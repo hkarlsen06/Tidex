@@ -1,4 +1,10 @@
+"use client";
+
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { FormEvent, useMemo, useState } from "react";
+
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 const googleIcon = (
   <svg
@@ -26,7 +32,113 @@ const googleIcon = (
   </svg>
 );
 
+type MessageState = { type: "error" | "success"; text: string } | null;
+
 export default function LoginPage() {
+  const router = useRouter();
+  const supabase = useMemo(() => createSupabaseBrowserClient(), []);
+
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [message, setMessage] = useState<MessageState>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSigningUp, setIsSigningUp] = useState(false);
+  const [isOAuthRedirecting, setIsOAuthRedirecting] = useState(false);
+
+  const resetMessage = () => setMessage(null);
+
+  const handleSignIn = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!email || !password) {
+      setMessage({ type: "error", text: "Fyll inn e-post og passord." });
+      return;
+    }
+
+    setIsSubmitting(true);
+    setMessage(null);
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    setIsSubmitting(false);
+
+    if (error) {
+      setMessage({ type: "error", text: error.message });
+      return;
+    }
+
+    setMessage({
+      type: "success",
+      text: "Innlogging vellykket! Sender deg videre...",
+    });
+
+    router.replace("/");
+    router.refresh();
+  };
+
+  const handleSignUp = async () => {
+    if (!email || !password) {
+      setMessage({
+        type: "error",
+        text: "Fyll inn e-post og passord for å opprette konto.",
+      });
+      return;
+    }
+
+    setIsSigningUp(true);
+    setMessage(null);
+
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo:
+          process.env.NEXT_PUBLIC_SUPABASE_REDIRECT_URL ?? undefined,
+      },
+    });
+
+    setIsSigningUp(false);
+
+    if (error) {
+      setMessage({ type: "error", text: error.message });
+      return;
+    }
+
+    setMessage({
+      type: "success",
+      text: "Sjekk e-posten din for å bekrefte kontoen.",
+    });
+  };
+
+  const handleGoogleSignIn = async () => {
+    setIsOAuthRedirecting(true);
+    setMessage(null);
+
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo:
+          process.env.NEXT_PUBLIC_SUPABASE_REDIRECT_URL ?? undefined,
+      },
+    });
+
+    if (error) {
+      setIsOAuthRedirecting(false);
+      setMessage({ type: "error", text: error.message });
+      return;
+    }
+
+    setMessage({
+      type: "success",
+      text: "Sender deg videre til Google...",
+    });
+  };
+
+  const buttonDisabled = isSubmitting || isSigningUp || isOAuthRedirecting;
+
   return (
     <main className="relative flex min-h-screen items-center justify-center bg-gradient-to-br from-background-primary via-background-secondary to-background-primary px-4 py-16 text-text-primary">
       <section className="w-full max-w-md rounded-[2.5rem] border border-border-strong/60 bg-surface-secondary p-10 shadow-[0px_40px_80px_-20px_rgba(15,23,42,0.75)] backdrop-blur">
@@ -34,7 +146,7 @@ export default function LoginPage() {
           <h1 className="text-3xl font-semibold tracking-wide text-text-primary">Logg inn</h1>
         </div>
 
-        <form className="space-y-6" noValidate>
+        <form className="space-y-6" noValidate onSubmit={handleSignIn}>
           <div className="space-y-2">
             <label htmlFor="email" className="block text-sm font-semibold text-text-primary">
               E-post
@@ -44,6 +156,11 @@ export default function LoginPage() {
               name="email"
               type="email"
               placeholder="E-post"
+              value={email}
+              onChange={(event) => {
+                resetMessage();
+                setEmail(event.target.value);
+              }}
               className="w-full rounded-full border border-border-subtle bg-background-primary px-5 py-3 text-sm text-text-primary placeholder:text-text-muted focus:border-brand-highlight focus:outline-none focus:ring-2 focus:ring-brand-highlight/60"
             />
           </div>
@@ -57,34 +174,58 @@ export default function LoginPage() {
               name="password"
               type="password"
               placeholder="Passord"
+              value={password}
+              onChange={(event) => {
+                resetMessage();
+                setPassword(event.target.value);
+              }}
               className="w-full rounded-full border border-border-subtle bg-background-primary px-5 py-3 text-sm text-text-primary placeholder:text-text-muted focus:border-brand-highlight focus:outline-none focus:ring-2 focus:ring-brand-highlight/60"
             />
           </div>
 
           <button
             type="submit"
-            className="w-full rounded-full bg-gradient-to-r from-brand-gradientStart via-brand-gradientMid to-brand-gradientEnd px-5 py-3 text-sm font-bold uppercase tracking-wide text-text-inverse shadow-lg shadow-brand-gradientMid/40 transition hover:from-brand-gradientMid hover:via-brand-gradientMid hover:to-brand-gradientEnd focus:outline-none focus:ring-4 focus:ring-brand-highlight/60 focus:ring-offset-2 focus:ring-offset-surface-secondary"
+            disabled={buttonDisabled}
+            className="w-full rounded-full bg-gradient-to-r from-brand-gradientStart via-brand-gradientMid to-brand-gradientEnd px-5 py-3 text-sm font-bold uppercase tracking-wide text-text-inverse shadow-lg shadow-brand-gradientMid/40 transition hover:from-brand-gradientMid hover:via-brand-gradientMid hover:to-brand-gradientEnd focus:outline-none focus:ring-4 focus:ring-brand-highlight/60 focus:ring-offset-2 focus:ring-offset-surface-secondary disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Logg inn
+            {isSubmitting ? "Logger inn..." : "Logg inn"}
           </button>
         </form>
+
+        {message && (
+          <div
+            className={`mt-4 rounded-full px-5 py-3 text-sm font-medium ${
+              message.type === "error"
+                ? "bg-red-500/10 text-red-300"
+                : "bg-emerald-500/10 text-emerald-300"
+            }`}
+            role="status"
+            aria-live="polite"
+          >
+            {message.text}
+          </div>
+        )}
 
         <div className="mt-6 space-y-3">
           <button
             type="button"
-            className="w-full rounded-full bg-surface-primary px-5 py-3 text-sm font-semibold uppercase tracking-wide text-text-primary transition hover:bg-surface-primary/80 focus:outline-none focus:ring-4 focus:ring-brand-highlight/40 focus:ring-offset-2 focus:ring-offset-surface-secondary"
+            onClick={handleSignUp}
+            disabled={buttonDisabled}
+            className="w-full rounded-full bg-surface-primary px-5 py-3 text-sm font-semibold uppercase tracking-wide text-text-primary transition hover:bg-surface-primary/80 focus:outline-none focus:ring-4 focus:ring-brand-highlight/40 focus:ring-offset-2 focus:ring-offset-surface-secondary disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Opprett ny konto
+            {isSigningUp ? "Oppretter konto..." : "Opprett ny konto"}
           </button>
           <button
             type="button"
+            onClick={handleGoogleSignIn}
+            disabled={buttonDisabled}
             aria-label="Fortsett med Google"
-            className="flex w-full items-center justify-center gap-3 rounded-full bg-surface-primary px-5 py-3 text-sm font-semibold uppercase tracking-wide text-text-primary transition hover:bg-surface-primary/80 focus:outline-none focus:ring-4 focus:ring-brand-highlight/40 focus:ring-offset-2 focus:ring-offset-surface-secondary"
+            className="flex w-full items-center justify-center gap-3 rounded-full bg-surface-primary px-5 py-3 text-sm font-semibold uppercase tracking-wide text-text-primary transition hover:bg-surface-primary/80 focus:outline-none focus:ring-4 focus:ring-brand-highlight/40 focus:ring-offset-2 focus:ring-offset-surface-secondary disabled:cursor-not-allowed disabled:opacity-60"
           >
             <span className="flex h-6 w-6 items-center justify-center rounded-full bg-text-primary">
               {googleIcon}
             </span>
-            Fortsett med Google
+            {isOAuthRedirecting ? "Videresender..." : "Fortsett med Google"}
           </button>
         </div>
 
