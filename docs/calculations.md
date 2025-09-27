@@ -1,158 +1,289 @@
-# Wage Calculation Reference
+# Wage Calculations
 
-This document explains the logic used throughout the project to derive paid hours and gross pay for employee shifts. It focuses on the decision process, inputs, and outputs rather than reproducing the source code. Use it as a high-level guide when reasoning about payroll behaviour or making changes.
+Authoritative spec for how a single shift is transformed into pay. Pure, deterministic, framework-agnostic. Implemented in `src/lib/payroll`.
 
-## System Overview
+- Entry point: `computeShift(shift, settings, presetRules)`
+- Never performs I/O. No dates from system clock. All inputs explicit.
+- Outputs an enriched shift with derived fields and an audit trail.
 
-- **Authoritative results live on the server.** Every API response that returns shifts calls the server-side calculator to attach `duration_hours`, `paid_hours`, `gross`, and the break policy that was applied.
-- **The SPA mirrors the rules locally** so the UI can preview totals, simulate alternate break deductions, and render audit details while offline. Client math should match the server unless deliberately diverging for exploratory tools.
-- **Snapshots ensure stable numbers.** When a shift is created, the server locks in the employee’s hourly wage and tariff level so later updates do not retroactively change historical payouts.
+---
 
-## Server-side Logic (`server/payroll/calc.js` and supporting helpers)
+## 1) Data shapes
 
-### Inputs
+```ts
+// src/lib/payroll/types.ts (summary)
+export type ShiftRow = {
+  id: string;
+  user_id: string;
+  shift_date: string; // ISO date: "2025-09-27"
+  start_time: string; // "HH:mm"
+  end_time: string; // "HH:mm" (can be next day if end <= start)
+  pause_duration_hours?: number | null; // manual pause entered
+  hourly_wage_snapshot?: number | null; // locked-in base rate
+};
 
-- `start_time` and `end_time` in `HH:mm` (converted from stored UTC timestamps).
-- `break_minutes` recorded manually for a shift.
-- `hourly_wage_snapshot` captured at insert/update time.
-- Organization break policy resolved via `getOrgSettings(managerId)` (defaults to `fixed_0_5_over_5_5h`).
+export type BonusRule = {
+  days: number[]; // 1=Mon ... 7=Sun
+  from: `${number}:${number}`; // inclusive
+  to: `${number}:${number}`; // inclusive
+  rate: number; // NOK/hour supplement
+};
 
-### Step-by-step flow (`calcEmployeeShift`)
+export type UserSettings = {
+  use_preset?: boolean | null;
+  custom_wage?: number | null;
+  current_wage_level?: number | null; // key into preset table
+  custom_bonuses?: { rules: BonusRule[] } | null;
 
-1. **Time normalisation** – convert the start/end pair to minutes since midnight. If the end is earlier or equal to the start, treat the shift as crossing midnight and add 24 hours, ensuring a zero- or negative-length shift never produces pay.
-2. **Duration calculation** – compute raw hours worked before deductions (`durationHours`).
-3. **Policy deduction** – call `applyBreakPolicy` to calculate automatic break time dictated by the organisation:
-   - `fixed_0_5_over_5_5h`: subtract 0.5 hours once a shift exceeds 5.5 hours.
-   - `proportional_across_periods` and `from_base_rate`: currently act like the fixed rule but are placeholders for future split-by-period logic.
-   - `none`: perform no automatic deduction.
-   - Unknown policies fall back to `none` to avoid accidental over-deduction.
-4. **Manual break handling** – subtract the user-entered `break_minutes` (converted to hours) from the duration in addition to any policy deduction.
-5. **Paid hours** – clamp the remainder to zero or above to guard against over-reporting break time.
-6. **Gross wage** – multiply paid hours by `hourly_wage_snapshot`.
-7. **Rounding** – round all numeric outputs to two decimals without mutating the original shift row.
+  break_policy?:
+    | "fixed_0_5_over_5_5h"
+    | "proportional_across_periods"
+    | "from_base_rate"
+    | "none";
+  pause_deduction_enabled?: boolean | null;
+  pause_deduction_method?:
+    | "proportional"
+    | "base_only"
+    | "end_of_shift"
+    | "none"
+    | null;
+  pause_threshold_hours?: number | null; // e.g. 5.5
+  pause_deduction_minutes?: number | null; // e.g. 30
+};
 
-### API integration (`server/server.js`)
+export type WagePeriod = {
+  fromMin: number; // minutes since day start
+  toMin: number; // exclusive
+  baseRate: number;
+  bonusRate: number;
+  totalRate: number; // base + bonus
+};
 
-- **Time conversion helpers** (`hhmmToUtcIso`, `formatTimeHHmm`) translate between stored UTC timestamps and the calculator’s `HH:mm` inputs.
-- **Route usage**: `GET /employee-shifts`, `POST /employee-shifts`, and `PUT /employee-shifts/:id` all invoke `calcEmployeeShift` before responding so the client always receives derived fields alongside the raw shift data.
-- **Snapshot enforcement**: `computeEmployeeSnapshot` fetches tariff/custom wage data, resolves the effective hourly rate (tariff table or custom value), and provides the fields stored with each shift record.
-- **Break policy resolution**: `getOrgSettings` reads an organisation-specific policy from dedicated Supabase tables when present, then falls back to per-user settings or an in-memory default.
+export type ShiftComputed = {
+  id: string;
+  durationHours: number; // raw duration before any deductions
+  paidHours: number; // after policy + manual pauses
+  basePay: number; // NOK
+  bonusPay: number; // NOK
+  gross: number; // NOK
+  wagePeriods: WagePeriod[]; // split by bonus changes, after deductions
+  breakAudit: {
+    method: UserSettings["pause_deduction_method"];
+    policy: NonNullable<UserSettings["break_policy"]>;
+    thresholdHours: number;
+    deductedHours: number; // policy + manual
+    notes?: string[];
+  };
+};
+```
 
-### Key considerations
+---
 
-- **Cross-midnight safety** – identical start/end times imply a 24-hour shift to avoid zero pay for valid overnight work.
-- **Rounded outputs** – rounding happens at the calculator boundary; the database continues to store raw minutes and wage snapshots.
-- **Extensibility hooks** – policy names like `proportional_across_periods` anticipate future wage-period-aware logic without breaking callers today.
+## 2) Pipeline
 
-## Client-side Logic (`app/src/js/appLogic.js`)
+1. **Resolve base rate**
+   - If `shift.hourly_wage_snapshot` present → use it.
+   - Else if `settings.use_preset && settings.current_wage_level` → map to preset table.
+   - Else if `settings.custom_wage` → use it.
+   - Else fallback to a sane default preset.
+2. **Build wage periods**
+   - `buildWagePeriods(startHHMM, endHHMM, weekday, baseRate, rules)`
+   - Normalizes cross-midnight by allowing `end < start` and adding 24h.
+   - Splits [start, end) at every matching `BonusRule` boundary.
+   - Each segment gets `bonusRate = max(rule.rate)` that fully covers it.
+   - Result: array of contiguous `WagePeriod` segments.
+3. **Compute raw duration**
+   - `durationHours = sum((toMin - fromMin))/60`, rounded to 2 decimals.
+4. **Apply break policy deduction**
+   - `applyBreakDeduction(periods, policy, method, threshold, deductionHours)`
+   - If `policy === fixed_0_5_over_5_5h` and `duration > threshold` → deduct `pause_deduction_minutes/60` hours.
+   - Deduction method:
+     - `end_of_shift`: cut from tail periods.
+     - `proportional`: cut across all periods by share of minutes.
+     - `base_only`: cut from lowest-bonus periods first.
+     - `none`: no cut.
+   - Returns adjusted periods, audit, and paidHours after policy.
+5. **Apply manual pause**
+   - If user entered `pause_duration_hours`, subtract from tail deterministically.
+   - Drop empty periods after cuts.
+6. **Compute pay**
+   - For each remaining period:
+     - `basePay += hours * baseRate`
+     - `bonusPay += hours * bonusRate`
+   - `gross = basePay + bonusPay`
+   - Round to 2 decimals.
+7. **Emit audit**
+   - `breakAudit` describes policy, method, thresholds, total deducted hours, and notes.
 
-The SPA reimplements wage math to power interactive views, offline editing, and compliance audits. While richer than the server helper, it uses the same foundational ideas.
+---
 
-### Data sources
+## 3) Function contract
 
-- **Wage rate selection** – prefer the per-shift `hourly_wage_snapshot`. If absent (e.g., locally drafted shifts), fall back to the user’s currently selected preset or custom wage.
-- **Bonus rules** – load preset or user-defined bonus windows that add per-hour supplements based on day-of-week and time of day.
-- **Break settings** – toggleable controls govern whether deductions occur, the applied method, threshold hours (default 5.5), and deduction length (default 30 minutes).
+```ts
+import { computeShift, ShiftRow, UserSettings, BonusRule } from "@/lib/payroll";
 
-### Local calculation flow (`calculateShift`)
+const presetRules: BonusRule[] = [
+  // Example presets
+  { days: [1, 2, 3, 4, 5], from: "18:00", to: "21:00", rate: 22 },
+  { days: [1, 2, 3, 4, 5], from: "21:00", to: "23:59", rate: 45 },
+  { days: [6], from: "13:00", to: "15:00", rate: 45 },
+  { days: [6], from: "15:00", to: "18:00", rate: 55 },
+  { days: [6], from: "18:00", to: "23:59", rate: 110 },
+  { days: [7], from: "00:00", to: "23:59", rate: 115 },
+];
 
-1. **Time handling** – convert start/end to minutes, supporting cross-midnight and 24-hour edge cases identical to the server.
-2. **Raw duration** – compute unadjusted hours and reject non-positive results to avoid showing nonsense totals.
-3. **Break deduction decision** (`calculateLegalBreakDeduction`):
-   - When disabled or under threshold, return early with zero deduction.
-   - When enabled, gather wage periods (see below) and apply one of four strategies:
-     - `proportional`: remove time evenly across all wage periods.
-     - `base_only`: remove time from base-rate periods (or the lowest available bonus rates when no pure base period exists).
-     - `end_of_shift`: subtract the deduction from the tail of the shift (legacy behaviour kept for compatibility warnings).
-     - `none`: treat the break as paid time.
-   - Produce an audit trail indicating the chosen method, deducted hours, and any compliance notes.
-4. **Wage period construction** (`calculateWagePeriods`):
-   - Split the shift timeline into contiguous segments, considering bonus rule windows, shift day-of-week, and overnight spans.
-   - Each segment tracks its base wage, bonus rate, total rate, and coverage for audit output.
-5. **Applying deductions**:
-   - For proportional/base-only methods, `calculateAdjustedWages` recomputes hours, base wage, and bonus from the adjusted periods.
-   - For end-of-shift/none, simply subtract the deduction hours (if any) from total paid hours and recompute bonuses on the adjusted range.
-6. **Result object** – return rounded totals: `hours`/`paidHours`, split earnings (`baseWage`, `bonus`), aggregate `total`, and the break deduction audit record for UI display.
+const result = computeShift(shiftRow, userSettings, presetRules);
+// → ShiftComputed
+```
 
-### Additional client behaviours
+**Determinism:** same input → same output. No hidden timezones, no DB calls.
 
-- **Audit tooling** – compliance warnings highlight legacy deduction methods that may violate labour rules.
-- **Tax preview** – after local wage computation, UI components may optionally apply user-configured tax percentages; this happens outside the wage logic described here.
-- **Offline resilience** – calculations rely solely on in-memory data, enabling projections even without a network connection. Upon sync, server results remain canonical.
+---
 
-## Testing Notes
+## 4) Server usage pattern
 
-- `server/tests/payroll.test.js` still reflects an older overtime-centric structure (`regularHours`, `overtimeHours`, `totalPay`). The current server helper returns `durationHours`, `paidHours`, and `gross`. Update or replace these tests if you need automated coverage for the new calculator interface.
+- Compute **once per fetch** on the server. Send enriched shifts to the client.
 
-## Implementation Checklist (when modifying payroll logic)
+```ts
+// src/app/(app)/shifts/_data/getShifts.ts
+export async function getComputedShifts(userId: string) {
+  // 1) load settings
+  // 2) load raw shifts
+  // 3) map computeShift(...) over rows
+  // 4) return enriched list
+}
+```
 
-- Update both the server helper and the client mirror if behaviour changes (or document intentional divergences).
-- Adjust Supabase migrations or settings queries if new organisation-level configuration is introduced.
-- Revisit API docs (`docs/API.md`, `docs/DATABASE.md`, `docs/ARCHITECTURE_AND_SNAPSHOTS.md`) to keep derivation logic in sync.
-- Expand or modernise test coverage to validate new scenarios (e.g., policy-specific deductions, bonus edge cases, cross-midnight shifts).
+- UI renders precomputed fields (`gross`, `paidHours`, etc.). No re-calc during paint.
 
-Presets:
+**Revalidation:** After any mutation, revalidate the server loader so SSR remains the source of truth.
 
-exportconstapp= {
+---
 
-// Constants
+## 5) Client usage pattern (optimistic)
 
-    PAUSE_THRESHOLD: 5.5,
+- On add/edit:
+  1. Compute optimistic `ShiftComputed` with same `computeShift(...)`.
+  2. Update local list in state.
+  3. Commit mutation to server.
+  4. Revalidate. Replace with server result.
+- On delete:
+  1. Remove from local list.
+  2. Commit delete.
+  3. Revalidate.
 
-    PAUSE_DEDUCTION: 0.5,
+Only recompute affected shifts. Never recompute all on every render.
 
-    MONTHS: ['januar', 'februar', 'mars', 'april', 'mai', 'juni',
+---
 
-'juli', 'august', 'september', 'oktober', 'november', 'desember'],
+## 6) Example calculation
 
-    WEEKDAYS: ['søndag', 'mandag', 'tirsdag', 'onsdag', 'torsdag', 'fredag', 'lørdag'],
+**Inputs**
 
-    PRESET_WAGE_RATES: {
+- Date: Saturday (day 6)
+- Start–End: `14:30` → `22:15`
+- Base rate: 185.38 NOK/h
+- Preset rules:
+  - Sat 13:00–15:00 +45
+  - Sat 15:00–18:00 +55
+  - Sat 18:00–23:59 +110
+- Policy: `fixed_0_5_over_5_5h`, threshold 5.5h, deduction 30 minutes, method `proportional`
+- Manual pause: 0.25 h
 
-// Use negative numbers for young workers to avoid conflicts with regular levels 1-6
+**Split periods**
 
-'-1': 129.91, // under16
+- 14:30–15:00 → +45
+- 15:00–18:00 → +55
+- 18:00–22:15 → +110
 
-'-2': 132.90, // under18
+**Raw duration**
 
-1: 184.54,
+- (30 + 180 + 255) min = 465 min = **7.75 h**
 
-2: 185.38,
+**Policy deduction**
 
-3: 187.46,
+- 7.75 > 5.5 → deduct 0.5 h proportionally.
+- New total: 7.25 h
 
-4: 193.05,
+**Manual pause**
 
-5: 210.81,
+- Deduct 0.25 h from tail.
+- New total: **7.00 h paid**
 
-6: 256.14
+**Pay**
 
-    },
+- Compute per period after cuts.
+- Sum base and bonus separately.
+- Round to 2 decimals.
+- Emit `gross = basePay + bonusPay`.
 
-// Organization settings cache
+(The exact split after deductions is left to the library; audit will state how many minutes were cut from which segments.)
 
-    orgSettings: { break_policy: 'fixed_0_5_over_5_5h' },
+---
 
-// Data loading state
+## 7) Cross-midnight and boundaries
 
-    isDataLoading: true,
+- If `end <= start`, treat `end += 24h`.
+- Rules can straddle midnight. The builder checks both same-day and +24h windows.
+- Rule `to` is inclusive in input and converted to exclusive internally (`+1 minute`) to avoid gaps.
 
-    PRESET_BONUSES: {
+---
 
-    rules: [
+## 8) Rounding
 
-    { days: [1, 2, 3, 4, 5], from: "18:00", to: "21:00", rate: 22 },
+- Hours: duration and paidHours rounded to 2 decimals for display.
+- Money: basePay and bonusPay rounded to 2 decimals at the end of accumulation.
+- Internal minute arithmetic stays integer to avoid drift.
 
-    { days: [1, 2, 3, 4, 5], from: "21:00", to: "23:59", rate: 45 },
+---
 
-    { days: [6], from: "13:00", to: "15:00", rate: 45 },
+## 9) Performance
 
-    { days: [6], from: "15:00", to: "18:00", rate: 55 },
+- `O(k)` per shift where `k` = number of rule boundaries hit.
+- Server computes once per fetch. Client computes on targeted updates only.
+- No recompute during React renders if you pass precomputed data.
 
-    { days: [6], from: "18:00", to: "23:59", rate: 110 },
+---
 
-    { days: [7], from: "00:00", to: "23:59", rate: 115 }
+## 10) Testing
 
-    ]
+Add table-driven tests that pin expected outputs:
 
-    },
+- Weekday vs weekend rules.
+- Cross-midnight shifts.
+- Each break method.
+- Manual pause with and without policy deduction.
+- Snapshot wage override vs preset mapping.
+
+---
+
+## 11) Extensibility
+
+Add features by layering pure steps:
+
+- **Overtime tiers:** After paid periods are finalized, apply tiered multipliers for hours beyond thresholds.
+- **Holiday calendar:** Pre-map dates → bonus overlays. Feed as additional `BonusRule`s.
+- **Minimum payable block:** Clamp tiny paid fragments after deductions.
+
+---
+
+## 12) Do’s and Don’ts
+
+- Do treat `computeShift` as the sole source of calculation truth.
+- Do store snapshots (base rate, maybe resolved bonuses) if your business rules require historic accuracy.
+- Do not call calculators inside React render paths.
+- Do not read system time inside calculators.
+
+---
+
+## 13) Glossary
+
+- **Base rate:** Hourly wage before supplements.
+- **Supplement/Bonus:** Extra NOK/hour by rule window.
+- **Policy deduction:** Automatic break when shift crosses a threshold.
+- **Manual pause:** User-entered break on top of policy deduction.
+- **Paid hours:** Billable hours after all deductions.
+
+```
+
+```
