@@ -7,7 +7,7 @@ This document outlines how authentication is wired into the project today, how t
 - We rely on [`@supabase/ssr`](https://supabase.com/docs/guides/auth/server-side/nextjs) alongside `@supabase/supabase-js` to manage sessions on both the server and browser.
 - All environment variables needed for auth must live in `.env.local` (see `.env.local.example` for required keys). The minimum set is:
   - `NEXT_PUBLIC_SUPABASE_URL`
-  - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+  - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
   - `NEXT_PUBLIC_SUPABASE_REDIRECT_URL`
 - Sessions are cookie-based. Server components and route handlers read/write auth cookies using the helpers in `lib/supabase`.
 

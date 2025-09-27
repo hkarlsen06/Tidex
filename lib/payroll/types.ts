@@ -64,3 +64,7 @@ export type ShiftComputed = {
   wagePeriods: WagePeriod[];     // after split
   breakAudit: BreakAudit;
 };
+
+export type ShiftWithComputations = ShiftRow & {
+  computed: ShiftComputed;
+};
