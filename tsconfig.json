@@ -1,0 +1,13 @@
+{
+  "extends": "./config/tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": "."
+  },
+  "include": [
+    "config/../next-env.d.ts",
+    "config/../**/*.ts",
+    "config/../**/*.tsx",
+    "config/../.next/types/**/*.ts",
+    ".next/types/**/*.ts"
+  ]
+}
