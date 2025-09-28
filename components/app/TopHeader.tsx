@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { UserMenu } from "./user-menu";
+import { UserMenu } from "./UserMenu";
 
 export type TopHeaderProps = {
   userName: string;

@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 import { SupabaseListener } from "../supabase-listener";
-import { TopHeader } from "../components/top-header";
+import { TopHeader } from "../../components/app/TopHeader";
 
 export default async function RootLayout({
   children,

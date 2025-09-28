@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-import ShiftCard from "@/app/components/ShiftCard";
+import ShiftCard from "@/components/app/ShiftCard";
 import { getComputedShifts } from "./_data/getShifts";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { ShiftWithComputations } from "@/lib/payroll";
