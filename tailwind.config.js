@@ -1,39 +1,76 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  content: [
+    darkMode: ["class"],
+    content: [
     "./app/**/*.{js,ts,jsx,tsx}",
     "./components/**/*.{js,ts,jsx,tsx}"
   ],
   theme: {
-    extend: {
-      colors: {
-        background: {
-          primary: "hsl(229 84% 5%)",
-          secondary: "hsl(222 47% 11%)",
-          tertiary: "hsl(217 33% 17%)",
-        },
-        surface: {
-          primary: "hsl(220 49% 8%)",
-          secondary: "hsl(221 39% 11%)",
-        },
-        text: {
-          primary: "hsl(210 40% 98%)",
-          secondary: "hsl(214 32% 91%)",
-          muted: "hsl(215 20% 65%)",
-          inverse: "hsl(222 47% 11%)",
-        },
-        border: {
-          subtle: "hsl(215 16% 47%)",
-          strong: "hsl(215 19% 35%)",
-        },
-        brand: {
-          gradientStart: "hsl(199 89% 48%)",
-          gradientMid: "hsl(189 94% 43%)",
-          gradientEnd: "hsl(192 91% 36%)",
-          highlight: "hsl(188 86% 53%)",
-        }
-      }
-    }
+  	extend: {
+  		colors: {
+  			background: 'hsl(var(--background))',
+  			surface: {
+  				primary: 'hsl(220 49% 8%)',
+  				secondary: 'hsl(221 39% 11%)'
+  			},
+  			text: {
+  				primary: 'hsl(210 40% 98%)',
+  				secondary: 'hsl(214 32% 91%)',
+  				muted: 'hsl(215 20% 65%)',
+  				inverse: 'hsl(222 47% 11%)'
+  			},
+  			border: 'hsl(var(--border))',
+  			brand: {
+  				gradientStart: 'hsl(199 89% 48%)',
+  				gradientMid: 'hsl(189 94% 43%)',
+  				gradientEnd: 'hsl(192 91% 36%)',
+  				highlight: 'hsl(188 86% 53%)'
+  			},
+  			foreground: 'hsl(var(--foreground))',
+  			card: {
+  				DEFAULT: 'hsl(var(--card))',
+  				foreground: 'hsl(var(--card-foreground))'
+  			},
+  			popover: {
+  				DEFAULT: 'hsl(var(--popover))',
+  				foreground: 'hsl(var(--popover-foreground))'
+  			},
+  			primary: {
+  				DEFAULT: 'hsl(var(--primary))',
+  				foreground: 'hsl(var(--primary-foreground))'
+  			},
+  			secondary: {
+  				DEFAULT: 'hsl(var(--secondary))',
+  				foreground: 'hsl(var(--secondary-foreground))'
+  			},
+  			muted: {
+  				DEFAULT: 'hsl(var(--muted))',
+  				foreground: 'hsl(var(--muted-foreground))'
+  			},
+  			accent: {
+  				DEFAULT: 'hsl(var(--accent))',
+  				foreground: 'hsl(var(--accent-foreground))'
+  			},
+  			destructive: {
+  				DEFAULT: 'hsl(var(--destructive))',
+  				foreground: 'hsl(var(--destructive-foreground))'
+  			},
+  			input: 'hsl(var(--input))',
+  			ring: 'hsl(var(--ring))',
+  			chart: {
+  				'1': 'hsl(var(--chart-1))',
+  				'2': 'hsl(var(--chart-2))',
+  				'3': 'hsl(var(--chart-3))',
+  				'4': 'hsl(var(--chart-4))',
+  				'5': 'hsl(var(--chart-5))'
+  			}
+  		},
+  		borderRadius: {
+  			lg: 'var(--radius)',
+  			md: 'calc(var(--radius) - 2px)',
+  			sm: 'calc(var(--radius) - 4px)'
+  		}
+  	}
   },
-  plugins: []
+  plugins: [require("tailwindcss-animate")]
 };
