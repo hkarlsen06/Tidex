@@ -89,7 +89,7 @@ export function ShiftCard({ shift }: ShiftCardProps) {
           <p className="text-2xl font-semibold tracking-tight text-text-primary">
             {formatCurrency(gross)}
           </p>
-          <p className="text-xs text-text-secondary">{breakdown}</p>
+          <p className="text-xs">{breakdown}</p>
         </div>
       </header>
     </article>

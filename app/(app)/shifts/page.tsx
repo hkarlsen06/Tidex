@@ -78,8 +78,8 @@ export default async function ShiftsPage() {
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-10">
       <header className="space-y-2">
-        <h1 className="text-3xl font-semibold text-text-primary">Skiftoversikt</h1>
-        <p className="text-sm text-text-secondary">
+        <h1>Skiftoversikt</h1>
+        <p>
           Historiske skift med beregnet lønn, gruppert per uke.
         </p>
       </header>
@@ -87,7 +87,7 @@ export default async function ShiftsPage() {
       {grouped.length === 0 ? (
         <div className="rounded-3xl border border-border-subtle/60 bg-surface-secondary/40 px-8 py-12 text-center text-text-secondary">
           <p className="text-lg font-medium text-text-primary">Ingen skift registrert ennå</p>
-          <p className="mt-2 text-sm">
+          <p className="mt-2">
             Når du legger inn skift vil de dukke opp her med full lønnsberegning.
           </p>
         </div>

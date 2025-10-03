@@ -97,4 +97,19 @@ a {
   body {
     @apply bg-background text-foreground;
   }
+  h1 {
+    @apply text-3xl font-semibold text-text-primary;
+  }
+  h2 {
+    @apply text-2xl font-semibold text-text-primary;
+  }
+  h3 {
+    @apply text-xl font-semibold text-text-primary;
+  }
+  p {
+    @apply text-sm text-text-secondary;
+  }
+  label {
+    @apply block text-sm font-semibold text-text-primary;
+  }
 }

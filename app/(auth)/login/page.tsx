@@ -139,12 +139,12 @@ export default function LoginPage() {
       <div className="relative flex min-h-screen items-center justify-center px-4 py-16 text-slate-100">
         <section className="w-full max-w-md rounded-[2.5rem] border border-border-strong/60 bg-surface-secondary p-10 shadow-[0px_40px_80px_-20px_rgba(15,23,42,0.75)] backdrop-blur">
           <div className="mb-8 text-center">
-            <h1 className="text-3xl font-semibold tracking-wide text-text-primary">Logg inn</h1>
+            <h1 className="tracking-wide">Logg inn</h1>
           </div>
 
           <form className="space-y-6" noValidate onSubmit={handleSignIn}>
             <div className="space-y-2">
-              <label htmlFor="email" className="block text-sm font-semibold text-text-primary">
+              <label htmlFor="email">
                 E-post
               </label>
               <input
@@ -162,7 +162,7 @@ export default function LoginPage() {
             </div>
 
             <div className="space-y-2">
-              <label htmlFor="password" className="block text-sm font-semibold text-text-primary">
+              <label htmlFor="password">
                 Passord
               </label>
               <input
