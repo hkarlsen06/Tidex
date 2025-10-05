@@ -57,7 +57,7 @@ export function ShiftCard({ shift }: ShiftCardProps) {
   const isWeekend = dayName === "lørdag" || dayName === "søndag";
 
   return (
-    <Card className="rounded-[28px]">
+    <Card className="rounded-card">
       <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0 py-6">
         <div className="space-y-1">
           <p className="text-lg font-medium capitalize text-text-primary">

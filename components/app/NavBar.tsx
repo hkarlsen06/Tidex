@@ -14,11 +14,12 @@ import {
   IconSettingsFilled,
 } from "@tabler/icons-react";
 
-type NavItem = {
-  href: string;
-  label: string;
-  icon: React.ComponentType<{ stroke?: number; className?: string }>;
-  iconFilled: React.ComponentType<{ className?: string }>;
+type TablerIcon = typeof IconHome;
+type NavItem = { 
+  href: string; 
+  label: string; 
+  icon: TablerIcon; 
+  iconFilled: TablerIcon;
   isCenter?: boolean;
 };
 
@@ -60,9 +61,9 @@ export function NavBar() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed bottom-4 left-0 right-0 z-40">
+    <nav className="fixed bottom-4 left-0 right-0 z-40" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
       <div className="mx-auto max-w-[480px] px-4">
-        <div className="flex items-center justify-around rounded-full border border-border-subtle bg-surface-primary/80 px-6 py-3 shadow-lg backdrop-blur dark:shadow-slate-950/40">
+        <div className="flex items-center justify-around rounded-full border border-border-subtle bg-surface-primary/80 px-6 py-3 shadow-app-lg backdrop-blur">
           {navItems.map((item) => {
             const isActive = pathname === item.href;
             const Icon = isActive && !item.isCenter ? item.iconFilled : item.icon;

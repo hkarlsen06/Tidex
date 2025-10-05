@@ -32,6 +32,26 @@ module.exports = {
   				gradientEnd: 'hsl(var(--brand-gradientEnd))',
   				highlight: 'hsl(var(--brand-highlight))'
   			},
+  			success: {
+  				DEFAULT: 'hsl(var(--success))',
+  				foreground: 'hsl(var(--success-foreground))',
+  				subtle: 'hsl(var(--success-subtle))'
+  			},
+  			warning: {
+  				DEFAULT: 'hsl(var(--warning))',
+  				foreground: 'hsl(var(--warning-foreground))',
+  				subtle: 'hsl(var(--warning-subtle))'
+  			},
+  			error: {
+  				DEFAULT: 'hsl(var(--error))',
+  				foreground: 'hsl(var(--error-foreground))',
+  				subtle: 'hsl(var(--error-subtle))'
+  			},
+  			info: {
+  				DEFAULT: 'hsl(var(--info))',
+  				foreground: 'hsl(var(--info-foreground))',
+  				subtle: 'hsl(var(--info-subtle))'
+  			},
   			foreground: 'hsl(var(--foreground))',
   			card: {
   				DEFAULT: 'hsl(var(--card))',
@@ -74,7 +94,16 @@ module.exports = {
   		borderRadius: {
   			lg: 'var(--radius)',
   			md: 'calc(var(--radius) - 2px)',
-  			sm: 'calc(var(--radius) - 4px)'
+  			sm: 'calc(var(--radius) - 4px)',
+  			xl: 'calc(var(--radius) * 1.5)',
+  			'2xl': 'calc(var(--radius) * 2)',
+  			'3xl': 'calc(var(--radius) * 3)',
+  			card: '1.75rem'
+  		},
+  		boxShadow: {
+  			'app': '0 10px 40px -10px hsl(var(--shadow-color))',
+  			'app-lg': '0 20px 60px -15px hsl(var(--shadow-color-strong))',
+  			'app-inner': 'inset 0 2px 4px 0 hsl(var(--shadow-color))'
   		}
   	}
   },

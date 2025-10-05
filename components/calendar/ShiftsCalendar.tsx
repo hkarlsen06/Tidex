@@ -64,8 +64,8 @@ export function ShiftsCalendar({
               {employees.slice(0, 3).map((emp, idx) => (
                 <div
                   key={idx}
-                  className="inline-flex h-4 min-w-4 items-center justify-center rounded-full text-[9px] text-white px-0.5"
-                  style={{ backgroundColor: emp.color || "#6366f1" }}
+                  className="inline-flex h-4 min-w-4 items-center justify-center rounded-full text-[9px] text-text-inverse px-0.5"
+                  style={{ backgroundColor: emp.color || "hsl(var(--info))" }}
                 >
                   {initials(emp.name)}
                 </div>

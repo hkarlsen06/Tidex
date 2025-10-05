@@ -13,7 +13,7 @@ export function TopHeader({ userName, avatarUrl }: TopHeaderProps) {
 
   return (
     <header className="sticky top-4 z-50 px-4">
-      <div className="flex items-center justify-between rounded-full border border-border-subtle bg-surface-primary/80 px-4 py-2 shadow-lg backdrop-blur dark:shadow-slate-950/40">
+      <div className="flex items-center justify-between rounded-full border border-border-subtle bg-surface-primary/80 px-4 py-2 shadow-app-lg backdrop-blur">
         <div className="flex items-center gap-3">
           <span className="inline-flex h-10 w-10 items-center justify-center rounded-full">
             <Image

@@ -136,8 +136,8 @@ export default function LoginPage() {
 
   return (
     <div className="app-container">
-      <div className="relative flex min-h-screen items-center justify-center px-4 py-16 text-slate-100">
-        <section className="w-full max-w-md rounded-[2.5rem] border border-border-strong/60 bg-surface-secondary p-10 shadow-[0px_40px_80px_-20px_rgba(15,23,42,0.75)] backdrop-blur">
+      <div className="relative flex min-h-screen items-center justify-center px-4 py-16">
+        <section className="w-full max-w-md rounded-3xl border border-border bg-surface-secondary p-10 shadow-app-lg backdrop-blur">
           <div className="mb-8 text-center">
             <h1 className="tracking-wide">Logg inn</h1>
           </div>
@@ -192,8 +192,8 @@ export default function LoginPage() {
             <div
               className={`mt-4 rounded-full px-5 py-3 text-sm font-medium ${
                 message.type === "error"
-                  ? "bg-red-500/10 text-red-300"
-                  : "bg-emerald-500/10 text-emerald-300"
+                  ? "bg-error-subtle text-error-foreground"
+                  : "bg-success-subtle text-success-foreground"
               }`}
               role="status"
               aria-live="polite"

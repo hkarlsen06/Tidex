@@ -78,7 +78,7 @@ export function MonthlyEarningsCalendar({
   };
 
   return (
-    <Card className="rounded-[28px] border-0">
+    <Card className="rounded-card border-0">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 py-3">
         <div className="flex items-center gap-1">
           <button

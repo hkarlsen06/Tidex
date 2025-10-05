@@ -10,7 +10,7 @@ export function Input({ className, invalid, ...props }: Props) {
     <BaseInput
       {...props}
       aria-invalid={invalid || undefined}
-      className={cn(invalid && "ring-1 ring-red-500", className)}
+      className={cn(invalid && "ring-1 ring-error", className)}
     />
   );
 }
