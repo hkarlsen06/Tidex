@@ -34,7 +34,7 @@ export default async function RootLayout({
       <SupabaseListener accessToken={session?.access_token} />
       <div className="app-container">
         <TopHeader userName={userName} avatarUrl={avatarUrl} />
-        <main className="px-4 pb-24 pt-6">{children}</main>
+        <main className="pb-24 pt-6">{children}</main>
         <NavBar />
       </div>
     </>
