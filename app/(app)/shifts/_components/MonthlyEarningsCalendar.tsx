@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { IconChevronLeft, IconChevronRight } from "@tabler/icons-react";
 import { ShiftsCalendar } from "@/components/app/ShiftsCalendar";
 import { Card, CardHeader, CardTitle } from "@/components/app/Card";
 import { ShiftWithComputations } from "@/lib/payroll";
@@ -36,11 +37,14 @@ function getTotalEarnings(earningsByDate: EarningsByDate): number {
   return Object.values(earningsByDate).reduce((sum, val) => sum + val, 0);
 }
 
-function formatMonthYear(date: Date): string {
+function formatMonth(date: Date): string {
   return new Intl.DateTimeFormat("nb-NO", {
     month: "long",
-    year: "numeric",
   }).format(date);
+}
+
+function formatYear(date: Date): string {
+  return date.getFullYear().toString();
 }
 
 function formatCurrency(value: number): string {
@@ -65,11 +69,36 @@ export function MonthlyEarningsCalendar({
     [earningsByDate]
   );
 
+  const goToPreviousMonth = () => {
+    setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1));
+  };
+
+  const goToNextMonth = () => {
+    setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1));
+  };
+
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0">
-        <CardTitle className="capitalize">{formatMonthYear(month)}</CardTitle>
-        <div className="text-lg font-semibold text-text-primary">
+    <Card className="rounded-[28px] border-0">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 py-3">
+        <div className="flex items-center gap-1">
+          <button
+            onClick={goToPreviousMonth}
+            className="h-7 w-7 flex items-center justify-center rounded-md hover:bg-surface-secondary transition-colors text-text-primary"
+            aria-label="Previous month"
+          >
+            <IconChevronLeft size={18} />
+          </button>
+          <span className="capitalize w-24 text-center font-medium text-text-primary">{formatMonth(month)}</span>
+          <button
+            onClick={goToNextMonth}
+            className="h-7 w-7 flex items-center justify-center rounded-md hover:bg-surface-secondary transition-colors text-text-primary"
+            aria-label="Next month"
+          >
+            <IconChevronRight size={18} />
+          </button>
+          <span className="font-medium text-text-muted ml-1">{formatYear(month)}</span>
+        </div>
+        <div className="font-semibold text-text-primary">
           {formatCurrency(totalEarnings)} kr
         </div>
       </CardHeader>
