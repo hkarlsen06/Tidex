@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { Card, CardHeader, CardTitle } from "@/components/app/Card";
+import { getComputedShifts } from "@/app/(app)/shifts/_data/getShifts";
+import { HomeContent } from "./_components/HomeContent";
 
 export default async function Home() {
   const supabase = await createSupabaseServerClient();
@@ -13,13 +14,11 @@ export default async function Home() {
     redirect("/login");
   }
 
+  const shifts = await getComputedShifts(user.id);
+
   return (
-    <main className="flex min-h-[60vh] flex-col items-center justify-center gap-6 text-center">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle>Velkommen tilbake, {user.email}!</CardTitle>
-        </CardHeader>
-      </Card>
+    <main className="flex min-h-[60vh] flex-col gap-6 px-4">
+      <HomeContent shifts={shifts} />
     </main>
   );
 }
