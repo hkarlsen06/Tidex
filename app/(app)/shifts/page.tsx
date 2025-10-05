@@ -5,6 +5,7 @@ import { getComputedShifts } from "./_data/getShifts";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { ShiftWithComputations } from "@/lib/payroll";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/app/Card";
+import { MonthlyEarningsCalendar } from "./_components/MonthlyEarningsCalendar";
 
 type WeekGroup = {
   id: string;
@@ -78,6 +79,7 @@ export default async function ShiftsPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-10">
+      <MonthlyEarningsCalendar shifts={shifts} />
       {grouped.length === 0 ? (
         <Card className="text-center">
           <CardHeader>

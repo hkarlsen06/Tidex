@@ -32,6 +32,8 @@ export function ShiftsCalendar({
   const CustomDay = React.useCallback(
     (props: DayProps) => {
       const { date, ...buttonProps } = props;
+      if (!date) return null;
+
       const iso = toISODate(date);
       const earnings = earningsByDate[iso];
       const hours = hoursByDate[iso];
