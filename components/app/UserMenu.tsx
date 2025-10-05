@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { ThemeToggle } from "./ThemeToggle";
 
 export function UserMenu({
   displayName,
@@ -43,10 +44,10 @@ export function UserMenu({
           if (e.key === "Escape") setOpen(false);
           if (e.key === "ArrowDown") setOpen(true);
         }}
-        className="flex items-center gap-3 rounded-full bg-slate-800/80 px-3 py-1 shadow-inner focus:outline-none focus:ring-2 focus:ring-slate-400/40"
+        className="flex items-center gap-3 rounded-full bg-surface-secondary/80 px-3 py-1 shadow-inner focus:outline-none focus:ring-2 focus:ring-border"
       >
-        <span className="text-sm font-medium text-slate-200">{displayName}</span>
-        <span className="relative inline-flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-slate-700 text-sm font-semibold uppercase text-slate-300">
+        <span className="text-sm font-medium text-text-primary">{displayName}</span>
+        <span className="relative inline-flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-surface-secondary text-sm font-semibold uppercase text-text-primary">
           {avatarUrl ? (
             <Image
               src={avatarUrl}
@@ -68,19 +69,20 @@ export function UserMenu({
           ref={menuRef}
           role="menu"
           aria-label="User menu"
-          className="absolute right-0 mt-2 w-48 overflow-hidden rounded-xl border border-slate-800 bg-slate-900/95 shadow-xl shadow-slate-950/40 backdrop-blur"
+          className="absolute right-0 mt-2 w-48 overflow-hidden rounded-xl border border-border-subtle bg-surface-primary/95 shadow-xl backdrop-blur dark:shadow-slate-950/40"
         >
           <Link
             href="/settings"
             role="menuitem"
-            className="block px-4 py-2 text-sm text-slate-200 hover:bg-slate-800/70"
+            className="block px-4 py-2 text-sm text-text-primary hover:bg-surface-secondary/70"
           >
             Profilinnstillinger
           </Link>
+          <ThemeToggle />
           <Link
             href="/logout"
             role="menuitem"
-            className="block px-4 py-2 text-sm text-red-300 hover:bg-red-900/30"
+            className="block px-4 py-2 text-sm text-red-400 hover:bg-red-500/20 dark:text-red-300 dark:hover:bg-red-900/30"
           >
             Logg ut
           </Link>

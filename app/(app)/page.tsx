@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { Card, CardHeader, CardTitle } from "@/components/app/Card";
 
 export default async function Home() {
   const supabase = await createSupabaseServerClient();
@@ -13,8 +14,12 @@ export default async function Home() {
   }
 
   return (
-    <main className="flex min-h-[60vh] flex-col items-center justify-center gap-6 text-center text-text-primary">
-      <h1>Velkommen tilbake, {user.email}!</h1>
+    <main className="flex min-h-[60vh] flex-col items-center justify-center gap-6 text-center">
+      <Card className="w-full max-w-md">
+        <CardHeader>
+          <CardTitle>Velkommen tilbake, {user.email}!</CardTitle>
+        </CardHeader>
+      </Card>
     </main>
   );
 }

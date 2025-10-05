@@ -1,4 +1,5 @@
 import { ShiftWithComputations } from "@/lib/payroll";
+import { Card, CardHeader, CardContent } from "@/components/app/Card";
 
 type ShiftCardProps = {
   shift: ShiftWithComputations;
@@ -56,8 +57,8 @@ export function ShiftCard({ shift }: ShiftCardProps) {
   const isWeekend = dayName === "lørdag" || dayName === "søndag";
 
   return (
-    <article className="flex w-full flex-col gap-6 rounded-[28px] bg-gradient-to-br from-surface-secondary/70 via-surface-primary/80 to-background-secondary/60 px-6 py-5 text-text-primary shadow-lg shadow-black/30">
-      <header className="flex items-start justify-between gap-4">
+    <Card className="rounded-[28px]">
+      <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0 pb-3">
         <div className="space-y-1">
           <p className="text-lg font-medium capitalize text-text-primary">
             {dateLabel}
@@ -91,8 +92,8 @@ export function ShiftCard({ shift }: ShiftCardProps) {
           </p>
           <p className="text-xs">{breakdown}</p>
         </div>
-      </header>
-    </article>
+      </CardHeader>
+    </Card>
   );
 }
 

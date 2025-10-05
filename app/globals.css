@@ -57,6 +57,19 @@ a {
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
     --radius: 0.5rem;
+
+    --surface-primary: 240 10% 96%;
+    --surface-secondary: 240 10% 93%;
+    --background-secondary: 240 10% 98%;
+    --text-primary: 222.2 84% 4.9%;
+    --text-secondary: 215.4 16.3% 46.9%;
+    --text-muted: 215 20.2% 65.1%;
+    --text-inverse: 210 40% 98%;
+    --border-subtle: 214.3 31.8% 91.4%;
+    --brand-gradientStart: 199 89% 48%;
+    --brand-gradientMid: 189 94% 43%;
+    --brand-gradientEnd: 192 91% 36%;
+    --brand-highlight: 188 86% 53%;
   }
   .dark {
     --background: 222.2 84% 4.9%;
@@ -83,6 +96,19 @@ a {
     --chart-3: 30 80% 55%;
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
+
+    --surface-primary: 220 49% 8%;
+    --surface-secondary: 221 39% 11%;
+    --background-secondary: 222.2 84% 4.9%;
+    --text-primary: 210 40% 98%;
+    --text-secondary: 214 32% 91%;
+    --text-muted: 215 20% 65%;
+    --text-inverse: 222 47% 11%;
+    --border-subtle: 217.2 32.6% 17.5%;
+    --brand-gradientStart: 199 89% 48%;
+    --brand-gradientMid: 189 94% 43%;
+    --brand-gradientEnd: 192 91% 36%;
+    --brand-highlight: 188 86% 53%;
   }
 }
 

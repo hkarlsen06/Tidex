@@ -22,19 +22,19 @@ components/
 List all available shadcn components:
 
 ```bash
-pnpm dlx shadcn@latest add
+npm dlx shadcn@latest add
 ```
 
 Add any shadcn components you need:
 
 ```bash
-pnpm dlx shadcn@latest add <component-name> [more-components...]
+npm dlx shadcn@latest add <component-name> [more-components...]
 ```
 
 Example:
 
 ```bash
-pnpm dlx shadcn@latest add button input dialog
+npm dlx shadcn@latest add button input dialog
 ```
 
 Tailwind setup (already done):

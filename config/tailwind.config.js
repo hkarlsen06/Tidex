@@ -8,23 +8,29 @@ module.exports = {
   theme: {
   	extend: {
   		colors: {
-  			background: 'hsl(var(--background))',
+  			background: {
+  				DEFAULT: 'hsl(var(--background))',
+  				secondary: 'hsl(var(--background-secondary))'
+  			},
   			surface: {
-  				primary: 'hsl(220 49% 8%)',
-  				secondary: 'hsl(221 39% 11%)'
+  				primary: 'hsl(var(--surface-primary))',
+  				secondary: 'hsl(var(--surface-secondary))'
   			},
   			text: {
-  				primary: 'hsl(210 40% 98%)',
-  				secondary: 'hsl(214 32% 91%)',
-  				muted: 'hsl(215 20% 65%)',
-  				inverse: 'hsl(222 47% 11%)'
+  				primary: 'hsl(var(--text-primary))',
+  				secondary: 'hsl(var(--text-secondary))',
+  				muted: 'hsl(var(--text-muted))',
+  				inverse: 'hsl(var(--text-inverse))'
   			},
-  			border: 'hsl(var(--border))',
+  			border: {
+  				DEFAULT: 'hsl(var(--border))',
+  				subtle: 'hsl(var(--border-subtle))'
+  			},
   			brand: {
-  				gradientStart: 'hsl(199 89% 48%)',
-  				gradientMid: 'hsl(189 94% 43%)',
-  				gradientEnd: 'hsl(192 91% 36%)',
-  				highlight: 'hsl(188 86% 53%)'
+  				gradientStart: 'hsl(var(--brand-gradientStart))',
+  				gradientMid: 'hsl(var(--brand-gradientMid))',
+  				gradientEnd: 'hsl(var(--brand-gradientEnd))',
+  				highlight: 'hsl(var(--brand-highlight))'
   			},
   			foreground: 'hsl(var(--foreground))',
   			card: {
