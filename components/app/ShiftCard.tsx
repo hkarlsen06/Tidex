@@ -58,7 +58,7 @@ export function ShiftCard({ shift }: ShiftCardProps) {
 
   return (
     <Card className="rounded-[28px]">
-      <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0 pb-3">
+      <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0 py-6">
         <div className="space-y-1">
           <p className="text-lg font-medium capitalize text-text-primary">
             {dateLabel}
@@ -68,7 +68,7 @@ export function ShiftCard({ shift }: ShiftCardProps) {
             </span>
           </p>
           <div className="flex items-center gap-3 text-sm text-text-secondary">
-            <span className="inline-flex items-center gap-1 rounded-full bg-surface-secondary/70 px-3 py-1 text-text-primary">
+            <span className="inline-flex items-center gap-1 text-text-primary">
               <svg
                 aria-hidden="true"
                 className="h-4 w-4 text-text-muted"

@@ -91,7 +91,7 @@ export default async function ShiftsPage() {
         <div className="flex flex-col gap-8">
           {grouped.map((group) => (
             <section key={group.id} className="space-y-4">
-              <Card className="rounded-[28px]">
+              <Card className="rounded-[28px] border-0">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 py-3">
                   <div className="flex items-center gap-2 font-medium text-text-primary">
                     <span>{group.label}</span>
