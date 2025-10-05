@@ -15,9 +15,6 @@ export default async function Home() {
   return (
     <main className="flex min-h-[60vh] flex-col items-center justify-center gap-6 text-center text-text-primary">
       <h1>Velkommen tilbake, {user.email}!</h1>
-      <p className="max-w-xl">
-        Naviger til skiftoversikten for å se dine registrerte skift med full lønnsberegning.
-      </p>
     </main>
   );
 }

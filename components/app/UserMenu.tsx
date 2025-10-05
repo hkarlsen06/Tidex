@@ -75,14 +75,14 @@ export function UserMenu({
             role="menuitem"
             className="block px-4 py-2 text-sm text-slate-200 hover:bg-slate-800/70"
           >
-            Profile settings
+            Profilinnstillinger
           </Link>
           <Link
             href="/logout"
             role="menuitem"
             className="block px-4 py-2 text-sm text-red-300 hover:bg-red-900/30"
           >
-            Log out
+            Logg ut
           </Link>
         </div>
       )}
