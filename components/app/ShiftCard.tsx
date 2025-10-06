@@ -16,19 +16,21 @@ const hoursFormatter = new Intl.NumberFormat("nb-NO", {
 });
 
 const dayFormatter = new Intl.DateTimeFormat("nb-NO", {
-  weekday: "long",
+  weekday: "short",
 });
 
 const dateFormatter = new Intl.DateTimeFormat("nb-NO", {
-  day: "numeric",
+  day: "2-digit",
   month: "long",
 });
 
 function formatDateParts(date: string) {
   const parsed = new Date(`${date}T00:00:00Z`);
+  const weekday = parsed.getUTCDay();
   return {
     dayName: dayFormatter.format(parsed),
     dateLabel: dateFormatter.format(parsed),
+    isWeekend: weekday === 0 || weekday === 6,
   };
 }
 
@@ -50,20 +52,19 @@ function formatPlainAmount(value: number) {
 
 export function ShiftCard({ shift }: ShiftCardProps) {
   const { computed } = shift;
-  const { dayName, dateLabel } = formatDateParts(shift.shift_date);
+  const { dayName, dateLabel, isWeekend } = formatDateParts(shift.shift_date);
   const { basePay, bonusPay, gross, paidHours } = computed;
 
   const breakdown = `${formatPlainAmount(basePay)}${bonusPay > 0 ? ` + ${formatPlainAmount(bonusPay)}` : ""}`;
-  const isWeekend = dayName === "lørdag" || dayName === "søndag";
 
   return (
     <Card className="rounded-3xl">
       <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0 py-6">
         <div className="space-y-1">
-          <p className="text-lg font-medium capitalize text-text-primary">
+          <p className="text-lg font-medium text-text-primary">
             {dateLabel}
             <span className="text-text-muted"> · </span>
-            <span className={`capitalize ${isWeekend ? "text-brand-highlight" : "text-text-secondary"}`}>
+            <span className={isWeekend ? "text-brand-highlight" : "text-text-secondary"}>
               {dayName}
             </span>
           </p>

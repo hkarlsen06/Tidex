@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useMemo } from "react";
 import { IconChevronLeft, IconChevronRight } from "@tabler/icons-react";
 import { ShiftsCalendar } from "@/components/app/ShiftsCalendar";
 import { Card, CardHeader, CardTitle } from "@/components/app/Card";
@@ -9,6 +9,8 @@ import type { ISODate, EarningsByDate } from "@/components/calendar/calendar.typ
 
 type MonthlyEarningsCalendarProps = {
   shifts: ShiftWithComputations[];
+  month: Date;
+  onMonthChange: (month: Date) => void;
 };
 
 function buildEarningsByDate(
@@ -56,9 +58,9 @@ function formatCurrency(value: number): string {
 
 export function MonthlyEarningsCalendar({
   shifts,
+  month,
+  onMonthChange,
 }: MonthlyEarningsCalendarProps) {
-  const [month, setMonth] = useState(new Date());
-
   const earningsByDate = useMemo(
     () => buildEarningsByDate(shifts, month),
     [shifts, month]
@@ -70,11 +72,11 @@ export function MonthlyEarningsCalendar({
   );
 
   const goToPreviousMonth = () => {
-    setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1));
+    onMonthChange(new Date(month.getFullYear(), month.getMonth() - 1, 1));
   };
 
   const goToNextMonth = () => {
-    setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1));
+    onMonthChange(new Date(month.getFullYear(), month.getMonth() + 1, 1));
   };
 
   return (
@@ -107,7 +109,7 @@ export function MonthlyEarningsCalendar({
           month={month}
           mode="money"
           earningsByDate={earningsByDate}
-          onMonthChange={setMonth}
+          onMonthChange={onMonthChange}
         />
       </div>
     </Card>
