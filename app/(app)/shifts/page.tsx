@@ -57,6 +57,11 @@ function groupByWeek(shifts: ShiftWithComputations[]): WeekGroup[] {
     group.totalGross += shift.computed.gross;
   }
 
+  // Sort shifts within each group by date (earliest first)
+  for (const group of groups) {
+    group.shifts.sort((a, b) => a.shift_date.localeCompare(b.shift_date));
+  }
+
   return groups;
 }
 

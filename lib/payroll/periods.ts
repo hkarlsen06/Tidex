@@ -5,6 +5,18 @@ const toMin = (hhmm: string) => {
   return h * 60 + m;
 };
 
+function resolveBonusRate(rule: BonusRule, baseRate: number): number {
+  // If 'rate' is specified, use it as fixed NOK per hour
+  if (rule.rate != null && !isNaN(rule.rate)) {
+    return rule.rate;
+  }
+  // If 'percent' is specified, calculate as percentage of base rate
+  if (rule.percent != null && !isNaN(rule.percent)) {
+    return (baseRate * rule.percent) / 100;
+  }
+  return 0;
+}
+
 export function buildWagePeriods(
   startHHMM: string,
   endHHMM: string,
@@ -44,7 +56,10 @@ export function buildWagePeriods(
       for (const base of [0, 24 * 60]) {
         const rf = toMin(r.from) + base;
         const rt = toMin(r.to) + base + 1;
-        if (a >= rf && b <= rt) bonus = Math.max(bonus, r.rate);
+        if (a >= rf && b <= rt) {
+          const bonusValue = resolveBonusRate(r, baseRate);
+          bonus = Math.max(bonus, bonusValue);
+        }
       }
     }
     out.push({ fromMin: a, toMin: b, baseRate, bonusRate: bonus, totalRate: baseRate + bonus });

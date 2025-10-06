@@ -15,11 +15,10 @@ export type UserSettings = {
   custom_wage?: number | null;
   current_wage_level?: number | null; // maps to preset table
   custom_bonuses?: { rules: BonusRule[] } | null;
-  break_policy?: BreakPolicy | null;
-  pause_deduction_enabled?: boolean | null;
-  pause_deduction_method?: BreakMethod | null;
-  pause_threshold_hours?: number | null;
-  pause_deduction_minutes?: number | null;
+  break_enabled?: boolean | null;          // Master switch for automatic break deductions
+  break_method?: BreakMethod | null;       // How to apply deduction (proportional, base_only, end_of_shift)
+  break_threshold_hours?: number | null;   // Minimum shift duration to trigger break (e.g., 5.5)
+  break_deduction_minutes?: number | null; // Amount to deduct (e.g., 30)
   audit_break_calculations?: boolean | null;
 };
 
@@ -27,14 +26,9 @@ export type BonusRule = {
   days: number[];   // 1-7 Mon..Sun
   from: HHMM;       // inclusive
   to: HHMM;         // inclusive
-  rate: number;     // NOK per hour supplement
+  rate?: number;    // Fixed NOK per hour supplement (e.g., 22, 45, 110)
+  percent?: number; // Percentage supplement (e.g., 50 for 50% bonus)
 };
-
-export type BreakPolicy =
-  | "fixed_0_5_over_5_5h"
-  | "proportional_across_periods"
-  | "from_base_rate"
-  | "none";
 
 export type BreakMethod = "proportional" | "base_only" | "end_of_shift" | "none";
 
@@ -48,7 +42,6 @@ export type WagePeriod = {
 
 export type BreakAudit = {
   method: BreakMethod;
-  policy: BreakPolicy;
   thresholdHours: number;
   deductedHours: number;
   notes?: string[];

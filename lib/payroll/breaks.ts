@@ -1,23 +1,16 @@
-import { BreakAudit, BreakMethod, BreakPolicy, WagePeriod } from "./types";
+import { BreakAudit, BreakMethod, WagePeriod } from "./types";
 
 export function applyBreakDeduction(
   periods: WagePeriod[],
-  policy: BreakPolicy,
   method: BreakMethod,
   thresholdHours: number,
   deductionHours: number
-): { periods: WagePeriod[]; audit: BreakAudit; paidHours: number } {
+): { periods: WagePeriod[]; audit: BreakAudit } {
   const totalMinutes = periods.reduce((s, p) => s + (p.toMin - p.fromMin), 0);
   const totalHours = totalMinutes / 60;
 
-  let toDeduct = 0;
-  if (policy === "fixed_0_5_over_5_5h" && totalHours > thresholdHours) {
-    toDeduct = Math.max(toDeduct, deductionHours || 0.5);
-  }
-  // "none" keeps toDeduct at 0. Other named policies can map to same logic for now.
-
-  let paidMinutes = totalMinutes - Math.round(toDeduct * 60);
-  if (paidMinutes < 0) paidMinutes = 0;
+  // Only deduct if shift exceeds threshold
+  let toDeduct = totalHours > thresholdHours ? deductionHours : 0;
 
   let adjusted = periods.map(p => ({ ...p }));
   const notes: string[] = [];
@@ -70,10 +63,9 @@ export function applyBreakDeduction(
 
   const audit: BreakAudit = {
     method,
-    policy,
     thresholdHours,
     deductedHours: toDeduct,
     notes,
   };
-  return { periods: adjusted, audit, paidHours: paidMinutes / 60 };
+  return { periods: adjusted, audit };
 }

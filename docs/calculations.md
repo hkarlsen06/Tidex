@@ -35,20 +35,10 @@ export type UserSettings = {
   current_wage_level?: number | null; // key into preset table
   custom_bonuses?: { rules: BonusRule[] } | null;
 
-  break_policy?:
-    | "fixed_0_5_over_5_5h"
-    | "proportional_across_periods"
-    | "from_base_rate"
-    | "none";
-  pause_deduction_enabled?: boolean | null;
-  pause_deduction_method?:
-    | "proportional"
-    | "base_only"
-    | "end_of_shift"
-    | "none"
-    | null;
-  pause_threshold_hours?: number | null; // e.g. 5.5
-  pause_deduction_minutes?: number | null; // e.g. 30
+  break_enabled?: boolean | null;          // Master switch for automatic breaks
+  break_method?: "proportional" | "base_only" | "end_of_shift" | "none" | null;
+  break_threshold_hours?: number | null;   // e.g. 5.5
+  break_deduction_minutes?: number | null; // e.g. 30
 };
 
 export type WagePeriod = {
@@ -68,10 +58,9 @@ export type ShiftComputed = {
   gross: number; // NOK
   wagePeriods: WagePeriod[]; // split by bonus changes, after deductions
   breakAudit: {
-    method: UserSettings["pause_deduction_method"];
-    policy: NonNullable<UserSettings["break_policy"]>;
+    method: UserSettings["break_method"];
     thresholdHours: number;
-    deductedHours: number; // policy + manual
+    deductedHours: number; // automatic + manual
     notes?: string[];
   };
 };
@@ -94,9 +83,9 @@ export type ShiftComputed = {
    - Result: array of contiguous `WagePeriod` segments.
 3. **Compute raw duration**
    - `durationHours = sum((toMin - fromMin))/60`, rounded to 2 decimals.
-4. **Apply break policy deduction**
-   - `applyBreakDeduction(periods, policy, method, threshold, deductionHours)`
-   - If `policy === fixed_0_5_over_5_5h` and `duration > threshold` → deduct `pause_deduction_minutes/60` hours.
+4. **Apply automatic break deduction**
+   - `applyBreakDeduction(periods, method, threshold, deductionHours)`
+   - If `break_enabled` and `duration > threshold` → deduct `break_deduction_minutes/60` hours.
    - Deduction method:
      - `end_of_shift`: cut from tail periods.
      - `proportional`: cut across all periods by share of minutes.

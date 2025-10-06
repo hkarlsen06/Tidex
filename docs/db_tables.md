@@ -34,7 +34,7 @@ Lookup file. Keep updated when new columns are added.
 - **custom_wage** → `numeric`
 - **current_wage_level** → `integer`
 - **custom_bonuses** → `jsonb`
-- **pause_deduction** → `boolean`
+- **pause_deduction** → `boolean` (deprecated, use `break_enabled`)
 - **created_at** → `timestamp with time zone`
 - **updated_at** → `timestamp with time zone`
 - **last_active** → `timestamp with time zone`
@@ -45,12 +45,11 @@ Lookup file. Keep updated when new columns are added.
 - **tax_deduction_enabled** → `boolean`
 - **tax_percentage** → `numeric`
 - **payroll_day** → `integer`
-- **pause_deduction_enabled** → `boolean`
-- **pause_deduction_method** → `text`
-- **pause_threshold_hours** → `numeric`
-- **pause_deduction_minutes** → `integer`
+- **break_enabled** → `boolean` - Master switch for automatic break deductions
+- **break_method** → `text` - How to apply deduction: 'proportional', 'base_only', 'end_of_shift', 'none'
+- **break_threshold_hours** → `numeric` - Minimum shift duration to trigger break (e.g., 5.5)
+- **break_deduction_minutes** → `integer` - Amount to deduct (e.g., 30)
 - **audit_break_calculations** → `boolean`
-- **break_policy** → `text`
 - **theme** → `text`
 - **show_employee_tab** → `boolean`
 

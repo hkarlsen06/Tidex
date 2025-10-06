@@ -1,8 +1,7 @@
 import { buildWagePeriods } from "./periods";
 import { applyBreakDeduction } from "./breaks";
 import {
-  BonusRule, ShiftComputed, ShiftRow, UserSettings, WagePeriod,
-  BreakPolicy, BreakMethod
+  BonusRule, ShiftComputed, ShiftRow, UserSettings, WagePeriod, BreakMethod
 } from "./types";
 
 const WEEKDAYS = [7,1,2,3,4,5,6]; // JS getDay(): 0=Sun → 7, then 1..6 Mon..Sat
@@ -12,11 +11,10 @@ const PRESET_WAGE_RATES: Record<string, number> = {
 };
 
 const defaultSettings = {
-  break_policy: "fixed_0_5_over_5_5h" as BreakPolicy,
-  pause_deduction_enabled: true,
-  pause_deduction_method: "proportional" as BreakMethod,
-  pause_threshold_hours: 5.5,
-  pause_deduction_minutes: 30,
+  break_enabled: true,
+  break_method: "proportional" as BreakMethod,
+  break_threshold_hours: 5.5,
+  break_deduction_minutes: 30,
 };
 
 function resolveBaseRate(s: ShiftRow, settings: UserSettings): number {
@@ -42,8 +40,9 @@ export function computeShift(
   const weekday = WEEKDAYS[date.getUTCDay()]; // 1-7
 
   const baseRate = resolveBaseRate(s, settings);
-  const rules: BonusRule[] =
-    settings.custom_bonuses?.rules?.length ? settings.custom_bonuses.rules : presetRules;
+  const rules: BonusRule[] = settings.use_preset
+    ? presetRules
+    : (settings.custom_bonuses?.rules?.length ? settings.custom_bonuses.rules : presetRules);
 
   let periods: WagePeriod[] = buildWagePeriods(st, et, weekday, baseRate, rules);
 
@@ -54,30 +53,30 @@ export function computeShift(
   // manual pause (user-entered), treated as additional deduction
   const manualPauseHours = Math.max(0, s.pause_duration_hours ?? 0);
 
-  const policy = settings.break_policy ?? defaultSettings.break_policy;
-  const method = settings.pause_deduction_method ?? defaultSettings.pause_deduction_method;
-  const threshold = settings.pause_threshold_hours ?? defaultSettings.pause_threshold_hours;
-  const policyMinutes = settings.pause_deduction_enabled === false ? 0 : (settings.pause_deduction_minutes ?? defaultSettings.pause_deduction_minutes);
-  const policyHours = policyMinutes / 60;
+  // Resolve break settings
+  const breakEnabled = settings.break_enabled ?? defaultSettings.break_enabled;
+  const method = settings.break_method ?? defaultSettings.break_method;
+  const threshold = settings.break_threshold_hours ?? defaultSettings.break_threshold_hours;
+  const breakMinutes = breakEnabled ? (settings.break_deduction_minutes ?? defaultSettings.break_deduction_minutes) : 0;
+  const breakHours = breakMinutes / 60;
 
-  // apply policy deduction first
-  const afterPolicy = applyBreakDeduction(periods, policy, method, threshold, policyHours);
-  periods = afterPolicy.periods;
+  // Apply automatic break deduction first
+  const afterBreak = applyBreakDeduction(periods, method, threshold, breakHours);
+  periods = afterBreak.periods;
 
-  // then apply manual pause by subtracting from tail for determinism
-  let remaining = Math.round(manualPauseHours * 60);
-  for (let i = periods.length - 1; i >= 0 && remaining > 0; i--) {
-    const span = periods[i].toMin - periods[i].fromMin;
-    const cut = Math.min(span, remaining);
-    periods[i].toMin -= cut;
-    remaining -= cut;
+  // Then apply manual pause by subtracting from tail for determinism
+  if (manualPauseHours > 0) {
+    let remaining = Math.round(manualPauseHours * 60);
+    for (let i = periods.length - 1; i >= 0 && remaining > 0; i--) {
+      const span = periods[i].toMin - periods[i].fromMin;
+      const cut = Math.min(span, remaining);
+      periods[i].toMin -= cut;
+      remaining -= cut;
+    }
+    periods = periods.filter(p => p.toMin > p.fromMin);
   }
-  periods = periods.filter(p => p.toMin > p.fromMin);
 
-  const paidMinutes = Math.max(
-    0,
-    periods.reduce((sum, p) => sum + (p.toMin - p.fromMin), 0)
-  );
+  const paidMinutes = periods.reduce((sum, p) => sum + (p.toMin - p.fromMin), 0);
   const paidHours = +(paidMinutes / 60).toFixed(2);
 
   // pay
@@ -100,9 +99,12 @@ export function computeShift(
     gross,
     wagePeriods: periods,
     breakAudit: {
-      ...afterPolicy.audit,
-      deductedHours: +(afterPolicy.audit.deductedHours + manualPauseHours).toFixed(2),
-      notes: [...(afterPolicy.audit.notes || []), manualPauseHours > 0 ? "Manual pause applied at end of shift" : undefined].filter(Boolean) as string[],
+      ...afterBreak.audit,
+      deductedHours: +(afterBreak.audit.deductedHours + manualPauseHours).toFixed(2),
+      notes: [
+        ...(afterBreak.audit.notes || []),
+        ...(manualPauseHours > 0 ? ["Manual pause applied at end of shift"] : [])
+      ],
     }
   };
 }

@@ -9,12 +9,9 @@ import {
 } from "@/lib/payroll";
 
 const PRESET_RULES: BonusRule[] = [
-  { days: [1,2,3,4,5], from: "18:00", to: "21:00", rate: 22 },
-  { days: [1,2,3,4,5], from: "21:00", to: "23:59", rate: 45 },
-  { days: [6], from: "13:00", to: "15:00", rate: 45 },
-  { days: [6], from: "15:00", to: "18:00", rate: 55 },
-  { days: [6], from: "18:00", to: "23:59", rate: 110 },
-  { days: [7], from: "00:00", to: "23:59", rate: 115 },
+  { days: [1, 2, 3, 4, 5], from: "18:00", to: "06:00", rate: 15.5 },
+  { days: [6], from: "00:00", to: "24:00", rate: 15.5 },
+  { days: [7], from: "00:00", to: "24:00", rate: 31.0 },
 ];
 
 export async function getComputedShifts(
