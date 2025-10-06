@@ -1,11 +1,9 @@
+/* eslint-disable @next/next/no-page-custom-font */
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { Inter } from "next/font/google";
 
 import "./globals.css";
 import "react-day-picker/style.css";
-
-const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "next-kkarlsen.dev",
@@ -22,6 +20,16 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link
+          rel="preconnect"
+          href="https://fonts.gstatic.com"
+          crossOrigin="anonymous"
+        />
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        />
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -33,7 +41,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           }}
         />
       </head>
-      <body className={`${inter.className} bg-background text-foreground antialiased`}>
+      <body className="bg-background text-foreground antialiased">
         {children}
       </body>
     </html>

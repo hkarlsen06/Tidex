@@ -104,6 +104,17 @@ module.exports = {
   			'app': '0 10px 40px -10px hsl(var(--shadow-color))',
   			'app-lg': '0 20px 60px -15px hsl(var(--shadow-color-strong))',
   			'app-inner': 'inset 0 2px 4px 0 hsl(var(--shadow-color))'
+  		},
+  		fontFamily: {
+  			sans: [
+  				'Inter',
+  				'ui-sans-serif',
+  				'system-ui',
+  				'-apple-system',
+  				'BlinkMacSystemFont',
+  				'Segoe UI',
+  				'sans-serif'
+  			]
   		}
   	}
   },
