@@ -34,7 +34,12 @@ export function buildWagePeriods(
   for (const r of rules) {
     if (!r.days.includes(weekday)) continue;
     const rf = toMin(r.from);
-    const rt = toMin(r.to) + 1; // inclusive to → make exclusive
+    let rt = toMin(r.to);
+    // Handle cross-midnight rules: if to < from, add 24h to rt
+    if (rt < rf) {
+      rt += 24 * 60;
+    }
+    rt += 1; // inclusive to → make exclusive
     // consider both same-day and next-day windows
     for (const base of [0, 24 * 60]) {
       const a = rf + base, b = rt + base;
@@ -55,7 +60,12 @@ export function buildWagePeriods(
       if (!r.days.includes(weekday)) continue;
       for (const base of [0, 24 * 60]) {
         const rf = toMin(r.from) + base;
-        const rt = toMin(r.to) + base + 1;
+        let rt = toMin(r.to) + base;
+        // Handle cross-midnight rules: if to < from, add 24h to rt
+        if (toMin(r.to) < toMin(r.from)) {
+          rt += 24 * 60;
+        }
+        rt += 1; // Make inclusive 'to' exclusive
         if (a >= rf && b <= rt) {
           const bonusValue = resolveBonusRate(r, baseRate);
           bonus = Math.max(bonus, bonusValue);
