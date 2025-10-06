@@ -14,10 +14,6 @@ const numberFormatter = new Intl.NumberFormat("nb-NO", {
   maximumFractionDigits: 0,
 });
 
-const monthFormatter = new Intl.DateTimeFormat("nb-NO", {
-  month: "long",
-});
-
 function formatCurrency(value: number): string {
   return `${numberFormatter.format(Math.round(value))} kr`;
 }
@@ -27,7 +23,6 @@ function calculateMonthData(
   month: Date
 ): {
   total: string;
-  monthLabel: string;
   percentageChange?: number;
   tillegg: string;
 } {
@@ -80,13 +75,8 @@ function calculateMonthData(
     );
   }
 
-  const monthLabel =
-    monthFormatter.format(month).charAt(0).toUpperCase() +
-    monthFormatter.format(month).slice(1);
-
   return {
     total: formatCurrency(gross),
-    monthLabel,
     percentageChange,
     tillegg: formatCurrency(bonusPay),
   };
@@ -112,7 +102,6 @@ export function HomeContent({ shifts }: HomeContentProps) {
     <div className="flex flex-col gap-6">
       <TotalCard
         total={data.total}
-        monthLabel={data.monthLabel}
         percentageChange={data.percentageChange}
         tillegg={data.tillegg}
         className="mt-8"

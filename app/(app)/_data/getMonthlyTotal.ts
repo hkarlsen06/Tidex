@@ -14,16 +14,11 @@ function formatCurrency(value: number): string {
   return `${numberFormatter.format(Math.round(value))} kr`;
 }
 
-const monthFormatter = new Intl.DateTimeFormat("nb-NO", {
-  month: "long",
-});
-
 /**
  * Get the current month's total gross earnings for a user with comparison to last month
  */
 export async function getMonthlyTotal(userId: string): Promise<{
   total: string;
-  monthLabel: string;
   percentageChange?: number;
   tillegg: string;
   gross: number;
@@ -36,8 +31,6 @@ export async function getMonthlyTotal(userId: string): Promise<{
   const now = new Date();
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth() + 1; // 1-based month
-  const monthLabel = monthFormatter.format(now).charAt(0).toUpperCase() + monthFormatter.format(now).slice(1);
-
   // Filter shifts for current month
   const currentMonthShifts = shifts.filter((shift) => {
     const shiftDate = new Date(shift.shift_date + "T00:00:00Z");
@@ -85,7 +78,6 @@ export async function getMonthlyTotal(userId: string): Promise<{
 
   return {
     total: formatCurrency(gross),
-    monthLabel,
     percentageChange,
     tillegg: formatCurrency(bonusPay),
     gross,

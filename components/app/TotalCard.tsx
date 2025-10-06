@@ -4,7 +4,6 @@ import { Card, CardContent } from '@appui/Card';
 
 interface TotalCardProps {
   total: string;
-  monthLabel?: string;
   percentageChange?: number;
   tillegg?: string;
   isLoading?: boolean;
@@ -14,7 +13,6 @@ interface TotalCardProps {
 
 export const TotalCard: React.FC<TotalCardProps> = ({
   total,
-  monthLabel,
   percentageChange,
   tillegg,
   isLoading = false,
@@ -63,21 +61,15 @@ export const TotalCard: React.FC<TotalCardProps> = ({
           </div>
         ) : (
           <div className="text-center">
-            {monthLabel && (
+            {hasChange && (
               <div className="flex items-center justify-center gap-2">
-                <span className="font-medium text-text-secondary">{monthLabel}</span>
-                {hasChange && (
-                  <>
-                    <ArrowIcon
-                      className={`h-4 w-4 ${isPositive ? 'text-success' : 'text-error'}`}
-                      stroke={2}
-                    />
-                    <span className={`font-semibold ${isPositive ? 'text-success' : 'text-error'}`}>
-                      {isPositive ? '+' : ''}
-                      {percentageChange}%
-                    </span>
-                  </>
-                )}
+                <ArrowIcon
+                  className={`h-4 w-4 ${isPositive ? 'text-success' : 'text-error'}`}
+                  stroke={2}
+                />
+                <span className={`font-semibold ${isPositive ? 'text-success' : 'text-error'}`}>
+                  {Math.abs(percentageChange as number)}%
+                </span>
               </div>
             )}
             <div className="mt-2 text-6xl font-bold text-brand-highlight">{total}</div>
