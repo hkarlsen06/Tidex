@@ -28,18 +28,12 @@ export function applyBreakDeduction(
       }
       notes.push("Deducted at end of shift");
     } else if (method === "proportional") {
-      const proportionalCuts = adjusted.map(p => {
-        const span = p.toMin - p.fromMin;
-        return Math.floor((span / totalMinutes) * Math.round(toDeduct * 60));
-      });
-      // fix rounding by consuming remainder from the end
-      let used = proportionalCuts.reduce((s, v) => s + v, 0);
-      let rem = Math.round(toDeduct * 60) - used;
-      for (let i = adjusted.length - 1; i >= 0 && rem > 0; i--) {
-        proportionalCuts[i] += 1; rem -= 1;
-      }
+      // Deduct exact proportional fractions (not rounded to minutes)
       for (let i = 0; i < adjusted.length; i++) {
-        adjusted[i].toMin -= Math.min(adjusted[i].toMin - adjusted[i].fromMin, proportionalCuts[i]);
+        const span = adjusted[i].toMin - adjusted[i].fromMin;
+        const proportion = span / totalMinutes;
+        const cutMinutes = proportion * toDeduct * 60;
+        adjusted[i].toMin -= cutMinutes;
       }
       notes.push("Deducted proportionally across periods");
     } else if (method === "base_only") {

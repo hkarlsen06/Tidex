@@ -50,31 +50,16 @@ export function computeShift(
   const totalMinutes = periods.reduce((sum, p) => sum + (p.toMin - p.fromMin), 0);
   const durationHours = +(totalMinutes / 60).toFixed(2);
 
-  // manual pause (user-entered), treated as additional deduction
-  const manualPauseHours = Math.max(0, s.pause_duration_hours ?? 0);
-
-  // Resolve break settings
-  const breakEnabled = settings.break_enabled ?? defaultSettings.break_enabled;
-  const method = settings.break_method ?? defaultSettings.break_method;
-  const threshold = settings.break_threshold_hours ?? defaultSettings.break_threshold_hours;
-  const breakMinutes = breakEnabled ? (settings.break_deduction_minutes ?? defaultSettings.break_deduction_minutes) : 0;
+  // Resolve break settings - support both old and new field names
+  const breakEnabled = settings.break_enabled ?? settings.pause_deduction_enabled ?? defaultSettings.break_enabled;
+  const method = settings.break_method ?? settings.pause_deduction_method ?? defaultSettings.break_method;
+  const threshold = settings.break_threshold_hours ?? settings.pause_threshold_hours ?? defaultSettings.break_threshold_hours;
+  const breakMinutes = breakEnabled ? (settings.break_deduction_minutes ?? settings.pause_deduction_minutes ?? defaultSettings.break_deduction_minutes) : 0;
   const breakHours = breakMinutes / 60;
 
-  // Apply automatic break deduction first
+  // Apply automatic break deduction
   const afterBreak = applyBreakDeduction(periods, method, threshold, breakHours);
   periods = afterBreak.periods;
-
-  // Then apply manual pause by subtracting from tail for determinism
-  if (manualPauseHours > 0) {
-    let remaining = Math.round(manualPauseHours * 60);
-    for (let i = periods.length - 1; i >= 0 && remaining > 0; i--) {
-      const span = periods[i].toMin - periods[i].fromMin;
-      const cut = Math.min(span, remaining);
-      periods[i].toMin -= cut;
-      remaining -= cut;
-    }
-    periods = periods.filter(p => p.toMin > p.fromMin);
-  }
 
   const paidMinutes = periods.reduce((sum, p) => sum + (p.toMin - p.fromMin), 0);
   const paidHours = +(paidMinutes / 60).toFixed(2);
@@ -82,9 +67,11 @@ export function computeShift(
   // pay
   let basePay = 0, bonusPay = 0;
   for (const p of periods) {
-    const h = (p.toMin - p.fromMin) / 60;
-    basePay += h * p.baseRate;
-    bonusPay += h * p.bonusRate;
+    // Round hours to 3 decimals to match old codebase behavior
+    const h = Math.round((p.toMin - p.fromMin) / 60 * 1000) / 1000;
+    // Round each period's contribution to cents
+    basePay += Math.round(h * p.baseRate * 100) / 100;
+    bonusPay += Math.round(h * p.bonusRate * 100) / 100;
   }
   basePay = +basePay.toFixed(2);
   bonusPay = +bonusPay.toFixed(2);
@@ -98,13 +85,6 @@ export function computeShift(
     bonusPay,
     gross,
     wagePeriods: periods,
-    breakAudit: {
-      ...afterBreak.audit,
-      deductedHours: +(afterBreak.audit.deductedHours + manualPauseHours).toFixed(2),
-      notes: [
-        ...(afterBreak.audit.notes || []),
-        ...(manualPauseHours > 0 ? ["Manual pause applied at end of shift"] : [])
-      ],
-    }
+    breakAudit: afterBreak.audit
   };
 }

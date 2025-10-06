@@ -39,13 +39,13 @@ export function buildWagePeriods(
     if (rt < rf) {
       rt += 24 * 60;
     }
-    rt += 1; // inclusive to → make exclusive
+    // rt is inclusive, no need to add 1 since bonus matching uses inclusive logic
     // consider both same-day and next-day windows
     for (const base of [0, 24 * 60]) {
       const a = rf + base, b = rt + base;
-      if (b <= start || a >= end) continue;
-      points.add(Math.max(a, start));
-      points.add(Math.min(b, end));
+      if (b < start || a > end) continue;
+      if (a > start && a < end) points.add(a);
+      if (b > start && b < end) points.add(b);
     }
   }
 
@@ -65,8 +65,11 @@ export function buildWagePeriods(
         if (toMin(r.to) < toMin(r.from)) {
           rt += 24 * 60;
         }
-        rt += 1; // Make inclusive 'to' exclusive
-        if (a >= rf && b <= rt) {
+        // Check if period [a,b) is fully within rule [rf, rt] (rt is inclusive)
+        // Period [a,b) means from minute a (inclusive) to minute b (exclusive)
+        // So we need: a >= rf (period starts at or after rule starts)
+        //         and b-1 <= rt (period ends at or before rule ends, since b is exclusive)
+        if (a >= rf && b - 1 <= rt) {
           const bonusValue = resolveBonusRate(r, baseRate);
           bonus = Math.max(bonus, bonusValue);
         }
