@@ -125,7 +125,7 @@ export function ShiftsCalendar({
         weekday: "text-text-muted font-normal text-xs text-center py-2 uppercase",
         week: "grid grid-cols-7 gap-1 mb-1",
         day: "aspect-square p-0",
-        day_button: "w-full h-full rounded-lg hover:bg-surface-secondary transition-colors",
+        day_button: "w-full h-full rounded-lg hover:bg-surface-secondary transition-colors border border-border-subtle",
         outside: "opacity-40",
         today: "",
       }}
