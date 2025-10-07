@@ -22,6 +22,9 @@
     "react": "18.2.0",
     "react-day-picker": "^9.11.0",
     "react-dom": "18.2.0",
+    "autoprefixer": "^10.4.17",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.17",
     "tailwind-merge": "^3.3.1",
     "tailwindcss-animate": "^1.0.7"
   },
@@ -32,14 +35,12 @@
     "@types/node": "20.12.7",
     "@types/react": "18.2.61",
     "@types/react-dom": "18.2.19",
-    "autoprefixer": "^10.4.17",
     "eslint": "^9.14.0",
     "eslint-config-next": "^15.5.4",
     "glob": "^10.4.5",
-    "postcss": "^8.5.6",
     "rimraf": "^5.0.10",
     "supabase": "^2.48.3",
-    "tailwindcss": "^3.4.17",
+    
     "typescript": "5.4.4"
   },
   "engines": {
