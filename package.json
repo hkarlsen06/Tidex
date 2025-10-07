@@ -44,5 +44,6 @@
   },
   "engines": {
     "node": "v22.x"
-  }
+  },
+  "type": "module"
 }

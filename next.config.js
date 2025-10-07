@@ -1,2 +1,3 @@
-// root stub
-module.exports = require("./config/next.config.js");
+// root ESM stub
+import config from "./config/next.config.js";
+export default config;

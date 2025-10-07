@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { DayPicker, type DayContentProps } from "react-day-picker";
+import { DayPicker } from "react-day-picker";
 import {
   toISODate,
   formatNOKInt,
@@ -29,16 +29,18 @@ export function ShiftsCalendar({
   onDayClick,
   onMonthChange,
 }: ShiftsCalendarProps) {
-  const CustomDayContent = React.useCallback(
-    (props: DayContentProps) => {
-      const { date } = props;
+  const CustomDayButton = React.useCallback(
+    (props: any) => {
+      const { day, className, ...buttonProps } = props;
+      const date: Date = day.date;
       const iso = toISODate(date);
       const earnings = earningsByDate[iso];
       const hours = hoursByDate[iso];
       const employees = employeesByDate[iso] || [];
 
       return (
-        <div className="flex flex-col items-center justify-start gap-0.5 w-full h-full p-1">
+        <button {...buttonProps} className={className}>
+          <div className="flex flex-col items-center justify-start gap-0.5 w-full h-full p-1">
           <div className="text-sm font-semibold text-text-primary">
             {date.getDate()}
           </div>
@@ -77,7 +79,8 @@ export function ShiftsCalendar({
               )}
             </div>
           )}
-        </div>
+          </div>
+        </button>
       );
     },
     [mode, earningsByDate, hoursByDate, employeesByDate]
@@ -96,14 +99,13 @@ export function ShiftsCalendar({
 
   return (
     <DayPicker
-      mode="default"
       month={month}
       onMonthChange={onMonthChange}
       onDayClick={handleDayClick}
       weekStartsOn={1}
       showOutsideDays
       components={{
-        DayContent: CustomDayContent,
+        DayButton: CustomDayButton,
       }}
       classNames={{
         root: "w-full",

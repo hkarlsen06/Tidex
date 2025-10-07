@@ -20,7 +20,6 @@ export async function GET() {
     pause_duration_hours: 0,
     hourly_wage_snapshot: null,
     user_id: "test",
-    created_at: "",
   };
 
   const settings: UserSettings = {

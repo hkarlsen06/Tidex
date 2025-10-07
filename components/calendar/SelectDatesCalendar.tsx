@@ -39,6 +39,11 @@ export function SelectDatesCalendar({
       selected={selected}
       onSelect={(dates) => onSelectedChange(dates ?? [])}
       modifiers={modifiers}
+      modifiersClassNames={{
+        conflict: "bg-warning-subtle ring-1 ring-warning rounded-md",
+        hasShift:
+          "after:absolute after:bottom-1 after:left-1/2 after:-translate-x-1/2 after:h-1.5 after:w-1.5 after:rounded-full after:bg-info",
+      }}
       weekStartsOn={1}
       showWeekNumber
       showOutsideDays={!disabledOutsideMonth}
@@ -62,9 +67,6 @@ export function SelectDatesCalendar({
         day_outside: disabledOutsideMonth ? "opacity-50 pointer-events-none" : "opacity-50",
         day_disabled: "text-text-muted opacity-50",
         day_hidden: "invisible",
-        // Custom modifiers
-        day_conflict: "bg-warning-subtle ring-1 ring-warning rounded-md",
-        day_hasShift: "after:absolute after:bottom-1 after:left-1/2 after:-translate-x-1/2 after:h-1.5 after:w-1.5 after:rounded-full after:bg-info",
       }}
     />
   );

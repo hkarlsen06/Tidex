@@ -1,6 +1,8 @@
 // calendar.utils.ts
-export const toISODate = (d: Date): `${number}-${number}-${number}` =>
-  d.toISOString().slice(0, 10) as `${number}-${number}-${number}`;
+export type ISODate = `${number}-${number}-${number}`;
+
+export const toISODate = (d: Date): ISODate =>
+  d.toISOString().slice(0, 10) as ISODate;
 
 export const formatNOKInt = (n: number) =>
   new Intl.NumberFormat("nb-NO", { maximumFractionDigits: 0 }).format(n);
