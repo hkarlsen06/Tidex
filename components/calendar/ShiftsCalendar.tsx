@@ -19,6 +19,7 @@ export type ShiftsCalendarProps = {
   employeesByDate?: Record<ISODate, { name: string; color?: string }[]>;
   onDayClick?: (isoDate: ISODate, hasShifts: boolean) => void;
   onMonthChange?: (month: Date) => void;
+  weekNumberPosition?: "top-left" | "bottom-left";
 };
 
 export function ShiftsCalendar({
@@ -29,6 +30,7 @@ export function ShiftsCalendar({
   employeesByDate = {},
   onDayClick,
   onMonthChange,
+  weekNumberPosition = "bottom-left",
 }: ShiftsCalendarProps) {
   function getIsoWeek(date: Date) {
     const d = new Date(
@@ -61,13 +63,15 @@ export function ShiftsCalendar({
         >
           <div className="relative flex flex-col items-center justify-start gap-0.5 w-full h-full p-1">
           {isMonday && (
-            <span className="absolute left-1 top-1 text-[9px] leading-none text-text-muted">
+            <span className={`absolute left-1 text-[9px] leading-none text-text-muted ${
+              weekNumberPosition === "top-left" ? "top-1" : "bottom-1"
+            }`}>
               {new Intl.NumberFormat("nb-NO", { minimumIntegerDigits: 2 }).format(
                 week as number
               )}
             </span>
           )}
-          <div className="text-sm font-semibold text-text-primary">
+          <div className="w-full text-sm font-semibold text-text-primary text-right pr-1">
             {date.getDate()}
           </div>
           {mode === "money" && earnings !== undefined && (
@@ -76,7 +80,7 @@ export function ShiftsCalendar({
             </div>
           )}
           {mode === "hours" && hours && (
-            <div className="text-xs text-text-secondary leading-tight text-center">
+            <div className="text-[10px] text-text-secondary leading-tight text-center">
               <div>
                 {hours.start}
                 {hours.start && "-"}
@@ -109,7 +113,7 @@ export function ShiftsCalendar({
         </button>
       );
     },
-    [mode, earningsByDate, hoursByDate, employeesByDate]
+    [mode, earningsByDate, hoursByDate, employeesByDate, weekNumberPosition]
   );
 
   const handleDayClick = React.useCallback(

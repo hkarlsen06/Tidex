@@ -177,44 +177,44 @@ export default function AddShiftForm({ existingShifts }: Props) {
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 pb-24">
       <Card className="rounded-3xl border-border-subtle bg-surface-primary/80 shadow-app-lg">
         <CardHeader className="flex flex-col gap-4 space-y-0 pb-0">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="space-y-1">
-              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-highlight">
-                Skiftplanlegging
-              </span>
-              <CardTitle className="text-3xl font-semibold text-text-primary">
+          <div className="space-y-1">
+            <span className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-highlight">
+              Skiftplanlegging
+            </span>
+            <div className="flex items-center justify-between gap-3">
+              <CardTitle className="text-2xl sm:text-3xl font-semibold text-text-primary whitespace-nowrap">
                 Legg til skift
               </CardTitle>
-            </div>
-            <div className="inline-flex items-center gap-1 rounded-full border border-border-subtle bg-surface-secondary/80 p-1 shadow-app-inner">
-              <Button
-                type="button"
-                variant="ghost"
-                aria-pressed={mode === "single"}
-                onClick={() => setMode("single")}
-                className={cn(
-                  "h-9 rounded-full px-4 text-sm transition-all",
-                  mode === "single"
-                    ? "bg-brand-gradientMid text-text-inverse shadow-app"
-                    : "text-text-secondary hover:text-text-primary"
-                )}
-              >
-                Enkel
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                aria-pressed={mode === "recurring"}
-                onClick={() => setMode("recurring")}
-                className={cn(
-                  "h-9 rounded-full px-4 text-sm transition-all",
-                  mode === "recurring"
-                    ? "bg-brand-gradientMid text-text-inverse shadow-app"
-                    : "text-text-secondary hover:text-text-primary"
-                )}
-              >
-                Serie
-              </Button>
+              <div className="inline-flex items-center gap-1 rounded-full border border-border-subtle bg-surface-secondary/80 p-1 shadow-app-inner flex-shrink-0">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  aria-pressed={mode === "single"}
+                  onClick={() => setMode("single")}
+                  className={cn(
+                    "h-9 rounded-full px-4 text-sm transition-all whitespace-nowrap",
+                    mode === "single"
+                      ? "bg-brand-gradientMid text-text-inverse shadow-app"
+                      : "text-text-secondary hover:text-text-primary"
+                  )}
+                >
+                  Enkel
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  aria-pressed={mode === "recurring"}
+                  onClick={() => setMode("recurring")}
+                  className={cn(
+                    "h-9 rounded-full px-4 text-sm transition-all whitespace-nowrap",
+                    mode === "recurring"
+                      ? "bg-brand-gradientMid text-text-inverse shadow-app"
+                      : "text-text-secondary hover:text-text-primary"
+                  )}
+                >
+                  Serie
+                </Button>
+              </div>
             </div>
           </div>
           <div className="flex flex-wrap items-start justify-between gap-2">

@@ -60,13 +60,13 @@ export function SelectDatesCalendar({
       >
         <div className="relative z-[1] flex flex-col items-center justify-start gap-0.5 w-full h-full p-1">
           {isMonday && (
-            <span className="absolute left-1 top-1 text-[9px] leading-none text-text-muted">
+            <span className="absolute left-1 bottom-1 text-[9px] leading-none text-text-muted">
               {new Intl.NumberFormat("nb-NO", { minimumIntegerDigits: 2 }).format(
                 week as number
               )}
             </span>
           )}
-          <div className={cn("text-sm font-semibold", isSelected ? "text-text-inverse" : "text-text-primary")}>
+          <div className={cn("w-full text-sm font-semibold text-right pr-1", isSelected ? "text-text-inverse" : "text-text-primary")}>
             {date.getDate()}
           </div>
         </div>
@@ -101,7 +101,7 @@ export function SelectDatesCalendar({
         conflict: "bg-warning-subtle ring-1 ring-warning rounded-md",
         selected: "", // selected handled in CustomDayButton for stronger control
         hasShift:
-          "relative after:pointer-events-none after:z-0 after:absolute after:top-1/2 after:left-1/2 after:-translate-x-1/2 after:-translate-y-1/2 after:h-1.5 after:w-1.5 after:rounded-full after:bg-info",
+          "relative after:pointer-events-none after:z-0 after:absolute after:bottom-1.5 after:right-1.5 after:h-1.5 after:w-1.5 after:rounded-full after:bg-info",
       }}
       weekStartsOn={1}
       showOutsideDays={!disabledOutsideMonth}
