@@ -135,9 +135,8 @@ export default function LoginPage() {
   const buttonDisabled = isSubmitting || isSigningUp || isOAuthRedirecting;
 
   return (
-    <div className="app-container">
-      <div className="relative flex min-h-screen items-center justify-center px-4 py-16">
-        <section className="w-full max-w-md rounded-3xl border border-border bg-surface-secondary p-10 shadow-app-lg backdrop-blur">
+    <div className="relative flex min-h-screen items-center justify-center py-16">
+      <section className="w-full max-w-md rounded-3xl border border-border bg-surface-secondary p-10 shadow-app-lg backdrop-blur">
           <div className="mb-8 text-center">
             <h1 className="tracking-wide">Logg inn</h1>
           </div>
@@ -233,8 +232,7 @@ export default function LoginPage() {
               Tilbakestill med kode
             </Link>
           </div>
-        </section>
-      </div>
+      </section>
     </div>
   );
 }
