@@ -107,7 +107,7 @@ export function HomeContent({ shifts }: HomeContentProps) {
         percentageChange={data.percentageChange}
         tillegg={data.tillegg}
       />
-      <div className="flex items-center justify-between px-[calc(var(--radius)*3)]">
+      <div className="flex items-center justify-between">
         <MonthPicker
           month={month}
           onPreviousMonth={goToPreviousMonth}
@@ -116,7 +116,7 @@ export function HomeContent({ shifts }: HomeContentProps) {
         <span className="font-medium text-text-muted">{month.getFullYear()}</span>
       </div>
       <Card className="border-border bg-surface-primary card">
-        <CardContent className="p-6 text-center">
+        <CardContent className="px-4 py-6 text-center">
           <p className="text-lg font-medium text-text-primary">
             Vi er for øyeblikket under vedlikehold
           </p>

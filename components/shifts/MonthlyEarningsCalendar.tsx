@@ -104,7 +104,7 @@ export function MonthlyEarningsCalendar({
           {formatCurrency(totalEarnings)} kr
         </div>
       </CardHeader>
-      <div className="px-6 pb-6">
+      <div className="px-4 pb-6">
         <ShiftsCalendar
           month={month}
           mode="money"

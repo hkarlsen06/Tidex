@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 
 import { getComputedShifts } from "./_data/getShifts";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { ShiftsView } from "./_components/ShiftsView";
+import { ShiftsView } from "@components//shifts/ShiftsView";
 
 export default async function ShiftsPage() {
   const supabase = await createSupabaseServerClient();

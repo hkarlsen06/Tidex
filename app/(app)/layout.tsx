@@ -34,7 +34,7 @@ export default async function RootLayout({
       <SupabaseListener accessToken={session?.access_token} />
       <div className="app-container grid min-h-dvh grid-rows-[auto_1fr]">
         <TopHeader userName={userName} avatarUrl={avatarUrl} />
-        <main className="px-4 pt-6" style={{ paddingBottom: 'calc(6rem + env(safe-area-inset-bottom))' }}>{children}</main>
+        <main className="px-4 pt-8" style={{ paddingBottom: 'calc(6rem + env(safe-area-inset-bottom))' }}>{children}</main>
         <NavBar />
       </div>
     </>
