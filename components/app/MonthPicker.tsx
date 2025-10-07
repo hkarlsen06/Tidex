@@ -19,7 +19,7 @@ export function MonthPicker({ month, onPreviousMonth, onNextMonth }: MonthPicker
     <div className="flex items-center gap-1">
       <button
         onClick={onPreviousMonth}
-        className="flex h-7 w-7 items-center justify-center rounded-md text-text-primary transition-colors hover:bg-surface-secondary"
+        className="flex h-7 w-7 items-center justify-center rounded-md text-text-primary transition-colors hover:bg-surface-secondary focus:outline-none focus-visible:outline-none"
         aria-label="Forrige måned"
       >
         <IconChevronLeft size={18} />
@@ -29,7 +29,7 @@ export function MonthPicker({ month, onPreviousMonth, onNextMonth }: MonthPicker
       </span>
       <button
         onClick={onNextMonth}
-        className="flex h-7 w-7 items-center justify-center rounded-md text-text-primary transition-colors hover:bg-surface-secondary"
+        className="flex h-7 w-7 items-center justify-center rounded-md text-text-primary transition-colors hover:bg-surface-secondary focus:outline-none focus-visible:outline-none"
         aria-label="Neste måned"
       >
         <IconChevronRight size={18} />

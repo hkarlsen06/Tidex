@@ -179,3 +179,15 @@ a {
     @apply rounded-3xl;
   }
 }
+
+/* Ensure react-day-picker spans full app width */
+.rdp-root {
+  width: 100%;
+}
+.rdp-months {
+  width: 100%;
+  max-width: none;
+}
+.rdp-month {
+  width: 100%;
+}

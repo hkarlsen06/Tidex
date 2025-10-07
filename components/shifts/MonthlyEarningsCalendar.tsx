@@ -11,6 +11,7 @@ type MonthlyEarningsCalendarProps = {
   shifts: ShiftWithComputations[];
   month: Date;
   onMonthChange: (month: Date) => void;
+  onDayClick?: (iso: ISODate, hasShifts: boolean) => void;
 };
 
 function buildEarningsByDate(
@@ -60,6 +61,7 @@ export function MonthlyEarningsCalendar({
   shifts,
   month,
   onMonthChange,
+  onDayClick,
 }: MonthlyEarningsCalendarProps) {
   const earningsByDate = useMemo(
     () => buildEarningsByDate(shifts, month),
@@ -104,12 +106,13 @@ export function MonthlyEarningsCalendar({
           {formatCurrency(totalEarnings)} kr
         </div>
       </CardHeader>
-      <div className="px-4 pb-6">
+      <div className="pb-6">
         <ShiftsCalendar
           month={month}
           mode="money"
           earningsByDate={earningsByDate}
           onMonthChange={onMonthChange}
+          onDayClick={onDayClick}
         />
       </div>
     </Card>

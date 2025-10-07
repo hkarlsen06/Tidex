@@ -1,6 +1,12 @@
 # Add Shifts (Next.js 15)
 
-Clean plan for implementing “Add Shift(s)” in this codebase. Personal planner only — no employees, no service workers.
+This document is the single source of truth for the Add Shift(s) feature. It gives full context on what’s already implemented, what remains, how the parts fit the repo’s architecture, and how to validate behavior. Personal planner only — no employees, no service workers, no per‑shift manual pause.
+
+## TL;DR
+
+- Status: MVP implemented and wired. New shifts appear immediately after save.
+- Files: server action, client form, and route are in place (see “What’s Implemented”).
+- Next: optional recurring UI and conflict highlighting.
 
 ## Scope
 
@@ -20,6 +26,10 @@ Clean plan for implementing “Add Shift(s)” in this codebase. Personal planne
 
 Row Level Security already allows users to insert their own rows.
 
+Notes:
+- No `pause_duration_hours` column is used or expected.
+- `shift_type` is derived from the date on the server.
+
 ## UX Overview
 
 - Route: `/shifts/add`
@@ -28,7 +38,19 @@ Row Level Security already allows users to insert their own rows.
 - Calendar highlights existing shifts and potential conflicts (non‑blocking for MVP).
 - After save, navigate to `/shifts` and refresh data.
 
-## Implementation Plan
+## What’s Implemented
+
+- Route shell: `app/(app)/shifts/add/page.tsx` — server component enforces auth and renders the client form.
+- Client form: `app/(app)/shifts/add/AddShiftForm.tsx` — uses `SelectDatesCalendar`, `Input` time fields, `Button` CTA; submits via server action; on success navigates to `/shifts` and refreshes.
+- Server action: `app/(app)/shifts/add/actions.ts` — validates input, derives `shift_type`, inserts into `user_shifts`, calls `revalidatePath('/shifts')`.
+- Shifts page: `app/(app)/shifts/page.tsx` — already loads through `getComputedShifts(...)`.
+
+Immediate visibility path:
+- Server action inserts rows and calls `revalidatePath('/shifts')`.
+- Client then `router.push('/shifts')` and `router.refresh()`.
+- The `/shifts` page fetches server‑side and renders the new rows immediately.
+
+## Implementation Plan (design details)
 
 1) Add Page Shell
 - File: `app/(app)/shifts/add/page.tsx`
@@ -62,20 +84,20 @@ Row Level Security already allows users to insert their own rows.
 
 ## Components To Build
 
-- `app/(app)/shifts/add/AddShiftForm.tsx` (client)
+- `app/(app)/shifts/add/AddShiftForm.tsx` (client) — implemented
   - Layout: `Card` header, calendar section, time inputs row, primary action.
   - Calendar: `SelectDatesCalendar` from `components/app/SelectDatesCalendar`.
   - Time: two `Input type="time"` (15‑min step), labels “Start” and “Slutt”.
   - CTA: `Button` labeled “Legg til X skift”. Disabled until valid.
   - Success: navigate to `/shifts`.
 
-- `app/(app)/shifts/add/RecurringForm.tsx` (client, optional)
+- `app/(app)/shifts/add/RecurringForm.tsx` (client, optional) — not implemented
   - Frequency select (weekly / every N weeks), number input for N.
   - Start date (calendar) and duration (end date or months).
   - Reuses time inputs from base form.
   - `Dialog` to confirm “Oppretter N skift”.
 
-- `app/(app)/shifts/add/actions.ts` (server)
+- `app/(app)/shifts/add/actions.ts` (server) — implemented
   - `export async function createShifts(input: { dates: string[]; start: string; end: string; seriesId?: string })`.
   - Auth via `createSupabaseServerClient()`; derive `userId`.
   - Compute `shift_type` per date; batch insert into `user_shifts`.
@@ -103,10 +125,41 @@ Uses existing wrappers:
 
 ## File Checklist (MVP)
 
-- `app/(app)/shifts/add/page.tsx` → server wrapper, renders `<AddShiftForm />`.
-- `app/(app)/shifts/add/AddShiftForm.tsx` → client UI and submit.
-- `app/(app)/shifts/add/actions.ts` → `createShifts()` server action.
-- (Optional) `app/(app)/shifts/add/RecurringForm.tsx` → recurring UI.
+- `app/(app)/shifts/add/page.tsx` → server wrapper, renders `<AddShiftForm />` (done).
+- `app/(app)/shifts/add/AddShiftForm.tsx` → client UI and submit (done).
+- `app/(app)/shifts/add/actions.ts` → `createShifts()` server action (done).
+- (Optional) `app/(app)/shifts/add/RecurringForm.tsx` → recurring UI (pending).
+
+## Remaining Work (Backlog)
+
+- Recurring creation UI and confirmation dialog.
+- Conflict highlighting using `hasShiftDates` and `conflictDates` in `SelectDatesCalendar`.
+- Basic zod schema for server action validation with friendly error mapping in the client.
+- Empty‑state success banner on `/shifts?added=N` (optional).
+
+## TODO (Add Shifts polishing)
+
+- [x] Do not prefill time selectors in both modes.
+- [x] Replace DayPicker chevrons with shared `MonthPicker` above the calendar.
+- [x] Hide DayPicker caption/month-year over the calendar (remove duplicate month/year).
+- [x] Pass `hideCaptionNav` to `SelectDatesCalendar` so nav/caption are hidden.
+- [x] Remove "Forhåndsvis antall:" label from the series mode.
+- [ ] Sanity-check week-number column layout with custom header (keep or adjust if still confusing).
+- [ ] Add zod schema for server action and map friendly errors in the client.
+
+## Manual Test Plan
+
+- Auth: visit `/shifts/add` while signed in; ensure redirect to `/login` when signed out.
+- Single add: pick one date, set times, click CTA → lands on `/shifts` and shows the new shift.
+- Multi‑add: pick multiple dates, set times, click CTA → all dates appear grouped by week.
+- Cross‑midnight: set start > end (e.g., 22:00 → 06:00) → shift renders and computes pay correctly.
+- Revalidation: after add, refresh the browser; the shift remains visible (persisted).
+
+## Guardrails
+
+- Security: server action derives `user_id` from session; RLS enforces per‑user inserts.
+- Caching: `revalidatePath('/shifts')` on mutation; no client‑side Supabase writes.
+- Timezones: dates are submitted as local ISO (`YYYY-MM-DD`), calculations use server loaders.
 
 ## Pseudocode
 
@@ -203,4 +256,4 @@ export default function AddShiftForm() {
 }
 ```
 
-This plan fits the current architecture, removes employee/service‑worker complexity, and uses existing shadcn wrappers.
+This plan fits the current architecture, removes employee/service‑worker complexity, and uses existing shadcn wrappers. It documents both what’s done and what remains so any agent can continue confidently.

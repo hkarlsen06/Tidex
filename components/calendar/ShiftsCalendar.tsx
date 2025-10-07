@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { DayPicker } from "react-day-picker";
+import { nb } from "date-fns/locale";
 import {
   toISODate,
   formatNOKInt,
@@ -29,6 +30,18 @@ export function ShiftsCalendar({
   onDayClick,
   onMonthChange,
 }: ShiftsCalendarProps) {
+  function getIsoWeek(date: Date) {
+    const d = new Date(
+      Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())
+    );
+    const day = d.getUTCDay() || 7;
+    d.setUTCDate(d.getUTCDate() + 4 - day);
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    const weekNumber = Math.ceil(
+      ((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7
+    );
+    return weekNumber;
+  }
   const CustomDayButton = React.useCallback(
     (props: any) => {
       const { day, className, modifiers, ...buttonProps } = props;
@@ -38,13 +51,22 @@ export function ShiftsCalendar({
       const hours = hoursByDate[iso];
       const employees = employeesByDate[iso] || [];
       const isToday = Boolean(modifiers?.today);
+      const isMonday = date.getDay() === 1;
+      const week = isMonday ? getIsoWeek(date) : null;
 
       return (
         <button
           {...buttonProps}
           className={`${className} ${isToday ? "bg-surface-secondary" : ""}`}
         >
-          <div className="flex flex-col items-center justify-start gap-0.5 w-full h-full p-1">
+          <div className="relative flex flex-col items-center justify-start gap-0.5 w-full h-full p-1">
+          {isMonday && (
+            <span className="absolute left-1 top-1 text-[9px] leading-none text-text-muted">
+              {new Intl.NumberFormat("nb-NO", { minimumIntegerDigits: 2 }).format(
+                week as number
+              )}
+            </span>
+          )}
           <div className="text-sm font-semibold text-text-primary">
             {date.getDate()}
           </div>
@@ -103,6 +125,7 @@ export function ShiftsCalendar({
 
   return (
     <DayPicker
+      locale={nb}
       month={month}
       onMonthChange={onMonthChange}
       onDayClick={handleDayClick}

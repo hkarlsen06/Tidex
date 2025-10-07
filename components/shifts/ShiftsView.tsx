@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 
 import ShiftCard from "@/components/app/ShiftCard";
 import {
@@ -102,11 +103,16 @@ type ShiftsViewProps = {
 };
 
 export function ShiftsView({ shifts }: ShiftsViewProps) {
+  const router = useRouter();
   const [selectedMonth, setSelectedMonth] = useState(() => startOfMonth(new Date()));
 
   const handleMonthChange = useCallback((month: Date) => {
     setSelectedMonth(startOfMonth(month));
   }, []);
+
+  const handleDayClick = useCallback((iso: string) => {
+    router.push(`/shifts/add?date=${encodeURIComponent(iso)}`);
+  }, [router]);
 
   const filteredShifts = useMemo(
     () => filterShiftsByMonth(shifts, selectedMonth),
@@ -134,6 +140,7 @@ export function ShiftsView({ shifts }: ShiftsViewProps) {
             shifts={shifts}
             month={selectedMonth}
             onMonthChange={handleMonthChange}
+            onDayClick={handleDayClick}
           />
         </div>
       </div>
