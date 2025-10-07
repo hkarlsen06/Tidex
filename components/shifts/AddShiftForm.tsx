@@ -6,8 +6,8 @@ import { Button } from "@/components/app/Button";
 import { Input } from "@/components/app/Input";
 import { SelectDatesCalendar } from "@/components/app/SelectDatesCalendar";
 import type { ISODate } from "@/components/calendar/calendar.utils";
-import { createShifts } from "./actions";
-import RecurringForm from "./RecurringForm";
+import { createShifts } from "../../app/(app)/shifts/add/actions";
+import RecurringForm from "../../app/(app)/shifts/add/RecurringForm";
 import { MonthPicker } from "@/components/app/MonthPicker";
 
 type ExistingShift = {
@@ -152,26 +152,26 @@ export default function AddShiftForm({ existingShifts }: Props) {
   return (
     <div>
       <div className="space-y-4">
+          <h1>Legg til skift</h1>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              onClick={() => setMode("single")}
+              className={mode === "single" ? "" : "opacity-60"}
+            >
+              Enkel
+            </Button>
+            <Button
+              type="button"
+              onClick={() => setMode("recurring")}
+              className={mode === "recurring" ? "" : "opacity-60"}
+            >
+              Serie
+            </Button>
+          </div>
+
           {mode === "single" ? (
             <>
-              <h1>Legg til skift</h1>
-              <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  onClick={() => setMode("single")}
-                  className={mode === "single" ? "" : "opacity-60"}
-                >
-                  Enkel
-                </Button>
-                <Button
-                  type="button"
-                  onClick={() => setMode("recurring")}
-                  className={mode === "recurring" ? "" : "opacity-60"}
-                >
-                  Serie
-                </Button>
-              </div>
-
               <div className="flex items-center justify-between">
                 <MonthPicker
                   month={month}
@@ -227,23 +227,6 @@ export default function AddShiftForm({ existingShifts }: Props) {
             </>
           ) : (
             <>
-              <h1>Legg til skift</h1>
-              <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  onClick={() => setMode("single")}
-                  className={mode === "single" ? "" : "opacity-60"}
-                >
-                  Enkel
-                </Button>
-                <Button
-                  type="button"
-                  onClick={() => setMode("recurring")}
-                  className={mode === "recurring" ? "" : "opacity-60"}
-                >
-                  Serie
-                </Button>
-              </div>
               <RecurringForm />
             </>
           )}

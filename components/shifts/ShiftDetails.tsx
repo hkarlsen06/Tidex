@@ -1,6 +1,8 @@
 "use client";
 
-import { IconPencil, IconTrash, IconClock } from "@tabler/icons-react";
+import { useEffect, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { IconPencil, IconTrash, IconClock, IconCheck, IconX } from "@tabler/icons-react";
 import {
   Dialog,
   DialogContent,
@@ -9,14 +11,49 @@ import {
   DialogFooter,
 } from "@components/app/Dialog";
 import { Button } from "@components/app/Button";
+import { Input } from "@components/app/Input";
 import type { ShiftWithComputations } from "@/lib/payroll";
+import BonusBreakdown, { type BonusSegmentInput } from "./BonusBreakdown";
+import { updateShift } from "@/app/(app)/shifts/_actions/updateShift";
+
+const MINUTES_PER_DAY = 24 * 60;
+
+function minutesToSegmentTime(minutes: number) {
+  const dayOffset = Math.floor(minutes / MINUTES_PER_DAY);
+  const remainder = ((minutes % MINUTES_PER_DAY) + MINUTES_PER_DAY) % MINUTES_PER_DAY;
+  const isFullDay = remainder === 0 && minutes !== 0;
+  const hours = isFullDay ? 24 : Math.floor(remainder / 60);
+  const mins = isFullDay ? 0 : remainder % 60;
+  return {
+    time: `${String(hours).padStart(2, "0")}:${String(mins).padStart(2, "0")}`,
+    dayOffset,
+  };
+}
+
+function buildBonusSegments(shift: ShiftWithComputations): BonusSegmentInput[] {
+  return shift.computed.wagePeriods
+    .filter((period) => period.bonusRate > 0)
+    .map((period) => {
+      const from = minutesToSegmentTime(period.fromMin);
+      const to = minutesToSegmentTime(period.toMin);
+      return {
+        from: from.time,
+        to: to.time,
+        dayOffset: from.dayOffset,
+        rate: period.bonusRate,
+      } satisfies BonusSegmentInput;
+    });
+}
+
+const TIME_PATTERN = /^\d{2}:\d{2}$/;
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 export type ShiftDetailsProps = {
   isOpen: boolean;
   shift: ShiftWithComputations | null;
   onClose: () => void;
-  onEdit?: (shiftId: string) => void;
   onDelete?: (shiftId: string) => void;
+  isDeleting?: boolean;
 };
 
 const numberFormatter = new Intl.NumberFormat("nb-NO", {
@@ -58,7 +95,115 @@ function formatCurrencyNOKInt(value: number) {
   return `${numberFormatter.format(Math.round(value))} kr`;
 }
 
-export function ShiftDetails({ isOpen, shift, onClose, onEdit, onDelete }: ShiftDetailsProps) {
+export function ShiftDetails({
+  isOpen,
+  shift,
+  onClose,
+  onDelete,
+  isDeleting,
+}: ShiftDetailsProps) {
+  const router = useRouter();
+  const [isEditing, setIsEditing] = useState(false);
+  const [startTime, setStartTime] = useState("");
+  const [endTime, setEndTime] = useState("");
+  const [shiftDate, setShiftDate] = useState("");
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saving, startTransition] = useTransition();
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+
+  useEffect(() => {
+    if (shift) {
+      setStartTime(shift.start_time);
+      setEndTime(shift.end_time);
+      setShiftDate(shift.shift_date);
+    } else {
+      setStartTime("");
+      setEndTime("");
+      setShiftDate("");
+    }
+    setIsEditing(false);
+    setSaveError(null);
+    setConfirmingDelete(false);
+  }, [shift]);
+
+  const handleEdit = () => {
+    if (!shift) return;
+    setConfirmingDelete(false);
+    setStartTime(shift.start_time);
+    setEndTime(shift.end_time);
+    setShiftDate(shift.shift_date);
+    setIsEditing(true);
+  };
+
+  const handleDeleteClick = () => {
+    if (!shift) return;
+    setIsEditing(false);
+    setSaveError(null);
+    setConfirmingDelete(true);
+  };
+
+  const handleCancelEdit = () => {
+    if (!shift) {
+      setIsEditing(false);
+      return;
+    }
+    setStartTime(shift.start_time);
+    setEndTime(shift.end_time);
+    setShiftDate(shift.shift_date);
+    setSaveError(null);
+    setIsEditing(false);
+  };
+
+  const handleCancelDelete = () => {
+    setConfirmingDelete(false);
+  };
+
+  const handleConfirmDelete = () => {
+    if (!shift) return;
+    setConfirmingDelete(false);
+    onDelete?.(shift.id);
+  };
+
+  const handleSave = () => {
+    if (!shift) return;
+    if (!DATE_PATTERN.test(shiftDate)) {
+      setSaveError("Ugyldig dato");
+      return;
+    }
+    if (!TIME_PATTERN.test(startTime) || !TIME_PATTERN.test(endTime)) {
+      setSaveError("Ugyldig tid");
+      return;
+    }
+    setSaveError(null);
+    startTransition(async () => {
+      try {
+        await updateShift({
+          id: shift.id,
+          shift_date: shiftDate,
+          start: startTime,
+          end: endTime,
+        });
+        setIsEditing(false);
+        router.refresh();
+      } catch (error: any) {
+        setSaveError(error?.message || "Kunne ikke oppdatere skift");
+      }
+    });
+  };
+
+  const bonusSegments = shift ? buildBonusSegments(shift) : [];
+  const baseWageRate =
+    shift && shift.computed.paidHours > 0
+      ? shift.computed.basePay / shift.computed.paidHours
+      : 0;
+  const hasBonusBreakdown =
+    !!(shift && shift.computed.bonusPay > 0 && bonusSegments.length > 0);
+
+  const canSave =
+    DATE_PATTERN.test(shiftDate) &&
+    TIME_PATTERN.test(startTime) &&
+    TIME_PATTERN.test(endTime);
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent className="sm:rounded-3xl max-w-[480px]">
@@ -73,18 +218,54 @@ export function ShiftDetails({ isOpen, shift, onClose, onEdit, onDelete }: Shift
           <div className="py-6 text-center text-text-secondary">Fant ikke vakten.</div>
         ) : (
           <div className="space-y-4 pt-2">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-4">
               <div className="text-sm text-text-secondary">Dato</div>
-              <div className="text-base font-medium text-text-primary">
-                {formatDate(shift.shift_date)}
-              </div>
+              {isEditing ? (
+                <Input
+                  type="date"
+                  value={shiftDate}
+                  onChange={(event) => setShiftDate(event.target.value)}
+                  disabled={saving}
+                  className="w-[160px]"
+                />
+              ) : (
+                <div className="text-base font-medium text-text-primary">
+                  {formatDate(shift.shift_date)}
+                </div>
+              )}
             </div>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-4">
               <div className="text-sm text-text-secondary">Tid</div>
-              <div className="text-base font-medium text-text-primary">
-                {formatTimeRange(shift.start_time, shift.end_time)}
-              </div>
+              {isEditing ? (
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="time"
+                    step={900}
+                    value={startTime}
+                    onChange={(event) => setStartTime(event.target.value)}
+                    disabled={saving}
+                    className="w-[120px]"
+                  />
+                  <span className="text-text-muted">→</span>
+                  <Input
+                    type="time"
+                    step={900}
+                    value={endTime}
+                    onChange={(event) => setEndTime(event.target.value)}
+                    disabled={saving}
+                    className="w-[120px]"
+                  />
+                </div>
+              ) : (
+                <div className="text-base font-medium text-text-primary">
+                  {formatTimeRange(shift.start_time, shift.end_time)}
+                </div>
+              )}
             </div>
+
+            {saveError ? (
+              <div className="text-sm text-error">{saveError}</div>
+            ) : null}
             <div className="flex items-center justify-between">
               <div className="text-sm text-text-secondary">Betalte timer</div>
               <div className="text-base font-medium text-text-primary">
@@ -100,14 +281,19 @@ export function ShiftDetails({ isOpen, shift, onClose, onEdit, onDelete }: Shift
                 {formatCurrencyNOKInt(shift.computed.basePay)}
               </div>
             </div>
-            {shift.computed.bonusPay > 0 && (
-              <div className="flex items-center justify-between">
-                <div className="text-sm text-text-secondary">Tillegg</div>
-                <div className="text-base font-medium text-text-primary">
-                  {formatCurrencyNOKInt(shift.computed.bonusPay)}
-                </div>
-              </div>
-            )}
+
+            {hasBonusBreakdown ? <div className="h-px bg-border-subtle" /> : null}
+
+            {hasBonusBreakdown ? (
+              <BonusBreakdown
+                startTime={shift.start_time}
+                endTime={shift.end_time}
+                baseWage={baseWageRate}
+                segments={bonusSegments}
+              />
+            ) : null}
+
+            {hasBonusBreakdown ? <div className="h-px bg-border-subtle" /> : null}
 
             <div className="flex items-center justify-between pt-2">
               <div className="text-sm text-text-secondary">Total</div>
@@ -124,21 +310,63 @@ export function ShiftDetails({ isOpen, shift, onClose, onEdit, onDelete }: Shift
               <div className="flex items-center gap-2">
                 <Button
                   variant="secondary"
-                  onClick={() => shift && onEdit?.(shift.id)}
+                  onClick={handleEdit}
                   className="gap-2"
+                  disabled={isEditing || saving || confirmingDelete || isDeleting}
                 >
                   <IconPencil className="h-4 w-4" />
                   Rediger
                 </Button>
                 <Button
                   variant="destructive"
-                  onClick={() => shift && onDelete?.(shift.id)}
+                  onClick={handleDeleteClick}
                   className="gap-2"
+                  loading={isDeleting}
+                  disabled={isDeleting || saving || confirmingDelete}
                 >
                   <IconTrash className="h-4 w-4" />
                   Slett
                 </Button>
               </div>
+              {isEditing ? (
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="icon"
+                    aria-label="Avbryt redigering"
+                    onClick={handleCancelEdit}
+                    disabled={saving}
+                    className="bg-rose-500 text-white hover:bg-rose-600"
+                  >
+                    <IconX className="h-5 w-5" />
+                  </Button>
+                  <Button
+                    size="icon"
+                    aria-label="Lagre endringer"
+                    onClick={handleSave}
+                    disabled={saving || !canSave}
+                    className="bg-emerald-500 text-white hover:bg-emerald-600"
+                  >
+                    <IconCheck className="h-5 w-5" />
+                  </Button>
+                </div>
+              ) : confirmingDelete ? (
+                <div className="flex items-center gap-2">
+                  <Button
+                    onClick={handleCancelDelete}
+                    disabled={isDeleting}
+                    className="bg-emerald-500 text-white hover:bg-emerald-600"
+                  >
+                    Avbryt
+                  </Button>
+                  <Button
+                    onClick={handleConfirmDelete}
+                    disabled={isDeleting}
+                    className="bg-surface-secondary text-text-primary hover:bg-surface-secondary/80 border border-border-subtle"
+                  >
+                    Bekreft
+                  </Button>
+                </div>
+              ) : null}
             </div>
           )}
         </DialogFooter>

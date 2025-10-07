@@ -214,14 +214,20 @@ export function ShiftsView({ shifts }: ShiftsViewProps) {
     <ShiftDetails
       isOpen={detailsOpen}
       shift={selectedShift}
-      onClose={() => setDetailsOpen(false)}
+      onClose={() => {
+        setDetailsOpen(false);
+        setSelectedShift(null);
+      }}
+      isDeleting={pending}
       onDelete={(id) => {
         startTransition(async () => {
           try {
             await deleteShift(id);
-          } finally {
             setDetailsOpen(false);
+            setSelectedShift(null);
             router.refresh();
+          } catch (error) {
+            console.error("Failed to delete shift", error);
           }
         });
       }}

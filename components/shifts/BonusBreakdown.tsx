@@ -1,0 +1,147 @@
+"use client";
+
+import type { ReactNode } from "react";
+
+const MINUTES_PER_DAY = 24 * 60;
+
+const currencyFormatter = new Intl.NumberFormat("nb-NO", {
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 0,
+});
+
+const hoursFormatter = new Intl.NumberFormat("nb-NO", {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
+function timeToMinutes(time: string): number | null {
+  if (!time) return null;
+  const [hh, mm] = time.split(":").map((part) => Number.parseInt(part, 10));
+  if (Number.isNaN(hh) || Number.isNaN(mm)) return null;
+  if (hh === 24 && mm === 0) return MINUTES_PER_DAY;
+  if (hh < 0 || mm < 0 || mm >= 60 || hh > 24) return null;
+  return hh * 60 + mm;
+}
+
+function minutesToDisplay(minutes: number): string {
+  const offset = minutes >= 0 ? Math.floor(minutes / MINUTES_PER_DAY) : Math.ceil((minutes - MINUTES_PER_DAY + 1) / MINUTES_PER_DAY);
+  const remainder = ((minutes % MINUTES_PER_DAY) + MINUTES_PER_DAY) % MINUTES_PER_DAY;
+
+  const isFullDay = remainder === 0 && minutes !== 0;
+  const hours = isFullDay ? 24 : Math.floor(remainder / 60);
+  const mins = isFullDay ? 0 : remainder % 60;
+  const base = `${String(hours).padStart(2, "0")}:${String(mins).padStart(2, "0")}`;
+  if (offset > 0) return `${base} (+${offset})`;
+  if (offset < 0) return `${base} (${offset})`;
+  return base;
+}
+
+export type BonusSegmentInput = {
+  from: string;
+  to: string;
+  dayOffset?: number;
+  rate?: number | null;
+  percent?: number | null;
+  note?: ReactNode;
+};
+
+type BonusBreakdownProps = {
+  startTime: string;
+  endTime: string;
+  baseWage: number;
+  segments: BonusSegmentInput[];
+};
+
+type BonusRow = {
+  period: string;
+  hours: number;
+  rate: number;
+  amount: number;
+  note?: ReactNode;
+};
+
+function computeRows({ startTime, endTime, baseWage, segments }: BonusBreakdownProps) {
+  const shiftStart = timeToMinutes(startTime);
+  const shiftEndRaw = timeToMinutes(endTime);
+  if (shiftStart == null || shiftEndRaw == null) return [] as BonusRow[];
+
+  const shiftEnd = shiftEndRaw > shiftStart ? shiftEndRaw : shiftEndRaw + MINUTES_PER_DAY;
+
+  const rows: BonusRow[] = [];
+
+  for (const segment of segments) {
+    const segStartRaw = timeToMinutes(segment.from);
+    const segEndRaw = timeToMinutes(segment.to);
+    if (segStartRaw == null || segEndRaw == null) continue;
+
+    const offsetMinutes = (segment.dayOffset ?? 0) * MINUTES_PER_DAY;
+    const segStart = segStartRaw + offsetMinutes;
+    let segEnd = segEndRaw + offsetMinutes;
+    if (segEnd <= segStart) {
+      segEnd += MINUTES_PER_DAY;
+    }
+
+    const overlapStart = Math.max(shiftStart, segStart);
+    const overlapEnd = Math.min(shiftEnd, segEnd);
+    const overlapMinutes = overlapEnd - overlapStart;
+
+    if (overlapMinutes <= 0) continue;
+
+    const hours = overlapMinutes / 60;
+    const rate = segment.rate ?? ((segment.percent ?? 0) / 100) * baseWage;
+    if (rate <= 0) continue;
+    const amount = hours * rate;
+
+    rows.push({
+      period: `${minutesToDisplay(overlapStart)} – ${minutesToDisplay(overlapEnd)}`,
+      hours,
+      rate,
+      amount,
+      note: segment.note,
+    });
+  }
+
+  return rows;
+}
+
+export function BonusBreakdown(props: BonusBreakdownProps) {
+  const rows = computeRows(props);
+  if (rows.length === 0) return null;
+
+  const total = rows.reduce((sum, row) => sum + row.amount, 0);
+
+  return (
+    <>
+      <div className="flex items-center justify-between">
+        <div className="text-sm text-text-secondary">Totalt tillegg</div>
+        <div className="text-base font-medium text-text-primary">
+          {currencyFormatter.format(Math.round(total))} kr
+        </div>
+      </div>
+      <div className="space-y-2">
+        {rows.map((row, index) => (
+          <div
+            key={`${row.period}-${index}`}
+            className="space-y-1 rounded-xl bg-surface-secondary/40 p-3"
+          >
+            <div className="flex items-center justify-between text-sm text-text-primary">
+              <span>{row.period.replace("23:59", "24:00")}</span>
+              <span>
+                {hoursFormatter.format(row.hours)}t × {currencyFormatter.format(Math.round(row.rate))} kr
+              </span>
+            </div>
+            <div className="flex items-center justify-between text-sm font-semibold text-text-primary">
+              <span>Tillegg</span>
+              <span>{currencyFormatter.format(Math.round(row.amount))} kr</span>
+            </div>
+            {row.note ? (
+              <div className="text-xs text-text-secondary">{row.note}</div>
+            ) : null}
+          </div>
+        ))}
+      </div>
+    </>
+  );
+}
+
+export default BonusBreakdown;
