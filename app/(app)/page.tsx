@@ -17,7 +17,7 @@ export default async function Home() {
   const shifts = await getComputedShifts(user.id);
 
   return (
-    <div className="grid min-h-full place-items-center px-4 w-full">
+    <div className="grid min-h-full place-items-center w-full">
       <HomeContent shifts={shifts} />
     </div>
   );

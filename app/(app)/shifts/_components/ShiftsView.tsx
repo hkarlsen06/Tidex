@@ -128,7 +128,7 @@ export function ShiftsView({ shifts }: ShiftsViewProps) {
 
   return (
     <div className="flex w-full flex-col">
-      <div className="h-[calc(100vh-theme(spacing.24)-theme(spacing.6))] flex items-center justify-center px-4 -mt-6">
+      <div className="h-[calc(100vh-theme(spacing.24)-theme(spacing.6))] flex items-center justify-center -mt-6">
         <div className="w-full">
           <MonthlyEarningsCalendar
             shifts={shifts}
@@ -137,7 +137,7 @@ export function ShiftsView({ shifts }: ShiftsViewProps) {
           />
         </div>
       </div>
-      <div className="px-4 pb-10">
+      <div className="pb-10">
         {grouped.length === 0 ? (
           <Card className="text-center">
             <CardHeader>
