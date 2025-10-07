@@ -20,9 +20,10 @@ export const TotalCard: React.FC<TotalCardProps> = ({
   className = '',
 }) => {
   const cardClasses = [
-    'relative overflow-hidden rounded-3xl',
+    'relative overflow-hidden',
     'bg-surface-primary border-border-subtle',
     'shadow-app-lg',
+    'total-card',
     'transition-all duration-300',
     onClick
       ? 'cursor-pointer hover:shadow-app-lg hover:bg-surface-secondary focus:outline-none focus:ring-2 focus:ring-brand-highlight focus:ring-offset-2'

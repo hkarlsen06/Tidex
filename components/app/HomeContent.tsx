@@ -4,6 +4,8 @@ import { useState, useMemo } from "react";
 import { TotalCard } from "@/components/app/TotalCard";
 import { MonthPicker } from "./MonthPicker";
 import { ShiftWithComputations } from "@/lib/payroll";
+import { Card, CardContent } from "@/components/app/Card";
+import Link from "next/link";
 
 type HomeContentProps = {
   shifts: ShiftWithComputations[];
@@ -114,6 +116,19 @@ export function HomeContent({ shifts }: HomeContentProps) {
         />
         <span className="font-medium text-text-muted">{month.getFullYear()}</span>
       </div>
+      <Card className="border-border bg-surface-primary card">
+        <CardContent className="p-6 text-center">
+          <p className="text-lg font-medium text-text-primary">
+            Vi er for øyeblikket under vedlikehold
+          </p>
+          <p className="mt-2 text-sm text-text-muted">
+            Du kan fortsatt{" "}
+            <Link href="/shifts" className="text-brand-gradientStart hover:underline">
+              se dine vakter
+            </Link>
+          </p>
+        </CardContent>
+      </Card>
     </div>
   );
 }

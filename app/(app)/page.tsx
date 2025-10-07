@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getComputedShifts } from "@/app/(app)/shifts/_data/getShifts";
-import { HomeContent } from "./_components/HomeContent";
+import { HomeContent } from "../../components/app/HomeContent";
 
 export default async function Home() {
   const supabase = await createSupabaseServerClient();
