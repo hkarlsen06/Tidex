@@ -191,3 +191,9 @@ a {
 .rdp-month {
   width: 100%;
 }
+
+input[type="time"]::-webkit-clear-button,
+input[type="time"]::-webkit-inner-spin-button,
+input[type="time"]::-webkit-calendar-picker-indicator {
+  display: none;
+}

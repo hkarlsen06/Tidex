@@ -5,12 +5,17 @@ import { cn } from "@/lib/cn";
 
 type Props = React.ComponentProps<typeof BaseInput> & { invalid?: boolean };
 
-export function Input({ className, invalid, ...props }: Props) {
-  return (
-    <BaseInput
-      {...props}
-      aria-invalid={invalid || undefined}
-      className={cn(invalid && "ring-1 ring-error", className)}
-    />
-  );
-}
+export const Input = React.forwardRef<HTMLInputElement, Props>(
+  ({ className, invalid, ...props }, ref) => {
+    return (
+      <BaseInput
+        {...props}
+        ref={ref}
+        aria-invalid={invalid || undefined}
+        className={cn(invalid && "ring-1 ring-error", className)}
+      />
+    );
+  }
+);
+
+Input.displayName = "Input";

@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import AddShiftForm from "@/components/shifts/AddShiftForm";
+import AddShiftForm from "@/components/shifts/add/AddShiftForm";
 import { getComputedShifts } from "@/app/(app)/shifts/_data/getShifts";
 
 export default async function AddShiftsPage() {
