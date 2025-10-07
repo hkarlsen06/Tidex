@@ -27,6 +27,7 @@ This document is the single source of truth for the Add Shift(s) feature. It giv
 Row Level Security already allows users to insert their own rows.
 
 Notes:
+
 - No `pause_duration_hours` column is used or expected.
 - `shift_type` is derived from the date on the server.
 
@@ -46,24 +47,28 @@ Notes:
 - Shifts page: `app/(app)/shifts/page.tsx` — already loads through `getComputedShifts(...)`.
 
 Immediate visibility path:
+
 - Server action inserts rows and calls `revalidatePath('/shifts')`.
 - Client then `router.push('/shifts')` and `router.refresh()`.
 - The `/shifts` page fetches server‑side and renders the new rows immediately.
 
 ## Implementation Plan (design details)
 
-1) Add Page Shell
+1. Add Page Shell
+
 - File: `app/(app)/shifts/add/page.tsx`
 - Server Component: enforce auth, render `<AddShiftForm />`.
 
-2) AddShiftForm (client)
+2. AddShiftForm (client)
+
 - File: `app/(app)/shifts/add/AddShiftForm.tsx`
 - Uses wrapped shadcn components from `components/app`: `Card`, `Button`, `Input`, `Dialog`, and `SelectDatesCalendar`.
 - State: `selectedDates: Date[]`, `start: HH:mm`, `end: HH:mm`, `submitting: boolean`.
 - Validation: require ≥1 date and both times; allow cross‑midnight.
 - Submit calls a Server Action to insert rows, then `router.push('/shifts')` and `router.refresh()`.
 
-3) Persistence (Server Action)
+3. Persistence (Server Action)
+
 - File: `app/(app)/shifts/add/actions.ts` (or `app/(app)/shifts/_actions/createShift.ts`)
 - Export `createShifts(data)` with `"use server"`.
 - Resolve `userId` from session via `createSupabaseServerClient()`.
@@ -72,12 +77,14 @@ Immediate visibility path:
   - Insert `{ user_id, shift_date, start_time, end_time, shift_type, series_id? }`.
 - Return count and/or inserted IDs. Validate payload server‑side (e.g., zod).
 
-4) Recurring (optional second tab)
+4. Recurring (optional second tab)
+
 - Weekly or every‑N‑weeks from a `startDate` until an `endDate` or `months` duration.
 - Generate occurrences client‑side, confirm count in `Dialog`, include shared `series_id` (UUID).
 - Submit via the same Server Action.
 
-5) Conflicts (nice‑to‑have)
+5. Conflicts (nice‑to‑have)
+
 - Client detects overlaps against already‑loaded shifts in the current month; schema: `Record<ISODate, {start: HH:mm, end: HH:mm}[]>`.
 - Non‑blocking: allow save but surface warnings in UI.
 - Use `SelectDatesCalendar` props `hasShiftDates` to render small dots, and `conflictDates` to mark overlap candidates.
@@ -85,6 +92,7 @@ Immediate visibility path:
 ## Components To Build
 
 - `app/(app)/shifts/add/AddShiftForm.tsx` (client) — implemented
+
   - Layout: `Card` header, calendar section, time inputs row, primary action.
   - Calendar: `SelectDatesCalendar` from `components/app/SelectDatesCalendar`.
   - Time: two `Input type="time"` (15‑min step), labels “Start” and “Slutt”.
@@ -92,6 +100,7 @@ Immediate visibility path:
   - Success: navigate to `/shifts`.
 
 - `app/(app)/shifts/add/RecurringForm.tsx` (client, optional) — not implemented
+
   - Frequency select (weekly / every N weeks), number input for N.
   - Start date (calendar) and duration (end date or months).
   - Reuses time inputs from base form.
@@ -103,6 +112,7 @@ Immediate visibility path:
   - Compute `shift_type` per date; batch insert into `user_shifts`.
 
 Uses existing wrappers:
+
 - `components/app/Card.tsx`, `components/app/Button.tsx`, `components/app/Input.tsx`, `components/app/Dialog.tsx`
 - `components/app/SelectDatesCalendar.tsx`
 
@@ -144,7 +154,7 @@ Uses existing wrappers:
 - [x] Hide DayPicker caption/month-year over the calendar (remove duplicate month/year).
 - [x] Pass `hideCaptionNav` to `SelectDatesCalendar` so nav/caption are hidden.
 - [x] Remove "Forhåndsvis antall:" label from the series mode.
-- [ ] Sanity-check week-number column layout with custom header (keep or adjust if still confusing).
+- [x] Inline week number over Monday date (no extra column).
 - [ ] Add zod schema for server action and map friendly errors in the client.
 
 ## Manual Test Plan
@@ -171,9 +181,21 @@ import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { randomUUID } from "node:crypto";
 
-export async function createShifts({ dates, start, end, seriesId }: { dates: string[]; start: string; end: string; seriesId?: string; }) {
+export async function createShifts({
+  dates,
+  start,
+  end,
+  seriesId,
+}: {
+  dates: string[];
+  start: string;
+  end: string;
+  seriesId?: string;
+}) {
   const supabase = await createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) throw new Error("Unauthorized");
 
   const toType = (iso: string) => {
@@ -235,18 +257,36 @@ export default function AddShiftForm() {
           <CardTitle>Legg til skift</CardTitle>
         </CardHeader>
         <div className="px-4 pb-6 space-y-4">
-          <SelectDatesCalendar month={new Date()} selected={dates} onSelectedChange={setDates} />
+          <SelectDatesCalendar
+            month={new Date()}
+            selected={dates}
+            onSelectedChange={setDates}
+          />
           <div className="grid grid-cols-2 gap-3">
             <label className="space-y-1">
               <span className="text-sm text-text-secondary">Start</span>
-              <Input type="time" step={900} value={start} onChange={(e) => setStart(e.target.value)} />
+              <Input
+                type="time"
+                step={900}
+                value={start}
+                onChange={(e) => setStart(e.target.value)}
+              />
             </label>
             <label className="space-y-1">
               <span className="text-sm text-text-secondary">Slutt</span>
-              <Input type="time" step={900} value={end} onChange={(e) => setEnd(e.target.value)} />
+              <Input
+                type="time"
+                step={900}
+                value={end}
+                onChange={(e) => setEnd(e.target.value)}
+              />
             </label>
           </div>
-          <Button onClick={onSubmit} disabled={dates.length === 0} loading={pending}>
+          <Button
+            onClick={onSubmit}
+            disabled={dates.length === 0}
+            loading={pending}
+          >
             Legg til {dates.length || 0} skift
           </Button>
         </div>
@@ -257,3 +297,4 @@ export default function AddShiftForm() {
 ```
 
 This plan fits the current architecture, removes employee/service‑worker complexity, and uses existing shadcn wrappers. It documents both what’s done and what remains so any agent can continue confidently.
+![1759862292391](image/shifts-add/1759862292391.png)

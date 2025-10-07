@@ -150,28 +150,28 @@ export default function AddShiftForm({ existingShifts }: Props) {
   };
 
   return (
-    <div className="py-6">
+    <div>
       <div className="space-y-4">
-        <h1>Legg til skift</h1>
-          <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              onClick={() => setMode("single")}
-              className={mode === "single" ? "" : "opacity-60"}
-            >
-              Enkel
-            </Button>
-            <Button
-              type="button"
-              onClick={() => setMode("recurring")}
-              className={mode === "recurring" ? "" : "opacity-60"}
-            >
-              Serie
-            </Button>
-          </div>
-
           {mode === "single" ? (
-            <div className="space-y-4">
+            <>
+              <h1>Legg til skift</h1>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  onClick={() => setMode("single")}
+                  className={mode === "single" ? "" : "opacity-60"}
+                >
+                  Enkel
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => setMode("recurring")}
+                  className={mode === "recurring" ? "" : "opacity-60"}
+                >
+                  Serie
+                </Button>
+              </div>
+
               <div className="flex items-center justify-between">
                 <MonthPicker
                   month={month}
@@ -224,9 +224,28 @@ export default function AddShiftForm({ existingShifts }: Props) {
               <Button onClick={onSubmit} disabled={!canSubmit} loading={pending}>
                 Legg til {dates.length || 0} skift
               </Button>
-            </div>
+            </>
           ) : (
-            <RecurringForm />
+            <>
+              <h1>Legg til skift</h1>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  onClick={() => setMode("single")}
+                  className={mode === "single" ? "" : "opacity-60"}
+                >
+                  Enkel
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => setMode("recurring")}
+                  className={mode === "recurring" ? "" : "opacity-60"}
+                >
+                  Serie
+                </Button>
+              </div>
+              <RecurringForm />
+            </>
           )}
       </div>
     </div>

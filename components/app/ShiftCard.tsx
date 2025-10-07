@@ -1,8 +1,10 @@
 import { ShiftWithComputations } from "@/lib/payroll";
 import { Card, CardHeader, CardContent } from "@/components/app/Card";
+import { cn } from "@/lib/cn";
 
 type ShiftCardProps = {
   shift: ShiftWithComputations;
+  onClick?: () => void;
 };
 
 const numberFormatter = new Intl.NumberFormat("nb-NO", {
@@ -50,7 +52,7 @@ function formatPlainAmount(value: number) {
   return numberFormatter.format(Math.round(value));
 }
 
-export function ShiftCard({ shift }: ShiftCardProps) {
+export function ShiftCard({ shift, onClick }: ShiftCardProps) {
   const { computed } = shift;
   const { dayName, dateLabel, isWeekend } = formatDateParts(shift.shift_date);
   const { basePay, bonusPay, gross, paidHours } = computed;
@@ -58,7 +60,15 @@ export function ShiftCard({ shift }: ShiftCardProps) {
   const breakdown = `${formatPlainAmount(basePay)}${bonusPay > 0 ? ` + ${formatPlainAmount(bonusPay)}` : ""}`;
 
   return (
-    <Card className="rounded-3xl">
+    <Card
+      className={cn(
+        "rounded-3xl",
+        onClick && "cursor-pointer transition-colors hover:bg-surface-secondary"
+      )}
+      onClick={onClick}
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+    >
       <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0 py-6">
         <div className="space-y-1">
           <p className="text-lg font-medium text-text-primary">

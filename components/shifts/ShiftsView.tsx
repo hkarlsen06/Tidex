@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useCallback } from "react";
+import { useMemo, useState, useCallback, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
 import ShiftCard from "@/components/app/ShiftCard";
@@ -12,6 +12,8 @@ import {
 } from "@/components/app/Card";
 import { MonthlyEarningsCalendar } from "./MonthlyEarningsCalendar";
 import { ShiftWithComputations } from "@/lib/payroll";
+import ShiftDetails from "@/components/shifts/ShiftDetails";
+import { deleteShift } from "@/app/(app)/shifts/_actions/deleteShift";
 
 export type WeekGroup = {
   id: string;
@@ -104,15 +106,29 @@ type ShiftsViewProps = {
 
 export function ShiftsView({ shifts }: ShiftsViewProps) {
   const router = useRouter();
+  const [pending, startTransition] = useTransition();
   const [selectedMonth, setSelectedMonth] = useState(() => startOfMonth(new Date()));
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [selectedShift, setSelectedShift] = useState<ShiftWithComputations | null>(null);
 
   const handleMonthChange = useCallback((month: Date) => {
     setSelectedMonth(startOfMonth(month));
   }, []);
 
-  const handleDayClick = useCallback((iso: string) => {
-    router.push(`/shifts/add?date=${encodeURIComponent(iso)}`);
-  }, [router]);
+  const handleDayClick = useCallback(
+    (iso: string, hasShifts: boolean) => {
+      if (hasShifts) {
+        const match = shifts.find((s) => s.shift_date === iso);
+        if (match) {
+          setSelectedShift(match);
+          setDetailsOpen(true);
+          return;
+        }
+      }
+      router.push(`/shifts/add?date=${encodeURIComponent(iso)}`);
+    },
+    [router, shifts]
+  );
 
   const filteredShifts = useMemo(
     () => filterShiftsByMonth(shifts, selectedMonth),
@@ -133,6 +149,7 @@ export function ShiftsView({ shifts }: ShiftsViewProps) {
     : "Når du legger inn skift vil de dukke opp her med full lønnsberegning.";
 
   return (
+    <>
     <div className="flex w-full flex-col">
       <div className="h-[calc(100vh-theme(spacing.24)-theme(spacing.8))] flex items-center justify-center -mt-8">
         <div className="w-full">
@@ -178,7 +195,14 @@ export function ShiftsView({ shifts }: ShiftsViewProps) {
                 </Card>
                 <div className="space-y-4">
                   {group.shifts.map((shift) => (
-                    <ShiftCard key={shift.id} shift={shift} />
+                    <ShiftCard
+                      key={shift.id}
+                      shift={shift}
+                      onClick={() => {
+                        setSelectedShift(shift);
+                        setDetailsOpen(true);
+                      }}
+                    />
                   ))}
                 </div>
               </section>
@@ -187,5 +211,21 @@ export function ShiftsView({ shifts }: ShiftsViewProps) {
         )}
       </div>
     </div>
+    <ShiftDetails
+      isOpen={detailsOpen}
+      shift={selectedShift}
+      onClose={() => setDetailsOpen(false)}
+      onDelete={(id) => {
+        startTransition(async () => {
+          try {
+            await deleteShift(id);
+          } finally {
+            setDetailsOpen(false);
+            router.refresh();
+          }
+        });
+      }}
+    />
+    </>
   );
 }
