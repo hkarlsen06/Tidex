@@ -69,14 +69,22 @@ export function NavBar() {
             const Icon = isActive && !item.isCenter ? item.iconFilled : item.icon;
 
             if (item.isCenter) {
+              const isOnAddPage = pathname === "/shifts/add";
+              const targetHref = isOnAddPage ? "/shifts" : item.href;
+
               return (
                 <Link
                   key={item.href}
-                  href={item.href}
+                  href={targetHref}
                   className="flex items-center justify-center"
                 >
                   <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-gradientMid">
-                    <Icon className="h-6 w-6 text-text-inverse" stroke={2} />
+                    <Icon
+                      className={`h-6 w-6 text-text-inverse transition-transform duration-200 ${
+                        isOnAddPage ? "rotate-45" : ""
+                      }`}
+                      stroke={2}
+                    />
                   </div>
                 </Link>
               );
