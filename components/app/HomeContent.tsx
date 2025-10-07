@@ -106,7 +106,6 @@ export function HomeContent({ shifts }: HomeContentProps) {
         total={data.total}
         percentageChange={data.percentageChange}
         tillegg={data.tillegg}
-        className="mt-8"
       />
       <div className="flex items-center justify-between px-[calc(var(--radius)*3)]">
         <MonthPicker

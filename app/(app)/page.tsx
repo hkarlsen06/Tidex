@@ -17,8 +17,8 @@ export default async function Home() {
   const shifts = await getComputedShifts(user.id);
 
   return (
-    <main className="flex min-h-[60vh] flex-col gap-6 px-4">
+    <div className="grid min-h-full place-items-center px-4 w-full">
       <HomeContent shifts={shifts} />
-    </main>
+    </div>
   );
 }

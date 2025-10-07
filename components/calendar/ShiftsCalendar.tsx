@@ -31,15 +31,19 @@ export function ShiftsCalendar({
 }: ShiftsCalendarProps) {
   const CustomDayButton = React.useCallback(
     (props: any) => {
-      const { day, className, ...buttonProps } = props;
+      const { day, className, modifiers, ...buttonProps } = props;
       const date: Date = day.date;
       const iso = toISODate(date);
       const earnings = earningsByDate[iso];
       const hours = hoursByDate[iso];
       const employees = employeesByDate[iso] || [];
+      const isToday = Boolean(modifiers?.today);
 
       return (
-        <button {...buttonProps} className={className}>
+        <button
+          {...buttonProps}
+          className={`${className} ${isToday ? "bg-surface-secondary" : ""}`}
+        >
           <div className="flex flex-col items-center justify-start gap-0.5 w-full h-full p-1">
           <div className="text-sm font-semibold text-text-primary">
             {date.getDate()}
@@ -123,7 +127,7 @@ export function ShiftsCalendar({
         day: "aspect-square p-0",
         day_button: "w-full h-full rounded-lg hover:bg-surface-secondary transition-colors",
         outside: "opacity-40",
-        today: "bg-surface-secondary",
+        today: "",
       }}
     />
   );
