@@ -44,7 +44,7 @@ export function UserMenu({
           if (e.key === "Escape") setOpen(false);
           if (e.key === "ArrowDown") setOpen(true);
         }}
-        className="flex items-center gap-3 rounded-full bg-surface-secondary/80 px-3 py-1 shadow-app-inner focus:outline-none focus:ring-2 focus:ring-border"
+        className="flex items-center gap-3 rounded-full bg-surface-secondary/80 px-3 py-1 shadow-app-sm dark:shadow-app-inner focus:outline-none focus:ring-2 focus:ring-border"
       >
         <span className="text-sm font-medium text-text-primary">{displayName}</span>
         <span className="relative inline-flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-surface-secondary text-sm font-semibold uppercase text-text-primary">
@@ -82,7 +82,7 @@ export function UserMenu({
           <Link
             href="/logout"
             role="menuitem"
-            className="block px-4 py-2 text-sm text-error-foreground hover:bg-error-subtle"
+            className="block px-4 py-2 text-sm text-error hover:bg-error-subtle"
           >
             Logg ut
           </Link>

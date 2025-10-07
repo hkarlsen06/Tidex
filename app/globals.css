@@ -59,14 +59,14 @@ a {
     --chart-5: 27 87% 67%;
     --radius: 0.5rem;
 
-    --surface-primary: 240 10% 96%;
-    --surface-secondary: 240 10% 93%;
-    --background-secondary: 240 10% 98%;
+    --surface-primary: 240 10% 95%;
+    --surface-secondary: 240 10% 98%;
+    --background-secondary: 240 10% 96%;
     --text-primary: 222.2 84% 4.9%;
     --text-secondary: 215.4 16.3% 46.9%;
     --text-muted: 215 20.2% 65.1%;
     --text-inverse: 210 40% 98%;
-    --border-subtle: 214.3 31.8% 91.4%;
+    --border-subtle: 214.3 31.8% 94%;
     --brand-gradientStart: 199 89% 48%;
     --brand-gradientMid: 189 94% 43%;
     --brand-gradientEnd: 192 91% 36%;
@@ -87,8 +87,8 @@ a {
     --info-subtle: 221 83% 53% / 0.1;
 
     /* Shadow colors */
-    --shadow-color: 0 0% 0% / 0.1;
-    --shadow-color-strong: 0 0% 0% / 0.2;
+    --shadow-color: 0 0% 0% / 0.05;
+    --shadow-color-strong: 0 0% 0% / 0.1;
   }
   .dark {
     --background: 222.2 84% 4.9%;

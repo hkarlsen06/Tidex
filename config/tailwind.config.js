@@ -106,7 +106,9 @@ export default {
   		boxShadow: {
   			'app': '0 10px 40px -10px hsl(var(--shadow-color))',
   			'app-lg': '0 20px 60px -15px hsl(var(--shadow-color-strong))',
-  			'app-inner': 'inset 0 2px 4px 0 hsl(var(--shadow-color))'
+  			'app-inner': 'inset 0 2px 4px 0 hsl(var(--shadow-color))',
+  			'app-sm': '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+  			'app-md': '0 4px 6px -1px hsl(var(--shadow-color)), 0 2px 4px -2px hsl(var(--shadow-color))'
   		},
   		fontFamily: {
   			sans: [

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { updateTheme } from "@/app/actions/updateTheme";
 
 export function ThemeToggle() {
   const [theme, setTheme] = useState<"light" | "dark">("dark");
@@ -13,11 +14,16 @@ export function ThemeToggle() {
     document.documentElement.classList.toggle("dark", initialTheme === "dark");
   }, []);
 
-  const toggleTheme = () => {
+  const toggleTheme = async () => {
     const newTheme = theme === "dark" ? "light" : "dark";
     setTheme(newTheme);
     localStorage.setItem("theme", newTheme);
     document.documentElement.classList.toggle("dark", newTheme === "dark");
+
+    // Sync to database (fire and forget - user already sees the change)
+    updateTheme(newTheme).catch((err) => {
+      console.error("Failed to sync theme to database:", err);
+    });
   };
 
   return (

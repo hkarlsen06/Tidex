@@ -174,7 +174,7 @@ export function MonthlyEarningsCalendar({
         />
       </div>
       <div className="flex justify-center pb-6">
-        <div className="inline-flex items-center gap-1 rounded-full border border-border-subtle bg-surface-secondary/80 p-1 shadow-app-inner w-2/3">
+        <div className="inline-flex items-center gap-1 rounded-full border border-border-subtle bg-surface-secondary/80 p-1 shadow-app-sm dark:shadow-app-inner w-2/3">
           <Button
             type="button"
             variant="ghost"

@@ -161,7 +161,7 @@ export default function RecurringForm() {
                 setCustomInterval("");
               }}
               className={cn(
-                "flex h-full items-center justify-center rounded-2xl border border-border-subtle bg-surface-secondary/70 p-4 text-sm font-medium text-text-secondary shadow-app-inner transition hover:border-border hover:text-text-primary focus:outline-none focus-visible:outline-none",
+                "flex h-full items-center justify-center rounded-2xl border border-border-subtle bg-surface-secondary/70 p-4 text-sm font-medium text-text-secondary shadow-app-sm dark:shadow-app-inner transition hover:border-border hover:text-text-primary focus:outline-none focus-visible:outline-none",
                 isActive && "border-brand-gradientMid/60 bg-brand-gradientMid/10 text-text-primary shadow-app"
               )}
             >

@@ -185,7 +185,7 @@ export default function AddShiftForm({ existingShifts }: Props) {
               <CardTitle className="text-2xl sm:text-3xl font-semibold text-text-primary whitespace-nowrap">
                 Legg til skift
               </CardTitle>
-              <div className="inline-flex items-center gap-1 rounded-full border border-border-subtle bg-surface-secondary/80 p-1 shadow-app-inner flex-shrink-0">
+              <div className="inline-flex items-center gap-1 rounded-full border border-border-subtle bg-surface-secondary/80 p-1 shadow-app-sm dark:shadow-app-inner flex-shrink-0">
                 <Button
                   type="button"
                   variant="ghost"
