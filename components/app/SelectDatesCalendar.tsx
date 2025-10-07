@@ -1,1 +1,1 @@
-export * from "@/components/calendar/SelectDatesCalendar";
+export * from "../calendar/SelectDatesCalendar";

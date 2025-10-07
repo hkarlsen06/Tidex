@@ -1,1 +1,1 @@
-export * from "@/components/calendar/ShiftsCalendar";
+export * from "../calendar/ShiftsCalendar";

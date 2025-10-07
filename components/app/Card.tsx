@@ -1,2 +1,2 @@
 // components/app/Card.tsx
-export * from "@/components/ui/card";
+export * from "../ui/card";
