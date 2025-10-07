@@ -65,4 +65,3 @@ Lookup file. Keep updated when new columns are added.
 - **shift_type** → `integer`
 - **created_at** → `timestamp with time zone`
 - **series_id** → `uuid`
-- **pause_duration_hours** → `numeric`

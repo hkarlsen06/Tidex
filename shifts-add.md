@@ -17,7 +17,6 @@ Clean plan for implementing “Add Shift(s)” in this codebase. Personal planne
   - `end_time: text` (HH:mm) — cross‑midnight allowed (`end <= start` means next day)
   - `shift_type: int` (derived: 0=weekday, 1=Saturday, 2=Sunday)
   - `series_id: uuid` (optional, for recurring batches)
-  - `pause_duration_hours: numeric` (optional)
 
 Row Level Security already allows users to insert their own rows.
 
@@ -115,6 +114,7 @@ Uses existing wrappers:
 
 ```ts
 "use server";
+import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { randomUUID } from "node:crypto";
 
@@ -141,6 +141,7 @@ export async function createShifts({ dates, start, end, seriesId }: { dates: str
 
   const { error } = await supabase.from("user_shifts").insert(rows);
   if (error) throw error;
+  revalidatePath("/shifts");
   return { inserted: rows.length };
 }
 ```

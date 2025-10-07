@@ -17,7 +17,6 @@ export async function GET() {
     shift_date: "2024-10-02", // Thursday (day 4)
     start_time: "16:00",
     end_time: "23:15",
-    pause_duration_hours: 0,
     hourly_wage_snapshot: null,
     user_id: "test",
   };

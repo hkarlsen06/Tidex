@@ -18,7 +18,6 @@ export type ShiftRow = {
   shift_date: string; // ISO date: "2025-09-27"
   start_time: string; // "HH:mm"
   end_time: string; // "HH:mm" (can be next day if end <= start)
-  pause_duration_hours?: number | null; // manual pause entered
   hourly_wage_snapshot?: number | null; // locked-in base rate
 };
 
@@ -52,7 +51,7 @@ export type WagePeriod = {
 export type ShiftComputed = {
   id: string;
   durationHours: number; // raw duration before any deductions
-  paidHours: number; // after policy + manual pauses
+  paidHours: number; // after policy
   basePay: number; // NOK
   bonusPay: number; // NOK
   gross: number; // NOK
@@ -60,7 +59,7 @@ export type ShiftComputed = {
   breakAudit: {
     method: UserSettings["break_method"];
     thresholdHours: number;
-    deductedHours: number; // automatic + manual
+    deductedHours: number; // automatic
     notes?: string[];
   };
 };
@@ -92,16 +91,13 @@ export type ShiftComputed = {
      - `base_only`: cut from lowest-bonus periods first.
      - `none`: no cut.
    - Returns adjusted periods, audit, and paidHours after policy.
-5. **Apply manual pause**
-   - If user entered `pause_duration_hours`, subtract from tail deterministically.
-   - Drop empty periods after cuts.
-6. **Compute pay**
+5. **Compute pay**
    - For each remaining period:
      - `basePay += hours * baseRate`
      - `bonusPay += hours * bonusRate`
    - `gross = basePay + bonusPay`
    - Round to 2 decimals.
-7. **Emit audit**
+6. **Emit audit**
    - `breakAudit` describes policy, method, thresholds, total deducted hours, and notes.
 
 ---
@@ -177,7 +173,6 @@ Only recompute affected shifts. Never recompute all on every render.
   - Sat 15:00–18:00 +55
   - Sat 18:00–23:59 +110
 - Policy: `fixed_0_5_over_5_5h`, threshold 5.5h, deduction 30 minutes, method `proportional`
-- Manual pause: 0.25 h
 
 **Split periods**
 
@@ -194,10 +189,7 @@ Only recompute affected shifts. Never recompute all on every render.
 - 7.75 > 5.5 → deduct 0.5 h proportionally.
 - New total: 7.25 h
 
-**Manual pause**
-
-- Deduct 0.25 h from tail.
-- New total: **7.00 h paid**
+New total after policy: **7.25 h paid**
 
 **Pay**
 
@@ -241,7 +233,7 @@ Add table-driven tests that pin expected outputs:
 - Weekday vs weekend rules.
 - Cross-midnight shifts.
 - Each break method.
-- Manual pause with and without policy deduction.
+
 - Snapshot wage override vs preset mapping.
 
 ---
@@ -270,7 +262,6 @@ Add features by layering pure steps:
 - **Base rate:** Hourly wage before supplements.
 - **Supplement/Bonus:** Extra NOK/hour by rule window.
 - **Policy deduction:** Automatic break when shift crosses a threshold.
-- **Manual pause:** User-entered break on top of policy deduction.
 - **Paid hours:** Billable hours after all deductions.
 
 ```

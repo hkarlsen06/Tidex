@@ -6,7 +6,6 @@ export type ShiftRow = {
   shift_date: string;           // ISO date
   start_time: string;           // "HH:mm"
   end_time: string;             // "HH:mm"
-  pause_duration_hours?: number | null;
   hourly_wage_snapshot?: number | null; // optional if you snapshot on insert
 };
 

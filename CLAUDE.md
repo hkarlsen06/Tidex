@@ -97,9 +97,9 @@ Pure, deterministic wage calculations live in `lib/payroll/`:
 Key concepts:
 - Base rate resolved from snapshot, preset table, or custom wage
 - Time split into wage periods with bonus overlays
-- Break deductions applied via configurable policies (fixed, proportional, etc.)
-- Manual pauses deducted from tail periods deterministically
-- Cross-midnight shifts supported (when `end <= start`, treat as next day)
+ - Break deductions applied via configurable policies (fixed, proportional, etc.)
+ - [Removed] No per-shift manual pause; policy-based only
+ - Cross-midnight shifts supported (when `end <= start`, treat as next day)
 
 See `docs/calculations.md` for complete specification.
 
