@@ -6,8 +6,8 @@ import "./globals.css";
 import "react-day-picker/style.css";
 
 export const metadata: Metadata = {
-  title: "next-kkarlsen.dev",
-  description: "Fresh Next.js project scaffolded by Codex",
+  title: "kkarlsen.dev - Lønn",
+  description: "App for å regne ut lønn basert på skiftene dine med tillegg!",
 };
 
 export const viewport = {
