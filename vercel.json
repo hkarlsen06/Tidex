@@ -1,0 +1,5 @@
+{
+"buildCommand": "npm ci && npm run build",
+"outputDirectory": ".next",
+"nodeVersion": "20.x"
+}

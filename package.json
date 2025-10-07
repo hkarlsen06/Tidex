@@ -7,7 +7,7 @@
     "dev:turbo": "next dev --turbo",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint . -c .eslintrc.json"
+    "lint": "eslint ."
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.15",
@@ -15,7 +15,6 @@
     "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.58.0",
     "@tabler/icons-react": "^3.35.0",
-    "@tailwindcss/postcss": "^4.1.13",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.544.0",
@@ -27,15 +26,23 @@
     "tailwindcss-animate": "^1.0.7"
   },
   "devDependencies": {
+    "@eslint/config-array": "^0.21.0",
+    "@eslint/object-schema": "^2.1.6",
+    "@eslint/js": "^9.14.0",
     "@types/node": "20.12.7",
     "@types/react": "18.2.61",
     "@types/react-dom": "18.2.19",
     "autoprefixer": "^10.4.17",
-    "eslint": "8.57.1",
-    "eslint-config-next": "14.2.3",
+    "eslint": "^9.14.0",
+    "eslint-config-next": "^15.5.4",
+    "glob": "^10.4.5",
     "postcss": "^8.5.6",
+    "rimraf": "^5.0.10",
     "supabase": "^2.48.3",
     "tailwindcss": "^3.4.17",
     "typescript": "5.4.4"
+  },
+  "engines": {
+    "node": "20.x"
   }
 }
