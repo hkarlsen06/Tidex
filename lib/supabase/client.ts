@@ -14,5 +14,20 @@ if (!supabasePublishableKey) {
   throw missingEnvError("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY");
 }
 
-export const createSupabaseBrowserClient = () =>
-  createBrowserClient(supabaseUrl, supabasePublishableKey);
+// Singleton instance to ensure only one browser client exists
+let browserClient: ReturnType<typeof createBrowserClient> | null = null;
+
+export const createSupabaseBrowserClient = () => {
+  if (browserClient) return browserClient;
+
+  browserClient = createBrowserClient(supabaseUrl, supabasePublishableKey, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      // Unique storage key to avoid subdomain collisions
+      storageKey: 'sb:kkarlsen:v1',
+    },
+  });
+
+  return browserClient;
+};
