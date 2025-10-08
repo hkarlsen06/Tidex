@@ -3,10 +3,14 @@ import { cookies } from "next/headers";
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import type { NextRequest, NextResponse } from "next/server";
 import { ENV } from "@/lib/env";
+import { SUPABASE_AUTH_COOKIE_NAME } from "./constants";
 
 export async function createSupabaseServerClient() {
   const store = await cookies();
   return createServerClient(ENV.URL!, ENV.PUBLISHABLE!, {
+    cookieOptions: {
+      name: SUPABASE_AUTH_COOKIE_NAME,
+    },
     cookies: {
       get: (name: string) => store.get(name)?.value,
       set: (_n: string, _v: string, _o?: CookieOptions) => {},
@@ -21,6 +25,9 @@ export function createSupabaseRouteHandlerClient(
   response: NextResponse
 ) {
   return createServerClient(ENV.URL!, ENV.PUBLISHABLE!, {
+    cookieOptions: {
+      name: SUPABASE_AUTH_COOKIE_NAME,
+    },
     cookies: {
       get: (name: string) => request.cookies.get(name)?.value,
       set: (name: string, value: string, options?: CookieOptions) => {

@@ -1,5 +1,7 @@
 import { createBrowserClient } from "@supabase/ssr";
 
+import { SUPABASE_AUTH_COOKIE_NAME } from "./constants";
+
 const missingEnvError = (name: string) =>
   new Error(`Missing required environment variable: ${name}`);
 
@@ -21,11 +23,12 @@ export const createSupabaseBrowserClient = () => {
   if (browserClient) return browserClient;
 
   browserClient = createBrowserClient(supabaseUrl, supabasePublishableKey, {
+    cookieOptions: {
+      name: SUPABASE_AUTH_COOKIE_NAME,
+    },
     auth: {
       persistSession: true,
       autoRefreshToken: true,
-      // Unique storage key to avoid subdomain collisions
-      storageKey: 'sb:kkarlsen:v1',
     },
   });
 
