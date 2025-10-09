@@ -14,7 +14,7 @@ export default async function AddShiftsPage() {
   }
 
   // Load existing shifts to support conflict highlighting in the calendar
-  const shifts = await getComputedShifts(user.id);
+  const { shifts } = await getComputedShifts(user.id);
   const existingShifts = shifts.map((s) => ({
     shift_date: s.shift_date,
     start_time: s.start_time,

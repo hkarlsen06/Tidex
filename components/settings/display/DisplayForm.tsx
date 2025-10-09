@@ -146,23 +146,6 @@ export function DisplayForm({ initialData }: DisplayFormProps) {
               <div className="flex gap-2 sm:gap-4">
                 <button
                   type="button"
-                  onClick={() => handleViewChange('list')}
-                  disabled={isSaving}
-                  className={cn(
-                    'flex-1 flex flex-col items-center justify-center gap-2 rounded-2xl px-3 sm:px-8 py-6 transition-all',
-                    'border-2',
-                    defaultShiftsView === 'list'
-                      ? 'border-text-primary bg-surface-secondary'
-                      : 'border-border hover:border-border-subtle hover:bg-surface-primary',
-                    isSaving && 'opacity-50 cursor-not-allowed'
-                  )}
-                >
-                  <IconListDetails stroke={2} className="h-8 w-8" />
-                  <span className="text-xs font-medium">Liste</span>
-                </button>
-
-                <button
-                  type="button"
                   onClick={() => handleViewChange('calendar')}
                   disabled={isSaving}
                   className={cn(
@@ -176,6 +159,23 @@ export function DisplayForm({ initialData }: DisplayFormProps) {
                 >
                   <IconCalendarWeek stroke={2} className="h-8 w-8" />
                   <span className="text-xs font-medium">Kalender</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleViewChange('list')}
+                  disabled={isSaving}
+                  className={cn(
+                    'flex-1 flex flex-col items-center justify-center gap-2 rounded-2xl px-3 sm:px-8 py-6 transition-all',
+                    'border-2',
+                    defaultShiftsView === 'list'
+                      ? 'border-text-primary bg-surface-secondary'
+                      : 'border-border hover:border-border-subtle hover:bg-surface-primary',
+                    isSaving && 'opacity-50 cursor-not-allowed'
+                  )}
+                >
+                  <IconListDetails stroke={2} className="h-8 w-8" />
+                  <span className="text-xs font-medium">Liste</span>
                 </button>
               </div>
             </div>

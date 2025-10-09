@@ -14,7 +14,7 @@ export default async function ShiftsPage() {
     redirect("/login");
   }
 
-  const shifts = await getComputedShifts(user.id);
+  const { shifts, defaultView } = await getComputedShifts(user.id);
 
-  return <ShiftsView shifts={shifts} />;
+  return <ShiftsView shifts={shifts} defaultView={defaultView} />;
 }
