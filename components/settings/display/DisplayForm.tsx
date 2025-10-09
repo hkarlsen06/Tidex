@@ -78,13 +78,13 @@ export function DisplayForm({ initialData }: DisplayFormProps) {
               <p className="text-sm text-text-secondary mb-4">
                 Velg hvordan appen skal se ut
               </p>
-              <div className="flex gap-4">
+              <div className="flex gap-2 sm:gap-4">
                 <button
                   type="button"
                   onClick={() => handleThemeChange('light')}
                   disabled={isSaving}
                   className={cn(
-                    'flex flex-col items-center justify-center gap-2 rounded-2xl px-8 py-6 transition-all',
+                    'flex-1 flex flex-col items-center justify-center gap-2 rounded-2xl px-3 sm:px-8 py-6 transition-all',
                     'border-2',
                     theme === 'light'
                       ? 'border-text-primary bg-surface-secondary'
@@ -101,7 +101,7 @@ export function DisplayForm({ initialData }: DisplayFormProps) {
                   onClick={() => handleThemeChange('dark')}
                   disabled={isSaving}
                   className={cn(
-                    'flex flex-col items-center justify-center gap-2 rounded-2xl px-8 py-6 transition-all',
+                    'flex-1 flex flex-col items-center justify-center gap-2 rounded-2xl px-3 sm:px-8 py-6 transition-all',
                     'border-2',
                     theme === 'dark'
                       ? 'border-text-primary bg-surface-secondary'
@@ -118,7 +118,7 @@ export function DisplayForm({ initialData }: DisplayFormProps) {
                   onClick={() => handleThemeChange('system')}
                   disabled={isSaving}
                   className={cn(
-                    'flex flex-col items-center justify-center gap-2 rounded-2xl px-8 py-6 transition-all',
+                    'flex-1 flex flex-col items-center justify-center gap-2 rounded-2xl px-3 sm:px-8 py-6 transition-all',
                     'border-2',
                     theme === 'system'
                       ? 'border-text-primary bg-surface-secondary'
@@ -143,13 +143,13 @@ export function DisplayForm({ initialData }: DisplayFormProps) {
               <p className="text-sm text-text-secondary mb-4">
                 Velg hvordan vakter vises som standard
               </p>
-              <div className="flex gap-4">
+              <div className="flex gap-2 sm:gap-4">
                 <button
                   type="button"
                   onClick={() => handleViewChange('list')}
                   disabled={isSaving}
                   className={cn(
-                    'flex flex-col items-center justify-center gap-2 rounded-2xl px-8 py-6 transition-all',
+                    'flex-1 flex flex-col items-center justify-center gap-2 rounded-2xl px-3 sm:px-8 py-6 transition-all',
                     'border-2',
                     defaultShiftsView === 'list'
                       ? 'border-text-primary bg-surface-secondary'
@@ -166,7 +166,7 @@ export function DisplayForm({ initialData }: DisplayFormProps) {
                   onClick={() => handleViewChange('calendar')}
                   disabled={isSaving}
                   className={cn(
-                    'flex flex-col items-center justify-center gap-2 rounded-2xl px-8 py-6 transition-all',
+                    'flex-1 flex flex-col items-center justify-center gap-2 rounded-2xl px-3 sm:px-8 py-6 transition-all',
                     'border-2',
                     defaultShiftsView === 'calendar'
                       ? 'border-text-primary bg-surface-secondary'
