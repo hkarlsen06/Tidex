@@ -7,6 +7,7 @@ import { SupabaseListener } from "../supabase-listener";
 import { TopHeader } from "@/components/app/TopHeader";
 import { NavBar } from "@/components/app/NavBar";
 import { ThemeProvider } from "@/components/app/ThemeProvider";
+import { OnboardingPromptModal } from "./_components/OnboardingPromptModal";
 
 // Server layout: Uses verified user data from getUser() for secure UI rendering.
 // Child pages that need authorization must also call auth.getUser() themselves.
@@ -37,6 +38,9 @@ export default async function RootLayout({
     (user?.user_metadata?.picture as string | undefined) ??
     null;
 
+  // Check if user has finished onboarding
+  const finishedOnboarding = user?.user_metadata?.finishedOnboarding ?? false;
+
   // Get user's theme preference from database
   const serverTheme = await getUserTheme();
 
@@ -44,6 +48,7 @@ export default async function RootLayout({
     <>
       <SupabaseListener accessToken={session?.access_token} />
       <ThemeProvider serverTheme={serverTheme} />
+      <OnboardingPromptModal shouldShow={!finishedOnboarding} />
       <div className="app-container grid min-h-dvh grid-rows-[auto_1fr]">
         <TopHeader userName={userName} avatarUrl={avatarUrl} />
         <main className="px-4 pt-8" style={{ paddingBottom: 'calc(6rem + env(safe-area-inset-bottom))' }}>{children}</main>
