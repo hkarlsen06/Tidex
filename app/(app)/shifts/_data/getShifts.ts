@@ -19,7 +19,11 @@ const PRESET_RULES: BonusRule[] = [
 
 export async function getComputedShifts(
   userId: string
-): Promise<{ shifts: ShiftWithComputations[], defaultView: string }> {
+): Promise<{
+  shifts: ShiftWithComputations[],
+  defaultView: string,
+  settings: UserSettings
+}> {
   const supabase = await createSupabaseServerClient();
 
   const { data: settingsRow, error: settingsErr } = await supabase
@@ -41,7 +45,7 @@ export async function getComputedShifts(
 
   if (shiftsErr) {
     console.error("user_shifts error:", shiftsErr);
-    return { shifts: [], defaultView: "calendar" };
+    return { shifts: [], defaultView: "calendar", settings };
   }
 
   const computedShifts = ((shifts ?? []) as ShiftRow[]).map((shift) => ({
@@ -51,6 +55,7 @@ export async function getComputedShifts(
 
   return {
     shifts: computedShifts,
-    defaultView: (settingsRow as any)?.default_shifts_view || "calendar"
+    defaultView: (settingsRow as any)?.default_shifts_view || "calendar",
+    settings
   };
 }
