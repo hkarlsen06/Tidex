@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useId } from 'react';
 import { Label } from '@appui/Label';
 import { Button } from '@appui/Button';
 import { Input } from '@appui/Input';
@@ -22,18 +22,20 @@ export function SupplementsEditor({
   onChange,
   className,
 }: SupplementsEditorProps) {
+  const baseId = useId();
+
   // Initialize with one empty rule if no existing rules, or use existing rules
   const getInitialRules = (): SupplementRule[] => {
     if (value?.rules && value.rules.length > 0) {
-      return value.rules.map((rule) => ({
+      return value.rules.map((rule, index) => ({
         ...rule,
-        id: crypto.randomUUID(),
+        id: `${index}`,
       }));
     }
     // Start with one empty rule so form is visible
     return [
       {
-        id: crypto.randomUUID(),
+        id: '0',
         days: [],
         from: '',
         to: '',
@@ -43,16 +45,18 @@ export function SupplementsEditor({
   };
 
   const [rules, setRules] = useState<SupplementRule[]>(getInitialRules());
+  const [nextId, setNextId] = useState(() => rules.length);
 
   const addRule = () => {
     const newRule: SupplementRule = {
-      id: crypto.randomUUID(),
+      id: `${nextId}`,
       days: [1, 2, 3, 4, 5],
       from: '18:00',
       to: '23:00',
       rate: 50, // Default to rate type (kr/t)
     };
     setRules([...rules, newRule]);
+    setNextId(nextId + 1);
   };
 
   const removeRule = (id: string) => {
@@ -165,11 +169,11 @@ export function SupplementsEditor({
                 }`}
               >
                 <div className="space-y-2">
-                  <Label htmlFor={`from-${rule.id}`} className="text-sm">
+                  <Label htmlFor={`${baseId}-from-${rule.id}`} className="text-sm">
                     Fra
                   </Label>
                   <Input
-                    id={`from-${rule.id}`}
+                    id={`${baseId}-from-${rule.id}`}
                     type="time"
                     value={rule.from}
                     onChange={(e) =>
@@ -179,11 +183,11 @@ export function SupplementsEditor({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor={`to-${rule.id}`} className="text-sm">
+                  <Label htmlFor={`${baseId}-to-${rule.id}`} className="text-sm">
                     Til
                   </Label>
                   <Input
-                    id={`to-${rule.id}`}
+                    id={`${baseId}-to-${rule.id}`}
                     type="time"
                     value={rule.to}
                     onChange={(e) =>
@@ -237,7 +241,7 @@ export function SupplementsEditor({
                   !hasType ? 'opacity-40' : 'opacity-100'
                 }`}
               >
-                <Label htmlFor={`value-${rule.id}`} className="text-sm">
+                <Label htmlFor={`${baseId}-value-${rule.id}`} className="text-sm">
                   {hasType
                     ? rule.percent !== undefined
                       ? 'Prosent %'
@@ -246,7 +250,7 @@ export function SupplementsEditor({
                 </Label>
                 <div className="relative">
                   <Input
-                    id={`value-${rule.id}`}
+                    id={`${baseId}-value-${rule.id}`}
                     type="number"
                     min={0}
                     step="any"
