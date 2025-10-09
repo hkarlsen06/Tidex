@@ -42,7 +42,6 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState<MessageState>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSigningUp, setIsSigningUp] = useState(false);
   const [isOAuthRedirecting, setIsOAuthRedirecting] = useState(false);
 
   const resetMessage = () => setMessage(null);
@@ -74,40 +73,6 @@ export default function LoginPage() {
     router.refresh();
   };
 
-  const handleSignUp = async () => {
-    if (!email || !password) {
-      setMessage({
-        type: "error",
-        text: "Fyll inn e-post og passord for å opprette konto.",
-      });
-      return;
-    }
-
-    setIsSigningUp(true);
-    setMessage(null);
-
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo:
-          process.env.NEXT_PUBLIC_SUPABASE_REDIRECT_URL ?? undefined,
-      },
-    });
-
-    setIsSigningUp(false);
-
-    if (error) {
-      setMessage({ type: "error", text: error.message });
-      return;
-    }
-
-    setMessage({
-      type: "success",
-      text: "Sjekk e-posten din for å bekrefte kontoen.",
-    });
-  };
-
   const handleGoogleSignIn = async () => {
     setIsOAuthRedirecting(true);
     setMessage(null);
@@ -132,7 +97,7 @@ export default function LoginPage() {
     });
   };
 
-  const buttonDisabled = isSubmitting || isSigningUp || isOAuthRedirecting;
+  const buttonDisabled = isSubmitting || isOAuthRedirecting;
 
   return (
     <div className="relative flex min-h-screen items-center justify-center py-16">
@@ -202,14 +167,12 @@ export default function LoginPage() {
           )}
 
           <div className="mt-6 space-y-3">
-            <button
-              type="button"
-              onClick={handleSignUp}
-              disabled={buttonDisabled}
-              className="w-full rounded-full bg-surface-primary px-5 py-3 text-sm font-semibold uppercase tracking-wide text-text-primary transition hover:bg-surface-primary/80 focus:outline-none focus:ring-4 focus:ring-brand-highlight/40 focus:ring-offset-2 focus:ring-offset-surface-secondary disabled:cursor-not-allowed disabled:opacity-60"
+            <Link
+              href="/signup"
+              className="flex w-full items-center justify-center rounded-full bg-surface-primary px-5 py-3 text-sm font-semibold uppercase tracking-wide text-text-primary transition hover:bg-surface-primary/80 focus:outline-none focus:ring-4 focus:ring-brand-highlight/40 focus:ring-offset-2 focus:ring-offset-surface-secondary"
             >
-              {isSigningUp ? "Oppretter konto..." : "Opprett ny konto"}
-            </button>
+              Opprett ny konto
+            </Link>
             <button
               type="button"
               onClick={handleGoogleSignIn}
