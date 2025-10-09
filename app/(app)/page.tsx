@@ -14,7 +14,7 @@ export default async function Home() {
     redirect("/login");
   }
 
-  const shifts = await getComputedShifts(user.id);
+  const { shifts } = await getComputedShifts(user.id);
 
   return <HomeContent shifts={shifts} />;
 }

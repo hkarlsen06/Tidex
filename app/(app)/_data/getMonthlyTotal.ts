@@ -25,7 +25,7 @@ export async function getMonthlyTotal(userId: string): Promise<{
   bonusPay: number;
   shiftCount: number;
 }> {
-  const shifts = await getComputedShifts(userId);
+  const { shifts } = await getComputedShifts(userId);
 
   // Get current month and year
   const now = new Date();

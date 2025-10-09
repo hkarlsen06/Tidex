@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useCallback, useTransition } from "react";
+import { useMemo, useState, useCallback, useTransition, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 import ShiftCard from "@/components/app/ShiftCard";
@@ -102,14 +102,30 @@ function startOfMonth(date: Date) {
 
 type ShiftsViewProps = {
   shifts: ShiftWithComputations[];
+  defaultView?: string;
 };
 
-export function ShiftsView({ shifts }: ShiftsViewProps) {
+export function ShiftsView({ shifts, defaultView = "calendar" }: ShiftsViewProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [selectedMonth, setSelectedMonth] = useState(() => startOfMonth(new Date()));
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [selectedShift, setSelectedShift] = useState<ShiftWithComputations | null>(null);
+  const shiftsListRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to shifts list if defaultView is "list"
+  useEffect(() => {
+    if (defaultView === "list" && shiftsListRef.current) {
+      const headerHeight = 96; // Height of TopHeader (theme(spacing.24) = 96px)
+      const offset = 32; // Additional spacing (theme(spacing.8) = 32px)
+      const targetPosition = shiftsListRef.current.offsetTop - headerHeight - offset;
+
+      window.scrollTo({
+        top: targetPosition,
+        behavior: "instant"
+      });
+    }
+  }, [defaultView]);
 
   const handleMonthChange = useCallback((month: Date) => {
     setSelectedMonth(startOfMonth(month));
@@ -161,7 +177,7 @@ export function ShiftsView({ shifts }: ShiftsViewProps) {
           />
         </div>
       </div>
-      <div className="pb-10">
+      <div ref={shiftsListRef} className="pb-10">
         {grouped.length === 0 ? (
           <Card className="text-center">
             <CardHeader>
