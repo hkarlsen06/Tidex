@@ -324,17 +324,35 @@ export function SupplementsStep({
         </Button>
       </div>
 
-      <div className="flex gap-3">
-        <Button onClick={onBack} variant="outline" className="flex-1">
-          Tilbake
-        </Button>
-        <Button onClick={handleSkip} variant="ghost" className="flex-1">
-          Hopp over
-        </Button>
-        <Button onClick={handleNext} className="flex-1">
-          Neste
-        </Button>
-      </div>
+      {/* Check if any settings have been configured */}
+      {(() => {
+        const hasValidSettings = rules.some(
+          (rule) => rule.days.length > 0 && rule.from && rule.to && (rule.percent !== undefined || rule.rate !== undefined)
+        );
+
+        return (
+          <div className="flex gap-3">
+            <Button onClick={onBack} variant="outline" className="flex-1">
+              Tilbake
+            </Button>
+            <Button
+              onClick={handleSkip}
+              variant="ghost"
+              className="flex-1"
+              disabled={hasValidSettings}
+            >
+              Hopp over
+            </Button>
+            <Button
+              onClick={handleNext}
+              className="flex-1"
+              disabled={!hasValidSettings}
+            >
+              Neste
+            </Button>
+          </div>
+        );
+      })()}
     </div>
   );
 }

@@ -144,17 +144,35 @@ export function TaxPayrollStep({
         </div>
       </div>
 
-      <div className="flex gap-3">
-        <Button onClick={onBack} variant="outline" className="flex-1">
-          Tilbake
-        </Button>
-        <Button onClick={handleSkip} variant="ghost" className="flex-1">
-          Hopp over
-        </Button>
-        <Button onClick={onNext} className="flex-1">
-          Neste
-        </Button>
-      </div>
+      {/* Check if any settings have been configured */}
+      {(() => {
+        const hasValidSettings =
+          (taxDeductionEnabled && taxPercentage && parseFloat(taxPercentage) > 0) ||
+          (payrollDay && parseInt(payrollDay) >= 1 && parseInt(payrollDay) <= 31);
+
+        return (
+          <div className="flex gap-3">
+            <Button onClick={onBack} variant="outline" className="flex-1">
+              Tilbake
+            </Button>
+            <Button
+              onClick={handleSkip}
+              variant="ghost"
+              className="flex-1"
+              disabled={!!hasValidSettings}
+            >
+              Hopp over
+            </Button>
+            <Button
+              onClick={onNext}
+              className="flex-1"
+              disabled={!hasValidSettings}
+            >
+              Neste
+            </Button>
+          </div>
+        );
+      })()}
     </div>
   );
 }
