@@ -1,8 +1,20 @@
-export default function SettingsPage() {
-  return (
-    <div className="py-6">
-      <h1 className="text-2xl font-bold mb-6">Stats</h1>
-      <p className="text-text-secondary">Statistikkssiden kommer snart...</p>
-    </div>
-  );
+import { redirect } from "next/navigation";
+
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getStatsData } from "./_data/getStatsData";
+import { StatsContent } from "@/components/app/StatsContent";
+
+export default async function StatsPage() {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  const data = await getStatsData(user.id);
+
+  return <StatsContent data={data} />;
 }
