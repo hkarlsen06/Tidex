@@ -43,11 +43,11 @@ export function DataForm() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 opacity-50 pointer-events-none">
       <Card className="p-6">
         <div className="space-y-6">
           <div>
-            <h3 className="text-lg font-semibold">Eksporter data</h3>
+            <h3 className="text-lg font-semibold text-text-muted">Eksporter data</h3>
             <p className="text-sm text-text-secondary mt-1">
               Last ned alle dine vakter og innstillinger som en JSON-fil
             </p>
@@ -57,14 +57,14 @@ export function DataForm() {
 
           <div className="flex items-center justify-between">
             <div>
-              <p className="font-medium">Eksporter til JSON</p>
+              <p className="font-medium text-text-muted">Eksporter til JSON</p>
               <p className="text-sm text-text-secondary">
                 Inkluderer alle vakter, innstillinger og preferanser
               </p>
             </div>
-            <Button onClick={handleExport} disabled={isExporting}>
+            <Button onClick={handleExport} disabled>
               <Download className="h-4 w-4 mr-2" />
-              {isExporting ? 'Eksporterer...' : 'Eksporter'}
+              Eksporter
             </Button>
           </div>
         </div>
@@ -73,7 +73,7 @@ export function DataForm() {
       <Card className="p-6">
         <div className="space-y-6">
           <div>
-            <h3 className="text-lg font-semibold">Importer data</h3>
+            <h3 className="text-lg font-semibold text-text-muted">Importer data</h3>
             <p className="text-sm text-text-secondary mt-1">
               Last opp en tidligere eksportert JSON-fil for å gjenopprette data
             </p>
@@ -83,7 +83,7 @@ export function DataForm() {
 
           <div className="flex items-center justify-between">
             <div>
-              <p className="font-medium">Importer fra JSON</p>
+              <p className="font-medium text-text-muted">Importer fra JSON</p>
               <p className="text-sm text-text-secondary">
                 Dette vil overskrive eksisterende data
               </p>
@@ -95,13 +95,13 @@ export function DataForm() {
                 onChange={handleImport}
                 className="hidden"
                 id="import-file"
-                disabled={isImporting}
+                disabled
               />
               <label htmlFor="import-file">
-                <Button asChild disabled={isImporting}>
-                  <span className="cursor-pointer">
+                <Button asChild disabled>
+                  <span>
                     <Upload className="h-4 w-4 mr-2" />
-                    {isImporting ? 'Importerer...' : 'Importer'}
+                    Importer
                   </span>
                 </Button>
               </label>
@@ -110,17 +110,14 @@ export function DataForm() {
         </div>
       </Card>
 
-      <Card className="p-6 border-yellow-200 dark:border-yellow-900">
+      <Card className="p-6 border-yellow-200 dark:border-yellow-900 opacity-100">
         <div className="space-y-2">
           <h3 className="font-semibold text-yellow-600 dark:text-yellow-400">
-            Viktig informasjon
+            Kommer snart
           </h3>
-          <ul className="text-sm text-text-secondary space-y-1 list-disc list-inside">
-            <li>Eksporterte filer inneholder all din personlige informasjon</li>
-            <li>Oppbevar eksporterte filer sikkert</li>
-            <li>Import vil overskrive eksisterende data - lag en sikkerhetskopi først</li>
-            <li>Denne funksjonen er under utvikling og vil bli fullført snart</li>
-          </ul>
+          <p className="text-sm text-text-secondary">
+            Data import og eksport funksjonen er under utvikling og vil bli tilgjengelig i en fremtidig oppdatering.
+          </p>
         </div>
       </Card>
     </div>

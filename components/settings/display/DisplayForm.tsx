@@ -3,46 +3,66 @@
 import { useState } from 'react';
 import { Card } from '@appui/Card';
 import { Label } from '@appui/Label';
-import { Button } from '@appui/Button';
-import { RadioGroup, RadioGroupItem } from '@appui/RadioGroup';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@appui/Select';
-import { updateDisplaySettings } from '../../_actions/updateSettings';
+import { updateDisplaySettings } from '@/app/(app)/settings/_actions/updateSettings';
 import { useRouter } from 'next/navigation';
-import { useTheme } from 'next-themes';
+import { IconListDetails, IconCalendarWeek, IconSun, IconMoon, IconScreenShare } from '@tabler/icons-react';
+import { cn } from '@/lib/utils';
 
 interface DisplayFormProps {
   initialData: {
     theme: string;
     defaultShiftsView: string;
-    currencyFormat: string;
   };
 }
 
 export function DisplayForm({ initialData }: DisplayFormProps) {
   const router = useRouter();
-  const { setTheme } = useTheme();
-  const [theme, setThemeState] = useState(initialData.theme);
+  const [theme, setTheme] = useState(initialData.theme || 'system');
   const [defaultShiftsView, setDefaultShiftsView] = useState(initialData.defaultShiftsView);
-  const [currencyFormat, setCurrencyFormat] = useState(initialData.currencyFormat);
   const [isSaving, setIsSaving] = useState(false);
 
-  const handleSave = async () => {
+  const handleThemeChange = async (newTheme: string) => {
+    setTheme(newTheme);
     setIsSaving(true);
+
+    try {
+      // Save to localStorage
+      localStorage.setItem('theme', newTheme);
+
+      // Apply theme immediately to DOM
+      if (newTheme === 'system') {
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        document.documentElement.classList.toggle('dark', prefersDark);
+      } else {
+        document.documentElement.classList.toggle('dark', newTheme === 'dark');
+      }
+
+      await updateDisplaySettings({
+        theme: newTheme,
+        default_shifts_view: defaultShiftsView,
+      });
+
+      router.refresh();
+    } catch (error) {
+      console.error('Failed to save theme:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleViewChange = async (newView: string) => {
+    setDefaultShiftsView(newView);
+    setIsSaving(true);
+
     try {
       await updateDisplaySettings({
         theme,
-        default_shifts_view: defaultShiftsView,
-        currency_format: currencyFormat,
+        default_shifts_view: newView,
       });
 
-      // Apply theme immediately
-      setTheme(theme);
-
       router.refresh();
-      // You can add a toast notification here
     } catch (error) {
-      console.error('Failed to save display settings:', error);
-      // You can add error toast here
+      console.error('Failed to save view preference:', error);
     } finally {
       setIsSaving(false);
     }
@@ -58,26 +78,58 @@ export function DisplayForm({ initialData }: DisplayFormProps) {
               <p className="text-sm text-text-secondary mb-4">
                 Velg hvordan appen skal se ut
               </p>
-              <RadioGroup value={theme} onValueChange={setThemeState}>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="light" id="light" />
-                  <Label htmlFor="light" className="font-normal cursor-pointer">
-                    Lys
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="dark" id="dark" />
-                  <Label htmlFor="dark" className="font-normal cursor-pointer">
-                    Mørk
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="system" id="system" />
-                  <Label htmlFor="system" className="font-normal cursor-pointer">
-                    System (automatisk)
-                  </Label>
-                </div>
-              </RadioGroup>
+              <div className="flex gap-4">
+                <button
+                  type="button"
+                  onClick={() => handleThemeChange('light')}
+                  disabled={isSaving}
+                  className={cn(
+                    'flex flex-col items-center justify-center gap-2 rounded-2xl px-8 py-6 transition-all',
+                    'border-2',
+                    theme === 'light'
+                      ? 'border-text-primary bg-surface-secondary'
+                      : 'border-border hover:border-border-subtle hover:bg-surface-primary',
+                    isSaving && 'opacity-50 cursor-not-allowed'
+                  )}
+                >
+                  <IconSun stroke={2} className="h-8 w-8" />
+                  <span className="text-xs font-medium">Lys</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleThemeChange('dark')}
+                  disabled={isSaving}
+                  className={cn(
+                    'flex flex-col items-center justify-center gap-2 rounded-2xl px-8 py-6 transition-all',
+                    'border-2',
+                    theme === 'dark'
+                      ? 'border-text-primary bg-surface-secondary'
+                      : 'border-border hover:border-border-subtle hover:bg-surface-primary',
+                    isSaving && 'opacity-50 cursor-not-allowed'
+                  )}
+                >
+                  <IconMoon stroke={2} className="h-8 w-8" />
+                  <span className="text-xs font-medium">Mørk</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleThemeChange('system')}
+                  disabled={isSaving}
+                  className={cn(
+                    'flex flex-col items-center justify-center gap-2 rounded-2xl px-8 py-6 transition-all',
+                    'border-2',
+                    theme === 'system'
+                      ? 'border-text-primary bg-surface-secondary'
+                      : 'border-border hover:border-border-subtle hover:bg-surface-primary',
+                    isSaving && 'opacity-50 cursor-not-allowed'
+                  )}
+                >
+                  <IconScreenShare stroke={2} className="h-8 w-8" />
+                  <span className="text-xs font-medium">System</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -86,52 +138,50 @@ export function DisplayForm({ initialData }: DisplayFormProps) {
       <Card className="p-6">
         <div className="space-y-6">
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="defaultView" className="text-base font-semibold">
-                Standard vaktoversikt
-              </Label>
-              <p className="text-sm text-text-secondary">
+            <div>
+              <Label className="text-base font-semibold">Standard vaktoversikt</Label>
+              <p className="text-sm text-text-secondary mb-4">
                 Velg hvordan vakter vises som standard
               </p>
-              <Select value={defaultShiftsView} onValueChange={setDefaultShiftsView}>
-                <SelectTrigger id="defaultView">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="list">Liste</SelectItem>
-                  <SelectItem value="calendar">Kalender</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+              <div className="flex gap-4">
+                <button
+                  type="button"
+                  onClick={() => handleViewChange('list')}
+                  disabled={isSaving}
+                  className={cn(
+                    'flex flex-col items-center justify-center gap-2 rounded-2xl px-8 py-6 transition-all',
+                    'border-2',
+                    defaultShiftsView === 'list'
+                      ? 'border-text-primary bg-surface-secondary'
+                      : 'border-border hover:border-border-subtle hover:bg-surface-primary',
+                    isSaving && 'opacity-50 cursor-not-allowed'
+                  )}
+                >
+                  <IconListDetails stroke={2} className="h-8 w-8" />
+                  <span className="text-xs font-medium">Liste</span>
+                </button>
 
-            <div className="space-y-2">
-              <Label htmlFor="currency" className="text-base font-semibold">
-                Valuta
-              </Label>
-              <p className="text-sm text-text-secondary">
-                Velg hvordan beløp vises
-              </p>
-              <Select value={currencyFormat} onValueChange={setCurrencyFormat}>
-                <SelectTrigger id="currency">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="NOK">NOK (kr)</SelectItem>
-                  <SelectItem value="USD">USD ($)</SelectItem>
-                  <SelectItem value="EUR">EUR (€)</SelectItem>
-                  <SelectItem value="GBP">GBP (£)</SelectItem>
-                </SelectContent>
-              </Select>
+                <button
+                  type="button"
+                  onClick={() => handleViewChange('calendar')}
+                  disabled={isSaving}
+                  className={cn(
+                    'flex flex-col items-center justify-center gap-2 rounded-2xl px-8 py-6 transition-all',
+                    'border-2',
+                    defaultShiftsView === 'calendar'
+                      ? 'border-text-primary bg-surface-secondary'
+                      : 'border-border hover:border-border-subtle hover:bg-surface-primary',
+                    isSaving && 'opacity-50 cursor-not-allowed'
+                  )}
+                >
+                  <IconCalendarWeek stroke={2} className="h-8 w-8" />
+                  <span className="text-xs font-medium">Kalender</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
       </Card>
-
-      <div className="flex justify-end">
-        <Button onClick={handleSave} disabled={isSaving}>
-          {isSaving ? 'Lagrer...' : 'Lagre endringer'}
-        </Button>
-      </div>
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import "server-only";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-export type Theme = "light" | "dark";
+export type Theme = "light" | "dark" | "system";
 
 /**
  * Get user's theme preference from database
@@ -24,7 +24,7 @@ export async function getUserTheme(): Promise<Theme | null> {
     .eq("user_id", user.id)
     .single();
 
-  if (settings?.theme === "light" || settings?.theme === "dark") {
+  if (settings?.theme === "light" || settings?.theme === "dark" || settings?.theme === "system") {
     return settings.theme;
   }
 

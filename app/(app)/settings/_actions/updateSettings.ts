@@ -49,17 +49,17 @@ export async function clearAllShifts() {
 
 export async function updatePaySettings(data: {
   use_preset?: boolean;
-  current_wage_level?: number;
-  custom_wage?: number;
+  current_wage_level?: number | null;
+  custom_wage?: number | null;
   custom_bonuses?: any;
-  monthly_goal?: number;
-  payroll_day?: number;
+  monthly_goal?: number | null;
+  payroll_day?: number | null;
   pause_deduction_enabled?: boolean;
-  pause_deduction_method?: string;
-  pause_threshold_hours?: number;
-  pause_deduction_minutes?: number;
+  pause_deduction_method?: string | null;
+  pause_threshold_hours?: number | null;
+  pause_deduction_minutes?: number | null;
   tax_deduction_enabled?: boolean;
-  tax_percentage?: number;
+  tax_percentage?: number | null;
   break_policy?: string;
 }) {
   const supabase = await createSupabaseServerClient();
@@ -67,10 +67,15 @@ export async function updatePaySettings(data: {
 
   if (!user) throw new Error('Not authenticated');
 
-  await supabase
+  const { error } = await supabase
     .from('user_settings')
     .update(data)
     .eq('user_id', user.id);
+
+  if (error) {
+    console.error('Failed to update pay settings:', error);
+    throw error;
+  }
 
   revalidatePath('/settings/pay');
   return { success: true };
@@ -79,24 +84,27 @@ export async function updatePaySettings(data: {
 export async function updateDisplaySettings(data: {
   theme?: string;
   default_shifts_view?: string;
-  currency_format?: string;
 }) {
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) throw new Error('Not authenticated');
 
-  await supabase
+  const { error } = await supabase
     .from('user_settings')
     .update(data)
     .eq('user_id', user.id);
+
+  if (error) {
+    console.error('Failed to update display settings:', error);
+    throw error;
+  }
 
   revalidatePath('/settings/display');
   return { success: true };
 }
 
 export async function updatePreferencesSettings(data: {
-  show_employee_tab?: boolean;
   direct_time_input?: boolean;
   full_minute_range?: boolean;
 }) {
@@ -105,10 +113,15 @@ export async function updatePreferencesSettings(data: {
 
   if (!user) throw new Error('Not authenticated');
 
-  await supabase
+  const { error } = await supabase
     .from('user_settings')
     .update(data)
     .eq('user_id', user.id);
+
+  if (error) {
+    console.error('Failed to update preferences settings:', error);
+    throw error;
+  }
 
   revalidatePath('/settings/preferences');
   return { success: true };

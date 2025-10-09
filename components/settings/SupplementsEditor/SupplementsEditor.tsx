@@ -249,10 +249,10 @@ export function SupplementsEditor({
                     id={`value-${rule.id}`}
                     type="number"
                     min={0}
-                    value={rule.percent ?? rule.rate ?? 0}
+                    step="any"
+                    value={rule.percent ?? rule.rate ?? ''}
                     onChange={(e) => {
-                      const val =
-                        e.target.value === '' ? 0 : parseFloat(e.target.value);
+                      const val = e.target.value === '' ? 0 : parseFloat(e.target.value);
                       if (rule.percent !== undefined) {
                         updateRule(rule.id, { percent: val });
                       } else {

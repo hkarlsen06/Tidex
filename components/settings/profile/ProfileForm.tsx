@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card } from '@appui/Card';
 import { Input } from '@appui/Input';
 import { Label } from '@appui/Label';
@@ -15,7 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@appui/Dialog';
-import { updateProfileSettings, clearAllShifts } from '../../_actions/updateSettings';
+import { updateProfileSettings, clearAllShifts } from '@/app/(app)/settings/_actions/updateSettings';
 import { useRouter } from 'next/navigation';
 
 interface ProfileFormProps {
@@ -32,20 +32,39 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [showClearDialog, setShowClearDialog] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
+  const saveTimeoutRef = useRef<NodeJS.Timeout>();
 
-  const handleSave = async () => {
-    setIsSaving(true);
-    try {
-      await updateProfileSettings({ firstName });
-      router.refresh();
-      // You can add a toast notification here
-    } catch (error) {
-      console.error('Failed to save profile:', error);
-      // You can add error toast here
-    } finally {
-      setIsSaving(false);
+  // Auto-save when firstName changes
+  useEffect(() => {
+    // Clear any pending save
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
     }
-  };
+
+    // Don't save if value hasn't changed
+    if (firstName === initialData.firstName) {
+      return;
+    }
+
+    // Debounce save for 1 second
+    saveTimeoutRef.current = setTimeout(async () => {
+      setIsSaving(true);
+      try {
+        await updateProfileSettings({ firstName });
+        router.refresh();
+      } catch (error) {
+        console.error('Failed to save profile:', error);
+      } finally {
+        setIsSaving(false);
+      }
+    }, 1000);
+
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, [firstName, initialData.firstName, router]);
 
   const handleClearShifts = async () => {
     setIsClearing(true);
@@ -53,10 +72,8 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
       await clearAllShifts();
       setShowClearDialog(false);
       router.refresh();
-      // You can add a success toast here
     } catch (error) {
       console.error('Failed to clear shifts:', error);
-      // You can add error toast here
     } finally {
       setIsClearing(false);
     }
@@ -98,6 +115,7 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
                 placeholder="Ditt navn"
+                disabled={isSaving}
               />
             </div>
 
@@ -113,12 +131,6 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
                 E-postadressen kan ikke endres
               </p>
             </div>
-          </div>
-
-          <div className="flex justify-end">
-            <Button onClick={handleSave} disabled={isSaving}>
-              {isSaving ? 'Lagrer...' : 'Lagre endringer'}
-            </Button>
           </div>
         </div>
       </Card>
