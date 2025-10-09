@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import {
   Dialog,
   DialogContent,
@@ -18,10 +18,16 @@ interface OnboardingPromptModalProps {
 
 export function OnboardingPromptModal({ shouldShow }: OnboardingPromptModalProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
+    // Don't show modal if user is on the onboarding page
+    if (pathname === "/onboarding") {
+      return;
+    }
+
     // Check if user has already dismissed this session
     const hasSeenPrompt = sessionStorage.getItem("onboarding_prompt_dismissed");
 
@@ -32,7 +38,7 @@ export function OnboardingPromptModal({ shouldShow }: OnboardingPromptModalProps
       }, 500);
       return () => clearTimeout(timer);
     }
-  }, [shouldShow, dismissed]);
+  }, [shouldShow, dismissed, pathname]);
 
   const handleSetup = () => {
     setOpen(false);
@@ -47,7 +53,7 @@ export function OnboardingPromptModal({ shouldShow }: OnboardingPromptModalProps
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md" hideCloseButton>
         <DialogHeader>
           <DialogTitle>Fullfør kontooppsettet</DialogTitle>
           <DialogDescription className="pt-2">
@@ -88,11 +94,11 @@ export function OnboardingPromptModal({ shouldShow }: OnboardingPromptModalProps
           </div>
         </div>
 
-        <DialogFooter className="sm:space-x-2">
-          <Button variant="outline" onClick={handleDismiss}>
+        <DialogFooter className="flex-row gap-2">
+          <Button variant="outline" onClick={handleDismiss} className="flex-1">
             Gjør det senere
           </Button>
-          <Button onClick={handleSetup}>
+          <Button onClick={handleSetup} className="flex-1">
             Start oppsett
           </Button>
         </DialogFooter>
