@@ -1,18 +1,18 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card } from '@appui/Card';
 import { Label } from '@appui/Label';
 import { Input } from '@appui/Input';
-import { Button } from '@appui/Button';
 import { Switch } from '@appui/Switch';
-import { RadioGroup, RadioGroupItem } from '@appui/RadioGroup';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@appui/Select';
 import { Separator } from '@appui/Separator';
 import { SupplementsEditor, SupplementsData } from '@/components/settings/SupplementsEditor';
-import { updatePaySettings } from '../../_actions/updateSettings';
+import { updatePaySettings } from '@/app/(app)/settings/_actions/updateSettings';
 import { useRouter } from 'next/navigation';
 import { PRESET_WAGE_RATES } from '@/lib/payroll/calc';
+import { IconBuilding, IconAdjustments } from '@tabler/icons-react';
+import { cn } from '@/lib/utils';
 
 interface PayFormProps {
   initialData: any;
@@ -20,6 +20,7 @@ interface PayFormProps {
 
 export function PayForm({ initialData }: PayFormProps) {
   const router = useRouter();
+  const isInitialMount = useRef(true);
 
   // Wage settings
   const [usePreset, setUsePreset] = useState(initialData.use_preset ?? true);
@@ -59,13 +60,13 @@ export function PayForm({ initialData }: PayFormProps) {
 
   const [isSaving, setIsSaving] = useState(false);
 
-  const handleSave = async () => {
+  const saveSettings = async () => {
     setIsSaving(true);
     try {
       await updatePaySettings({
         use_preset: usePreset,
-        current_wage_level: usePreset ? parseInt(wageLevel) : null,
-        custom_wage: !usePreset ? parseFloat(customWage) : null,
+        current_wage_level: parseInt(wageLevel),
+        custom_wage: parseFloat(customWage),
         custom_bonuses: customBonuses,
         monthly_goal: monthlyGoal ? parseFloat(monthlyGoal) : null,
         payroll_day: payrollDay ? parseInt(payrollDay) : null,
@@ -78,14 +79,32 @@ export function PayForm({ initialData }: PayFormProps) {
         break_policy: breakPolicy,
       });
       router.refresh();
-      // You can add a toast notification here
     } catch (error) {
       console.error('Failed to save pay settings:', error);
-      // You can add error toast here
     } finally {
       setIsSaving(false);
     }
   };
+
+  // Auto-save for immediate changes (buttons, switches, selects)
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    saveSettings();
+  }, [usePreset, wageLevel, breakPolicy, pauseDeductionEnabled, taxDeductionEnabled, customBonuses]);
+
+  // Debounced auto-save for text inputs (1 second)
+  useEffect(() => {
+    if (isInitialMount.current) return;
+
+    const timer = setTimeout(() => {
+      saveSettings();
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [customWage, pauseThresholdHours, pauseDeductionMinutes, taxPercentage, monthlyGoal, payrollDay]);
 
   const getCurrentWage = () => {
     if (usePreset) {
@@ -109,23 +128,37 @@ export function PayForm({ initialData }: PayFormProps) {
 
           <Separator />
 
-          <RadioGroup
-            value={usePreset ? 'preset' : 'custom'}
-            onValueChange={(value) => setUsePreset(value === 'preset')}
-          >
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="preset" id="preset" />
-              <Label htmlFor="preset" className="font-normal cursor-pointer">
-                Tariff (Handel og Kontor)
-              </Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="custom" id="custom" />
-              <Label htmlFor="custom" className="font-normal cursor-pointer">
-                Egendefinert timelønn
-              </Label>
-            </div>
-          </RadioGroup>
+          <div className="flex gap-4">
+            <button
+              type="button"
+              onClick={() => setUsePreset(true)}
+              className={cn(
+                'flex-1 flex flex-col items-center justify-center gap-2 rounded-2xl px-8 py-6 transition-all',
+                'border-2',
+                usePreset
+                  ? 'border-text-primary bg-surface-secondary'
+                  : 'border-border hover:border-border-subtle hover:bg-surface-primary'
+              )}
+            >
+              <IconBuilding stroke={2} className="h-8 w-8" />
+              <span className="text-xs font-medium">Tariff</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setUsePreset(false)}
+              className={cn(
+                'flex-1 flex flex-col items-center justify-center gap-2 rounded-2xl px-8 py-6 transition-all',
+                'border-2',
+                !usePreset
+                  ? 'border-text-primary bg-surface-secondary'
+                  : 'border-border hover:border-border-subtle hover:bg-surface-primary'
+              )}
+            >
+              <IconAdjustments stroke={2} className="h-8 w-8" />
+              <span className="text-xs font-medium">Egendefinert</span>
+            </button>
+          </div>
 
           {usePreset ? (
             <div className="space-y-2">
@@ -135,11 +168,22 @@ export function PayForm({ initialData }: PayFormProps) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {Object.keys(PRESET_WAGE_RATES).map((level) => (
-                    <SelectItem key={level} value={level}>
-                      Nivå {level} - {PRESET_WAGE_RATES[level].toFixed(2)} kr/t
-                    </SelectItem>
-                  ))}
+                  {Object.keys(PRESET_WAGE_RATES).map((level) => {
+                    const levelNum = parseInt(level);
+                    let label = `Nivå ${level}`;
+
+                    if (levelNum === -1) {
+                      label = 'Under 16 år';
+                    } else if (levelNum === -2) {
+                      label = '16 - 18 år';
+                    }
+
+                    return (
+                      <SelectItem key={level} value={level}>
+                        {label} - {PRESET_WAGE_RATES[level].toFixed(2)} kr/t
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
             </div>
@@ -211,14 +255,14 @@ export function PayForm({ initialData }: PayFormProps) {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="proportional">Proporsjonal</SelectItem>
-                      <SelectItem value="fixed">Fast</SelectItem>
-                      <SelectItem value="threshold">Terskel</SelectItem>
+                      <SelectItem value="base_only">Kun grunnlønn</SelectItem>
+                      <SelectItem value="end_of_shift">Slutt av vakt</SelectItem>
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-text-secondary">
-                    {breakPolicy === 'proportional' && 'Trekker automatisk basert på arbeidstid'}
-                    {breakPolicy === 'fixed' && 'Fast trekk uansett arbeidstid'}
-                    {breakPolicy === 'threshold' && 'Trekk kun hvis arbeidstid er over terskel'}
+                    {breakPolicy === 'proportional' && 'Trekker pause proporsjonal basert på vaktlengde'}
+                    {breakPolicy === 'base_only' && 'Trekker pause kun fra grunnlønn'}
+                    {breakPolicy === 'end_of_shift' && 'Trekker pause fra slutten av vakten'}
                   </p>
                 </div>
 
@@ -330,12 +374,6 @@ export function PayForm({ initialData }: PayFormProps) {
           </div>
         </div>
       </Card>
-
-      <div className="flex justify-end">
-        <Button onClick={handleSave} disabled={isSaving}>
-          {isSaving ? 'Lagrer...' : 'Lagre endringer'}
-        </Button>
-      </div>
     </div>
   );
 }
