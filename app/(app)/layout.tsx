@@ -25,13 +25,13 @@ export default async function RootLayout({
     data: { session },
   } = await supabase.auth.getSession();
 
-  // Using verified user data from getUser() - safe for all server-side usage
   const userName =
+    (user?.user_metadata?.first_name as string | undefined) ??
     (user?.user_metadata?.full_name as string | undefined) ??
     (user?.user_metadata?.name as string | undefined) ??
     (user?.user_metadata?.display_name as string | undefined) ??
     user?.email ??
-    "Guest";
+    "Gjest";
   const avatarUrl =
     (user?.user_metadata?.avatar_url as string | undefined) ??
     (user?.user_metadata?.picture as string | undefined) ??
