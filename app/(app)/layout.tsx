@@ -8,8 +8,8 @@ import { TopHeader } from "@/components/app/TopHeader";
 import { NavBar } from "@/components/app/NavBar";
 import { ThemeProvider } from "@/components/app/ThemeProvider";
 
-// Server layout: getSession() is for UI hydration ONLY. No authorization here.
-// Child pages that need verified identity must call auth.getUser() themselves.
+// Server layout: Uses verified user data from getUser() for secure UI rendering.
+// Child pages that need authorization must also call auth.getUser() themselves.
 export default async function RootLayout({
   children,
 }: {
@@ -17,12 +17,15 @@ export default async function RootLayout({
 }) {
   const supabase = await createSupabaseServerClient();
   const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  // Get session for access token (used only for client-side auth state sync)
+  const {
     data: { session },
   } = await supabase.auth.getSession();
 
-  // IMPORTANT: session?.user is cached, unverified data. Safe for UI rendering only.
-  // Never use this for authorization decisions. Protected pages must call getUser().
-  const user = session?.user;
+  // Using verified user data from getUser() - safe for all server-side usage
   const userName =
     (user?.user_metadata?.full_name as string | undefined) ??
     (user?.user_metadata?.name as string | undefined) ??
