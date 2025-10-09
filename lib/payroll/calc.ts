@@ -5,7 +5,7 @@ import {
 } from "./types";
 
 const WEEKDAYS = [7,1,2,3,4,5,6]; // JS getDay(): 0=Sun → 7, then 1..6 Mon..Sat
-const PRESET_WAGE_RATES: Record<string, number> = {
+export const PRESET_WAGE_RATES: Record<string, number> = {
   "-1": 129.91, "-2": 132.90, "1": 184.54, "2": 185.38,
   "3": 187.46, "4": 193.05, "5": 210.81, "6": 256.14,
 };

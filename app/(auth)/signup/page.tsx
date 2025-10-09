@@ -4,33 +4,23 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 
-import {
-  InputOTP,
-  InputOTPGroup,
-  InputOTPSeparator,
-  InputOTPSlot,
-} from "@/components/app/InputOTP";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type MessageState = { type: "error" | "success"; text: string } | null;
-type Step = "details" | "otp";
 
 export default function SignupPage() {
   const router = useRouter();
   const supabase = createSupabaseBrowserClient();
 
-  const [step, setStep] = useState<Step>("details");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [fullName, setFullName] = useState("");
-  const [otp, setOtp] = useState("");
   const [message, setMessage] = useState<MessageState>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const resetMessage = () => setMessage(null);
 
-  // Step 1: Create account and send OTP
   const handleSignUp = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
@@ -61,14 +51,14 @@ export default function SignupPage() {
     setIsSubmitting(true);
     setMessage(null);
 
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: {
-          name: fullName,
+          first_name: fullName,
         },
-        emailRedirectTo: undefined,
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
       },
     });
 
@@ -79,38 +69,7 @@ export default function SignupPage() {
       return;
     }
 
-    setMessage({
-      type: "success",
-      text: "En kode er sendt til din e-post. Sjekk innboksen din.",
-    });
-    setStep("otp");
-  };
-
-  // Step 2: Verify OTP
-  const handleVerifyOtp = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    if (otp.length !== 6) {
-      setMessage({ type: "error", text: "Fyll inn alle 6 sifrene." });
-      return;
-    }
-
-    setIsSubmitting(true);
-    setMessage(null);
-
-    const { error } = await supabase.auth.verifyOtp({
-      email,
-      token: otp,
-      type: "signup",
-    });
-
-    setIsSubmitting(false);
-
-    if (error) {
-      setMessage({ type: "error", text: error.message });
-      return;
-    }
-
+    // User is now logged in automatically
     setMessage({
       type: "success",
       text: "Konto opprettet! Omdirigerer...",
@@ -129,14 +88,11 @@ export default function SignupPage() {
         <div className="mb-8 text-center">
           <h1 className="tracking-wide">Opprett konto</h1>
           <p className="mt-2 text-sm text-text-secondary">
-            {step === "details" && "Fyll inn dine opplysninger"}
-            {step === "otp" && "Skriv inn koden vi sendte deg"}
+            Fyll inn dine opplysninger
           </p>
         </div>
 
-        {/* Step 1: Account Details */}
-        {step === "details" && (
-          <form className="space-y-6" noValidate onSubmit={handleSignUp}>
+        <form className="space-y-6" noValidate onSubmit={handleSignUp}>
             <div className="space-y-2">
               <label htmlFor="fullName">Fullt navn</label>
               <input
@@ -206,57 +162,9 @@ export default function SignupPage() {
               disabled={isSubmitting}
               className="w-full rounded-full bg-gradient-to-r from-brand-gradientStart via-brand-gradientMid to-brand-gradientEnd px-5 py-3 text-sm font-bold uppercase tracking-wide text-text-inverse shadow-lg shadow-brand-gradientMid/40 transition hover:from-brand-gradientMid hover:via-brand-gradientMid hover:to-brand-gradientEnd focus:outline-none focus:ring-4 focus:ring-brand-highlight/60 focus:ring-offset-2 focus:ring-offset-surface-secondary disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isSubmitting ? "Sender kode..." : "Send kode"}
+              {isSubmitting ? "Oppretter konto..." : "Opprett konto"}
             </button>
           </form>
-        )}
-
-        {/* Step 2: OTP */}
-        {step === "otp" && (
-          <form className="space-y-6" noValidate onSubmit={handleVerifyOtp}>
-            <div className="flex flex-col items-center space-y-4">
-              <label htmlFor="otp" className="text-sm text-text-secondary">
-                6-sifret kode
-              </label>
-              <InputOTP
-                maxLength={6}
-                value={otp}
-                onChange={(value) => {
-                  resetMessage();
-                  setOtp(value);
-                }}
-              >
-                <InputOTPGroup>
-                  <InputOTPSlot index={0} />
-                  <InputOTPSlot index={1} />
-                  <InputOTPSlot index={2} />
-                </InputOTPGroup>
-                <InputOTPSeparator />
-                <InputOTPGroup>
-                  <InputOTPSlot index={3} />
-                  <InputOTPSlot index={4} />
-                  <InputOTPSlot index={5} />
-                </InputOTPGroup>
-              </InputOTP>
-            </div>
-
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="w-full rounded-full bg-gradient-to-r from-brand-gradientStart via-brand-gradientMid to-brand-gradientEnd px-5 py-3 text-sm font-bold uppercase tracking-wide text-text-inverse shadow-lg shadow-brand-gradientMid/40 transition hover:from-brand-gradientMid hover:via-brand-gradientMid hover:to-brand-gradientEnd focus:outline-none focus:ring-4 focus:ring-brand-highlight/60 focus:ring-offset-2 focus:ring-offset-surface-secondary disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {isSubmitting ? "Verifiserer..." : "Verifiser kode"}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setStep("details")}
-              className="w-full text-sm text-text-secondary transition hover:text-text-primary"
-            >
-              ← Tilbake til opplysninger
-            </button>
-          </form>
-        )}
 
         {/* Message Display */}
         {message && (
