@@ -226,7 +226,7 @@ export default function LoginPage() {
 
           <div className="mt-8 text-center text-sm">
             <Link
-              href="#"
+              href="/reset-password"
               className="font-semibold text-brand-highlight transition hover:text-brand-highlight/80 focus:outline-none focus:ring-2 focus:ring-brand-highlight/60"
             >
               Tilbakestill med kode
