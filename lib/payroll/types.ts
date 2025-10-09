@@ -28,6 +28,11 @@ export type UserSettings = {
   pause_deduction_minutes?: number | null;
 
   audit_break_calculations?: boolean | null;
+
+  // Tax settings
+  tax_deduction_enabled?: boolean | null;
+  tax_percentage?: number | null;
+  payroll_day?: number | null;
 };
 
 export type BonusRule = {
