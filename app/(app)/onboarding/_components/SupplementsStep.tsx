@@ -195,7 +195,7 @@ export function SupplementsStep({
               {/* Days selector - always enabled */}
               <div className="space-y-2">
                 <Label className="text-sm">Hvilke dager?</Label>
-                <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
+                <div className="grid grid-cols-4 gap-2">
                   {DAY_LABELS.map((label, idx) => {
                     const dayNum = idx + 1;
                     const isSelected = rule.days.includes(dayNum);
