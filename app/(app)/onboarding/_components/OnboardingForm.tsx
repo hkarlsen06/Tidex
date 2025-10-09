@@ -5,7 +5,9 @@ import { useRouter } from "next/navigation";
 import { Card } from "@appui/Card";
 import { StepIndicator } from "./StepIndicator";
 import { WageStep } from "./WageStep";
+import { SupplementsStep } from "./SupplementsStep";
 import { BreakStep } from "./BreakStep";
+import { TaxPayrollStep } from "./TaxPayrollStep";
 import { PreferencesStep } from "./PreferencesStep";
 import { CompletionStep } from "./CompletionStep";
 import { completeOnboarding } from "../actions";
@@ -16,10 +18,14 @@ interface OnboardingFormProps {
     use_preset?: boolean;
     current_wage_level?: number;
     custom_wage?: number;
+    custom_bonuses?: any;
     break_enabled?: boolean;
     break_method?: string;
     break_threshold_hours?: number;
     break_deduction_minutes?: number;
+    tax_deduction_enabled?: boolean;
+    tax_percentage?: number;
+    payroll_day?: number;
     theme?: string;
     default_shifts_view?: string;
     monthly_goal?: number;
@@ -42,7 +48,12 @@ export function OnboardingForm({ initialSettings }: OnboardingFormProps) {
     initialSettings?.custom_wage?.toString() || "200"
   );
 
-  // Step 2: Break
+  // Step 2: Custom Supplements
+  const [customBonuses, setCustomBonuses] = useState<{ rules: any[] } | null>(
+    initialSettings?.custom_bonuses || null
+  );
+
+  // Step 3: Break
   const [breakEnabled, setBreakEnabled] = useState(
     initialSettings?.break_enabled !== false
   );
@@ -56,7 +67,18 @@ export function OnboardingForm({ initialSettings }: OnboardingFormProps) {
     initialSettings?.break_method || "proportional"
   );
 
-  // Step 3: Preferences
+  // Step 4: Tax & Payroll
+  const [taxDeductionEnabled, setTaxDeductionEnabled] = useState(
+    initialSettings?.tax_deduction_enabled || false
+  );
+  const [taxPercentage, setTaxPercentage] = useState(
+    initialSettings?.tax_percentage?.toString() || "30"
+  );
+  const [payrollDay, setPayrollDay] = useState(
+    initialSettings?.payroll_day?.toString() || ""
+  );
+
+  // Step 5: Preferences
   const [theme, setTheme] = useState(initialSettings?.theme || "dark");
   const [shiftsView, setShiftsView] = useState(
     initialSettings?.default_shifts_view || "list"
@@ -85,10 +107,14 @@ export function OnboardingForm({ initialSettings }: OnboardingFormProps) {
         use_preset: wageType === "preset",
         current_wage_level: wageType === "preset" ? parseInt(wageLevel) : null,
         custom_wage: wageType === "custom" ? parseFloat(customWage) : null,
+        custom_bonuses: customBonuses,
         break_enabled: breakEnabled,
         break_method: breakEnabled ? method : null,
         break_threshold_hours: breakEnabled ? parseFloat(threshold) : null,
         break_deduction_minutes: breakEnabled ? parseInt(duration) : null,
+        tax_deduction_enabled: taxDeductionEnabled,
+        tax_percentage: taxDeductionEnabled && taxPercentage ? parseFloat(taxPercentage) : null,
+        payroll_day: payrollDay ? parseInt(payrollDay) : null,
         theme,
         default_shifts_view: shiftsView,
         monthly_goal: monthlyGoal ? parseFloat(monthlyGoal) : null,
@@ -105,17 +131,17 @@ export function OnboardingForm({ initialSettings }: OnboardingFormProps) {
 
   const getWageDisplay = () => {
     if (wageType === "preset") {
-      const rate = PRESET_WAGE_RATES[parseInt(wageLevel) as keyof typeof PRESET_WAGE_RATES];
+      const rate = PRESET_WAGE_RATES[wageLevel];
       return `${rate?.toFixed(2) || "0"} kr/t (Tariff Nivå ${wageLevel})`;
     }
     return `${customWage} kr/t`;
   };
 
-  const totalSteps = 4;
+  const totalSteps = 6;
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center p-4 bg-background">
-      <Card className="w-full max-w-2xl p-8 shadow-app-lg backdrop-blur border-border bg-surface-secondary">
+    <div className="min-h-full flex justify-center pt-8 pb-32 px-4 bg-background">
+      <Card className="w-full max-w-2xl h-fit p-8 shadow-app-lg backdrop-blur border-border bg-surface-secondary">
         {currentStep < totalSteps && (
           <StepIndicator currentStep={currentStep} totalSteps={totalSteps} />
         )}
@@ -133,6 +159,16 @@ export function OnboardingForm({ initialSettings }: OnboardingFormProps) {
         )}
 
         {currentStep === 2 && (
+          <SupplementsStep
+            customBonuses={customBonuses}
+            setCustomBonuses={setCustomBonuses}
+            wageType={wageType}
+            onNext={() => setCurrentStep(3)}
+            onBack={() => setCurrentStep(1)}
+          />
+        )}
+
+        {currentStep === 3 && (
           <BreakStep
             breakEnabled={breakEnabled}
             setBreakEnabled={setBreakEnabled}
@@ -142,12 +178,25 @@ export function OnboardingForm({ initialSettings }: OnboardingFormProps) {
             setDuration={setDuration}
             method={method}
             setMethod={setMethod}
-            onNext={() => setCurrentStep(3)}
-            onBack={() => setCurrentStep(1)}
+            onNext={() => setCurrentStep(4)}
+            onBack={() => setCurrentStep(2)}
           />
         )}
 
-        {currentStep === 3 && (
+        {currentStep === 4 && (
+          <TaxPayrollStep
+            taxDeductionEnabled={taxDeductionEnabled}
+            setTaxDeductionEnabled={setTaxDeductionEnabled}
+            taxPercentage={taxPercentage}
+            setTaxPercentage={setTaxPercentage}
+            payrollDay={payrollDay}
+            setPayrollDay={setPayrollDay}
+            onNext={() => setCurrentStep(5)}
+            onBack={() => setCurrentStep(3)}
+          />
+        )}
+
+        {currentStep === 5 && (
           <PreferencesStep
             theme={theme}
             setTheme={setTheme}
@@ -155,17 +204,21 @@ export function OnboardingForm({ initialSettings }: OnboardingFormProps) {
             setShiftsView={setShiftsView}
             monthlyGoal={monthlyGoal}
             setMonthlyGoal={setMonthlyGoal}
-            onNext={() => setCurrentStep(4)}
-            onBack={() => setCurrentStep(2)}
+            onNext={() => setCurrentStep(6)}
+            onBack={() => setCurrentStep(4)}
           />
         )}
 
-        {currentStep === 4 && (
+        {currentStep === 6 && (
           <CompletionStep
             wageDisplay={getWageDisplay()}
+            customBonuses={customBonuses}
             breakEnabled={breakEnabled}
             breakDuration={duration}
             breakThreshold={threshold}
+            taxDeductionEnabled={taxDeductionEnabled}
+            taxPercentage={taxPercentage}
+            payrollDay={payrollDay}
             theme={theme}
             onComplete={handleComplete}
             isSubmitting={isSubmitting}

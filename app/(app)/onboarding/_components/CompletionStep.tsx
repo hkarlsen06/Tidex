@@ -7,9 +7,13 @@ import { CheckCircle } from "lucide-react";
 
 interface CompletionStepProps {
   wageDisplay: string;
+  customBonuses: { rules: any[] } | null;
   breakEnabled: boolean;
   breakDuration: string;
   breakThreshold: string;
+  taxDeductionEnabled: boolean;
+  taxPercentage: string;
+  payrollDay: string;
   theme: string;
   onComplete: () => void;
   isSubmitting: boolean;
@@ -17,9 +21,13 @@ interface CompletionStepProps {
 
 export function CompletionStep({
   wageDisplay,
+  customBonuses,
   breakEnabled,
   breakDuration,
   breakThreshold,
+  taxDeductionEnabled,
+  taxPercentage,
+  payrollDay,
   theme,
   onComplete,
   isSubmitting,
@@ -53,9 +61,29 @@ export function CompletionStep({
           <Badge variant="secondary">{wageDisplay}</Badge>
         </div>
         <div className="flex items-center justify-between">
+          <span className="text-text-secondary">Tillegg</span>
+          <Badge variant="secondary">
+            {customBonuses && customBonuses.rules.length > 0
+              ? `${customBonuses.rules.length} tillegg`
+              : "Ingen"}
+          </Badge>
+        </div>
+        <div className="flex items-center justify-between">
           <span className="text-text-secondary">Pause</span>
           <Badge variant="secondary">
             {breakEnabled ? `${breakDuration} min etter ${breakThreshold} timer` : "Av"}
+          </Badge>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-text-secondary">Skattetrekk</span>
+          <Badge variant="secondary">
+            {taxDeductionEnabled ? `${taxPercentage}%` : "Av"}
+          </Badge>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-text-secondary">Lønningsdag</span>
+          <Badge variant="secondary">
+            {payrollDay ? `${payrollDay}. i måneden` : "Ikke satt"}
           </Badge>
         </div>
         <div className="flex items-center justify-between">

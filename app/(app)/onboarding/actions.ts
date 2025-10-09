@@ -7,10 +7,14 @@ interface OnboardingSettings {
   use_preset: boolean;
   current_wage_level: number | null;
   custom_wage: number | null;
+  custom_bonuses: { rules: any[] } | null;
   break_enabled: boolean;
   break_method: string | null;
   break_threshold_hours: number | null;
   break_deduction_minutes: number | null;
+  tax_deduction_enabled: boolean;
+  tax_percentage: number | null;
+  payroll_day: number | null;
   theme: string;
   default_shifts_view: string;
   monthly_goal: number | null;
@@ -35,10 +39,14 @@ export async function completeOnboarding(settings: OnboardingSettings) {
     use_preset: settings.use_preset,
     current_wage_level: settings.current_wage_level,
     custom_wage: settings.custom_wage,
+    custom_bonuses: settings.custom_bonuses,
     break_enabled: settings.break_enabled,
     break_method: settings.break_method,
     break_threshold_hours: settings.break_threshold_hours,
     break_deduction_minutes: settings.break_deduction_minutes,
+    tax_deduction_enabled: settings.tax_deduction_enabled,
+    tax_percentage: settings.tax_percentage,
+    payroll_day: settings.payroll_day,
     theme: settings.theme,
     default_shifts_view: settings.default_shifts_view,
     monthly_goal: settings.monthly_goal,
