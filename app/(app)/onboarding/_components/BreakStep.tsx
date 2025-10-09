@@ -5,7 +5,6 @@ import { Switch } from "@appui/Switch";
 import { Input } from "@appui/Input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@appui/Select";
 import { Button } from "@appui/Button";
-import { Badge } from "@appui/Badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@appui/Tooltip";
 import { InfoIcon } from "lucide-react";
 
@@ -103,13 +102,10 @@ export function BreakStep({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="proportional">
-                    <div className="flex items-center gap-2">
-                      <span>Proporsjonal (fordelt over hele vakten)</span>
-                      <Badge variant="secondary">Anbefalt</Badge>
-                    </div>
+                    Proporsjonal (anbefalt)
                   </SelectItem>
                   <SelectItem value="base_only">
-                    Fra grunntid (unngå tillegg)
+                    Fra grunntid
                   </SelectItem>
                   <SelectItem value="end_of_shift">
                     Fra slutten av vakten

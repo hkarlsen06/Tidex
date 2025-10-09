@@ -65,7 +65,7 @@ export function CompletionStep({
           <Badge variant="secondary">
             {customBonuses && customBonuses.rules.length > 0
               ? `${customBonuses.rules.length} tillegg`
-              : "Ingen"}
+              : "Ingen / Tariff"}
           </Badge>
         </div>
         <div className="flex items-center justify-between">
