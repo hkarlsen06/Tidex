@@ -12,6 +12,7 @@ import { PreferencesStep } from "./PreferencesStep";
 import { CompletionStep } from "./CompletionStep";
 import { completeOnboarding } from "../actions";
 import { PRESET_WAGE_RATES } from "@/lib/payroll/calc";
+import { SupplementsData } from "@/components/settings/SupplementsEditor";
 
 interface OnboardingFormProps {
   initialSettings?: {
@@ -49,7 +50,7 @@ export function OnboardingForm({ initialSettings }: OnboardingFormProps) {
   );
 
   // Step 2: Custom Supplements
-  const [customBonuses, setCustomBonuses] = useState<{ rules: any[] } | null>(
+  const [customBonuses, setCustomBonuses] = useState<SupplementsData | null>(
     initialSettings?.custom_bonuses || null
   );
 
