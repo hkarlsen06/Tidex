@@ -81,6 +81,7 @@ export function UserMenu({
           <ThemeToggle />
           <Link
             href="/logout"
+            prefetch={false}
             role="menuitem"
             className="block px-4 py-2 text-sm text-error hover:bg-error-subtle"
           >
