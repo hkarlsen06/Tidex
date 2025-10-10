@@ -70,22 +70,10 @@ export default function LoginPage() {
       return;
     }
 
-    // Sync session to server cookies before navigation
-    await fetch("/auth/callback", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "x-csrf": "auth-sync",
-      },
-      body: JSON.stringify({ event: "SIGNED_IN", session: data.session }),
-      keepalive: true,
-      cache: "no-store",
-    });
-
-    // Microtask tick ensures cookie sync completes
-    await Promise.resolve();
-    router.replace("/");
-    router.refresh();
+    // Use full page navigation to ensure cookies are properly set and visible
+    // SupabaseListener will handle the auth state sync via its onAuthStateChange handler
+    // Full navigation ensures server-side getUser() sees the cookies
+    window.location.href = "/";
   };
 
   const handleGoogleSignIn = async () => {
