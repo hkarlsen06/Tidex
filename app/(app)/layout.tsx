@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { redirect } from "next/navigation";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getUserTheme } from "@/lib/theme/getTheme";
@@ -21,25 +22,30 @@ export default async function RootLayout({
     data: { user },
   } = await supabase.auth.getUser();
 
+  // Redirect to login if no valid session
+  if (!user) {
+    redirect("/login");
+  }
+
   // Get session for access token (used only for client-side auth state sync)
   const {
     data: { session },
   } = await supabase.auth.getSession();
 
   const userName =
-    (user?.user_metadata?.first_name as string | undefined) ??
-    (user?.user_metadata?.full_name as string | undefined) ??
-    (user?.user_metadata?.name as string | undefined) ??
-    (user?.user_metadata?.display_name as string | undefined) ??
-    user?.email ??
-    "Gjest";
+    (user.user_metadata?.first_name as string | undefined) ??
+    (user.user_metadata?.full_name as string | undefined) ??
+    (user.user_metadata?.name as string | undefined) ??
+    (user.user_metadata?.display_name as string | undefined) ??
+    user.email ??
+    "User";
   const avatarUrl =
-    (user?.user_metadata?.avatar_url as string | undefined) ??
-    (user?.user_metadata?.picture as string | undefined) ??
+    (user.user_metadata?.avatar_url as string | undefined) ??
+    (user.user_metadata?.picture as string | undefined) ??
     null;
 
   // Check if user has finished onboarding
-  const finishedOnboarding = user?.user_metadata?.finishedOnboarding ?? false;
+  const finishedOnboarding = user.user_metadata?.finishedOnboarding ?? false;
 
   // Get user's theme preference from database
   const serverTheme = await getUserTheme();
