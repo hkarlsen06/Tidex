@@ -73,7 +73,7 @@ export function UserMenu({
           className="absolute right-0 mt-2 w-48 overflow-hidden rounded-xl border border-border-subtle bg-surface-primary/95 shadow-app-lg backdrop-blur"
         >
           <Link
-            href="/profile"
+            href="/settings/profile"
             role="menuitem"
             className="flex items-center gap-2 px-4 py-2 text-sm text-text-primary hover:bg-surface-secondary/70"
           >
