@@ -253,47 +253,47 @@ export default function AddShiftForm({ existingShifts }: Props) {
                 hideCaptionNav
               />
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <label className="block space-y-3 rounded-2xl border border-border-subtle bg-surface-secondary/70 p-4 shadow-app-inner transition hover:border-border">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <label className="block min-w-0 space-y-3 rounded-2xl border border-border-subtle bg-surface-secondary/70 p-4 shadow-app-inner transition hover:border-border">
                   <span className="text-xs font-semibold uppercase tracking-[0.1em] text-text-muted">
                     Start
                   </span>
-                  <div className="relative">
+                  <div className="flex min-w-0 items-center gap-2">
                     <Input
                       ref={startInputRef}
                       type="time"
                       step={900}
                       value={start}
                       onChange={(e) => setStart(e.target.value)}
-                      className="h-10 rounded-xl border-border-subtle bg-transparent pr-12 text-base text-text-primary"
+                      className="h-10 flex-1 rounded-xl border-border-subtle bg-transparent text-base text-text-primary"
                     />
                     <button
                       type="button"
                       onClick={() => openNativePicker(startInputRef.current)}
-                      className="absolute inset-y-0 right-3 flex items-center text-text-muted transition hover:text-text-primary focus:outline-none"
+                      className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border border-border-subtle bg-surface-secondary/70 text-text-muted transition hover:border-border hover:text-text-primary focus:outline-none focus-visible:outline-none"
                       aria-label="Velg starttid"
                     >
                       <IconClock className="h-5 w-5" stroke={1.5} />
                     </button>
                   </div>
                 </label>
-                <label className="block space-y-3 rounded-2xl border border-border-subtle bg-surface-secondary/70 p-4 shadow-app-inner transition hover:border-border">
+                <label className="block min-w-0 space-y-3 rounded-2xl border border-border-subtle bg-surface-secondary/70 p-4 shadow-app-inner transition hover:border-border">
                   <span className="text-xs font-semibold uppercase tracking-[0.1em] text-text-muted">
                     Slutt
                   </span>
-                  <div className="relative">
+                  <div className="flex min-w-0 items-center gap-2">
                     <Input
                       ref={endInputRef}
                       type="time"
                       step={900}
                       value={end}
                       onChange={(e) => setEnd(e.target.value)}
-                      className="h-10 rounded-xl border-border-subtle bg-transparent pr-12 text-base text-text-primary"
+                      className="h-10 flex-1 rounded-xl border-border-subtle bg-transparent text-base text-text-primary"
                     />
                     <button
                       type="button"
                       onClick={() => openNativePicker(endInputRef.current)}
-                      className="absolute inset-y-0 right-3 flex items-center text-text-muted transition hover:text-text-primary focus:outline-none"
+                      className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border border-border-subtle bg-surface-secondary/70 text-text-muted transition hover:border-border hover:text-text-primary focus:outline-none focus-visible:outline-none"
                       aria-label="Velg sluttid"
                     >
                       <IconClock className="h-5 w-5" stroke={1.5} />

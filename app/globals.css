@@ -197,3 +197,9 @@ input[type="time"]::-webkit-inner-spin-button,
 input[type="time"]::-webkit-calendar-picker-indicator {
   display: none;
 }
+
+input[type="time"] {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
