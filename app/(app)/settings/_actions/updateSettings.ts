@@ -2,6 +2,21 @@
 
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
+import { z } from 'zod';
+import { logger } from '@/lib/logger';
+
+// Validation schema for bonus rules
+const BonusRuleSchema = z.object({
+  days: z.array(z.number().int().min(1).max(7)),
+  from: z.string().regex(/^\d{2}:\d{2}$/),
+  to: z.string().regex(/^\d{2}:\d{2}$/),
+  rate: z.number().optional(),
+  percent: z.number().optional(),
+});
+
+const CustomBonusesSchema = z.object({
+  rules: z.array(BonusRuleSchema),
+});
 
 export async function updateProfileSettings(data: {
   firstName: string;
@@ -42,8 +57,8 @@ export async function clearAllShifts() {
 
   if (error) throw error;
 
+  // Only revalidate shifts page since that's what changed
   revalidatePath('/shifts');
-  revalidatePath('/settings/profile');
   return { success: true };
 }
 
@@ -67,13 +82,23 @@ export async function updatePaySettings(data: {
 
   if (!user) throw new Error('Not authenticated');
 
+  // Validate custom_bonuses if provided
+  if (data.custom_bonuses !== undefined && data.custom_bonuses !== null) {
+    try {
+      CustomBonusesSchema.parse(data.custom_bonuses);
+    } catch (error) {
+      logger.error('Invalid custom_bonuses format:', error);
+      throw new Error('Ugyldig bonuskonfigurasjon');
+    }
+  }
+
   const { error } = await supabase
     .from('user_settings')
     .update(data)
     .eq('user_id', user.id);
 
   if (error) {
-    console.error('Failed to update pay settings:', error);
+    logger.error('Failed to update pay settings:', error);
     throw error;
   }
 
@@ -96,7 +121,7 @@ export async function updateDisplaySettings(data: {
     .eq('user_id', user.id);
 
   if (error) {
-    console.error('Failed to update display settings:', error);
+    logger.error('Failed to update display settings:', error);
     throw error;
   }
 
@@ -119,7 +144,7 @@ export async function updatePreferencesSettings(data: {
     .eq('user_id', user.id);
 
   if (error) {
-    console.error('Failed to update preferences settings:', error);
+    logger.error('Failed to update preferences settings:', error);
     throw error;
   }
 

@@ -27,6 +27,10 @@ function resolveBaseRate(s: ShiftRow, settings: UserSettings): number {
   return PRESET_WAGE_RATES["1"]; // sane fallback
 }
 
+// Precision constants for payroll calculations
+const HOUR_DECIMAL_PRECISION = 1000; // 3 decimal places (0.001 hours)
+const CURRENCY_PRECISION = 100; // 2 decimal places (cents)
+
 export function computeShift(
   shift: ShiftRow,
   settings: UserSettings,
@@ -68,10 +72,10 @@ export function computeShift(
   let basePay = 0, bonusPay = 0;
   for (const p of periods) {
     // Round hours to 3 decimals to match old codebase behavior
-    const h = Math.round((p.toMin - p.fromMin) / 60 * 1000) / 1000;
+    const h = Math.round((p.toMin - p.fromMin) / 60 * HOUR_DECIMAL_PRECISION) / HOUR_DECIMAL_PRECISION;
     // Round each period's contribution to cents
-    basePay += Math.round(h * p.baseRate * 100) / 100;
-    bonusPay += Math.round(h * p.bonusRate * 100) / 100;
+    basePay += Math.round(h * p.baseRate * CURRENCY_PRECISION) / CURRENCY_PRECISION;
+    bonusPay += Math.round(h * p.bonusRate * CURRENCY_PRECISION) / CURRENCY_PRECISION;
   }
   basePay = +basePay.toFixed(2);
   bonusPay = +bonusPay.toFixed(2);

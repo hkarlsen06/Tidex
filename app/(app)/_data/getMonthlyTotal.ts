@@ -1,5 +1,10 @@
 import "server-only";
 import { getComputedShifts } from "@/app/(app)/shifts/_data/getShifts";
+import {
+  getCurrentYearMonth,
+  getPreviousYearMonth,
+  isDateInMonth,
+} from "@/lib/date-utils";
 
 const numberFormatter = new Intl.NumberFormat("nb-NO", {
   minimumFractionDigits: 0,
@@ -19,7 +24,7 @@ function formatCurrency(value: number): string {
  */
 export async function getMonthlyTotal(userId: string): Promise<{
   total: string;
-  percentageChange?: number;
+  percentageChange?: number | "..";
   tillegg: string;
   gross: number;
   bonusPay: number;
@@ -27,31 +32,19 @@ export async function getMonthlyTotal(userId: string): Promise<{
 }> {
   const { shifts } = await getComputedShifts(userId);
 
-  // Get current month and year
-  const now = new Date();
-  const currentYear = now.getFullYear();
-  const currentMonth = now.getMonth() + 1; // 1-based month
+  // Get current month and year in UTC to ensure consistent date comparisons
+  const { year: currentYear, month: currentMonth } = getCurrentYearMonth();
+  const { year: lastMonthYear, month: lastMonth } = getPreviousYearMonth();
+
   // Filter shifts for current month
-  const currentMonthShifts = shifts.filter((shift) => {
-    const shiftDate = new Date(shift.shift_date + "T00:00:00Z");
-    return (
-      shiftDate.getFullYear() === currentYear &&
-      shiftDate.getMonth() + 1 === currentMonth
-    );
-  });
+  const currentMonthShifts = shifts.filter((shift) =>
+    isDateInMonth(shift.shift_date, currentYear, currentMonth)
+  );
 
   // Filter shifts for last month
-  const lastMonthDate = new Date(currentYear, currentMonth - 2, 1); // month is 0-indexed for Date constructor
-  const lastMonthYear = lastMonthDate.getFullYear();
-  const lastMonth = lastMonthDate.getMonth() + 1;
-
-  const lastMonthShifts = shifts.filter((shift) => {
-    const shiftDate = new Date(shift.shift_date + "T00:00:00Z");
-    return (
-      shiftDate.getFullYear() === lastMonthYear &&
-      shiftDate.getMonth() + 1 === lastMonth
-    );
-  });
+  const lastMonthShifts = shifts.filter((shift) =>
+    isDateInMonth(shift.shift_date, lastMonthYear, lastMonth)
+  );
 
   // Calculate current month totals
   const gross = currentMonthShifts.reduce(
@@ -71,9 +64,12 @@ export async function getMonthlyTotal(userId: string): Promise<{
   );
 
   // Calculate percentage change
-  let percentageChange: number | undefined;
+  let percentageChange: number | ".." | undefined;
   if (lastMonthGross > 0) {
     percentageChange = Math.round(((gross - lastMonthGross) / lastMonthGross) * 100);
+  } else if (gross > 0) {
+    // New earnings from zero - show ".." indicator
+    percentageChange = "..";
   }
 
   return {

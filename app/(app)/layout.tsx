@@ -3,12 +3,13 @@ import { redirect } from "next/navigation";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getUserTheme } from "@/lib/theme/getTheme";
+import { sanitizeDisplayName, sanitizeUrl } from "@/lib/sanitize";
 
 import { SupabaseListener } from "../supabase-listener";
 import { TopHeader } from "@/components/app/TopHeader";
 import { NavBar } from "@/components/app/NavBar";
 import { ThemeProvider } from "@/components/app/ThemeProvider";
-import { OnboardingPromptModal } from "./_components/OnboardingPromptModal";
+import { OnboardingPromptModal } from "@/components/app/OnboardingPromptModal";
 
 // Server layout: Uses verified user data from getUser() for secure UI rendering.
 // Child pages that need authorization must also call auth.getUser() themselves.
@@ -32,17 +33,21 @@ export default async function RootLayout({
     data: { session },
   } = await supabase.auth.getSession();
 
-  const userName =
+  // Sanitize user metadata from OAuth providers for defense-in-depth
+  const rawUserName =
     (user.user_metadata?.first_name as string | undefined) ??
     (user.user_metadata?.full_name as string | undefined) ??
     (user.user_metadata?.name as string | undefined) ??
     (user.user_metadata?.display_name as string | undefined) ??
     user.email ??
     "User";
-  const avatarUrl =
+  const userName = sanitizeDisplayName(rawUserName);
+
+  const rawAvatarUrl =
     (user.user_metadata?.avatar_url as string | undefined) ??
     (user.user_metadata?.picture as string | undefined) ??
     null;
+  const avatarUrl = sanitizeUrl(rawAvatarUrl);
 
   // Check if user has finished onboarding
   const finishedOnboarding = user.user_metadata?.finishedOnboarding ?? false;
@@ -51,15 +56,14 @@ export default async function RootLayout({
   const serverTheme = await getUserTheme();
 
   return (
-    <>
+    <ThemeProvider serverTheme={serverTheme}>
       <SupabaseListener accessToken={session?.access_token} />
-      <ThemeProvider serverTheme={serverTheme} />
       <OnboardingPromptModal shouldShow={!finishedOnboarding} />
       <div className="app-container grid min-h-dvh grid-rows-[auto_1fr]">
         <TopHeader userName={userName} avatarUrl={avatarUrl} />
         <main className="px-4 pt-8" style={{ paddingBottom: 'calc(6rem + env(safe-area-inset-bottom))' }}>{children}</main>
         <NavBar />
       </div>
-    </>
+    </ThemeProvider>
   );
 }

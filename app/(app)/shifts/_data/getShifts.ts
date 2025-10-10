@@ -7,6 +7,7 @@ import {
   type ShiftWithComputations,
   type UserSettings,
 } from "@/lib/payroll";
+import { logger } from "@/lib/logger";
 
 const PRESET_RULES: BonusRule[] = [
   { days: [1, 2, 3, 4, 5], from: "18:00", to: "21:00", rate: 22 },
@@ -33,7 +34,8 @@ export async function getComputedShifts(
     .single();
 
   if (settingsErr && settingsErr.code !== "PGRST116") {
-    console.error("user_settings error:", settingsErr);
+    logger.error("Failed to load user settings:", settingsErr);
+    throw new Error("Kunne ikke laste brukerinnstillinger. Vennligst prøv igjen senere.");
   }
   const settings: UserSettings = settingsRow ?? {};
 
@@ -44,7 +46,7 @@ export async function getComputedShifts(
     .order("shift_date", { ascending: false });
 
   if (shiftsErr) {
-    console.error("user_shifts error:", shiftsErr);
+    logger.error("user_shifts error:", shiftsErr);
     return { shifts: [], defaultView: "calendar", settings };
   }
 
