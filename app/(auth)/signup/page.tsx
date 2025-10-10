@@ -75,6 +75,21 @@ export default function SignupPage() {
       text: "Konto opprettet! Omdirigerer...",
     });
 
+    // Sync session to server cookies before navigation
+    await fetch("/auth/callback", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-csrf": "auth-sync",
+      },
+      body: JSON.stringify({ event: "SIGNED_UP", session: data.session }),
+      keepalive: true,
+      cache: "no-store",
+    });
+
+    // Microtask tick ensures cookie sync completes
+    await Promise.resolve();
+
     // Redirect to onboarding
     setTimeout(() => {
       router.replace("/onboarding");
