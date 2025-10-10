@@ -57,7 +57,7 @@ export default function LoginPage() {
     setIsSubmitting(true);
     setMessage(null);
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
@@ -69,6 +69,20 @@ export default function LoginPage() {
       return;
     }
 
+    // Sync session to server cookies before navigation
+    await fetch("/auth/callback", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-csrf": "auth-sync",
+      },
+      body: JSON.stringify({ event: "SIGNED_IN", session: data.session }),
+      keepalive: true,
+      cache: "no-store",
+    });
+
+    // Microtask tick ensures cookie sync completes
+    await Promise.resolve();
     router.replace("/");
     router.refresh();
   };
