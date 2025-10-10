@@ -1,10 +1,20 @@
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseRouteHandlerClient } from "@/lib/supabase/server";
 
-export async function GET() {
+function propagateCookies(from: NextResponse, to: NextResponse) {
+  for (const cookie of from.cookies.getAll()) {
+    to.cookies.set(cookie);
+  }
+}
+
+export async function GET(request: NextRequest) {
+  const baseResponse = new NextResponse(null, {
+    headers: { "cache-control": "no-store" },
+  });
+
   try {
-    const supabase = await createSupabaseServerClient();
+    const supabase = createSupabaseRouteHandlerClient(request, baseResponse);
     const {
       data: { session },
       error,
@@ -12,31 +22,40 @@ export async function GET() {
 
     if (error) {
       console.error("[AUTH SESSION] Failed to read session from cookies", error);
-      return NextResponse.json(
+      const errorResponse = NextResponse.json(
         { session: null },
         {
           status: 401,
           headers: { "cache-control": "no-store" },
         }
       );
+
+      propagateCookies(baseResponse, errorResponse);
+      return errorResponse;
     }
 
-    return NextResponse.json(
+    const successResponse = NextResponse.json(
       { session },
       {
         status: 200,
         headers: { "cache-control": "no-store" },
       }
     );
+
+    propagateCookies(baseResponse, successResponse);
+    return successResponse;
   } catch (error) {
     console.error("[AUTH SESSION] Unexpected error while fetching session", error);
-    return NextResponse.json(
+    const errorResponse = NextResponse.json(
       { session: null },
       {
         status: 500,
         headers: { "cache-control": "no-store" },
       }
     );
+
+    propagateCookies(baseResponse, errorResponse);
+    return errorResponse;
   }
 }
 
