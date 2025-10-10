@@ -27,9 +27,10 @@ export async function createSupabaseServerClient() {
       set: (name: string, value: string, options?: CookieOptions) => {
         try {
           store.set({ name, value, ...COOKIE_SECURITY_OPTIONS, ...options });
-        } catch {
+        } catch (error) {
           // Ignore errors in Server Components (can't set cookies during render)
           // Cookie writes will succeed in Server Actions and Route Handlers
+          console.warn("[Supabase Server] Failed to set cookie:", name, error);
         }
       },
       remove: (name: string, options?: CookieOptions) => {
@@ -41,8 +42,9 @@ export async function createSupabaseServerClient() {
             ...options,
             expires: new Date(0),
           });
-        } catch {
+        } catch (error) {
           // Ignore errors in Server Components
+          console.warn("[Supabase Server] Failed to remove cookie:", name, error);
         }
       },
     },
