@@ -28,8 +28,13 @@ export async function updateProfileSettings(data: {
   if (!user) throw new Error('Not authenticated');
 
   // Update auth metadata
+  const existingMetadata = user.user_metadata ?? {};
+
   await supabase.auth.updateUser({
-    data: { first_name: data.firstName }
+    data: {
+      ...existingMetadata,
+      first_name: data.firstName,
+    },
   });
 
   // Update profile picture if changed

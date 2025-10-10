@@ -43,11 +43,45 @@ export default async function RootLayout({
     "User";
   const userName = sanitizeDisplayName(rawUserName);
 
-  const rawAvatarUrl =
+  const rawMetadataAvatarUrl =
     (user.user_metadata?.avatar_url as string | undefined) ??
     (user.user_metadata?.picture as string | undefined) ??
     null;
-  const avatarUrl = sanitizeUrl(rawAvatarUrl);
+  const metadataAvatarUrl = sanitizeUrl(rawMetadataAvatarUrl);
+
+  const rawIdentityAvatarUrl = (() => {
+    if (!user.identities || user.identities.length === 0) {
+      return null;
+    }
+
+    for (const identity of user.identities) {
+      const data = identity.identity_data as Record<string, unknown> | null | undefined;
+      if (!data) continue;
+
+      const candidate =
+        (typeof data.avatar_url === "string" && data.avatar_url) ||
+        (typeof data.picture === "string" && data.picture) ||
+        null;
+
+      if (candidate) {
+        return candidate;
+      }
+    }
+
+    return null;
+  })();
+
+  const identityAvatarUrl = sanitizeUrl(rawIdentityAvatarUrl);
+
+  const avatarUrl = metadataAvatarUrl ?? identityAvatarUrl;
+
+  const { data: settings } = await supabase
+    .from("user_settings")
+    .select("profile_picture_url")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  const profilePictureUrl = sanitizeUrl(settings?.profile_picture_url ?? null);
+  const resolvedAvatarUrl = profilePictureUrl ?? avatarUrl;
 
   // Check if user has finished onboarding
   const finishedOnboarding = user.user_metadata?.finishedOnboarding ?? false;
@@ -60,7 +94,7 @@ export default async function RootLayout({
       <SupabaseListener accessToken={session?.access_token} />
       <OnboardingPromptModal shouldShow={!finishedOnboarding} />
       <div className="app-container grid min-h-dvh grid-rows-[auto_1fr]">
-        <TopHeader userName={userName} avatarUrl={avatarUrl} />
+        <TopHeader userName={userName} avatarUrl={resolvedAvatarUrl} />
         <main className="px-4 pt-8" style={{ paddingBottom: 'calc(6rem + env(safe-area-inset-bottom))' }}>{children}</main>
         <NavBar />
       </div>
