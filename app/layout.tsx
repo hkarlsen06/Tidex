@@ -39,7 +39,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           dangerouslySetInnerHTML={{
             __html: `
               try {
-                const theme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+                // Initialize theme from localStorage or system preference
+                // ThemeProvider will sync with DB preference on authenticated pages
+                const savedTheme = localStorage.getItem('theme');
+                const theme = savedTheme || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
                 document.documentElement.classList.toggle('dark', theme === 'dark');
               } catch (e) {}
             `,

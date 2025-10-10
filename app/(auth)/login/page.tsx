@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { translateError } from "@/lib/errors/translate";
 
 const googleIcon = (
   <svg
@@ -65,7 +66,7 @@ export default function LoginPage() {
     setIsSubmitting(false);
 
     if (error) {
-      setMessage({ type: "error", text: error.message });
+      setMessage({ type: "error", text: translateError(error.message) });
       return;
     }
 
@@ -101,7 +102,7 @@ export default function LoginPage() {
 
     if (error) {
       setIsOAuthRedirecting(false);
-      setMessage({ type: "error", text: error.message });
+      setMessage({ type: "error", text: translateError(error.message) });
       return;
     }
 
@@ -115,6 +116,18 @@ export default function LoginPage() {
 
   return (
     <div className="relative flex min-h-screen items-center justify-center py-16">
+      {/* Full-screen loading overlay during OAuth redirect */}
+      {isOAuthRedirecting && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+          <div className="rounded-3xl border border-border bg-surface-secondary p-8 shadow-app-lg">
+            <div className="flex flex-col items-center gap-4">
+              <div className="h-12 w-12 animate-spin rounded-full border-4 border-border border-t-brand-highlight"></div>
+              <p className="text-lg font-semibold text-text-primary">Sender deg videre til Google...</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <section className="w-full max-w-md rounded-3xl border border-border bg-surface-secondary p-10 shadow-app-lg backdrop-blur">
           <div className="mb-8 text-center">
             <h1 className="tracking-wide">Logg inn</h1>

@@ -1,18 +1,27 @@
 'use server';
 
 import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { logger } from '@/lib/logger';
 
 export async function getUserSettings(userId: string) {
-  const supabase = await createSupabaseServerClient();
+  try {
+    const supabase = await createSupabaseServerClient();
 
-  const { data, error } = await supabase
-    .from('user_settings')
-    .select('*')
-    .eq('user_id', userId)
-    .single();
+    const { data, error } = await supabase
+      .from('user_settings')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
 
-  if (error) throw error;
-  return data;
+    if (error) {
+      logger.error('Failed to fetch user settings:', error);
+      return null;
+    }
+    return data;
+  } catch (error) {
+    logger.error('Unexpected error fetching settings:', error);
+    return null;
+  }
 }
 
 export async function getUserProfile() {

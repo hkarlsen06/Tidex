@@ -1,5 +1,11 @@
 import "server-only";
 import { getComputedShifts } from "@/app/(app)/shifts/_data/getShifts";
+import {
+  getCurrentYearMonth,
+  getPreviousYearMonth,
+  isDateInMonth,
+  parseDateAsUTC,
+} from "@/lib/date-utils";
 
 export type StatsData = {
   currentMonth: {
@@ -24,28 +30,22 @@ export type StatsData = {
 export async function getStatsData(userId: string): Promise<StatsData> {
   const { shifts } = await getComputedShifts(userId);
 
-  const now = new Date();
-  const currentYear = now.getFullYear();
-  const currentMonth = now.getMonth() + 1;
+  // Use UTC-based date handling for consistent month/year comparisons
+  const { year: currentYear, month: currentMonth } = getCurrentYearMonth();
+  const { year: lastMonthYear, month: lastMonth } = getPreviousYearMonth();
 
   // Current month stats
-  const monthShifts = shifts.filter((shift) => {
-    const shiftDate = new Date(shift.shift_date + "T00:00:00Z");
-    return shiftDate.getFullYear() === currentYear && shiftDate.getMonth() + 1 === currentMonth;
-  });
+  const monthShifts = shifts.filter((shift) =>
+    isDateInMonth(shift.shift_date, currentYear, currentMonth)
+  );
   const monthEarnings = monthShifts.reduce((sum, shift) => sum + (shift.computed.gross || 0), 0);
   const monthHours = monthShifts.reduce((sum, shift) => sum + (shift.computed.paidHours || 0), 0);
   const monthAvgRate = monthHours > 0 ? monthEarnings / monthHours : 0;
 
   // Last month stats
-  const lastMonthDate = new Date(currentYear, currentMonth - 2, 1);
-  const lastMonthYear = lastMonthDate.getFullYear();
-  const lastMonth = lastMonthDate.getMonth() + 1;
-
-  const lastMonthShifts = shifts.filter((shift) => {
-    const shiftDate = new Date(shift.shift_date + "T00:00:00Z");
-    return shiftDate.getFullYear() === lastMonthYear && shiftDate.getMonth() + 1 === lastMonth;
-  });
+  const lastMonthShifts = shifts.filter((shift) =>
+    isDateInMonth(shift.shift_date, lastMonthYear, lastMonth)
+  );
   const lastMonthEarnings = lastMonthShifts.reduce((sum, shift) => sum + (shift.computed.gross || 0), 0);
   const lastMonthHours = lastMonthShifts.reduce((sum, shift) => sum + (shift.computed.paidHours || 0), 0);
 
@@ -56,9 +56,10 @@ export async function getStatsData(userId: string): Promise<StatsData> {
   }
 
   // Year-to-date stats (only up to today)
+  const now = new Date();
   const ytdShifts = shifts.filter((shift) => {
-    const shiftDate = new Date(shift.shift_date + "T00:00:00Z");
-    return shiftDate.getFullYear() === currentYear && shiftDate <= now;
+    const shiftDate = parseDateAsUTC(shift.shift_date);
+    return shiftDate.getUTCFullYear() === currentYear && shiftDate <= now;
   });
   const ytdEarnings = ytdShifts.reduce((sum, shift) => sum + (shift.computed.gross || 0), 0);
   const ytdHours = ytdShifts.reduce((sum, shift) => sum + (shift.computed.paidHours || 0), 0);

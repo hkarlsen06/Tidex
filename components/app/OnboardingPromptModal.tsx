@@ -28,10 +28,11 @@ export function OnboardingPromptModal({ shouldShow }: OnboardingPromptModalProps
       return;
     }
 
-    // Check if user has already dismissed this session
-    const hasSeenPrompt = sessionStorage.getItem("onboarding_prompt_dismissed");
+    // Check if user has permanently dismissed or dismissed this session
+    const permanentlyDismissed = localStorage.getItem("onboarding_prompt_dismissed");
+    const sessionDismissed = sessionStorage.getItem("onboarding_prompt_dismissed");
 
-    if (shouldShow && !hasSeenPrompt && !dismissed) {
+    if (shouldShow && !permanentlyDismissed && !sessionDismissed && !dismissed) {
       // Small delay to avoid jarring immediate popup
       const timer = setTimeout(() => {
         setOpen(true);
@@ -45,10 +46,18 @@ export function OnboardingPromptModal({ shouldShow }: OnboardingPromptModalProps
     router.push("/onboarding");
   };
 
-  const handleDismiss = () => {
+  const handleDismissSession = () => {
     setOpen(false);
     setDismissed(true);
+    // Dismiss for this session only - will reappear next session
     sessionStorage.setItem("onboarding_prompt_dismissed", "true");
+  };
+
+  const handleDismissPermanently = () => {
+    setOpen(false);
+    setDismissed(true);
+    // Permanently dismiss - won't show again until user clears localStorage
+    localStorage.setItem("onboarding_prompt_dismissed", "true");
   };
 
   return (
@@ -94,12 +103,15 @@ export function OnboardingPromptModal({ shouldShow }: OnboardingPromptModalProps
           </div>
         </div>
 
-        <DialogFooter className="flex-row gap-2">
-          <Button variant="outline" onClick={handleDismiss} className="flex-1">
+        <DialogFooter className="flex-col gap-2 sm:flex-col">
+          <Button onClick={handleSetup} className="w-full">
+            Start oppsett
+          </Button>
+          <Button variant="outline" onClick={handleDismissSession} className="w-full">
             Gjør det senere
           </Button>
-          <Button onClick={handleSetup} className="flex-1">
-            Start oppsett
+          <Button variant="ghost" onClick={handleDismissPermanently} className="w-full text-xs text-text-muted">
+            Ikke vis dette igjen
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -8,6 +8,7 @@ import { SUPABASE_AUTH_COOKIE_NAME } from "./constants";
 // Secure cookie defaults for authentication
 const COOKIE_SECURITY_OPTIONS: Partial<CookieOptions> = {
   httpOnly: true,
+  // Secure flag only in production (requires HTTPS). In development (HTTP), secure cookies are rejected by browsers.
   secure: process.env.NODE_ENV === "production",
   sameSite: "lax", // Use 'strict' if no cross-site OAuth flows
   maxAge: 60 * 60 * 24 * 7, // 7 days (matches Supabase default refresh token expiry)
