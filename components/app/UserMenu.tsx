@@ -76,7 +76,7 @@ export function UserMenu({
             role="menuitem"
             className="block px-4 py-2 text-sm text-text-primary hover:bg-surface-secondary/70"
           >
-            Profilinnstillinger
+            Profil
           </Link>
           <ThemeToggle />
           <Link
