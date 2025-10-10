@@ -265,7 +265,7 @@ export default function AddShiftForm({ existingShifts }: Props) {
                       step={900}
                       value={start}
                       onChange={(e) => setStart(e.target.value)}
-                      className="h-10 rounded-xl border-border-subtle bg-transparent pr-12 text-base text-text-primary"
+                      className="h-10 w-full rounded-xl border-border-subtle bg-transparent pr-12 text-base text-text-primary"
                     />
                     <button
                       type="button"
@@ -288,7 +288,7 @@ export default function AddShiftForm({ existingShifts }: Props) {
                       step={900}
                       value={end}
                       onChange={(e) => setEnd(e.target.value)}
-                      className="h-10 rounded-xl border-border-subtle bg-transparent pr-12 text-base text-text-primary"
+                      className="h-10 w-full rounded-xl border-border-subtle bg-transparent pr-12 text-base text-text-primary"
                     />
                     <button
                       type="button"
