@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { AUTH_SYNC_CSRF_HEADER } from "@/lib/auth/constants";
+import { ensureAuthSyncCsrfToken } from "@/lib/auth/csrf.client";
 
 type MessageState = { type: "error" | "success"; text: string } | null;
 
@@ -76,11 +78,13 @@ export default function SignupPage() {
     });
 
     // Sync session to server cookies before navigation
+    const csrfToken = ensureAuthSyncCsrfToken();
+
     await fetch("/auth/callback", {
       method: "POST",
       headers: {
         "content-type": "application/json",
-        "x-csrf": "auth-sync",
+        [AUTH_SYNC_CSRF_HEADER]: csrfToken,
       },
       body: JSON.stringify({ event: "SIGNED_UP", session: data.session }),
       keepalive: true,
