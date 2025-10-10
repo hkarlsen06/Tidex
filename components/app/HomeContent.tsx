@@ -117,14 +117,22 @@ export function HomeContent({ shifts, settings }: HomeContentProps) {
     [shifts, month, settings]
   );
 
-  // Calculate next payroll data (last month's totals)
-  const payrollData = useMemo(() => {
-    const lastMonth = new Date(month.getFullYear(), month.getMonth() - 1, 1);
-    const targetYear = lastMonth.getFullYear();
-    const targetMonth = lastMonth.getMonth() + 1;
+  const payrollDay = Number(settings.payroll_day) || 1;
 
-    // Filter last month shifts
-    const lastMonthShifts = shifts.filter((shift) => {
+  // Calculate next payroll data based on whether the upcoming payroll
+  // happens this month (paying last month's earnings) or next month
+  // (paying this month's earnings once the payroll day has passed).
+  const payrollData = useMemo(() => {
+    const today = new Date();
+    const payrollMonthDate =
+      today.getDate() >= payrollDay
+        ? new Date(today.getFullYear(), today.getMonth(), 1)
+        : new Date(today.getFullYear(), today.getMonth() - 1, 1);
+
+    const targetYear = payrollMonthDate.getFullYear();
+    const targetMonth = payrollMonthDate.getMonth() + 1;
+
+    const relevantShifts = shifts.filter((shift) => {
       const shiftDate = new Date(shift.shift_date + "T00:00:00Z");
       return (
         shiftDate.getFullYear() === targetYear &&
@@ -132,17 +140,17 @@ export function HomeContent({ shifts, settings }: HomeContentProps) {
       );
     });
 
-    const gross = lastMonthShifts.reduce(
+    const gross = relevantShifts.reduce(
       (sum, shift) => sum + (shift.computed.gross || 0),
       0
     );
 
-    const basePay = lastMonthShifts.reduce(
+    const basePay = relevantShifts.reduce(
       (sum, shift) => sum + (shift.computed.basePay || 0),
       0
     );
 
-    const bonusPay = lastMonthShifts.reduce(
+    const bonusPay = relevantShifts.reduce(
       (sum, shift) => sum + (shift.computed.bonusPay || 0),
       0
     );
@@ -159,7 +167,7 @@ export function HomeContent({ shifts, settings }: HomeContentProps) {
       bonusAmount: bonusPay,
       taxAmount,
     };
-  }, [shifts, month, settings]);
+  }, [payrollDay, settings, shifts]);
 
   // Find next shift or last shift
   const displayShift = useMemo(() => {
@@ -202,7 +210,6 @@ export function HomeContent({ shifts, settings }: HomeContentProps) {
     setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1));
   };
 
-  const payrollDay = Number(settings.payroll_day) || 1;
   const taxDeductionEnabled = settings.tax_deduction_enabled ?? false;
 
   return (
