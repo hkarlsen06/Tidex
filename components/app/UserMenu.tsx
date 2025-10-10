@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { IconUserCircle, IconLogout2 } from "@tabler/icons-react";
 import { ThemeToggle } from "./ThemeToggle";
 
 export function UserMenu({
@@ -72,10 +73,11 @@ export function UserMenu({
           className="absolute right-0 mt-2 w-48 overflow-hidden rounded-xl border border-border-subtle bg-surface-primary/95 shadow-app-lg backdrop-blur"
         >
           <Link
-            href="/settings"
+            href="/profile"
             role="menuitem"
-            className="block px-4 py-2 text-sm text-text-primary hover:bg-surface-secondary/70"
+            className="flex items-center gap-2 px-4 py-2 text-sm text-text-primary hover:bg-surface-secondary/70"
           >
+            <IconUserCircle stroke={2} className="h-4 w-4" />
             Profil
           </Link>
           <ThemeToggle />
@@ -83,8 +85,9 @@ export function UserMenu({
             href="/logout"
             prefetch={false}
             role="menuitem"
-            className="block px-4 py-2 text-sm text-error hover:bg-error-subtle"
+            className="flex items-center gap-2 px-4 py-2 text-sm text-error hover:bg-error-subtle"
           >
+            <IconLogout2 stroke={2} className="h-4 w-4" />
             Logg ut
           </Link>
         </div>
