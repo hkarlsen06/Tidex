@@ -134,7 +134,7 @@ supabase.auth.onAuthStateChange(async (event, session) => {
     method: "POST",
     headers: {
       "content-type": "application/json",
-      "x-csrf": "auth-sync", // CSRF protection
+      [AUTH_SYNC_CSRF_HEADER]: ensureAuthSyncCsrfToken(), // CSRF protection
     },
     body: JSON.stringify({ event, session }),
     keepalive: true, // Survives tab close/navigation
@@ -167,7 +167,10 @@ export async function POST(request: NextRequest) {
   const requestOrigin = new URL(request.url).origin;
   const sameOrigin = origin && origin === requestOrigin;
 
-  if (!sameOrigin || request.headers.get("x-csrf") !== "auth-sync") {
+  const csrfHeader = request.headers.get(AUTH_SYNC_CSRF_HEADER);
+  const csrfCookie = request.cookies.get(AUTH_SYNC_CSRF_COOKIE_NAME)?.value;
+
+  if (!sameOrigin || !csrfHeader || !csrfCookie || csrfCookie !== csrfHeader) {
     return NextResponse.json({ ok: false }, { status: 403 });
   }
 
@@ -186,8 +189,8 @@ export async function POST(request: NextRequest) {
 ```
 
 **CSRF Protection:**
-- Requires `x-csrf: auth-sync` header
-- Validates request origin matches server origin
+- Requires a per-browser CSRF token stored in a same-site cookie
+- Validates request origin matches server origin and the header matches the cookie value
 - Prevents malicious sites from syncing attacker sessions into user cookies
 
 ### 4. Server Components Re-Render
@@ -263,7 +266,7 @@ if (!error) {
     method: "POST",
     headers: {
       "content-type": "application/json",
-      "x-csrf": "auth-sync",
+      [AUTH_SYNC_CSRF_HEADER]: ensureAuthSyncCsrfToken(),
     },
     body: JSON.stringify({ event: "SIGNED_IN", session: data.session }),
     keepalive: true,
@@ -287,7 +290,7 @@ if (!error) {
     method: "POST",
     headers: {
       "content-type": "application/json",
-      "x-csrf": "auth-sync",
+      [AUTH_SYNC_CSRF_HEADER]: ensureAuthSyncCsrfToken(),
     },
     body: JSON.stringify({ event: "SIGNED_UP", session: data.session }),
     keepalive: true,
@@ -391,7 +394,7 @@ npm run build  # Regenerate service worker with new rules
 1. ✅ Only one `SupabaseListener` mounted (check React DevTools component tree)
 2. ✅ Console shows `[SUPABASE LISTENER] Mounting single auth state listener` once
 3. ✅ `/auth/callback` POST endpoint is reachable (check Network tab)
-4. ✅ POST includes `x-csrf: auth-sync` header
+4. ✅ POST includes dynamic `x-csrf` header that matches the CSRF cookie value
 5. ✅ No custom storage adapters in client config
 6. ✅ Sign-in/out flows include explicit POST before navigation
 7. ✅ No manual `localStorage`/`sessionStorage` writes for auth tokens
@@ -452,7 +455,7 @@ With proper cookie sync, users stay signed in across sessions.
 2. Wait 1+ hour (or manually expire access token in DevTools)
 3. Perform action requiring auth
 4. Should auto-refresh without error
-5. Check Network tab: `/auth/callback` POST should have `x-csrf: auth-sync` header and no cache headers
+5. Check Network tab: `/auth/callback` POST should have an `x-csrf` header whose value matches the `auth-sync-csrf` cookie and no cache headers
 
 ### Automated Test
 
@@ -537,7 +540,7 @@ try {
 
 ✅ **Cookie sync headers**
 - Network tab: `/auth/callback` POST includes:
-  - `x-csrf: auth-sync` header
+- `x-csrf` header value identical to the `auth-sync-csrf` cookie
   - `cache: no-store` in request
   - `keepalive: true` (invisible in DevTools but set in code)
 
@@ -587,7 +590,7 @@ try {
 |-------------|----------------|
 | Single listener | ✅ [app/supabase-listener.tsx](../app/supabase-listener.tsx) with `useRef` guard + mount log |
 | Cookie sync | ✅ `/auth/callback` POST endpoint with `keepalive: true` and `cache: no-store` |
-| CSRF protection | ✅ Origin validation + `x-csrf: auth-sync` header required |
+| CSRF protection | ✅ Origin validation + matching `x-csrf` header/cookie required |
 | Cookie security | ✅ HttpOnly, Secure (prod), SameSite=Lax, MaxAge=7d |
 | Cookie removal | ✅ Sets `expires: new Date(0)` instead of empty string |
 | Race protection | ✅ [lib/auth/refresh-lock.ts](../lib/auth/refresh-lock.ts) serializes concurrent refreshes |
