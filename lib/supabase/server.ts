@@ -43,8 +43,9 @@ export async function createSupabaseServerClient() {
             expires: new Date(0),
           });
         } catch (error) {
-          // Ignore errors in Server Components
-          console.warn("[Supabase Server] Failed to remove cookie:", name, error);
+          // Silently ignore - can't remove cookies during Server Component rendering
+          // This is expected behavior in Next.js 15. Stale cookies will be replaced
+          // when the user successfully logs in.
         }
       },
     },
