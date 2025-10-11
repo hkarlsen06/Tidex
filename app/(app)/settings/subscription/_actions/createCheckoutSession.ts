@@ -6,7 +6,7 @@ import { redirect } from 'next/navigation';
 import { logger } from '@/lib/logger';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-06-20',
+  apiVersion: '2025-09-30.clover',
 });
 
 interface CheckoutSessionResult {

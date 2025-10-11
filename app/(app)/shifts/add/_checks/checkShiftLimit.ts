@@ -1,0 +1,71 @@
+'use server';
+
+import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { getUserSubscriptionData } from '@/app/(app)/settings/subscription/_data/getSubscription';
+import { hasProAccess, getUniqueShiftMonths } from '@/lib/subscription/hasProAccess';
+
+export interface ShiftLimitCheckResult {
+  allowed: boolean;
+  existingMonths?: string[];
+  reason?: string;
+}
+
+/**
+ * Checks if a user can add shifts in a specific month based on their subscription tier.
+ * Free tier users can only have shifts in one month at a time.
+ *
+ * @param targetMonth - The month being added to (YYYY-MM format)
+ * @returns Result indicating if allowed and which months currently have shifts
+ */
+export async function checkShiftLimit(targetMonth: string): Promise<ShiftLimitCheckResult> {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { allowed: false, reason: 'Unauthorized' };
+  }
+
+  // Fetch subscription status
+  const { subscription, profile } = await getUserSubscriptionData(user.id);
+
+  // If user has Pro access (grandfathered or subscribed), allow all months
+  if (hasProAccess(subscription, profile)) {
+    return { allowed: true };
+  }
+
+  // User is on free tier - check existing shifts
+  const { data: existingShifts, error } = await supabase
+    .from('user_shifts')
+    .select('shift_date')
+    .eq('user_id', user.id);
+
+  if (error) {
+    console.error('Error fetching shifts for limit check:', error);
+    return { allowed: false, reason: 'Database error' };
+  }
+
+  // If no existing shifts, allow
+  if (!existingShifts || existingShifts.length === 0) {
+    return { allowed: true };
+  }
+
+  // Get unique months from existing shifts
+  const existingMonths = getUniqueShiftMonths(existingShifts);
+
+  // If user already has shifts in the target month, allow (adding to same month)
+  if (existingMonths.has(targetMonth)) {
+    return { allowed: true };
+  }
+
+  // If user has shifts in any other month, block
+  if (existingMonths.size > 0) {
+    return {
+      allowed: false,
+      existingMonths: Array.from(existingMonths),
+      reason: 'Free tier users can only have shifts in one month'
+    };
+  }
+
+  // Should not reach here, but allow by default
+  return { allowed: true };
+}

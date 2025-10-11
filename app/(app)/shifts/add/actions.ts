@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getUserSubscriptionData } from "@/app/(app)/settings/subscription/_data/getSubscription";
+import { hasProAccess, getUniqueShiftMonths } from "@/lib/subscription/hasProAccess";
 
 type CreateShiftsInput = {
   dates: string[]; // ISO YYYY-MM-DD (local date)
@@ -36,6 +38,31 @@ export async function createShifts(input: CreateShiftsInput) {
   if (dates.length === 0) throw new Error("Minst én dato er påkrevd");
   if (!isHHMM(input.start) || !isHHMM(input.end)) throw new Error("Ugyldig tid");
   if (!dates.every(isISODate)) throw new Error("Ugyldig datoformat");
+
+  // Server-side validation: Check free tier limitation
+  const { subscription, profile } = await getUserSubscriptionData(user.id);
+
+  if (!hasProAccess(subscription, profile)) {
+    // User is on free tier - enforce single month limitation
+    const { data: existingShifts } = await supabase
+      .from("user_shifts")
+      .select("shift_date")
+      .eq("user_id", user.id);
+
+    if (existingShifts && existingShifts.length > 0) {
+      const existingMonths = getUniqueShiftMonths(existingShifts);
+
+      // Check if new shifts would create multiple months
+      const newMonths = getUniqueShiftMonths(dates.map(d => ({ shift_date: d })));
+      const allMonths = new Set([...Array.from(existingMonths), ...Array.from(newMonths)]);
+
+      if (allMonths.size > 1) {
+        throw new Error(
+          "Du er på gratisplanen og kan bare ha skift i én måned om gangen. Oppgrader til Pro eller slett skift i andre måneder."
+        );
+      }
+    }
+  }
 
   const sid = input.seriesId && input.seriesId.trim().length > 0 ? input.seriesId : undefined;
 

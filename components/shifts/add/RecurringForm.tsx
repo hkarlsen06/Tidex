@@ -8,6 +8,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { createShifts } from "../../../app/(app)/shifts/add/actions";
 import { IconClock } from "@tabler/icons-react";
 import { cn } from "@/lib/cn";
+import { FreeTierLimitModal } from "./FreeTierLimitModal";
+import { checkShiftLimit } from "../../../app/(app)/shifts/add/_checks/checkShiftLimit";
 
 function toLocalISODate(d: Date) {
   const y = d.getFullYear();
@@ -40,6 +42,8 @@ export default function RecurringForm() {
 
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showLimitModal, setShowLimitModal] = useState(false);
+  const [limitModalData, setLimitModalData] = useState<{ existingMonths: string[]; targetMonth: string } | null>(null);
 
   const parsedCustomInterval = useMemo(() => {
     const parsed = parseInt(customInterval, 10);
@@ -80,6 +84,29 @@ export default function RecurringForm() {
     setError(null);
     startTransition(async () => {
       try {
+        // Extract target month from first date in the series
+        const targetMonth = dates[0]?.substring(0, 7); // YYYY-MM
+        if (!targetMonth) {
+          setError("Kunne ikke bestemme måneden");
+          setOpen(false);
+          return;
+        }
+
+        // Check if user can add shifts to this month
+        const limitCheck = await checkShiftLimit(targetMonth);
+
+        if (!limitCheck.allowed && limitCheck.existingMonths) {
+          // Close the preview dialog and show limit modal
+          setOpen(false);
+          setLimitModalData({
+            existingMonths: limitCheck.existingMonths,
+            targetMonth,
+          });
+          setShowLimitModal(true);
+          return;
+        }
+
+        // User is allowed - proceed with shift creation
         const sid = crypto.randomUUID();
         await createShifts({ dates, start, end, seriesId: sid });
         router.push("/shifts");
@@ -88,6 +115,21 @@ export default function RecurringForm() {
         setError(e?.message || "Kunne ikke lagre skift");
       } finally {
         setOpen(false);
+      }
+    });
+  };
+
+  const handleDeleteAndProceed = async () => {
+    // Called after user deletes shifts in other months
+    setError(null);
+    startTransition(async () => {
+      try {
+        const sid = crypto.randomUUID();
+        await createShifts({ dates, start, end, seriesId: sid });
+        router.push("/shifts");
+        router.refresh();
+      } catch (e: any) {
+        setError(e?.message || "Kunne ikke lagre skift");
       }
     });
   };
@@ -307,6 +349,17 @@ export default function RecurringForm() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Free tier limitation modal */}
+      {limitModalData && (
+        <FreeTierLimitModal
+          open={showLimitModal}
+          onOpenChange={setShowLimitModal}
+          existingMonths={limitModalData.existingMonths}
+          targetMonth={limitModalData.targetMonth}
+          onDeleteComplete={handleDeleteAndProceed}
+        />
+      )}
     </div>
   );
 }
