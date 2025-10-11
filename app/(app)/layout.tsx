@@ -6,10 +6,9 @@ import { getUserTheme } from "@/lib/theme/getTheme";
 import { sanitizeDisplayName, sanitizeUrl } from "@/lib/sanitize";
 
 import { SupabaseListener } from "../supabase-listener";
-import { TopHeader } from "@/components/app/TopHeader";
-import { NavBar } from "@/components/app/NavBar";
 import { ThemeProvider } from "@/components/app/ThemeProvider";
 import { OnboardingPromptModal } from "@/components/app/OnboardingPromptModal";
+import { AppLayoutClient } from "@/components/app/AppLayoutClient";
 
 // Server layout: Uses verified user data from getUser() for secure UI rendering.
 // Child pages that need authorization must also call auth.getUser() themselves.
@@ -93,11 +92,9 @@ export default async function RootLayout({
     <ThemeProvider serverTheme={serverTheme}>
       <SupabaseListener accessToken={session?.access_token} />
       <OnboardingPromptModal shouldShow={!finishedOnboarding} />
-      <div className="app-container grid min-h-dvh grid-rows-[auto_1fr]">
-        <TopHeader userName={userName} avatarUrl={resolvedAvatarUrl} />
-        <main className="px-4 pt-8" style={{ paddingBottom: 'calc(6rem + env(safe-area-inset-bottom))' }}>{children}</main>
-        <NavBar />
-      </div>
+      <AppLayoutClient userName={userName} avatarUrl={resolvedAvatarUrl}>
+        {children}
+      </AppLayoutClient>
     </ThemeProvider>
   );
 }

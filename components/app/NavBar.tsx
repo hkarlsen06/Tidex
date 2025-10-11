@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import type { MouseEvent } from "react";
 import {
   IconHome,
   IconHomeFilled,
@@ -13,6 +14,7 @@ import {
   IconSettings,
   IconSettingsFilled,
 } from "@tabler/icons-react";
+import { useNavigationFeedback } from "./navigation-feedback";
 
 type TablerIcon = typeof IconHome;
 type NavItem = { 
@@ -59,13 +61,31 @@ const navItems: NavItem[] = [
 
 export function NavBar() {
   const pathname = usePathname();
+  const { navigate, pendingPath } = useNavigationFeedback();
+
+  const handleItemClick = (href: string) => (event: MouseEvent<HTMLAnchorElement>) => {
+    if (
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey ||
+      event.altKey ||
+      event.button !== 0
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+    navigate(href);
+  };
+
+  const isPathActive = (href: string) => pathname === href || pendingPath === href;
 
   return (
     <nav className="fixed bottom-4 left-0 right-0 z-40" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
       <div className="mx-auto max-w-[480px] px-4">
         <div className="flex items-center justify-around rounded-full border border-border-subtle bg-surface-primary/80 px-6 py-3 shadow-app-lg backdrop-blur">
           {navItems.map((item) => {
-            const isActive = pathname === item.href;
+            const isActive = isPathActive(item.href);
             const Icon = isActive && !item.isCenter ? item.iconFilled : item.icon;
 
             if (item.isCenter) {
@@ -76,6 +96,7 @@ export function NavBar() {
                 <Link
                   key={item.href}
                   href={targetHref}
+                  onClick={handleItemClick(targetHref)}
                   className="flex items-center justify-center"
                 >
                   <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-gradientMid">
@@ -94,6 +115,7 @@ export function NavBar() {
               <Link
                 key={item.href}
                 href={item.href}
+                onClick={handleItemClick(item.href)}
                 className="flex items-center justify-center"
               >
                 <Icon
