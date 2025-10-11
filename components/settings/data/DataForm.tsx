@@ -1,12 +1,11 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Card } from '@appui/Card';
 import { Button } from '@appui/Button';
 import { Input } from '@appui/Input';
 import { Separator } from '@appui/Separator';
-import { cn } from '@/lib/cn';
 import { Download } from 'lucide-react';
+import { cn } from '@/lib/cn';
 
 const JSPDF_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
 
@@ -739,175 +738,185 @@ export function DataForm() {
 
   return (
     <div className="space-y-6">
-      <Card className="p-6">
-        <div className="space-y-6">
+      <div className="space-y-6">
+        <div className="text-center">
+          <h3 className="text-lg font-semibold text-text-muted">Eksporter data</h3>
+          <p className="mt-1 text-sm text-text-secondary">
+            Velg tidsperiode og last ned vakter som PDF eller CSV.
+          </p>
+        </div>
+
+        <Separator />
+
+        <div className="space-y-4">
           <div>
-            <h3 className="text-lg font-semibold text-text-muted">Eksporter data</h3>
-            <p className="mt-1 text-sm text-text-secondary">
-              Velg tidsperiode og last ned vakter som PDF eller CSV.
+            <p className="font-medium text-text-muted">Velg tidsperiode</p>
+            <p className="text-sm text-text-secondary">
+              Forhåndsvalg eller egendefinert periode må settes før eksport.
             </p>
           </div>
 
-          <Separator />
+          <div className="flex gap-2">
+            {PRESET_ORDER.map((key) => {
+              const isSelected = selectedPreset === key;
+              return (
+                <Button
+                  key={key}
+                  type="button"
+                  variant={isSelected ? 'default' : 'secondary'}
+                  className={cn(
+                    'flex-1 min-w-0 text-sm',
+                    !isSelected && 'bg-muted text-text-secondary hover:bg-muted'
+                  )}
+                  onClick={() => setSelectedPreset(key)}
+                >
+                  {getPresetLabel(key)}
+                </Button>
+              );
+            })}
+          </div>
 
-          <div className="space-y-4">
-            <div>
-              <p className="font-medium text-text-muted">Velg tidsperiode</p>
-              <p className="text-sm text-text-secondary">
-                Forhåndsvalg eller egendefinert periode må settes før eksport.
-              </p>
-            </div>
-
-            <div className="flex gap-2">
-              {PRESET_ORDER.map((key) => {
-                const isSelected = selectedPreset === key;
-                return (
-                  <Button
-                    key={key}
-                    type="button"
-                    variant={isSelected ? 'default' : 'secondary'}
-                    className={cn(
-                      'flex-1 min-w-0 text-sm',
-                      !isSelected && 'bg-muted text-text-secondary hover:bg-muted'
-                    )}
-                    onClick={() => setSelectedPreset(key)}
-                  >
-                    {getPresetLabel(key)}
-                  </Button>
-                );
-              })}
-            </div>
-
-            <div className="flex items-center gap-3">
-              <div className="h-px flex-1 bg-border" />
-              <span className="text-xs uppercase tracking-wide text-text-secondary">
-                eller
-              </span>
-              <div className="h-px flex-1 bg-border" />
-            </div>
-
+          <div className="flex items-center gap-4">
             <div
-              className={cn(
-                'cursor-pointer rounded-md border p-3 transition-colors sm:p-4',
-                selectedPreset === 'custom'
-                  ? 'border-primary bg-primary/5'
-                  : 'border-border bg-muted text-text-secondary hover:bg-muted'
-              )}
-              onClick={() => setSelectedPreset('custom')}
-            >
-              <div className="flex flex-col gap-2">
-                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                  <p className="font-medium text-text-muted">Egendefinert periode</p>
-                  <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-semibold uppercase tracking-wide text-text-secondary">
-                        Fra
-                      </span>
-                      <Input
-                        type="date"
-                        value={customRange.from}
-                        max={customRange.to || undefined}
-                        onChange={(event) => {
-                          const value = event.target.value;
-                          setSelectedPreset('custom');
-                          setCustomRange((previous) => ({
-                            ...previous,
-                            from: value,
-                          }));
-                        }}
-                        onFocus={() => setSelectedPreset('custom')}
-                        className="w-32 sm:w-36"
-                      />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-semibold uppercase tracking-wide text-text-secondary">
-                        Til
-                      </span>
-                      <Input
-                        type="date"
-                        value={customRange.to}
-                        min={customRange.from || undefined}
-                        onChange={(event) => {
-                          const value = event.target.value;
-                          setSelectedPreset('custom');
-                          setCustomRange((previous) => ({
-                            ...previous,
-                            to: value,
-                          }));
-                        }}
-                        onFocus={() => setSelectedPreset('custom')}
-                        className="w-32 sm:w-36"
-                      />
-                    </div>
+              className="h-px flex-1"
+              style={{
+                backgroundImage:
+                  'repeating-linear-gradient(to right, hsl(var(--border)) 0, hsl(var(--border)) 8px, transparent 8px, transparent 16px)',
+              }}
+            />
+            <span className="text-xs uppercase tracking-wide text-text-secondary">
+              eller
+            </span>
+            <div
+              className="h-px flex-1"
+              style={{
+                backgroundImage:
+                  'repeating-linear-gradient(to right, hsl(var(--border)) 0, hsl(var(--border)) 8px, transparent 8px, transparent 16px)',
+              }}
+            />
+          </div>
+
+          <div
+            className={cn(
+              'cursor-pointer rounded-md border p-3 transition-colors sm:p-4',
+              selectedPreset === 'custom'
+                ? 'border-primary bg-primary/5'
+                : 'border-border bg-muted text-text-secondary hover:bg-muted'
+            )}
+            onClick={() => setSelectedPreset('custom')}
+          >
+            <div className="flex flex-col gap-2">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                <p className="font-medium text-text-muted">Egendefinert periode</p>
+                <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold uppercase tracking-wide text-text-secondary">
+                      Fra
+                    </span>
+                    <Input
+                      type="date"
+                      value={customRange.from}
+                      max={customRange.to || undefined}
+                      onChange={(event) => {
+                        const value = event.target.value;
+                        setSelectedPreset('custom');
+                        setCustomRange((previous) => ({
+                          ...previous,
+                          from: value,
+                        }));
+                      }}
+                      onFocus={() => setSelectedPreset('custom')}
+                      className="w-32 sm:w-36"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold uppercase tracking-wide text-text-secondary">
+                      Til
+                    </span>
+                    <Input
+                      type="date"
+                      value={customRange.to}
+                      min={customRange.from || undefined}
+                      onChange={(event) => {
+                        const value = event.target.value;
+                        setSelectedPreset('custom');
+                        setCustomRange((previous) => ({
+                          ...previous,
+                          to: value,
+                        }));
+                      }}
+                      onFocus={() => setSelectedPreset('custom')}
+                      className="w-32 sm:w-36"
+                    />
                   </div>
                 </div>
-                {customRangeInvalid && (
-                  <p className="text-xs text-destructive">
-                    Fradato kan ikke være etter tildato.
-                  </p>
-                )}
               </div>
+              {customRangeInvalid && (
+                <p className="text-xs text-destructive">
+                  Fradato kan ikke være etter tildato.
+                </p>
+              )}
             </div>
+          </div>
 
-            {selectedRangeLabel && (
+          {selectedRangeLabel && (
+            <p className="text-sm text-text-secondary">
+              Valgt periode: {selectedRangeLabel}
+            </p>
+          )}
+        </div>
+
+        <Separator />
+
+        <div className="space-y-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="font-medium text-text-muted">Eksporter til PDF</p>
               <p className="text-sm text-text-secondary">
-                Valgt periode: {selectedRangeLabel}
+                Inkluderer vaktoversikt, summer per type og totale lønnstall.
               </p>
-            )}
+            </div>
+            <Button
+              className={cn(
+                'bg-[#FF0000] text-white hover:bg-[#e50000]',
+                (!canExport || isExportingPdf) && 'hover:bg-[#FF0000]'
+              )}
+              onClick={() => handleExport('pdf')}
+              disabled={!canExport || isExportingPdf}
+            >
+              <Download className="mr-2 h-4 w-4" />
+              {isExportingPdf ? 'Eksporterer…' : 'Last ned PDF'}
+            </Button>
           </div>
 
-          <Separator />
-
-          <div className="space-y-6">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="font-medium text-text-muted">Eksporter til PDF</p>
-                <p className="text-sm text-text-secondary">
-                  Inkluderer vaktoversikt, summer per type og totale lønnstall.
-                </p>
-              </div>
-              <Button
-                className={cn(
-                  'bg-[#FF0000] text-white hover:bg-[#e50000]',
-                  (!canExport || isExportingPdf) && 'hover:bg-[#FF0000]'
-                )}
-                onClick={() => handleExport('pdf')}
-                disabled={!canExport || isExportingPdf}
-              >
-                <Download className="mr-2 h-4 w-4" />
-                {isExportingPdf ? 'Eksporterer…' : 'Last ned PDF'}
-              </Button>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="font-medium text-text-muted">Eksporter til CSV</p>
+              <p className="text-sm text-text-secondary">
+                Laster ned den samme perioden som kommaseparert fil i kronologisk rekkefølge.
+              </p>
             </div>
-
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="font-medium text-text-muted">Eksporter til CSV</p>
-                <p className="text-sm text-text-secondary">
-                  Laster ned den samme perioden som kommaseparert fil i kronologisk rekkefølge.
-                </p>
-              </div>
-              <Button
-                onClick={() => handleExport('csv')}
-                disabled={!canExport || isExportingCsv}
-              >
-                <Download className="mr-2 h-4 w-4" />
-                {isExportingCsv ? 'Eksporterer…' : 'Last ned CSV'}
-              </Button>
-            </div>
+            <Button
+              onClick={() => handleExport('csv')}
+              disabled={!canExport || isExportingCsv}
+            >
+              <Download className="mr-2 h-4 w-4" />
+              {isExportingCsv ? 'Eksporterer…' : 'Last ned CSV'}
+            </Button>
           </div>
         </div>
-      </Card>
+      </div>
 
-      <Card className="p-6">
-        <div className="space-y-2">
-          <h3 className="font-semibold text-text-muted">Om rapporten</h3>
-          <p className="text-sm text-text-secondary">
-            Rapporten er optimalisert for A4-portrettformat og inkluderer automatisk
-            sidetall og genereringstidspunkt. Lagre den for intern dokumentasjon eller
-            del den med arbeidsgiver ved behov.
-          </p>
-        </div>
-      </Card>
+      <Separator className="mt-6" />
+
+      <div className="space-y-2">
+        <h3 className="font-semibold text-text-muted">Om rapporten</h3>
+        <p className="text-sm text-text-secondary">
+          PDF-rapporten er optimalisert for A4-portrettformat og inkluderer automatisk sidetall og
+          genereringstidspunkt. Lagre den for intern dokumentasjon eller del den ved
+          behov.
+        </p>
+      </div>
     </div>
   );
 }
