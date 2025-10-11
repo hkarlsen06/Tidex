@@ -42,6 +42,7 @@ export async function GET() {
       paidHours: result.paidHours,
       durationHours: result.durationHours,
       wagePeriods: result.wagePeriods,
+      originalWagePeriods: result.originalWagePeriods,
       breakAudit: result.breakAudit,
     },
   });

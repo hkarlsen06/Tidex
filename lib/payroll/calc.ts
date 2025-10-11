@@ -54,6 +54,9 @@ export function computeShift(
   const totalMinutes = periods.reduce((sum, p) => sum + (p.toMin - p.fromMin), 0);
   const durationHours = +(totalMinutes / 60).toFixed(2);
 
+  // Store original periods before break deduction (for display purposes)
+  const originalWagePeriods = periods.map(p => ({ ...p }));
+
   // Resolve break settings - support both old and new field names
   const breakEnabled = settings.break_enabled ?? settings.pause_deduction_enabled ?? defaultSettings.break_enabled;
   const method = settings.break_method ?? settings.pause_deduction_method ?? defaultSettings.break_method;
@@ -89,6 +92,7 @@ export function computeShift(
     bonusPay,
     gross,
     wagePeriods: periods,
+    originalWagePeriods,
     breakAudit: afterBreak.audit
   };
 }
