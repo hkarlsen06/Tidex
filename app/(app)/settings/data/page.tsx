@@ -19,7 +19,7 @@ export default async function DataPage() {
         <div>
           <h2 className="text-2xl font-bold">Data</h2>
           <p className="text-text-secondary mt-1">
-            Eksporter eller importer dine data
+            Eksporter dataene dine for å holde en sikkerhetskopi
           </p>
         </div>
 
