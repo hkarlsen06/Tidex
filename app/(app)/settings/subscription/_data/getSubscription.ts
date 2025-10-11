@@ -1,0 +1,93 @@
+'use server';
+
+import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { logger } from '@/lib/logger';
+
+export interface Subscription {
+  id: string;
+  user_id: string;
+  stripe_customer_id: string | null;
+  stripe_subscription_id: string | null;
+  status: string;
+  current_period_end: string | null;
+  created_at: string;
+  updated_at: string;
+  price_id: string | null;
+}
+
+export interface UserProfile {
+  id: string;
+  before_paywall: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SubscriptionData {
+  subscription: Subscription | null;
+  profile: UserProfile | null;
+}
+
+export async function getUserSubscription(userId: string): Promise<Subscription | null> {
+  try {
+    const supabase = await createSupabaseServerClient();
+
+    const { data, error } = await supabase
+      .from('subscriptions')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
+
+    if (error) {
+      // If no subscription found, that's okay - user is on free plan
+      if (error.code === 'PGRST116') {
+        return null;
+      }
+      logger.error('Failed to fetch user subscription:', error);
+      return null;
+    }
+
+    return data;
+  } catch (error) {
+    logger.error('Unexpected error fetching subscription:', error);
+    return null;
+  }
+}
+
+export async function getUserSubscriptionData(userId: string): Promise<SubscriptionData> {
+  try {
+    const supabase = await createSupabaseServerClient();
+
+    // Fetch both subscription and profile data
+    const [subscriptionResult, profileResult] = await Promise.all([
+      supabase
+        .from('subscriptions')
+        .select('*')
+        .eq('user_id', userId)
+        .single(),
+      supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single(),
+    ]);
+
+    const subscription = subscriptionResult.error && subscriptionResult.error.code === 'PGRST116'
+      ? null
+      : subscriptionResult.data;
+
+    const profile = profileResult.error ? null : profileResult.data;
+
+    if (subscriptionResult.error && subscriptionResult.error.code !== 'PGRST116') {
+      logger.error('Failed to fetch user subscription:', subscriptionResult.error);
+    }
+
+    if (profileResult.error) {
+      logger.error('Failed to fetch user profile:', profileResult.error);
+    }
+
+    return { subscription, profile };
+  } catch (error) {
+    logger.error('Unexpected error fetching subscription data:', error);
+    return { subscription: null, profile: null };
+  }
+}
