@@ -15,6 +15,7 @@ interface NextPayrollCardProps {
   taxEnabled: boolean;
   isLoading?: boolean;
   className?: string;
+  selectedMonth?: Date;
 }
 
 const numberFormatter = new Intl.NumberFormat("nb-NO", {
@@ -23,11 +24,22 @@ const numberFormatter = new Intl.NumberFormat("nb-NO", {
 });
 
 const dateFormatter = new Intl.DateTimeFormat("nb-NO", {
-  day: "2-digit",
+  day: "numeric",
   month: "long",
 });
 
-function getNextPayrollDate(payrollDay: number): Date {
+function getPayrollDateForMonth(payrollDay: number, selectedMonth?: Date): Date {
+  // If a month is selected, return the payroll date for that selected month
+  // (which pays for the previous month's work)
+  if (selectedMonth) {
+    return new Date(
+      selectedMonth.getFullYear(),
+      selectedMonth.getMonth(),
+      payrollDay
+    );
+  }
+
+  // Otherwise, use the original logic for "next payroll"
   const today = new Date();
   const currentMonth = today.getMonth();
   const currentYear = today.getFullYear();
@@ -62,9 +74,10 @@ export const NextPayrollCard: React.FC<NextPayrollCardProps> = ({
   taxEnabled,
   isLoading = false,
   className = '',
+  selectedMonth,
 }) => {
   const router = useRouter();
-  const nextPayrollDate = getNextPayrollDate(payrollDay);
+  const nextPayrollDate = getPayrollDateForMonth(payrollDay, selectedMonth);
   const formattedDate = dateFormatter.format(nextPayrollDate);
 
   // Calculate breakdown based on tax settings

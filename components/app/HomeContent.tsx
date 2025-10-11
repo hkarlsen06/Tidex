@@ -107,6 +107,14 @@ function calculateMonthData(
   };
 }
 
+function isCurrentMonth(date: Date): boolean {
+  const now = new Date();
+  return (
+    date.getFullYear() === now.getFullYear() &&
+    date.getMonth() === now.getMonth()
+  );
+}
+
 export function HomeContent({ shifts, settings }: HomeContentProps) {
   const [month, setMonth] = useState(new Date());
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -119,18 +127,46 @@ export function HomeContent({ shifts, settings }: HomeContentProps) {
 
   const payrollDay = Number(settings.payroll_day) || 1;
 
-  // Calculate next payroll data based on whether the upcoming payroll
-  // happens this month (paying last month's earnings) or next month
-  // (paying this month's earnings once the payroll day has passed).
+  // Calculate payroll data and date based on selected month
   const payrollData = useMemo(() => {
+    const selectedMonthIsCurrent = isCurrentMonth(month);
     const today = new Date();
-    const payrollMonthDate =
-      today.getDate() >= payrollDay
-        ? new Date(today.getFullYear(), today.getMonth(), 1)
-        : new Date(today.getFullYear(), today.getMonth() - 1, 1);
 
-    const targetYear = payrollMonthDate.getFullYear();
-    const targetMonth = payrollMonthDate.getMonth() + 1;
+    let payrollMonthDate: Date;
+    let earningsMonthDate: Date;
+
+    if (selectedMonthIsCurrent) {
+      // For current month: check if payday has passed
+      if (today.getDate() >= payrollDay) {
+        // Payday has passed - show next month's payroll paying for current month
+        payrollMonthDate = new Date(
+          today.getFullYear(),
+          today.getMonth() + 1,
+          1
+        );
+        earningsMonthDate = new Date(today.getFullYear(), today.getMonth(), 1);
+      } else {
+        // Payday hasn't passed - show current month's payroll paying for last month
+        payrollMonthDate = new Date(today.getFullYear(), today.getMonth(), 1);
+        earningsMonthDate = new Date(
+          today.getFullYear(),
+          today.getMonth() - 1,
+          1
+        );
+      }
+    } else {
+      // For non-current months: show the selected month's payroll paying for previous month
+      payrollMonthDate = new Date(month.getFullYear(), month.getMonth(), 1);
+      earningsMonthDate = new Date(
+        month.getFullYear(),
+        month.getMonth() - 1,
+        1
+      );
+    }
+
+    // Get earnings from the earnings month
+    const targetYear = earningsMonthDate.getFullYear();
+    const targetMonth = earningsMonthDate.getMonth() + 1;
 
     const relevantShifts = shifts.filter((shift) => {
       const shiftDate = new Date(shift.shift_date + "T00:00:00Z");
@@ -166,41 +202,83 @@ export function HomeContent({ shifts, settings }: HomeContentProps) {
       baseAmount: basePay,
       bonusAmount: bonusPay,
       taxAmount,
+      payrollMonthDate,
     };
-  }, [payrollDay, settings, shifts]);
+  }, [month, settings, shifts, payrollDay]);
 
-  // Find next shift or last shift
+  // Find shift to display based on selected month
   const displayShift = useMemo(() => {
     if (shifts.length === 0) return null;
 
-    const now = new Date();
+    const selectedMonthIsCurrent = isCurrentMonth(month);
 
-    // Sort shifts by date and time
-    const sortedShifts = [...shifts].sort((a, b) => {
-      const dateCompare = a.shift_date.localeCompare(b.shift_date);
-      if (dateCompare !== 0) return dateCompare;
-      return a.start_time.localeCompare(b.start_time);
-    });
+    if (selectedMonthIsCurrent) {
+      // For current month: show next upcoming shift or last shift
+      const now = new Date();
 
-    // Find next upcoming shift
-    for (const shift of sortedShifts) {
-      const [hours, minutes] = shift.start_time.split(':').map(Number);
-      const shiftDateTime = new Date(shift.shift_date + 'T00:00:00');
-      shiftDateTime.setHours(hours, minutes, 0, 0);
+      // Sort shifts by date and time
+      const sortedShifts = [...shifts].sort((a, b) => {
+        const dateCompare = a.shift_date.localeCompare(b.shift_date);
+        if (dateCompare !== 0) return dateCompare;
+        return a.start_time.localeCompare(b.start_time);
+      });
 
-      if (shiftDateTime > now) {
-        return shift;
+      // Find next upcoming shift
+      for (const shift of sortedShifts) {
+        const [hours, minutes] = shift.start_time.split(':').map(Number);
+        const shiftDateTime = new Date(shift.shift_date + 'T00:00:00');
+        shiftDateTime.setHours(hours, minutes, 0, 0);
+
+        if (shiftDateTime > now) {
+          return shift;
+        }
       }
-    }
 
-    // No future shifts, return the last shift
-    return sortedShifts[sortedShifts.length - 1];
-  }, [shifts]);
+      // No future shifts, return the last shift
+      return sortedShifts[sortedShifts.length - 1];
+    } else {
+      // For other months: show shift with highest earnings in selected month
+      const targetYear = month.getFullYear();
+      const targetMonth = month.getMonth() + 1;
+
+      const monthShifts = shifts.filter((shift) => {
+        const shiftDate = new Date(shift.shift_date + "T00:00:00Z");
+        return (
+          shiftDate.getFullYear() === targetYear &&
+          shiftDate.getMonth() + 1 === targetMonth
+        );
+      });
+
+      if (monthShifts.length === 0) return null;
+
+      // Find maximum gross earnings
+      const maxGross = Math.max(...monthShifts.map(s => s.computed.gross || 0));
+
+      // Get all shifts with max earnings, then sort chronologically
+      const topShifts = monthShifts
+        .filter(s => s.computed.gross === maxGross)
+        .sort((a, b) => {
+          const dateCompare = a.shift_date.localeCompare(b.shift_date);
+          if (dateCompare !== 0) return dateCompare;
+          return a.start_time.localeCompare(b.start_time);
+        });
+
+      // Return the first one chronologically
+      return topShifts[0];
+    }
+  }, [shifts, month]);
 
   const relativeTimeText = useMemo(() => {
     if (!displayShift) return null;
-    return getRelativeTime(displayShift.shift_date, displayShift.start_time);
-  }, [displayShift]);
+
+    const selectedMonthIsCurrent = isCurrentMonth(month);
+
+    if (selectedMonthIsCurrent) {
+      return getRelativeTime(displayShift.shift_date, displayShift.start_time);
+    } else {
+      return "Beste vakt";
+    }
+  }, [displayShift, month]);
 
   const goToPreviousMonth = () => {
     setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1));
@@ -225,6 +303,7 @@ export function HomeContent({ shifts, settings }: HomeContentProps) {
               bonusAmount={payrollData.bonusAmount}
               taxAmount={payrollData.taxAmount}
               taxEnabled={taxDeductionEnabled}
+              selectedMonth={payrollData.payrollMonthDate}
             />
           )}
           <TotalCard
