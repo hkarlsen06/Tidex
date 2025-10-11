@@ -5,7 +5,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/app/Button";
 import { Input } from "@/components/app/Input";
 import { SelectDatesCalendar } from "@/components/app/SelectDatesCalendar";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/app/Card";
 import type { ISODate } from "@/components/calendar/calendar.utils";
 import { createShifts } from "../../../app/(app)/shifts/add/actions";
 import RecurringForm from "./RecurringForm";
@@ -175,162 +174,160 @@ export default function AddShiftForm({ existingShifts }: Props) {
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 pb-24">
-      <Card className="rounded-3xl border-border-subtle bg-surface-primary/80 shadow-app-lg">
-        <CardHeader className="flex flex-col gap-4 space-y-0 pb-0">
-          <div className="space-y-1">
-            <span className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-highlight">
-              Skiftplanlegging
-            </span>
-            <div className="flex items-center justify-between gap-3">
-              <CardTitle className="text-2xl sm:text-3xl font-semibold text-text-primary whitespace-nowrap">
-                Legg til skift
-              </CardTitle>
-              <div className="inline-flex items-center gap-1 rounded-full border border-border-subtle bg-surface-secondary/80 p-1 shadow-app-sm dark:shadow-app-inner flex-shrink-0">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  aria-pressed={mode === "single"}
-                  onClick={() => setMode("single")}
-                  className={cn(
-                    "h-9 rounded-full px-4 text-sm transition-all whitespace-nowrap",
-                    mode === "single"
-                      ? "bg-brand-gradientMid text-text-inverse shadow-app"
-                      : "text-text-secondary hover:text-text-primary"
-                  )}
-                >
-                  Enkel
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  aria-pressed={mode === "recurring"}
-                  onClick={() => setMode("recurring")}
-                  className={cn(
-                    "h-9 rounded-full px-4 text-sm transition-all whitespace-nowrap",
-                    mode === "recurring"
-                      ? "bg-brand-gradientMid text-text-inverse shadow-app"
-                      : "text-text-secondary hover:text-text-primary"
-                  )}
-                >
-                  Serie
-                </Button>
-              </div>
+      <div className="flex flex-col gap-4">
+        <div className="space-y-1">
+          <span className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-highlight">
+            Skiftplanlegging
+          </span>
+          <div className="flex items-center justify-between gap-3">
+            <h1 className="whitespace-nowrap text-2xl font-semibold text-text-primary sm:text-3xl">
+              Legg til skift
+            </h1>
+            <div className="inline-flex items-center gap-1 rounded-full border border-border-subtle bg-surface-secondary/80 p-1 shadow-app-sm dark:shadow-app-inner flex-shrink-0">
+              <Button
+                type="button"
+                variant="ghost"
+                aria-pressed={mode === "single"}
+                onClick={() => setMode("single")}
+                className={cn(
+                  "h-9 rounded-full px-4 text-sm transition-all whitespace-nowrap",
+                  mode === "single"
+                    ? "bg-brand-gradientMid text-text-inverse shadow-app"
+                    : "text-text-secondary hover:text-text-primary"
+                )}
+              >
+                Enkel
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                aria-pressed={mode === "recurring"}
+                onClick={() => setMode("recurring")}
+                className={cn(
+                  "h-9 rounded-full px-4 text-sm transition-all whitespace-nowrap",
+                  mode === "recurring"
+                    ? "bg-brand-gradientMid text-text-inverse shadow-app"
+                    : "text-text-secondary hover:text-text-primary"
+                )}
+              >
+                Serie
+              </Button>
             </div>
           </div>
-          <div className="flex flex-wrap items-start justify-between gap-2">
-            <CardDescription className="text-sm text-text-secondary">
-              {mode === "single"
-                ? "Velg én eller flere datoer og angi tidsrommet for vakten."
-                : "Angi start- og sluttdato, intervall og tidsrom for gjentakende vakter."}
-            </CardDescription>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-6 pt-6">
-          {mode === "single" ? (
-            <>
-              <div className="flex flex-wrap items-center justify-between gap-4">
-                <MonthPicker
-                  month={month}
-                  onPreviousMonth={() =>
-                    setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))
-                  }
-                  onNextMonth={() =>
-                    setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))
-                  }
-                />
-                <span className="rounded-full bg-surface-secondary/80 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-text-muted">
-                  {month.getFullYear()}
-                </span>
-              </div>
-
-              <SelectDatesCalendar
+        </div>
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <p className="text-sm text-text-secondary">
+            {mode === "single"
+              ? "Velg én eller flere datoer og angi tidsrommet for vakten."
+              : "Angi start- og sluttdato, intervall og tidsrom for gjentakende vakter."}
+          </p>
+        </div>
+      </div>
+      <div className="space-y-6">
+        {mode === "single" ? (
+          <>
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <MonthPicker
                 month={month}
-                onMonthChange={setMonth}
-                selected={dates}
-                onSelectedChange={setDates}
-                hasShiftDates={hasShiftDates}
-                conflictDates={conflictDates}
-                hideCaptionNav
+                onPreviousMonth={() =>
+                  setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))
+                }
+                onNextMonth={() =>
+                  setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))
+                }
               />
+              <span className="rounded-full bg-surface-secondary/80 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-text-muted">
+                {month.getFullYear()}
+              </span>
+            </div>
 
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <label className="block min-w-0 space-y-3 rounded-2xl border border-border-subtle bg-surface-secondary/70 p-4 shadow-app-inner transition hover:border-border">
-                  <span className="text-xs font-semibold uppercase tracking-[0.1em] text-text-muted">
-                    Start
-                  </span>
-                  <div className="flex min-w-0 items-center gap-2">
-                    <Input
-                      ref={startInputRef}
-                      type="time"
-                      step={900}
-                      value={start}
-                      onChange={(e) => setStart(e.target.value)}
-                      className="h-10 flex-1 rounded-xl border-border-subtle bg-transparent text-base text-text-primary"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => openNativePicker(startInputRef.current)}
-                      className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border border-border-subtle bg-surface-secondary/70 text-text-muted transition hover:border-border hover:text-text-primary focus:outline-none focus-visible:outline-none"
-                      aria-label="Velg starttid"
-                    >
-                      <IconClock className="h-5 w-5" stroke={1.5} />
-                    </button>
-                  </div>
-                </label>
-                <label className="block min-w-0 space-y-3 rounded-2xl border border-border-subtle bg-surface-secondary/70 p-4 shadow-app-inner transition hover:border-border">
-                  <span className="text-xs font-semibold uppercase tracking-[0.1em] text-text-muted">
-                    Slutt
-                  </span>
-                  <div className="flex min-w-0 items-center gap-2">
-                    <Input
-                      ref={endInputRef}
-                      type="time"
-                      step={900}
-                      value={end}
-                      onChange={(e) => setEnd(e.target.value)}
-                      className="h-10 flex-1 rounded-xl border-border-subtle bg-transparent text-base text-text-primary"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => openNativePicker(endInputRef.current)}
-                      className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border border-border-subtle bg-surface-secondary/70 text-text-muted transition hover:border-border hover:text-text-primary focus:outline-none focus-visible:outline-none"
-                      aria-label="Velg sluttid"
-                    >
-                      <IconClock className="h-5 w-5" stroke={1.5} />
-                    </button>
-                  </div>
-                </label>
-              </div>
+            <SelectDatesCalendar
+              month={month}
+              onMonthChange={setMonth}
+              selected={dates}
+              onSelectedChange={setDates}
+              hasShiftDates={hasShiftDates}
+              conflictDates={conflictDates}
+              hideCaptionNav
+            />
 
-              <div className="rounded-2xl border border-border-subtle bg-surface-secondary/70 px-4 py-3 text-sm text-text-secondary shadow-app-inner">
-                {selectedSummary}
-              </div>
-
-              {error && (
-                <div
-                  className="rounded-2xl border border-error/30 bg-error-subtle px-4 py-3 text-sm font-medium text-error shadow-app-inner"
-                  role="alert"
-                >
-                  {error}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <label className="block min-w-0 space-y-3 rounded-2xl border border-border-subtle bg-surface-secondary/70 p-4 shadow-app-inner transition hover:border-border">
+                <span className="text-xs font-semibold uppercase tracking-[0.1em] text-text-muted">
+                  Start
+                </span>
+                <div className="flex min-w-0 items-center gap-2">
+                  <Input
+                    ref={startInputRef}
+                    type="time"
+                    step={900}
+                    value={start}
+                    onChange={(e) => setStart(e.target.value)}
+                    className="h-10 flex-1 rounded-xl border-border-subtle bg-transparent text-base text-text-primary"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => openNativePicker(startInputRef.current)}
+                    className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border border-border-subtle bg-surface-secondary/70 text-text-muted transition hover:border-border hover:text-text-primary focus:outline-none focus-visible:outline-none"
+                    aria-label="Velg starttid"
+                  >
+                    <IconClock className="h-5 w-5" stroke={1.5} />
+                  </button>
                 </div>
-              )}
+              </label>
+              <label className="block min-w-0 space-y-3 rounded-2xl border border-border-subtle bg-surface-secondary/70 p-4 shadow-app-inner transition hover:border-border">
+                <span className="text-xs font-semibold uppercase tracking-[0.1em] text-text-muted">
+                  Slutt
+                </span>
+                <div className="flex min-w-0 items-center gap-2">
+                  <Input
+                    ref={endInputRef}
+                    type="time"
+                    step={900}
+                    value={end}
+                    onChange={(e) => setEnd(e.target.value)}
+                    className="h-10 flex-1 rounded-xl border-border-subtle bg-transparent text-base text-text-primary"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => openNativePicker(endInputRef.current)}
+                    className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border border-border-subtle bg-surface-secondary/70 text-text-muted transition hover:border-border hover:text-text-primary focus:outline-none focus-visible:outline-none"
+                    aria-label="Velg sluttid"
+                  >
+                    <IconClock className="h-5 w-5" stroke={1.5} />
+                  </button>
+                </div>
+              </label>
+            </div>
 
-              <div className="flex justify-center">
-                <Button
-                  onClick={onSubmit}
-                  disabled={!canSubmit}
-                  loading={pending}
-                  className="rounded-2xl bg-brand-gradientMid px-6 py-3 text-base font-semibold text-text-inverse shadow-app transition hover:bg-brand-gradientEnd"
-                >
-                  Legg til {dates.length || 0} skift
-                </Button>
+            <div className="rounded-2xl border border-border-subtle bg-surface-secondary/70 px-4 py-3 text-sm text-text-secondary shadow-app-inner">
+              {selectedSummary}
+            </div>
+
+            {error && (
+              <div
+                className="rounded-2xl border border-error/30 bg-error-subtle px-4 py-3 text-sm font-medium text-error shadow-app-inner"
+                role="alert"
+              >
+                {error}
               </div>
-            </>
-          ) : (
-            <RecurringForm />
-          )}
-        </CardContent>
-      </Card>
+            )}
+
+            <div className="flex justify-center">
+              <Button
+                onClick={onSubmit}
+                disabled={!canSubmit}
+                loading={pending}
+                className="rounded-2xl bg-brand-gradientMid px-6 py-3 text-base font-semibold text-text-inverse shadow-app transition hover:bg-brand-gradientEnd"
+              >
+                Legg til {dates.length || 0} skift
+              </Button>
+            </div>
+          </>
+        ) : (
+          <RecurringForm />
+        )}
+      </div>
     </div>
   );
 }

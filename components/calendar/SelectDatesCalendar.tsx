@@ -45,6 +45,7 @@ export function SelectDatesCalendar({
     const date: Date = day.date;
     const isToday = Boolean(modifiers?.today);
     const isSelected = Boolean(modifiers?.selected);
+    const hasConflict = Boolean(modifiers?.conflict);
     const isMonday = date.getDay() === 1;
     const week = isMonday ? getIsoWeek(date) : null;
 
@@ -53,9 +54,15 @@ export function SelectDatesCalendar({
         {...buttonProps}
         className={cn(
           className,
-          "w-full h-full rounded-lg transition-colors focus:outline-none focus-visible:outline-none border border-border-subtle hover:bg-surface-secondary",
+          "w-full h-full rounded-lg transition-colors focus:outline-none focus-visible:outline-none border hover:bg-surface-secondary",
+          !hasConflict && "border-border-subtle",
           isToday && !isSelected && "bg-surface-secondary/60",
-          isSelected && "bg-brand-gradientStart text-text-inverse hover:bg-brand-gradientStart border-transparent"
+          hasConflict && !isSelected && "border-warning border-dashed",
+          hasConflict && isSelected && "ring-1 ring-warning border-transparent",
+          isSelected &&
+            (hasConflict
+              ? "bg-warning-subtle text-text-primary hover:bg-warning-subtle"
+              : "bg-brand-gradientStart text-text-inverse hover:bg-brand-gradientStart border-transparent")
         )}
       >
         <div className="relative z-[1] flex flex-col items-center justify-start gap-0.5 w-full h-full p-1">
@@ -66,7 +73,12 @@ export function SelectDatesCalendar({
               )}
             </span>
           )}
-          <div className={cn("w-full text-sm font-semibold text-right pr-1", isSelected ? "text-text-inverse" : "text-text-primary")}>
+          <div
+            className={cn(
+              "w-full text-sm font-semibold text-right pr-1",
+              isSelected && !hasConflict ? "text-text-inverse" : "text-text-primary"
+            )}
+          >
             {date.getDate()}
           </div>
         </div>
@@ -98,7 +110,6 @@ export function SelectDatesCalendar({
       }}
       modifiers={modifiers}
       modifiersClassNames={{
-        conflict: "bg-warning-subtle ring-1 ring-warning rounded-md",
         selected: "", // selected handled in CustomDayButton for stronger control
         hasShift:
           "relative after:pointer-events-none after:z-0 after:absolute after:bottom-1.5 after:right-1.5 after:h-1.5 after:w-1.5 after:rounded-full after:bg-info",
