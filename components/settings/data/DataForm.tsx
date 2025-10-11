@@ -344,8 +344,8 @@ function formatLongDate(date: Date | null): string {
   if (!date) return '';
   return new Intl.DateTimeFormat('no-NO', {
     day: '2-digit',
-    month: 'long',
-    year: 'numeric',
+    month: '2-digit',
+    year: '2-digit',
   }).format(date);
 }
 
