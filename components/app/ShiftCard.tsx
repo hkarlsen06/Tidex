@@ -22,7 +22,7 @@ const dayFormatter = new Intl.DateTimeFormat("nb-NO", {
 });
 
 const dateFormatter = new Intl.DateTimeFormat("nb-NO", {
-  day: "2-digit",
+  day: "numeric",
   month: "long",
 });
 
