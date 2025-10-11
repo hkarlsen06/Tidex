@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "crypto";
+import sharp from "sharp";
 
 import { createSupabaseRouteHandlerClient } from "@/lib/supabase/server";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const BUCKET = "profile-pictures";
+const HEIC_EXTENSIONS = new Set(["heic", "heif", "heics", "heifs"]);
+
+export const runtime = "nodejs";
 
 function propagateCookies(from: NextResponse, to: NextResponse) {
   for (const cookie of from.cookies.getAll()) {
@@ -37,6 +41,28 @@ function extFromMime(type: string | undefined | null) {
   const parts = type.split("/");
   if (parts.length !== 2) return null;
   return parts[1];
+}
+
+function isHeicLike(ext: string | null, mime: string | undefined | null) {
+  if (ext && HEIC_EXTENSIONS.has(ext)) {
+    return true;
+  }
+
+  if (!mime) return false;
+  const normalized = mime.toLowerCase();
+  return (
+    normalized === "image/heic" ||
+    normalized === "image/heif" ||
+    normalized === "image/heic-sequence" ||
+    normalized === "image/heif-sequence"
+  );
+}
+
+async function convertHeicToJpeg(file: File) {
+  const arrayBuffer = await file.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+  const converted = await sharp(buffer).rotate().jpeg({ quality: 90 }).toBuffer();
+  return converted;
 }
 
 export async function POST(request: NextRequest) {
@@ -92,15 +118,48 @@ export async function POST(request: NextRequest) {
       return errorResponse;
     }
 
-    const fileExt = extFromFilename(file.name) ?? extFromMime(file.type) ?? "bin";
+    const mimeType = file.type || undefined;
+    const filenameExt = extFromFilename(file.name);
+    const mimeExt = extFromMime(file.type);
+    let fileExt = filenameExt ?? mimeExt ?? "bin";
+    let uploadData: File | Buffer = file;
+    let contentType = mimeType;
+
+    if (isHeicLike(filenameExt, mimeType)) {
+      try {
+        const converted = await convertHeicToJpeg(file);
+
+        if (converted.byteLength > MAX_FILE_SIZE) {
+          const errorResponse = NextResponse.json(
+            { error: "Konvertert bilde er for stort. Velg et mindre bilde." },
+            { status: 413, headers: { "cache-control": "no-store" } }
+          );
+          propagateCookies(baseResponse, errorResponse);
+          return errorResponse;
+        }
+
+        uploadData = converted;
+        contentType = "image/jpeg";
+        fileExt = "jpg";
+      } catch (conversionError) {
+        console.error("[PROFILE PICTURE] Failed to convert HEIC image:", conversionError);
+        const errorResponse = NextResponse.json(
+          { error: "Kunne ikke konvertere HEIC-bildet. Prøv et annet bilde." },
+          { status: 415, headers: { "cache-control": "no-store" } }
+        );
+        propagateCookies(baseResponse, errorResponse);
+        return errorResponse;
+      }
+    }
+
     const storagePath = `${user.id}/${randomUUID()}.${fileExt}`;
 
     const { error: uploadError } = await supabase.storage
       .from(BUCKET)
-      .upload(storagePath, file, {
+      .upload(storagePath, uploadData, {
         cacheControl: "3600",
         upsert: true,
-        contentType: file.type || undefined,
+        contentType,
       });
 
     if (uploadError) {
