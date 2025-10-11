@@ -163,7 +163,7 @@ export default function ResetPasswordPage() {
                   resetMessage();
                   setEmail(event.target.value);
                 }}
-                className="w-full rounded-full border border-border-subtle bg-background-primary px-5 py-3 text-sm text-text-primary placeholder:text-text-muted focus:border-brand-highlight focus:outline-none focus:ring-2 focus:ring-brand-highlight/60"
+                className="w-full rounded-full border border-border-subtle bg-background-primary px-5 py-3 text-base text-text-primary placeholder:text-text-muted focus:border-brand-highlight focus:outline-none focus:ring-2 focus:ring-brand-highlight/60"
               />
             </div>
 
@@ -243,7 +243,7 @@ export default function ResetPasswordPage() {
                   resetMessage();
                   setPassword(event.target.value);
                 }}
-                className="w-full rounded-full border border-border-subtle bg-background-primary px-5 py-3 text-sm text-text-primary placeholder:text-text-muted focus:border-brand-highlight focus:outline-none focus:ring-2 focus:ring-brand-highlight/60"
+                className="w-full rounded-full border border-border-subtle bg-background-primary px-5 py-3 text-base text-text-primary placeholder:text-text-muted focus:border-brand-highlight focus:outline-none focus:ring-2 focus:ring-brand-highlight/60"
               />
             </div>
 
@@ -259,7 +259,7 @@ export default function ResetPasswordPage() {
                   resetMessage();
                   setConfirmPassword(event.target.value);
                 }}
-                className="w-full rounded-full border border-border-subtle bg-background-primary px-5 py-3 text-sm text-text-primary placeholder:text-text-muted focus:border-brand-highlight focus:outline-none focus:ring-2 focus:ring-brand-highlight/60"
+                className="w-full rounded-full border border-border-subtle bg-background-primary px-5 py-3 text-base text-text-primary placeholder:text-text-muted focus:border-brand-highlight focus:outline-none focus:ring-2 focus:ring-brand-highlight/60"
               />
             </div>
 

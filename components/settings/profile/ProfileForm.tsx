@@ -17,12 +17,14 @@ import {
 } from '@appui/Dialog';
 import { updateProfileSettings, clearAllShifts } from '@/app/(app)/settings/_actions/updateSettings';
 import { useRouter } from 'next/navigation';
+import { GoogleConnectionCard } from './GoogleConnectionCard';
 
 interface ProfileFormProps {
   initialData: {
     firstName: string;
     email: string;
     profilePictureUrl: string | null;
+    hasGoogleConnected: boolean;
   };
 }
 
@@ -284,6 +286,8 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
           </div>
         </div>
       </Card>
+
+      <GoogleConnectionCard hasGoogleConnected={initialData.hasGoogleConnected} />
 
       <Card className="p-6 border-red-200 dark:border-red-900">
         <div className="space-y-4">
