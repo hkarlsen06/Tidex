@@ -17,12 +17,13 @@ import {
 import { useNavigationFeedback } from "./navigation-feedback";
 
 type TablerIcon = typeof IconHome;
-type NavItem = { 
-  href: string; 
-  label: string; 
-  icon: TablerIcon; 
+type NavItem = {
+  href: string;
+  label: string;
+  icon: TablerIcon;
   iconFilled: TablerIcon;
   isCenter?: boolean;
+  matchPrefix?: boolean;
 };
 
 const navItems: NavItem[] = [
@@ -56,6 +57,7 @@ const navItems: NavItem[] = [
     label: "Settings",
     icon: IconSettings,
     iconFilled: IconSettingsFilled,
+    matchPrefix: true,
   },
 ];
 
@@ -78,18 +80,56 @@ export function NavBar() {
     navigate(href);
   };
 
-  const isPathActive = (href: string) => pathname === href || pendingPath === href;
+  const normalizePath = (path: string | null) => {
+    if (!path) {
+      return null;
+    }
+    if (path === "/") {
+      return "/";
+    }
+    return path.replace(/\/+$/, "");
+  };
+
+  const isPathActive = (item: NavItem) => {
+    const normalizedHref = normalizePath(item.href);
+    if (!normalizedHref) {
+      return false;
+    }
+
+    const matches = (path: string | null) => {
+      const normalizedPath = normalizePath(path);
+      if (!normalizedPath || !normalizedHref) {
+        return false;
+      }
+
+      if (normalizedHref === "/") {
+        return normalizedPath === "/";
+      }
+
+      if (normalizedPath === normalizedHref) {
+        return true;
+      }
+
+      if (!item.matchPrefix) {
+        return false;
+      }
+
+      return normalizedPath.startsWith(`${normalizedHref}/`);
+    };
+
+    return matches(pathname) || matches(pendingPath);
+  };
 
   return (
     <nav className="fixed bottom-4 left-0 right-0 z-40" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
       <div className="mx-auto max-w-[480px] px-4">
         <div className="flex items-center justify-around rounded-full border border-border-subtle bg-surface-primary/80 px-6 py-3 shadow-app-lg backdrop-blur">
           {navItems.map((item) => {
-            const isActive = isPathActive(item.href);
+            const isActive = isPathActive(item);
             const Icon = isActive && !item.isCenter ? item.iconFilled : item.icon;
 
             if (item.isCenter) {
-              const isOnAddPage = pathname === "/shifts/add";
+              const isOnAddPage = pathname === "/shifts/add" || pendingPath === "/shifts/add";
               const targetHref = isOnAddPage ? "/shifts" : item.href;
 
               return (
