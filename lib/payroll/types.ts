@@ -67,7 +67,8 @@ export type ShiftComputed = {
   basePay: number;               // NOK
   bonusPay: number;              // NOK
   gross: number;                 // NOK
-  wagePeriods: WagePeriod[];     // after split
+  wagePeriods: WagePeriod[];     // after break deduction
+  originalWagePeriods: WagePeriod[]; // before break deduction (for display)
   breakAudit: BreakAudit;
 };
 

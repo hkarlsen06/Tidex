@@ -42,6 +42,7 @@ export type BonusSegmentInput = {
   dayOffset?: number;
   rate?: number | null;
   percent?: number | null;
+  actualHours?: number; // Pre-computed paid hours (after break deduction)
   note?: ReactNode;
 };
 
@@ -61,12 +62,6 @@ type BonusRow = {
 };
 
 function computeRows({ startTime, endTime, baseWage, segments }: BonusBreakdownProps) {
-  const shiftStart = timeToMinutes(startTime);
-  const shiftEndRaw = timeToMinutes(endTime);
-  if (shiftStart == null || shiftEndRaw == null) return [] as BonusRow[];
-
-  const shiftEnd = shiftEndRaw > shiftStart ? shiftEndRaw : shiftEndRaw + MINUTES_PER_DAY;
-
   const rows: BonusRow[] = [];
 
   for (const segment of segments) {
@@ -81,19 +76,18 @@ function computeRows({ startTime, endTime, baseWage, segments }: BonusBreakdownP
       segEnd += MINUTES_PER_DAY;
     }
 
-    const overlapStart = Math.max(shiftStart, segStart);
-    const overlapEnd = Math.min(shiftEnd, segEnd);
-    const overlapMinutes = overlapEnd - overlapStart;
-
-    if (overlapMinutes <= 0) continue;
-
-    const hours = overlapMinutes / 60;
     const rate = segment.rate ?? ((segment.percent ?? 0) / 100) * baseWage;
     if (rate <= 0) continue;
+
+    // Use pre-computed actualHours if available (accounts for break deductions)
+    // Otherwise fall back to calculating from segment boundaries
+    const hours = segment.actualHours ?? 0;
+    if (hours <= 0) continue;
+
     const amount = hours * rate;
 
     rows.push({
-      period: `${minutesToDisplay(overlapStart)} – ${minutesToDisplay(overlapEnd)}`,
+      period: `${minutesToDisplay(segStart)} – ${minutesToDisplay(segEnd)}`,
       hours,
       rate,
       amount,

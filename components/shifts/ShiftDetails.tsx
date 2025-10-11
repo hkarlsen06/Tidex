@@ -31,18 +31,61 @@ function minutesToSegmentTime(minutes: number) {
 }
 
 function buildBonusSegments(shift: ShiftWithComputations): BonusSegmentInput[] {
-  return shift.computed.wagePeriods
-    .filter((period) => period.bonusRate > 0)
-    .map((period) => {
-      const from = minutesToSegmentTime(period.fromMin);
-      const to = minutesToSegmentTime(period.toMin);
-      return {
-        from: from.time,
-        to: to.time,
-        dayOffset: from.dayOffset,
-        rate: period.bonusRate,
-      } satisfies BonusSegmentInput;
+  // Use originalWagePeriods for display (shows configured time ranges)
+  // but calculate actual paid hours from adjusted wagePeriods (after break deduction)
+  const original = shift.computed.originalWagePeriods;
+  const adjusted = shift.computed.wagePeriods;
+
+  // Group consecutive periods with same bonus rate and calculate actual hours
+  const segments: BonusSegmentInput[] = [];
+  let i = 0;
+
+  while (i < original.length) {
+    const period = original[i];
+    if (period.bonusRate <= 0) {
+      i++;
+      continue;
+    }
+
+    // Find consecutive periods with same bonus rate
+    let groupStart = period.fromMin;
+    let groupEnd = period.toMin;
+    let currentRate = period.bonusRate;
+    let j = i + 1;
+
+    while (j < original.length && original[j].bonusRate === currentRate) {
+      groupEnd = original[j].toMin;
+      j++;
+    }
+
+    // Calculate actual paid hours for this bonus rate group from adjusted periods
+    let actualHours = 0;
+    for (const adj of adjusted) {
+      // Find overlap between adjusted period and original group
+      if (adj.bonusRate === currentRate) {
+        const overlapStart = Math.max(adj.fromMin, groupStart);
+        const overlapEnd = Math.min(adj.toMin, groupEnd);
+        if (overlapEnd > overlapStart) {
+          actualHours += (overlapEnd - overlapStart) / 60;
+        }
+      }
+    }
+
+    const from = minutesToSegmentTime(groupStart);
+    const to = minutesToSegmentTime(groupEnd);
+
+    segments.push({
+      from: from.time,
+      to: to.time,
+      dayOffset: from.dayOffset,
+      rate: currentRate,
+      actualHours,
     });
+
+    i = j;
+  }
+
+  return segments;
 }
 
 const TIME_PATTERN = /^\d{2}:\d{2}$/;
