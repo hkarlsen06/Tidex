@@ -205,10 +205,8 @@ export async function disconnectGoogleAccount() {
     userId: user.id,
   });
 
-  // Unlink the identity - use identity_id field, not id
-  const { error } = await supabase.auth.unlinkIdentity({
-    identity_id: googleIdentity.identity_id || googleIdentity.id,
-  });
+  // Unlink the identity - pass the whole identity object
+  const { error } = await supabase.auth.unlinkIdentity(googleIdentity);
 
   if (error) {
     logger.error('Failed to unlink Google identity:', error);
