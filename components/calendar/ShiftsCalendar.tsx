@@ -61,7 +61,7 @@ export function ShiftsCalendar({
           {...buttonProps}
           className={`${className} ${isToday ? "bg-surface-secondary" : ""}`}
         >
-          <div className="relative flex flex-col items-center justify-start gap-0.5 w-full h-full p-1">
+          <div className="relative flex flex-col items-center justify-start gap-0.5 w-full h-full p-1 pb-1.5">
           {isMonday && (
             <span className={`absolute left-1 text-[9px] leading-none text-text-muted ${
               weekNumberPosition === "top-left" ? "top-1" : "bottom-1"
@@ -71,16 +71,16 @@ export function ShiftsCalendar({
               )}
             </span>
           )}
-          <div className="w-full text-sm font-semibold text-text-primary text-right pr-1">
+          <div className="w-full text-xs font-semibold text-text-primary text-right pr-1">
             {date.getDate()}
           </div>
           {mode === "money" && earnings !== undefined && (
-            <div className="text-xs text-text-secondary font-medium">
+            <div className="text-xs text-text-secondary font-medium mt-1">
               {formatNOKInt(earnings)}
             </div>
           )}
           {mode === "hours" && hours && (
-            <div className="text-[10px] text-text-secondary leading-tight text-center">
+            <div className="text-[10px] text-text-secondary leading-[1.3] text-center">
               <div>
                 {hours.start}
                 {hours.start && "-"}
