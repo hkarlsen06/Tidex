@@ -65,6 +65,22 @@ export function NavBar() {
   const pathname = usePathname();
   const { navigate, pendingPath } = useNavigationFeedback();
 
+  const isOnboardingPath = (path: string | null) => {
+    if (typeof path !== "string") {
+      return false;
+    }
+
+    const normalizedPath = normalizePath(path);
+    return Boolean(
+      normalizedPath &&
+        (normalizedPath === "/onboarding" || normalizedPath.startsWith("/onboarding/"))
+    );
+  };
+
+  if (isOnboardingPath(pathname) || isOnboardingPath(pendingPath)) {
+    return null;
+  }
+
   const handleItemClick = (href: string) => (event: MouseEvent<HTMLAnchorElement>) => {
     if (
       event.metaKey ||
@@ -80,7 +96,7 @@ export function NavBar() {
     navigate(href);
   };
 
-  const normalizePath = (path: string | null) => {
+  function normalizePath(path: string | null) {
     if (!path) {
       return null;
     }
@@ -88,7 +104,7 @@ export function NavBar() {
       return "/";
     }
     return path.replace(/\/+$/, "");
-  };
+  }
 
   const isPathActive = (item: NavItem) => {
     const normalizedHref = normalizePath(item.href);
