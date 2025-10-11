@@ -24,7 +24,7 @@ const settingsItems = [
   {
     href: '/settings/data',
     label: 'Data',
-    description: 'Eksporter og importer dine data',
+    description: 'Eksporter dine data som PDF',
     icon: Database,
   },
 ];
