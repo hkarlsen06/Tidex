@@ -14,15 +14,7 @@ export default async function DataPage() {
   return (
     <div className="container mx-auto px-4 py-8 max-w-2xl">
       <BackButton fallbackHref="/settings" />
-
-      <div className="space-y-6">
-        <div>
-          <h2 className="text-2xl font-bold">Data</h2>
-          <p className="text-text-secondary mt-1">
-            Eksporter dataene dine for å holde en sikkerhetskopi
-          </p>
-        </div>
-
+      <div className="mt-6">
         <DataForm />
       </div>
     </div>
