@@ -156,3 +156,65 @@ export async function updatePreferencesSettings(data: {
   revalidatePath('/settings/preferences');
   return { success: true };
 }
+
+export async function connectGoogleAccount(redirectUrl: string) {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) throw new Error('Not authenticated');
+
+  // linkIdentity returns a URL that the client needs to navigate to
+  const { data, error } = await supabase.auth.linkIdentity({
+    provider: 'google',
+    options: {
+      redirectTo: redirectUrl,
+      queryParams: {
+        access_type: 'offline',
+        prompt: 'consent',
+      },
+    },
+  });
+
+  if (error) {
+    logger.error('Failed to link Google identity:', error);
+    throw error;
+  }
+
+  // Return the OAuth URL for the client to navigate to
+  return { url: data.url };
+}
+
+export async function disconnectGoogleAccount() {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) throw new Error('Not authenticated');
+
+  // Find Google identity
+  const googleIdentity = user.identities?.find(
+    (identity) => identity.provider === 'google'
+  );
+
+  if (!googleIdentity) {
+    throw new Error('Ingen Google-konto funnet');
+  }
+
+  logger.info('Unlinking Google identity:', {
+    identityId: googleIdentity.identity_id,
+    provider: googleIdentity.provider,
+    userId: user.id,
+  });
+
+  // Unlink the identity - use identity_id field, not id
+  const { error } = await supabase.auth.unlinkIdentity({
+    identity_id: googleIdentity.identity_id || googleIdentity.id,
+  });
+
+  if (error) {
+    logger.error('Failed to unlink Google identity:', error);
+    throw error;
+  }
+
+  revalidatePath('/settings/profile');
+  return { success: true };
+}

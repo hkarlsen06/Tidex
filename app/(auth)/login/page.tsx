@@ -80,11 +80,17 @@ export default function LoginPage() {
     setIsOAuthRedirecting(true);
     setMessage(null);
 
+    // Build redirect URL dynamically based on current origin
+    const redirectUrl = `${window.location.origin}/auth/callback`;
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo:
-          process.env.NEXT_PUBLIC_SUPABASE_REDIRECT_URL ?? undefined,
+        redirectTo: redirectUrl,
+        queryParams: {
+          access_type: "offline",
+          prompt: "consent",
+        },
       },
     });
 
@@ -136,7 +142,7 @@ export default function LoginPage() {
                   resetMessage();
                   setEmail(event.target.value);
                 }}
-                className="w-full rounded-full border border-border-subtle bg-background-primary px-5 py-3 text-sm text-text-primary placeholder:text-text-muted focus:border-brand-highlight focus:outline-none focus:ring-2 focus:ring-brand-highlight/60"
+                className="w-full rounded-full border border-border-subtle bg-background-primary px-5 py-3 text-base text-text-primary placeholder:text-text-muted focus:border-brand-highlight focus:outline-none focus:ring-2 focus:ring-brand-highlight/60"
               />
             </div>
 
@@ -154,7 +160,7 @@ export default function LoginPage() {
                   resetMessage();
                   setPassword(event.target.value);
                 }}
-                className="w-full rounded-full border border-border-subtle bg-background-primary px-5 py-3 text-sm text-text-primary placeholder:text-text-muted focus:border-brand-highlight focus:outline-none focus:ring-2 focus:ring-brand-highlight/60"
+                className="w-full rounded-full border border-border-subtle bg-background-primary px-5 py-3 text-base text-text-primary placeholder:text-text-muted focus:border-brand-highlight focus:outline-none focus:ring-2 focus:ring-brand-highlight/60"
               />
             </div>
 

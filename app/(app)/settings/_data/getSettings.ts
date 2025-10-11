@@ -38,9 +38,15 @@ export async function getUserProfile() {
     .eq('user_id', user.id)
     .single();
 
+  // Check if user has Google OAuth connected
+  const hasGoogleConnected = user.identities?.some(
+    (identity) => identity.provider === 'google'
+  ) ?? false;
+
   return {
     firstName: user.user_metadata?.first_name || '',
     email: user.email || '',
     profilePictureUrl: settings?.profile_picture_url || null,
+    hasGoogleConnected,
   };
 }
