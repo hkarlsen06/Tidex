@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { Card } from '@appui/Card';
-import { ChevronRight, User, Banknote, Palette, Settings, Database } from 'lucide-react';
+import { ChevronRight, User, Banknote, Palette, Settings, Database, CreditCard } from 'lucide-react';
 
 const settingsItems = [
   {
@@ -14,6 +14,12 @@ const settingsItems = [
     label: 'Lønn og tillegg',
     description: 'Konfigurer lønnsinnstillinger og tillegg',
     icon: Banknote,
+  },
+  {
+    href: '/settings/subscription',
+    label: 'Abonnement',
+    description: 'Administrer ditt abonnement',
+    icon: CreditCard,
   },
   {
     href: '/settings/display',
