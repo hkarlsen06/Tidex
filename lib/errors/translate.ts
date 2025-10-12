@@ -21,6 +21,18 @@ export function translateError(message: string): string {
     "Database error saving new user": "Databasefeil ved lagring av ny bruker",
     "Failed to fetch": "Kunne ikke koble til serveren",
     "Network request failed": "Nettverksforespørsel feilet",
+    // Phone-related errors
+    "Invalid phone number": "Ugyldig telefonnummer",
+    "Phone not confirmed": "Telefonnummeret er ikke bekreftet",
+    "SMS OTP has expired": "SMS-koden har utløpt",
+    "Invalid OTP": "Ugyldig kode",
+    "OTP expired": "Koden har utløpt",
+    "Token expired": "Koden har utløpt",
+    "Phone number already in use": "Telefonnummeret er allerede i bruk",
+    "Unable to send SMS": "Kunne ikke sende SMS",
+    "SMS rate limit exceeded": "For mange SMS-forespørsler. Prøv igjen senere.",
+    "Signups not allowed for otp": "Du må registrere deg før du kan logge inn",
+    "Signups not allowed": "Du må registrere deg før du kan logge inn",
   };
 
   // Check for exact match

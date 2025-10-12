@@ -43,10 +43,32 @@ export async function getUserProfile() {
     (identity) => identity.provider === 'google'
   ) ?? false;
 
+  // Check if user has phone number linked
+  const hasPhoneConnected = user.identities?.some(
+    (identity) => identity.provider === 'phone'
+  ) ?? false;
+
+  // Get phone number and strip +47 prefix for display
+  let phoneNumber: string | null = null;
+  if (user.phone) {
+    phoneNumber = user.phone.startsWith('+47')
+      ? user.phone.substring(3)
+      : user.phone;
+  }
+
+  // Check if user has a password set
+  // Users have password if they signed up with email or have set one later
+  const hasPassword = user.identities?.some(
+    (identity) => identity.provider === 'email'
+  ) ?? false;
+
   return {
     firstName: user.user_metadata?.first_name || '',
     email: user.email || '',
     profilePictureUrl: settings?.profile_picture_url || null,
     hasGoogleConnected,
+    hasPhoneConnected,
+    phoneNumber,
+    hasPassword,
   };
 }

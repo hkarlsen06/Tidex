@@ -7,17 +7,33 @@ import { FormEvent, useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { AUTH_SYNC_CSRF_HEADER } from "@/lib/auth/constants";
 import { ensureAuthSyncCsrfToken } from "@/lib/auth/csrf.client";
+import {
+  detectInputType,
+  normalizePhoneToE164,
+  isValidNorwegianPhone,
+  isValidEmail,
+} from "@/lib/validation/phone";
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSeparator,
+  InputOTPSlot,
+} from "@/components/app/InputOTP";
 
 type MessageState = { type: "error" | "success"; text: string } | null;
+type SignupStep = "input" | "otp";
 
 export default function SignupPage() {
   const router = useRouter();
   const supabase = createSupabaseBrowserClient();
 
-  const [email, setEmail] = useState("");
+  const [emailOrPhone, setEmailOrPhone] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [otp, setOtp] = useState("");
+  const [step, setStep] = useState<SignupStep>("input");
+  const [signupType, setSignupType] = useState<"email" | "phone" | null>(null);
   const [message, setMessage] = useState<MessageState>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -26,7 +42,7 @@ export default function SignupPage() {
   const handleSignUp = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!email || !password || !confirmPassword || !fullName) {
+    if (!emailOrPhone || !fullName) {
       setMessage({
         type: "error",
         text: "Fyll inn alle feltene.",
@@ -34,71 +50,247 @@ export default function SignupPage() {
       return;
     }
 
-    if (password !== confirmPassword) {
+    const inputType = detectInputType(emailOrPhone);
+
+    if (inputType === "unknown") {
       setMessage({
         type: "error",
-        text: "Passordene stemmer ikke overens.",
+        text: "Ugyldig e-post eller telefonnummer. Telefonnummer må være 8 siffer.",
       });
       return;
     }
 
-    if (password.length < 6) {
-      setMessage({
-        type: "error",
-        text: "Passordet må være minst 6 tegn langt.",
+    if (inputType === "email") {
+      // Email signup requires password
+      if (!password || !confirmPassword) {
+        setMessage({
+          type: "error",
+          text: "Fyll inn passord.",
+        });
+        return;
+      }
+
+      if (password !== confirmPassword) {
+        setMessage({
+          type: "error",
+          text: "Passordene stemmer ikke overens.",
+        });
+        return;
+      }
+
+      if (password.length < 6) {
+        setMessage({
+          type: "error",
+          text: "Passordet må være minst 6 tegn langt.",
+        });
+        return;
+      }
+
+      if (!isValidEmail(emailOrPhone)) {
+        setMessage({ type: "error", text: "Ugyldig e-postformat." });
+        return;
+      }
+
+      setIsSubmitting(true);
+      setMessage(null);
+
+      const { data, error } = await supabase.auth.signUp({
+        email: emailOrPhone,
+        password,
+        options: {
+          data: {
+            first_name: fullName,
+          },
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
       });
+
+      setIsSubmitting(false);
+
+      if (error) {
+        setMessage({ type: "error", text: error.message });
+        return;
+      }
+
+      // User is now logged in automatically
+      setMessage({
+        type: "success",
+        text: "Konto opprettet! Omdirigerer...",
+      });
+
+      // Sync session to server cookies before navigation
+      const csrfToken = ensureAuthSyncCsrfToken();
+
+      await fetch("/auth/callback", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          [AUTH_SYNC_CSRF_HEADER]: csrfToken,
+        },
+        body: JSON.stringify({ event: "SIGNED_UP", session: data.session }),
+        keepalive: true,
+        cache: "no-store",
+      });
+
+      // Microtask tick ensures cookie sync completes
+      await Promise.resolve();
+
+      // Redirect to onboarding
+      setTimeout(() => {
+        router.replace("/onboarding");
+        router.refresh();
+      }, 1500);
+    } else {
+      // Phone signup with OTP
+      if (!isValidNorwegianPhone(emailOrPhone)) {
+        setMessage({
+          type: "error",
+          text: "Telefonnummer må være 8 siffer.",
+        });
+        return;
+      }
+
+      // Validate password if provided (optional for phone)
+      if (password || confirmPassword) {
+        if (!password || !confirmPassword) {
+          setMessage({
+            type: "error",
+            text: "Fyll inn begge passordfeltene hvis du vil sette passord.",
+          });
+          return;
+        }
+
+        if (password !== confirmPassword) {
+          setMessage({
+            type: "error",
+            text: "Passordene stemmer ikke overens.",
+          });
+          return;
+        }
+
+        if (password.length < 6) {
+          setMessage({
+            type: "error",
+            text: "Passordet må være minst 6 tegn langt.",
+          });
+          return;
+        }
+      }
+
+      setIsSubmitting(true);
+      setMessage(null);
+
+      try {
+        const phoneE164 = normalizePhoneToE164(emailOrPhone);
+        const { error } = await supabase.auth.signInWithOtp({
+          phone: phoneE164,
+          options: {
+            data: {
+              first_name: fullName,
+            },
+          },
+        });
+
+        setIsSubmitting(false);
+
+        if (error) {
+          setMessage({ type: "error", text: error.message });
+          return;
+        }
+
+        setSignupType("phone");
+        setStep("otp");
+        setMessage({
+          type: "success",
+          text: "SMS-kode sendt! Sjekk meldingene dine.",
+        });
+      } catch (err) {
+        setIsSubmitting(false);
+        setMessage({
+          type: "error",
+          text: err instanceof Error ? err.message : "En feil oppstod",
+        });
+      }
+    }
+  };
+
+  const handleVerifyOtp = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (otp.length !== 6) {
+      setMessage({ type: "error", text: "Fyll inn alle 6 sifrene." });
+      return;
+    }
+
+    if (!isValidNorwegianPhone(emailOrPhone)) {
+      setMessage({ type: "error", text: "Ugyldig telefonnummer." });
       return;
     }
 
     setIsSubmitting(true);
     setMessage(null);
 
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          first_name: fullName,
+    try {
+      const phoneE164 = normalizePhoneToE164(emailOrPhone);
+      const { data, error } = await supabase.auth.verifyOtp({
+        phone: phoneE164,
+        token: otp,
+        type: "sms",
+      });
+
+      setIsSubmitting(false);
+
+      if (error) {
+        setMessage({ type: "error", text: error.message });
+        return;
+      }
+
+      // If user provided a password during signup, set it now
+      if (password && password.length >= 6) {
+        const { error: passwordError } = await supabase.auth.updateUser({
+          password: password,
+        });
+
+        if (passwordError) {
+          console.error("Failed to set password:", passwordError);
+          // Don't block signup if password setting fails
+          // User can set it later in profile
+        }
+      }
+
+      setMessage({
+        type: "success",
+        text: "Konto opprettet! Omdirigerer...",
+      });
+
+      // Sync session to server cookies
+      const csrfToken = ensureAuthSyncCsrfToken();
+
+      await fetch("/auth/callback", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          [AUTH_SYNC_CSRF_HEADER]: csrfToken,
         },
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
-      },
-    });
+        body: JSON.stringify({ event: "SIGNED_UP", session: data.session }),
+        keepalive: true,
+        cache: "no-store",
+      });
 
-    setIsSubmitting(false);
+      await Promise.resolve();
 
-    if (error) {
-      setMessage({ type: "error", text: error.message });
-      return;
+      // Redirect to onboarding
+      setTimeout(() => {
+        router.replace("/onboarding");
+        router.refresh();
+      }, 1500);
+    } catch (err) {
+      setIsSubmitting(false);
+      setMessage({
+        type: "error",
+        text: err instanceof Error ? err.message : "En feil oppstod",
+      });
     }
-
-    // User is now logged in automatically
-    setMessage({
-      type: "success",
-      text: "Konto opprettet! Omdirigerer...",
-    });
-
-    // Sync session to server cookies before navigation
-    const csrfToken = ensureAuthSyncCsrfToken();
-
-    await fetch("/auth/callback", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        [AUTH_SYNC_CSRF_HEADER]: csrfToken,
-      },
-      body: JSON.stringify({ event: "SIGNED_UP", session: data.session }),
-      keepalive: true,
-      cache: "no-store",
-    });
-
-    // Microtask tick ensures cookie sync completes
-    await Promise.resolve();
-
-    // Redirect to onboarding
-    setTimeout(() => {
-      router.replace("/onboarding");
-      router.refresh();
-    }, 1500);
   };
 
   return (
@@ -107,11 +299,15 @@ export default function SignupPage() {
         <div className="mb-8 text-center">
           <h1 className="tracking-wide">Opprett konto</h1>
           <p className="mt-2 text-sm text-text-secondary">
-            Fyll inn dine opplysninger
+            {step === "otp"
+              ? `Skriv inn koden vi sendte til ${emailOrPhone}`
+              : "Fyll inn dine opplysninger"}
           </p>
         </div>
 
-        <form className="space-y-6" noValidate onSubmit={handleSignUp}>
+        {/* Step 1: Input Form */}
+        {step === "input" && (
+          <form className="space-y-6" noValidate onSubmit={handleSignUp}>
             <div className="space-y-2">
               <label htmlFor="fullName">Fullt navn</label>
               <input
@@ -129,51 +325,118 @@ export default function SignupPage() {
             </div>
 
             <div className="space-y-2">
-              <label htmlFor="email">E-post</label>
+              <label htmlFor="emailOrPhone">E-post eller telefonnummer</label>
               <input
-                id="email"
-                name="email"
-                type="email"
-                placeholder="E-post"
-                value={email}
+                id="emailOrPhone"
+                name="emailOrPhone"
+                type="text"
+                placeholder="E-post eller telefonnummer"
+                value={emailOrPhone}
                 onChange={(event) => {
                   resetMessage();
-                  setEmail(event.target.value);
+                  setEmailOrPhone(event.target.value);
                 }}
                 className="w-full rounded-full border border-border-subtle bg-background-primary px-5 py-3 text-base text-text-primary placeholder:text-text-muted focus:border-brand-highlight focus:outline-none focus:ring-2 focus:ring-brand-highlight/60"
               />
             </div>
 
-            <div className="space-y-2">
-              <label htmlFor="password">Passord</label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                placeholder="Passord"
-                value={password}
-                onChange={(event) => {
-                  resetMessage();
-                  setPassword(event.target.value);
-                }}
-                className="w-full rounded-full border border-border-subtle bg-background-primary px-5 py-3 text-base text-text-primary placeholder:text-text-muted focus:border-brand-highlight focus:outline-none focus:ring-2 focus:ring-brand-highlight/60"
-              />
-            </div>
+            {/* Show password fields for email (required) or phone (optional) */}
+            {emailOrPhone && (
+              <>
+                <div className="space-y-2">
+                  <label htmlFor="password">
+                    Passord
+                    {detectInputType(emailOrPhone) === "phone" && (
+                      <span className="ml-2 text-xs text-text-secondary font-normal">
+                        (valgfritt)
+                      </span>
+                    )}
+                  </label>
+                  <input
+                    id="password"
+                    name="password"
+                    type="password"
+                    placeholder={
+                      detectInputType(emailOrPhone) === "phone"
+                        ? "Sett passord (eller bruk kun SMS-kode)"
+                        : "Passord"
+                    }
+                    value={password}
+                    onChange={(event) => {
+                      resetMessage();
+                      setPassword(event.target.value);
+                    }}
+                    className="w-full rounded-full border border-border-subtle bg-background-primary px-5 py-3 text-base text-text-primary placeholder:text-text-muted focus:border-brand-highlight focus:outline-none focus:ring-2 focus:ring-brand-highlight/60"
+                  />
+                  {detectInputType(emailOrPhone) === "phone" && (
+                    <p className="text-xs text-text-secondary">
+                      Hvis du setter passord kan du logge inn med enten SMS-kode
+                      eller passord
+                    </p>
+                  )}
+                </div>
 
-            <div className="space-y-2">
-              <label htmlFor="confirmPassword">Bekreft passord</label>
-              <input
-                id="confirmPassword"
-                name="confirmPassword"
-                type="password"
-                placeholder="Bekreft passord"
-                value={confirmPassword}
-                onChange={(event) => {
+                {(password || detectInputType(emailOrPhone) === "email") && (
+                  <div className="space-y-2">
+                    <label htmlFor="confirmPassword">Bekreft passord</label>
+                    <input
+                      id="confirmPassword"
+                      name="confirmPassword"
+                      type="password"
+                      placeholder="Bekreft passord"
+                      value={confirmPassword}
+                      onChange={(event) => {
+                        resetMessage();
+                        setConfirmPassword(event.target.value);
+                      }}
+                      className="w-full rounded-full border border-border-subtle bg-background-primary px-5 py-3 text-base text-text-primary placeholder:text-text-muted focus:border-brand-highlight focus:outline-none focus:ring-2 focus:ring-brand-highlight/60"
+                    />
+                  </div>
+                )}
+              </>
+            )}
+
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="w-full rounded-full bg-gradient-to-r from-brand-gradientStart via-brand-gradientMid to-brand-gradientEnd px-5 py-3 text-sm font-bold uppercase tracking-wide text-text-inverse shadow-lg shadow-brand-gradientMid/40 transition hover:from-brand-gradientMid hover:via-brand-gradientMid hover:to-brand-gradientEnd focus:outline-none focus:ring-4 focus:ring-brand-highlight/60 focus:ring-offset-2 focus:ring-offset-surface-secondary disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isSubmitting
+                ? detectInputType(emailOrPhone) === "phone"
+                  ? "Sender kode..."
+                  : "Oppretter konto..."
+                : "Opprett konto"}
+            </button>
+          </form>
+        )}
+
+        {/* Step 2: OTP Verification (for phone signup) */}
+        {step === "otp" && (
+          <form className="space-y-6" noValidate onSubmit={handleVerifyOtp}>
+            <div className="flex flex-col items-center space-y-4">
+              <label htmlFor="otp" className="text-sm text-text-secondary">
+                6-sifret SMS-kode
+              </label>
+              <InputOTP
+                maxLength={6}
+                value={otp}
+                onChange={(value) => {
                   resetMessage();
-                  setConfirmPassword(event.target.value);
+                  setOtp(value);
                 }}
-                className="w-full rounded-full border border-border-subtle bg-background-primary px-5 py-3 text-base text-text-primary placeholder:text-text-muted focus:border-brand-highlight focus:outline-none focus:ring-2 focus:ring-brand-highlight/60"
-              />
+              >
+                <InputOTPGroup>
+                  <InputOTPSlot index={0} />
+                  <InputOTPSlot index={1} />
+                  <InputOTPSlot index={2} />
+                </InputOTPGroup>
+                <InputOTPSeparator />
+                <InputOTPGroup>
+                  <InputOTPSlot index={3} />
+                  <InputOTPSlot index={4} />
+                  <InputOTPSlot index={5} />
+                </InputOTPGroup>
+              </InputOTP>
             </div>
 
             <button
@@ -181,9 +444,22 @@ export default function SignupPage() {
               disabled={isSubmitting}
               className="w-full rounded-full bg-gradient-to-r from-brand-gradientStart via-brand-gradientMid to-brand-gradientEnd px-5 py-3 text-sm font-bold uppercase tracking-wide text-text-inverse shadow-lg shadow-brand-gradientMid/40 transition hover:from-brand-gradientMid hover:via-brand-gradientMid hover:to-brand-gradientEnd focus:outline-none focus:ring-4 focus:ring-brand-highlight/60 focus:ring-offset-2 focus:ring-offset-surface-secondary disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isSubmitting ? "Oppretter konto..." : "Opprett konto"}
+              {isSubmitting ? "Verifiserer..." : "Verifiser og opprett konto"}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setStep("input");
+                setOtp("");
+                resetMessage();
+              }}
+              className="w-full text-sm text-text-secondary transition hover:text-text-primary"
+            >
+              ← Tilbake
             </button>
           </form>
+        )}
 
         {/* Message Display */}
         {message && (
@@ -200,15 +476,17 @@ export default function SignupPage() {
           </div>
         )}
 
-        {/* Back to login */}
-        <div className="mt-8 text-center text-sm">
-          <Link
-            href="/login"
-            className="font-semibold text-brand-highlight transition hover:text-brand-highlight/80 focus:outline-none focus:ring-2 focus:ring-brand-highlight/60"
-          >
-            ← Tilbake til innlogging
-          </Link>
-        </div>
+        {/* Back to login - only show on input step */}
+        {step === "input" && (
+          <div className="mt-8 text-center text-sm">
+            <Link
+              href="/login"
+              className="font-semibold text-brand-highlight transition hover:text-brand-highlight/80 focus:outline-none focus:ring-2 focus:ring-brand-highlight/60"
+            >
+              ← Tilbake til innlogging
+            </Link>
+          </div>
+        )}
       </section>
     </div>
   );

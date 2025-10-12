@@ -6,25 +6,14 @@ import { Input } from '@appui/Input';
 import { Label } from '@appui/Label';
 import { Button } from '@appui/Button';
 import { Avatar, AvatarFallback, AvatarImage } from '@appui/Avatar';
-import { Separator } from '@appui/Separator';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@appui/Dialog';
-import { updateProfileSettings, clearAllShifts } from '@/app/(app)/settings/_actions/updateSettings';
+import { updateProfileSettings } from '@/app/(app)/settings/_actions/updateSettings';
 import { useRouter } from 'next/navigation';
-import { GoogleConnectionCard } from './GoogleConnectionCard';
 
 interface ProfileFormProps {
   initialData: {
     firstName: string;
     email: string;
     profilePictureUrl: string | null;
-    hasGoogleConnected: boolean;
   };
 }
 
@@ -33,8 +22,6 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
   const [firstName, setFirstName] = useState(initialData.firstName);
   const [profilePictureUrl, setProfilePictureUrl] = useState(initialData.profilePictureUrl);
   const [isSaving, setIsSaving] = useState(false);
-  const [showClearDialog, setShowClearDialog] = useState(false);
-  const [isClearing, setIsClearing] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const saveTimeoutRef = useRef<NodeJS.Timeout>();
@@ -75,19 +62,6 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
       }
     };
   }, [firstName, initialData.firstName, router]);
-
-  const handleClearShifts = async () => {
-    setIsClearing(true);
-    try {
-      await clearAllShifts();
-      setShowClearDialog(false);
-      router.refresh();
-    } catch (error) {
-      console.error('Failed to clear shifts:', error);
-    } finally {
-      setIsClearing(false);
-    }
-  };
 
   const getInitials = (name: string) => {
     return name
@@ -207,142 +181,83 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
   };
 
   return (
-    <>
-      <Card className="p-6">
-        <div className="space-y-6">
-          <div className="space-y-4">
-            <div className="flex items-center gap-4">
-              <Avatar className="h-20 w-20">
-                <AvatarImage src={profilePictureUrl || undefined} />
-                <AvatarFallback className="bg-surface-secondary text-text-primary text-lg">
-                  {getInitials(firstName || initialData.email)}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1">
-                <h3 className="font-semibold">Profilbilde</h3>
-                <p className="text-sm text-text-secondary">
-                  Last opp et nytt bilde eller fjern det eksisterende.
-                </p>
-                <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handleProfilePictureUpload}
-                  />
+    <Card className="p-6">
+      <div className="space-y-6">
+        <div className="space-y-4">
+          <div className="flex items-center gap-4">
+            <Avatar className="h-20 w-20">
+              <AvatarImage src={profilePictureUrl || undefined} />
+              <AvatarFallback className="bg-surface-secondary text-text-primary text-lg">
+                {getInitials(firstName || initialData.email)}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1">
+              <h3 className="font-semibold">Profilbilde</h3>
+              <p className="text-sm text-text-secondary">
+                Last opp et nytt bilde eller fjern det eksisterende.
+              </p>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleProfilePictureUpload}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleUploadClick}
+                  disabled={isUploading}
+                >
+                  {isUploading ? 'Laster opp…' : profilePictureUrl ? 'Bytt bilde' : 'Last opp bilde'}
+                </Button>
+                {profilePictureUrl && (
                   <Button
                     type="button"
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
-                    onClick={handleUploadClick}
+                    onClick={handleRemoveProfilePicture}
                     disabled={isUploading}
                   >
-                    {isUploading ? 'Laster opp…' : profilePictureUrl ? 'Bytt bilde' : 'Last opp bilde'}
+                    Fjern bilde
                   </Button>
-                  {profilePictureUrl && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleRemoveProfilePicture}
-                      disabled={isUploading}
-                    >
-                      Fjern bilde
-                    </Button>
-                  )}
-                </div>
-                {uploadError && (
-                  <p className="mt-2 text-sm text-destructive">
-                    {uploadError}
-                  </p>
                 )}
               </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="firstName">Navn</Label>
-              <Input
-                id="firstName"
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-                placeholder="Ditt navn"
-                disabled={isSaving}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="email">E-post</Label>
-              <Input
-                id="email"
-                value={initialData.email}
-                disabled
-                className="opacity-60"
-              />
-              <p className="text-xs text-text-secondary">
-                E-postadressen kan ikke endres
-              </p>
+              {uploadError && (
+                <p className="mt-2 text-sm text-destructive">
+                  {uploadError}
+                </p>
+              )}
             </div>
           </div>
-        </div>
-      </Card>
 
-      <GoogleConnectionCard hasGoogleConnected={initialData.hasGoogleConnected} />
+          <div className="space-y-2">
+            <Label htmlFor="firstName">Navn</Label>
+            <Input
+              id="firstName"
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              placeholder="Ditt navn"
+              disabled={isSaving}
+            />
+          </div>
 
-      <Card className="p-6 border-red-200 dark:border-red-900">
-        <div className="space-y-4">
-          <div>
-            <h3 className="font-semibold text-red-600 dark:text-red-400">Faresone</h3>
-            <p className="text-sm text-text-secondary mt-1">
-              Irreversible handlinger
+          <div className="space-y-2">
+            <Label htmlFor="email">E-post</Label>
+            <Input
+              id="email"
+              value={initialData.email}
+              disabled
+              className="opacity-60"
+            />
+            <p className="text-xs text-text-secondary">
+              E-postadressen kan ikke endres
             </p>
           </div>
-
-          <Separator />
-
-          <div className="flex items-center justify-between">
-            <div>
-              <h4 className="font-medium">Slett alle vakter</h4>
-              <p className="text-sm text-text-secondary">
-                Dette vil permanent slette alle dine registrerte vakter
-              </p>
-            </div>
-            <Button
-              variant="destructive"
-              onClick={() => setShowClearDialog(true)}
-            >
-              Slett alle
-            </Button>
-          </div>
         </div>
-      </Card>
-
-      <Dialog open={showClearDialog} onOpenChange={setShowClearDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Er du sikker?</DialogTitle>
-            <DialogDescription>
-              Dette vil permanent slette alle dine vakter. Denne handlingen kan ikke angres.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowClearDialog(false)}
-              disabled={isClearing}
-            >
-              Avbryt
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleClearShifts}
-              disabled={isClearing}
-            >
-              {isClearing ? 'Sletter...' : 'Slett alle vakter'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
+      </div>
+    </Card>
   );
 }
