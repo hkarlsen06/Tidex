@@ -55,8 +55,8 @@ function getStatusBadge(status: string) {
 function getStatusDescription(status: string, planName: string, isGrandfathered: boolean): string {
   if (isGrandfathered) {
     return status === 'active'
-      ? `Du støtter oss med ${planName}-abonnementet`
-      : `Du støttet oss tidligere med ${planName}-abonnementet`;
+      ? `Du støtter oss med\u00A0${planName}-abonnementet`
+      : `Du støttet oss tidligere med\u00A0${planName}-abonnementet`;
   }
 
   if (status === 'active') {
