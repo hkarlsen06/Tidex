@@ -216,3 +216,153 @@ export async function disconnectGoogleAccount() {
   revalidatePath('/settings/profile');
   return { success: true };
 }
+
+export async function linkPhoneNumber(phone: string) {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) throw new Error('Not authenticated');
+
+  // Store the pending phone number in user metadata and send OTP
+  // We don't use updateUser({ phone }) directly because it might not require confirmation
+  // depending on Supabase project settings
+  const existingMetadata = user.user_metadata ?? {};
+
+  // First, store the pending phone in metadata (not the actual phone field yet)
+  const { error: metadataError } = await supabase.auth.updateUser({
+    data: {
+      ...existingMetadata,
+      pendingPhone: phone,
+    },
+  });
+
+  if (metadataError) {
+    logger.error('Failed to store pending phone:', metadataError);
+    throw metadataError;
+  }
+
+  // Now send the OTP using signInWithOtp in a way that doesn't create a new session
+  // We use the phone provider but with the current user's session
+  const { error } = await supabase.auth.updateUser({
+    phone,
+  });
+
+  if (error) {
+    logger.error('Failed to initiate phone linking:', error);
+    throw error;
+  }
+
+  logger.info('OTP sent for phone linking:', { phone });
+  return { success: true };
+}
+
+export async function verifyAndLinkPhone(phone: string, otp: string) {
+  const supabase = await createSupabaseServerClient();
+
+  // Get current user to check pending phone
+  const { data: { user: currentUser } } = await supabase.auth.getUser();
+  if (!currentUser) throw new Error('Not authenticated');
+
+  // Verify that this phone matches the pending phone
+  const pendingPhone = currentUser.user_metadata?.pendingPhone;
+  if (pendingPhone !== phone) {
+    throw new Error('Phone number mismatch');
+  }
+
+  // Verify the OTP for phone change
+  const { data, error: verifyError } = await supabase.auth.verifyOtp({
+    phone,
+    token: otp,
+    type: 'phone_change',
+  });
+
+  if (verifyError) {
+    logger.error('Failed to verify OTP:', verifyError);
+    throw verifyError;
+  }
+
+  if (!data.user) {
+    throw new Error('Verification failed');
+  }
+
+  // Check that phone was actually confirmed
+  if (!data.user.phone_confirmed_at) {
+    logger.error('Phone not confirmed after OTP verification');
+    throw new Error('Phone verification incomplete');
+  }
+
+  // Clean up pending phone from metadata
+  const existingMetadata = data.user.user_metadata ?? {};
+  const { pendingPhone: _, ...cleanedMetadata } = existingMetadata;
+
+  await supabase.auth.updateUser({
+    data: cleanedMetadata,
+  });
+
+  logger.info('Phone number successfully linked and confirmed:', {
+    userId: data.user.id,
+    phone: phone,
+    confirmedAt: data.user.phone_confirmed_at,
+  });
+
+  revalidatePath('/settings/profile');
+  return { success: true };
+}
+
+export async function unlinkPhoneNumber() {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) throw new Error('Not authenticated');
+
+  // Find phone identity
+  const phoneIdentity = user.identities?.find(
+    (identity) => identity.provider === 'phone'
+  );
+
+  if (!phoneIdentity) {
+    throw new Error('Ingen telefonnummer funnet');
+  }
+
+  logger.info('Unlinking phone identity:', {
+    identityId: phoneIdentity.identity_id,
+    provider: phoneIdentity.provider,
+    userId: user.id,
+  });
+
+  // Unlink the identity
+  const { error } = await supabase.auth.unlinkIdentity(phoneIdentity);
+
+  if (error) {
+    logger.error('Failed to unlink phone identity:', error);
+    throw error;
+  }
+
+  revalidatePath('/settings/profile');
+  return { success: true };
+}
+
+export async function setPassword(password: string) {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) throw new Error('Not authenticated');
+
+  // Validate password length
+  if (password.length < 6) {
+    throw new Error('Passordet må være minst 6 tegn langt');
+  }
+
+  // Update user password
+  const { error } = await supabase.auth.updateUser({
+    password,
+  });
+
+  if (error) {
+    logger.error('Failed to set password:', error);
+    throw error;
+  }
+
+  revalidatePath('/settings/profile');
+  return { success: true };
+}

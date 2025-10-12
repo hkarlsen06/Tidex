@@ -11,16 +11,24 @@ import {
   InputOTPSlot,
 } from "@/components/app/InputOTP";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import {
+  detectInputType,
+  normalizePhoneToE164,
+  isValidNorwegianPhone,
+  isValidEmail,
+} from "@/lib/validation/phone";
+import { translateError } from "@/lib/errors/translate";
 
 type MessageState = { type: "error" | "success"; text: string } | null;
-type Step = "email" | "otp" | "password";
+type Step = "input" | "otp" | "password";
 
 export default function ResetPasswordPage() {
   const router = useRouter();
   const supabase = createSupabaseBrowserClient();
 
-  const [step, setStep] = useState<Step>("email");
-  const [email, setEmail] = useState("");
+  const [step, setStep] = useState<Step>("input");
+  const [emailOrPhone, setEmailOrPhone] = useState("");
+  const [resetType, setResetType] = useState<"email" | "phone" | null>(null);
   const [otp, setOtp] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -29,34 +37,96 @@ export default function ResetPasswordPage() {
 
   const resetMessage = () => setMessage(null);
 
-  // Step 1: Send OTP to email
+  // Step 1: Send OTP to email or phone
   const handleSendOtp = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!email) {
-      setMessage({ type: "error", text: "Fyll inn e-postadressen din." });
+    if (!emailOrPhone) {
+      setMessage({
+        type: "error",
+        text: "Fyll inn e-post eller telefonnummer.",
+      });
+      return;
+    }
+
+    const inputType = detectInputType(emailOrPhone);
+
+    if (inputType === "unknown") {
+      setMessage({
+        type: "error",
+        text: "Ugyldig e-post eller telefonnummer. Telefonnummer må være 8 siffer.",
+      });
       return;
     }
 
     setIsSubmitting(true);
     setMessage(null);
 
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: undefined,
-    });
+    try {
+      if (inputType === "email") {
+        if (!isValidEmail(emailOrPhone)) {
+          setMessage({ type: "error", text: "Ugyldig e-postformat." });
+          setIsSubmitting(false);
+          return;
+        }
 
-    setIsSubmitting(false);
+        const { error } = await supabase.auth.resetPasswordForEmail(
+          emailOrPhone,
+          {
+            redirectTo: undefined,
+          }
+        );
 
-    if (error) {
-      setMessage({ type: "error", text: error.message });
-      return;
+        setIsSubmitting(false);
+
+        if (error) {
+          setMessage({ type: "error", text: translateError(error.message) });
+          return;
+        }
+
+        setResetType("email");
+        setMessage({
+          type: "success",
+          text: "En kode er sendt til din e-post. Sjekk innboksen din.",
+        });
+      } else {
+        // Phone reset
+        if (!isValidNorwegianPhone(emailOrPhone)) {
+          setMessage({
+            type: "error",
+            text: "Telefonnummer må være 8 siffer.",
+          });
+          setIsSubmitting(false);
+          return;
+        }
+
+        const phoneE164 = normalizePhoneToE164(emailOrPhone);
+        const { error } = await supabase.auth.signInWithOtp({
+          phone: phoneE164,
+        });
+
+        setIsSubmitting(false);
+
+        if (error) {
+          setMessage({ type: "error", text: translateError(error.message) });
+          return;
+        }
+
+        setResetType("phone");
+        setMessage({
+          type: "success",
+          text: "SMS-kode sendt! Sjekk meldingene dine.",
+        });
+      }
+
+      setStep("otp");
+    } catch (err) {
+      setIsSubmitting(false);
+      setMessage({
+        type: "error",
+        text: err instanceof Error ? err.message : "En feil oppstod",
+      });
     }
-
-    setMessage({
-      type: "success",
-      text: "En kode er sendt til din e-post. Sjekk innboksen din.",
-    });
-    setStep("otp");
   };
 
   // Step 2: Verify OTP
@@ -71,21 +141,52 @@ export default function ResetPasswordPage() {
     setIsSubmitting(true);
     setMessage(null);
 
-    const { error } = await supabase.auth.verifyOtp({
-      email,
-      token: otp,
-      type: "recovery",
-    });
+    try {
+      if (resetType === "email") {
+        const { error } = await supabase.auth.verifyOtp({
+          email: emailOrPhone,
+          token: otp,
+          type: "recovery",
+        });
 
-    setIsSubmitting(false);
+        setIsSubmitting(false);
 
-    if (error) {
-      setMessage({ type: "error", text: error.message });
-      return;
+        if (error) {
+          setMessage({ type: "error", text: translateError(error.message) });
+          return;
+        }
+      } else {
+        // Phone verification
+        if (!isValidNorwegianPhone(emailOrPhone)) {
+          setMessage({ type: "error", text: "Ugyldig telefonnummer." });
+          setIsSubmitting(false);
+          return;
+        }
+
+        const phoneE164 = normalizePhoneToE164(emailOrPhone);
+        const { error } = await supabase.auth.verifyOtp({
+          phone: phoneE164,
+          token: otp,
+          type: "sms",
+        });
+
+        setIsSubmitting(false);
+
+        if (error) {
+          setMessage({ type: "error", text: translateError(error.message) });
+          return;
+        }
+      }
+
+      setMessage({ type: "success", text: "Koden er verifisert!" });
+      setStep("password");
+    } catch (err) {
+      setIsSubmitting(false);
+      setMessage({
+        type: "error",
+        text: err instanceof Error ? err.message : "En feil oppstod",
+      });
     }
-
-    setMessage({ type: "success", text: "Koden er verifisert!" });
-    setStep("password");
   };
 
   // Step 3: Update password
@@ -120,7 +221,7 @@ export default function ResetPasswordPage() {
     setIsSubmitting(false);
 
     if (error) {
-      setMessage({ type: "error", text: error.message });
+      setMessage({ type: "error", text: translateError(error.message) });
       return;
     }
 
@@ -142,26 +243,27 @@ export default function ResetPasswordPage() {
         <div className="mb-8 text-center">
           <h1 className="tracking-wide">Tilbakestill passord</h1>
           <p className="mt-2 text-sm text-text-secondary">
-            {step === "email" && "Vi sender deg en kode på e-post"}
+            {step === "input" &&
+              "Vi sender deg en kode på e-post eller SMS"}
             {step === "otp" && "Skriv inn koden vi sendte deg"}
             {step === "password" && "Velg et nytt passord"}
           </p>
         </div>
 
-        {/* Step 1: Email */}
-        {step === "email" && (
+        {/* Step 1: Email or Phone Input */}
+        {step === "input" && (
           <form className="space-y-6" noValidate onSubmit={handleSendOtp}>
             <div className="space-y-2">
-              <label htmlFor="email">E-post</label>
+              <label htmlFor="emailOrPhone">E-post eller telefonnummer</label>
               <input
-                id="email"
-                name="email"
-                type="email"
-                placeholder="E-post"
-                value={email}
+                id="emailOrPhone"
+                name="emailOrPhone"
+                type="text"
+                placeholder="E-post eller telefonnummer"
+                value={emailOrPhone}
                 onChange={(event) => {
                   resetMessage();
-                  setEmail(event.target.value);
+                  setEmailOrPhone(event.target.value);
                 }}
                 className="w-full rounded-full border border-border-subtle bg-background-primary px-5 py-3 text-base text-text-primary placeholder:text-text-muted focus:border-brand-highlight focus:outline-none focus:ring-2 focus:ring-brand-highlight/60"
               />
@@ -216,10 +318,14 @@ export default function ResetPasswordPage() {
 
             <button
               type="button"
-              onClick={() => setStep("email")}
+              onClick={() => {
+                setStep("input");
+                setOtp("");
+                resetMessage();
+              }}
               className="w-full text-sm text-text-secondary transition hover:text-text-primary"
             >
-              ← Tilbake til e-post
+              ← Tilbake
             </button>
           </form>
         )}
