@@ -44,6 +44,7 @@ function getStatusBadge(status: string) {
     incomplete_expired: { label: 'Utløpt', variant: 'destructive' },
     trialing: { label: 'Prøveperiode', variant: 'secondary' },
     unpaid: { label: 'Ubetalt', variant: 'destructive' },
+    paused: { label: 'Pause', variant: 'outline' },
   };
 
   const statusInfo = statusMap[status] || { label: status, variant: 'outline' as const };
@@ -51,9 +52,44 @@ function getStatusBadge(status: string) {
   return <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>;
 }
 
+function getStatusDescription(status: string, planName: string, isGrandfathered: boolean): string {
+  if (isGrandfathered) {
+    return status === 'active'
+      ? `Du støtter oss med ${planName}-abonnementet`
+      : `Du støttet oss tidligere med ${planName}-abonnementet`;
+  }
+
+  if (status === 'active') {
+    return `Du er for øyeblikket på ${planName}-planen`;
+  }
+
+  if (status === 'canceled') {
+    return `Ditt ${planName}-abonnement er kansellert`;
+  }
+
+  if (status === 'past_due') {
+    return `Ditt ${planName}-abonnement har forfalt betaling`;
+  }
+
+  if (status === 'unpaid') {
+    return `Ditt ${planName}-abonnement er ubetalt`;
+  }
+
+  if (status === 'incomplete' || status === 'incomplete_expired') {
+    return `Ditt ${planName}-abonnement er ikke fullført`;
+  }
+
+  if (status === 'trialing') {
+    return `Du er i prøveperioden for ${planName}-planen`;
+  }
+
+  return `Ditt ${planName}-abonnement har status: ${status}`;
+}
+
 export function SubscriptionStatus({ subscription, isGrandfathered = false }: SubscriptionStatusProps) {
   const planInfo = getPlanInfo(subscription.price_id);
   const [isLoading, setIsLoading] = useState(false);
+  const isActive = subscription.status === 'active';
 
   const handleManageSubscription = async () => {
     try {
@@ -79,12 +115,10 @@ export function SubscriptionStatus({ subscription, isGrandfathered = false }: Su
         <div className="flex items-start justify-between">
           <div>
             <h3 className="text-lg font-semibold">
-              {isGrandfathered ? 'Abonnementsstøtte' : 'Nåværende plan'}
+              {isGrandfathered ? 'Abonnementsstøtte' : isActive ? 'Nåværende plan' : 'Tidligere abonnement'}
             </h3>
             <p className="text-sm text-text-secondary mt-1">
-              {isGrandfathered
-                ? `Du støtter oss med ${planInfo.name}-abonnementet`
-                : `Du er for øyeblikket på ${planInfo.name}-planen`}
+              {getStatusDescription(subscription.status, planInfo.name, isGrandfathered)}
             </p>
           </div>
           {getStatusBadge(subscription.status)}
@@ -105,7 +139,9 @@ export function SubscriptionStatus({ subscription, isGrandfathered = false }: Su
 
           {subscription.current_period_end && (
             <div>
-              <p className="text-sm text-text-secondary mb-1">Neste fornyelse</p>
+              <p className="text-sm text-text-secondary mb-1">
+                {isActive ? 'Neste fornyelse' : 'Utløper'}
+              </p>
               <p className="text-lg font-semibold">{formatDate(subscription.current_period_end)}</p>
             </div>
           )}
@@ -118,7 +154,7 @@ export function SubscriptionStatus({ subscription, isGrandfathered = false }: Su
           )}
         </div>
 
-        {planInfo.name === 'Pro' && (
+        {planInfo.name === 'Pro' && (isActive || isGrandfathered) && (
           <>
             <Separator />
             <div className="p-4 bg-surface-secondary rounded-lg">
@@ -139,7 +175,7 @@ export function SubscriptionStatus({ subscription, isGrandfathered = false }: Su
           </>
         )}
 
-        {planInfo.name === 'Max' && (
+        {planInfo.name === 'Max' && (isActive || isGrandfathered) && (
           <>
             <Separator />
             <div className="p-4 bg-surface-secondary rounded-lg">
