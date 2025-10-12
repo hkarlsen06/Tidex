@@ -1,6 +1,10 @@
+'use client';
+
 import Link from 'next/link';
+import type { MouseEvent } from 'react';
 import { Card } from '@appui/Card';
 import { ChevronRight, User, Banknote, Palette, Settings, Database, CreditCard } from 'lucide-react';
+import { useNavigationFeedback } from '@/components/app/navigation-feedback';
 
 const settingsItems = [
   {
@@ -36,6 +40,23 @@ const settingsItems = [
 ];
 
 export default function SettingsPage() {
+  const { navigate } = useNavigationFeedback();
+
+  const handleItemClick = (href: string) => (event: MouseEvent<HTMLAnchorElement>) => {
+    if (
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey ||
+      event.altKey ||
+      event.button !== 0
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+    navigate(href);
+  };
+
   return (
     <div className="container mx-auto px-4 py-8 max-w-2xl">
       <h1 className="text-3xl font-bold mb-2">Innstillinger</h1>
@@ -47,7 +68,7 @@ export default function SettingsPage() {
         {settingsItems.map((item) => {
           const Icon = item.icon;
           return (
-            <Link key={item.href} href={item.href}>
+            <Link key={item.href} href={item.href} onClick={handleItemClick(item.href)}>
               <Card className="p-5 hover:bg-surface-secondary/50 transition-colors cursor-pointer">
                 <div className="flex items-center gap-4">
                   <div className="p-3 rounded-lg bg-surface-secondary">

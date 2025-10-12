@@ -13,6 +13,7 @@ import { cn } from "@/lib/cn";
 import { IconClock } from "@tabler/icons-react";
 import { FreeTierLimitModal } from "./FreeTierLimitModal";
 import { checkShiftLimit } from "../../../app/(app)/shifts/add/_checks/checkShiftLimit";
+import { useNavigationFeedback } from "@/components/app/navigation-feedback";
 
 type ExistingShift = {
   shift_date: string; // YYYY-MM-DD
@@ -55,6 +56,7 @@ type Props = {
 
 export default function AddShiftForm({ existingShifts }: Props) {
   const router = useRouter();
+  const { navigate } = useNavigationFeedback();
   const searchParams = useSearchParams();
   const [pending, startTransition] = useTransition();
   const [mode, setMode] = useState<"single" | "recurring">("single");
@@ -172,7 +174,7 @@ export default function AddShiftForm({ existingShifts }: Props) {
         try {
           await createShifts({ dates: isoDates, start, end });
           // Navigate and refresh to show new data immediately
-          router.push("/shifts");
+          navigate("/shifts");
           router.refresh();
         } catch (e: any) {
           setError(e?.message || "Kunne ikke lagre skift");
@@ -189,7 +191,7 @@ export default function AddShiftForm({ existingShifts }: Props) {
     startTransition(async () => {
       try {
         await createShifts({ dates: isoDates, start, end });
-        router.push("/shifts");
+        navigate("/shifts");
         router.refresh();
       } catch (e: any) {
         setError(e?.message || "Kunne ikke lagre skift");

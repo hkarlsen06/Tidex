@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from "@appui/Dialog";
 import { Button } from "@appui/Button";
+import { useNavigationFeedback } from "./navigation-feedback";
 
 interface OnboardingPromptModalProps {
   shouldShow: boolean;
@@ -18,6 +19,7 @@ interface OnboardingPromptModalProps {
 
 export function OnboardingPromptModal({ shouldShow }: OnboardingPromptModalProps) {
   const router = useRouter();
+  const { navigate } = useNavigationFeedback();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [dismissed, setDismissed] = useState(false);
@@ -43,7 +45,7 @@ export function OnboardingPromptModal({ shouldShow }: OnboardingPromptModalProps
 
   const handleSetup = () => {
     setOpen(false);
-    router.push("/onboarding");
+    navigate("/onboarding");
   };
 
   const handleDismissSession = () => {

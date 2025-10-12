@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { ChevronLeft } from 'lucide-react';
 import { Button } from '@appui/Button';
+import { useNavigationFeedback } from './navigation-feedback';
 
 interface BackButtonProps {
   label?: string;
@@ -11,10 +12,11 @@ interface BackButtonProps {
 
 export function BackButton({ label = 'Tilbake', fallbackHref }: BackButtonProps) {
   const router = useRouter();
+  const { navigate } = useNavigationFeedback();
 
   const handleBack = () => {
     if (fallbackHref) {
-      router.push(fallbackHref);
+      navigate(fallbackHref);
     } else {
       router.back();
     }

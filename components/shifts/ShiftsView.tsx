@@ -14,6 +14,7 @@ import { MonthlyEarningsCalendar } from "./MonthlyEarningsCalendar";
 import { ShiftWithComputations } from "@/lib/payroll";
 import ShiftDetails from "@/components/shifts/ShiftDetails";
 import { deleteShift } from "@/app/(app)/shifts/_actions/deleteShift";
+import { useNavigationFeedback } from "@/components/app/navigation-feedback";
 
 export type WeekGroup = {
   id: string;
@@ -107,6 +108,7 @@ type ShiftsViewProps = {
 
 export function ShiftsView({ shifts, defaultView = "calendar" }: ShiftsViewProps) {
   const router = useRouter();
+  const { navigate } = useNavigationFeedback();
   const [pending, startTransition] = useTransition();
   const [selectedMonth, setSelectedMonth] = useState(() => startOfMonth(new Date()));
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -141,9 +143,9 @@ export function ShiftsView({ shifts, defaultView = "calendar" }: ShiftsViewProps
           return;
         }
       }
-      router.push(`/shifts/add?date=${encodeURIComponent(iso)}`);
+      navigate(`/shifts/add?date=${encodeURIComponent(iso)}`);
     },
-    [router, shifts]
+    [navigate, shifts]
   );
 
   const filteredShifts = useMemo(

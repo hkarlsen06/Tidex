@@ -1,9 +1,8 @@
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { Card } from '@appui/Card';
-import { Button } from '@appui/Button';
-import Link from 'next/link';
 import { CheckCircle } from 'lucide-react';
+import { SubscriptionSuccessButtons } from './SubscriptionSuccessButtons';
 
 export default async function SubscriptionSuccessPage() {
   const supabase = await createSupabaseServerClient();
@@ -38,14 +37,7 @@ export default async function SubscriptionSuccessPage() {
             </ul>
           </div>
 
-          <div className="flex gap-4 w-full">
-            <Button asChild className="flex-1">
-              <Link href="/home">Gå til Dashboard</Link>
-            </Button>
-            <Button asChild variant="outline" className="flex-1">
-              <Link href="/settings/subscription">Se abonnement</Link>
-            </Button>
-          </div>
+          <SubscriptionSuccessButtons />
         </div>
       </Card>
     </div>

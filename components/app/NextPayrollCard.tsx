@@ -4,6 +4,7 @@ import React from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardHeader } from '@appui/Card';
 import { cn } from '@/lib/cn';
+import { useNavigationFeedback } from './navigation-feedback';
 
 interface NextPayrollCardProps {
   payrollDay: number;
@@ -77,6 +78,7 @@ export const NextPayrollCard: React.FC<NextPayrollCardProps> = ({
   selectedMonth,
 }) => {
   const router = useRouter();
+  const { navigate } = useNavigationFeedback();
   const nextPayrollDate = getPayrollDateForMonth(payrollDay, selectedMonth);
   const formattedDate = dateFormatter.format(nextPayrollDate);
 
@@ -93,7 +95,7 @@ export const NextPayrollCard: React.FC<NextPayrollCardProps> = ({
   }
 
   const handleClick = () => {
-    router.push('/settings/pay');
+    navigate('/settings/pay');
   };
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
