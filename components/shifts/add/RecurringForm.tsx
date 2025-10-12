@@ -10,6 +10,7 @@ import { IconClock } from "@tabler/icons-react";
 import { cn } from "@/lib/cn";
 import { FreeTierLimitModal } from "./FreeTierLimitModal";
 import { checkShiftLimit } from "../../../app/(app)/shifts/add/_checks/checkShiftLimit";
+import { useNavigationFeedback } from "@/components/app/navigation-feedback";
 
 function toLocalISODate(d: Date) {
   const y = d.getFullYear();
@@ -29,6 +30,7 @@ function parseISODate(s: string): Date | null {
 
 export default function RecurringForm() {
   const router = useRouter();
+  const { navigate } = useNavigationFeedback();
   const [pending, startTransition] = useTransition();
 
   const [startDate, setStartDate] = useState<string>(() => toLocalISODate(new Date()));
@@ -112,7 +114,7 @@ export default function RecurringForm() {
         try {
           const sid = crypto.randomUUID();
           await createShifts({ dates, start, end, seriesId: sid });
-          router.push("/shifts");
+          navigate("/shifts");
           router.refresh();
         } catch (e: any) {
           setError(e?.message || "Kunne ikke lagre skift");
@@ -131,7 +133,7 @@ export default function RecurringForm() {
       try {
         const sid = crypto.randomUUID();
         await createShifts({ dates, start, end, seriesId: sid });
-        router.push("/shifts");
+        navigate("/shifts");
         router.refresh();
       } catch (e: any) {
         setError(e?.message || "Kunne ikke lagre skift");

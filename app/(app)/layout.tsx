@@ -7,7 +7,6 @@ import { sanitizeDisplayName, sanitizeUrl } from "@/lib/sanitize";
 
 import { SupabaseListener } from "../supabase-listener";
 import { ThemeProvider } from "@/components/app/ThemeProvider";
-import { OnboardingPromptModal } from "@/components/app/OnboardingPromptModal";
 import { AppLayoutClient } from "@/components/app/AppLayoutClient";
 
 // Server layout: Uses verified user data from getUser() for secure UI rendering.
@@ -91,8 +90,11 @@ export default async function RootLayout({
   return (
     <ThemeProvider serverTheme={serverTheme}>
       <SupabaseListener accessToken={session?.access_token} />
-      <OnboardingPromptModal shouldShow={!finishedOnboarding} />
-      <AppLayoutClient userName={userName} avatarUrl={resolvedAvatarUrl}>
+      <AppLayoutClient
+        userName={userName}
+        avatarUrl={resolvedAvatarUrl}
+        showOnboardingPrompt={!finishedOnboarding}
+      >
         {children}
       </AppLayoutClient>
     </ThemeProvider>
