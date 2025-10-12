@@ -752,7 +752,7 @@ export function DataForm() {
           <div>
             <p className="font-medium text-text-muted">Velg tidsperiode</p>
             <p className="text-sm text-text-secondary">
-              Forhåndsvalg eller egendefinert periode må settes før eksport.
+              Velg en tidsperiode for eksporten.
             </p>
           </div>
 
@@ -893,7 +893,7 @@ export function DataForm() {
             <div>
               <p className="font-medium text-text-muted">Eksporter til CSV</p>
               <p className="text-sm text-text-secondary">
-                Laster ned den samme perioden som kommaseparert fil i kronologisk rekkefølge.
+                Vaktinfo per vakt i kronologisk rekkefølge. Inkluderer sum på slutten.
               </p>
             </div>
             <Button
