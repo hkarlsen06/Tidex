@@ -170,15 +170,6 @@ export function FreeTierLimitModal({
                 <div className="flex gap-2">
                   <Button
                     type="button"
-                    variant="ghost"
-                    onClick={() => setShowConfirmDelete(false)}
-                    disabled={isDeleting}
-                    className="flex-1 text-xs"
-                  >
-                    Avbryt
-                  </Button>
-                  <Button
-                    type="button"
                     variant="destructive"
                     onClick={handleDeleteConfirm}
                     disabled={isDeleting}
@@ -186,6 +177,14 @@ export function FreeTierLimitModal({
                     className="flex-1 text-xs"
                   >
                     Slett {deleteCount} {deleteCount === 1 ? 'måned' : 'måneder'}
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={() => setShowConfirmDelete(false)}
+                    disabled={isDeleting}
+                    className="flex-1 text-xs bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    Avbryt
                   </Button>
                 </div>
               </div>
