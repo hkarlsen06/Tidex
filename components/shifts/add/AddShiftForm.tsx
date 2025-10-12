@@ -142,40 +142,45 @@ export default function AddShiftForm({ existingShifts }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const onSubmit = () => {
+  const onSubmit = async () => {
     if (!canSubmit) return;
     setError(null);
-    startTransition(async () => {
-      try {
-        // Extract target month from first selected date
-        const targetMonth = isoDates[0]?.substring(0, 7); // YYYY-MM
-        if (!targetMonth) {
-          setError("Kunne ikke bestemme måneden");
-          return;
-        }
 
-        // Check if user can add shifts to this month
-        const limitCheck = await checkShiftLimit(targetMonth);
-
-        if (!limitCheck.allowed && limitCheck.existingMonths) {
-          // Show modal with options to upgrade or delete
-          setLimitModalData({
-            existingMonths: limitCheck.existingMonths,
-            targetMonth,
-          });
-          setShowLimitModal(true);
-          return;
-        }
-
-        // User is allowed - proceed with shift creation
-        await createShifts({ dates: isoDates, start, end });
-        // Navigate and refresh to show new data immediately
-        router.push("/shifts");
-        router.refresh();
-      } catch (e: any) {
-        setError(e?.message || "Kunne ikke lagre skift");
+    try {
+      // Extract target month from first selected date
+      const targetMonth = isoDates[0]?.substring(0, 7); // YYYY-MM
+      if (!targetMonth) {
+        setError("Kunne ikke bestemme måneden");
+        return;
       }
-    });
+
+      // Check if user can add shifts to this month (before transition)
+      const limitCheck = await checkShiftLimit(targetMonth);
+
+      if (!limitCheck.allowed && limitCheck.existingMonths) {
+        // Show modal with options to upgrade or delete
+        setLimitModalData({
+          existingMonths: limitCheck.existingMonths,
+          targetMonth,
+        });
+        setShowLimitModal(true);
+        return;
+      }
+
+      // User is allowed - proceed with shift creation in transition
+      startTransition(async () => {
+        try {
+          await createShifts({ dates: isoDates, start, end });
+          // Navigate and refresh to show new data immediately
+          router.push("/shifts");
+          router.refresh();
+        } catch (e: any) {
+          setError(e?.message || "Kunne ikke lagre skift");
+        }
+      });
+    } catch (e: any) {
+      setError(e?.message || "Kunne ikke lagre skift");
+    }
   };
 
   const handleDeleteAndProceed = async () => {

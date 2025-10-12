@@ -11,7 +11,7 @@ export function FreePlanInfo() {
         <div>
           <h4 className="font-semibold text-sm mb-1">Du er på gratisplanen</h4>
           <p className="text-sm text-text-secondary">
-            Med gratisplanen kan du bare ha skift i én måned om gangen.
+            Med gratisplanen kan du bare ha skift i én måned av gangen.
             Oppgrader til Pro eller Max for å lagre skift på tvers av flere måneder.
           </p>
         </div>

@@ -80,43 +80,48 @@ export default function RecurringForm() {
     setOpen(true);
   };
 
-  const onConfirm = () => {
+  const onConfirm = async () => {
     setError(null);
-    startTransition(async () => {
-      try {
-        // Extract target month from first date in the series
-        const targetMonth = dates[0]?.substring(0, 7); // YYYY-MM
-        if (!targetMonth) {
-          setError("Kunne ikke bestemme måneden");
-          setOpen(false);
-          return;
-        }
 
-        // Check if user can add shifts to this month
-        const limitCheck = await checkShiftLimit(targetMonth);
-
-        if (!limitCheck.allowed && limitCheck.existingMonths) {
-          // Close the preview dialog and show limit modal
-          setOpen(false);
-          setLimitModalData({
-            existingMonths: limitCheck.existingMonths,
-            targetMonth,
-          });
-          setShowLimitModal(true);
-          return;
-        }
-
-        // User is allowed - proceed with shift creation
-        const sid = crypto.randomUUID();
-        await createShifts({ dates, start, end, seriesId: sid });
-        router.push("/shifts");
-        router.refresh();
-      } catch (e: any) {
-        setError(e?.message || "Kunne ikke lagre skift");
-      } finally {
+    try {
+      // Extract target month from first date in the series
+      const targetMonth = dates[0]?.substring(0, 7); // YYYY-MM
+      if (!targetMonth) {
+        setError("Kunne ikke bestemme måneden");
         setOpen(false);
+        return;
       }
-    });
+
+      // Check if user can add shifts to this month (before transition)
+      const limitCheck = await checkShiftLimit(targetMonth);
+
+      if (!limitCheck.allowed && limitCheck.existingMonths) {
+        // Close the preview dialog and show limit modal
+        setOpen(false);
+        setLimitModalData({
+          existingMonths: limitCheck.existingMonths,
+          targetMonth,
+        });
+        setShowLimitModal(true);
+        return;
+      }
+
+      // User is allowed - proceed with shift creation in transition
+      setOpen(false);
+      startTransition(async () => {
+        try {
+          const sid = crypto.randomUUID();
+          await createShifts({ dates, start, end, seriesId: sid });
+          router.push("/shifts");
+          router.refresh();
+        } catch (e: any) {
+          setError(e?.message || "Kunne ikke lagre skift");
+        }
+      });
+    } catch (e: any) {
+      setError(e?.message || "Kunne ikke lagre skift");
+      setOpen(false);
+    }
   };
 
   const handleDeleteAndProceed = async () => {

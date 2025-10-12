@@ -52,20 +52,20 @@ export async function checkShiftLimit(targetMonth: string): Promise<ShiftLimitCh
   // Get unique months from existing shifts
   const existingMonths = getUniqueShiftMonths(existingShifts);
 
-  // If user already has shifts in the target month, allow (adding to same month)
-  if (existingMonths.has(targetMonth)) {
+  // If user already has shifts ONLY in the target month, allow (adding to same month)
+  if (existingMonths.size === 1 && existingMonths.has(targetMonth)) {
     return { allowed: true };
   }
 
-  // If user has shifts in any other month, block
-  if (existingMonths.size > 0) {
-    return {
-      allowed: false,
-      existingMonths: Array.from(existingMonths),
-      reason: 'Free tier users can only have shifts in one month'
-    };
+  // If user has no existing shifts, allow
+  if (existingMonths.size === 0) {
+    return { allowed: true };
   }
 
-  // Should not reach here, but allow by default
-  return { allowed: true };
+  // If user has shifts in other month(s), block
+  return {
+    allowed: false,
+    existingMonths: Array.from(existingMonths),
+    reason: 'Free tier users can only have shifts in one month'
+  };
 }
