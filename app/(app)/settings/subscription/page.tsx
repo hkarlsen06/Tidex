@@ -20,7 +20,12 @@ export default async function SubscriptionPage() {
 
   // Check if user is an early supporter (before paywall)
   const isEarlySupporter = profile?.before_paywall === true;
-  const isGrandfatheredSubscriber = isEarlySupporter && subscription;
+
+  // Check if user has an active subscription (status must be 'active')
+  const hasActiveSubscription = subscription?.status === 'active';
+
+  // Grandfathered subscriber: early supporter with an active subscription
+  const isGrandfatheredSubscriber = isEarlySupporter && hasActiveSubscription;
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
@@ -37,10 +42,16 @@ export default async function SubscriptionPage() {
         {isGrandfatheredSubscriber ? (
           <>
             <GrandfatheredSubscriberBanner />
-            <SubscriptionStatus subscription={subscription} isGrandfathered={true} />
+            <SubscriptionStatus subscription={subscription!} isGrandfathered={true} />
           </>
+        ) : hasActiveSubscription ? (
+          <SubscriptionStatus subscription={subscription!} isGrandfathered={false} />
         ) : subscription ? (
-          <SubscriptionStatus subscription={subscription} isGrandfathered={false} />
+          <>
+            {/* Show canceled/expired subscription status */}
+            <SubscriptionStatus subscription={subscription} isGrandfathered={false} />
+            <UpgradeOptions />
+          </>
         ) : isEarlySupporter ? (
           <>
             <EarlySupporterStatus />
