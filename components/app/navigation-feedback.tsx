@@ -121,7 +121,7 @@ export function NavigationOverlay() {
       aria-live="polite"
       aria-busy="true"
       aria-label="Loading next page"
-      className="absolute inset-0 z-30 flex items-center justify-center bg-background transition-colors"
+      className="fixed inset-0 z-30 flex items-center justify-center bg-background transition-colors"
     >
       <IconLoader className="h-12 w-12 animate-spin text-text-primary" stroke={2} />
     </div>
