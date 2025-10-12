@@ -35,7 +35,7 @@ export async function deleteShiftsInOtherMonths(targetMonth: string): Promise<De
       .from('user_shifts')
       .select('id')
       .eq('user_id', user.id)
-      .not('shift_date', 'like', `${targetMonth}%`);
+      .not('shift_date::text', 'like', `${targetMonth}%`);
 
     if (selectError) {
       console.error('Error selecting shifts to delete:', selectError);
@@ -52,7 +52,7 @@ export async function deleteShiftsInOtherMonths(targetMonth: string): Promise<De
       .from('user_shifts')
       .delete()
       .eq('user_id', user.id)
-      .not('shift_date', 'like', `${targetMonth}%`);
+      .not('shift_date::text', 'like', `${targetMonth}%`);
 
     if (deleteError) {
       console.error('Error deleting shifts:', deleteError);
