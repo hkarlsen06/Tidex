@@ -23,38 +23,42 @@ export function SupplementsEditor({
   className,
 }: SupplementsEditorProps) {
   const baseId = useId();
+  const createEmptyRule = (id: string): SupplementRule => ({
+    id,
+    days: [],
+    from: '',
+    to: '',
+  });
 
   // Initialize with one empty rule if no existing rules, or use existing rules
   const getInitialRules = (): SupplementRule[] => {
     if (value?.rules && value.rules.length > 0) {
-      return value.rules.map((rule, index) => ({
-        ...rule,
-        id: `${index}`,
-      }));
+      return value.rules.map((rule, index) => {
+        // Infer mode from existing data for backward compatibility
+        let mode: 'percent' | 'rate' | undefined = rule.mode;
+        if (!mode) {
+          if (rule.percent !== undefined) {
+            mode = 'percent';
+          } else if (rule.rate !== undefined) {
+            mode = 'rate';
+          }
+        }
+        return {
+          ...rule,
+          id: `${index}`,
+          mode,
+        };
+      });
     }
     // Start with one empty rule so form is visible
-    return [
-      {
-        id: '0',
-        days: [],
-        from: '',
-        to: '',
-        // No type pre-selected - user must choose percent or rate
-      },
-    ];
+    return [createEmptyRule('0')];
   };
 
   const [rules, setRules] = useState<SupplementRule[]>(getInitialRules());
   const [nextId, setNextId] = useState(() => rules.length);
 
   const addRule = () => {
-    const newRule: SupplementRule = {
-      id: `${nextId}`,
-      days: [1, 2, 3, 4, 5],
-      from: '18:00',
-      to: '23:00',
-      rate: 50, // Default to rate type (kr/t)
-    };
+    const newRule = createEmptyRule(`${nextId}`);
     setRules([...rules, newRule]);
     setNextId(nextId + 1);
   };
@@ -69,11 +73,13 @@ export function SupplementsEditor({
         rule.days.length > 0 &&
         rule.from &&
         rule.to &&
-        (rule.percent !== undefined || rule.rate !== undefined)
+        rule.mode &&
+        ((rule.mode === 'percent' && rule.percent !== undefined && rule.percent !== 0) ||
+         (rule.mode === 'rate' && rule.rate !== undefined && rule.rate !== 0))
     );
 
     if (validRules.length > 0) {
-      const cleanedRules = validRules.map(({ id, ...rest }) => rest) as any[];
+      const cleanedRules = validRules.map(({ id, mode, ...rest }) => rest) as any[];
       onChange({ rules: cleanedRules });
     } else {
       onChange(null);
@@ -90,11 +96,13 @@ export function SupplementsEditor({
         rule.days.length > 0 &&
         rule.from &&
         rule.to &&
-        (rule.percent !== undefined || rule.rate !== undefined)
+        rule.mode &&
+        ((rule.mode === 'percent' && rule.percent !== undefined && rule.percent !== 0) ||
+         (rule.mode === 'rate' && rule.rate !== undefined && rule.rate !== 0))
     );
 
     if (validRules.length > 0) {
-      const cleanedRules = validRules.map(({ id, ...rest }) => rest) as any[];
+      const cleanedRules = validRules.map(({ id, mode, ...rest }) => rest) as any[];
       onChange({ rules: cleanedRules });
     } else {
       onChange(null);
@@ -112,6 +120,13 @@ export function SupplementsEditor({
     updateRule(ruleId, { days });
   };
 
+  // Helper to check if value is invalid
+  const isValueInvalid = (rule: SupplementRule) => {
+    if (!rule.mode) return false;
+    const value = rule.mode === 'percent' ? rule.percent : rule.rate;
+    return value === undefined || value === 0;
+  };
+
   return (
     <div className={className}>
       <div className="space-y-4">
@@ -120,7 +135,7 @@ export function SupplementsEditor({
           const hasDays = rule.days.length > 0;
           const hasFromTime = rule.from.length > 0;
           const hasToTime = rule.to.length > 0;
-          const hasType = rule.percent !== undefined || rule.rate !== undefined;
+          const hasType = rule.mode === 'percent' || rule.mode === 'rate';
 
           return (
             <Card key={rule.id} className="p-4 space-y-4 bg-surface-primary">
@@ -208,11 +223,11 @@ export function SupplementsEditor({
                 <div className="flex gap-2">
                   <button
                     onClick={() =>
-                      updateRule(rule.id, { percent: 50, rate: undefined })
+                      updateRule(rule.id, { mode: 'percent', percent: undefined, rate: undefined })
                     }
                     disabled={!hasToTime}
                     className={`flex-1 px-3 py-2 text-sm rounded border transition-colors ${
-                      rule.percent !== undefined
+                      rule.mode === 'percent'
                         ? 'bg-brand-gradientStart text-white border-brand-gradientStart'
                         : 'bg-surface-secondary border-border text-text-secondary hover:border-brand-gradientStart/50'
                     } disabled:cursor-not-allowed disabled:hover:border-border`}
@@ -221,11 +236,11 @@ export function SupplementsEditor({
                   </button>
                   <button
                     onClick={() =>
-                      updateRule(rule.id, { rate: 50, percent: undefined })
+                      updateRule(rule.id, { mode: 'rate', rate: undefined, percent: undefined })
                     }
                     disabled={!hasToTime}
                     className={`flex-1 px-3 py-2 text-sm rounded border transition-colors ${
-                      rule.rate !== undefined
+                      rule.mode === 'rate'
                         ? 'bg-brand-gradientStart text-white border-brand-gradientStart'
                         : 'bg-surface-secondary border-border text-text-secondary hover:border-brand-gradientStart/50'
                     } disabled:cursor-not-allowed disabled:hover:border-border`}
@@ -243,7 +258,7 @@ export function SupplementsEditor({
               >
                 <Label htmlFor={`${baseId}-value-${rule.id}`} className="text-sm">
                   {hasType
-                    ? rule.percent !== undefined
+                    ? rule.mode === 'percent'
                       ? 'Prosent %'
                       : 'Beløp (kr/t)'
                     : 'Verdi'}
@@ -254,21 +269,27 @@ export function SupplementsEditor({
                     type="number"
                     min={0}
                     step="any"
-                    value={rule.percent ?? rule.rate ?? ''}
+                    value={rule.mode === 'percent' ? (rule.percent ?? '') : (rule.rate ?? '')}
                     onChange={(e) => {
-                      const val = e.target.value === '' ? 0 : parseFloat(e.target.value);
-                      if (rule.percent !== undefined) {
+                      const inputValue = e.target.value;
+                      // Allow empty string (user clearing the field)
+                      const val = inputValue === '' ? undefined : parseFloat(inputValue);
+
+                      if (rule.mode === 'percent') {
                         updateRule(rule.id, { percent: val });
-                      } else {
+                      } else if (rule.mode === 'rate') {
                         updateRule(rule.id, { rate: val });
                       }
                     }}
+                    onFocus={(e) => e.target.select()}
                     disabled={!hasType}
+                    invalid={hasType && isValueInvalid(rule)}
                     className={hasType ? 'pr-12' : ''}
+                    placeholder="0"
                   />
                   {hasType && (
                     <span className="absolute right-4 top-1/2 -translate-y-1/2 text-text-secondary text-sm">
-                      {rule.percent !== undefined ? '%' : 'kr/t'}
+                      {rule.mode === 'percent' ? '%' : 'kr/t'}
                     </span>
                   )}
                 </div>
@@ -285,7 +306,9 @@ export function SupplementsEditor({
               r.days.length === 0 ||
               !r.from ||
               !r.to ||
-              (r.percent === undefined && r.rate === undefined)
+              !r.mode ||
+              ((r.mode === 'percent' && (r.percent === undefined || r.percent === 0)) ||
+               (r.mode === 'rate' && (r.rate === undefined || r.rate === 0)))
           )}
           className="w-full rounded-3xl"
         >

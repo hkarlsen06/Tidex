@@ -81,8 +81,11 @@ export default async function RootLayout({
   const profilePictureUrl = sanitizeUrl(settings?.profile_picture_url ?? null);
   const resolvedAvatarUrl = profilePictureUrl ?? avatarUrl;
 
-  // Check if user has finished onboarding
-  const finishedOnboarding = user.user_metadata?.finishedOnboarding ?? false;
+  const { count: shiftCount, error: shiftCountError } = await supabase
+    .from("user_shifts")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", user.id);
+  const showAddShiftHint = !shiftCountError && (shiftCount ?? 0) === 0;
 
   // Get user's theme preference from database
   const serverTheme = await getUserTheme();
@@ -93,7 +96,7 @@ export default async function RootLayout({
       <AppLayoutClient
         userName={userName}
         avatarUrl={resolvedAvatarUrl}
-        showOnboardingPrompt={!finishedOnboarding}
+        showAddShiftHint={showAddShiftHint}
       >
         {children}
       </AppLayoutClient>

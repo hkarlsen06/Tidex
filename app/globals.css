@@ -203,3 +203,37 @@ input[type="time"] {
   max-width: 100%;
   min-width: 0;
 }
+
+@layer utilities {
+  .animate-gentle-bob {
+    animation: gentle-bob 3.6s ease-in-out infinite;
+  }
+
+  .animate-gentle-pulse {
+    animation: gentle-pulse 3.6s ease-in-out infinite;
+  }
+}
+
+@keyframes gentle-bob {
+  0%,
+  100% {
+    transform: translateY(-6px) scale(0.96);
+    opacity: 0.85;
+  }
+  50% {
+    transform: translateY(6px) scale(1.04);
+    opacity: 1;
+  }
+}
+
+@keyframes gentle-pulse {
+  0%,
+  100% {
+    transform: scale(0.98);
+    opacity: 0.85;
+  }
+  50% {
+    transform: scale(1.03);
+    opacity: 1;
+  }
+}

@@ -13,6 +13,7 @@ import {
   IconStackFilled,
   IconSettings,
   IconSettingsFilled,
+  IconArrowDown,
 } from "@tabler/icons-react";
 import { useNavigationFeedback } from "./navigation-feedback";
 
@@ -61,7 +62,11 @@ const navItems: NavItem[] = [
   },
 ];
 
-export function NavBar() {
+type NavBarProps = {
+  showAddShiftHint?: boolean;
+};
+
+export function NavBar({ showAddShiftHint = false }: NavBarProps) {
   const pathname = usePathname();
   const { navigate, pendingPath } = useNavigationFeedback();
 
@@ -106,6 +111,14 @@ export function NavBar() {
     return path.replace(/\/+$/, "");
   }
 
+  const isEligibleForHint = (path: string | null) => {
+    const normalizedPath = normalizePath(path);
+    if (!normalizedPath) {
+      return false;
+    }
+    return normalizedPath === "/" || normalizedPath === "/shifts";
+  };
+
   const isPathActive = (item: NavItem) => {
     const normalizedHref = normalizePath(item.href);
     if (!normalizedHref) {
@@ -147,23 +160,40 @@ export function NavBar() {
             if (item.isCenter) {
               const isOnAddPage = pathname === "/shifts/add" || pendingPath === "/shifts/add";
               const targetHref = isOnAddPage ? "/shifts" : item.href;
+              const shouldShowHint =
+                showAddShiftHint &&
+                !isOnAddPage &&
+                (isEligibleForHint(pathname) || isEligibleForHint(pendingPath));
 
               return (
-                <Link
-                  key={item.href}
-                  href={targetHref}
-                  onClick={handleItemClick(targetHref)}
-                  className="flex items-center justify-center"
-                >
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-gradientMid">
-                    <Icon
-                      className={`h-6 w-6 text-text-inverse transition-transform duration-200 ${
-                        isOnAddPage ? "rotate-45" : ""
-                      }`}
-                      stroke={2}
-                    />
-                  </div>
-                </Link>
+                <div key={item.href} className="relative flex items-center justify-center">
+                  {shouldShowHint ? (
+                    <div className="pointer-events-none absolute bottom-[calc(100%+1.5rem)] left-1/2 flex -translate-x-1/2 flex-col items-center gap-3">
+                      <span className="animate-gentle-pulse flex w-max flex-col items-center gap-0.5 rounded-lg border border-border-subtle bg-surface-primary px-3 py-1.5 text-center text-xs font-semibold text-text-primary shadow-app leading-tight">
+                        <span>Legg til din</span>
+                        <span>første vakt!</span>
+                      </span>
+                      <IconArrowDown
+                        className="h-10 w-10 text-brand-highlight animate-gentle-bob drop-shadow"
+                        stroke={2}
+                      />
+                    </div>
+                  ) : null}
+                  <Link
+                    href={targetHref}
+                    onClick={handleItemClick(targetHref)}
+                    className="flex items-center justify-center"
+                  >
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-gradientMid">
+                      <Icon
+                        className={`h-6 w-6 text-text-inverse transition-transform duration-200 ${
+                          isOnAddPage ? "rotate-45" : ""
+                        }`}
+                        stroke={2}
+                      />
+                    </div>
+                  </Link>
+                </div>
               );
             }
 

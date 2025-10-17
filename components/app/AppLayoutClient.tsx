@@ -5,20 +5,23 @@ import type { ReactNode } from "react";
 import { NavigationFeedbackProvider, NavigationOverlay } from "./navigation-feedback";
 import { TopHeader } from "./TopHeader";
 import { NavBar } from "./NavBar";
-import { OnboardingPromptModal } from "./OnboardingPromptModal";
 
 type AppLayoutClientProps = {
   children: ReactNode;
   userName: string;
   avatarUrl?: string | null;
-  showOnboardingPrompt?: boolean;
+  showAddShiftHint?: boolean;
 };
 
-export function AppLayoutClient({ children, userName, avatarUrl, showOnboardingPrompt = false }: AppLayoutClientProps) {
+export function AppLayoutClient({
+  children,
+  userName,
+  avatarUrl,
+  showAddShiftHint,
+}: AppLayoutClientProps) {
   return (
     <NavigationFeedbackProvider>
-      <OnboardingPromptModal shouldShow={showOnboardingPrompt} />
-      <LayoutContent userName={userName} avatarUrl={avatarUrl}>
+      <LayoutContent userName={userName} avatarUrl={avatarUrl} showAddShiftHint={showAddShiftHint}>
         {children}
       </LayoutContent>
     </NavigationFeedbackProvider>
@@ -29,6 +32,7 @@ function LayoutContent({
   children,
   userName,
   avatarUrl,
+  showAddShiftHint,
 }: AppLayoutClientProps) {
   return (
     <div className="app-container grid min-h-dvh grid-rows-[auto_1fr]">
@@ -40,7 +44,7 @@ function LayoutContent({
         {children}
         <NavigationOverlay />
       </main>
-      <NavBar />
+      <NavBar showAddShiftHint={showAddShiftHint} />
     </div>
   );
 }

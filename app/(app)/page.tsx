@@ -14,6 +14,12 @@ export default async function Home() {
     redirect("/login");
   }
 
+  // Redirect to onboarding if user hasn't finished onboarding
+  const finishedOnboarding = user.user_metadata?.finishedOnboarding ?? false;
+  if (!finishedOnboarding) {
+    redirect("/onboarding");
+  }
+
   const { shifts, settings } = await getComputedShifts(user.id);
 
   return <HomeContent shifts={shifts} settings={settings} />;

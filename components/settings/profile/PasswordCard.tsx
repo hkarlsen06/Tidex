@@ -159,7 +159,7 @@ export function PasswordCard({ hasPassword }: PasswordCardProps) {
 
   return (
     <Card className="p-6">
-      <div className="flex items-center justify-between gap-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
         <div className="flex items-center gap-4 flex-1 min-w-0">
           <div className="p-3 rounded-lg bg-surface-secondary flex-shrink-0">
             <IconLock className="h-6 w-6 text-text-primary" />
@@ -181,7 +181,7 @@ export function PasswordCard({ hasPassword }: PasswordCardProps) {
           variant={hasPassword ? 'outline' : 'default'}
           onClick={() => setShowPasswordForm(true)}
           disabled={isLoading}
-          className="flex-shrink-0"
+          className="w-full sm:w-auto sm:flex-shrink-0"
         >
           {hasPassword ? 'Endre' : 'Sett passord'}
         </Button>

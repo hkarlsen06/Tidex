@@ -1,9 +1,10 @@
 'use client';
 
+import { useState } from 'react';
 import { Button } from '@appui/Button';
 import { Card } from '@appui/Card';
 import { InfoIcon } from 'lucide-react';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@appui/Tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@appui/Tooltip';
 import { SupplementsEditor, SupplementsData } from '@/components/settings/SupplementsEditor';
 
 interface SupplementsStepProps {
@@ -21,6 +22,8 @@ export function SupplementsStep({
   onNext,
   onBack,
 }: SupplementsStepProps) {
+  const [tooltipOpen, setTooltipOpen] = useState(false);
+
   const handleSkip = () => {
     setCustomBonuses(null);
     onNext();
@@ -31,7 +34,7 @@ export function SupplementsStep({
     return (
       <div className="space-y-6">
         <div className="space-y-2">
-          <h2 className="text-2xl font-bold">Egendefinerte tillegg</h2>
+          <h2 className="text-2xl font-bold">Tillegg</h2>
           <p className="text-text-secondary">
             Siden du bruker tariffavtale, er tillegg allerede definert i systemet.
           </p>
@@ -74,23 +77,37 @@ export function SupplementsStep({
     <div className="space-y-6">
       <div className="space-y-2">
         <div className="flex items-start gap-2">
-          <h2 className="text-2xl font-bold">Egendefinerte tillegg</h2>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <InfoIcon className="h-5 w-5 text-text-muted mt-1 cursor-help" />
-              </TooltipTrigger>
-              <TooltipContent className="max-w-xs">
-                <p>
-                  Legg til ekstra tillegg som gjelder for bestemte tider og dager.
-                  For eksempel kveldstillegg eller helgetillegg.
-                </p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <h2 className="text-2xl font-bold">Tillegg</h2>
+          <Tooltip open={tooltipOpen} onOpenChange={setTooltipOpen} delayDuration={0}>
+            <TooltipTrigger
+              asChild
+              onPointerDown={(e) => e.preventDefault()}
+            >
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setTooltipOpen(!tooltipOpen);
+                }}
+                className="touch-manipulation mt-1"
+              >
+                <InfoIcon className="h-5 w-5 text-text-muted cursor-pointer hover:text-text-primary transition-colors" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent
+              className="max-w-xs bg-surface-primary border-border text-text-primary"
+              onPointerDownOutside={() => setTooltipOpen(false)}
+              onEscapeKeyDown={() => setTooltipOpen(false)}
+            >
+              <p>
+                Legg til ekstra tillegg som gjelder for bestemte tider og dager.
+                For eksempel kveldstillegg eller helgetillegg.
+              </p>
+            </TooltipContent>
+          </Tooltip>
         </div>
         <p className="text-text-secondary">
-          Sett opp tillegg som kveldstillegg, helgetillegg, etc. (valgfritt)
+          Sett opp tillegg som kveldstillegg, helgetillegg, etc.
         </p>
       </div>
 

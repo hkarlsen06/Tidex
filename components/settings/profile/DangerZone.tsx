@@ -12,13 +12,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@appui/Dialog';
-import { clearAllShifts } from '@/app/(app)/settings/_actions/updateSettings';
+import { clearAllShifts, restartOnboarding } from '@/app/(app)/settings/_actions/updateSettings';
 import { useRouter } from 'next/navigation';
 
 export function DangerZone() {
   const router = useRouter();
   const [showClearDialog, setShowClearDialog] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
+  const [showRestartDialog, setShowRestartDialog] = useState(false);
+  const [isRestarting, setIsRestarting] = useState(false);
 
   const handleClearShifts = async () => {
     setIsClearing(true);
@@ -30,6 +32,20 @@ export function DangerZone() {
       console.error('Failed to clear shifts:', error);
     } finally {
       setIsClearing(false);
+    }
+  };
+
+  const handleRestartOnboarding = async () => {
+    setIsRestarting(true);
+    try {
+      await restartOnboarding();
+      setShowRestartDialog(false);
+      router.push('/onboarding');
+      router.refresh();
+    } catch (error) {
+      console.error('Failed to restart onboarding:', error);
+    } finally {
+      setIsRestarting(false);
     }
   };
 
@@ -46,8 +62,26 @@ export function DangerZone() {
 
           <Separator />
 
-          <div className="flex items-center justify-between">
-            <div>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch sm:gap-8">
+            <div className="space-y-1 sm:w-52 sm:flex-shrink-0">
+              <h4 className="font-medium">Start onboarding på nytt</h4>
+              <p className="text-sm text-text-secondary">
+                Nullstill onboarding-status og gå gjennom oppsettet på nytt
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              onClick={() => setShowRestartDialog(true)}
+              className="w-full px-4 py-4 sm:w-40 sm:self-stretch"
+            >
+              Start på nytt
+            </Button>
+          </div>
+
+          <Separator />
+
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch sm:gap-8">
+            <div className="space-y-1 sm:w-52 sm:flex-shrink-0">
               <h4 className="font-medium">Slett alle vakter</h4>
               <p className="text-sm text-text-secondary">
                 Dette vil permanent slette alle dine registrerte vakter
@@ -56,6 +90,7 @@ export function DangerZone() {
             <Button
               variant="destructive"
               onClick={() => setShowClearDialog(true)}
+              className="w-full px-4 py-4 sm:w-40 sm:self-stretch"
             >
               Slett alle
             </Button>
@@ -85,6 +120,33 @@ export function DangerZone() {
               disabled={isClearing}
             >
               {isClearing ? 'Sletter...' : 'Slett alle vakter'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showRestartDialog} onOpenChange={setShowRestartDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Start onboarding på nytt?</DialogTitle>
+            <DialogDescription>
+              Du blir sendt tilbake til onboarding-opplegget med forhåndsutfylte innstillinger.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowRestartDialog(false)}
+              disabled={isRestarting}
+            >
+              Avbryt
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={handleRestartOnboarding}
+              disabled={isRestarting}
+            >
+              {isRestarting ? 'Sender...' : 'Start på nytt'}
             </Button>
           </DialogFooter>
         </DialogContent>

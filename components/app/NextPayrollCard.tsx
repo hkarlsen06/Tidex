@@ -17,6 +17,7 @@ interface NextPayrollCardProps {
   isLoading?: boolean;
   className?: string;
   selectedMonth?: Date;
+  hasPayout?: boolean;
 }
 
 const numberFormatter = new Intl.NumberFormat("nb-NO", {
@@ -76,15 +77,20 @@ export const NextPayrollCard: React.FC<NextPayrollCardProps> = ({
   isLoading = false,
   className = '',
   selectedMonth,
+  hasPayout = true,
 }) => {
   const router = useRouter();
   const { navigate } = useNavigationFeedback();
   const nextPayrollDate = getPayrollDateForMonth(payrollDay, selectedMonth);
   const formattedDate = dateFormatter.format(nextPayrollDate);
 
+  const showNoPayoutPlaceholder = !hasPayout;
+
   // Calculate breakdown based on tax settings
   let breakdown: string;
-  if (taxEnabled && grossAmount !== undefined && taxAmount !== undefined) {
+  if (showNoPayoutPlaceholder) {
+    breakdown = '---';
+  } else if (taxEnabled && grossAmount !== undefined && taxAmount !== undefined) {
     breakdown = `${formatPlainAmount(grossAmount)} - ${formatPlainAmount(taxAmount)}`;
   } else if (baseAmount !== undefined && bonusAmount !== undefined) {
     breakdown = bonusAmount > 0
@@ -149,7 +155,7 @@ export const NextPayrollCard: React.FC<NextPayrollCardProps> = ({
             </div>
             <div className="text-right">
               <p className="text-2xl font-semibold tracking-tight text-text-primary">
-                {formatCurrency(netAmount)}
+                {showNoPayoutPlaceholder ? '---' : formatCurrency(netAmount)}
               </p>
               <p className="text-xs">{breakdown}</p>
             </div>

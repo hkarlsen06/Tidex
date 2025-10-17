@@ -95,7 +95,7 @@ export function CompletionStep({
       <Separator />
 
       <Button onClick={onComplete} className="w-full" disabled={isSubmitting}>
-        {isSubmitting ? "Lagrer..." : "Gå til hjem"}
+        {isSubmitting ? "Lagrer..." : "La oss legge til din første vakt!"}
       </Button>
     </div>
   );
