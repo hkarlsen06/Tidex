@@ -1,6 +1,8 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 import { NavigationFeedbackProvider, NavigationOverlay } from "./navigation-feedback";
 import { TopHeader } from "./TopHeader";
@@ -19,6 +21,20 @@ export function AppLayoutClient({
   avatarUrl,
   showAddShiftHint,
 }: AppLayoutClientProps) {
+  const router = useRouter();
+
+  // Proactively prefetch common routes to speed up transitions
+  useEffect(() => {
+    try {
+      router.prefetch("/");
+      router.prefetch("/shifts");
+      router.prefetch("/stats");
+      router.prefetch("/settings");
+    } catch {
+      // Ignore if prefetch isn't available in this environment
+    }
+  }, [router]);
+
   return (
     <NavigationFeedbackProvider>
       <LayoutContent userName={userName} avatarUrl={avatarUrl} showAddShiftHint={showAddShiftHint}>

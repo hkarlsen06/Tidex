@@ -19,5 +19,55 @@ export default withPWA({
       urlPattern: /^https?:\/\/[^/]+\/auth\/callback$/,
       handler: "NetworkOnly",
     },
+    {
+      // Cache top-level app pages to make reloads and back/forward instant
+      // Serve cached immediately, update in background
+      urlPattern: /^https?:\/\/[^/]+\/(?:\?.*)?$/,
+      handler: "StaleWhileRevalidate",
+      method: "GET",
+      options: {
+        cacheName: "page-root",
+        expiration: {
+          maxEntries: 10,
+          maxAgeSeconds: 60,
+        },
+      },
+    },
+    {
+      urlPattern: /^https?:\/\/[^/]+\/shifts(?:\?.*)?$/,
+      handler: "StaleWhileRevalidate",
+      method: "GET",
+      options: {
+        cacheName: "page-shifts",
+        expiration: {
+          maxEntries: 10,
+          maxAgeSeconds: 60,
+        },
+      },
+    },
+    {
+      urlPattern: /^https?:\/\/[^/]+\/stats(?:\?.*)?$/,
+      handler: "StaleWhileRevalidate",
+      method: "GET",
+      options: {
+        cacheName: "page-stats",
+        expiration: {
+          maxEntries: 10,
+          maxAgeSeconds: 60,
+        },
+      },
+    },
+    {
+      urlPattern: /^https?:\/\/[^/]+\/settings(?:\?.*)?$/,
+      handler: "StaleWhileRevalidate",
+      method: "GET",
+      options: {
+        cacheName: "page-settings",
+        expiration: {
+          maxEntries: 10,
+          maxAgeSeconds: 60,
+        },
+      },
+    },
   ],
 })(nextConfig);

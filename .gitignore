@@ -24,3 +24,5 @@
 .env.production
 
 skole
+
+*.tsbuildinfo
