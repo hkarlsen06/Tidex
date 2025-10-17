@@ -9,6 +9,7 @@ import ShiftDetails from "@/components/shifts/ShiftDetails";
 import { ShiftWithComputations, UserSettings } from "@/lib/payroll";
 import { getRelativeTime } from "@/lib/utils/relativeTime";
 import { hasShiftEnded } from "@/lib/shifts/hasShiftEnded";
+import { useMonth } from "./MonthContext";
 
 type HomeContentProps = {
   shifts: ShiftWithComputations[];
@@ -133,7 +134,7 @@ function isCurrentMonth(date: Date): boolean {
 }
 
 export function HomeContent({ shifts, settings }: HomeContentProps) {
-  const [month, setMonth] = useState(new Date());
+  const { selectedMonth: month, goToPreviousMonth, goToNextMonth } = useMonth();
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [selectedShift, setSelectedShift] = useState<ShiftWithComputations | null>(null);
 
@@ -297,14 +298,6 @@ export function HomeContent({ shifts, settings }: HomeContentProps) {
       return "Beste vakt";
     }
   }, [displayShift, month]);
-
-  const goToPreviousMonth = () => {
-    setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1));
-  };
-
-  const goToNextMonth = () => {
-    setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1));
-  };
 
   const taxDeductionEnabled = settings.tax_deduction_enabled ?? false;
 

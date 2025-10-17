@@ -17,6 +17,27 @@ const COOKIE_SECURITY_OPTIONS: Partial<CookieOptions> = {
 
 export async function createSupabaseServerClient() {
   const store = await cookies();
+  const isWritableCookieStore =
+    typeof store.set === "function" &&
+    !Function.prototype.toString
+      .call(store.set)
+      .includes("ReadonlyRequestCookiesError");
+
+  const mergeCookieOptions = (options?: CookieOptions) => {
+    const merged = {
+      ...COOKIE_SECURITY_OPTIONS,
+      ...options,
+    } as Record<string, unknown>;
+
+    // Name is provided separately to cookies.set
+    delete merged.name;
+    return merged;
+  };
+
+  const shouldIgnoreCookieMutationError = (error: unknown) =>
+    error instanceof Error &&
+    error.message.includes("Cookies can only be modified in a Server Action or Route Handler");
+
   return createServerClient(ENV.URL!, ENV.PUBLISHABLE!, {
     cookieOptions: {
       name: SUPABASE_AUTH_COOKIE_NAME,
@@ -25,27 +46,35 @@ export async function createSupabaseServerClient() {
     cookies: {
       get: (name: string) => store.get(name)?.value,
       set: (name: string, value: string, options?: CookieOptions) => {
+        if (!isWritableCookieStore) {
+          return;
+        }
+
         try {
-          store.set({ name, value, ...COOKIE_SECURITY_OPTIONS, ...options });
+          store.set(name, value, mergeCookieOptions(options) as any);
         } catch (error) {
-          // Ignore errors in Server Components (can't set cookies during render)
-          // Cookie writes will succeed in Server Actions and Route Handlers
-          console.warn("[Supabase Server] Failed to set cookie:", name, error);
+          if (!shouldIgnoreCookieMutationError(error)) {
+            console.warn("[Supabase Server] Failed to set cookie:", name, error);
+          }
         }
       },
       remove: (name: string, options?: CookieOptions) => {
+        if (!isWritableCookieStore) {
+          return;
+        }
+
         try {
-          store.set({
-            name,
-            value: "",
-            ...COOKIE_SECURITY_OPTIONS,
+          const mergedOptions = mergeCookieOptions({
             ...options,
             expires: new Date(0),
+            maxAge: 0,
           });
+
+          store.set(name, "", mergedOptions as any);
         } catch (error) {
-          // Silently ignore - can't remove cookies during Server Component rendering
-          // This is expected behavior in Next.js 15. Stale cookies will be replaced
-          // when the user successfully logs in.
+          if (!shouldIgnoreCookieMutationError(error)) {
+            console.warn("[Supabase Server] Failed to remove cookie:", name, error);
+          }
         }
       },
     },

@@ -14,6 +14,7 @@ import { IconClock } from "@tabler/icons-react";
 import { FreeTierLimitModal } from "./FreeTierLimitModal";
 import { checkShiftLimit } from "../../../app/(app)/shifts/add/_checks/checkShiftLimit";
 import { useNavigationFeedback } from "@/components/app/navigation-feedback";
+import { useMonth } from "@/components/app/MonthContext";
 
 type ExistingShift = {
   shift_date: string; // YYYY-MM-DD
@@ -60,7 +61,7 @@ export default function AddShiftForm({ existingShifts }: Props) {
   const searchParams = useSearchParams();
   const [pending, startTransition] = useTransition();
   const [mode, setMode] = useState<"single" | "recurring">("single");
-  const [month, setMonth] = useState<Date>(() => startOfMonth(new Date()));
+  const { selectedMonth: month, setSelectedMonth: setMonth, goToPreviousMonth, goToNextMonth } = useMonth();
   const [dates, setDates] = useState<Date[]>([]);
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
@@ -275,12 +276,8 @@ export default function AddShiftForm({ existingShifts }: Props) {
             <div className="flex flex-wrap items-center justify-between gap-4">
               <MonthPicker
                 month={month}
-                onPreviousMonth={() =>
-                  setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))
-                }
-                onNextMonth={() =>
-                  setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))
-                }
+                onPreviousMonth={goToPreviousMonth}
+                onNextMonth={goToNextMonth}
               />
               <span className="rounded-full bg-surface-secondary/80 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-text-muted">
                 {month.getFullYear()}
