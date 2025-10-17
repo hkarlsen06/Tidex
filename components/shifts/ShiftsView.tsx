@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useCallback, useTransition, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 
 import ShiftCard from "@/components/app/ShiftCard";
 import {
@@ -10,12 +11,19 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/app/Card";
-import { MonthlyEarningsCalendar } from "./MonthlyEarningsCalendar";
+import { CalendarSkeleton } from "@/components/app/CalendarSkeleton";
 import { ShiftWithComputations } from "@/lib/payroll";
 import ShiftDetails from "@/components/shifts/ShiftDetails";
 import { deleteShift } from "@/app/(app)/shifts/_actions/deleteShift";
 import { useNavigationFeedback } from "@/components/app/navigation-feedback";
 import { useMonth } from "@/components/app/MonthContext";
+import type { ShiftsAggregates } from "@/app/(app)/shifts/_data/getShifts";
+
+// Lazy load the calendar to reduce initial bundle size (~40KB savings)
+const MonthlyEarningsCalendar = dynamic(
+  () => import("./MonthlyEarningsCalendar").then((mod) => ({ default: mod.MonthlyEarningsCalendar })),
+  { loading: () => <CalendarSkeleton /> }
+);
 
 export type WeekGroup = {
   id: string;
@@ -82,20 +90,52 @@ function formatWeekTotal(value: number) {
   return `${currencyFormatter.format(Math.round(value))} kr`;
 }
 
-function filterShiftsByMonth(
+// Combined filter and group operation for better performance
+function filterAndGroupByWeek(
   shifts: ShiftWithComputations[],
   month: Date
-): ShiftWithComputations[] {
+): WeekGroup[] {
+  const groups: WeekGroup[] = [];
+  const map = new Map<string, WeekGroup>();
   const targetMonth = month.getMonth();
   const targetYear = month.getFullYear();
 
-  return shifts.filter((shift) => {
+  // Single pass: filter AND group simultaneously
+  for (const shift of shifts) {
     const shiftDate = new Date(`${shift.shift_date}T00:00:00`);
-    return (
-      shiftDate.getMonth() === targetMonth &&
-      shiftDate.getFullYear() === targetYear
-    );
-  });
+
+    // Filter inline
+    if (shiftDate.getMonth() !== targetMonth || shiftDate.getFullYear() !== targetYear) {
+      continue;
+    }
+
+    // Group inline
+    const date = new Date(`${shift.shift_date}T00:00:00Z`);
+    const { weekNumber, year } = getIsoWeek(date);
+    const id = `${year}-${weekNumber}`;
+
+    let group = map.get(id);
+    if (!group) {
+      group = {
+        id,
+        label: `Uke ${weekFormatter.format(weekNumber)}`,
+        totalGross: 0,
+        shifts: [],
+      };
+      map.set(id, group);
+      groups.push(group);
+    }
+
+    group.shifts.push(shift);
+    group.totalGross += shift.computed.gross;
+  }
+
+  // Sort once at the end
+  for (const group of groups) {
+    group.shifts.sort((a, b) => a.shift_date.localeCompare(b.shift_date));
+  }
+
+  return groups;
 }
 
 function startOfMonth(date: Date) {
@@ -105,9 +145,10 @@ function startOfMonth(date: Date) {
 type ShiftsViewProps = {
   shifts: ShiftWithComputations[];
   defaultView?: string;
+  aggregates: ShiftsAggregates;
 };
 
-export function ShiftsView({ shifts, defaultView = "calendar" }: ShiftsViewProps) {
+export function ShiftsView({ shifts, defaultView = "calendar", aggregates }: ShiftsViewProps) {
   const router = useRouter();
   const { navigate } = useNavigationFeedback();
   const [pending, startTransition] = useTransition();
@@ -149,15 +190,10 @@ export function ShiftsView({ shifts, defaultView = "calendar" }: ShiftsViewProps
     [navigate, shifts]
   );
 
-  const filteredShifts = useMemo(
-    () => filterShiftsByMonth(shifts, selectedMonth),
-    [shifts, selectedMonth]
-  );
-
   const grouped = useMemo(() => {
-    const groups = groupByWeek(filteredShifts);
+    const groups = filterAndGroupByWeek(shifts, selectedMonth);
     return [...groups].reverse();
-  }, [filteredShifts]);
+  }, [shifts, selectedMonth]);
 
   const hasAnyShifts = shifts.length > 0;
   const emptyTitle = hasAnyShifts
