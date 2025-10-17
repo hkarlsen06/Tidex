@@ -16,6 +16,16 @@ body {
   color: var(--foreground, #111111);
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+.recharts-cartesian-axis-tick-value {
+  font-size: 16px;
+  line-height: 1;
+}
+
 a {
   color: inherit;
   text-decoration: none;
