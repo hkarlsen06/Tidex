@@ -1,11 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { IconClock } from "@tabler/icons-react";
 import { ShiftsCalendar } from "@/components/app/ShiftsCalendar";
 import { Card, CardHeader, CardTitle } from "@/components/app/Card";
 import { Button } from "@/components/app/Button";
 import { MonthPicker } from "@/components/app/MonthPicker";
+import { useMonth } from "@/components/app/MonthContext";
 import { ShiftWithComputations } from "@/lib/payroll";
 import type { ISODate, EarningsByDate, HoursByDate } from "@/components/calendar/calendar.types";
 import { cn } from "@/lib/cn";
@@ -75,13 +76,38 @@ function formatCurrency(value: number): string {
   }).format(value);
 }
 
+// Helper to get animation classes based on direction
+function getAnimationClasses(direction: 'next' | 'previous' | null): string {
+  if (!direction) return '';
+
+  if (direction === 'next') {
+    // Going forward: swipe in from right with fade
+    return 'animate-[swipe-in-right_0.4s_ease-in-out]';
+  } else {
+    // Going backward: swipe in from left with fade
+    return 'animate-[swipe-in-left_0.4s_ease-in-out]';
+  }
+}
+
 export function MonthlyEarningsCalendar({
   shifts,
   month,
   onMonthChange,
   onDayClick,
 }: MonthlyEarningsCalendarProps) {
+  const { goToPreviousMonth, goToNextMonth } = useMonth();
   const [viewMode, setViewMode] = useState<"money" | "hours">("money");
+  const [localDirection, setLocalDirection] = useState<'next' | 'previous' | null>(null);
+  const [prevMonth, setPrevMonth] = useState(month);
+
+  // Track month changes and determine direction locally
+  useEffect(() => {
+    if (month.getTime() !== prevMonth.getTime()) {
+      const isForward = month > prevMonth;
+      setLocalDirection(isForward ? 'next' : 'previous');
+      setPrevMonth(month);
+    }
+  }, [month, prevMonth]);
 
   // Filter shifts once per month change
   const monthlyShifts = useMemo(() => {
@@ -113,14 +139,6 @@ export function MonthlyEarningsCalendar({
     [earningsByDate]
   );
 
-  const goToPreviousMonth = () => {
-    onMonthChange(new Date(month.getFullYear(), month.getMonth() - 1, 1));
-  };
-
-  const goToNextMonth = () => {
-    onMonthChange(new Date(month.getFullYear(), month.getMonth() + 1, 1));
-  };
-
   return (
     <Card className="rounded-card border-0">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 py-3 px-0">
@@ -132,7 +150,10 @@ export function MonthlyEarningsCalendar({
           />
           <span className="font-medium text-text-muted ml-1">{formatYear(month)}</span>
         </div>
-        <div className="font-semibold text-text-primary">
+        <div
+          key={`total-${month.getFullYear()}-${month.getMonth()}`}
+          className={`font-semibold text-text-primary ${getAnimationClasses(localDirection)}`}
+        >
           {formatCurrency(totalEarnings)} kr
         </div>
       </CardHeader>
