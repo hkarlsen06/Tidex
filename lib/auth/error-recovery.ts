@@ -91,15 +91,7 @@ export async function handleAuthError(error: any): Promise<never> {
  * Never returns - always redirects.
  */
 async function signOutAndRedirect(): Promise<never> {
-  try {
-    const supabase = await createSupabaseServerClient();
-    await supabase.auth.signOut();
-  } catch (signOutError) {
-    console.error("[AUTH ERROR] Sign out failed:", signOutError);
-    // Continue to redirect even if sign out fails
-  }
-
-  redirect("/login");
+  redirect("/logout");
 }
 
 /**
