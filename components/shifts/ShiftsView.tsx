@@ -15,6 +15,7 @@ import { ShiftWithComputations } from "@/lib/payroll";
 import ShiftDetails from "@/components/shifts/ShiftDetails";
 import { deleteShift } from "@/app/(app)/shifts/_actions/deleteShift";
 import { useNavigationFeedback } from "@/components/app/navigation-feedback";
+import { useMonth } from "@/components/app/MonthContext";
 
 export type WeekGroup = {
   id: string;
@@ -110,7 +111,7 @@ export function ShiftsView({ shifts, defaultView = "calendar" }: ShiftsViewProps
   const router = useRouter();
   const { navigate } = useNavigationFeedback();
   const [pending, startTransition] = useTransition();
-  const [selectedMonth, setSelectedMonth] = useState(() => startOfMonth(new Date()));
+  const { selectedMonth, setSelectedMonth } = useMonth();
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [selectedShift, setSelectedShift] = useState<ShiftWithComputations | null>(null);
   const shiftsListRef = useRef<HTMLDivElement>(null);

@@ -7,6 +7,7 @@ import { sanitizeDisplayName, sanitizeUrl } from "@/lib/sanitize";
 
 import { SupabaseListener } from "../supabase-listener";
 import { ThemeProvider } from "@/components/app/ThemeProvider";
+import { MonthProvider } from "@/components/app/MonthContext";
 import { AppLayoutClient } from "@/components/app/AppLayoutClient";
 
 // Server layout: Uses verified user data from getUser() for secure UI rendering.
@@ -92,14 +93,16 @@ export default async function RootLayout({
 
   return (
     <ThemeProvider serverTheme={serverTheme}>
-      <SupabaseListener accessToken={session?.access_token} />
-      <AppLayoutClient
-        userName={userName}
-        avatarUrl={resolvedAvatarUrl}
-        showAddShiftHint={showAddShiftHint}
-      >
-        {children}
-      </AppLayoutClient>
+      <MonthProvider>
+        <SupabaseListener accessToken={session?.access_token} />
+        <AppLayoutClient
+          userName={userName}
+          avatarUrl={resolvedAvatarUrl}
+          showAddShiftHint={showAddShiftHint}
+        >
+          {children}
+        </AppLayoutClient>
+      </MonthProvider>
     </ThemeProvider>
   );
 }
