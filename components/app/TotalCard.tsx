@@ -12,9 +12,23 @@ interface TotalCardProps {
   taxDeductionEnabled?: boolean;
   grossBeforeTax?: string;
   earnedToDate?: string;
+  animationDirection?: 'next' | 'previous' | null;
 }
 
 const ROTATION_INTERVAL_MS = 4500;
+
+// Helper to get animation classes based on direction
+function getAnimationClasses(direction: 'next' | 'previous' | null): string {
+  if (!direction) return '';
+
+  if (direction === 'next') {
+    // Going to next month: slide out right, slide in from right
+    return 'animate-[slide-in-from-right_0.4s_ease-out]';
+  } else {
+    // Going to previous month: slide out left, slide in from left
+    return 'animate-[slide-in-from-left_0.4s_ease-out]';
+  }
+}
 
 export const TotalCard: React.FC<TotalCardProps> = ({
   total,
@@ -26,6 +40,7 @@ export const TotalCard: React.FC<TotalCardProps> = ({
   taxDeductionEnabled = false,
   grossBeforeTax,
   earnedToDate,
+  animationDirection = null,
 }) => {
   const cardClasses = [
     'relative overflow-hidden',
@@ -159,7 +174,10 @@ export const TotalCard: React.FC<TotalCardProps> = ({
         ) : (
           <div className="text-center">
             {hasChange && (
-              <div className="flex items-center justify-center gap-2">
+              <div
+                key={`percentage-${percentageChange}`}
+                className={`flex items-center justify-center gap-2 ${getAnimationClasses(animationDirection)}`}
+              >
                 <ArrowIcon
                   className={`h-6 w-6 ${isPositive ? 'text-success' : 'text-error'}`}
                   stroke={2}
@@ -169,9 +187,16 @@ export const TotalCard: React.FC<TotalCardProps> = ({
                 </span>
               </div>
             )}
-            <div className="mt-3 text-6xl font-bold text-brand-highlight">{total}</div>
+            <div
+              key={`total-${total}`}
+              className={`mt-3 text-6xl font-bold text-brand-highlight ${getAnimationClasses(animationDirection)}`}
+            >{total}</div>
             {textOptions.length > 0 ? (
-              <div className="relative mx-auto mt-4 overflow-hidden" style={{ width: '66.67%', minHeight: '1.75rem' }}>
+              <div
+                key={`subtitle-container-${total}`}
+                className={`relative mx-auto mt-4 overflow-hidden ${getAnimationClasses(animationDirection)}`}
+                style={{ width: '66.67%', minHeight: '1.75rem' }}
+              >
                 {/* Current text - exits when transitioning */}
                 <div
                   className={`absolute inset-0 text-lg text-text-secondary ${

@@ -123,7 +123,7 @@ function isCurrentMonth(date: Date): boolean {
 }
 
 export function HomeContent({ shifts, settings }: HomeContentProps) {
-  const { selectedMonth: month, goToPreviousMonth, goToNextMonth } = useMonth();
+  const { selectedMonth: month, goToPreviousMonth, goToNextMonth, direction } = useMonth();
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [selectedShift, setSelectedShift] = useState<ShiftWithComputations | null>(null);
 
@@ -319,6 +319,7 @@ export function HomeContent({ shifts, settings }: HomeContentProps) {
             taxDeductionEnabled={taxDeductionEnabled}
             grossBeforeTax={data.grossBeforeTax}
             earnedToDate={data.earnedToDate}
+            animationDirection={direction}
           />
           <div className="flex items-center justify-between">
             <MonthPicker
