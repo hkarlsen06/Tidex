@@ -8,6 +8,7 @@ import { ShiftCard } from "@/components/app/ShiftCard";
 import ShiftDetails from "@/components/shifts/ShiftDetails";
 import { ShiftWithComputations, UserSettings } from "@/lib/payroll";
 import { getRelativeTime } from "@/lib/utils/relativeTime";
+import { hasShiftEnded } from "@/lib/shifts/hasShiftEnded";
 
 type HomeContentProps = {
   shifts: ShiftWithComputations[];
@@ -33,6 +34,7 @@ function calculateMonthData(
   tillegg: string;
   grossBeforeTax?: string;
   lastMonthNet?: number;
+  earnedToDate: string;
 } {
   const targetYear = month.getFullYear();
   const targetMonth = month.getMonth() + 1;
@@ -70,6 +72,16 @@ function calculateMonthData(
     0
   );
 
+  const now = new Date();
+  const completedShifts = currentMonthShifts.filter((shift) =>
+    hasShiftEnded(shift, now)
+  );
+
+  const completedGross = completedShifts.reduce(
+    (sum, shift) => sum + (shift.computed.gross || 0),
+    0
+  );
+
   const lastMonthGross = lastMonthShifts.reduce(
     (sum, shift) => sum + (shift.computed.gross || 0),
     0
@@ -86,6 +98,10 @@ function calculateMonthData(
   const lastMonthNetAmount = taxDeductionEnabled
     ? lastMonthGross * (1 - taxPercentage / 100)
     : lastMonthGross;
+
+  const earnedToDateAmount = taxDeductionEnabled
+    ? completedGross * (1 - taxPercentage / 100)
+    : completedGross;
 
   // Calculate percentage change based on display amount (net if tax enabled, gross otherwise)
   let percentageChange: number | undefined;
@@ -104,6 +120,7 @@ function calculateMonthData(
     tillegg: formatCurrency(bonusPay),
     grossBeforeTax: taxDeductionEnabled ? formatCurrency(gross) : undefined,
     lastMonthNet: lastMonthNetAmount,
+    earnedToDate: formatCurrency(earnedToDateAmount),
   };
 }
 
@@ -314,6 +331,7 @@ export function HomeContent({ shifts, settings }: HomeContentProps) {
             tillegg={data.tillegg}
             taxDeductionEnabled={taxDeductionEnabled}
             grossBeforeTax={data.grossBeforeTax}
+            earnedToDate={data.earnedToDate}
           />
           <div className="flex items-center justify-between">
             <MonthPicker

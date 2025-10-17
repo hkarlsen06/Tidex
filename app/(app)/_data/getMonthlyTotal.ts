@@ -5,6 +5,7 @@ import {
   getPreviousYearMonth,
   isDateInMonth,
 } from "@/lib/date-utils";
+import { hasShiftEnded } from "@/lib/shifts/hasShiftEnded";
 
 const numberFormatter = new Intl.NumberFormat("nb-NO", {
   minimumFractionDigits: 0,
@@ -29,6 +30,8 @@ export async function getMonthlyTotal(userId: string): Promise<{
   gross: number;
   bonusPay: number;
   shiftCount: number;
+  earnedToDate: string;
+  earnedToDateGross: number;
 }> {
   const { shifts } = await getComputedShifts(userId);
 
@@ -57,6 +60,15 @@ export async function getMonthlyTotal(userId: string): Promise<{
     0
   );
 
+  const completedShifts = currentMonthShifts.filter((shift) =>
+    hasShiftEnded(shift)
+  );
+
+  const earnedToDateGross = completedShifts.reduce(
+    (sum, shift) => sum + (shift.computed.gross || 0),
+    0
+  );
+
   // Calculate last month total for comparison
   const lastMonthGross = lastMonthShifts.reduce(
     (sum, shift) => sum + (shift.computed.gross || 0),
@@ -79,5 +91,7 @@ export async function getMonthlyTotal(userId: string): Promise<{
     gross,
     bonusPay,
     shiftCount: currentMonthShifts.length,
+    earnedToDate: formatCurrency(earnedToDateGross),
+    earnedToDateGross,
   };
 }
