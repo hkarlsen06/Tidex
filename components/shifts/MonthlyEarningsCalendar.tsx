@@ -1,10 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { IconChevronLeft, IconChevronRight } from "@tabler/icons-react";
 import { ShiftsCalendar } from "@/components/app/ShiftsCalendar";
 import { Card, CardHeader, CardTitle } from "@/components/app/Card";
 import { Button } from "@/components/app/Button";
+import { MonthPicker } from "@/components/app/MonthPicker";
 import { ShiftWithComputations } from "@/lib/payroll";
 import type { ISODate, EarningsByDate, HoursByDate } from "@/components/calendar/calendar.types";
 import { cn } from "@/lib/cn";
@@ -89,12 +89,6 @@ function getTotalEarnings(earningsByDate: EarningsByDate): number {
   return Object.values(earningsByDate).reduce((sum, val) => sum + val, 0);
 }
 
-function formatMonth(date: Date): string {
-  return new Intl.DateTimeFormat("nb-NO", {
-    month: "long",
-  }).format(date);
-}
-
 function formatYear(date: Date): string {
   return date.getFullYear().toString();
 }
@@ -141,21 +135,11 @@ export function MonthlyEarningsCalendar({
     <Card className="rounded-card border-0">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 py-3 px-0">
         <div className="flex items-center gap-1 flex-1">
-          <button
-            onClick={goToPreviousMonth}
-            className="h-7 w-7 flex items-center justify-center rounded-md hover:bg-surface-secondary transition-colors text-text-primary"
-            aria-label="Previous month"
-          >
-            <IconChevronLeft size={18} />
-          </button>
-          <span className="capitalize w-24 text-center font-medium text-text-primary">{formatMonth(month)}</span>
-          <button
-            onClick={goToNextMonth}
-            className="h-7 w-7 flex items-center justify-center rounded-md hover:bg-surface-secondary transition-colors text-text-primary"
-            aria-label="Next month"
-          >
-            <IconChevronRight size={18} />
-          </button>
+          <MonthPicker
+            month={month}
+            onPreviousMonth={goToPreviousMonth}
+            onNextMonth={goToNextMonth}
+          />
           <span className="font-medium text-text-muted ml-1">{formatYear(month)}</span>
         </div>
         <div className="font-semibold text-text-primary">
