@@ -182,7 +182,7 @@ export function NavBar({ showAddShiftHint = false }: NavBarProps) {
                   <Link
                     href={targetHref}
                     onClick={handleItemClick(targetHref)}
-                    className="flex items-center justify-center"
+                    className="flex items-center justify-center p-2 -m-2"
                   >
                     <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-gradientMid">
                       <Icon
@@ -202,7 +202,7 @@ export function NavBar({ showAddShiftHint = false }: NavBarProps) {
                 key={item.href}
                 href={item.href}
                 onClick={handleItemClick(item.href)}
-                className="flex items-center justify-center"
+                className="flex items-center justify-center p-3 -m-3"
               >
                 <Icon
                   className={
