@@ -18,12 +18,18 @@ const PRESET_RULES: BonusRule[] = [
   { days: [7], from: "00:00", to: "23:59", rate: 115 },
 ];
 
+export type ShiftsAggregates = {
+  totalHours: number;
+  totalEarnings: number;
+};
+
 export async function getComputedShifts(
   userId: string
 ): Promise<{
   shifts: ShiftWithComputations[],
   defaultView: string,
-  settings: UserSettings
+  settings: UserSettings,
+  aggregates: ShiftsAggregates
 }> {
   const supabase = await createSupabaseServerClient();
 
@@ -47,7 +53,12 @@ export async function getComputedShifts(
 
   if (shiftsErr) {
     logger.error("user_shifts error:", shiftsErr);
-    return { shifts: [], defaultView: "calendar", settings };
+    return {
+      shifts: [],
+      defaultView: "calendar",
+      settings,
+      aggregates: { totalHours: 0, totalEarnings: 0 }
+    };
   }
 
   const computedShifts = ((shifts ?? []) as ShiftRow[]).map((shift) => ({
@@ -55,9 +66,19 @@ export async function getComputedShifts(
     computed: computeShift(shift, settings, PRESET_RULES),
   }));
 
+  // Compute aggregates once on the server
+  const aggregates: ShiftsAggregates = computedShifts.reduce(
+    (acc, shift) => ({
+      totalHours: acc.totalHours + shift.computed.paidHours,
+      totalEarnings: acc.totalEarnings + shift.computed.gross,
+    }),
+    { totalHours: 0, totalEarnings: 0 }
+  );
+
   return {
     shifts: computedShifts,
     defaultView: (settingsRow as any)?.default_shifts_view || "calendar",
-    settings
+    settings,
+    aggregates
   };
 }

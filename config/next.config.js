@@ -6,6 +6,10 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  // Optimize icon library imports to reduce bundle size
+  experimental: {
+    optimizePackageImports: ['@tabler/icons-react'],
+  },
 };
 
 export default withPWA({

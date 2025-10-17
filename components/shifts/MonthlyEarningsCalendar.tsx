@@ -17,50 +17,24 @@ type MonthlyEarningsCalendarProps = {
   onDayClick?: (iso: ISODate, hasShifts: boolean) => void;
 };
 
-function buildEarningsByDate(
-  shifts: ShiftWithComputations[],
-  month: Date
-): EarningsByDate {
+function buildEarningsByDate(shifts: ShiftWithComputations[]): EarningsByDate {
   const result: EarningsByDate = {};
-  const targetMonth = month.getMonth();
-  const targetYear = month.getFullYear();
-
   for (const shift of shifts) {
-    const shiftDate = new Date(`${shift.shift_date}T00:00:00`);
-    if (
-      shiftDate.getMonth() === targetMonth &&
-      shiftDate.getFullYear() === targetYear
-    ) {
-      const isoDate = shift.shift_date as ISODate;
-      result[isoDate] = (result[isoDate] || 0) + shift.computed.gross;
-    }
+    const isoDate = shift.shift_date as ISODate;
+    result[isoDate] = (result[isoDate] || 0) + shift.computed.gross;
   }
-
   return result;
 }
 
-function buildHoursByDate(
-  shifts: ShiftWithComputations[],
-  month: Date
-): HoursByDate {
+function buildHoursByDate(shifts: ShiftWithComputations[]): HoursByDate {
   const result: HoursByDate = {};
-  const targetMonth = month.getMonth();
-  const targetYear = month.getFullYear();
-
-  // Group shifts by date
   const shiftsByDate = new Map<ISODate, ShiftWithComputations[]>();
 
   for (const shift of shifts) {
-    const shiftDate = new Date(`${shift.shift_date}T00:00:00`);
-    if (
-      shiftDate.getMonth() === targetMonth &&
-      shiftDate.getFullYear() === targetYear
-    ) {
-      const isoDate = shift.shift_date as ISODate;
-      const existing = shiftsByDate.get(isoDate) || [];
-      existing.push(shift);
-      shiftsByDate.set(isoDate, existing);
-    }
+    const isoDate = shift.shift_date as ISODate;
+    const existing = shiftsByDate.get(isoDate) || [];
+    existing.push(shift);
+    shiftsByDate.set(isoDate, existing);
   }
 
   // For each date, get the first shift (by start time)
@@ -109,14 +83,29 @@ export function MonthlyEarningsCalendar({
 }: MonthlyEarningsCalendarProps) {
   const [viewMode, setViewMode] = useState<"money" | "hours">("money");
 
+  // Filter shifts once per month change
+  const monthlyShifts = useMemo(() => {
+    const targetMonth = month.getMonth();
+    const targetYear = month.getFullYear();
+
+    return shifts.filter((shift) => {
+      const shiftDate = new Date(`${shift.shift_date}T00:00:00`);
+      return (
+        shiftDate.getMonth() === targetMonth &&
+        shiftDate.getFullYear() === targetYear
+      );
+    });
+  }, [shifts, month]);
+
+  // Now build functions only process relevant shifts
   const earningsByDate = useMemo(
-    () => buildEarningsByDate(shifts, month),
-    [shifts, month]
+    () => buildEarningsByDate(monthlyShifts),
+    [monthlyShifts]
   );
 
   const hoursByDate = useMemo(
-    () => buildHoursByDate(shifts, month),
-    [shifts, month]
+    () => buildHoursByDate(monthlyShifts),
+    [monthlyShifts]
   );
 
   const totalEarnings = useMemo(
@@ -172,7 +161,7 @@ export function MonthlyEarningsCalendar({
                 : "text-text-secondary hover:text-text-primary"
             )}
           >
-            ----kr
+            ---- kr
           </Button>
           <Button
             type="button"

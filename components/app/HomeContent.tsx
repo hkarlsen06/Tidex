@@ -26,7 +26,7 @@ function formatCurrency(value: number): string {
 }
 
 function calculateMonthData(
-  shifts: ShiftWithComputations[],
+  shiftsByMonth: Map<string, ShiftWithComputations[]>,
   month: Date,
   settings: UserSettings
 ): {
@@ -40,27 +40,16 @@ function calculateMonthData(
   const targetYear = month.getFullYear();
   const targetMonth = month.getMonth() + 1;
 
-  // Filter current month shifts
-  const currentMonthShifts = shifts.filter((shift) => {
-    const shiftDate = new Date(shift.shift_date + "T00:00:00Z");
-    return (
-      shiftDate.getFullYear() === targetYear &&
-      shiftDate.getMonth() + 1 === targetMonth
-    );
-  });
+  // O(1) lookup instead of O(n) filtering
+  const targetYearMonth = `${targetYear}-${String(targetMonth).padStart(2, '0')}`;
+  const currentMonthShifts = shiftsByMonth.get(targetYearMonth) || [];
 
-  // Filter last month shifts
+  // O(1) lookup for last month
   const lastMonthDate = new Date(targetYear, targetMonth - 2, 1);
   const lastMonthYear = lastMonthDate.getFullYear();
   const lastMonth = lastMonthDate.getMonth() + 1;
-
-  const lastMonthShifts = shifts.filter((shift) => {
-    const shiftDate = new Date(shift.shift_date + "T00:00:00Z");
-    return (
-      shiftDate.getFullYear() === lastMonthYear &&
-      shiftDate.getMonth() + 1 === lastMonth
-    );
-  });
+  const lastMonthKey = `${lastMonthYear}-${String(lastMonth).padStart(2, '0')}`;
+  const lastMonthShifts = shiftsByMonth.get(lastMonthKey) || [];
 
   // Calculate totals
   const gross = currentMonthShifts.reduce(
@@ -138,9 +127,24 @@ export function HomeContent({ shifts, settings }: HomeContentProps) {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [selectedShift, setSelectedShift] = useState<ShiftWithComputations | null>(null);
 
+  // Pre-index shifts by year-month for O(1) lookups instead of O(n) filtering
+  const shiftsByMonth = useMemo(() => {
+    const index = new Map<string, ShiftWithComputations[]>();
+
+    shifts.forEach(shift => {
+      const yearMonth = shift.shift_date.substring(0, 7); // "2025-01"
+      if (!index.has(yearMonth)) {
+        index.set(yearMonth, []);
+      }
+      index.get(yearMonth)!.push(shift);
+    });
+
+    return index;
+  }, [shifts]);
+
   const data = useMemo(
-    () => calculateMonthData(shifts, month, settings),
-    [shifts, month, settings]
+    () => calculateMonthData(shiftsByMonth, month, settings),
+    [shiftsByMonth, month, settings]
   );
 
   const payrollDay = Number(settings.payroll_day) || 1;
@@ -182,17 +186,11 @@ export function HomeContent({ shifts, settings }: HomeContentProps) {
       );
     }
 
-    // Get earnings from the earnings month
+    // O(1) lookup for earnings month
     const targetYear = earningsMonthDate.getFullYear();
     const targetMonth = earningsMonthDate.getMonth() + 1;
-
-    const relevantShifts = shifts.filter((shift) => {
-      const shiftDate = new Date(shift.shift_date + "T00:00:00Z");
-      return (
-        shiftDate.getFullYear() === targetYear &&
-        shiftDate.getMonth() + 1 === targetMonth
-      );
-    });
+    const earningsKey = `${targetYear}-${String(targetMonth).padStart(2, '0')}`;
+    const relevantShifts = shiftsByMonth.get(earningsKey) || [];
 
     const gross = relevantShifts.reduce(
       (sum, shift) => sum + (shift.computed.gross || 0),
@@ -223,7 +221,7 @@ export function HomeContent({ shifts, settings }: HomeContentProps) {
       payrollMonthDate,
       hasPayout: relevantShifts.length > 0,
     };
-  }, [month, settings, shifts, payrollDay]);
+  }, [month, settings, shiftsByMonth, payrollDay]);
 
   // Find shift to display based on selected month
   const displayShift = useMemo(() => {
@@ -259,14 +257,10 @@ export function HomeContent({ shifts, settings }: HomeContentProps) {
       // For other months: show shift with highest earnings in selected month
       const targetYear = month.getFullYear();
       const targetMonth = month.getMonth() + 1;
+      const targetKey = `${targetYear}-${String(targetMonth).padStart(2, '0')}`;
 
-      const monthShifts = shifts.filter((shift) => {
-        const shiftDate = new Date(shift.shift_date + "T00:00:00Z");
-        return (
-          shiftDate.getFullYear() === targetYear &&
-          shiftDate.getMonth() + 1 === targetMonth
-        );
-      });
+      // O(1) lookup instead of O(n) filtering
+      const monthShifts = shiftsByMonth.get(targetKey) || [];
 
       if (monthShifts.length === 0) return null;
 
@@ -285,7 +279,7 @@ export function HomeContent({ shifts, settings }: HomeContentProps) {
       // Return the first one chronologically
       return topShifts[0];
     }
-  }, [shifts, month]);
+  }, [shifts, shiftsByMonth, month]);
 
   const relativeTimeText = useMemo(() => {
     if (!displayShift) return null;

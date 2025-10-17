@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useLayoutEffect, useState, useCallback, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from "react";
 
 function startOfMonth(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), 1);
@@ -27,8 +27,8 @@ const MonthContext = createContext<MonthContextType | undefined>(undefined);
 export function MonthProvider({ children }: { children: ReactNode }) {
   const [selectedMonth, setSelectedMonthState] = useState<Date>(() => startOfMonth(new Date()));
 
-  // Restore from localStorage on mount
-  useLayoutEffect(() => {
+  // Restore from localStorage on mount (non-blocking)
+  useEffect(() => {
     const stored = localStorage.getItem("selectedMonth");
     if (stored) {
       try {
