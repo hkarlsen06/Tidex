@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { IconArrowDown, IconArrowUp } from '@tabler/icons-react';
 import { Card, CardContent } from '@appui/Card';
 
@@ -11,7 +11,10 @@ interface TotalCardProps {
   className?: string;
   taxDeductionEnabled?: boolean;
   grossBeforeTax?: string;
+  earnedToDate?: string;
 }
+
+const ROTATION_INTERVAL_MS = 4500;
 
 export const TotalCard: React.FC<TotalCardProps> = ({
   total,
@@ -22,6 +25,7 @@ export const TotalCard: React.FC<TotalCardProps> = ({
   className = '',
   taxDeductionEnabled = false,
   grossBeforeTax,
+  earnedToDate,
 }) => {
   const cardClasses = [
     'relative overflow-hidden',
@@ -48,6 +52,94 @@ export const TotalCard: React.FC<TotalCardProps> = ({
         }
       }
     : undefined;
+
+  const primaryContent = useMemo(() => {
+    if (taxDeductionEnabled && grossBeforeTax) {
+      return (
+        <>
+          <span className="font-semibold text-text-primary">{grossBeforeTax}</span> før skatt
+        </>
+      );
+    }
+
+    if (tillegg) {
+      return (
+        <>
+          Tillegg: <span className="font-semibold text-text-primary">{tillegg}</span>
+        </>
+      );
+    }
+
+    return null;
+  }, [taxDeductionEnabled, grossBeforeTax, tillegg]);
+
+  const alternateContent = useMemo(() => {
+    const value = earnedToDate ?? total;
+
+    if (!value) {
+      return null;
+    }
+
+    return (
+      <>
+        <span className="font-semibold text-text-primary">{value}</span> til nå
+      </>
+    );
+  }, [earnedToDate, total]);
+
+  const textOptions = useMemo(() => {
+    const options: React.ReactNode[] = [];
+
+    if (alternateContent) {
+      options.push(alternateContent);
+    }
+
+    if (primaryContent) {
+      options.push(primaryContent);
+    }
+
+    return options;
+  }, [alternateContent, primaryContent]);
+
+  const [displayIndex, setDisplayIndex] = useState(0);
+  const [nextDisplayIndex, setNextDisplayIndex] = useState<number | null>(null);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+
+  useEffect(() => {
+    if (isLoading) {
+      return;
+    }
+
+    setDisplayIndex(0);
+    setNextDisplayIndex(null);
+    setIsTransitioning(false);
+
+    if (textOptions.length < 2) {
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      setDisplayIndex((currentIndex) => {
+        const nextIndex = (currentIndex + 1) % textOptions.length;
+        setNextDisplayIndex(nextIndex);
+        setIsTransitioning(true);
+        return currentIndex; // Don't update displayIndex yet - wait for animation
+      });
+    }, ROTATION_INTERVAL_MS);
+
+    return () => window.clearInterval(intervalId);
+  }, [textOptions, isLoading]);
+
+  const handleExitAnimationEnd = () => {
+    if (nextDisplayIndex !== null) {
+      setDisplayIndex(nextDisplayIndex);
+      setNextDisplayIndex(null);
+    }
+  };
+
+  const handleEnterAnimationEnd = () => {
+    setIsTransitioning(false);
+  };
 
   return (
     <Card
@@ -78,13 +170,31 @@ export const TotalCard: React.FC<TotalCardProps> = ({
               </div>
             )}
             <div className="mt-3 text-6xl font-bold text-brand-highlight">{total}</div>
-            {taxDeductionEnabled && grossBeforeTax ? (
-              <div className="mt-4 text-lg text-text-secondary">
-                <span className="font-semibold text-text-primary">{grossBeforeTax}</span> før skatt
-              </div>
-            ) : tillegg ? (
-              <div className="mt-4 text-lg text-text-secondary">
-                Tillegg: <span className="font-semibold text-text-primary">{tillegg}</span>
+            {textOptions.length > 0 ? (
+              <div className="relative mx-auto mt-4 overflow-hidden" style={{ width: '66.67%', minHeight: '1.75rem' }}>
+                {/* Current text - exits when transitioning */}
+                <div
+                  className={`absolute inset-0 text-lg text-text-secondary ${
+                    isTransitioning ? 'animate-[swipe-out-left_0.4s_ease-in-out]' : ''
+                  }`}
+                  style={{
+                    opacity: isTransitioning && nextDisplayIndex !== null ? 0 : 1,
+                    pointerEvents: isTransitioning && nextDisplayIndex !== null ? 'none' : 'auto',
+                  }}
+                  onAnimationEnd={handleExitAnimationEnd}
+                >
+                  {textOptions[displayIndex]}
+                </div>
+
+                {/* Next text - enters when transitioning */}
+                {isTransitioning && nextDisplayIndex !== null && (
+                  <div
+                    className="absolute inset-0 text-lg text-text-secondary animate-[swipe-in-right_0.4s_ease-in-out]"
+                    onAnimationEnd={handleEnterAnimationEnd}
+                  >
+                    {textOptions[nextDisplayIndex]}
+                  </div>
+                )}
               </div>
             ) : null}
           </div>
