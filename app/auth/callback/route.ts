@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 
 import { createSupabaseRouteHandlerClient } from "@/lib/supabase/server";
 import { AUTH_SYNC_CSRF_COOKIE_NAME, AUTH_SYNC_CSRF_HEADER } from "@/lib/auth/constants";
+import { clearSupabaseAuthCookies } from "@/lib/supabase/cookies";
 
 function resolveRedirectUrl(requestUrl: URL): URL {
   const nextParam = requestUrl.searchParams.get("next");
@@ -71,10 +72,31 @@ export async function POST(request: NextRequest) {
 
     if (session) {
       // Write the session into server-side cookies
-      await supabase.auth.setSession(session);
+      const { error: setSessionError } = await supabase.auth.setSession(session);
+
+      if (setSessionError) {
+        console.error("[AUTH SYNC] Failed to persist session cookie", setSessionError);
+        const errorResponse = NextResponse.json(
+          { ok: false },
+          {
+            status: 401,
+            headers: { "cache-control": "no-store" },
+          }
+        );
+        clearSupabaseAuthCookies(request, errorResponse);
+        return errorResponse;
+      }
     } else {
       // Clear cookies on sign-out
-      await supabase.auth.signOut();
+      const { error: signOutError } = await supabase.auth.signOut();
+
+      if (signOutError) {
+        console.warn(
+          "[AUTH SYNC] Supabase signOut returned error; clearing cookies manually",
+          signOutError
+        );
+        clearSupabaseAuthCookies(request, response);
+      }
     }
 
     return response;

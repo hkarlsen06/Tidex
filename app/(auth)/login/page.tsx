@@ -328,6 +328,10 @@ export default function LoginPage() {
                   name="emailOrPhone"
                   type="text"
                   placeholder="E-post eller telefonnummer"
+                  // Microsoft Editor browser extension injects these attributes before hydration; set them eagerly to avoid mismatches.
+                  spellCheck={false}
+                  data-ms-editor="true"
+                  suppressHydrationWarning
                   value={emailOrPhone}
                   onChange={(event) => {
                     resetMessage();

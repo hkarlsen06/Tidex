@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { createSupabaseRouteHandlerClient } from "@/lib/supabase/server";
+import { clearSupabaseAuthCookies } from "@/lib/supabase/cookies";
 
 function propagateCookies(from: NextResponse, to: NextResponse) {
   for (const cookie of from.cookies.getAll()) {
@@ -31,6 +32,7 @@ export async function GET(request: NextRequest) {
       );
 
       propagateCookies(baseResponse, errorResponse);
+      clearSupabaseAuthCookies(request, errorResponse);
       return errorResponse;
     }
 
@@ -55,6 +57,7 @@ export async function GET(request: NextRequest) {
     );
 
     propagateCookies(baseResponse, errorResponse);
+    clearSupabaseAuthCookies(request, errorResponse);
     return errorResponse;
   }
 }
