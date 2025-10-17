@@ -15,7 +15,7 @@ import { IconLoader } from "@tabler/icons-react";
 
 type NavigationFeedbackContextValue = {
   navigate: (href: string) => void;
-  pendingPath: string | null;
+  pendingPath: string | null; // Pathname only (no query/hash)
   isNavigating: boolean;
 };
 
@@ -27,20 +27,48 @@ export function NavigationFeedbackProvider({ children }: { children: ReactNode }
   const [pendingPath, setPendingPath] = useState<string | null>(null);
   const [isNavigating, setIsNavigating] = useState(false);
   const hideFrameRef = useRef<number | null>(null);
+  const showDelayRef = useRef<number | null>(null);
+
+  const toPathname = useCallback((href: string) => {
+    try {
+      const url = new URL(href, window.location.origin);
+      const path = url.pathname;
+      if (path === "/") return "/";
+      return path.replace(/\/+$/, "");
+    } catch {
+      // Fallback: strip query/hash manually
+      const pathOnly = href.split("?")[0].split("#")[0];
+      if (pathOnly === "/") return "/";
+      return pathOnly.replace(/\/+$/, "");
+    }
+  }, []);
 
   const navigate = useCallback(
     (href: string) => {
       // Ignore navigation if we're already on the target path
-      if (!href || href === pathname) {
+      if (!href) {
         return;
       }
 
-      setPendingPath(href);
-      setIsNavigating(true);
+      const targetPath = toPathname(href);
+      if (targetPath === toPathname(pathname)) {
+        return;
+      }
+
+      setPendingPath(targetPath);
+      // Delay showing the overlay to avoid flashing on fast (prefetched) transitions
+      if (showDelayRef.current) {
+        window.clearTimeout(showDelayRef.current);
+        showDelayRef.current = null;
+      }
+      showDelayRef.current = window.setTimeout(() => {
+        setIsNavigating((prev) => (pendingPath ? true : prev || true));
+        showDelayRef.current = null;
+      }, 150);
 
       router.push(href);
     },
-    [pathname, router],
+    [pathname, router, toPathname],
   );
 
   useEffect(() => {
@@ -58,6 +86,10 @@ export function NavigationFeedbackProvider({ children }: { children: ReactNode }
       if (hideFrameRef.current) {
         window.cancelAnimationFrame(hideFrameRef.current);
         hideFrameRef.current = null;
+      }
+      if (showDelayRef.current) {
+        window.clearTimeout(showDelayRef.current);
+        showDelayRef.current = null;
       }
     };
   }, [pathname, pendingPath]);
@@ -109,9 +141,13 @@ export function useNavigationFeedback() {
 }
 
 export function NavigationOverlay() {
-  const { isNavigating } = useNavigationFeedback();
+  const { isNavigating, pendingPath } = useNavigationFeedback();
 
-  if (!isNavigating) {
+  // Hide the full-screen overlay for main tab navigations
+  const skipOverlayFor = new Set(["/", "/shifts", "/stats", "/settings"]);
+  const skip = pendingPath && skipOverlayFor.has(pendingPath);
+
+  if (!isNavigating || skip) {
     return null;
   }
 
