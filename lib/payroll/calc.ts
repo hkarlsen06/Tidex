@@ -46,7 +46,7 @@ export function computeShift(
   const baseRate = resolveBaseRate(s, settings);
   const rules: BonusRule[] = settings.use_preset
     ? presetRules
-    : (settings.custom_bonuses?.rules?.length ? settings.custom_bonuses.rules : presetRules);
+    : (settings.custom_bonuses?.rules?.length ? settings.custom_bonuses.rules : []);
 
   let periods: WagePeriod[] = buildWagePeriods(st, et, weekday, baseRate, rules);
 

@@ -9,6 +9,9 @@ import { Subscription } from '@/app/(app)/settings/subscription/_data/getSubscri
 import { createPortalSession } from '@/app/(app)/settings/subscription/_actions/createPortalSession';
 import { useState } from 'react';
 
+const LEGACY_PRO_PRICE_IDS = ['price_1RzQ85Qiotkj8G58AO6st4fh'];
+const LEGACY_MAX_PRICE_IDS = ['price_1RzQC1Qiotkj8G58tYo4U5oO'];
+
 interface SubscriptionStatusProps {
   subscription: Subscription;
   isGrandfathered?: boolean;
@@ -26,10 +29,15 @@ function formatDate(dateString: string | null): string {
 }
 
 function getPlanInfo(priceId: string | null): { name: string; price: string } {
-  if (priceId === ENV.PRO_PRICE_ID) {
-    return { name: 'Pro', price: '29,90 kr' };
+  if (priceId) {
+    if (priceId === ENV.PRO_PRICE_ID) {
+      return { name: 'Pro', price: '29,90 kr' };
+    }
+    if (LEGACY_PRO_PRICE_IDS.includes(priceId)) {
+      return { name: 'Pro', price: '44,90 kr' };
+    }
   }
-  if (priceId === ENV.MAX_PRICE_ID) {
+  if (priceId && (priceId === ENV.MAX_PRICE_ID || LEGACY_MAX_PRICE_IDS.includes(priceId))) {
     return { name: 'Max', price: '89,90 kr' };
   }
   return { name: 'Ukjent', price: 'N/A' };
