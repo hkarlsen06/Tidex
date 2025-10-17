@@ -20,12 +20,14 @@ interface MonthContextType {
   setSelectedMonth: (month: Date) => void;
   goToPreviousMonth: () => void;
   goToNextMonth: () => void;
+  direction: 'next' | 'previous' | null;
 }
 
 const MonthContext = createContext<MonthContextType | undefined>(undefined);
 
 export function MonthProvider({ children }: { children: ReactNode }) {
   const [selectedMonth, setSelectedMonthState] = useState<Date>(() => startOfMonth(new Date()));
+  const [direction, setDirection] = useState<'next' | 'previous' | null>(null);
 
   // Restore from localStorage on mount (non-blocking)
   useEffect(() => {
@@ -45,9 +47,11 @@ export function MonthProvider({ children }: { children: ReactNode }) {
     const normalized = startOfMonth(month);
     setSelectedMonthState(normalized);
     localStorage.setItem("selectedMonth", serializeMonth(normalized));
+    setDirection(null); // Reset direction for manual selection
   }, []);
 
   const goToPreviousMonth = useCallback(() => {
+    setDirection('previous');
     setSelectedMonthState((prev) => {
       const newMonth = new Date(prev.getFullYear(), prev.getMonth() - 1, 1);
       localStorage.setItem("selectedMonth", serializeMonth(newMonth));
@@ -56,6 +60,7 @@ export function MonthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const goToNextMonth = useCallback(() => {
+    setDirection('next');
     setSelectedMonthState((prev) => {
       const newMonth = new Date(prev.getFullYear(), prev.getMonth() + 1, 1);
       localStorage.setItem("selectedMonth", serializeMonth(newMonth));
@@ -70,6 +75,7 @@ export function MonthProvider({ children }: { children: ReactNode }) {
         setSelectedMonth,
         goToPreviousMonth,
         goToNextMonth,
+        direction,
       }}
     >
       {children}
