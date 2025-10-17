@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { IconClock } from "@tabler/icons-react";
 import { ShiftsCalendar } from "@/components/app/ShiftsCalendar";
 import { Card, CardHeader, CardTitle } from "@/components/app/Card";
 import { Button } from "@/components/app/Button";
@@ -171,7 +172,7 @@ export function MonthlyEarningsCalendar({
                 : "text-text-secondary hover:text-text-primary"
             )}
           >
-            --,--kr
+            ----kr
           </Button>
           <Button
             type="button"
@@ -185,7 +186,8 @@ export function MonthlyEarningsCalendar({
                 : "text-text-secondary hover:text-text-primary"
             )}
           >
-            HH:MM
+            <span>--:--</span>
+            <IconClock stroke={2} aria-hidden="true" />
           </Button>
         </div>
       </div>
