@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Card } from "@appui/Card";
+import { TooltipProvider } from "@appui/Tooltip";
 import { StepIndicator } from "./StepIndicator";
 import { WageStep } from "./WageStep";
 import { SupplementsStep } from "./SupplementsStep";
@@ -56,7 +57,7 @@ export function OnboardingForm({ initialSettings }: OnboardingFormProps) {
 
   // Step 3: Break
   const [breakEnabled, setBreakEnabled] = useState(
-    initialSettings?.break_enabled !== false
+    initialSettings?.break_enabled ?? false
   );
   const [threshold, setThreshold] = useState(
     initialSettings?.break_threshold_hours?.toString() || "5.5"
@@ -66,6 +67,15 @@ export function OnboardingForm({ initialSettings }: OnboardingFormProps) {
   );
   const [method, setMethod] = useState(
     initialSettings?.break_method || "proportional"
+  );
+  const [breakThresholdActivated, setBreakThresholdActivated] = useState(
+    Boolean(initialSettings?.break_threshold_hours)
+  );
+  const [breakDurationActivated, setBreakDurationActivated] = useState(
+    Boolean(initialSettings?.break_deduction_minutes)
+  );
+  const [breakMethodActivated, setBreakMethodActivated] = useState(
+    Boolean(initialSettings?.break_method)
   );
 
   // Step 4: Tax & Payroll
@@ -82,7 +92,7 @@ export function OnboardingForm({ initialSettings }: OnboardingFormProps) {
   // Step 5: Preferences
   const [theme, setTheme] = useState(initialSettings?.theme || "dark");
   const [shiftsView, setShiftsView] = useState(
-    initialSettings?.default_shifts_view || "list"
+    initialSettings?.default_shifts_view || "calendar"
   );
   const [monthlyGoal, setMonthlyGoal] = useState(
     initialSettings?.monthly_goal?.toString() || "20000"
@@ -122,7 +132,7 @@ export function OnboardingForm({ initialSettings }: OnboardingFormProps) {
       };
 
       await completeOnboarding(settings);
-      router.push("/");
+      router.push("/shifts/add");
       router.refresh();
     } catch (error) {
       console.error("Failed to complete onboarding:", error);
@@ -141,8 +151,9 @@ export function OnboardingForm({ initialSettings }: OnboardingFormProps) {
   const totalSteps = 6;
 
   return (
-    <div className="min-h-full flex justify-center pt-8 pb-32 px-4 bg-background">
-      <Card className="w-full max-w-2xl h-fit p-8 shadow-app-lg backdrop-blur border-border bg-surface-secondary">
+    <TooltipProvider>
+      <div className="min-h-full flex justify-center pt-8 pb-32 px-4 bg-background">
+        <Card className="w-full max-w-2xl h-fit p-8 shadow-app-lg backdrop-blur border-border bg-surface-secondary">
         {currentStep < totalSteps && (
           <StepIndicator currentStep={currentStep} totalSteps={totalSteps} />
         )}
@@ -179,6 +190,12 @@ export function OnboardingForm({ initialSettings }: OnboardingFormProps) {
             setDuration={setDuration}
             method={method}
             setMethod={setMethod}
+            thresholdActivated={breakThresholdActivated}
+            setThresholdActivated={setBreakThresholdActivated}
+            durationActivated={breakDurationActivated}
+            setDurationActivated={setBreakDurationActivated}
+            methodActivated={breakMethodActivated}
+            setMethodActivated={setBreakMethodActivated}
             onNext={() => setCurrentStep(4)}
             onBack={() => setCurrentStep(2)}
           />
@@ -225,7 +242,8 @@ export function OnboardingForm({ initialSettings }: OnboardingFormProps) {
             isSubmitting={isSubmitting}
           />
         )}
-      </Card>
-    </div>
+        </Card>
+      </div>
+    </TooltipProvider>
   );
 }

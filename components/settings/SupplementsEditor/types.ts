@@ -5,6 +5,7 @@ export interface SupplementRule {
   to: string;
   rate?: number;
   percent?: number;
+  mode?: 'percent' | 'rate'; // Track selected mode separately from value
 }
 
 export interface SupplementsData {

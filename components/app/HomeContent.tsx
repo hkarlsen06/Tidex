@@ -203,6 +203,7 @@ export function HomeContent({ shifts, settings }: HomeContentProps) {
       bonusAmount: bonusPay,
       taxAmount,
       payrollMonthDate,
+      hasPayout: relevantShifts.length > 0,
     };
   }, [month, settings, shifts, payrollDay]);
 
@@ -304,6 +305,7 @@ export function HomeContent({ shifts, settings }: HomeContentProps) {
               taxAmount={payrollData.taxAmount}
               taxEnabled={taxDeductionEnabled}
               selectedMonth={payrollData.payrollMonthDate}
+              hasPayout={payrollData.hasPayout}
             />
           )}
           <TotalCard

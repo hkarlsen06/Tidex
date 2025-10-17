@@ -1,11 +1,12 @@
 "use client";
 
 import { Label } from "@appui/Label";
-import { RadioGroup, RadioGroupItem } from "@appui/RadioGroup";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@appui/Select";
 import { Input } from "@appui/Input";
 import { Button } from "@appui/Button";
 import { PRESET_WAGE_RATES } from "@/lib/payroll/calc";
+import { IconBuilding, IconAdjustments } from "@tabler/icons-react";
+import { cn } from "@/lib/utils";
 
 interface WageStepProps {
   wageType: "preset" | "custom";
@@ -43,18 +44,39 @@ export function WageStep({
         <p className="text-text-secondary">Vi trenger dette for å beregne lønnen din nøyaktig.</p>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-6">
         <div className="space-y-2">
-          <RadioGroup value={wageType} onValueChange={(v) => setWageType(v as "preset" | "custom")}>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="preset" id="preset" />
-              <Label htmlFor="preset">Jeg er på tariffavtale</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="custom" id="custom" />
-              <Label htmlFor="custom">Jeg har egendefinert lønn</Label>
-            </div>
-          </RadioGroup>
+          <div className="flex gap-2 sm:gap-4">
+            <button
+              type="button"
+              onClick={() => setWageType("preset")}
+              className={cn(
+                "flex-1 flex flex-col items-center justify-center gap-2 rounded-2xl px-3 sm:px-8 py-6 transition-all",
+                "border-2",
+                wageType === "preset"
+                  ? "border-text-primary bg-surface-secondary"
+                  : "border-border hover:border-border-subtle hover:bg-surface-primary"
+              )}
+            >
+              <IconBuilding stroke={2} className="h-8 w-8" />
+              <span className="text-xs font-medium">Tariff</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setWageType("custom")}
+              className={cn(
+                "flex-1 flex flex-col items-center justify-center gap-2 rounded-2xl px-3 sm:px-8 py-6 transition-all",
+                "border-2",
+                wageType === "custom"
+                  ? "border-text-primary bg-surface-secondary"
+                  : "border-border hover:border-border-subtle hover:bg-surface-primary"
+              )}
+            >
+              <IconAdjustments stroke={2} className="h-8 w-8" />
+              <span className="text-xs font-medium">Egendefinert</span>
+            </button>
+          </div>
         </div>
 
         {wageType === "preset" && (

@@ -7,6 +7,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { IconUserCircle, IconLogout2 } from "@tabler/icons-react";
 import { ThemeToggle } from "./ThemeToggle";
+import { cn } from "@/lib/utils";
 import { useNavigationFeedback } from "./navigation-feedback";
 
 export function UserMenu({
@@ -50,6 +51,29 @@ export function UserMenu({
     return () => document.removeEventListener("mousedown", onDocClick);
   }, [open]);
 
+  const normalizePath = (path: string | null) => {
+    if (!path) {
+      return null;
+    }
+    if (path === "/") {
+      return "/";
+    }
+    return path.replace(/\/+$/, "");
+  };
+
+  const isOnboardingPath = (path: string | null) => {
+    const normalizedPath = normalizePath(path);
+    if (!normalizedPath) {
+      return false;
+    }
+    return (
+      normalizedPath === "/onboarding" ||
+      normalizedPath.startsWith("/onboarding/")
+    );
+  };
+
+  const isProfileDisabled = isOnboardingPath(pathname);
+
   return (
     <div className="relative">
       <button
@@ -92,9 +116,21 @@ export function UserMenu({
         >
           <Link
             href="/settings/profile"
-            onClick={handleNavigationClick("/settings/profile")}
+            onClick={(event) => {
+              if (isProfileDisabled) {
+                event.preventDefault();
+                event.stopPropagation();
+                return;
+              }
+              handleNavigationClick("/settings/profile")(event);
+            }}
             role="menuitem"
-            className="flex items-center gap-2 px-4 py-2 text-sm text-text-primary hover:bg-surface-secondary/70"
+            aria-disabled={isProfileDisabled}
+            tabIndex={isProfileDisabled ? -1 : undefined}
+            className={cn(
+              "flex items-center gap-2 px-4 py-2 text-sm text-text-primary hover:bg-surface-secondary/70",
+              isProfileDisabled && "cursor-not-allowed opacity-50 hover:bg-surface-primary/95"
+            )}
           >
             <IconUserCircle stroke={2} className="h-4 w-4" />
             Profil
