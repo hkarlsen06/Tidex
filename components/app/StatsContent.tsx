@@ -157,7 +157,7 @@ export function StatsContent({ data }: StatsContentProps) {
       <Card className="border-border bg-surface-primary">
         <CardHeader className="pb-3">
           <CardTitle className="text-xl font-bold text-text-primary">
-            Månedlig utvikling
+            Månedens utvikling
           </CardTitle>
         </CardHeader>
         <CardContent className="px-3 pb-4 pt-1">
