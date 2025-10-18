@@ -13,7 +13,17 @@ import { ComponentPropsWithoutRef, ElementRef, forwardRef } from "react";
 const InputOTP = forwardRef<
   ElementRef<typeof BaseInputOTP>,
   ComponentPropsWithoutRef<typeof BaseInputOTP>
->((props, ref) => <BaseInputOTP ref={ref} {...props} />);
+>(({ className, containerClassName, ...props }, ref) => (
+  <BaseInputOTP
+    ref={ref}
+    className={cn("text-base sm:text-lg", className)}
+    containerClassName={cn(
+      "w-full justify-center gap-3 sm:gap-4 px-4 sm:px-0",
+      containerClassName
+    )}
+    {...props}
+  />
+));
 InputOTP.displayName = "InputOTP";
 
 const InputOTPGroup = forwardRef<
@@ -31,10 +41,10 @@ const InputOTPSlot = forwardRef<
     ref={ref}
     className={cn(
       // Size and shape
-      "h-14 w-14 rounded-lg",
+      "h-11 w-11 rounded-md sm:h-14 sm:w-14 sm:rounded-lg",
       // Colors matching design system
-      "border-2 border-border-subtle bg-background-primary",
-      "text-text-primary text-lg font-semibold",
+      "border border-border-subtle sm:border-2 bg-background-primary",
+      "text-text-primary text-base font-semibold sm:text-lg",
       // Focus state with brand colors
       "focus-within:border-brand-highlight focus-within:ring-2 focus-within:ring-brand-highlight/60",
       // Hover state
