@@ -1,6 +1,6 @@
 "use client";
 
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Cell } from "recharts";
 import {
   ChartContainer,
   ChartTooltip,
@@ -20,6 +20,10 @@ const chartConfig = {
 };
 
 export function MonthlyBarChart({ data }: MonthlyBarChartProps) {
+  const now = new Date();
+  const currentMonth = now.getMonth() + 1; // Date#getMonth is 0-based
+  const currentYear = now.getFullYear();
+
   return (
     <ChartContainer config={chartConfig} className="h-[260px] w-full">
       <BarChart data={data} margin={{ top: 12, right: 16, bottom: 16, left: 16 }}>
@@ -68,11 +72,26 @@ export function MonthlyBarChart({ data }: MonthlyBarChartProps) {
         />
         <Bar
           dataKey="earnings"
-          fill="hsl(var(--brand-gradientStart) / 0.2)"
           stroke="hsl(var(--brand-gradientStart))"
           strokeWidth={2}
           radius={[8, 8, 0, 0]}
-        />
+        >
+          {data.map((entry) => {
+            const isCurrentMonth =
+              entry.monthNumber === currentMonth && entry.year === currentYear;
+
+            return (
+              <Cell
+                key={`${entry.year}-${entry.monthNumber}`}
+                fill={
+                  isCurrentMonth
+                    ? "hsl(var(--brand-gradientStart))"
+                    : "hsl(var(--brand-gradientStart) / 0.2)"
+                }
+              />
+            );
+          })}
+        </Bar>
       </BarChart>
     </ChartContainer>
   );

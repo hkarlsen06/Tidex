@@ -47,10 +47,18 @@ export function MonthlyCumulativeChart({ data }: MonthlyCumulativeChartProps) {
         <CartesianGrid
           strokeDasharray="3 3"
           className="stroke-muted"
-          verticalPoints={xAxisTicks.map((tick) => {
-            const index = data.findIndex((d) => d.day === tick);
-            return index;
-          })}
+          verticalCoordinatesGenerator={({ xAxis }) => {
+            if (!xAxis?.ticks) {
+              return [];
+            }
+
+            const allowedTicks = new Set(xAxisTicks);
+
+            return xAxis.ticks
+              .filter((tick: { value: string | number }) => allowedTicks.has(String(tick.value)))
+              .map((tick: { coordinate?: number }) => tick.coordinate)
+              .filter((coord: unknown): coord is number => typeof coord === "number");
+          }}
         />
         <XAxis
           dataKey="day"
