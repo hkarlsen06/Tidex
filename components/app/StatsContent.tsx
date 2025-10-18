@@ -6,6 +6,7 @@ import { MonthlyBarChart } from "@/components/app/charts/MonthlyBarChart";
 import { WeeklyBarChart } from "@/components/app/charts/WeeklyBarChart";
 import { DayOfWeekChart } from "@/components/app/charts/DayOfWeekChart";
 import { CumulativeAreaChart } from "@/components/app/charts/CumulativeAreaChart";
+import { MonthlyCumulativeChart } from "@/components/app/charts/MonthlyCumulativeChart";
 import { TrendingUp, TrendingDown, Clock, Briefcase, DollarSign } from "lucide-react";
 
 type StatsContentProps = {
@@ -149,6 +150,18 @@ export function StatsContent({ data }: StatsContentProps) {
         </CardHeader>
         <CardContent className="px-3 pb-4 pt-1">
           <MonthlyBarChart data={data.last6Months} />
+        </CardContent>
+      </Card>
+
+      {/* Monthly cumulative comparison chart */}
+      <Card className="border-border bg-surface-primary">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-xl font-bold text-text-primary">
+            Månedlig utvikling
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="px-3 pb-4 pt-1">
+          <MonthlyCumulativeChart data={data.thisMonthCumulative} />
         </CardContent>
       </Card>
 

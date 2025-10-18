@@ -34,6 +34,15 @@ export type DayOfWeekData = {
   totalShifts: number;
 };
 
+export type DailyCumulativeData = {
+  day: string; // "1", "2", "3", etc.
+  dayNumber: number; // 1-31
+  currentMonth: number; // Cumulative earnings for current month
+  lastMonth: number; // Cumulative earnings for last month (same day)
+  isToday: boolean;
+  isFuture: boolean;
+};
+
 export type StatsData = {
   currentMonth: {
     totalEarnings: number;
@@ -56,6 +65,7 @@ export type StatsData = {
   last6Months: MonthlyData[];
   thisWeek: DailyData[];
   byDayOfWeek: DayOfWeekData[];
+  thisMonthCumulative: DailyCumulativeData[];
 };
 
 const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Des"];
@@ -186,6 +196,47 @@ export async function getStatsData(userId: string): Promise<StatsData> {
     };
   });
 
+  // Monthly cumulative comparison (current month vs last month by day)
+  const thisMonthCumulative: DailyCumulativeData[] = [];
+
+  // Get number of days in current month
+  const daysInCurrentMonth = new Date(Date.UTC(currentYear, currentMonth, 0)).getUTCDate();
+
+  // Get today's day number
+  const todayDayNumber = now.getUTCDate();
+
+  // Build daily cumulative arrays for both months
+  let currentMonthCumulative = 0;
+  let lastMonthCumulative = 0;
+
+  for (let day = 1; day <= daysInCurrentMonth; day++) {
+    // Current month - check if there are shifts on this day
+    const currentDayDate = new Date(Date.UTC(currentYear, currentMonth - 1, day)).toISOString().split('T')[0];
+    const currentDayShifts = shifts.filter((shift) => shift.shift_date === currentDayDate);
+    const currentDayEarnings = currentDayShifts.reduce((sum, shift) => sum + (shift.computed.gross || 0), 0);
+    currentMonthCumulative += currentDayEarnings;
+
+    // Last month - check if there are shifts on this day (if it exists in last month)
+    const lastMonthDate = new Date(Date.UTC(lastMonthYear, lastMonth - 1, day));
+    const daysInLastMonth = new Date(Date.UTC(lastMonthYear, lastMonth, 0)).getUTCDate();
+
+    if (day <= daysInLastMonth) {
+      const lastDayDate = lastMonthDate.toISOString().split('T')[0];
+      const lastDayShifts = shifts.filter((shift) => shift.shift_date === lastDayDate);
+      const lastDayEarnings = lastDayShifts.reduce((sum, shift) => sum + (shift.computed.gross || 0), 0);
+      lastMonthCumulative += lastDayEarnings;
+    }
+
+    thisMonthCumulative.push({
+      day: day.toString(),
+      dayNumber: day,
+      currentMonth: currentMonthCumulative,
+      lastMonth: lastMonthCumulative,
+      isToday: day === todayDayNumber,
+      isFuture: day > todayDayNumber,
+    });
+  }
+
   return {
     currentMonth: {
       totalEarnings: monthEarnings,
@@ -207,5 +258,6 @@ export async function getStatsData(userId: string): Promise<StatsData> {
     last6Months,
     thisWeek,
     byDayOfWeek,
+    thisMonthCumulative,
   };
 }
