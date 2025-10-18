@@ -126,6 +126,7 @@ export function HomeContent({ shifts, settings }: HomeContentProps) {
   const { selectedMonth: month, goToPreviousMonth, goToNextMonth, direction } = useMonth();
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [selectedShift, setSelectedShift] = useState<ShiftWithComputations | null>(null);
+  const selectedMonthIsCurrent = isCurrentMonth(month);
 
   // Pre-index shifts by year-month for O(1) lookups instead of O(n) filtering
   const shiftsByMonth = useMemo(() => {
@@ -151,31 +152,21 @@ export function HomeContent({ shifts, settings }: HomeContentProps) {
 
   // Calculate payroll data and date based on selected month
   const payrollData = useMemo(() => {
-    const selectedMonthIsCurrent = isCurrentMonth(month);
     const today = new Date();
 
     let payrollMonthDate: Date;
     let earningsMonthDate: Date;
+    let showPreviousPayroll = false;
 
     if (selectedMonthIsCurrent) {
-      // For current month: check if payday has passed
-      if (today.getDate() >= payrollDay) {
-        // Payday has passed - show next month's payroll paying for current month
-        payrollMonthDate = new Date(
-          today.getFullYear(),
-          today.getMonth() + 1,
-          1
-        );
-        earningsMonthDate = new Date(today.getFullYear(), today.getMonth(), 1);
-      } else {
-        // Payday hasn't passed - show current month's payroll paying for last month
-        payrollMonthDate = new Date(today.getFullYear(), today.getMonth(), 1);
-        earningsMonthDate = new Date(
-          today.getFullYear(),
-          today.getMonth() - 1,
-          1
-        );
-      }
+      // For current month we keep showing this month's payroll even after payday
+      payrollMonthDate = new Date(today.getFullYear(), today.getMonth(), 1);
+      earningsMonthDate = new Date(
+        today.getFullYear(),
+        today.getMonth() - 1,
+        1
+      );
+      showPreviousPayroll = today.getDate() >= payrollDay;
     } else {
       // For non-current months: show the selected month's payroll paying for previous month
       payrollMonthDate = new Date(month.getFullYear(), month.getMonth(), 1);
@@ -220,14 +211,13 @@ export function HomeContent({ shifts, settings }: HomeContentProps) {
       taxAmount,
       payrollMonthDate,
       hasPayout: relevantShifts.length > 0,
+      showPreviousPayroll,
     };
-  }, [month, settings, shiftsByMonth, payrollDay]);
+  }, [month, settings, shiftsByMonth, payrollDay, selectedMonthIsCurrent]);
 
   // Find shift to display based on selected month
   const displayShift = useMemo(() => {
     if (shifts.length === 0) return null;
-
-    const selectedMonthIsCurrent = isCurrentMonth(month);
 
     if (selectedMonthIsCurrent) {
       // For current month: show next upcoming shift or last shift
@@ -279,19 +269,17 @@ export function HomeContent({ shifts, settings }: HomeContentProps) {
       // Return the first one chronologically
       return topShifts[0];
     }
-  }, [shifts, shiftsByMonth, month]);
+  }, [shifts, shiftsByMonth, month, selectedMonthIsCurrent]);
 
   const relativeTimeText = useMemo(() => {
     if (!displayShift) return null;
-
-    const selectedMonthIsCurrent = isCurrentMonth(month);
 
     if (selectedMonthIsCurrent) {
       return getRelativeTime(displayShift.shift_date, displayShift.start_time);
     } else {
       return "Beste vakt";
     }
-  }, [displayShift, month]);
+  }, [displayShift, selectedMonthIsCurrent]);
 
   const taxDeductionEnabled = settings.tax_deduction_enabled ?? false;
 
@@ -310,6 +298,7 @@ export function HomeContent({ shifts, settings }: HomeContentProps) {
               taxEnabled={taxDeductionEnabled}
               selectedMonth={payrollData.payrollMonthDate}
               hasPayout={payrollData.hasPayout}
+              showPreviousPayroll={payrollData.showPreviousPayroll}
             />
           )}
           <TotalCard
@@ -318,7 +307,7 @@ export function HomeContent({ shifts, settings }: HomeContentProps) {
             tillegg={data.tillegg}
             taxDeductionEnabled={taxDeductionEnabled}
             grossBeforeTax={data.grossBeforeTax}
-            earnedToDate={data.earnedToDate}
+            earnedToDate={selectedMonthIsCurrent ? data.earnedToDate : undefined}
             animationDirection={direction}
           />
           <div className="flex items-center justify-between">

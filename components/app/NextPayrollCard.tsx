@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-import { useRouter } from 'next/navigation';
 import { Card, CardHeader } from '@appui/Card';
 import { cn } from '@/lib/cn';
 import { useNavigationFeedback } from './navigation-feedback';
@@ -18,6 +17,7 @@ interface NextPayrollCardProps {
   className?: string;
   selectedMonth?: Date;
   hasPayout?: boolean;
+  showPreviousPayroll?: boolean;
 }
 
 const numberFormatter = new Intl.NumberFormat("nb-NO", {
@@ -31,31 +31,13 @@ const dateFormatter = new Intl.DateTimeFormat("nb-NO", {
 });
 
 function getPayrollDateForMonth(payrollDay: number, selectedMonth?: Date): Date {
-  // If a month is selected, return the payroll date for that selected month
-  // (which pays for the previous month's work)
-  if (selectedMonth) {
-    return new Date(
-      selectedMonth.getFullYear(),
-      selectedMonth.getMonth(),
-      payrollDay
-    );
-  }
+  const referenceDate = selectedMonth ?? new Date();
 
-  // Otherwise, use the original logic for "next payroll"
-  const today = new Date();
-  const currentMonth = today.getMonth();
-  const currentYear = today.getFullYear();
-  const currentDay = today.getDate();
-
-  // Create payroll date for current month
-  const currentPayrollDate = new Date(currentYear, currentMonth, payrollDay);
-
-  // If payroll day has passed this month, use next month
-  if (currentDay >= payrollDay) {
-    return new Date(currentYear, currentMonth + 1, payrollDay);
-  }
-
-  return currentPayrollDate;
+  return new Date(
+    referenceDate.getFullYear(),
+    referenceDate.getMonth(),
+    payrollDay
+  );
 }
 
 function formatCurrency(value: number): string {
@@ -78,13 +60,26 @@ export const NextPayrollCard: React.FC<NextPayrollCardProps> = ({
   className = '',
   selectedMonth,
   hasPayout = true,
+  showPreviousPayroll,
 }) => {
-  const router = useRouter();
   const { navigate } = useNavigationFeedback();
-  const nextPayrollDate = getPayrollDateForMonth(payrollDay, selectedMonth);
-  const formattedDate = dateFormatter.format(nextPayrollDate);
+  const payrollDate = getPayrollDateForMonth(payrollDay, selectedMonth);
+  const formattedDate = dateFormatter.format(payrollDate);
 
   const showNoPayoutPlaceholder = !hasPayout;
+  const today = new Date();
+  const matchesCurrentMonth = selectedMonth
+    ? selectedMonth.getFullYear() === today.getFullYear() &&
+      selectedMonth.getMonth() === today.getMonth()
+    : true;
+  const defaultShowPreviousPayroll = matchesCurrentMonth && today.getDate() >= payrollDay;
+  const shouldShowPreviousPayroll =
+    showPreviousPayroll ?? defaultShowPreviousPayroll;
+  const payrollLabel = matchesCurrentMonth
+    ? shouldShowPreviousPayroll
+      ? 'Forrige lønning'
+      : 'Neste lønning'
+    : 'Lønning';
 
   // Calculate breakdown based on tax settings
   let breakdown: string;
@@ -149,7 +144,7 @@ export const NextPayrollCard: React.FC<NextPayrollCardProps> = ({
                     <line x1="8" y1="2" x2="8" y2="6" />
                     <line x1="3" y1="10" x2="21" y2="10" />
                   </svg>
-                  Neste lønning
+                  {payrollLabel}
                 </span>
               </div>
             </div>

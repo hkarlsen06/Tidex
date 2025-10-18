@@ -89,18 +89,16 @@ export const TotalCard: React.FC<TotalCardProps> = ({
   }, [taxDeductionEnabled, grossBeforeTax, tillegg]);
 
   const alternateContent = useMemo(() => {
-    const value = earnedToDate ?? total;
-
-    if (!value) {
+    if (!earnedToDate) {
       return null;
     }
 
     return (
       <>
-        <span className="font-semibold text-text-primary">{value}</span> til nå
+        <span className="font-semibold text-text-primary">{earnedToDate}</span> til nå
       </>
     );
-  }, [earnedToDate, total]);
+  }, [earnedToDate]);
 
   const textOptions = useMemo(() => {
     const options: React.ReactNode[] = [];
