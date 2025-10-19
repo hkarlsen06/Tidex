@@ -2,6 +2,7 @@ import withPWA from "next-pwa";
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  allowedDevOrigins: ["192.168.68.50"],
   // Skip ESLint during production builds on Vercel so devDeps aren't required
   eslint: {
     ignoreDuringBuilds: true,

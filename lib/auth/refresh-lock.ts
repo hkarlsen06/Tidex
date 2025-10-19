@@ -6,7 +6,7 @@
  * that race with each other, potentially causing "Refresh Token Not Found" errors.
  *
  * Usage:
- *   const supabase = createSupabaseBrowserClient();
+ *   import { supabase } from "@/lib/supabase/browser";
  *   const { data } = await withRefreshLock(() => supabase.auth.getSession());
  */
 

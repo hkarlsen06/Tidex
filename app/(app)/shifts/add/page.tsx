@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import AddShiftForm from "@/components/shifts/add/AddShiftForm";
 
@@ -9,7 +8,7 @@ export default async function AddShiftsPage() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/login");
+    throw new Error("Expected authenticated user in shifts add page; middleware should handle redirects.");
   }
 
   // Load only the minimal data needed to highlight conflicts in the calendar

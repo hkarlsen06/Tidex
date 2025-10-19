@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { supabase } from "@/lib/supabase/browser";
 import { translateError } from "@/lib/errors/translate";
 import {
   detectInputType,
@@ -50,7 +50,6 @@ type LoginStep = "input" | "otp";
 
 export default function LoginPage() {
   const router = useRouter();
-  const supabase = createSupabaseBrowserClient();
 
   const [emailOrPhone, setEmailOrPhone] = useState("");
   const [password, setPassword] = useState("");
@@ -104,7 +103,7 @@ export default function LoginPage() {
       setIsSubmitting(true);
       setMessage(null);
 
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { error } = await supabase.auth.signInWithPassword({
         email: emailOrPhone,
         password,
       });

@@ -11,7 +11,7 @@ export default async function Home() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/login");
+    throw new Error("Expected authenticated user on home page; middleware should handle redirects.");
   }
 
   // Redirect to onboarding if user hasn't finished onboarding

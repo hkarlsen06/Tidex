@@ -4,9 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
-import { AUTH_SYNC_CSRF_HEADER } from "@/lib/auth/constants";
-import { ensureAuthSyncCsrfToken } from "@/lib/auth/csrf.client";
+import { supabase } from "@/lib/supabase/browser";
 import {
   detectInputType,
   normalizePhoneToE164,
@@ -25,7 +23,6 @@ type SignupStep = "input" | "otp";
 
 export default function SignupPage() {
   const router = useRouter();
-  const supabase = createSupabaseBrowserClient();
 
   const [emailOrPhone, setEmailOrPhone] = useState("");
   const [password, setPassword] = useState("");
@@ -94,7 +91,7 @@ export default function SignupPage() {
       setIsSubmitting(true);
       setMessage(null);
 
-      const { data, error } = await supabase.auth.signUp({
+      const { error } = await supabase.auth.signUp({
         email: emailOrPhone,
         password,
         options: {
@@ -117,23 +114,6 @@ export default function SignupPage() {
         type: "success",
         text: "Konto opprettet! Omdirigerer...",
       });
-
-      // Sync session to server cookies before navigation
-      const csrfToken = ensureAuthSyncCsrfToken();
-
-      await fetch("/auth/callback", {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          [AUTH_SYNC_CSRF_HEADER]: csrfToken,
-        },
-        body: JSON.stringify({ event: "SIGNED_UP", session: data.session }),
-        keepalive: true,
-        cache: "no-store",
-      });
-
-      // Microtask tick ensures cookie sync completes
-      await Promise.resolve();
 
       // Redirect to onboarding
       setTimeout(() => {
@@ -232,11 +212,11 @@ export default function SignupPage() {
 
     try {
       const phoneE164 = normalizePhoneToE164(emailOrPhone);
-      const { data, error } = await supabase.auth.verifyOtp({
-        phone: phoneE164,
-        token: otp,
-        type: "sms",
-      });
+        const { error } = await supabase.auth.verifyOtp({
+          phone: phoneE164,
+          token: otp,
+          type: "sms",
+        });
 
       setIsSubmitting(false);
 
@@ -262,22 +242,6 @@ export default function SignupPage() {
         type: "success",
         text: "Konto opprettet! Omdirigerer...",
       });
-
-      // Sync session to server cookies
-      const csrfToken = ensureAuthSyncCsrfToken();
-
-      await fetch("/auth/callback", {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          [AUTH_SYNC_CSRF_HEADER]: csrfToken,
-        },
-        body: JSON.stringify({ event: "SIGNED_UP", session: data.session }),
-        keepalive: true,
-        cache: "no-store",
-      });
-
-      await Promise.resolve();
 
       // Redirect to onboarding
       setTimeout(() => {

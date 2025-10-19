@@ -11,7 +11,7 @@ export default async function OnboardingPage() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/login");
+    throw new Error("Expected authenticated user in onboarding page; middleware should handle redirects.");
   }
 
   // Check if user has already completed onboarding

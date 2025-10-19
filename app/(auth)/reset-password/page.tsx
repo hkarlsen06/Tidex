@@ -10,7 +10,7 @@ import {
   InputOTPSeparator,
   InputOTPSlot,
 } from "@/components/app/InputOTP";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { supabase } from "@/lib/supabase/browser";
 import {
   detectInputType,
   normalizePhoneToE164,
@@ -24,7 +24,6 @@ type Step = "input" | "otp" | "password";
 
 export default function ResetPasswordPage() {
   const router = useRouter();
-  const supabase = createSupabaseBrowserClient();
 
   const [step, setStep] = useState<Step>("input");
   const [emailOrPhone, setEmailOrPhone] = useState("");

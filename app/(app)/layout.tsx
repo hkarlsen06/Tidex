@@ -1,6 +1,4 @@
 import type { ReactNode } from "react";
-import { redirect } from "next/navigation";
-
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 // import { getUserTheme } from "@/lib/theme/getTheme";
 import { sanitizeDisplayName, sanitizeUrl } from "@/lib/sanitize";
@@ -22,9 +20,8 @@ export default async function RootLayout({
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Redirect to login if no valid session
   if (!user) {
-    redirect("/login");
+    throw new Error("Expected authenticated user in app layout; middleware should handle redirects.");
   }
 
   // Run subsequent queries in parallel to minimize latency

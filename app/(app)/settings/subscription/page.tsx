@@ -1,5 +1,4 @@
 import { createSupabaseServerClient } from '@/lib/supabase/server';
-import { redirect } from 'next/navigation';
 import { BackButton } from '@appui/BackButton';
 import { getUserSubscriptionData } from './_data/getSubscription';
 import { SubscriptionStatus } from '@/components/settings/subscription/SubscriptionStatus';
@@ -13,7 +12,7 @@ export default async function SubscriptionPage() {
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect('/login');
+    throw new Error('Expected authenticated user in subscription page; middleware should handle redirects.');
   }
 
   const { subscription, profile } = await getUserSubscriptionData(user.id);
