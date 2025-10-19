@@ -7,7 +7,7 @@ import { CheckCircle } from "lucide-react";
 
 interface CompletionStepProps {
   wageDisplay: string;
-  customBonuses: { rules: any[] } | null;
+  customSupplements: { rules: any[] } | null;
   breakEnabled: boolean;
   breakDuration: string;
   breakThreshold: string;
@@ -21,7 +21,7 @@ interface CompletionStepProps {
 
 export function CompletionStep({
   wageDisplay,
-  customBonuses,
+  customSupplements,
   breakEnabled,
   breakDuration,
   breakThreshold,
@@ -63,8 +63,8 @@ export function CompletionStep({
         <div className="flex items-center justify-between">
           <span className="text-text-secondary">Tillegg</span>
           <Badge variant="secondary">
-            {customBonuses && customBonuses.rules.length > 0
-              ? `${customBonuses.rules.length} tillegg`
+            {customSupplements && customSupplements.rules.length > 0
+              ? `${customSupplements.rules.length} tillegg`
               : "Ingen / Tariff"}
           </Badge>
         </div>

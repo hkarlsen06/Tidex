@@ -32,7 +32,7 @@ export async function GET() {
     settings,
     result: {
       basePay: result.basePay,
-      bonusPay: result.bonusPay,
+      supplementPay: result.supplementPay,
       gross: result.gross,
       paidHours: result.paidHours,
       durationHours: result.durationHours,

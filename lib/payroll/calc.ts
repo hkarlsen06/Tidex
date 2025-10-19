@@ -1,7 +1,7 @@
 import { buildWagePeriods } from "./periods";
 import { applyBreakDeduction } from "./breaks";
 import {
-  BonusRule, ShiftComputed, ShiftRow, UserSettings, WagePeriod, BreakMethod
+  SupplementRule, ShiftComputed, ShiftRow, UserSettings, WagePeriod, BreakMethod
 } from "./types";
 
 const WEEKDAYS = [7,1,2,3,4,5,6]; // JS getDay(): 0=Sun → 7, then 1..6 Mon..Sat
@@ -34,7 +34,7 @@ const CURRENCY_PRECISION = 100; // 2 decimal places (cents)
 export function computeShift(
   shift: ShiftRow,
   settings: UserSettings,
-  presetRules: BonusRule[]
+  presetRules: SupplementRule[]
 ): ShiftComputed {
   const s = { ...shift };
   const st = s.start_time;
@@ -44,9 +44,9 @@ export function computeShift(
   const weekday = WEEKDAYS[date.getUTCDay()]; // 1-7
 
   const baseRate = resolveBaseRate(s, settings);
-  const rules: BonusRule[] = settings.use_preset
+  const rules: SupplementRule[] = settings.use_preset
     ? presetRules
-    : (settings.custom_bonuses?.rules?.length ? settings.custom_bonuses.rules : []);
+    : (settings.custom_supplements?.rules?.length ? settings.custom_supplements.rules : []);
 
   let periods: WagePeriod[] = buildWagePeriods(st, et, weekday, baseRate, rules);
 
@@ -81,24 +81,24 @@ export function computeShift(
   const paidHours = +(paidMinutes / 60).toFixed(2);
 
   // pay
-  let basePay = 0, bonusPay = 0;
+  let basePay = 0, supplementPay = 0;
   for (const p of periods) {
     // Round hours to 3 decimals to match old codebase behavior
     const h = Math.round((p.toMin - p.fromMin) / 60 * HOUR_DECIMAL_PRECISION) / HOUR_DECIMAL_PRECISION;
     // Round each period's contribution to cents
     basePay += Math.round(h * p.baseRate * CURRENCY_PRECISION) / CURRENCY_PRECISION;
-    bonusPay += Math.round(h * p.bonusRate * CURRENCY_PRECISION) / CURRENCY_PRECISION;
+    supplementPay += Math.round(h * p.supplementRate * CURRENCY_PRECISION) / CURRENCY_PRECISION;
   }
   basePay = +basePay.toFixed(2);
-  bonusPay = +bonusPay.toFixed(2);
-  const gross = +(basePay + bonusPay).toFixed(2);
+  supplementPay = +supplementPay.toFixed(2);
+  const gross = +(basePay + supplementPay).toFixed(2);
 
   return {
     id: s.id,
     durationHours,
     paidHours,
     basePay,
-    bonusPay,
+    supplementPay,
     gross,
     wagePeriods: periods,
     originalWagePeriods,

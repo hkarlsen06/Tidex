@@ -22,7 +22,7 @@ interface OnboardingFormProps {
     use_preset?: boolean;
     current_wage_level?: number;
     custom_wage?: number;
-    custom_bonuses?: any;
+    custom_supplements?: any;
     pause_deduction_enabled?: boolean;
     pause_deduction_method?: string;
     pause_threshold_hours?: number;
@@ -53,8 +53,8 @@ export function OnboardingForm({ initialSettings }: OnboardingFormProps) {
   );
 
   // Step 2: Custom Supplements
-  const [customBonuses, setCustomBonuses] = useState<SupplementsData | null>(
-    initialSettings?.custom_bonuses || null
+  const [customSupplements, setCustomSupplements] = useState<SupplementsData | null>(
+    initialSettings?.custom_supplements || null
   );
 
   // Step 3: Break
@@ -137,7 +137,7 @@ export function OnboardingForm({ initialSettings }: OnboardingFormProps) {
         use_preset: wageType === "preset",
         current_wage_level: wageType === "preset" ? parseInt(wageLevel) : null,
         custom_wage: wageType === "custom" ? parseFloat(customWage) : null,
-        custom_bonuses: customBonuses,
+        custom_supplements: customSupplements,
         pause_deduction_enabled: breakEnabled,
         pause_deduction_method: breakMethod,
         pause_threshold_hours: parsedThreshold,
@@ -191,8 +191,8 @@ export function OnboardingForm({ initialSettings }: OnboardingFormProps) {
 
         {currentStep === 2 && (
           <SupplementsStep
-            customBonuses={customBonuses}
-            setCustomBonuses={setCustomBonuses}
+            customSupplements={customSupplements}
+            setCustomSupplements={setCustomSupplements}
             wageType={wageType}
             onNext={() => setCurrentStep(3)}
             onBack={() => setCurrentStep(1)}
@@ -249,7 +249,7 @@ export function OnboardingForm({ initialSettings }: OnboardingFormProps) {
         {currentStep === 6 && (
           <CompletionStep
             wageDisplay={getWageDisplay()}
-            customBonuses={customBonuses}
+            customSupplements={customSupplements}
             breakEnabled={breakEnabled}
             breakDuration={duration}
             breakThreshold={threshold}

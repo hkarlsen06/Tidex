@@ -30,8 +30,8 @@ export function PayForm({ initialData }: PayFormProps) {
   const [usePreset, setUsePreset] = useState(initialData.use_preset ?? true);
   const [wageLevel, setWageLevel] = useState(initialData.current_wage_level?.toString() || '1');
   const [customWage, setCustomWage] = useState(initialData.custom_wage?.toString() || '200');
-  const [customBonuses, setCustomBonuses] = useState<SupplementsData | null>(
-    initialData.custom_bonuses || null
+  const [customSupplements, setCustomSupplements] = useState<SupplementsData | null>(
+    initialData.custom_supplements || null
   );
   const customWageValue = parseFloat(customWage);
   const isCustomWageInvalid =
@@ -81,7 +81,7 @@ export function PayForm({ initialData }: PayFormProps) {
         use_preset: usePreset,
         current_wage_level: parseInt(wageLevel),
         custom_wage: customWageValue,
-        custom_bonuses: customBonuses,
+        custom_supplements: customSupplements,
         monthly_goal: monthlyGoal ? parseFloat(monthlyGoal) : null,
         payroll_day: payrollDay ? parseInt(payrollDay) : null,
         pause_deduction_enabled: pauseDeductionEnabled,
@@ -106,7 +106,7 @@ export function PayForm({ initialData }: PayFormProps) {
       return;
     }
     saveSettings();
-  }, [usePreset, wageLevel, pauseMethod, pauseDeductionEnabled, taxDeductionEnabled, customBonuses]);
+  }, [usePreset, wageLevel, pauseMethod, pauseDeductionEnabled, taxDeductionEnabled, customSupplements]);
 
   // Debounced auto-save for text inputs (1 second)
   useEffect(() => {
@@ -239,8 +239,8 @@ export function PayForm({ initialData }: PayFormProps) {
 
           <SupplementsEditor
             key={usePreset ? 'tariff' : 'custom'}
-            value={usePreset ? TARIFF_SUPPLEMENTS_DATA : customBonuses}
-            onChange={setCustomBonuses}
+            value={usePreset ? TARIFF_SUPPLEMENTS_DATA : customSupplements}
+            onChange={setCustomSupplements}
             readOnly={usePreset}
           />
 

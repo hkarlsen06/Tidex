@@ -36,7 +36,7 @@ function minutesToDisplay(minutes: number): string {
   return base;
 }
 
-export type BonusSegmentInput = {
+export type SupplementSegmentInput = {
   from: string;
   to: string;
   dayOffset?: number;
@@ -46,14 +46,14 @@ export type BonusSegmentInput = {
   note?: ReactNode;
 };
 
-type BonusBreakdownProps = {
+type SupplementBreakdownProps = {
   startTime: string;
   endTime: string;
   baseWage: number;
-  segments: BonusSegmentInput[];
+  segments: SupplementSegmentInput[];
 };
 
-type BonusRow = {
+type SupplementRow = {
   period: string;
   hours: number;
   rate: number;
@@ -61,8 +61,8 @@ type BonusRow = {
   note?: ReactNode;
 };
 
-function computeRows({ startTime, endTime, baseWage, segments }: BonusBreakdownProps) {
-  const rows: BonusRow[] = [];
+function computeRows({ startTime, endTime, baseWage, segments }: SupplementBreakdownProps) {
+  const rows: SupplementRow[] = [];
 
   for (const segment of segments) {
     const segStartRaw = timeToMinutes(segment.from);
@@ -98,7 +98,7 @@ function computeRows({ startTime, endTime, baseWage, segments }: BonusBreakdownP
   return rows;
 }
 
-export function BonusBreakdown(props: BonusBreakdownProps) {
+export function SupplementBreakdown(props: SupplementBreakdownProps) {
   const rows = computeRows(props);
   if (rows.length === 0) return null;
 
@@ -138,4 +138,4 @@ export function BonusBreakdown(props: BonusBreakdownProps) {
   );
 }
 
-export default BonusBreakdown;
+export default SupplementBreakdown;

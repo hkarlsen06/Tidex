@@ -28,7 +28,7 @@ export async function getMonthlyTotal(userId: string): Promise<{
   percentageChange?: number | "..";
   tillegg: string;
   gross: number;
-  bonusPay: number;
+  supplementPay: number;
   shiftCount: number;
   earnedToDate: string;
   earnedToDateGross: number;
@@ -55,8 +55,8 @@ export async function getMonthlyTotal(userId: string): Promise<{
     0
   );
 
-  const bonusPay = currentMonthShifts.reduce(
-    (sum, shift) => sum + (shift.computed.bonusPay || 0),
+  const supplementPay = currentMonthShifts.reduce(
+    (sum, shift) => sum + (shift.computed.supplementPay || 0),
     0
   );
 
@@ -87,9 +87,9 @@ export async function getMonthlyTotal(userId: string): Promise<{
   return {
     total: formatCurrency(gross),
     percentageChange,
-    tillegg: formatCurrency(bonusPay),
+    tillegg: formatCurrency(supplementPay),
     gross,
-    bonusPay,
+    supplementPay,
     shiftCount: currentMonthShifts.length,
     earnedToDate: formatCurrency(earnedToDateGross),
     earnedToDateGross,

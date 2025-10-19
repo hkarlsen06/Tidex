@@ -8,16 +8,16 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@appui/Tooltip';
 import { SupplementsEditor, SupplementsData } from '@/components/settings/SupplementsEditor';
 
 interface SupplementsStepProps {
-  customBonuses: SupplementsData | null;
-  setCustomBonuses: (value: SupplementsData | null) => void;
+  customSupplements: SupplementsData | null;
+  setCustomSupplements: (value: SupplementsData | null) => void;
   wageType: 'preset' | 'custom';
   onNext: () => void;
   onBack: () => void;
 }
 
 export function SupplementsStep({
-  customBonuses,
-  setCustomBonuses,
+  customSupplements,
+  setCustomSupplements,
   wageType,
   onNext,
   onBack,
@@ -25,7 +25,7 @@ export function SupplementsStep({
   const [tooltipOpen, setTooltipOpen] = useState(false);
 
   const handleSkip = () => {
-    setCustomBonuses(null);
+    setCustomSupplements(null);
     onNext();
   };
 
@@ -58,7 +58,7 @@ export function SupplementsStep({
           </Button>
           <Button
             onClick={() => {
-              setCustomBonuses(null);
+              setCustomSupplements(null);
               onNext();
             }}
             className="flex-1"
@@ -71,7 +71,7 @@ export function SupplementsStep({
   }
 
   const hasValidSettings =
-    customBonuses?.rules && customBonuses.rules.length > 0;
+    customSupplements?.rules && customSupplements.rules.length > 0;
 
   return (
     <div className="space-y-6">
@@ -111,7 +111,7 @@ export function SupplementsStep({
         </p>
       </div>
 
-      <SupplementsEditor value={customBonuses} onChange={setCustomBonuses} />
+      <SupplementsEditor value={customSupplements} onChange={setCustomSupplements} />
 
       <div className="flex gap-3">
         <Button onClick={onBack} variant="outline" className="flex-1">

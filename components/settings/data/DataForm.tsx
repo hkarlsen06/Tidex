@@ -127,7 +127,7 @@ type JsPDFConstructor = new (options?: {
 type ShiftCalculation = {
   hours: number;
   baseWage: number;
-  bonus: number;
+  supplement: number;
   total: number;
 };
 
@@ -155,7 +155,7 @@ type PreparedExportData = {
   totals: {
     totalHours: number;
     totalBaseWage: number;
-    totalBonus: number;
+    totalSupplement: number;
     totalWages: number;
   };
   countsByType: {
@@ -302,7 +302,7 @@ function prepareExportData(payload: ExportPayload): PreparedExportData {
 
   let totalHours = 0;
   let totalBaseWage = 0;
-  let totalBonus = 0;
+  let totalSupplement = 0;
   let totalWages = 0;
 
   const counts = {
@@ -314,7 +314,7 @@ function prepareExportData(payload: ExportPayload): PreparedExportData {
   for (const shift of preparedShifts) {
     totalHours += shift.calc.hours;
     totalBaseWage += shift.calc.baseWage;
-    totalBonus += shift.calc.bonus;
+    totalSupplement += shift.calc.supplement;
     totalWages += shift.calc.total;
 
     if (shift.type === 1) {
@@ -331,7 +331,7 @@ function prepareExportData(payload: ExportPayload): PreparedExportData {
     totals: {
       totalHours,
       totalBaseWage,
-      totalBonus,
+      totalSupplement,
       totalWages,
     },
     countsByType: counts,
@@ -385,7 +385,7 @@ function renderSummary(doc: JsPDFInstance, yRef: { value: number }, data: Prepar
     },
     {
       label: 'Totale tillegg:',
-      value: `${formatCurrencyShort(data.totals.totalBonus)} kr`,
+      value: `${formatCurrencyShort(data.totals.totalSupplement)} kr`,
     },
     {
       label: 'Total lønn:',
@@ -484,7 +484,7 @@ function renderTable(
       shift.endTime,
       shift.calc.hours.toFixed(2),
       formatCurrencyShort(shift.calc.baseWage),
-      formatCurrencyShort(shift.calc.bonus),
+      formatCurrencyShort(shift.calc.supplement),
       formatCurrencyShort(shift.calc.total),
     ];
 
@@ -510,7 +510,7 @@ function renderTable(
     yRef.value
   );
   doc.text(
-    formatCurrencyShort(data.totals.totalBonus),
+    formatCurrencyShort(data.totals.totalSupplement),
     columnPositions[6],
     yRef.value
   );
@@ -558,7 +558,7 @@ function buildCsvContent(data: PreparedExportData): string {
     shift.endTime,
     shift.calc.hours.toFixed(2),
     shift.calc.baseWage.toFixed(2),
-    shift.calc.bonus.toFixed(2),
+    shift.calc.supplement.toFixed(2),
     shift.calc.total.toFixed(2),
   ]);
 
@@ -569,7 +569,7 @@ function buildCsvContent(data: PreparedExportData): string {
     '',
     data.totals.totalHours.toFixed(2),
     data.totals.totalBaseWage.toFixed(2),
-    data.totals.totalBonus.toFixed(2),
+    data.totals.totalSupplement.toFixed(2),
     data.totals.totalWages.toFixed(2),
   ];
 

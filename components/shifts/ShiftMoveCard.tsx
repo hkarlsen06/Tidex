@@ -1,7 +1,7 @@
 "use client";
 
 import { KeyboardEvent, useMemo } from "react";
-import { ShiftWithComputations, UserSettings, BonusRule, computeShift } from "@/lib/payroll";
+import { ShiftWithComputations, UserSettings, SupplementRule, computeShift } from "@/lib/payroll";
 import { cn } from "@/lib/cn";
 import {
   formatDateParts as baseFormatDateParts,
@@ -32,7 +32,7 @@ type ShiftMoveCardProps = {
   selected: boolean;
   onToggle: (id: string) => void;
   userSettings: UserSettings;
-  presetRules: BonusRule[];
+  presetRules: SupplementRule[];
 };
 
 export function ShiftMoveCard({ shift, targetDate, selected, onToggle, userSettings, presetRules }: ShiftMoveCardProps) {
@@ -57,7 +57,7 @@ export function ShiftMoveCard({ shift, targetDate, selected, onToggle, userSetti
 
   // Calculate what the wage would be on the target date - memoized for performance
   const { computed: originalComputed } = shift;
-  const { basePay, bonusPay, gross: originalGross, paidHours } = originalComputed;
+  const { basePay, supplementPay, gross: originalGross, paidHours } = originalComputed;
 
   const { newGross, wageChanged, grossDifference } = useMemo(() => {
     if (!target || !targetDate) {
@@ -84,7 +84,7 @@ export function ShiftMoveCard({ shift, targetDate, selected, onToggle, userSetti
     };
   }, [target, targetDate, shift, userSettings, presetRules, originalGross]);
 
-  const normalBreakdown = `${baseFormatPlainAmount(basePay)}${bonusPay > 0 ? ` + ${baseFormatPlainAmount(bonusPay)}` : ""}`;
+  const normalBreakdown = `${baseFormatPlainAmount(basePay)}${supplementPay > 0 ? ` + ${baseFormatPlainAmount(supplementPay)}` : ""}`;
 
   const handleToggle = () => onToggle(shift.id);
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {

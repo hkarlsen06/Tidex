@@ -14,7 +14,7 @@ import {
 } from "@/components/app/Card";
 import { CalendarSkeleton } from "@/components/app/CalendarSkeleton";
 import { Button } from "@/components/app/Button";
-import { ShiftWithComputations, UserSettings, BonusRule } from "@/lib/payroll";
+import { ShiftWithComputations, UserSettings, SupplementRule } from "@/lib/payroll";
 import ShiftDetails from "@/components/shifts/ShiftDetails";
 import { deleteShift } from "@/app/(app)/shifts/_actions/deleteShift";
 import { updateShift } from "@/app/(app)/shifts/_actions/updateShift";
@@ -306,7 +306,7 @@ type MoveShiftModalProps = {
   isSubmitting: boolean;
   error?: string | null;
   userSettings: UserSettings;
-  presetRules: BonusRule[];
+  presetRules: SupplementRule[];
 };
 
 function MoveShiftModal({
@@ -462,7 +462,7 @@ type ShiftsViewProps = {
   defaultView?: string;
   aggregates: ShiftsAggregates;
   userSettings: UserSettings;
-  presetRules: BonusRule[];
+  presetRules: SupplementRule[];
 };
 
 export function ShiftsView({ shifts, defaultView = "calendar", aggregates, userSettings, presetRules }: ShiftsViewProps) {

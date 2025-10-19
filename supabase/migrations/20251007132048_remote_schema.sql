@@ -149,7 +149,7 @@ CREATE TABLE IF NOT EXISTS "public"."user_settings" (
     "use_preset" boolean DEFAULT true,
     "custom_wage" numeric DEFAULT 200,
     "current_wage_level" integer DEFAULT 1,
-    "custom_bonuses" "jsonb",
+    "custom_supplements" "jsonb",
     "pause_deduction" boolean DEFAULT true,
     "created_at" timestamp with time zone DEFAULT "now"(),
     "updated_at" timestamp with time zone DEFAULT "now"(),

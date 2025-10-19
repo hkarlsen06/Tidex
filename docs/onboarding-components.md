@@ -7,6 +7,7 @@ This document lists the shadcn/ui components needed for implementing the onboard
 ## Currently Installed Components
 
 ✅ **Already available** (in `components/ui/`):
+
 - `button` - For CTAs and navigation
 - `card` - For step containers (already used in login/signup)
 - `input` - For text fields (email, custom wage, etc.)
@@ -20,10 +21,13 @@ This document lists the shadcn/ui components needed for implementing the onboard
 ### Priority 1: Essential for MVP
 
 #### 1. **Radio Group**
+
 ```bash
 npx shadcn@latest add radio-group
 ```
+
 **Use case**: Step 1 - Wage type selector (Preset vs. Custom)
+
 ```tsx
 <RadioGroup value={wageType} onValueChange={setWageType}>
   <RadioGroupItem value="preset">Jeg er på tariffavtale</RadioGroupItem>
@@ -32,10 +36,13 @@ npx shadcn@latest add radio-group
 ```
 
 #### 2. **Select**
+
 ```bash
 npx shadcn@latest add select
 ```
+
 **Use case**: Step 1 - Preset wage level dropdown
+
 ```tsx
 <Select value={wageLevel} onValueChange={setWageLevel}>
   <SelectTrigger>
@@ -53,32 +60,45 @@ npx shadcn@latest add select
 **Also used in**: Step 2 - Break method dropdown
 
 #### 3. **Switch**
+
 ```bash
 npx shadcn@latest add switch
 ```
+
 **Use case**: Step 2 - Enable/disable break deductions
+
 ```tsx
 <div className="flex items-center space-x-2">
-  <Switch id="break-enabled" checked={breakEnabled} onCheckedChange={setBreakEnabled} />
+  <Switch
+    id="break-enabled"
+    checked={breakEnabled}
+    onCheckedChange={setBreakEnabled}
+  />
   <Label htmlFor="break-enabled">Trekk automatisk pause fra vakter</Label>
 </div>
 ```
 
 #### 4. **Label**
+
 ```bash
 npx shadcn@latest add label
 ```
+
 **Use case**: All steps - Accessible labels for form fields
+
 ```tsx
 <Label htmlFor="custom-wage">Timelønn (kr/t)</Label>
 <Input id="custom-wage" type="number" value={wage} onChange={...} />
 ```
 
 #### 5. **Progress**
+
 ```bash
 npx shadcn@latest add progress
 ```
+
 **Use case**: Step indicator showing onboarding progress
+
 ```tsx
 <Progress value={(currentStep / totalSteps) * 100} />
 <p className="text-sm text-text-secondary">Steg {currentStep} av {totalSteps}</p>
@@ -87,10 +107,13 @@ npx shadcn@latest add progress
 ### Priority 2: Nice to Have
 
 #### 6. **Slider**
+
 ```bash
 npx shadcn@latest add slider
 ```
+
 **Use case**: Step 2 - Visual selection of break threshold hours
+
 ```tsx
 <Label>Pause trekkes når vakten er lengre enn {threshold} timer</Label>
 <Slider value={[threshold]} onValueChange={([v]) => setThreshold(v)}
@@ -100,10 +123,13 @@ npx shadcn@latest add slider
 **Also useful for**: Step 4 - Monthly goal selection
 
 #### 7. **Separator**
+
 ```bash
 npx shadcn@latest add separator
 ```
+
 **Use case**: Visual dividers between form sections within a step
+
 ```tsx
 <div className="space-y-4">
   <WageTypeSelector />
@@ -113,10 +139,13 @@ npx shadcn@latest add separator
 ```
 
 #### 8. **Tooltip**
+
 ```bash
 npx shadcn@latest add tooltip
 ```
-**Use case**: Help text for complex settings (break method, bonus rules)
+
+**Use case**: Help text for complex settings (break method, supplement rules)
+
 ```tsx
 <TooltipProvider>
   <Tooltip>
@@ -131,10 +160,13 @@ npx shadcn@latest add tooltip
 ```
 
 #### 9. **Badge**
+
 ```bash
 npx shadcn@latest add badge
 ```
+
 **Use case**: Highlighting recommended options
+
 ```tsx
 <SelectItem value="proportional">
   Proporsjonal <Badge variant="secondary">Anbefalt</Badge>
@@ -142,10 +174,13 @@ npx shadcn@latest add badge
 ```
 
 #### 10. **Tabs** (Alternative design)
+
 ```bash
 npx shadcn@latest add tabs
 ```
+
 **Use case**: Alternative to Radio Group for wage type selection
+
 ```tsx
 <Tabs value={wageType} onValueChange={setWageType}>
   <TabsList>
@@ -160,18 +195,25 @@ npx shadcn@latest add tabs
 ### Priority 3: Future Enhancements
 
 #### 11. **Accordion**
+
 ```bash
 npx shadcn@latest add accordion
 ```
+
 **Use case**: Expandable help sections for complex explanations
+
 ```tsx
 <Accordion type="single" collapsible>
   <AccordionItem value="break-methods">
     <AccordionTrigger>Hva er forskjellen mellom metodene?</AccordionTrigger>
     <AccordionContent>
       <ul>
-        <li><strong>Proporsjonal:</strong> ...</li>
-        <li><strong>Fra grunntid:</strong> ...</li>
+        <li>
+          <strong>Proporsjonal:</strong> ...
+        </li>
+        <li>
+          <strong>Fra grunntid:</strong> ...
+        </li>
         {/* ... */}
       </ul>
     </AccordionContent>
@@ -180,10 +222,13 @@ npx shadcn@latest add accordion
 ```
 
 #### 12. **Toggle Group**
+
 ```bash
 npx shadcn@latest add toggle-group
 ```
+
 **Use case**: Theme selector (alternative to current ThemeToggle)
+
 ```tsx
 <ToggleGroup type="single" value={theme} onValueChange={setTheme}>
   <ToggleGroupItem value="light">☀️ Lys</ToggleGroupItem>
@@ -193,10 +238,13 @@ npx shadcn@latest add toggle-group
 ```
 
 #### 13. **Alert**
+
 ```bash
 npx shadcn@latest add alert
 ```
+
 **Use case**: Informational messages and warnings
+
 ```tsx
 <Alert>
   <AlertCircle className="h-4 w-4" />
@@ -226,6 +274,7 @@ npx shadcn@latest add slider separator tooltip badge
 ## Component Mapping to Onboarding Steps
 
 ### Step 1: Wage Configuration
+
 - ✅ `Card` - Step container
 - 🆕 `RadioGroup` - Wage type selector (Preset vs Custom)
 - 🆕 `Select` - Preset level dropdown
@@ -234,6 +283,7 @@ npx shadcn@latest add slider separator tooltip badge
 - ✅ `Button` - "Neste" CTA
 
 ### Step 2: Break Policy
+
 - ✅ `Card` - Step container
 - 🆕 `Switch` - Enable/disable breaks
 - 🆕 `Label` - Field labels
@@ -242,13 +292,15 @@ npx shadcn@latest add slider separator tooltip badge
 - 🆕 `Tooltip` (optional) - Explain break methods
 - ✅ `Button` - "Neste" CTA
 
-### Step 3: Bonus Rules (Optional MVP)
+### Step 3: Supplement Rules (Optional MVP)
+
 - ✅ `Card` - Step container
-- 🆕 `RadioGroup` - Preset vs Custom bonuses
+- 🆕 `RadioGroup` - Preset vs Custom supplements
 - 🆕 `Badge` (optional) - "Anbefalt" tag
 - ✅ `Button` - "Neste" / "Hopp over"
 
 ### Step 4: Theme & Preferences
+
 - ✅ `Card` - Step container
 - 🆕 `RadioGroup` or `ToggleGroup` - Theme selector
 - 🆕 `RadioGroup` - Default shifts view
@@ -257,6 +309,7 @@ npx shadcn@latest add slider separator tooltip badge
 - ✅ `Button` - "Fullfør"
 
 ### All Steps
+
 - 🆕 `Progress` - Step indicator at top
 - 🆕 `Separator` - Visual dividers
 - 🆕 `Alert` (optional) - Help messages
@@ -278,12 +331,14 @@ After installing the raw shadcn components, create app-specific wrappers in `com
 9. `Badge.tsx` (if used) - Exports from `@ui/badge`
 
 **Pattern** (following existing convention):
+
 ```tsx
 // components/app/RadioGroup.tsx
 export * from "../ui/radio-group";
 ```
 
 Or with additional app-specific logic:
+
 ```tsx
 // components/app/Select.tsx
 import * as React from "react";
@@ -312,7 +367,9 @@ export * from "../ui/select";
 ## Design Notes
 
 ### Consistency with Existing Design
+
 All forms in the app (login, signup, reset-password) use:
+
 - **Card wrapper**: `rounded-3xl border border-border bg-surface-secondary p-10 shadow-app-lg`
 - **Input styling**: `rounded-full border border-border-subtle bg-background-primary`
 - **Button styling**: Gradient brand buttons for primary CTAs
@@ -320,6 +377,7 @@ All forms in the app (login, signup, reset-password) use:
 Onboarding should match this design language.
 
 ### Accessibility
+
 - Use `Label` with `htmlFor` for all inputs
 - Include `aria-describedby` for help text
 - Mark invalid fields with `aria-invalid`
@@ -327,6 +385,7 @@ Onboarding should match this design language.
 - Progress indicator should be announced by screen readers
 
 ### Mobile Responsiveness
+
 - Stack form fields vertically on mobile
 - Use full-width buttons
 - Ensure touch targets are at least 44x44px
@@ -339,7 +398,13 @@ Onboarding should match this design language.
 ```tsx
 // app/(app)/onboarding/_components/WageStep.tsx
 import { RadioGroup, RadioGroupItem } from "@appui/RadioGroup";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@appui/Select";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@appui/Select";
 import { Label } from "@appui/Label";
 import { Input } from "@appui/Input";
 import { Button } from "@appui/Button";
@@ -351,7 +416,10 @@ export function WageStep({ onNext }: { onNext: () => void }) {
 
   return (
     <div className="space-y-6">
-      <RadioGroup value={wageType} onValueChange={(v) => setWageType(v as "preset" | "custom")}>
+      <RadioGroup
+        value={wageType}
+        onValueChange={(v) => setWageType(v as "preset" | "custom")}
+      >
         <div className="flex items-center space-x-2">
           <RadioGroupItem value="preset" id="preset" />
           <Label htmlFor="preset">Jeg er på tariffavtale</Label>
@@ -387,7 +455,9 @@ export function WageStep({ onNext }: { onNext: () => void }) {
         </div>
       )}
 
-      <Button onClick={onNext} className="w-full">Neste</Button>
+      <Button onClick={onNext} className="w-full">
+        Neste
+      </Button>
     </div>
   );
 }

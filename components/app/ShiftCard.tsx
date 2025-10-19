@@ -55,9 +55,9 @@ export function formatPlainAmount(value: number) {
 export function ShiftCard({ shift, onClick }: ShiftCardProps) {
   const { computed } = shift;
   const { dayName, dateLabel, isWeekend } = formatDateParts(shift.shift_date);
-  const { basePay, bonusPay, gross, paidHours } = computed;
+  const { basePay, supplementPay, gross, paidHours } = computed;
 
-  const breakdown = `${formatPlainAmount(basePay)}${bonusPay > 0 ? ` + ${formatPlainAmount(bonusPay)}` : ""}`;
+  const breakdown = `${formatPlainAmount(basePay)}${supplementPay > 0 ? ` + ${formatPlainAmount(supplementPay)}` : ""}`;
 
   return (
     <Card
