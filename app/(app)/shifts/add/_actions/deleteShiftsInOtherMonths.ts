@@ -30,12 +30,32 @@ export async function deleteShiftsInOtherMonths(targetMonth: string): Promise<De
   }
 
   try {
+    const [yearStr, monthStr] = targetMonth.split('-');
+    const year = Number(yearStr);
+    const month = Number(monthStr);
+
+    if (!Number.isFinite(year) || !Number.isFinite(month) || month < 1 || month > 12) {
+      return { success: false, deletedCount: 0, error: 'Invalid month value' };
+    }
+
+    const monthStart = new Date(Date.UTC(year, month - 1, 1));
+    const nextMonthStart = new Date(Date.UTC(year, month, 1));
+    const formatDate = (date: Date) => date.toISOString().split('T')[0];
+    const keepStart = formatDate(monthStart);
+    const keepEnd = formatDate(nextMonthStart);
+
+    const outsideMonthFilter = [
+      `shift_date.lt.${keepStart}`,
+      `shift_date.gte.${keepEnd}`,
+      'shift_date.is.null'
+    ].join(',');
+
     // First, get all shifts that will be deleted (for counting)
     const { data: shiftsToDelete, error: selectError } = await supabase
       .from('user_shifts')
       .select('id')
       .eq('user_id', user.id)
-      .not('shift_date::text', 'like', `${targetMonth}%`);
+      .or(outsideMonthFilter);
 
     if (selectError) {
       console.error('Error selecting shifts to delete:', selectError);
@@ -52,7 +72,7 @@ export async function deleteShiftsInOtherMonths(targetMonth: string): Promise<De
       .from('user_shifts')
       .delete()
       .eq('user_id', user.id)
-      .not('shift_date::text', 'like', `${targetMonth}%`);
+      .or(outsideMonthFilter);
 
     if (deleteError) {
       console.error('Error deleting shifts:', deleteError);
