@@ -9,7 +9,7 @@ import {
 } from "@/lib/payroll";
 import { logger } from "@/lib/logger";
 
-const PRESET_RULES: BonusRule[] = [
+export const PRESET_RULES: BonusRule[] = [
   { days: [1, 2, 3, 4, 5], from: "18:00", to: "21:00", rate: 22 },
   { days: [1, 2, 3, 4, 5], from: "21:00", to: "23:59", rate: 45 },
   { days: [6], from: "13:00", to: "15:00", rate: 45 },

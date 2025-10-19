@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-import { getComputedShifts } from "./_data/getShifts";
+import { getComputedShifts, PRESET_RULES } from "./_data/getShifts";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { ShiftsView } from "@components//shifts/ShiftsView";
 
@@ -14,7 +14,7 @@ export default async function ShiftsPage() {
     redirect("/login");
   }
 
-  const { shifts, defaultView, aggregates } = await getComputedShifts(user.id);
+  const { shifts, defaultView, aggregates, settings } = await getComputedShifts(user.id);
 
-  return <ShiftsView shifts={shifts} defaultView={defaultView} aggregates={aggregates} />;
+  return <ShiftsView shifts={shifts} defaultView={defaultView} aggregates={aggregates} userSettings={settings} presetRules={PRESET_RULES} />;
 }
