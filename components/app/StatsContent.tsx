@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/app/Card";
 import { StatsData } from "@/app/(app)/stats/_data/getStatsData";
 import { MonthlyBarChart } from "@/components/app/charts/MonthlyBarChart";
@@ -8,6 +10,8 @@ import { DayOfWeekChart } from "@/components/app/charts/DayOfWeekChart";
 import { CumulativeAreaChart } from "@/components/app/charts/CumulativeAreaChart";
 import { MonthlyCumulativeChart } from "@/components/app/charts/MonthlyCumulativeChart";
 import { TrendingUp, TrendingDown, Clock, Briefcase, DollarSign } from "lucide-react";
+import { MonthPicker } from "@/components/app/MonthPicker";
+import { useMonth } from "@/components/app/MonthContext";
 
 type StatsContentProps = {
   data: StatsData;
@@ -89,29 +93,148 @@ function StatCard({ label, value, suffix, trend, icon }: StatCardProps) {
 }
 
 export function StatsContent({ data }: StatsContentProps) {
-  const currentMonthName = new Date().toLocaleDateString("nb-NO", { month: "long" });
-  const trend = data.percentageChange !== null ? {
-    value: data.percentageChange,
-    isPositive: data.percentageChange >= 0,
-  } : undefined;
+  const {
+    selectedMonth,
+    goToPreviousMonth,
+    goToNextMonth,
+  } = useMonth();
+
+  const [activeData, setActiveData] = useState<StatsData>(data);
+  const [isLoading, setIsLoading] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+
+  const selectedYear = selectedMonth.getFullYear();
+  const selectedMonthNumber = selectedMonth.getMonth() + 1;
+
+  const focusYear = activeData.focusMonth.year;
+  const focusMonth = activeData.focusMonth.month;
+
+  useEffect(() => {
+    if (focusYear === selectedYear && focusMonth === selectedMonthNumber) {
+      return;
+    }
+
+    const controller = new AbortController();
+    const query = new URLSearchParams({
+      year: selectedYear.toString(),
+      month: selectedMonthNumber.toString(),
+    });
+
+    setIsLoading(true);
+    setFetchError(null);
+
+    fetch(`/api/stats?${query.toString()}`, {
+      method: "GET",
+      credentials: "include",
+      cache: "no-store",
+      signal: controller.signal,
+    })
+      .then((response) => {
+        if (response.status === 401) {
+          // Session expired, force reload to trigger middleware redirect
+          if (typeof window !== "undefined") {
+            window.location.href = "/login";
+          }
+          throw new Error("Unauthorized");
+        }
+        if (!response.ok) {
+          throw new Error(`Failed to load stats (${response.status})`);
+        }
+        return response.json() as Promise<StatsData>;
+      })
+      .then((payload) => {
+        if (!controller.signal.aborted) {
+          setActiveData(payload);
+        }
+      })
+      .catch((error) => {
+        if (controller.signal.aborted) {
+          return;
+        }
+        console.error("Failed to load stats data", error);
+        setFetchError("Kunne ikke oppdatere statistikken. Prøv igjen senere.");
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setIsLoading(false);
+        }
+      });
+
+    return () => {
+      controller.abort();
+    };
+  }, [focusMonth, focusYear, selectedMonthNumber, selectedYear]);
+
+  const grossEarnings = activeData.currentMonth.totalEarnings;
+  const netEarnings = activeData.currentMonth.totalEarningsNet;
+  const displayedEarnings = activeData.tax.enabled ? netEarnings : grossEarnings;
+
+  const selectedHours = activeData.currentMonth.totalHours;
+  const selectedShiftCount = activeData.currentMonth.shiftCount;
+  const selectedAverageRate = activeData.currentMonth.averageRate;
+
+  const trend = activeData.percentageChange !== null
+    ? {
+        value: activeData.percentageChange,
+        isPositive: activeData.percentageChange >= 0,
+      }
+    : undefined;
+
+  const selectedMonthLabel = useMemo(() => {
+    const name = new Intl.DateTimeFormat("nb-NO", { month: "long" }).format(selectedMonth);
+    return name.charAt(0).toUpperCase() + name.slice(1);
+  }, [selectedMonth]);
+
+  const realNow = useMemo(() => new Date(), []);
+  const isCurrentMonthSelected =
+    selectedYear === realNow.getUTCFullYear() &&
+    selectedMonthNumber === realNow.getUTCMonth() + 1;
+
+  const weekCardTitle = isCurrentMonthSelected
+    ? "Denne uken"
+    : `Ukeoversikt – ${selectedMonthLabel}`;
 
   return (
     <div className="flex flex-col w-full max-w-md mx-auto pb-6 pt-2 space-y-6">
       {/* Hero section with key metrics */}
       <div className="space-y-5">
-        <h1 className="text-2xl font-bold text-text-primary capitalize">{currentMonthName}</h1>
+        <div className="flex items-center justify-start">
+          <MonthPicker
+            month={selectedMonth}
+            onPreviousMonth={goToPreviousMonth}
+            onNextMonth={goToNextMonth}
+          />
+          {isLoading && (
+            <span className="ml-3 text-sm text-text-muted">Oppdaterer...</span>
+          )}
+        </div>
+        {fetchError && (
+          <p className="text-sm text-error">
+            {fetchError}
+          </p>
+        )}
 
         <Card className="border-border bg-surface-primary overflow-hidden">
           <CardContent className="p-6">
             <p className="text-lg font-semibold text-text-muted mb-3">
-              Inntjening denne måneden (før skatt)
+              Inntjening denne måneden
             </p>
             <div className="flex items-baseline gap-2">
               <p className="text-5xl font-bold tabular-nums text-text-primary">
-                {formatCurrency(data.currentMonth.totalEarnings, true)}
+                {formatCurrency(displayedEarnings, true)}
               </p>
               <p className="text-2xl font-medium text-text-secondary">kr</p>
             </div>
+            {activeData.tax.enabled && (
+              <div className="mt-3 space-y-1">
+                <p className="text-base font-medium text-text-secondary">
+                  Etter skatt
+                </p>
+                <p className="text-sm text-text-muted">
+                  Før skatt: {formatCurrency(grossEarnings, true)} kr
+                </p>
+              </div>
+            )}
             {trend && (
               <div className="flex items-center gap-2 mt-4">
                 {trend.isPositive ? (
@@ -130,28 +253,16 @@ export function StatsContent({ data }: StatsContentProps) {
         <div className="grid grid-cols-2 gap-3">
           <StatCard
             label="Timer"
-            value={formatHours(data.currentMonth.totalHours)}
+            value={formatHours(selectedHours)}
             icon={<Clock className="w-5 h-5" />}
           />
           <StatCard
             label="Vakter"
-            value={data.currentMonth.shiftCount.toString()}
+            value={selectedShiftCount.toString()}
             icon={<Briefcase className="w-5 h-5" />}
           />
         </div>
       </div>
-
-      {/* Monthly earnings chart */}
-      <Card className="border-border bg-surface-primary">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-xl font-bold text-text-primary">
-            Siste 6 måneder
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="px-3 pb-4 pt-1">
-          <MonthlyBarChart data={data.last6Months} />
-        </CardContent>
-      </Card>
 
       {/* Monthly cumulative comparison chart */}
       <Card className="border-border bg-surface-primary">
@@ -161,7 +272,7 @@ export function StatsContent({ data }: StatsContentProps) {
           </CardTitle>
         </CardHeader>
         <CardContent className="px-3 pb-4 pt-1">
-          <MonthlyCumulativeChart data={data.thisMonthCumulative} />
+          <MonthlyCumulativeChart data={activeData.thisMonthCumulative} />
         </CardContent>
       </Card>
 
@@ -169,11 +280,11 @@ export function StatsContent({ data }: StatsContentProps) {
       <Card className="border-border bg-surface-primary">
         <CardHeader className="pb-3">
           <CardTitle className="text-xl font-bold text-text-primary">
-            Denne uken
+            {weekCardTitle}
           </CardTitle>
         </CardHeader>
         <CardContent className="px-3 pb-4 pt-1">
-          <WeeklyBarChart data={data.thisWeek} />
+          <WeeklyBarChart data={activeData.thisWeek} />
         </CardContent>
       </Card>
 
@@ -181,7 +292,7 @@ export function StatsContent({ data }: StatsContentProps) {
       <div className="grid grid-cols-1 gap-3">
         <StatCard
           label="Gjennomsnitt"
-          value={formatCurrency(data.currentMonth.averageRate, true)}
+          value={formatCurrency(selectedAverageRate, true)}
           suffix="kr/t"
           icon={<DollarSign className="w-4 h-4" />}
         />
@@ -195,7 +306,7 @@ export function StatsContent({ data }: StatsContentProps) {
           </CardTitle>
         </CardHeader>
         <CardContent className="px-3 pb-4 pt-1">
-          <CumulativeAreaChart data={data.last6Months} />
+          <CumulativeAreaChart data={activeData.last6Months} />
         </CardContent>
       </Card>
 
@@ -207,28 +318,38 @@ export function StatsContent({ data }: StatsContentProps) {
           </CardTitle>
         </CardHeader>
         <CardContent className="px-3 pb-4 pt-1">
-          <DayOfWeekChart data={data.byDayOfWeek} />
+          <DayOfWeekChart data={activeData.byDayOfWeek} />
         </CardContent>
       </Card>
 
       {/* Year to date summary */}
       <div className="space-y-5">
         <h2 className="text-xl font-bold text-text-primary">
-          {new Date().getFullYear()} totalt
+          {selectedYear} totalt
         </h2>
+        <Card className="border-border bg-surface-primary">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-xl font-bold text-text-primary">
+              Siste 6 måneder
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-3 pb-4 pt-1">
+            <MonthlyBarChart data={activeData.last6Months} />
+          </CardContent>
+        </Card>
         <div className="grid grid-cols-1 gap-3">
           <StatCard
             label="Totalt"
-            value={formatCurrency(data.yearToDate.totalEarnings)}
+            value={formatCurrency(activeData.yearToDate.totalEarnings)}
             suffix="kr"
           />
           <StatCard
             label="Timer"
-            value={formatHours(data.yearToDate.totalHours)}
+            value={formatHours(activeData.yearToDate.totalHours)}
           />
           <StatCard
             label="Vakter"
-            value={data.yearToDate.shiftCount.toString()}
+            value={activeData.yearToDate.shiftCount.toString()}
           />
         </div>
       </div>
