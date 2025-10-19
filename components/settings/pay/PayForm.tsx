@@ -29,6 +29,10 @@ export function PayForm({ initialData }: PayFormProps) {
   const [customBonuses, setCustomBonuses] = useState<SupplementsData | null>(
     initialData.custom_bonuses || null
   );
+  const customWageValue = parseFloat(customWage);
+  const isCustomWageInvalid =
+    !usePreset &&
+    (!customWage || Number.isNaN(customWageValue) || customWageValue < 1 || customWageValue > 10000);
 
   // Break settings
   const [pauseDeductionEnabled, setPauseDeductionEnabled] = useState(
@@ -61,12 +65,16 @@ export function PayForm({ initialData }: PayFormProps) {
   const [isSaving, setIsSaving] = useState(false);
 
   const saveSettings = async () => {
+    if (isCustomWageInvalid) {
+      return;
+    }
+
     setIsSaving(true);
     try {
       await updatePaySettings({
         use_preset: usePreset,
         current_wage_level: parseInt(wageLevel),
-        custom_wage: parseFloat(customWage),
+        custom_wage: customWageValue,
         custom_bonuses: customBonuses,
         monthly_goal: monthlyGoal ? parseFloat(monthlyGoal) : null,
         payroll_day: payrollDay ? parseInt(payrollDay) : null,
@@ -193,8 +201,10 @@ export function PayForm({ initialData }: PayFormProps) {
               <Input
                 id="customWage"
                 type="number"
-                min={0}
+                min={1}
+                max={10000}
                 step={0.01}
+                invalid={isCustomWageInvalid}
                 value={customWage}
                 onChange={(e) => setCustomWage(e.target.value)}
               />
