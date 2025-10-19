@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/app/Button";
-import { Input } from "@/components/app/Input";
+import { TimeInput } from "@/components/app/TimeInput";
 import { SelectDatesCalendar } from "@/components/app/SelectDatesCalendar";
 import type { ISODate } from "@/components/calendar/calendar.utils";
 import { createShifts } from "../../../app/(app)/shifts/add/actions";
@@ -300,13 +300,12 @@ export default function AddShiftForm({ existingShifts }: Props) {
                   Start
                 </span>
                 <div className="flex min-w-0 items-center gap-2">
-                  <Input
+                  <TimeInput
                     ref={startInputRef}
-                    type="time"
                     step={900}
                     value={start}
-                    onChange={(e) => setStart(e.target.value)}
-                    className="h-10 flex-1 rounded-xl border-border-subtle bg-transparent text-base text-text-primary"
+                    onChange={setStart}
+                    onComplete={() => endInputRef.current?.focus()}
                   />
                   <button
                     type="button"
@@ -323,13 +322,11 @@ export default function AddShiftForm({ existingShifts }: Props) {
                   Slutt
                 </span>
                 <div className="flex min-w-0 items-center gap-2">
-                  <Input
+                  <TimeInput
                     ref={endInputRef}
-                    type="time"
                     step={900}
                     value={end}
-                    onChange={(e) => setEnd(e.target.value)}
-                    className="h-10 flex-1 rounded-xl border-border-subtle bg-transparent text-base text-text-primary"
+                    onChange={setEnd}
                   />
                   <button
                     type="button"
