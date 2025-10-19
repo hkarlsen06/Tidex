@@ -180,6 +180,12 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
     }
   };
 
+  const mailHref = (() => {
+    const subject = encodeURIComponent('Endring av e-postadresse');
+    const body = encodeURIComponent(`Jeg ønsker å endre epost-addresssen min fra ${initialData.email} til (ny epost).`);
+    return `mailto:kkarlsen06@kkarlsen.dev?subject=${subject}&body=${body}`;
+  })();
+
   return (
     <Card className="p-6">
       <div className="space-y-6">
@@ -253,7 +259,14 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
               className="opacity-60"
             />
             <p className="text-xs text-text-secondary">
-              E-postadressen kan ikke endres
+              For å endre e-postadresse,{' '}
+              <a
+                className="underline"
+                href={mailHref}
+              >
+                ta kontakt
+              </a>
+              .
             </p>
           </div>
         </div>
