@@ -8,15 +8,10 @@ interface OnboardingSettings {
   current_wage_level: number | null;
   custom_wage: number | null;
   custom_bonuses: { rules: any[] } | null;
-  break_enabled: boolean;
-  break_method: string | null;
-  break_threshold_hours: number | null;
-  break_deduction_minutes: number | null;
   pause_deduction_enabled: boolean;
   pause_deduction_method: string | null;
   pause_threshold_hours: number | null;
   pause_deduction_minutes: number | null;
-  break_policy: string | null;
   tax_deduction_enabled: boolean;
   tax_percentage: number | null;
   payroll_day: number | null;
@@ -45,15 +40,10 @@ export async function completeOnboarding(settings: OnboardingSettings) {
     current_wage_level: settings.current_wage_level,
     custom_wage: settings.custom_wage,
     custom_bonuses: settings.custom_bonuses,
-    break_enabled: settings.break_enabled,
-    break_method: settings.break_method,
-    break_threshold_hours: settings.break_threshold_hours,
-    break_deduction_minutes: settings.break_deduction_minutes,
     pause_deduction_enabled: settings.pause_deduction_enabled,
     pause_deduction_method: settings.pause_deduction_method,
     pause_threshold_hours: settings.pause_threshold_hours,
     pause_deduction_minutes: settings.pause_deduction_minutes,
-    break_policy: settings.break_policy,
     tax_deduction_enabled: settings.tax_deduction_enabled,
     tax_percentage: settings.tax_percentage,
     payroll_day: settings.payroll_day,

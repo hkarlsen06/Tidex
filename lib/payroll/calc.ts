@@ -11,10 +11,10 @@ export const PRESET_WAGE_RATES: Record<string, number> = {
 };
 
 const defaultSettings = {
-  break_enabled: true,
-  break_method: "proportional" as BreakMethod,
-  break_threshold_hours: 5.5,
-  break_deduction_minutes: 30,
+  pause_deduction_enabled: true,
+  pause_deduction_method: "proportional" as BreakMethod,
+  pause_threshold_hours: 5.5,
+  pause_deduction_minutes: 30,
 };
 
 function resolveBaseRate(s: ShiftRow, settings: UserSettings): number {
@@ -58,14 +58,23 @@ export function computeShift(
   const originalWagePeriods = periods.map(p => ({ ...p }));
 
   // Resolve break settings - support both old and new field names
-  const breakEnabled = settings.break_enabled ?? settings.pause_deduction_enabled ?? defaultSettings.break_enabled;
-  const method = settings.break_method ?? settings.pause_deduction_method ?? defaultSettings.break_method;
-  const threshold = settings.break_threshold_hours ?? settings.pause_threshold_hours ?? defaultSettings.break_threshold_hours;
-  const breakMinutes = breakEnabled ? (settings.break_deduction_minutes ?? settings.pause_deduction_minutes ?? defaultSettings.break_deduction_minutes) : 0;
-  const breakHours = breakMinutes / 60;
+  const pauseEnabled =
+    settings.pause_deduction_enabled ??
+    defaultSettings.pause_deduction_enabled;
+  const method =
+    settings.pause_deduction_method ??
+    defaultSettings.pause_deduction_method;
+  const threshold =
+    settings.pause_threshold_hours ??
+    defaultSettings.pause_threshold_hours;
+  const pauseMinutes = pauseEnabled
+    ? settings.pause_deduction_minutes ??
+      defaultSettings.pause_deduction_minutes
+    : 0;
+  const pauseHours = pauseMinutes / 60;
 
   // Apply automatic break deduction
-  const afterBreak = applyBreakDeduction(periods, method, threshold, breakHours);
+  const afterBreak = applyBreakDeduction(periods, method, threshold, pauseHours);
   periods = afterBreak.periods;
 
   const paidMinutes = periods.reduce((sum, p) => sum + (p.toMin - p.fromMin), 0);

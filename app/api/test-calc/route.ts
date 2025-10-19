@@ -24,10 +24,10 @@ export async function GET() {
   const settings: UserSettings = {
     use_preset: true,
     current_wage_level: 3,
-    break_enabled: true,
-    break_method: "proportional",
-    break_threshold_hours: 5.5,
-    break_deduction_minutes: 30,
+    pause_deduction_enabled: true,
+    pause_deduction_method: "proportional",
+    pause_threshold_hours: 5.5,
+    pause_deduction_minutes: 30,
   };
 
   const result = computeShift(shift, settings, PRESET_RULES);

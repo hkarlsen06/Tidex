@@ -23,10 +23,10 @@ interface OnboardingFormProps {
     current_wage_level?: number;
     custom_wage?: number;
     custom_bonuses?: any;
-    break_enabled?: boolean;
-    break_method?: string;
-    break_threshold_hours?: number;
-    break_deduction_minutes?: number;
+    pause_deduction_enabled?: boolean;
+    pause_deduction_method?: string;
+    pause_threshold_hours?: number;
+    pause_deduction_minutes?: number;
     tax_deduction_enabled?: boolean;
     tax_percentage?: number;
     payroll_day?: number;
@@ -59,29 +59,16 @@ export function OnboardingForm({ initialSettings }: OnboardingFormProps) {
 
   // Step 3: Break
   const initialBreakEnabled =
-    initialSettings?.break_enabled ??
     initialSettings?.pause_deduction_enabled ??
     false;
   const initialThresholdValue =
-    initialSettings?.break_threshold_hours ??
     initialSettings?.pause_threshold_hours ??
     null;
   const initialDurationValue =
-    initialSettings?.break_deduction_minutes ??
     initialSettings?.pause_deduction_minutes ??
     null;
-  const existingBreakPolicy = initialSettings?.break_policy;
-  const initialFallbackMethod =
-    typeof existingBreakPolicy === "string" &&
-    BREAK_METHOD_OPTIONS.includes(
-      existingBreakPolicy as (typeof BREAK_METHOD_OPTIONS)[number]
-    )
-      ? existingBreakPolicy
-      : undefined;
   const initialBreakMethod =
-    initialSettings?.break_method ??
     initialSettings?.pause_deduction_method ??
-    initialFallbackMethod ??
     "proportional";
 
   const [breakEnabled, setBreakEnabled] = useState(
@@ -103,11 +90,7 @@ export function OnboardingForm({ initialSettings }: OnboardingFormProps) {
     initialDurationValue !== null
   );
   const [breakMethodActivated, setBreakMethodActivated] = useState(
-    Boolean(
-      initialSettings?.break_method ??
-        initialSettings?.pause_deduction_method ??
-        initialFallbackMethod
-    )
+    Boolean(initialSettings?.pause_deduction_method)
   );
 
   // Step 4: Tax & Payroll
@@ -155,15 +138,10 @@ export function OnboardingForm({ initialSettings }: OnboardingFormProps) {
         current_wage_level: wageType === "preset" ? parseInt(wageLevel) : null,
         custom_wage: wageType === "custom" ? parseFloat(customWage) : null,
         custom_bonuses: customBonuses,
-        break_enabled: breakEnabled,
-        break_method: breakMethod,
-        break_threshold_hours: parsedThreshold,
-        break_deduction_minutes: parsedDuration,
         pause_deduction_enabled: breakEnabled,
         pause_deduction_method: breakMethod,
         pause_threshold_hours: parsedThreshold,
         pause_deduction_minutes: parsedDuration,
-        break_policy: breakMethod,
         tax_deduction_enabled: taxDeductionEnabled,
         tax_percentage: taxDeductionEnabled && taxPercentage ? parseFloat(taxPercentage) : null,
         payroll_day: payrollDay ? parseInt(payrollDay) : null,
