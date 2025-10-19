@@ -28,6 +28,8 @@ export function PreferencesStep({
   onNext,
   onBack,
 }: PreferencesStepProps) {
+  const monthlyGoalPresets = ["15000", "20000", "25000"];
+
   return (
     <div className="space-y-6">
       <div className="space-y-2">
@@ -150,6 +152,22 @@ export function PreferencesStep({
             <span className="absolute right-4 top-1/2 -translate-y-1/2 text-text-secondary text-sm">
               kr
             </span>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            {monthlyGoalPresets.map((value) => {
+              const numericValue = Number(value);
+              return (
+                <Button
+                  key={value}
+                  type="button"
+                  variant={monthlyGoal === value ? "default" : "outline"}
+                  className="w-full"
+                  onClick={() => setMonthlyGoal(value)}
+                >
+                  {new Intl.NumberFormat("nb-NO").format(numericValue)} kr
+                </Button>
+              );
+            })}
           </div>
         </div>
       </div>

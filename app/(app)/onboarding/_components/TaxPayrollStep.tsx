@@ -32,6 +32,8 @@ export function TaxPayrollStep({
 }: TaxPayrollStepProps) {
   const [taxTooltipOpen, setTaxTooltipOpen] = useState(false);
   const [payrollTooltipOpen, setPayrollTooltipOpen] = useState(false);
+  const payrollDayPresets = ["10", "15", "20"];
+  const taxPercentagePresets = ["25", "30", "40"];
 
   const handleSkip = () => {
     setTaxDeductionEnabled(false);
@@ -50,9 +52,9 @@ export function TaxPayrollStep({
 
       <div className="space-y-6">
         {/* Payroll Day Section */}
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <Label htmlFor="payroll-day">Lønningsdag</Label>
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Label htmlFor="payroll-day">Lønningsdag</Label>
             <Tooltip open={payrollTooltipOpen} onOpenChange={setPayrollTooltipOpen} delayDuration={0}>
               <TooltipTrigger
                 asChild
@@ -76,7 +78,7 @@ export function TaxPayrollStep({
               >
                 <p>
                   Hvilken dag i måneden får du utbetalt lønn? Dette brukes
-                  til å vise "Dager til neste lønning" på dashbordet.
+                  til å vise &quot;Dager til neste lønning&quot; på dashbordet.
                 </p>
               </TooltipContent>
             </Tooltip>
@@ -87,10 +89,9 @@ export function TaxPayrollStep({
           <div className="relative">
             <Input
               id="payroll-day"
-              type="number"
-              min={1}
-              max={31}
-              step={1}
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
               value={payrollDay}
               onChange={(e) => {
                 const value = e.target.value;
@@ -111,6 +112,19 @@ export function TaxPayrollStep({
             <span className="absolute right-4 top-1/2 -translate-y-1/2 text-text-secondary text-sm">
               dag i måneden
             </span>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            {payrollDayPresets.map((value) => (
+              <Button
+                key={value}
+                type="button"
+                variant={payrollDay === value ? "default" : "outline"}
+                className="w-full"
+                onClick={() => setPayrollDay(value)}
+              >
+                {value}. dag
+              </Button>
+            ))}
           </div>
         </div>
 
@@ -174,7 +188,6 @@ export function TaxPayrollStep({
                   type="number"
                   min={0}
                   max={100}
-                  step={0.5}
                   value={taxPercentage}
                   onChange={(e) => setTaxPercentage(e.target.value)}
                   placeholder="30"
@@ -183,6 +196,19 @@ export function TaxPayrollStep({
                 <span className="absolute right-4 top-1/2 -translate-y-1/2 text-text-secondary text-sm">
                   %
                 </span>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                {taxPercentagePresets.map((value) => (
+                  <Button
+                    key={value}
+                    type="button"
+                    variant={taxPercentage === value ? "default" : "outline"}
+                    className="w-full"
+                    onClick={() => setTaxPercentage(value)}
+                  >
+                    {value}%
+                  </Button>
+                ))}
               </div>
             </div>
           )}
