@@ -18,6 +18,7 @@ import { ShiftWithComputations, UserSettings, BonusRule } from "@/lib/payroll";
 import ShiftDetails from "@/components/shifts/ShiftDetails";
 import { deleteShift } from "@/app/(app)/shifts/_actions/deleteShift";
 import { updateShift } from "@/app/(app)/shifts/_actions/updateShift";
+import { copyShifts } from "@/app/(app)/shifts/_actions/copyShifts";
 import { useNavigationFeedback } from "@/components/app/navigation-feedback";
 import { useMonth } from "@/components/app/MonthContext";
 import type { ShiftsAggregates } from "@/app/(app)/shifts/_data/getShifts";
@@ -479,6 +480,8 @@ export function ShiftsView({ shifts, defaultView = "calendar", aggregates, userS
   const [moveSelection, setMoveSelection] = useState<string[]>([]);
   const [moveError, setMoveError] = useState<string | null>(null);
   const [openedFromCalendar, setOpenedFromCalendar] = useState(false);
+  const [copyMode, setCopyMode] = useState(false);
+  const [copying, startCopyTransition] = useTransition();
   const shiftsListRef = useRef<HTMLDivElement>(null);
   const calendarContainerRef = useRef<HTMLDivElement>(null);
 
@@ -490,6 +493,7 @@ export function ShiftsView({ shifts, defaultView = "calendar", aggregates, userS
     setMoveTargetDate(null);
     setMoveError(null);
     setOpenedFromCalendar(false);
+    setCopyMode(false);
   }, []);
   const shiftsByDate = useMemo(() => {
     const map = new Map<ISODate, ShiftWithComputations[]>();
@@ -559,6 +563,28 @@ export function ShiftsView({ shifts, defaultView = "calendar", aggregates, userS
           return;
         }
 
+        // If in copy mode, copy the shifts to the target date
+        if (copyMode) {
+          const sourceShifts = shiftsByDate.get(selectedDate) ?? [];
+          if (sourceShifts.length > 0) {
+            const shiftIds = sourceShifts.map(shift => shift.id);
+            startCopyTransition(async () => {
+              try {
+                await copyShifts({
+                  shiftIds,
+                  targetDate: isoDate,
+                });
+                clearSelection();
+                router.refresh();
+              } catch (error) {
+                // TODO: Add error handling UI
+                console.error("Failed to copy shifts", error);
+              }
+            });
+          }
+          return;
+        }
+
         const sourceShifts = shiftsByDate.get(selectedDate) ?? [];
         if (sourceShifts.length > 0) {
           const defaultSelection =
@@ -591,7 +617,7 @@ export function ShiftsView({ shifts, defaultView = "calendar", aggregates, userS
 
       navigate(`/shifts/add?date=${encodeURIComponent(iso)}`);
     },
-    [calendarSelectedShiftId, clearSelection, navigate, selectedDate, shiftsByDate]
+    [calendarSelectedShiftId, clearSelection, navigate, selectedDate, shiftsByDate, copyMode, router]
   );
 
   const handleOpenDetails = useCallback(() => {
@@ -610,6 +636,15 @@ export function ShiftsView({ shifts, defaultView = "calendar", aggregates, userS
       }
     }
   }, [selectedDate, shiftsByDate, calendarSelectedShiftId]);
+
+  const handleInitiateCopy = useCallback(() => {
+    if (!selectedDate) return;
+    setCopyMode(true);
+  }, [selectedDate]);
+
+  const handleCancelCopy = useCallback(() => {
+    setCopyMode(false);
+  }, []);
 
   const selectedDateShifts = useMemo(
     () => (selectedDate ? shiftsByDate.get(selectedDate) ?? [] : []),
@@ -733,6 +768,10 @@ export function ShiftsView({ shifts, defaultView = "calendar", aggregates, userS
             containerRef={calendarContainerRef}
             onClearSelection={clearSelection}
             onOpenDetails={handleOpenDetails}
+            copyMode={copyMode}
+            onInitiateCopy={handleInitiateCopy}
+            copying={copying}
+            onCancelCopy={handleCancelCopy}
           />
         </div>
       </div>

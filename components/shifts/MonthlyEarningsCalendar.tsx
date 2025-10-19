@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useEffect, type Ref } from "react";
-import { IconClock, IconX } from "@tabler/icons-react";
+import { IconClock, IconCopy } from "@tabler/icons-react";
 import { ShiftsCalendar } from "@/components/app/ShiftsCalendar";
 import { Card, CardHeader, CardTitle } from "@/components/app/Card";
 import { Button } from "@/components/app/Button";
@@ -20,6 +20,10 @@ type MonthlyEarningsCalendarProps = {
   containerRef?: Ref<HTMLDivElement>;
   onClearSelection?: () => void;
   onOpenDetails?: () => void;
+  copyMode?: boolean;
+  onInitiateCopy?: () => void;
+  copying?: boolean;
+  onCancelCopy?: () => void;
 };
 
 function buildEarningsByDate(shifts: ShiftWithComputations[]): EarningsByDate {
@@ -102,6 +106,10 @@ export function MonthlyEarningsCalendar({
   containerRef,
   onClearSelection,
   onOpenDetails,
+  copyMode = false,
+  onInitiateCopy,
+  copying = false,
+  onCancelCopy,
 }: MonthlyEarningsCalendarProps) {
   const { goToPreviousMonth, goToNextMonth } = useMonth();
   const [viewMode, setViewMode] = useState<"money" | "hours">("money");
@@ -184,21 +192,31 @@ export function MonthlyEarningsCalendar({
               <Button
                 type="button"
                 variant="ghost"
-                onClick={() => onClearSelection?.()}
-                disabled={!onClearSelection}
-                className="flex-1 rounded-full h-9 gap-2 bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 dark:text-emerald-400"
+                onClick={() => onInitiateCopy?.()}
+                disabled={!onInitiateCopy || copyMode || copying}
+                loading={copying}
+                className="flex-1 rounded-full h-9 gap-2 bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 dark:text-blue-400"
               >
-                <IconX stroke={2} className="h-4 w-4" />
-                Avbryt
+                <IconCopy stroke={2} className="h-4 w-4" />
+                Kopier
               </Button>
               <Button
                 type="button"
                 variant="default"
-                onClick={() => onOpenDetails?.()}
-                disabled={!onOpenDetails}
+                onClick={() => {
+                  if (copyMode) {
+                    onCancelCopy?.();
+                  } else {
+                    onOpenDetails?.();
+                  }
+                }}
+                disabled={
+                  copying ||
+                  (copyMode ? !onCancelCopy : !onOpenDetails)
+                }
                 className="flex-[2] rounded-full h-9"
               >
-                Detaljer
+                {copyMode ? "Avbryt" : "Detaljer"}
               </Button>
             </div>
           ) : (
@@ -236,7 +254,7 @@ export function MonthlyEarningsCalendar({
           )}
         </div>
         <div className={`text-xs font-medium leading-tight text-text-muted text-center ${selectedDate ? 'opacity-100' : 'opacity-0'}`}>
-          Velg en annen dato for å flytte vakten
+          {copyMode ? "Velg en dato for å kopiere vakten dit" : "Velg en annen dato for å flytte vakten"}
         </div>
       </div>
     </Card>
