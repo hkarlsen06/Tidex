@@ -8,6 +8,7 @@ export interface ShiftLimitCheckResult {
   allowed: boolean;
   existingMonths?: string[];
   reason?: string;
+  isFreeTier: boolean;
 }
 
 /**
@@ -22,15 +23,17 @@ export async function checkShiftLimit(targetMonth: string): Promise<ShiftLimitCh
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
-    return { allowed: false, reason: 'Unauthorized' };
+    return { allowed: false, reason: 'Unauthorized', isFreeTier: false };
   }
 
   // Fetch subscription status
   const { subscription, profile } = await getUserSubscriptionData(user.id);
 
+  const isFreeTier = !hasProAccess(subscription, profile);
+
   // If user has Pro access (grandfathered or subscribed), allow all months
-  if (hasProAccess(subscription, profile)) {
-    return { allowed: true };
+  if (!isFreeTier) {
+    return { allowed: true, isFreeTier: false };
   }
 
   // User is on free tier - check existing shifts
@@ -41,12 +44,12 @@ export async function checkShiftLimit(targetMonth: string): Promise<ShiftLimitCh
 
   if (error) {
     console.error('Error fetching shifts for limit check:', error);
-    return { allowed: false, reason: 'Database error' };
+    return { allowed: false, reason: 'Database error', isFreeTier };
   }
 
   // If no existing shifts, allow
   if (!existingShifts || existingShifts.length === 0) {
-    return { allowed: true };
+    return { allowed: true, isFreeTier };
   }
 
   // Get unique months from existing shifts
@@ -54,18 +57,19 @@ export async function checkShiftLimit(targetMonth: string): Promise<ShiftLimitCh
 
   // If user already has shifts ONLY in the target month, allow (adding to same month)
   if (existingMonths.size === 1 && existingMonths.has(targetMonth)) {
-    return { allowed: true };
+    return { allowed: true, isFreeTier };
   }
 
   // If user has no existing shifts, allow
   if (existingMonths.size === 0) {
-    return { allowed: true };
+    return { allowed: true, isFreeTier };
   }
 
   // If user has shifts in other month(s), block
   return {
     allowed: false,
     existingMonths: Array.from(existingMonths),
-    reason: 'Free tier users can only have shifts in one month'
+    reason: 'Free tier users can only have shifts in one month',
+    isFreeTier
   };
 }

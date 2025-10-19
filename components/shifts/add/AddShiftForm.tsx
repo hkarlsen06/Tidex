@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState, useTransition, useEffect, useRef } from "react";
+import { useMemo, useState, useTransition, useEffect, useRef, useCallback } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/app/Button";
 import { TimeInput } from "@/components/app/TimeInput";
@@ -31,6 +32,12 @@ function toLocalISODate(d: Date) {
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
+}
+
+function monthKeyFromDate(date: Date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  return `${y}-${m}`;
 }
 
 function toMinutes(hhmm: string): number {
@@ -70,6 +77,9 @@ export default function AddShiftForm({ existingShifts }: Props) {
   const endInputRef = useRef<HTMLInputElement>(null);
   const [showLimitModal, setShowLimitModal] = useState(false);
   const [limitModalData, setLimitModalData] = useState<{ existingMonths: string[]; targetMonth: string } | null>(null);
+  const [isFreeTier, setIsFreeTier] = useState<boolean | null>(null);
+  const [showMultiMonthWarning, setShowMultiMonthWarning] = useState(false);
+  const limitStatusLoadingRef = useRef(false);
 
   const canSubmit = dates.length > 0 && /^\d{2}:\d{2}$/.test(start) && /^\d{2}:\d{2}$/.test(end);
 
@@ -145,6 +155,51 @@ export default function AddShiftForm({ existingShifts }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const ensureLimitStatus = useCallback(
+    async (targetMonth: string) => {
+      if (isFreeTier !== null || limitStatusLoadingRef.current) {
+        return;
+      }
+
+      limitStatusLoadingRef.current = true;
+      try {
+        const status = await checkShiftLimit(targetMonth);
+        setIsFreeTier(status.isFreeTier);
+      } catch (err) {
+        console.error("Kunne ikke sjekke abonnementstatus:", err);
+      } finally {
+        limitStatusLoadingRef.current = false;
+      }
+    },
+    [isFreeTier]
+  );
+
+  useEffect(() => {
+    const initialMonthKey = monthKeyFromDate(month);
+    void ensureLimitStatus(initialMonthKey);
+  }, [month, ensureLimitStatus]);
+
+  const handleSelectedChange = useCallback(
+    (nextDates: Date[]) => {
+      if (nextDates.length > 0) {
+        const firstMonthKey = monthKeyFromDate(nextDates[0]);
+        void ensureLimitStatus(firstMonthKey);
+      }
+
+      if (isFreeTier) {
+        const uniqueMonths = new Set(nextDates.map(monthKeyFromDate));
+        if (uniqueMonths.size > 1) {
+          setShowMultiMonthWarning(true);
+          return;
+        }
+      }
+
+      setShowMultiMonthWarning(false);
+      setDates(nextDates);
+    },
+    [ensureLimitStatus, isFreeTier]
+  );
+
   const onSubmit = async () => {
     if (!canSubmit) return;
     setError(null);
@@ -159,6 +214,7 @@ export default function AddShiftForm({ existingShifts }: Props) {
 
       // Check if user can add shifts to this month (before transition)
       const limitCheck = await checkShiftLimit(targetMonth);
+      setIsFreeTier(limitCheck.isFreeTier);
 
       if (!limitCheck.allowed && limitCheck.existingMonths) {
         // Show modal with options to upgrade or delete
@@ -288,11 +344,21 @@ export default function AddShiftForm({ existingShifts }: Props) {
               month={month}
               onMonthChange={setMonth}
               selected={dates}
-              onSelectedChange={setDates}
+              onSelectedChange={handleSelectedChange}
               hasShiftDates={hasShiftDates}
               conflictDates={conflictDates}
               hideCaptionNav
             />
+
+            {showMultiMonthWarning && (
+              <div className="rounded-2xl border border-warning/40 bg-warning-subtle px-4 py-3 text-sm text-warning">
+                Du kan bare ha vakter i én måned av gangen.{" "}
+                <Link href="/settings/subscription" className="font-semibold underline underline-offset-4">
+                  Oppgrader
+                </Link>{" "}
+                for å legge til så mange du vil.
+              </div>
+            )}
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <label className="block min-w-0 space-y-3 rounded-2xl border border-border-subtle bg-surface-secondary/70 p-4 shadow-app-inner transition hover:border-border">
