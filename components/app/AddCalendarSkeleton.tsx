@@ -1,4 +1,4 @@
-import { Card, CardHeader } from "@/components/app/Card";
+import { Card } from "@/components/app/Card";
 
 /**
  * Skeleton loader for the calendar in the /shifts/add route.
@@ -10,22 +10,6 @@ export function AddCalendarSkeleton() {
 
   return (
     <Card className="rounded-card border-0 animate-pulse">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 py-3 px-0">
-        <div className="flex items-center gap-1 flex-1">
-          {/* Month picker skeleton */}
-          <div className="flex items-center gap-2">
-            {/* Previous button */}
-            <div className="h-9 w-9 bg-surface-secondary rounded" />
-            {/* Month name */}
-            <div className="h-6 w-24 bg-surface-secondary rounded" />
-            {/* Next button */}
-            <div className="h-9 w-9 bg-surface-secondary rounded" />
-          </div>
-          {/* Year */}
-          <div className="h-5 w-12 bg-surface-secondary rounded ml-1" />
-        </div>
-      </CardHeader>
-
       {/* Weekday headers */}
       <div className="grid grid-cols-7 mb-2">
         {Array.from({ length: 7 }, (_, i) => (
