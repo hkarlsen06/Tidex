@@ -393,20 +393,20 @@ export function ShiftDetails({
                   </Button>
                 </div>
               ) : confirmingDelete ? (
-                <div className="flex items-center gap-2">
-                  <Button
-                    onClick={handleCancelDelete}
-                    disabled={isDeleting}
-                    className="bg-emerald-500 text-white hover:bg-emerald-600"
-                  >
-                    Avbryt
-                  </Button>
+                <div className="flex items-center gap-3">
                   <Button
                     onClick={handleConfirmDelete}
                     disabled={isDeleting}
                     className="bg-surface-secondary text-text-primary hover:bg-surface-secondary/80 border border-border-subtle"
                   >
                     Bekreft
+                  </Button>
+                  <Button
+                    onClick={handleCancelDelete}
+                    disabled={isDeleting}
+                    className="bg-emerald-500 text-white hover:bg-emerald-600"
+                  >
+                    Avbryt
                   </Button>
                 </div>
               ) : null}
