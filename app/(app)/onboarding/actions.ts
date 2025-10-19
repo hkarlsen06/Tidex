@@ -12,6 +12,11 @@ interface OnboardingSettings {
   break_method: string | null;
   break_threshold_hours: number | null;
   break_deduction_minutes: number | null;
+  pause_deduction_enabled: boolean;
+  pause_deduction_method: string | null;
+  pause_threshold_hours: number | null;
+  pause_deduction_minutes: number | null;
+  break_policy: string | null;
   tax_deduction_enabled: boolean;
   tax_percentage: number | null;
   payroll_day: number | null;
@@ -44,6 +49,11 @@ export async function completeOnboarding(settings: OnboardingSettings) {
     break_method: settings.break_method,
     break_threshold_hours: settings.break_threshold_hours,
     break_deduction_minutes: settings.break_deduction_minutes,
+    pause_deduction_enabled: settings.pause_deduction_enabled,
+    pause_deduction_method: settings.pause_deduction_method,
+    pause_threshold_hours: settings.pause_threshold_hours,
+    pause_deduction_minutes: settings.pause_deduction_minutes,
+    break_policy: settings.break_policy,
     tax_deduction_enabled: settings.tax_deduction_enabled,
     tax_percentage: settings.tax_percentage,
     payroll_day: settings.payroll_day,

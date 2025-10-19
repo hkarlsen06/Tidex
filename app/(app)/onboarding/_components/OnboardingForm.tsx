@@ -15,6 +15,8 @@ import { completeOnboarding } from "../actions";
 import { PRESET_WAGE_RATES } from "@/lib/payroll/calc";
 import { SupplementsData } from "@/components/settings/SupplementsEditor";
 
+const BREAK_METHOD_OPTIONS = ["proportional", "base_only", "end_of_shift"] as const;
+
 interface OnboardingFormProps {
   initialSettings?: {
     use_preset?: boolean;
@@ -56,26 +58,56 @@ export function OnboardingForm({ initialSettings }: OnboardingFormProps) {
   );
 
   // Step 3: Break
+  const initialBreakEnabled =
+    initialSettings?.break_enabled ??
+    initialSettings?.pause_deduction_enabled ??
+    false;
+  const initialThresholdValue =
+    initialSettings?.break_threshold_hours ??
+    initialSettings?.pause_threshold_hours ??
+    null;
+  const initialDurationValue =
+    initialSettings?.break_deduction_minutes ??
+    initialSettings?.pause_deduction_minutes ??
+    null;
+  const existingBreakPolicy = initialSettings?.break_policy;
+  const initialFallbackMethod =
+    typeof existingBreakPolicy === "string" &&
+    BREAK_METHOD_OPTIONS.includes(
+      existingBreakPolicy as (typeof BREAK_METHOD_OPTIONS)[number]
+    )
+      ? existingBreakPolicy
+      : undefined;
+  const initialBreakMethod =
+    initialSettings?.break_method ??
+    initialSettings?.pause_deduction_method ??
+    initialFallbackMethod ??
+    "proportional";
+
   const [breakEnabled, setBreakEnabled] = useState(
-    initialSettings?.break_enabled ?? false
+    initialBreakEnabled
   );
   const [threshold, setThreshold] = useState(
-    initialSettings?.break_threshold_hours?.toString() || "5.5"
+    initialThresholdValue !== null ? initialThresholdValue.toString() : "5.5"
   );
   const [duration, setDuration] = useState(
-    initialSettings?.break_deduction_minutes?.toString() || "30"
+    initialDurationValue !== null ? initialDurationValue.toString() : "30"
   );
   const [method, setMethod] = useState(
-    initialSettings?.break_method || "proportional"
+    initialBreakMethod
   );
   const [breakThresholdActivated, setBreakThresholdActivated] = useState(
-    Boolean(initialSettings?.break_threshold_hours)
+    initialThresholdValue !== null
   );
   const [breakDurationActivated, setBreakDurationActivated] = useState(
-    Boolean(initialSettings?.break_deduction_minutes)
+    initialDurationValue !== null
   );
   const [breakMethodActivated, setBreakMethodActivated] = useState(
-    Boolean(initialSettings?.break_method)
+    Boolean(
+      initialSettings?.break_method ??
+        initialSettings?.pause_deduction_method ??
+        initialFallbackMethod
+    )
   );
 
   // Step 4: Tax & Payroll
@@ -114,15 +146,24 @@ export function OnboardingForm({ initialSettings }: OnboardingFormProps) {
   const handleComplete = async () => {
     setIsSubmitting(true);
     try {
+      const parsedThreshold = breakEnabled ? Number.parseFloat(threshold) : null;
+      const parsedDuration = breakEnabled ? Number.parseInt(duration, 10) : null;
+      const breakMethod = breakEnabled ? method : null;
+
       const settings = {
         use_preset: wageType === "preset",
         current_wage_level: wageType === "preset" ? parseInt(wageLevel) : null,
         custom_wage: wageType === "custom" ? parseFloat(customWage) : null,
         custom_bonuses: customBonuses,
         break_enabled: breakEnabled,
-        break_method: breakEnabled ? method : null,
-        break_threshold_hours: breakEnabled ? parseFloat(threshold) : null,
-        break_deduction_minutes: breakEnabled ? parseInt(duration) : null,
+        break_method: breakMethod,
+        break_threshold_hours: parsedThreshold,
+        break_deduction_minutes: parsedDuration,
+        pause_deduction_enabled: breakEnabled,
+        pause_deduction_method: breakMethod,
+        pause_threshold_hours: parsedThreshold,
+        pause_deduction_minutes: parsedDuration,
+        break_policy: breakMethod,
         tax_deduction_enabled: taxDeductionEnabled,
         tax_percentage: taxDeductionEnabled && taxPercentage ? parseFloat(taxPercentage) : null,
         payroll_day: payrollDay ? parseInt(payrollDay) : null,
