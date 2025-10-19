@@ -6,15 +6,17 @@ import { Input } from "@/components/app/Input";
 import { cn } from "@/lib/cn";
 
 type TimeInputProps = {
+  id?: string;
   value: string;
   onChange: (value: string) => void;
   className?: string;
   onComplete?: () => void; // Called when user finishes entering time
   step?: number;
+  disabled?: boolean;
 };
 
 export const TimeInput = React.forwardRef<HTMLInputElement, TimeInputProps>(
-  ({ value, onChange, className, onComplete, step = 900 }, ref) => {
+  ({ id, value, onChange, className, onComplete, step = 900, disabled }, ref) => {
     const [inputValue, setInputValue] = React.useState(value);
     const internalRef = React.useRef<HTMLInputElement>(null);
     const inputRef = (ref as React.RefObject<HTMLInputElement>) || internalRef;
@@ -176,6 +178,7 @@ export const TimeInput = React.forwardRef<HTMLInputElement, TimeInputProps>(
 
     return (
       <Input
+        id={id}
         ref={inputRef}
         type="text"
         inputMode="numeric"
@@ -185,6 +188,7 @@ export const TimeInput = React.forwardRef<HTMLInputElement, TimeInputProps>(
         onKeyDown={handleKeyDown}
         onBlur={handleBlur}
         maxLength={5}
+        disabled={disabled}
         className={cn("h-10 flex-1 rounded-xl border-border-subtle bg-transparent text-base text-text-primary", className)}
       />
     );

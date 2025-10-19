@@ -224,7 +224,7 @@ export function PayForm({ initialData }: PayFormProps) {
         <Card className="p-6">
           <div className="space-y-6">
             <div>
-              <h3 className="text-lg font-semibold">Egendefinerte tillegg</h3>
+              <h3 className="text-lg font-semibold">Tillegg</h3>
               <p className="text-sm text-text-secondary mt-1">
                 Legg til tillegg for bestemte tider og dager
               </p>

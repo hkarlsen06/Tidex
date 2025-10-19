@@ -1,41 +1,69 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { SUPABASE_AUTH_COOKIE_NAME } from '@/lib/supabase/constants';
+import { createServerClient } from '@supabase/ssr';
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Define public routes that don't need auth
+  // Define routes that don't need authentication
   const isPublicRoute =
     pathname.startsWith('/login') ||
     pathname.startsWith('/signup') ||
     pathname.startsWith('/auth/') ||
     pathname.startsWith('/reset-password');
 
-  // Only check auth for protected routes
-  if (!isPublicRoute) {
-    const hasSupabaseCookie = request.cookies
-      .getAll()
-      .some((cookie) => cookie.name.startsWith(SUPABASE_AUTH_COOKIE_NAME));
+  // Always create a response object so we can modify cookies later
+  const res = NextResponse.next();
 
-    if (!hasSupabaseCookie) {
-      const loginUrl = new URL('/login', request.url);
-      return NextResponse.redirect(loginUrl);
-    }
+  // Skip auth checks on public routes
+  if (isPublicRoute) return res;
+
+  // Create Supabase server client for the middleware
+const supabase = createServerClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+  {
+    cookies: {
+      getAll() {
+        return request.cookies.getAll().map(({ name, value }) => ({ name, value }));
+      },
+      setAll(cookies) {
+        cookies.forEach(({ name, value, options }) => {
+          res.cookies.set({ name, value, ...options });
+        });
+      },
+    },
+  }
+);
+
+  // Try to get the current user (refreshes tokens if needed)
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+
+  // If refresh token is invalid or expired, clear cookies and redirect to login
+  if (error?.status === 400 || /refresh token/i.test(error?.message ?? '')) {
+    res.cookies.set({ name: 'sb-access-token', value: '', path: '/', maxAge: 0 });
+    res.cookies.set({ name: 'sb-refresh-token', value: '', path: '/', maxAge: 0 });
+
+    const loginUrl = new URL('/login', request.url);
+    return NextResponse.redirect(loginUrl);
   }
 
-  return NextResponse.next();
+  // If no user found, redirect to login
+  if (!user) {
+    const loginUrl = new URL('/login', request.url);
+    return NextResponse.redirect(loginUrl);
+  }
+
+  // Auth OK — continue
+  return res;
 }
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public files (public folder)
-     */
+    // Match all routes except static assets and public files
     '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 };
