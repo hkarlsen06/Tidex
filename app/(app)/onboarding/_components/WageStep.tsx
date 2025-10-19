@@ -27,8 +27,13 @@ export function WageStep({
   setCustomWage,
   onNext,
 }: WageStepProps) {
+  const wageValue = parseFloat(customWage);
+  const isCustomWageInvalid =
+    wageType === "custom" &&
+    (!customWage || Number.isNaN(wageValue) || wageValue < 1 || wageValue > 10000);
+
   const handleNext = () => {
-    if (wageType === "custom" && (!customWage || parseFloat(customWage) < 100)) {
+    if (isCustomWageInvalid) {
       return;
     }
     if (wageType === "preset" && !wageLevel) {
@@ -116,7 +121,9 @@ export function WageStep({
               <Input
                 id="custom-wage"
                 type="number"
-                min={100}
+                min={1}
+                max={10000}
+                invalid={isCustomWageInvalid}
                 value={customWage}
                 onChange={(e) => setCustomWage(e.target.value)}
                 className="pr-12"
