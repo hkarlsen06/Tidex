@@ -26,7 +26,7 @@ const dateFormatter = new Intl.DateTimeFormat("nb-NO", {
   month: "long",
 });
 
-function formatDateParts(date: string) {
+export function formatDateParts(date: string) {
   const parsed = new Date(`${date}T00:00:00Z`);
   const weekday = parsed.getUTCDay();
   return {
@@ -36,19 +36,19 @@ function formatDateParts(date: string) {
   };
 }
 
-function formatTimeRange(start: string, end: string) {
+export function formatTimeRange(start: string, end: string) {
   return `${start} – ${end}`;
 }
 
-function formatHours(value: number) {
+export function formatHours(value: number) {
   return `${hoursFormatter.format(value)}t`;
 }
 
-function formatCurrency(value: number) {
+export function formatCurrency(value: number) {
   return `${numberFormatter.format(Math.round(value))} kr`;
 }
 
-function formatPlainAmount(value: number) {
+export function formatPlainAmount(value: number) {
   return numberFormatter.format(Math.round(value));
 }
 
@@ -74,7 +74,7 @@ export function ShiftCard({ shift, onClick }: ShiftCardProps) {
           <p className="text-lg font-medium text-text-primary">
             {dateLabel}
             <span className="text-text-muted"> · </span>
-            <span className={isWeekend ? "text-brand-highlight" : "text-text-secondary"}>
+            <span className="text-text-secondary">
               {dayName}
             </span>
           </p>

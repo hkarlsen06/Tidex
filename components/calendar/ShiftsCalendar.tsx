@@ -10,7 +10,6 @@ import {
   type ISODate,
 } from "./calendar.utils";
 import type { EarningsByDate, HoursByDate } from "./calendar.types";
-import { useMonth } from "../app/MonthContext";
 
 export type ShiftsCalendarProps = {
   month: Date;
@@ -21,12 +20,17 @@ export type ShiftsCalendarProps = {
   onDayClick?: (isoDate: ISODate, hasShifts: boolean) => void;
   onMonthChange?: (month: Date) => void;
   weekNumberPosition?: "top-left" | "bottom-left";
+  selectedDate?: ISODate | null;
 };
 
 type DayButtonProps = {
   day: { date: Date };
   className?: string;
-  modifiers?: { today?: boolean };
+  modifiers?: {
+    today?: boolean;
+    selected?: boolean;
+    [key: string]: boolean | undefined;
+  };
   earningsByDate: EarningsByDate;
   hoursByDate: HoursByDate;
   employeesByDate: Record<ISODate, { name: string; color?: string }[]>;
@@ -34,6 +38,7 @@ type DayButtonProps = {
   weekNumberPosition: "top-left" | "bottom-left";
   animationDirection: 'next' | 'previous' | null;
   currentMonth: Date;
+  selectedDate?: ISODate | null;
   [key: string]: any;
 };
 
@@ -72,6 +77,7 @@ const DayButton = React.memo(function DayButton({
   weekNumberPosition,
   animationDirection,
   currentMonth,
+  selectedDate,
   ...buttonProps
 }: DayButtonProps) {
   const date: Date = day.date;
@@ -81,6 +87,7 @@ const DayButton = React.memo(function DayButton({
   const employees = employeesByDate[iso] || [];
   const isToday = Boolean(modifiers?.today);
   const isMonday = date.getDay() === 1;
+  const isSelected = selectedDate === iso;
   const week = isMonday ? getIsoWeek(date) : null;
 
   // Only animate cells from the current month
@@ -91,7 +98,12 @@ const DayButton = React.memo(function DayButton({
   return (
     <button
       {...buttonProps}
-      className={`${className} ${isToday ? "bg-surface-secondary" : ""}`}
+      aria-selected={isSelected}
+      className={`${className} ${isToday ? "bg-surface-secondary" : ""} ${
+        isSelected
+          ? "border-brand-gradientMid bg-brand-gradientMid/10 text-brand-highlight shadow-app-sm"
+          : ""
+      }`}
     >
       <div className="relative flex flex-col items-center justify-start gap-0.5 w-full h-full p-1 pb-1.5 overflow-hidden">
       {isMonday && (
@@ -161,9 +173,14 @@ export function ShiftsCalendar({
   onDayClick,
   onMonthChange,
   weekNumberPosition = "bottom-left",
+  selectedDate = null,
 }: ShiftsCalendarProps) {
   const [localDirection, setLocalDirection] = React.useState<'next' | 'previous' | null>(null);
   const [prevMonth, setPrevMonth] = React.useState(month);
+  const selectedDay = React.useMemo(
+    () => (selectedDate ? new Date(`${selectedDate}T00:00:00`) : undefined),
+    [selectedDate]
+  );
 
   // Track month changes and determine direction locally
   React.useEffect(() => {
@@ -173,6 +190,14 @@ export function ShiftsCalendar({
       setPrevMonth(month);
     }
   }, [month, prevMonth]);
+
+  React.useEffect(() => {
+    if (!localDirection) {
+      return;
+    }
+    const timeout = setTimeout(() => setLocalDirection(null), 450);
+    return () => clearTimeout(timeout);
+  }, [localDirection]);
 
   const CustomDayButton = React.useCallback(
     (props: any) => (
@@ -185,9 +210,10 @@ export function ShiftsCalendar({
         weekNumberPosition={weekNumberPosition}
         animationDirection={localDirection}
         currentMonth={month}
+        selectedDate={selectedDate}
       />
     ),
-    [mode, earningsByDate, hoursByDate, employeesByDate, weekNumberPosition, localDirection, month]
+    [mode, earningsByDate, hoursByDate, employeesByDate, weekNumberPosition, localDirection, month, selectedDate]
   );
 
   const handleDayClick = React.useCallback(
@@ -202,9 +228,12 @@ export function ShiftsCalendar({
   );
 
   return (
-    <DayPicker
+    <div className="w-full">
+      <DayPicker
       locale={nb}
       month={month}
+      mode="single"
+      selected={selectedDay}
       onMonthChange={onMonthChange}
       onDayClick={handleDayClick}
       weekStartsOn={1}
@@ -227,9 +256,11 @@ export function ShiftsCalendar({
         week: "grid grid-cols-7 gap-1 mb-1",
         day: "aspect-square p-0",
         day_button: "w-full h-full rounded-lg hover:bg-surface-secondary transition-colors border border-border-subtle",
+        selected: "",
         outside: "opacity-40",
         today: "",
       }}
     />
+    </div>
   );
 }

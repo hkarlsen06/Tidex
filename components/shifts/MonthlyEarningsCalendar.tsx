@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
-import { IconClock } from "@tabler/icons-react";
+import { useMemo, useState, useEffect, type Ref } from "react";
+import { IconClock, IconX } from "@tabler/icons-react";
 import { ShiftsCalendar } from "@/components/app/ShiftsCalendar";
 import { Card, CardHeader, CardTitle } from "@/components/app/Card";
 import { Button } from "@/components/app/Button";
@@ -16,6 +16,9 @@ type MonthlyEarningsCalendarProps = {
   month: Date;
   onMonthChange: (month: Date) => void;
   onDayClick?: (iso: ISODate, hasShifts: boolean) => void;
+  selectedDate?: ISODate | null;
+  containerRef?: Ref<HTMLDivElement>;
+  onClearSelection?: () => void;
 };
 
 function buildEarningsByDate(shifts: ShiftWithComputations[]): EarningsByDate {
@@ -94,6 +97,9 @@ export function MonthlyEarningsCalendar({
   month,
   onMonthChange,
   onDayClick,
+  selectedDate = null,
+  containerRef,
+  onClearSelection,
 }: MonthlyEarningsCalendarProps) {
   const { goToPreviousMonth, goToNextMonth } = useMonth();
   const [viewMode, setViewMode] = useState<"money" | "hours">("money");
@@ -140,9 +146,9 @@ export function MonthlyEarningsCalendar({
   );
 
   return (
-    <Card className="rounded-card border-0">
+    <Card ref={containerRef} className="rounded-card border-0">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 py-3 px-0">
-        <div className="flex items-center gap-1 flex-1">
+        <div className="flex items-center gap-1">
           <MonthPicker
             month={month}
             onPreviousMonth={goToPreviousMonth}
@@ -165,40 +171,61 @@ export function MonthlyEarningsCalendar({
           hoursByDate={hoursByDate}
           onMonthChange={onMonthChange}
           onDayClick={onDayClick}
+          selectedDate={selectedDate}
           weekNumberPosition="top-left"
         />
       </div>
       <div className="flex justify-center pb-6">
-        <div className="inline-flex items-center gap-1 rounded-full border border-border-subtle bg-surface-secondary/80 p-1 shadow-app-sm dark:shadow-app-inner w-2/3">
-          <Button
-            type="button"
-            variant="ghost"
-            aria-pressed={viewMode === "money"}
-            onClick={() => setViewMode("money")}
-            className={cn(
-              "h-9 rounded-full px-4 text-sm transition-all flex-1 whitespace-nowrap",
-              viewMode === "money"
-                ? "bg-surface-primary text-text-primary shadow-sm"
-                : "text-text-secondary hover:text-text-primary"
-            )}
-          >
-            ---- kr
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            aria-pressed={viewMode === "hours"}
-            onClick={() => setViewMode("hours")}
-            className={cn(
-              "h-9 rounded-full px-4 text-sm transition-all flex-1 whitespace-nowrap",
-              viewMode === "hours"
-                ? "bg-surface-primary text-text-primary shadow-sm"
-                : "text-text-secondary hover:text-text-primary"
-            )}
-          >
-            <span>--:--</span>
-            <IconClock stroke={2} aria-hidden="true" />
-          </Button>
+        <div className="inline-flex min-h-[44px] w-2/3 items-center gap-1 rounded-full border border-border-subtle bg-surface-secondary/80 px-1 py-1 shadow-app-sm dark:shadow-app-inner">
+          {selectedDate ? (
+            <div className="flex w-full items-center justify-between gap-3 rounded-full bg-surface-primary px-4 py-2">
+              <div className="flex items-center justify-center text-sm font-semibold leading-tight text-brand-highlight text-center">
+                <span>Trykk samme for detaljer, annen for å flytte.</span>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => onClearSelection?.()}
+                disabled={!onClearSelection}
+                className="rounded-full px-3 py-3 text-text-secondary hover:text-text-primary"
+              >
+                <IconX stroke={2} className="h-4 w-4" aria-hidden="true" />
+                <span className="sr-only">Fjern valg</span>
+              </Button>
+            </div>
+          ) : (
+            <>
+              <Button
+                type="button"
+                variant="ghost"
+                aria-pressed={viewMode === "money"}
+                onClick={() => setViewMode("money")}
+                className={cn(
+                  "h-9 rounded-full px-4 text-sm transition-all flex-1 whitespace-nowrap",
+                  viewMode === "money"
+                    ? "bg-surface-primary text-text-primary shadow-sm"
+                    : "text-text-secondary hover:text-text-primary"
+                )}
+              >
+                ---- kr
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                aria-pressed={viewMode === "hours"}
+                onClick={() => setViewMode("hours")}
+                className={cn(
+                  "h-9 rounded-full px-4 text-sm transition-all flex-1 whitespace-nowrap",
+                  viewMode === "hours"
+                    ? "bg-surface-primary text-text-primary shadow-sm"
+                    : "text-text-secondary hover:text-text-primary"
+                )}
+              >
+                <span>--:--</span>
+                <IconClock stroke={2} aria-hidden="true" />
+              </Button>
+            </>
+          )}
         </div>
       </div>
     </Card>
