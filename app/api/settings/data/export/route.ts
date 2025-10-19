@@ -1,18 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { createSupabaseRouteHandlerClient } from "@/lib/supabase/server";
-import type { ShiftRow, UserSettings, BonusRule } from "@/lib/payroll";
-import { computeShift } from "@/lib/payroll";
+import {
+  computeShift,
+  PRESET_SUPPLEMENT_RULES,
+  type ShiftRow,
+  type UserSettings,
+} from "@/lib/payroll";
 import { logger } from "@/lib/logger";
-
-const PRESET_RULES: BonusRule[] = [
-  { days: [1, 2, 3, 4, 5], from: "18:00", to: "21:00", rate: 22 },
-  { days: [1, 2, 3, 4, 5], from: "21:00", to: "23:59", rate: 45 },
-  { days: [6], from: "13:00", to: "15:00", rate: 45 },
-  { days: [6], from: "15:00", to: "18:00", rate: 55 },
-  { days: [6], from: "18:00", to: "23:59", rate: 110 },
-  { days: [7], from: "00:00", to: "23:59", rate: 115 },
-];
 
 const CACHE_CONTROL = { headers: { "cache-control": "no-store" } };
 
@@ -130,7 +125,7 @@ export async function GET(request: NextRequest) {
   }
 
   const computedShifts = (shifts ?? []).map((shift) => {
-    const computed = computeShift(shift as ShiftRow, settings, PRESET_RULES);
+    const computed = computeShift(shift as ShiftRow, settings, PRESET_SUPPLEMENT_RULES);
     const { shift_type, series_id, ...rest } = shift as ShiftRowWithMeta;
     return {
       id: rest.id,

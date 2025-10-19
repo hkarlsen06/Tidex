@@ -2,21 +2,14 @@ import "server-only";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   computeShift,
-  type BonusRule,
   type ShiftRow,
   type ShiftWithComputations,
   type UserSettings,
+  PRESET_SUPPLEMENT_RULES,
 } from "@/lib/payroll";
 import { logger } from "@/lib/logger";
 
-export const PRESET_RULES: BonusRule[] = [
-  { days: [1, 2, 3, 4, 5], from: "18:00", to: "21:00", rate: 22 },
-  { days: [1, 2, 3, 4, 5], from: "21:00", to: "23:59", rate: 45 },
-  { days: [6], from: "13:00", to: "15:00", rate: 45 },
-  { days: [6], from: "15:00", to: "18:00", rate: 55 },
-  { days: [6], from: "18:00", to: "23:59", rate: 110 },
-  { days: [7], from: "00:00", to: "23:59", rate: 115 },
-];
+export const PRESET_RULES = PRESET_SUPPLEMENT_RULES;
 
 export type ShiftsAggregates = {
   totalHours: number;

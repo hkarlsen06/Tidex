@@ -10,13 +10,17 @@ import { Separator } from '@appui/Separator';
 import { SupplementsEditor, SupplementsData } from '@/components/settings/SupplementsEditor';
 import { updatePaySettings } from '@/app/(app)/settings/_actions/updateSettings';
 import { useRouter } from 'next/navigation';
-import { PRESET_WAGE_RATES } from '@/lib/payroll/calc';
+import { PRESET_WAGE_RATES, PRESET_SUPPLEMENT_RULES } from '@/lib/payroll';
 import { IconBuilding, IconAdjustments } from '@tabler/icons-react';
 import { cn } from '@/lib/utils';
 
 interface PayFormProps {
   initialData: any;
 }
+
+const TARIFF_SUPPLEMENTS_DATA: SupplementsData = {
+  rules: PRESET_SUPPLEMENT_RULES.map((rule) => ({ ...rule })),
+};
 
 export function PayForm({ initialData }: PayFormProps) {
   const router = useRouter();
@@ -219,23 +223,34 @@ export function PayForm({ initialData }: PayFormProps) {
         </div>
       </Card>
 
-      {/* Custom Supplements - only for custom wage */}
-      {!usePreset && (
-        <Card className="p-6">
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-lg font-semibold">Tillegg</h3>
-              <p className="text-sm text-text-secondary mt-1">
-                Legg til tillegg for bestemte tider og dager
-              </p>
-            </div>
-
-            <Separator />
-
-            <SupplementsEditor value={customBonuses} onChange={setCustomBonuses} />
+      {/* Supplements */}
+      <Card className="p-6">
+        <div className="space-y-6">
+          <div>
+            <h3 className="text-lg font-semibold">Tillegg</h3>
+            <p className="text-sm text-text-secondary mt-1">
+              {usePreset
+                ? 'Se hvilke tillegg som følger tariffavtalen'
+                : 'Legg til tillegg for bestemte tider og dager'}
+            </p>
           </div>
-        </Card>
-      )}
+
+          <Separator />
+
+          <SupplementsEditor
+            key={usePreset ? 'tariff' : 'custom'}
+            value={usePreset ? TARIFF_SUPPLEMENTS_DATA : customBonuses}
+            onChange={setCustomBonuses}
+            readOnly={usePreset}
+          />
+
+          {usePreset && (
+            <p className="text-xs text-text-secondary">
+              Tariff-tillegg styres av tariffavtalen og kan ikke endres her.
+            </p>
+          )}
+        </div>
+      </Card>
 
       {/* Break Deduction */}
       <Card className="p-6">
