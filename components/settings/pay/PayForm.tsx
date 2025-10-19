@@ -38,7 +38,9 @@ export function PayForm({ initialData }: PayFormProps) {
   const [pauseDeductionEnabled, setPauseDeductionEnabled] = useState(
     initialData.pause_deduction_enabled ?? true
   );
-  const [breakPolicy, setBreakPolicy] = useState(initialData.break_policy || 'proportional');
+  const [pauseMethod, setPauseMethod] = useState(
+    initialData.pause_deduction_method || 'proportional'
+  );
   const [pauseThresholdHours, setPauseThresholdHours] = useState(
     initialData.pause_threshold_hours?.toString() || '5.5'
   );
@@ -79,12 +81,11 @@ export function PayForm({ initialData }: PayFormProps) {
         monthly_goal: monthlyGoal ? parseFloat(monthlyGoal) : null,
         payroll_day: payrollDay ? parseInt(payrollDay) : null,
         pause_deduction_enabled: pauseDeductionEnabled,
-        pause_deduction_method: pauseDeductionEnabled ? breakPolicy : null,
+        pause_deduction_method: pauseDeductionEnabled ? pauseMethod : null,
         pause_threshold_hours: pauseDeductionEnabled ? parseFloat(pauseThresholdHours) : null,
         pause_deduction_minutes: pauseDeductionEnabled ? parseInt(pauseDeductionMinutes) : null,
         tax_deduction_enabled: taxDeductionEnabled,
         tax_percentage: taxDeductionEnabled ? parseFloat(taxPercentage) : null,
-        break_policy: breakPolicy,
       });
       router.refresh();
     } catch (error) {
@@ -101,7 +102,7 @@ export function PayForm({ initialData }: PayFormProps) {
       return;
     }
     saveSettings();
-  }, [usePreset, wageLevel, breakPolicy, pauseDeductionEnabled, taxDeductionEnabled, customBonuses]);
+  }, [usePreset, wageLevel, pauseMethod, pauseDeductionEnabled, taxDeductionEnabled, customBonuses]);
 
   // Debounced auto-save for text inputs (1 second)
   useEffect(() => {
@@ -258,9 +259,9 @@ export function PayForm({ initialData }: PayFormProps) {
 
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="breakPolicy">Trekkmetode</Label>
-                  <Select value={breakPolicy} onValueChange={setBreakPolicy}>
-                    <SelectTrigger id="breakPolicy">
+                  <Label htmlFor="pauseMethod">Trekkmetode</Label>
+                  <Select value={pauseMethod} onValueChange={setPauseMethod}>
+                    <SelectTrigger id="pauseMethod">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -270,9 +271,9 @@ export function PayForm({ initialData }: PayFormProps) {
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-text-secondary">
-                    {breakPolicy === 'proportional' && 'Trekker pause proporsjonal basert på vaktlengde'}
-                    {breakPolicy === 'base_only' && 'Trekker pause kun fra grunnlønn'}
-                    {breakPolicy === 'end_of_shift' && 'Trekker pause fra slutten av vakten'}
+                    {pauseMethod === 'proportional' && 'Trekker pause proporsjonal basert på vaktlengde'}
+                    {pauseMethod === 'base_only' && 'Trekker pause kun fra grunnlønn'}
+                    {pauseMethod === 'end_of_shift' && 'Trekker pause fra slutten av vakten'}
                   </p>
                 </div>
 

@@ -44,11 +44,10 @@ Lookup file. Keep updated when new columns are added.
 - **tax_deduction_enabled** → **boolean**
 - **tax_percentage** → **numeric**
 - **payroll_day** → **integer**
-- **break_enabled** → **boolean**
-- **break_method** → **text**
-- **break_threshold_hours** → **numeric**
-- **break_deduction_minutes** → **integer**
-- **audit_break_calculations** → **boolean**
+- **pause_deduction_enabled** → **boolean**
+- **pause_deduction_method** → **text**
+- **pause_threshold_hours** → **numeric**
+- **pause_deduction_minutes** → **integer**
 - **theme** → **text**
 
 ---

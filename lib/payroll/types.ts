@@ -15,19 +15,11 @@ export type UserSettings = {
   current_wage_level?: number | null; // maps to preset table
   custom_bonuses?: { rules: BonusRule[] } | null;
 
-  // Break/pause settings (support both old and new field names for backward compatibility)
-  break_enabled?: boolean | null;          // Master switch for automatic break deductions
-  break_method?: BreakMethod | null;       // How to apply deduction (proportional, base_only, end_of_shift)
-  break_threshold_hours?: number | null;   // Minimum shift duration to trigger break (e.g., 5.5)
-  break_deduction_minutes?: number | null; // Amount to deduct (e.g., 30)
-
-  // Old field names (deprecated but supported)
-  pause_deduction_enabled?: boolean | null;
-  pause_deduction_method?: BreakMethod | null;
-  pause_threshold_hours?: number | null;
-  pause_deduction_minutes?: number | null;
-
-  audit_break_calculations?: boolean | null;
+  // Pause settings
+  pause_deduction_enabled?: boolean | null; // Master switch for automatic break deductions
+  pause_deduction_method?: BreakMethod | null; // How to apply deduction (proportional, base_only, end_of_shift)
+  pause_threshold_hours?: number | null; // Minimum shift duration to trigger break (e.g., 5.5)
+  pause_deduction_minutes?: number | null; // Amount to deduct (e.g., 30)
 
   // Tax settings
   tax_deduction_enabled?: boolean | null;

@@ -80,7 +80,6 @@ export async function updatePaySettings(data: {
   pause_deduction_minutes?: number | null;
   tax_deduction_enabled?: boolean;
   tax_percentage?: number | null;
-  break_policy?: string;
 }) {
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
