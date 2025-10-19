@@ -36,7 +36,10 @@ import { cn } from "@/lib/cn";
 // Lazy load the calendar to reduce initial bundle size (~40KB savings)
 const MonthlyEarningsCalendar = dynamic(
   () => import("./MonthlyEarningsCalendar").then((mod) => ({ default: mod.MonthlyEarningsCalendar })),
-  { loading: () => <CalendarSkeleton /> }
+  {
+    loading: () => <CalendarSkeleton />,
+    ssr: true
+  }
 );
 
 export type WeekGroup = {
