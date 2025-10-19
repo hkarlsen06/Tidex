@@ -20,7 +20,7 @@ export default async function ProfilePage() {
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-2xl">
-      <BackButton fallbackHref="/settings" />
+      <BackButton label="Innstillinger" fallbackHref="/settings" />
 
       <div className="space-y-6">
         <div>
