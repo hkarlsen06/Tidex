@@ -105,7 +105,7 @@ const DayButton = React.memo(function DayButton({
           : ""
       }`}
     >
-      <div className="relative flex flex-col items-center justify-start gap-0.5 w-full h-full p-1 pb-1.5 overflow-hidden">
+      <div className="relative flex flex-col items-center justify-start gap-0.5 w-full h-full p-1 pb-2 sm:pb-1.5 overflow-hidden">
       {isMonday && (
         <span className={`absolute left-1 text-[9px] leading-none text-text-muted ${
           weekNumberPosition === "top-left" ? "top-1" : "bottom-1"
@@ -129,13 +129,13 @@ const DayButton = React.memo(function DayButton({
       {mode === "hours" && hours && (
         <div
           key={`hours-${iso}-${currentMonth.getFullYear()}-${currentMonth.getMonth()}`}
-          className={`text-[10px] font-medium text-text-secondary leading-tight text-center mt-1 ${getCellAnimationClasses(cellDirection)}`}
+          className={`text-[9px] sm:text-[10px] font-medium text-text-secondary leading-none text-center mt-0.5 ${getCellAnimationClasses(cellDirection)}`}
         >
           <div>
             {hours.start}
             {hours.start && "-"}
           </div>
-          <div>
+          <div className="mt-0.5">
             {hours.end}
             {hours.crossesMidnight && "*"}
           </div>
