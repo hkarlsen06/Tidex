@@ -104,7 +104,7 @@ export function StatsContent({ data }: StatsContentProps) {
         <Card className="border-border bg-surface-primary overflow-hidden">
           <CardContent className="p-6">
             <p className="text-lg font-semibold text-text-muted mb-3">
-              Inntjening denne måneden
+              Inntjening denne måneden (før skatt)
             </p>
             <div className="flex items-baseline gap-2">
               <p className="text-5xl font-bold tabular-nums text-text-primary">
