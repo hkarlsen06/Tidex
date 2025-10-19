@@ -9,9 +9,10 @@ import { connectGoogleAccount, disconnectGoogleAccount } from '@/app/(app)/setti
 
 interface GoogleConnectionCardProps {
   hasGoogleConnected: boolean;
+  canDisconnectGoogle: boolean;
 }
 
-export function GoogleConnectionCard({ hasGoogleConnected }: GoogleConnectionCardProps) {
+export function GoogleConnectionCard({ hasGoogleConnected, canDisconnectGoogle }: GoogleConnectionCardProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -75,18 +76,30 @@ export function GoogleConnectionCard({ hasGoogleConnected }: GoogleConnectionCar
             )}
           </div>
         </div>
-        <Button
-          variant={hasGoogleConnected ? 'outline' : 'default'}
-          onClick={hasGoogleConnected ? handleDisconnect : handleConnect}
-          disabled={isLoading}
-          className="w-full sm:w-auto sm:flex-shrink-0"
-        >
-          {isLoading
-            ? 'Behandler...'
-            : hasGoogleConnected
-            ? 'Koble fra'
-            : 'Koble til'}
-        </Button>
+        <div className="w-full sm:w-auto sm:flex-shrink-0 flex flex-col gap-2 sm:items-end">
+          <Button
+            variant={hasGoogleConnected ? 'outline' : 'default'}
+            onClick={hasGoogleConnected ? handleDisconnect : handleConnect}
+            disabled={isLoading || (hasGoogleConnected && !canDisconnectGoogle)}
+            title={
+              hasGoogleConnected && !canDisconnectGoogle
+                ? 'Legg til en annen påloggingsmetode før du kobler fra Google-kontoen.'
+                : undefined
+            }
+            className="w-full sm:w-auto"
+          >
+            {isLoading
+              ? 'Behandler...'
+              : hasGoogleConnected
+              ? 'Koble fra'
+              : 'Koble til'}
+          </Button>
+          {hasGoogleConnected && !canDisconnectGoogle && (
+            <p className="text-xs text-text-secondary text-left sm:text-right">
+              Legg til en annen påloggingsmetode før du kobler fra Google-kontoen.
+            </p>
+          )}
+        </div>
       </div>
     </Card>
   );

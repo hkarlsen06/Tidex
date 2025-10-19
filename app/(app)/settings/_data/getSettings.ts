@@ -38,15 +38,15 @@ export async function getUserProfile() {
     .eq('user_id', user.id)
     .single();
 
+  const identityProviders = new Set(
+    user.identities?.map((identity) => identity.provider) ?? []
+  );
+
   // Check if user has Google OAuth connected
-  const hasGoogleConnected = user.identities?.some(
-    (identity) => identity.provider === 'google'
-  ) ?? false;
+  const hasGoogleConnected = identityProviders.has('google');
 
   // Check if user has phone number linked
-  const hasPhoneConnected = user.identities?.some(
-    (identity) => identity.provider === 'phone'
-  ) ?? false;
+  const hasPhoneConnected = identityProviders.has('phone');
 
   // Get phone number and strip +47 prefix for display
   let phoneNumber: string | null = null;
@@ -58,9 +58,11 @@ export async function getUserProfile() {
 
   // Check if user has a password set
   // Users have password if they signed up with email or have set one later
-  const hasPassword = user.identities?.some(
-    (identity) => identity.provider === 'email'
-  ) ?? false;
+  const hasPassword = identityProviders.has('email');
+
+  const loginMethodCount = identityProviders.size;
+  const canUnlinkPhone = hasPhoneConnected && loginMethodCount > 1;
+  const canDisconnectGoogle = hasGoogleConnected && loginMethodCount > 1;
 
   return {
     firstName: user.user_metadata?.first_name || '',
@@ -70,5 +72,7 @@ export async function getUserProfile() {
     hasPhoneConnected,
     phoneNumber,
     hasPassword,
+    canUnlinkPhone,
+    canDisconnectGoogle,
   };
 }

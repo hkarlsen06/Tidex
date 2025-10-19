@@ -47,9 +47,13 @@ export default async function ProfilePage() {
           <PhoneConnectionCard
             hasPhoneConnected={profile.hasPhoneConnected}
             phoneNumber={profile.phoneNumber}
+            canUnlinkPhone={profile.canUnlinkPhone}
           />
 
-          <GoogleConnectionCard hasGoogleConnected={profile.hasGoogleConnected} />
+          <GoogleConnectionCard
+            hasGoogleConnected={profile.hasGoogleConnected}
+            canDisconnectGoogle={profile.canDisconnectGoogle}
+          />
         </div>
 
         {/* Danger zone at the very bottom */}

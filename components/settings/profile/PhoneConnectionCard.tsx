@@ -28,6 +28,7 @@ import { translateError } from '@/lib/errors/translate';
 interface PhoneConnectionCardProps {
   hasPhoneConnected: boolean;
   phoneNumber: string | null;
+  canUnlinkPhone: boolean;
 }
 
 type LinkStep = 'input' | 'otp';
@@ -35,6 +36,7 @@ type LinkStep = 'input' | 'otp';
 export function PhoneConnectionCard({
   hasPhoneConnected,
   phoneNumber,
+  canUnlinkPhone,
 }: PhoneConnectionCardProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
@@ -249,20 +251,32 @@ export function PhoneConnectionCard({
             {error && <p className="text-sm text-destructive mt-2">{error}</p>}
           </div>
         </div>
-        <Button
-          variant={hasPhoneConnected ? 'outline' : 'default'}
-          onClick={
-            hasPhoneConnected ? handleUnlink : () => setShowLinkForm(true)
-          }
-          disabled={isLoading}
-          className="w-full sm:w-auto sm:flex-shrink-0"
-        >
-          {isLoading
-            ? 'Behandler...'
-            : hasPhoneConnected
-              ? 'Koble fra'
-              : 'Koble til'}
-        </Button>
+        <div className="w-full sm:w-auto sm:flex-shrink-0 flex flex-col gap-2 sm:items-end">
+          <Button
+            variant={hasPhoneConnected ? 'outline' : 'default'}
+            onClick={
+              hasPhoneConnected ? handleUnlink : () => setShowLinkForm(true)
+            }
+            disabled={isLoading || (hasPhoneConnected && !canUnlinkPhone)}
+            title={
+              hasPhoneConnected && !canUnlinkPhone
+                ? 'Legg til en annen påloggingsmetode før du kobler fra telefonnummeret.'
+                : undefined
+            }
+            className="w-full sm:w-auto"
+          >
+            {isLoading
+              ? 'Behandler...'
+              : hasPhoneConnected
+                ? 'Koble fra'
+                : 'Koble til'}
+          </Button>
+          {hasPhoneConnected && !canUnlinkPhone && (
+            <p className="text-xs text-text-secondary text-left sm:text-right">
+              Legg til en annen påloggingsmetode før du kobler fra telefonnummeret.
+            </p>
+          )}
+        </div>
       </div>
     </Card>
   );
