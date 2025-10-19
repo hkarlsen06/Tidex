@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useId } from 'react';
+import { useState, useId, useRef } from 'react';
 import { Label } from '@appui/Label';
 import { Button } from '@appui/Button';
-import { Input } from '@appui/Input';
+import { Input } from '@/components/app/Input';
+import { TimeInput } from '@/components/app/TimeInput';
 import { Card } from '@appui/Card';
 import { Badge } from '@appui/Badge';
 import { Trash2, Plus } from 'lucide-react';
@@ -56,6 +57,8 @@ export function SupplementsEditor({
 
   const [rules, setRules] = useState<SupplementRule[]>(getInitialRules());
   const [nextId, setNextId] = useState(() => rules.length);
+  const fromInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const toInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const addRule = () => {
     const newRule = createEmptyRule(`${nextId}`);
@@ -66,6 +69,8 @@ export function SupplementsEditor({
   const removeRule = (id: string) => {
     const newRules = rules.filter((r) => r.id !== id);
     setRules(newRules);
+    delete fromInputRefs.current[id];
+    delete toInputRefs.current[id];
 
     // Update parent immediately
     const validRules = newRules.filter(
@@ -179,7 +184,7 @@ export function SupplementsEditor({
 
               {/* Time range - disabled until days selected */}
               <div
-                className={`grid grid-cols-2 gap-3 transition-opacity ${
+                className={`grid grid-cols-1 gap-3 sm:grid-cols-2 transition-opacity ${
                   !hasDays ? 'opacity-40' : 'opacity-100'
                 }`}
               >
@@ -187,28 +192,44 @@ export function SupplementsEditor({
                   <Label htmlFor={`${baseId}-from-${rule.id}`} className="text-sm">
                     Fra
                   </Label>
-                  <Input
+                  <TimeInput
                     id={`${baseId}-from-${rule.id}`}
-                    type="time"
+                    ref={(el) => {
+                      if (el) {
+                        fromInputRefs.current[rule.id] = el;
+                      } else {
+                        delete fromInputRefs.current[rule.id];
+                      }
+                    }}
                     value={rule.from}
-                    onChange={(e) =>
-                      updateRule(rule.id, { from: e.target.value })
-                    }
+                    onChange={(val) => updateRule(rule.id, { from: val })}
+                    onComplete={() => {
+                      const next = toInputRefs.current[rule.id];
+                      if (next) {
+                        next.focus();
+                      }
+                    }}
                     disabled={!hasDays}
+                    className="w-full"
                   />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor={`${baseId}-to-${rule.id}`} className="text-sm">
                     Til
                   </Label>
-                  <Input
+                  <TimeInput
                     id={`${baseId}-to-${rule.id}`}
-                    type="time"
+                    ref={(el) => {
+                      if (el) {
+                        toInputRefs.current[rule.id] = el;
+                      } else {
+                        delete toInputRefs.current[rule.id];
+                      }
+                    }}
                     value={rule.to}
-                    onChange={(e) =>
-                      updateRule(rule.id, { to: e.target.value })
-                    }
+                    onChange={(val) => updateRule(rule.id, { to: val })}
                     disabled={!hasDays || !hasFromTime}
+                    className="w-full"
                   />
                 </div>
               </div>
@@ -220,7 +241,7 @@ export function SupplementsEditor({
                 }`}
               >
                 <Label className="text-sm">Tilleggstype</Label>
-                <div className="flex gap-2">
+                <div className="flex flex-col gap-2 sm:flex-row">
                   <button
                     onClick={() =>
                       updateRule(rule.id, { mode: 'percent', percent: undefined, rate: undefined })
