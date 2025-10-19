@@ -129,7 +129,7 @@ const DayButton = React.memo(function DayButton({
       {mode === "hours" && hours && (
         <div
           key={`hours-${iso}-${currentMonth.getFullYear()}-${currentMonth.getMonth()}`}
-          className={`text-xs font-medium text-text-secondary leading-tight text-center mt-1 ${getCellAnimationClasses(cellDirection)}`}
+          className={`text-[10px] font-medium text-text-secondary leading-tight text-center mt-1 ${getCellAnimationClasses(cellDirection)}`}
         >
           <div>
             {hours.start}
