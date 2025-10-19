@@ -1,20 +1,9 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
+import { getProjectRefFromUrl } from '@/lib/supabase/utils';
 
-function getProjectRefFromUrl(url: string) {
-  try {
-    const u = new URL(url);
-    // e.g. https://kkarlsen-dev.supabase.co -> kkarlsen-dev
-    const host = u.hostname; // kkarlsen-dev.supabase.co
-    const [ref] = host.split('.');
-    return ref || '';
-  } catch {
-    return '';
-  }
-}
-
-function clearSupabaseCookies(res: NextResponse, req: NextRequest, projectRef: string) {
+function clearSupabaseCookies(res: NextResponse, req: NextRequest, projectRef: string | null) {
   // Clear new-style names (some setups use these)
   res.cookies.set({ name: 'sb-access-token', value: '', path: '/', maxAge: 0 });
   res.cookies.set({ name: 'sb-refresh-token', value: '', path: '/', maxAge: 0 });
