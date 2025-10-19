@@ -19,6 +19,7 @@ type MonthlyEarningsCalendarProps = {
   selectedDate?: ISODate | null;
   containerRef?: Ref<HTMLDivElement>;
   onClearSelection?: () => void;
+  onOpenDetails?: () => void;
 };
 
 function buildEarningsByDate(shifts: ShiftWithComputations[]): EarningsByDate {
@@ -100,6 +101,7 @@ export function MonthlyEarningsCalendar({
   selectedDate = null,
   containerRef,
   onClearSelection,
+  onOpenDetails,
 }: MonthlyEarningsCalendarProps) {
   const { goToPreviousMonth, goToNextMonth } = useMonth();
   const [viewMode, setViewMode] = useState<"money" | "hours">("money");
@@ -175,22 +177,28 @@ export function MonthlyEarningsCalendar({
           weekNumberPosition="top-left"
         />
       </div>
-      <div className="flex justify-center pb-6">
-        <div className="inline-flex min-h-[44px] w-2/3 items-center gap-1 rounded-full border border-border-subtle bg-surface-secondary/80 px-1 py-1 shadow-app-sm dark:shadow-app-inner">
+      <div className="flex flex-col items-center gap-2 pb-6">
+        <div className="inline-flex min-h-[44px] w-[90%] items-center gap-1 rounded-full border border-border-subtle bg-surface-secondary/80 px-1 py-1 shadow-app-sm dark:shadow-app-inner">
           {selectedDate ? (
-            <div className="flex w-full items-center justify-between gap-3 rounded-full bg-surface-primary px-4 py-2">
-              <div className="flex items-center justify-center text-sm font-semibold leading-tight text-brand-highlight text-center">
-                <span>Trykk samme for detaljer, annen for å flytte.</span>
-              </div>
+            <div className="flex w-full items-center justify-between gap-2 rounded-full bg-surface-primary px-0 py-0">
               <Button
                 type="button"
                 variant="ghost"
                 onClick={() => onClearSelection?.()}
                 disabled={!onClearSelection}
-                className="rounded-full px-3 py-3 text-text-secondary hover:text-text-primary"
+                className="flex-1 rounded-full h-9 gap-2 bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 dark:text-emerald-400"
               >
-                <IconX stroke={2} className="h-4 w-4" aria-hidden="true" />
-                <span className="sr-only">Fjern valg</span>
+                <IconX stroke={2} className="h-4 w-4" />
+                Avbryt
+              </Button>
+              <Button
+                type="button"
+                variant="default"
+                onClick={() => onOpenDetails?.()}
+                disabled={!onOpenDetails}
+                className="flex-[2] rounded-full h-9"
+              >
+                Detaljer
               </Button>
             </div>
           ) : (
@@ -226,6 +234,9 @@ export function MonthlyEarningsCalendar({
               </Button>
             </>
           )}
+        </div>
+        <div className={`text-xs font-medium leading-tight text-text-muted text-center ${selectedDate ? 'opacity-100' : 'opacity-0'}`}>
+          Velg en annen dato for å flytte vakten
         </div>
       </div>
     </Card>

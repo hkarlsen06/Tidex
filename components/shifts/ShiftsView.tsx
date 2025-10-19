@@ -554,17 +554,8 @@ export function ShiftsView({ shifts, defaultView = "calendar", aggregates, userS
 
       if (selectedDate) {
         if (selectedDate === isoDate) {
-          if (targetShifts.length > 0) {
-            const shiftToOpen =
-              (calendarSelectedShiftId &&
-                targetShifts.find((shift) => shift.id === calendarSelectedShiftId)) ??
-              targetShifts[0];
-            if (shiftToOpen) {
-              setSelectedShift(shiftToOpen);
-              setOpenedFromCalendar(true);
-              setDetailsOpen(true);
-            }
-          }
+          // Deselect when clicking the same date again
+          clearSelection();
           return;
         }
 
@@ -602,6 +593,23 @@ export function ShiftsView({ shifts, defaultView = "calendar", aggregates, userS
     },
     [calendarSelectedShiftId, clearSelection, navigate, selectedDate, shiftsByDate]
   );
+
+  const handleOpenDetails = useCallback(() => {
+    if (!selectedDate) return;
+
+    const targetShifts = shiftsByDate.get(selectedDate) ?? [];
+    if (targetShifts.length > 0) {
+      const shiftToOpen =
+        (calendarSelectedShiftId &&
+          targetShifts.find((shift) => shift.id === calendarSelectedShiftId)) ??
+        targetShifts[0];
+      if (shiftToOpen) {
+        setSelectedShift(shiftToOpen);
+        setOpenedFromCalendar(true);
+        setDetailsOpen(true);
+      }
+    }
+  }, [selectedDate, shiftsByDate, calendarSelectedShiftId]);
 
   const selectedDateShifts = useMemo(
     () => (selectedDate ? shiftsByDate.get(selectedDate) ?? [] : []),
@@ -724,6 +732,7 @@ export function ShiftsView({ shifts, defaultView = "calendar", aggregates, userS
             selectedDate={selectedDate}
             containerRef={calendarContainerRef}
             onClearSelection={clearSelection}
+            onOpenDetails={handleOpenDetails}
           />
         </div>
       </div>
