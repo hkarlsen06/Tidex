@@ -14,6 +14,7 @@ interface SupplementsEditorProps {
   value: SupplementsData | null;
   onChange: (value: SupplementsData | null) => void;
   className?: string;
+  readOnly?: boolean;
 }
 
 const DAY_LABELS = ['Man', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør', 'Søn'];
@@ -22,6 +23,7 @@ export function SupplementsEditor({
   value,
   onChange,
   className,
+  readOnly = false,
 }: SupplementsEditorProps) {
   const baseId = useId();
   const createEmptyRule = (id: string): SupplementRule => ({
@@ -51,6 +53,9 @@ export function SupplementsEditor({
         };
       });
     }
+    if (readOnly) {
+      return [];
+    }
     // Start with one empty rule so form is visible
     return [createEmptyRule('0')];
   };
@@ -61,12 +66,18 @@ export function SupplementsEditor({
   const toInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const addRule = () => {
+    if (readOnly) {
+      return;
+    }
     const newRule = createEmptyRule(`${nextId}`);
     setRules([...rules, newRule]);
     setNextId(nextId + 1);
   };
 
   const removeRule = (id: string) => {
+    if (readOnly) {
+      return;
+    }
     const newRules = rules.filter((r) => r.id !== id);
     setRules(newRules);
     delete fromInputRefs.current[id];
@@ -92,6 +103,9 @@ export function SupplementsEditor({
   };
 
   const updateRule = (id: string, updates: Partial<SupplementRule>) => {
+    if (readOnly) {
+      return;
+    }
     const newRules = rules.map((r) => (r.id === id ? { ...r, ...updates } : r));
     setRules(newRules);
 
@@ -115,6 +129,9 @@ export function SupplementsEditor({
   };
 
   const toggleDay = (ruleId: string, day: number) => {
+    if (readOnly) {
+      return;
+    }
     const rule = rules.find((r) => r.id === ruleId);
     if (!rule) return;
 
@@ -148,14 +165,16 @@ export function SupplementsEditor({
                 <Badge variant="secondary">
                   Tillegg #{rules.indexOf(rule) + 1}
                 </Badge>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => removeRule(rule.id)}
-                  className="h-8 w-8 p-0"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                {!readOnly && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => removeRule(rule.id)}
+                    className="h-8 w-8 p-0"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
               </div>
 
               {/* Days selector - always enabled */}
@@ -168,8 +187,10 @@ export function SupplementsEditor({
                     return (
                       <button
                         key={dayNum}
+                        type="button"
                         onClick={() => toggleDay(rule.id, dayNum)}
-                        className={`px-2 py-1.5 text-xs sm:text-sm rounded border transition-colors ${
+                        disabled={readOnly}
+                        className={`px-2 py-1.5 text-xs sm:text-sm rounded border transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
                           isSelected
                             ? 'bg-brand-gradientStart text-white border-brand-gradientStart'
                             : 'bg-surface-secondary border-border text-text-secondary hover:border-brand-gradientStart/50'
@@ -209,7 +230,7 @@ export function SupplementsEditor({
                         next.focus();
                       }
                     }}
-                    disabled={!hasDays}
+                    disabled={readOnly || !hasDays}
                     className="w-full"
                   />
                 </div>
@@ -228,7 +249,7 @@ export function SupplementsEditor({
                     }}
                     value={rule.to}
                     onChange={(val) => updateRule(rule.id, { to: val })}
-                    disabled={!hasDays || !hasFromTime}
+                    disabled={readOnly || !hasDays || !hasFromTime}
                     className="w-full"
                   />
                 </div>
@@ -243,28 +264,30 @@ export function SupplementsEditor({
                 <Label className="text-sm">Tilleggstype</Label>
                 <div className="flex flex-col gap-2 sm:flex-row">
                   <button
+                    type="button"
                     onClick={() =>
                       updateRule(rule.id, { mode: 'percent', percent: undefined, rate: undefined })
                     }
-                    disabled={!hasToTime}
-                    className={`flex-1 px-3 py-2 text-sm rounded border transition-colors ${
+                    disabled={readOnly || !hasToTime}
+                    className={`flex-1 px-3 py-2 text-sm rounded border transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
                       rule.mode === 'percent'
                         ? 'bg-brand-gradientStart text-white border-brand-gradientStart'
                         : 'bg-surface-secondary border-border text-text-secondary hover:border-brand-gradientStart/50'
-                    } disabled:cursor-not-allowed disabled:hover:border-border`}
+                    } disabled:hover:border-border`}
                   >
                     Prosent
                   </button>
                   <button
+                    type="button"
                     onClick={() =>
                       updateRule(rule.id, { mode: 'rate', rate: undefined, percent: undefined })
                     }
-                    disabled={!hasToTime}
-                    className={`flex-1 px-3 py-2 text-sm rounded border transition-colors ${
+                    disabled={readOnly || !hasToTime}
+                    className={`flex-1 px-3 py-2 text-sm rounded border transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
                       rule.mode === 'rate'
                         ? 'bg-brand-gradientStart text-white border-brand-gradientStart'
                         : 'bg-surface-secondary border-border text-text-secondary hover:border-brand-gradientStart/50'
-                    } disabled:cursor-not-allowed disabled:hover:border-border`}
+                    } disabled:hover:border-border`}
                   >
                     Fast beløp
                   </button>
@@ -303,7 +326,7 @@ export function SupplementsEditor({
                       }
                     }}
                     onFocus={(e) => e.target.select()}
-                    disabled={!hasType}
+                    disabled={readOnly || !hasType}
                     invalid={hasType && isValueInvalid(rule)}
                     className={hasType ? 'pr-12' : ''}
                     placeholder="0"
@@ -319,23 +342,31 @@ export function SupplementsEditor({
           );
         })}
 
-        <Button
-          variant="outline"
-          onClick={addRule}
-          disabled={rules.some(
-            (r) =>
-              r.days.length === 0 ||
-              !r.from ||
-              !r.to ||
-              !r.mode ||
-              ((r.mode === 'percent' && (r.percent === undefined || r.percent === 0)) ||
-               (r.mode === 'rate' && (r.rate === undefined || r.rate === 0)))
-          )}
-          className="w-full rounded-3xl"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          {rules.length === 1 ? 'Legg til ett til' : 'Legg til flere'}
-        </Button>
+        {readOnly && rules.length === 0 && (
+          <p className="text-sm text-text-secondary italic">
+            Ingen tillegg er definert.
+          </p>
+        )}
+
+        {!readOnly && (
+          <Button
+            variant="outline"
+            onClick={addRule}
+            disabled={rules.some(
+              (r) =>
+                r.days.length === 0 ||
+                !r.from ||
+                !r.to ||
+                !r.mode ||
+                ((r.mode === 'percent' && (r.percent === undefined || r.percent === 0)) ||
+                 (r.mode === 'rate' && (r.rate === undefined || r.rate === 0)))
+            )}
+            className="w-full rounded-3xl"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            {rules.length === 1 ? 'Legg til ett til' : 'Legg til flere'}
+          </Button>
+        )}
       </div>
     </div>
   );
