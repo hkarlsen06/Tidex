@@ -49,18 +49,21 @@ export async function createShifts(input: CreateShiftsInput) {
       .select("shift_date")
       .eq("user_id", user.id);
 
-    if (existingShifts && existingShifts.length > 0) {
-      const existingMonths = getUniqueShiftMonths(existingShifts);
+    const existingMonths = existingShifts
+      ? getUniqueShiftMonths(existingShifts)
+      : new Set<string>();
+    const newMonths = getUniqueShiftMonths(
+      dates.map((shift_date) => ({ shift_date }))
+    );
+    const allMonths = new Set([
+      ...Array.from(existingMonths),
+      ...Array.from(newMonths),
+    ]);
 
-      // Check if new shifts would create multiple months
-      const newMonths = getUniqueShiftMonths(dates.map(d => ({ shift_date: d })));
-      const allMonths = new Set([...Array.from(existingMonths), ...Array.from(newMonths)]);
-
-      if (allMonths.size > 1) {
-        throw new Error(
-          "Du er på gratisplanen og kan bare ha skift i én måned om gangen. Oppgrader til Pro eller slett skift i andre måneder."
-        );
-      }
+    if (allMonths.size > 1) {
+      throw new Error(
+        "Du er på gratisplanen og kan bare ha skift i én måned om gangen. Oppgrader til Pro eller slett skift i andre måneder."
+      );
     }
   }
 
@@ -83,4 +86,3 @@ export async function createShifts(input: CreateShiftsInput) {
 
   return { inserted: rows.length };
 }
-

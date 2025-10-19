@@ -54,16 +54,21 @@ export async function copyShifts(input: CopyShiftsInput) {
       .select("shift_date")
       .eq("user_id", user.id);
 
-    if (existingShifts && existingShifts.length > 0) {
-      const existingMonths = getUniqueShiftMonths(existingShifts);
-      const newMonths = getUniqueShiftMonths([{ shift_date: input.targetDate }]);
-      const allMonths = new Set([...Array.from(existingMonths), ...Array.from(newMonths)]);
+    const existingMonths = existingShifts
+      ? getUniqueShiftMonths(existingShifts)
+      : new Set<string>();
+    const newMonths = getUniqueShiftMonths([
+      { shift_date: input.targetDate },
+    ]);
+    const allMonths = new Set([
+      ...Array.from(existingMonths),
+      ...Array.from(newMonths),
+    ]);
 
-      if (allMonths.size > 1) {
-        throw new Error(
-          "Du er på gratisplanen og kan bare ha skift i én måned om gangen. Oppgrader til Pro eller slett skift i andre måneder."
-        );
-      }
+    if (allMonths.size > 1) {
+      throw new Error(
+        "Du er på gratisplanen og kan bare ha skift i én måned om gangen. Oppgrader til Pro eller slett skift i andre måneder."
+      );
     }
   }
 
