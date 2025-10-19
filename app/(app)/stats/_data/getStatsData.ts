@@ -2,7 +2,6 @@ import "server-only";
 import { getComputedShifts } from "@/app/(app)/shifts/_data/getShifts";
 import {
   getCurrentYearMonth,
-  getPreviousYearMonth,
   isDateInMonth,
   parseDateAsUTC,
   getYearMonth,
@@ -43,15 +42,36 @@ export type DailyCumulativeData = {
   isFuture: boolean;
 };
 
+export type MonthlySummary = {
+  key: string; // YYYY-MM
+  year: number;
+  month: number; // 1-12
+  totalGross: number;
+  totalNet: number;
+  totalHours: number;
+  shiftCount: number;
+  averageRate: number;
+};
+
 export type StatsData = {
+  focusMonth: {
+    year: number;
+    month: number;
+  };
+  tax: {
+    enabled: boolean;
+    percentage: number;
+  };
   currentMonth: {
     totalEarnings: number;
+    totalEarningsNet: number;
     totalHours: number;
     shiftCount: number;
     averageRate: number;
   };
   lastMonth: {
     totalEarnings: number;
+    totalEarningsNet: number;
     totalHours: number;
     shiftCount: number;
   };
@@ -66,6 +86,7 @@ export type StatsData = {
   thisWeek: DailyData[];
   byDayOfWeek: DayOfWeekData[];
   thisMonthCumulative: DailyCumulativeData[];
+  monthlySummaries: MonthlySummary[];
 };
 
 const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Des"];
@@ -73,20 +94,95 @@ const FULL_MONTH_NAMES = ["Januar", "Februar", "Mars", "April", "Mai", "Juni", "
 const DAY_NAMES = ["Søn", "Man", "Tir", "Ons", "Tor", "Fre", "Lør"];
 const FULL_DAY_NAMES = ["Søndag", "Mandag", "Tirsdag", "Onsdag", "Torsdag", "Fredag", "Lørdag"];
 
-export async function getStatsData(userId: string): Promise<StatsData> {
-  const { shifts } = await getComputedShifts(userId);
+type StatsOptions = {
+  year?: number;
+  month?: number; // 1-12
+};
 
-  // Use UTC-based date handling for consistent month/year comparisons
-  const { year: currentYear, month: currentMonth } = getCurrentYearMonth();
-  const { year: lastMonthYear, month: lastMonth } = getPreviousYearMonth();
+export async function getStatsData(userId: string, options: StatsOptions = {}): Promise<StatsData> {
+  const { shifts, settings } = await getComputedShifts(userId);
+
+  // Determine focus month (defaults to current UTC month)
+  const { year: currentYearDefault, month: currentMonthDefault } = getCurrentYearMonth();
+  const focusYear = options.year ?? currentYearDefault;
+  const focusMonth = options.month ?? currentMonthDefault;
+
+  const previousMonthDate = new Date(Date.UTC(focusYear, focusMonth - 2, 1));
+  const { year: lastMonthYear, month: lastMonth } = getYearMonth(previousMonthDate);
+
+  const realNow = new Date();
+  const isCurrentSelection =
+    focusYear === realNow.getUTCFullYear() && focusMonth === realNow.getUTCMonth() + 1;
+  const monthEndDate = new Date(Date.UTC(focusYear, focusMonth, 0));
+  const cutoffDate = isCurrentSelection ? realNow : monthEndDate;
+
+  const taxEnabled = settings.tax_deduction_enabled ?? false;
+  const taxPercentage = taxEnabled ? Number(settings.tax_percentage ?? 0) : 0;
+  const netMultiplier = taxEnabled ? 1 - taxPercentage / 100 : 1;
+  const applyNet = (gross: number) =>
+    taxEnabled ? +(gross * netMultiplier).toFixed(2) : gross;
+
+  // Pre-compute monthly aggregates for client-side month switching
+  const monthlyMap = new Map<string, MonthlySummary>();
+
+  for (const shift of shifts) {
+    const shiftDate = parseDateAsUTC(shift.shift_date);
+    const year = shiftDate.getUTCFullYear();
+    const monthIndex = shiftDate.getUTCMonth() + 1;
+    const key = `${year}-${String(monthIndex).padStart(2, "0")}`;
+
+    const gross = shift.computed.gross || 0;
+    const hours = shift.computed.paidHours || 0;
+
+    const existing = monthlyMap.get(key) ?? {
+      key,
+      year,
+      month: monthIndex,
+      totalGross: 0,
+      totalNet: 0,
+      totalHours: 0,
+      shiftCount: 0,
+      averageRate: 0,
+    };
+
+    existing.totalGross += gross;
+    existing.totalNet += taxEnabled ? gross * netMultiplier : gross;
+    existing.totalHours += hours;
+    existing.shiftCount += 1;
+
+    monthlyMap.set(key, existing);
+  }
+
+  const monthlySummaries = Array.from(monthlyMap.values())
+    .map((summary) => {
+      const totalGross = +summary.totalGross.toFixed(2);
+      const totalNet = +summary.totalNet.toFixed(2);
+      const totalHours = +summary.totalHours.toFixed(2);
+      const averageRate =
+        totalHours > 0 ? +(totalGross / totalHours).toFixed(2) : 0;
+
+      return {
+        ...summary,
+        totalGross,
+        totalNet,
+        totalHours,
+        shiftCount: summary.shiftCount,
+        averageRate,
+      };
+    })
+    .sort((a, b) => {
+      if (a.year !== b.year) return a.year - b.year;
+      return a.month - b.month;
+    });
 
   // Current month stats
   const monthShifts = shifts.filter((shift) =>
-    isDateInMonth(shift.shift_date, currentYear, currentMonth)
+    isDateInMonth(shift.shift_date, focusYear, focusMonth)
   );
   const monthEarnings = monthShifts.reduce((sum, shift) => sum + (shift.computed.gross || 0), 0);
   const monthHours = monthShifts.reduce((sum, shift) => sum + (shift.computed.paidHours || 0), 0);
   const monthAvgRate = monthHours > 0 ? monthEarnings / monthHours : 0;
+  const monthEarningsNet = applyNet(monthEarnings);
 
   // Last month stats
   const lastMonthShifts = shifts.filter((shift) =>
@@ -94,18 +190,25 @@ export async function getStatsData(userId: string): Promise<StatsData> {
   );
   const lastMonthEarnings = lastMonthShifts.reduce((sum, shift) => sum + (shift.computed.gross || 0), 0);
   const lastMonthHours = lastMonthShifts.reduce((sum, shift) => sum + (shift.computed.paidHours || 0), 0);
+  const lastMonthEarningsNet = applyNet(lastMonthEarnings);
 
   // Calculate percentage change
   let percentageChange: number | null = null;
-  if (lastMonthEarnings > 0) {
-    percentageChange = Math.round(((monthEarnings - lastMonthEarnings) / lastMonthEarnings) * 100);
+  const displayCurrent = taxEnabled ? monthEarningsNet : monthEarnings;
+  const displayLast = taxEnabled ? lastMonthEarningsNet : lastMonthEarnings;
+  if (displayLast > 0) {
+    percentageChange = Math.round(((displayCurrent - displayLast) / displayLast) * 100);
   }
 
   // Year-to-date stats (only up to today)
-  const now = new Date();
+  const weekReferenceDate =
+    monthShifts.length > 0
+      ? parseDateAsUTC(monthShifts[0].shift_date)
+      : monthEndDate;
+
   const ytdShifts = shifts.filter((shift) => {
     const shiftDate = parseDateAsUTC(shift.shift_date);
-    return shiftDate.getUTCFullYear() === currentYear && shiftDate <= now;
+    return shiftDate.getUTCFullYear() === focusYear && shiftDate <= cutoffDate;
   });
   const ytdEarnings = ytdShifts.reduce((sum, shift) => sum + (shift.computed.gross || 0), 0);
   const ytdHours = ytdShifts.reduce((sum, shift) => sum + (shift.computed.paidHours || 0), 0);
@@ -113,7 +216,7 @@ export async function getStatsData(userId: string): Promise<StatsData> {
   // Last 6 months breakdown
   const last6Months: MonthlyData[] = [];
   for (let i = 5; i >= 0; i--) {
-    const targetDate = new Date(Date.UTC(currentYear, currentMonth - 1 - i, 1));
+    const targetDate = new Date(Date.UTC(focusYear, focusMonth - 1 - i, 1));
     const { year, month } = getYearMonth(targetDate);
 
     const monthShifts = shifts.filter((shift) => isDateInMonth(shift.shift_date, year, month));
@@ -134,18 +237,24 @@ export async function getStatsData(userId: string): Promise<StatsData> {
   // This week's daily breakdown (Monday to Sunday of current week)
   const thisWeek: DailyData[] = [];
 
-  // Get the current day of week (0 = Sunday, 1 = Monday, etc.)
-  const currentDayOfWeek = now.getUTCDay();
+  // Get the reference day of week (0 = Sunday, 1 = Monday, etc.)
+  const currentDayOfWeek = weekReferenceDate.getUTCDay();
   // Calculate days since Monday (treat Sunday as 7)
   const daysSinceMonday = currentDayOfWeek === 0 ? 6 : currentDayOfWeek - 1;
 
-  // Start from Monday of this week
+  // Start from Monday of the reference week
   for (let i = 0; i < 7; i++) {
     const daysFromMonday = i - daysSinceMonday;
-    const targetDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + daysFromMonday));
+    const targetDate = new Date(
+      Date.UTC(
+        weekReferenceDate.getUTCFullYear(),
+        weekReferenceDate.getUTCMonth(),
+        weekReferenceDate.getUTCDate() + daysFromMonday
+      )
+    );
     const dateString = targetDate.toISOString().split('T')[0];
 
-    const dayShifts = shifts.filter((shift) => shift.shift_date === dateString);
+    const dayShifts = monthShifts.filter((shift) => shift.shift_date === dateString);
     const earnings = dayShifts.reduce((sum, shift) => sum + (shift.computed.gross || 0), 0);
     const hours = dayShifts.reduce((sum, shift) => sum + (shift.computed.paidHours || 0), 0);
 
@@ -166,7 +275,7 @@ export async function getStatsData(userId: string): Promise<StatsData> {
   // By day of week aggregation
   const dayOfWeekMap = new Map<number, { earnings: number; hours: number; shifts: number }>();
 
-  for (const shift of shifts) {
+  for (const shift of monthShifts) {
     const shiftDate = parseDateAsUTC(shift.shift_date);
     const dayOfWeek = shiftDate.getUTCDay();
 
@@ -200,10 +309,10 @@ export async function getStatsData(userId: string): Promise<StatsData> {
   const thisMonthCumulative: DailyCumulativeData[] = [];
 
   // Get number of days in current month
-  const daysInCurrentMonth = new Date(Date.UTC(currentYear, currentMonth, 0)).getUTCDate();
+  const daysInCurrentMonth = monthEndDate.getUTCDate();
 
-  // Get today's day number
-  const todayDayNumber = now.getUTCDate();
+  // Determine day number cut-off (today if current month, otherwise end of month)
+  const todayDayNumber = isCurrentSelection ? realNow.getUTCDate() : daysInCurrentMonth;
 
   // Build daily cumulative arrays for both months
   let currentMonthCumulative = 0;
@@ -211,7 +320,7 @@ export async function getStatsData(userId: string): Promise<StatsData> {
 
   for (let day = 1; day <= daysInCurrentMonth; day++) {
     // Current month - check if there are shifts on this day
-    const currentDayDate = new Date(Date.UTC(currentYear, currentMonth - 1, day)).toISOString().split('T')[0];
+    const currentDayDate = new Date(Date.UTC(focusYear, focusMonth - 1, day)).toISOString().split('T')[0];
     const currentDayShifts = shifts.filter((shift) => shift.shift_date === currentDayDate);
     const currentDayEarnings = currentDayShifts.reduce((sum, shift) => sum + (shift.computed.gross || 0), 0);
     currentMonthCumulative += currentDayEarnings;
@@ -232,20 +341,30 @@ export async function getStatsData(userId: string): Promise<StatsData> {
       dayNumber: day,
       currentMonth: currentMonthCumulative,
       lastMonth: lastMonthCumulative,
-      isToday: day === todayDayNumber,
+      isToday: isCurrentSelection && day === todayDayNumber,
       isFuture: day > todayDayNumber,
     });
   }
 
   return {
+    focusMonth: {
+      year: focusYear,
+      month: focusMonth,
+    },
+    tax: {
+      enabled: taxEnabled,
+      percentage: taxPercentage,
+    },
     currentMonth: {
       totalEarnings: monthEarnings,
+      totalEarningsNet: monthEarningsNet,
       totalHours: monthHours,
       shiftCount: monthShifts.length,
       averageRate: monthAvgRate,
     },
     lastMonth: {
       totalEarnings: lastMonthEarnings,
+      totalEarningsNet: lastMonthEarningsNet,
       totalHours: lastMonthHours,
       shiftCount: lastMonthShifts.length,
     },
@@ -259,5 +378,6 @@ export async function getStatsData(userId: string): Promise<StatsData> {
     thisWeek,
     byDayOfWeek,
     thisMonthCumulative,
+    monthlySummaries,
   };
 }
