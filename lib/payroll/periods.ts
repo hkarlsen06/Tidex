@@ -1,11 +1,11 @@
-import { BonusRule, WagePeriod } from "./types";
+import { SupplementRule, WagePeriod } from "./types";
 
 const toMin = (hhmm: string) => {
   const [h, m] = hhmm.split(":").map(Number);
   return h * 60 + m;
 };
 
-function resolveBonusRate(rule: BonusRule, baseRate: number): number {
+function resolveSupplementRate(rule: SupplementRule, baseRate: number): number {
   // If 'rate' is specified, use it as fixed NOK per hour
   if (rule.rate != null && !isNaN(rule.rate)) {
     return rule.rate;
@@ -22,7 +22,7 @@ export function buildWagePeriods(
   endHHMM: string,
   weekday: number,                  // 1-7 Mon..Sun
   baseRate: number,
-  rules: BonusRule[]
+  rules: SupplementRule[]
 ): WagePeriod[] {
   // normalize cross-midnight by allowing end < start and adding 24h
   let start = toMin(startHHMM);
@@ -39,7 +39,7 @@ export function buildWagePeriods(
     if (rt < rf) {
       rt += 24 * 60;
     }
-    // rt is inclusive, no need to add 1 since bonus matching uses inclusive logic
+    // rt is inclusive, no need to add 1 since supplement matching uses inclusive logic
     // consider both same-day and next-day windows
     for (const base of [0, 24 * 60]) {
       const a = rf + base, b = rt + base;
@@ -54,8 +54,8 @@ export function buildWagePeriods(
 
   for (let i = 0; i < sorted.length - 1; i++) {
     const a = sorted[i], b = sorted[i + 1];
-    // find highest matching bonus in [a,b)
-    let bonus = 0;
+    // find highest matching supplement in [a,b)
+    let supplement = 0;
     for (const r of rules) {
       if (!r.days.includes(weekday)) continue;
       for (const base of [0, 24 * 60]) {
@@ -70,12 +70,12 @@ export function buildWagePeriods(
         // So we need: a >= rf (period starts at or after rule starts)
         //         and b-1 <= rt (period ends at or before rule ends, since b is exclusive)
         if (a >= rf && b - 1 <= rt) {
-          const bonusValue = resolveBonusRate(r, baseRate);
-          bonus = Math.max(bonus, bonusValue);
+          const supplementValue = resolveSupplementRate(r, baseRate);
+          supplement = Math.max(supplement, supplementValue);
         }
       }
     }
-    out.push({ fromMin: a, toMin: b, baseRate, bonusRate: bonus, totalRate: baseRate + bonus });
+    out.push({ fromMin: a, toMin: b, baseRate, supplementRate: supplement, totalRate: baseRate + supplement });
   }
   return out;
 }

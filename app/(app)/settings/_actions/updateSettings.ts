@@ -5,8 +5,8 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { logger } from '@/lib/logger';
 
-// Validation schema for bonus rules
-const BonusRuleSchema = z.object({
+// Validation schema for supplement rules
+const SupplementRuleSchema = z.object({
   days: z.array(z.number().int().min(1).max(7)),
   from: z.string().regex(/^\d{2}:\d{2}$/),
   to: z.string().regex(/^\d{2}:\d{2}$/),
@@ -14,8 +14,8 @@ const BonusRuleSchema = z.object({
   percent: z.number().optional(),
 });
 
-const CustomBonusesSchema = z.object({
-  rules: z.array(BonusRuleSchema),
+const CustomSupplementsSchema = z.object({
+  rules: z.array(SupplementRuleSchema),
 });
 
 export async function updateProfileSettings(data: {
@@ -71,7 +71,7 @@ export async function updatePaySettings(data: {
   use_preset?: boolean;
   current_wage_level?: number | null;
   custom_wage?: number | null;
-  custom_bonuses?: any;
+  custom_supplements?: any;
   monthly_goal?: number | null;
   payroll_day?: number | null;
   pause_deduction_enabled?: boolean;
@@ -86,13 +86,13 @@ export async function updatePaySettings(data: {
 
   if (!user) throw new Error('Not authenticated');
 
-  // Validate custom_bonuses if provided
-  if (data.custom_bonuses !== undefined && data.custom_bonuses !== null) {
+  // Validate custom_supplements if provided
+  if (data.custom_supplements !== undefined && data.custom_supplements !== null) {
     try {
-      CustomBonusesSchema.parse(data.custom_bonuses);
+      CustomSupplementsSchema.parse(data.custom_supplements);
     } catch (error) {
-      logger.error('Invalid custom_bonuses format:', error);
-      throw new Error('Ugyldig bonuskonfigurasjon');
+      logger.error('Invalid custom_supplements format:', error);
+      throw new Error('Ugyldig supplementkonfigurasjon');
     }
   }
 

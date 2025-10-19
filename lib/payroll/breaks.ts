@@ -37,10 +37,10 @@ export function applyBreakDeduction(
       }
       notes.push("Deducted proportionally across periods");
     } else if (method === "base_only") {
-      // prefer periods with lowest bonus
+      // prefer periods with lowest supplement
       const order = adjusted
-        .map((p, idx) => ({ idx, bonus: p.bonusRate }))
-        .sort((a, b) => a.bonus - b.bonus)
+        .map((p, idx) => ({ idx, supplement: p.supplementRate }))
+        .sort((a, b) => a.supplement - b.supplement)
         .map(o => o.idx);
       for (const i of order) {
         if (remaining <= 0) break;
@@ -49,7 +49,7 @@ export function applyBreakDeduction(
         adjusted[i].toMin -= cut;
         remaining -= cut;
       }
-      notes.push("Deducted from base/lowest bonus periods first");
+      notes.push("Deducted from base/lowest supplement periods first");
     }
     // trim empty periods
     adjusted = adjusted.filter(p => p.toMin > p.fromMin);

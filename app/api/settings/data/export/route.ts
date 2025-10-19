@@ -137,7 +137,7 @@ export async function GET(request: NextRequest) {
       calc: {
         hours: computed.paidHours,
         baseWage: computed.basePay,
-        bonus: computed.bonusPay,
+        supplement: computed.supplementPay,
         total: computed.gross,
       },
     };

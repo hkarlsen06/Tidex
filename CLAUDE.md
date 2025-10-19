@@ -24,6 +24,7 @@ npm run lint     # Run ESLint
 - `app/auth/callback/` - OAuth/magic link callback handler
 
 Each route group has its own layout:
+
 - `app/(app)/layout.tsx` - Renders TopHeader and wraps authenticated pages
 - `app/(auth)/layout.tsx` - Minimal layout for auth pages
 - `app/layout.tsx` - Root layout with theme initialization script
@@ -48,6 +49,7 @@ Protected pages fetch user via `createSupabaseServerClient()` and redirect to `/
 **Always import from `components/app`, never from `components/ui`**
 
 To add new shadcn components:
+
 ```bash
 npm dlx shadcn@latest add <component-name>
 ```
@@ -57,6 +59,7 @@ Then create a wrapper in `components/app/` (see `components/ui/shadcn_components
 ### Import Aliases
 
 Defined in `tsconfig.json`:
+
 - `@/*` - Project root
 - `@components/*` - `components/`
 - `@ui/*` - `components/ui/`
@@ -67,12 +70,14 @@ Defined in `tsconfig.json`:
 **Dark mode is class-based**: The `dark` class on `<html>` toggles between themes.
 
 Theme management:
+
 - `ThemeToggle` component controls theme (in `components/app/ThemeToggle.tsx`)
 - Theme state synced to localStorage
 - Initial theme set via inline script in `app/layout.tsx` (prevents flash)
 - Tailwind configured with `darkMode: ["class"]` in `config/tailwind.config.js`
 
 **Color system**: CSS variables in `app/globals.css` define semantic tokens for light and dark modes:
+
 - Surface: `bg-surface-primary`, `bg-surface-secondary`
 - Text: `text-text-primary`, `text-text-secondary`, `text-text-muted`
 - Background: `bg-background`, `bg-background-secondary`
@@ -95,11 +100,12 @@ Pure, deterministic wage calculations live in `lib/payroll/`:
 - **Client receives precomputed data**: UI renders `gross`, `paidHours`, etc. without recalculation
 
 Key concepts:
+
 - Base rate resolved from snapshot, preset table, or custom wage
-- Time split into wage periods with bonus overlays
- - Break deductions applied via configurable policies (fixed, proportional, etc.)
- - [Removed] No per-shift manual pause; policy-based only
- - Cross-midnight shifts supported (when `end <= start`, treat as next day)
+- Time split into wage periods with supplement overlays
+- Break deductions applied via configurable policies (fixed, proportional, etc.)
+- [Removed] No per-shift manual pause; policy-based only
+- Cross-midnight shifts supported (when `end <= start`, treat as next day)
 
 See `docs/calculations.md` for complete specification.
 
@@ -123,6 +129,7 @@ Pages import and await these loaders, never calling Supabase directly.
 ## Configuration Files
 
 Configs centralized in `/config`:
+
 - `config/tailwind.config.js` - Tailwind theme and semantic colors
 - `config/postcss.config.js` - PostCSS with Tailwind plugin
 - `config/tsconfig.base.json` - Base TypeScript config
@@ -131,6 +138,7 @@ Configs centralized in `/config`:
 ## Environment Variables
 
 Required in `.env.local`:
+
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
 - `NEXT_PUBLIC_SUPABASE_REDIRECT_URL` (optional; login flow constructs callback URLs dynamically)

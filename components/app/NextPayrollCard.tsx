@@ -10,7 +10,7 @@ interface NextPayrollCardProps {
   netAmount: number;
   grossAmount?: number;
   baseAmount?: number;
-  bonusAmount?: number;
+  supplementAmount?: number;
   taxAmount?: number;
   taxEnabled: boolean;
   isLoading?: boolean;
@@ -53,7 +53,7 @@ export const NextPayrollCard: React.FC<NextPayrollCardProps> = ({
   netAmount,
   grossAmount,
   baseAmount,
-  bonusAmount,
+  supplementAmount,
   taxAmount,
   taxEnabled,
   isLoading = false,
@@ -87,9 +87,9 @@ export const NextPayrollCard: React.FC<NextPayrollCardProps> = ({
     breakdown = '---';
   } else if (taxEnabled && grossAmount !== undefined && taxAmount !== undefined) {
     breakdown = `${formatPlainAmount(grossAmount)} - ${formatPlainAmount(taxAmount)}`;
-  } else if (baseAmount !== undefined && bonusAmount !== undefined) {
-    breakdown = bonusAmount > 0
-      ? `${formatPlainAmount(baseAmount)} + ${formatPlainAmount(bonusAmount)}`
+  } else if (baseAmount !== undefined && supplementAmount !== undefined) {
+    breakdown = supplementAmount > 0
+      ? `${formatPlainAmount(baseAmount)} + ${formatPlainAmount(supplementAmount)}`
       : formatPlainAmount(baseAmount);
   } else {
     breakdown = formatPlainAmount(netAmount);

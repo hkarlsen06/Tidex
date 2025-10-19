@@ -33,7 +33,7 @@ Lookup file. Keep updated when new columns are added.
 - **use_preset** → **boolean**
 - **custom_wage** → **numeric**
 - **current_wage_level** → **integer**
-- **custom_bonuses** → **jsonb**
+- **custom_supplements** → **jsonb**
 - **created_at** → timestamp with time zone
 - **updated_at** → timestamp with time zone
 - **last_active** → timestamp with time zone

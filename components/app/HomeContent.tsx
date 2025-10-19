@@ -57,8 +57,8 @@ function calculateMonthData(
     0
   );
 
-  const bonusPay = currentMonthShifts.reduce(
-    (sum, shift) => sum + (shift.computed.bonusPay || 0),
+  const supplementPay = currentMonthShifts.reduce(
+    (sum, shift) => sum + (shift.computed.supplementPay || 0),
     0
   );
 
@@ -107,7 +107,7 @@ function calculateMonthData(
   return {
     total: formatCurrency(taxDeductionEnabled ? netAmount : gross),
     percentageChange,
-    tillegg: formatCurrency(bonusPay),
+    tillegg: formatCurrency(supplementPay),
     grossBeforeTax: taxDeductionEnabled ? formatCurrency(gross) : undefined,
     lastMonthNet: lastMonthNetAmount,
     earnedToDate: formatCurrency(earnedToDateAmount),
@@ -193,8 +193,8 @@ export function HomeContent({ shifts, settings }: HomeContentProps) {
       0
     );
 
-    const bonusPay = relevantShifts.reduce(
-      (sum, shift) => sum + (shift.computed.bonusPay || 0),
+    const supplementPay = relevantShifts.reduce(
+      (sum, shift) => sum + (shift.computed.supplementPay || 0),
       0
     );
 
@@ -207,7 +207,7 @@ export function HomeContent({ shifts, settings }: HomeContentProps) {
       netAmount,
       grossAmount: gross,
       baseAmount: basePay,
-      bonusAmount: bonusPay,
+      supplementAmount: supplementPay,
       taxAmount,
       payrollMonthDate,
       hasPayout: relevantShifts.length > 0,
@@ -293,7 +293,7 @@ export function HomeContent({ shifts, settings }: HomeContentProps) {
               netAmount={payrollData.netAmount}
               grossAmount={payrollData.grossAmount}
               baseAmount={payrollData.baseAmount}
-              bonusAmount={payrollData.bonusAmount}
+              supplementAmount={payrollData.supplementAmount}
               taxAmount={payrollData.taxAmount}
               taxEnabled={taxDeductionEnabled}
               selectedMonth={payrollData.payrollMonthDate}

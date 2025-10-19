@@ -13,7 +13,7 @@ import {
 import { Button } from "@components/app/Button";
 import { Input } from "@components/app/Input";
 import type { ShiftWithComputations } from "@/lib/payroll";
-import BonusBreakdown, { type BonusSegmentInput } from "./BonusBreakdown";
+import SupplementBreakdown, { type SupplementSegmentInput } from "./SupplementBreakdown";
 import { updateShift } from "@/app/(app)/shifts/_actions/updateShift";
 
 const MINUTES_PER_DAY = 24 * 60;
@@ -30,39 +30,39 @@ function minutesToSegmentTime(minutes: number) {
   };
 }
 
-function buildBonusSegments(shift: ShiftWithComputations): BonusSegmentInput[] {
+function buildSupplementSegments(shift: ShiftWithComputations): SupplementSegmentInput[] {
   // Use originalWagePeriods for display (shows configured time ranges)
   // but calculate actual paid hours from adjusted wagePeriods (after break deduction)
   const original = shift.computed.originalWagePeriods;
   const adjusted = shift.computed.wagePeriods;
 
-  // Group consecutive periods with same bonus rate and calculate actual hours
-  const segments: BonusSegmentInput[] = [];
+  // Group consecutive periods with same supplement rate and calculate actual hours
+  const segments: SupplementSegmentInput[] = [];
   let i = 0;
 
   while (i < original.length) {
     const period = original[i];
-    if (period.bonusRate <= 0) {
+    if (period.supplementRate <= 0) {
       i++;
       continue;
     }
 
-    // Find consecutive periods with same bonus rate
+    // Find consecutive periods with same supplement rate
     let groupStart = period.fromMin;
     let groupEnd = period.toMin;
-    let currentRate = period.bonusRate;
+    let currentRate = period.supplementRate;
     let j = i + 1;
 
-    while (j < original.length && original[j].bonusRate === currentRate) {
+    while (j < original.length && original[j].supplementRate === currentRate) {
       groupEnd = original[j].toMin;
       j++;
     }
 
-    // Calculate actual paid hours for this bonus rate group from adjusted periods
+    // Calculate actual paid hours for this supplement rate group from adjusted periods
     let actualHours = 0;
     for (const adj of adjusted) {
       // Find overlap between adjusted period and original group
-      if (adj.bonusRate === currentRate) {
+      if (adj.supplementRate === currentRate) {
         const overlapStart = Math.max(adj.fromMin, groupStart);
         const overlapEnd = Math.min(adj.toMin, groupEnd);
         if (overlapEnd > overlapStart) {
@@ -234,13 +234,13 @@ export function ShiftDetails({
     });
   };
 
-  const bonusSegments = shift ? buildBonusSegments(shift) : [];
+  const supplementSegments = shift ? buildSupplementSegments(shift) : [];
   const baseWageRate =
     shift && shift.computed.paidHours > 0
       ? shift.computed.basePay / shift.computed.paidHours
       : 0;
-  const hasBonusBreakdown =
-    !!(shift && shift.computed.bonusPay > 0 && bonusSegments.length > 0);
+  const hasSupplementBreakdown =
+    !!(shift && shift.computed.supplementPay > 0 && supplementSegments.length > 0);
 
   const canSave =
     DATE_PATTERN.test(shiftDate) &&
@@ -325,18 +325,18 @@ export function ShiftDetails({
               </div>
             </div>
 
-            {hasBonusBreakdown ? <div className="h-px bg-border-subtle" /> : null}
+            {hasSupplementBreakdown ? <div className="h-px bg-border-subtle" /> : null}
 
-            {hasBonusBreakdown ? (
-              <BonusBreakdown
+            {hasSupplementBreakdown ? (
+              <SupplementBreakdown
                 startTime={shift.start_time}
                 endTime={shift.end_time}
                 baseWage={baseWageRate}
-                segments={bonusSegments}
+                segments={supplementSegments}
               />
             ) : null}
 
-            {hasBonusBreakdown ? <div className="h-px bg-border-subtle" /> : null}
+            {hasSupplementBreakdown ? <div className="h-px bg-border-subtle" /> : null}
 
             <div className="flex items-center justify-between pt-2">
               <div className="text-sm text-text-secondary">Total</div>

@@ -7,7 +7,7 @@ interface OnboardingSettings {
   use_preset: boolean;
   current_wage_level: number | null;
   custom_wage: number | null;
-  custom_bonuses: { rules: any[] } | null;
+  custom_supplements: { rules: any[] } | null;
   pause_deduction_enabled: boolean;
   pause_deduction_method: string | null;
   pause_threshold_hours: number | null;
@@ -39,7 +39,7 @@ export async function completeOnboarding(settings: OnboardingSettings) {
     use_preset: settings.use_preset,
     current_wage_level: settings.current_wage_level,
     custom_wage: settings.custom_wage,
-    custom_bonuses: settings.custom_bonuses,
+    custom_supplements: settings.custom_supplements,
     pause_deduction_enabled: settings.pause_deduction_enabled,
     pause_deduction_method: settings.pause_deduction_method,
     pause_threshold_hours: settings.pause_threshold_hours,
