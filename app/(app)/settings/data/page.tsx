@@ -13,7 +13,7 @@ export default async function DataPage() {
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-2xl">
-      <BackButton fallbackHref="/settings" />
+      <BackButton label="Innstillinger" fallbackHref="/settings" />
       <div className="mt-6">
         <DataForm />
       </div>
