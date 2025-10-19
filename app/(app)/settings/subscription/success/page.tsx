@@ -1,5 +1,4 @@
 import { createSupabaseServerClient } from '@/lib/supabase/server';
-import { redirect } from 'next/navigation';
 import { Card } from '@appui/Card';
 import { CheckCircle } from 'lucide-react';
 import { SubscriptionSuccessButtons } from './SubscriptionSuccessButtons';
@@ -9,7 +8,7 @@ export default async function SubscriptionSuccessPage() {
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect('/login');
+    throw new Error('Expected authenticated user in subscription success page; middleware should handle redirects.');
   }
 
   return (

@@ -33,8 +33,8 @@ Each route group has its own layout:
 Uses `@supabase/ssr` with cookie-based sessions:
 
 1. **Server-side**: Use `createSupabaseServerClient()` from `lib/supabase/server.ts` in Server Components and data loaders
-2. **Client-side**: Use `createSupabaseBrowserClient()` from `lib/supabase/client.ts` in Client Components
-3. **Session sync**: `app/supabase-listener.tsx` subscribes to auth changes and calls `router.refresh()` to update server components
+2. **Client-side**: Import the shared `supabase` instance from `lib/supabase/browser.ts` in Client Components
+3. **Session sync**: `app/supabase-listener.tsx` subscribes to auth changes via the shared client and calls `router.refresh()` to update server components
 
 Protected pages fetch user via `createSupabaseServerClient()` and redirect to `/login` if unauthenticated. See `docs/auth.md` for detailed flow.
 
@@ -133,9 +133,9 @@ Configs centralized in `/config`:
 Required in `.env.local`:
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
-- `NEXT_PUBLIC_SUPABASE_REDIRECT_URL`
+- `NEXT_PUBLIC_SUPABASE_REDIRECT_URL` (optional; login flow constructs callback URLs dynamically)
 
-Validated at module load in `lib/supabase/client.ts` and accessed via `lib/env.ts`.
+Validated at module load in `lib/supabase/browser.ts` and accessed via `lib/env.ts`.
 
 ## Key Principles
 

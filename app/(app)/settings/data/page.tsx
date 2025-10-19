@@ -1,5 +1,4 @@
 import { createSupabaseServerClient } from '@/lib/supabase/server';
-import { redirect } from 'next/navigation';
 import { DataForm } from '@components/settings/data/DataForm';
 import { BackButton } from '@appui/BackButton';
 
@@ -8,7 +7,7 @@ export default async function DataPage() {
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect('/login');
+    throw new Error('Expected authenticated user in data settings page; middleware should handle redirects.');
   }
 
   return (

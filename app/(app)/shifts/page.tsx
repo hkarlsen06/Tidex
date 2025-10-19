@@ -1,5 +1,3 @@
-import { redirect } from "next/navigation";
-
 import { getComputedShifts, PRESET_RULES } from "./_data/getShifts";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { ShiftsView } from "@components//shifts/ShiftsView";
@@ -11,7 +9,7 @@ export default async function ShiftsPage() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/login");
+    throw new Error("Expected authenticated user in shifts page; middleware should handle redirects.");
   }
 
   const { shifts, defaultView, aggregates, settings } = await getComputedShifts(user.id);

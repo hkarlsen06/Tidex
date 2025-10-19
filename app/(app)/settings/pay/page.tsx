@@ -1,5 +1,4 @@
 import { createSupabaseServerClient } from '@/lib/supabase/server';
-import { redirect } from 'next/navigation';
 import { getUserSettings } from '../_data/getSettings';
 import { PayForm } from '@components/settings/pay/PayForm';
 import { BackButton } from '@appui/BackButton';
@@ -9,7 +8,7 @@ export default async function PayPage() {
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect('/login');
+    throw new Error('Expected authenticated user in pay settings page; middleware should handle redirects.');
   }
 
   const settings = await getUserSettings(user.id);

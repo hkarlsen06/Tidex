@@ -1,5 +1,4 @@
 import { createSupabaseServerClient } from '@/lib/supabase/server';
-import { redirect } from 'next/navigation';
 import { getUserProfile } from '../_data/getSettings';
 import { ProfileForm } from '@components/settings/profile/ProfileForm';
 import { PhoneConnectionCard } from '@components/settings/profile/PhoneConnectionCard';
@@ -13,7 +12,7 @@ export default async function ProfilePage() {
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect('/login');
+    throw new Error('Expected authenticated user in profile settings page; middleware should handle redirects.');
   }
 
   const profile = await getUserProfile();

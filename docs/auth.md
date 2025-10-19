@@ -14,15 +14,15 @@ This document outlines how authentication is wired into the project today, how t
 ## Runtime Flow
 
 1. **Anonymous visit** → `/` checks session server-side and redirects unauthenticated visitors to `/login` (`app/page.tsx`).
-2. **Login** → `/login` renders a client-side form that calls `supabase.auth.signInWithPassword`, `signUp`, or `signInWithOAuth` via the browser client from `lib/supabase/client.ts`.
+2. **Login** → `/login` renders a client-side form that calls `supabase.auth.signInWithPassword`, `signUp`, or `signInWithOAuth` via the shared browser client from `lib/supabase/browser.ts`.
 3. **OAuth/email callbacks** → Supabase redirects back to `/auth/callback` with a `code`. The route handler exchanges the code for a session via `createSupabaseRouteHandlerClient`, updates cookies, and redirects to the `next` destination (`app/auth/callback/route.ts`).
 4. **Session hydration** → `app/layout.tsx` creates a server client, fetches the session, and renders `SupabaseListener`. The listener subscribes to auth changes in the browser and triggers `router.refresh()` when the access token changes (`app/supabase-listener.tsx`). This keeps server components in sync after login/logout without a full page reload.
 5. **Subsequent requests** → Server components read cookies through `createSupabaseServerClient`. When the user is authenticated, the Supabase client’s cookie jar contains the session and requests are made with the right access token.
 
 ## Key Modules
 
-- `lib/supabase/client.ts`
-  - Creates the **browser client** using `createBrowserClient`.
+- `lib/supabase/browser.ts`
+  - Creates the shared **browser client** using `createBrowserClient`.
   - Validates required env vars at module load to fail fast during development/deployment.
 - `lib/supabase/server.ts`
   - Provides helpers to instantiate the **server client** for RSCs/actions and **route handler client** when both cookies and response headers are needed.
@@ -42,7 +42,7 @@ This document outlines how authentication is wired into the project today, how t
 
 - **Centralize Supabase imports**: Always use the helpers in `lib/supabase`. Do not call `createBrowserClient` / `createServerClient` in arbitrary files—this keeps cookie configuration and env validation consistent.
 - **Server components**: Call `createSupabaseServerClient()` at the top of the async component or loader, then use the returned client. If you need to send responses (e.g., API routes, route handlers), use `createSupabaseRouteHandlerClient(request, response)` so that cookies are persisted.
-- **Client components**: Use `createSupabaseBrowserClient()` and memoize it (e.g., with `useMemo`) when the component re-renders frequently.
+- **Client components**: Import the shared `supabase` instance from `lib/supabase/browser` so every component interacts with the same client.
 - **Session-dependent rendering**: Prefer server-side checks (redirecting before render) to avoid flashes of unauthenticated UI.
 - **Auth state changes**: When you add logout flows or session updates, trigger `router.refresh()` after the operation so server components re-evaluate.
 - **Environment variables**: Never hardcode Supabase credentials. Update `.env.local.example` when new keys are required and keep `.env.local` out of version control.
