@@ -76,7 +76,7 @@ export async function handleAuthError(error: any): Promise<never> {
 
     // Refresh succeeded but the original operation still failed
     // Redirect to trigger re-render with fresh session
-    redirect(getCurrentPath());
+    redirect(await getCurrentPath());
   } catch (refreshError) {
     console.error("[AUTH ERROR] Refresh threw exception:", refreshError);
     await signOutAndRedirect();
@@ -98,9 +98,9 @@ async function signOutAndRedirect(): Promise<never> {
  * Get current path for redirect after refresh.
  * Falls back to root if headers not available.
  */
-function getCurrentPath(): string {
+async function getCurrentPath(): Promise<string> {
   try {
-    const headerList = headers();
+    const headerList = await headers();
     const referer = headerList.get("referer");
 
     if (referer) {

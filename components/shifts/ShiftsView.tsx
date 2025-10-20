@@ -30,7 +30,7 @@ import {
   DialogFooter,
   DialogDescription,
 } from "@/components/app/Dialog";
-import { IconArrowRight } from "@tabler/icons-react";
+import { IconArrowRight, IconArrowLeft } from "@tabler/icons-react";
 import { cn } from "@/lib/cn";
 
 // Lazy load the calendar to reduce initial bundle size (~40KB savings)
@@ -223,12 +223,16 @@ function CalendarCellPreview({
     variant === "target"
       ? "border-brand-gradientMid bg-brand-gradientMid/10"
       : "border-border-subtle";
+  const dayNumberClasses = cn(
+    "w-full text-2xl font-bold text-right pr-1",
+    variant === "target" ? "text-brand-highlight" : "text-text-primary"
+  );
 
   return (
     <div className="flex flex-col items-center gap-1">
       <div className={`${baseClasses} ${variantClasses}`}>
         <div className="flex flex-1 flex-col items-center justify-start gap-1 p-1 pb-1.5">
-          <div className="w-full text-2xl font-bold text-brand-highlight text-right pr-1">
+          <div className={dayNumberClasses}>
             {dayNumber !== null ? dayNumber : "--"}
           </div>
           {dayNumber ? (
@@ -295,6 +299,48 @@ function MoveShiftModal({
     : "Velg dato";
   const targetHours =
     selectedShifts.length > 0 && targetDate ? hoursPreview : "";
+  const isReverseDirection = useMemo(() => {
+    if (!sourceDate || !targetDate) {
+      return false;
+    }
+    return parseISODate(targetDate).getTime() < parseISODate(sourceDate).getTime();
+  }, [sourceDate, targetDate]);
+
+  const fromSection = (
+    <div className="flex flex-col items-center gap-2">
+      <span className="text-xs font-semibold uppercase tracking-[0.2em] text-text-muted">
+        Fra
+      </span>
+      <CalendarCellPreview
+        isoDate={sourceDate}
+        hours={hoursPreview}
+        placeholder={sourcePlaceholder}
+        variant="source"
+        sourceDate={sourceDate}
+      />
+    </div>
+  );
+
+  const toSection = (
+    <div className="flex flex-col items-center gap-2">
+      <span className="text-xs font-semibold uppercase tracking-[0.2em] text-text-muted">
+        Til
+      </span>
+      <CalendarCellPreview
+        isoDate={targetDate}
+        hours={targetHours}
+        placeholder={targetPlaceholder}
+        variant="target"
+        sourceDate={sourceDate}
+      />
+    </div>
+  );
+
+  const directionArrow = isReverseDirection ? (
+    <IconArrowLeft className="h-8 w-8 text-brand-highlight" aria-hidden="true" />
+  ) : (
+    <IconArrowRight className="h-8 w-8 text-brand-highlight" aria-hidden="true" />
+  );
 
   return (
     <Dialog open={open} onOpenChange={(nextOpen) => { if (!nextOpen && !isSubmitting) onCancel(); }}>
@@ -316,31 +362,19 @@ function MoveShiftModal({
         <div className="space-y-5 pt-2">
           <div className="flex flex-col items-center gap-5">
             <div className="flex items-center gap-6">
-              <div className="flex flex-col items-center gap-2">
-                <span className="text-xs font-semibold uppercase tracking-[0.2em] text-text-muted">
-                  Fra
-                </span>
-                <CalendarCellPreview
-                  isoDate={sourceDate}
-                  hours={hoursPreview}
-                  placeholder={sourcePlaceholder}
-                  variant="source"
-                  sourceDate={sourceDate}
-                />
-              </div>
-              <IconArrowRight className="h-8 w-8 text-brand-highlight" aria-hidden="true" />
-              <div className="flex flex-col items-center gap-2">
-                <span className="text-xs font-semibold uppercase tracking-[0.2em] text-text-muted">
-                  Til
-                </span>
-                <CalendarCellPreview
-                  isoDate={targetDate}
-                  hours={targetHours}
-                  placeholder={targetPlaceholder}
-                  variant="target"
-                  sourceDate={sourceDate}
-                />
-              </div>
+              {isReverseDirection ? (
+                <>
+                  {toSection}
+                  {directionArrow}
+                  {fromSection}
+                </>
+              ) : (
+                <>
+                  {fromSection}
+                  {directionArrow}
+                  {toSection}
+                </>
+              )}
             </div>
           </div>
           {shifts.length > 0 && (
@@ -384,12 +418,13 @@ function MoveShiftModal({
             </p>
           )}
         </div>
-        <DialogFooter className="pt-4">
+        <DialogFooter className="pt-4 flex w-full flex-row items-center gap-3">
           <Button
             type="button"
             variant="ghost"
             onClick={onCancel}
             disabled={isSubmitting}
+            className="flex-1 h-11 rounded-full border border-border-subtle bg-white text-neutral-900 hover:bg-surface-secondary dark:text-neutral-900"
           >
             Avbryt
           </Button>
@@ -399,6 +434,7 @@ function MoveShiftModal({
             onClick={onConfirm}
             loading={isSubmitting}
             disabled={isSubmitting || selectedIds.length === 0 || !targetDate}
+            className="flex-1 h-11 rounded-full"
           >
             Flytt vakt
           </Button>
@@ -429,6 +465,7 @@ export function ShiftsView({ shifts, defaultView = "calendar", userSettings, pre
   const [moveTargetDate, setMoveTargetDate] = useState<ISODate | null>(null);
   const [moveSelection, setMoveSelection] = useState<string[]>([]);
   const [moveError, setMoveError] = useState<string | null>(null);
+  const [moveMode, setMoveMode] = useState(false);
   const [openedFromCalendar, setOpenedFromCalendar] = useState(false);
   const [copyMode, setCopyMode] = useState(false);
   const [copying, startCopyTransition] = useTransition();
@@ -442,6 +479,7 @@ export function ShiftsView({ shifts, defaultView = "calendar", userSettings, pre
     setMoveModalOpen(false);
     setMoveTargetDate(null);
     setMoveError(null);
+    setMoveMode(false);
     setOpenedFromCalendar(false);
     setCopyMode(false);
   }, []);
@@ -517,7 +555,7 @@ export function ShiftsView({ shifts, defaultView = "calendar", userSettings, pre
         if (copyMode) {
           const sourceShifts = shiftsByDate.get(selectedDate) ?? [];
           if (sourceShifts.length > 0) {
-            const shiftIds = sourceShifts.map(shift => shift.id);
+            const shiftIds = sourceShifts.map((shift) => shift.id);
             startCopyTransition(async () => {
               try {
                 await copyShifts({
@@ -535,20 +573,25 @@ export function ShiftsView({ shifts, defaultView = "calendar", userSettings, pre
           return;
         }
 
-        const sourceShifts = shiftsByDate.get(selectedDate) ?? [];
-        if (sourceShifts.length > 0) {
-          const defaultSelection =
-            sourceShifts.length === 1
-              ? [sourceShifts[0].id]
-              : [];
-          setMoveSelection(defaultSelection);
-          setMoveTargetDate(isoDate);
-          setMoveError(null);
-          setMoveModalOpen(true);
+        if (moveMode) {
+          const sourceShifts = shiftsByDate.get(selectedDate) ?? [];
+          if (sourceShifts.length > 0) {
+            const defaultSelection =
+              sourceShifts.length === 1
+                ? [sourceShifts[0].id]
+                : [];
+            setMoveSelection(defaultSelection);
+            setMoveTargetDate(isoDate);
+            setMoveError(null);
+            setMoveModalOpen(true);
+            setMoveMode(false);
+            return;
+          }
+
+          setMoveMode(false);
+          clearSelection();
           return;
         }
-
-        clearSelection();
       }
 
       if (hasShifts && targetShifts.length > 0) {
@@ -561,13 +604,20 @@ export function ShiftsView({ shifts, defaultView = "calendar", userSettings, pre
           setCalendarSelectedShiftId(shiftToRemember.id);
           setMoveSelection([]);
           setOpenedFromCalendar(false);
+          setCopyMode(false);
+          setMoveMode(false);
         }
+        return;
+      }
+
+      if (selectedDate) {
+        clearSelection();
         return;
       }
 
       navigate(`/shifts/add?date=${encodeURIComponent(iso)}`);
     },
-    [calendarSelectedShiftId, clearSelection, navigate, selectedDate, shiftsByDate, copyMode, router]
+    [calendarSelectedShiftId, clearSelection, navigate, selectedDate, shiftsByDate, copyMode, router, moveMode]
   );
 
   const handleOpenDetails = useCallback(() => {
@@ -587,8 +637,25 @@ export function ShiftsView({ shifts, defaultView = "calendar", userSettings, pre
     }
   }, [selectedDate, shiftsByDate, calendarSelectedShiftId]);
 
+  const handleInitiateMoveMode = useCallback(() => {
+    if (!selectedDate) return;
+    setMoveMode(true);
+    setMoveSelection([]);
+    setMoveTargetDate(null);
+    setMoveError(null);
+    setCopyMode(false);
+  }, [selectedDate]);
+
+  const handleCancelMoveMode = useCallback(() => {
+    setMoveMode(false);
+    setMoveSelection([]);
+    setMoveTargetDate(null);
+    setMoveError(null);
+  }, []);
+
   const handleInitiateCopy = useCallback(() => {
     if (!selectedDate) return;
+    setMoveMode(false);
     setCopyMode(true);
   }, [selectedDate]);
 
@@ -619,6 +686,7 @@ export function ShiftsView({ shifts, defaultView = "calendar", userSettings, pre
     setMoveTargetDate(null);
     setMoveSelection([]);
     setMoveError(null);
+    setMoveMode(false);
   }, []);
 
   const handleConfirmMove = useCallback(() => {
@@ -722,6 +790,10 @@ export function ShiftsView({ shifts, defaultView = "calendar", userSettings, pre
             onInitiateCopy={handleInitiateCopy}
             copying={copying}
             onCancelCopy={handleCancelCopy}
+            onInitiateMove={handleInitiateMoveMode}
+            moveMode={moveMode}
+            moving={moving}
+            onCancelMoveMode={handleCancelMoveMode}
           />
         </div>
       </div>
