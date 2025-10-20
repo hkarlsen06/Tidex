@@ -295,7 +295,6 @@ export default function LoginClient({ initialNext }: { initialNext: string }) {
         redirectTo: redirectUrl.toString(),
         queryParams: {
           access_type: 'offline',
-          prompt: 'consent',
         },
       },
     });
