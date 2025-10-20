@@ -16,7 +16,6 @@ export const metadata: Metadata = {
   title: "kkarlsen.dev - Lønn",
   description: "App for å regne ut lønn basert på skiftene dine med tillegg!",
   manifest: "/manifest.json",
-  themeColor: "#2563eb",
   icons: {
     icon: [
       {
@@ -60,6 +59,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
+  themeColor: "#2563eb",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
