@@ -15,6 +15,45 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "kkarlsen.dev - Lønn",
   description: "App for å regne ut lønn basert på skiftene dine med tillegg!",
+  manifest: "/manifest.json",
+  themeColor: "#2563eb",
+  icons: {
+    icon: [
+      {
+        url: "/icon-192x192.png",
+        sizes: "192x192",
+        type: "image/png",
+      },
+      {
+        url: "/icon-512x512.png",
+        sizes: "512x512",
+        type: "image/png",
+      },
+    ],
+    apple: [
+      {
+        url: "/apple-touch-icon-180x180.png",
+        sizes: "180x180",
+      },
+      {
+        url: "/apple-touch-icon-152x152.png",
+        sizes: "152x152",
+      },
+      {
+        url: "/apple-touch-icon-120x120.png",
+        sizes: "120x120",
+      },
+      {
+        url: "/apple-touch-icon-76x76.png",
+        sizes: "76x76",
+      },
+    ],
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "KKarlsen.DEV",
+  },
 };
 
 export const viewport: Viewport = {
@@ -27,11 +66,12 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <link rel="manifest" href="/manifest.json" />
-        <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
-        <meta name="theme-color" content="#2563eb" />
         <meta name="mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon-180x180.png" />
+        <link rel="apple-touch-icon" sizes="152x152" href="/apple-touch-icon-152x152.png" />
+        <link rel="apple-touch-icon" sizes="120x120" href="/apple-touch-icon-120x120.png" />
+        <link rel="apple-touch-icon" sizes="76x76" href="/apple-touch-icon-76x76.png" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <script
           dangerouslySetInnerHTML={{
             __html: `
