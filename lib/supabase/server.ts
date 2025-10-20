@@ -5,14 +5,59 @@ import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import type { NextRequest, NextResponse } from "next/server";
 import { ENV } from "@/lib/env";
 
+const ONE_WEEK_SECONDS = 60 * 60 * 24 * 7;
+
+function envPrefersSecureCookies() {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+  if (siteUrl) {
+    return siteUrl.startsWith("https");
+  }
+  return process.env.NODE_ENV === "production";
+}
+
+function isLoopbackHost(hostname: string) {
+  const lower = hostname.toLowerCase();
+  return (
+    lower === "localhost" ||
+    lower.startsWith("localhost:") ||
+    lower === "127.0.0.1" ||
+    lower.startsWith("127.0.0.1:") ||
+    lower === "[::1]" ||
+    lower.startsWith("[::1]:")
+  );
+}
+
+function resolveSecureFlag(protocol: string | undefined, hostname: string | undefined) {
+  if (protocol === "https:") return true;
+  if (protocol === "http:") {
+    if (hostname && isLoopbackHost(hostname)) {
+      return false;
+    }
+    return false;
+  }
+  if (hostname && isLoopbackHost(hostname)) return false;
+  return envPrefersSecureCookies();
+}
+
+function buildCookieBase(): Partial<CookieOptions> {
+  return {
+    httpOnly: true,
+    secure: envPrefersSecureCookies(),
+    sameSite: "lax",
+    path: "/",
+    maxAge: ONE_WEEK_SECONDS,
+  };
+}
+
+function buildCookieBaseForRequest(request: NextRequest): Partial<CookieOptions> {
+  return {
+    ...buildCookieBase(),
+    secure: resolveSecureFlag(request.nextUrl.protocol, request.nextUrl.hostname),
+  };
+}
+
 // Security defaults applied when we WRITE cookies (reading is unaffected)
-const COOKIE_SECURITY_OPTIONS: Partial<CookieOptions> = {
-  httpOnly: true,
-  secure: process.env.NODE_ENV === "production",
-  sameSite: "lax",
-  path: "/",
-  maxAge: 60 * 60 * 24 * 7, // 7 days
-};
+const COOKIE_SECURITY_OPTIONS = buildCookieBase();
 
 // Helper: Next.js throws when attempting to set cookies in RSC render phase
 const isReadonlyCookiesError = (err: unknown) =>
@@ -63,6 +108,8 @@ export function createSupabaseRouteHandlerClient(
   request: NextRequest,
   response: NextResponse
 ) {
+  const base = buildCookieBaseForRequest(request);
+
   return createServerClient(ENV.URL!, ENV.PUBLISHABLE!, {
     cookies: {
       getAll() {
@@ -73,7 +120,7 @@ export function createSupabaseRouteHandlerClient(
           response.cookies.set({
             name,
             value,
-            ...COOKIE_SECURITY_OPTIONS,
+            ...base,
             ...(options ?? {}),
           } as any);
         }
