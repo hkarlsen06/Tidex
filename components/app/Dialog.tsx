@@ -49,3 +49,5 @@ export const DialogContent = React.forwardRef<
     </BaseDialogContent>
   );
 });
+
+DialogContent.displayName = "DialogContent";

@@ -47,8 +47,6 @@ export type SupplementSegmentInput = {
 };
 
 type SupplementBreakdownProps = {
-  startTime: string;
-  endTime: string;
   baseWage: number;
   segments: SupplementSegmentInput[];
 };
@@ -61,7 +59,7 @@ type SupplementRow = {
   note?: ReactNode;
 };
 
-function computeRows({ startTime, endTime, baseWage, segments }: SupplementBreakdownProps) {
+function computeRows({ baseWage, segments }: SupplementBreakdownProps) {
   const rows: SupplementRow[] = [];
 
   for (const segment of segments) {

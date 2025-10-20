@@ -1,5 +1,6 @@
 import "server-only";
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { withRefreshLock } from "./refresh-lock";
 
@@ -81,9 +82,8 @@ export async function handleAuthError(error: any): Promise<never> {
     await signOutAndRedirect();
   }
 
-  // TypeScript needs this for exhaustiveness checking, but code never reaches here
-  // because all paths above either throw or redirect
-  throw new Error("Unreachable");
+  // As a final safeguard, ensure we sign out if execution continues.
+  return signOutAndRedirect();
 }
 
 /**
@@ -100,8 +100,17 @@ async function signOutAndRedirect(): Promise<never> {
  */
 function getCurrentPath(): string {
   try {
-    // In Server Components, we can't reliably get the current path
-    // Redirect to root and let the app router handle it
+    const headerList = headers();
+    const referer = headerList.get("referer");
+
+    if (referer) {
+      try {
+        return new URL(referer).pathname || "/";
+      } catch {
+        // Ignore parsing errors and fall back below
+      }
+    }
+
     return "/";
   } catch {
     return "/";

@@ -20,7 +20,7 @@ export default async function Home() {
     redirect("/onboarding");
   }
 
-  const { shifts, settings, aggregates } = await getComputedShifts(user.id);
+  const { shifts, settings } = await getComputedShifts(user.id);
 
   return <HomeContent shifts={shifts} settings={settings} />;
 }

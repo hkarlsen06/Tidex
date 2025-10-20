@@ -1,6 +1,6 @@
 "use client";
 
-import { MutableRefObject, useEffect, useRef, useState } from "react";
+import { MutableRefObject, useCallback, useEffect, useRef, useState } from "react";
 import { Label } from "@appui/Label";
 import { Switch } from "@appui/Switch";
 import { Input } from "@appui/Input";
@@ -108,19 +108,22 @@ export function BreakStep({
     triggerPressFeedback(setMethodButtonPressed, methodButtonTimeout);
   };
 
-  useEffect(() => {
-    return () => {
-      if (thresholdButtonTimeout.current) {
-        clearTimeout(thresholdButtonTimeout.current);
-      }
-      if (durationButtonTimeout.current) {
-        clearTimeout(durationButtonTimeout.current);
-      }
-      if (methodButtonTimeout.current) {
-        clearTimeout(methodButtonTimeout.current);
-      }
-    };
-  }, []);
+  const clearAllTimeouts = useCallback(() => {
+    if (thresholdButtonTimeout.current) {
+      clearTimeout(thresholdButtonTimeout.current);
+      thresholdButtonTimeout.current = null;
+    }
+    if (durationButtonTimeout.current) {
+      clearTimeout(durationButtonTimeout.current);
+      durationButtonTimeout.current = null;
+    }
+    if (methodButtonTimeout.current) {
+      clearTimeout(methodButtonTimeout.current);
+      methodButtonTimeout.current = null;
+    }
+  }, [durationButtonTimeout, methodButtonTimeout, thresholdButtonTimeout]);
+
+  useEffect(() => clearAllTimeouts, [clearAllTimeouts]);
 
   const isFormComplete =
     !breakEnabled || (thresholdActivated && durationActivated && methodActivated);

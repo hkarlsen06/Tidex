@@ -21,7 +21,7 @@ export function ThemeProvider({
   children: ReactNode;
 }) {
   const [theme, setTheme] = useState<EffectiveTheme>("dark");
-  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Use useLayoutEffect to apply theme synchronously before browser paint
   // This minimizes flash when serverTheme differs from localStorage

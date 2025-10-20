@@ -12,7 +12,7 @@ export default async function ShiftsPage() {
     throw new Error("Expected authenticated user in shifts page; middleware should handle redirects.");
   }
 
-  const { shifts, defaultView, aggregates, settings } = await getComputedShifts(user.id);
+  const { shifts, defaultView, settings } = await getComputedShifts(user.id);
 
-  return <ShiftsView shifts={shifts} defaultView={defaultView} aggregates={aggregates} userSettings={settings} presetRules={PRESET_RULES} />;
+  return <ShiftsView shifts={shifts} defaultView={defaultView} userSettings={settings} presetRules={PRESET_RULES} />;
 }

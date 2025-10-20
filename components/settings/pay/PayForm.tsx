@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Card } from '@appui/Card';
 import { Label } from '@appui/Label';
 import { Input } from '@appui/Input';
@@ -68,14 +68,11 @@ export function PayForm({ initialData }: PayFormProps) {
     initialData.payroll_day?.toString() || ''
   );
 
-  const [isSaving, setIsSaving] = useState(false);
-
-  const saveSettings = async () => {
+  const saveSettings = useCallback(async () => {
     if (isCustomWageInvalid) {
       return;
     }
 
-    setIsSaving(true);
     try {
       await updatePaySettings({
         use_preset: usePreset,
@@ -94,10 +91,23 @@ export function PayForm({ initialData }: PayFormProps) {
       router.refresh();
     } catch (error) {
       console.error('Failed to save pay settings:', error);
-    } finally {
-      setIsSaving(false);
     }
-  };
+  }, [
+    customSupplements,
+    customWageValue,
+    isCustomWageInvalid,
+    monthlyGoal,
+    pauseDeductionEnabled,
+    pauseDeductionMinutes,
+    pauseMethod,
+    pauseThresholdHours,
+    payrollDay,
+    router,
+    taxDeductionEnabled,
+    taxPercentage,
+    usePreset,
+    wageLevel,
+  ]);
 
   // Auto-save for immediate changes (buttons, switches, selects)
   useEffect(() => {
@@ -106,7 +116,7 @@ export function PayForm({ initialData }: PayFormProps) {
       return;
     }
     saveSettings();
-  }, [usePreset, wageLevel, pauseMethod, pauseDeductionEnabled, taxDeductionEnabled, customSupplements]);
+  }, [customSupplements, pauseDeductionEnabled, pauseMethod, saveSettings, taxDeductionEnabled, usePreset, wageLevel]);
 
   // Debounced auto-save for text inputs (1 second)
   useEffect(() => {
@@ -117,7 +127,7 @@ export function PayForm({ initialData }: PayFormProps) {
     }, 1000);
 
     return () => clearTimeout(timer);
-  }, [customWage, pauseThresholdHours, pauseDeductionMinutes, taxPercentage, monthlyGoal, payrollDay]);
+  }, [customWage, monthlyGoal, pauseDeductionMinutes, pauseThresholdHours, payrollDay, saveSettings, taxPercentage]);
 
   const getCurrentWage = () => {
     if (usePreset) {

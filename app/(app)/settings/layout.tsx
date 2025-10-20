@@ -1,7 +1,9 @@
+import type { ReactNode } from "react";
+
 export default function SettingsLayout({
   children,
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return <>{children}</>;
 }

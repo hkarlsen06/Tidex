@@ -16,7 +16,7 @@ type TimeInputProps = {
 };
 
 export const TimeInput = React.forwardRef<HTMLInputElement, TimeInputProps>(
-  ({ id, value, onChange, className, onComplete, step = 900, disabled }, ref) => {
+  ({ id, value, onChange, className, onComplete, step: _step = 900, disabled }, ref) => {
     const [inputValue, setInputValue] = React.useState(value);
     const internalRef = React.useRef<HTMLInputElement>(null);
     const inputRef = (ref as React.RefObject<HTMLInputElement>) || internalRef;
@@ -118,7 +118,6 @@ export const TimeInput = React.forwardRef<HTMLInputElement, TimeInputProps>(
         }
       } else if (digits.length === 3) {
         const minuteFirst = parseInt(digits[2]);
-        const newDigit = parseInt(e.key);
 
         // If minute first digit is 6-9, auto-prefix with 0
         if (minuteFirst >= 6) {

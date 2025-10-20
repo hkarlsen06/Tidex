@@ -1,5 +1,7 @@
+import type { ReactNode } from "react";
+
 // server component
-export default function AuthLayout({ children }: { children: React.ReactNode }) {
+export default function AuthLayout({ children }: { children: ReactNode }) {
   return (
     <>
       <script

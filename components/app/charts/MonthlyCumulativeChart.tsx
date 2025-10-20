@@ -1,6 +1,6 @@
 "use client";
 
-import { Line, LineChart, CartesianGrid, XAxis, YAxis, ReferenceLine } from "recharts";
+import { Line, LineChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import {
   ChartContainer,
   ChartTooltip,
