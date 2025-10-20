@@ -34,8 +34,13 @@ function resolveInitialNext(searchParams: LoginSearchParams): string {
   return raw;
 }
 
-export default function Page({ searchParams }: { searchParams: LoginSearchParams }) {
-  const initialNext = resolveInitialNext(searchParams);
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<LoginSearchParams>;
+}) {
+  const resolvedSearchParams = await searchParams;
+  const initialNext = resolveInitialNext(resolvedSearchParams);
 
   return <LoginClient initialNext={initialNext} />;
 }
