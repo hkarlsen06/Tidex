@@ -15,6 +15,7 @@ import { Input } from "@components/app/Input";
 import type { ShiftWithComputations } from "@/lib/payroll";
 import SupplementBreakdown, { type SupplementSegmentInput } from "./SupplementBreakdown";
 import { updateShift } from "@/app/(app)/shifts/_actions/updateShift";
+import { cn } from "@/lib/cn";
 
 const MINUTES_PER_DAY = 24 * 60;
 
@@ -347,67 +348,67 @@ export function ShiftDetails({
 
         <DialogFooter className="mt-4">
           {shift && (
-            <div className="flex w-full items-center justify-between">
-              <div className="flex items-center gap-2">
+            <div className="grid w-full grid-cols-3 gap-2">
+              <Button
+                onClick={() => {
+                  if (confirmingDelete) {
+                    handleConfirmDelete();
+                  } else {
+                    handleDeleteClick();
+                  }
+                }}
+                disabled={saving || isDeleting || isEditing}
+                loading={confirmingDelete && isDeleting}
+                className={cn(
+                  "col-span-1 h-11 w-full rounded-full px-4 text-sm font-medium transition-colors gap-2",
+                  isEditing
+                    ? "bg-surface-secondary text-text-muted cursor-not-allowed"
+                    : "bg-rose-600 text-white hover:bg-rose-700"
+                )}
+              >
+                <IconTrash className="h-4 w-4" />
+                {confirmingDelete ? "Bekreft" : "Slett"}
+              </Button>
+              {isEditing ? (
                 <Button
-                  variant="secondary"
+                  onClick={handleSave}
+                  disabled={saving || !canSave}
+                  className="col-span-1 h-11 w-full rounded-full px-4 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 gap-2"
+                >
+                  <IconCheck className="h-4 w-4" />
+                  Lagre
+                </Button>
+              ) : (
+                <Button
                   onClick={handleEdit}
-                  className="gap-2"
-                  disabled={isEditing || saving || confirmingDelete || isDeleting}
+                  disabled={saving || isDeleting || confirmingDelete}
+                  className="col-span-1 h-11 w-full rounded-full px-4 text-sm font-medium transition-colors gap-2 bg-blue-600 text-white hover:bg-blue-700"
                 >
                   <IconPencil className="h-4 w-4" />
                   Rediger
                 </Button>
-                <Button
-                  variant="destructive"
-                  onClick={handleDeleteClick}
-                  className="gap-2"
-                  loading={isDeleting}
-                  disabled={isDeleting || saving || confirmingDelete}
-                >
-                  <IconTrash className="h-4 w-4" />
-                  Slett
-                </Button>
-              </div>
+              )}
               {isEditing ? (
-                <div className="flex items-center gap-2">
-                  <Button
-                    size="icon"
-                    aria-label="Avbryt redigering"
-                    onClick={handleCancelEdit}
-                    disabled={saving}
-                    className="bg-rose-500 text-white hover:bg-rose-600"
-                  >
-                    <IconX className="h-5 w-5" />
-                  </Button>
-                  <Button
-                    size="icon"
-                    aria-label="Lagre endringer"
-                    onClick={handleSave}
-                    disabled={saving || !canSave}
-                    className="bg-emerald-500 text-white hover:bg-emerald-600"
-                  >
-                    <IconCheck className="h-5 w-5" />
-                  </Button>
-                </div>
+                <Button
+                  onClick={handleCancelEdit}
+                  disabled={saving || isDeleting}
+                  className="col-span-1 h-11 w-full rounded-full px-4 text-sm font-medium border border-border-subtle bg-white text-neutral-900 hover:bg-surface-secondary dark:text-neutral-900 gap-2"
+                >
+                  <IconX className="h-4 w-4" />
+                  Avbryt
+                </Button>
               ) : confirmingDelete ? (
-                <div className="flex items-center gap-3">
-                  <Button
-                    onClick={handleConfirmDelete}
-                    disabled={isDeleting}
-                    className="bg-surface-secondary text-text-primary hover:bg-surface-secondary/80 border border-border-subtle"
-                  >
-                    Bekreft
-                  </Button>
-                  <Button
-                    onClick={handleCancelDelete}
-                    disabled={isDeleting}
-                    className="bg-emerald-500 text-white hover:bg-emerald-600"
-                  >
-                    Avbryt
-                  </Button>
-                </div>
-              ) : null}
+                <Button
+                  onClick={handleCancelDelete}
+                  disabled={isDeleting}
+                  className="col-span-1 h-11 w-full rounded-full px-4 text-sm font-medium border border-border-subtle bg-white text-neutral-900 hover:bg-surface-secondary dark:text-neutral-900 gap-2"
+                >
+                  <IconX className="h-4 w-4" />
+                  Avbryt
+                </Button>
+              ) : (
+                <div className="col-span-1" aria-hidden="true" />
+              )}
             </div>
           )}
         </DialogFooter>

@@ -103,7 +103,7 @@ export function ShiftMoveCard({ shift, targetDate, selected, onToggle, userSetti
       className={cn(
         "rounded-3xl cursor-pointer transition-colors",
         selected
-          ? "border-brand-gradientMid bg-brand-gradientMid/10 shadow-app"
+          ? "border-border-strong bg-surface-primary shadow-app-sm"
           : "hover:bg-surface-secondary"
       )}
     >

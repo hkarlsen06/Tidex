@@ -10,6 +10,7 @@ import {
   type ISODate,
 } from "./calendar.utils";
 import type { EarningsByDate, HoursByDate } from "./calendar.types";
+import { cn } from "@/lib/cn";
 
 export type ShiftsCalendarProps = {
   month: Date;
@@ -115,7 +116,12 @@ const DayButton = React.memo(function DayButton({
           )}
         </span>
       )}
-      <div className="w-full text-xs font-semibold text-text-primary text-right pr-1">
+      <div
+        className={cn(
+          "w-full text-xs font-semibold text-right pr-1",
+          isSelected || isToday ? "text-brand-highlight" : "text-text-primary"
+        )}
+      >
         {date.getDate()}
       </div>
       {mode === "money" && earnings !== undefined && (

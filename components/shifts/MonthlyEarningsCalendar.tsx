@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useEffect, type Ref } from "react";
-import { IconClock, IconCopy } from "@tabler/icons-react";
+import { IconClock, IconCopy, IconArrowsExchange, IconInfoCircle } from "@tabler/icons-react";
 import { ShiftsCalendar } from "@/components/app/ShiftsCalendar";
 import { Card, CardHeader } from "@/components/app/Card";
 import { Button } from "@/components/app/Button";
@@ -24,6 +24,10 @@ type MonthlyEarningsCalendarProps = {
   onInitiateCopy?: () => void;
   copying?: boolean;
   onCancelCopy?: () => void;
+  onInitiateMove?: () => void;
+  moveMode?: boolean;
+  moving?: boolean;
+  onCancelMoveMode?: () => void;
 };
 
 function buildEarningsByDate(shifts: ShiftWithComputations[]): EarningsByDate {
@@ -110,6 +114,10 @@ export function MonthlyEarningsCalendar({
   onInitiateCopy,
   copying = false,
   onCancelCopy,
+  onInitiateMove,
+  moveMode = false,
+  moving = false,
+  onCancelMoveMode,
 }: MonthlyEarningsCalendarProps) {
   const { goToPreviousMonth, goToNextMonth } = useMonth();
   const [viewMode, setViewMode] = useState<"money" | "hours">("money");
@@ -188,14 +196,19 @@ export function MonthlyEarningsCalendar({
       <div className="flex flex-col items-center gap-2 pb-6">
         <div className="inline-flex min-h-[44px] w-[90%] items-center gap-1 rounded-full border border-border-subtle bg-surface-secondary/80 px-1 py-1 shadow-app-sm dark:shadow-app-inner">
           {selectedDate ? (
-            <div className="flex w-full items-center justify-between gap-2 rounded-full bg-surface-primary px-0 py-0">
+            <div className="flex w-full items-center gap-2 rounded-full bg-surface-primary px-1 py-0.5">
               <Button
                 type="button"
                 variant="ghost"
                 onClick={() => onInitiateCopy?.()}
-                disabled={!onInitiateCopy || copyMode || copying}
+                disabled={
+                  !onInitiateCopy ||
+                  copyMode ||
+                  copying ||
+                  moveMode
+                }
                 loading={copying}
-                className="flex-1 rounded-full h-9 gap-2 bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 dark:text-blue-400"
+                className="flex-1 h-9 gap-2 rounded-full bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 dark:text-blue-400"
               >
                 <IconCopy stroke={2} className="h-4 w-4" />
                 Kopier
@@ -206,28 +219,51 @@ export function MonthlyEarningsCalendar({
                 onClick={() => {
                   if (copyMode) {
                     onCancelCopy?.();
+                  } else if (moveMode) {
+                    onCancelMoveMode?.();
                   } else {
                     onOpenDetails?.();
                   }
                 }}
                 disabled={
                   copying ||
-                  (copyMode ? !onCancelCopy : !onOpenDetails)
+                  moving ||
+                  (copyMode ? !onCancelCopy : moveMode ? !onCancelMoveMode : !onOpenDetails)
                 }
-                className="flex-[2] rounded-full h-9"
+                className={cn(
+                  "flex-1 h-9 rounded-full",
+                  !(copyMode || moveMode) && "gap-2"
+                )}
               >
-                {copyMode ? "Avbryt" : "Detaljer"}
+                {copyMode || moveMode ? (
+                  "Avbryt"
+                ) : (
+                  <>
+                    <IconInfoCircle stroke={2} className="h-4 w-4" />
+                    Detaljer
+                  </>
+                )}
               </Button>
-              {onClearSelection && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={onClearSelection}
-                  className="h-9 flex-1 rounded-full text-xs text-text-secondary hover:text-text-primary"
-                >
-                  Fjern valg
-                </Button>
-              )}
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => onInitiateMove?.()}
+                disabled={
+                  !onInitiateMove ||
+                  copyMode ||
+                  moving ||
+                  moveMode
+                }
+                className={cn(
+                  "flex-1 h-9 gap-2 rounded-full px-4 text-sm transition-all",
+                  moveMode
+                    ? "bg-amber-500/20 text-amber-700 dark:text-amber-400"
+                    : "bg-amber-500/10 text-amber-700 hover:bg-amber-500/20 dark:text-amber-300"
+                )}
+              >
+                <IconArrowsExchange stroke={2} className="h-4 w-4" />
+                Flytt
+              </Button>
             </div>
           ) : (
             <>
@@ -264,7 +300,11 @@ export function MonthlyEarningsCalendar({
           )}
         </div>
         <div className={`text-xs font-medium leading-tight text-text-muted text-center ${selectedDate ? 'opacity-100' : 'opacity-0'}`}>
-          {copyMode ? "Velg en dato for å kopiere vakten dit" : "Velg en annen dato for å flytte vakten"}
+          {copyMode
+            ? "Velg en dato for å kopiere vakten dit"
+            : moveMode
+              ? "Velg en dato for å flytte vakten"
+              : "Trykk utenfor for å fjerne markeringen"}
         </div>
       </div>
     </Card>
