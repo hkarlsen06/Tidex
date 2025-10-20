@@ -312,6 +312,8 @@ export default function LoginClient({ initialNext }: { initialNext: string }) {
     });
   };
 
+  const detectedInputType = detectInputType(emailOrPhone);
+  const isPhoneInput = detectedInputType === 'phone';
   const buttonDisabled = isSubmitting || isOAuthRedirecting;
 
   return (
@@ -352,6 +354,7 @@ export default function LoginClient({ initialNext }: { initialNext: string }) {
                 spellCheck={false}
                 data-ms-editor="true"
                 suppressHydrationWarning
+                autoComplete="username"
                 value={emailOrPhone}
                 onChange={(event) => {
                   resetMessage();
@@ -361,27 +364,27 @@ export default function LoginClient({ initialNext }: { initialNext: string }) {
               />
             </div>
 
-            {/* Show password field for email OR phone with password option */}
-            {emailOrPhone &&
-              (detectInputType(emailOrPhone) === 'email' ||
-                (detectInputType(emailOrPhone) === 'phone' &&
-                  phoneLoginMethod === 'password')) && (
-                <div className="space-y-2">
-                  <label htmlFor="password">Passord</label>
-                  <input
-                    id="password"
-                    name="password"
-                    type="password"
-                    placeholder="Passord"
-                    value={password}
-                    onChange={(event) => {
-                      resetMessage();
-                      setPassword(event.target.value);
-                    }}
-                    className="w-full rounded-full border border-border-subtle bg-background-primary px-5 py-3 text-base text-text-primary placeholder:text-text-muted focus:border-brand-highlight focus:outline-none focus:ring-2 focus:ring-brand-highlight/60"
-                  />
-                </div>
-              )}
+            <div className="space-y-2">
+              <div className="flex items-baseline justify-items">
+                <label htmlFor="password">Passord</label>
+                {isPhoneInput && (
+                  <span className="text-sm text-text-secondary ml-2">(valgfritt)</span>
+                )}
+              </div>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                placeholder="Passord"
+                autoComplete="current-password"
+                value={password}
+                onChange={(event) => {
+                  resetMessage();
+                  setPassword(event.target.value);
+                }}
+                className="w-full rounded-full border border-border-subtle bg-background-primary px-5 py-3 text-base text-text-primary placeholder:text-text-muted focus:border-brand-highlight focus:outline-none focus:ring-2 focus:ring-brand-highlight/60"
+              />
+            </div>
 
             <button
               type="submit"
@@ -389,8 +392,7 @@ export default function LoginClient({ initialNext }: { initialNext: string }) {
               className="w-full rounded-full bg-gradient-to-r from-brand-gradientStart via-brand-gradientMid to-brand-gradientEnd px-5 py-3 text-sm font-bold uppercase tracking-wide text-text-inverse shadow-lg shadow-brand-gradientMid/40 transition hover:from-brand-gradientMid hover:via-brand-gradientMid hover:to-brand-gradientEnd focus:outline-none focus:ring-4 focus:ring-brand-highlight/60 focus:ring-offset-2 focus:ring-offset-surface-secondary disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isSubmitting
-                ? detectInputType(emailOrPhone) === 'phone' &&
-                  phoneLoginMethod === 'otp'
+                ? isPhoneInput && phoneLoginMethod === 'otp'
                   ? 'Sender kode...'
                   : 'Logger inn...'
                 : 'Logg inn'}
@@ -398,7 +400,7 @@ export default function LoginClient({ initialNext }: { initialNext: string }) {
 
             {/* Show "Engangskode" button for phone users with password */}
             {emailOrPhone &&
-              detectInputType(emailOrPhone) === 'phone' &&
+              isPhoneInput &&
               phoneLoginMethod === 'password' && (
                 <button
                   type="button"
