@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { FormEvent, useState } from "react";
 
 import { supabase } from "@/lib/supabase/browser";
@@ -48,8 +48,19 @@ const googleIcon = (
 type MessageState = { type: "error" | "success"; text: string } | null;
 type LoginStep = "input" | "otp";
 
+function resolveRedirectPath(rawRedirect: string | null): string {
+  if (!rawRedirect) return "/";
+
+  if (!rawRedirect.startsWith("/") || rawRedirect.startsWith("//")) {
+    return "/";
+  }
+
+  return rawRedirect;
+}
+
 export default function LoginPage() {
-  const router = useRouter();
+  const searchParams = useSearchParams();
+  const getRedirectPath = () => resolveRedirectPath(searchParams.get("redirect"));
 
   const [emailOrPhone, setEmailOrPhone] = useState("");
   const [password, setPassword] = useState("");
@@ -115,8 +126,9 @@ export default function LoginPage() {
         return;
       }
 
+      const destination = getRedirectPath();
       // Use full page navigation to ensure cookies are properly set
-      window.location.href = "/";
+      window.location.href = destination;
     } else {
       // Phone login
       if (!isValidNorwegianPhone(emailOrPhone)) {
@@ -151,8 +163,9 @@ export default function LoginPage() {
             return;
           }
 
+          const destination = getRedirectPath();
           // Use full page navigation to ensure cookies are properly set
-          window.location.href = "/";
+          window.location.href = destination;
         } catch (err) {
           setIsSubmitting(false);
           setMessage({
@@ -250,8 +263,9 @@ export default function LoginPage() {
       }
 
       setMessage({ type: "success", text: "Logger inn..." });
+      const destination = getRedirectPath();
       // Use full page navigation to ensure cookies are properly set
-      window.location.href = "/";
+      window.location.href = destination;
     } catch (err) {
       setIsSubmitting(false);
       setMessage({
@@ -265,13 +279,18 @@ export default function LoginPage() {
     setIsOAuthRedirecting(true);
     setMessage(null);
 
-    // Build redirect URL dynamically based on current origin
-    const redirectUrl = `${window.location.origin}/auth/callback`;
+    const redirectPath = getRedirectPath();
+    // Build redirect URL dynamically based on current origin and preserve redirect target
+
+    // Bruk miljøvariabel for base-URL
+    const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL!; 
+    const redirectUrl = new URL("/auth/callback", BASE_URL);
+    redirectUrl.searchParams.set("next", redirectPath);
 
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: redirectUrl,
+        redirectTo: redirectUrl.toString(),
         queryParams: {
           access_type: "offline",
           prompt: "consent",

@@ -38,7 +38,9 @@ export async function middleware(request: NextRequest) {
   // Quick guard: if envs aren’t loaded, you’ll always look logged out.
   if (!supabaseUrl || !supabaseKey) {
     // Don’t loop; just send to login.
-    return NextResponse.redirect(new URL('/login', request.url));
+    const loginUrl = new URL('/login', request.url);
+    loginUrl.searchParams.set('redirect', request.nextUrl.pathname + request.nextUrl.search);
+    return NextResponse.redirect(loginUrl);
   }
 
   const projectRef = getProjectRefFromUrl(supabaseUrl);
@@ -61,12 +63,16 @@ export async function middleware(request: NextRequest) {
   // If refresh token is invalid/missing, purge all possible SB cookie variants and bounce to /login
   if (error?.status === 400 || /refresh token/i.test(error?.message ?? '')) {
     clearSupabaseCookies(res, request, projectRef);
-    return NextResponse.redirect(new URL('/login', request.url));
+    const loginUrl = new URL('/login', request.url);
+    loginUrl.searchParams.set('redirect', request.nextUrl.pathname + request.nextUrl.search);
+    return NextResponse.redirect(loginUrl);
   }
 
   if (!user) {
     // Not authenticated: redirect once.
-    return NextResponse.redirect(new URL('/login', request.url));
+    const loginUrl = new URL('/login', request.url);
+    loginUrl.searchParams.set('redirect', request.nextUrl.pathname + request.nextUrl.search);
+    return NextResponse.redirect(loginUrl);
   }
 
   // Auth OK
