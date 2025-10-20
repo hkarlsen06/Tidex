@@ -307,7 +307,7 @@ export default function LoginClient({ initialNext }: { initialNext: string }) {
 
     setMessage({
       type: 'success',
-      text: 'Sender deg videre til Google...',
+      text: 'Venter på Google...',
     });
   };
 
@@ -323,7 +323,7 @@ export default function LoginClient({ initialNext }: { initialNext: string }) {
           <div className="rounded-3xl border border-border bg-surface-secondary p-8 shadow-app-lg">
             <div className="flex flex-col items-center gap-4">
               <div className="h-12 w-12 animate-spin rounded-full border-4 border-border border-t-brand-highlight"></div>
-              <p className="text-lg font-semibold text-text-primary">Sender deg videre til Google...</p>
+              <p className="text-lg font-semibold text-text-primary">Venter på Google...</p>
             </div>
           </div>
         </div>
