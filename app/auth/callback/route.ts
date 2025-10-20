@@ -1,5 +1,4 @@
-import type { NextRequest } from "next/server";
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 
 import { createSupabaseRouteHandlerClient } from "@/lib/supabase/server";
 
@@ -29,20 +28,33 @@ function resolveRedirectUrl(requestUrl: URL): URL {
 
 // Handle OAuth callbacks and magic link redirects
 export async function GET(request: NextRequest) {
-  const requestUrl = new URL(request.url);
-  const code = requestUrl.searchParams.get("code");
-  const redirectUrl = resolveRedirectUrl(requestUrl);
+  const url = new URL(request.url);
+  const code = url.searchParams.get("code");
+  const oauthError = url.searchParams.get("error");
+  const oauthErrorDesc = url.searchParams.get("error_description");
+  const redirectUrl = resolveRedirectUrl(url);
+
+  if (oauthError) {
+    const login = new URL("/login", url.origin);
+    login.searchParams.set("error", oauthErrorDesc ?? oauthError);
+    return NextResponse.redirect(login);
+  }
+
   const response = NextResponse.redirect(redirectUrl);
 
-  if (code) {
-    const supabase = createSupabaseRouteHandlerClient(request, response);
+  if (!code) {
+    return response;
+  }
 
-    try {
-      await supabase.auth.exchangeCodeForSession(code);
-    } catch (error) {
-      console.error("[AUTH CALLBACK] Failed to exchange code for session", error);
-      return NextResponse.redirect(new URL("/login", request.url));
-    }
+  const supabase = createSupabaseRouteHandlerClient(request, response);
+
+  try {
+    await supabase.auth.exchangeCodeForSession(code);
+  } catch (error) {
+    console.error("[AUTH CALLBACK] Failed to exchange code for session", error);
+    const login = new URL("/login", url.origin);
+    login.searchParams.set("error", "auth_exchange_failed");
+    return NextResponse.redirect(login);
   }
 
   return response;
