@@ -14,7 +14,7 @@ const compat = new FlatCompat({
   baseDirectory: __dirname,
 });
 
-export default [
+const config = [
   {
     ignores: [
       "**/.next/**",
@@ -87,6 +87,7 @@ export default [
     },
     rules: {
       "import/no-anonymous-default-export": "warn",
+      "import/namespace": "off",
       "react/no-unknown-property": "off",
       "react/react-in-jsx-scope": "off",
       "react/prop-types": "off",
@@ -106,3 +107,5 @@ export default [
     },
   },
 ];
+
+export default config;

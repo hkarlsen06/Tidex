@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition, useEffect, useRef, useCallback } from "react";
+import { useMemo, useState, useTransition, useEffect, useRef, useCallback, useId } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/app/Button";
@@ -75,6 +75,8 @@ export default function AddShiftForm({ existingShifts }: Props) {
   const [error, setError] = useState<string | null>(null);
   const startInputRef = useRef<HTMLInputElement>(null);
   const endInputRef = useRef<HTMLInputElement>(null);
+  const startTimeId = useId();
+  const endTimeId = useId();
   const [showLimitModal, setShowLimitModal] = useState(false);
   const [limitModalData, setLimitModalData] = useState<{ existingMonths: string[]; targetMonth: string } | null>(null);
   const [isFreeTier, setIsFreeTier] = useState<boolean | null>(null);
@@ -361,12 +363,13 @@ export default function AddShiftForm({ existingShifts }: Props) {
             )}
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <label className="block min-w-0 space-y-3 rounded-2xl border border-border-subtle bg-surface-secondary/70 p-4 shadow-app-inner transition hover:border-border">
+              <label htmlFor={startTimeId} className="block min-w-0 space-y-3 rounded-2xl border border-border-subtle bg-surface-secondary/70 p-4 shadow-app-inner transition hover:border-border">
                 <span className="text-xs font-semibold uppercase tracking-[0.1em] text-text-muted">
                   Start
                 </span>
                 <div className="flex min-w-0 items-center gap-2">
                   <TimeInput
+                    id={startTimeId}
                     ref={startInputRef}
                     step={900}
                     value={start}
@@ -383,12 +386,13 @@ export default function AddShiftForm({ existingShifts }: Props) {
                   </button>
                 </div>
               </label>
-              <label className="block min-w-0 space-y-3 rounded-2xl border border-border-subtle bg-surface-secondary/70 p-4 shadow-app-inner transition hover:border-border">
+              <label htmlFor={endTimeId} className="block min-w-0 space-y-3 rounded-2xl border border-border-subtle bg-surface-secondary/70 p-4 shadow-app-inner transition hover:border-border">
                 <span className="text-xs font-semibold uppercase tracking-[0.1em] text-text-muted">
                   Slutt
                 </span>
                 <div className="flex min-w-0 items-center gap-2">
                   <TimeInput
+                    id={endTimeId}
                     ref={endInputRef}
                     step={900}
                     value={end}

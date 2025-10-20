@@ -62,7 +62,7 @@ export function NavigationFeedbackProvider({ children }: { children: ReactNode }
         showDelayRef.current = null;
       }
       showDelayRef.current = window.setTimeout(() => {
-        setIsNavigating((prev) => (pendingPath ? true : prev || true));
+        setIsNavigating(true);
         showDelayRef.current = null;
       }, 150);
 

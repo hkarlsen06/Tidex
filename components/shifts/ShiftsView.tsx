@@ -21,7 +21,6 @@ import { updateShift } from "@/app/(app)/shifts/_actions/updateShift";
 import { copyShifts } from "@/app/(app)/shifts/_actions/copyShifts";
 import { useNavigationFeedback } from "@/components/app/navigation-feedback";
 import { useMonth } from "@/components/app/MonthContext";
-import type { ShiftsAggregates } from "@/app/(app)/shifts/_data/getShifts";
 import type { ISODate } from "@/components/calendar/calendar.types";
 import {
   Dialog,
@@ -70,38 +69,6 @@ function getIsoWeek(date: Date) {
     ((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7
   );
   return { weekNumber, year: d.getUTCFullYear() };
-}
-
-function groupByWeek(shifts: ShiftWithComputations[]): WeekGroup[] {
-  const groups: WeekGroup[] = [];
-  const map = new Map<string, WeekGroup>();
-
-  for (const shift of shifts) {
-    const date = parseISODate(shift.shift_date);
-    const { weekNumber, year } = getIsoWeek(date);
-    const id = `${year}-${weekNumber}`;
-
-    let group = map.get(id);
-    if (!group) {
-      group = {
-        id,
-        label: `Uke ${weekFormatter.format(weekNumber)}`,
-        totalGross: 0,
-        shifts: [],
-      };
-      map.set(id, group);
-      groups.push(group);
-    }
-
-    group.shifts.push(shift);
-    group.totalGross += shift.computed.gross;
-  }
-
-  for (const group of groups) {
-    group.shifts.sort((a, b) => a.shift_date.localeCompare(b.shift_date));
-  }
-
-  return groups;
 }
 
 function formatWeekTotal(value: number) {
@@ -164,10 +131,6 @@ const moveDateFormatter = new Intl.DateTimeFormat("nb-NO", {
   month: "long",
 });
 
-const moveDayFormatter = new Intl.DateTimeFormat("nb-NO", {
-  weekday: "long",
-});
-
 function capitalize(input: string) {
   return input ? input.charAt(0).toUpperCase() + input.slice(1) : "";
 }
@@ -175,14 +138,6 @@ function capitalize(input: string) {
 // Parse ISO date string consistently as UTC to avoid timezone issues
 function parseISODate(isoDate: string): Date {
   return new Date(`${isoDate}T00:00:00Z`);
-}
-
-function formatReadableDate(iso: ISODate | null) {
-  if (!iso) return "";
-  const date = parseISODate(iso);
-  const label = capitalize(moveDateFormatter.format(date));
-  const weekday = capitalize(moveDayFormatter.format(date));
-  return `${label} · ${weekday}`;
 }
 
 function formatShiftRange(shift: ShiftWithComputations) {
@@ -323,11 +278,7 @@ function MoveShiftModal({
   userSettings,
   presetRules,
 }: MoveShiftModalProps) {
-  const formattedSource = formatReadableDate(sourceDate);
-  const formattedTarget = formatReadableDate(targetDate);
   const multipleShifts = shifts.length > 1;
-  const sourceDisplay = formattedSource || "Velg dato";
-  const targetDisplay = formattedTarget || "Velg dato";
   const hasSourceShifts = shifts.length > 0;
   const selectedShifts =
     selectedIds.length > 0
@@ -460,12 +411,11 @@ function MoveShiftModal({
 type ShiftsViewProps = {
   shifts: ShiftWithComputations[];
   defaultView?: string;
-  aggregates: ShiftsAggregates;
   userSettings: UserSettings;
   presetRules: SupplementRule[];
 };
 
-export function ShiftsView({ shifts, defaultView = "calendar", aggregates, userSettings, presetRules }: ShiftsViewProps) {
+export function ShiftsView({ shifts, defaultView = "calendar", userSettings, presetRules }: ShiftsViewProps) {
   const router = useRouter();
   const { navigate } = useNavigationFeedback();
   const [pending, startTransition] = useTransition();

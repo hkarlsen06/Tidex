@@ -796,9 +796,10 @@ export function DataForm() {
             />
           </div>
 
-          <div
+          <button
+            type="button"
             className={cn(
-              'cursor-pointer rounded-md border p-3 transition-colors sm:p-4',
+              'w-full text-left rounded-md border p-3 transition-colors sm:p-4',
               selectedPreset === 'custom'
                 ? 'border-primary bg-primary/5'
                 : 'border-border bg-muted text-text-secondary hover:bg-muted'
@@ -857,7 +858,7 @@ export function DataForm() {
                 </p>
               )}
             </div>
-          </div>
+          </button>
 
           {selectedRangeLabel && (
             <p className="text-sm text-text-secondary">

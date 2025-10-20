@@ -4,7 +4,6 @@ import { KeyboardEvent, useMemo } from "react";
 import { ShiftWithComputations, UserSettings, SupplementRule, computeShift } from "@/lib/payroll";
 import { cn } from "@/lib/cn";
 import {
-  formatDateParts as baseFormatDateParts,
   formatCurrency as baseFormatCurrency,
   formatPlainAmount as baseFormatPlainAmount,
   formatTimeRange as baseFormatTimeRange,

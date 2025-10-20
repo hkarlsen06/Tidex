@@ -3,7 +3,7 @@
 import { useMemo, useState, useEffect, type Ref } from "react";
 import { IconClock, IconCopy } from "@tabler/icons-react";
 import { ShiftsCalendar } from "@/components/app/ShiftsCalendar";
-import { Card, CardHeader, CardTitle } from "@/components/app/Card";
+import { Card, CardHeader } from "@/components/app/Card";
 import { Button } from "@/components/app/Button";
 import { MonthPicker } from "@/components/app/MonthPicker";
 import { useMonth } from "@/components/app/MonthContext";
@@ -218,6 +218,16 @@ export function MonthlyEarningsCalendar({
               >
                 {copyMode ? "Avbryt" : "Detaljer"}
               </Button>
+              {onClearSelection && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={onClearSelection}
+                  className="h-9 flex-1 rounded-full text-xs text-text-secondary hover:text-text-primary"
+                >
+                  Fjern valg
+                </Button>
+              )}
             </div>
           ) : (
             <>

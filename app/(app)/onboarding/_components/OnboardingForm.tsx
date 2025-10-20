@@ -15,8 +15,6 @@ import { completeOnboarding } from "../actions";
 import { PRESET_WAGE_RATES } from "@/lib/payroll/calc";
 import { SupplementsData } from "@/components/settings/SupplementsEditor";
 
-const BREAK_METHOD_OPTIONS = ["proportional", "base_only", "end_of_shift"] as const;
-
 interface OnboardingFormProps {
   initialSettings?: {
     use_preset?: boolean;

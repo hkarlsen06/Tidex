@@ -1,5 +1,5 @@
 import { ShiftWithComputations } from "@/lib/payroll";
-import { Card, CardHeader, CardContent } from "@/components/app/Card";
+import { Card, CardHeader } from "@/components/app/Card";
 import { cn } from "@/lib/cn";
 
 type ShiftCardProps = {
@@ -54,7 +54,7 @@ export function formatPlainAmount(value: number) {
 
 export function ShiftCard({ shift, onClick }: ShiftCardProps) {
   const { computed } = shift;
-  const { dayName, dateLabel, isWeekend } = formatDateParts(shift.shift_date);
+  const { dayName, dateLabel } = formatDateParts(shift.shift_date);
   const { basePay, supplementPay, gross, paidHours } = computed;
 
   const breakdown = `${formatPlainAmount(basePay)}${supplementPay > 0 ? ` + ${formatPlainAmount(supplementPay)}` : ""}`;

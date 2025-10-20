@@ -98,7 +98,7 @@ const DayButton = React.memo(function DayButton({
   return (
     <button
       {...buttonProps}
-      aria-selected={isSelected}
+      aria-pressed={isSelected}
       className={`${className} ${isToday ? "bg-surface-secondary" : ""} ${
         isSelected
           ? "border-brand-gradientMid bg-brand-gradientMid/10 text-brand-highlight shadow-app-sm"

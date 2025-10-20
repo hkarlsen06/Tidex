@@ -95,7 +95,7 @@ export function SupplementsEditor({
     );
 
     if (validRules.length > 0) {
-      const cleanedRules = validRules.map(({ id, mode, ...rest }) => rest) as any[];
+      const cleanedRules = validRules.map(({ id: _id, mode: _mode, ...rest }) => rest) as any[];
       onChange({ rules: cleanedRules });
     } else {
       onChange(null);
@@ -121,7 +121,7 @@ export function SupplementsEditor({
     );
 
     if (validRules.length > 0) {
-      const cleanedRules = validRules.map(({ id, mode, ...rest }) => rest) as any[];
+      const cleanedRules = validRules.map(({ id: _id, mode: _mode, ...rest }) => rest) as any[];
       onChange({ rules: cleanedRules });
     } else {
       onChange(null);

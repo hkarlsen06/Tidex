@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState, useTransition } from "react";
+import { useId, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/app/Input";
 import { Button } from "@/components/app/Button";
@@ -41,6 +41,12 @@ export default function RecurringForm() {
   const [end, setEnd] = useState("");
   const startInputRef = useRef<HTMLInputElement>(null);
   const endInputRef = useRef<HTMLInputElement>(null);
+  const idPrefix = useId();
+  const startDateId = `${idPrefix}-start-date`;
+  const endDateId = `${idPrefix}-end-date`;
+  const customIntervalId = `${idPrefix}-interval`;
+  const startTimeId = `${idPrefix}-start-time`;
+  const endTimeId = `${idPrefix}-end-time`;
 
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -173,18 +179,20 @@ export default function RecurringForm() {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <label className={fieldWrapperClass}>
+        <label htmlFor={startDateId} className={fieldWrapperClass}>
           <span className={fieldLabelClass}>Startdato</span>
           <Input
+            id={startDateId}
             type="date"
             value={startDate}
             onChange={(e) => setStartDate(e.target.value)}
             className="h-10 rounded-xl border-border-subtle bg-transparent text-base text-text-primary"
           />
         </label>
-        <label className={fieldWrapperClass}>
+        <label htmlFor={endDateId} className={fieldWrapperClass}>
           <span className={fieldLabelClass}>Sluttdato</span>
           <Input
+            id={endDateId}
             type="date"
             value={endDate}
             onChange={(e) => setEndDate(e.target.value)}
@@ -220,6 +228,7 @@ export default function RecurringForm() {
         })}
 
         <label
+          htmlFor={customIntervalId}
           className={cn(
             fieldWrapperClass,
             "h-full flex items-center justify-center",
@@ -227,6 +236,7 @@ export default function RecurringForm() {
           )}
         >
           <Input
+            id={customIntervalId}
             type="text"
             inputMode="numeric"
             pattern="[0-9]*"
@@ -245,10 +255,11 @@ export default function RecurringForm() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <label className={fieldWrapperClass}>
+        <label htmlFor={startTimeId} className={fieldWrapperClass}>
           <span className={fieldLabelClass}>Start</span>
           <div className="flex min-w-0 items-center gap-2">
             <Input
+              id={startTimeId}
               ref={startInputRef}
               type="time"
               step={900}
@@ -266,10 +277,11 @@ export default function RecurringForm() {
             </button>
           </div>
         </label>
-        <label className={fieldWrapperClass}>
+        <label htmlFor={endTimeId} className={fieldWrapperClass}>
           <span className={fieldLabelClass}>Slutt</span>
           <div className="flex min-w-0 items-center gap-2">
             <Input
+              id={endTimeId}
               ref={endInputRef}
               type="time"
               step={900}

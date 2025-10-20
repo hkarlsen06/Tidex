@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import type { ReactNode } from "react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/app/Card";
 import { StatsData } from "@/app/(app)/stats/_data/getStatsData";
@@ -52,7 +53,7 @@ type StatCardProps = {
     value: number;
     isPositive: boolean;
   };
-  icon?: React.ReactNode;
+  icon?: ReactNode;
 };
 
 function StatCard({ label, value, suffix, trend, icon }: StatCardProps) {

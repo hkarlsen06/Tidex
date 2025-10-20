@@ -1,7 +1,7 @@
 'use client';
 
 import { Card } from '@appui/Card';
-import { Heart, Sparkles } from 'lucide-react';
+import { Heart } from 'lucide-react';
 
 export function GrandfatheredSubscriberBanner() {
   return (

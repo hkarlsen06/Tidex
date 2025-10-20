@@ -30,7 +30,6 @@ export default function SignupPage() {
   const [fullName, setFullName] = useState("");
   const [otp, setOtp] = useState("");
   const [step, setStep] = useState<SignupStep>("input");
-  const [signupType, setSignupType] = useState<"email" | "phone" | null>(null);
   const [message, setMessage] = useState<MessageState>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -178,7 +177,6 @@ export default function SignupPage() {
           return;
         }
 
-        setSignupType("phone");
         setStep("otp");
         setMessage({
           type: "success",

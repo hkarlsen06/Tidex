@@ -1,6 +1,6 @@
 "use client";
 
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Cell } from "recharts";
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import {
   ChartContainer,
   ChartTooltip,
@@ -87,7 +87,7 @@ export function DayOfWeekChart({ data }: DayOfWeekChartProps) {
                 }
                 return label;
               }}
-              formatter={(value, name) => {
+              formatter={(value, _name) => {
                 const amount = Math.round(value as number).toLocaleString('nb-NO');
                 return (
                   <div className="flex items-center gap-2">

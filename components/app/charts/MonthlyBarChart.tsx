@@ -58,7 +58,7 @@ export function MonthlyBarChart({ data }: MonthlyBarChartProps) {
                 }
                 return label;
               }}
-              formatter={(value, name) => {
+              formatter={(value, _name) => {
                 const amount = Math.round(value as number).toLocaleString('nb-NO');
                 return (
                   <div className="flex items-center gap-2">

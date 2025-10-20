@@ -329,8 +329,6 @@ export function ShiftDetails({
 
             {hasSupplementBreakdown ? (
               <SupplementBreakdown
-                startTime={shift.start_time}
-                endTime={shift.end_time}
                 baseWage={baseWageRate}
                 segments={supplementSegments}
               />

@@ -14,7 +14,8 @@ export function sanitizeUserInput(input: string | null | undefined): string {
 
   // Remove control characters and normalize whitespace
   let sanitized = input
-    .replace(/[\x00-\x1F\x7F-\x9F]/g, "") // Remove control characters
+    // eslint-disable-next-line no-control-regex -- intentionally strip control characters
+    .replace(/[\u0000-\u001F\u007F-\u009F]/g, "") // Remove control characters
     .replace(/\s+/g, " ") // Normalize whitespace
     .trim();
 

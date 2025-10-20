@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import type { MouseEvent } from 'react';
 import { Card } from '@appui/Card';
-import { ChevronRight, User, Banknote, Palette, Settings, Database, CreditCard } from 'lucide-react';
+import { ChevronRight, User, Banknote, Palette, Database, CreditCard } from 'lucide-react';
 import { useNavigationFeedback } from '@/components/app/navigation-feedback';
 
 const settingsItems = [
