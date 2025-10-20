@@ -108,7 +108,6 @@ export function MonthlyEarningsCalendar({
   onDayClick,
   selectedDate = null,
   containerRef,
-  onClearSelection,
   onOpenDetails,
   copyMode = false,
   onInitiateCopy,
