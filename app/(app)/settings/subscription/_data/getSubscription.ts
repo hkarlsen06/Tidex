@@ -13,6 +13,12 @@ export interface Subscription {
   created_at: string;
   updated_at: string;
   price_id: string | null;
+  cancel_at_period_end: boolean;
+  canceled_at: string | null;
+  cancel_at: string | null;
+  cancellation_reason: string | null;
+  cancellation_feedback: string | null;
+  cancellation_comment: string | null;
 }
 
 export interface UserProfile {

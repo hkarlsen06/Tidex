@@ -60,14 +60,22 @@ function getStatusBadge(status: string) {
   return <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>;
 }
 
-function getStatusDescription(status: string, planName: string, isGrandfathered: boolean): string {
+function getStatusDescription(
+  status: string,
+  planName: string,
+  isGrandfathered: boolean,
+  cancelAtPeriodEnd: boolean
+): string {
   if (isGrandfathered) {
     return status === 'active'
-      ? `Du støtter oss med\u00A0${planName}-abonnementet`
+      ? `Du er på\u00A0${planName}-abonnementet`
       : `Du støttet oss tidligere med\u00A0${planName}-abonnementet`;
   }
 
   if (status === 'active') {
+    if (cancelAtPeriodEnd) {
+      return `Ditt ${planName}-abonnement kanselleres ved periodens slutt`;
+    }
     return `Du er for øyeblikket på ${planName}-planen`;
   }
 
@@ -98,6 +106,7 @@ export function SubscriptionStatus({ subscription, isGrandfathered = false }: Su
   const planInfo = getPlanInfo(subscription.price_id);
   const [isLoading, setIsLoading] = useState(false);
   const isActive = subscription.status === 'active';
+  const willBeCancelled = isActive && subscription.cancel_at_period_end;
 
   const handleManageSubscription = async () => {
     try {
@@ -126,10 +135,16 @@ export function SubscriptionStatus({ subscription, isGrandfathered = false }: Su
               {isGrandfathered ? 'Abonnementsstøtte' : isActive ? 'Nåværende plan' : 'Tidligere abonnement'}
             </h3>
             <p className="text-sm text-text-secondary mt-1">
-              {getStatusDescription(subscription.status, planInfo.name, isGrandfathered)}
+              {getStatusDescription(subscription.status, planInfo.name, isGrandfathered, subscription.cancel_at_period_end)}
             </p>
           </div>
-          {getStatusBadge(subscription.status)}
+          {willBeCancelled ? (
+            <Badge variant="outline" className="border-yellow-500 text-yellow-700 dark:text-yellow-400">
+              Kanselleres...
+            </Badge>
+          ) : (
+            getStatusBadge(subscription.status)
+          )}
         </div>
 
         <Separator />
@@ -145,19 +160,37 @@ export function SubscriptionStatus({ subscription, isGrandfathered = false }: Su
             <p className="text-lg font-semibold">{planInfo.price}/måned</p>
           </div>
 
-          {subscription.current_period_end && (
+          {(subscription.current_period_end || subscription.cancel_at || subscription.canceled_at) && (
             <div>
               <p className="text-sm text-text-secondary mb-1">
-                {isActive ? 'Neste fornyelse' : 'Utløper'}
+                {subscription.status === 'canceled'
+                  ? 'Kansellert'
+                  : subscription.cancel_at_period_end
+                  ? 'Kanselleres'
+                  : isActive
+                  ? 'Neste fornyelse'
+                  : 'Utløper'}
               </p>
-              <p className="text-lg font-semibold">{formatDate(subscription.current_period_end)}</p>
+              <p className="text-lg font-semibold">
+                {formatDate(
+                  subscription.status === 'canceled'
+                    ? subscription.canceled_at
+                    : subscription.cancel_at_period_end
+                    ? (subscription.cancel_at || subscription.current_period_end)
+                    : subscription.current_period_end
+                )}
+              </p>
             </div>
           )}
 
-          {subscription.created_at && (
+          {(subscription.canceled_at || subscription.created_at) && (
             <div>
-              <p className="text-sm text-text-secondary mb-1">Første gang du abonnerte</p>
-              <p className="text-lg font-semibold">{formatDate(subscription.created_at)}</p>
+              <p className="text-sm text-text-secondary mb-1">
+                {subscription.canceled_at ? 'Kanselleringstidspunkt' : 'Første gang du abonnerte'}
+              </p>
+              <p className="text-lg font-semibold">
+                {formatDate(subscription.canceled_at || subscription.created_at)}
+              </p>
             </div>
           )}
         </div>
