@@ -265,14 +265,14 @@ export function MonthlyEarningsCalendar({
               </Button>
             </div>
           ) : (
-            <>
+            <div className="flex w-full items-center gap-2 rounded-full px-1 py-0.5">
               <Button
                 type="button"
                 variant="ghost"
                 aria-pressed={viewMode === "money"}
                 onClick={() => setViewMode("money")}
                 className={cn(
-                  "h-9 rounded-full px-4 text-sm transition-all flex-1 whitespace-nowrap",
+                  "h-9 rounded-full px-4 text-sm flex-1 whitespace-nowrap transition-none",
                   viewMode === "money"
                     ? "bg-surface-primary text-text-primary shadow-sm"
                     : "text-text-secondary hover:text-text-primary"
@@ -286,7 +286,7 @@ export function MonthlyEarningsCalendar({
                 aria-pressed={viewMode === "hours"}
                 onClick={() => setViewMode("hours")}
                 className={cn(
-                  "h-9 rounded-full px-4 text-sm transition-all flex-1 whitespace-nowrap",
+                  "h-9 rounded-full px-4 text-sm flex-1 whitespace-nowrap transition-none",
                   viewMode === "hours"
                     ? "bg-surface-primary text-text-primary shadow-sm"
                     : "text-text-secondary hover:text-text-primary"
@@ -295,16 +295,16 @@ export function MonthlyEarningsCalendar({
                 <span>--:--</span>
                 <IconClock stroke={2} aria-hidden="true" />
               </Button>
-            </>
+            </div>
           )}
         </div>
-        <div className={`text-xs font-medium leading-tight text-text-muted text-center ${selectedDate ? 'opacity-100' : 'opacity-0'}`}>
-          {copyMode
-            ? "Velg en dato for å kopiere vakten dit"
-            : moveMode
-              ? "Velg en dato for å flytte vakten"
-              : "Trykk utenfor for å fjerne markeringen"}
-        </div>
+        {selectedDate && (copyMode || moveMode) && (
+          <div className="text-xs font-medium leading-tight text-text-muted text-center">
+            {copyMode
+              ? "Velg en dato for å kopiere vakten dit"
+              : "Velg en dato for å flytte vakten"}
+          </div>
+        )}
       </div>
     </Card>
   );
