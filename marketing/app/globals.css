@@ -1,0 +1,112 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 220 13% 7%;
+    --foreground: 0 0% 100%;
+    --card: 220 13% 12%;
+    --card-foreground: 0 0% 100%;
+    --popover: 220 13% 12%;
+    --popover-foreground: 0 0% 100%;
+    --primary: 194 95% 61%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 191 100% 50%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 220 13% 18%;
+    --muted-foreground: 0 0% 69%;
+    --accent: 191 100% 50%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 20%;
+    --input: 0 0% 20%;
+    --ring: 194 95% 61%;
+    --radius: 0.5rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+/* Custom animations for gradient orbs */
+@keyframes orb-float {
+  0%, 100% {
+    transform: translate(var(--x, 0), var(--y, 0));
+  }
+  25% {
+    transform: translate(calc(var(--x, 0) + 15px), calc(var(--y, 0) - 10px));
+  }
+  50% {
+    transform: translate(calc(var(--x, 0) - 10px), calc(var(--y, 0) + 15px));
+  }
+  75% {
+    transform: translate(calc(var(--x, 0) + 10px), calc(var(--y, 0) + 10px));
+  }
+}
+
+@keyframes orb-float-reverse {
+  0%, 100% {
+    transform: translate(var(--x, 0), var(--y, 0));
+  }
+  25% {
+    transform: translate(calc(var(--x, 0) - 12px), calc(var(--y, 0) + 8px));
+  }
+  50% {
+    transform: translate(calc(var(--x, 0) + 8px), calc(var(--y, 0) - 12px));
+  }
+  75% {
+    transform: translate(calc(var(--x, 0) - 8px), calc(var(--y, 0) - 8px));
+  }
+}
+
+@keyframes orb-float-slow {
+  0%, 100% {
+    transform: translate(-50%, -50%);
+  }
+  25% {
+    transform: translate(calc(-50% + 8px), calc(-50% - 12px));
+  }
+  50% {
+    transform: translate(calc(-50% - 8px), calc(-50% + 8px));
+  }
+  75% {
+    transform: translate(calc(-50% + 12px), calc(-50% - 5px));
+  }
+}
+
+@keyframes bg-scroll-up {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(-50%);
+  }
+}
+
+.orb-1 {
+  animation: orb-float 25s infinite ease-in-out;
+}
+
+.orb-2 {
+  animation: orb-float-reverse 25s infinite ease-in-out;
+}
+
+.orb-3 {
+  animation: orb-float-slow 25s infinite ease-in-out;
+}
+
+/* Glass morphism effect */
+.glass-card {
+  background: linear-gradient(180deg, rgba(30, 30, 30, 0.45), rgba(24, 24, 24, 0.4));
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
