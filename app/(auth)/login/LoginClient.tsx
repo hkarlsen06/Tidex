@@ -17,6 +17,16 @@ import {
   InputOTPSeparator,
   InputOTPSlot,
 } from '@/components/app/InputOTP';
+import {
+  Field,
+  FieldLabel,
+  FieldError,
+  FieldGroup,
+  FieldSeparator,
+} from '@/components/app/Field';
+import { Input } from '@/components/app/Input';
+import { Button } from '@/components/app/Button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/app/Card';
 
 const googleIcon = (
   <svg
@@ -46,6 +56,11 @@ const googleIcon = (
 
 type MessageState = { type: 'error' | 'success'; text: string } | null;
 type LoginStep = 'input' | 'otp';
+type FieldErrors = {
+  emailOrPhone?: string;
+  password?: string;
+  otp?: string;
+};
 
 export default function LoginClient({ initialNext }: { initialNext: string }) {
   const getRedirectPath = () => initialNext;
@@ -57,6 +72,7 @@ export default function LoginClient({ initialNext }: { initialNext: string }) {
   const [, setLoginType] = useState<'email' | 'phone' | null>(null);
   const [phoneLoginMethod, setPhoneLoginMethod] = useState<'otp' | 'password'>('otp');
   const [message, setMessage] = useState<MessageState>(null);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isOAuthRedirecting, setIsOAuthRedirecting] = useState(false);
   const [showSignupPrompt, setShowSignupPrompt] = useState(false);
@@ -66,36 +82,43 @@ export default function LoginClient({ initialNext }: { initialNext: string }) {
     setShowSignupPrompt(false);
   };
 
+  const resetFieldErrors = () => {
+    setFieldErrors({});
+  };
+
+  const resetAll = () => {
+    resetMessage();
+    resetFieldErrors();
+  };
+
   const handleSignIn = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    resetAll();
+
+    const errors: FieldErrors = {};
 
     if (!emailOrPhone) {
-      setMessage({
-        type: 'error',
-        text: 'Fyll inn e-post eller telefonnummer.',
-      });
-      return;
+      errors.emailOrPhone = 'Fyll inn e-post eller telefonnummer.';
     }
 
     const inputType = detectInputType(emailOrPhone);
 
-    if (inputType === 'unknown') {
-      setMessage({
-        type: 'error',
-        text: 'Ugyldig e-post eller telefonnummer. Telefonnummer må være 8 siffer.',
-      });
-      return;
+    if (emailOrPhone && inputType === 'unknown') {
+      errors.emailOrPhone = 'Ugyldig e-post eller telefonnummer. Telefonnummer må være 8 siffer.';
     }
 
     if (inputType === 'email') {
       // Email login requires password
       if (!password) {
-        setMessage({ type: 'error', text: 'Fyll inn passord.' });
-        return;
+        errors.password = 'Fyll inn passord.';
       }
 
-      if (!isValidEmail(emailOrPhone)) {
-        setMessage({ type: 'error', text: 'Ugyldig e-postformat.' });
+      if (emailOrPhone && !isValidEmail(emailOrPhone)) {
+        errors.emailOrPhone = 'Ugyldig e-postformat.';
+      }
+
+      if (Object.keys(errors).length > 0) {
+        setFieldErrors(errors);
         return;
       }
 
@@ -120,19 +143,20 @@ export default function LoginClient({ initialNext }: { initialNext: string }) {
     } else {
       // Phone login
       if (!isValidNorwegianPhone(emailOrPhone)) {
-        setMessage({
-          type: 'error',
-          text: 'Telefonnummer må være 8 siffer.',
-        });
+        errors.emailOrPhone = 'Telefonnummer må være 8 siffer.';
+      }
+
+      if (phoneLoginMethod === 'password' && !password) {
+        errors.password = 'Fyll inn passord.';
+      }
+
+      if (Object.keys(errors).length > 0) {
+        setFieldErrors(errors);
         return;
       }
 
       if (phoneLoginMethod === 'password') {
         // Phone login with password
-        if (!password) {
-          setMessage({ type: 'error', text: 'Fyll inn passord.' });
-          return;
-        }
 
         setIsSubmitting(true);
         setMessage(null);
@@ -221,14 +245,20 @@ export default function LoginClient({ initialNext }: { initialNext: string }) {
 
   const handleVerifyOtp = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    resetAll();
+
+    const errors: FieldErrors = {};
 
     if (otp.length !== 6) {
-      setMessage({ type: 'error', text: 'Fyll inn alle 6 sifrene.' });
-      return;
+      errors.otp = 'Fyll inn alle 6 sifrene.';
     }
 
     if (!isValidNorwegianPhone(emailOrPhone)) {
-      setMessage({ type: 'error', text: 'Ugyldig telefonnummer.' });
+      errors.otp = 'Ugyldig telefonnummer.';
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
       return;
     }
 
@@ -320,98 +350,106 @@ export default function LoginClient({ initialNext }: { initialNext: string }) {
       {/* Full-screen loading overlay during OAuth redirect */}
       {isOAuthRedirecting && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
-          <div className="rounded-3xl border border-border bg-surface-secondary p-8 shadow-app-lg">
-            <div className="flex flex-col items-center gap-4">
-              <div className="h-12 w-12 animate-spin rounded-full border-4 border-border border-t-brand-highlight"></div>
-              <p className="text-lg font-semibold text-text-primary">Venter på Google...</p>
-            </div>
-          </div>
+          <Card className="max-w-sm shadow-lg">
+            <CardContent className="pt-6">
+              <div className="flex flex-col items-center gap-4">
+                <div className="h-12 w-12 animate-spin rounded-full border-4 border-border border-t-primary"></div>
+                <p className="text-lg font-semibold">Venter på Google...</p>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       )}
 
-      <section className="w-full max-w-md rounded-3xl border border-border bg-surface-secondary p-10 shadow-app-lg backdrop-blur">
-        <div className="mb-8 text-center">
-          <h1 className="tracking-wide">Logg inn</h1>
+      <Card className="w-full max-w-md shadow-lg">
+        <CardHeader className="text-center">
+          <CardTitle className="text-2xl">Hei, du!</CardTitle>
           {step === 'otp' && (
-            <p className="mt-2 text-sm text-text-secondary">
+            <CardDescription>
               Skriv inn koden vi sendte til {emailOrPhone}
-            </p>
+            </CardDescription>
           )}
-        </div>
+        </CardHeader>
+
+        <CardContent>
 
         {/* Step 1: Email/Phone and Password Input */}
         {step === 'input' && (
           <form className="space-y-6" noValidate onSubmit={handleSignIn}>
-            <div className="space-y-2">
-              <label htmlFor="emailOrPhone">E-post eller telefonnummer</label>
-              <input
-                id="emailOrPhone"
-                name="emailOrPhone"
-                type="text"
-                placeholder="E-post eller telefonnummer"
-                // Microsoft Editor browser extension injects these attributes before hydration; set them eagerly to avoid mismatches.
-                spellCheck={false}
-                data-ms-editor="true"
-                suppressHydrationWarning
-                autoComplete="username"
-                value={emailOrPhone}
-                onChange={(event) => {
-                  resetMessage();
-                  setEmailOrPhone(event.target.value);
-                }}
-                className="w-full rounded-full border border-border-subtle bg-background-primary px-5 py-3 text-base text-text-primary placeholder:text-text-muted focus:border-brand-highlight focus:outline-none focus:ring-2 focus:ring-brand-highlight/60"
-              />
-            </div>
+            <FieldGroup>
+              <Field data-invalid={!!fieldErrors.emailOrPhone}>
+                <FieldLabel htmlFor="emailOrPhone">E-post eller telefonnummer</FieldLabel>
+                <Input
+                  id="emailOrPhone"
+                  name="emailOrPhone"
+                  type="text"
+                  placeholder="E-post eller telefonnummer"
+                  // Microsoft Editor browser extension injects these attributes before hydration; set them eagerly to avoid mismatches.
+                  spellCheck={false}
+                  data-ms-editor="true"
+                  suppressHydrationWarning
+                  autoComplete="username"
+                  value={emailOrPhone}
+                  onChange={(event) => {
+                    resetAll();
+                    setEmailOrPhone(event.target.value);
+                  }}
+                  aria-invalid={!!fieldErrors.emailOrPhone}
+                />
+                <FieldError>{fieldErrors.emailOrPhone}</FieldError>
+              </Field>
 
-            <div className="space-y-2">
-              <div className="flex items-baseline justify-items">
-                <label htmlFor="password">Passord</label>
-                {isPhoneInput && (
-                  <span className="text-sm text-text-secondary ml-2">(valgfritt)</span>
-                )}
-              </div>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                placeholder="Passord"
-                autoComplete="current-password"
-                value={password}
-                onChange={(event) => {
-                  resetMessage();
-                  setPassword(event.target.value);
-                }}
-                className="w-full rounded-full border border-border-subtle bg-background-primary px-5 py-3 text-base text-text-primary placeholder:text-text-muted focus:border-brand-highlight focus:outline-none focus:ring-2 focus:ring-brand-highlight/60"
-              />
-            </div>
+              <Field data-invalid={!!fieldErrors.password}>
+                <FieldLabel htmlFor="password">
+                  Passord
+                  {isPhoneInput && (
+                    <span className="text-sm text-muted-foreground font-normal ml-2">(valgfritt)</span>
+                  )}
+                </FieldLabel>
+                <Input
+                  id="password"
+                  name="password"
+                  type="password"
+                  placeholder="Passord"
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(event) => {
+                    resetAll();
+                    setPassword(event.target.value);
+                  }}
+                  aria-invalid={!!fieldErrors.password}
+                />
+                <FieldError>{fieldErrors.password}</FieldError>
+              </Field>
+            </FieldGroup>
 
-            <button
+            <Button
               type="submit"
               disabled={buttonDisabled}
-              className="w-full rounded-full bg-gradient-to-r from-brand-gradientStart via-brand-gradientMid to-brand-gradientEnd px-5 py-3 text-sm font-bold uppercase tracking-wide text-text-inverse shadow-lg shadow-brand-gradientMid/40 transition hover:from-brand-gradientMid hover:via-brand-gradientMid hover:to-brand-gradientEnd focus:outline-none focus:ring-4 focus:ring-brand-highlight/60 focus:ring-offset-2 focus:ring-offset-surface-secondary disabled:cursor-not-allowed disabled:opacity-60"
+              loading={isSubmitting}
+              size="lg"
+              className="w-full"
             >
-              {isSubmitting
-                ? isPhoneInput && phoneLoginMethod === 'otp'
-                  ? 'Sender kode...'
-                  : 'Logger inn...'
-                : 'Logg inn'}
-            </button>
+              {isPhoneInput && phoneLoginMethod === 'otp' ? 'Send kode' : 'Logg inn'}
+            </Button>
 
             {/* Show "Engangskode" button for phone users with password */}
             {emailOrPhone &&
               isPhoneInput &&
               phoneLoginMethod === 'password' && (
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="sm"
                   onClick={() => {
                     setPhoneLoginMethod('otp');
                     setPassword('');
-                    resetMessage();
+                    resetAll();
                   }}
-                  className="w-full text-sm text-text-secondary transition hover:text-text-primary"
+                  className="w-full"
                 >
                   Bruk engangskode i stedet →
-                </button>
+                </Button>
               )}
           </form>
         )}
@@ -419,15 +457,15 @@ export default function LoginClient({ initialNext }: { initialNext: string }) {
         {/* Step 2: OTP Verification (for phone login) */}
         {step === 'otp' && (
           <form className="space-y-6" noValidate onSubmit={handleVerifyOtp}>
-            <div className="flex flex-col items-center space-y-4">
-              <label htmlFor="otp" className="sr-only">
+            <Field data-invalid={!!fieldErrors.otp} className="items-center">
+              <FieldLabel htmlFor="otp" className="sr-only">
                 Engangskode mottatt via SMS
-              </label>
+              </FieldLabel>
               <InputOTP
                 maxLength={6}
                 value={otp}
                 onChange={(value) => {
-                  resetMessage();
+                  resetAll();
                   setOtp(value);
                 }}
               >
@@ -443,27 +481,34 @@ export default function LoginClient({ initialNext }: { initialNext: string }) {
                   <InputOTPSlot index={5} />
                 </InputOTPGroup>
               </InputOTP>
-            </div>
+              {fieldErrors.otp && (
+                <FieldError className="text-center">{fieldErrors.otp}</FieldError>
+              )}
+            </Field>
 
-            <button
+            <Button
               type="submit"
               disabled={buttonDisabled}
-              className="w-full rounded-full bg-gradient-to-r from-brand-gradientStart via-brand-gradientMid to-brand-gradientEnd px-5 py-3 text-sm font-bold uppercase tracking-wide text-text-inverse shadow-lg shadow-brand-gradientMid/40 transition hover:from-brand-gradientMid hover:via-brand-gradientMid hover:to-brand-gradientEnd focus:outline-none focus:ring-4 focus:ring-brand-highlight/60 focus:ring-offset-2 focus:ring-offset-surface-secondary disabled:cursor-not-allowed disabled:opacity-60"
+              loading={isSubmitting}
+              size="lg"
+              className="w-full"
             >
-              {isSubmitting ? 'Verifiserer...' : 'Verifiser kode'}
-            </button>
+              Verifiser kode
+            </Button>
 
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="sm"
               onClick={() => {
                 setStep('input');
                 setOtp('');
-                resetMessage();
+                resetAll();
               }}
-              className="w-full text-sm text-text-secondary transition hover:text-text-primary"
+              className="w-full"
             >
               ← Tilbake til innlogging
-            </button>
+            </Button>
           </form>
         )}
 
@@ -501,42 +546,54 @@ export default function LoginClient({ initialNext }: { initialNext: string }) {
         {/* Only show signup and Google options on input step */}
         {step === 'input' && (
           <>
-            <div className={`space-y-3 ${showSignupPrompt ? 'mt-2' : 'mt-6'}`}>
-              <Link
-                href="/signup"
-                className={`flex w-full items-center justify-center rounded-full px-5 py-3 text-sm font-semibold uppercase tracking-wide transition focus:outline-none focus:ring-4 focus:ring-offset-2 focus:ring-offset-surface-secondary ${
-                  showSignupPrompt
-                    ? 'bg-gradient-to-r from-brand-gradientStart via-brand-gradientMid to-brand-gradientEnd text-text-inverse shadow-lg shadow-brand-gradientMid/40 hover:from-brand-gradientMid hover:via-brand-gradientMid hover:to-brand-gradientEnd focus:ring-brand-highlight/60 ring-4 ring-brand-highlight/40'
-                    : 'bg-surface-primary text-text-primary hover:bg-surface-primary/80 focus:ring-brand-highlight/40'
-                }`}
-              >
-                Opprett ny konto
-              </Link>
-              <button
-                type="button"
-                onClick={handleGoogleSignIn}
-                disabled={buttonDisabled}
-                aria-label="Fortsett med Google"
-                className="flex w-full items-center justify-center gap-3 rounded-full bg-surface-primary px-5 py-3 text-sm font-semibold uppercase tracking-wide text-text-primary transition hover:bg-surface-primary/80 focus:outline-none focus:ring-4 focus:ring-brand-highlight/40 focus:ring-offset-2 focus:ring-offset-surface-secondary disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-text-primary">
-                  {googleIcon}
-                </span>
-                {isOAuthRedirecting ? 'Videresender...' : 'Fortsett med Google'}
-              </button>
+            <div className={showSignupPrompt ? 'mt-2 mb-6' : 'mt-6 mb-6'}>
+              <FieldSeparator>Eller</FieldSeparator>
             </div>
 
-            <div className="mt-8 text-center text-sm">
-              <Link
-                href="/reset-password"
-                className="font-semibold text-brand-highlight transition hover:text-brand-highlight/80 focus:outline-none focus:ring-2 focus:ring-brand-highlight/60"
+            <div className="space-y-3">
+              <Button
+                asChild
+                variant={showSignupPrompt ? 'default' : 'outline'}
+                size="lg"
+                className={`w-full ${showSignupPrompt ? 'ring-2 ring-ring ring-offset-2' : ''}`}
               >
-                Tilbakestill med kode
-              </Link>
+                <Link href="/signup">
+                  Opprett ny konto
+                </Link>
+              </Button>
+
+              <Button
+                type="button"
+                variant="outline"
+                size="lg"
+                onClick={handleGoogleSignIn}
+                disabled={buttonDisabled}
+                loading={isOAuthRedirecting}
+                aria-label="Fortsett med Google"
+                className="w-full"
+              >
+                <span className="flex h-5 w-5 items-center justify-center">
+                  {googleIcon}
+                </span>
+                Fortsett med Google
+              </Button>
+            </div>
+
+            <div className="mt-6 text-center">
+              <Button
+                asChild
+                variant="link"
+                size="sm"
+              >
+                <Link href="/reset-password">
+                  Tilbakestill passord
+                </Link>
+              </Button>
             </div>
           </>
         )}
-      </section>
+        </CardContent>
+      </Card>
     </div>
   );
 }
