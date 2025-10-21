@@ -42,7 +42,7 @@ export function EarlySupporterStatus() {
         </div>
 
         <div className="flex items-center gap-2 p-3 bg-surface-primary rounded-lg border border-border-subtle">
-          <div className="text-2xl">🎉</div>
+          <div className="text-2xl">✰</div>
           <div className="flex-1">
             <p className="text-sm font-medium">Du slipper å betale</p>
             <p className="text-xs text-text-secondary">Verdi: 29,90 kr/måned</p>

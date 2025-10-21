@@ -17,7 +17,7 @@ export function GrandfatheredSubscriberBanner() {
         </div>
         <p className="text-sm text-text-secondary">
           Du var med fra starten og har fortsatt gratis tilgang til alle Pro-funksjoner for livet.
-          I tillegg støtter du nå med et abonnement - det betyr alt for oss! 🎉
+          I tillegg støtter du nå med et abonnement - det betyr alt for oss! ✰
         </p>
       </div>
     </Card>

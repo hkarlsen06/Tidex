@@ -137,6 +137,36 @@ export function PayForm({ initialData }: PayFormProps) {
     return `${customWage} kr/t`;
   };
 
+  const SupplementsCard = () => (
+    <Card className="p-6">
+      <div className="space-y-6">
+        <div>
+          <h3 className="text-lg font-semibold">Tillegg</h3>
+          <p className="text-sm text-text-secondary mt-1">
+            {usePreset
+              ? 'Se hvilke tillegg som følger tariffavtalen'
+              : 'Legg til tillegg for bestemte tider og dager'}
+          </p>
+        </div>
+
+        <Separator />
+
+        <SupplementsEditor
+          key={usePreset ? 'tariff' : 'custom'}
+          value={usePreset ? TARIFF_SUPPLEMENTS_DATA : customSupplements}
+          onChange={setCustomSupplements}
+          readOnly={usePreset}
+        />
+
+        {usePreset && (
+          <p className="text-xs text-text-secondary">
+            Tariff-tillegg styres av tariffavtalen og kan ikke endres her.
+          </p>
+        )}
+      </div>
+    </Card>
+  );
+
   return (
     <div className="space-y-6">
       {/* Wage Configuration */}
@@ -233,34 +263,8 @@ export function PayForm({ initialData }: PayFormProps) {
         </div>
       </Card>
 
-      {/* Supplements */}
-      <Card className="p-6">
-        <div className="space-y-6">
-          <div>
-            <h3 className="text-lg font-semibold">Tillegg</h3>
-            <p className="text-sm text-text-secondary mt-1">
-              {usePreset
-                ? 'Se hvilke tillegg som følger tariffavtalen'
-                : 'Legg til tillegg for bestemte tider og dager'}
-            </p>
-          </div>
-
-          <Separator />
-
-          <SupplementsEditor
-            key={usePreset ? 'tariff' : 'custom'}
-            value={usePreset ? TARIFF_SUPPLEMENTS_DATA : customSupplements}
-            onChange={setCustomSupplements}
-            readOnly={usePreset}
-          />
-
-          {usePreset && (
-            <p className="text-xs text-text-secondary">
-              Tariff-tillegg styres av tariffavtalen og kan ikke endres her.
-            </p>
-          )}
-        </div>
-      </Card>
+      {/* Supplements - for custom wage users, show here */}
+      {!usePreset && <SupplementsCard />}
 
       {/* Break Deduction */}
       <Card className="p-6">
@@ -410,6 +414,9 @@ export function PayForm({ initialData }: PayFormProps) {
           </div>
         </div>
       </Card>
+
+      {/* Supplements - for tariff users, show at the bottom */}
+      {usePreset && <SupplementsCard />}
     </div>
   );
 }
