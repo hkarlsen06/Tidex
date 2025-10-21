@@ -22,7 +22,6 @@ import {
   FieldLabel,
   FieldError,
   FieldGroup,
-  FieldDescription,
 } from "@/components/app/Field";
 import { Input } from "@/components/app/Input";
 import { Button } from "@/components/app/Button";
@@ -142,23 +141,21 @@ export default function SignupPage() {
         errors.emailOrPhone = "Telefonnummer må være 8 siffer.";
       }
 
-      // Validate password if provided (optional for phone)
-      if (password || confirmPassword) {
-        if (password && !confirmPassword) {
-          errors.confirmPassword = "Bekreft passordet.";
-        }
+      // Password is required for phone signup
+      if (!password) {
+        errors.password = "Fyll inn passord.";
+      }
 
-        if (!password && confirmPassword) {
-          errors.password = "Fyll inn passord.";
-        }
+      if (!confirmPassword) {
+        errors.confirmPassword = "Fyll inn bekreftelse av passord.";
+      }
 
-        if (password && confirmPassword && password !== confirmPassword) {
-          errors.confirmPassword = "Passordene stemmer ikke overens.";
-        }
+      if (password && confirmPassword && password !== confirmPassword) {
+        errors.confirmPassword = "Passordene stemmer ikke overens.";
+      }
 
-        if (password && password.length < 6) {
-          errors.password = "Passordet må være minst 6 tegn langt.";
-        }
+      if (password && password.length < 6) {
+        errors.password = "Passordet må være minst 6 tegn langt.";
       }
 
       if (Object.keys(errors).length > 0) {
@@ -170,8 +167,10 @@ export default function SignupPage() {
 
       try {
         const phoneE164 = normalizePhoneToE164(emailOrPhone);
-        const { error } = await supabase.auth.signInWithOtp({
+
+        const { error } = await supabase.auth.signUp({
           phone: phoneE164,
+          password: password,
           options: {
             data: {
               first_name: fullName,
@@ -182,7 +181,15 @@ export default function SignupPage() {
         setIsSubmitting(false);
 
         if (error) {
-          setMessage({ type: "error", text: error.message });
+          // Handle specific error for existing user
+          if (error.message.includes("already registered") || error.message.includes("already exists") || error.message.includes("User already registered")) {
+            setMessage({
+              type: "error",
+              text: "Dette telefonnummeret er allerede registrert. Gå til innlogging."
+            });
+          } else {
+            setMessage({ type: "error", text: error.message });
+          }
           return;
         }
 
@@ -237,19 +244,6 @@ export default function SignupPage() {
         return;
       }
 
-      // If user provided a password during signup, set it now
-      if (password && password.length >= 6) {
-        const { error: passwordError } = await supabase.auth.updateUser({
-          password: password,
-        });
-
-        if (passwordError) {
-          console.error("Failed to set password:", passwordError);
-          // Don't block signup if password setting fails
-          // User can set it later in profile
-        }
-      }
-
       setMessage({
         type: "success",
         text: "Konto opprettet! Omdirigerer...",
@@ -271,7 +265,6 @@ export default function SignupPage() {
 
   const detectedInputType = detectInputType(emailOrPhone);
   const isPhoneInput = detectedInputType === "phone";
-  const isEmailInput = detectedInputType === "email";
 
   return (
     <div className="relative flex min-h-screen items-center justify-center py-16">
@@ -324,27 +317,16 @@ export default function SignupPage() {
                   <FieldError>{fieldErrors.emailOrPhone}</FieldError>
                 </Field>
 
-                {/* Show password fields for email (required) or phone (optional) */}
+                {/* Show password fields when email or phone is entered */}
                 {emailOrPhone && (
                   <>
                     <Field data-invalid={!!fieldErrors.password}>
-                      <FieldLabel htmlFor="password">
-                        Passord
-                        {isPhoneInput && (
-                          <span className="text-sm text-muted-foreground font-normal ml-2">
-                            (valgfritt)
-                          </span>
-                        )}
-                      </FieldLabel>
+                      <FieldLabel htmlFor="password">Passord</FieldLabel>
                       <Input
                         id="password"
                         name="password"
                         type="password"
-                        placeholder={
-                          isPhoneInput
-                            ? "Sett passord (eller bruk kun SMS-kode)"
-                            : "Passord"
-                        }
+                        placeholder="Passord"
                         value={password}
                         onChange={(event) => {
                           resetAll();
@@ -352,33 +334,25 @@ export default function SignupPage() {
                         }}
                         aria-invalid={!!fieldErrors.password}
                       />
-                      {isPhoneInput && (
-                        <FieldDescription>
-                          Hvis du setter passord kan du logge inn med enten SMS-kode
-                          eller passord
-                        </FieldDescription>
-                      )}
                       <FieldError>{fieldErrors.password}</FieldError>
                     </Field>
 
-                    {(password || isEmailInput) && (
-                      <Field data-invalid={!!fieldErrors.confirmPassword}>
-                        <FieldLabel htmlFor="confirmPassword">Bekreft passord</FieldLabel>
-                        <Input
-                          id="confirmPassword"
-                          name="confirmPassword"
-                          type="password"
-                          placeholder="Bekreft passord"
-                          value={confirmPassword}
-                          onChange={(event) => {
-                            resetAll();
-                            setConfirmPassword(event.target.value);
-                          }}
-                          aria-invalid={!!fieldErrors.confirmPassword}
-                        />
-                        <FieldError>{fieldErrors.confirmPassword}</FieldError>
-                      </Field>
-                    )}
+                    <Field data-invalid={!!fieldErrors.confirmPassword}>
+                      <FieldLabel htmlFor="confirmPassword">Bekreft passord</FieldLabel>
+                      <Input
+                        id="confirmPassword"
+                        name="confirmPassword"
+                        type="password"
+                        placeholder="Bekreft passord"
+                        value={confirmPassword}
+                        onChange={(event) => {
+                          resetAll();
+                          setConfirmPassword(event.target.value);
+                        }}
+                        aria-invalid={!!fieldErrors.confirmPassword}
+                      />
+                      <FieldError>{fieldErrors.confirmPassword}</FieldError>
+                    </Field>
                   </>
                 )}
               </FieldGroup>
