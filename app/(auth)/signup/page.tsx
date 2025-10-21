@@ -17,9 +17,26 @@ import {
   InputOTPSeparator,
   InputOTPSlot,
 } from "@/components/app/InputOTP";
+import {
+  Field,
+  FieldLabel,
+  FieldError,
+  FieldGroup,
+  FieldDescription,
+} from "@/components/app/Field";
+import { Input } from "@/components/app/Input";
+import { Button } from "@/components/app/Button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/app/Card";
 
 type MessageState = { type: "error" | "success"; text: string } | null;
 type SignupStep = "input" | "otp";
+type FieldErrors = {
+  fullName?: string;
+  emailOrPhone?: string;
+  password?: string;
+  confirmPassword?: string;
+  otp?: string;
+};
 
 export default function SignupPage() {
   const router = useRouter();
@@ -31,64 +48,64 @@ export default function SignupPage() {
   const [otp, setOtp] = useState("");
   const [step, setStep] = useState<SignupStep>("input");
   const [message, setMessage] = useState<MessageState>(null);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const resetMessage = () => setMessage(null);
+  const resetFieldErrors = () => setFieldErrors({});
+  const resetAll = () => {
+    resetMessage();
+    resetFieldErrors();
+  };
 
   const handleSignUp = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    resetAll();
 
-    if (!emailOrPhone || !fullName) {
-      setMessage({
-        type: "error",
-        text: "Fyll inn alle feltene.",
-      });
-      return;
+    const errors: FieldErrors = {};
+
+    if (!fullName) {
+      errors.fullName = "Fyll inn fullt navn.";
+    }
+
+    if (!emailOrPhone) {
+      errors.emailOrPhone = "Fyll inn e-post eller telefonnummer.";
     }
 
     const inputType = detectInputType(emailOrPhone);
 
-    if (inputType === "unknown") {
-      setMessage({
-        type: "error",
-        text: "Ugyldig e-post eller telefonnummer. Telefonnummer må være 8 siffer.",
-      });
-      return;
+    if (emailOrPhone && inputType === "unknown") {
+      errors.emailOrPhone = "Ugyldig e-post eller telefonnummer. Telefonnummer må være 8 siffer.";
     }
 
     if (inputType === "email") {
       // Email signup requires password
-      if (!password || !confirmPassword) {
-        setMessage({
-          type: "error",
-          text: "Fyll inn passord.",
-        });
-        return;
+      if (!password) {
+        errors.password = "Fyll inn passord.";
       }
 
-      if (password !== confirmPassword) {
-        setMessage({
-          type: "error",
-          text: "Passordene stemmer ikke overens.",
-        });
-        return;
+      if (!confirmPassword) {
+        errors.confirmPassword = "Fyll inn bekreftelse av passord.";
       }
 
-      if (password.length < 6) {
-        setMessage({
-          type: "error",
-          text: "Passordet må være minst 6 tegn langt.",
-        });
-        return;
+      if (password && confirmPassword && password !== confirmPassword) {
+        errors.confirmPassword = "Passordene stemmer ikke overens.";
       }
 
-      if (!isValidEmail(emailOrPhone)) {
-        setMessage({ type: "error", text: "Ugyldig e-postformat." });
+      if (password && password.length < 6) {
+        errors.password = "Passordet må være minst 6 tegn langt.";
+      }
+
+      if (emailOrPhone && !isValidEmail(emailOrPhone)) {
+        errors.emailOrPhone = "Ugyldig e-postformat.";
+      }
+
+      if (Object.keys(errors).length > 0) {
+        setFieldErrors(errors);
         return;
       }
 
       setIsSubmitting(true);
-      setMessage(null);
 
       const { error } = await supabase.auth.signUp({
         email: emailOrPhone,
@@ -122,42 +139,34 @@ export default function SignupPage() {
     } else {
       // Phone signup with OTP
       if (!isValidNorwegianPhone(emailOrPhone)) {
-        setMessage({
-          type: "error",
-          text: "Telefonnummer må være 8 siffer.",
-        });
-        return;
+        errors.emailOrPhone = "Telefonnummer må være 8 siffer.";
       }
 
       // Validate password if provided (optional for phone)
       if (password || confirmPassword) {
-        if (!password || !confirmPassword) {
-          setMessage({
-            type: "error",
-            text: "Fyll inn begge passordfeltene hvis du vil sette passord.",
-          });
-          return;
+        if (password && !confirmPassword) {
+          errors.confirmPassword = "Bekreft passordet.";
         }
 
-        if (password !== confirmPassword) {
-          setMessage({
-            type: "error",
-            text: "Passordene stemmer ikke overens.",
-          });
-          return;
+        if (!password && confirmPassword) {
+          errors.password = "Fyll inn passord.";
         }
 
-        if (password.length < 6) {
-          setMessage({
-            type: "error",
-            text: "Passordet må være minst 6 tegn langt.",
-          });
-          return;
+        if (password && confirmPassword && password !== confirmPassword) {
+          errors.confirmPassword = "Passordene stemmer ikke overens.";
+        }
+
+        if (password && password.length < 6) {
+          errors.password = "Passordet må være minst 6 tegn langt.";
         }
       }
 
+      if (Object.keys(errors).length > 0) {
+        setFieldErrors(errors);
+        return;
+      }
+
       setIsSubmitting(true);
-      setMessage(null);
 
       try {
         const phoneE164 = normalizePhoneToE164(emailOrPhone);
@@ -194,27 +203,32 @@ export default function SignupPage() {
 
   const handleVerifyOtp = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    resetAll();
+
+    const errors: FieldErrors = {};
 
     if (otp.length !== 6) {
-      setMessage({ type: "error", text: "Fyll inn alle 6 sifrene." });
-      return;
+      errors.otp = "Fyll inn alle 6 sifrene.";
     }
 
     if (!isValidNorwegianPhone(emailOrPhone)) {
-      setMessage({ type: "error", text: "Ugyldig telefonnummer." });
+      errors.otp = "Ugyldig telefonnummer.";
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
       return;
     }
 
     setIsSubmitting(true);
-    setMessage(null);
 
     try {
       const phoneE164 = normalizePhoneToE164(emailOrPhone);
-        const { error } = await supabase.auth.verifyOtp({
-          phone: phoneE164,
-          token: otp,
-          type: "sms",
-        });
+      const { error } = await supabase.auth.verifyOtp({
+        phone: phoneE164,
+        token: otp,
+        type: "sms",
+      });
 
       setIsSubmitting(false);
 
@@ -255,201 +269,221 @@ export default function SignupPage() {
     }
   };
 
+  const detectedInputType = detectInputType(emailOrPhone);
+  const isPhoneInput = detectedInputType === "phone";
+  const isEmailInput = detectedInputType === "email";
+
   return (
     <div className="relative flex min-h-screen items-center justify-center py-16">
-      <section className="w-full max-w-md rounded-3xl border border-border bg-surface-secondary p-10 shadow-app-lg backdrop-blur">
-        <div className="mb-8 text-center">
-          <h1 className="tracking-wide">Opprett konto</h1>
-          <p className="mt-2 text-sm text-text-secondary">
+      <Card className="w-full max-w-md shadow-lg">
+        <CardHeader className="text-center">
+          <CardTitle className="text-2xl">Opprett konto</CardTitle>
+          <CardDescription>
             {step === "otp"
               ? `Skriv inn koden vi sendte til ${emailOrPhone}`
               : "Fyll inn dine opplysninger"}
-          </p>
-        </div>
+          </CardDescription>
+        </CardHeader>
 
-        {/* Step 1: Input Form */}
-        {step === "input" && (
-          <form className="space-y-6" noValidate onSubmit={handleSignUp}>
-            <div className="space-y-2">
-              <label htmlFor="fullName">Fullt navn</label>
-              <input
-                id="fullName"
-                name="fullName"
-                type="text"
-                placeholder="Fullt navn"
-                value={fullName}
-                onChange={(event) => {
-                  resetMessage();
-                  setFullName(event.target.value);
-                }}
-                className="w-full rounded-full border border-border-subtle bg-background-primary px-5 py-3 text-base text-text-primary placeholder:text-text-muted focus:border-brand-highlight focus:outline-none focus:ring-2 focus:ring-brand-highlight/60"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label htmlFor="emailOrPhone">E-post eller telefonnummer</label>
-              <input
-                id="emailOrPhone"
-                name="emailOrPhone"
-                type="text"
-                placeholder="E-post eller telefonnummer"
-                value={emailOrPhone}
-                onChange={(event) => {
-                  resetMessage();
-                  setEmailOrPhone(event.target.value);
-                }}
-                className="w-full rounded-full border border-border-subtle bg-background-primary px-5 py-3 text-base text-text-primary placeholder:text-text-muted focus:border-brand-highlight focus:outline-none focus:ring-2 focus:ring-brand-highlight/60"
-              />
-            </div>
-
-            {/* Show password fields for email (required) or phone (optional) */}
-            {emailOrPhone && (
-              <>
-                <div className="space-y-2">
-                  <label htmlFor="password">
-                    Passord
-                    {detectInputType(emailOrPhone) === "phone" && (
-                      <span className="ml-2 text-xs text-text-secondary font-normal">
-                        (valgfritt)
-                      </span>
-                    )}
-                  </label>
-                  <input
-                    id="password"
-                    name="password"
-                    type="password"
-                    placeholder={
-                      detectInputType(emailOrPhone) === "phone"
-                        ? "Sett passord (eller bruk kun SMS-kode)"
-                        : "Passord"
-                    }
-                    value={password}
+        <CardContent>
+          {/* Step 1: Input Form */}
+          {step === "input" && (
+            <form className="space-y-6" noValidate onSubmit={handleSignUp}>
+              <FieldGroup>
+                <Field data-invalid={!!fieldErrors.fullName}>
+                  <FieldLabel htmlFor="fullName">Fullt navn</FieldLabel>
+                  <Input
+                    id="fullName"
+                    name="fullName"
+                    type="text"
+                    placeholder="Fullt navn"
+                    value={fullName}
                     onChange={(event) => {
-                      resetMessage();
-                      setPassword(event.target.value);
+                      resetAll();
+                      setFullName(event.target.value);
                     }}
-                    className="w-full rounded-full border border-border-subtle bg-background-primary px-5 py-3 text-base text-text-primary placeholder:text-text-muted focus:border-brand-highlight focus:outline-none focus:ring-2 focus:ring-brand-highlight/60"
+                    aria-invalid={!!fieldErrors.fullName}
                   />
-                  {detectInputType(emailOrPhone) === "phone" && (
-                    <p className="text-xs text-text-secondary">
-                      Hvis du setter passord kan du logge inn med enten SMS-kode
-                      eller passord
-                    </p>
-                  )}
-                </div>
+                  <FieldError>{fieldErrors.fullName}</FieldError>
+                </Field>
 
-                {(password || detectInputType(emailOrPhone) === "email") && (
-                  <div className="space-y-2">
-                    <label htmlFor="confirmPassword">Bekreft passord</label>
-                    <input
-                      id="confirmPassword"
-                      name="confirmPassword"
-                      type="password"
-                      placeholder="Bekreft passord"
-                      value={confirmPassword}
-                      onChange={(event) => {
-                        resetMessage();
-                        setConfirmPassword(event.target.value);
-                      }}
-                      className="w-full rounded-full border border-border-subtle bg-background-primary px-5 py-3 text-base text-text-primary placeholder:text-text-muted focus:border-brand-highlight focus:outline-none focus:ring-2 focus:ring-brand-highlight/60"
-                    />
-                  </div>
+                <Field data-invalid={!!fieldErrors.emailOrPhone}>
+                  <FieldLabel htmlFor="emailOrPhone">E-post eller telefonnummer</FieldLabel>
+                  <Input
+                    id="emailOrPhone"
+                    name="emailOrPhone"
+                    type="text"
+                    placeholder="E-post eller telefonnummer"
+                    value={emailOrPhone}
+                    onChange={(event) => {
+                      resetAll();
+                      setEmailOrPhone(event.target.value);
+                    }}
+                    aria-invalid={!!fieldErrors.emailOrPhone}
+                  />
+                  <FieldError>{fieldErrors.emailOrPhone}</FieldError>
+                </Field>
+
+                {/* Show password fields for email (required) or phone (optional) */}
+                {emailOrPhone && (
+                  <>
+                    <Field data-invalid={!!fieldErrors.password}>
+                      <FieldLabel htmlFor="password">
+                        Passord
+                        {isPhoneInput && (
+                          <span className="text-sm text-muted-foreground font-normal ml-2">
+                            (valgfritt)
+                          </span>
+                        )}
+                      </FieldLabel>
+                      <Input
+                        id="password"
+                        name="password"
+                        type="password"
+                        placeholder={
+                          isPhoneInput
+                            ? "Sett passord (eller bruk kun SMS-kode)"
+                            : "Passord"
+                        }
+                        value={password}
+                        onChange={(event) => {
+                          resetAll();
+                          setPassword(event.target.value);
+                        }}
+                        aria-invalid={!!fieldErrors.password}
+                      />
+                      {isPhoneInput && (
+                        <FieldDescription>
+                          Hvis du setter passord kan du logge inn med enten SMS-kode
+                          eller passord
+                        </FieldDescription>
+                      )}
+                      <FieldError>{fieldErrors.password}</FieldError>
+                    </Field>
+
+                    {(password || isEmailInput) && (
+                      <Field data-invalid={!!fieldErrors.confirmPassword}>
+                        <FieldLabel htmlFor="confirmPassword">Bekreft passord</FieldLabel>
+                        <Input
+                          id="confirmPassword"
+                          name="confirmPassword"
+                          type="password"
+                          placeholder="Bekreft passord"
+                          value={confirmPassword}
+                          onChange={(event) => {
+                            resetAll();
+                            setConfirmPassword(event.target.value);
+                          }}
+                          aria-invalid={!!fieldErrors.confirmPassword}
+                        />
+                        <FieldError>{fieldErrors.confirmPassword}</FieldError>
+                      </Field>
+                    )}
+                  </>
                 )}
-              </>
-            )}
+              </FieldGroup>
 
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="w-full rounded-full bg-gradient-to-r from-brand-gradientStart via-brand-gradientMid to-brand-gradientEnd px-5 py-3 text-sm font-bold uppercase tracking-wide text-text-inverse shadow-lg shadow-brand-gradientMid/40 transition hover:from-brand-gradientMid hover:via-brand-gradientMid hover:to-brand-gradientEnd focus:outline-none focus:ring-4 focus:ring-brand-highlight/60 focus:ring-offset-2 focus:ring-offset-surface-secondary disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {isSubmitting
-                ? detectInputType(emailOrPhone) === "phone"
-                  ? "Sender kode..."
-                  : "Oppretter konto..."
-                : "Opprett konto"}
-            </button>
-          </form>
-        )}
-
-        {/* Step 2: OTP Verification (for phone signup) */}
-        {step === "otp" && (
-          <form className="space-y-6" noValidate onSubmit={handleVerifyOtp}>
-            <div className="flex flex-col items-center space-y-4">
-              <label htmlFor="otp" className="text-sm text-text-secondary">
-                6-sifret SMS-kode
-              </label>
-              <InputOTP
-                maxLength={6}
-                value={otp}
-                onChange={(value) => {
-                  resetMessage();
-                  setOtp(value);
-                }}
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+                loading={isSubmitting}
+                size="lg"
+                className="w-full"
               >
-                <InputOTPGroup>
-                  <InputOTPSlot index={0} />
-                  <InputOTPSlot index={1} />
-                  <InputOTPSlot index={2} />
-                </InputOTPGroup>
-                <InputOTPSeparator />
-                <InputOTPGroup>
-                  <InputOTPSlot index={3} />
-                  <InputOTPSlot index={4} />
-                  <InputOTPSlot index={5} />
-                </InputOTPGroup>
-              </InputOTP>
+                {isPhoneInput ? "Send kode" : "Opprett konto"}
+              </Button>
+            </form>
+          )}
+
+          {/* Step 2: OTP Verification (for phone signup) */}
+          {step === "otp" && (
+            <form className="space-y-6" noValidate onSubmit={handleVerifyOtp}>
+              <Field data-invalid={!!fieldErrors.otp} className="items-center">
+                <FieldLabel htmlFor="otp" className="sr-only">
+                  6-sifret SMS-kode
+                </FieldLabel>
+                <InputOTP
+                  maxLength={6}
+                  value={otp}
+                  onChange={(value) => {
+                    resetAll();
+                    setOtp(value);
+                  }}
+                >
+                  <InputOTPGroup>
+                    <InputOTPSlot index={0} />
+                    <InputOTPSlot index={1} />
+                    <InputOTPSlot index={2} />
+                  </InputOTPGroup>
+                  <InputOTPSeparator />
+                  <InputOTPGroup>
+                    <InputOTPSlot index={3} />
+                    <InputOTPSlot index={4} />
+                    <InputOTPSlot index={5} />
+                  </InputOTPGroup>
+                </InputOTP>
+                {fieldErrors.otp && (
+                  <FieldError className="text-center">{fieldErrors.otp}</FieldError>
+                )}
+              </Field>
+
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+                loading={isSubmitting}
+                size="lg"
+                className="w-full"
+              >
+                Verifiser og opprett konto
+              </Button>
+
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setStep("input");
+                  setOtp("");
+                  resetAll();
+                }}
+                className="w-full"
+              >
+                ← Tilbake
+              </Button>
+            </form>
+          )}
+
+          {/* Message Display */}
+          {message && (
+            <div
+              className={`mt-4 rounded-md px-4 py-3 text-sm font-medium ${
+                message.type === "error"
+                  ? "bg-error-subtle text-error-foreground"
+                  : "bg-success-subtle text-success-foreground"
+              }`}
+              role="status"
+              aria-live="polite"
+            >
+              {message.text}
             </div>
+          )}
 
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="w-full rounded-full bg-gradient-to-r from-brand-gradientStart via-brand-gradientMid to-brand-gradientEnd px-5 py-3 text-sm font-bold uppercase tracking-wide text-text-inverse shadow-lg shadow-brand-gradientMid/40 transition hover:from-brand-gradientMid hover:via-brand-gradientMid hover:to-brand-gradientEnd focus:outline-none focus:ring-4 focus:ring-brand-highlight/60 focus:ring-offset-2 focus:ring-offset-surface-secondary disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {isSubmitting ? "Verifiserer..." : "Verifiser og opprett konto"}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                setStep("input");
-                setOtp("");
-                resetMessage();
-              }}
-              className="w-full text-sm text-text-secondary transition hover:text-text-primary"
-            >
-              ← Tilbake
-            </button>
-          </form>
-        )}
-
-        {/* Message Display */}
-        {message && (
-          <div
-            className={`mt-4 rounded-full px-5 py-3 text-sm font-medium ${
-              message.type === "error"
-                ? "bg-error-subtle text-error-foreground"
-                : "bg-success-subtle text-success-foreground"
-            }`}
-            role="status"
-            aria-live="polite"
-          >
-            {message.text}
-          </div>
-        )}
-
-        {/* Back to login - only show on input step */}
-        {step === "input" && (
-          <div className="mt-8 text-center text-sm">
-            <Link
-              href="/login"
-              className="font-semibold text-brand-highlight transition hover:text-brand-highlight/80 focus:outline-none focus:ring-2 focus:ring-brand-highlight/60"
-            >
-              ← Tilbake til innlogging
-            </Link>
-          </div>
-        )}
-      </section>
+          {/* Back to login - only show on input step */}
+          {step === "input" && (
+            <div className="mt-6 text-center">
+              <Button
+                asChild
+                variant="link"
+                size="sm"
+              >
+                <Link href="/login">
+                  ← Tilbake til innlogging
+                </Link>
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

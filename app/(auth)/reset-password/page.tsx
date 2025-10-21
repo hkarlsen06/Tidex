@@ -18,9 +18,24 @@ import {
   isValidEmail,
 } from "@/lib/validation/phone";
 import { translateError } from "@/lib/errors/translate";
+import {
+  Field,
+  FieldLabel,
+  FieldError,
+  FieldGroup,
+} from "@/components/app/Field";
+import { Input } from "@/components/app/Input";
+import { Button } from "@/components/app/Button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/app/Card";
 
 type MessageState = { type: "error" | "success"; text: string } | null;
 type Step = "input" | "otp" | "password";
+type FieldErrors = {
+  emailOrPhone?: string;
+  otp?: string;
+  password?: string;
+  confirmPassword?: string;
+};
 
 export default function ResetPasswordPage() {
   const router = useRouter();
@@ -32,39 +47,44 @@ export default function ResetPasswordPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [message, setMessage] = useState<MessageState>(null);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const resetMessage = () => setMessage(null);
+  const resetFieldErrors = () => setFieldErrors({});
+  const resetAll = () => {
+    resetMessage();
+    resetFieldErrors();
+  };
 
   // Step 1: Send OTP to email or phone
   const handleSendOtp = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    resetAll();
+
+    const errors: FieldErrors = {};
 
     if (!emailOrPhone) {
-      setMessage({
-        type: "error",
-        text: "Fyll inn e-post eller telefonnummer.",
-      });
-      return;
+      errors.emailOrPhone = "Fyll inn e-post eller telefonnummer.";
     }
 
     const inputType = detectInputType(emailOrPhone);
 
-    if (inputType === "unknown") {
-      setMessage({
-        type: "error",
-        text: "Ugyldig e-post eller telefonnummer. Telefonnummer må være 8 siffer.",
-      });
+    if (emailOrPhone && inputType === "unknown") {
+      errors.emailOrPhone = "Ugyldig e-post eller telefonnummer. Telefonnummer må være 8 siffer.";
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
       return;
     }
 
     setIsSubmitting(true);
-    setMessage(null);
 
     try {
       if (inputType === "email") {
         if (!isValidEmail(emailOrPhone)) {
-          setMessage({ type: "error", text: "Ugyldig e-postformat." });
+          setFieldErrors({ emailOrPhone: "Ugyldig e-postformat." });
           setIsSubmitting(false);
           return;
         }
@@ -91,10 +111,7 @@ export default function ResetPasswordPage() {
       } else {
         // Phone reset
         if (!isValidNorwegianPhone(emailOrPhone)) {
-          setMessage({
-            type: "error",
-            text: "Telefonnummer må være 8 siffer.",
-          });
+          setFieldErrors({ emailOrPhone: "Telefonnummer må være 8 siffer." });
           setIsSubmitting(false);
           return;
         }
@@ -131,14 +148,20 @@ export default function ResetPasswordPage() {
   // Step 2: Verify OTP
   const handleVerifyOtp = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    resetAll();
+
+    const errors: FieldErrors = {};
 
     if (otp.length !== 6) {
-      setMessage({ type: "error", text: "Fyll inn alle 6 sifrene." });
+      errors.otp = "Fyll inn alle 6 sifrene.";
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
       return;
     }
 
     setIsSubmitting(true);
-    setMessage(null);
 
     try {
       if (resetType === "email") {
@@ -191,27 +214,32 @@ export default function ResetPasswordPage() {
   // Step 3: Update password
   const handleUpdatePassword = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    resetAll();
 
-    if (!password || !confirmPassword) {
-      setMessage({ type: "error", text: "Fyll inn begge passordfeltene." });
-      return;
+    const errors: FieldErrors = {};
+
+    if (!password) {
+      errors.password = "Fyll inn nytt passord.";
     }
 
-    if (password !== confirmPassword) {
-      setMessage({ type: "error", text: "Passordene stemmer ikke overens." });
-      return;
+    if (!confirmPassword) {
+      errors.confirmPassword = "Bekreft passordet.";
     }
 
-    if (password.length < 6) {
-      setMessage({
-        type: "error",
-        text: "Passordet må være minst 6 tegn langt.",
-      });
+    if (password && confirmPassword && password !== confirmPassword) {
+      errors.confirmPassword = "Passordene stemmer ikke overens.";
+    }
+
+    if (password && password.length < 6) {
+      errors.password = "Passordet må være minst 6 tegn langt.";
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
       return;
     }
 
     setIsSubmitting(true);
-    setMessage(null);
 
     const { error } = await supabase.auth.updateUser({
       password: password,
@@ -238,171 +266,191 @@ export default function ResetPasswordPage() {
 
   return (
     <div className="relative flex min-h-screen items-center justify-center py-16">
-      <section className="w-full max-w-md rounded-3xl border border-border bg-surface-secondary p-10 shadow-app-lg backdrop-blur">
-        <div className="mb-8 text-center">
-          <h1 className="tracking-wide">Tilbakestill passord</h1>
-          <p className="mt-2 text-sm text-text-secondary">
-            {step === "input" &&
-              "Vi sender deg en kode på e-post eller SMS"}
+      <Card className="w-full max-w-md shadow-lg">
+        <CardHeader className="text-center">
+          <CardTitle className="text-2xl">Tilbakestill passord</CardTitle>
+          <CardDescription>
+            {step === "input" && "Vi sender deg en kode på e-post eller SMS"}
             {step === "otp" && "Skriv inn koden vi sendte deg"}
             {step === "password" && "Velg et nytt passord"}
-          </p>
-        </div>
+          </CardDescription>
+        </CardHeader>
 
-        {/* Step 1: Email or Phone Input */}
-        {step === "input" && (
-          <form className="space-y-6" noValidate onSubmit={handleSendOtp}>
-            <div className="space-y-2">
-              <label htmlFor="emailOrPhone">E-post eller telefonnummer</label>
-              <input
-                id="emailOrPhone"
-                name="emailOrPhone"
-                type="text"
-                placeholder="E-post eller telefonnummer"
-                value={emailOrPhone}
-                onChange={(event) => {
-                  resetMessage();
-                  setEmailOrPhone(event.target.value);
-                }}
-                className="w-full rounded-full border border-border-subtle bg-background-primary px-5 py-3 text-base text-text-primary placeholder:text-text-muted focus:border-brand-highlight focus:outline-none focus:ring-2 focus:ring-brand-highlight/60"
-              />
-            </div>
+        <CardContent>
+          {/* Step 1: Email or Phone Input */}
+          {step === "input" && (
+            <form className="space-y-6" noValidate onSubmit={handleSendOtp}>
+              <Field data-invalid={!!fieldErrors.emailOrPhone}>
+                <FieldLabel htmlFor="emailOrPhone">E-post eller telefonnummer</FieldLabel>
+                <Input
+                  id="emailOrPhone"
+                  name="emailOrPhone"
+                  type="text"
+                  placeholder="E-post eller telefonnummer"
+                  value={emailOrPhone}
+                  onChange={(event) => {
+                    resetAll();
+                    setEmailOrPhone(event.target.value);
+                  }}
+                  aria-invalid={!!fieldErrors.emailOrPhone}
+                />
+                <FieldError>{fieldErrors.emailOrPhone}</FieldError>
+              </Field>
 
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="w-full rounded-full bg-gradient-to-r from-brand-gradientStart via-brand-gradientMid to-brand-gradientEnd px-5 py-3 text-sm font-bold uppercase tracking-wide text-text-inverse shadow-lg shadow-brand-gradientMid/40 transition hover:from-brand-gradientMid hover:via-brand-gradientMid hover:to-brand-gradientEnd focus:outline-none focus:ring-4 focus:ring-brand-highlight/60 focus:ring-offset-2 focus:ring-offset-surface-secondary disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {isSubmitting ? "Sender..." : "Send kode"}
-            </button>
-          </form>
-        )}
-
-        {/* Step 2: OTP */}
-        {step === "otp" && (
-          <form className="space-y-6" noValidate onSubmit={handleVerifyOtp}>
-            <div className="flex flex-col items-center space-y-4">
-              <label htmlFor="otp" className="text-sm text-text-secondary">
-                6-sifret kode
-              </label>
-              <InputOTP
-                maxLength={6}
-                value={otp}
-                onChange={(value) => {
-                  resetMessage();
-                  setOtp(value);
-                }}
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+                loading={isSubmitting}
+                size="lg"
+                className="w-full"
               >
-                <InputOTPGroup>
-                  <InputOTPSlot index={0} />
-                  <InputOTPSlot index={1} />
-                  <InputOTPSlot index={2} />
-                </InputOTPGroup>
-                <InputOTPSeparator />
-                <InputOTPGroup>
-                  <InputOTPSlot index={3} />
-                  <InputOTPSlot index={4} />
-                  <InputOTPSlot index={5} />
-                </InputOTPGroup>
-              </InputOTP>
-            </div>
+                Send kode
+              </Button>
+            </form>
+          )}
 
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="w-full rounded-full bg-gradient-to-r from-brand-gradientStart via-brand-gradientMid to-brand-gradientEnd px-5 py-3 text-sm font-bold uppercase tracking-wide text-text-inverse shadow-lg shadow-brand-gradientMid/40 transition hover:from-brand-gradientMid hover:via-brand-gradientMid hover:to-brand-gradientEnd focus:outline-none focus:ring-4 focus:ring-brand-highlight/60 focus:ring-offset-2 focus:ring-offset-surface-secondary disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {isSubmitting ? "Verifiserer..." : "Verifiser kode"}
-            </button>
+          {/* Step 2: OTP */}
+          {step === "otp" && (
+            <form className="space-y-6" noValidate onSubmit={handleVerifyOtp}>
+              <Field data-invalid={!!fieldErrors.otp} className="items-center">
+                <FieldLabel htmlFor="otp" className="sr-only">
+                  6-sifret kode
+                </FieldLabel>
+                <InputOTP
+                  maxLength={6}
+                  value={otp}
+                  onChange={(value) => {
+                    resetAll();
+                    setOtp(value);
+                  }}
+                >
+                  <InputOTPGroup>
+                    <InputOTPSlot index={0} />
+                    <InputOTPSlot index={1} />
+                    <InputOTPSlot index={2} />
+                  </InputOTPGroup>
+                  <InputOTPSeparator />
+                  <InputOTPGroup>
+                    <InputOTPSlot index={3} />
+                    <InputOTPSlot index={4} />
+                    <InputOTPSlot index={5} />
+                  </InputOTPGroup>
+                </InputOTP>
+                {fieldErrors.otp && (
+                  <FieldError className="text-center">{fieldErrors.otp}</FieldError>
+                )}
+              </Field>
 
-            <button
-              type="button"
-              onClick={() => {
-                setStep("input");
-                setOtp("");
-                resetMessage();
-              }}
-              className="w-full text-sm text-text-secondary transition hover:text-text-primary"
-            >
-              ← Tilbake
-            </button>
-          </form>
-        )}
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+                loading={isSubmitting}
+                size="lg"
+                className="w-full"
+              >
+                Verifiser kode
+              </Button>
 
-        {/* Step 3: New Password */}
-        {step === "password" && (
-          <form
-            className="space-y-6"
-            noValidate
-            onSubmit={handleUpdatePassword}
-          >
-            <div className="space-y-2">
-              <label htmlFor="password">Nytt passord</label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                placeholder="Nytt passord"
-                value={password}
-                onChange={(event) => {
-                  resetMessage();
-                  setPassword(event.target.value);
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setStep("input");
+                  setOtp("");
+                  resetAll();
                 }}
-                className="w-full rounded-full border border-border-subtle bg-background-primary px-5 py-3 text-base text-text-primary placeholder:text-text-muted focus:border-brand-highlight focus:outline-none focus:ring-2 focus:ring-brand-highlight/60"
-              />
-            </div>
+                className="w-full"
+              >
+                ← Tilbake
+              </Button>
+            </form>
+          )}
 
-            <div className="space-y-2">
-              <label htmlFor="confirmPassword">Bekreft passord</label>
-              <input
-                id="confirmPassword"
-                name="confirmPassword"
-                type="password"
-                placeholder="Bekreft passord"
-                value={confirmPassword}
-                onChange={(event) => {
-                  resetMessage();
-                  setConfirmPassword(event.target.value);
-                }}
-                className="w-full rounded-full border border-border-subtle bg-background-primary px-5 py-3 text-base text-text-primary placeholder:text-text-muted focus:border-brand-highlight focus:outline-none focus:ring-2 focus:ring-brand-highlight/60"
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="w-full rounded-full bg-gradient-to-r from-brand-gradientStart via-brand-gradientMid to-brand-gradientEnd px-5 py-3 text-sm font-bold uppercase tracking-wide text-text-inverse shadow-lg shadow-brand-gradientMid/40 transition hover:from-brand-gradientMid hover:via-brand-gradientMid hover:to-brand-gradientEnd focus:outline-none focus:ring-4 focus:ring-brand-highlight/60 focus:ring-offset-2 focus:ring-offset-surface-secondary disabled:cursor-not-allowed disabled:opacity-60"
+          {/* Step 3: New Password */}
+          {step === "password" && (
+            <form
+              className="space-y-6"
+              noValidate
+              onSubmit={handleUpdatePassword}
             >
-              {isSubmitting ? "Oppdaterer..." : "Oppdater passord"}
-            </button>
-          </form>
-        )}
+              <FieldGroup>
+                <Field data-invalid={!!fieldErrors.password}>
+                  <FieldLabel htmlFor="password">Nytt passord</FieldLabel>
+                  <Input
+                    id="password"
+                    name="password"
+                    type="password"
+                    placeholder="Nytt passord"
+                    value={password}
+                    onChange={(event) => {
+                      resetAll();
+                      setPassword(event.target.value);
+                    }}
+                    aria-invalid={!!fieldErrors.password}
+                  />
+                  <FieldError>{fieldErrors.password}</FieldError>
+                </Field>
 
-        {/* Message Display */}
-        {message && (
-          <div
-            className={`mt-4 rounded-full px-5 py-3 text-sm font-medium ${
-              message.type === "error"
-                ? "bg-error-subtle text-error-foreground"
-                : "bg-success-subtle text-success-foreground"
-            }`}
-            role="status"
-            aria-live="polite"
-          >
-            {message.text}
+                <Field data-invalid={!!fieldErrors.confirmPassword}>
+                  <FieldLabel htmlFor="confirmPassword">Bekreft passord</FieldLabel>
+                  <Input
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    type="password"
+                    placeholder="Bekreft passord"
+                    value={confirmPassword}
+                    onChange={(event) => {
+                      resetAll();
+                      setConfirmPassword(event.target.value);
+                    }}
+                    aria-invalid={!!fieldErrors.confirmPassword}
+                  />
+                  <FieldError>{fieldErrors.confirmPassword}</FieldError>
+                </Field>
+              </FieldGroup>
+
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+                loading={isSubmitting}
+                size="lg"
+                className="w-full"
+              >
+                Oppdater passord
+              </Button>
+            </form>
+          )}
+
+          {/* Message Display */}
+          {message && (
+            <div
+              className={`mt-4 rounded-md px-4 py-3 text-sm font-medium ${
+                message.type === "error"
+                  ? "bg-error-subtle text-error-foreground"
+                  : "bg-success-subtle text-success-foreground"
+              }`}
+              role="status"
+              aria-live="polite"
+            >
+              {message.text}
+            </div>
+          )}
+
+          {/* Back to login */}
+          <div className="mt-6 text-center">
+            <Button
+              asChild
+              variant="link"
+              size="sm"
+            >
+              <Link href="/login">
+                ← Tilbake til innlogging
+              </Link>
+            </Button>
           </div>
-        )}
-
-        {/* Back to login */}
-        <div className="mt-8 text-center text-sm">
-          <Link
-            href="/login"
-            className="font-semibold text-brand-highlight transition hover:text-brand-highlight/80 focus:outline-none focus:ring-2 focus:ring-brand-highlight/60"
-          >
-            ← Tilbake til innlogging
-          </Link>
-        </div>
-      </section>
+        </CardContent>
+      </Card>
     </div>
   );
 }
