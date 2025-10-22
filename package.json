@@ -6,7 +6,8 @@
     "marketing"
   ],
   "scripts": {
-    "dev": "next dev",
+    "dev": "node server.mjs",
+    "dev:http": "next dev",
     "dev:turbo": "next dev --turbo",
     "build": "next build",
     "start": "next start",
