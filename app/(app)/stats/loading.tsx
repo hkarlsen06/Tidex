@@ -61,7 +61,7 @@ export default function StatsLoading() {
         <div className="flex flex-col space-y-1.5 p-6 pb-3">
           <div className="h-6 w-40 bg-surface-secondary rounded animate-pulse" />
         </div>
-        <div className="p-6 pt-0 px-3 pb-4 pt-1">
+        <div className="p-6 px-3 pb-4 pt-1">
           <div className="h-64 bg-surface-secondary rounded animate-pulse" />
         </div>
       </div>
@@ -71,7 +71,7 @@ export default function StatsLoading() {
         <div className="flex flex-col space-y-1.5 p-6 pb-3">
           <div className="h-6 w-32 bg-surface-secondary rounded animate-pulse" />
         </div>
-        <div className="p-6 pt-0 px-3 pb-4 pt-1">
+        <div className="p-6 px-3 pb-4 pt-1">
           <div className="h-64 bg-surface-secondary rounded animate-pulse" />
         </div>
       </div>
@@ -101,7 +101,7 @@ export default function StatsLoading() {
           <div className="flex flex-col space-y-1.5 p-6 pb-3">
             <div className="h-6 w-44 bg-surface-secondary rounded animate-pulse" />
           </div>
-          <div className="p-6 pt-0 px-3 pb-4 pt-1">
+          <div className="p-6 px-3 pb-4 pt-1">
             <div className="h-64 bg-surface-secondary rounded animate-pulse" />
           </div>
         </div>
@@ -111,7 +111,7 @@ export default function StatsLoading() {
           <div className="flex flex-col space-y-1.5 p-6 pb-3">
             <div className="h-6 w-36 bg-surface-secondary rounded animate-pulse" />
           </div>
-          <div className="p-6 pt-0 px-3 pb-4 pt-1">
+          <div className="p-6 px-3 pb-4 pt-1">
             <div className="h-64 bg-surface-secondary rounded animate-pulse" />
           </div>
         </div>
@@ -121,7 +121,7 @@ export default function StatsLoading() {
           <div className="flex flex-col space-y-1.5 p-6 pb-3">
             <div className="h-6 w-52 bg-surface-secondary rounded animate-pulse" />
           </div>
-          <div className="p-6 pt-0 px-3 pb-4 pt-1">
+          <div className="p-6 px-3 pb-4 pt-1">
             <div className="h-64 bg-surface-secondary rounded animate-pulse" />
           </div>
         </div>
