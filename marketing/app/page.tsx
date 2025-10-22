@@ -38,7 +38,7 @@ const faqs = [
   {
     question: 'Hvordan håndteres pauser og pausetrekk?',
     answer:
-      'Vi regner ut lønna di smart! Hvis du jobber over 5,5 timer, trekker vi automatisk 30 minutter for pause, akkurat som de fleste arbeidsgivere gjør. Du kan også legge inn dine egne pauser manuelt.\n\nJobber du nattskift eller lange vakter? Ingen problem! Kalkulatoren takler alt fra vanlige arbeidsdager til skift som går over midnatt. Du kan også justere pausereglene i innstillingene hvis arbeidsplassen din har andre regler.',
+      'Vi regner ut lønna di smart! Hvis du jobber over 5,5 timer, trekker vi automatisk 30 minutter for pause, akkurat som de fleste arbeidsgivere gjør.\n\nJobber du nattskift eller lange vakter? Ingen problem! Kalkulatoren takler alt fra vanlige arbeidsdager til skift som går over midnatt. Du kan også justere pausereglene i innstillingene hvis arbeidsplassen din har andre regler.',
   },
   {
     question: 'Hvordan fungerer overtid og tillegg?',
@@ -221,6 +221,24 @@ export default function LandingPage() {
             <Link href="https://app.kkarlsen.dev" target="_blank" rel="noopener noreferrer">
               Start nå – gratis
             </Link>
+          </Button>
+        </div>
+      </section>
+
+      <section className="px-6 pb-16 sm:pb-20">
+        <div className="mx-auto flex w-full max-w-3xl flex-col items-center gap-6 rounded-[40px] border border-border-subtle/60 bg-surface-primary/80 px-8 py-10 text-center shadow-app">
+          <h2 className="text-2xl font-semibold sm:text-3xl">Har du spørsmål?</h2>
+          <p className="max-w-xl text-pretty text-base text-text-secondary">
+            Ta kontakt hvis du lurer på noe eller har tilbakemeldinger.
+          </p>
+          <Button
+            asChild
+            variant="outline"
+            className="h-12 rounded-full border-border-subtle bg-surface-primary px-10 text-base font-semibold text-text-primary hover:border-brand-gradientMid hover:text-text-primary"
+          >
+            <a href="mailto:kkarlsen06@kkarlsen.dev?subject=Kontakt%20fra%20kkarlsen.dev&body=Hei%2C%20Hjalmar!%0A%0AJeg%20lurte%20p%C3%A5%20">
+              Ta kontakt
+            </a>
           </Button>
         </div>
       </section>
