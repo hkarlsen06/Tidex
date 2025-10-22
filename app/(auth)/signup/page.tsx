@@ -27,6 +27,8 @@ import { Input } from "@/components/app/Input";
 import { Button } from "@/components/app/Button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/app/Card";
 import { TurnstileCaptcha } from "@/components/app/TurnstileCaptcha";
+import { Checkbox } from "@/components/app/Checkbox";
+import { LegalModal } from "@/components/legal";
 
 type MessageState = { type: "error" | "success"; text: string } | null;
 type SignupStep = "input" | "otp";
@@ -51,6 +53,8 @@ export default function SignupPage() {
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [legalModalOpen, setLegalModalOpen] = useState(false);
 
   const resetMessage = () => setMessage(null);
   const resetFieldErrors = () => setFieldErrors({});
@@ -76,6 +80,11 @@ export default function SignupPage() {
 
     if (!captchaToken) {
       setMessage({ type: "error", text: "Vennligst fullfør captcha-verifiseringen." });
+      return;
+    }
+
+    if (!agreedToTerms) {
+      setMessage({ type: "error", text: "Du må godta vilkårene og personvernerklæringen for å fortsette." });
       return;
     }
 
@@ -367,6 +376,45 @@ export default function SignupPage() {
                 )}
               </FieldGroup>
 
+              <Card className="bg-surface-primary/50 rounded-lg">
+                <CardContent className="flex items-center gap-3 p-4">
+                  <Checkbox
+                    id="terms"
+                    checked={agreedToTerms}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        // If checking, open modal to read terms
+                        setLegalModalOpen(true);
+                      } else {
+                        // If unchecking, just untick
+                        setAgreedToTerms(false);
+                      }
+                    }}
+                    className="h-6 w-6"
+                  />
+                  <label
+                    htmlFor="terms"
+                    className="text-sm text-text-secondary leading-relaxed cursor-pointer select-none"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setLegalModalOpen(true);
+                    }}
+                  >
+                    Jeg godtar{" "}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setLegalModalOpen(true);
+                      }}
+                      className="text-brand-primary hover:underline font-medium"
+                    >
+                      vilkårene
+                    </button>
+                  </label>
+                </CardContent>
+              </Card>
+
               <div className="flex justify-center overflow-hidden rounded-lg bg-surface-primary/50">
                 <TurnstileCaptcha
                   onSuccess={(token) => {
@@ -383,7 +431,7 @@ export default function SignupPage() {
 
               <Button
                 type="submit"
-                disabled={isSubmitting || !captchaToken}
+                disabled={isSubmitting || !captchaToken || !agreedToTerms}
                 loading={isSubmitting}
                 size="lg"
                 className="w-full"
@@ -482,6 +530,14 @@ export default function SignupPage() {
           )}
         </CardContent>
       </Card>
+
+      <LegalModal
+        open={legalModalOpen}
+        onOpenChange={setLegalModalOpen}
+        showActions={true}
+        onAccept={() => setAgreedToTerms(true)}
+        onDecline={() => setAgreedToTerms(false)}
+      />
     </div>
   );
 }
