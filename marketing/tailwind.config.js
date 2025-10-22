@@ -1,9 +1,29 @@
-const sharedConfig = require('../config/tailwind.config.js');
+import baseConfig from '../config/tailwind.config.js';
 
-module.exports = {
-  ...sharedConfig,
-  content: [
-    './app/**/*.{ts,tsx}',
-    '../components/**/*.{ts,tsx}',
-  ],
+const {
+  content = [],
+  presets,
+  theme = {},
+  plugins = [],
+  ...rest
+} = baseConfig;
+
+const marketingContent = [
+  './app/**/*.{ts,tsx}',
+  './components/**/*.{ts,tsx}',
+];
+
+const mergedContent = Array.from(new Set([...content, ...marketingContent]));
+
+export default {
+  ...rest,
+  content: mergedContent,
+  presets,
+  theme: {
+    ...theme,
+    extend: {
+      ...(theme?.extend ?? {}),
+    },
+  },
+  plugins: [...plugins],
 };
