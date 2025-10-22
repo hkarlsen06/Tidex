@@ -157,17 +157,17 @@ export default function LoginClient({ initialNext }: { initialNext: string }) {
         errors.emailOrPhone = 'Telefonnummer må være 8 siffer.';
       }
 
-      if (phoneLoginMethod === 'password' && !password) {
-        errors.password = 'Fyll inn passord.';
-      }
+      // Determine if user wants password login (has entered a password)
+      const usePasswordLogin = password.trim().length > 0;
 
       if (Object.keys(errors).length > 0) {
         setFieldErrors(errors);
         return;
       }
 
-      if (phoneLoginMethod === 'password') {
+      if (usePasswordLogin) {
         // Phone login with password
+        setPhoneLoginMethod('password'); // Update state for UI consistency
 
         setIsSubmitting(true);
         setMessage(null);
@@ -406,7 +406,8 @@ export default function LoginClient({ initialNext }: { initialNext: string }) {
                   autoComplete="username"
                   value={emailOrPhone}
                   onChange={(event) => {
-                    resetAll();
+                    resetMessage();
+                    resetFieldErrors();
                     setEmailOrPhone(event.target.value);
                   }}
                   aria-invalid={!!fieldErrors.emailOrPhone}
@@ -429,7 +430,8 @@ export default function LoginClient({ initialNext }: { initialNext: string }) {
                   autoComplete="current-password"
                   value={password}
                   onChange={(event) => {
-                    resetAll();
+                    resetMessage();
+                    resetFieldErrors();
                     setPassword(event.target.value);
                   }}
                   aria-invalid={!!fieldErrors.password}
@@ -459,13 +461,13 @@ export default function LoginClient({ initialNext }: { initialNext: string }) {
               size="lg"
               className="w-full"
             >
-              {isPhoneInput && phoneLoginMethod === 'otp' ? 'Send kode' : 'Logg inn'}
+              {isPhoneInput && !password.trim() && phoneLoginMethod === 'otp' ? 'Send kode' : 'Logg inn'}
             </Button>
 
             {/* Show "Engangskode" button for phone users with password */}
             {emailOrPhone &&
               isPhoneInput &&
-              phoneLoginMethod === 'password' && (
+              password.trim() && (
                 <Button
                   type="button"
                   variant="ghost"
