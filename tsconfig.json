@@ -15,5 +15,9 @@
     "config/../**/*.tsx",
     "config/../.next/types/**/*.ts",
     ".next/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "marketing"
   ]
 }
