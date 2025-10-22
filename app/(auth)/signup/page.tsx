@@ -26,6 +26,7 @@ import {
 import { Input } from "@/components/app/Input";
 import { Button } from "@/components/app/Button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/app/Card";
+import { TurnstileCaptcha } from "@/components/app/TurnstileCaptcha";
 
 type MessageState = { type: "error" | "success"; text: string } | null;
 type SignupStep = "input" | "otp";
@@ -49,12 +50,14 @@ export default function SignupPage() {
   const [message, setMessage] = useState<MessageState>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
 
   const resetMessage = () => setMessage(null);
   const resetFieldErrors = () => setFieldErrors({});
   const resetAll = () => {
     resetMessage();
     resetFieldErrors();
+    setCaptchaToken(null);
   };
 
   const handleSignUp = async (event: FormEvent<HTMLFormElement>) => {
@@ -69,6 +72,11 @@ export default function SignupPage() {
 
     if (!emailOrPhone) {
       errors.emailOrPhone = "Fyll inn e-post eller telefonnummer.";
+    }
+
+    if (!captchaToken) {
+      setMessage({ type: "error", text: "Vennligst fullfør captcha-verifiseringen." });
+      return;
     }
 
     const inputType = detectInputType(emailOrPhone);
@@ -114,6 +122,7 @@ export default function SignupPage() {
             first_name: fullName,
           },
           emailRedirectTo: `${window.location.origin}/auth/callback`,
+          captchaToken,
         },
       });
 
@@ -175,6 +184,7 @@ export default function SignupPage() {
             data: {
               first_name: fullName,
             },
+            captchaToken,
           },
         });
 
@@ -357,9 +367,22 @@ export default function SignupPage() {
                 )}
               </FieldGroup>
 
+              <div className="flex justify-center">
+                <TurnstileCaptcha
+                  onSuccess={(token) => {
+                    setCaptchaToken(token);
+                    resetMessage();
+                  }}
+                  onError={() => {
+                    setCaptchaToken(null);
+                    setMessage({ type: "error", text: "Captcha-verifisering feilet. Prøv igjen." });
+                  }}
+                />
+              </div>
+
               <Button
                 type="submit"
-                disabled={isSubmitting}
+                disabled={isSubmitting || !captchaToken}
                 loading={isSubmitting}
                 size="lg"
                 className="w-full"
