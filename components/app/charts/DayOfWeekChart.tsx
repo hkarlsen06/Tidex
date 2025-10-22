@@ -50,6 +50,33 @@ export function DayOfWeekChart({ data }: DayOfWeekChartProps) {
     ticks.push(tick);
   }
 
+  // Get today's day abbreviation for highlighting
+  const now = new Date();
+  const dayNames = ['Søn', 'Man', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør'];
+  const todayAbbrev = dayNames[now.getDay()];
+
+  // Custom tick component to color today's day of week
+  const CustomXAxisTick = (props: any) => {
+    const { x, y, payload } = props;
+    const isToday = payload.value === todayAbbrev;
+
+    return (
+      <g transform={`translate(${x},${y})`}>
+        <text
+          x={0}
+          y={0}
+          dy={8}
+          textAnchor="middle"
+          fontSize={16}
+          fill={isToday ? "hsl(var(--brand-gradientEnd))" : "hsl(var(--foreground))"}
+          fontWeight={isToday ? 600 : 400}
+        >
+          {payload.value}
+        </text>
+      </g>
+    );
+  };
+
   return (
     <ChartContainer config={chartConfig} className="h-[220px] w-full">
       <BarChart data={data} margin={{ top: 12, right: 16, bottom: 16, left: 16 }}>
@@ -59,7 +86,7 @@ export function DayOfWeekChart({ data }: DayOfWeekChartProps) {
           tickLine={false}
           axisLine={false}
           padding={{ left: 8, right: 8 }}
-          tick={{ fontSize: 16 }}
+          tick={<CustomXAxisTick />}
           tickMargin={8}
         />
         <YAxis

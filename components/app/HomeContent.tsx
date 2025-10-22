@@ -310,13 +310,13 @@ export function HomeContent({ shifts, settings }: HomeContentProps) {
             earnedToDate={selectedMonthIsCurrent ? data.earnedToDate : undefined}
             animationDirection={direction}
           />
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between -mt-3 -mb-3">
             <MonthPicker
               month={month}
               onPreviousMonth={goToPreviousMonth}
               onNextMonth={goToNextMonth}
             />
-            <span className="font-medium text-text-muted">{month.getFullYear()}</span>
+            <span className="font-medium text-text-muted mr-3">{month.getFullYear()}</span>
           </div>
           {displayShift && (
             <div className="flex flex-col gap-2">

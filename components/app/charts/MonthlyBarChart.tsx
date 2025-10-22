@@ -15,7 +15,7 @@ type MonthlyBarChartProps = {
 const chartConfig = {
   earnings: {
     label: "inntjening",
-    color: "hsl(var(--brand-gradientStart))",
+    color: "hsl(var(--brand-gradientMid))",
   },
 };
 
@@ -23,6 +23,29 @@ export function MonthlyBarChart({ data }: MonthlyBarChartProps) {
   const now = new Date();
   const currentMonth = now.getMonth() + 1; // Date#getMonth is 0-based
   const currentYear = now.getFullYear();
+
+  // Custom tick component to color current month's label
+  const CustomXAxisTick = (props: any) => {
+    const { x, y, payload } = props;
+    const monthData = data.find(d => d.month === payload.value);
+    const isCurrentMonth = monthData?.monthNumber === currentMonth && monthData?.year === currentYear;
+
+    return (
+      <g transform={`translate(${x},${y})`}>
+        <text
+          x={0}
+          y={0}
+          dy={8}
+          textAnchor="middle"
+          fontSize={16}
+          fill={isCurrentMonth ? "hsl(var(--brand-gradientMid))" : "hsl(var(--foreground))"}
+          fontWeight={isCurrentMonth ? 600 : 400}
+        >
+          {payload.value}
+        </text>
+      </g>
+    );
+  };
 
   return (
     <ChartContainer config={chartConfig} className="h-[260px] w-full">
@@ -33,7 +56,7 @@ export function MonthlyBarChart({ data }: MonthlyBarChartProps) {
           tickLine={false}
           axisLine={false}
           padding={{ left: 8, right: 8 }}
-          tick={{ fontSize: 16 }}
+          tick={<CustomXAxisTick />}
           tickMargin={8}
         />
         <YAxis
@@ -72,7 +95,7 @@ export function MonthlyBarChart({ data }: MonthlyBarChartProps) {
         />
         <Bar
           dataKey="earnings"
-          stroke="hsl(var(--brand-gradientStart))"
+          stroke="hsl(var(--brand-gradientMid))"
           strokeWidth={2}
           radius={[8, 8, 0, 0]}
         >
@@ -85,8 +108,8 @@ export function MonthlyBarChart({ data }: MonthlyBarChartProps) {
                 key={`${entry.year}-${entry.monthNumber}`}
                 fill={
                   isCurrentMonth
-                    ? "hsl(var(--brand-gradientStart))"
-                    : "hsl(var(--brand-gradientStart) / 0.2)"
+                    ? "hsl(var(--brand-gradientMid))"
+                    : "hsl(var(--brand-gradientMid) / 0.2)"
                 }
               />
             );

@@ -8,7 +8,7 @@ import { StatsData } from "@/app/(app)/stats/_data/getStatsData";
 import { MonthlyBarChart } from "@/components/app/charts/MonthlyBarChart";
 import { WeeklyBarChart } from "@/components/app/charts/WeeklyBarChart";
 import { DayOfWeekChart } from "@/components/app/charts/DayOfWeekChart";
-import { CumulativeAreaChart } from "@/components/app/charts/CumulativeAreaChart";
+import { YearlyCumulativeChart } from "@/components/app/charts/YearlyCumulativeChart";
 import { MonthlyCumulativeChart } from "@/components/app/charts/MonthlyCumulativeChart";
 import { TrendingUp, TrendingDown, Clock, Briefcase, DollarSign } from "lucide-react";
 import { MonthPicker } from "@/components/app/MonthPicker";
@@ -191,24 +191,21 @@ export function StatsContent({ data }: StatsContentProps) {
     selectedYear === realNow.getUTCFullYear() &&
     selectedMonthNumber === realNow.getUTCMonth() + 1;
 
-  const weekCardTitle = isCurrentMonthSelected
-    ? "Denne uken"
-    : `Ukeoversikt – ${selectedMonthLabel}`;
-
   return (
     <div className="flex flex-col w-full max-w-md mx-auto pb-6 pt-2 space-y-6">
       {/* Hero section with key metrics */}
       <div className="space-y-5">
-        <div className="flex items-center justify-start">
+        <div className="flex items-center justify-between -mb-3">
           <MonthPicker
             month={selectedMonth}
             onPreviousMonth={goToPreviousMonth}
             onNextMonth={goToNextMonth}
           />
-          {isLoading && (
-            <span className="ml-3 text-sm text-text-muted">Oppdaterer...</span>
-          )}
+          <span className="font-medium text-text-muted mr-3">{selectedMonth.getFullYear()}</span>
         </div>
+        {isLoading && (
+          <span className="text-sm text-text-muted">Oppdaterer...</span>
+        )}
         {fetchError && (
           <p className="text-sm text-error">
             {fetchError}
@@ -277,17 +274,19 @@ export function StatsContent({ data }: StatsContentProps) {
         </CardContent>
       </Card>
 
-      {/* Weekly earnings chart */}
-      <Card className="border-border bg-surface-primary">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-xl font-bold text-text-primary">
-            {weekCardTitle}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="px-3 pb-4 pt-1">
-          <WeeklyBarChart data={activeData.thisWeek} />
-        </CardContent>
-      </Card>
+      {/* Weekly earnings chart - only show for current month */}
+      {isCurrentMonthSelected && (
+        <Card className="border-border bg-surface-primary">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-xl font-bold text-text-primary">
+              Denne uken
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-3 pb-4 pt-1">
+            <WeeklyBarChart data={activeData.thisWeek} />
+          </CardContent>
+        </Card>
+      )}
 
       {/* Additional stats grid */}
       <div className="grid grid-cols-1 gap-3">
@@ -299,35 +298,24 @@ export function StatsContent({ data }: StatsContentProps) {
         />
       </div>
 
-      {/* Cumulative earnings chart */}
-      <Card className="border-border bg-surface-primary">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-xl font-bold text-text-primary">
-            Kumulativ utvikling
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="px-3 pb-4 pt-1">
-          <CumulativeAreaChart data={activeData.last6Months} />
-        </CardContent>
-      </Card>
-
-      {/* Day of week breakdown */}
-      <Card className="border-border bg-surface-primary">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-xl font-bold text-text-primary">
-            Gjennomsnitt per ukedag
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="px-3 pb-4 pt-1">
-          <DayOfWeekChart data={activeData.byDayOfWeek} />
-        </CardContent>
-      </Card>
-
       {/* Year to date summary */}
       <div className="space-y-5">
         <h2 className="text-xl font-bold text-text-primary">
           {selectedYear} totalt
         </h2>
+
+        {/* Cumulative earnings chart */}
+        <Card className="border-border bg-surface-primary">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-xl font-bold text-text-primary">
+              Kumulativ utvikling
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-3 pb-4 pt-1">
+            <YearlyCumulativeChart data={activeData.yearlyCumulative} />
+          </CardContent>
+        </Card>
+
         <Card className="border-border bg-surface-primary">
           <CardHeader className="pb-3">
             <CardTitle className="text-xl font-bold text-text-primary">
@@ -338,6 +326,19 @@ export function StatsContent({ data }: StatsContentProps) {
             <MonthlyBarChart data={activeData.last6Months} />
           </CardContent>
         </Card>
+
+        {/* Day of week breakdown */}
+        <Card className="border-border bg-surface-primary">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-xl font-bold text-text-primary">
+              Gjennomsnitt per ukedag
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-3 pb-4 pt-1">
+            <DayOfWeekChart data={activeData.byDayOfWeek} />
+          </CardContent>
+        </Card>
+
         <div className="grid grid-cols-1 gap-3">
           <StatCard
             label="Totalt"

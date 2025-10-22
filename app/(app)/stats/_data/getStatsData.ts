@@ -42,6 +42,14 @@ export type DailyCumulativeData = {
   isFuture: boolean;
 };
 
+export type YearlyCumulativeData = {
+  month: string; // "Jan", "Feb", etc.
+  fullMonth: string; // "Januar", "Februar", etc.
+  monthNumber: number; // 1-12
+  cumulative: number; // Cumulative earnings up to this month
+  isProjected: boolean; // Whether this is a projected value
+};
+
 export type MonthlySummary = {
   key: string; // YYYY-MM
   year: number;
@@ -86,6 +94,7 @@ export type StatsData = {
   thisWeek: DailyData[];
   byDayOfWeek: DayOfWeekData[];
   thisMonthCumulative: DailyCumulativeData[];
+  yearlyCumulative: YearlyCumulativeData[];
   monthlySummaries: MonthlySummary[];
 };
 
@@ -201,11 +210,6 @@ export async function getStatsData(userId: string, options: StatsOptions = {}): 
   }
 
   // Year-to-date stats (only up to today)
-  const weekReferenceDate =
-    monthShifts.length > 0
-      ? parseDateAsUTC(monthShifts[0].shift_date)
-      : monthEndDate;
-
   const ytdShifts = shifts.filter((shift) => {
     const shiftDate = parseDateAsUTC(shift.shift_date);
     return shiftDate.getUTCFullYear() === focusYear && shiftDate <= cutoffDate;
@@ -235,26 +239,28 @@ export async function getStatsData(userId: string, options: StatsOptions = {}): 
   }
 
   // This week's daily breakdown (Monday to Sunday of current week)
+  // Always uses the ACTUAL current week, not the selected month
   const thisWeek: DailyData[] = [];
 
-  // Get the reference day of week (0 = Sunday, 1 = Monday, etc.)
-  const currentDayOfWeek = weekReferenceDate.getUTCDay();
+  // Get the current day of week (0 = Sunday, 1 = Monday, etc.)
+  const currentDayOfWeek = realNow.getUTCDay();
   // Calculate days since Monday (treat Sunday as 7)
   const daysSinceMonday = currentDayOfWeek === 0 ? 6 : currentDayOfWeek - 1;
 
-  // Start from Monday of the reference week
+  // Start from Monday of the current week
   for (let i = 0; i < 7; i++) {
     const daysFromMonday = i - daysSinceMonday;
     const targetDate = new Date(
       Date.UTC(
-        weekReferenceDate.getUTCFullYear(),
-        weekReferenceDate.getUTCMonth(),
-        weekReferenceDate.getUTCDate() + daysFromMonday
+        realNow.getUTCFullYear(),
+        realNow.getUTCMonth(),
+        realNow.getUTCDate() + daysFromMonday
       )
     );
     const dateString = targetDate.toISOString().split('T')[0];
 
-    const dayShifts = monthShifts.filter((shift) => shift.shift_date === dateString);
+    // Find shifts for this day from ALL shifts, not just the selected month
+    const dayShifts = shifts.filter((shift) => shift.shift_date === dateString);
     const earnings = dayShifts.reduce((sum, shift) => sum + (shift.computed.gross || 0), 0);
     const hours = dayShifts.reduce((sum, shift) => sum + (shift.computed.paidHours || 0), 0);
 
@@ -272,10 +278,10 @@ export async function getStatsData(userId: string, options: StatsOptions = {}): 
     });
   }
 
-  // By day of week aggregation
+  // By day of week aggregation (using year-to-date data for consistency)
   const dayOfWeekMap = new Map<number, { earnings: number; hours: number; shifts: number }>();
 
-  for (const shift of monthShifts) {
+  for (const shift of ytdShifts) {
     const shiftDate = parseDateAsUTC(shift.shift_date);
     const dayOfWeek = shiftDate.getUTCDay();
 
@@ -346,6 +352,103 @@ export async function getStatsData(userId: string, options: StatsOptions = {}): 
     });
   }
 
+  // Yearly cumulative with projection starting from today
+  const yearlyCumulative: YearlyCumulativeData[] = [];
+  let yearCumulative = 0;
+
+  // Calculate how many days have passed in the year so far
+  const yearStart = new Date(Date.UTC(focusYear, 0, 1));
+  const daysSoFar = isCurrentSelection
+    ? Math.ceil((realNow.getTime() - yearStart.getTime()) / (1000 * 60 * 60 * 24))
+    : 365; // If not current year, use full year
+
+  // Calculate average daily earnings for projection
+  const averageDailyEarnings = daysSoFar > 0 ? ytdEarnings / daysSoFar : 0;
+
+  const currentMonthIndex = realNow.getUTCMonth() + 1;
+  const currentDayOfMonth = realNow.getUTCDate();
+
+  for (let monthIndex = 1; monthIndex <= 12; monthIndex++) {
+    const monthKey = `${focusYear}-${String(monthIndex).padStart(2, "0")}`;
+    const monthSummary = monthlySummaries.find((s) => s.key === monthKey);
+
+    const isCurrentMonth = isCurrentSelection && monthIndex === currentMonthIndex;
+    const isInFuture = isCurrentSelection && monthIndex > currentMonthIndex;
+
+    if (monthSummary && monthIndex < currentMonthIndex) {
+      // Past months: use actual data
+      yearCumulative += monthSummary.totalGross;
+      yearlyCumulative.push({
+        month: MONTH_NAMES[monthIndex - 1],
+        fullMonth: FULL_MONTH_NAMES[monthIndex - 1],
+        monthNumber: monthIndex,
+        cumulative: yearCumulative,
+        isProjected: false,
+      });
+    } else if (isCurrentMonth) {
+      // Current month: split into actual (up to today) and projected (rest of month)
+      const actualEarnings = monthSummary?.totalGross || 0;
+      yearCumulative += actualEarnings;
+
+      // Add actual data point for current month
+      yearlyCumulative.push({
+        month: MONTH_NAMES[monthIndex - 1],
+        fullMonth: FULL_MONTH_NAMES[monthIndex - 1],
+        monthNumber: monthIndex,
+        cumulative: yearCumulative,
+        isProjected: false,
+      });
+
+      // Calculate remaining days in current month and project earnings
+      const daysInMonth = new Date(Date.UTC(focusYear, monthIndex, 0)).getUTCDate();
+      const remainingDays = daysInMonth - currentDayOfMonth;
+      const projectedRemainingEarnings = averageDailyEarnings * remainingDays;
+
+      // Add projected data point for current month (end of month projection)
+      yearlyCumulative.push({
+        month: MONTH_NAMES[monthIndex - 1],
+        fullMonth: FULL_MONTH_NAMES[monthIndex - 1],
+        monthNumber: monthIndex,
+        cumulative: yearCumulative + projectedRemainingEarnings,
+        isProjected: true,
+      });
+
+      // Update cumulative for future months
+      yearCumulative += projectedRemainingEarnings;
+    } else if (isInFuture) {
+      // Future months: project based on daily average
+      const daysInMonth = new Date(Date.UTC(focusYear, monthIndex, 0)).getUTCDate();
+      const projectedMonthEarnings = averageDailyEarnings * daysInMonth;
+      yearCumulative += projectedMonthEarnings;
+      yearlyCumulative.push({
+        month: MONTH_NAMES[monthIndex - 1],
+        fullMonth: FULL_MONTH_NAMES[monthIndex - 1],
+        monthNumber: monthIndex,
+        cumulative: yearCumulative,
+        isProjected: true,
+      });
+    } else if (monthSummary) {
+      // Past year, but has data
+      yearCumulative += monthSummary.totalGross;
+      yearlyCumulative.push({
+        month: MONTH_NAMES[monthIndex - 1],
+        fullMonth: FULL_MONTH_NAMES[monthIndex - 1],
+        monthNumber: monthIndex,
+        cumulative: yearCumulative,
+        isProjected: false,
+      });
+    } else {
+      // Past year, no data for this month
+      yearlyCumulative.push({
+        month: MONTH_NAMES[monthIndex - 1],
+        fullMonth: FULL_MONTH_NAMES[monthIndex - 1],
+        monthNumber: monthIndex,
+        cumulative: yearCumulative,
+        isProjected: false,
+      });
+    }
+  }
+
   return {
     focusMonth: {
       year: focusYear,
@@ -378,6 +481,7 @@ export async function getStatsData(userId: string, options: StatsOptions = {}): 
     thisWeek,
     byDayOfWeek,
     thisMonthCumulative,
+    yearlyCumulative,
     monthlySummaries,
   };
 }

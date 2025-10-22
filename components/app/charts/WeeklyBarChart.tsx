@@ -1,6 +1,6 @@
 "use client";
 
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Cell } from "recharts";
 import {
   ChartContainer,
   ChartTooltip,
@@ -154,6 +154,32 @@ export function WeeklyBarChart({ data }: WeeklyBarChartProps) {
   const { domain, ticks } = calculateYAxisScale(earnings);
   const formatTick = createTickFormatter(ticks);
 
+  // Get today's date string to highlight the current day
+  const today = new Date().toISOString().split('T')[0];
+
+  // Custom tick component to color today's label
+  const CustomXAxisTick = (props: any) => {
+    const { x, y, payload } = props;
+    const dayData = data.find(d => d.date === payload.value);
+    const isToday = dayData?.fullDate === today;
+
+    return (
+      <g transform={`translate(${x},${y})`}>
+        <text
+          x={0}
+          y={0}
+          dy={8}
+          textAnchor="middle"
+          fontSize={16}
+          fill={isToday ? "hsl(var(--brand-gradientMid))" : "hsl(var(--foreground))"}
+          fontWeight={isToday ? 600 : 400}
+        >
+          {payload.value}
+        </text>
+      </g>
+    );
+  };
+
   return (
     <ChartContainer config={chartConfig} className="h-[220px] w-full">
       <BarChart data={data} margin={{ top: 12, right: 16, bottom: 16, left: 16 }}>
@@ -163,7 +189,7 @@ export function WeeklyBarChart({ data }: WeeklyBarChartProps) {
           tickLine={false}
           axisLine={false}
           padding={{ left: 8, right: 8 }}
-          tick={{ fontSize: 16 }}
+          tick={<CustomXAxisTick />}
           tickMargin={8}
         />
         <YAxis
@@ -203,11 +229,25 @@ export function WeeklyBarChart({ data }: WeeklyBarChartProps) {
         />
         <Bar
           dataKey="earnings"
-          fill="hsl(var(--brand-gradientMid) / 0.2)"
           stroke="hsl(var(--brand-gradientMid))"
           strokeWidth={2}
           radius={[8, 8, 0, 0]}
-        />
+        >
+          {data.map((entry) => {
+            const isToday = entry.fullDate === today;
+
+            return (
+              <Cell
+                key={entry.fullDate}
+                fill={
+                  isToday
+                    ? "hsl(var(--brand-gradientMid))"
+                    : "hsl(var(--brand-gradientMid) / 0.2)"
+                }
+              />
+            );
+          })}
+        </Bar>
       </BarChart>
     </ChartContainer>
   );
