@@ -41,6 +41,29 @@ export function MonthlyCumulativeChart({ data }: MonthlyCumulativeChartProps) {
     .filter((_, index) => index === 0 || (index + 1) % 5 === 0 || index === data.length - 1)
     .map((d) => d.day);
 
+  // Custom tick component to color today's day number
+  const CustomXAxisTick = (props: any) => {
+    const { x, y, payload } = props;
+    const dayData = data.find(d => d.day === payload.value);
+    const isToday = dayData?.isToday;
+
+    return (
+      <g transform={`translate(${x},${y})`}>
+        <text
+          x={0}
+          y={0}
+          dy={8}
+          textAnchor="middle"
+          fontSize={16}
+          fill={isToday ? "hsl(var(--brand-highlight))" : "hsl(var(--foreground))"}
+          fontWeight={isToday ? 600 : 400}
+        >
+          {payload.value}
+        </text>
+      </g>
+    );
+  };
+
   return (
     <ChartContainer config={chartConfig} className="h-[260px] w-full">
       <LineChart data={chartData} margin={{ top: 12, right: 20, bottom: 16, left: 16 }}>
@@ -65,7 +88,7 @@ export function MonthlyCumulativeChart({ data }: MonthlyCumulativeChartProps) {
           tickLine={false}
           axisLine={false}
           padding={{ left: 8, right: 8 }}
-          tick={{ fontSize: 16 }}
+          tick={<CustomXAxisTick />}
           tickMargin={8}
           ticks={xAxisTicks}
         />
