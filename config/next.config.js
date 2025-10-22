@@ -17,6 +17,13 @@ const nextConfig = {
   experimental: {
     optimizePackageImports: ['@tabler/icons-react'],
   },
+  // Suppress webpack cache serialization warnings
+  webpack: (config) => {
+    config.infrastructureLogging = {
+      level: 'error',
+    };
+    return config;
+  },
 };
 
 export default withPWA({
