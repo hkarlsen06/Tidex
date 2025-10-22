@@ -2,12 +2,18 @@
   "name": "next-kkarlsen-dev",
   "version": "0.1.0",
   "private": true,
+  "workspaces": [
+    "marketing"
+  ],
   "scripts": {
     "dev": "next dev",
     "dev:turbo": "next dev --turbo",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "marketing:dev": "npm run dev --workspace marketing",
+    "marketing:build": "npm run build --workspace marketing",
+    "marketing:start": "npm run start --workspace marketing"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.1.10",
