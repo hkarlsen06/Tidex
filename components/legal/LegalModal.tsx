@@ -7,8 +7,10 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogFooter,
 } from "@/components/app/Dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/app/Tabs";
+import { Button } from "@/components/app/Button";
 import { PrivacyPolicy } from "./PrivacyPolicy";
 import { TermsOfService } from "./TermsOfService";
 
@@ -16,10 +18,30 @@ interface LegalModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   defaultTab?: "privacy" | "terms";
+  onAccept?: () => void;
+  onDecline?: () => void;
+  showActions?: boolean;
 }
 
-export function LegalModal({ open, onOpenChange, defaultTab = "terms" }: LegalModalProps) {
+export function LegalModal({
+  open,
+  onOpenChange,
+  defaultTab = "terms",
+  onAccept,
+  onDecline,
+  showActions = false
+}: LegalModalProps) {
   const [activeTab, setActiveTab] = useState(defaultTab);
+
+  const handleAccept = () => {
+    onAccept?.();
+    onOpenChange(false);
+  };
+
+  const handleDecline = () => {
+    onDecline?.();
+    onOpenChange(false);
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -45,6 +67,22 @@ export function LegalModal({ open, onOpenChange, defaultTab = "terms" }: LegalMo
             <PrivacyPolicy />
           </TabsContent>
         </Tabs>
+
+        {showActions && (
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={handleDecline}
+            >
+              Avslår
+            </Button>
+            <Button
+              onClick={handleAccept}
+            >
+              Godtar
+            </Button>
+          </DialogFooter>
+        )}
       </DialogContent>
     </Dialog>
   );
