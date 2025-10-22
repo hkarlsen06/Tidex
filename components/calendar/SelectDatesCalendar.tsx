@@ -3,7 +3,7 @@
 import * as React from "react";
 import { DayPicker } from "react-day-picker";
 import { nb } from "date-fns/locale";
-import { toISODate, type ISODate } from "./calendar.utils";
+import { toISODate, type ISODate, formatNOKInt } from "./calendar.utils";
 import { cn } from "@/lib/utils";
 
 export type SelectDatesCalendarProps = {
@@ -11,10 +11,11 @@ export type SelectDatesCalendarProps = {
   selected: Date[]; // controlled multi-select
   onSelectedChange: (dates: Date[]) => void;
   conflictDates?: Set<ISODate>; // paint yellow
-  hasShiftDates?: Set<ISODate>; // tiny dot
+  hasShiftDates?: Set<ISODate>; // highlight date number
   disabledOutsideMonth?: boolean; // default: true
   onMonthChange?: (month: Date) => void;
   hideCaptionNav?: boolean; // hides built-in caption and nav
+  previewEarnings?: Partial<Record<ISODate, number>>;
 };
 
 export function SelectDatesCalendar({
@@ -26,6 +27,7 @@ export function SelectDatesCalendar({
   disabledOutsideMonth = true,
   onMonthChange,
   hideCaptionNav = false,
+  previewEarnings = {},
 }: SelectDatesCalendarProps) {
   function getIsoWeek(date: Date) {
     const d = new Date(
@@ -40,51 +42,72 @@ export function SelectDatesCalendar({
     return weekNumber;
   }
 
-  const CustomDayButton = React.useCallback((props: any) => {
-    const { day, className, modifiers, ...buttonProps } = props;
-    const date: Date = day.date;
-    const isToday = Boolean(modifiers?.today);
-    const isSelected = Boolean(modifiers?.selected);
-    const hasConflict = Boolean(modifiers?.conflict);
-    const isMonday = date.getDay() === 1;
-    const week = isMonday ? getIsoWeek(date) : null;
+  const CustomDayButton = React.useCallback(
+    (props: any) => {
+      const { day, className, modifiers, ...buttonProps } = props;
+      const date: Date = day.date;
+      const isToday = Boolean(modifiers?.today);
+      const isSelected = Boolean(modifiers?.selected);
+      const hasConflict = Boolean(modifiers?.conflict);
+      const isMonday = date.getDay() === 1;
+      const week = isMonday ? getIsoWeek(date) : null;
+      const iso = toISODate(date);
+      const preview = previewEarnings[iso];
+      const hasShift = hasShiftDates.has(iso);
 
-    return (
-      <button
-        {...buttonProps}
-        className={cn(
-          className,
-          "w-full h-full rounded-lg transition-colors focus:outline-none focus-visible:outline-none border hover:bg-surface-secondary",
-          !hasConflict && "border-border-subtle",
-          isToday && !isSelected && "bg-surface-secondary/60",
-          hasConflict && !isSelected && "border-warning border-dashed",
-          hasConflict && isSelected && "ring-1 ring-warning border-transparent",
-          isSelected &&
-            (hasConflict
-              ? "bg-warning-subtle text-text-primary hover:bg-warning-subtle"
-              : "bg-brand-gradientStart text-text-inverse hover:bg-brand-gradientStart border-transparent")
-        )}
-      >
-        <div className="relative z-[1] flex flex-col items-center justify-start gap-0.5 w-full h-full p-1">
-          {isMonday && (
-            <span className="absolute left-1 bottom-1 text-[9px] leading-none text-text-muted">
-              {new Intl.NumberFormat("nb-NO", { minimumIntegerDigits: 2 }).format(
-                week as number
-              )}
-            </span>
+      return (
+        <button
+          {...buttonProps}
+          className={cn(
+            className,
+            "w-full h-full rounded-lg transition-colors focus:outline-none focus-visible:outline-none border hover:bg-surface-secondary",
+            !hasConflict && "border-border-subtle",
+            hasConflict && !isSelected && "border-warning border-dashed",
+            hasConflict && isSelected && "ring-1 ring-warning border-transparent",
+            isSelected &&
+              (hasConflict
+                ? "bg-warning-subtle text-text-primary hover:bg-warning-subtle"
+                : "bg-brand-gradientStart text-text-inverse hover:bg-brand-gradientStart border-transparent"),
+            isToday && "ring-1 ring-brand-highlight",
+            isToday && !isSelected && "border-brand-highlight"
           )}
-          <div
-            className={cn(
-              "w-full text-sm font-semibold text-right pr-1",
-              isSelected && !hasConflict ? "text-text-inverse" : "text-text-primary"
+        >
+          <div className="relative z-[1] flex flex-col items-center justify-start gap-0.5 w-full h-full p-1">
+            {isMonday && (
+              <span className="absolute left-1 top-1 text-[9px] leading-none text-text-muted">
+                {new Intl.NumberFormat("nb-NO", { minimumIntegerDigits: 2 }).format(
+                  week as number
+                )}
+              </span>
             )}
-          >
-            {date.getDate()}
+            <div
+              className={cn(
+                "w-full text-sm font-semibold text-right pr-1",
+                isSelected && !hasConflict
+                  ? "text-text-inverse"
+                  : hasShift
+                    ? "text-brand-highlight"
+                    : "text-text-primary"
+              )}
+            >
+              {date.getDate()}
+            </div>
+            {preview != null && (
+              <div
+                className={cn(
+                  "w-full text-sm font-semibold text-right pr-1",
+                  isSelected && !hasConflict ? "text-text-inverse/80" : "text-text-secondary"
+                )}
+              >
+                {formatNOKInt(preview)}
+              </div>
+            )}
           </div>
-        </div>
-      </button>
-    );
-  }, []);
+        </button>
+      );
+    },
+    [hasShiftDates, previewEarnings]
+  );
   const modifiers = React.useMemo(
     () => ({
       conflict: (date: Date) => conflictDates.has(toISODate(date)),
@@ -111,8 +134,6 @@ export function SelectDatesCalendar({
       modifiers={modifiers}
       modifiersClassNames={{
         selected: "", // selected handled in CustomDayButton for stronger control
-        hasShift:
-          "relative after:pointer-events-none after:z-0 after:absolute after:bottom-1.5 after:right-1.5 after:h-1.5 after:w-1.5 after:rounded-full after:bg-info",
       }}
       weekStartsOn={1}
       showOutsideDays={!disabledOutsideMonth}

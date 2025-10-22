@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useState, useTransition, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { IconPencil, IconTrash, IconClock, IconCheck, IconX } from "@tabler/icons-react";
 import {
@@ -16,6 +16,7 @@ import type { ShiftWithComputations } from "@/lib/payroll";
 import SupplementBreakdown, { type SupplementSegmentInput } from "./SupplementBreakdown";
 import { updateShift } from "@/app/(app)/shifts/_actions/updateShift";
 import { cn } from "@/lib/cn";
+import { TimeInput } from "@/components/app/TimeInput";
 
 const MINUTES_PER_DAY = 24 * 60;
 
@@ -154,6 +155,8 @@ export function ShiftDetails({
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, startTransition] = useTransition();
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const startInputRef = useRef<HTMLInputElement>(null);
+  const endInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (shift) {
@@ -184,22 +187,6 @@ export function ShiftDetails({
     setIsEditing(false);
     setSaveError(null);
     setConfirmingDelete(true);
-  };
-
-  const handleCancelEdit = () => {
-    if (!shift) {
-      setIsEditing(false);
-      return;
-    }
-    setStartTime(shift.start_time);
-    setEndTime(shift.end_time);
-    setShiftDate(shift.shift_date);
-    setSaveError(null);
-    setIsEditing(false);
-  };
-
-  const handleCancelDelete = () => {
-    setConfirmingDelete(false);
   };
 
   const handleConfirmDelete = () => {
@@ -250,7 +237,7 @@ export function ShiftDetails({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent className="sm:rounded-3xl max-w-[480px]">
+      <DialogContent hideCloseButton className="sm:rounded-3xl max-w-[480px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-text-primary">
             <IconClock className="h-5 w-5 text-text-muted" aria-hidden />
@@ -282,22 +269,21 @@ export function ShiftDetails({
               <div className="text-sm text-text-secondary">Tid</div>
               {isEditing ? (
                 <div className="flex items-center gap-2">
-                  <Input
-                    type="time"
-                    step={900}
+                  <TimeInput
+                    ref={startInputRef}
                     value={startTime}
-                    onChange={(event) => setStartTime(event.target.value)}
+                    onChange={setStartTime}
+                    onComplete={() => endInputRef.current?.focus()}
                     disabled={saving}
-                    className="w-[120px]"
+                    className="w-[120px] flex-none"
                   />
                   <span className="text-text-muted">→</span>
-                  <Input
-                    type="time"
-                    step={900}
+                  <TimeInput
+                    ref={endInputRef}
                     value={endTime}
-                    onChange={(event) => setEndTime(event.target.value)}
+                    onChange={setEndTime}
                     disabled={saving}
-                    className="w-[120px]"
+                    className="w-[120px] flex-none"
                   />
                 </div>
               ) : (
@@ -390,7 +376,17 @@ export function ShiftDetails({
               )}
               {isEditing ? (
                 <Button
-                  onClick={handleCancelEdit}
+                  onClick={() => {
+                    if (!shift) {
+                      setIsEditing(false);
+                      return;
+                    }
+                    setStartTime(shift.start_time);
+                    setEndTime(shift.end_time);
+                    setShiftDate(shift.shift_date);
+                    setSaveError(null);
+                    setIsEditing(false);
+                  }}
                   disabled={saving || isDeleting}
                   className="col-span-1 h-11 w-full rounded-full px-4 text-sm font-medium border border-border-subtle bg-white text-neutral-900 hover:bg-surface-secondary dark:text-neutral-900 gap-2"
                 >
@@ -399,7 +395,9 @@ export function ShiftDetails({
                 </Button>
               ) : confirmingDelete ? (
                 <Button
-                  onClick={handleCancelDelete}
+                  onClick={() => {
+                    setConfirmingDelete(false);
+                  }}
                   disabled={isDeleting}
                   className="col-span-1 h-11 w-full rounded-full px-4 text-sm font-medium border border-border-subtle bg-white text-neutral-900 hover:bg-surface-secondary dark:text-neutral-900 gap-2"
                 >
@@ -407,7 +405,16 @@ export function ShiftDetails({
                   Avbryt
                 </Button>
               ) : (
-                <div className="col-span-1" aria-hidden="true" />
+                <Button
+                  onClick={() => {
+                    setSaveError(null);
+                    onClose();
+                  }}
+                  disabled={saving || isDeleting}
+                  className="col-span-1 h-11 w-full rounded-full px-4 text-sm font-medium border border-border-subtle bg-white text-neutral-900 hover:bg-surface-secondary dark:text-neutral-900"
+                >
+                  Lukk
+                </Button>
               )}
             </div>
           )}

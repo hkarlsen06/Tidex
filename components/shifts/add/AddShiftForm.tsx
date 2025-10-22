@@ -7,6 +7,7 @@ import { Button } from "@/components/app/Button";
 import { TimeInput } from "@/components/app/TimeInput";
 import { SelectDatesCalendar } from "@/components/app/SelectDatesCalendar";
 import type { ISODate } from "@/components/calendar/calendar.utils";
+import { computeShift, type UserSettings, type SupplementRule } from "@/lib/payroll";
 import { createShifts } from "../../../app/(app)/shifts/add/actions";
 import RecurringForm from "./RecurringForm";
 import { MonthPicker } from "@/components/app/MonthPicker";
@@ -60,9 +61,11 @@ function overlaps(aStart: number, aEnd: number, bStart: number, bEnd: number) {
 
 type Props = {
   existingShifts: ExistingShift[];
+  userSettings: UserSettings;
+  presetRules: SupplementRule[];
 };
 
-export default function AddShiftForm({ existingShifts }: Props) {
+export default function AddShiftForm({ existingShifts, userSettings, presetRules }: Props) {
   const router = useRouter();
   const { navigate } = useNavigationFeedback();
   const searchParams = useSearchParams();
@@ -267,6 +270,34 @@ export default function AddShiftForm({ existingShifts }: Props) {
     return `${sorted.length} datoer valgt · ${first} – ${last}`;
   }, [dates]);
 
+  const previewEarnings = useMemo(() => {
+    if (!/^\d{2}:\d{2}$/.test(start) || !/^\d{2}:\d{2}$/.test(end) || isoDates.length === 0) {
+      return {};
+    }
+
+    const result: Record<ISODate, number> = {};
+    for (const iso of isoDates) {
+      try {
+        const computed = computeShift(
+          {
+            id: `preview-${iso}`,
+            user_id: "preview",
+            shift_date: iso,
+            start_time: start,
+            end_time: end,
+          },
+          userSettings,
+          presetRules
+        );
+        result[iso as ISODate] = computed.gross;
+      } catch (err) {
+        console.error("Failed to compute preview earnings for shift:", err);
+        return {};
+      }
+    }
+    return result;
+  }, [start, end, isoDates, userSettings, presetRules]);
+
   const openNativePicker = (input: HTMLInputElement | null) => {
     if (!input) return;
     const picker = (input as unknown as { showPicker?: () => void }).showPicker;
@@ -350,6 +381,7 @@ export default function AddShiftForm({ existingShifts }: Props) {
               hasShiftDates={hasShiftDates}
               conflictDates={conflictDates}
               hideCaptionNav
+              previewEarnings={previewEarnings}
             />
 
             {showMultiMonthWarning && (

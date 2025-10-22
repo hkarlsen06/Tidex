@@ -3,6 +3,7 @@
 import { useId, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/app/Input";
+import { TimeInput } from "@/components/app/TimeInput";
 import { Button } from "@/components/app/Button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/app/Dialog";
 import { createShifts } from "../../../app/(app)/shifts/add/actions";
@@ -231,26 +232,44 @@ export default function RecurringForm() {
           htmlFor={customIntervalId}
           className={cn(
             fieldWrapperClass,
-            "h-full flex items-center justify-center",
+            "flex h-full flex-col items-center justify-center gap-2 space-y-0 py-5",
             selectedInterval === null && "border-brand-gradientMid/60 bg-brand-gradientMid/10 text-text-primary shadow-app"
           )}
         >
-          <Input
-            id={customIntervalId}
-            type="text"
-            inputMode="numeric"
-            pattern="[0-9]*"
-            value={customInterval}
-            placeholder="Hver x. uke"
-            onChange={(e) => {
-              const value = e.target.value;
-              if (/^\d*$/.test(value)) {
-                setCustomInterval(value);
-                setSelectedInterval(null);
-              }
-            }}
-            className="h-10 w-auto min-w-[7rem] max-w-full rounded-xl border-border-subtle bg-transparent px-3 text-center text-base text-text-primary"
-          />
+          <span
+            className={cn(
+              "text-sm font-medium text-text-secondary",
+              selectedInterval === null && "text-text-primary"
+            )}
+          >
+            Hver
+          </span>
+          <div className="relative w-full max-w-[6rem]">
+            <Input
+              id={customIntervalId}
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              value={customInterval}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (/^\d*$/.test(value)) {
+                  setCustomInterval(value);
+                  setSelectedInterval(null);
+                }
+              }}
+              className="h-10 w-full rounded-xl border-border-subtle bg-transparent px-3 text-center text-transparent"
+              style={{ caretColor: "var(--color-text-primary, #94a3b8)" }}
+            />
+            <span
+              className={cn(
+                "pointer-events-none absolute inset-0 flex items-center justify-center text-sm text-text-muted",
+                selectedInterval === null && "text-text-primary"
+              )}
+            >
+              {customInterval ? `${customInterval}. uke` : "x. uke"}
+            </span>
+          </div>
         </label>
       </div>
 
@@ -258,14 +277,12 @@ export default function RecurringForm() {
         <label htmlFor={startTimeId} className={fieldWrapperClass}>
           <span className={fieldLabelClass}>Start</span>
           <div className="flex min-w-0 items-center gap-2">
-            <Input
+            <TimeInput
               id={startTimeId}
               ref={startInputRef}
-              type="time"
-              step={900}
               value={start}
-              onChange={(e) => setStart(e.target.value)}
-              className="h-10 flex-1 rounded-xl border-border-subtle bg-transparent text-base text-text-primary"
+              onChange={setStart}
+              onComplete={() => endInputRef.current?.focus()}
             />
             <button
               type="button"
@@ -280,14 +297,11 @@ export default function RecurringForm() {
         <label htmlFor={endTimeId} className={fieldWrapperClass}>
           <span className={fieldLabelClass}>Slutt</span>
           <div className="flex min-w-0 items-center gap-2">
-            <Input
+            <TimeInput
               id={endTimeId}
               ref={endInputRef}
-              type="time"
-              step={900}
               value={end}
-              onChange={(e) => setEnd(e.target.value)}
-              className="h-10 flex-1 rounded-xl border-border-subtle bg-transparent text-base text-text-primary"
+              onChange={setEnd}
             />
             <button
               type="button"

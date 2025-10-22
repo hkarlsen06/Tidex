@@ -89,6 +89,8 @@ const DayButton = React.memo(function DayButton({
   const isToday = Boolean(modifiers?.today);
   const isMonday = date.getDay() === 1;
   const isSelected = selectedDate === iso;
+  const hasShift =
+    earnings !== undefined || hours !== undefined || employees.length > 0;
   const week = isMonday ? getIsoWeek(date) : null;
 
   // Only animate cells from the current month
@@ -100,11 +102,13 @@ const DayButton = React.memo(function DayButton({
     <button
       {...buttonProps}
       aria-pressed={isSelected}
-      className={`${className} ${isToday ? "bg-surface-secondary" : ""} ${
-        isSelected
-          ? "border-brand-gradientMid bg-brand-gradientMid/10 text-brand-highlight shadow-app-sm"
-          : ""
-      }`}
+      className={cn(
+        className,
+        isSelected &&
+          "border-brand-gradientMid bg-brand-gradientMid/10 text-brand-highlight shadow-app-sm",
+        isToday && "ring-1 ring-brand-highlight",
+        isToday && !isSelected && "border-brand-highlight"
+      )}
     >
       <div className="relative flex flex-col items-center justify-start gap-0.5 w-full h-full p-1 pb-2 sm:pb-1.5 overflow-hidden">
       {isMonday && (
@@ -119,7 +123,11 @@ const DayButton = React.memo(function DayButton({
       <div
         className={cn(
           "w-full text-xs font-semibold text-right pr-1",
-          isSelected || isToday ? "text-brand-highlight" : "text-text-primary"
+          isSelected
+            ? "text-brand-highlight"
+            : hasShift
+              ? "text-brand-highlight"
+              : "text-text-primary"
         )}
       >
         {date.getDate()}
@@ -127,7 +135,7 @@ const DayButton = React.memo(function DayButton({
       {mode === "money" && earnings !== undefined && (
         <div
           key={`earnings-${iso}-${currentMonth.getFullYear()}-${currentMonth.getMonth()}`}
-          className={`text-xs text-text-secondary font-medium mt-1 ${getCellAnimationClasses(cellDirection)}`}
+          className={`text-sm text-text-secondary font-semibold mt-1 ${getCellAnimationClasses(cellDirection)}`}
         >
           {formatNOKInt(earnings)}
         </div>
