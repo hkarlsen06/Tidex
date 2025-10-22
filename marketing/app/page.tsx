@@ -117,7 +117,6 @@ export default function LandingPage() {
               <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-center">
                 <Button
                   asChild
-                  size="lg"
                   className="h-12 w-full rounded-full bg-gradient-to-r from-brand-gradientStart via-brand-gradientMid to-brand-gradientEnd px-8 text-base font-semibold text-text-inverse shadow-app-lg sm:w-auto"
                 >
                   <Link href="https://app.kkarlsen.dev" target="_blank" rel="noopener noreferrer">
@@ -126,7 +125,6 @@ export default function LandingPage() {
                 </Button>
                 <Button
                   asChild
-                  size="lg"
                   variant="outline"
                   className="h-12 w-full rounded-full border-border-subtle bg-surface-primary/40 px-8 text-base font-semibold text-text-primary hover:border-brand-gradientMid hover:text-text-primary sm:w-auto"
                 >
@@ -218,7 +216,6 @@ export default function LandingPage() {
           </p>
           <Button
             asChild
-            size="lg"
             className="h-12 rounded-full bg-gradient-to-r from-brand-gradientStart via-brand-gradientMid to-brand-gradientEnd px-10 text-base font-semibold text-text-inverse shadow-app-lg"
           >
             <Link href="https://app.kkarlsen.dev" target="_blank" rel="noopener noreferrer">

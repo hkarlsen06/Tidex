@@ -17,6 +17,8 @@ const compat = new FlatCompat({
 const config = [
   {
     ignores: [
+      "supabase/**",
+      "marketing/**",
       "**/.next/**",
       "node_modules/**",
       "public/**",
