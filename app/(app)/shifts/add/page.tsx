@@ -1,5 +1,7 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import AddShiftForm from "@/components/shifts/add/AddShiftForm";
+import { PRESET_RULES } from "../_data/getShifts";
+import type { UserSettings } from "@/lib/payroll";
 
 export default async function AddShiftsPage() {
   const supabase = await createSupabaseServerClient();
@@ -10,6 +12,18 @@ export default async function AddShiftsPage() {
   if (!user) {
     throw new Error("Expected authenticated user in shifts add page; middleware should handle redirects.");
   }
+
+  const { data: settingsRow, error: settingsError } = await supabase
+    .from("user_settings")
+    .select("*")
+    .eq("user_id", user.id)
+    .single();
+
+  if (settingsError && settingsError.code !== "PGRST116") {
+    console.error("Failed to load user settings for add shift page:", settingsError);
+  }
+
+  const userSettings: UserSettings = settingsRow ?? {};
 
   // Load only the minimal data needed to highlight conflicts in the calendar
   // Avoids the heavier getComputedShifts() call which computes payroll for every shift
@@ -30,5 +44,11 @@ export default async function AddShiftsPage() {
     end_time: s.end_time as string,
   }));
 
-  return <AddShiftForm existingShifts={existingShifts} />;
+  return (
+    <AddShiftForm
+      existingShifts={existingShifts}
+      userSettings={userSettings}
+      presetRules={PRESET_RULES}
+    />
+  );
 }
