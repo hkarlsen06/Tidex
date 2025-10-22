@@ -7,6 +7,7 @@ import { Label } from '@appui/Label';
 import { Button } from '@appui/Button';
 import { Avatar, AvatarFallback, AvatarImage } from '@appui/Avatar';
 import { updateProfileSettings } from '@/app/(app)/settings/_actions/updateSettings';
+import { IconArrowsExchange, IconTrash } from '@tabler/icons-react';
 import { useRouter } from 'next/navigation';
 
 interface ProfileFormProps {
@@ -189,20 +190,17 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
   return (
     <Card className="p-6">
       <div className="space-y-6">
-        <div className="space-y-4">
-          <div className="flex items-center gap-4">
-            <Avatar className="h-20 w-20">
-              <AvatarImage src={profilePictureUrl || undefined} />
-              <AvatarFallback className="bg-surface-secondary text-text-primary text-lg">
-                {getInitials(firstName || initialData.email)}
-              </AvatarFallback>
-            </Avatar>
-            <div className="flex-1">
-              <h3 className="font-semibold">Profilbilde</h3>
-              <p className="text-sm text-text-secondary">
-                Last opp et nytt bilde eller fjern det eksisterende.
-              </p>
-              <div className="mt-3 flex flex-wrap items-center gap-2">
+        <div className="space-y-5">
+          <div className="space-y-4">
+            <h2 className="text-2xl font-semibold">Personlig informasjon</h2>
+            <div className="flex items-center gap-6">
+              <Avatar className="h-24 w-24">
+                <AvatarImage src={profilePictureUrl || undefined} />
+                <AvatarFallback className="bg-surface-secondary text-text-primary text-lg">
+                  {getInitials(firstName || initialData.email)}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex flex-col items-center gap-3">
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -214,28 +212,32 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
                   type="button"
                   variant="outline"
                   size="sm"
+                  className="w-36 justify-center gap-2"
                   onClick={handleUploadClick}
                   disabled={isUploading}
                 >
+                  <IconArrowsExchange className="h-4 w-4" aria-hidden />
                   {isUploading ? 'Laster opp…' : profilePictureUrl ? 'Bytt bilde' : 'Last opp bilde'}
                 </Button>
                 {profilePictureUrl && (
                   <Button
                     type="button"
-                    variant="ghost"
+                    variant="outline"
                     size="sm"
+                    className="w-36 justify-center gap-2"
                     onClick={handleRemoveProfilePicture}
                     disabled={isUploading}
                   >
+                    <IconTrash className="h-4 w-4" aria-hidden />
                     Fjern bilde
                   </Button>
                 )}
+                {uploadError && (
+                  <p className="text-center text-sm text-destructive">
+                    {uploadError}
+                  </p>
+                )}
               </div>
-              {uploadError && (
-                <p className="mt-2 text-sm text-destructive">
-                  {uploadError}
-                </p>
-              )}
             </div>
           </div>
 
