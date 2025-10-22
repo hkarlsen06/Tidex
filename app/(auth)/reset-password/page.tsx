@@ -27,6 +27,7 @@ import {
 import { Input } from "@/components/app/Input";
 import { Button } from "@/components/app/Button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/app/Card";
+import { TurnstileCaptcha } from "@/components/app/TurnstileCaptcha";
 
 type MessageState = { type: "error" | "success"; text: string } | null;
 type Step = "input" | "otp" | "password";
@@ -49,12 +50,14 @@ export default function ResetPasswordPage() {
   const [message, setMessage] = useState<MessageState>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
 
   const resetMessage = () => setMessage(null);
   const resetFieldErrors = () => setFieldErrors({});
   const resetAll = () => {
     resetMessage();
     resetFieldErrors();
+    setCaptchaToken(null);
   };
 
   // Step 1: Send OTP to email or phone
@@ -66,6 +69,11 @@ export default function ResetPasswordPage() {
 
     if (!emailOrPhone) {
       errors.emailOrPhone = "Fyll inn e-post eller telefonnummer.";
+    }
+
+    if (!captchaToken) {
+      setMessage({ type: "error", text: "Vennligst fullfør captcha-verifiseringen." });
+      return;
     }
 
     const inputType = detectInputType(emailOrPhone);
@@ -93,6 +101,7 @@ export default function ResetPasswordPage() {
           emailOrPhone,
           {
             redirectTo: undefined,
+            captchaToken,
           }
         );
 
@@ -119,6 +128,9 @@ export default function ResetPasswordPage() {
         const phoneE164 = normalizePhoneToE164(emailOrPhone);
         const { error } = await supabase.auth.signInWithOtp({
           phone: phoneE164,
+          options: {
+            captchaToken,
+          },
         });
 
         setIsSubmitting(false);
@@ -297,9 +309,22 @@ export default function ResetPasswordPage() {
                 <FieldError>{fieldErrors.emailOrPhone}</FieldError>
               </Field>
 
+              <div className="flex justify-center">
+                <TurnstileCaptcha
+                  onSuccess={(token) => {
+                    setCaptchaToken(token);
+                    resetMessage();
+                  }}
+                  onError={() => {
+                    setCaptchaToken(null);
+                    setMessage({ type: "error", text: "Captcha-verifisering feilet. Prøv igjen." });
+                  }}
+                />
+              </div>
+
               <Button
                 type="submit"
-                disabled={isSubmitting}
+                disabled={isSubmitting || !captchaToken}
                 loading={isSubmitting}
                 size="lg"
                 className="w-full"

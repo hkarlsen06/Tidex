@@ -27,6 +27,7 @@ import {
 import { Input } from '@/components/app/Input';
 import { Button } from '@/components/app/Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/app/Card';
+import { TurnstileCaptcha } from '@/components/app/TurnstileCaptcha';
 
 const googleIcon = (
   <svg
@@ -76,6 +77,7 @@ export default function LoginClient({ initialNext }: { initialNext: string }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isOAuthRedirecting, setIsOAuthRedirecting] = useState(false);
   const [showSignupPrompt, setShowSignupPrompt] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
 
   const resetMessage = () => {
     setMessage(null);
@@ -89,6 +91,7 @@ export default function LoginClient({ initialNext }: { initialNext: string }) {
   const resetAll = () => {
     resetMessage();
     resetFieldErrors();
+    setCaptchaToken(null);
   };
 
   const handleSignIn = async (event: FormEvent<HTMLFormElement>) => {
@@ -99,6 +102,11 @@ export default function LoginClient({ initialNext }: { initialNext: string }) {
 
     if (!emailOrPhone) {
       errors.emailOrPhone = 'Fyll inn e-post eller telefonnummer.';
+    }
+
+    if (!captchaToken) {
+      setMessage({ type: 'error', text: 'Vennligst fullfør captcha-verifiseringen.' });
+      return;
     }
 
     const inputType = detectInputType(emailOrPhone);
@@ -128,6 +136,9 @@ export default function LoginClient({ initialNext }: { initialNext: string }) {
       const { error } = await supabase.auth.signInWithPassword({
         email: emailOrPhone,
         password,
+        options: {
+          captchaToken,
+        },
       });
 
       setIsSubmitting(false);
@@ -166,6 +177,9 @@ export default function LoginClient({ initialNext }: { initialNext: string }) {
           const { error } = await supabase.auth.signInWithPassword({
             phone: phoneE164,
             password,
+            options: {
+              captchaToken,
+            },
           });
 
           setIsSubmitting(false);
@@ -199,6 +213,7 @@ export default function LoginClient({ initialNext }: { initialNext: string }) {
             phone: phoneE164,
             options: {
               shouldCreateUser: false, // Don't create user if doesn't exist
+              captchaToken,
             },
           });
 
@@ -423,9 +438,22 @@ export default function LoginClient({ initialNext }: { initialNext: string }) {
               </Field>
             </FieldGroup>
 
+            <div className="flex justify-center">
+              <TurnstileCaptcha
+                onSuccess={(token) => {
+                  setCaptchaToken(token);
+                  resetMessage();
+                }}
+                onError={() => {
+                  setCaptchaToken(null);
+                  setMessage({ type: 'error', text: 'Captcha-verifisering feilet. Prøv igjen.' });
+                }}
+              />
+            </div>
+
             <Button
               type="submit"
-              disabled={buttonDisabled}
+              disabled={buttonDisabled || !captchaToken}
               loading={isSubmitting}
               size="lg"
               className="w-full"
@@ -567,7 +595,7 @@ export default function LoginClient({ initialNext }: { initialNext: string }) {
                 variant="outline"
                 size="lg"
                 onClick={handleGoogleSignIn}
-                disabled={buttonDisabled}
+                disabled={buttonDisabled || !captchaToken}
                 loading={isOAuthRedirecting}
                 aria-label="Fortsett med Google"
                 className="w-full"
