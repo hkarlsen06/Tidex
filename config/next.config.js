@@ -1,8 +1,14 @@
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import withPWA from "next-pwa";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   allowedDevOrigins: ["192.168.68.50"],
+  outputFileTracingRoot: path.join(__dirname, ".."),
   // Skip ESLint during production builds on Vercel so devDeps aren't required
   eslint: {
     ignoreDuringBuilds: true,

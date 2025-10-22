@@ -1,11 +1,12 @@
+const path = require('path');
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'export',
   distDir: 'dist',
-  images: {
-    unoptimized: true,
-  },
+  images: { unoptimized: true },
   trailingSlash: true,
-}
+  outputFileTracingRoot: path.join(__dirname, '..'),
+};
 
-export default nextConfig
+module.exports = nextConfig;
