@@ -244,8 +244,19 @@ export default function LandingPage() {
       </section>
 
       <footer className="px-6 pb-10">
-        <div className="mx-auto w-full max-w-6xl text-center text-sm text-text-secondary">
-          © 2025 Hjalmar Kristensen-Karlsen
+        <div className="mx-auto w-full max-w-6xl space-y-2 text-center">
+          <div className="flex items-center justify-center gap-3 text-sm">
+            <Link href="/privacy" className="text-text-secondary hover:text-text-primary transition-colors">
+              Personvernerklæring
+            </Link>
+            <span className="text-text-muted">•</span>
+            <Link href="/terms" className="text-text-secondary hover:text-text-primary transition-colors">
+              Vilkår for bruk
+            </Link>
+          </div>
+          <div className="text-sm text-text-secondary">
+            © 2025 Hjalmar Kristensen-Karlsen
+          </div>
         </div>
       </footer>
     </main>
