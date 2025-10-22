@@ -1,3 +1,4 @@
 [build]
+  base = "."
   command = "npm ci --include=dev && npm run --workspace marketing build"
   publish = "marketing/out"
