@@ -29,7 +29,7 @@ export function TurnstileCaptcha({ onSuccess, onError, className }: TurnstileCap
       onError={onError}
       options={{
         theme: "dark",
-        size: "normal",
+        size: "flexible",
       }}
       className={className}
     />

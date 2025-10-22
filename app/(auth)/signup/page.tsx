@@ -367,7 +367,7 @@ export default function SignupPage() {
                 )}
               </FieldGroup>
 
-              <div className="flex justify-center">
+              <div className="flex justify-center overflow-hidden rounded-lg bg-surface-primary/50">
                 <TurnstileCaptcha
                   onSuccess={(token) => {
                     setCaptchaToken(token);
@@ -377,6 +377,7 @@ export default function SignupPage() {
                     setCaptchaToken(null);
                     setMessage({ type: "error", text: "Captcha-verifisering feilet. Prøv igjen." });
                   }}
+                  className="scale-[1.01] -my-[1px] brightness-90 contrast-110"
                 />
               </div>
 
