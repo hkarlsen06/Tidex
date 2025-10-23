@@ -4,6 +4,9 @@ import type { ReactNode } from "react";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
+import { supabase } from "@/lib/supabase/browser";
+import { withRefreshLock } from "@/lib/auth/refresh-lock";
+import { logSessionRefresh } from "@/lib/auth/session-telemetry";
 import { NavigationFeedbackProvider, NavigationOverlay } from "./navigation-feedback";
 import { TopHeader } from "./TopHeader";
 import { NavBar } from "./NavBar";
@@ -34,6 +37,35 @@ export function AppLayoutClient({
       // Ignore if prefetch isn't available in this environment
     }
   }, [router]);
+
+  // Løsning 4: Initial session check on app mount
+  // Ensures session is fresh on cold start (e.g., after device restart)
+  // Prevents flashing of stale state before first API call
+  useEffect(() => {
+    const checkInitialSession = async () => {
+      const startTime = performance.now();
+      logSessionRefresh("session_refresh_attempt", "initial");
+
+      try {
+        const { data, error } = await withRefreshLock(() => supabase.auth.getSession());
+        const duration = performance.now() - startTime;
+
+        if (error) {
+          console.error("[SUPABASE] Initial session check failed:", error);
+          logSessionRefresh("session_refresh_failure", "initial", { error, duration_ms: duration });
+        } else {
+          console.log("[SUPABASE] Initial session OK:", !!data.session);
+          logSessionRefresh("session_refresh_success", "initial", { duration_ms: duration });
+        }
+      } catch (err) {
+        const duration = performance.now() - startTime;
+        console.error("[SUPABASE] Session check threw:", err);
+        logSessionRefresh("session_refresh_failure", "initial", { error: err, duration_ms: duration });
+      }
+    };
+
+    checkInitialSession();
+  }, []);
 
   return (
     <NavigationFeedbackProvider>
