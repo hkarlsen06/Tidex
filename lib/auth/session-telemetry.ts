@@ -13,8 +13,7 @@ export type RefreshEvent = {
   type:
     | "session_refresh_attempt"
     | "session_refresh_success"
-    | "session_refresh_failure"
-    | "session_refresh_skipped_no_cookie"; // Cookie missing at wake
+    | "session_refresh_failure";
   reason: RefreshReason;
   timestamp: number;
   attempt_id?: string; // UUID to pair attempt with success/failure
@@ -167,6 +166,9 @@ function extractErrorCode(error: unknown): string | undefined {
   if (!error) return undefined;
 
   if (error instanceof Error) {
+    // Check for our "no_session" error marker
+    if (error.message === "no_session") return "no_session";
+
     // Supabase errors have a code property
     const supabaseError = error as any;
     if (supabaseError.code) return supabaseError.code;
@@ -214,7 +216,6 @@ export function getDevMetrics() {
   const attempts = devMetrics.filter((e) => e.type === "session_refresh_attempt");
   const successes = devMetrics.filter((e) => e.type === "session_refresh_success");
   const failures = devMetrics.filter((e) => e.type === "session_refresh_failure");
-  const skippedNoCookie = devMetrics.filter((e) => e.type === "session_refresh_skipped_no_cookie").length;
 
   // Calculate success rate by matching attemptIds
   const attemptIds = new Set(attempts.map((e) => e.attempt_id).filter(Boolean));
@@ -253,7 +254,6 @@ export function getDevMetrics() {
     successes: successes.length,
     failures: failures.length,
     completed_attempts: completedAttempts.length,
-    skipped_no_cookie: skippedNoCookie,
     success_rate:
       completedAttempts.length > 0
         ? ((successfulAttempts.length / completedAttempts.length) * 100).toFixed(1) + "%"
@@ -277,7 +277,6 @@ export function printDevMetrics() {
   console.group("📊 Session Refresh Metrics (24h)");
   console.log("Total events:", metrics.total_events);
   console.log("Success rate:", metrics.success_rate);
-  console.log("Skipped (no cookie):", metrics.skipped_no_cookie);
   console.log("By reason:", metrics.by_reason);
   console.log("Error codes:", metrics.error_codes);
   console.log("Avg duration:", metrics.avg_duration_ms, "ms");
@@ -336,7 +335,6 @@ export function shouldAttemptWakeRefresh(reason: RefreshReason): boolean {
   // Check if we're within debounce window
   if (now - lastWakeAttempt < WAKE_DEBOUNCE_MS) {
     console.log(`[SUPABASE] Debouncing ${reason} refresh (last attempt ${now - lastWakeAttempt}ms ago)`);
-    logSessionRefresh("session_refresh_skipped_no_cookie", reason); // Reuse "skipped" type for debounced attempts
     return false;
   }
 
