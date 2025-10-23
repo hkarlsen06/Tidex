@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Card, CardHeader } from '@appui/Card';
 import { cn } from '@/lib/cn';
 import { useNavigationFeedback } from './navigation-feedback';
@@ -67,7 +67,7 @@ export const NextPayrollCard: React.FC<NextPayrollCardProps> = ({
   const formattedDate = dateFormatter.format(payrollDate);
 
   const showNoPayoutPlaceholder = !hasPayout;
-  const today = new Date();
+  const today = useMemo(() => new Date(), []);
   const matchesCurrentMonth = selectedMonth
     ? selectedMonth.getFullYear() === today.getFullYear() &&
       selectedMonth.getMonth() === today.getMonth()
