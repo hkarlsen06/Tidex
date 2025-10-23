@@ -171,7 +171,7 @@ export function SubscriptionStatus({ subscription, isGrandfathered = false }: Su
                   ? 'Neste fornyelse'
                   : 'Utløper'}
               </p>
-              <p className="text-lg font-semibold">
+              <p className="text-lg font-semibold" suppressHydrationWarning>
                 {formatDate(
                   subscription.status === 'canceled'
                     ? subscription.canceled_at
@@ -188,7 +188,7 @@ export function SubscriptionStatus({ subscription, isGrandfathered = false }: Su
               <p className="text-sm text-text-secondary mb-1">
                 {subscription.canceled_at ? 'Kanselleringstidspunkt' : 'Første gang du abonnerte'}
               </p>
-              <p className="text-lg font-semibold">
+              <p className="text-lg font-semibold" suppressHydrationWarning>
                 {formatDate(subscription.canceled_at || subscription.created_at)}
               </p>
             </div>

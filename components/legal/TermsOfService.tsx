@@ -3,7 +3,7 @@ export function TermsOfService() {
     <div className="prose prose-sm max-w-none dark:prose-invert space-y-6">
       <div>
         <h1>Vilkår for bruk</h1>
-        <p className="text-text-muted">Sist oppdatert: {new Date().toLocaleDateString('nb-NO')}</p>
+        <p className="text-text-muted" suppressHydrationWarning>Sist oppdatert: {new Date().toLocaleDateString('nb-NO')}</p>
       </div>
 
       <div>
