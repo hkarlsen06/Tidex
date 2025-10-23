@@ -91,6 +91,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       </head>
       <body className={`${inter.className} bg-background text-foreground antialiased`}>
         {children}
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );
