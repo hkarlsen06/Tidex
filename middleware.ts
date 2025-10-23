@@ -4,7 +4,7 @@ import { createServerClient, type CookieOptions } from "@supabase/ssr";
 
 import { getProjectRefFromUrl } from "@/lib/supabase/utils";
 
-const PUBLIC_PATH_PREFIXES = ["/login", "/signup", "/auth/", "/reset-password"];
+const PUBLIC_PATH_PREFIXES = ["/login", "/signup", "/auth/", "/reset-password", "/verify-email"];
 
 function isLoopbackHost(hostname: string) {
   const lower = hostname.toLowerCase();

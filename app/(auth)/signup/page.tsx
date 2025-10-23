@@ -130,7 +130,7 @@ export default function SignupPage() {
           data: {
             first_name: fullName,
           },
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          emailRedirectTo: `${window.location.origin}/auth/callback?next=/onboarding`,
           captchaToken,
         },
       });
@@ -142,16 +142,14 @@ export default function SignupPage() {
         return;
       }
 
-      // User is now logged in automatically
+      // Redirect to email verification page
       setMessage({
         type: "success",
-        text: "Konto opprettet! Omdirigerer...",
+        text: "Konto opprettet! Sjekk e-posten din for å bekrefte kontoen.",
       });
 
-      // Redirect to onboarding
       setTimeout(() => {
-        router.replace("/onboarding");
-        router.refresh();
+        router.replace(`/verify-email?email=${encodeURIComponent(emailOrPhone)}`);
       }, 1500);
     } else {
       // Phone signup with OTP
