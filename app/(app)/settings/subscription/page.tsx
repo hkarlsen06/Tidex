@@ -1,5 +1,4 @@
 import { createSupabaseServerClient } from '@/lib/supabase/server';
-import { BackButton } from '@appui/BackButton';
 import { getUserSubscriptionData } from './_data/getSubscription';
 import { SubscriptionStatus } from '@/components/settings/subscription/SubscriptionStatus';
 import { EarlySupporterStatus } from '@/components/settings/subscription/EarlySupporterStatus';
@@ -28,8 +27,6 @@ export default async function SubscriptionPage() {
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
-      <BackButton label="Innstillinger" fallbackHref="/settings" />
-
       <div className="space-y-6">
         <div>
           <h2 className="text-2xl font-bold">Abonnement</h2>

@@ -5,7 +5,6 @@ import { PhoneConnectionCard } from '@components/settings/profile/PhoneConnectio
 import { PasswordCard } from '@components/settings/profile/PasswordCard';
 import { GoogleConnectionCard } from '@components/settings/profile/GoogleConnectionCard';
 import { DangerZone } from '@components/settings/profile/DangerZone';
-import { BackButton } from '@appui/BackButton';
 
 export default async function ProfilePage() {
   const supabase = await createSupabaseServerClient();
@@ -19,8 +18,6 @@ export default async function ProfilePage() {
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-2xl">
-      <BackButton label="Innstillinger" fallbackHref="/settings" />
-
       <div className="space-y-6">
         <div>
           <h2 className="text-2xl font-bold">Profil</h2>
