@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 
 import { supabase } from "@/lib/supabase/browser";
 import { withRefreshLock } from "@/lib/auth/refresh-lock";
-import { logSessionRefresh } from "@/lib/auth/session-telemetry";
+import { logSessionRefresh, hasAuthCookie } from "@/lib/auth/session-telemetry";
 import { NavigationFeedbackProvider, NavigationOverlay } from "./navigation-feedback";
 import { TopHeader } from "./TopHeader";
 import { NavBar } from "./NavBar";
@@ -43,8 +43,15 @@ export function AppLayoutClient({
   // Prevents flashing of stale state before first API call
   useEffect(() => {
     const checkInitialSession = async () => {
+      // Check if auth cookie exists before attempting refresh
+      if (!hasAuthCookie()) {
+        console.log("[SUPABASE] No auth cookie found on mount - skipping initial refresh");
+        logSessionRefresh("session_refresh_skipped_no_cookie", "initial");
+        return;
+      }
+
       const startTime = performance.now();
-      logSessionRefresh("session_refresh_attempt", "initial");
+      const attemptId = logSessionRefresh("session_refresh_attempt", "initial");
 
       try {
         const { data, error } = await withRefreshLock(() => supabase.auth.getSession());
@@ -52,15 +59,15 @@ export function AppLayoutClient({
 
         if (error) {
           console.error("[SUPABASE] Initial session check failed:", error);
-          logSessionRefresh("session_refresh_failure", "initial", { error, duration_ms: duration });
+          logSessionRefresh("session_refresh_failure", "initial", { attempt_id: attemptId, error, duration_ms: duration });
         } else {
           console.log("[SUPABASE] Initial session OK:", !!data.session);
-          logSessionRefresh("session_refresh_success", "initial", { duration_ms: duration });
+          logSessionRefresh("session_refresh_success", "initial", { attempt_id: attemptId, duration_ms: duration });
         }
       } catch (err) {
         const duration = performance.now() - startTime;
         console.error("[SUPABASE] Session check threw:", err);
-        logSessionRefresh("session_refresh_failure", "initial", { error: err, duration_ms: duration });
+        logSessionRefresh("session_refresh_failure", "initial", { attempt_id: attemptId, error: err, duration_ms: duration });
       }
     };
 

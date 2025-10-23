@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { getProjectRefFromUrl } from "../../lib/supabase/utils";
 
 /**
  * E2E Test: Session refresh on app wake
@@ -13,6 +14,11 @@ import { test, expect } from "@playwright/test";
  *    - Request returns 200 OK
  *    - Cookie is updated with new token
  */
+
+// Get actual cookie name from Supabase URL
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://id.kkarlsen.dev";
+const projectRef = getProjectRefFromUrl(supabaseUrl) || "test";
+const AUTH_COOKIE_NAME = `sb-${projectRef}-auth-token`;
 
 test.describe("Session Refresh on Wake", () => {
   test.beforeEach(async ({ page }) => {
@@ -36,7 +42,7 @@ test.describe("Session Refresh on Wake", () => {
     // Set the Supabase auth cookie
     await page.context().addCookies([
       {
-        name: "sb-test-auth-token",
+        name: AUTH_COOKIE_NAME,
         value: JSON.stringify(mockSession),
         domain: "127.0.0.1",
         path: "/",

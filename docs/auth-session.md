@@ -188,7 +188,19 @@ All session refresh attempts are logged with these events:
 
 **Important distinctions:**
 - ✅ **`session_refresh_failure`**: Cookie exists, but refresh returned 400/401 error
-- ✅ **`session_refresh_skipped_no_cookie`**: No auth cookie found, refresh was skipped (expected after cookie expiry)
+- ✅ **`session_refresh_skipped_no_cookie`**: No auth cookie found, refresh was skipped (expected after cookie expiry or debouncing)
+
+**Event Pairing with attemptId:**
+- Each `session_refresh_attempt` generates a unique `attemptId` (UUID)
+- Corresponding `session_refresh_success` or `session_refresh_failure` includes the same `attemptId`
+- Success rate is calculated by matching attemptIds: `(successful attempts / completed attempts) * 100`
+- This ensures accurate metrics even if events are logged out of order
+
+**Wake Debouncing:**
+- Multiple wake events (visibilitychange, pageshow, focus) can fire simultaneously on iOS
+- Debounce window: 1000ms - only one refresh attempt allowed per second
+- Subsequent attempts within the window are logged as `session_refresh_skipped_no_cookie`
+- Prevents refresh spam and reduces unnecessary API calls
 
 **Code:** [lib/auth/session-telemetry.ts](../lib/auth/session-telemetry.ts)
 
@@ -644,5 +656,29 @@ window.__sessionMetrics.getMetrics().by_reason
 
 ---
 
-**Last Updated:** 2025-01-23
+## Changelog
+
+### 2025-10-23: Bug Fixes & Optimizations
+
+**9 critical fixes applied:**
+
+1. **Fixed focus timer memory leak** - Use Set to track all timers, clear all on cleanup
+2. **Fixed race condition in withRefreshLock** - Atomic check-and-set prevents concurrent refreshes
+3. **Fixed success rate calculation** - AttemptId pairing ensures accurate metrics (success/completed)
+4. **Added cookie value validation** - hasAuthCookie now verifies cookie has valid tokens
+5. **Added cookie guard to initial session check** - Consistent with other refresh triggers
+6. **Fixed hardcoded cookie name in Playwright tests** - Derives from NEXT_PUBLIC_SUPABASE_URL
+7. **Fixed error serialization** - Errors properly serialized for production logging (no circular refs)
+8. **Optimized metrics cleanup** - O(n) splice instead of O(n²) shift loop
+9. **Added wake debounce** - 1000ms window prevents simultaneous refresh spam on iOS
+
+**Impact:**
+- More reliable session refresh (no race conditions)
+- Accurate telemetry metrics (paired attemptIds)
+- Better performance (optimized cleanup, debounced refreshes)
+- Production-ready error logging (serialized, no PII)
+
+---
+
+**Last Updated:** 2025-10-23
 **Configuration Version:** JWT Expiry 3600s, Rotation Enabled, Reuse Interval 10s
