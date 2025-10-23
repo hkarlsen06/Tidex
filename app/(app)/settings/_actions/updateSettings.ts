@@ -391,3 +391,43 @@ export async function setPassword(password: string) {
   revalidatePath('/settings/profile');
   return { success: true };
 }
+
+export async function initiateEmailChange(newEmail: string) {
+  const supabase = await createSupabaseServerClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) throw new Error('Not authenticated');
+
+  // Validate email format
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(newEmail)) {
+    throw new Error('Ugyldig e-postadresse');
+  }
+
+  // Check if new email is same as current
+  if (user.email === newEmail) {
+    throw new Error('Den nye e-postadressen er den samme som den nåværende');
+  }
+
+  // Store the pending email in user metadata and initiate email change
+  const existingMetadata = user.user_metadata ?? {};
+
+  // Initiate email change - Supabase will send a confirmation email
+  // The user needs to click the link in BOTH the old and new email
+  const { error } = await supabase.auth.updateUser({
+    email: newEmail,
+    data: {
+      ...existingMetadata,
+      pendingEmail: newEmail,
+    },
+  });
+
+  if (error) {
+    logger.error('Failed to initiate email change:', error);
+    throw error;
+  }
+
+  logger.info('Email change initiated:', { newEmail });
+  return { success: true };
+}
+

@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@appui/Avatar';
 import { updateProfileSettings } from '@/app/(app)/settings/_actions/updateSettings';
 import { IconArrowsExchange, IconTrash } from '@tabler/icons-react';
 import { useRouter } from 'next/navigation';
+import { EmailChangeCard } from './EmailChangeCard';
 
 interface ProfileFormProps {
   initialData: {
@@ -25,6 +26,7 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [showEmailChangeCard, setShowEmailChangeCard] = useState(false);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -181,13 +183,13 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
     }
   };
 
-  const mailHref = (() => {
-    const subject = encodeURIComponent('Endring av e-postadresse');
-    const body = encodeURIComponent(`Jeg ønsker å endre epost-addresssen min fra ${initialData.email} til (ny epost).`);
-    return `mailto:kkarlsen06@kkarlsen.dev?subject=${subject}&body=${body}`;
-  })();
+  const handleEmailChangeComplete = () => {
+    setShowEmailChangeCard(false);
+    router.refresh();
+  };
 
   return (
+    <>
     <Card className="p-6">
       <div className="space-y-6">
         <div className="space-y-5">
@@ -261,18 +263,25 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
               className="opacity-60"
             />
             <p className="text-xs text-text-secondary">
-              For å endre e-postadresse,{' '}
-              <a
-                className="underline"
-                href={mailHref}
+              <button
+                type="button"
+                className="underline hover:text-text-primary transition-colors"
+                onClick={() => setShowEmailChangeCard(true)}
               >
-                ta kontakt
-              </a>
-              .
+                Endre e-postadresse
+              </button>
             </p>
           </div>
         </div>
       </div>
     </Card>
+    {showEmailChangeCard && (
+      <EmailChangeCard
+        currentEmail={initialData.email}
+        onCancel={() => setShowEmailChangeCard(false)}
+        onComplete={handleEmailChangeComplete}
+      />
+    )}
+    </>
   );
 }
