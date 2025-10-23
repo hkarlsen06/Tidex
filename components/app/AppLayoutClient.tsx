@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/browser";
 import { withRefreshLock } from "@/lib/auth/refresh-lock";
 import { logSessionRefresh } from "@/lib/auth/session-telemetry";
-import { NavigationFeedbackProvider, NavigationOverlay } from "./navigation-feedback";
+import { NavigationFeedbackProvider } from "./navigation-feedback";
 import { TopHeader } from "./TopHeader";
 import { NavBar } from "./NavBar";
 
@@ -94,7 +94,6 @@ function LayoutContent({
         style={{ paddingBottom: "calc(6rem + env(safe-area-inset-bottom))" }}
       >
         {children}
-        <NavigationOverlay />
       </main>
       <NavBar showAddShiftHint={showAddShiftHint} />
     </div>

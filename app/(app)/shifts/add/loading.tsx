@@ -17,7 +17,7 @@ export default function AddShiftLoading() {
             <div className="inline-flex items-center gap-1 rounded-full border border-border-subtle bg-surface-secondary/80 p-1 shadow-app-sm dark:shadow-app-inner flex-shrink-0">
               <div
                 className={cn(
-                  "h-9 rounded-full px-4 text-sm transition-all whitespace-nowrap",
+                  "flex items-center justify-center h-9 rounded-full px-4 text-sm transition-all whitespace-nowrap",
                   "bg-brand-gradientMid text-text-inverse shadow-app"
                 )}
               >
@@ -25,7 +25,7 @@ export default function AddShiftLoading() {
               </div>
               <div
                 className={cn(
-                  "h-9 rounded-full px-4 text-sm transition-all whitespace-nowrap",
+                  "flex items-center justify-center h-9 rounded-full px-4 text-sm transition-all whitespace-nowrap",
                   "text-text-secondary"
                 )}
               >
