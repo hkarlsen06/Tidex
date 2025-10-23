@@ -36,6 +36,8 @@
     "@types/node": "20.12.7",
     "@types/react": "18.2.61",
     "@types/react-dom": "18.2.19",
+    "@vercel/analytics": "^1.5.0",
+    "@vercel/speed-insights": "^1.2.0",
     "autoprefixer": "^10.4.17",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
