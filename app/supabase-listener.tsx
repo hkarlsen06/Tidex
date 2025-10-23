@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 
 import { supabase } from "@/lib/supabase/browser";
 import { withRefreshLock } from "@/lib/auth/refresh-lock";
-import { logSessionRefresh, hasAuthCookie, shouldAttemptWakeRefresh } from "@/lib/auth/session-telemetry";
+import { logSessionRefresh, shouldAttemptWakeRefresh } from "@/lib/auth/session-telemetry";
 
 type SupabaseListenerProps = {
   accessToken?: string;
@@ -49,20 +49,23 @@ export function SupabaseListener({ accessToken }: SupabaseListenerProps) {
           return;
         }
 
-        // Check if auth cookie exists before attempting refresh
-        if (!hasAuthCookie()) {
-          console.log("[SUPABASE] No auth cookie found - skipping refresh");
-          logSessionRefresh("session_refresh_skipped_no_cookie", "visibilitychange");
-          return;
-        }
-
         const startTime = performance.now();
         const attemptId = logSessionRefresh("session_refresh_attempt", "visibilitychange");
 
         try {
-          await withRefreshLock(() => supabase.auth.getSession());
+          const { data, error } = await withRefreshLock(() => supabase.auth.getSession());
           const duration = performance.now() - startTime;
-          logSessionRefresh("session_refresh_success", "visibilitychange", { attempt_id: attemptId, duration_ms: duration });
+
+          if (error || !data.session) {
+            console.error("[SUPABASE] Failed to refresh on wake:", error);
+            logSessionRefresh("session_refresh_failure", "visibilitychange", {
+              attempt_id: attemptId,
+              error: error || new Error("no_session"),
+              duration_ms: duration
+            });
+          } else {
+            logSessionRefresh("session_refresh_success", "visibilitychange", { attempt_id: attemptId, duration_ms: duration });
+          }
         } catch (error) {
           const duration = performance.now() - startTime;
           console.error("[SUPABASE] Failed to refresh on wake:", error);
@@ -88,20 +91,23 @@ export function SupabaseListener({ accessToken }: SupabaseListenerProps) {
           return;
         }
 
-        // Check if auth cookie exists before attempting refresh
-        if (!hasAuthCookie()) {
-          console.log("[SUPABASE] No auth cookie found - skipping refresh");
-          logSessionRefresh("session_refresh_skipped_no_cookie", "pageshow");
-          return;
-        }
-
         const startTime = performance.now();
         const attemptId = logSessionRefresh("session_refresh_attempt", "pageshow");
 
         try {
-          await withRefreshLock(() => supabase.auth.getSession());
+          const { data, error } = await withRefreshLock(() => supabase.auth.getSession());
           const duration = performance.now() - startTime;
-          logSessionRefresh("session_refresh_success", "pageshow", { attempt_id: attemptId, duration_ms: duration });
+
+          if (error || !data.session) {
+            console.error("[SUPABASE] Failed to refresh on pageshow:", error);
+            logSessionRefresh("session_refresh_failure", "pageshow", {
+              attempt_id: attemptId,
+              error: error || new Error("no_session"),
+              duration_ms: duration
+            });
+          } else {
+            logSessionRefresh("session_refresh_success", "pageshow", { attempt_id: attemptId, duration_ms: duration });
+          }
         } catch (error) {
           const duration = performance.now() - startTime;
           console.error("[SUPABASE] Failed to refresh on pageshow:", error);
@@ -138,26 +144,23 @@ export function SupabaseListener({ accessToken }: SupabaseListenerProps) {
         return;
       }
 
-      // Check if auth cookie exists before attempting refresh
-      if (!hasAuthCookie()) {
-        console.log("[SUPABASE] No auth cookie found - skipping refresh");
-        logSessionRefresh("session_refresh_skipped_no_cookie", "focus");
-        // Still reset flag to allow future checks
-        const timer = setTimeout(() => {
-          hasFiredOnce = false;
-          timers.delete(timer);
-        }, 5000);
-        timers.add(timer);
-        return;
-      }
-
       const startTime = performance.now();
       const attemptId = logSessionRefresh("session_refresh_attempt", "focus");
 
       try {
-        await withRefreshLock(() => supabase.auth.getSession());
+        const { data, error } = await withRefreshLock(() => supabase.auth.getSession());
         const duration = performance.now() - startTime;
-        logSessionRefresh("session_refresh_success", "focus", { attempt_id: attemptId, duration_ms: duration });
+
+        if (error || !data.session) {
+          console.error("[SUPABASE] Failed to refresh on focus:", error);
+          logSessionRefresh("session_refresh_failure", "focus", {
+            attempt_id: attemptId,
+            error: error || new Error("no_session"),
+            duration_ms: duration
+          });
+        } else {
+          logSessionRefresh("session_refresh_success", "focus", { attempt_id: attemptId, duration_ms: duration });
+        }
       } catch (error) {
         const duration = performance.now() - startTime;
         console.error("[SUPABASE] Failed to refresh on focus:", error);
