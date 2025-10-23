@@ -54,7 +54,15 @@ serve(async (req)=>{
     }
     // Idempotency: mark seen
     const marked = await markEventSeen(event.id, event.type);
-    if (!marked.ok && marked.code !== "23505") {
+    if (!marked.ok) {
+      if (marked.code === "23505") {
+        // Event already exists
+        return json({
+          received: false,
+          id: event.id,
+          error: "duplicate_event"
+        }, 409); // HTTP 409 Conflict
+      }
       console.warn("[stripe-webhook] markEventSeen failed, proceeding:", marked.error);
     }
     try {
@@ -159,9 +167,21 @@ async function handleEvent(event) {
     case "customer.subscription.paused":
     case "customer.subscription.resumed":
       {
-        // Hent alltid fersk subscription for å sikre current_period_end er korrekt
+        // Get the raw subscription from the webhook event
         const rawSub = event.data.object;
+        
+        // Hent alltid fersk subscription for å sikre current_period_end er korrekt
         const sub = await safeRetrieveSubscription(rawSub.id) ?? rawSub;
+        
+        // Set cancellation fields for active subscriptions being cancelled
+        if (type === "customer.subscription.updated" && 
+            sub.status === "active" && 
+            (sub.cancel_at_period_end === true || sub.cancel_at != null)) {
+          // Set canceled_at if not already set
+          sub.canceled_at = sub.canceled_at || Math.floor(Date.now() / 1000);
+          sub.cancel_at_period_end = true; // Ensure this is set
+        }
+        
         const customerId = asId(sub.customer);
         const uid = sub?.metadata?.supabase_uid ?? (customerId ? await uidFromCustomer(customerId) : null);
         if (!uid) {
@@ -248,7 +268,11 @@ async function upsertCustomerMapping(userId, customerId) {
   if (error) console.warn("[webhook] mapping upsert failed:", error.message);
 }
 async function upsertSubscription(userId, customerId, sub) {
-  const status = sub.status; // 'active' | 'trialing' | 'past_due' | 'canceled' | 'incomplete' | 'paused' | etc.
+  // Determine effective status - use 'cancelling' for active subs that are pending cancellation
+  let status = sub.status; // 'active' | 'trialing' | 'past_due' | 'canceled' | 'incomplete' | 'paused' | etc.
+  if (status === 'active' && sub.cancel_at_period_end === true) {
+    status = 'cancelling';
+  }
   // Finn riktig period end:
   // 1) Top-nivå current_period_end hvis satt
   // 2) Fallback: første subscription_item.current_period_end
