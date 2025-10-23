@@ -14,18 +14,27 @@ let inflight: Promise<any> | null = null;
 
 export async function withRefreshLock<T>(fn: () => Promise<T>): Promise<T> {
   // Wait for any in-flight refresh to complete
-  while (inflight) {
+  if (inflight) {
     await inflight.catch(() => {
       // Ignore errors from previous refresh attempts
     });
   }
 
-  // Execute the refresh operation
-  inflight = fn();
+  // If another refresh started while we were waiting, return that one
+  if (inflight) {
+    return inflight as Promise<T>;
+  }
+
+  // Execute the refresh operation atomically
+  const promise = fn();
+  inflight = promise;
 
   try {
-    return await inflight;
+    return await promise;
   } finally {
-    inflight = null;
+    // Only clear if we're still the active promise
+    if (inflight === promise) {
+      inflight = null;
+    }
   }
 }

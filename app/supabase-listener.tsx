@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 
 import { supabase } from "@/lib/supabase/browser";
 import { withRefreshLock } from "@/lib/auth/refresh-lock";
-import { logSessionRefresh, hasAuthCookie } from "@/lib/auth/session-telemetry";
+import { logSessionRefresh, hasAuthCookie, shouldAttemptWakeRefresh } from "@/lib/auth/session-telemetry";
 
 type SupabaseListenerProps = {
   accessToken?: string;
@@ -44,6 +44,11 @@ export function SupabaseListener({ accessToken }: SupabaseListenerProps) {
       if (document.visibilityState === "visible") {
         console.log("[SUPABASE] App visible - checking session");
 
+        // Debounce: Skip if another wake event fired recently
+        if (!shouldAttemptWakeRefresh("visibilitychange")) {
+          return;
+        }
+
         // Check if auth cookie exists before attempting refresh
         if (!hasAuthCookie()) {
           console.log("[SUPABASE] No auth cookie found - skipping refresh");
@@ -52,16 +57,16 @@ export function SupabaseListener({ accessToken }: SupabaseListenerProps) {
         }
 
         const startTime = performance.now();
-        logSessionRefresh("session_refresh_attempt", "visibilitychange");
+        const attemptId = logSessionRefresh("session_refresh_attempt", "visibilitychange");
 
         try {
           await withRefreshLock(() => supabase.auth.getSession());
           const duration = performance.now() - startTime;
-          logSessionRefresh("session_refresh_success", "visibilitychange", { duration_ms: duration });
+          logSessionRefresh("session_refresh_success", "visibilitychange", { attempt_id: attemptId, duration_ms: duration });
         } catch (error) {
           const duration = performance.now() - startTime;
           console.error("[SUPABASE] Failed to refresh on wake:", error);
-          logSessionRefresh("session_refresh_failure", "visibilitychange", { error, duration_ms: duration });
+          logSessionRefresh("session_refresh_failure", "visibilitychange", { attempt_id: attemptId, error, duration_ms: duration });
         }
       }
     };
@@ -78,6 +83,11 @@ export function SupabaseListener({ accessToken }: SupabaseListenerProps) {
       if (event.persisted) {
         console.log("[SUPABASE] App restored from cache - checking session");
 
+        // Debounce: Skip if another wake event fired recently
+        if (!shouldAttemptWakeRefresh("pageshow")) {
+          return;
+        }
+
         // Check if auth cookie exists before attempting refresh
         if (!hasAuthCookie()) {
           console.log("[SUPABASE] No auth cookie found - skipping refresh");
@@ -86,16 +96,16 @@ export function SupabaseListener({ accessToken }: SupabaseListenerProps) {
         }
 
         const startTime = performance.now();
-        logSessionRefresh("session_refresh_attempt", "pageshow");
+        const attemptId = logSessionRefresh("session_refresh_attempt", "pageshow");
 
         try {
           await withRefreshLock(() => supabase.auth.getSession());
           const duration = performance.now() - startTime;
-          logSessionRefresh("session_refresh_success", "pageshow", { duration_ms: duration });
+          logSessionRefresh("session_refresh_success", "pageshow", { attempt_id: attemptId, duration_ms: duration });
         } catch (error) {
           const duration = performance.now() - startTime;
           console.error("[SUPABASE] Failed to refresh on pageshow:", error);
-          logSessionRefresh("session_refresh_failure", "pageshow", { error, duration_ms: duration });
+          logSessionRefresh("session_refresh_failure", "pageshow", { attempt_id: attemptId, error, duration_ms: duration });
         }
       }
     };
@@ -109,7 +119,7 @@ export function SupabaseListener({ accessToken }: SupabaseListenerProps) {
   // Uses 'once' to avoid spamming refresh on every focus
   useEffect(() => {
     let hasFiredOnce = false;
-    let resetTimer: ReturnType<typeof setTimeout> | null = null;
+    const timers = new Set<ReturnType<typeof setTimeout>>();
 
     const handleFocus = async () => {
       if (hasFiredOnce) return;
@@ -117,40 +127,56 @@ export function SupabaseListener({ accessToken }: SupabaseListenerProps) {
 
       console.log("[SUPABASE] Window focused - checking session");
 
+      // Debounce: Skip if another wake event fired recently
+      if (!shouldAttemptWakeRefresh("focus")) {
+        // Still reset flag to allow future checks
+        const timer = setTimeout(() => {
+          hasFiredOnce = false;
+          timers.delete(timer);
+        }, 5000);
+        timers.add(timer);
+        return;
+      }
+
       // Check if auth cookie exists before attempting refresh
       if (!hasAuthCookie()) {
         console.log("[SUPABASE] No auth cookie found - skipping refresh");
         logSessionRefresh("session_refresh_skipped_no_cookie", "focus");
         // Still reset flag to allow future checks
-        resetTimer = setTimeout(() => {
+        const timer = setTimeout(() => {
           hasFiredOnce = false;
+          timers.delete(timer);
         }, 5000);
+        timers.add(timer);
         return;
       }
 
       const startTime = performance.now();
-      logSessionRefresh("session_refresh_attempt", "focus");
+      const attemptId = logSessionRefresh("session_refresh_attempt", "focus");
 
       try {
         await withRefreshLock(() => supabase.auth.getSession());
         const duration = performance.now() - startTime;
-        logSessionRefresh("session_refresh_success", "focus", { duration_ms: duration });
+        logSessionRefresh("session_refresh_success", "focus", { attempt_id: attemptId, duration_ms: duration });
       } catch (error) {
         const duration = performance.now() - startTime;
         console.error("[SUPABASE] Failed to refresh on focus:", error);
-        logSessionRefresh("session_refresh_failure", "focus", { error, duration_ms: duration });
+        logSessionRefresh("session_refresh_failure", "focus", { attempt_id: attemptId, error, duration_ms: duration });
       }
 
       // Reset flag after 5 seconds to allow future focus events
-      resetTimer = setTimeout(() => {
+      const timer = setTimeout(() => {
         hasFiredOnce = false;
+        timers.delete(timer);
       }, 5000);
+      timers.add(timer);
     };
 
     window.addEventListener("focus", handleFocus);
     return () => {
       window.removeEventListener("focus", handleFocus);
-      if (resetTimer) clearTimeout(resetTimer);
+      timers.forEach((timer) => clearTimeout(timer));
+      timers.clear();
     };
   }, []);
 
