@@ -268,11 +268,8 @@ async function upsertCustomerMapping(userId, customerId) {
   if (error) console.warn("[webhook] mapping upsert failed:", error.message);
 }
 async function upsertSubscription(userId, customerId, sub) {
-  // Determine effective status - use 'cancelling' for active subs that are pending cancellation
-  let status = sub.status; // 'active' | 'trialing' | 'past_due' | 'canceled' | 'incomplete' | 'paused' | etc.
-  if (status === 'active' && sub.cancel_at_period_end === true) {
-    status = 'cancelling';
-  }
+  const status = sub.status; // 'active' | 'trialing' | 'past_due' | 'canceled' | 'incomplete' | 'paused' | etc.
+  
   // Finn riktig period end:
   // 1) Top-nivå current_period_end hvis satt
   // 2) Fallback: første subscription_item.current_period_end
