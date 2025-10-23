@@ -135,6 +135,15 @@ export function EmailChangeCard({ currentEmail, onCancel, onComplete }: EmailCha
                 Vi har sendt bekreftelseslenker til både <strong>{currentEmail}</strong> og <strong>{newEmailInput}</strong>.
                 Du må klikke på begge lenkene for å fullføre endringen.
               </p>
+              <p className="text-sm text-text-secondary text-center mt-3">
+                Har du ikke tilgang til den gamle e-posten?{' '}
+                <a
+                  href="mailto:hjalmar@kkarlsen.dev?subject=Hjelp med endring av e-postadresse"
+                  className="text-brand-primary underline hover:no-underline font-medium"
+                >
+                  Ta kontakt
+                </a>
+              </p>
             </div>
 
             <div className="flex gap-2">
