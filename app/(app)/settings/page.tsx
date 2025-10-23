@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import type { MouseEvent } from 'react';
 import { Card } from '@appui/Card';
-import { ChevronRight, User, Banknote, Palette, Database, CreditCard } from 'lucide-react';
+import { ChevronRight, User, Banknote, Palette, Database, CreditCard, Loader2 } from 'lucide-react';
 import { useNavigationFeedback } from '@/components/app/navigation-feedback';
 
 const settingsItems = [
@@ -40,7 +40,7 @@ const settingsItems = [
 ];
 
 export default function SettingsPage() {
-  const { navigate } = useNavigationFeedback();
+  const { navigate, pendingPath } = useNavigationFeedback();
 
   const handleItemClick = (href: string) => (event: MouseEvent<HTMLAnchorElement>) => {
     if (
@@ -67,6 +67,7 @@ export default function SettingsPage() {
       <div className="flex flex-col gap-6">
         {settingsItems.map((item) => {
           const Icon = item.icon;
+          const isNavigating = pendingPath === item.href;
           return (
             <Link key={item.href} href={item.href} onClick={handleItemClick(item.href)}>
               <Card className="p-5 hover:bg-surface-secondary/50 transition-colors cursor-pointer">
@@ -78,7 +79,11 @@ export default function SettingsPage() {
                     <h3 className="font-semibold text-lg text-text-primary mb-0.5">{item.label}</h3>
                     <p className="text-sm text-text-secondary">{item.description}</p>
                   </div>
-                  <ChevronRight className="h-5 w-5 text-text-secondary flex-shrink-0" />
+                  {isNavigating ? (
+                    <Loader2 className="h-5 w-5 text-text-secondary flex-shrink-0 animate-spin" />
+                  ) : (
+                    <ChevronRight className="h-5 w-5 text-text-secondary flex-shrink-0" />
+                  )}
                 </div>
               </Card>
             </Link>
