@@ -38,7 +38,13 @@ export async function GET(request: NextRequest) {
 
   try {
     const data = await getStatsData(user.id, { year, month });
-    return NextResponse.json(data);
+    return NextResponse.json(data, {
+      headers: {
+        // Cache for 5 minutes (300 seconds)
+        // 'private' ensures cache is user-specific, not shared across users
+        'Cache-Control': 'private, max-age=300, stale-while-revalidate=60',
+      },
+    });
   } catch (error) {
     console.error("Failed to load stats data", error);
     return NextResponse.json({ error: "Failed to load stats data" }, { status: 500 });

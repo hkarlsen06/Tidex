@@ -1,22 +1,37 @@
 import "server-only";
 import { cache } from "react";
-import { unstable_cache } from "next/cache";
 import { getComputedShifts } from "@/app/(app)/shifts/_data/getShifts";
 import {
   getCurrentYearMonth,
+  getCurrentYearStart,
+  getCurrentYearEnd,
   isDateInMonth,
   parseDateAsUTC,
   getYearMonth,
 } from "@/lib/date-utils";
 
 /**
- * Helper to get start date for stats (12 months ago for comprehensive stats)
+ * Helper to get date range for stats based on the target year
+ * Current year: load full year for comprehensive stats
+ * Other years: load that specific year
  */
-function getStatsStartDate(): string {
-  const date = new Date();
-  date.setUTCMonth(date.getUTCMonth() - 12);
-  date.setUTCDate(1);
-  return date.toISOString().split('T')[0];
+function getStatsDateRange(options: StatsOptions): { startDate: string; endDate: string } {
+  const { year: currentYear } = getCurrentYearMonth();
+  const targetYear = options.year ?? currentYear;
+
+  if (targetYear === currentYear) {
+    // Current year: load full year for comprehensive stats
+    return {
+      startDate: getCurrentYearStart(),
+      endDate: getCurrentYearEnd(),
+    };
+  } else {
+    // Past/future year: load that specific year
+    return {
+      startDate: `${targetYear}-01-01`,
+      endDate: `${targetYear}-12-31`,
+    };
+  }
 }
 
 export type MonthlyData = {
@@ -138,13 +153,16 @@ type StatsOptions = {
 };
 
 /**
- * Internal implementation of getStatsData
+ * Get comprehensive stats data with caching
+ * - Uses React cache() for request deduplication within a single request
+ * - Includes monthly summaries, charts data, and projections
  */
-async function getStatsDataInternal(userId: string, options: StatsOptions = {}): Promise<StatsData> {
-  // Load last 12 months of shifts for stats calculations
+export const getStatsData = cache(async (userId: string, options: StatsOptions = {}): Promise<StatsData> => {
+  // Load full year of shifts for comprehensive stats calculations
+  const dateRange = getStatsDateRange(options);
   const { shifts, settings } = await getComputedShifts(userId, {
-    startDate: getStatsStartDate(),
-    limit: 1000 // Reasonable limit for 12 months of data
+    ...dateRange,
+    limit: 1000 // Reasonable limit for 1 year of data
   });
 
   // Determine focus month (defaults to current UTC month)
@@ -547,32 +565,6 @@ async function getStatsDataInternal(userId: string, options: StatsOptions = {}):
       remaining: +goalRemaining.toFixed(2),
     },
   };
-}
-
-/**
- * Get comprehensive stats data with caching
- * - Uses React cache() for request deduplication
- * - Uses Next.js Data Cache for persistent caching (5 min TTL)
- * - Includes monthly summaries, charts data, and projections
- */
-export const getStatsData = cache(async (userId: string, options: StatsOptions = {}): Promise<StatsData> => {
-  // Resolve defaults to match internal implementation
-  const { year: currentYear, month: currentMonth } = getCurrentYearMonth();
-  const resolvedYear = options.year ?? currentYear;
-  const resolvedMonth = options.month ?? currentMonth;
-
-  const cacheKey = `stats-${userId}-${resolvedYear}-${resolvedMonth}`;
-
-  const getCached = unstable_cache(
-    async () => getStatsDataInternal(userId, options),
-    [cacheKey],
-    {
-      tags: [`user-stats-${userId}`],
-      revalidate: 300 // 5 minutes
-    }
-  );
-
-  return getCached();
 });
 
 /**

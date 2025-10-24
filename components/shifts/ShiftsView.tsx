@@ -451,7 +451,7 @@ type ShiftsViewProps = {
   presetRules: SupplementRule[];
 };
 
-export function ShiftsView({ shifts, defaultView = "calendar", userSettings, presetRules }: ShiftsViewProps) {
+export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", userSettings, presetRules }: ShiftsViewProps) {
   const router = useRouter();
   const { navigate } = useNavigationFeedback();
   const [pending, startTransition] = useTransition();
@@ -469,8 +469,20 @@ export function ShiftsView({ shifts, defaultView = "calendar", userSettings, pre
   const [openedFromCalendar, setOpenedFromCalendar] = useState(false);
   const [copyMode, setCopyMode] = useState(false);
   const [copying, startCopyTransition] = useTransition();
+  const [additionalShifts, setAdditionalShifts] = useState<ShiftWithComputations[]>([]);
+  const [loadingMonth, setLoadingMonth] = useState(false);
   const shiftsListRef = useRef<HTMLDivElement>(null);
   const calendarContainerRef = useRef<HTMLDivElement>(null);
+
+  // Track which months have been loaded or are currently loading
+  const [loadedMonths, setLoadedMonths] = useState<Set<string>>(new Set());
+  const [loadingMonths, setLoadingMonths] = useState<Set<string>>(new Set());
+
+  // Combine initial shifts with any dynamically loaded shifts
+  const shifts = useMemo(
+    () => [...initialShifts, ...additionalShifts],
+    [initialShifts, additionalShifts]
+  );
 
   const clearSelection = useCallback(() => {
     setSelectedDate(null);
@@ -483,6 +495,61 @@ export function ShiftsView({ shifts, defaultView = "calendar", userSettings, pre
     setOpenedFromCalendar(false);
     setCopyMode(false);
   }, []);
+
+  // Helper to generate month key for tracking
+  const getMonthKey = useCallback((year: number, month: number): string => {
+    return `${year}-${String(month).padStart(2, '0')}`;
+  }, []);
+
+  // Helper to fetch a month's shifts and update state
+  const fetchMonth = useCallback(async (year: number, month: number) => {
+    const key = getMonthKey(year, month);
+
+    // Skip if already loaded or currently loading
+    if (loadedMonths.has(key) || loadingMonths.has(key)) {
+      return;
+    }
+
+    // Mark as loading
+    setLoadingMonths(prev => new Set(prev).add(key));
+
+    try {
+      const response = await fetch(`/api/shifts?year=${year}&month=${month}`);
+      const data = await response.json();
+
+      if (data.shifts && Array.isArray(data.shifts)) {
+        setAdditionalShifts(prev => {
+          // Filter out any duplicates before adding
+          const existingIds = new Set([...initialShifts, ...prev].map(s => s.id));
+          const newShifts = data.shifts.filter((s: ShiftWithComputations) => !existingIds.has(s.id));
+          return [...prev, ...newShifts];
+        });
+
+        // Mark as successfully loaded
+        setLoadedMonths(prev => new Set(prev).add(key));
+      }
+    } catch (err) {
+      console.error(`Failed to fetch month ${key}:`, err);
+    } finally {
+      // Remove from loading set
+      setLoadingMonths(prev => {
+        const next = new Set(prev);
+        next.delete(key);
+        return next;
+      });
+    }
+  }, [getMonthKey, loadedMonths, loadingMonths, initialShifts]);
+
+  // Manual load button handler (fallback if prefetch didn't trigger)
+  const handleLoadMonth = useCallback(() => {
+    const selectedYear = selectedMonth.getFullYear();
+    const selectedMonthNum = selectedMonth.getMonth() + 1;
+
+    setLoadingMonth(true);
+    fetchMonth(selectedYear, selectedMonthNum).finally(() => {
+      setLoadingMonth(false);
+    });
+  }, [selectedMonth, fetchMonth]);
   const shiftsByDate = useMemo(() => {
     const map = new Map<ISODate, ShiftWithComputations[]>();
     for (const shift of shifts) {
@@ -499,6 +566,39 @@ export function ShiftsView({ shifts, defaultView = "calendar", userSettings, pre
     });
     return map;
   }, [shifts]);
+
+  // Initialize loaded months from SSR data on mount
+  useEffect(() => {
+    const loaded = new Set<string>();
+    for (const shift of initialShifts) {
+      const [year, month] = shift.shift_date.split('-');
+      const key = `${year}-${month}`;
+      loaded.add(key);
+    }
+    setLoadedMonths(loaded);
+  }, [initialShifts]);
+
+  // Proactive prefetch: Load adjacent months (prev, current, next) whenever selectedMonth changes
+  useEffect(() => {
+    const selectedYear = selectedMonth.getFullYear();
+    const selectedMonthNum = selectedMonth.getMonth() + 1;
+
+    // Calculate prev and next months
+    const prevDate = new Date(selectedYear, selectedMonthNum - 2, 1);
+    const nextDate = new Date(selectedYear, selectedMonthNum, 1);
+
+    const prevYear = prevDate.getFullYear();
+    const prevMonthNum = prevDate.getMonth() + 1;
+    const nextYear = nextDate.getFullYear();
+    const nextMonthNum = nextDate.getMonth() + 1;
+
+    // Prefetch all 3 months in parallel (fetchMonth checks if already loaded)
+    Promise.all([
+      fetchMonth(selectedYear, selectedMonthNum), // Current
+      fetchMonth(prevYear, prevMonthNum),         // Previous
+      fetchMonth(nextYear, nextMonthNum),         // Next
+    ]);
+  }, [selectedMonth, fetchMonth]);
 
   // Auto-scroll to shifts list if defaultView is "list"
   useEffect(() => {
@@ -764,6 +864,12 @@ export function ShiftsView({ shifts, defaultView = "calendar", userSettings, pre
     return [...groups].reverse();
   }, [shifts, selectedMonth]);
 
+  // Check if we have data for the selected month
+  const selectedYear = selectedMonth.getFullYear();
+  const selectedMonthNum = selectedMonth.getMonth() + 1;
+  const targetKey = `${selectedYear}-${String(selectedMonthNum).padStart(2, '0')}`;
+  const hasDataForSelectedMonth = shifts.some(s => s.shift_date.startsWith(targetKey));
+
   const hasAnyShifts = shifts.length > 0;
   const emptyTitle = hasAnyShifts
     ? "Ingen skift for denne måneden"
@@ -803,6 +909,18 @@ export function ShiftsView({ shifts, defaultView = "calendar", userSettings, pre
             <CardHeader>
               <CardTitle>{emptyTitle}</CardTitle>
               <CardDescription>{emptyDescription}</CardDescription>
+              {!hasDataForSelectedMonth && hasAnyShifts && (
+                <div className="pt-4">
+                  <Button
+                    onClick={handleLoadMonth}
+                    disabled={loadingMonth}
+                    variant="default"
+                    className="mx-auto"
+                  >
+                    {loadingMonth ? 'Laster...' : `Last inn vakter for ${selectedMonth.toLocaleDateString('nb-NO', { month: 'long', year: 'numeric' })}`}
+                  </Button>
+                </div>
+              )}
             </CardHeader>
           </Card>
         ) : (

@@ -1,6 +1,5 @@
 import "server-only";
 import { cache } from "react";
-import { unstable_cache } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   computeShift,
@@ -9,6 +8,7 @@ import {
   type UserSettings,
   PRESET_SUPPLEMENT_RULES,
 } from "@/lib/payroll";
+import { getCurrentYearMonth, getMonthStart, getMonthEnd } from "@/lib/date-utils";
 import { logger } from "@/lib/logger";
 
 export const PRESET_RULES = PRESET_SUPPLEMENT_RULES;
@@ -25,26 +25,29 @@ export type ShiftLoadOptions = {
 };
 
 /**
- * Helper to get date N months ago in YYYY-MM-DD format
+ * Get default start date for shift loading (current month start)
+ * Used when no explicit startDate is provided
  */
-function getMonthsAgo(months: number): string {
-  const date = new Date();
-  date.setUTCMonth(date.getUTCMonth() - months);
-  date.setUTCDate(1); // Start of month
-  return date.toISOString().split('T')[0];
+function getDefaultStartDate(): string {
+  const { year, month } = getCurrentYearMonth();
+  return getMonthStart(year, month);
 }
 
 /**
- * Helper to get current date in YYYY-MM-DD format
+ * Get default end date for shift loading (current month end)
+ * Used when no explicit endDate is provided
  */
-function getCurrentDate(): string {
-  return new Date().toISOString().split('T')[0];
+function getDefaultEndDate(): string {
+  const { year, month } = getCurrentYearMonth();
+  return getMonthEnd(year, month);
 }
 
 /**
- * Internal implementation of getComputedShifts
+ * Get computed shifts with pagination and caching
+ * - Uses React cache() for request deduplication within a single request
+ * - Supports date range filtering and limits
  */
-async function getComputedShiftsInternal(
+export const getComputedShifts = cache(async (
   userId: string,
   options: ShiftLoadOptions = {}
 ): Promise<{
@@ -52,11 +55,11 @@ async function getComputedShiftsInternal(
   defaultView: string,
   settings: UserSettings,
   aggregates: ShiftsAggregates
-}> {
+}> => {
   const {
-    startDate = getMonthsAgo(6), // Default: last 6 months
-    endDate = getCurrentDate(),
-    limit = 500
+    startDate = getDefaultStartDate(), // Default: current month start
+    endDate = getDefaultEndDate(),     // Default: current month end
+    limit = 50                          // Default: reasonable limit for 1 month
   } = options;
 
   const supabase = await createSupabaseServerClient();
@@ -122,42 +125,4 @@ async function getComputedShiftsInternal(
     settings,
     aggregates
   };
-}
-
-/**
- * Get computed shifts with pagination and caching
- * - Uses React cache() for request deduplication
- * - Uses Next.js Data Cache for persistent caching (5 min TTL)
- * - Supports date range filtering and limits
- */
-export const getComputedShifts = cache(async (
-  userId: string,
-  options: ShiftLoadOptions = {}
-): Promise<{
-  shifts: ShiftWithComputations[],
-  defaultView: string,
-  settings: UserSettings,
-  aggregates: ShiftsAggregates
-}> => {
-  // Resolve defaults to ensure consistent cache keys
-  const resolvedOptions = {
-    startDate: options.startDate ?? getMonthsAgo(6),
-    endDate: options.endDate ?? getCurrentDate(),
-    limit: options.limit ?? 500
-  };
-
-  // Create a cache key based on resolved options
-  const cacheKey = `shifts-${userId}-${resolvedOptions.startDate}-${resolvedOptions.endDate}-${resolvedOptions.limit}`;
-
-  // Wrap with unstable_cache for persistent caching
-  const getCached = unstable_cache(
-    async () => getComputedShiftsInternal(userId, options),
-    [cacheKey],
-    {
-      tags: [`user-shifts-${userId}`],
-      revalidate: 300 // 5 minutes
-    }
-  );
-
-  return getCached();
 });
