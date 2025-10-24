@@ -59,7 +59,9 @@ export function MonthlyGoalProgress({ data }: MonthlyGoalProgressProps) {
   const strokeWidth = 12;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
-  const offset = circumference - (displayPercentage / 100) * circumference;
+  // Clamp circle at 100% to avoid visual wrap-around when over target
+  const circlePercentage = Math.min(displayPercentage, 100);
+  const offset = circumference - (circlePercentage / 100) * circumference;
 
   return (
     <Card className="border-border bg-surface-primary overflow-hidden">
@@ -111,7 +113,16 @@ export function MonthlyGoalProgress({ data }: MonthlyGoalProgressProps) {
 
           {/* Right side: Circular progress indicator */}
           <div className="relative flex-shrink-0">
-            <svg width={size} height={size} className="transform -rotate-90">
+            <svg
+              width={size}
+              height={size}
+              className="transform -rotate-90"
+              style={{
+                filter: isGoalReached
+                  ? `drop-shadow(0 0 8px ${progressColor}) drop-shadow(0 0 4px ${progressColor})`
+                  : 'none'
+              }}
+            >
               {/* Background circle */}
               <circle
                 cx={size / 2}

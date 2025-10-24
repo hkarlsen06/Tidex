@@ -1,6 +1,6 @@
 "use client";
 
-import { Pie, PieChart, Cell, Legend } from "recharts";
+import { Pie, PieChart, Cell } from "recharts";
 import {
   ChartContainer,
   ChartTooltip,
@@ -77,8 +77,39 @@ export function SupplementBreakdownChart({ data }: SupplementBreakdownChartProps
   const totalEarnings = data.basePay + data.supplementPay;
 
   return (
-    <div className="relative h-[280px] w-full">
-      <ChartContainer config={chartConfig} className="h-full w-full">
+    <div className="flex items-center gap-8 h-[280px] w-full pl-4">
+      {/* Left side: Total and legend */}
+      <div className="flex flex-col gap-5 flex-shrink-0">
+        {/* Total earnings */}
+        <div>
+          <p className="text-2xl font-bold text-text-primary tabular-nums">
+            {numberFormatter.format(totalEarnings)} kr
+          </p>
+        </div>
+
+        {/* Legend items */}
+        <div className="flex flex-col gap-3">
+          {chartData.map((item, index) => (
+            <div key={`legend-${index}`} className="flex items-center gap-2.5">
+              <div
+                className="w-3 h-3 rounded-full flex-shrink-0"
+                style={{
+                  backgroundColor: item.name === "basePay"
+                    ? chartConfig.basePay.color
+                    : chartConfig.supplementPay.color
+                }}
+              />
+              <span className="text-sm text-text-secondary whitespace-nowrap">
+                {item.label} ({item.percentage.toFixed(1)}%)
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Right side: Pie chart */}
+      <div className="relative flex-1 h-full">
+        <ChartContainer config={chartConfig} className="h-full w-full">
         <PieChart>
           <ChartTooltip
             content={
@@ -111,7 +142,7 @@ export function SupplementBreakdownChart({ data }: SupplementBreakdownChartProps
             dataKey="value"
             nameKey="name"
             cx="50%"
-            cy="45%"
+            cy="50%"
             innerRadius={70}
             outerRadius={105}
             paddingAngle={2}
@@ -128,38 +159,8 @@ export function SupplementBreakdownChart({ data }: SupplementBreakdownChartProps
               />
             ))}
           </Pie>
-          <Legend
-            verticalAlign="bottom"
-            height={36}
-            content={({ payload }) => {
-              if (!payload) return null;
-              return (
-                <div className="flex justify-center gap-6 mt-4">
-                  {payload.map((entry, index) => {
-                    const item = chartData[index];
-                    return (
-                      <div key={`legend-${index}`} className="flex items-center gap-2">
-                        <div
-                          className="w-3 h-3 rounded-full"
-                          style={{ backgroundColor: entry.color }}
-                        />
-                        <span className="text-sm text-text-secondary">
-                          {item.label} ({item.percentage.toFixed(1)}%)
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              );
-            }}
-          />
         </PieChart>
       </ChartContainer>
-      {/* Absolutely positioned text in the center */}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none pb-12">
-        <p className="text-2xl font-bold text-text-primary tabular-nums">
-          {numberFormatter.format(totalEarnings)} kr
-        </p>
       </div>
     </div>
   );
