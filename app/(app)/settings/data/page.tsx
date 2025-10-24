@@ -1,6 +1,11 @@
 import { redirect } from 'next/navigation';
+import type { Metadata } from 'next';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { DataForm } from '@components/settings/data/DataForm';
+
+export const metadata: Metadata = {
+  title: "Data",
+};
 
 export default async function DataPage() {
   // Layout guarantees user is authenticated

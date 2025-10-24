@@ -1,7 +1,12 @@
 import { redirect } from "next/navigation";
+import type { Metadata } from "next";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getStatsData } from "./_data/getStatsData";
 import { StatsContent } from "@/components/app/StatsContent";
+
+export const metadata: Metadata = {
+  title: "Statistikk",
+};
 
 export default async function StatsPage() {
   // Layout guarantees user is authenticated

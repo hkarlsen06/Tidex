@@ -1,8 +1,13 @@
 import { redirect } from 'next/navigation';
+import type { Metadata } from 'next';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { Card } from '@appui/Card';
 import { XCircle } from 'lucide-react';
 import { SubscriptionCancelButtons } from './SubscriptionCancelButtons';
+
+export const metadata: Metadata = {
+  title: "Oppgradering avbrutt",
+};
 
 export default async function SubscriptionCancelPage() {
   // Layout guarantees user is authenticated

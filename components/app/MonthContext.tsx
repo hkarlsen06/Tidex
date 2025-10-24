@@ -47,7 +47,8 @@ export function MonthProvider({ children }: { children: ReactNode }) {
         console.warn("Failed to restore selectedMonth from localStorage:", err);
       }
     }
-  }, [initialMonth]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run once on mount - initialMonth is stable from useMemo
 
   // Sync to localStorage whenever selectedMonth changes
   useEffect(() => {

@@ -1,7 +1,12 @@
 import { redirect } from "next/navigation";
+import type { Metadata } from "next";
 import { getComputedShifts, PRESET_RULES } from "./_data/getShifts";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { ShiftsView } from "@components//shifts/ShiftsView";
+
+export const metadata: Metadata = {
+  title: "Vakter",
+};
 
 export default async function ShiftsPage() {
   // Layout guarantees user is authenticated

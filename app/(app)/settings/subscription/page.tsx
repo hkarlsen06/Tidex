@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation';
+import type { Metadata } from 'next';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { getUserSubscriptionData } from './_data/getSubscription';
 import { SubscriptionStatus } from '@/components/settings/subscription/SubscriptionStatus';
@@ -6,6 +7,10 @@ import { EarlySupporterStatus } from '@/components/settings/subscription/EarlySu
 import { GrandfatheredSubscriberBanner } from '@/components/settings/subscription/GrandfatheredSubscriberBanner';
 import { FreePlanInfo } from '@/components/settings/subscription/FreePlanInfo';
 import { UpgradeOptions } from '@/components/settings/subscription/UpgradeOptions';
+
+export const metadata: Metadata = {
+  title: "Abonnement",
+};
 
 export default async function SubscriptionPage() {
   // Layout guarantees user is authenticated

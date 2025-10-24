@@ -1,8 +1,13 @@
 import { redirect } from 'next/navigation';
+import type { Metadata } from 'next';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { Card } from '@appui/Card';
 import { CheckCircle } from 'lucide-react';
 import { SubscriptionSuccessButtons } from './SubscriptionSuccessButtons';
+
+export const metadata: Metadata = {
+  title: "Oppgradering vellykket",
+};
 
 export default async function SubscriptionSuccessPage() {
   // Layout guarantees user is authenticated

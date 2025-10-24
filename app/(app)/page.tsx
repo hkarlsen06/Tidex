@@ -1,8 +1,13 @@
 import { redirect } from "next/navigation";
+import type { Metadata } from "next";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getComputedShifts } from "@/app/(app)/shifts/_data/getShifts";
 import { HomeContent } from "../../components/app/HomeContent";
+
+export const metadata: Metadata = {
+  title: "Hjem - KKarlsen.DEV",
+};
 
 export default async function Home() {
   // Layout guarantees user is authenticated
