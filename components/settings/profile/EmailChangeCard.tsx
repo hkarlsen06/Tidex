@@ -19,7 +19,7 @@ interface EmailChangeCardProps {
 
 type ChangeStep = 'input' | 'sent';
 
-export function EmailChangeCard({ currentEmail, onCancel, onComplete }: EmailChangeCardProps) {
+export function EmailChangeCard({ currentEmail, onCancel }: EmailChangeCardProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [changeStep, setChangeStep] = useState<ChangeStep>('input');

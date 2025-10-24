@@ -23,6 +23,38 @@ const chartConfig = {
   },
 };
 
+// Custom tick component to color today's day number
+function CustomXAxisTick({
+  x,
+  y,
+  payload,
+  data
+}: {
+  x: number;
+  y: number;
+  payload: any;
+  data: DailyCumulativeData[];
+}) {
+  const dayData = data.find(d => d.day === payload.value);
+  const isToday = dayData?.isToday;
+
+  return (
+    <g transform={`translate(${x},${y})`}>
+      <text
+        x={0}
+        y={0}
+        dy={8}
+        textAnchor="middle"
+        fontSize={16}
+        fill={isToday ? "hsl(var(--brand-highlight))" : "hsl(var(--foreground))"}
+        fontWeight={isToday ? 600 : 400}
+      >
+        {payload.value}
+      </text>
+    </g>
+  );
+}
+
 export function MonthlyCumulativeChart({ data }: MonthlyCumulativeChartProps) {
   // To make the projected line continue from the actual line without a separate animation start,
   // we need to include the last actual data point in the projected data
@@ -40,29 +72,6 @@ export function MonthlyCumulativeChart({ data }: MonthlyCumulativeChartProps) {
   const xAxisTicks = data
     .filter((_, index) => index === 0 || (index + 1) % 5 === 0 || index === data.length - 1)
     .map((d) => d.day);
-
-  // Custom tick component to color today's day number
-  const CustomXAxisTick = (props: any) => {
-    const { x, y, payload } = props;
-    const dayData = data.find(d => d.day === payload.value);
-    const isToday = dayData?.isToday;
-
-    return (
-      <g transform={`translate(${x},${y})`}>
-        <text
-          x={0}
-          y={0}
-          dy={8}
-          textAnchor="middle"
-          fontSize={16}
-          fill={isToday ? "hsl(var(--brand-highlight))" : "hsl(var(--foreground))"}
-          fontWeight={isToday ? 600 : 400}
-        >
-          {payload.value}
-        </text>
-      </g>
-    );
-  };
 
   return (
     <ChartContainer config={chartConfig} className="h-[260px] w-full">
@@ -88,7 +97,7 @@ export function MonthlyCumulativeChart({ data }: MonthlyCumulativeChartProps) {
           tickLine={false}
           axisLine={false}
           padding={{ left: 8, right: 8 }}
-          tick={<CustomXAxisTick />}
+          tick={(props) => <CustomXAxisTick {...props} data={data} />}
           tickMargin={8}
           ticks={xAxisTicks}
         />

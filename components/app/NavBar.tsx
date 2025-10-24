@@ -186,7 +186,6 @@ export function NavBar({ showAddShiftHint = false }: NavBarProps) {
   const minimizeToClose = isMinimized && isOnAddPage;
   const minimizeToPlus = isMinimized && isOnShiftsPage;
   const minimizeToSettings = isMinimized && isOnSettingsSubPage;
-  const minimizeToHome = isMinimized && !isOnAddPage && !isOnShiftsPage && !isOnSettingsSubPage;
 
   return (
     <nav className="fixed bottom-4 left-0 right-0 z-40" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>

@@ -158,17 +158,14 @@ export function ShiftDetails({
   const startInputRef = useRef<HTMLInputElement>(null);
   const endInputRef = useRef<HTMLInputElement>(null);
 
+  // Reset form state when shift changes
+  // Note: These setState calls are intentional to reset UI state when the shift prop changes
   useEffect(() => {
-    if (shift) {
-      setStartTime(shift.start_time);
-      setEndTime(shift.end_time);
-      setShiftDate(shift.shift_date);
-    } else {
-      setStartTime("");
-      setEndTime("");
-      setShiftDate("");
-    }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsEditing(false);
+    setStartTime(shift?.start_time ?? "");
+    setEndTime(shift?.end_time ?? "");
+    setShiftDate(shift?.shift_date ?? "");
     setSaveError(null);
     setConfirmingDelete(false);
   }, [shift]);
@@ -377,13 +374,11 @@ export function ShiftDetails({
               {isEditing ? (
                 <Button
                   onClick={() => {
-                    if (!shift) {
-                      setIsEditing(false);
-                      return;
+                    if (shift) {
+                      setStartTime(shift.start_time);
+                      setEndTime(shift.end_time);
+                      setShiftDate(shift.shift_date);
                     }
-                    setStartTime(shift.start_time);
-                    setEndTime(shift.end_time);
-                    setShiftDate(shift.shift_date);
                     setSaveError(null);
                     setIsEditing(false);
                   }}

@@ -27,7 +27,7 @@ const config = [
     ],
   },
   js.configs.recommended,
-  nextPlugin.flatConfig.coreWebVitals,
+  nextPlugin.configs['core-web-vitals'],
   {
     languageOptions: {
       globals: {

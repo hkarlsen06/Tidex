@@ -22,10 +22,13 @@ export function MonthPicker({ month, onPreviousMonth, onNextMonth }: MonthPicker
   const [prevMonth, setPrevMonth] = useState(month);
   const [direction, setDirection] = useState<"forward" | "backward">("forward");
 
+  // Track month changes for animation transitions
   useEffect(() => {
     if (month.getTime() !== prevMonth.getTime()) {
       // Determine direction based on month comparison
       const isForward = month > prevMonth;
+      // Note: These setState calls are intentional to trigger animation state changes when month prop changes
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setDirection(isForward ? "forward" : "backward");
       setIsTransitioning(true);
     }

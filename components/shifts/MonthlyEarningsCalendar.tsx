@@ -127,6 +127,8 @@ export function MonthlyEarningsCalendar({
   useEffect(() => {
     if (month.getTime() !== prevMonth.getTime()) {
       const isForward = month > prevMonth;
+      // Note: These setState calls are intentional to trigger animation state changes when month prop changes
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLocalDirection(isForward ? 'next' : 'previous');
       setPrevMonth(month);
     }

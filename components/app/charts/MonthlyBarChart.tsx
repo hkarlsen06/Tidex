@@ -19,33 +19,46 @@ const chartConfig = {
   },
 };
 
+// Custom tick component to color current month's label
+function CustomXAxisTick({
+  x,
+  y,
+  payload,
+  data,
+  currentMonth,
+  currentYear
+}: {
+  x: number;
+  y: number;
+  payload: any;
+  data: MonthlyData[];
+  currentMonth: number;
+  currentYear: number;
+}) {
+  const monthData = data.find(d => d.month === payload.value);
+  const isCurrentMonth = monthData?.monthNumber === currentMonth && monthData?.year === currentYear;
+
+  return (
+    <g transform={`translate(${x},${y})`}>
+      <text
+        x={0}
+        y={0}
+        dy={8}
+        textAnchor="middle"
+        fontSize={16}
+        fill={isCurrentMonth ? "hsl(var(--brand-gradientMid))" : "hsl(var(--foreground))"}
+        fontWeight={isCurrentMonth ? 600 : 400}
+      >
+        {payload.value}
+      </text>
+    </g>
+  );
+}
+
 export function MonthlyBarChart({ data }: MonthlyBarChartProps) {
   const now = new Date();
   const currentMonth = now.getMonth() + 1; // Date#getMonth is 0-based
   const currentYear = now.getFullYear();
-
-  // Custom tick component to color current month's label
-  const CustomXAxisTick = (props: any) => {
-    const { x, y, payload } = props;
-    const monthData = data.find(d => d.month === payload.value);
-    const isCurrentMonth = monthData?.monthNumber === currentMonth && monthData?.year === currentYear;
-
-    return (
-      <g transform={`translate(${x},${y})`}>
-        <text
-          x={0}
-          y={0}
-          dy={8}
-          textAnchor="middle"
-          fontSize={16}
-          fill={isCurrentMonth ? "hsl(var(--brand-gradientMid))" : "hsl(var(--foreground))"}
-          fontWeight={isCurrentMonth ? 600 : 400}
-        >
-          {payload.value}
-        </text>
-      </g>
-    );
-  };
 
   return (
     <ChartContainer config={chartConfig} className="h-[260px] w-full">
@@ -56,7 +69,14 @@ export function MonthlyBarChart({ data }: MonthlyBarChartProps) {
           tickLine={false}
           axisLine={false}
           padding={{ left: 8, right: 8 }}
-          tick={<CustomXAxisTick />}
+          tick={(props) => (
+            <CustomXAxisTick
+              {...props}
+              data={data}
+              currentMonth={currentMonth}
+              currentYear={currentYear}
+            />
+          )}
           tickMargin={8}
         />
         <YAxis

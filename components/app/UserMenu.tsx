@@ -23,6 +23,8 @@ export function UserMenu({
   const pathname = usePathname();
   const { navigate } = useNavigationFeedback();
 
+  // Close menu on navigation
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => setOpen(false), [pathname]);
 
   const handleNavigationClick = (href: string) => (event: ReactMouseEvent<HTMLAnchorElement>) => {

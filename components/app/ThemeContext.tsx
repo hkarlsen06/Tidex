@@ -49,6 +49,8 @@ export function ThemeProvider({
       effectiveTheme = themePreference;
     }
 
+    // Sync theme state with DOM and system preference
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setTheme(effectiveTheme);
     document.documentElement.classList.toggle("dark", effectiveTheme === "dark");
 

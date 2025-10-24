@@ -108,7 +108,7 @@ test.describe("Session Refresh on Wake", () => {
     await page.waitForTimeout(500);
 
     // Verify telemetry logged the refresh attempt
-    const hasRefreshLog = consoleLogs.some(
+    const _hasRefreshLog = consoleLogs.some(
       (log) => log.includes("session_refresh_attempt") || log.includes("session_refresh_success")
     );
 
@@ -249,7 +249,7 @@ test.describe("Session Refresh on Wake", () => {
  * 2. The old refresh_token cannot be reused (single-use verification)
  */
 test.describe("Refresh Token Rotation", () => {
-  test.skip("should rotate refresh tokens on successful refresh", async ({ page }) => {
+  test.skip("should rotate refresh tokens on successful refresh", async ({ page: _page }) => {
     // Note: This test requires real Supabase credentials and is marked as skip
     // Uncomment and configure when testing with real auth
 

@@ -123,6 +123,8 @@ export function StatsContent({ data }: StatsContentProps) {
       month: selectedMonthNumber.toString(),
     });
 
+    // Note: These setState calls are intentional to show loading state before async fetch
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsLoading(true);
     setFetchError(null);
 
@@ -182,11 +184,6 @@ export function StatsContent({ data }: StatsContentProps) {
         isPositive: activeData.percentageChange >= 0,
       }
     : undefined;
-
-  const selectedMonthLabel = useMemo(() => {
-    const name = new Intl.DateTimeFormat("nb-NO", { month: "long" }).format(selectedMonth);
-    return name.charAt(0).toUpperCase() + name.slice(1);
-  }, [selectedMonth]);
 
   const realNow = useMemo(() => new Date(), []);
   const isCurrentMonthSelected =

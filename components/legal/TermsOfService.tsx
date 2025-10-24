@@ -77,7 +77,7 @@ export function TermsOfService() {
 
       <div>
         <h2>8. Ansvarsbegrensning</h2>
-        <p>Tjenesten leveres "som den er" uten garantier av noen slag. Vi er ikke ansvarlige for:</p>
+        <p>Tjenesten leveres &ldquo;som den er&rdquo; uten garantier av noen slag. Vi er ikke ansvarlige for:</p>
         <ul>
           <li>Feil i lønnsberegninger eller tap som følge av disse</li>
           <li>Tap av data som følge av tekniske feil</li>

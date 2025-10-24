@@ -393,10 +393,6 @@ export default function SignupPage() {
                   <label
                     htmlFor="terms"
                     className="text-sm text-text-secondary leading-relaxed cursor-pointer select-none"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setLegalModalOpen(true);
-                    }}
                   >
                     Jeg godtar{" "}
                     <button
