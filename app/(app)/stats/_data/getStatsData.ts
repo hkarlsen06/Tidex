@@ -556,8 +556,12 @@ async function getStatsDataInternal(userId: string, options: StatsOptions = {}):
  * - Includes monthly summaries, charts data, and projections
  */
 export const getStatsData = cache(async (userId: string, options: StatsOptions = {}): Promise<StatsData> => {
-  const { year, month } = options;
-  const cacheKey = `stats-${userId}-${year || 'default'}-${month || 'default'}`;
+  // Resolve defaults to match internal implementation
+  const { year: currentYear, month: currentMonth } = getCurrentYearMonth();
+  const resolvedYear = options.year ?? currentYear;
+  const resolvedMonth = options.month ?? currentMonth;
+
+  const cacheKey = `stats-${userId}-${resolvedYear}-${resolvedMonth}`;
 
   const getCached = unstable_cache(
     async () => getStatsDataInternal(userId, options),

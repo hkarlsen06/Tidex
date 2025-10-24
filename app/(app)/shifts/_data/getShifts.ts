@@ -139,8 +139,15 @@ export const getComputedShifts = cache(async (
   settings: UserSettings,
   aggregates: ShiftsAggregates
 }> => {
-  // Create a cache key based on user and options
-  const cacheKey = `shifts-${userId}-${options.startDate || 'default'}-${options.endDate || 'default'}-${options.limit || 'default'}`;
+  // Resolve defaults to ensure consistent cache keys
+  const resolvedOptions = {
+    startDate: options.startDate ?? getMonthsAgo(6),
+    endDate: options.endDate ?? getCurrentDate(),
+    limit: options.limit ?? 500
+  };
+
+  // Create a cache key based on resolved options
+  const cacheKey = `shifts-${userId}-${resolvedOptions.startDate}-${resolvedOptions.endDate}-${resolvedOptions.limit}`;
 
   // Wrap with unstable_cache for persistent caching
   const getCached = unstable_cache(
