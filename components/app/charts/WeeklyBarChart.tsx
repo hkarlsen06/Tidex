@@ -148,6 +148,40 @@ const createTickFormatter = (ticks: number[]) => {
   };
 };
 
+// Custom tick component to color today's label
+function CustomXAxisTick({
+  x,
+  y,
+  payload,
+  data,
+  today
+}: {
+  x: number;
+  y: number;
+  payload: any;
+  data: DailyData[];
+  today: string;
+}) {
+  const dayData = data.find(d => d.date === payload.value);
+  const isToday = dayData?.fullDate === today;
+
+  return (
+    <g transform={`translate(${x},${y})`}>
+      <text
+        x={0}
+        y={0}
+        dy={8}
+        textAnchor="middle"
+        fontSize={16}
+        fill={isToday ? "hsl(var(--brand-gradientMid))" : "hsl(var(--foreground))"}
+        fontWeight={isToday ? 600 : 400}
+      >
+        {payload.value}
+      </text>
+    </g>
+  );
+}
+
 export function WeeklyBarChart({ data }: WeeklyBarChartProps) {
   // Calculate domain for y-axis to focus on the range where data varies
   const earnings = data.map((d) => d.earnings);
@@ -156,29 +190,6 @@ export function WeeklyBarChart({ data }: WeeklyBarChartProps) {
 
   // Get today's date string to highlight the current day
   const today = new Date().toISOString().split('T')[0];
-
-  // Custom tick component to color today's label
-  const CustomXAxisTick = (props: any) => {
-    const { x, y, payload } = props;
-    const dayData = data.find(d => d.date === payload.value);
-    const isToday = dayData?.fullDate === today;
-
-    return (
-      <g transform={`translate(${x},${y})`}>
-        <text
-          x={0}
-          y={0}
-          dy={8}
-          textAnchor="middle"
-          fontSize={16}
-          fill={isToday ? "hsl(var(--brand-gradientMid))" : "hsl(var(--foreground))"}
-          fontWeight={isToday ? 600 : 400}
-        >
-          {payload.value}
-        </text>
-      </g>
-    );
-  };
 
   return (
     <ChartContainer config={chartConfig} className="h-[220px] w-full">
@@ -189,7 +200,7 @@ export function WeeklyBarChart({ data }: WeeklyBarChartProps) {
           tickLine={false}
           axisLine={false}
           padding={{ left: 8, right: 8 }}
-          tick={<CustomXAxisTick />}
+          tick={(props) => <CustomXAxisTick {...props} data={data} today={today} />}
           tickMargin={8}
         />
         <YAxis

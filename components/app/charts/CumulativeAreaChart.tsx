@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import {
   ChartContainer,
@@ -20,15 +21,16 @@ const chartConfig = {
 };
 
 export function CumulativeAreaChart({ data }: CumulativeAreaChartProps) {
-  // Calculate cumulative earnings
-  let cumulative = 0;
-  const cumulativeData = data.map((item) => {
-    cumulative += item.earnings;
-    return {
-      ...item,
-      cumulative,
-    };
-  });
+  // Calculate cumulative earnings using reduce without mutation
+  const cumulativeData = useMemo(() => {
+    const result: Array<MonthlyData & { cumulative: number }> = [];
+    data.reduce((cumulative, item) => {
+      const newCumulative = cumulative + item.earnings;
+      result.push({ ...item, cumulative: newCumulative });
+      return newCumulative;
+    }, 0);
+    return result;
+  }, [data]);
 
   return (
     <ChartContainer config={chartConfig} className="h-[220px] w-full">

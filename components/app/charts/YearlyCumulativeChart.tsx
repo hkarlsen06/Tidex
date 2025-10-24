@@ -23,10 +23,41 @@ const chartConfig = {
   },
 };
 
-export function YearlyCumulativeChart({ data }: YearlyCumulativeChartProps) {
-  // Find the index where projection starts
-  const firstProjectedIndex = data.findIndex((item) => item.isProjected);
+// Custom tick component to color current month's label
+function CustomXAxisTick({
+  x,
+  y,
+  payload,
+  data,
+  currentMonth
+}: {
+  x: number;
+  y: number;
+  payload: any;
+  data: YearlyCumulativeData[];
+  currentMonth: number;
+}) {
+  const monthData = data.find(d => d.month === payload.value);
+  const isCurrentMonth = monthData?.monthNumber === currentMonth;
 
+  return (
+    <g transform={`translate(${x},${y})`}>
+      <text
+        x={0}
+        y={0}
+        dy={8}
+        textAnchor="middle"
+        fontSize={16}
+        fill={isCurrentMonth ? "hsl(var(--brand-highlight))" : "hsl(var(--foreground))"}
+        fontWeight={isCurrentMonth ? 600 : 400}
+      >
+        {payload.value}
+      </text>
+    </g>
+  );
+}
+
+export function YearlyCumulativeChart({ data }: YearlyCumulativeChartProps) {
   // Create chart data with separate values for actual and projected
   const chartData = data.map((item, index) => {
     // For the transition point, include value in both actual and projected
@@ -43,29 +74,6 @@ export function YearlyCumulativeChart({ data }: YearlyCumulativeChartProps) {
   // Get current month to highlight
   const now = new Date();
   const currentMonth = now.getMonth() + 1;
-
-  // Custom tick component to color current month's label
-  const CustomXAxisTick = (props: any) => {
-    const { x, y, payload } = props;
-    const monthData = data.find(d => d.month === payload.value);
-    const isCurrentMonth = monthData?.monthNumber === currentMonth;
-
-    return (
-      <g transform={`translate(${x},${y})`}>
-        <text
-          x={0}
-          y={0}
-          dy={8}
-          textAnchor="middle"
-          fontSize={16}
-          fill={isCurrentMonth ? "hsl(var(--brand-highlight))" : "hsl(var(--foreground))"}
-          fontWeight={isCurrentMonth ? 600 : 400}
-        >
-          {payload.value}
-        </text>
-      </g>
-    );
-  };
 
   return (
     <ChartContainer config={chartConfig} className="h-[220px] w-full">
@@ -86,7 +94,7 @@ export function YearlyCumulativeChart({ data }: YearlyCumulativeChartProps) {
           tickLine={false}
           axisLine={false}
           padding={{ left: 8, right: 8 }}
-          tick={<CustomXAxisTick />}
+          tick={(props) => <CustomXAxisTick {...props} data={data} currentMonth={currentMonth} />}
           tickMargin={8}
         />
         <YAxis

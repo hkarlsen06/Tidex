@@ -118,11 +118,14 @@ export const TotalCard: React.FC<TotalCardProps> = ({
   const [nextDisplayIndex, setNextDisplayIndex] = useState<number | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
 
+  // Reset display state when data changes
   useEffect(() => {
     if (isLoading) {
       return;
     }
 
+    // Note: These setState calls are intentional to reset animation state when data changes
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setDisplayIndex(0);
     setNextDisplayIndex(null);
     setIsTransitioning(false);

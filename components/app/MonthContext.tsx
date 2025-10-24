@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, useEffect, useMemo, ReactNode } from "react";
 
 function startOfMonth(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), 1);
@@ -26,27 +26,37 @@ interface MonthContextType {
 const MonthContext = createContext<MonthContextType | undefined>(undefined);
 
 export function MonthProvider({ children }: { children: ReactNode }) {
-  const [selectedMonth, setSelectedMonthState] = useState<Date>(() => startOfMonth(new Date()));
+  // Always start with current month to avoid SSR hydration mismatch
+  const initialMonth = useMemo(() => startOfMonth(new Date()), []);
+  const [selectedMonth, setSelectedMonthState] = useState<Date>(initialMonth);
   const [direction, setDirection] = useState<'next' | 'previous' | null>(null);
 
-  // Restore from localStorage on mount (non-blocking)
+  // Restore from localStorage after mount (client-side only)
   useEffect(() => {
     const stored = localStorage.getItem("selectedMonth");
     if (stored) {
       try {
         const restoredMonth = deserializeMonth(stored);
-        setSelectedMonthState(restoredMonth);
+        // Only update if different from initial month to avoid unnecessary re-renders
+        if (restoredMonth.getTime() !== initialMonth.getTime()) {
+          // Note: This setState is intentional to restore persisted state after SSR hydration
+          // eslint-disable-next-line react-hooks/set-state-in-effect
+          setSelectedMonthState(restoredMonth);
+        }
       } catch (err) {
-        // Invalid format, ignore and use default
         console.warn("Failed to restore selectedMonth from localStorage:", err);
       }
     }
-  }, []);
+  }, [initialMonth]);
+
+  // Sync to localStorage whenever selectedMonth changes
+  useEffect(() => {
+    localStorage.setItem("selectedMonth", serializeMonth(selectedMonth));
+  }, [selectedMonth]);
 
   const setSelectedMonth = useCallback((month: Date) => {
     const normalized = startOfMonth(month);
     setSelectedMonthState(normalized);
-    localStorage.setItem("selectedMonth", serializeMonth(normalized));
     setDirection(null); // Reset direction for manual selection
   }, []);
 
@@ -54,7 +64,6 @@ export function MonthProvider({ children }: { children: ReactNode }) {
     setDirection('previous');
     setSelectedMonthState((prev) => {
       const newMonth = new Date(prev.getFullYear(), prev.getMonth() - 1, 1);
-      localStorage.setItem("selectedMonth", serializeMonth(newMonth));
       return newMonth;
     });
   }, []);
@@ -63,7 +72,6 @@ export function MonthProvider({ children }: { children: ReactNode }) {
     setDirection('next');
     setSelectedMonthState((prev) => {
       const newMonth = new Date(prev.getFullYear(), prev.getMonth() + 1, 1);
-      localStorage.setItem("selectedMonth", serializeMonth(newMonth));
       return newMonth;
     });
   }, []);
