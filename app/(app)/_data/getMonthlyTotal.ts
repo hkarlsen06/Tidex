@@ -1,4 +1,6 @@
 import "server-only";
+import { cache } from "react";
+import { unstable_cache } from "next/cache";
 import { getComputedShifts } from "@/app/(app)/shifts/_data/getShifts";
 import {
   getCurrentYearMonth,
@@ -21,9 +23,9 @@ function formatCurrency(value: number): string {
 }
 
 /**
- * Get the current month's total gross earnings for a user with comparison to last month
+ * Internal implementation of getMonthlyTotal
  */
-export async function getMonthlyTotal(userId: string): Promise<{
+async function getMonthlyTotalInternal(userId: string): Promise<{
   total: string;
   percentageChange?: number | "..";
   tillegg: string;
@@ -33,7 +35,15 @@ export async function getMonthlyTotal(userId: string): Promise<{
   earnedToDate: string;
   earnedToDateGross: number;
 }> {
-  const { shifts } = await getComputedShifts(userId);
+  // Load last 3 months for current + previous month comparison
+  const threeMonthsAgo = new Date();
+  threeMonthsAgo.setUTCMonth(threeMonthsAgo.getUTCMonth() - 3);
+  const startDate = threeMonthsAgo.toISOString().split('T')[0];
+
+  const { shifts } = await getComputedShifts(userId, {
+    startDate,
+    limit: 200 // Reasonable limit for 3 months
+  });
 
   // Get current month and year in UTC to ensure consistent date comparisons
   const { year: currentYear, month: currentMonth } = getCurrentYearMonth();
@@ -95,3 +105,32 @@ export async function getMonthlyTotal(userId: string): Promise<{
     earnedToDateGross,
   };
 }
+
+/**
+ * Get the current month's total gross earnings for a user with comparison to last month
+ * - Uses React cache() for request deduplication
+ * - Uses Next.js Data Cache for persistent caching (5 min TTL)
+ */
+export const getMonthlyTotal = cache(async (userId: string): Promise<{
+  total: string;
+  percentageChange?: number | "..";
+  tillegg: string;
+  gross: number;
+  supplementPay: number;
+  shiftCount: number;
+  earnedToDate: string;
+  earnedToDateGross: number;
+}> => {
+  const cacheKey = `monthly-total-${userId}`;
+
+  const getCached = unstable_cache(
+    async () => getMonthlyTotalInternal(userId),
+    [cacheKey],
+    {
+      tags: [`user-shifts-${userId}`],
+      revalidate: 300 // 5 minutes
+    }
+  );
+
+  return getCached();
+});

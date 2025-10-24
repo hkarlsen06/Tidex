@@ -1,4 +1,6 @@
 import "server-only";
+import { cache } from "react";
+import { unstable_cache } from "next/cache";
 import { getComputedShifts } from "@/app/(app)/shifts/_data/getShifts";
 import {
   getCurrentYearMonth,
@@ -6,6 +8,16 @@ import {
   parseDateAsUTC,
   getYearMonth,
 } from "@/lib/date-utils";
+
+/**
+ * Helper to get start date for stats (12 months ago for comprehensive stats)
+ */
+function getStatsStartDate(): string {
+  const date = new Date();
+  date.setUTCMonth(date.getUTCMonth() - 12);
+  date.setUTCDate(1);
+  return date.toISOString().split('T')[0];
+}
 
 export type MonthlyData = {
   month: string; // "Jan", "Feb", etc.
@@ -125,8 +137,15 @@ type StatsOptions = {
   month?: number; // 1-12
 };
 
-export async function getStatsData(userId: string, options: StatsOptions = {}): Promise<StatsData> {
-  const { shifts, settings } = await getComputedShifts(userId);
+/**
+ * Internal implementation of getStatsData
+ */
+async function getStatsDataInternal(userId: string, options: StatsOptions = {}): Promise<StatsData> {
+  // Load last 12 months of shifts for stats calculations
+  const { shifts, settings } = await getComputedShifts(userId, {
+    startDate: getStatsStartDate(),
+    limit: 1000 // Reasonable limit for 12 months of data
+  });
 
   // Determine focus month (defaults to current UTC month)
   const { year: currentYearDefault, month: currentMonthDefault } = getCurrentYearMonth();
@@ -529,3 +548,25 @@ export async function getStatsData(userId: string, options: StatsOptions = {}): 
     },
   };
 }
+
+/**
+ * Get comprehensive stats data with caching
+ * - Uses React cache() for request deduplication
+ * - Uses Next.js Data Cache for persistent caching (5 min TTL)
+ * - Includes monthly summaries, charts data, and projections
+ */
+export const getStatsData = cache(async (userId: string, options: StatsOptions = {}): Promise<StatsData> => {
+  const { year, month } = options;
+  const cacheKey = `stats-${userId}-${year || 'default'}-${month || 'default'}`;
+
+  const getCached = unstable_cache(
+    async () => getStatsDataInternal(userId, options),
+    [cacheKey],
+    {
+      tags: [`user-stats-${userId}`],
+      revalidate: 300 // 5 minutes
+    }
+  );
+
+  return getCached();
+});

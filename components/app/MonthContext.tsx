@@ -40,7 +40,7 @@ export function MonthProvider({ children }: { children: ReactNode }) {
         // Only update if different from initial month to avoid unnecessary re-renders
         if (restoredMonth.getTime() !== initialMonth.getTime()) {
           // Note: This setState is intentional to restore persisted state after SSR hydration
-          // eslint-disable-next-line react-hooks/set-state-in-effect
+           
           setSelectedMonthState(restoredMonth);
         }
       } catch (err) {

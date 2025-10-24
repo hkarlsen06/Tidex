@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getUserSubscriptionData } from "@/app/(app)/settings/subscription/_data/getSubscription";
 import { hasProAccess, getUniqueShiftMonths } from "@/lib/subscription/hasProAccess";
+import { invalidateUserCache } from "@/app/(app)/shifts/_data/cache";
 
 type CopyShiftsInput = {
   shiftIds: string[];
@@ -85,8 +86,13 @@ export async function copyShifts(input: CopyShiftsInput) {
   const { error } = await supabase.from("user_shifts").insert(rows);
   if (error) throw new Error(error.message);
 
+  // Invalidate all cached data for this user
+  invalidateUserCache(user.id);
+
   // Ensure any cached data is fresh on next view
   revalidatePath("/shifts");
+  revalidatePath("/");
+  revalidatePath("/stats");
 
   return { copied: rows.length };
 }

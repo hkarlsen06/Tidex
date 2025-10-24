@@ -273,7 +273,13 @@ export function PayForm({ initialData }: PayFormProps) {
       </Card>
 
       {/* Supplements - for custom wage users, show here */}
-      {!usePreset && <SupplementsCard />}
+      {!usePreset && (
+        <SupplementsCard
+          usePreset={usePreset}
+          customSupplements={customSupplements}
+          setCustomSupplements={setCustomSupplements}
+        />
+      )}
 
       {/* Break Deduction */}
       <Card className="p-6">
