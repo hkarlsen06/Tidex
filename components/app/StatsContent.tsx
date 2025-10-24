@@ -10,6 +10,8 @@ import { WeeklyBarChart } from "@/components/app/charts/WeeklyBarChart";
 import { DayOfWeekChart } from "@/components/app/charts/DayOfWeekChart";
 import { YearlyCumulativeChart } from "@/components/app/charts/YearlyCumulativeChart";
 import { MonthlyCumulativeChart } from "@/components/app/charts/MonthlyCumulativeChart";
+import { SupplementBreakdownChart } from "@/components/app/charts/SupplementBreakdownChart";
+import { MonthlyGoalProgress } from "@/components/app/MonthlyGoalProgress";
 import { TrendingUp, TrendingDown, Clock, Briefcase, DollarSign } from "lucide-react";
 import { MonthPicker } from "@/components/app/MonthPicker";
 import { useMonth } from "@/components/app/MonthContext";
@@ -262,6 +264,9 @@ export function StatsContent({ data }: StatsContentProps) {
         </div>
       </div>
 
+      {/* Monthly goal progress */}
+      <MonthlyGoalProgress data={activeData.monthlyGoal} />
+
       {/* Monthly cumulative comparison chart */}
       <Card className="border-border bg-surface-primary">
         <CardHeader className="pb-3">
@@ -273,6 +278,20 @@ export function StatsContent({ data }: StatsContentProps) {
           <MonthlyCumulativeChart data={activeData.thisMonthCumulative} />
         </CardContent>
       </Card>
+
+      {/* Supplement breakdown chart */}
+      {selectedShiftCount > 0 && (
+        <Card className="border-border bg-surface-primary">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-xl font-bold text-text-primary">
+              Lønnssammensetning
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-3 pb-4 pt-1">
+            <SupplementBreakdownChart data={activeData.currentMonthBreakdown} />
+          </CardContent>
+        </Card>
+      )}
 
       {/* Weekly earnings chart - only show for current month */}
       {isCurrentMonthSelected && (
@@ -288,19 +307,17 @@ export function StatsContent({ data }: StatsContentProps) {
         </Card>
       )}
 
-      {/* Additional stats grid */}
-      <div className="grid grid-cols-1 gap-3">
-        <StatCard
-          label="Gjennomsnitt"
-          value={formatCurrency(selectedAverageRate, true)}
-          suffix="kr/t"
-          icon={<DollarSign className="w-4 h-4" />}
-        />
-      </div>
+      {/* Average hourly rate */}
+      <StatCard
+        label="Gjennomsnitt"
+        value={formatCurrency(selectedAverageRate, true)}
+        suffix="kr/t"
+        icon={<DollarSign className="w-4 h-4" />}
+      />
 
       {/* Year to date summary */}
       <div className="space-y-5">
-        <h2 className="text-xl font-bold text-text-primary">
+        <h2 className="text-xl font-bold text-text-primary pl-6">
           {selectedYear} totalt
         </h2>
 

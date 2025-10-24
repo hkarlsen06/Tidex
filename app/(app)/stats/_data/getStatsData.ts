@@ -61,6 +61,21 @@ export type MonthlySummary = {
   averageRate: number;
 };
 
+export type SupplementBreakdown = {
+  basePay: number;
+  supplementPay: number;
+  basePercentage: number;
+  supplementPercentage: number;
+};
+
+export type MonthlyGoal = {
+  enabled: boolean;
+  target: number;
+  progress: number; // current earnings
+  percentage: number; // progress as % of goal
+  remaining: number; // amount left to reach goal
+};
+
 export type StatsData = {
   focusMonth: {
     year: number;
@@ -96,6 +111,8 @@ export type StatsData = {
   thisMonthCumulative: DailyCumulativeData[];
   yearlyCumulative: YearlyCumulativeData[];
   monthlySummaries: MonthlySummary[];
+  currentMonthBreakdown: SupplementBreakdown;
+  monthlyGoal: MonthlyGoal;
 };
 
 const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Des"];
@@ -192,6 +209,20 @@ export async function getStatsData(userId: string, options: StatsOptions = {}): 
   const monthHours = monthShifts.reduce((sum, shift) => sum + (shift.computed.paidHours || 0), 0);
   const monthAvgRate = monthHours > 0 ? monthEarnings / monthHours : 0;
   const monthEarningsNet = applyNet(monthEarnings);
+
+  // Calculate supplement breakdown for current month
+  const monthBasePay = monthShifts.reduce((sum, shift) => sum + (shift.computed.basePay || 0), 0);
+  const monthSupplementPay = monthShifts.reduce((sum, shift) => sum + (shift.computed.supplementPay || 0), 0);
+  const totalPay = monthBasePay + monthSupplementPay;
+  const basePercentage = totalPay > 0 ? (monthBasePay / totalPay) * 100 : 0;
+  const supplementPercentage = totalPay > 0 ? (monthSupplementPay / totalPay) * 100 : 0;
+
+  // Calculate monthly goal progress
+  const monthlyGoalTarget = settings.monthly_goal ? Number(settings.monthly_goal) : 0;
+  const monthlyGoalEnabled = monthlyGoalTarget > 0;
+  const goalProgress = taxEnabled ? monthEarningsNet : monthEarnings;
+  const goalPercentage = monthlyGoalEnabled ? (goalProgress / monthlyGoalTarget) * 100 : 0;
+  const goalRemaining = monthlyGoalEnabled ? Math.max(0, monthlyGoalTarget - goalProgress) : 0;
 
   // Last month stats
   const lastMonthShifts = shifts.filter((shift) =>
@@ -483,5 +514,18 @@ export async function getStatsData(userId: string, options: StatsOptions = {}): 
     thisMonthCumulative,
     yearlyCumulative,
     monthlySummaries,
+    currentMonthBreakdown: {
+      basePay: +monthBasePay.toFixed(2),
+      supplementPay: +monthSupplementPay.toFixed(2),
+      basePercentage: +basePercentage.toFixed(1),
+      supplementPercentage: +supplementPercentage.toFixed(1),
+    },
+    monthlyGoal: {
+      enabled: monthlyGoalEnabled,
+      target: monthlyGoalTarget,
+      progress: +goalProgress.toFixed(2),
+      percentage: +goalPercentage.toFixed(1),
+      remaining: +goalRemaining.toFixed(2),
+    },
   };
 }

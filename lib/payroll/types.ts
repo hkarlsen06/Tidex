@@ -25,6 +25,7 @@ export type UserSettings = {
   tax_deduction_enabled?: boolean | null;
   tax_percentage?: number | null;
   payroll_day?: number | null;
+  monthly_goal?: number | null;
 };
 
 export type SupplementRule = {
