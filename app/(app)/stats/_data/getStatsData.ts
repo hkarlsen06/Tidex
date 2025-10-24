@@ -574,3 +574,39 @@ export const getStatsData = cache(async (userId: string, options: StatsOptions =
 
   return getCached();
 });
+
+/**
+ * Lightweight critical data type - only essential info for initial render
+ */
+export type CriticalStatsData = Pick<
+  StatsData,
+  | 'focusMonth'
+  | 'tax'
+  | 'currentMonth'
+  | 'lastMonth'
+  | 'percentageChange'
+  | 'monthlyGoal'
+>;
+
+/**
+ * Get only critical stats data for initial page render
+ * - Loads only essential current month stats
+ * - Much faster than full stats data
+ * - Charts data loaded separately via API
+ */
+export const getCriticalStatsData = cache(async (
+  userId: string,
+  options: StatsOptions = {}
+): Promise<CriticalStatsData> => {
+  const fullData = await getStatsData(userId, options);
+
+  // Return only critical fields needed for hero section
+  return {
+    focusMonth: fullData.focusMonth,
+    tax: fullData.tax,
+    currentMonth: fullData.currentMonth,
+    lastMonth: fullData.lastMonth,
+    percentageChange: fullData.percentageChange,
+    monthlyGoal: fullData.monthlyGoal,
+  };
+});
