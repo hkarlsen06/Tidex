@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { FormEvent, useState } from 'react';
 
 import { supabase } from '@/lib/supabase/browser';
@@ -27,33 +28,25 @@ import {
 import { Input } from '@/components/app/Input';
 import { Button } from '@/components/app/Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/app/Card';
-import { TurnstileCaptcha } from '@/components/app/TurnstileCaptcha';
 
-const googleIcon = (
-  <svg
-    className="h-4 w-4"
-    viewBox="0 0 533.5 544.3"
-    aria-hidden
-    focusable="false"
-  >
-    <path
-      d="M533.5 278.4c0-18.5-1.5-37-4.7-55H272.1v104h146.9c-6.3 33.9-25.5 62.6-54.3 81.9v68.2h87.8c51.4-47.4 81-117.5 81-199.1z"
-      fill="#4285f4"
-    />
-    <path
-      d="M272.1 544.3c73.5 0 135.3-24.3 180.4-66.1l-87.8-68.2c-24.3 16.3-55.4 25.8-92.6 25.8-71 0-131.2-47.9-152.6-112.2H28.7v70.5c45.4 90.1 138.5 150.2 243.4 150.2z"
-      fill="#34a853"
-    />
-    <path
-      d="M119.5 323.6c-10.7-31.8-10.7-66.4 0-98.2V154.9H28.7c-41.4 82.6-41.4 180.7 0 263.3l90.8-70.6z"
-      fill="#fbbc04"
-    />
-    <path
-      d="M272.1 107.7c38.9-.6 76.2 14.7 104.2 42.4l77.6-77.6C406.7 27.4 344.4.1 272.1 0 167.2 0 74.1 60.1 28.7 150.1l90.8 70.5c21.4-64.2 81.6-112.2 152.6-112.2z"
-      fill="#ea4335"
-    />
-  </svg>
+// Lazy load Turnstile CAPTCHA to avoid blocking initial render
+const TurnstileCaptcha = dynamic(
+  () => import('@/components/app/TurnstileCaptcha').then(mod => mod.TurnstileCaptcha),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex h-[65px] items-center justify-center rounded-lg bg-surface-primary/50">
+        <div className="h-5 w-5 animate-spin rounded-full border-2 border-border border-t-primary"></div>
+      </div>
+    )
+  }
 );
+
+// Lazy load Google icon SVG
+const GoogleIcon = dynamic(() => import('./GoogleIcon'), {
+  ssr: false,
+  loading: () => <div className="h-4 w-4" />
+});
 
 type MessageState = { type: 'error' | 'success'; text: string } | null;
 type LoginStep = 'input' | 'otp';
@@ -604,7 +597,7 @@ export default function LoginClient({ initialNext }: { initialNext: string }) {
                 className="w-full"
               >
                 <span className="flex h-5 w-5 items-center justify-center">
-                  {googleIcon}
+                  <GoogleIcon />
                 </span>
                 Fortsett med Google
               </Button>
