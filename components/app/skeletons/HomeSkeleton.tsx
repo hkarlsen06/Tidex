@@ -4,27 +4,28 @@ import { ShiftCardSkeleton } from "../ShiftCardSkeleton";
 
 export function HomeSkeleton() {
   return (
-    <div className="mx-auto max-w-[800px] space-y-6">
-      {/* Month picker skeleton */}
-      <div className="flex items-center justify-center gap-4 py-4">
-        <div className="h-10 w-10 bg-surface-secondary rounded-lg animate-pulse" />
-        <div className="h-8 w-32 bg-surface-secondary rounded animate-pulse" />
-        <div className="h-10 w-10 bg-surface-secondary rounded-lg animate-pulse" />
-      </div>
-
-      {/* Summary cards */}
-      <div className="grid gap-4 sm:grid-cols-2">
-        <TotalCardSkeleton />
+    <div className="flex items-center justify-center h-full">
+      <div className="flex flex-col gap-6 w-full max-w-md">
+        {/* NextPayrollCard first (match actual order) */}
         <NextPayrollCardSkeleton />
-      </div>
 
-      {/* Recent shifts skeleton */}
-      <div className="space-y-4">
-        <div className="h-6 w-32 bg-surface-secondary rounded animate-pulse" />
-        <div className="space-y-3">
+        {/* TotalCard second */}
+        <TotalCardSkeleton />
+
+        {/* Month picker in middle (match actual position) */}
+        <div className="flex items-center justify-between -mt-3 -mb-3">
+          <div className="flex items-center gap-4">
+            <div className="h-10 w-10 bg-surface-secondary rounded-lg animate-pulse" />
+            <div className="h-8 w-32 bg-surface-secondary rounded animate-pulse" />
+            <div className="h-10 w-10 bg-surface-secondary rounded-lg animate-pulse" />
+          </div>
+          <div className="h-5 w-12 bg-surface-secondary rounded animate-pulse mr-3" />
+        </div>
+
+        {/* Single shift with relative time text */}
+        <div className="flex flex-col gap-2">
           <ShiftCardSkeleton />
-          <ShiftCardSkeleton />
-          <ShiftCardSkeleton />
+          <div className="h-3 w-20 bg-surface-secondary rounded animate-pulse mx-auto" />
         </div>
       </div>
     </div>
