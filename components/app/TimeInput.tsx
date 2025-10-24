@@ -19,7 +19,7 @@ export const TimeInput = React.forwardRef<HTMLInputElement, TimeInputProps>(
   ({ id, value, onChange, className, onComplete, step: _step = 900, disabled }, ref) => {
     const [inputValue, setInputValue] = React.useState(value);
     const internalRef = React.useRef<HTMLInputElement>(null);
-    const inputRef = (ref as React.RefObject<HTMLInputElement>) || internalRef;
+    const inputRef = (ref as React.RefObject<HTMLInputElement | null>) || internalRef;
 
     React.useEffect(() => {
       setInputValue(value);

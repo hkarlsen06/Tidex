@@ -74,7 +74,7 @@ Theme management:
 - `ThemeToggle` component controls theme (in `components/app/ThemeToggle.tsx`)
 - Theme state synced to localStorage
 - Initial theme set via inline script in `app/layout.tsx` (prevents flash)
-- Tailwind configured with `darkMode: ["class"]` in `config/tailwind.config.js`
+- Tailwind configured with `darkMode: ["class"]` in `tailwind.config.js`
 
 **Color system**: CSS variables in `app/globals.css` define semantic tokens for light and dark modes:
 
@@ -128,12 +128,12 @@ Pages import and await these loaders, never calling Supabase directly.
 
 ## Configuration Files
 
-Configs centralized in `/config`:
+Configuration files are in the project root:
 
-- `config/tailwind.config.js` - Tailwind theme and semantic colors
-- `config/postcss.config.js` - PostCSS with Tailwind plugin
-- `config/tsconfig.base.json` - Base TypeScript config
-- Root stubs (`tailwind.config.js`, `tsconfig.json`, etc.) re-export from `/config`
+- `tailwind.config.js` - Tailwind theme and semantic colors
+- `postcss.config.cjs` - PostCSS with Tailwind plugin
+- `tsconfig.json` - TypeScript configuration with path aliases
+- `next.config.js` - Next.js configuration with PWA settings
 
 ## Environment Variables
 

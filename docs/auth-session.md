@@ -509,7 +509,7 @@ window.__sessionMetrics.printMetrics()
 
 **Possible causes:**
 1. Wake-refresh not implemented → **Fixed** (this PR)
-2. Service worker caching `/auth/callback` → Check [config/next.config.js:36-39](../config/next.config.js#L36-L39)
+2. Service worker caching `/auth/callback` → Check [next.config.js:36-39](../next.config.js#L36-L39)
 3. iOS clearing localStorage → **Not applicable** (we use cookies)
 
 **Verify fix:**

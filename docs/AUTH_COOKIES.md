@@ -356,7 +356,7 @@ Client components receive server-rendered data with verified user identity. They
 
 The PWA service worker is configured to **never cache** `/auth/callback` requests.
 
-[config/next.config.js](../config/next.config.js) PWA configuration:
+[next.config.js](../next.config.js) PWA configuration:
 
 ```javascript
 export default withPWA({
