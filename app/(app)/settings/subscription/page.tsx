@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { getUserSubscriptionData } from './_data/getSubscription';
 import { SubscriptionStatus } from '@/components/settings/subscription/SubscriptionStatus';
@@ -7,11 +8,13 @@ import { FreePlanInfo } from '@/components/settings/subscription/FreePlanInfo';
 import { UpgradeOptions } from '@/components/settings/subscription/UpgradeOptions';
 
 export default async function SubscriptionPage() {
+  // Layout guarantees user is authenticated
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
 
+  // This should never happen (layout redirects), but TypeScript needs the guard
   if (!user) {
-    throw new Error('Expected authenticated user in subscription page; middleware should handle redirects.');
+    redirect('/login');
   }
 
   const { subscription, profile } = await getUserSubscriptionData(user.id);

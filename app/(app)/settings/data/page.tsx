@@ -1,12 +1,15 @@
+import { redirect } from 'next/navigation';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { DataForm } from '@components/settings/data/DataForm';
 
 export default async function DataPage() {
+  // Layout guarantees user is authenticated
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
 
+  // This should never happen (layout redirects), but TypeScript needs the guard
   if (!user) {
-    throw new Error('Expected authenticated user in data settings page; middleware should handle redirects.');
+    redirect('/login');
   }
 
   return (

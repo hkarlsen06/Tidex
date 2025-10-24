@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { OnboardingForm } from "./_components/OnboardingForm";
 
 export default async function OnboardingPage() {
+  // Layout guarantees user is authenticated
   const supabase = await createSupabaseServerClient();
 
   // Get current user
@@ -10,8 +11,9 @@ export default async function OnboardingPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
+  // This should never happen (layout redirects), but TypeScript needs the guard
   if (!user) {
-    throw new Error("Expected authenticated user in onboarding page; middleware should handle redirects.");
+    redirect("/login");
   }
 
   // Check if user has already completed onboarding

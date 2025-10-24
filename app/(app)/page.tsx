@@ -5,13 +5,15 @@ import { getComputedShifts } from "@/app/(app)/shifts/_data/getShifts";
 import { HomeContent } from "../../components/app/HomeContent";
 
 export default async function Home() {
+  // Layout guarantees user is authenticated
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
+  // This should never happen (layout redirects), but TypeScript needs the guard
   if (!user) {
-    throw new Error("Expected authenticated user on home page; middleware should handle redirects.");
+    redirect("/login");
   }
 
   // Redirect to onboarding if user hasn't finished onboarding

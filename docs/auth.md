@@ -1,6 +1,6 @@
-# Supabase Auth Architecture
+# Supabase Auth Architecture (Next.js 16)
 
-This document outlines how authentication is wired into the project today, how the different pieces interact, and what to consider when extending the system.
+This document outlines how authentication is wired into the project following Next.js 16 best practices, how the different pieces interact, and what to consider when extending the system.
 
 ## Overview
 
@@ -10,43 +10,53 @@ This document outlines how authentication is wired into the project today, how t
   - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
   - `NEXT_PUBLIC_SUPABASE_REDIRECT_URL`
 - Sessions are cookie-based. Server components and route handlers read/write auth cookies using the helpers in `lib/supabase`.
+- **Authentication happens in Server Components (the data access layer), NOT in proxy.ts**. This follows Next.js 16 guidance that proxy should handle token refresh and routing, not business logic or authentication.
 
 ## Runtime Flow
 
-1. **Anonymous visit** → `/` checks session server-side and redirects unauthenticated visitors to `/login` (`app/page.tsx`).
-2. **Login** → `/login` renders a client-side form that calls `supabase.auth.signInWithPassword`, `signUp`, or `signInWithOAuth` via the shared browser client from `lib/supabase/browser.ts`.
-3. **OAuth/email callbacks** → Supabase redirects back to `/auth/callback` with a `code`. The route handler exchanges the code for a session via `createSupabaseRouteHandlerClient`, updates cookies, and redirects to the `next` destination (`app/auth/callback/route.ts`).
-4. **Session hydration** → `app/layout.tsx` creates a server client, fetches the session, and renders `SupabaseListener`. The listener subscribes to auth changes in the browser and triggers `router.refresh()` when the access token changes (`app/supabase-listener.tsx`). This keeps server components in sync after login/logout without a full page reload.
-5. **Subsequent requests** → Server components read cookies through `createSupabaseServerClient`. When the user is authenticated, the Supabase client’s cookie jar contains the session and requests are made with the right access token.
+1. **Token refresh** → `proxy.ts` creates a Supabase client to refresh expired auth tokens and sync cookies between client/server. It does NOT check authentication or redirect—that's handled in layouts/pages. This is fast (~1-5ms) since there's no network I/O beyond what Supabase SSR needs.
+2. **Authentication enforcement** → `app/(app)/layout.tsx` calls `getUser()` and redirects unauthenticated users to `/login`. This is the **single source of truth** for authentication in protected routes.
+3. **Login** → `/login` renders a client-side form that calls `supabase.auth.signInWithPassword`, `signUp`, or `signInWithOAuth` via the shared browser client from `lib/supabase/browser.ts`.
+4. **OAuth/email callbacks** → Supabase redirects back to `/auth/callback` with a `code`. The route handler exchanges the code for a session via `createSupabaseRouteHandlerClient`, updates cookies, and redirects to the `next` destination (`app/auth/callback/route.ts`).
+5. **Session hydration** → `app/layout.tsx` creates a server client, fetches the session, and renders `SupabaseListener`. The listener subscribes to auth changes in the browser and triggers `router.refresh()` when the access token changes (`app/supabase-listener.tsx`). This keeps server components in sync after login/logout without a full page reload.
+6. **Subsequent requests** → Server components read cookies through `createSupabaseServerClient`. When the user is authenticated, the Supabase client's cookie jar contains the session and requests are made with the right access token.
 
 ## Key Modules
 
+- `proxy.ts`
+  - **Token refresh only** - Creates Supabase client to refresh expired tokens and sync cookies.
+  - Does NOT perform authentication checks or redirects (that's the layout's job).
+  - Fast execution (~1-5ms) with minimal network I/O.
+- `app/(app)/layout.tsx`
+  - **Authentication enforcement** - Calls `getUser()` and redirects to `/login` if no user.
+  - Single source of truth for protecting all routes under `(app)/`.
+  - Follows Next.js 16 data access layer pattern.
 - `lib/supabase/browser.ts`
   - Creates the shared **browser client** using `createBrowserClient`.
   - Validates required env vars at module load to fail fast during development/deployment.
 - `lib/supabase/server.ts`
   - Provides helpers to instantiate the **server client** for RSCs/actions and **route handler client** when both cookies and response headers are needed.
-  - Wraps Next’s `cookies()` API and `NextResponse` to bridge Supabase’s cookie expectations.
+  - Wraps Next's `cookies()` API and `NextResponse` to bridge Supabase's cookie expectations.
 - `app/supabase-listener.tsx`
   - Client component subscribed to `supabase.auth.onAuthStateChange`.
   - Refreshes the router when the access token changes so server components receive up-to-date session info.
 - `app/auth/callback/route.ts`
   - Exchanges auth codes returned by Supabase (OAuth, magic links) into persisted sessions by writing cookies via the response object.
-- `app/login/page.tsx`
+- `app/(auth)/login/page.tsx`
   - Client route for password, sign-up, and Google OAuth flows.
   - Uses optimistic UI state (loading flags, inline messaging) and redirects to `/` after success.
-- `app/page.tsx`
-  - Server-protected route. Fetches the user via the server client and redirects to `/login` if absent.
 
 ## Implementation Guidelines
 
+- **Don't use proxy.ts for authentication**: Following Next.js 16 best practices, `proxy.ts` only handles token refresh (cookie management). Authentication logic belongs in Server Components (layouts/pages).
 - **Centralize Supabase imports**: Always use the helpers in `lib/supabase`. Do not call `createBrowserClient` / `createServerClient` in arbitrary files—this keeps cookie configuration and env validation consistent.
 - **Server components**: Call `createSupabaseServerClient()` at the top of the async component or loader, then use the returned client. If you need to send responses (e.g., API routes, route handlers), use `createSupabaseRouteHandlerClient(request, response)` so that cookies are persisted.
 - **Client components**: Import the shared `supabase` instance from `lib/supabase/browser` so every component interacts with the same client.
+- **Protected routes**: All routes under `app/(app)/` are protected by the layout's `getUser()` check. Individual pages can trust that the user exists (the layout redirects otherwise).
 - **Session-dependent rendering**: Prefer server-side checks (redirecting before render) to avoid flashes of unauthenticated UI.
 - **Auth state changes**: When you add logout flows or session updates, trigger `router.refresh()` after the operation so server components re-evaluate.
 - **Environment variables**: Never hardcode Supabase credentials. Update `.env.local.example` when new keys are required and keep `.env.local` out of version control.
-- **New routes requiring auth**: Use the same pattern as `app/page.tsx`. If you need more complex authorization logic, fetch the user on the server and branch before returning UI.
+- **New routes requiring auth**: Place them under `app/(app)/` and they'll inherit authentication from the layout. If you need the user object, call `getUser()` but you don't need to redirect (layout handles it).
 
 ## Supabase Dashboard Checklist
 
