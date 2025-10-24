@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState, useEffect } from "react";
 import type { MouseEvent } from "react";
 import {
   IconHome,
@@ -19,6 +20,7 @@ import {
 } from "@tabler/icons-react";
 import { useNavigationFeedback } from "./navigation-feedback";
 import { useScrollDirection } from "./use-scroll-direction";
+import { supabase } from "@/lib/supabase/browser";
 
 type TablerIcon = typeof IconHome;
 type NavItem = {
@@ -65,14 +67,43 @@ const navItems: NavItem[] = [
   },
 ];
 
-type NavBarProps = {
-  showAddShiftHint?: boolean;
-};
-
-export function NavBar({ showAddShiftHint = false }: NavBarProps) {
+export function NavBar() {
   const pathname = usePathname();
   const { navigate, pendingPath } = useNavigationFeedback();
   const { scrollDirection, scrollY } = useScrollDirection(50);
+  const [showAddShiftHint, setShowAddShiftHint] = useState(false);
+
+  // Fetch shift count client-side to determine if hint should be shown
+  // This is deferred to avoid blocking the initial render
+  useEffect(() => {
+    const checkShiftCount = async () => {
+      try {
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        if (userError || !user) {
+          console.warn("[NavBar] Failed to get user for shift count check:", userError);
+          return;
+        }
+
+        const { count, error } = await supabase
+          .from("user_shifts")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", user.id);
+
+        if (error) {
+          console.warn("[NavBar] Failed to check shift count:", error);
+          return;
+        }
+
+        if ((count ?? 0) === 0) {
+          setShowAddShiftHint(true);
+        }
+      } catch (err) {
+        console.error("[NavBar] Unexpected error in shift count check:", err);
+      }
+    };
+
+    checkShiftCount();
+  }, []);
 
   const isOnboardingPath = (path: string | null) => {
     if (typeof path !== "string") {

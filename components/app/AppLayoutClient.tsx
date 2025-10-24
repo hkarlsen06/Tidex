@@ -15,14 +15,12 @@ type AppLayoutClientProps = {
   children: ReactNode;
   userName: string;
   avatarUrl?: string | null;
-  showAddShiftHint?: boolean;
 };
 
 export function AppLayoutClient({
   children,
   userName,
   avatarUrl,
-  showAddShiftHint,
 }: AppLayoutClientProps) {
   const router = useRouter();
 
@@ -73,7 +71,7 @@ export function AppLayoutClient({
 
   return (
     <NavigationFeedbackProvider>
-      <LayoutContent userName={userName} avatarUrl={avatarUrl} showAddShiftHint={showAddShiftHint}>
+      <LayoutContent userName={userName} avatarUrl={avatarUrl}>
         {children}
       </LayoutContent>
     </NavigationFeedbackProvider>
@@ -84,7 +82,6 @@ function LayoutContent({
   children,
   userName,
   avatarUrl,
-  showAddShiftHint,
 }: AppLayoutClientProps) {
   return (
     <div className="app-container grid min-h-dvh grid-rows-[auto_1fr]">
@@ -95,7 +92,7 @@ function LayoutContent({
       >
         {children}
       </main>
-      <NavBar showAddShiftHint={showAddShiftHint} />
+      <NavBar />
     </div>
   );
 }

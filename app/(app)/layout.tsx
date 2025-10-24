@@ -35,17 +35,13 @@ export default async function RootLayout({
   }
 
   // Run subsequent queries in parallel to minimize latency
-  const [sessionRes, settingsRes, shiftCountRes] = await Promise.all([
+  const [sessionRes, settingsRes] = await Promise.all([
     supabase.auth.getSession(),
     supabase
       .from("user_settings")
       .select("profile_picture_url,theme")
       .eq("user_id", user.id)
       .maybeSingle(),
-    supabase
-      .from("user_shifts")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", user.id),
   ]);
 
   const {
@@ -98,9 +94,6 @@ export default async function RootLayout({
   const profilePictureUrl = sanitizeUrl(settings?.profile_picture_url ?? null);
   const resolvedAvatarUrl = profilePictureUrl ?? avatarUrl;
 
-  const { count: shiftCount, error: shiftCountError } = shiftCountRes;
-  const showAddShiftHint = !shiftCountError && (shiftCount ?? 0) === 0;
-
   // Resolve user's theme preference from already-fetched settings
   const serverTheme =
     settings?.theme === "light" || settings?.theme === "dark" || settings?.theme === "system"
@@ -114,7 +107,6 @@ export default async function RootLayout({
         <AppLayoutClient
           userName={userName}
           avatarUrl={resolvedAvatarUrl}
-          showAddShiftHint={showAddShiftHint}
         >
           {children}
         </AppLayoutClient>

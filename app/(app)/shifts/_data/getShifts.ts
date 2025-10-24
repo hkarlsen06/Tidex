@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   computeShift,
@@ -16,14 +17,14 @@ export type ShiftsAggregates = {
   totalEarnings: number;
 };
 
-export async function getComputedShifts(
+export const getComputedShifts = cache(async (
   userId: string
 ): Promise<{
   shifts: ShiftWithComputations[],
   defaultView: string,
   settings: UserSettings,
   aggregates: ShiftsAggregates
-}> {
+}> => {
   const supabase = await createSupabaseServerClient();
 
   const { data: settingsRow, error: settingsErr } = await supabase
@@ -74,4 +75,4 @@ export async function getComputedShifts(
     settings,
     aggregates
   };
-}
+});

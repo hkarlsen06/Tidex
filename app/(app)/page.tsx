@@ -1,9 +1,11 @@
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getComputedShifts } from "@/app/(app)/shifts/_data/getShifts";
 import { HomeContent } from "../../components/app/HomeContent";
+import { HomeSkeleton } from "../../components/app/skeletons/HomeSkeleton";
 
 export const metadata: Metadata = {
   title: "Hjem - KKarlsen.DEV",
@@ -27,7 +29,14 @@ export default async function Home() {
     redirect("/onboarding");
   }
 
-  const { shifts, settings } = await getComputedShifts(user.id);
+  return (
+    <Suspense fallback={<HomeSkeleton />}>
+      <HomeDataLoader userId={user.id} />
+    </Suspense>
+  );
+}
 
+async function HomeDataLoader({ userId }: { userId: string }) {
+  const { shifts, settings } = await getComputedShifts(userId);
   return <HomeContent shifts={shifts} settings={settings} />;
 }
