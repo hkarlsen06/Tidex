@@ -1,7 +1,12 @@
 import { redirect } from 'next/navigation';
+import type { Metadata } from 'next';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { getUserSettings } from '../_data/getSettings';
 import { DisplayForm } from '@components/settings/display/DisplayForm';
+
+export const metadata: Metadata = {
+  title: "Utseende",
+};
 
 export default async function DisplayPage() {
   // Layout guarantees user is authenticated

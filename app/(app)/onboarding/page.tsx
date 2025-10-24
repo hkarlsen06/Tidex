@@ -1,6 +1,11 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import type { Metadata } from "next";
 import { OnboardingForm } from "./_components/OnboardingForm";
+
+export const metadata: Metadata = {
+  title: "Kom i gang",
+};
 
 export default async function OnboardingPage() {
   // Layout guarantees user is authenticated

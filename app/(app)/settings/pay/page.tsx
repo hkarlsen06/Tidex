@@ -1,7 +1,12 @@
 import { redirect } from 'next/navigation';
+import type { Metadata } from 'next';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { getUserSettings } from '../_data/getSettings';
 import { PayForm } from '@components/settings/pay/PayForm';
+
+export const metadata: Metadata = {
+  title: "Lønn og tillegg",
+};
 
 export default async function PayPage() {
   // Layout guarantees user is authenticated

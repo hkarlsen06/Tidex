@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation';
+import type { Metadata } from 'next';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { getUserProfile } from '../_data/getSettings';
 import { ProfileForm } from '@components/settings/profile/ProfileForm';
@@ -6,6 +7,10 @@ import { PhoneConnectionCard } from '@components/settings/profile/PhoneConnectio
 import { PasswordCard } from '@components/settings/profile/PasswordCard';
 import { GoogleConnectionCard } from '@components/settings/profile/GoogleConnectionCard';
 import { DangerZone } from '@components/settings/profile/DangerZone';
+
+export const metadata: Metadata = {
+  title: "Profil",
+};
 
 export default async function ProfilePage() {
   // Layout guarantees user is authenticated

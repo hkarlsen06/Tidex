@@ -1,8 +1,13 @@
 import { redirect } from "next/navigation";
+import type { Metadata } from "next";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import AddShiftForm from "@/components/shifts/add/AddShiftForm";
 import { PRESET_RULES } from "../_data/getShifts";
 import type { UserSettings } from "@/lib/payroll";
+
+export const metadata: Metadata = {
+  title: "Legg til vakt",
+};
 
 export default async function AddShiftsPage() {
   // Layout guarantees user is authenticated

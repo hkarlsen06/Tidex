@@ -18,7 +18,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "kkarlsen.dev - Lønn",
+  title: "KKarlsen.DEV - Lønn",
   description: "App for å regne ut lønn basert på skiftene dine med tillegg!",
   manifest: "/manifest.json",
   icons: {
