@@ -191,7 +191,7 @@ export function NavBar({ showAddShiftHint = false }: NavBarProps) {
   return (
     <nav className="fixed bottom-4 left-0 right-0 z-40" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
       <div className={`mx-auto max-w-[480px] px-4 transition-all duration-500 ease-in-out ${isMinimized ? (minimizeToClose || minimizeToPlus ? "" : minimizeToSettings ? "flex justify-end" : "!px-4") : ""}`}>
-        <div className={`flex items-center rounded-full border border-border-subtle bg-surface-primary/80 shadow-app-lg backdrop-blur transition-all duration-500 ease-in-out ${
+        <div className={`flex items-center rounded-3xl border border-border-subtle bg-surface-primary/80 shadow-app-lg backdrop-blur transition-all duration-500 ease-in-out ${
           isMinimized
             ? minimizeToClose || minimizeToPlus
               ? "w-16 mx-auto justify-center px-4 py-3"
@@ -208,7 +208,7 @@ export function NavBar({ showAddShiftHint = false }: NavBarProps) {
                 onClick={handleItemClick("/shifts")}
                 className="flex items-center justify-center p-2 -m-2 navbar-icon-fade-in"
               >
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-gradientMid navbar-scale-in">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-gradientMid navbar-scale-in">
                   <IconX className="h-6 w-6 text-text-inverse transition-transform duration-200" stroke={2} />
                 </div>
               </Link>
@@ -219,7 +219,7 @@ export function NavBar({ showAddShiftHint = false }: NavBarProps) {
                 onClick={handleItemClick("/shifts/add")}
                 className="flex items-center justify-center p-2 -m-2 navbar-icon-fade-in"
               >
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-gradientMid navbar-scale-in">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-gradientMid navbar-scale-in">
                   <IconPlus className="h-6 w-6 text-text-inverse" stroke={2} />
                 </div>
               </Link>
@@ -274,7 +274,7 @@ export function NavBar({ showAddShiftHint = false }: NavBarProps) {
                     onClick={handleItemClick(targetHref)}
                     className="flex items-center justify-center p-2 -m-2"
                   >
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-gradientMid">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-gradientMid">
                       <Icon
                         className={`h-6 w-6 text-text-inverse transition-transform duration-200 ${
                           isOnAddPage ? "rotate-45" : ""
