@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { getUserProfile } from '../_data/getSettings';
 import { ProfileForm } from '@components/settings/profile/ProfileForm';
@@ -7,11 +8,13 @@ import { GoogleConnectionCard } from '@components/settings/profile/GoogleConnect
 import { DangerZone } from '@components/settings/profile/DangerZone';
 
 export default async function ProfilePage() {
+  // Layout guarantees user is authenticated
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
 
+  // This should never happen (layout redirects), but TypeScript needs the guard
   if (!user) {
-    throw new Error('Expected authenticated user in profile settings page; middleware should handle redirects.');
+    redirect('/login');
   }
 
   const profile = await getUserProfile();

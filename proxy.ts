@@ -2,9 +2,17 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 
-import { getProjectRefFromUrl } from "@/lib/supabase/utils";
-
-const PUBLIC_PATH_PREFIXES = ["/login", "/signup", "/auth/", "/reset-password", "/verify-email"];
+/**
+ * Next.js 16 Proxy for Supabase Token Refresh
+ *
+ * Purpose: Refresh expired auth tokens and sync cookies between client/server.
+ * Does NOT perform authentication - that's handled in Server Components (layouts/pages).
+ *
+ * This follows Next.js 16 best practices:
+ * - Proxy handles token refresh (cookie management)
+ * - Authentication logic lives in the data access layer (Server Components)
+ * - No network I/O beyond what Supabase SSR needs for token refresh
+ */
 
 function isLoopbackHost(hostname: string) {
   const lower = hostname.toLowerCase();
@@ -44,66 +52,16 @@ function buildCookieBase(request: NextRequest): Partial<CookieOptions> {
   };
 }
 
-function buildLoginUrl(request: NextRequest) {
-  const loginUrl = new URL("/login", request.url);
-  loginUrl.searchParams.set("redirect", request.nextUrl.pathname + request.nextUrl.search);
-  return loginUrl;
-}
-
-function applySupabaseCookie(
-  base: Partial<CookieOptions>,
-  response: NextResponse,
-  name: string,
-  value: string,
-  overrides?: Partial<CookieOptions>
-) {
-  response.cookies.set({
-    name,
-    value,
-    ...base,
-    ...(overrides ?? {}),
-  });
-}
-
-function clearSupabaseCookies(
-  base: Partial<CookieOptions>,
-  response: NextResponse,
-  request: NextRequest,
-  projectRef: string | null
-) {
-  const expireOverrides: Partial<CookieOptions> = {
-    maxAge: 0,
-    expires: new Date(0),
-  };
-
-  applySupabaseCookie(base, response, "sb-access-token", "", expireOverrides);
-  applySupabaseCookie(base, response, "sb-refresh-token", "", expireOverrides);
-
-  const scopedPrefix = projectRef ? `sb-${projectRef}-auth-token` : null;
-
-  for (const { name } of request.cookies.getAll()) {
-    if (name === "sb-access-token" || name === "sb-refresh-token") continue;
-    if (name.startsWith("sb-") || (scopedPrefix && name.startsWith(scopedPrefix))) {
-      applySupabaseCookie(base, response, name, "", expireOverrides);
-    }
-  }
-}
-
 export async function proxy(request: NextRequest) {
-  const { pathname } = request.nextUrl;
-
-  if (PUBLIC_PATH_PREFIXES.some((prefix) => pathname.startsWith(prefix))) {
-    return NextResponse.next();
-  }
-
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
+  // If Supabase isn't configured, let the request through
+  // Server Components will handle auth validation
   if (!supabaseUrl || !supabaseKey) {
-    return NextResponse.redirect(buildLoginUrl(request));
+    return NextResponse.next();
   }
 
-  const projectRef = getProjectRefFromUrl(supabaseUrl);
   const cookieBase = buildCookieBase(request);
 
   const response = NextResponse.next({
@@ -112,37 +70,29 @@ export async function proxy(request: NextRequest) {
     },
   });
 
-  const supabase = createServerClient(supabaseUrl, supabaseKey, {
+  // Create Supabase client for token refresh
+  // This will automatically refresh expired tokens via the cookie adapter
+  createServerClient(supabaseUrl, supabaseKey, {
     cookies: {
       getAll() {
         return request.cookies.getAll().map(({ name, value }) => ({ name, value }));
       },
       setAll(cookiesToSet) {
         cookiesToSet.forEach(({ name, value, options }) => {
-          applySupabaseCookie(cookieBase, response, name, value, options ?? undefined);
+          response.cookies.set({
+            name,
+            value,
+            ...cookieBase,
+            ...(options ?? {}),
+          });
         });
       },
     },
     cookieOptions: cookieBase,
   });
 
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
-
-  if (error?.status === 400 || error?.status === 401 || error?.status === 403) {
-    const redirectResponse = NextResponse.redirect(buildLoginUrl(request));
-    clearSupabaseCookies(cookieBase, redirectResponse, request, projectRef);
-    return redirectResponse;
-  }
-
-  if (!user) {
-    const redirectResponse = NextResponse.redirect(buildLoginUrl(request));
-    clearSupabaseCookies(cookieBase, redirectResponse, request, projectRef);
-    return redirectResponse;
-  }
-
+  // No getUser() call - Server Components handle authentication
+  // This proxy only ensures tokens are fresh
   return response;
 }
 

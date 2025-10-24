@@ -1,16 +1,19 @@
+import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import AddShiftForm from "@/components/shifts/add/AddShiftForm";
 import { PRESET_RULES } from "../_data/getShifts";
 import type { UserSettings } from "@/lib/payroll";
 
 export default async function AddShiftsPage() {
+  // Layout guarantees user is authenticated
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
+  // This should never happen (layout redirects), but TypeScript needs the guard
   if (!user) {
-    throw new Error("Expected authenticated user in shifts add page; middleware should handle redirects.");
+    redirect("/login");
   }
 
   const { data: settingsRow, error: settingsError } = await supabase

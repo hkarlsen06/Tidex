@@ -1,13 +1,16 @@
+import { redirect } from 'next/navigation';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { getUserSettings } from '../_data/getSettings';
 import { PreferencesForm } from '@components/settings/preferences/PreferencesForm';
 
 export default async function PreferencesPage() {
+  // Layout guarantees user is authenticated
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
 
+  // This should never happen (layout redirects), but TypeScript needs the guard
   if (!user) {
-    throw new Error('Expected authenticated user in preferences settings page; middleware should handle redirects.');
+    redirect('/login');
   }
 
   const settings = await getUserSettings(user.id);

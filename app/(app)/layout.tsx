@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 // import { getUserTheme } from "@/lib/theme/getTheme";
 import { sanitizeDisplayName, sanitizeUrl } from "@/lib/sanitize";
@@ -8,8 +9,15 @@ import { ThemeProvider } from "@/components/app/ThemeProvider";
 import { MonthProvider } from "@/components/app/MonthContext";
 import { AppLayoutClient } from "@/components/app/AppLayoutClient";
 
-// Server layout: Uses verified user data from getUser() for secure UI rendering.
-// Child pages that need authorization must also call auth.getUser() themselves.
+/**
+ * Protected App Layout
+ *
+ * This layout enforces authentication for all routes under (app)/.
+ * Following Next.js 16 best practices, authentication happens in Server Components
+ * (the data access layer), not in proxy.ts.
+ *
+ * Unauthenticated users are redirected to /login.
+ */
 export default async function RootLayout({
   children,
 }: {
@@ -20,8 +28,9 @@ export default async function RootLayout({
     data: { user },
   } = await supabase.auth.getUser();
 
+  // Authentication enforcement - redirect to login if no user
   if (!user) {
-    throw new Error("Expected authenticated user in app layout; middleware should handle redirects.");
+    redirect("/login");
   }
 
   // Run subsequent queries in parallel to minimize latency

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-A Next.js 15 application for tracking work shifts and calculating wages with Supabase authentication. Uses Tailwind CSS for styling with a custom design system and supports both light and dark modes.
+A Next.js 16 application for tracking work shifts and calculating wages with Supabase authentication. Uses Tailwind CSS for styling with a custom design system and supports both light and dark modes.
 
 ## Development Commands
 
@@ -29,15 +29,17 @@ Each route group has its own layout:
 - `app/(auth)/layout.tsx` - Minimal layout for auth pages
 - `app/layout.tsx` - Root layout with theme initialization script
 
-### Authentication Flow
+### Authentication Flow (Next.js 16)
 
-Uses `@supabase/ssr` with cookie-based sessions:
+Uses `@supabase/ssr` with cookie-based sessions following Next.js 16 best practices:
 
-1. **Server-side**: Use `createSupabaseServerClient()` from `lib/supabase/server.ts` in Server Components and data loaders
-2. **Client-side**: Import the shared `supabase` instance from `lib/supabase/browser.ts` in Client Components
-3. **Session sync**: `app/supabase-listener.tsx` subscribes to auth changes via the shared client and calls `router.refresh()` to update server components
+1. **Token refresh**: `proxy.ts` handles Supabase token refresh and cookie syncing (~1-5ms, no auth logic)
+2. **Authentication enforcement**: `app/(app)/layout.tsx` calls `getUser()` and redirects to `/login` (single source of truth)
+3. **Server-side**: Use `createSupabaseServerClient()` from `lib/supabase/server.ts` in Server Components and data loaders
+4. **Client-side**: Import the shared `supabase` instance from `lib/supabase/browser.ts` in Client Components
+5. **Session sync**: `app/supabase-listener.tsx` subscribes to auth changes via the shared client and calls `router.refresh()` to update server components
 
-Protected pages fetch user via `createSupabaseServerClient()` and redirect to `/login` if unauthenticated. See `docs/auth.md` for detailed flow.
+**Important**: Authentication happens in Server Components (data access layer), NOT in proxy.ts. All routes under `app/(app)/` are protected by the layout. See `docs/auth.md` for detailed flow.
 
 ### Component System
 

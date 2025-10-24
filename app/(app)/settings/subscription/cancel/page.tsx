@@ -1,14 +1,17 @@
+import { redirect } from 'next/navigation';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { Card } from '@appui/Card';
 import { XCircle } from 'lucide-react';
 import { SubscriptionCancelButtons } from './SubscriptionCancelButtons';
 
 export default async function SubscriptionCancelPage() {
+  // Layout guarantees user is authenticated
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
 
+  // This should never happen (layout redirects), but TypeScript needs the guard
   if (!user) {
-    throw new Error('Expected authenticated user in subscription cancel page; middleware should handle redirects.');
+    redirect('/login');
   }
 
   return (
