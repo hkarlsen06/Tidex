@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { invalidateUserCache } from "@/app/(app)/shifts/_data/cache";
 
 export type UpdateShiftInput = {
   id: string;
@@ -74,7 +75,12 @@ export async function updateShift(input: UpdateShiftInput) {
     throw new Error(error.message);
   }
 
+  // Invalidate all cached data for this user
+  invalidateUserCache(user.id);
+
   revalidatePath("/shifts");
+  revalidatePath("/");
+  revalidatePath("/stats");
 
   return { updated: 1 };
 }

@@ -1,5 +1,6 @@
 import "server-only";
 import { cache } from "react";
+import { unstable_cache } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   computeShift,
@@ -17,14 +18,47 @@ export type ShiftsAggregates = {
   totalEarnings: number;
 };
 
-export const getComputedShifts = cache(async (
-  userId: string
+export type ShiftLoadOptions = {
+  startDate?: string; // YYYY-MM-DD
+  endDate?: string; // YYYY-MM-DD
+  limit?: number;
+};
+
+/**
+ * Helper to get date N months ago in YYYY-MM-DD format
+ */
+function getMonthsAgo(months: number): string {
+  const date = new Date();
+  date.setUTCMonth(date.getUTCMonth() - months);
+  date.setUTCDate(1); // Start of month
+  return date.toISOString().split('T')[0];
+}
+
+/**
+ * Helper to get current date in YYYY-MM-DD format
+ */
+function getCurrentDate(): string {
+  return new Date().toISOString().split('T')[0];
+}
+
+/**
+ * Internal implementation of getComputedShifts
+ */
+async function getComputedShiftsInternal(
+  userId: string,
+  options: ShiftLoadOptions = {}
 ): Promise<{
   shifts: ShiftWithComputations[],
   defaultView: string,
   settings: UserSettings,
   aggregates: ShiftsAggregates
-}> => {
+}> {
+  const {
+    startDate = getMonthsAgo(6), // Default: last 6 months
+    endDate = getCurrentDate(),
+    limit = 500
+  } = options;
+
   const supabase = await createSupabaseServerClient();
 
   const { data: settingsRow, error: settingsErr } = await supabase
@@ -39,11 +73,24 @@ export const getComputedShifts = cache(async (
   }
   const settings: UserSettings = settingsRow ?? {};
 
-  const { data: shifts, error: shiftsErr } = await supabase
+  let query = supabase
     .from("user_shifts")
     .select("*")
     .eq("user_id", userId)
     .order("shift_date", { ascending: false });
+
+  // Apply date range filters
+  if (startDate) {
+    query = query.gte("shift_date", startDate);
+  }
+  if (endDate) {
+    query = query.lte("shift_date", endDate);
+  }
+  if (limit) {
+    query = query.limit(limit);
+  }
+
+  const { data: shifts, error: shiftsErr } = await query;
 
   if (shiftsErr) {
     logger.error("user_shifts error:", shiftsErr);
@@ -75,4 +122,35 @@ export const getComputedShifts = cache(async (
     settings,
     aggregates
   };
+}
+
+/**
+ * Get computed shifts with pagination and caching
+ * - Uses React cache() for request deduplication
+ * - Uses Next.js Data Cache for persistent caching (5 min TTL)
+ * - Supports date range filtering and limits
+ */
+export const getComputedShifts = cache(async (
+  userId: string,
+  options: ShiftLoadOptions = {}
+): Promise<{
+  shifts: ShiftWithComputations[],
+  defaultView: string,
+  settings: UserSettings,
+  aggregates: ShiftsAggregates
+}> => {
+  // Create a cache key based on user and options
+  const cacheKey = `shifts-${userId}-${options.startDate || 'default'}-${options.endDate || 'default'}-${options.limit || 'default'}`;
+
+  // Wrap with unstable_cache for persistent caching
+  const getCached = unstable_cache(
+    async () => getComputedShiftsInternal(userId, options),
+    [cacheKey],
+    {
+      tags: [`user-shifts-${userId}`],
+      revalidate: 300 // 5 minutes
+    }
+  );
+
+  return getCached();
 });
