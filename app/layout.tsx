@@ -7,13 +7,14 @@ import { SpeedInsights } from "@vercel/speed-insights/next"
 
 import SWRegister from "./sw-register";
 import "./globals.css";
-import "react-day-picker/style.css";
 
 const inter = Inter({
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700", "800"],
-  display: "optional",
+  weight: ["400", "600", "700"], // Reduced to only critical weights
+  display: "swap", // Changed from 'optional' to 'swap' for faster FCP
   variable: "--font-inter",
+  preload: true,
+  fallback: ["system-ui", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "sans-serif"],
 });
 
 export const metadata: Metadata = {
