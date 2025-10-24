@@ -1,4 +1,4 @@
-import baseConfig from '../config/tailwind.config.js';
+import baseConfig from '../tailwind.config.js';
 
 const {
   content = [],
