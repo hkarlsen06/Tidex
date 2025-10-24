@@ -77,6 +77,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <link rel="apple-touch-icon" sizes="120x120" href="/apple-touch-icon-120x120.png" />
         <link rel="apple-touch-icon" sizes="76x76" href="/apple-touch-icon-76x76.png" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        {/* Resource hints for faster loading */}
+        <link rel="preconnect" href="https://kkarlsen-dev.supabase.co" />
+        <link rel="dns-prefetch" href="https://kkarlsen-dev.supabase.co" />
+        <link rel="preconnect" href="https://vercel.live" />
+        <link rel="dns-prefetch" href="https://vercel.live" />
         <script
           dangerouslySetInnerHTML={{
             __html: `

@@ -5,11 +5,25 @@ import type { ReactNode } from "react";
 import dynamic from "next/dynamic";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/app/Card";
-import { StatsData } from "@/app/(app)/stats/_data/getStatsData";
+import type { StatsData } from "@/app/(app)/stats/_data/getStatsData";
 import { MonthlyGoalProgress } from "@/components/app/MonthlyGoalProgress";
 import { TrendingUp, TrendingDown, Clock, Briefcase, DollarSign } from "lucide-react";
 import { MonthPicker } from "@/components/app/MonthPicker";
 import { useMonth } from "@/components/app/MonthContext";
+
+/**
+ * Chart data type - matches what the /api/stats/charts endpoint returns
+ */
+type ChartData = Pick<
+  StatsData,
+  | 'last6Months'
+  | 'thisWeek'
+  | 'byDayOfWeek'
+  | 'thisMonthCumulative'
+  | 'yearlyCumulative'
+  | 'currentMonthBreakdown'
+  | 'yearToDate'
+>;
 
 // Lazy load all chart components to reduce initial bundle size
 const ChartSkeleton = () => (
@@ -133,7 +147,17 @@ export function StatsContent({ data }: StatsContentProps) {
   } = useMonth();
 
   const [activeData, setActiveData] = useState<StatsData>(data);
-  const [isLoading, setIsLoading] = useState(false);
+  // Initialize chart data from SSR props to avoid unnecessary skeleton UI
+  const [chartData, setChartData] = useState<ChartData | null>({
+    last6Months: data.last6Months,
+    thisWeek: data.thisWeek,
+    byDayOfWeek: data.byDayOfWeek,
+    thisMonthCumulative: data.thisMonthCumulative,
+    yearlyCumulative: data.yearlyCumulative,
+    currentMonthBreakdown: data.currentMonthBreakdown,
+    yearToDate: data.yearToDate,
+  });
+  const [isLoadingStats, setIsLoadingStats] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
   const selectedYear = selectedMonth.getFullYear();
@@ -142,6 +166,7 @@ export function StatsContent({ data }: StatsContentProps) {
   const focusYear = activeData.focusMonth.year;
   const focusMonth = activeData.focusMonth.month;
 
+  // Handle month changes - load full stats data
   useEffect(() => {
     if (focusYear === selectedYear && focusMonth === selectedMonthNumber) {
       return;
@@ -155,7 +180,7 @@ export function StatsContent({ data }: StatsContentProps) {
 
     // Note: These setState calls are intentional to show loading state before async fetch
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setIsLoading(true);
+    setIsLoadingStats(true);
     setFetchError(null);
 
     fetch(`/api/stats?${query.toString()}`, {
@@ -180,6 +205,16 @@ export function StatsContent({ data }: StatsContentProps) {
       .then((payload) => {
         if (!controller.signal.aborted) {
           setActiveData(payload);
+          // Extract chart data from full payload
+          setChartData({
+            last6Months: payload.last6Months,
+            thisWeek: payload.thisWeek,
+            byDayOfWeek: payload.byDayOfWeek,
+            thisMonthCumulative: payload.thisMonthCumulative,
+            yearlyCumulative: payload.yearlyCumulative,
+            currentMonthBreakdown: payload.currentMonthBreakdown,
+            yearToDate: payload.yearToDate,
+          });
         }
       })
       .catch((error) => {
@@ -191,7 +226,7 @@ export function StatsContent({ data }: StatsContentProps) {
       })
       .finally(() => {
         if (!controller.signal.aborted) {
-          setIsLoading(false);
+          setIsLoadingStats(false);
         }
       });
 
@@ -232,7 +267,7 @@ export function StatsContent({ data }: StatsContentProps) {
           />
           <span className="font-medium text-text-muted mr-3">{selectedMonth.getFullYear()}</span>
         </div>
-        {isLoading && (
+        {isLoadingStats && (
           <span className="text-sm text-text-muted">Oppdaterer...</span>
         )}
         {fetchError && (
@@ -302,7 +337,11 @@ export function StatsContent({ data }: StatsContentProps) {
           </CardTitle>
         </CardHeader>
         <CardContent className="px-3 pb-4 pt-1">
-          <MonthlyCumulativeChart data={activeData.thisMonthCumulative} />
+          {!chartData ? (
+            <ChartSkeleton />
+          ) : (
+            <MonthlyCumulativeChart data={chartData.thisMonthCumulative} />
+          )}
         </CardContent>
       </Card>
 
@@ -315,7 +354,11 @@ export function StatsContent({ data }: StatsContentProps) {
             </CardTitle>
           </CardHeader>
           <CardContent className="px-3 pb-4 pt-1">
-            <SupplementBreakdownChart data={activeData.currentMonthBreakdown} />
+            {!chartData ? (
+              <ChartSkeleton />
+            ) : (
+              <SupplementBreakdownChart data={chartData.currentMonthBreakdown} />
+            )}
           </CardContent>
         </Card>
       )}
@@ -329,7 +372,11 @@ export function StatsContent({ data }: StatsContentProps) {
             </CardTitle>
           </CardHeader>
           <CardContent className="px-3 pb-4 pt-1">
-            <WeeklyBarChart data={activeData.thisWeek} />
+            {!chartData ? (
+              <ChartSkeleton />
+            ) : (
+              <WeeklyBarChart data={chartData.thisWeek} />
+            )}
           </CardContent>
         </Card>
       )}
@@ -356,7 +403,11 @@ export function StatsContent({ data }: StatsContentProps) {
             </CardTitle>
           </CardHeader>
           <CardContent className="px-3 pb-4 pt-1">
-            <YearlyCumulativeChart data={activeData.yearlyCumulative} />
+            {!chartData ? (
+              <ChartSkeleton />
+            ) : (
+              <YearlyCumulativeChart data={chartData.yearlyCumulative} />
+            )}
           </CardContent>
         </Card>
 
@@ -367,7 +418,11 @@ export function StatsContent({ data }: StatsContentProps) {
             </CardTitle>
           </CardHeader>
           <CardContent className="px-3 pb-4 pt-1">
-            <MonthlyBarChart data={activeData.last6Months} />
+            {!chartData ? (
+              <ChartSkeleton />
+            ) : (
+              <MonthlyBarChart data={chartData.last6Months} />
+            )}
           </CardContent>
         </Card>
 
@@ -379,24 +434,38 @@ export function StatsContent({ data }: StatsContentProps) {
             </CardTitle>
           </CardHeader>
           <CardContent className="px-3 pb-4 pt-1">
-            <DayOfWeekChart data={activeData.byDayOfWeek} />
+            {!chartData ? (
+              <ChartSkeleton />
+            ) : (
+              <DayOfWeekChart data={chartData.byDayOfWeek} />
+            )}
           </CardContent>
         </Card>
 
         <div className="grid grid-cols-1 gap-3">
-          <StatCard
-            label="Totalt"
-            value={formatCurrency(activeData.yearToDate.totalEarnings)}
-            suffix="kr"
-          />
-          <StatCard
-            label="Timer"
-            value={formatHours(activeData.yearToDate.totalHours)}
-          />
-          <StatCard
-            label="Vakter"
-            value={activeData.yearToDate.shiftCount.toString()}
-          />
+          {!chartData ? (
+            <>
+              <ChartSkeleton />
+              <ChartSkeleton />
+              <ChartSkeleton />
+            </>
+          ) : (
+            <>
+              <StatCard
+                label="Totalt"
+                value={formatCurrency(chartData.yearToDate.totalEarnings)}
+                suffix="kr"
+              />
+              <StatCard
+                label="Timer"
+                value={formatHours(chartData.yearToDate.totalHours)}
+              />
+              <StatCard
+                label="Vakter"
+                value={chartData.yearToDate.shiftCount.toString()}
+              />
+            </>
+          )}
         </div>
       </div>
     </div>

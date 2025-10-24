@@ -19,8 +19,8 @@ const nextConfig = {
   turbopack: {},
 
   experimental: {
-    // Keep this if you truly benefit from it.
-    optimizePackageImports: ["@tabler/icons-react"],
+    // Optimize package imports to reduce bundle size
+    optimizePackageImports: ["@tabler/icons-react", "recharts", "lucide-react"],
   },
 
   // No `eslint` key (Next 16 doesn’t lint in build).
