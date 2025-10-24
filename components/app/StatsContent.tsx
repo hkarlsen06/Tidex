@@ -2,19 +2,49 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
+import dynamic from "next/dynamic";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/app/Card";
 import { StatsData } from "@/app/(app)/stats/_data/getStatsData";
-import { MonthlyBarChart } from "@/components/app/charts/MonthlyBarChart";
-import { WeeklyBarChart } from "@/components/app/charts/WeeklyBarChart";
-import { DayOfWeekChart } from "@/components/app/charts/DayOfWeekChart";
-import { YearlyCumulativeChart } from "@/components/app/charts/YearlyCumulativeChart";
-import { MonthlyCumulativeChart } from "@/components/app/charts/MonthlyCumulativeChart";
-import { SupplementBreakdownChart } from "@/components/app/charts/SupplementBreakdownChart";
 import { MonthlyGoalProgress } from "@/components/app/MonthlyGoalProgress";
 import { TrendingUp, TrendingDown, Clock, Briefcase, DollarSign } from "lucide-react";
 import { MonthPicker } from "@/components/app/MonthPicker";
 import { useMonth } from "@/components/app/MonthContext";
+
+// Lazy load all chart components to reduce initial bundle size
+const ChartSkeleton = () => (
+  <div className="h-64 bg-surface-secondary rounded animate-pulse" />
+);
+
+const MonthlyBarChart = dynamic(
+  () => import("@/components/app/charts/MonthlyBarChart").then(mod => mod.MonthlyBarChart),
+  { loading: () => <ChartSkeleton /> }
+);
+
+const WeeklyBarChart = dynamic(
+  () => import("@/components/app/charts/WeeklyBarChart").then(mod => mod.WeeklyBarChart),
+  { loading: () => <ChartSkeleton /> }
+);
+
+const DayOfWeekChart = dynamic(
+  () => import("@/components/app/charts/DayOfWeekChart").then(mod => mod.DayOfWeekChart),
+  { loading: () => <ChartSkeleton /> }
+);
+
+const YearlyCumulativeChart = dynamic(
+  () => import("@/components/app/charts/YearlyCumulativeChart").then(mod => mod.YearlyCumulativeChart),
+  { loading: () => <ChartSkeleton /> }
+);
+
+const MonthlyCumulativeChart = dynamic(
+  () => import("@/components/app/charts/MonthlyCumulativeChart").then(mod => mod.MonthlyCumulativeChart),
+  { loading: () => <ChartSkeleton /> }
+);
+
+const SupplementBreakdownChart = dynamic(
+  () => import("@/components/app/charts/SupplementBreakdownChart").then(mod => mod.SupplementBreakdownChart),
+  { loading: () => <ChartSkeleton /> }
+);
 
 type StatsContentProps = {
   data: StatsData;
