@@ -39,8 +39,8 @@ export function MonthProvider({ children }: { children: ReactNode }) {
         const restoredMonth = deserializeMonth(stored);
         // Only update if different from initial month to avoid unnecessary re-renders
         if (restoredMonth.getTime() !== initialMonth.getTime()) {
-          // Note: This setState is intentional to restore persisted state after SSR hydration
-           
+          // Note: This setState in effect is intentional - we restore persisted state
+          // after SSR hydration to sync with localStorage. This only runs once on mount.
           setSelectedMonthState(restoredMonth);
         }
       } catch (err) {
