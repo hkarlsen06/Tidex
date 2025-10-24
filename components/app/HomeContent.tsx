@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { TotalCard } from "@/components/app/TotalCard";
 import { NextPayrollCard } from "@/components/app/NextPayrollCard";
 import { MonthPicker } from "./MonthPicker";
@@ -122,11 +122,100 @@ function isCurrentMonth(date: Date): boolean {
   );
 }
 
-export function HomeContent({ shifts, settings }: HomeContentProps) {
+export function HomeContent({ shifts: initialShifts, settings }: HomeContentProps) {
   const { selectedMonth: month, goToPreviousMonth, goToNextMonth, direction } = useMonth();
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [selectedShift, setSelectedShift] = useState<ShiftWithComputations | null>(null);
+  const [additionalShifts, setAdditionalShifts] = useState<ShiftWithComputations[]>([]);
+  const [loadingMonth, setLoadingMonth] = useState(false);
   const selectedMonthIsCurrent = isCurrentMonth(month);
+
+  // Track which months have been loaded or are currently loading
+  const [loadedMonths, setLoadedMonths] = useState<Set<string>>(new Set());
+  const [loadingMonths, setLoadingMonths] = useState<Set<string>>(new Set());
+
+  // Combine initial shifts with any dynamically loaded shifts
+  const shifts = useMemo(
+    () => [...initialShifts, ...additionalShifts],
+    [initialShifts, additionalShifts]
+  );
+
+  // Helper to generate month key for tracking
+  const getMonthKey = useCallback((year: number, month: number): string => {
+    return `${year}-${String(month).padStart(2, '0')}`;
+  }, []);
+
+  // Helper to fetch a month's shifts and update state
+  const fetchMonth = useCallback(async (year: number, month: number) => {
+    const key = getMonthKey(year, month);
+
+    // Skip if already loaded or currently loading
+    if (loadedMonths.has(key) || loadingMonths.has(key)) {
+      return;
+    }
+
+    // Mark as loading
+    setLoadingMonths(prev => new Set(prev).add(key));
+
+    try {
+      const response = await fetch(`/api/shifts?year=${year}&month=${month}`);
+      const data = await response.json();
+
+      if (data.shifts && Array.isArray(data.shifts)) {
+        setAdditionalShifts(prev => {
+          // Filter out any duplicates before adding
+          const existingIds = new Set([...initialShifts, ...prev].map(s => s.id));
+          const newShifts = data.shifts.filter((s: ShiftWithComputations) => !existingIds.has(s.id));
+          return [...prev, ...newShifts];
+        });
+
+        // Mark as successfully loaded
+        setLoadedMonths(prev => new Set(prev).add(key));
+      }
+    } catch (err) {
+      console.error(`Failed to fetch month ${key}:`, err);
+    } finally {
+      // Remove from loading set
+      setLoadingMonths(prev => {
+        const next = new Set(prev);
+        next.delete(key);
+        return next;
+      });
+    }
+  }, [getMonthKey, loadedMonths, loadingMonths, initialShifts]);
+
+  // Initialize loaded months from SSR data on mount
+  useEffect(() => {
+    const loaded = new Set<string>();
+    for (const shift of initialShifts) {
+      const [year, month] = shift.shift_date.split('-');
+      const key = `${year}-${month}`;
+      loaded.add(key);
+    }
+    setLoadedMonths(loaded);
+  }, [initialShifts]);
+
+  // Proactive prefetch: Load adjacent months (prev, current, next) whenever month changes
+  useEffect(() => {
+    const selectedYear = month.getFullYear();
+    const selectedMonthNum = month.getMonth() + 1;
+
+    // Calculate prev and next months
+    const prevDate = new Date(selectedYear, selectedMonthNum - 2, 1);
+    const nextDate = new Date(selectedYear, selectedMonthNum, 1);
+
+    const prevYear = prevDate.getFullYear();
+    const prevMonthNum = prevDate.getMonth() + 1;
+    const nextYear = nextDate.getFullYear();
+    const nextMonthNum = nextDate.getMonth() + 1;
+
+    // Prefetch all 3 months in parallel (fetchMonth checks if already loaded)
+    Promise.all([
+      fetchMonth(selectedYear, selectedMonthNum), // Current
+      fetchMonth(prevYear, prevMonthNum),         // Previous
+      fetchMonth(nextYear, nextMonthNum),         // Next
+    ]);
+  }, [month, fetchMonth]);
 
   // Pre-index shifts by year-month for O(1) lookups instead of O(n) filtering
   const shiftsByMonth = useMemo(() => {

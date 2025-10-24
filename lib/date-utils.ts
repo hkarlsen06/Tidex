@@ -64,6 +64,27 @@ export function getPreviousYearMonth(): { year: number; month: number } {
 }
 
 /**
+ * Gets the next month's year and month
+ *
+ * @returns Object with year and month (1-12)
+ *
+ * @example
+ * getNextYearMonth() // { year: 2024, month: 4 } when current month is March 2024
+ * getNextYearMonth() // { year: 2025, month: 1 } when current month is December 2024
+ */
+export function getNextYearMonth(): { year: number; month: number } {
+  const now = new Date();
+  const nextMonthDate = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1)
+  );
+
+  return {
+    year: nextMonthDate.getUTCFullYear(),
+    month: nextMonthDate.getUTCMonth() + 1,
+  };
+}
+
+/**
  * Extracts year and month from a UTC date
  *
  * @param date - Date object
@@ -113,4 +134,64 @@ export function getTodayAsDateString(): string {
   const month = String(now.getUTCMonth() + 1).padStart(2, "0");
   const day = String(now.getUTCDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+/**
+ * Get start of current year (YYYY-01-01)
+ * Useful for loading full year of data
+ *
+ * @returns Date string in YYYY-MM-DD format
+ *
+ * @example
+ * getCurrentYearStart() // "2025-01-01"
+ */
+export function getCurrentYearStart(): string {
+  const now = new Date();
+  return `${now.getUTCFullYear()}-01-01`;
+}
+
+/**
+ * Get end of current year (YYYY-12-31)
+ * Useful for loading full year of data
+ *
+ * @returns Date string in YYYY-MM-DD format
+ *
+ * @example
+ * getCurrentYearEnd() // "2025-12-31"
+ */
+export function getCurrentYearEnd(): string {
+  const now = new Date();
+  return `${now.getUTCFullYear()}-12-31`;
+}
+
+/**
+ * Get start of a specific month (YYYY-MM-01)
+ * Useful for loading month-specific data
+ *
+ * @param year - Year (e.g., 2025)
+ * @param month - Month (1-12)
+ * @returns Date string in YYYY-MM-DD format
+ *
+ * @example
+ * getMonthStart(2025, 3) // "2025-03-01"
+ */
+export function getMonthStart(year: number, month: number): string {
+  return `${year}-${String(month).padStart(2, "0")}-01`;
+}
+
+/**
+ * Get end of a specific month (YYYY-MM-last day)
+ * Handles different month lengths including leap years
+ *
+ * @param year - Year (e.g., 2025)
+ * @param month - Month (1-12)
+ * @returns Date string in YYYY-MM-DD format
+ *
+ * @example
+ * getMonthEnd(2025, 2) // "2025-02-28"
+ * getMonthEnd(2024, 2) // "2024-02-29" (leap year)
+ */
+export function getMonthEnd(year: number, month: number): string {
+  const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  return `${year}-${String(month).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
 }

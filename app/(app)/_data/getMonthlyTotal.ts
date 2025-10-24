@@ -5,6 +5,8 @@ import { getComputedShifts } from "@/app/(app)/shifts/_data/getShifts";
 import {
   getCurrentYearMonth,
   getPreviousYearMonth,
+  getMonthStart,
+  getMonthEnd,
   isDateInMonth,
 } from "@/lib/date-utils";
 import { hasShiftEnded } from "@/lib/shifts/hasShiftEnded";
@@ -35,14 +37,14 @@ async function getMonthlyTotalInternal(userId: string): Promise<{
   earnedToDate: string;
   earnedToDateGross: number;
 }> {
-  // Load last 3 months for current + previous month comparison
-  const threeMonthsAgo = new Date();
-  threeMonthsAgo.setUTCMonth(threeMonthsAgo.getUTCMonth() - 3);
-  const startDate = threeMonthsAgo.toISOString().split('T')[0];
+  // Load current month + previous month only (2 months total)
+  const { year, month } = getCurrentYearMonth();
+  const { year: prevYear, month: prevMonth } = getPreviousYearMonth();
 
   const { shifts } = await getComputedShifts(userId, {
-    startDate,
-    limit: 200 // Reasonable limit for 3 months
+    startDate: getMonthStart(prevYear, prevMonth),
+    endDate: getMonthEnd(year, month),
+    limit: 100 // Reasonable limit for 2 months
   });
 
   // Get current month and year in UTC to ensure consistent date comparisons

@@ -157,7 +157,7 @@ export function StatsContent({ data }: StatsContentProps) {
     currentMonthBreakdown: data.currentMonthBreakdown,
     yearToDate: data.yearToDate,
   });
-  const [isLoadingStats, setIsLoadingStats] = useState(false);
+  const [_isLoadingStats, setIsLoadingStats] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
   const selectedYear = selectedMonth.getFullYear();
@@ -186,7 +186,6 @@ export function StatsContent({ data }: StatsContentProps) {
     fetch(`/api/stats?${query.toString()}`, {
       method: "GET",
       credentials: "include",
-      cache: "no-store",
       signal: controller.signal,
     })
       .then((response) => {
@@ -267,9 +266,6 @@ export function StatsContent({ data }: StatsContentProps) {
           />
           <span className="font-medium text-text-muted mr-3">{selectedMonth.getFullYear()}</span>
         </div>
-        {isLoadingStats && (
-          <span className="text-sm text-text-muted">Oppdaterer...</span>
-        )}
         {fetchError && (
           <p className="text-sm text-error">
             {fetchError}
