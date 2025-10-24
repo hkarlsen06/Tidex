@@ -110,7 +110,7 @@ const DayButton = React.memo(function DayButton({
         isToday && !isSelected && "border-brand-highlight"
       )}
     >
-      <div className="relative flex flex-col items-center justify-start gap-0.5 w-full h-full p-1 pb-2 sm:pb-1.5 overflow-hidden">
+      <div className="relative flex flex-col w-full h-full p-1 overflow-hidden">
       {isMonday && (
         <span className={`absolute left-1 text-[9px] leading-none text-text-muted ${
           weekNumberPosition === "top-left" ? "top-1" : "bottom-1"
@@ -122,7 +122,7 @@ const DayButton = React.memo(function DayButton({
       )}
       <div
         className={cn(
-          "w-full text-xs font-semibold text-right pr-1",
+          "w-full text-xs font-semibold text-right pr-1 leading-none",
           isSelected
             ? "text-brand-highlight"
             : hasShift
@@ -135,7 +135,7 @@ const DayButton = React.memo(function DayButton({
       {mode === "money" && earnings !== undefined && (
         <div
           key={`earnings-${iso}-${currentMonth.getFullYear()}-${currentMonth.getMonth()}`}
-          className={`text-sm text-text-secondary font-semibold mt-1 ${getCellAnimationClasses(cellDirection)}`}
+          className={`flex-1 flex flex-col items-center justify-end pb-1 text-sm text-text-secondary font-semibold ${getCellAnimationClasses(cellDirection)}`}
         >
           {formatNOKInt(earnings)}
         </div>
@@ -143,13 +143,13 @@ const DayButton = React.memo(function DayButton({
       {mode === "hours" && hours && (
         <div
           key={`hours-${iso}-${currentMonth.getFullYear()}-${currentMonth.getMonth()}`}
-          className={`text-[9px] sm:text-[10px] font-medium text-text-secondary leading-none text-center mt-0.5 ${getCellAnimationClasses(cellDirection)}`}
+          className={`flex-1 flex flex-col items-center justify-center text-sm font-semibold text-text-secondary leading-tight ${getCellAnimationClasses(cellDirection)}`}
         >
           <div>
             {hours.start}
             {hours.start && "-"}
           </div>
-          <div className="mt-0.5">
+          <div>
             {hours.end}
             {hours.crossesMidnight && "*"}
           </div>

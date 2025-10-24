@@ -274,8 +274,8 @@ export function MonthlyEarningsCalendar({
                 className={cn(
                   "h-9 rounded-full px-4 text-sm flex-1 whitespace-nowrap transition-none",
                   viewMode === "money"
-                    ? "bg-surface-primary text-text-primary shadow-sm"
-                    : "text-text-secondary hover:text-text-primary"
+                    ? "bg-white dark:bg-slate-700 text-black dark:text-white shadow-app-md font-semibold"
+                    : "text-text-muted hover:text-text-primary hover:bg-surface-secondary/50"
                 )}
               >
                 ---- kr
@@ -288,8 +288,8 @@ export function MonthlyEarningsCalendar({
                 className={cn(
                   "h-9 rounded-full px-4 text-sm flex-1 whitespace-nowrap transition-none",
                   viewMode === "hours"
-                    ? "bg-surface-primary text-text-primary shadow-sm"
-                    : "text-text-secondary hover:text-text-primary"
+                    ? "bg-white dark:bg-slate-700 text-black dark:text-white shadow-app-md font-semibold"
+                    : "text-text-muted hover:text-text-primary hover:bg-surface-secondary/50"
                 )}
               >
                 <span>--:--</span>
