@@ -78,7 +78,7 @@ export function MonthlyGoalProgress({ data }: MonthlyGoalProgressProps) {
 
         <div className="grid grid-cols-[1fr,auto] gap-6 items-center">
           {/* Left side: Text content */}
-          <div className="flex flex-col items-center justify-center space-y-3">
+          <div className="flex flex-col justify-center space-y-3">
             <p className="text-sm text-text-secondary">
               Mål: {formatCurrency(data.target)} kr
             </p>
@@ -98,10 +98,15 @@ export function MonthlyGoalProgress({ data }: MonthlyGoalProgressProps) {
 
             {/* Status message */}
             {isGoalReached ? (
-              <div className="flex items-center gap-2">
-                <TrendingUp className="w-5 h-5" style={{ color: progressColor }} />
+              <div className="flex flex-col sm:flex-row items-start gap-1 sm:gap-2">
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5" style={{ color: progressColor }} />
+                  <p className="text-base font-medium" style={{ color: progressColor }}>
+                    Mål nådd!
+                  </p>
+                </div>
                 <p className="text-base font-medium" style={{ color: progressColor }}>
-                  Mål nådd! +{formatCurrency(progressOverTarget)} kr over
+                  +{formatCurrency(progressOverTarget)} kr over
                 </p>
               </div>
             ) : (
