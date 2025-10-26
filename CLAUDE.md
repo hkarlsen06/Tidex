@@ -4,42 +4,65 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-A Next.js 16 application for tracking work shifts and calculating wages with Supabase authentication. Uses Tailwind CSS for styling with a custom design system and supports both light and dark modes.
+A Next.js 16 application for tracking work shifts and calculating wages with Supabase authentication. Supports internationalization (i18n) with Norwegian and English locales. Uses Tailwind CSS for styling with a custom design system and supports both light and dark modes.
 
 ## Development Commands
 
 ```bash
-npm run dev      # Start dev server with Turbo (http://localhost:3000)
-npm run build    # Production build
-npm start        # Run production server
-npm run lint     # Run ESLint
+npm run dev         # Start HTTPS dev server via server.mjs (https://localhost:3000)
+npm run dev:http    # Start HTTP dev server (http://localhost:3000)
+npm run dev:turbo   # Start dev server with Turbo mode
+npm run build       # Production build
+npm start           # Run production server
+npm run lint        # Run ESLint
 ```
 
 ## Architecture
 
 ### Route Structure
 
-- `app/(app)/*` - Protected routes requiring authentication (home, shifts)
-- `app/(auth)/*` - Public authentication routes (login, logout)
-- `app/auth/callback/` - OAuth/magic link callback handler
+The application uses locale-based routing with dynamic `[locale]` segments for internationalization:
+
+- `app/[locale]/(app)/*` - Protected routes requiring authentication (home, shifts, stats, settings)
+- `app/[locale]/(auth)/*` - Public authentication routes (login, signup, verify-email, reset-password)
+- `app/auth/callback/` - OAuth/magic link callback handler (unlocalized)
 
 Each route group has its own layout:
 
-- `app/(app)/layout.tsx` - Renders TopHeader and wraps authenticated pages
-- `app/(auth)/layout.tsx` - Minimal layout for auth pages
-- `app/layout.tsx` - Root layout with theme initialization script
+- `app/[locale]/(app)/layout.tsx` - Authentication enforcement, renders TopHeader, wraps authenticated pages
+- `app/[locale]/(auth)/layout.tsx` - Minimal layout for auth pages
+- `app/[locale]/layout.tsx` - Locale wrapper with i18n providers
+- `app/layout.tsx` - Root layout with theme initialization script, fonts, and metadata
+
+**Key routes:**
+- `/{locale}/` - Home/dashboard (protected)
+- `/{locale}/shifts` - View and manage shifts (protected)
+- `/{locale}/stats` - Statistics and analytics (protected)
+- `/{locale}/settings` - Settings hub with nested routes (protected)
+- `/{locale}/login` - Login page (public)
+- `/{locale}/signup` - Sign up page (public)
+
+### Internationalization (i18n)
+
+The app supports multiple locales (Norwegian and English) via:
+
+- **Locale routing**: All user-facing routes are prefixed with `[locale]` (e.g., `/en/shifts`, `/no/shifts`)
+- **Locale detection**: `proxy.ts` middleware detects locale from URL, cookie (`NEXT_LOCALE`), or `Accept-Language` header
+- **Automatic redirects**: Requests to non-localized paths (e.g., `/shifts`) are redirected to the user's preferred locale
+- **Configuration**: See `lib/i18n/config.ts` for supported locales and settings
+- **Translations**: Dictionary files in `lib/i18n/dictionaries/` provide localized strings
 
 ### Authentication Flow (Next.js 16)
 
 Uses `@supabase/ssr` with cookie-based sessions following Next.js 16 best practices:
 
-1. **Token refresh**: `proxy.ts` handles Supabase token refresh and cookie syncing (~1-5ms, no auth logic)
-2. **Authentication enforcement**: `app/(app)/layout.tsx` calls `getUser()` and redirects to `/login` (single source of truth)
+1. **Token refresh & locale routing**: `proxy.ts` middleware handles both Supabase token refresh and locale routing (~1-5ms, no auth logic)
+2. **Authentication enforcement**: `app/[locale]/(app)/layout.tsx` calls `getUser()` and redirects to `/login` (single source of truth)
 3. **Server-side**: Use `createSupabaseServerClient()` from `lib/supabase/server.ts` in Server Components and data loaders
 4. **Client-side**: Import the shared `supabase` instance from `lib/supabase/browser.ts` in Client Components
 5. **Session sync**: `app/supabase-listener.tsx` subscribes to auth changes via the shared client and calls `router.refresh()` to update server components
 
-**Important**: Authentication happens in Server Components (data access layer), NOT in proxy.ts. All routes under `app/(app)/` are protected by the layout. See `docs/auth.md` for detailed flow.
+**Important**: Authentication happens in Server Components (data access layer), NOT in proxy.ts. All routes under `app/[locale]/(app)/` are protected by the layout. See `docs/auth.md` for detailed flow.
 
 ### Component System
 
@@ -56,7 +79,7 @@ To add new shadcn components:
 npm dlx shadcn@latest add <component-name>
 ```
 
-Then create a wrapper in `components/app/` (see `components/ui/shadcn_components.md` for patterns).
+Then create a wrapper in `components/app/` following existing patterns in that directory.
 
 ### Import Aliases
 
@@ -108,8 +131,7 @@ Key concepts:
 - Break deductions applied via configurable policies (fixed, proportional, etc.)
 - [Removed] No per-shift manual pause; policy-based only
 - Cross-midnight shifts supported (when `end <= start`, treat as next day)
-
-See `docs/calculations.md` for complete specification.
+- High precision calculations: 3 decimal places for hours, 2 for currency
 
 ### Data Loading Pattern
 
@@ -141,11 +163,21 @@ Configuration files are in the project root:
 
 Required in `.env.local`:
 
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
-- `NEXT_PUBLIC_SUPABASE_REDIRECT_URL` (optional; login flow constructs callback URLs dynamically)
+**Supabase (Authentication & Database):**
+- `NEXT_PUBLIC_SUPABASE_URL` - Supabase project URL
+- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` - Supabase anon/public key
 
-Validated at module load in `lib/supabase/browser.ts` and accessed via `lib/env.ts`.
+**Stripe (Subscriptions):**
+- `NEXT_PUBLIC_PRO_PRICE_ID` - Stripe price ID for Pro tier
+- `NEXT_PUBLIC_MAX_PRICE_ID` - Stripe price ID for Max tier
+
+**Security:**
+- `NEXT_PUBLIC_TURNSTILE_SITE_KEY` - Cloudflare Turnstile site key for bot protection
+
+**Optional:**
+- `NEXT_PUBLIC_SITE_URL` - Full site URL (used for secure cookie determination)
+
+Environment variables are validated at module load in `lib/env.ts` (throws errors if missing).
 
 ## Key Principles
 
@@ -155,3 +187,5 @@ Validated at module load in `lib/supabase/browser.ts` and accessed via `lib/env.
 4. **Compute wages server-side** - `lib/payroll` functions are pure and called in data loaders
 5. **Theme-aware components** - all UI must respond to light/dark mode via CSS variables
 6. **Server-first auth checks** - redirect before render to avoid unauthenticated UI flashes
+7. **Respect locale routing** - all user-facing URLs should include `[locale]` parameter
+8. **Use translation dictionaries** - import from `lib/i18n/dictionaries/` for user-facing text
