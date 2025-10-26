@@ -59,9 +59,6 @@ export function LandingPage({ locale, dictionary, path = '' }: LandingPageProps)
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,hsla(var(--brand-gradientStart)/0.16),transparent_55%)]" />
         <div className="relative w-full max-w-4xl px-6 sm:px-0">
           <div className="relative mx-auto w-full max-w-[32rem] sm:max-w-xl">
-            <div className="absolute right-0 -top-10 z-10 flex justify-end sm:-top-12">
-              <MarketingLocaleToggle currentLocale={locale} path={path} />
-            </div>
             <div className="relative flex w-full flex-col items-center gap-8 overflow-hidden rounded-[44px] border border-border-subtle/60 bg-surface-primary/70 px-6 pb-[calc(3rem+env(safe-area-inset-bottom))] pt-12 shadow-app max-h-[760px] sm:max-h-[820px] sm:px-12">
               <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,hsla(var(--brand-gradientStart)/0.16),transparent_55%)]" />
               <div className="relative flex flex-col items-center gap-8 text-center">
@@ -117,6 +114,9 @@ export function LandingPage({ locale, dictionary, path = '' }: LandingPageProps)
                   </Button>
                 </div>
               </div>
+            </div>
+            <div className="mt-6 flex justify-center sm:mt-8">
+              <MarketingLocaleToggle currentLocale={locale} path={path} />
             </div>
           </div>
         </div>
