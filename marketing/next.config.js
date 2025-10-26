@@ -12,9 +12,6 @@ const nextConfig = {
   // Optional: keeps URLs consistent on static hosts
   trailingSlash: true,
 
-  // Silence build-time ESLint requirement on CI (or install eslint as a devDep)
-  eslint: { ignoreDuringBuilds: true },
-
   // Monorepo/workspace hint so Next traces correctly on Netlify
   outputFileTracingRoot: path.join(__dirname, '..'),
 };
