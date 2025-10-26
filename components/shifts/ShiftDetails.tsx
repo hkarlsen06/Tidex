@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition, useRef } from "react";
+import { useEffect, useState, useTransition, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { IconPencil, IconTrash, IconClock, IconCheck, IconX } from "@tabler/icons-react";
 import {
@@ -18,6 +18,7 @@ import { updateShift } from "@/app/[locale]/(app)/shifts/_actions/updateShift";
 import { cn } from "@/lib/cn";
 import { TimeInput } from "@/components/app/TimeInput";
 import { useTranslations } from "@/lib/i18n/client";
+import type { Locale } from "@/lib/i18n/config";
 
 const MINUTES_PER_DAY = 24 * 60;
 
@@ -112,21 +113,18 @@ const hoursFormatter = new Intl.NumberFormat("nb-NO", {
   maximumFractionDigits: 2,
 });
 
-const dayFormatter = new Intl.DateTimeFormat("nb-NO", { weekday: "long" });
-const dateFormatter = new Intl.DateTimeFormat("nb-NO", {
-  day: "2-digit",
-  month: "long",
-});
+// Map our locale codes to BCP 47 locale tags for Intl.DateTimeFormat
+function getDateLocale(locale: Locale): string {
+  const localeMap: Record<Locale, string> = {
+    no: 'nb-NO',
+    en: 'en-US',
+    de: 'de-DE',
+  };
+  return localeMap[locale];
+}
 
 function capitalize(input: string) {
   return input.charAt(0).toUpperCase() + input.slice(1);
-}
-
-function formatDate(dateISO: string) {
-  const d = new Date(`${dateISO}T00:00:00Z`);
-  const day = capitalize(dayFormatter.format(d));
-  const label = capitalize(dateFormatter.format(d));
-  return `${label} · ${day}`;
 }
 
 function formatTimeRange(start: string, end: string) {
@@ -148,8 +146,29 @@ export function ShiftDetails({
   onDelete,
   isDeleting,
 }: ShiftDetailsProps) {
-  const { t } = useTranslations();
+  const { t, locale } = useTranslations();
   const router = useRouter();
+
+  // Create locale-aware date formatters
+  const dayFormatter = useMemo(() => {
+    return new Intl.DateTimeFormat(getDateLocale(locale), { weekday: "long" });
+  }, [locale]);
+
+  const dateFormatter = useMemo(() => {
+    return new Intl.DateTimeFormat(getDateLocale(locale), {
+      day: "2-digit",
+      month: "long",
+    });
+  }, [locale]);
+
+  const formatDate = useMemo(() => {
+    return (dateISO: string) => {
+      const d = new Date(`${dateISO}T00:00:00Z`);
+      const day = capitalize(dayFormatter.format(d));
+      const label = capitalize(dateFormatter.format(d));
+      return `${label} · ${day}`;
+    };
+  }, [dayFormatter, dateFormatter]);
   const [isEditing, setIsEditing] = useState(false);
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");

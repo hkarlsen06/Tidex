@@ -10,10 +10,18 @@ import {
   formatHours as baseFormatHours,
 } from "@/components/app/ShiftCard";
 import { Card, CardHeader } from "@/components/app/Card";
+import { useTranslations } from "@/lib/i18n/client";
+import type { Locale } from "@/lib/i18n/config";
 
-const dayNumberFormatter = new Intl.DateTimeFormat("nb-NO", { day: "numeric" });
-const monthFormatter = new Intl.DateTimeFormat("nb-NO", { month: "long" });
-const dayFormatter = new Intl.DateTimeFormat("nb-NO", { weekday: "short" });
+// Map our locale codes to BCP 47 locale tags for Intl.DateTimeFormat
+function getDateLocale(locale: Locale): string {
+  const localeMap: Record<Locale, string> = {
+    no: 'nb-NO',
+    en: 'en-US',
+    de: 'de-DE',
+  };
+  return localeMap[locale];
+}
 
 // Parse ISO date string consistently as UTC to avoid timezone issues
 function parseISODate(isoDate: string): Date {
@@ -35,6 +43,21 @@ type ShiftMoveCardProps = {
 };
 
 export function ShiftMoveCard({ shift, targetDate, selected, onToggle, userSettings, presetRules }: ShiftMoveCardProps) {
+  const { locale } = useTranslations();
+
+  // Create locale-aware date formatters
+  const dayNumberFormatter = useMemo(() => {
+    return new Intl.DateTimeFormat(getDateLocale(locale), { day: "numeric" });
+  }, [locale]);
+
+  const monthFormatter = useMemo(() => {
+    return new Intl.DateTimeFormat(getDateLocale(locale), { month: "long" });
+  }, [locale]);
+
+  const dayFormatter = useMemo(() => {
+    return new Intl.DateTimeFormat(getDateLocale(locale), { weekday: "short" });
+  }, [locale]);
+
   const sourceDate = parseISODate(shift.shift_date);
   const target = targetDate ? parseISODate(targetDate) : null;
 

@@ -33,6 +33,7 @@ import {
 import { IconArrowRight, IconArrowLeft } from "@tabler/icons-react";
 import { cn } from "@/lib/cn";
 import { useTranslations } from "@/lib/i18n/client";
+import type { Locale } from "@/lib/i18n/config";
 
 // Lazy load the calendar to reduce initial bundle size (~40KB savings)
 const MonthlyEarningsCalendar = dynamic(
@@ -127,10 +128,15 @@ function startOfMonth(date: Date) {
   return new Date(date.getFullYear(), date.getMonth(), 1);
 }
 
-const moveDateFormatter = new Intl.DateTimeFormat("nb-NO", {
-  day: "2-digit",
-  month: "long",
-});
+// Map our locale codes to BCP 47 locale tags for Intl.DateTimeFormat
+function getDateLocale(locale: Locale): string {
+  const localeMap: Record<Locale, string> = {
+    no: 'nb-NO',
+    en: 'en-US',
+    de: 'de-DE',
+  };
+  return localeMap[locale];
+}
 
 function capitalize(input: string) {
   return input ? input.charAt(0).toUpperCase() + input.slice(1) : "";
@@ -167,6 +173,7 @@ type CalendarCellPreviewProps = {
   placeholder: string;
   variant: "source" | "target";
   sourceDate?: ISODate | null;
+  locale: Locale;
   t: any;
 };
 
@@ -176,8 +183,16 @@ function CalendarCellPreview({
   placeholder,
   variant,
   sourceDate,
+  locale,
   t,
 }: CalendarCellPreviewProps) {
+  const moveDateFormatter = useMemo(() => {
+    return new Intl.DateTimeFormat(getDateLocale(locale), {
+      day: "2-digit",
+      month: "long",
+    });
+  }, [locale]);
+
   const date = isoDate ? parseISODate(isoDate) : null;
   const dayNumber = date ? date.getUTCDate() : null;
   const monthLabel = date
@@ -269,6 +284,7 @@ type MoveShiftModalProps = {
   error?: string | null;
   userSettings: UserSettings;
   presetRules: SupplementRule[];
+  locale: Locale;
   t: any;
 };
 
@@ -285,6 +301,7 @@ function MoveShiftModal({
   error,
   userSettings,
   presetRules,
+  locale,
   t,
 }: MoveShiftModalProps) {
   const multipleShifts = shifts.length > 1;
@@ -322,6 +339,7 @@ function MoveShiftModal({
         placeholder={sourcePlaceholder}
         variant="source"
         sourceDate={sourceDate}
+        locale={locale}
         t={t}
       />
     </div>
@@ -338,6 +356,7 @@ function MoveShiftModal({
         placeholder={targetPlaceholder}
         variant="target"
         sourceDate={sourceDate}
+        locale={locale}
         t={t}
       />
     </div>
@@ -459,7 +478,7 @@ type ShiftsViewProps = {
 };
 
 export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", userSettings, presetRules }: ShiftsViewProps) {
-  const { t } = useTranslations();
+  const { t, locale } = useTranslations();
   const {
     errorSelectOne,
     errorPartial,
@@ -1000,6 +1019,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
       error={moveError}
       userSettings={userSettings}
       presetRules={presetRules}
+      locale={locale}
       t={t}
     />
     <ShiftDetails
