@@ -2,9 +2,10 @@
 
 import * as React from "react";
 import { DayPicker } from "react-day-picker";
-import { nb } from "date-fns/locale";
+import { nb, enUS } from "date-fns/locale";
 import { toISODate, type ISODate, formatNOKInt } from "./calendar.utils";
 import { cn } from "@/lib/utils";
+import { useLocale } from "@/lib/i18n/client";
 
 export type SelectDatesCalendarProps = {
   month: Date; // controlled
@@ -29,6 +30,18 @@ export function SelectDatesCalendar({
   hideCaptionNav = false,
   previewEarnings = {},
 }: SelectDatesCalendarProps) {
+  const locale = useLocale();
+  const dateFnsLocale = locale === 'en' ? enUS : nb;
+
+  // Custom formatter for weekday names to show 2-letter abbreviations
+  const formatWeekdayName = React.useCallback((date: Date) => {
+    const day = date.getDay();
+    const shortNames = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
+    const shortNamesNb = ['SØ', 'MA', 'TI', 'ON', 'TO', 'FR', 'LØ'];
+    const names = locale === 'no' ? shortNamesNb : shortNames;
+    return names[day];
+  }, [locale]);
+
   function getIsoWeek(date: Date) {
     const d = new Date(
       Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())
@@ -118,7 +131,7 @@ export function SelectDatesCalendar({
 
   return (
     <DayPicker
-      locale={nb}
+      locale={dateFnsLocale}
       className="w-full"
       mode="multiple"
       month={month}
@@ -141,6 +154,9 @@ export function SelectDatesCalendar({
       disabled={disabledOutsideMonth ? { before: month, after: new Date(month.getFullYear(), month.getMonth() + 1, 0) } : undefined}
       components={{
         DayButton: CustomDayButton,
+      }}
+      formatters={{
+        formatWeekdayName,
       }}
       classNames={{
         root: "w-full",

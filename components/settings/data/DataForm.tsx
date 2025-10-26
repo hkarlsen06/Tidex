@@ -6,18 +6,9 @@ import { Input } from '@appui/Input';
 import { Separator } from '@appui/Separator';
 import { Download } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import type { Dictionary } from '@/lib/i18n/dictionaries/no';
 
 const JSPDF_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
-
-const WEEKDAY_NAMES = [
-  'søndag',
-  'mandag',
-  'tirsdag',
-  'onsdag',
-  'torsdag',
-  'fredag',
-  'lørdag',
-];
 
 const PAGE_CONFIG = {
   format: 'a4',
@@ -207,12 +198,12 @@ function formatCurrencyShort(value: number): string {
   return Math.round(value).toLocaleString('nb-NO');
 }
 
-function weekdayAbbrev(date: Date): string {
-  return WEEKDAY_NAMES[date.getDay()].substring(0, 3);
+function weekdayAbbrev(date: Date, t: Dictionary): string {
+  return t.dateTime.daysExport[date.getDay()].substring(0, 3);
 }
 
-function weekdayAbbrevCsv(date: Date): string {
-  return weekdayAbbrev(date).replace(/ø/gi, (match) => (match === 'ø' ? 'o' : 'O'));
+function weekdayAbbrevCsv(date: Date, t: Dictionary): string {
+  return weekdayAbbrev(date, t).replace(/ø/gi, (match) => (match === 'ø' ? 'o' : 'O'));
 }
 
 function calculateShift(shift: RawShift): ShiftCalculation {
@@ -415,7 +406,8 @@ function renderSummary(doc: JsPDFInstance, yRef: { value: number }, data: Prepar
 function renderTable(
   doc: JsPDFInstance,
   yRef: { value: number },
-  data: PreparedExportData
+  data: PreparedExportData,
+  t: Dictionary
 ) {
   const { margins } = PAGE_CONFIG;
   const columnPositions: number[] = [];
@@ -479,7 +471,7 @@ function renderTable(
 
     const rowValues = [
       shift.dateObj.toLocaleDateString('no-NO'),
-      weekdayAbbrev(shift.dateObj),
+      weekdayAbbrev(shift.dateObj, t),
       shift.startTime,
       shift.endTime,
       shift.calc.hours.toFixed(2),
@@ -549,11 +541,11 @@ function escapeCsvValue(value: string): string {
   return stringValue;
 }
 
-function buildCsvContent(data: PreparedExportData): string {
+function buildCsvContent(data: PreparedExportData, t: Dictionary): string {
   const header = ['Dato', 'Dag', 'Start', 'Slutt', 'Timer', 'Grunnlonn', 'Tillegg', 'Totalt'];
   const rows = data.shifts.map((shift) => [
     shift.dateObj.toLocaleDateString('no-NO'),
-    weekdayAbbrevCsv(shift.dateObj),
+    weekdayAbbrevCsv(shift.dateObj, t),
     shift.startTime,
     shift.endTime,
     shift.calc.hours.toFixed(2),
@@ -578,8 +570,8 @@ function buildCsvContent(data: PreparedExportData): string {
     .join('\n');
 }
 
-function downloadCsv(data: PreparedExportData, range: DateRange) {
-  const csvContent = buildCsvContent(data);
+function downloadCsv(data: PreparedExportData, range: DateRange, t: Dictionary) {
+  const csvContent = buildCsvContent(data, t);
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
@@ -591,7 +583,11 @@ function downloadCsv(data: PreparedExportData, range: DateRange) {
   URL.revokeObjectURL(url);
 }
 
-export function DataForm() {
+interface DataFormProps {
+  t: Dictionary;
+}
+
+export function DataForm({ t }: DataFormProps) {
   const [selectedPreset, setSelectedPreset] = useState<PeriodPreset | null>(null);
   const [customRange, setCustomRange] = useState<DateRange>({ from: '', to: '' });
   const [isExportingPdf, setIsExportingPdf] = useState(false);
@@ -705,7 +701,7 @@ export function DataForm() {
         yRef.value = 60;
 
         renderSummary(doc, yRef, exportData);
-        renderTable(doc, yRef, exportData);
+        renderTable(doc, yRef, exportData, t);
         applyFooters(doc);
 
         doc.save(buildFileName(range, 'pdf', exportDate));
@@ -727,7 +723,7 @@ export function DataForm() {
       }
 
       const exportData = prepareExportData(payload);
-      downloadCsv(exportData, range);
+      downloadCsv(exportData, range, t);
     } catch (error) {
       console.error('[csv export] Failed to generate csv:', error);
       alert('Noe gikk galt under eksporten. Prøv igjen senere.');
@@ -740,9 +736,9 @@ export function DataForm() {
     <div className="space-y-6">
       <div className="space-y-6">
         <div className="text-center">
-          <h3 className="text-lg font-semibold text-text-muted">Eksporter data</h3>
+          <h3 className="text-lg font-semibold text-text-muted">{t.pages.settings.data.export.title}</h3>
           <p className="mt-1 text-sm text-text-secondary">
-            Velg tidsperiode og last ned vakter som PDF eller CSV.
+            {t.pages.settings.data.export.description}
           </p>
         </div>
 
@@ -750,9 +746,9 @@ export function DataForm() {
 
         <div className="space-y-4">
           <div>
-            <p className="font-medium text-text-muted">Velg tidsperiode</p>
+            <p className="font-medium text-text-muted">{t.pages.settings.data.export.periodLabel}</p>
             <p className="text-sm text-text-secondary">
-              Velg en tidsperiode for eksporten.
+              {t.pages.settings.data.export.periodDescription}
             </p>
           </div>
 
@@ -785,7 +781,7 @@ export function DataForm() {
               }}
             />
             <span className="text-xs uppercase tracking-wide text-text-secondary">
-              eller
+              {t.common.or}
             </span>
             <div
               className="h-px flex-1"
@@ -808,11 +804,11 @@ export function DataForm() {
           >
             <div className="flex flex-col gap-2">
               <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                <p className="font-medium text-text-muted">Egendefinert periode</p>
+                <p className="font-medium text-text-muted">{t.pages.settings.data.export.customPeriod}</p>
                 <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap">
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-semibold uppercase tracking-wide text-text-secondary">
-                      Fra
+                      {t.pages.settings.data.export.fromLabel}
                     </span>
                     <Input
                       type="date"
@@ -832,7 +828,7 @@ export function DataForm() {
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-semibold uppercase tracking-wide text-text-secondary">
-                      Til
+                      {t.pages.settings.data.export.toLabel}
                     </span>
                     <Input
                       type="date"
@@ -854,7 +850,7 @@ export function DataForm() {
               </div>
               {customRangeInvalid && (
                 <p className="text-xs text-destructive">
-                  Fradato kan ikke være etter tildato.
+                  {t.pages.settings.data.export.dateRangeError}
                 </p>
               )}
             </div>
@@ -862,7 +858,7 @@ export function DataForm() {
 
           {selectedRangeLabel && (
             <p className="text-sm text-text-secondary">
-              Valgt periode: {selectedRangeLabel}
+              {t.pages.settings.data.export.selectedPeriod} {selectedRangeLabel}
             </p>
           )}
         </div>
@@ -872,9 +868,9 @@ export function DataForm() {
         <div className="space-y-6">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="font-medium text-text-muted">Eksporter til PDF</p>
+              <p className="font-medium text-text-muted">{t.pages.settings.data.export.pdf.title}</p>
               <p className="text-sm text-text-secondary">
-                Inkluderer vaktoversikt, summer per type og totale lønnstall.
+                {t.pages.settings.data.export.pdf.description}
               </p>
             </div>
             <Button
@@ -886,15 +882,15 @@ export function DataForm() {
               disabled={!canExport || isExportingPdf}
             >
               <Download className="mr-2 h-4 w-4" />
-              {isExportingPdf ? 'Eksporterer…' : 'Last ned PDF'}
+              {isExportingPdf ? t.pages.settings.data.export.pdf.exporting : t.pages.settings.data.export.pdf.button}
             </Button>
           </div>
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="font-medium text-text-muted">Eksporter til CSV</p>
+              <p className="font-medium text-text-muted">{t.pages.settings.data.export.csv.title}</p>
               <p className="text-sm text-text-secondary">
-                Vaktinfo per vakt i kronologisk rekkefølge. Inkluderer sum på slutten.
+                {t.pages.settings.data.export.csv.description}
               </p>
             </div>
             <Button
@@ -902,7 +898,7 @@ export function DataForm() {
               disabled={!canExport || isExportingCsv}
             >
               <Download className="mr-2 h-4 w-4" />
-              {isExportingCsv ? 'Eksporterer…' : 'Last ned CSV'}
+              {isExportingCsv ? t.pages.settings.data.export.csv.exporting : t.pages.settings.data.export.csv.button}
             </Button>
           </div>
         </div>
@@ -911,11 +907,9 @@ export function DataForm() {
       <Separator className="mt-6" />
 
       <div className="space-y-2">
-        <h3 className="font-semibold text-text-muted">Om rapporten</h3>
+        <h3 className="font-semibold text-text-muted">{t.pages.settings.data.export.about.title}</h3>
         <p className="text-sm text-text-secondary">
-          PDF-rapporten er optimalisert for A4-portrettformat og inkluderer automatisk sidetall og
-          genereringstidspunkt. Lagre den for intern dokumentasjon eller del den ved
-          behov.
+          {t.pages.settings.data.export.about.description}
         </p>
       </div>
     </div>

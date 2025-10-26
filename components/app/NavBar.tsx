@@ -21,6 +21,7 @@ import {
 import { useNavigationFeedback } from "./navigation-feedback";
 import { useScrollDirection } from "./use-scroll-direction";
 import { supabase } from "@/lib/supabase/browser";
+import { useTranslations } from "@/lib/i18n/client";
 
 type TablerIcon = typeof IconHome;
 type NavItem = {
@@ -68,10 +69,15 @@ const navItems: NavItem[] = [
 ];
 
 export function NavBar() {
-  const pathname = usePathname();
+  const { t } = useTranslations();
+  const rawPathname = usePathname();
   const { navigate, pendingPath } = useNavigationFeedback();
   const { scrollDirection, scrollY } = useScrollDirection(50);
   const [showAddShiftHint, setShowAddShiftHint] = useState(false);
+
+  // Strip locale prefix from pathname for consistent nav item matching
+  // usePathname() returns paths like "/no/settings", "/en/shifts", or "/de/stats"
+  const pathname = rawPathname.replace(/^\/(no|en|de)(?=\/|$)/, '') || '/';
 
   // Fetch shift count client-side to determine if hint should be shown
   // This is deferred to avoid blocking the initial render
@@ -290,8 +296,8 @@ export function NavBar() {
                   {shouldShowHint ? (
                     <div className="pointer-events-none absolute bottom-[calc(100%+1.5rem)] left-1/2 flex -translate-x-1/2 flex-col items-center gap-3">
                       <span className="animate-gentle-pulse flex w-max flex-col items-center gap-0.5 rounded-lg border border-border-subtle bg-surface-primary px-3 py-1.5 text-center text-xs font-semibold text-text-primary shadow-app leading-tight">
-                        <span>Legg til din</span>
-                        <span>første vakt!</span>
+                        <span>{t.navigation.addFirstShiftLine1}</span>
+                        <span>{t.navigation.addFirstShiftLine2}</span>
                       </span>
                       <IconArrowDown
                         className="h-10 w-10 text-brand-highlight animate-gentle-bob drop-shadow"

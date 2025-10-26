@@ -3,7 +3,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getStatsData } from "@/app/(app)/stats/_data/getStatsData";
+import { getStatsData } from "@/app/[locale]/(app)/stats/_data/getStatsData";
+import type { Locale } from "@/lib/i18n/config";
 
 export async function GET(request: NextRequest) {
   const supabase = await createSupabaseServerClient();
@@ -18,6 +19,7 @@ export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const yearParam = searchParams.get("year");
   const monthParam = searchParams.get("month");
+  const localeParam = searchParams.get("locale") || 'no';
 
   let year: number | undefined;
   let month: number | undefined;
@@ -37,7 +39,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const data = await getStatsData(user.id, { year, month });
+    const data = await getStatsData(user.id, { year, month, locale: localeParam as Locale });
     return NextResponse.json(data, {
       headers: {
         // Cache for 5 minutes (300 seconds)

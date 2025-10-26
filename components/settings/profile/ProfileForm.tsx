@@ -6,10 +6,11 @@ import { Input } from '@appui/Input';
 import { Label } from '@appui/Label';
 import { Button } from '@appui/Button';
 import { Avatar, AvatarFallback, AvatarImage } from '@appui/Avatar';
-import { updateProfileSettings } from '@/app/(app)/settings/_actions/updateSettings';
+import { updateProfileSettings } from '@/app/[locale]/(app)/settings/_actions/updateSettings';
 import { IconArrowsExchange, IconTrash } from '@tabler/icons-react';
 import { useRouter } from 'next/navigation';
 import { EmailChangeCard } from './EmailChangeCard';
+import { useTranslations } from '@/lib/i18n/client';
 
 interface ProfileFormProps {
   initialData: {
@@ -20,6 +21,7 @@ interface ProfileFormProps {
 }
 
 export function ProfileForm({ initialData }: ProfileFormProps) {
+  const { t } = useTranslations();
   const router = useRouter();
   const [firstName, setFirstName] = useState(initialData.firstName);
   const [profilePictureUrl, setProfilePictureUrl] = useState(initialData.profilePictureUrl);
@@ -89,7 +91,7 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
     if (!file) return;
 
     if (file.size > 5 * 1024 * 1024) {
-      setUploadError('Bildet må være mindre enn 5MB');
+      setUploadError(t.pages.settings.profile.personalInfo.errors.imageTooBig);
       return;
     }
 
@@ -113,7 +115,7 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
       if (!response.ok) {
         const errorPayload = await response.json().catch(() => null);
         console.error('Failed to upload profile picture via API route:', errorPayload ?? response.statusText);
-        setUploadError(errorPayload?.error ?? 'Kunne ikke laste opp bildet. Prøv igjen.');
+        setUploadError(errorPayload?.error ?? t.pages.settings.profile.personalInfo.errors.uploadFailed);
         return;
       }
 
@@ -121,7 +123,7 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
       newUrl = payload.publicUrl;
     } catch (error) {
       console.error('Unexpected error uploading profile picture:', error);
-      setUploadError('Kunne ikke laste opp bildet. Prøv igjen.');
+      setUploadError(t.pages.settings.profile.personalInfo.errors.uploadFailed);
       return;
     }
 
@@ -135,7 +137,7 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
       router.refresh();
     } catch (error) {
       console.error('Failed to save profile picture:', error);
-      setUploadError('Kunne ikke lagre profilbildet.');
+      setUploadError(t.pages.settings.profile.personalInfo.errors.saveFailed);
       if (newUrl) {
         try {
           await fetch(`/api/profile-picture?url=${encodeURIComponent(newUrl)}`, {
@@ -164,7 +166,7 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
       if (!response.ok) {
         const errorPayload = await response.json().catch(() => null);
         console.error('Failed to delete profile picture via API route:', errorPayload ?? response.statusText);
-        setUploadError(errorPayload?.error ?? 'Kunne ikke fjerne profilbildet.');
+        setUploadError(errorPayload?.error ?? t.pages.settings.profile.personalInfo.errors.removeFailed);
         return;
       }
 
@@ -177,7 +179,7 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
       router.refresh();
     } catch (error) {
       console.error('Failed to remove profile picture:', error);
-      setUploadError('Kunne ikke fjerne profilbildet.');
+      setUploadError(t.pages.settings.profile.personalInfo.errors.removeFailed);
     } finally {
       setIsUploading(false);
     }
@@ -194,7 +196,7 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
       <div className="space-y-6">
         <div className="space-y-5">
           <div className="space-y-4">
-            <h2 className="text-2xl font-semibold">Personlig informasjon</h2>
+            <h2 className="text-2xl font-semibold">{t.pages.settings.profile.personalInfo.title}</h2>
             <div className="flex items-center gap-6">
               <Avatar className="h-24 w-24">
                 <AvatarImage src={profilePictureUrl || undefined} />
@@ -219,7 +221,7 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
                   disabled={isUploading}
                 >
                   <IconArrowsExchange className="h-4 w-4" aria-hidden />
-                  {isUploading ? 'Laster opp…' : profilePictureUrl ? 'Bytt bilde' : 'Last opp bilde'}
+                  {isUploading ? t.pages.settings.profile.personalInfo.uploadingImage : profilePictureUrl ? t.pages.settings.profile.personalInfo.changeImage : t.pages.settings.profile.personalInfo.uploadImage}
                 </Button>
                 {profilePictureUrl && (
                   <Button
@@ -231,7 +233,7 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
                     disabled={isUploading}
                   >
                     <IconTrash className="h-4 w-4" aria-hidden />
-                    Fjern bilde
+                    {t.pages.settings.profile.personalInfo.removeImage}
                   </Button>
                 )}
                 {uploadError && (
@@ -244,18 +246,17 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="firstName">Navn</Label>
+            <Label htmlFor="firstName">{t.pages.settings.profile.personalInfo.nameLabel}</Label>
             <Input
               id="firstName"
               value={firstName}
               onChange={(e) => setFirstName(e.target.value)}
-              placeholder="Ditt navn"
               disabled={isSaving}
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="email">E-post</Label>
+            <Label htmlFor="email">{t.pages.settings.profile.personalInfo.emailLabel}</Label>
             <Input
               id="email"
               value={initialData.email}
@@ -268,7 +269,7 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
                 className="underline hover:text-text-primary transition-colors"
                 onClick={() => setShowEmailChangeCard(true)}
               >
-                Endre e-postadresse
+                {t.pages.settings.profile.personalInfo.changeEmail}
               </button>
             </p>
           </div>

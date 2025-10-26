@@ -3,7 +3,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getStatsData } from "@/app/(app)/stats/_data/getStatsData";
+import { getStatsData } from "@/app/[locale]/(app)/stats/_data/getStatsData";
 
 /**
  * API endpoint for chart data only

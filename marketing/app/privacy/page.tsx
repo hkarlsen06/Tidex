@@ -1,25 +1,28 @@
 import type { Metadata } from 'next';
-import { PrivacyPolicy } from '@components/legal/PrivacyPolicy';
+import { defaultLocale } from '@/lib/i18n/config';
+import { getDictionary } from '@/lib/i18n/dictionaries';
+import { MarketingLegalPage } from '../../components/MarketingLegalPage';
+
+const dictionary = getDictionary(defaultLocale);
 
 export const metadata: Metadata = {
-  title: 'Personvernerklæring — kkarlsen.dev',
-  description:
-    'Les om hvordan kkarlsen.dev samler inn, bruker og beskytter dine personopplysninger.',
+  title: dictionary.legal.privacy.meta.title,
+  description: dictionary.legal.privacy.meta.description,
   openGraph: {
-    title: 'Personvernerklæring — kkarlsen.dev',
-    description:
-      'Les om hvordan kkarlsen.dev samler inn, bruker og beskytter dine personopplysninger.',
-    url: 'https://kkarlsen.dev/privacy',
+    title: dictionary.legal.privacy.meta.title,
+    description: dictionary.legal.privacy.meta.description,
+    url: 'https://tidex.no/privacy',
     type: 'website',
   },
 };
 
 export default function PrivacyPage() {
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-12 max-w-4xl">
-        <PrivacyPolicy />
-      </div>
-    </div>
+    <MarketingLegalPage
+      locale={defaultLocale}
+      dictionary={dictionary}
+      variant="privacy"
+      path="/privacy"
+    />
   );
 }

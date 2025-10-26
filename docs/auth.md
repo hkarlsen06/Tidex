@@ -60,8 +60,8 @@ This document outlines how authentication is wired into the project following Ne
 
 ## Supabase Dashboard Checklist
 
-- Configure **Site URL** to your production domain (`https://kkarlsen.dev`) and optionally localhost for dev.
-- Add `https://kalkulator.kkarlsen.dev/auth/callback` and other environments to **Redirect URLs** in the Supabase Auth settings.
+- Configure **Site URL** to your production domain (`https://tidex.dev`) and optionally localhost for dev.
+- Add `https://kalkulator.tidex.dev/auth/callback` and other environments to **Redirect URLs** in the Supabase Auth settings.
 - Ensure the Google OAuth credentials in Supabase match the configured redirect URL if you plan to use social login.
 
 ## Extending the System

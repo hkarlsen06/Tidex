@@ -14,12 +14,14 @@ This document summarizes the Phase 3 advanced performance optimizations implemen
 
 #### Changes Made:
 
-1. **Created Critical Data Function** ([app/(app)/stats/_data/getStatsData.ts:578-612](app/(app)/stats/_data/getStatsData.ts#L578-L612))
+1. **Created Critical Data Function** ([app/(app)/stats/\_data/getStatsData.ts:578-612](<app/(app)/stats/_data/getStatsData.ts#L578-L612>))
+
    - Added `CriticalStatsData` type with only essential fields
    - Created `getCriticalStatsData()` function that returns minimal data for hero section
    - Enables faster initial page render with critical metrics
 
 2. **Created Chart Data API Endpoint** ([app/api/stats/charts/route.ts](app/api/stats/charts/route.ts))
+
    - New `/api/stats/charts` endpoint for chart data only
    - Separates heavy chart computations from critical stats
    - Returns only chart-related fields (last6Months, thisWeek, byDayOfWeek, etc.)
@@ -58,6 +60,7 @@ const [chartData, setChartData] = useState<ChartData | null>({
 ```
 
 **Benefits**:
+
 - All content (stats and charts) renders immediately from SSR data
 - No skeleton UI on initial page load
 - Month changes load full data set efficiently
@@ -82,6 +85,7 @@ const [chartData, setChartData] = useState<ChartData | null>({
    ```
 
 **Benefits**:
+
 - Automatic tree-shaking for specified packages
 - Smaller route-specific bundles
 - Faster initial load times
@@ -102,19 +106,21 @@ const [chartData, setChartData] = useState<ChartData | null>({
 1. **Updated Root Layout** ([app/layout.tsx:80-84](app/layout.tsx#L80-L84))
    ```html
    {/* Resource hints for faster loading */}
-   <link rel="preconnect" href="https://kkarlsen-dev.supabase.co" />
-   <link rel="dns-prefetch" href="https://kkarlsen-dev.supabase.co" />
+   <link rel="preconnect" href="https://tidex-dev.supabase.co" />
+   <link rel="dns-prefetch" href="https://tidex-dev.supabase.co" />
    <link rel="preconnect" href="https://vercel.live" />
    <link rel="dns-prefetch" href="https://vercel.live" />
    ```
 
 **Benefits**:
+
 - Earlier DNS resolution for Supabase and Vercel domains
 - Faster API requests through early connection establishment
 - Reduced latency for critical data fetching
 - 10-20% improvement in LCP timing (as predicted in plan)
 
 **Technical Details**:
+
 - `preconnect`: Establishes early connection (DNS + TCP + TLS)
 - `dns-prefetch`: Performs DNS lookup in advance (lighter than preconnect)
 - Applied to domains frequently accessed during page load
@@ -127,20 +133,22 @@ const [chartData, setChartData] = useState<ChartData | null>({
 
 After completing all three phases (Phase 1, 2, and 3):
 
-| Metric | Before | After Phase 3 | Target | Status |
-|--------|--------|---------------|--------|--------|
-| **TTFB** | ~1000ms | < 400ms | < 800ms | ✅ Exceeds target |
-| **FCP** | ~2-3s | < 1.5s | < 1.8s | ✅ Exceeds target |
-| **LCP** | ~3-4s | < 2.5s | < 2.5s | ✅ Meets target |
+| Metric   | Before  | After Phase 3 | Target  | Status            |
+| -------- | ------- | ------------- | ------- | ----------------- |
+| **TTFB** | ~1000ms | < 400ms       | < 800ms | ✅ Exceeds target |
+| **FCP**  | ~2-3s   | < 1.5s        | < 1.8s  | ✅ Exceeds target |
+| **LCP**  | ~3-4s   | < 2.5s        | < 2.5s  | ✅ Meets target   |
 
 ### Phase 3 Specific Contributions:
 
 1. **Progressive Data Loading (3.1)**
+
    - Faster initial render (hero section shows immediately)
    - Better perceived performance with skeleton UI
    - Reduced blocking time for chart data
 
 2. **Code Splitting (3.2)**
+
    - 20-30% smaller route-specific bundles (predicted)
    - Reduced JavaScript parsing time
    - Faster Time to Interactive (TTI)
@@ -155,6 +163,7 @@ After completing all three phases (Phase 1, 2, and 3):
 ## Testing Recommendations
 
 ### 1. Lighthouse Audits
+
 ```bash
 # Run Lighthouse in CLI
 npx lighthouse https://your-domain.com/stats --view
@@ -189,6 +198,7 @@ npx lighthouse https://your-domain.com/stats --view
 ### 4. Vercel Speed Insights
 
 Monitor real-user metrics in production:
+
 - Dashboard → Speed Insights
 - Track FCP, LCP, TTFB trends over time
 - Verify improvements in 95th percentile scores
@@ -198,15 +208,18 @@ Monitor real-user metrics in production:
 ## File Changes Summary
 
 ### New Files Created:
+
 - [app/api/stats/charts/route.ts](app/api/stats/charts/route.ts) - Chart data API endpoint
 
 ### Modified Files:
+
 - [app/layout.tsx](app/layout.tsx) - Added resource hints
 - [next.config.js](next.config.js) - Added package import optimization
-- [app/(app)/stats/_data/getStatsData.ts](app/(app)/stats/_data/getStatsData.ts) - Added critical data function
+- [app/(app)/stats/\_data/getStatsData.ts](<app/(app)/stats/_data/getStatsData.ts>) - Added critical data function
 - [components/app/StatsContent.tsx](components/app/StatsContent.tsx) - Progressive data loading
 
 ### Lines of Code:
+
 - Added: ~150 lines
 - Modified: ~50 lines
 - Total impact: ~200 lines
@@ -218,6 +231,7 @@ Monitor real-user metrics in production:
 If issues arise, optimizations can be rolled back individually:
 
 ### 3.1 Progressive Data Loading
+
 ```bash
 # Revert StatsContent to load all data at once
 git checkout HEAD~1 components/app/StatsContent.tsx
@@ -226,16 +240,20 @@ rm app/api/stats/charts/route.ts
 ```
 
 ### 3.2 Code Splitting
+
 ```javascript
 // Remove from next.config.js experimental block
 optimizePackageImports: ["@tabler/icons-react"], // Original value
 ```
 
 ### 3.3 Resource Hints
+
 ```tsx
 // Remove from app/layout.tsx <head>
-{/* Resource hints for faster loading */}
-<link rel="preconnect" href="..." />
+{
+  /* Resource hints for faster loading */
+}
+<link rel="preconnect" href="..." />;
 ```
 
 ---
@@ -255,9 +273,10 @@ optimizePackageImports: ["@tabler/icons-react"], // Original value
 ### Cache Invalidation
 
 Chart data shares the same cache tags as stats data:
+
 ```typescript
-tags: [`user-stats-${userId}`]
-revalidate: 300 // 5 minutes
+tags: [`user-stats-${userId}`];
+revalidate: 300; // 5 minutes
 ```
 
 When shifts are mutated, both `/api/stats` and `/api/stats/charts` caches are invalidated automatically.
@@ -271,6 +290,7 @@ When shifts are mutated, both `/api/stats` and `/api/stats/charts` caches are in
 ### Browser Compatibility
 
 Resource hints are widely supported:
+
 - `preconnect`: Chrome 46+, Firefox 39+, Safari 11.1+
 - `dns-prefetch`: Chrome 1+, Firefox 3+, Safari 5+
 

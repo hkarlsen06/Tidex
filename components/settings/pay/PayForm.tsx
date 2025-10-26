@@ -8,11 +8,12 @@ import { Switch } from '@appui/Switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@appui/Select';
 import { Separator } from '@appui/Separator';
 import { SupplementsEditor, SupplementsData } from '@/components/settings/SupplementsEditor';
-import { updatePaySettings } from '@/app/(app)/settings/_actions/updateSettings';
+import { updatePaySettings } from '@/app/[locale]/(app)/settings/_actions/updateSettings';
 import { useRouter } from 'next/navigation';
 import { PRESET_WAGE_RATES, PRESET_SUPPLEMENT_RULES } from '@/lib/payroll';
 import { IconBuilding, IconAdjustments } from '@tabler/icons-react';
 import { cn } from '@/lib/utils';
+import { useTranslations } from '@/lib/i18n/client';
 
 interface PayFormProps {
   initialData: any;
@@ -29,15 +30,17 @@ interface SupplementsCardProps {
 }
 
 function SupplementsCard({ usePreset, customSupplements, setCustomSupplements }: SupplementsCardProps) {
+  const { t } = useTranslations();
+
   return (
     <Card className="p-6">
       <div className="space-y-6">
         <div>
-          <h3 className="text-lg font-semibold">Tillegg</h3>
+          <h3 className="text-lg font-semibold">{t.pages.settings.pay.supplements.title}</h3>
           <p className="text-sm text-text-secondary mt-1">
             {usePreset
-              ? 'Se hvilke tillegg som følger tariffavtalen'
-              : 'Legg til tillegg for bestemte tider og dager'}
+              ? t.pages.settings.pay.supplements.descriptionPreset
+              : t.pages.settings.pay.supplements.descriptionCustom}
           </p>
         </div>
 
@@ -52,7 +55,7 @@ function SupplementsCard({ usePreset, customSupplements, setCustomSupplements }:
 
         {usePreset && (
           <p className="text-xs text-text-secondary">
-            Tariff-tillegg styres av tariffavtalen og kan ikke endres her.
+            {t.pages.settings.pay.supplements.tariffNote}
           </p>
         )}
       </div>
@@ -61,6 +64,7 @@ function SupplementsCard({ usePreset, customSupplements, setCustomSupplements }:
 }
 
 export function PayForm({ initialData }: PayFormProps) {
+  const { t } = useTranslations();
   const router = useRouter();
   const isInitialMount = useRef(true);
 
@@ -170,9 +174,9 @@ export function PayForm({ initialData }: PayFormProps) {
   const getCurrentWage = () => {
     if (usePreset) {
       const rate = PRESET_WAGE_RATES[wageLevel];
-      return `${rate?.toFixed(2) || '0'} kr/t`;
+      return `${rate?.toFixed(2) || '0'} ${t.common.perHour}`;
     }
-    return `${customWage} kr/t`;
+    return `${customWage} ${t.common.perHour}`;
   };
 
 
@@ -182,9 +186,9 @@ export function PayForm({ initialData }: PayFormProps) {
       <Card className="p-6">
         <div className="space-y-6">
           <div>
-            <h3 className="text-lg font-semibold">Grunnlønn</h3>
+            <h3 className="text-lg font-semibold">{t.pages.settings.pay.wage.title}</h3>
             <p className="text-sm text-text-secondary mt-1">
-              Velg mellom tariff eller egendefinert timelønn
+              {t.pages.settings.pay.wage.description}
             </p>
           </div>
 
@@ -203,7 +207,7 @@ export function PayForm({ initialData }: PayFormProps) {
               )}
             >
               <IconBuilding stroke={2} className="h-8 w-8" />
-              <span className="text-xs font-medium">Tariff</span>
+              <span className="text-xs font-medium">{t.pages.settings.pay.wage.tariffButton}</span>
             </button>
 
             <button
@@ -218,13 +222,13 @@ export function PayForm({ initialData }: PayFormProps) {
               )}
             >
               <IconAdjustments stroke={2} className="h-8 w-8" />
-              <span className="text-xs font-medium">Egendefinert</span>
+              <span className="text-xs font-medium">{t.pages.settings.pay.wage.customButton}</span>
             </button>
           </div>
 
           {usePreset ? (
             <div className="space-y-2">
-              <Label htmlFor="wageLevel">Tariffnivå</Label>
+              <Label htmlFor="wageLevel">{t.pages.settings.pay.wage.wageLevelLabel}</Label>
               <Select value={wageLevel} onValueChange={setWageLevel}>
                 <SelectTrigger id="wageLevel">
                   <SelectValue />
@@ -232,17 +236,17 @@ export function PayForm({ initialData }: PayFormProps) {
                 <SelectContent>
                   {Object.keys(PRESET_WAGE_RATES).map((level) => {
                     const levelNum = parseInt(level);
-                    let label = `Nivå ${level}`;
+                    let label = `${t.pages.settings.pay.wage.wageLevelPrefix} ${level}`;
 
                     if (levelNum === -1) {
-                      label = 'Under 16 år';
+                      label = t.pages.settings.pay.wage.wageLevelUnder16;
                     } else if (levelNum === -2) {
-                      label = '16 - 18 år';
+                      label = t.pages.settings.pay.wage.wageLevel16to18;
                     }
 
                     return (
                       <SelectItem key={level} value={level}>
-                        {label} - {PRESET_WAGE_RATES[level].toFixed(2)} kr/t
+                        {label} - {PRESET_WAGE_RATES[level].toFixed(2)} {t.common.perHour}
                       </SelectItem>
                     );
                   })}
@@ -251,7 +255,7 @@ export function PayForm({ initialData }: PayFormProps) {
             </div>
           ) : (
             <div className="space-y-2">
-              <Label htmlFor="customWage">Timelønn (kr)</Label>
+              <Label htmlFor="customWage">{t.pages.settings.pay.wage.customWageLabel}</Label>
               <Input
                 id="customWage"
                 type="number"
@@ -266,7 +270,7 @@ export function PayForm({ initialData }: PayFormProps) {
           )}
 
           <div className="p-4 bg-surface-primary rounded-lg">
-            <p className="text-sm text-text-secondary">Din nåværende lønn:</p>
+            <p className="text-sm text-text-secondary">{t.pages.settings.pay.wage.currentWage}</p>
             <p className="text-xl font-semibold mt-1">{getCurrentWage()}</p>
           </div>
         </div>
@@ -286,9 +290,9 @@ export function PayForm({ initialData }: PayFormProps) {
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-lg font-semibold">Pausetrekk</h3>
+              <h3 className="text-lg font-semibold">{t.pages.settings.pay.breaks.title}</h3>
               <p className="text-sm text-text-secondary mt-1">
-                Automatisk trekk for pauser
+                {t.pages.settings.pay.breaks.description}
               </p>
             </div>
             <Switch
@@ -303,27 +307,27 @@ export function PayForm({ initialData }: PayFormProps) {
 
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="pauseMethod">Trekkmetode</Label>
+                  <Label htmlFor="pauseMethod">{t.pages.settings.pay.breaks.methodLabel}</Label>
                   <Select value={pauseMethod} onValueChange={setPauseMethod}>
                     <SelectTrigger id="pauseMethod">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="proportional">Proporsjonal</SelectItem>
-                      <SelectItem value="base_only">Kun grunnlønn</SelectItem>
-                      <SelectItem value="end_of_shift">Slutt av vakt</SelectItem>
+                      <SelectItem value="proportional">{t.pages.settings.pay.breaks.methodProportional}</SelectItem>
+                      <SelectItem value="base_only">{t.pages.settings.pay.breaks.methodBaseOnly}</SelectItem>
+                      <SelectItem value="end_of_shift">{t.pages.settings.pay.breaks.methodEndOfShift}</SelectItem>
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-text-secondary">
-                    {pauseMethod === 'proportional' && 'Trekker pause proporsjonal basert på vaktlengde'}
-                    {pauseMethod === 'base_only' && 'Trekker pause kun fra grunnlønn'}
-                    {pauseMethod === 'end_of_shift' && 'Trekker pause fra slutten av vakten'}
+                    {pauseMethod === 'proportional' && t.pages.settings.pay.breaks.methodHelpProportional}
+                    {pauseMethod === 'base_only' && t.pages.settings.pay.breaks.methodHelpBaseOnly}
+                    {pauseMethod === 'end_of_shift' && t.pages.settings.pay.breaks.methodHelpEndOfShift}
                   </p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="threshold">Terskel (timer)</Label>
+                    <Label htmlFor="threshold">{t.pages.settings.pay.breaks.thresholdLabel}</Label>
                     <Input
                       id="threshold"
                       type="number"
@@ -334,7 +338,7 @@ export function PayForm({ initialData }: PayFormProps) {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="duration">Varighet (min)</Label>
+                    <Label htmlFor="duration">{t.pages.settings.pay.breaks.durationLabel}</Label>
                     <Input
                       id="duration"
                       type="number"
@@ -356,9 +360,9 @@ export function PayForm({ initialData }: PayFormProps) {
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-lg font-semibold">Skattetrekk</h3>
+              <h3 className="text-lg font-semibold">{t.pages.settings.pay.tax.title}</h3>
               <p className="text-sm text-text-secondary mt-1">
-                Vis lønn etter skattetrekk
+                {t.pages.settings.pay.tax.description}
               </p>
             </div>
             <Switch
@@ -372,7 +376,7 @@ export function PayForm({ initialData }: PayFormProps) {
               <Separator />
 
               <div className="space-y-2">
-                <Label htmlFor="taxPercentage">Skattesats (%)</Label>
+                <Label htmlFor="taxPercentage">{t.pages.settings.pay.tax.percentageLabel}</Label>
                 <Input
                   id="taxPercentage"
                   type="number"
@@ -383,7 +387,7 @@ export function PayForm({ initialData }: PayFormProps) {
                   onChange={(e) => setTaxPercentage(e.target.value)}
                 />
                 <p className="text-xs text-text-secondary">
-                  Dette er kun for visning - faktisk skatt kan variere
+                  {t.pages.settings.pay.tax.disclaimer}
                 </p>
               </div>
             </>
@@ -395,9 +399,9 @@ export function PayForm({ initialData }: PayFormProps) {
       <Card className="p-6">
         <div className="space-y-6">
           <div>
-            <h3 className="text-lg font-semibold">Andre innstillinger</h3>
+            <h3 className="text-lg font-semibold">{t.pages.settings.pay.other.title}</h3>
             <p className="text-sm text-text-secondary mt-1">
-              Månedsmål og utbetalingsdato
+              {t.pages.settings.pay.other.description}
             </p>
           </div>
 
@@ -405,7 +409,7 @@ export function PayForm({ initialData }: PayFormProps) {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="monthlyGoal">Månedsmål (kr)</Label>
+              <Label htmlFor="monthlyGoal">{t.pages.settings.pay.other.monthlyGoalLabel}</Label>
               <Input
                 id="monthlyGoal"
                 type="number"
@@ -415,7 +419,7 @@ export function PayForm({ initialData }: PayFormProps) {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="payrollDay">Utbetalingsdag</Label>
+              <Label htmlFor="payrollDay">{t.pages.settings.pay.other.paymentDayLabel}</Label>
               <Input
                 id="payrollDay"
                 type="number"

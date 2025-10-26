@@ -11,7 +11,7 @@ import {
   linkPhoneNumber,
   verifyAndLinkPhone,
   unlinkPhoneNumber,
-} from '@/app/(app)/settings/_actions/updateSettings';
+} from '@/app/[locale]/(app)/settings/_actions/updateSettings';
 import {
   normalizePhoneToE164,
   isValidNorwegianPhone,
@@ -24,6 +24,7 @@ import {
   InputOTPSlot,
 } from '@appui/InputOTP';
 import { translateError } from '@/lib/errors/translate';
+import { useTranslations } from '@/lib/i18n/client';
 
 interface PhoneConnectionCardProps {
   hasPhoneConnected: boolean;
@@ -38,6 +39,7 @@ export function PhoneConnectionCard({
   phoneNumber,
   canUnlinkPhone,
 }: PhoneConnectionCardProps) {
+  const { t } = useTranslations();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -48,7 +50,7 @@ export function PhoneConnectionCard({
 
   const handleLink = async () => {
     if (!isValidNorwegianPhone(phoneInput)) {
-      setError('Telefonnummer må være 8 siffer.');
+      setError(t.pages.settings.profile.phone.errors.phoneInvalid);
       return;
     }
 
@@ -64,7 +66,7 @@ export function PhoneConnectionCard({
       setError(
         err instanceof Error
           ? translateError(err.message)
-          : 'En feil oppstod'
+          : t.pages.settings.profile.phone.errors.genericError
       );
     } finally {
       setIsLoading(false);
@@ -73,7 +75,7 @@ export function PhoneConnectionCard({
 
   const handleVerifyOtp = async () => {
     if (otp.length !== 6) {
-      setError('Fyll inn alle 6 sifrene.');
+      setError(t.pages.settings.profile.phone.errors.otpIncomplete);
       return;
     }
 
@@ -93,7 +95,7 @@ export function PhoneConnectionCard({
       setError(
         err instanceof Error
           ? translateError(err.message)
-          : 'En feil oppstod'
+          : t.pages.settings.profile.phone.errors.genericError
       );
     } finally {
       setIsLoading(false);
@@ -112,7 +114,7 @@ export function PhoneConnectionCard({
       setError(
         err instanceof Error
           ? translateError(err.message)
-          : 'En feil oppstod'
+          : t.pages.settings.profile.phone.errors.genericError
       );
     } finally {
       setIsLoading(false);
@@ -137,12 +139,12 @@ export function PhoneConnectionCard({
             </div>
             <div className="flex-1">
               <h3 className="font-semibold text-text-primary">
-                Koble til telefonnummer
+                {t.pages.settings.profile.phone.title}
               </h3>
               <p className="text-sm text-text-secondary mt-0.5">
                 {linkStep === 'input'
-                  ? 'Skriv inn ditt 8-sifrede telefonnummer'
-                  : 'Skriv inn koden vi sendte til deg'}
+                  ? t.pages.settings.profile.phone.instructionEnter
+                  : t.pages.settings.profile.phone.instructionVerify}
               </p>
             </div>
           </div>
@@ -150,7 +152,7 @@ export function PhoneConnectionCard({
           {linkStep === 'input' ? (
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="phone">Telefonnummer (8 siffer)</Label>
+                <Label htmlFor="phone">{t.pages.settings.profile.phone.phoneLabel}</Label>
                 <Input
                   id="phone"
                   type="text"
@@ -173,14 +175,14 @@ export function PhoneConnectionCard({
                   disabled={isLoading || !phoneInput}
                   className="flex-1"
                 >
-                  {isLoading ? 'Sender...' : 'Send kode'}
+                  {isLoading ? t.pages.settings.profile.phone.sending : t.pages.auth.login.submitButtonSendCode}
                 </Button>
                 <Button
                   variant="outline"
                   onClick={handleCancelLink}
                   disabled={isLoading}
                 >
-                  Avbryt
+                  {t.common.cancel}
                 </Button>
               </div>
             </div>
@@ -217,14 +219,14 @@ export function PhoneConnectionCard({
                   disabled={isLoading || otp.length !== 6}
                   className="flex-1"
                 >
-                  {isLoading ? 'Verifiserer...' : 'Verifiser'}
+                  {isLoading ? t.pages.settings.profile.phone.verifying : t.pages.auth.login.verifyButton}
                 </Button>
                 <Button
                   variant="outline"
                   onClick={handleCancelLink}
                   disabled={isLoading}
                 >
-                  Avbryt
+                  {t.common.cancel}
                 </Button>
               </div>
             </div>
@@ -242,11 +244,11 @@ export function PhoneConnectionCard({
             <IconPhone className="h-6 w-6 text-text-primary" />
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-text-primary">Telefonnummer</h3>
+            <h3 className="font-semibold text-text-primary">{t.pages.settings.profile.phone.titleConnected}</h3>
             <p className="text-sm text-text-secondary mt-0.5">
               {hasPhoneConnected
-                ? `Du har koblet til telefonnummer ${formatPhoneForDisplay(phoneNumber || '')}`
-                : 'Koble til telefonnummeret ditt for enklere pålogging'}
+                ? t.pages.settings.profile.phone.connectedAs.replace('{phone}', formatPhoneForDisplay(phoneNumber || ''))
+                : t.pages.settings.profile.phone.notConnected}
             </p>
             {error && <p className="text-sm text-destructive mt-2">{error}</p>}
           </div>
@@ -260,20 +262,20 @@ export function PhoneConnectionCard({
             disabled={isLoading || (hasPhoneConnected && !canUnlinkPhone)}
             title={
               hasPhoneConnected && !canUnlinkPhone
-                ? 'Legg til en annen påloggingsmetode før du kobler fra telefonnummeret.'
+                ? t.pages.settings.profile.phone.addOtherMethod
                 : undefined
             }
             className="w-full sm:w-auto"
           >
             {isLoading
-              ? 'Behandler...'
+              ? t.pages.settings.profile.phone.processing
               : hasPhoneConnected
-                ? 'Koble fra'
-                : 'Koble til'}
+                ? t.pages.settings.profile.phone.disconnect
+                : t.pages.settings.profile.phone.connect}
           </Button>
           {hasPhoneConnected && !canUnlinkPhone && (
             <p className="text-xs text-text-secondary text-left sm:text-right">
-              Legg til en annen påloggingsmetode før du kobler fra telefonnummeret.
+              {t.pages.settings.profile.phone.addOtherMethod}
             </p>
           )}
         </div>

@@ -5,7 +5,8 @@ import { Card } from '@appui/Card';
 import { Button } from '@appui/Button';
 import { IconBrandGoogleFilled } from '@tabler/icons-react';
 import { useRouter } from 'next/navigation';
-import { connectGoogleAccount, disconnectGoogleAccount } from '@/app/(app)/settings/_actions/updateSettings';
+import { connectGoogleAccount, disconnectGoogleAccount } from '@/app/[locale]/(app)/settings/_actions/updateSettings';
+import { useTranslations } from '@/lib/i18n/client';
 
 interface GoogleConnectionCardProps {
   hasGoogleConnected: boolean;
@@ -13,6 +14,7 @@ interface GoogleConnectionCardProps {
 }
 
 export function GoogleConnectionCard({ hasGoogleConnected, canDisconnectGoogle }: GoogleConnectionCardProps) {
+  const { t } = useTranslations();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -32,7 +34,7 @@ export function GoogleConnectionCard({ hasGoogleConnected, canDisconnectGoogle }
       window.location.href = url;
     } catch (err) {
       console.error('Failed to connect Google:', err);
-      setError(err instanceof Error ? err.message : 'En feil oppstod');
+      setError(err instanceof Error ? err.message : t.pages.settings.profile.google.errors.genericError);
       setIsLoading(false);
     }
   };
@@ -48,7 +50,7 @@ export function GoogleConnectionCard({ hasGoogleConnected, canDisconnectGoogle }
       router.refresh();
     } catch (err) {
       console.error('Failed to disconnect Google:', err);
-      setError(err instanceof Error ? err.message : 'En feil oppstod');
+      setError(err instanceof Error ? err.message : t.pages.settings.profile.google.errors.genericError);
     } finally {
       // Always reset loading state
       setIsLoading(false);
@@ -63,11 +65,11 @@ export function GoogleConnectionCard({ hasGoogleConnected, canDisconnectGoogle }
             <IconBrandGoogleFilled className="h-6 w-6 text-text-primary" />
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-text-primary">Google-konto</h3>
+            <h3 className="font-semibold text-text-primary">{t.pages.settings.profile.google.title}</h3>
             <p className="text-sm text-text-secondary mt-0.5">
               {hasGoogleConnected
-                ? 'Du har koblet til en Google-konto for raskere pålogging'
-                : 'Koble til Google-kontoen din for enklere pålogging'}
+                ? t.pages.settings.profile.google.connected
+                : t.pages.settings.profile.google.notConnected}
             </p>
             {error && (
               <p className="text-sm text-destructive mt-2">
@@ -83,20 +85,20 @@ export function GoogleConnectionCard({ hasGoogleConnected, canDisconnectGoogle }
             disabled={isLoading || (hasGoogleConnected && !canDisconnectGoogle)}
             title={
               hasGoogleConnected && !canDisconnectGoogle
-                ? 'Legg til en annen påloggingsmetode før du kobler fra Google-kontoen.'
+                ? t.pages.settings.profile.google.addOtherMethod
                 : undefined
             }
             className="w-full sm:w-auto"
           >
             {isLoading
-              ? 'Behandler...'
+              ? t.pages.settings.profile.google.processing
               : hasGoogleConnected
-              ? 'Koble fra'
-              : 'Koble til'}
+              ? t.pages.settings.profile.google.disconnect
+              : t.pages.settings.profile.google.connect}
           </Button>
           {hasGoogleConnected && !canDisconnectGoogle && (
             <p className="text-xs text-text-secondary text-left sm:text-right">
-              Legg til en annen påloggingsmetode før du kobler fra Google-kontoen.
+              {t.pages.settings.profile.google.addOtherMethod}
             </p>
           )}
         </div>

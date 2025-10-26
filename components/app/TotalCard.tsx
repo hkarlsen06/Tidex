@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { IconArrowDown, IconArrowUp } from '@tabler/icons-react';
 import { Card, CardContent } from '@appui/Card';
+import { useTranslations } from '@/lib/i18n/client';
 
 interface TotalCardProps {
   total: string;
@@ -42,6 +43,7 @@ export const TotalCard: React.FC<TotalCardProps> = ({
   earnedToDate,
   animationDirection = null,
 }) => {
+  const { t } = useTranslations();
   const cardClasses = [
     'relative overflow-hidden',
     'bg-surface-primary border-border-subtle',
@@ -72,7 +74,7 @@ export const TotalCard: React.FC<TotalCardProps> = ({
     if (taxDeductionEnabled && grossBeforeTax) {
       return (
         <>
-          <span className="font-semibold text-text-primary">{grossBeforeTax}</span> før skatt
+          <span className="font-semibold text-text-primary">{grossBeforeTax}</span> {t.components.totalCard.beforeTax}
         </>
       );
     }
@@ -80,13 +82,13 @@ export const TotalCard: React.FC<TotalCardProps> = ({
     if (tillegg) {
       return (
         <>
-          Tillegg: <span className="font-semibold text-text-primary">{tillegg}</span>
+          {t.components.totalCard.supplements}: <span className="font-semibold text-text-primary">{tillegg}</span>
         </>
       );
     }
 
     return null;
-  }, [taxDeductionEnabled, grossBeforeTax, tillegg]);
+  }, [taxDeductionEnabled, grossBeforeTax, tillegg, t]);
 
   const alternateContent = useMemo(() => {
     if (!earnedToDate) {
@@ -95,10 +97,10 @@ export const TotalCard: React.FC<TotalCardProps> = ({
 
     return (
       <>
-        <span className="font-semibold text-text-primary">{earnedToDate}</span> til nå
+        <span className="font-semibold text-text-primary">{earnedToDate}</span> {t.components.totalCard.earnedToDate}
       </>
     );
-  }, [earnedToDate]);
+  }, [earnedToDate, t]);
 
   const textOptions = useMemo(() => {
     const options: React.ReactNode[] = [];

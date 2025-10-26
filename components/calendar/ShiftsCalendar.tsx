@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { DayPicker } from "react-day-picker";
-import { nb } from "date-fns/locale";
+import { nb, enUS } from "date-fns/locale";
 import {
   toISODate,
   formatNOKInt,
@@ -11,6 +11,7 @@ import {
 } from "./calendar.utils";
 import type { EarningsByDate, HoursByDate } from "./calendar.types";
 import { cn } from "@/lib/cn";
+import { useLocale } from "@/lib/i18n/client";
 
 export type ShiftsCalendarProps = {
   month: Date;
@@ -189,12 +190,23 @@ export function ShiftsCalendar({
   weekNumberPosition = "bottom-left",
   selectedDate = null,
 }: ShiftsCalendarProps) {
+  const locale = useLocale();
+  const dateFnsLocale = locale === 'en' ? enUS : nb;
   const [localDirection, setLocalDirection] = React.useState<'next' | 'previous' | null>(null);
   const [prevMonth, setPrevMonth] = React.useState(month);
   const selectedDay = React.useMemo(
     () => (selectedDate ? new Date(`${selectedDate}T00:00:00`) : undefined),
     [selectedDate]
   );
+
+  // Custom formatter for weekday names to show 2-letter abbreviations
+  const formatWeekdayName = React.useCallback((date: Date) => {
+    const day = date.getDay();
+    const shortNames = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
+    const shortNamesNb = ['SØ', 'MA', 'TI', 'ON', 'TO', 'FR', 'LØ'];
+    const names = locale === 'no' ? shortNamesNb : shortNames;
+    return names[day];
+  }, [locale]);
 
   // Track month changes and determine direction locally
   React.useEffect(() => {
@@ -244,7 +256,7 @@ export function ShiftsCalendar({
   return (
     <div className="w-full">
       <DayPicker
-      locale={nb}
+      locale={dateFnsLocale}
       month={month}
       mode="single"
       selected={selectedDay}
@@ -254,6 +266,9 @@ export function ShiftsCalendar({
       showOutsideDays
       components={{
         DayButton: CustomDayButton,
+      }}
+      formatters={{
+        formatWeekdayName,
       }}
       classNames={{
         root: "w-full",

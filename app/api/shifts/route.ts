@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getComputedShifts } from "@/app/(app)/shifts/_data/getShifts";
+import { getComputedShifts } from "@/app/[locale]/(app)/shifts/_data/getShifts";
 import { getMonthStart, getMonthEnd } from "@/lib/date-utils";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 

@@ -4,6 +4,7 @@ import React, { useMemo } from 'react';
 import { Card, CardHeader } from '@appui/Card';
 import { cn } from '@/lib/cn';
 import { useNavigationFeedback } from './navigation-feedback';
+import { useTranslations } from '@/lib/i18n/client';
 
 interface NextPayrollCardProps {
   payrollDay: number;
@@ -63,6 +64,7 @@ export const NextPayrollCard: React.FC<NextPayrollCardProps> = ({
   showPreviousPayroll,
 }) => {
   const { navigate } = useNavigationFeedback();
+  const { t } = useTranslations();
   const payrollDate = getPayrollDateForMonth(payrollDay, selectedMonth);
   const formattedDate = dateFormatter.format(payrollDate);
 
@@ -77,9 +79,9 @@ export const NextPayrollCard: React.FC<NextPayrollCardProps> = ({
     showPreviousPayroll ?? defaultShowPreviousPayroll;
   const payrollLabel = matchesCurrentMonth
     ? shouldShowPreviousPayroll
-      ? 'Forrige lønning'
-      : 'Neste lønning'
-    : 'Lønning';
+      ? t.components.nextPayrollCard.previousPayroll
+      : t.components.nextPayrollCard.nextPayroll
+    : t.components.nextPayrollCard.payroll;
 
   // Calculate breakdown based on tax settings
   let breakdown: string;

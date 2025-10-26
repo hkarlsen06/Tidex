@@ -13,6 +13,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/app/Tabs"
 import { Button } from "@/components/app/Button";
 import { PrivacyPolicy } from "./PrivacyPolicy";
 import { TermsOfService } from "./TermsOfService";
+import { useTranslations } from "@/lib/i18n/client";
 
 interface LegalModalProps {
   open: boolean;
@@ -32,6 +33,7 @@ export function LegalModal({
   showActions = false
 }: LegalModalProps) {
   const [activeTab, setActiveTab] = useState(defaultTab);
+  const { t } = useTranslations();
 
   const handleAccept = () => {
     onAccept?.();
@@ -47,24 +49,24 @@ export function LegalModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>Juridisk informasjon</DialogTitle>
+          <DialogTitle>{t.legal.modalTitle}</DialogTitle>
           <DialogDescription>
-            Les gjennom våre vilkår og personvernerklæring
+            {t.legal.modalDescription}
           </DialogDescription>
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as "privacy" | "terms")} className="flex-1 flex flex-col min-h-0">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="terms">Vilkår for bruk</TabsTrigger>
-            <TabsTrigger value="privacy">Personvernerklæring</TabsTrigger>
+            <TabsTrigger value="terms">{t.legal.tabs.terms}</TabsTrigger>
+            <TabsTrigger value="privacy">{t.legal.tabs.privacy}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="terms" className="flex-1 overflow-y-auto px-1 mt-4">
-            <TermsOfService />
+            <TermsOfService content={t.legal.terms} />
           </TabsContent>
 
           <TabsContent value="privacy" className="flex-1 overflow-y-auto px-1 mt-4">
-            <PrivacyPolicy />
+            <PrivacyPolicy content={t.legal.privacy} />
           </TabsContent>
         </Tabs>
 
@@ -74,12 +76,12 @@ export function LegalModal({
               variant="outline"
               onClick={handleDecline}
             >
-              Avslår
+              {t.legal.actions.decline}
             </Button>
             <Button
               onClick={handleAccept}
             >
-              Godtar
+              {t.legal.actions.accept}
             </Button>
           </DialogFooter>
         )}

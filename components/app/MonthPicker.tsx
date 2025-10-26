@@ -2,6 +2,7 @@
 
 import { IconChevronLeft, IconChevronRight } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
+import { useTranslations } from "@/lib/i18n/client";
 
 type MonthPickerProps = {
   month: Date;
@@ -9,15 +10,15 @@ type MonthPickerProps = {
   onNextMonth: () => void;
 };
 
-function formatMonth(date: Date): string {
-  const month = new Intl.DateTimeFormat("nb-NO", {
-    month: "long",
-  }).format(date);
+function formatMonth(date: Date, monthsFull: readonly string[]): string {
+  const monthIndex = date.getMonth();
+  const monthName = monthsFull[monthIndex];
   // Capitalize first letter in JS to avoid CSS capitalize issues during animation
-  return month.charAt(0).toUpperCase() + month.slice(1);
+  return monthName.charAt(0).toUpperCase() + monthName.slice(1);
 }
 
 export function MonthPicker({ month, onPreviousMonth, onNextMonth }: MonthPickerProps) {
+  const { t } = useTranslations();
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [prevMonth, setPrevMonth] = useState(month);
   const [direction, setDirection] = useState<"forward" | "backward">("forward");
@@ -79,7 +80,7 @@ export function MonthPicker({ month, onPreviousMonth, onNextMonth }: MonthPicker
           }}
           onAnimationEnd={handleExitAnimationEnd}
         >
-          {formatMonth(prevMonth)}
+          {formatMonth(prevMonth, t.dateTime.monthsFull)}
         </div>
 
         {/* Next month - enters when transitioning */}
@@ -88,7 +89,7 @@ export function MonthPicker({ month, onPreviousMonth, onNextMonth }: MonthPicker
             className={`absolute inset-0 text-center font-medium text-text-primary ${enterAnimation}`}
             onAnimationEnd={handleEnterAnimationEnd}
           >
-            {formatMonth(month)}
+            {formatMonth(month, t.dateTime.monthsFull)}
           </div>
         )}
       </div>

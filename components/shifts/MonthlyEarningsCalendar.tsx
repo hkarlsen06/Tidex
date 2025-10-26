@@ -10,6 +10,7 @@ import { useMonth } from "@/components/app/MonthContext";
 import { ShiftWithComputations } from "@/lib/payroll";
 import type { ISODate, EarningsByDate, HoursByDate } from "@/components/calendar/calendar.types";
 import { cn } from "@/lib/cn";
+import { useTranslations } from "@/lib/i18n/client";
 
 type MonthlyEarningsCalendarProps = {
   shifts: ShiftWithComputations[];
@@ -118,6 +119,7 @@ export function MonthlyEarningsCalendar({
   moving = false,
   onCancelMoveMode,
 }: MonthlyEarningsCalendarProps) {
+  const { t } = useTranslations();
   const { goToPreviousMonth, goToNextMonth } = useMonth();
   const [viewMode, setViewMode] = useState<"money" | "hours">("money");
   const [localDirection, setLocalDirection] = useState<'next' | 'previous' | null>(null);
@@ -212,7 +214,7 @@ export function MonthlyEarningsCalendar({
                 className="flex-1 h-9 gap-2 rounded-full bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 dark:text-blue-400"
               >
                 <IconCopy stroke={2} className="h-4 w-4" />
-                Kopier
+                {t.pages.shifts.actions.copy}
               </Button>
               <Button
                 type="button"
@@ -237,11 +239,11 @@ export function MonthlyEarningsCalendar({
                 )}
               >
                 {copyMode || moveMode ? (
-                  "Avbryt"
+                  t.pages.shifts.actions.cancel
                 ) : (
                   <>
                     <IconInfoCircle stroke={2} className="h-4 w-4" />
-                    Detaljer
+                    {t.pages.shifts.actions.details}
                   </>
                 )}
               </Button>
@@ -263,7 +265,7 @@ export function MonthlyEarningsCalendar({
                 )}
               >
                 <IconArrowsExchange stroke={2} className="h-4 w-4" />
-                Flytt
+                {t.pages.shifts.actions.move}
               </Button>
             </div>
           ) : (
@@ -303,8 +305,8 @@ export function MonthlyEarningsCalendar({
         {selectedDate && (copyMode || moveMode) && (
           <div className="text-xs font-medium leading-tight text-text-muted text-center">
             {copyMode
-              ? "Velg en dato for å kopiere vakten dit"
-              : "Velg en dato for å flytte vakten"}
+              ? t.pages.shifts.actions.copyInstructions
+              : t.pages.shifts.actions.moveInstructions}
           </div>
         )}
       </div>

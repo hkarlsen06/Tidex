@@ -1,8 +1,9 @@
 "use client";
 
 import { Card, CardContent } from "@/components/app/Card";
-import { MonthlyGoal } from "@/app/(app)/stats/_data/getStatsData";
+import { MonthlyGoal } from "@/app/[locale]/(app)/stats/_data/getStatsData";
 import { Target, TrendingUp } from "lucide-react";
+import { useTranslations } from "@/lib/i18n/client";
 
 type MonthlyGoalProgressProps = {
   data: MonthlyGoal;
@@ -27,6 +28,8 @@ function formatCurrency(value: number, compact = false): string {
 }
 
 export function MonthlyGoalProgress({ data }: MonthlyGoalProgressProps) {
+  const { t } = useTranslations();
+
   if (!data.enabled) {
     return null;
   }
@@ -69,7 +72,7 @@ export function MonthlyGoalProgress({ data }: MonthlyGoalProgressProps) {
         {/* Title row */}
         <div className="flex items-start justify-between mb-4">
           <h3 className="text-xl font-bold text-text-primary">
-            Månedsmål
+            {t.pages.stats.monthlyGoal.title}
           </h3>
           <div className="text-text-muted opacity-50">
             <Target className="w-5 h-5" />
@@ -80,7 +83,7 @@ export function MonthlyGoalProgress({ data }: MonthlyGoalProgressProps) {
           {/* Left side: Text content */}
           <div className="flex flex-col justify-center space-y-3">
             <p className="text-sm text-text-secondary">
-              Mål: {formatCurrency(data.target)} kr
+              {t.pages.stats.monthlyGoal.goalLabel}: {formatCurrency(data.target)} {t.common.currency}
             </p>
 
             {/* Progress bar */}
@@ -98,20 +101,20 @@ export function MonthlyGoalProgress({ data }: MonthlyGoalProgressProps) {
 
             {/* Status message */}
             {isGoalReached ? (
-              <div className="flex flex-col sm:flex-row items-start gap-1 sm:gap-2">
+              <div className="flex flex-col items-start gap-1">
                 <div className="flex items-center gap-2">
                   <TrendingUp className="w-5 h-5" style={{ color: progressColor }} />
                   <p className="text-base font-medium" style={{ color: progressColor }}>
-                    Mål nådd!
+                    {t.pages.stats.monthlyGoal.goalReached}
                   </p>
                 </div>
                 <p className="text-base font-medium" style={{ color: progressColor }}>
-                  +{formatCurrency(progressOverTarget)} kr over
+                  {t.pages.stats.monthlyGoal.overTarget.replace('{amount}', formatCurrency(progressOverTarget))}
                 </p>
               </div>
             ) : (
               <p className="text-base font-medium text-text-secondary">
-                {formatCurrency(data.remaining)} kr gjenstår
+                {t.pages.stats.monthlyGoal.remaining.replace('{amount}', formatCurrency(data.remaining))}
               </p>
             )}
           </div>
@@ -162,7 +165,7 @@ export function MonthlyGoalProgress({ data }: MonthlyGoalProgressProps) {
                 {data.percentage.toFixed(0)}%
               </p>
               <p className="text-sm text-text-muted mt-1">
-                {formatCurrency(data.progress, true)} kr
+                {formatCurrency(data.progress, true)} {t.common.currency}
               </p>
             </div>
           </div>

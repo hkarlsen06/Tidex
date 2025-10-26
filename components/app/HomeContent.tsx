@@ -10,6 +10,7 @@ import { ShiftWithComputations, UserSettings } from "@/lib/payroll";
 import { getRelativeTime } from "@/lib/utils/relativeTime";
 import { hasShiftEnded } from "@/lib/shifts/hasShiftEnded";
 import { useMonth } from "./MonthContext";
+import { useTranslations } from "@/lib/i18n/client";
 
 type HomeContentProps = {
   shifts: ShiftWithComputations[];
@@ -123,11 +124,11 @@ function isCurrentMonth(date: Date): boolean {
 }
 
 export function HomeContent({ shifts: initialShifts, settings }: HomeContentProps) {
+  const { t } = useTranslations();
   const { selectedMonth: month, goToPreviousMonth, goToNextMonth, direction } = useMonth();
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [selectedShift, setSelectedShift] = useState<ShiftWithComputations | null>(null);
   const [additionalShifts, setAdditionalShifts] = useState<ShiftWithComputations[]>([]);
-  const [loadingMonth, setLoadingMonth] = useState(false);
   const selectedMonthIsCurrent = isCurrentMonth(month);
 
   // Track which months have been loaded or are currently loading
@@ -364,11 +365,11 @@ export function HomeContent({ shifts: initialShifts, settings }: HomeContentProp
     if (!displayShift) return null;
 
     if (selectedMonthIsCurrent) {
-      return getRelativeTime(displayShift.shift_date, displayShift.start_time);
+      return getRelativeTime(displayShift.shift_date, displayShift.start_time, t);
     } else {
       return "Beste vakt";
     }
-  }, [displayShift, selectedMonthIsCurrent]);
+  }, [displayShift, selectedMonthIsCurrent, t]);
 
   const taxDeductionEnabled = settings.tax_deduction_enabled ?? false;
 

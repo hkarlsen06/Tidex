@@ -8,7 +8,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const dev = process.env.NODE_ENV !== 'production';
-const hostname = 'local.kkarlsen.dev';
+const hostname = 'local.tidex.no';
 const port = 3000;
 
 // Initialize Next.js app
@@ -17,8 +17,8 @@ const handle = app.getRequestHandler();
 
 // HTTPS options with local certificates
 const httpsOptions = {
-  key: fs.readFileSync(path.join(__dirname, '.cert', 'local.kkarlsen.dev-key.pem')),
-  cert: fs.readFileSync(path.join(__dirname, '.cert', 'local.kkarlsen.dev.pem')),
+  key: fs.readFileSync(path.join(__dirname, '.cert', 'local.tidex.no-key.pem')),
+  cert: fs.readFileSync(path.join(__dirname, '.cert', 'local.tidex.no.pem')),
 };
 
 app.prepare().then(() => {

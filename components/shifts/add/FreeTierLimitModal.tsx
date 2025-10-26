@@ -12,9 +12,10 @@ import {
 import { Button } from '@appui/Button';
 import { AlertTriangle, Trash2, Sparkles } from 'lucide-react';
 import { formatMonth } from '@/lib/subscription/hasProAccess';
-import { deleteShiftsInOtherMonths } from '@/app/(app)/shifts/add/_actions/deleteShiftsInOtherMonths';
-import { createCheckoutSession } from '@/app/(app)/settings/subscription/_actions/createCheckoutSession';
+import { deleteShiftsInOtherMonths } from '@/app/[locale]/(app)/shifts/add/_actions/deleteShiftsInOtherMonths';
+import { createCheckoutSession } from '@/app/[locale]/(app)/settings/subscription/_actions/createCheckoutSession';
 import { ENV } from '@/lib/env';
+import { useTranslations } from '@/lib/i18n/client';
 
 interface FreeTierLimitModalProps {
   open: boolean;
@@ -31,6 +32,7 @@ export function FreeTierLimitModal({
   targetMonth,
   onDeleteComplete,
 }: FreeTierLimitModalProps) {
+  const { t } = useTranslations();
   const [isDeleting, setIsDeleting] = useState(false);
   const [isUpgrading, setIsUpgrading] = useState(false);
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
@@ -48,7 +50,7 @@ export function FreeTierLimitModal({
       const result = await deleteShiftsInOtherMonths(targetMonth);
 
       if (!result.success) {
-        setError(result.error || 'Kunne ikke slette skift');
+        setError(result.error || t.pages.shifts.add.freeTierLimit.couldNotDeleteShifts);
         setIsDeleting(false);
         return;
       }
@@ -58,7 +60,7 @@ export function FreeTierLimitModal({
       onDeleteComplete();
     } catch (err) {
       console.error('Error deleting shifts:', err);
-      setError('En uventet feil oppstod');
+      setError(t.pages.shifts.add.freeTierLimit.unexpectedError);
       setIsDeleting(false);
     }
   };
@@ -74,12 +76,12 @@ export function FreeTierLimitModal({
         // Redirect to Stripe checkout
         window.location.href = result.url;
       } else {
-        setError(result.error || 'Kunne ikke starte oppgraderingsprosessen');
+        setError(result.error || t.pages.shifts.add.freeTierLimit.couldNotStartUpgrade);
         setIsUpgrading(false);
       }
     } catch (err) {
       console.error('Error creating checkout session:', err);
-      setError('En uventet feil oppstod');
+      setError(t.pages.shifts.add.freeTierLimit.unexpectedError);
       setIsUpgrading(false);
     }
   };
@@ -102,9 +104,9 @@ export function FreeTierLimitModal({
               <AlertTriangle className="h-6 w-6 text-yellow-600 dark:text-yellow-500" />
             </div>
             <div>
-              <DialogTitle className="text-xl mb-2">Du er på gratisplanen</DialogTitle>
+              <DialogTitle className="text-xl mb-2">{t.pages.shifts.add.freeTierLimit.title}</DialogTitle>
               <DialogDescription className="text-sm text-text-secondary">
-                Med gratisplanen kan du bare ha skift i én måned av gangen.
+                {t.pages.shifts.add.freeTierLimit.description}
               </DialogDescription>
             </div>
           </div>
@@ -113,12 +115,14 @@ export function FreeTierLimitModal({
         <div className="space-y-4 py-2">
           <div className="rounded-2xl border border-border-subtle bg-surface-secondary/70 p-4 text-sm">
             <p className="text-text-secondary">
-              Du prøver å legge til skift i <strong className="text-text-primary">{formattedTargetMonth}</strong>,
-              men har allerede skift i <strong className="text-text-primary">{formattedOtherMonths}</strong>.
+              {t.pages.shifts.add.freeTierLimit.tryingToAdd}
+              <strong className="text-text-primary">{formattedTargetMonth}</strong>
+              {t.pages.shifts.add.freeTierLimit.butAlreadyHaveIn}
+              <strong className="text-text-primary">{formattedOtherMonths}</strong>.
             </p>
           </div>
 
-          <p className="text-sm font-semibold text-text-primary">Velg ett av alternativene:</p>
+          <p className="text-sm font-semibold text-text-primary">{t.pages.shifts.add.freeTierLimit.chooseOption}</p>
 
           <div className="space-y-3">
             {/* Upgrade option */}
@@ -130,11 +134,11 @@ export function FreeTierLimitModal({
               <div className="flex items-start gap-3">
                 <Sparkles className="h-5 w-5 text-brand-highlight flex-shrink-0 mt-0.5" />
                 <div className="flex-1 min-w-0">
-                  <h4 className="font-semibold text-sm">Oppgrader til Pro</h4>
+                  <h4 className="font-semibold text-sm">{t.pages.shifts.add.freeTierLimit.upgradeTitle}</h4>
                   <p className="text-xs text-text-secondary mt-1">
-                    Lagre skift på tvers av måneder, ubegrenset antall skift
+                    {t.pages.shifts.add.freeTierLimit.upgradeDescription}
                   </p>
-                  <p className="text-sm font-bold text-brand-highlight mt-2">29,90 kr/måned</p>
+                  <p className="text-sm font-bold text-brand-highlight mt-2">{t.pages.shifts.add.freeTierLimit.upgradePrice}</p>
                 </div>
               </div>
             </button>
@@ -149,9 +153,9 @@ export function FreeTierLimitModal({
                 <div className="flex items-start gap-3">
                   <Trash2 className="h-5 w-5 text-red-600 dark:text-red-500 flex-shrink-0 mt-0.5" />
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-semibold text-sm text-red-900 dark:text-red-300">Slett skift i andre måneder</h4>
+                    <h4 className="font-semibold text-sm text-red-900 dark:text-red-300">{t.pages.shifts.add.freeTierLimit.deleteTitle}</h4>
                     <p className="text-xs text-red-700 dark:text-red-400 mt-1">
-                      Alle skift i {formattedOtherMonths} vil bli permanent slettet
+                      {t.pages.shifts.add.freeTierLimit.deleteDescription.replace('{months}', formattedOtherMonths)}
                     </p>
                   </div>
                 </div>
@@ -161,9 +165,9 @@ export function FreeTierLimitModal({
                 <div className="flex items-start gap-3 mb-3">
                   <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-500 flex-shrink-0 mt-0.5" />
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-semibold text-sm text-red-900 dark:text-red-300">Er du sikker?</h4>
+                    <h4 className="font-semibold text-sm text-red-900 dark:text-red-300">{t.pages.shifts.add.freeTierLimit.confirmDeleteTitle}</h4>
                     <p className="text-xs text-red-700 dark:text-red-400 mt-1">
-                      Dette vil slette alle skift i {formattedOtherMonths} permanent.
+                      {t.pages.shifts.add.freeTierLimit.confirmDeleteDescription.replace('{months}', formattedOtherMonths)}
                     </p>
                   </div>
                 </div>
@@ -176,7 +180,10 @@ export function FreeTierLimitModal({
                     loading={isDeleting}
                     className="flex-1 text-xs"
                   >
-                    Slett {deleteCount} {deleteCount === 1 ? 'måned' : 'måneder'}
+                    {deleteCount === 1
+                      ? t.pages.shifts.add.freeTierLimit.deleteMonths.replace('{count}', '1')
+                      : t.pages.shifts.add.freeTierLimit.deleteMonthsPlural.replace('{count}', deleteCount.toString())
+                    }
                   </Button>
                   <Button
                     type="button"
@@ -184,7 +191,7 @@ export function FreeTierLimitModal({
                     disabled={isDeleting}
                     className="flex-1 text-xs bg-green-600 hover:bg-green-700 text-white"
                   >
-                    Avbryt
+                    {t.pages.shifts.add.freeTierLimit.cancel}
                   </Button>
                 </div>
               </div>
@@ -206,7 +213,7 @@ export function FreeTierLimitModal({
             disabled={isDeleting || isUpgrading}
             className="w-full rounded-xl px-4 py-2"
           >
-            Avbryt
+            {t.pages.shifts.add.freeTierLimit.cancel}
           </Button>
         </DialogFooter>
       </DialogContent>

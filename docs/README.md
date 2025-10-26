@@ -1,4 +1,4 @@
-# next-kkarlsen.dev
+# next-tidex
 
 This is a fresh [Next.js](https://nextjs.org/) project scaffolded by Codex.
 

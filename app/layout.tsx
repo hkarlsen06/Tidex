@@ -18,7 +18,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "KKarlsen.DEV - Lønn",
+  title: "Tidex",
   description: "App for å regne ut lønn basert på skiftene dine med tillegg!",
   manifest: "/manifest.json",
   icons: {
@@ -56,7 +56,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "KKarlsen.DEV",
+    title: "Tidex",
   },
 };
 
@@ -69,7 +69,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="no" suppressHydrationWarning>
       <head>
         <meta name="mobile-web-app-capable" content="yes" />
         <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon-180x180.png" />
@@ -78,8 +78,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <link rel="apple-touch-icon" sizes="76x76" href="/apple-touch-icon-76x76.png" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         {/* Resource hints for faster loading */}
-        <link rel="preconnect" href="https://kkarlsen-dev.supabase.co" />
-        <link rel="dns-prefetch" href="https://kkarlsen-dev.supabase.co" />
+        <link rel="preconnect" href="https://id.tidex.no" />
+        <link rel="dns-prefetch" href="https://id.tidex.no" />
         <link rel="preconnect" href="https://vercel.live" />
         <link rel="dns-prefetch" href="https://vercel.live" />
         <script

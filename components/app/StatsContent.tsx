@@ -5,11 +5,13 @@ import type { ReactNode } from "react";
 import dynamic from "next/dynamic";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/app/Card";
-import type { StatsData } from "@/app/(app)/stats/_data/getStatsData";
+import type { StatsData } from "@/app/[locale]/(app)/stats/_data/getStatsData";
 import { MonthlyGoalProgress } from "@/components/app/MonthlyGoalProgress";
 import { TrendingUp, TrendingDown, Clock, Briefcase, DollarSign } from "lucide-react";
 import { MonthPicker } from "@/components/app/MonthPicker";
 import { useMonth } from "@/components/app/MonthContext";
+import { useTranslations } from "@/lib/i18n/client";
+import { useParams } from "next/navigation";
 
 /**
  * Chart data type - matches what the /api/stats/charts endpoint returns
@@ -140,6 +142,10 @@ function StatCard({ label, value, suffix, trend, icon }: StatCardProps) {
 }
 
 export function StatsContent({ data }: StatsContentProps) {
+  const { t } = useTranslations();
+  const params = useParams();
+  const locale = (params?.locale as string) || 'no';
+  const couldNotUpdateError = t.pages.stats.errors.couldNotUpdate;
   const {
     selectedMonth,
     goToPreviousMonth,
@@ -176,6 +182,7 @@ export function StatsContent({ data }: StatsContentProps) {
     const query = new URLSearchParams({
       year: selectedYear.toString(),
       month: selectedMonthNumber.toString(),
+      locale: locale,
     });
 
     // Note: These setState calls are intentional to show loading state before async fetch
@@ -221,7 +228,7 @@ export function StatsContent({ data }: StatsContentProps) {
           return;
         }
         console.error("Failed to load stats data", error);
-        setFetchError("Kunne ikke oppdatere statistikken. Prøv igjen senere.");
+        setFetchError(couldNotUpdateError);
       })
       .finally(() => {
         if (!controller.signal.aborted) {
@@ -232,7 +239,7 @@ export function StatsContent({ data }: StatsContentProps) {
     return () => {
       controller.abort();
     };
-  }, [focusMonth, focusYear, selectedMonthNumber, selectedYear]);
+  }, [focusMonth, focusYear, selectedMonthNumber, selectedYear, locale, couldNotUpdateError]);
 
   const grossEarnings = activeData.currentMonth.totalEarnings;
   const netEarnings = activeData.currentMonth.totalEarningsNet;
@@ -275,21 +282,21 @@ export function StatsContent({ data }: StatsContentProps) {
         <Card className="border-border bg-surface-primary overflow-hidden">
           <CardContent className="p-6">
             <p className="text-lg font-semibold text-text-muted mb-3">
-              Inntjening denne måneden
+              {t.pages.stats.cards.monthlyEarnings}
             </p>
             <div className="flex items-baseline gap-2">
               <p className="text-5xl font-bold tabular-nums text-text-primary">
                 {formatCurrency(displayedEarnings, true)}
               </p>
-              <p className="text-2xl font-medium text-text-secondary">kr</p>
+              <p className="text-2xl font-medium text-text-secondary">{t.common.currency}</p>
             </div>
             {activeData.tax.enabled && (
               <div className="mt-3 space-y-1">
                 <p className="text-base font-medium text-text-secondary">
-                  Etter skatt
+                  {t.pages.stats.cards.afterTax}
                 </p>
                 <p className="text-sm text-text-muted">
-                  Før skatt: {formatCurrency(grossEarnings, true)} kr
+                  {t.pages.stats.cards.beforeTax}: {formatCurrency(grossEarnings, true)} {t.common.currency}
                 </p>
               </div>
             )}
@@ -301,7 +308,7 @@ export function StatsContent({ data }: StatsContentProps) {
                   <TrendingDown className="w-5 h-5 text-error" />
                 )}
                 <p className={`text-lg font-medium ${trend.isPositive ? "text-success" : "text-error"}`}>
-                  {trend.isPositive ? "+" : ""}{trend.value}% fra forrige måned
+                  {trend.isPositive ? "+" : ""}{trend.value}% {t.pages.stats.cards.fromPreviousMonth}
                 </p>
               </div>
             )}
@@ -310,12 +317,12 @@ export function StatsContent({ data }: StatsContentProps) {
 
         <div className="grid grid-cols-2 gap-3">
           <StatCard
-            label="Timer"
+            label={t.pages.stats.hours}
             value={formatHours(selectedHours)}
             icon={<Clock className="w-5 h-5" />}
           />
           <StatCard
-            label="Vakter"
+            label={t.pages.stats.shifts}
             value={selectedShiftCount.toString()}
             icon={<Briefcase className="w-5 h-5" />}
           />
@@ -329,7 +336,7 @@ export function StatsContent({ data }: StatsContentProps) {
       <Card className="border-border bg-surface-primary">
         <CardHeader className="pb-3">
           <CardTitle className="text-xl font-bold text-text-primary">
-            Månedens utvikling
+            {t.pages.stats.cards.monthlyProgress}
           </CardTitle>
         </CardHeader>
         <CardContent className="px-3 pb-4 pt-1">
@@ -346,7 +353,7 @@ export function StatsContent({ data }: StatsContentProps) {
         <Card className="border-border bg-surface-primary">
           <CardHeader className="pb-3">
             <CardTitle className="text-xl font-bold text-text-primary">
-              Lønnssammensetning
+              {t.pages.stats.cards.salaryComposition}
             </CardTitle>
           </CardHeader>
           <CardContent className="px-3 pb-4 pt-1">
@@ -364,7 +371,7 @@ export function StatsContent({ data }: StatsContentProps) {
         <Card className="border-border bg-surface-primary">
           <CardHeader className="pb-3">
             <CardTitle className="text-xl font-bold text-text-primary">
-              Denne uken
+              {t.pages.stats.cards.thisWeek}
             </CardTitle>
           </CardHeader>
           <CardContent className="px-3 pb-4 pt-1">
@@ -379,23 +386,23 @@ export function StatsContent({ data }: StatsContentProps) {
 
       {/* Average hourly rate */}
       <StatCard
-        label="Gjennomsnitt"
+        label={t.pages.stats.cards.average}
         value={formatCurrency(selectedAverageRate, true)}
-        suffix="kr/t"
+        suffix={t.common.perHour}
         icon={<DollarSign className="w-4 h-4" />}
       />
 
       {/* Year to date summary */}
       <div className="space-y-5">
         <h2 className="text-xl font-bold text-text-primary pl-6">
-          {selectedYear} totalt
+          {selectedYear} {t.pages.stats.cards.yearTotal}
         </h2>
 
         {/* Cumulative earnings chart */}
         <Card className="border-border bg-surface-primary">
           <CardHeader className="pb-3">
             <CardTitle className="text-xl font-bold text-text-primary">
-              Kumulativ utvikling
+              {t.pages.stats.cards.cumulativeProgress}
             </CardTitle>
           </CardHeader>
           <CardContent className="px-3 pb-4 pt-1">
@@ -410,7 +417,7 @@ export function StatsContent({ data }: StatsContentProps) {
         <Card className="border-border bg-surface-primary">
           <CardHeader className="pb-3">
             <CardTitle className="text-xl font-bold text-text-primary">
-              Siste 6 måneder
+              {t.pages.stats.cards.last6Months}
             </CardTitle>
           </CardHeader>
           <CardContent className="px-3 pb-4 pt-1">
@@ -426,7 +433,7 @@ export function StatsContent({ data }: StatsContentProps) {
         <Card className="border-border bg-surface-primary">
           <CardHeader className="pb-3">
             <CardTitle className="text-xl font-bold text-text-primary">
-              Gjennomsnitt per ukedag
+              {t.pages.stats.cards.averageByWeekday}
             </CardTitle>
           </CardHeader>
           <CardContent className="px-3 pb-4 pt-1">
@@ -448,16 +455,16 @@ export function StatsContent({ data }: StatsContentProps) {
           ) : (
             <>
               <StatCard
-                label="Totalt"
+                label={t.pages.stats.cards.total}
                 value={formatCurrency(chartData.yearToDate.totalEarnings)}
-                suffix="kr"
+                suffix={t.common.currency}
               />
               <StatCard
-                label="Timer"
+                label={t.pages.stats.hours}
                 value={formatHours(chartData.yearToDate.totalHours)}
               />
               <StatCard
-                label="Vakter"
+                label={t.pages.stats.shifts}
                 value={chartData.yearToDate.shiftCount.toString()}
               />
             </>

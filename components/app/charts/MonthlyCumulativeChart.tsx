@@ -6,21 +6,11 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
-import { DailyCumulativeData } from "@/app/(app)/stats/_data/getStatsData";
+import { DailyCumulativeData } from "@/app/[locale]/(app)/stats/_data/getStatsData";
+import { useTranslations } from "@/lib/i18n/client";
 
 type MonthlyCumulativeChartProps = {
   data: DailyCumulativeData[];
-};
-
-const chartConfig = {
-  currentMonth: {
-    label: "Denne måneden",
-    color: "hsl(var(--brand-highlight))",
-  },
-  lastMonth: {
-    label: "Forrige måned",
-    color: "hsl(var(--text-muted))",
-  },
 };
 
 // Custom tick component to color today's day number
@@ -56,6 +46,19 @@ function CustomXAxisTick({
 }
 
 export function MonthlyCumulativeChart({ data }: MonthlyCumulativeChartProps) {
+  const { t } = useTranslations();
+
+  const chartConfig = {
+    currentMonth: {
+      label: t.components.charts.monthlyCumulative.currentMonth,
+      color: "hsl(var(--brand-highlight))",
+    },
+    lastMonth: {
+      label: t.components.charts.monthlyCumulative.lastMonth,
+      color: "hsl(var(--text-muted))",
+    },
+  };
+
   // To make the projected line continue from the actual line without a separate animation start,
   // we need to include the last actual data point in the projected data
   const todayIndex = data.findIndex((d) => d.isToday);
@@ -114,7 +117,7 @@ export function MonthlyCumulativeChart({ data }: MonthlyCumulativeChartProps) {
             <ChartTooltipContent
               className="min-w-[200px] p-4"
               labelFormatter={(label) => {
-                return <span className="text-lg font-semibold">Dag {label}</span>;
+                return <span className="text-lg font-semibold">{t.components.charts.monthlyCumulative.day} {label}</span>;
               }}
               formatter={(value, name, props) => {
                 const data = props.payload as DailyCumulativeData & {
@@ -136,14 +139,14 @@ export function MonthlyCumulativeChart({ data }: MonthlyCumulativeChartProps) {
                       <div className="flex items-center gap-2">
                         <span className="font-mono font-semibold text-base tabular-nums">{amount} kr</span>
                         <span className="text-muted-foreground text-base">
-                          {data.isFuture ? "(prognose)" : "denne mnd"}
+                          {data.isFuture ? t.components.charts.monthlyCumulative.projected : t.components.charts.monthlyCumulative.thisMonth}
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="font-mono text-sm tabular-nums text-muted-foreground">
                           {Math.round(data.lastMonth).toLocaleString('nb-NO')} kr
                         </span>
-                        <span className="text-muted-foreground text-sm">forrige mnd</span>
+                        <span className="text-muted-foreground text-sm">{t.components.charts.monthlyCumulative.lastMonthShort}</span>
                       </div>
                     </div>
                   );
