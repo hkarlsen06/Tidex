@@ -312,7 +312,8 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
                     placeholder={t.pages.auth.signup.fullNamePlaceholder}
                     value={fullName}
                     onChange={(event) => {
-                      resetAll();
+                      resetMessage();
+                      resetFieldErrors();
                       setFullName(event.target.value);
                     }}
                     aria-invalid={!!fieldErrors.fullName}
@@ -329,7 +330,8 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
                     placeholder={t.pages.auth.signup.emailOrPhonePlaceholder}
                     value={emailOrPhone}
                     onChange={(event) => {
-                      resetAll();
+                      resetMessage();
+                      resetFieldErrors();
                       setEmailOrPhone(event.target.value);
                     }}
                     aria-invalid={!!fieldErrors.emailOrPhone}
@@ -349,7 +351,8 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
                         placeholder={t.pages.auth.signup.passwordPlaceholder}
                         value={password}
                         onChange={(event) => {
-                          resetAll();
+                          resetMessage();
+                          resetFieldErrors();
                           setPassword(event.target.value);
                         }}
                         aria-invalid={!!fieldErrors.password}
@@ -366,7 +369,8 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
                         placeholder={t.pages.auth.signup.confirmPasswordPlaceholder}
                         value={confirmPassword}
                         onChange={(event) => {
-                          resetAll();
+                          resetMessage();
+                          resetFieldErrors();
                           setConfirmPassword(event.target.value);
                         }}
                         aria-invalid={!!fieldErrors.confirmPassword}
