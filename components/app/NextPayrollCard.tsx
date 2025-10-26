@@ -5,6 +5,7 @@ import { Card, CardHeader } from '@appui/Card';
 import { cn } from '@/lib/cn';
 import { useNavigationFeedback } from './navigation-feedback';
 import { useTranslations } from '@/lib/i18n/client';
+import type { Locale } from '@/lib/i18n/config';
 
 interface NextPayrollCardProps {
   payrollDay: number;
@@ -26,10 +27,15 @@ const numberFormatter = new Intl.NumberFormat("nb-NO", {
   maximumFractionDigits: 0,
 });
 
-const dateFormatter = new Intl.DateTimeFormat("nb-NO", {
-  day: "numeric",
-  month: "long",
-});
+// Map our locale codes to BCP 47 locale tags for Intl.DateTimeFormat
+function getDateLocale(locale: Locale): string {
+  const localeMap: Record<Locale, string> = {
+    no: 'nb-NO',
+    en: 'en-US',
+    de: 'de-DE',
+  };
+  return localeMap[locale];
+}
 
 function getPayrollDateForMonth(payrollDay: number, selectedMonth?: Date): Date {
   const referenceDate = selectedMonth ?? new Date();
@@ -64,7 +70,16 @@ export const NextPayrollCard: React.FC<NextPayrollCardProps> = ({
   showPreviousPayroll,
 }) => {
   const { navigate } = useNavigationFeedback();
-  const { t } = useTranslations();
+  const { t, locale } = useTranslations();
+
+  // Create locale-aware date formatter
+  const dateFormatter = useMemo(() => {
+    return new Intl.DateTimeFormat(getDateLocale(locale), {
+      day: "numeric",
+      month: "long",
+    });
+  }, [locale]);
+
   const payrollDate = getPayrollDateForMonth(payrollDay, selectedMonth);
   const formattedDate = dateFormatter.format(payrollDate);
 
