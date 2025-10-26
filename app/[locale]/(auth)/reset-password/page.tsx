@@ -304,7 +304,8 @@ export default function ResetPasswordPage({ params }: { params: Promise<{ locale
                   placeholder={t.pages.auth.resetPassword.emailOrPhonePlaceholder}
                   value={emailOrPhone}
                   onChange={(event) => {
-                    resetAll();
+                    resetMessage();
+                    resetFieldErrors();
                     setEmailOrPhone(event.target.value);
                   }}
                   aria-invalid={!!fieldErrors.emailOrPhone}
