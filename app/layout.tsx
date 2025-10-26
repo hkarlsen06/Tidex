@@ -21,15 +21,16 @@ export const metadata: Metadata = {
   title: "Tidex",
   description: "App for å regne ut lønn basert på skiftene dine med tillegg!",
   manifest: "/manifest.json",
+  applicationName: "Tidex",
   icons: {
     icon: [
       {
-        url: "/icon-192x192.png",
+        url: "/android-chrome-192x192.png",
         sizes: "192x192",
         type: "image/png",
       },
       {
-        url: "/icon-512x512.png",
+        url: "/android-chrome-512x512.png",
         sizes: "512x512",
         type: "image/png",
       },
@@ -72,11 +73,12 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="no" suppressHydrationWarning>
       <head>
         <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="application-name" content="Tidex" />
+        <meta name="apple-mobile-web-app-title" content="Tidex" />
         <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon-180x180.png" />
         <link rel="apple-touch-icon" sizes="152x152" href="/apple-touch-icon-152x152.png" />
         <link rel="apple-touch-icon" sizes="120x120" href="/apple-touch-icon-120x120.png" />
         <link rel="apple-touch-icon" sizes="76x76" href="/apple-touch-icon-76x76.png" />
-        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         {/* Resource hints for faster loading */}
         <link rel="preconnect" href="https://id.tidex.no" />
         <link rel="dns-prefetch" href="https://id.tidex.no" />
