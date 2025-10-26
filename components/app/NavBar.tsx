@@ -81,6 +81,7 @@ export function NavBar() {
 
   // Fetch shift count client-side to determine if hint should be shown
   // This is deferred to avoid blocking the initial render
+  // Re-check when pathname changes so hint disappears after adding first shift
   useEffect(() => {
     const checkShiftCount = async () => {
       try {
@@ -100,16 +101,15 @@ export function NavBar() {
           return;
         }
 
-        if ((count ?? 0) === 0) {
-          setShowAddShiftHint(true);
-        }
+        // Update hint visibility based on current shift count
+        setShowAddShiftHint((count ?? 0) === 0);
       } catch (err) {
         console.error("[NavBar] Unexpected error in shift count check:", err);
       }
     };
 
     checkShiftCount();
-  }, []);
+  }, [pathname]);
 
   const isOnboardingPath = (path: string | null) => {
     if (typeof path !== "string") {
