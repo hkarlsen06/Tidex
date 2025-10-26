@@ -38,7 +38,7 @@ export default async function PreferencesPage({
   const settings = await getUserSettings(user.id);
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-2xl">
+    <div className="container mx-auto py-8 max-w-2xl">
       <div className="space-y-6">
         <div>
           <h2 className="text-2xl font-bold">{t.pages.settings.preferences.title}</h2>

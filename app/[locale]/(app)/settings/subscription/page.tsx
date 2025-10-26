@@ -51,7 +51,7 @@ export default async function SubscriptionPage({
   const isGrandfatheredSubscriber = isEarlySupporter && hasActiveSubscription;
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
+    <div className="container mx-auto py-8 max-w-4xl">
       <div className="space-y-6">
         <div>
           <h2 className="text-2xl font-bold">{t.pages.settings.subscription.title}</h2>
