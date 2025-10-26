@@ -7,6 +7,8 @@ import { Separator } from '@appui/Separator';
 import { Download } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import type { Dictionary } from '@/lib/i18n/dictionaries/no';
+import { useTranslations } from '@/lib/i18n/client';
+import type { Locale } from '@/lib/i18n/config';
 
 const JSPDF_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
 
@@ -89,7 +91,15 @@ const PRESET_ORDER: ReadonlyArray<Exclude<PeriodPreset, 'custom'>> = [
   'current_year',
 ];
 
-const MONTH_FORMATTER = new Intl.DateTimeFormat('no-NO', { month: 'long' });
+// Map our locale codes to BCP 47 locale tags for Intl.DateTimeFormat
+function getDateLocale(locale: Locale): string {
+  const localeMap: Record<Locale, string> = {
+    no: 'nb-NO',
+    en: 'en-US',
+    de: 'de-DE',
+  };
+  return localeMap[locale];
+}
 
 function capitalize(value: string): string {
   if (!value) return value;
@@ -180,7 +190,7 @@ function parseIsoDate(value: string): Date | null {
   return parsed;
 }
 
-function getPresetLabel(preset: Exclude<PeriodPreset, 'custom'>): string {
+function getPresetLabel(preset: Exclude<PeriodPreset, 'custom'>, locale: Locale): string {
   const now = new Date();
   if (preset === 'current_year') {
     return String(now.getFullYear());
@@ -191,7 +201,8 @@ function getPresetLabel(preset: Exclude<PeriodPreset, 'custom'>): string {
       ? new Date(now.getFullYear(), now.getMonth(), 1)
       : new Date(now.getFullYear(), now.getMonth() - 1, 1);
 
-  return capitalize(MONTH_FORMATTER.format(baseMonth));
+  const monthFormatter = new Intl.DateTimeFormat(getDateLocale(locale), { month: 'long' });
+  return capitalize(monthFormatter.format(baseMonth));
 }
 
 function formatCurrencyShort(value: number): string {
@@ -331,9 +342,9 @@ function prepareExportData(payload: ExportPayload): PreparedExportData {
   };
 }
 
-function formatLongDate(date: Date | null): string {
+function formatLongDate(date: Date | null, locale: Locale): string {
   if (!date) return '';
-  return new Intl.DateTimeFormat('no-NO', {
+  return new Intl.DateTimeFormat(getDateLocale(locale), {
     day: '2-digit',
     month: '2-digit',
     year: '2-digit',
@@ -588,6 +599,7 @@ interface DataFormProps {
 }
 
 export function DataForm({ t }: DataFormProps) {
+  const { locale } = useTranslations();
   const [selectedPreset, setSelectedPreset] = useState<PeriodPreset | null>(null);
   const [customRange, setCustomRange] = useState<DateRange>({ from: '', to: '' });
   const [isExportingPdf, setIsExportingPdf] = useState(false);
@@ -629,8 +641,8 @@ export function DataForm({ t }: DataFormProps) {
       return '';
     }
 
-    return `${formatLongDate(fromDate)} - ${formatLongDate(toDate)}`;
-  }, [resolvedRange]);
+    return `${formatLongDate(fromDate, locale)} - ${formatLongDate(toDate, locale)}`;
+  }, [resolvedRange, locale]);
 
   const canExport = Boolean(resolvedRange);
 
@@ -674,7 +686,7 @@ export function DataForm({ t }: DataFormProps) {
 
         const exportDate = payload.generatedAt ? new Date(payload.generatedAt) : new Date();
         doc.text(
-          `Eksportert: ${formatLongDate(exportDate)}`,
+          `Eksportert: ${formatLongDate(exportDate, locale)}`,
           PAGE_CONFIG.margins.left,
           yRef.value
         );
@@ -684,14 +696,15 @@ export function DataForm({ t }: DataFormProps) {
         const toDate = parseIsoDate(range.to);
         if (fromDate && toDate) {
           doc.text(
-            `Periode: ${formatLongDate(fromDate)} - ${formatLongDate(toDate)}`,
+            `Periode: ${formatLongDate(fromDate, locale)} - ${formatLongDate(toDate, locale)}`,
             PAGE_CONFIG.margins.left,
             yRef.value
           );
         } else if (exportData.shifts.length > 0) {
           doc.text(
-            `Periode: ${formatLongDate(exportData.firstDate)} - ${formatLongDate(
-              exportData.lastDate
+            `Periode: ${formatLongDate(exportData.firstDate, locale)} - ${formatLongDate(
+              exportData.lastDate,
+              locale
             )}`,
             PAGE_CONFIG.margins.left,
             yRef.value
@@ -766,7 +779,7 @@ export function DataForm({ t }: DataFormProps) {
                   )}
                   onClick={() => setSelectedPreset(key)}
                 >
-                  {getPresetLabel(key)}
+                  {getPresetLabel(key, locale)}
                 </Button>
               );
             })}
