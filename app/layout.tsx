@@ -37,6 +37,9 @@ export const metadata: Metadata = {
     ],
     apple: [
       {
+        url: "/apple-touch-icon.png",
+      },
+      {
         url: "/apple-touch-icon-180x180.png",
         sizes: "180x180",
       },
@@ -75,6 +78,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="application-name" content="Tidex" />
         <meta name="apple-mobile-web-app-title" content="Tidex" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon-180x180.png" />
         <link rel="apple-touch-icon" sizes="152x152" href="/apple-touch-icon-152x152.png" />
         <link rel="apple-touch-icon" sizes="120x120" href="/apple-touch-icon-120x120.png" />

@@ -23,6 +23,15 @@ const nextConfig = {
     optimizePackageImports: ["@tabler/icons-react", "recharts", "lucide-react"],
   },
 
+  async rewrites() {
+    return [
+      {
+        source: "/apple-touch-icon.png",
+        destination: "/apple-touch-icon-180x180.png",
+      },
+    ];
+  },
+
   // No `eslint` key (Next 16 doesn’t lint in build).
   // No `webpack` function (Turbopack ignores it, and it’s what caused the error).
 };
