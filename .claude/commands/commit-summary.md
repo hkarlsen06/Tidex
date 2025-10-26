@@ -1,5 +1,5 @@
 ---
-description: Generate a commit message based on staged or unstaged changes
+description: Generate a commit message summary without creating the commit
 ---
 
 Analyze the git changes and generate a concise, descriptive commit message following these rules:
