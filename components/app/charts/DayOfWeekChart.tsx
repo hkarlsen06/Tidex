@@ -6,7 +6,8 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
-import { DayOfWeekData } from "@/app/(app)/stats/_data/getStatsData";
+import { DayOfWeekData } from "@/app/[locale]/(app)/stats/_data/getStatsData";
+import { useTranslations } from "@/lib/i18n/client";
 
 type DayOfWeekChartProps = {
   data: DayOfWeekData[];
@@ -51,6 +52,8 @@ function CustomXAxisTick({
 }
 
 export function DayOfWeekChart({ data }: DayOfWeekChartProps) {
+  const { t } = useTranslations();
+
   // Calculate domain for y-axis to focus on the range where data varies
   const earnings = data.map((d) => d.averageEarnings);
   const maxEarnings = Math.max(...earnings);
@@ -83,8 +86,7 @@ export function DayOfWeekChart({ data }: DayOfWeekChartProps) {
 
   // Get today's day abbreviation for highlighting
   const now = new Date();
-  const dayNames = ['Søn', 'Man', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør'];
-  const todayAbbrev = dayNames[now.getDay()];
+  const todayAbbrev = t.dateTime.daysShort[now.getDay()];
 
   return (
     <ChartContainer config={chartConfig} className="h-[220px] w-full">

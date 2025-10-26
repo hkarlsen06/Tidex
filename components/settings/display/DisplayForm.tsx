@@ -3,19 +3,21 @@
 import { useState } from 'react';
 import { Card } from '@appui/Card';
 import { Label } from '@appui/Label';
-import { updateDisplaySettings } from '@/app/(app)/settings/_actions/updateSettings';
+import { updateDisplaySettings } from '@/app/[locale]/(app)/settings/_actions/updateSettings';
 import { useRouter } from 'next/navigation';
 import { IconListDetails, IconCalendarWeek, IconSun, IconMoon, IconScreenShare } from '@tabler/icons-react';
 import { cn } from '@/lib/utils';
+import type { Dictionary } from '@/lib/i18n/dictionaries/no';
 
 interface DisplayFormProps {
   initialData: {
     theme: string;
     defaultShiftsView: string;
   };
+  t: Dictionary;
 }
 
-export function DisplayForm({ initialData }: DisplayFormProps) {
+export function DisplayForm({ initialData, t }: DisplayFormProps) {
   const router = useRouter();
   const [theme, setTheme] = useState(initialData.theme || 'system');
   const [defaultShiftsView, setDefaultShiftsView] = useState(initialData.defaultShiftsView);
@@ -74,9 +76,9 @@ export function DisplayForm({ initialData }: DisplayFormProps) {
         <div className="space-y-6">
           <div className="space-y-4">
             <div>
-              <Label className="text-base font-semibold">Tema</Label>
+              <Label className="text-base font-semibold">{t.pages.settings.display.theme.label}</Label>
               <p className="text-sm text-text-secondary mb-4">
-                Velg hvordan appen skal se ut
+                {t.pages.settings.display.theme.description}
               </p>
               <div className="flex gap-2 sm:gap-4">
                 <button
@@ -93,7 +95,7 @@ export function DisplayForm({ initialData }: DisplayFormProps) {
                   )}
                 >
                   <IconSun stroke={2} className="h-8 w-8" />
-                  <span className="text-xs font-medium">Lys</span>
+                  <span className="text-xs font-medium">{t.pages.settings.display.theme.light}</span>
                 </button>
 
                 <button
@@ -110,7 +112,7 @@ export function DisplayForm({ initialData }: DisplayFormProps) {
                   )}
                 >
                   <IconMoon stroke={2} className="h-8 w-8" />
-                  <span className="text-xs font-medium">Mørk</span>
+                  <span className="text-xs font-medium">{t.pages.settings.display.theme.dark}</span>
                 </button>
 
                 <button
@@ -127,7 +129,7 @@ export function DisplayForm({ initialData }: DisplayFormProps) {
                   )}
                 >
                   <IconScreenShare stroke={2} className="h-8 w-8" />
-                  <span className="text-xs font-medium">System</span>
+                  <span className="text-xs font-medium">{t.pages.settings.display.theme.system}</span>
                 </button>
               </div>
             </div>
@@ -139,9 +141,9 @@ export function DisplayForm({ initialData }: DisplayFormProps) {
         <div className="space-y-6">
           <div className="space-y-4">
             <div>
-              <Label className="text-base font-semibold">Standard vaktoversikt</Label>
+              <Label className="text-base font-semibold">{t.pages.settings.display.defaultView.label}</Label>
               <p className="text-sm text-text-secondary mb-4">
-                Velg hvordan vakter vises som standard
+                {t.pages.settings.display.defaultView.description}
               </p>
               <div className="flex gap-2 sm:gap-4">
                 <button
@@ -158,7 +160,7 @@ export function DisplayForm({ initialData }: DisplayFormProps) {
                   )}
                 >
                   <IconCalendarWeek stroke={2} className="h-8 w-8" />
-                  <span className="text-xs font-medium">Kalender</span>
+                  <span className="text-xs font-medium">{t.pages.settings.display.defaultView.calendar}</span>
                 </button>
 
                 <button
@@ -175,7 +177,7 @@ export function DisplayForm({ initialData }: DisplayFormProps) {
                   )}
                 >
                   <IconListDetails stroke={2} className="h-8 w-8" />
-                  <span className="text-xs font-medium">Liste</span>
+                  <span className="text-xs font-medium">{t.pages.settings.display.defaultView.list}</span>
                 </button>
               </div>
             </div>

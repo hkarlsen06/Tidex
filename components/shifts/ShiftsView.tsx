@@ -16,9 +16,9 @@ import { CalendarSkeleton } from "@/components/app/CalendarSkeleton";
 import { Button } from "@/components/app/Button";
 import { ShiftWithComputations, UserSettings, SupplementRule } from "@/lib/payroll";
 import ShiftDetails from "@/components/shifts/ShiftDetails";
-import { deleteShift } from "@/app/(app)/shifts/_actions/deleteShift";
-import { updateShift } from "@/app/(app)/shifts/_actions/updateShift";
-import { copyShifts } from "@/app/(app)/shifts/_actions/copyShifts";
+import { deleteShift } from "@/app/[locale]/(app)/shifts/_actions/deleteShift";
+import { updateShift } from "@/app/[locale]/(app)/shifts/_actions/updateShift";
+import { copyShifts } from "@/app/[locale]/(app)/shifts/_actions/copyShifts";
 import { useNavigationFeedback } from "@/components/app/navigation-feedback";
 import { useMonth } from "@/components/app/MonthContext";
 import type { ISODate } from "@/components/calendar/calendar.types";
@@ -32,6 +32,7 @@ import {
 } from "@/components/app/Dialog";
 import { IconArrowRight, IconArrowLeft } from "@tabler/icons-react";
 import { cn } from "@/lib/cn";
+import { useTranslations } from "@/lib/i18n/client";
 
 // Lazy load the calendar to reduce initial bundle size (~40KB savings)
 const MonthlyEarningsCalendar = dynamic(
@@ -102,7 +103,7 @@ function filterAndGroupByWeek(
     if (!group) {
       group = {
         id,
-        label: `Uke ${weekFormatter.format(weekNumber)}`,
+        label: `${weekFormatter.format(weekNumber)}`,
         totalGross: 0,
         shifts: [],
       };
@@ -166,6 +167,7 @@ type CalendarCellPreviewProps = {
   placeholder: string;
   variant: "source" | "target";
   sourceDate?: ISODate | null;
+  t: any;
 };
 
 function CalendarCellPreview({
@@ -174,6 +176,7 @@ function CalendarCellPreview({
   placeholder,
   variant,
   sourceDate,
+  t,
 }: CalendarCellPreviewProps) {
   const date = isoDate ? parseISODate(isoDate) : null;
   const dayNumber = date ? date.getUTCDate() : null;
@@ -241,7 +244,7 @@ function CalendarCellPreview({
             </div>
           ) : (
             <div className="flex flex-1 items-center justify-center text-xs font-medium text-text-muted">
-              Velg dato
+              {t.pages.shifts.calendar.selectDate}
             </div>
           )}
         </div>
@@ -266,6 +269,7 @@ type MoveShiftModalProps = {
   error?: string | null;
   userSettings: UserSettings;
   presetRules: SupplementRule[];
+  t: any;
 };
 
 function MoveShiftModal({
@@ -281,6 +285,7 @@ function MoveShiftModal({
   error,
   userSettings,
   presetRules,
+  t,
 }: MoveShiftModalProps) {
   const multipleShifts = shifts.length > 1;
   const hasSourceShifts = shifts.length > 0;
@@ -291,12 +296,12 @@ function MoveShiftModal({
       ? shifts
       : [];
   const hoursPreview = buildHoursPreview(selectedShifts);
-  const sourcePlaceholder = hasSourceShifts ? "Velg vakter" : "Ingen vakter";
+  const sourcePlaceholder = hasSourceShifts ? t.pages.shifts.calendar.selectShifts : t.pages.shifts.calendar.noShifts;
   const targetPlaceholder = targetDate
     ? selectedShifts.length > 0
-      ? "Timer flyttes hit"
-      : "Velg vakter"
-    : "Velg dato";
+      ? t.pages.shifts.calendar.hoursMovingHere
+      : t.pages.shifts.calendar.selectShifts
+    : t.pages.shifts.calendar.selectDate;
   const targetHours =
     selectedShifts.length > 0 && targetDate ? hoursPreview : "";
   const isReverseDirection = useMemo(() => {
@@ -309,7 +314,7 @@ function MoveShiftModal({
   const fromSection = (
     <div className="flex flex-col items-center gap-2">
       <span className="text-xs font-semibold uppercase tracking-[0.2em] text-text-muted">
-        Fra
+        {t.pages.shifts.calendar.from}
       </span>
       <CalendarCellPreview
         isoDate={sourceDate}
@@ -317,6 +322,7 @@ function MoveShiftModal({
         placeholder={sourcePlaceholder}
         variant="source"
         sourceDate={sourceDate}
+        t={t}
       />
     </div>
   );
@@ -324,7 +330,7 @@ function MoveShiftModal({
   const toSection = (
     <div className="flex flex-col items-center gap-2">
       <span className="text-xs font-semibold uppercase tracking-[0.2em] text-text-muted">
-        Til
+        {t.pages.shifts.calendar.to}
       </span>
       <CalendarCellPreview
         isoDate={targetDate}
@@ -332,6 +338,7 @@ function MoveShiftModal({
         placeholder={targetPlaceholder}
         variant="target"
         sourceDate={sourceDate}
+        t={t}
       />
     </div>
   );
@@ -346,16 +353,16 @@ function MoveShiftModal({
     <Dialog open={open} onOpenChange={(nextOpen) => { if (!nextOpen && !isSubmitting) onCancel(); }}>
       <DialogContent className="sm:rounded-3xl max-w-lg">
         <DialogHeader>
-          <DialogTitle className="text-text-primary">Flytt vakt</DialogTitle>
+          <DialogTitle className="text-text-primary">{t.pages.shifts.move.title}</DialogTitle>
           <DialogDescription className="text-text-muted">
-            Bekreft flytting av valgt vakt til en ny dato.
+            {t.pages.shifts.move.description}
           </DialogDescription>
         </DialogHeader>
         {isSubmitting && (
           <div className="absolute inset-0 z-50 flex items-center justify-center rounded-3xl bg-surface-primary/80 backdrop-blur-sm">
             <div className="flex flex-col items-center gap-3">
               <div className="h-8 w-8 animate-spin rounded-full border-4 border-border-subtle border-t-brand-highlight" />
-              <p className="text-sm font-medium text-text-secondary">Flytter vakter...</p>
+              <p className="text-sm font-medium text-text-secondary">{t.pages.shifts.move.moving}</p>
             </div>
           </div>
         )}
@@ -381,7 +388,7 @@ function MoveShiftModal({
             <div className="space-y-3">
               {multipleShifts && (
                 <p className="text-xs font-medium text-text-secondary">
-                  Trykk på vaktene du vil flytte
+                  {t.pages.shifts.move.selectShiftsToMove}
                 </p>
               )}
               <div className={cn(
@@ -409,12 +416,12 @@ function MoveShiftModal({
           )}
           {!error && !targetDate && (
             <p className="text-sm text-text-muted">
-              Velg en måldato i kalenderen
+              {t.pages.shifts.move.selectTargetDate}
             </p>
           )}
           {!error && targetDate && selectedIds.length === 0 && multipleShifts && (
             <p className="text-sm text-text-muted">
-              Velg minst én vakt å flytte
+              {t.pages.shifts.move.selectAtLeastOne}
             </p>
           )}
         </div>
@@ -426,7 +433,7 @@ function MoveShiftModal({
             disabled={isSubmitting}
             className="flex-1 h-11 rounded-full border border-border-subtle bg-white text-neutral-900 hover:bg-surface-secondary dark:text-neutral-900"
           >
-            Avbryt
+            {t.pages.shifts.move.cancelButton}
           </Button>
           <Button
             type="button"
@@ -436,7 +443,7 @@ function MoveShiftModal({
             disabled={isSubmitting || selectedIds.length === 0 || !targetDate}
             className="flex-1 h-11 rounded-full"
           >
-            Flytt vakt
+            {t.pages.shifts.move.confirmButton}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -452,6 +459,13 @@ type ShiftsViewProps = {
 };
 
 export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", userSettings, presetRules }: ShiftsViewProps) {
+  const { t } = useTranslations();
+  const {
+    errorSelectOne,
+    errorPartial,
+    errorComplete,
+    errorUnexpected,
+  } = t.pages.shifts.move;
   const router = useRouter();
   const { navigate } = useNavigationFeedback();
   const [pending, startTransition] = useTransition();
@@ -800,7 +814,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
     );
 
     if (shiftsToMove.length === 0) {
-      setMoveError("Velg minst én vakt du vil flytte");
+      setMoveError(errorSelectOne);
       return;
     }
 
@@ -825,7 +839,10 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
           if (succeeded.length > 0) {
             // Partial success - show which ones failed
             setMoveError(
-              `${succeeded.length} av ${shiftsToMove.length} vakter ble flyttet. ${failed.length} feilet.`
+              errorPartial
+                .replace('{succeeded}', succeeded.length.toString())
+                .replace('{total}', shiftsToMove.length.toString())
+                .replace('{failed}', failed.length.toString())
             );
             router.refresh(); // Refresh to show partial success
           } else {
@@ -834,7 +851,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
             const message =
               firstError instanceof Error
                 ? firstError.message
-                : "Kunne ikke flytte vaktene";
+                : errorComplete;
             setMoveError(message);
           }
         } else {
@@ -845,7 +862,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
       } catch (error) {
         // Unexpected error outside Promise.allSettled
         const message =
-          error instanceof Error ? error.message : "En uventet feil oppstod";
+          error instanceof Error ? error.message : errorUnexpected;
         setMoveError(message);
       }
     });
@@ -857,6 +874,10 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
     selectedDate,
     shiftsByDate,
     startMoveTransition,
+    errorSelectOne,
+    errorPartial,
+    errorComplete,
+    errorUnexpected,
   ]);
 
   const grouped = useMemo(() => {
@@ -872,11 +893,11 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
 
   const hasAnyShifts = shifts.length > 0;
   const emptyTitle = hasAnyShifts
-    ? "Ingen skift for denne måneden"
-    : "Ingen skift registrert ennå";
+    ? t.pages.shifts.list.emptyMonthTitle
+    : t.pages.shifts.list.emptyTitle;
   const emptyDescription = hasAnyShifts
-    ? "Prøv å velge en annen måned i kalenderen for å se tidligere skift."
-    : "Når du legger inn skift vil de dukke opp her med full lønnsberegning.";
+    ? t.pages.shifts.list.emptyMonthDescription
+    : t.pages.shifts.list.emptyDescription;
 
   return (
     <>
@@ -917,7 +938,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
                     variant="default"
                     className="mx-auto"
                   >
-                    {loadingMonth ? 'Laster...' : `Last inn vakter for ${selectedMonth.toLocaleDateString('nb-NO', { month: 'long', year: 'numeric' })}`}
+                    {loadingMonth ? t.pages.shifts.list.loading : t.pages.shifts.list.loadMonth.replace('{month}', selectedMonth.toLocaleDateString('nb-NO', { month: 'long', year: 'numeric' }))}
                   </Button>
                 </div>
               )}
@@ -930,7 +951,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
                 <Card className="rounded-card border-0">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 py-3">
                     <div className="flex items-center gap-2 font-medium text-text-primary">
-                      <span>{group.label}</span>
+                      <span>{t.pages.shifts.list.weekLabel} {group.label}</span>
                       <svg
                         aria-hidden="true"
                         className="h-4 w-4 text-text-muted"
@@ -979,6 +1000,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
       error={moveError}
       userSettings={userSettings}
       presetRules={presetRules}
+      t={t}
     />
     <ShiftDetails
       isOpen={detailsOpen}

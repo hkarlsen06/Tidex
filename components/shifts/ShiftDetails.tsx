@@ -14,9 +14,10 @@ import { Button } from "@components/app/Button";
 import { Input } from "@components/app/Input";
 import type { ShiftWithComputations } from "@/lib/payroll";
 import SupplementBreakdown, { type SupplementSegmentInput } from "./SupplementBreakdown";
-import { updateShift } from "@/app/(app)/shifts/_actions/updateShift";
+import { updateShift } from "@/app/[locale]/(app)/shifts/_actions/updateShift";
 import { cn } from "@/lib/cn";
 import { TimeInput } from "@/components/app/TimeInput";
+import { useTranslations } from "@/lib/i18n/client";
 
 const MINUTES_PER_DAY = 24 * 60;
 
@@ -147,6 +148,7 @@ export function ShiftDetails({
   onDelete,
   isDeleting,
 }: ShiftDetailsProps) {
+  const { t } = useTranslations();
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [startTime, setStartTime] = useState("");
@@ -195,11 +197,11 @@ export function ShiftDetails({
   const handleSave = () => {
     if (!shift) return;
     if (!DATE_PATTERN.test(shiftDate)) {
-      setSaveError("Ugyldig dato");
+      setSaveError(t.pages.shifts.details.errorInvalidDate);
       return;
     }
     if (!TIME_PATTERN.test(startTime) || !TIME_PATTERN.test(endTime)) {
-      setSaveError("Ugyldig tid");
+      setSaveError(t.pages.shifts.details.errorInvalidTime);
       return;
     }
     setSaveError(null);
@@ -214,7 +216,7 @@ export function ShiftDetails({
         setIsEditing(false);
         router.refresh();
       } catch (error: any) {
-        setSaveError(error?.message || "Kunne ikke oppdatere skift");
+        setSaveError(error?.message || t.pages.shifts.details.errorUpdate);
       }
     });
   };
@@ -238,16 +240,16 @@ export function ShiftDetails({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-text-primary">
             <IconClock className="h-5 w-5 text-text-muted" aria-hidden />
-            Vaktdetaljer
+            {t.pages.shifts.details.title}
           </DialogTitle>
         </DialogHeader>
 
         {!shift ? (
-          <div className="py-6 text-center text-text-secondary">Fant ikke vakten.</div>
+          <div className="py-6 text-center text-text-secondary">{t.pages.shifts.details.notFound}</div>
         ) : (
           <div className="space-y-4 pt-2">
             <div className="flex items-center justify-between gap-4">
-              <div className="text-sm text-text-secondary">Dato</div>
+              <div className="text-sm text-text-secondary">{t.pages.shifts.details.date}</div>
               {isEditing ? (
                 <Input
                   type="date"
@@ -263,7 +265,7 @@ export function ShiftDetails({
               )}
             </div>
             <div className="flex items-center justify-between gap-4">
-              <div className="text-sm text-text-secondary">Tid</div>
+              <div className="text-sm text-text-secondary">{t.pages.shifts.details.time}</div>
               {isEditing ? (
                 <div className="flex items-center gap-2">
                   <TimeInput
@@ -294,7 +296,7 @@ export function ShiftDetails({
               <div className="text-sm text-error">{saveError}</div>
             ) : null}
             <div className="flex items-center justify-between">
-              <div className="text-sm text-text-secondary">Betalte timer</div>
+              <div className="text-sm text-text-secondary">{t.pages.shifts.details.paidHours}</div>
               <div className="text-base font-medium text-text-primary">
                 {formatHours(shift.computed.paidHours)}
               </div>
@@ -303,7 +305,7 @@ export function ShiftDetails({
             <div className="h-px bg-border-subtle" />
 
             <div className="flex items-center justify-between">
-              <div className="text-sm text-text-secondary">Grunnlønn</div>
+              <div className="text-sm text-text-secondary">{t.pages.shifts.details.basePay}</div>
               <div className="text-base font-medium text-text-primary">
                 {formatCurrencyNOKInt(shift.computed.basePay)}
               </div>
@@ -321,7 +323,7 @@ export function ShiftDetails({
             {hasSupplementBreakdown ? <div className="h-px bg-border-subtle" /> : null}
 
             <div className="flex items-center justify-between pt-2">
-              <div className="text-sm text-text-secondary">Total</div>
+              <div className="text-sm text-text-secondary">{t.pages.shifts.details.total}</div>
               <div className="text-xl font-semibold text-text-primary">
                 {formatCurrencyNOKInt(shift.computed.gross)}
               </div>
@@ -350,7 +352,7 @@ export function ShiftDetails({
                 )}
               >
                 <IconTrash className="h-4 w-4" />
-                {confirmingDelete ? "Bekreft" : "Slett"}
+                {confirmingDelete ? t.pages.shifts.details.confirmDeleteButton : t.pages.shifts.details.deleteButton}
               </Button>
               {isEditing ? (
                 <Button
@@ -359,7 +361,7 @@ export function ShiftDetails({
                   className="col-span-1 h-11 w-full rounded-full px-4 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 gap-2"
                 >
                   <IconCheck className="h-4 w-4" />
-                  Lagre
+                  {t.pages.shifts.details.saveButton}
                 </Button>
               ) : (
                 <Button
@@ -368,7 +370,7 @@ export function ShiftDetails({
                   className="col-span-1 h-11 w-full rounded-full px-4 text-sm font-medium transition-colors gap-2 bg-blue-600 text-white hover:bg-blue-700"
                 >
                   <IconPencil className="h-4 w-4" />
-                  Rediger
+                  {t.pages.shifts.details.editButton}
                 </Button>
               )}
               {isEditing ? (
@@ -386,7 +388,7 @@ export function ShiftDetails({
                   className="col-span-1 h-11 w-full rounded-full px-4 text-sm font-medium border border-border-subtle bg-white text-neutral-900 hover:bg-surface-secondary dark:text-neutral-900 gap-2"
                 >
                   <IconX className="h-4 w-4" />
-                  Avbryt
+                  {t.pages.shifts.details.cancelButton}
                 </Button>
               ) : confirmingDelete ? (
                 <Button
@@ -397,7 +399,7 @@ export function ShiftDetails({
                   className="col-span-1 h-11 w-full rounded-full px-4 text-sm font-medium border border-border-subtle bg-white text-neutral-900 hover:bg-surface-secondary dark:text-neutral-900 gap-2"
                 >
                   <IconX className="h-4 w-4" />
-                  Avbryt
+                  {t.pages.shifts.details.cancelButton}
                 </Button>
               ) : (
                 <Button
@@ -408,7 +410,7 @@ export function ShiftDetails({
                   disabled={saving || isDeleting}
                   className="col-span-1 h-11 w-full rounded-full px-4 text-sm font-medium border border-border-subtle bg-white text-neutral-900 hover:bg-surface-secondary dark:text-neutral-900"
                 >
-                  Lukk
+                  {t.pages.shifts.details.closeButton}
                 </Button>
               )}
             </div>

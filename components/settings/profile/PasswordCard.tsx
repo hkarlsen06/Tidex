@@ -7,14 +7,16 @@ import { Input } from '@appui/Input';
 import { Label } from '@appui/Label';
 import { IconLock } from '@tabler/icons-react';
 import { useRouter } from 'next/navigation';
-import { setPassword } from '@/app/(app)/settings/_actions/updateSettings';
+import { setPassword } from '@/app/[locale]/(app)/settings/_actions/updateSettings';
 import { translateError } from '@/lib/errors/translate';
+import { useTranslations } from '@/lib/i18n/client';
 
 interface PasswordCardProps {
   hasPassword: boolean;
 }
 
 export function PasswordCard({ hasPassword }: PasswordCardProps) {
+  const { t } = useTranslations();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -28,17 +30,17 @@ export function PasswordCard({ hasPassword }: PasswordCardProps) {
     setSuccess(null);
 
     if (!password) {
-      setError('Fyll inn passord');
+      setError(t.pages.settings.profile.password.errors.passwordRequired);
       return;
     }
 
     if (password.length < 6) {
-      setError('Passordet må være minst 6 tegn langt');
+      setError(t.pages.settings.profile.password.errors.passwordTooShort);
       return;
     }
 
     if (password !== confirmPassword) {
-      setError('Passordene stemmer ikke overens');
+      setError(t.pages.settings.profile.password.errors.passwordMismatch);
       return;
     }
 
@@ -46,7 +48,7 @@ export function PasswordCard({ hasPassword }: PasswordCardProps) {
 
     try {
       await setPassword(password);
-      setSuccess(hasPassword ? 'Passord oppdatert!' : 'Passord satt!');
+      setSuccess(hasPassword ? t.pages.settings.profile.password.success.updated : t.pages.settings.profile.password.success.set);
       setShowPasswordForm(false);
       setPasswordValue('');
       setConfirmPassword('');
@@ -56,7 +58,7 @@ export function PasswordCard({ hasPassword }: PasswordCardProps) {
       setError(
         err instanceof Error
           ? translateError(err.message)
-          : 'En feil oppstod'
+          : t.pages.settings.profile.password.errors.genericError
       );
     } finally {
       setIsLoading(false);
@@ -81,12 +83,12 @@ export function PasswordCard({ hasPassword }: PasswordCardProps) {
             </div>
             <div className="flex-1">
               <h3 className="font-semibold text-text-primary">
-                {hasPassword ? 'Endre passord' : 'Sett passord'}
+                {hasPassword ? t.pages.settings.profile.password.titleChange : t.pages.settings.profile.password.titleSet}
               </h3>
               <p className="text-sm text-text-secondary mt-0.5">
                 {hasPassword
-                  ? 'Oppdater ditt passord for pålogging'
-                  : 'Sett et passord for å kunne logge inn med passord i tillegg til SMS-kode'}
+                  ? t.pages.settings.profile.password.descriptionHasPassword
+                  : t.pages.settings.profile.password.descriptionNoPassword}
               </p>
             </div>
           </div>
@@ -94,12 +96,11 @@ export function PasswordCard({ hasPassword }: PasswordCardProps) {
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="password">
-                {hasPassword ? 'Nytt passord' : 'Passord'}
+                {hasPassword ? t.pages.settings.profile.password.newPasswordLabel : t.pages.settings.profile.password.passwordLabel}
               </Label>
               <Input
                 id="password"
                 type="password"
-                placeholder="Minst 6 tegn"
                 value={password}
                 onChange={(e) => {
                   setPasswordValue(e.target.value);
@@ -111,11 +112,10 @@ export function PasswordCard({ hasPassword }: PasswordCardProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Bekreft passord</Label>
+              <Label htmlFor="confirmPassword">{t.pages.settings.profile.password.confirmPasswordLabel}</Label>
               <Input
                 id="confirmPassword"
                 type="password"
-                placeholder="Skriv inn passordet igjen"
                 value={confirmPassword}
                 onChange={(e) => {
                   setConfirmPassword(e.target.value);
@@ -138,17 +138,17 @@ export function PasswordCard({ hasPassword }: PasswordCardProps) {
                 className="flex-1"
               >
                 {isLoading
-                  ? 'Lagrer...'
+                  ? t.pages.settings.profile.password.setting
                   : hasPassword
-                    ? 'Oppdater passord'
-                    : 'Sett passord'}
+                    ? t.pages.settings.profile.password.update
+                    : t.pages.settings.profile.password.set}
               </Button>
               <Button
                 variant="outline"
                 onClick={handleCancel}
                 disabled={isLoading}
               >
-                Avbryt
+                {t.common.cancel}
               </Button>
             </div>
           </div>
@@ -165,11 +165,11 @@ export function PasswordCard({ hasPassword }: PasswordCardProps) {
             <IconLock className="h-6 w-6 text-text-primary" />
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-text-primary">Passord</h3>
+            <h3 className="font-semibold text-text-primary">{t.pages.settings.profile.password.titleCard}</h3>
             <p className="text-sm text-text-secondary mt-0.5">
               {hasPassword
-                ? 'Du kan logge inn med passord eller SMS-kode'
-                : 'Sett et passord for å kunne logge inn med passord i tillegg til SMS-kode'}
+                ? t.pages.settings.profile.password.hasPassword
+                : t.pages.settings.profile.password.noPassword}
             </p>
             {error && <p className="text-sm text-destructive mt-2">{error}</p>}
             {success && (
@@ -183,7 +183,7 @@ export function PasswordCard({ hasPassword }: PasswordCardProps) {
           disabled={isLoading}
           className="w-full sm:w-auto sm:flex-shrink-0"
         >
-          {hasPassword ? 'Endre' : 'Sett passord'}
+          {hasPassword ? t.pages.settings.profile.password.change : t.pages.settings.profile.password.set}
         </Button>
       </div>
     </Card>

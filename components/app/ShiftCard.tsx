@@ -1,6 +1,9 @@
+"use client";
+
 import { ShiftWithComputations } from "@/lib/payroll";
 import { Card, CardHeader } from "@/components/app/Card";
 import { cn } from "@/lib/cn";
+import { useTranslations } from "@/lib/i18n/client";
 
 type ShiftCardProps = {
   shift: ShiftWithComputations;
@@ -17,21 +20,15 @@ const hoursFormatter = new Intl.NumberFormat("nb-NO", {
   maximumFractionDigits: 2,
 });
 
-const dayFormatter = new Intl.DateTimeFormat("nb-NO", {
-  weekday: "short",
-});
-
-const dateFormatter = new Intl.DateTimeFormat("nb-NO", {
-  day: "numeric",
-  month: "long",
-});
-
-export function formatDateParts(date: string) {
+export function formatDateParts(date: string, monthsFull: readonly string[], daysShort: readonly string[]) {
   const parsed = new Date(`${date}T00:00:00Z`);
   const weekday = parsed.getUTCDay();
+  const day = parsed.getUTCDate();
+  const month = parsed.getUTCMonth();
+
   return {
-    dayName: dayFormatter.format(parsed),
-    dateLabel: dateFormatter.format(parsed),
+    dayName: daysShort[weekday],
+    dateLabel: `${day}. ${monthsFull[month].toLowerCase()}`,
     isWeekend: weekday === 0 || weekday === 6,
   };
 }
@@ -53,8 +50,9 @@ export function formatPlainAmount(value: number) {
 }
 
 export function ShiftCard({ shift, onClick }: ShiftCardProps) {
+  const { t } = useTranslations();
   const { computed } = shift;
-  const { dayName, dateLabel } = formatDateParts(shift.shift_date);
+  const { dayName, dateLabel } = formatDateParts(shift.shift_date, t.dateTime.monthsFull, t.dateTime.daysShort);
   const { basePay, supplementPay, gross, paidHours } = computed;
 
   const breakdown = `${formatPlainAmount(basePay)}${supplementPay > 0 ? ` + ${formatPlainAmount(supplementPay)}` : ""}`;

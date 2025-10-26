@@ -1,4 +1,4 @@
-# Component Scaffolder Skill for app.kkarlsen.dev
+# Component Scaffolder Skill for app.tidex.dev
 
 ## Overview
 
@@ -36,6 +36,7 @@ The Component Scaffolder generates production-ready code for:
 ### 1. Invoke the Skill
 
 In Claude Code:
+
 ```
 /scaffold
 ```
@@ -47,6 +48,7 @@ Or use the Skill tool to invoke it.
 Use natural language to describe what you want to scaffold:
 
 **Examples:**
+
 - "Generate a Badge component with success, warning, and error variants"
 - "Scaffold a notifications settings page with email and push notification toggles"
 - "Create a reports route with monthly/yearly filters and export button"
@@ -55,6 +57,7 @@ Use natural language to describe what you want to scaffold:
 ### 3. Answer Clarifying Questions
 
 The skill will ask questions to ensure it generates exactly what you need:
+
 - What variants/options should be included?
 - Where should the feature live in the route structure?
 - What data needs to be displayed/managed?
@@ -62,6 +65,7 @@ The skill will ask questions to ensure it generates exactly what you need:
 ### 4. Review and Confirm
 
 The skill will show you what it will generate before creating files. You can:
+
 - Confirm and proceed
 - Request changes
 - Cancel if it's not quite right
@@ -73,17 +77,20 @@ The skill will show you what it will generate before creating files. You can:
 **Scenario:** You need a new UI component from shadcn/ui
 
 **Command:**
+
 ```
 npm dlx shadcn@latest add [component-name]
 ```
 
 **Then in Claude Code:**
+
 ```
 /scaffold
 "Create an app wrapper for the [component-name] component"
 ```
 
 **What Gets Generated:**
+
 - `components/app/[ComponentName].tsx` - App wrapper with semantic tokens
 
 ### Creating a Settings Page
@@ -91,12 +98,14 @@ npm dlx shadcn@latest add [component-name]
 **Scenario:** You need a new settings page for user preferences
 
 **Command:**
+
 ```
 /scaffold
 "Scaffold a [setting-name] settings page"
 ```
 
 **What Gets Generated:**
+
 - `app/(app)/settings/[setting-name]/page.tsx` - Server component
 - `components/settings/[setting-name]/[SettingName]Form.tsx` - Client form
 - `app/api/settings/[endpoint]/route.ts` - API route (if needed)
@@ -106,12 +115,14 @@ npm dlx shadcn@latest add [component-name]
 **Scenario:** You need a new authenticated route with data
 
 **Command:**
+
 ```
 /scaffold
 "Create a [route-name] route with data loader"
 ```
 
 **What Gets Generated:**
+
 - `app/(app)/[route-name]/page.tsx` - Server component with auth
 - `app/(app)/[route-name]/_data/get[DataName].ts` - Data loader
 - `components/[route-name]/[RouteName]View.tsx` - Client view component
@@ -122,12 +133,14 @@ npm dlx shadcn@latest add [component-name]
 **Scenario:** You need a full feature with database, routes, and UI
 
 **Command:**
+
 ```
 /scaffold
 "Build a [feature-name] feature"
 ```
 
 **What Gets Generated:**
+
 - Database migration template (for manual execution)
 - Type definitions
 - Data loaders
@@ -143,13 +156,14 @@ npm dlx shadcn@latest add [component-name]
 
 ```typescript
 // ❌ Wrong
-import { Button } from '@ui/button';
+import { Button } from "@ui/button";
 
 // ✅ Correct
-import { Button } from '@appui/Button';
+import { Button } from "@appui/Button";
 ```
 
 **Pattern:**
+
 1. shadcn generates base component in `components/ui/`
 2. Create app wrapper in `components/app/`
 3. Import wrapper throughout the app
@@ -160,15 +174,16 @@ import { Button } from '@appui/Button';
 
 ```typescript
 // ❌ Wrong
-className="bg-slate-900 text-gray-400 border-zinc-700"
+className = "bg-slate-900 text-gray-400 border-zinc-700";
 
 // ✅ Correct
-className="bg-surface-primary text-text-secondary border-border"
+className = "bg-surface-primary text-text-secondary border-border";
 ```
 
 ### Server-Side Data Loading
 
 **Pattern:**
+
 1. Server component fetches data
 2. Data loader does the heavy lifting
 3. Precompute everything (especially wages)
@@ -178,11 +193,11 @@ className="bg-surface-primary text-text-secondary border-border"
 // Server Component (page.tsx)
 export default async function Page() {
   const data = await getData(userId); // Fetch + compute
-  return <View data={data} />;         // Pass to client
+  return <View data={data} />; // Pass to client
 }
 
 // Client Component
-'use client';
+("use client");
 export function View({ data }) {
   return <div>{data.computed.total}</div>; // Just render
 }
@@ -191,6 +206,7 @@ export function View({ data }) {
 ### Auth Pattern
 
 **All protected routes:**
+
 1. Get Supabase server client
 2. Check for authenticated user
 3. Throw error if unauthenticated (middleware handles redirect)
@@ -199,10 +215,14 @@ export function View({ data }) {
 ```typescript
 export default async function ProtectedPage() {
   const supabase = await createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   if (!user) {
-    throw new Error('Expected authenticated user; middleware should handle redirects.');
+    throw new Error(
+      "Expected authenticated user; middleware should handle redirects."
+    );
   }
 
   const data = await getData(user.id);
@@ -238,32 +258,35 @@ The project uses these aliases (defined in tsconfig.json):
 ```
 
 **Usage:**
+
 ```typescript
-import { Button } from '@appui/Button';
-import { computeShift } from '@/lib/payroll/calc';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { Button } from "@appui/Button";
+import { computeShift } from "@/lib/payroll/calc";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 ```
 
 ## File Naming Conventions
 
-| Type | Convention | Example |
-|------|-----------|---------|
-| Components | PascalCase.tsx | `Button.tsx`, `ShiftCard.tsx` |
-| Data loaders | get[Name].ts | `getShifts.ts`, `getSettings.ts` |
-| API routes | route.ts | `app/api/shifts/route.ts` |
-| Types | PascalCase | `ShiftRow`, `UserSettings` |
-| Utils | camelCase.ts | `formatCurrency.ts`, `dateHelpers.ts` |
+| Type         | Convention     | Example                               |
+| ------------ | -------------- | ------------------------------------- |
+| Components   | PascalCase.tsx | `Button.tsx`, `ShiftCard.tsx`         |
+| Data loaders | get[Name].ts   | `getShifts.ts`, `getSettings.ts`      |
+| API routes   | route.ts       | `app/api/shifts/route.ts`             |
+| Types        | PascalCase     | `ShiftRow`, `UserSettings`            |
+| Utils        | camelCase.ts   | `formatCurrency.ts`, `dateHelpers.ts` |
 
 ## Examples from the Codebase
 
 ### Button Component (Two-Tier)
 
 **Base** (`components/ui/button.tsx`):
+
 - Generated by shadcn
 - Generic variants
 - Never imported directly
 
 **Wrapper** (`components/app/Button.tsx`):
+
 - Adds `loading` prop
 - App-specific styling
 - This is what gets imported
@@ -271,12 +294,14 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
 ### Pay Settings Page
 
 **Route** (`app/(app)/settings/pay/page.tsx`):
+
 - Server component
 - Auth check
 - Loads settings
 - Renders PayForm
 
 **Form** (`components/settings/pay/PayForm.tsx`):
+
 - Client component
 - Form state
 - POST to API
@@ -285,6 +310,7 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
 ### Shifts Route
 
 **Structure:**
+
 ```
 app/(app)/shifts/
   ├── page.tsx               # Entry point
@@ -296,6 +322,7 @@ components/shifts/
 ```
 
 **Data Flow:**
+
 1. `getShifts()` fetches + computes wages server-side
 2. Page receives enriched data
 3. Components just render (no computation)
@@ -352,7 +379,7 @@ To improve this skill:
 
 ## License
 
-This skill is part of the app.kkarlsen.dev project and follows the same license.
+This skill is part of the app.tidex.dev project and follows the same license.
 
 ---
 

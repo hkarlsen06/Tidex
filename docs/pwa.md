@@ -1,6 +1,6 @@
 # Progressive Web App (PWA) Implementation
 
-This document describes the PWA implementation for next-kkarlsen.dev, including caching strategies and offline testing procedures.
+This document describes the PWA implementation for next-tidex.dev, including caching strategies and offline testing procedures.
 
 ## Architecture
 
@@ -9,6 +9,7 @@ This document describes the PWA implementation for next-kkarlsen.dev, including 
 The application uses a **static Service Worker** ([public/sw.js](../public/sw.js)) implemented with **Workbox 6.6.0** loaded from CDN. This is a Turbopack-compatible solution that replaced the previous `next-pwa` webpack-based implementation.
 
 **Key features:**
+
 - Zero build-time dependencies (no webpack plugins)
 - Works seamlessly with Next.js 16 + Turbopack
 - Identical caching behavior to the previous next-pwa configuration
@@ -16,6 +17,7 @@ The application uses a **static Service Worker** ([public/sw.js](../public/sw.js
 ### Registration
 
 The Service Worker is registered client-side via [app/sw-register.tsx](../app/sw-register.tsx), a Client Component imported in [app/layout.tsx](../app/layout.tsx). Registration only occurs:
+
 - In production builds (`NODE_ENV === 'production'`)
 - When the browser supports Service Workers
 - Once on mount (via `useEffect`)
@@ -30,9 +32,9 @@ The Service Worker is registered client-side via [app/sw-register.tsx](../app/sw
 
 ```javascript
 workbox.routing.registerRoute(
-  ({url}) => url.pathname === '/auth/callback',
+  ({ url }) => url.pathname === "/auth/callback",
   new workbox.strategies.NetworkOnly(),
-  'GET'
+  "GET"
 );
 ```
 
@@ -41,16 +43,19 @@ workbox.routing.registerRoute(
 **Routes:** `/`, `/shifts`, `/stats`, `/settings` (including sub-routes)
 
 **Cache configuration:**
+
 - **TTL:** 60 seconds (`maxAgeSeconds: 60`)
 - **Max entries:** 10 per cache (`maxEntries: 10`)
 
 **Behavior:**
+
 1. First request: Fetch from network, store in cache
 2. Subsequent requests (within TTL): Serve from cache immediately, revalidate in background
 3. After TTL expiration: Serve stale content, fetch and update cache in background
 4. If cache exceeds 10 entries: Evict oldest entries (LRU)
 
 **Cache names:**
+
 - `page-root` - Root page
 - `page-shifts` - Shifts list and detail pages
 - `page-stats` - Statistics page
@@ -58,9 +63,9 @@ workbox.routing.registerRoute(
 
 ```javascript
 workbox.routing.registerRoute(
-  ({url, request}) => request.method === 'GET' && url.pathname === '/',
+  ({ url, request }) => request.method === "GET" && url.pathname === "/",
   new workbox.strategies.StaleWhileRevalidate({
-    cacheName: 'page-root',
+    cacheName: "page-root",
     plugins: [
       new workbox.expiration.ExpirationPlugin({
         maxEntries: 10,
@@ -68,7 +73,7 @@ workbox.routing.registerRoute(
       }),
     ],
   }),
-  'GET'
+  "GET"
 );
 ```
 
@@ -94,6 +99,7 @@ npm run start
 ### 2. Verify Registration
 
 Open Chrome DevTools → Application → Service Workers:
+
 - **Expected:** `/sw.js` listed with status "activated and is running"
 - **Scope:** `/`
 
@@ -125,6 +131,7 @@ Open Chrome DevTools → Application → Service Workers:
 4. Refresh the page or navigate between cached routes
 
 **Expected behavior:**
+
 - Cached routes (`/`, `/shifts`, etc.) load from cache
 - `/auth/callback` fails (no network, no cache)
 - Uncached routes fail to load
@@ -136,6 +143,7 @@ Open Chrome DevTools → Application → Service Workers:
 3. Revisit `/shifts`
 
 **Expected behavior:**
+
 - Page loads immediately from cache (stale content)
 - Background network request fetches fresh content
 - Next visit shows updated content
@@ -146,6 +154,7 @@ Open Chrome DevTools → Application → Service Workers:
 2. Check DevTools → Application → Cache Storage → `page-shifts`
 
 **Expected behavior:**
+
 - Cache contains max 10 entries
 - Oldest entries are evicted (LRU policy)
 
@@ -160,6 +169,7 @@ lighthouse http://localhost:3000 --view
 ```
 
 **Expected scores:**
+
 - **Installable:** ✓ Manifest and icons present
 - **Offline capable:** ✓ Service Worker registered and caching pages
 - **PWA optimized:** ✓ Theme color, viewport, etc.
@@ -171,6 +181,7 @@ lighthouse http://localhost:3000 --view
 **Symptoms:** DevTools → Application shows "No service workers"
 
 **Solutions:**
+
 1. Verify you're in **production mode** (`npm run build && npm start`)
 2. Check browser console for registration errors
 3. Ensure `public/sw.js` exists and is accessible at `http://localhost:3000/sw.js`
@@ -181,6 +192,7 @@ lighthouse http://localhost:3000 --view
 **Symptoms:** Page shows old content even after waiting >60s
 
 **Solutions:**
+
 1. Hard refresh (Ctrl+Shift+R / Cmd+Shift+R)
 2. Unregister SW in DevTools → Application → Service Workers → Unregister
 3. Clear cache storage in DevTools → Application → Cache Storage → Delete
@@ -190,6 +202,7 @@ lighthouse http://localhost:3000 --view
 **Symptoms:** `Build failed` errors mentioning webpack or next-pwa
 
 **Solutions:**
+
 1. Ensure `next-pwa` is **removed** from `package.json`
 2. Verify `next.config.js` has **no `webpack` function**
 3. Confirm `turbopack: {}` is present in config

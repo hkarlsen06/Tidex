@@ -7,7 +7,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
-import { MonthlyData } from "@/app/(app)/stats/_data/getStatsData";
+import { MonthlyData } from "@/app/[locale]/(app)/stats/_data/getStatsData";
 
 type CumulativeAreaChartProps = {
   data: MonthlyData[];

@@ -12,10 +12,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@appui/Dialog';
-import { clearAllShifts, restartOnboarding } from '@/app/(app)/settings/_actions/updateSettings';
+import { clearAllShifts, restartOnboarding } from '@/app/[locale]/(app)/settings/_actions/updateSettings';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from '@/lib/i18n/client';
 
 export function DangerZone() {
+  const { t } = useTranslations();
   const router = useRouter();
   const [showClearDialog, setShowClearDialog] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
@@ -54,9 +56,9 @@ export function DangerZone() {
       <Card className="p-6 border-red-200 dark:border-red-900">
         <div className="space-y-4">
           <div>
-            <h3 className="font-semibold text-red-600 dark:text-red-400">Faresone</h3>
+            <h3 className="font-semibold text-red-600 dark:text-red-400">{t.pages.settings.profile.dangerZone.title}</h3>
             <p className="text-sm text-text-secondary mt-1">
-              Irreversible handlinger
+              {t.pages.settings.profile.dangerZone.subtitle}
             </p>
           </div>
 
@@ -64,9 +66,9 @@ export function DangerZone() {
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch sm:gap-8">
             <div className="space-y-1 sm:w-52 sm:flex-shrink-0">
-              <h4 className="font-medium">Start onboarding på nytt</h4>
+              <h4 className="font-medium">{t.pages.settings.profile.dangerZone.restartOnboarding.title}</h4>
               <p className="text-sm text-text-secondary">
-                Nullstill onboarding-status og gå gjennom oppsettet på nytt
+                {t.pages.settings.profile.dangerZone.restartOnboarding.description}
               </p>
             </div>
             <Button
@@ -74,7 +76,7 @@ export function DangerZone() {
               onClick={() => setShowRestartDialog(true)}
               className="w-full px-4 py-4 sm:w-40 sm:self-stretch"
             >
-              Start på nytt
+              {t.pages.settings.profile.dangerZone.restartOnboarding.button}
             </Button>
           </div>
 
@@ -82,9 +84,9 @@ export function DangerZone() {
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch sm:gap-8">
             <div className="space-y-1 sm:w-52 sm:flex-shrink-0">
-              <h4 className="font-medium">Slett alle vakter</h4>
+              <h4 className="font-medium">{t.pages.settings.profile.dangerZone.deleteAllShifts.title}</h4>
               <p className="text-sm text-text-secondary">
-                Dette vil permanent slette alle dine registrerte vakter
+                {t.pages.settings.profile.dangerZone.deleteAllShifts.description}
               </p>
             </div>
             <Button
@@ -92,7 +94,7 @@ export function DangerZone() {
               onClick={() => setShowClearDialog(true)}
               className="w-full px-4 py-4 sm:w-40 sm:self-stretch"
             >
-              Slett alle
+              {t.pages.settings.profile.dangerZone.deleteAllShifts.button}
             </Button>
           </div>
         </div>
@@ -101,9 +103,9 @@ export function DangerZone() {
       <Dialog open={showClearDialog} onOpenChange={setShowClearDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Er du sikker?</DialogTitle>
+            <DialogTitle>{t.pages.settings.profile.dangerZone.deleteAllShifts.dialogTitle}</DialogTitle>
             <DialogDescription>
-              Dette vil permanent slette alle dine vakter. Denne handlingen kan ikke angres.
+              {t.pages.settings.profile.dangerZone.deleteAllShifts.dialogDescription}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -112,14 +114,14 @@ export function DangerZone() {
               onClick={() => setShowClearDialog(false)}
               disabled={isClearing}
             >
-              Avbryt
+              {t.common.cancel}
             </Button>
             <Button
               variant="destructive"
               onClick={handleClearShifts}
               disabled={isClearing}
             >
-              {isClearing ? 'Sletter...' : 'Slett alle vakter'}
+              {isClearing ? t.pages.settings.profile.dangerZone.deleteAllShifts.deleting : t.pages.settings.profile.dangerZone.deleteAllShifts.button}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -128,9 +130,9 @@ export function DangerZone() {
       <Dialog open={showRestartDialog} onOpenChange={setShowRestartDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Start onboarding på nytt?</DialogTitle>
+            <DialogTitle>{t.pages.settings.profile.dangerZone.restartOnboarding.dialogTitle}</DialogTitle>
             <DialogDescription>
-              Du blir sendt tilbake til onboarding-opplegget med forhåndsutfylte innstillinger.
+              {t.pages.settings.profile.dangerZone.restartOnboarding.dialogDescription}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -139,14 +141,14 @@ export function DangerZone() {
               onClick={() => setShowRestartDialog(false)}
               disabled={isRestarting}
             >
-              Avbryt
+              {t.common.cancel}
             </Button>
             <Button
               variant="secondary"
               onClick={handleRestartOnboarding}
               disabled={isRestarting}
             >
-              {isRestarting ? 'Sender...' : 'Start på nytt'}
+              {isRestarting ? t.pages.settings.profile.dangerZone.restartOnboarding.sending : t.pages.settings.profile.dangerZone.restartOnboarding.button}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -16,7 +16,7 @@ import { getProjectRefFromUrl } from "../../lib/supabase/utils";
  */
 
 // Get actual cookie name from Supabase URL
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://id.kkarlsen.dev";
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://id.tidex.dev";
 const projectRef = getProjectRefFromUrl(supabaseUrl) || "test";
 const AUTH_COOKIE_NAME = `sb-${projectRef}-auth-token`;
 

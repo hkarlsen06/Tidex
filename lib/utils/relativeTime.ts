@@ -1,10 +1,18 @@
+import type { Dictionary } from '@/lib/i18n/dictionaries/no';
+
+// Simple string interpolation helper
+function interpolate(str: string, values: Record<string, number>): string {
+  return str.replace(/\{(\w+)\}/g, (_, key) => String(values[key] ?? ''));
+}
+
 /**
- * Calculates the relative time between now and a given shift date/time in Norwegian
+ * Calculates the relative time between now and a given shift date/time
  * @param shiftDate - ISO date string (YYYY-MM-DD)
  * @param shiftTime - Time string (HH:MM)
- * @returns Relative time string in Norwegian (e.g., "I morgen", "Om 4 dager", "12t & 13min siden")
+ * @param t - Translations object from useTranslations() or getTranslations()
+ * @returns Relative time string (e.g., "Tomorrow", "In 4 days", "12h & 13min ago")
  */
-export function getRelativeTime(shiftDate: string, shiftTime: string): string {
+export function getRelativeTime(shiftDate: string, shiftTime: string, t: Dictionary): string {
   const now = new Date();
 
   // Parse shift date and time in local timezone
@@ -26,14 +34,20 @@ export function getRelativeTime(shiftDate: string, shiftTime: string): string {
     const m = diffMinutes % 60;
 
     if (h === 0) {
-      return isFuture ? `Om ${m}min` : `${m}min siden`;
+      return isFuture
+        ? interpolate(t.common.relativeTime.inMinutes, { minutes: m })
+        : interpolate(t.common.relativeTime.minutesAgo, { minutes: m });
     }
 
     if (m === 0) {
-      return isFuture ? `Om ${h}t` : `${h}t siden`;
+      return isFuture
+        ? interpolate(t.common.relativeTime.inHours, { hours: h })
+        : interpolate(t.common.relativeTime.hoursAgo, { hours: h });
     }
 
-    return isFuture ? `Om ${h}t & ${m}min` : `${h}t & ${m}min siden`;
+    return isFuture
+      ? interpolate(t.common.relativeTime.inHoursAndMinutes, { hours: h, minutes: m })
+      : interpolate(t.common.relativeTime.hoursAndMinutesAgo, { hours: h, minutes: m });
   }
 
   // Check if tomorrow
@@ -45,7 +59,7 @@ export function getRelativeTime(shiftDate: string, shiftTime: string): string {
     shiftDateTime.getFullYear() === tomorrow.getFullYear();
 
   if (isFuture && isTomorrow) {
-    return 'I morgen';
+    return t.common.relativeTime.tomorrow;
   }
 
   // Check if yesterday
@@ -57,13 +71,15 @@ export function getRelativeTime(shiftDate: string, shiftTime: string): string {
     shiftDateTime.getFullYear() === yesterday.getFullYear();
 
   if (!isFuture && isYesterday) {
-    return 'I går';
+    return t.common.relativeTime.yesterday;
   }
 
   // For multiple days
   if (diffDays === 1) {
-    return isFuture ? 'Om 1 dag' : '1 dag siden';
+    return isFuture ? t.common.relativeTime.inOneDay : t.common.relativeTime.oneDayAgo;
   }
 
-  return isFuture ? `Om ${diffDays} dager` : `${diffDays} dager siden`;
+  return isFuture
+    ? interpolate(t.common.relativeTime.inDays, { days: diffDays })
+    : interpolate(t.common.relativeTime.daysAgo, { days: diffDays });
 }

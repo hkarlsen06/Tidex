@@ -5,9 +5,10 @@ This guide explains how to set up Cloudflare Turnstile CAPTCHA for authenticatio
 ## Overview
 
 Turnstile CAPTCHA has been integrated into all authentication routes to prevent automated abuse:
-- [Login page](../app/(auth)/login/LoginClient.tsx) - Email/phone/OAuth login
-- [Signup page](../app/(auth)/signup/page.tsx) - User registration
-- [Reset Password page](../app/(auth)/reset-password/page.tsx) - Password recovery
+
+- [Login page](<../app/(auth)/login/LoginClient.tsx>) - Email/phone/OAuth login
+- [Signup page](<../app/(auth)/signup/page.tsx>) - User registration
+- [Reset Password page](<../app/(auth)/reset-password/page.tsx>) - Password recovery
 
 ## Prerequisites
 
@@ -22,8 +23,9 @@ Turnstile CAPTCHA has been integrated into all authentication routes to prevent 
 2. Navigate to **Turnstile** in the sidebar
 3. Click **Add Site**
 4. Configure your site:
+
    - **Site name**: Choose a descriptive name (e.g., "Production Auth" or "Development Auth")
-   - **Domain**: Add your production domain (e.g., `kkarlsen.dev`)
+   - **Domain**: Add your production domain (e.g., `tidex.dev`)
    - For local development, add `localhost` to the domain allowlist
    - **Widget Mode**: Choose "Managed" (recommended) or "Non-interactive"
    - **Theme**: Dark (matches your auth pages)
@@ -48,12 +50,15 @@ Turnstile CAPTCHA has been integrated into all authentication routes to prevent 
 Add the Turnstile site key to your environment variables:
 
 #### Development (`.env.local`)
+
 ```bash
 NEXT_PUBLIC_TURNSTILE_SITE_KEY=your_site_key_here
 ```
 
 #### Production
+
 Add the environment variable to your hosting platform:
+
 - **Vercel**: Project Settings → Environment Variables
 - **Netlify**: Site Settings → Build & Deploy → Environment
 - **Other platforms**: Add `NEXT_PUBLIC_TURNSTILE_SITE_KEY` to your deployment configuration
@@ -61,6 +66,7 @@ Add the environment variable to your hosting platform:
 ### 4. Verify Setup
 
 1. Start your development server:
+
    ```bash
    npm run dev
    ```
@@ -87,6 +93,7 @@ To test Turnstile locally:
 The integration follows the project's two-tier component architecture:
 
 1. **Wrapper Component**: [TurnstileCaptcha.tsx](../components/app/TurnstileCaptcha.tsx)
+
    - Lives in `components/app/` (app-specific wrapper)
    - Uses `@marsidev/react-turnstile` package
    - Configured with dark theme to match auth pages
@@ -163,6 +170,7 @@ await supabase.auth.resetPasswordForEmail(email, {
 ### Form Submits Before Captcha Completes
 
 This shouldn't happen - the submit button is disabled until `captchaToken` is set. If it does:
+
 1. Check the component state management
 2. Ensure `disabled={isSubmitting || !captchaToken}` is on the button
 3. Check browser console for React errors
@@ -208,6 +216,7 @@ To use different Turnstile sites for different routes:
 ## Support
 
 If you encounter issues:
+
 1. Check the [Troubleshooting](#troubleshooting) section above
 2. Review Cloudflare Turnstile logs in your dashboard
 3. Check Supabase authentication logs

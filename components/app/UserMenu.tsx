@@ -7,8 +7,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { IconUserCircle, IconLogout2 } from "@tabler/icons-react";
 import { ThemeToggle } from "./ThemeToggle";
+import { LocaleToggle } from "./LocaleToggle";
 import { cn } from "@/lib/utils";
 import { useNavigationFeedback } from "./navigation-feedback";
+import { useTranslations } from "@/lib/i18n/client";
 
 export function UserMenu({
   displayName,
@@ -17,6 +19,7 @@ export function UserMenu({
   displayName: string;
   avatarUrl: string | null;
 }) {
+  const { t } = useTranslations();
   const [open, setOpen] = useState(false);
   const btnRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -135,9 +138,10 @@ export function UserMenu({
             )}
           >
             <IconUserCircle stroke={2} className="h-4 w-4" />
-            Profil
+            {t.userMenu.profile}
           </Link>
           <ThemeToggle />
+          <LocaleToggle />
           <Link
             href="/logout"
             onClick={handleNavigationClick("/logout")}
@@ -146,7 +150,7 @@ export function UserMenu({
             className="flex items-center gap-2 px-4 py-2 text-sm text-error hover:bg-error-subtle"
           >
             <IconLogout2 stroke={2} className="h-4 w-4" />
-            Logg ut
+            {t.userMenu.logout}
           </Link>
         </div>
       )}

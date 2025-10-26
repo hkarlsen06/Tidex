@@ -1,25 +1,28 @@
 import type { Metadata } from 'next';
-import { TermsOfService } from '@components/legal/TermsOfService';
+import { defaultLocale } from '@/lib/i18n/config';
+import { getDictionary } from '@/lib/i18n/dictionaries';
+import { MarketingLegalPage } from '../../components/MarketingLegalPage';
+
+const dictionary = getDictionary(defaultLocale);
 
 export const metadata: Metadata = {
-  title: 'Vilkår for bruk — kkarlsen.dev',
-  description:
-    'Les vilkårene for bruk av kkarlsen.dev og hva som forventes av brukere av tjenesten.',
+  title: dictionary.legal.terms.meta.title,
+  description: dictionary.legal.terms.meta.description,
   openGraph: {
-    title: 'Vilkår for bruk — kkarlsen.dev',
-    description:
-      'Les vilkårene for bruk av kkarlsen.dev og hva som forventes av brukere av tjenesten.',
-    url: 'https://kkarlsen.dev/terms',
+    title: dictionary.legal.terms.meta.title,
+    description: dictionary.legal.terms.meta.description,
+    url: 'https://tidex.no/terms',
     type: 'website',
   },
 };
 
 export default function TermsPage() {
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-12 max-w-4xl">
-        <TermsOfService />
-      </div>
-    </div>
+    <MarketingLegalPage
+      locale={defaultLocale}
+      dictionary={dictionary}
+      variant="terms"
+      path="/terms"
+    />
   );
 }

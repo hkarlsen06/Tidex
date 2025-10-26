@@ -8,15 +8,16 @@ import { TimeInput } from "@/components/app/TimeInput";
 import { SelectDatesCalendar } from "@/components/app/SelectDatesCalendar";
 import type { ISODate } from "@/components/calendar/calendar.utils";
 import { computeShift, type UserSettings, type SupplementRule } from "@/lib/payroll";
-import { createShifts } from "../../../app/(app)/shifts/add/actions";
+import { createShifts } from "@/app/[locale]/(app)/shifts/add/actions";
 import RecurringForm from "./RecurringForm";
 import { MonthPicker } from "@/components/app/MonthPicker";
 import { cn } from "@/lib/cn";
 import { IconClock } from "@tabler/icons-react";
 import { FreeTierLimitModal } from "./FreeTierLimitModal";
-import { checkShiftLimit } from "../../../app/(app)/shifts/add/_checks/checkShiftLimit";
+import { checkShiftLimit } from "@/app/[locale]/(app)/shifts/add/_checks/checkShiftLimit";
 import { useNavigationFeedback } from "@/components/app/navigation-feedback";
 import { useMonth } from "@/components/app/MonthContext";
+import { useTranslations } from "@/lib/i18n/client";
 
 type ExistingShift = {
   shift_date: string; // YYYY-MM-DD
@@ -66,6 +67,7 @@ type Props = {
 };
 
 export default function AddShiftForm({ existingShifts, userSettings, presetRules }: Props) {
+  const { t } = useTranslations();
   const router = useRouter();
   const { navigate } = useNavigationFeedback();
   const searchParams = useSearchParams();
@@ -213,7 +215,7 @@ export default function AddShiftForm({ existingShifts, userSettings, presetRules
       // Extract target month from first selected date
       const targetMonth = isoDates[0]?.substring(0, 7); // YYYY-MM
       if (!targetMonth) {
-        setError("Kunne ikke bestemme måneden");
+        setError(t.pages.shifts.add.form.couldNotDetermineMonth);
         return;
       }
 
@@ -239,11 +241,11 @@ export default function AddShiftForm({ existingShifts, userSettings, presetRules
           navigate("/shifts");
           router.refresh();
         } catch (e: any) {
-          setError(e?.message || "Kunne ikke lagre skift");
+          setError(e?.message || t.pages.shifts.add.form.couldNotSaveShift);
         }
       });
     } catch (e: any) {
-      setError(e?.message || "Kunne ikke lagre skift");
+      setError(e?.message || t.pages.shifts.add.form.couldNotSaveShift);
     }
   };
 
@@ -256,19 +258,22 @@ export default function AddShiftForm({ existingShifts, userSettings, presetRules
         navigate("/shifts");
         router.refresh();
       } catch (e: any) {
-        setError(e?.message || "Kunne ikke lagre skift");
+        setError(e?.message || t.pages.shifts.add.form.couldNotSaveShift);
       }
     });
   };
 
   const selectedSummary = useMemo(() => {
-    if (dates.length === 0) return "Velg en eller flere datoer i kalenderen.";
+    if (dates.length === 0) return t.pages.shifts.add.form.selectDates;
     const sorted = [...dates].sort((a, b) => a.getTime() - b.getTime());
     const first = toLocalISODate(sorted[0]);
     const last = toLocalISODate(sorted[sorted.length - 1]);
-    if (sorted.length === 1) return `Valgt dato: ${first}`;
-    return `${sorted.length} datoer valgt · ${first} – ${last}`;
-  }, [dates]);
+    if (sorted.length === 1) return t.pages.shifts.add.form.dateSelected.replace('{date}', first);
+    return t.pages.shifts.add.form.datesSelected
+      .replace('{count}', sorted.length.toString())
+      .replace('{first}', first)
+      .replace('{last}', last);
+  }, [dates, t]);
 
   const previewEarnings = useMemo(() => {
     if (!/^\d{2}:\d{2}$/.test(start) || !/^\d{2}:\d{2}$/.test(end) || isoDates.length === 0) {
@@ -313,11 +318,11 @@ export default function AddShiftForm({ existingShifts, userSettings, presetRules
       <div className="flex flex-col gap-4">
         <div className="space-y-1">
           <span className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-highlight">
-            Skiftplanlegging
+            {t.pages.shifts.add.subtitle}
           </span>
           <div className="flex items-center justify-between gap-3">
             <h1 className="whitespace-nowrap text-2xl font-semibold text-text-primary sm:text-3xl">
-              Legg til skift
+              {t.pages.shifts.add.heading}
             </h1>
             <div className="inline-flex items-center gap-1 rounded-full border border-border-subtle bg-surface-secondary/80 p-1 shadow-app-sm dark:shadow-app-inner flex-shrink-0">
               <Button
@@ -332,7 +337,7 @@ export default function AddShiftForm({ existingShifts, userSettings, presetRules
                     : "text-text-secondary hover:text-text-primary"
                 )}
               >
-                Enkel
+                {t.pages.shifts.add.modeSingle}
               </Button>
               <Button
                 type="button"
@@ -346,16 +351,14 @@ export default function AddShiftForm({ existingShifts, userSettings, presetRules
                     : "text-text-secondary hover:text-text-primary"
                 )}
               >
-                Serie
+                {t.pages.shifts.add.modeSeries}
               </Button>
             </div>
           </div>
         </div>
         <div className="flex flex-wrap items-start justify-between gap-2">
           <p className="text-sm text-text-secondary">
-            {mode === "single"
-              ? "Velg én eller flere datoer og angi tidsrommet for vakten."
-              : "Angi start- og sluttdato, intervall og tidsrom for gjentakende vakter."}
+            {t.pages.shifts.add.description}
           </p>
         </div>
       </div>
@@ -386,18 +389,18 @@ export default function AddShiftForm({ existingShifts, userSettings, presetRules
 
             {showMultiMonthWarning && (
               <div className="rounded-2xl border border-warning/40 bg-warning-subtle px-4 py-3 text-sm text-warning">
-                Du kan bare ha vakter i én måned av gangen.{" "}
+                {t.pages.shifts.add.form.multiMonthWarning}
                 <Link href="/settings/subscription" className="font-semibold underline underline-offset-4">
-                  Oppgrader
-                </Link>{" "}
-                for å legge til så mange du vil.
+                  {t.pages.shifts.add.form.upgrade}
+                </Link>
+                {t.pages.shifts.add.form.upgradeToAddMore}
               </div>
             )}
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <label htmlFor={startTimeId} className="block min-w-0 space-y-3 rounded-2xl border border-border-subtle bg-surface-secondary/70 p-4 shadow-app-inner transition hover:border-border">
                 <span className="text-xs font-semibold uppercase tracking-[0.1em] text-text-muted">
-                  Start
+                  {t.pages.shifts.add.form.start}
                 </span>
                 <div className="flex min-w-0 items-center gap-2">
                   <TimeInput
@@ -412,7 +415,7 @@ export default function AddShiftForm({ existingShifts, userSettings, presetRules
                     type="button"
                     onClick={() => openNativePicker(startInputRef.current)}
                     className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border border-border-subtle bg-surface-secondary/70 text-text-muted transition hover:border-border hover:text-text-primary focus:outline-none focus-visible:outline-none"
-                    aria-label="Velg starttid"
+                    aria-label={t.pages.shifts.add.form.selectStartTime}
                   >
                     <IconClock className="h-5 w-5" stroke={1.5} />
                   </button>
@@ -420,7 +423,7 @@ export default function AddShiftForm({ existingShifts, userSettings, presetRules
               </label>
               <label htmlFor={endTimeId} className="block min-w-0 space-y-3 rounded-2xl border border-border-subtle bg-surface-secondary/70 p-4 shadow-app-inner transition hover:border-border">
                 <span className="text-xs font-semibold uppercase tracking-[0.1em] text-text-muted">
-                  Slutt
+                  {t.pages.shifts.add.form.end}
                 </span>
                 <div className="flex min-w-0 items-center gap-2">
                   <TimeInput
@@ -434,7 +437,7 @@ export default function AddShiftForm({ existingShifts, userSettings, presetRules
                     type="button"
                     onClick={() => openNativePicker(endInputRef.current)}
                     className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border border-border-subtle bg-surface-secondary/70 text-text-muted transition hover:border-border hover:text-text-primary focus:outline-none focus-visible:outline-none"
-                    aria-label="Velg sluttid"
+                    aria-label={t.pages.shifts.add.form.selectEndTime}
                   >
                     <IconClock className="h-5 w-5" stroke={1.5} />
                   </button>
@@ -462,7 +465,10 @@ export default function AddShiftForm({ existingShifts, userSettings, presetRules
                 loading={pending}
                 className="rounded-2xl bg-brand-gradientMid px-6 py-3 text-base font-semibold text-text-inverse shadow-app transition hover:bg-brand-gradientEnd"
               >
-                Legg til {dates.length || 0} skift
+                {dates.length === 1
+                  ? t.pages.shifts.add.form.addShifts.replace('{count}', '1')
+                  : t.pages.shifts.add.form.addShiftsPlural.replace('{count}', (dates.length || 0).toString())
+                }
               </Button>
             </div>
           </>

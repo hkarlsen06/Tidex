@@ -1,9 +1,11 @@
 "use client";
 
 import { useTheme } from "./ThemeProvider";
+import { useTranslations } from "@/lib/i18n/client";
 
 export function ThemeToggle() {
   const { theme, toggleTheme } = useTheme();
+  const { t } = useTranslations();
 
   return (
     <button
@@ -33,7 +35,7 @@ export function ThemeToggle() {
             <path d="m6.34 17.66-1.41 1.41" />
             <path d="m19.07 4.93-1.41 1.41" />
           </svg>
-          Lys modus
+          {t.userMenu.lightMode}
         </>
       ) : (
         <>
@@ -48,7 +50,7 @@ export function ThemeToggle() {
           >
             <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
           </svg>
-          Mørk modus
+          {t.userMenu.darkMode}
         </>
       )}
     </button>

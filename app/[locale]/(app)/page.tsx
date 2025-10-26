@@ -1,0 +1,59 @@
+import { redirect } from "next/navigation";
+
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getComputedShifts } from "@/app/[locale]/(app)/shifts/_data/getShifts";
+import {
+  getPreviousYearMonth,
+  getNextYearMonth,
+  getMonthStart,
+  getMonthEnd
+} from "@/lib/date-utils";
+import { HomeContent } from "@/components/app/HomeContent";
+import { getTranslations } from "@/lib/i18n/server";
+import type { Locale } from "@/lib/i18n/config";
+
+interface HomeProps {
+  params: Promise<{ locale: string }>;
+}
+
+export async function generateMetadata({ params }: HomeProps) {
+  const { locale } = await params;
+  const t = getTranslations(locale as Locale);
+
+  return {
+    title: t.pages.home.title,
+  };
+}
+
+export default async function Home({ params }: HomeProps) {
+  const { locale: _locale } = await params;
+  // Layout guarantees user is authenticated
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  // This should never happen (layout redirects), but TypeScript needs the guard
+  if (!user) {
+    redirect("/login");
+  }
+
+  // Redirect to onboarding if user hasn't finished onboarding
+  const finishedOnboarding = user.user_metadata?.finishedOnboarding ?? false;
+  if (!finishedOnboarding) {
+    redirect("/onboarding");
+  }
+
+  // Fetch 3 months of data (previous + current + next) for smooth navigation
+  // This covers 90% of user navigation patterns without loading states
+  const prevMonth = getPreviousYearMonth();
+  const nextMonth = getNextYearMonth();
+
+  const { shifts, settings } = await getComputedShifts(user.id, {
+    startDate: getMonthStart(prevMonth.year, prevMonth.month),
+    endDate: getMonthEnd(nextMonth.year, nextMonth.month),
+    limit: 150 // Accommodate up to ~50 shifts per month across 3 months
+  });
+
+  return <HomeContent shifts={shifts} settings={settings} />;
+}

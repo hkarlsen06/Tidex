@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { useTranslations } from "@/lib/i18n/client";
 
 const MINUTES_PER_DAY = 24 * 60;
 
@@ -97,6 +98,7 @@ function computeRows({ baseWage, segments }: SupplementBreakdownProps) {
 }
 
 export function SupplementBreakdown(props: SupplementBreakdownProps) {
+  const { t } = useTranslations();
   const rows = computeRows(props);
   if (rows.length === 0) return null;
 
@@ -105,7 +107,7 @@ export function SupplementBreakdown(props: SupplementBreakdownProps) {
   return (
     <>
       <div className="flex items-center justify-between">
-        <div className="text-sm text-text-secondary">Totalt tillegg</div>
+        <div className="text-sm text-text-secondary">{t.pages.shifts.details.totalSupplement}</div>
         <div className="text-base font-medium text-text-primary">
           {currencyFormatter.format(Math.round(total))} kr
         </div>
@@ -123,7 +125,7 @@ export function SupplementBreakdown(props: SupplementBreakdownProps) {
               </span>
             </div>
             <div className="flex items-center justify-between text-sm font-semibold text-text-primary">
-              <span>Tillegg</span>
+              <span>{t.pages.shifts.details.supplement}</span>
               <span>{currencyFormatter.format(Math.round(row.amount))} kr</span>
             </div>
             {row.note ? (

@@ -6,21 +6,11 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
-import { SupplementBreakdown } from "@/app/(app)/stats/_data/getStatsData";
+import { SupplementBreakdown } from "@/app/[locale]/(app)/stats/_data/getStatsData";
+import { useTranslations } from "@/lib/i18n/client";
 
 type SupplementBreakdownChartProps = {
   data: SupplementBreakdown;
-};
-
-const chartConfig = {
-  basePay: {
-    label: "Grunnlønn",
-    color: "hsl(var(--brand-gradientStart))",
-  },
-  supplementPay: {
-    label: "Tillegg",
-    color: "hsl(var(--brand-gradientEnd))",
-  },
 };
 
 const numberFormatter = new Intl.NumberFormat("nb-NO", {
@@ -29,12 +19,25 @@ const numberFormatter = new Intl.NumberFormat("nb-NO", {
 });
 
 export function SupplementBreakdownChart({ data }: SupplementBreakdownChartProps) {
+  const { t } = useTranslations();
+
+  const chartConfig = {
+    basePay: {
+      label: t.components.charts.supplementBreakdown.basePay,
+      color: "hsl(var(--brand-gradientStart))",
+    },
+    supplementPay: {
+      label: t.components.charts.supplementBreakdown.supplements,
+      color: "hsl(var(--brand-gradientEnd))",
+    },
+  };
+
   // Handle case where there are no earnings
   if (data.basePay === 0 && data.supplementPay === 0) {
     return (
       <div className="flex items-center justify-center h-[280px] text-text-muted">
         <p className="text-center">
-          Ingen lønnsdata for denne måneden
+          {t.components.charts.supplementBreakdown.noData}
         </p>
       </div>
     );
@@ -49,11 +52,11 @@ export function SupplementBreakdownChart({ data }: SupplementBreakdownChartProps
             {numberFormatter.format(data.basePay)} kr
           </p>
           <p className="text-base text-text-muted">
-            100% grunnlønn
+            {t.components.charts.supplementBreakdown.percentBasePay}
           </p>
         </div>
         <p className="text-sm text-text-secondary max-w-[280px] text-center">
-          Du har ikke tjent tillegg denne måneden. Tillegg opptjenes ved kvelds-, natt- og helgevakter.
+          {t.components.charts.supplementBreakdown.noSupplements}
         </p>
       </div>
     );
@@ -64,13 +67,13 @@ export function SupplementBreakdownChart({ data }: SupplementBreakdownChartProps
       name: "basePay",
       value: data.basePay,
       percentage: data.basePercentage,
-      label: "Grunnlønn",
+      label: t.components.charts.supplementBreakdown.basePay,
     },
     {
       name: "supplementPay",
       value: data.supplementPay,
       percentage: data.supplementPercentage,
-      label: "Tillegg",
+      label: t.components.charts.supplementBreakdown.supplements,
     },
   ];
 

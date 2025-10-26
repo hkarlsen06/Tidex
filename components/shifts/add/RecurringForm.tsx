@@ -6,12 +6,13 @@ import { Input } from "@/components/app/Input";
 import { TimeInput } from "@/components/app/TimeInput";
 import { Button } from "@/components/app/Button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/app/Dialog";
-import { createShifts } from "../../../app/(app)/shifts/add/actions";
+import { createShifts } from "@/app/[locale]/(app)/shifts/add/actions";
 import { IconClock } from "@tabler/icons-react";
 import { cn } from "@/lib/cn";
 import { FreeTierLimitModal } from "./FreeTierLimitModal";
-import { checkShiftLimit } from "../../../app/(app)/shifts/add/_checks/checkShiftLimit";
+import { checkShiftLimit } from "@/app/[locale]/(app)/shifts/add/_checks/checkShiftLimit";
 import { useNavigationFeedback } from "@/components/app/navigation-feedback";
+import { useTranslations } from "@/lib/i18n/client";
 
 function toLocalISODate(d: Date) {
   const y = d.getFullYear();
@@ -30,6 +31,7 @@ function parseISODate(s: string): Date | null {
 }
 
 export default function RecurringForm() {
+  const { t } = useTranslations();
   const router = useRouter();
   const { navigate } = useNavigationFeedback();
   const [pending, startTransition] = useTransition();
@@ -96,7 +98,7 @@ export default function RecurringForm() {
       // Extract target month from first date in the series
       const targetMonth = dates[0]?.substring(0, 7); // YYYY-MM
       if (!targetMonth) {
-        setError("Kunne ikke bestemme måneden");
+        setError(t.pages.shifts.add.form.couldNotDetermineMonth);
         setOpen(false);
         return;
       }
@@ -124,11 +126,11 @@ export default function RecurringForm() {
           navigate("/shifts");
           router.refresh();
         } catch (e: any) {
-          setError(e?.message || "Kunne ikke lagre skift");
+          setError(e?.message || t.pages.shifts.add.form.couldNotSaveShift);
         }
       });
     } catch (e: any) {
-      setError(e?.message || "Kunne ikke lagre skift");
+      setError(e?.message || t.pages.shifts.add.form.couldNotSaveShift);
       setOpen(false);
     }
   };
@@ -143,24 +145,30 @@ export default function RecurringForm() {
         navigate("/shifts");
         router.refresh();
       } catch (e: any) {
-        setError(e?.message || "Kunne ikke lagre skift");
+        setError(e?.message || t.pages.shifts.add.form.couldNotSaveShift);
       }
     });
   };
 
   const seriesSummary = useMemo(() => {
     if (dates.length === 0) {
-      return "Velg start- og sluttdato for å se hvilke uker som inngår i serien.";
+      return t.pages.shifts.add.recurring.selectDatesForSeries;
     }
     const first = dates[0];
     const last = dates[dates.length - 1];
     const hasTimes = /^\d{2}:\d{2}$/.test(start) && /^\d{2}:\d{2}$/.test(end);
-    const timeRange = hasTimes ? `${start}–${end}` : "angi tidspunkt for vakten";
+    const timeRange = hasTimes ? `${start}–${end}` : t.pages.shifts.add.recurring.specifyTime;
     if (dates.length === 1) {
-      return `Serie med 1 skift (${timeRange}) på ${first}.`;
+      return t.pages.shifts.add.recurring.seriesWith1Shift
+        .replace('{time}', timeRange)
+        .replace('{date}', first);
     }
-    return `Serie med ${dates.length} skift fra ${first} til ${last} · ${timeRange}.`;
-  }, [dates, end, start]);
+    return t.pages.shifts.add.recurring.seriesWithShifts
+      .replace('{count}', dates.length.toString())
+      .replace('{first}', first)
+      .replace('{last}', last)
+      .replace('{time}', timeRange);
+  }, [dates, end, start, t]);
 
   const fieldWrapperClass =
     "block min-w-0 space-y-3 rounded-2xl border border-border-subtle bg-surface-secondary/70 p-4 shadow-app-inner transition hover:border-border";
@@ -181,7 +189,7 @@ export default function RecurringForm() {
     <div className="space-y-6">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <label htmlFor={startDateId} className={fieldWrapperClass}>
-          <span className={fieldLabelClass}>Startdato</span>
+          <span className={fieldLabelClass}>{t.pages.shifts.add.recurring.startDate}</span>
           <Input
             id={startDateId}
             type="date"
@@ -191,7 +199,7 @@ export default function RecurringForm() {
           />
         </label>
         <label htmlFor={endDateId} className={fieldWrapperClass}>
-          <span className={fieldLabelClass}>Sluttdato</span>
+          <span className={fieldLabelClass}>{t.pages.shifts.add.recurring.endDate}</span>
           <Input
             id={endDateId}
             type="date"
@@ -204,10 +212,10 @@ export default function RecurringForm() {
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-5">
         {[
-          { label: "Hver uke", value: 1 },
-          { label: "Hver 2. uke", value: 2 },
-          { label: "Hver 3. uke", value: 3 },
-          { label: "Hver 4. uke", value: 4 },
+          { label: t.pages.shifts.add.recurring.everyWeek, value: 1 },
+          { label: t.pages.shifts.add.recurring.every2Weeks, value: 2 },
+          { label: t.pages.shifts.add.recurring.every3Weeks, value: 3 },
+          { label: t.pages.shifts.add.recurring.every4Weeks, value: 4 },
         ].map((option) => {
           const isActive = selectedInterval === option.value;
           return (
@@ -242,7 +250,7 @@ export default function RecurringForm() {
               selectedInterval === null && "text-text-primary"
             )}
           >
-            Hver
+            {t.pages.shifts.add.recurring.every}
           </span>
           <div className="relative w-full max-w-[6rem]">
             <Input
@@ -267,7 +275,7 @@ export default function RecurringForm() {
                 selectedInterval === null && "text-text-primary"
               )}
             >
-              {customInterval ? `${customInterval}. uke` : "x. uke"}
+              {customInterval ? `${customInterval}. ${t.pages.shifts.add.recurring.week}` : `x. ${t.pages.shifts.add.recurring.week}`}
             </span>
           </div>
         </label>
@@ -275,7 +283,7 @@ export default function RecurringForm() {
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <label htmlFor={startTimeId} className={fieldWrapperClass}>
-          <span className={fieldLabelClass}>Start</span>
+          <span className={fieldLabelClass}>{t.pages.shifts.add.form.start}</span>
           <div className="flex min-w-0 items-center gap-2">
             <TimeInput
               id={startTimeId}
@@ -288,14 +296,14 @@ export default function RecurringForm() {
               type="button"
               onClick={() => openNativePicker(startInputRef.current)}
               className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border border-border-subtle bg-surface-secondary/70 text-text-muted transition hover:border-border hover:text-text-primary focus:outline-none focus-visible:outline-none"
-              aria-label="Velg starttid"
+              aria-label={t.pages.shifts.add.form.selectStartTime}
             >
               <IconClock className="h-5 w-5" stroke={1.5} />
             </button>
           </div>
         </label>
         <label htmlFor={endTimeId} className={fieldWrapperClass}>
-          <span className={fieldLabelClass}>Slutt</span>
+          <span className={fieldLabelClass}>{t.pages.shifts.add.form.end}</span>
           <div className="flex min-w-0 items-center gap-2">
             <TimeInput
               id={endTimeId}
@@ -307,7 +315,7 @@ export default function RecurringForm() {
               type="button"
               onClick={() => openNativePicker(endInputRef.current)}
               className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border border-border-subtle bg-surface-secondary/70 text-text-muted transition hover:border-border hover:text-text-primary focus:outline-none focus-visible:outline-none"
-              aria-label="Velg sluttid"
+              aria-label={t.pages.shifts.add.form.selectEndTime}
             >
               <IconClock className="h-5 w-5" stroke={1.5} />
             </button>
@@ -335,16 +343,16 @@ export default function RecurringForm() {
           loading={pending}
           className="rounded-2xl bg-brand-gradientMid px-6 py-3 text-base font-semibold text-text-inverse shadow-app transition hover:bg-brand-gradientEnd"
         >
-          Forhåndsvis serie ({dates.length || 0})
+          {t.pages.shifts.add.recurring.previewSeries.replace('{count}', (dates.length || 0).toString())}
         </Button>
       </div>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-md rounded-3xl border border-border-subtle bg-surface-primary/95 shadow-app-lg">
           <DialogHeader>
-            <DialogTitle>Bekreft serie</DialogTitle>
+            <DialogTitle>{t.pages.shifts.add.recurring.confirmSeries}</DialogTitle>
             <DialogDescription>
-              Du er i ferd med å opprette {dates.length} skift.
+              {t.pages.shifts.add.recurring.confirmingSeriesDescription.replace('{count}', dates.length.toString())}
             </DialogDescription>
           </DialogHeader>
           <div className="max-h-56 space-y-2 overflow-auto rounded-2xl border border-border-subtle bg-surface-secondary/70 p-4 text-sm text-text-primary shadow-app-inner">
@@ -358,7 +366,7 @@ export default function RecurringForm() {
             ))}
             {dates.length > 20 && (
               <div className="rounded-xl bg-surface-primary/60 px-3 py-2 text-center text-sm text-text-muted shadow-app-inner">
-                …og {dates.length - 20} til
+                {t.pages.shifts.add.recurring.andMore.replace('{count}', (dates.length - 20).toString())}
               </div>
             )}
           </div>
@@ -369,7 +377,7 @@ export default function RecurringForm() {
               onClick={() => setOpen(false)}
               className="rounded-xl px-4 py-2 text-text-secondary hover:text-text-primary"
             >
-              Avbryt
+              {t.pages.shifts.add.recurring.cancel}
             </Button>
             <Button
               type="button"
@@ -377,7 +385,7 @@ export default function RecurringForm() {
               loading={pending}
               className="rounded-xl bg-brand-gradientMid px-5 py-2 font-semibold text-text-inverse shadow-app transition hover:bg-brand-gradientEnd"
             >
-              Bekreft
+              {t.pages.shifts.add.recurring.confirm}
             </Button>
           </DialogFooter>
         </DialogContent>
