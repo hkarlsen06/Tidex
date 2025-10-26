@@ -20,7 +20,7 @@ export default async function SubscriptionSuccessPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-2xl">
+    <div className="container mx-auto py-8 max-w-2xl">
       <Card className="p-8">
         <div className="flex flex-col items-center text-center space-y-6">
           <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">

@@ -35,7 +35,7 @@ export default async function DataPage({
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-2xl">
+    <div className="container mx-auto py-8 max-w-2xl">
       <div className="mt-6">
         <DataForm t={t} />
       </div>
