@@ -38,8 +38,6 @@ type DayButtonProps = {
   employeesByDate: Record<ISODate, { name: string; color?: string }[]>;
   mode: "money" | "hours";
   weekNumberPosition: "top-left" | "bottom-left";
-  animationDirection: 'next' | 'previous' | null;
-  currentMonth: Date;
   selectedDate?: ISODate | null;
   [key: string]: any;
 };
@@ -57,17 +55,6 @@ function getIsoWeek(date: Date) {
   return weekNumber;
 }
 
-// Helper to get animation classes based on direction
-function getCellAnimationClasses(direction: 'next' | 'previous' | null): string {
-  if (!direction) return '';
-
-  if (direction === 'next') {
-    return 'animate-[swipe-in-right_0.4s_ease-in-out]';
-  } else {
-    return 'animate-[swipe-in-left_0.4s_ease-in-out]';
-  }
-}
-
 const DayButton = React.memo(function DayButton({
   day,
   className,
@@ -77,8 +64,6 @@ const DayButton = React.memo(function DayButton({
   employeesByDate,
   mode,
   weekNumberPosition,
-  animationDirection,
-  currentMonth,
   selectedDate,
   ...buttonProps
 }: DayButtonProps) {
@@ -93,11 +78,6 @@ const DayButton = React.memo(function DayButton({
   const hasShift =
     earnings !== undefined || hours !== undefined || employees.length > 0;
   const week = isMonday ? getIsoWeek(date) : null;
-
-  // Only animate cells from the current month
-  const isCurrentMonth = date.getMonth() === currentMonth.getMonth() &&
-                         date.getFullYear() === currentMonth.getFullYear();
-  const cellDirection = isCurrentMonth ? animationDirection : null;
 
   return (
     <button
@@ -134,18 +114,12 @@ const DayButton = React.memo(function DayButton({
         {date.getDate()}
       </div>
       {mode === "money" && earnings !== undefined && (
-        <div
-          key={`earnings-${iso}-${currentMonth.getFullYear()}-${currentMonth.getMonth()}`}
-          className={`flex-1 flex flex-col items-center justify-end pb-1 text-sm text-text-secondary font-semibold ${getCellAnimationClasses(cellDirection)}`}
-        >
+        <div className="flex-1 flex flex-col items-center justify-end pb-1 text-sm text-text-secondary font-semibold">
           {formatNOKInt(earnings)}
         </div>
       )}
       {mode === "hours" && hours && (
-        <div
-          key={`hours-${iso}-${currentMonth.getFullYear()}-${currentMonth.getMonth()}`}
-          className={`flex-1 flex flex-col items-center justify-center text-sm font-semibold text-text-secondary leading-tight ${getCellAnimationClasses(cellDirection)}`}
-        >
+        <div className="flex-1 flex flex-col items-center justify-center text-sm font-semibold text-text-secondary leading-tight">
           <div>
             {hours.start}
             {hours.start && "-"}
@@ -192,8 +166,6 @@ export function ShiftsCalendar({
 }: ShiftsCalendarProps) {
   const locale = useLocale();
   const dateFnsLocale = locale === 'en' ? enUS : nb;
-  const [localDirection, setLocalDirection] = React.useState<'next' | 'previous' | null>(null);
-  const [prevMonth, setPrevMonth] = React.useState(month);
   const selectedDay = React.useMemo(
     () => (selectedDate ? new Date(`${selectedDate}T00:00:00`) : undefined),
     [selectedDate]
@@ -208,23 +180,6 @@ export function ShiftsCalendar({
     return names[day];
   }, [locale]);
 
-  // Track month changes and determine direction locally
-  React.useEffect(() => {
-    if (month.getTime() !== prevMonth.getTime()) {
-      const isForward = month > prevMonth;
-      setLocalDirection(isForward ? 'next' : 'previous');
-      setPrevMonth(month);
-    }
-  }, [month, prevMonth]);
-
-  React.useEffect(() => {
-    if (!localDirection) {
-      return;
-    }
-    const timeout = setTimeout(() => setLocalDirection(null), 450);
-    return () => clearTimeout(timeout);
-  }, [localDirection]);
-
   const CustomDayButton = React.useCallback(
     (props: any) => (
       <DayButton
@@ -234,12 +189,10 @@ export function ShiftsCalendar({
         employeesByDate={employeesByDate}
         mode={mode}
         weekNumberPosition={weekNumberPosition}
-        animationDirection={localDirection}
-        currentMonth={month}
         selectedDate={selectedDate}
       />
     ),
-    [mode, earningsByDate, hoursByDate, employeesByDate, weekNumberPosition, localDirection, month, selectedDate]
+    [mode, earningsByDate, hoursByDate, employeesByDate, weekNumberPosition, selectedDate]
   );
 
   const handleDayClick = React.useCallback(
