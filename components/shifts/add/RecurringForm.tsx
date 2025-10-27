@@ -6,6 +6,7 @@ import { Input } from "@/components/app/Input";
 import { TimeInput } from "@/components/app/TimeInput";
 import { Button } from "@/components/app/Button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/app/Dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/app/Select";
 import { createShifts } from "@/app/[locale]/(app)/shifts/add/actions";
 import { IconClock } from "@tabler/icons-react";
 import { cn } from "@/lib/cn";
@@ -37,17 +38,17 @@ export default function RecurringForm() {
   const [pending, startTransition] = useTransition();
 
   const [startDate, setStartDate] = useState<string>(() => toLocalISODate(new Date()));
-  const [endDate, setEndDate] = useState<string>(() => toLocalISODate(new Date(new Date().setMonth(new Date().getMonth() + 1))));
-  const [selectedInterval, setSelectedInterval] = useState<number | null>(1);
-  const [customInterval, setCustomInterval] = useState<string>("");
+  const [selectedInterval, setSelectedInterval] = useState<number>(1);
+  const [durationType, setDurationType] = useState<"no_end" | "months" | "years" | "end_date">("months");
+  const [durationMonths, setDurationMonths] = useState<string>("1");
+  const [durationYears, setDurationYears] = useState<string>("1");
+  const [durationEndDate, setDurationEndDate] = useState<string>(() => toLocalISODate(new Date(new Date().setMonth(new Date().getMonth() + 1))));
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
   const startInputRef = useRef<HTMLInputElement>(null);
   const endInputRef = useRef<HTMLInputElement>(null);
   const idPrefix = useId();
   const startDateId = `${idPrefix}-start-date`;
-  const endDateId = `${idPrefix}-end-date`;
-  const customIntervalId = `${idPrefix}-interval`;
   const startTimeId = `${idPrefix}-start-time`;
   const endTimeId = `${idPrefix}-end-time`;
 
@@ -56,17 +57,34 @@ export default function RecurringForm() {
   const [showLimitModal, setShowLimitModal] = useState(false);
   const [limitModalData, setLimitModalData] = useState<{ existingMonths: string[]; targetMonth: string } | null>(null);
 
-  const parsedCustomInterval = useMemo(() => {
-    const parsed = parseInt(customInterval, 10);
-    if (Number.isNaN(parsed) || parsed <= 0) {
-      return null;
-    }
-    return parsed;
-  }, [customInterval]);
+  const effectiveInterval = selectedInterval;
 
-  const effectiveInterval = useMemo(() => {
-    return Math.max(1, selectedInterval ?? parsedCustomInterval ?? 1);
-  }, [parsedCustomInterval, selectedInterval]);
+  const endDate = useMemo(() => {
+    const s = parseISODate(startDate);
+    if (!s) return "";
+
+    if (durationType === "no_end") {
+      // For "no end", we'll generate dates for 2 years ahead as a practical limit
+      const twoYearsAhead = new Date(s);
+      twoYearsAhead.setFullYear(twoYearsAhead.getFullYear() + 2);
+      return toLocalISODate(twoYearsAhead);
+    } else if (durationType === "months") {
+      const months = parseInt(durationMonths, 10);
+      if (isNaN(months) || months < 1) return toLocalISODate(s);
+      const monthsAhead = new Date(s);
+      monthsAhead.setMonth(monthsAhead.getMonth() + Math.min(months, 120)); // max 10 years
+      return toLocalISODate(monthsAhead);
+    } else if (durationType === "years") {
+      const years = parseInt(durationYears, 10);
+      if (isNaN(years) || years < 1) return toLocalISODate(s);
+      const yearsAhead = new Date(s);
+      yearsAhead.setFullYear(yearsAhead.getFullYear() + Math.min(years, 10)); // max 10 years
+      return toLocalISODate(yearsAhead);
+    } else {
+      // end_date
+      return durationEndDate;
+    }
+  }, [startDate, durationType, durationMonths, durationYears, durationEndDate]);
 
   const dates = useMemo(() => {
     const out: string[] = [];
@@ -188,100 +206,6 @@ export default function RecurringForm() {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <label htmlFor={startDateId} className={fieldWrapperClass}>
-          <span className={fieldLabelClass}>{t.pages.shifts.add.recurring.startDate}</span>
-          <Input
-            id={startDateId}
-            type="date"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-            className="h-10 rounded-xl border-border-subtle bg-transparent text-base text-text-primary"
-          />
-        </label>
-        <label htmlFor={endDateId} className={fieldWrapperClass}>
-          <span className={fieldLabelClass}>{t.pages.shifts.add.recurring.endDate}</span>
-          <Input
-            id={endDateId}
-            type="date"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-            className="h-10 rounded-xl border-border-subtle bg-transparent text-base text-text-primary"
-          />
-        </label>
-      </div>
-
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-5">
-        {[
-          { label: t.pages.shifts.add.recurring.everyWeek, value: 1 },
-          { label: t.pages.shifts.add.recurring.every2Weeks, value: 2 },
-          { label: t.pages.shifts.add.recurring.every3Weeks, value: 3 },
-          { label: t.pages.shifts.add.recurring.every4Weeks, value: 4 },
-        ].map((option) => {
-          const isActive = selectedInterval === option.value;
-          return (
-            <button
-              key={option.value}
-              type="button"
-              onClick={() => {
-                setSelectedInterval(option.value);
-                setCustomInterval("");
-              }}
-              className={cn(
-                "flex h-full items-center justify-center rounded-2xl border border-border-subtle bg-surface-secondary/70 p-4 text-sm font-medium text-text-secondary shadow-app-sm dark:shadow-app-inner transition hover:border-border hover:text-text-primary focus:outline-none focus-visible:outline-none",
-                isActive && "border-brand-gradientMid/60 bg-brand-gradientMid/10 text-text-primary shadow-app"
-              )}
-            >
-              {option.label}
-            </button>
-          );
-        })}
-
-        <label
-          htmlFor={customIntervalId}
-          className={cn(
-            fieldWrapperClass,
-            "flex h-full flex-col items-center justify-center gap-2 space-y-0 py-5",
-            selectedInterval === null && "border-brand-gradientMid/60 bg-brand-gradientMid/10 text-text-primary shadow-app"
-          )}
-        >
-          <span
-            className={cn(
-              "text-sm font-medium text-text-secondary",
-              selectedInterval === null && "text-text-primary"
-            )}
-          >
-            {t.pages.shifts.add.recurring.every}
-          </span>
-          <div className="relative w-full max-w-[6rem]">
-            <Input
-              id={customIntervalId}
-              type="text"
-              inputMode="numeric"
-              pattern="[0-9]*"
-              value={customInterval}
-              onChange={(e) => {
-                const value = e.target.value;
-                if (/^\d*$/.test(value)) {
-                  setCustomInterval(value);
-                  setSelectedInterval(null);
-                }
-              }}
-              className="h-10 w-full rounded-xl border-border-subtle bg-transparent px-3 text-center text-transparent"
-              style={{ caretColor: "var(--color-text-primary, #94a3b8)" }}
-            />
-            <span
-              className={cn(
-                "pointer-events-none absolute inset-0 flex items-center justify-center text-sm text-text-muted",
-                selectedInterval === null && "text-text-primary"
-              )}
-            >
-              {customInterval ? `${customInterval}. ${t.pages.shifts.add.recurring.week}` : `x. ${t.pages.shifts.add.recurring.week}`}
-            </span>
-          </div>
-        </label>
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <label htmlFor={startTimeId} className={fieldWrapperClass}>
           <span className={fieldLabelClass}>{t.pages.shifts.add.form.start}</span>
           <div className="flex min-w-0 items-center gap-2">
@@ -321,6 +245,181 @@ export default function RecurringForm() {
             </button>
           </div>
         </label>
+      </div>
+
+      <div className="h-px bg-border-subtle" />
+
+      <div className="flex items-center justify-center gap-2 py-1">
+        <span className="text-base text-text-primary">{t.pages.shifts.add.recurring.repeatEvery}</span>
+        <Select
+          value={String(effectiveInterval)}
+          onValueChange={(value) => {
+            const num = parseInt(value, 10);
+            setSelectedInterval(num);
+          }}
+        >
+          <SelectTrigger className="h-10 w-auto min-w-[100px] rounded-xl border-border-subtle bg-surface-secondary/70 text-base text-text-primary">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent className="rounded-xl border-border-subtle bg-surface-primary shadow-app-lg">
+            {[1, 2, 3, 4, 5, 6, 7, 8].map((num) => (
+              <SelectItem
+                key={num}
+                value={String(num)}
+                className="cursor-pointer rounded-lg text-text-primary hover:bg-surface-secondary focus:bg-surface-secondary"
+              >
+                {t.pages.shifts.add.recurring.weekOrdinals[num as keyof typeof t.pages.shifts.add.recurring.weekOrdinals]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <span className="text-base text-text-primary">{t.pages.shifts.add.recurring.week}</span>
+      </div>
+
+      <div className="h-px bg-border-subtle" />
+
+      <label htmlFor={startDateId} className={fieldWrapperClass}>
+        <span className={fieldLabelClass}>{t.pages.shifts.add.recurring.startDate}</span>
+        <Input
+          id={startDateId}
+          type="date"
+          value={startDate}
+          onChange={(e) => setStartDate(e.target.value)}
+          className="h-10 rounded-xl border-border-subtle bg-transparent text-base text-text-primary"
+        />
+      </label>
+
+      <div className="h-px bg-border-subtle" />
+
+      <div className="space-y-4">
+        <span className={fieldLabelClass}>{t.pages.shifts.add.recurring.duration}</span>
+
+        <div className="space-y-3">
+          {/* First three options inline */}
+          <div className="flex flex-wrap gap-3">
+            {/* No End option */}
+            <button
+              type="button"
+              onClick={() => setDurationType("no_end")}
+              className={cn(
+                "flex flex-1 min-w-[140px] items-center justify-center rounded-xl border px-4 py-3 text-center transition",
+                durationType === "no_end"
+                  ? "border-brand-gradientMid bg-brand-gradientMid/10 text-text-primary"
+                  : "border-border-subtle bg-surface-secondary/70 text-text-secondary hover:border-border hover:text-text-primary"
+              )}
+            >
+              <span className="text-base font-medium">{t.pages.shifts.add.recurring.noEnd}</span>
+            </button>
+
+            {/* Months option */}
+            <button
+              type="button"
+              onClick={() => setDurationType("months")}
+              className={cn(
+                "flex flex-1 min-w-[140px] items-center justify-center gap-2 rounded-xl border px-4 py-3 text-center transition",
+                durationType === "months"
+                  ? "border-brand-gradientMid bg-brand-gradientMid/10 text-text-primary"
+                  : "border-border-subtle bg-surface-secondary/70 text-text-secondary hover:border-border hover:text-text-primary"
+              )}
+            >
+              <Input
+                type="number"
+                min={1}
+                max={120}
+                value={durationMonths}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  // Allow empty string or valid numbers
+                  if (val === "" || /^\d+$/.test(val)) {
+                    const num = parseInt(val, 10);
+                    if (val === "" || (num >= 1 && num <= 120)) {
+                      setDurationMonths(val);
+                    }
+                  }
+                }}
+                onBlur={() => {
+                  // Set to 1 if empty on blur
+                  if (durationMonths === "" || parseInt(durationMonths, 10) < 1) {
+                    setDurationMonths("1");
+                  }
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setDurationType("months");
+                }}
+                className="h-9 w-16 rounded-lg border-border-subtle bg-surface-primary text-center text-base text-text-primary"
+              />
+              <span className="text-base font-medium">{t.pages.shifts.add.recurring.months}</span>
+            </button>
+
+            {/* Years option */}
+            <button
+              type="button"
+              onClick={() => setDurationType("years")}
+              className={cn(
+                "flex flex-1 min-w-[140px] items-center justify-center gap-2 rounded-xl border px-4 py-3 text-center transition",
+                durationType === "years"
+                  ? "border-brand-gradientMid bg-brand-gradientMid/10 text-text-primary"
+                  : "border-border-subtle bg-surface-secondary/70 text-text-secondary hover:border-border hover:text-text-primary"
+              )}
+            >
+              <Input
+                type="number"
+                min={1}
+                max={10}
+                value={durationYears}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  // Allow empty string or valid numbers
+                  if (val === "" || /^\d+$/.test(val)) {
+                    const num = parseInt(val, 10);
+                    if (val === "" || (num >= 1 && num <= 10)) {
+                      setDurationYears(val);
+                    }
+                  }
+                }}
+                onBlur={() => {
+                  // Set to 1 if empty on blur
+                  if (durationYears === "" || parseInt(durationYears, 10) < 1) {
+                    setDurationYears("1");
+                  }
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setDurationType("years");
+                }}
+                className="h-9 w-16 rounded-lg border-border-subtle bg-surface-primary text-center text-base text-text-primary"
+              />
+              <span className="text-base font-medium">{t.pages.shifts.add.recurring.years}</span>
+            </button>
+          </div>
+
+          {/* End date option */}
+          <div
+            className={cn(
+              "rounded-xl border px-4 py-3 transition",
+              durationType === "end_date"
+                ? "border-brand-gradientMid bg-brand-gradientMid/10"
+                : "border-border-subtle bg-surface-secondary/70"
+            )}
+          >
+            <div className="mb-2">
+              <span className={cn(
+                "text-base font-medium",
+                durationType === "end_date" ? "text-text-primary" : "text-text-secondary"
+              )}>
+                {t.pages.shifts.add.recurring.endDate}
+              </span>
+            </div>
+            <Input
+              type="date"
+              value={durationEndDate}
+              onChange={(e) => setDurationEndDate(e.target.value)}
+              onFocus={() => setDurationType("end_date")}
+              className="h-10 rounded-xl border-border-subtle bg-surface-primary text-base text-text-primary"
+            />
+          </div>
+        </div>
       </div>
 
       <div className="rounded-2xl border border-border-subtle bg-surface-secondary/70 px-4 py-3 text-sm text-text-secondary shadow-app-inner">

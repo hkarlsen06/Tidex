@@ -20,15 +20,30 @@ const hoursFormatter = new Intl.NumberFormat("nb-NO", {
   maximumFractionDigits: 2,
 });
 
-export function formatDateParts(date: string, monthsFull: readonly string[], daysShort: readonly string[]) {
+// Map our locale codes to BCP 47 locale tags for Intl.DateTimeFormat
+function getDateLocale(locale: string): string {
+  const localeMap: Record<string, string> = {
+    no: 'nb-NO',
+    en: 'en-US',
+    de: 'de-DE',
+  };
+  return localeMap[locale] || 'en-US';
+}
+
+export function formatDateParts(date: string, locale: string, daysShort: readonly string[]) {
   const parsed = new Date(`${date}T00:00:00Z`);
   const weekday = parsed.getUTCDay();
-  const day = parsed.getUTCDate();
-  const month = parsed.getUTCMonth();
+
+  // Use Intl.DateTimeFormat for locale-aware date formatting (consistent with NextPayrollCard)
+  const dateFormatter = new Intl.DateTimeFormat(getDateLocale(locale), {
+    day: "numeric",
+    month: "long",
+  });
+  const dateLabel = dateFormatter.format(parsed);
 
   return {
     dayName: daysShort[weekday],
-    dateLabel: `${day}. ${monthsFull[month].toLowerCase()}`,
+    dateLabel,
     isWeekend: weekday === 0 || weekday === 6,
   };
 }
@@ -50,9 +65,9 @@ export function formatPlainAmount(value: number) {
 }
 
 export function ShiftCard({ shift, onClick }: ShiftCardProps) {
-  const { t } = useTranslations();
+  const { t, locale } = useTranslations();
   const { computed } = shift;
-  const { dayName, dateLabel } = formatDateParts(shift.shift_date, t.dateTime.monthsFull, t.dateTime.daysShort);
+  const { dayName, dateLabel } = formatDateParts(shift.shift_date, locale, t.dateTime.daysShort);
   const { basePay, supplementPay, gross, paidHours } = computed;
 
   const breakdown = `${formatPlainAmount(basePay)}${supplementPay > 0 ? ` + ${formatPlainAmount(supplementPay)}` : ""}`;
