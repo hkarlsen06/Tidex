@@ -8,8 +8,6 @@ const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const BUCKET = "profile-pictures";
 const HEIC_EXTENSIONS = new Set(["heic", "heif", "heics", "heifs"]);
 
-export const runtime = "nodejs";
-
 function propagateCookies(from: NextResponse, to: NextResponse) {
   for (const cookie of from.cookies.getAll()) {
     to.cookies.set(cookie);
@@ -288,5 +286,3 @@ export async function DELETE(request: NextRequest) {
     return errorResponse;
   }
 }
-
-export const dynamic = "force-dynamic";
