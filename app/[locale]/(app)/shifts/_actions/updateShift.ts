@@ -3,12 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { invalidateUserCache } from "@/app/[locale]/(app)/shifts/_data/cache";
+import { convertSeriesShiftToStandalone } from "./convertSeriesShiftToStandalone";
 
 export type UpdateShiftInput = {
   id: string;
   shift_date: string; // ISO YYYY-MM-DD
   start: string; // HH:mm
   end: string; // HH:mm
+  series_id?: string; // Present if this is a series ghost
 };
 
 function isISODate(input: string) {
@@ -45,6 +47,25 @@ export async function updateShift(input: UpdateShiftInput) {
 
   if (!isHHMM(input.start) || !isHHMM(input.end)) {
     throw new Error("Ugyldig tid");
+  }
+
+  // If this is a series ghost, convert to standalone instead of updating
+  if (input.series_id) {
+    await convertSeriesShiftToStandalone({
+      seriesId: input.series_id,
+      shiftDate: input.shift_date,
+      startTime: input.start,
+      endTime: input.end,
+    });
+
+    // Invalidate all cached data for this user
+    invalidateUserCache(user.id);
+
+    revalidatePath("/shifts");
+    revalidatePath("/");
+    revalidatePath("/stats");
+
+    return { updated: 1 };
   }
 
   const shiftType = shiftTypeFromISODate(input.shift_date);

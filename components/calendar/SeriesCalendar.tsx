@@ -76,7 +76,7 @@ export function SeriesCalendar({
     return generateGhostsForMonth(yearMonth, value);
   }, [month, value]);
 
-  // Compute earnings for ghosts
+  // Compute earnings for ghosts AND anchors
   const ghostEarnings = useMemo<Partial<Record<ISODate, number>>>(() => {
     if (!/^\d{2}:\d{2}$/.test(value.start_time) || !/^\d{2}:\d{2}$/.test(value.end_time)) {
       return {};
@@ -84,6 +84,7 @@ export function SeriesCalendar({
 
     const result: Partial<Record<ISODate, number>> = {};
 
+    // Compute for all ghosts
     for (const ghost of ghosts) {
       try {
         const computed = computeShift(
@@ -103,8 +104,28 @@ export function SeriesCalendar({
       }
     }
 
+    // Also compute for anchor dates
+    for (const anchorDate of Object.values(value.selected_days)) {
+      try {
+        const computed = computeShift(
+          {
+            id: `anchor-${anchorDate}`,
+            user_id: 'preview',
+            shift_date: anchorDate,
+            start_time: value.start_time,
+            end_time: value.end_time,
+          },
+          userSettings,
+          presetRules
+        );
+        result[anchorDate as ISODate] = computed.gross;
+      } catch (err) {
+        console.error(`Failed to compute earnings for anchor ${anchorDate}:`, err);
+      }
+    }
+
     return result;
-  }, [ghosts, value.start_time, value.end_time, userSettings, presetRules]);
+  }, [ghosts, value.start_time, value.end_time, value.selected_days, userSettings, presetRules]);
 
   // Detect conflicts
   const conflicts = useMemo(() => {
@@ -204,7 +225,7 @@ export function SeriesCalendar({
       const newSelected = { ...value.selected_days, [weekdayKey]: newISO };
       onChange({ ...value, selected_days: newSelected });
     },
-    [value, onChange, conflictDates, locale, t]
+    [value, onChange, conflictDates, locale, t, onError]
   );
 
   // Handle month navigation

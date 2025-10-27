@@ -15,7 +15,7 @@ export type SelectDatesCalendarProps = {
   hasShiftDates?: Set<ISODate>; // highlight date number
   disabledOutsideMonth?: boolean; // default: true
   onMonthChange?: (month: Date) => void;
-  hideCaptionNav?: boolean; // hides built-in caption and nav
+  _hideCaptionNav?: boolean; // hides built-in caption and nav (reserved for future use)
   previewEarnings?: Partial<Record<ISODate, number>>;
 };
 
@@ -27,7 +27,7 @@ export function SelectDatesCalendar({
   hasShiftDates = new Set(),
   disabledOutsideMonth = true,
   onMonthChange,
-  hideCaptionNav = false,
+  _hideCaptionNav = false,
   previewEarnings = {},
 }: SelectDatesCalendarProps) {
   const locale = useLocale();

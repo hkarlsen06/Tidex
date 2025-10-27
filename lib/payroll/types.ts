@@ -7,6 +7,8 @@ export type ShiftRow = {
   start_time: string;           // "HH:mm"
   end_time: string;             // "HH:mm"
   hourly_wage_snapshot?: number | null; // optional if you snapshot on insert
+  series_id?: string;           // Links to series_shifts if this is a ghost
+  series_anchor_weekday?: number; // Which weekday anchor (0-6) generated this ghost
 };
 
 export type UserSettings = {

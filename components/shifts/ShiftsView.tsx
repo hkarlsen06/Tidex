@@ -19,6 +19,7 @@ import ShiftDetails from "@/components/shifts/ShiftDetails";
 import { deleteShift } from "@/app/[locale]/(app)/shifts/_actions/deleteShift";
 import { updateShift } from "@/app/[locale]/(app)/shifts/_actions/updateShift";
 import { copyShifts } from "@/app/[locale]/(app)/shifts/_actions/copyShifts";
+import { moveSeriesShift } from "@/app/[locale]/(app)/shifts/_actions/moveSeriesShift";
 import { useNavigationFeedback } from "@/components/app/navigation-feedback";
 import { useMonth } from "@/components/app/MonthContext";
 import type { ISODate } from "@/components/calendar/calendar.types";
@@ -748,9 +749,9 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
         return;
       }
 
-      navigate(`/shifts/add?date=${encodeURIComponent(iso)}`);
+      navigate(`/${locale}/shifts/add?date=${encodeURIComponent(iso)}`);
     },
-    [calendarSelectedShiftId, clearSelection, navigate, selectedDate, shiftsByDate, copyMode, router, moveMode]
+    [calendarSelectedShiftId, clearSelection, navigate, selectedDate, shiftsByDate, copyMode, router, moveMode, locale]
   );
 
   const handleOpenDetails = useCallback(() => {
@@ -841,14 +842,26 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
     startMoveTransition(async () => {
       try {
         const results = await Promise.allSettled(
-          shiftsToMove.map((shift) =>
-            updateShift({
+          shiftsToMove.map((shift) => {
+            // If this is a series shift, use moveSeriesShift action
+            if (shift.series_id) {
+              return moveSeriesShift({
+                seriesId: shift.series_id,
+                sourceDate: selectedDate,
+                targetDate: moveTargetDate,
+                startTime: shift.start_time,
+                endTime: shift.end_time,
+              });
+            }
+
+            // Otherwise, use regular updateShift
+            return updateShift({
               id: shift.id,
               shift_date: moveTargetDate,
               start: shift.start_time,
               end: shift.end_time,
-            })
-          )
+            });
+          })
         );
 
         const failed = results.filter((r) => r.status === "rejected");
@@ -1048,6 +1061,9 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
           }
         });
       }}
+      existingShifts={shifts.map(s => ({ shift_date: s.shift_date, start_time: s.start_time, end_time: s.end_time }))}
+      userSettings={userSettings}
+      presetRules={presetRules}
     />
     </>
   );

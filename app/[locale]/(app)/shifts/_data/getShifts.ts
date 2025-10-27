@@ -10,6 +10,9 @@ import {
 } from "@/lib/payroll";
 import { getCurrentYearMonth, getMonthStart, getMonthEnd } from "@/lib/date-utils";
 import { logger } from "@/lib/logger";
+import { generateGhostsForMonth } from "@/lib/series/utils";
+import type { SeriesShiftRow } from "@/lib/series/types";
+import { cleanTime } from "@/lib/time-utils";
 
 export const PRESET_RULES = PRESET_SUPPLEMENT_RULES;
 
@@ -110,8 +113,89 @@ export const getComputedShifts = cache(async (
     computed: computeShift(shift, settings, PRESET_RULES),
   }));
 
+  // Load series shifts and generate ghosts for the date range
+  const { data: seriesShifts, error: seriesError } = await supabase
+    .from("series_shifts")
+    .select("*")
+    .eq("user_id", userId);
+
+  if (seriesError) {
+    logger.error("Failed to load series shifts:", seriesError);
+  }
+
+  const seriesGhosts: ShiftWithComputations[] = [];
+  if (seriesShifts && seriesShifts.length > 0) {
+    // Generate ghosts for all months in the range
+    const startYear = new Date(startDate).getFullYear();
+    const startMonth = new Date(startDate).getMonth() + 1;
+    const endYear = new Date(endDate).getFullYear();
+    const endMonth = new Date(endDate).getMonth() + 1;
+
+    for (const series of seriesShifts as SeriesShiftRow[]) {
+      // Generate for each month in range
+      let currentYear = startYear;
+      let currentMonth = startMonth;
+
+      while (
+        currentYear < endYear ||
+        (currentYear === endYear && currentMonth <= endMonth)
+      ) {
+        const ghosts = generateGhostsForMonth({ year: currentYear, month: currentMonth }, {
+          start_time: cleanTime(series.start_time),
+          end_time: cleanTime(series.end_time),
+          repeat_interval_weeks: series.repeat_interval_weeks as 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8,
+          selected_days: series.selected_days,
+          end_condition: series.end_condition,
+          exclusions: series.exclusions || []
+        });
+
+        // Compute each ghost
+        for (const ghost of ghosts) {
+          try {
+            const computed = computeShift(
+              {
+                id: `ghost-${series.id}-${ghost.date}`,
+                user_id: userId,
+                shift_date: ghost.date,
+                start_time: cleanTime(series.start_time),
+                end_time: cleanTime(series.end_time),
+                series_id: series.id,
+                series_anchor_weekday: ghost.weekday
+              },
+              settings,
+              PRESET_RULES
+            );
+
+            seriesGhosts.push({
+              id: `ghost-${series.id}-${ghost.date}`,
+              user_id: userId,
+              shift_date: ghost.date,
+              start_time: cleanTime(series.start_time),
+              end_time: cleanTime(series.end_time),
+              series_id: series.id,
+              series_anchor_weekday: ghost.weekday,
+              computed
+            });
+          } catch (err) {
+            logger.error(`Failed to compute ghost for series ${series.id} on ${ghost.date}:`, err);
+          }
+        }
+
+        // Move to next month
+        currentMonth++;
+        if (currentMonth > 12) {
+          currentMonth = 1;
+          currentYear++;
+        }
+      }
+    }
+  }
+
+  // Merge shifts and series ghosts
+  const allShifts = [...computedShifts, ...seriesGhosts];
+
   // Compute aggregates once on the server
-  const aggregates: ShiftsAggregates = computedShifts.reduce(
+  const aggregates: ShiftsAggregates = allShifts.reduce(
     (acc, shift) => ({
       totalHours: acc.totalHours + shift.computed.paidHours,
       totalEarnings: acc.totalEarnings + shift.computed.gross,
@@ -120,7 +204,7 @@ export const getComputedShifts = cache(async (
   );
 
   return {
-    shifts: computedShifts,
+    shifts: allShifts,
     defaultView: (settingsRow as any)?.default_shifts_view || "calendar",
     settings,
     aggregates
