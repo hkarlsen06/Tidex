@@ -1,5 +1,3 @@
-export const dynamic = 'force-dynamic';
-
 import { Suspense } from 'react';
 import LoginClient from './LoginClient';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/app/Card';

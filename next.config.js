@@ -10,11 +10,6 @@ const nextConfig = {
   allowedDevOrigins: ["192.168.68.50"],
 
   outputFileTracingRoot: __dirname,
-
-  // Next 16 feature replacing the old PPR path.
-  // Temporarily disabled due to conflicts with route segment configs
-  // cacheComponents: true,
-
   // Tell Next “yes, I know I’m on Turbopack”.
   turbopack: {},
 
