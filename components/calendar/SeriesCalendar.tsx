@@ -243,7 +243,7 @@ export function SeriesCalendar({
         hasShiftDates={hasShiftDates}
         conflictDates={conflictDates}
         previewEarnings={ghostEarnings}
-        hideCaptionNav={false}
+        _hideCaptionNav={false}
         disabledOutsideMonth={true}
       />
       <div className="mt-4 text-center text-sm text-text-muted">
