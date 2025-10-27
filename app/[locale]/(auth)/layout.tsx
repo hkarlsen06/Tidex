@@ -1,4 +1,9 @@
+import type { Metadata } from "next";
 import type { ReactNode } from "react";
+
+export const metadata: Metadata = {
+  manifest: "/manifest.json",
+};
 
 // server component
 export default function AuthLayout({ children }: { children: ReactNode }) {
