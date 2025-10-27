@@ -384,7 +384,7 @@ export default function AddShiftForm({ existingShifts, userSettings, presetRules
               onSelectedChange={handleSelectedChange}
               hasShiftDates={hasShiftDates}
               conflictDates={conflictDates}
-              hideCaptionNav
+              _hideCaptionNav
               previewEarnings={previewEarnings}
             />
 

@@ -302,7 +302,7 @@ export default function RecurringForm({ existingShifts, userSettings, presetRule
                 value={String(num)}
                 className="cursor-pointer rounded-lg text-text-primary hover:bg-surface-secondary focus:bg-surface-secondary"
               >
-                {t.pages.shifts.add.series.weekOrdinals[num + 1]}
+                {t.pages.shifts.add.series.weekOrdinals[(num + 1) as keyof typeof t.pages.shifts.add.series.weekOrdinals]}
               </SelectItem>
             ))}
           </SelectContent>
