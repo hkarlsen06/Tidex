@@ -17,7 +17,7 @@ import { FreeTierLimitModal } from "./FreeTierLimitModal";
 import { checkShiftLimit } from "@/app/[locale]/(app)/shifts/add/_checks/checkShiftLimit";
 import { useNavigationFeedback } from "@/components/app/navigation-feedback";
 import { useMonth } from "@/components/app/MonthContext";
-import { useTranslations } from "@/lib/i18n/client";
+import { useTranslations, useLocale } from "@/lib/i18n/client";
 
 type ExistingShift = {
   shift_date: string; // YYYY-MM-DD
@@ -68,6 +68,7 @@ type Props = {
 
 export default function AddShiftForm({ existingShifts, userSettings, presetRules }: Props) {
   const { t } = useTranslations();
+  const locale = useLocale();
   const router = useRouter();
   const { navigate } = useNavigationFeedback();
   const searchParams = useSearchParams();
@@ -238,7 +239,7 @@ export default function AddShiftForm({ existingShifts, userSettings, presetRules
         try {
           await createShifts({ dates: isoDates, start, end });
           // Navigate and refresh to show new data immediately
-          navigate("/shifts");
+          navigate(`/${locale}/shifts`);
           router.refresh();
         } catch (e: any) {
           setError(e?.message || t.pages.shifts.add.form.couldNotSaveShift);
@@ -255,7 +256,7 @@ export default function AddShiftForm({ existingShifts, userSettings, presetRules
     startTransition(async () => {
       try {
         await createShifts({ dates: isoDates, start, end });
-        navigate("/shifts");
+        navigate(`/${locale}/shifts`);
         router.refresh();
       } catch (e: any) {
         setError(e?.message || t.pages.shifts.add.form.couldNotSaveShift);
@@ -473,7 +474,11 @@ export default function AddShiftForm({ existingShifts, userSettings, presetRules
             </div>
           </>
         ) : (
-          <RecurringForm />
+          <RecurringForm
+            existingShifts={existingShifts}
+            userSettings={userSettings}
+            presetRules={presetRules}
+          />
         )}
       </div>
 

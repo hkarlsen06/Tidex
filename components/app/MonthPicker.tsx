@@ -8,6 +8,8 @@ type MonthPickerProps = {
   month: Date;
   onPreviousMonth: () => void;
   onNextMonth: () => void;
+  canNavigateToPreviousMonth?: boolean;
+  canNavigateToNextMonth?: boolean;
 };
 
 function formatMonth(date: Date, monthsFull: readonly string[]): string {
@@ -17,7 +19,13 @@ function formatMonth(date: Date, monthsFull: readonly string[]): string {
   return monthName.charAt(0).toUpperCase() + monthName.slice(1);
 }
 
-export function MonthPicker({ month, onPreviousMonth, onNextMonth }: MonthPickerProps) {
+export function MonthPicker({
+  month,
+  onPreviousMonth,
+  onNextMonth,
+  canNavigateToPreviousMonth = true,
+  canNavigateToNextMonth = true,
+}: MonthPickerProps) {
   const { t } = useTranslations();
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [prevMonth, setPrevMonth] = useState(month);
@@ -63,7 +71,8 @@ export function MonthPicker({ month, onPreviousMonth, onNextMonth }: MonthPicker
     <div className="flex items-center gap-1">
       <button
         onClick={handlePreviousMonth}
-        className="flex h-10 w-10 items-center justify-center rounded-md text-text-primary transition-colors hover:bg-surface-secondary focus:outline-none focus-visible:outline-none"
+        disabled={!canNavigateToPreviousMonth}
+        className="flex h-10 w-10 items-center justify-center rounded-md text-text-primary transition-colors hover:bg-surface-secondary focus:outline-none focus-visible:outline-none disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
         aria-label="Forrige måned"
       >
         <IconChevronLeft size={18} />
@@ -95,7 +104,8 @@ export function MonthPicker({ month, onPreviousMonth, onNextMonth }: MonthPicker
       </div>
       <button
         onClick={handleNextMonth}
-        className="flex h-10 w-10 items-center justify-center rounded-md text-text-primary transition-colors hover:bg-surface-secondary focus:outline-none focus-visible:outline-none"
+        disabled={!canNavigateToNextMonth}
+        className="flex h-10 w-10 items-center justify-center rounded-md text-text-primary transition-colors hover:bg-surface-secondary focus:outline-none focus-visible:outline-none disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
         aria-label="Neste måned"
       >
         <IconChevronRight size={18} />
