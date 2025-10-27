@@ -1,0 +1,86 @@
+/**
+ * localStorage persistence for series shift drafts
+ *
+ * Allows users to resume building their series if they navigate away
+ */
+
+import type { SeriesDraft } from './types';
+
+const STORAGE_KEY = 'tidex.seriesDraft';
+
+/**
+ * Save series draft to localStorage
+ *
+ * @param draft - Series draft to persist
+ */
+export function saveSeriesDraft(draft: SeriesDraft): void {
+  if (typeof window === 'undefined') return;
+
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(draft));
+  } catch (error) {
+    console.warn('Failed to save series draft to localStorage:', error);
+  }
+}
+
+/**
+ * Load series draft from localStorage
+ *
+ * @returns Saved draft or null if not found/invalid
+ */
+export function loadSeriesDraft(): SeriesDraft | null {
+  if (typeof window === 'undefined') return null;
+
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw) as SeriesDraft;
+
+    // Basic validation
+    if (
+      typeof parsed.start_time !== 'string' ||
+      typeof parsed.end_time !== 'string' ||
+      typeof parsed.repeat_interval_weeks !== 'number' ||
+      typeof parsed.selected_days !== 'object' ||
+      !Array.isArray(parsed.exclusions)
+    ) {
+      console.warn('Invalid series draft in localStorage, clearing');
+      clearSeriesDraft();
+      return null;
+    }
+
+    return parsed;
+  } catch (error) {
+    console.warn('Failed to load series draft from localStorage:', error);
+    return null;
+  }
+}
+
+/**
+ * Clear series draft from localStorage
+ */
+export function clearSeriesDraft(): void {
+  if (typeof window === 'undefined') return;
+
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch (error) {
+    console.warn('Failed to clear series draft from localStorage:', error);
+  }
+}
+
+/**
+ * Check if a saved draft exists
+ *
+ * @returns true if a draft exists in localStorage
+ */
+export function hasSavedDraft(): boolean {
+  if (typeof window === 'undefined') return false;
+
+  try {
+    return localStorage.getItem(STORAGE_KEY) !== null;
+  } catch {
+    return false;
+  }
+}
