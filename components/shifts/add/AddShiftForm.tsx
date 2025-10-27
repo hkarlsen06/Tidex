@@ -358,7 +358,7 @@ export default function AddShiftForm({ existingShifts, userSettings, presetRules
         </div>
         <div className="flex flex-wrap items-start justify-between gap-2">
           <p className="text-sm text-text-secondary">
-            {t.pages.shifts.add.description}
+            {mode === "single" ? t.pages.shifts.add.description : t.pages.shifts.add.descriptionSeries}
           </p>
         </div>
       </div>
