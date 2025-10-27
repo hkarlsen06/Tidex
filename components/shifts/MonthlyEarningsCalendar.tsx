@@ -44,6 +44,11 @@ function buildHoursByDate(shifts: ShiftWithComputations[]): HoursByDate {
   const result: HoursByDate = {};
   const shiftsByDate = new Map<ISODate, ShiftWithComputations[]>();
 
+  // Helper to strip seconds from time (e.g., "12:30:00" -> "12:30")
+  const stripSeconds = (time: string): string => {
+    return time.substring(0, 5);
+  };
+
   for (const shift of shifts) {
     const isoDate = shift.shift_date as ISODate;
     const existing = shiftsByDate.get(isoDate) || [];
@@ -51,23 +56,30 @@ function buildHoursByDate(shifts: ShiftWithComputations[]): HoursByDate {
     shiftsByDate.set(isoDate, existing);
   }
 
-  // For each date, get the first shift (by start time)
+  // For each date, show earliest start to latest end
   shiftsByDate.forEach((shiftsOnDate, isoDate) => {
     const sorted = [...shiftsOnDate].sort((a, b) =>
       a.start_time.localeCompare(b.start_time)
     );
-    const firstShift = sorted[0];
 
-    // Check if shift crosses midnight
-    const startMinutes = parseInt(firstShift.start_time.split(':')[0]) * 60 +
-                        parseInt(firstShift.start_time.split(':')[1]);
-    const endMinutes = parseInt(firstShift.end_time.split(':')[0]) * 60 +
-                      parseInt(firstShift.end_time.split(':')[1]);
+    const earliestStart = sorted[0].start_time;
+    const latestEnd = sorted.reduce((latest, shift) => {
+      return shift.end_time > latest ? shift.end_time : latest;
+    }, sorted[0].end_time);
+
+    // Check if ANY shift crosses midnight
+    const hasMidnightCrossing = shiftsOnDate.some(shift => {
+      const startMinutes = parseInt(shift.start_time.split(':')[0]) * 60 +
+                          parseInt(shift.start_time.split(':')[1]);
+      const endMinutes = parseInt(shift.end_time.split(':')[0]) * 60 +
+                        parseInt(shift.end_time.split(':')[1]);
+      return endMinutes <= startMinutes;
+    });
 
     result[isoDate] = {
-      start: firstShift.start_time,
-      end: firstShift.end_time,
-      crossesMidnight: endMinutes <= startMinutes
+      start: stripSeconds(earliestStart),
+      end: stripSeconds(latestEnd),
+      crossesMidnight: hasMidnightCrossing
     };
   });
 

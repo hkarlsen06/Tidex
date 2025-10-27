@@ -35,7 +35,7 @@ export default function RecurringForm({ existingShifts, userSettings, presetRule
   const router = useRouter();
   const { navigate } = useNavigationFeedback();
   const [pending, startTransition] = useTransition();
-  const { selectedMonth: month, setSelectedMonth: setMonth, goToPreviousMonth, goToNextMonth } = useMonth();
+  const { selectedMonth: month, setSelectedMonth: _setMonth, goToPreviousMonth, goToNextMonth } = useMonth();
 
   // Initialize draft from localStorage or defaults
   const [draft, setDraft] = useState<SeriesDraft>(() => {
@@ -54,7 +54,7 @@ export default function RecurringForm({ existingShifts, userSettings, presetRule
 
   const [error, setError] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
-  const [conflicts, setConflicts] = useState<Map<string, ExistingShift[]>>(new Map());
+  const [_conflicts, _setConflicts] = useState<Map<string, ExistingShift[]>>(new Map());
 
   const startInputRef = useRef<HTMLInputElement>(null);
   const endInputRef = useRef<HTMLInputElement>(null);
@@ -64,11 +64,6 @@ export default function RecurringForm({ existingShifts, userSettings, presetRule
   // Save draft to localStorage on every change
   useEffect(() => {
     saveSeriesDraft(draft);
-  }, [draft]);
-
-  // Clear error on any draft change
-  useEffect(() => {
-    setError(null);
   }, [draft]);
 
   // Generate all projected dates for preview
@@ -161,7 +156,6 @@ export default function RecurringForm({ existingShifts, userSettings, presetRule
 
   const handleConfirm = async () => {
     setError(null);
-    setShowPreview(false);
 
     startTransition(async () => {
       try {
@@ -308,7 +302,7 @@ export default function RecurringForm({ existingShifts, userSettings, presetRule
                 value={String(num)}
                 className="cursor-pointer rounded-lg text-text-primary hover:bg-surface-secondary focus:bg-surface-secondary"
               >
-                {num === 0 ? t.pages.shifts.add.series.everyWeek : t.pages.shifts.add.series.everyNWeeks.replace('{n}', String(num + 1))}
+                {t.pages.shifts.add.series.weekOrdinals[num + 1]}
               </SelectItem>
             ))}
           </SelectContent>
@@ -325,6 +319,16 @@ export default function RecurringForm({ existingShifts, userSettings, presetRule
       />
 
       <div className="h-px bg-border-subtle" />
+
+      {/* Calendar instructions */}
+      <div className="space-y-2 pt-2">
+        <h3 className="text-xs font-semibold uppercase tracking-[0.1em] text-text-muted">
+          {t.pages.shifts.add.series.calendarInstructionsHeader}
+        </h3>
+        <p className="text-sm text-text-secondary leading-relaxed">
+          {t.pages.shifts.add.series.calendarInstructionsSubheader}
+        </p>
+      </div>
 
       {/* Month picker */}
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -353,7 +357,7 @@ export default function RecurringForm({ existingShifts, userSettings, presetRule
         existingShifts={existingShifts}
         userSettings={userSettings}
         presetRules={presetRules}
-        onConflictsFound={setConflicts}
+        onConflictsFound={_setConflicts}
         onError={handleCalendarError}
       />
 

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { IconPencil, IconTrash, IconClock, IconCheck, IconX } from "@tabler/icons-react";
+import { IconPencil, IconTrash, IconClock, IconCheck, IconX, IconRefresh } from "@tabler/icons-react";
 import {
   Dialog,
   DialogContent,
@@ -12,13 +12,15 @@ import {
 } from "@components/app/Dialog";
 import { Button } from "@components/app/Button";
 import { Input } from "@components/app/Input";
-import type { ShiftWithComputations } from "@/lib/payroll";
+import type { ShiftWithComputations, UserSettings, SupplementRule } from "@/lib/payroll";
 import SupplementBreakdown, { type SupplementSegmentInput } from "./SupplementBreakdown";
 import { updateShift } from "@/app/[locale]/(app)/shifts/_actions/updateShift";
 import { cn } from "@/lib/cn";
 import { TimeInput } from "@/components/app/TimeInput";
 import { useTranslations } from "@/lib/i18n/client";
 import type { Locale } from "@/lib/i18n/config";
+import { SeriesEditModal } from "./SeriesEditModal";
+import type { ExistingShift } from "@/lib/series/conflicts";
 
 const MINUTES_PER_DAY = 24 * 60;
 
@@ -99,8 +101,11 @@ export type ShiftDetailsProps = {
   isOpen: boolean;
   shift: ShiftWithComputations | null;
   onClose: () => void;
-  onDelete?: (shiftId: string) => void;
+  onDelete?: (shiftId: string | any) => void;
   isDeleting?: boolean;
+  existingShifts?: ExistingShift[];
+  userSettings?: UserSettings;
+  presetRules?: SupplementRule[];
 };
 
 const numberFormatter = new Intl.NumberFormat("nb-NO", {
@@ -145,9 +150,13 @@ export function ShiftDetails({
   onClose,
   onDelete,
   isDeleting,
+  existingShifts = [],
+  userSettings = {},
+  presetRules = [],
 }: ShiftDetailsProps) {
   const { t, locale } = useTranslations();
   const router = useRouter();
+  const [seriesModalOpen, setSeriesModalOpen] = useState(false);
 
   // Create locale-aware date formatters
   const dayFormatter = useMemo(() => {
@@ -210,7 +219,18 @@ export function ShiftDetails({
   const handleConfirmDelete = () => {
     if (!shift) return;
     setConfirmingDelete(false);
-    onDelete?.(shift.id);
+
+    // If series ghost, pass series info for exclusion handling
+    if (shift.series_id) {
+      onDelete?.({ shiftId: shift.id, seriesId: shift.series_id, shiftDate: shift.shift_date });
+    } else {
+      onDelete?.(shift.id);
+    }
+  };
+
+  const handleEditSeries = () => {
+    if (!shift?.series_id) return;
+    setSeriesModalOpen(true);
   };
 
   const handleSave = () => {
@@ -231,6 +251,7 @@ export function ShiftDetails({
           shift_date: shiftDate,
           start: startTime,
           end: endTime,
+          series_id: shift.series_id, // Pass series_id if present
         });
         setIsEditing(false);
         router.refresh();
@@ -239,6 +260,8 @@ export function ShiftDetails({
       }
     });
   };
+
+  const isSeriesGhost = Boolean(shift?.series_id);
 
   const supplementSegments = shift ? buildSupplementSegments(shift) : [];
   const baseWageRate =
@@ -255,13 +278,14 @@ export function ShiftDetails({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent hideCloseButton className="sm:rounded-3xl max-w-[480px]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-text-primary">
-            <IconClock className="h-5 w-5 text-text-muted" aria-hidden />
-            {t.pages.shifts.details.title}
-          </DialogTitle>
-        </DialogHeader>
+      {!seriesModalOpen && (
+        <DialogContent hideCloseButton className="sm:rounded-3xl max-w-[480px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-text-primary">
+              <IconClock className="h-5 w-5 text-text-muted" aria-hidden />
+              {t.pages.shifts.details.title}
+            </DialogTitle>
+          </DialogHeader>
 
         {!shift ? (
           <div className="py-6 text-center text-text-secondary">{t.pages.shifts.details.notFound}</div>
@@ -352,7 +376,7 @@ export function ShiftDetails({
 
         <DialogFooter className="mt-4">
           {shift && (
-            <div className="grid w-full grid-cols-3 gap-2">
+            <div className={cn("grid w-full gap-2", isSeriesGhost && !isEditing && !confirmingDelete ? "grid-cols-2" : "grid-cols-3")}>
               <Button
                 onClick={() => {
                   if (confirmingDelete) {
@@ -390,6 +414,16 @@ export function ShiftDetails({
                 >
                   <IconPencil className="h-4 w-4" />
                   {t.pages.shifts.details.editButton}
+                </Button>
+              )}
+              {isSeriesGhost && !isEditing && !confirmingDelete && (
+                <Button
+                  onClick={handleEditSeries}
+                  disabled={saving || isDeleting}
+                  className="col-span-1 h-11 w-full rounded-full px-4 text-sm font-medium transition-colors gap-2 bg-purple-600 text-white hover:bg-purple-700"
+                >
+                  <IconRefresh className="h-4 w-4" />
+                  {t.pages.shifts.details.editSeriesButton}
                 </Button>
               )}
               {isEditing ? (
@@ -435,7 +469,25 @@ export function ShiftDetails({
             </div>
           )}
         </DialogFooter>
-      </DialogContent>
+        </DialogContent>
+      )}
+      {shift?.series_id && (
+        <SeriesEditModal
+          isOpen={seriesModalOpen}
+          seriesId={shift.series_id}
+          onClose={(reason) => {
+            setSeriesModalOpen(false);
+            router.refresh();
+            // If the series was deleted, also close the parent ShiftDetails modal
+            if (reason === 'deleted') {
+              onClose();
+            }
+          }}
+          existingShifts={existingShifts}
+          userSettings={userSettings}
+          presetRules={presetRules}
+        />
+      )}
     </Dialog>
   );
 }

@@ -5,6 +5,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getUserSubscriptionData } from "@/app/[locale]/(app)/settings/subscription/_data/getSubscription";
 import { hasProAccess, getUniqueShiftMonths } from "@/lib/subscription/hasProAccess";
 import { invalidateUserCache } from "@/app/[locale]/(app)/shifts/_data/cache";
+import { cleanTime } from "@/lib/time-utils";
 
 type CopyShiftsInput = {
   shiftIds: string[];
@@ -33,15 +34,72 @@ export async function copyShifts(input: CopyShiftsInput) {
   if (shiftIds.length === 0) throw new Error("Minst én vakt er påkrevd");
   if (!isISODate(input.targetDate)) throw new Error("Ugyldig datoformat");
 
-  // Fetch the source shifts
-  const { data: sourceShifts, error: fetchError } = await supabase
-    .from("user_shifts")
-    .select("*")
-    .eq("user_id", user.id)
-    .in("id", shiftIds);
+  // Separate ghost shifts from regular shifts
+  const ghostIds = shiftIds.filter((id) => id.startsWith("ghost-"));
+  const regularIds = shiftIds.filter((id) => !id.startsWith("ghost-"));
 
-  if (fetchError) throw new Error(fetchError.message);
-  if (!sourceShifts || sourceShifts.length === 0) {
+  const sourceShifts: Array<{
+    start_time: string;
+    end_time: string;
+    series_id?: string;
+  }> = [];
+
+  // Fetch regular shifts from user_shifts table
+  if (regularIds.length > 0) {
+    const { data: regularShifts, error: fetchError } = await supabase
+      .from("user_shifts")
+      .select("*")
+      .eq("user_id", user.id)
+      .in("id", regularIds);
+
+    if (fetchError) throw new Error(fetchError.message);
+    if (regularShifts) {
+      sourceShifts.push(...regularShifts);
+    }
+  }
+
+  // Handle ghost shifts - extract series information
+  if (ghostIds.length > 0) {
+    // Parse ghost IDs to get series IDs and their corresponding ghost IDs
+    // Format: "ghost-{seriesId}-{date}"
+    const ghostBySeriesId = new Map<string, string[]>();
+    for (const ghostId of ghostIds) {
+      const match = ghostId.match(/^ghost-([a-f0-9-]+)-(\d{4}-\d{2}-\d{2})$/);
+      if (match) {
+        const seriesId = match[1];
+        if (!ghostBySeriesId.has(seriesId)) {
+          ghostBySeriesId.set(seriesId, []);
+        }
+        ghostBySeriesId.get(seriesId)!.push(ghostId);
+      }
+    }
+
+    if (ghostBySeriesId.size > 0) {
+      const { data: seriesShifts, error: seriesError } = await supabase
+        .from("series_shifts")
+        .select("id, start_time, end_time")
+        .eq("user_id", user.id)
+        .in("id", Array.from(ghostBySeriesId.keys()));
+
+      if (seriesError) throw new Error(seriesError.message);
+      if (seriesShifts) {
+        // For each ghost shift, add one entry with the series times
+        for (const series of seriesShifts) {
+          const ghostsForThisSeries = ghostBySeriesId.get(series.id) || [];
+          // Add one entry per ghost (each ghost represents a different date from the series)
+          for (const _ of ghostsForThisSeries) {
+            sourceShifts.push({
+              start_time: series.start_time,
+              end_time: series.end_time,
+              series_id: undefined, // Don't link copied shifts to the series
+            });
+          }
+        }
+      }
+    }
+  }
+
+  if (sourceShifts.length === 0) {
     throw new Error("Ingen vakter funnet");
   }
 
@@ -77,8 +135,8 @@ export async function copyShifts(input: CopyShiftsInput) {
   const rows = sourceShifts.map((shift) => ({
     user_id: user.id,
     shift_date: input.targetDate,
-    start_time: shift.start_time,
-    end_time: shift.end_time,
+    start_time: cleanTime(shift.start_time),
+    end_time: cleanTime(shift.end_time),
     shift_type: shiftTypeFromISODate(input.targetDate),
     ...(shift.series_id ? { series_id: shift.series_id } : {}),
   }));
@@ -90,9 +148,9 @@ export async function copyShifts(input: CopyShiftsInput) {
   invalidateUserCache(user.id);
 
   // Ensure any cached data is fresh on next view
-  revalidatePath("/shifts");
-  revalidatePath("/");
-  revalidatePath("/stats");
+  revalidatePath("/[locale]/shifts", "page");
+  revalidatePath("/[locale]", "page");
+  revalidatePath("/[locale]/stats", "page");
 
   return { copied: rows.length };
 }
