@@ -154,10 +154,10 @@ export function MonthlyEarningsCalendar({
     const targetYear = month.getFullYear();
 
     return shifts.filter((shift) => {
-      const shiftDate = new Date(`${shift.shift_date}T00:00:00`);
+      const shiftDate = new Date(`${shift.shift_date}T00:00:00Z`);
       return (
-        shiftDate.getMonth() === targetMonth &&
-        shiftDate.getFullYear() === targetYear
+        shiftDate.getUTCMonth() === targetMonth &&
+        shiftDate.getUTCFullYear() === targetYear
       );
     });
   }, [shifts, month]);

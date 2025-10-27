@@ -61,9 +61,9 @@ export async function updateShift(input: UpdateShiftInput) {
     // Invalidate all cached data for this user
     invalidateUserCache(user.id);
 
-    revalidatePath("/shifts");
-    revalidatePath("/");
-    revalidatePath("/stats");
+    revalidatePath("/[locale]/shifts", "page");
+    revalidatePath("/[locale]", "page");
+    revalidatePath("/[locale]/stats", "page");
 
     return { updated: 1 };
   }
@@ -99,9 +99,9 @@ export async function updateShift(input: UpdateShiftInput) {
   // Invalidate all cached data for this user
   invalidateUserCache(user.id);
 
-  revalidatePath("/shifts");
-  revalidatePath("/");
-  revalidatePath("/stats");
+  revalidatePath("/[locale]/shifts", "page");
+  revalidatePath("/[locale]", "page");
+  revalidatePath("/[locale]/stats", "page");
 
   return { updated: 1 };
 }
