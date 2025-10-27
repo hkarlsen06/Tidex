@@ -73,19 +73,15 @@ export function isInPhase(dateISO: string, anchorISO: string, interval: number):
   const date = parseDateAsUTC(dateISO);
   const anchor = parseDateAsUTC(anchorISO);
 
-  const dateWeek = getISOWeek(date);
-  const dateYear = getISOWeekYear(date);
-  const anchorWeek = getISOWeek(anchor);
-  const anchorYear = getISOWeekYear(anchor);
+  // Calculate the number of days between the two dates
+  const daysDiff = Math.floor((date.getTime() - anchor.getTime()) / (1000 * 60 * 60 * 24));
 
-  // Calculate week index from epoch (approximate, but consistent)
-  const dateWeekIndex = dateYear * 53 + dateWeek;
-  const anchorWeekIndex = anchorYear * 53 + anchorWeek;
+  // Calculate the number of weeks between the dates
+  const weeksDiff = Math.floor(daysDiff / 7);
 
   // Check if the week difference is divisible by (interval + 1)
   // interval 1 = every 2 weeks, interval 2 = every 3 weeks, etc.
-  const weekDiff = dateWeekIndex - anchorWeekIndex;
-  return weekDiff % (interval + 1) === 0;
+  return weeksDiff % (interval + 1) === 0;
 }
 
 /**

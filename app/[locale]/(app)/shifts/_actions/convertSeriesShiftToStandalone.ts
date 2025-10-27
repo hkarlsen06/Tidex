@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
+import { invalidateUserCache } from "../_data/cache";
 
 type ConvertInput = {
   seriesId: string;
@@ -79,5 +80,10 @@ export async function convertSeriesShiftToStandalone({
     throw new Error("Failed to create shift");
   }
 
-  revalidatePath("/shifts");
+  // Invalidate all cached data for this user
+  invalidateUserCache(user.id);
+
+  revalidatePath("/[locale]/shifts", "page");
+  revalidatePath("/[locale]", "page");
+  revalidatePath("/[locale]/stats", "page");
 }

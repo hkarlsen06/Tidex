@@ -58,9 +58,9 @@ export async function deleteShift(input: string | DeleteShiftInput) {
     // Invalidate all cached data for this user
     invalidateUserCache(user.id);
 
-    revalidatePath("/shifts");
-    revalidatePath("/");
-    revalidatePath("/stats");
+    revalidatePath("/[locale]/shifts", "page");
+    revalidatePath("/[locale]", "page");
+    revalidatePath("/[locale]/stats", "page");
 
     return { deleted: 1 };
   }
@@ -140,9 +140,9 @@ export async function deleteShift(input: string | DeleteShiftInput) {
   // Invalidate all cached data for this user
   invalidateUserCache(user.id);
 
-  revalidatePath("/shifts");
-  revalidatePath("/");
-  revalidatePath("/stats");
+  revalidatePath("/[locale]/shifts", "page");
+  revalidatePath("/[locale]", "page");
+  revalidatePath("/[locale]/stats", "page");
 
   return { deleted: 1 };
 }

@@ -18,6 +18,8 @@ const nextConfig = {
   // Tell Next “yes, I know I’m on Turbopack”.
   turbopack: {},
 
+  cacheComponents: true,
+
   experimental: {
     // Optimize package imports to reduce bundle size
     optimizePackageImports: ["@tabler/icons-react", "recharts", "lucide-react"],
