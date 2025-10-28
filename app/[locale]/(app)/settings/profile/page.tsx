@@ -26,6 +26,7 @@ export default async function ProfilePage({
 }: {
   params: Promise<{ locale: string }>;
 }) {
+  await connection();
   const { locale } = await params;
   const t = getTranslations(locale as Locale);
 
