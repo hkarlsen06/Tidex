@@ -1,10 +1,11 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { invalidateUserCache } from "@/data-access/cache";
+import { invalidateAndRevalidate } from "@/lib/revalidation/paths";
 import { convertSeriesShiftToStandalone } from "./convertSeriesShiftToStandalone";
 import { verifySession } from "@/data-access/auth";
+import { isISODate, isHHMM, shiftTypeFromISODate } from "@/lib/validation/shift-validators";
+import { ERRORS } from "@/lib/errors/messages";
 
 export type UpdateShiftInput = {
   id: string;
@@ -14,34 +15,20 @@ export type UpdateShiftInput = {
   series_id?: string; // Present if this is a series ghost
 };
 
-function isISODate(input: string) {
-  return /^\d{4}-\d{2}-\d{2}$/.test(input);
-}
-
-function isHHMM(input: string) {
-  return /^\d{2}:\d{2}$/.test(input);
-}
-
-function shiftTypeFromISODate(iso: string) {
-  const d = new Date(`${iso}T00:00:00Z`);
-  const weekday = d.getUTCDay();
-  return weekday === 6 ? 1 : weekday === 0 ? 2 : 0;
-}
-
 export async function updateShift(input: UpdateShiftInput) {
   const { user } = await verifySession();
   const supabase = await createSupabaseServerClient();
 
   if (!input.id) {
-    throw new Error("Skift-ID mangler");
+    throw new Error(ERRORS.INVALID_SHIFT_ID);
   }
 
   if (!isISODate(input.shift_date)) {
-    throw new Error("Ugyldig dato");
+    throw new Error(ERRORS.INVALID_DATE);
   }
 
   if (!isHHMM(input.start) || !isHHMM(input.end)) {
-    throw new Error("Ugyldig tid");
+    throw new Error(ERRORS.INVALID_TIME);
   }
 
   // If this is a series ghost, convert to standalone instead of updating
@@ -53,12 +40,8 @@ export async function updateShift(input: UpdateShiftInput) {
       endTime: input.end,
     });
 
-    // Invalidate all cached data for this user
-    invalidateUserCache(user.id);
-
-    revalidatePath("/[locale]/shifts", "page");
-    revalidatePath("/[locale]", "page");
-    revalidatePath("/[locale]/stats", "page");
+    // Invalidate cache and revalidate paths
+    invalidateAndRevalidate(user.id);
 
     return { updated: 1 };
   }
@@ -73,7 +56,7 @@ export async function updateShift(input: UpdateShiftInput) {
     .single();
 
   if (fetchError || !existing) {
-    throw new Error("Fant ikke skiftet");
+    throw new Error(ERRORS.SHIFT_NOT_FOUND);
   }
 
   const { error } = await supabase
@@ -91,12 +74,8 @@ export async function updateShift(input: UpdateShiftInput) {
     throw new Error(error.message);
   }
 
-  // Invalidate all cached data for this user
-  invalidateUserCache(user.id);
-
-  revalidatePath("/[locale]/shifts", "page");
-  revalidatePath("/[locale]", "page");
-  revalidatePath("/[locale]/stats", "page");
+  // Invalidate cache and revalidate paths
+  invalidateAndRevalidate(user.id);
 
   return { updated: 1 };
 }

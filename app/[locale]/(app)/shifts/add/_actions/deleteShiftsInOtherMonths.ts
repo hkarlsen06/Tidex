@@ -1,8 +1,7 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
-import { invalidateUserCache } from '@/data-access/cache';
+import { invalidateAndRevalidate } from '@/lib/revalidation/paths';
 import { verifySession } from '@/data-access/auth';
 
 export interface DeleteShiftsResult {
@@ -77,13 +76,8 @@ export async function deleteShiftsInOtherMonths(targetMonth: string): Promise<De
       return { success: false, deletedCount: 0, error: deleteError.message };
     }
 
-    // Invalidate all cached data for this user
-    invalidateUserCache(user.id);
-
-    // Revalidate the shifts page to reflect changes
-    revalidatePath('/shifts');
-    revalidatePath('/');
-    revalidatePath('/stats');
+    // Invalidate cache and revalidate paths
+    invalidateAndRevalidate(user.id);
 
     return { success: true, deletedCount: shiftsToDelete.length };
   } catch (error) {

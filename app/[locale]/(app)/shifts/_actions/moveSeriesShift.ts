@@ -1,13 +1,14 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
-import { invalidateUserCache } from "@/data-access/cache";
+import { invalidateAndRevalidate } from "@/lib/revalidation/paths";
 import { cleanTime } from "@/lib/time-utils";
 import { verifySession } from "@/data-access/auth";
 import { getUserSettings } from "@/data-access/settings";
 import { prepareShiftSnapshots } from "@/lib/payroll/snapshot";
+import { isISODate, isHHMM, shiftTypeFromISODate } from "@/lib/validation/shift-validators";
+import { ERRORS } from "@/lib/errors/messages";
 
 type MoveSeriesShiftInput = {
   seriesId: string;
@@ -16,20 +17,6 @@ type MoveSeriesShiftInput = {
   startTime: string; // HH:mm
   endTime: string; // HH:mm
 };
-
-function isISODate(input: string) {
-  return /^\d{4}-\d{2}-\d{2}$/.test(input);
-}
-
-function isHHMM(input: string) {
-  return /^\d{2}:\d{2}$/.test(input);
-}
-
-function shiftTypeFromISODate(iso: string) {
-  const d = new Date(`${iso}T00:00:00Z`);
-  const weekday = d.getUTCDay();
-  return weekday === 6 ? 1 : weekday === 0 ? 2 : 0;
-}
 
 /**
  * Move a series shift to a new date
@@ -48,7 +35,7 @@ export async function moveSeriesShift({
   const supabase = await createSupabaseServerClient();
 
   if (!isISODate(sourceDate) || !isISODate(targetDate)) {
-    throw new Error("Ugyldig dato");
+    throw new Error(ERRORS.INVALID_DATE);
   }
 
   // Clean time strings to HH:mm format (removes timezone and seconds)
@@ -56,7 +43,7 @@ export async function moveSeriesShift({
   const cleanedEndTime = cleanTime(endTime);
 
   if (!isHHMM(cleanedStartTime) || !isHHMM(cleanedEndTime)) {
-    throw new Error("Ugyldig tid");
+    throw new Error(ERRORS.INVALID_TIME);
   }
 
   // Load the series to get current exclusions
@@ -69,7 +56,7 @@ export async function moveSeriesShift({
 
   if (seriesError || !series) {
     logger.error("Failed to load series for move:", seriesError);
-    throw new Error("Fant ikke serien");
+    throw new Error(ERRORS.SERIES_NOT_FOUND);
   }
 
   // Add source date to exclusions
@@ -114,10 +101,6 @@ export async function moveSeriesShift({
     throw new Error("Kunne ikke opprette skift");
   }
 
-  // Invalidate all cached data for this user
-  invalidateUserCache(user.id);
-
-  revalidatePath("/[locale]/shifts", "page");
-  revalidatePath("/[locale]", "page");
-  revalidatePath("/[locale]/stats", "page");
+  // Invalidate cache and revalidate paths
+  invalidateAndRevalidate(user.id);
 }

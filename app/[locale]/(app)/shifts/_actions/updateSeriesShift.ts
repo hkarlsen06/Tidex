@@ -1,10 +1,9 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import type { SelectedDays, EndCondition } from "@/lib/series/types";
-import { invalidateUserCache } from "@/data-access/cache";
+import { invalidateAndRevalidate } from "@/lib/revalidation/paths";
 import { verifySession } from "@/data-access/auth";
 
 type UpdateSeriesInput = {
@@ -53,7 +52,6 @@ export async function updateSeriesShift({
     throw new Error("Failed to update series");
   }
 
-  // Invalidate cache to ensure changes appear immediately
-  invalidateUserCache(user.id);
-  revalidatePath("/[locale]/shifts", "page");
+  // Invalidate cache and revalidate paths
+  invalidateAndRevalidate(user.id);
 }

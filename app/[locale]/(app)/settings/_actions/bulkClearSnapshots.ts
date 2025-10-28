@@ -1,8 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { invalidateUserCache } from "@/data-access/cache";
+import { invalidateAndRevalidate } from "@/lib/revalidation/paths";
 import { verifySession } from "@/data-access/auth";
 import { logger } from "@/lib/logger";
 import { prepareShiftSnapshots } from "@/lib/payroll/snapshot";
@@ -47,13 +46,8 @@ export async function bulkClearSnapshots(
 
   const count = data?.length ?? 0;
 
-  // Invalidate cache
-  invalidateUserCache(user.id);
-
-  // Revalidate paths
-  revalidatePath("/[locale]/shifts", "page");
-  revalidatePath("/[locale]", "page");
-  revalidatePath("/[locale]/stats", "page");
+  // Invalidate cache and revalidate paths
+  invalidateAndRevalidate(user.id);
 
   return { success: true, count };
 }
