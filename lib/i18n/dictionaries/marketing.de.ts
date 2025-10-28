@@ -110,6 +110,7 @@ export const marketingDe = {
     emailBody: 'Hallo!\n\nIch frage mich ...',
   },
   footer: {
+    payrollDocs: 'Lohndokumentation',
     privacy: 'Datenschutzerklärung',
     terms: 'Nutzungsbedingungen',
     copyright: '© 2025 Hjalmar Kristensen-Karlsen',
