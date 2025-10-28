@@ -2,10 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getUserSubscriptionData } from "@/app/[locale]/(app)/settings/subscription/_data/getSubscription";
+import { getUserSubscriptionData } from "@/data-access/subscription";
 import { hasProAccess, getUniqueShiftMonths } from "@/lib/subscription/hasProAccess";
-import { invalidateUserCache } from "@/app/[locale]/(app)/shifts/_data/cache";
+import { invalidateUserCache } from "@/data-access/cache";
 import { cleanTime } from "@/lib/time-utils";
+import { verifySession } from "@/data-access/auth";
 
 type CopyShiftsInput = {
   shiftIds: string[];
@@ -23,12 +24,8 @@ function shiftTypeFromISODate(iso: string) {
 }
 
 export async function copyShifts(input: CopyShiftsInput) {
+  const { user } = await verifySession();
   const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) throw new Error("Unauthorized");
 
   const shiftIds = Array.isArray(input.shiftIds) ? input.shiftIds.filter(Boolean) : [];
   if (shiftIds.length === 0) throw new Error("Minst én vakt er påkrevd");
@@ -104,7 +101,7 @@ export async function copyShifts(input: CopyShiftsInput) {
   }
 
   // Server-side validation: Check free tier limitation
-  const { subscription, profile } = await getUserSubscriptionData(user.id);
+  const { subscription, profile } = await getUserSubscriptionData();
 
   if (!hasProAccess(subscription, profile)) {
     // User is on free tier - enforce single month limitation

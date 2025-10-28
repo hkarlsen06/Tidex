@@ -1,8 +1,8 @@
 'use server';
 
 import Stripe from 'stripe';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
+import { verifySession } from '@/data-access/auth';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-09-30.clover',
@@ -16,14 +16,7 @@ interface CheckoutSessionResult {
 
 export async function createCheckoutSession(priceId: string): Promise<CheckoutSessionResult> {
   try {
-    // Get authenticated user
-    const supabase = await createSupabaseServerClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      logger.error('User not authenticated', authError);
-      return { success: false, error: 'Du må være logget inn for å oppgradere' };
-    }
+    const { user } = await verifySession();
 
     // Get user email
     const email = user.email;

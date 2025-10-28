@@ -32,6 +32,9 @@
       ],
       "@appui/*": [
         "components/app/*"
+      ],
+      "@dal/*": [
+        "data-access/*"
       ]
     },
     "plugins": [

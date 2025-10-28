@@ -1,5 +1,6 @@
 'use server';
 
+import { verifySession } from '@/data-access/auth';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
 
@@ -33,14 +34,19 @@ export interface SubscriptionData {
   profile: UserProfile | null;
 }
 
-export async function getUserSubscription(userId: string): Promise<Subscription | null> {
+/**
+ * Get user subscription for the authenticated user
+ * - Automatically verifies user session
+ */
+export async function getUserSubscription(): Promise<Subscription | null> {
   try {
+    const { user } = await verifySession();
     const supabase = await createSupabaseServerClient();
 
     const { data, error } = await supabase
       .from('subscriptions')
       .select('*')
-      .eq('user_id', userId)
+      .eq('user_id', user.id)
       .single();
 
     if (error) {
@@ -59,8 +65,13 @@ export async function getUserSubscription(userId: string): Promise<Subscription 
   }
 }
 
-export async function getUserSubscriptionData(userId: string): Promise<SubscriptionData> {
+/**
+ * Get user subscription data including profile for the authenticated user
+ * - Automatically verifies user session
+ */
+export async function getUserSubscriptionData(): Promise<SubscriptionData> {
   try {
+    const { user } = await verifySession();
     const supabase = await createSupabaseServerClient();
 
     // Fetch both subscription and profile data
@@ -68,12 +79,12 @@ export async function getUserSubscriptionData(userId: string): Promise<Subscript
       supabase
         .from('subscriptions')
         .select('*')
-        .eq('user_id', userId)
+        .eq('user_id', user.id)
         .single(),
       supabase
         .from('profiles')
         .select('*')
-        .eq('id', userId)
+        .eq('id', user.id)
         .single(),
     ]);
 

@@ -6,7 +6,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
-import { DailyCumulativeData } from "@/app/[locale]/(app)/stats/_data/getStatsData";
+import { DailyCumulativeData } from "@/data-access/stats";
 import { useTranslations } from "@/lib/i18n/client";
 
 type MonthlyCumulativeChartProps = {

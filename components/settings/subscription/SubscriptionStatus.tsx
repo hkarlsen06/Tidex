@@ -5,7 +5,7 @@ import { Badge } from '@appui/Badge';
 import { Separator } from '@appui/Separator';
 import { Button } from '@appui/Button';
 import { ENV } from '@/lib/env';
-import { Subscription } from '@/app/[locale]/(app)/settings/subscription/_data/getSubscription';
+import { Subscription } from '@/data-access/subscription';
 import { createPortalSession } from '@/app/[locale]/(app)/settings/subscription/_actions/createPortalSession';
 import { useState } from 'react';
 import { useTranslations } from '@/lib/i18n/client';

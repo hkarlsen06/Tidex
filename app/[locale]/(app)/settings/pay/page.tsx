@@ -1,7 +1,6 @@
-import { redirect } from 'next/navigation';
 import type { Metadata } from 'next';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
-import { getUserSettings } from '../_data/getSettings';
+import { connection } from "next/server";
+import { getUserSettings } from '@/data-access/settings';
 import { PayForm } from '@components/settings/pay/PayForm';
 import { getTranslations } from '@/lib/i18n/server';
 import type { Locale } from '@/lib/i18n/config';
@@ -26,16 +25,7 @@ export default async function PayPage({
   const { locale } = await params;
   const t = getTranslations(locale as Locale);
 
-  // Layout guarantees user is authenticated
-  const supabase = await createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  // This should never happen (layout redirects), but TypeScript needs the guard
-  if (!user) {
-    redirect('/login');
-  }
-
-  const settings = await getUserSettings(user.id);
+  const settings = await getUserSettings();
 
   return (
     <div className="container mx-auto py-8 max-w-2xl">

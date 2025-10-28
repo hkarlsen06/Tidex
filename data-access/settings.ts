@@ -1,16 +1,22 @@
 'use server';
 
+import { verifySession } from '@/data-access/auth';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
 
-export async function getUserSettings(userId: string) {
+/**
+ * Get user settings for the authenticated user
+ * - Automatically verifies user session
+ */
+export async function getUserSettings() {
   try {
+    const { user } = await verifySession();
     const supabase = await createSupabaseServerClient();
 
     const { data, error } = await supabase
       .from('user_settings')
       .select('*')
-      .eq('user_id', userId)
+      .eq('user_id', user.id)
       .single();
 
     if (error) {
@@ -24,12 +30,13 @@ export async function getUserSettings(userId: string) {
   }
 }
 
+/**
+ * Get user profile information including authentication methods
+ * - Automatically verifies user session
+ */
 export async function getUserProfile() {
+  const { user } = await verifySession();
   const supabase = await createSupabaseServerClient();
-
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) throw new Error('Not authenticated');
 
   // Get settings for profile picture
   const { data: settings } = await supabase

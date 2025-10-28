@@ -6,7 +6,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
-import { SupplementBreakdown } from "@/app/[locale]/(app)/stats/_data/getStatsData";
+import { SupplementBreakdown } from "@/data-access/stats";
 import { useTranslations } from "@/lib/i18n/client";
 
 type SupplementBreakdownChartProps = {

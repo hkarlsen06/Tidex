@@ -1,10 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { verifySession } from "@/data-access/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getUserSubscriptionData } from "@/app/[locale]/(app)/settings/subscription/_data/getSubscription";
+import { getUserSubscriptionData } from "@/data-access/subscription";
 import { hasProAccess, getUniqueShiftMonths } from "@/lib/subscription/hasProAccess";
-import { invalidateUserCache } from "@/app/[locale]/(app)/shifts/_data/cache";
+import { invalidateUserCache } from "@/data-access/cache";
 
 type CreateShiftsInput = {
   dates: string[]; // ISO YYYY-MM-DD (local date)
@@ -28,12 +29,8 @@ function shiftTypeFromISODate(iso: string) {
 }
 
 export async function createShifts(input: CreateShiftsInput) {
+  const { user } = await verifySession();
   const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) throw new Error("Unauthorized");
 
   const dates = Array.isArray(input.dates) ? input.dates.filter(Boolean) : [];
   if (dates.length === 0) throw new Error("Minst én dato er påkrevd");
@@ -41,7 +38,7 @@ export async function createShifts(input: CreateShiftsInput) {
   if (!dates.every(isISODate)) throw new Error("Ugyldig datoformat");
 
   // Server-side validation: Check free tier limitation
-  const { subscription, profile } = await getUserSubscriptionData(user.id);
+  const { subscription, profile } = await getUserSubscriptionData();
 
   if (!hasProAccess(subscription, profile)) {
     // User is on free tier - enforce single month limitation

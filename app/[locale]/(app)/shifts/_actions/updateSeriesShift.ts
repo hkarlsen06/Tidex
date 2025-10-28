@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import type { SelectedDays, EndCondition } from "@/lib/series/types";
-import { invalidateUserCache } from "../_data/cache";
+import { invalidateUserCache } from "@/data-access/cache";
+import { verifySession } from "@/data-access/auth";
 
 type UpdateSeriesInput = {
   id: string;
@@ -30,15 +31,8 @@ export async function updateSeriesShift({
   end_condition,
   exclusions,
 }: UpdateSeriesInput): Promise<void> {
+  const { user } = await verifySession();
   const supabase = await createSupabaseServerClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    throw new Error("Unauthorized");
-  }
 
   // Update the series
   const { error } = await supabase

@@ -4,6 +4,7 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { logger } from '@/lib/logger';
+import { verifySession } from '@/data-access/auth';
 
 // Validation schema for supplement rules
 const SupplementRuleSchema = z.object({
@@ -22,10 +23,8 @@ export async function updateProfileSettings(data: {
   firstName: string;
   profilePictureUrl?: string | null;
 }) {
+  const { user } = await verifySession();
   const supabase = await createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) throw new Error('Not authenticated');
 
   // Update auth metadata
   const existingMetadata = user.user_metadata ?? {};
@@ -50,10 +49,8 @@ export async function updateProfileSettings(data: {
 }
 
 export async function clearAllShifts() {
+  const { user } = await verifySession();
   const supabase = await createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) throw new Error('Not authenticated');
 
   const { error } = await supabase
     .from('user_shifts')
@@ -81,10 +78,8 @@ export async function updatePaySettings(data: {
   tax_deduction_enabled?: boolean;
   tax_percentage?: number | null;
 }) {
+  const { user } = await verifySession();
   const supabase = await createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) throw new Error('Not authenticated');
 
   // Validate custom_supplements if provided
   if (data.custom_supplements !== undefined && data.custom_supplements !== null) {
@@ -114,10 +109,8 @@ export async function updateDisplaySettings(data: {
   theme?: string;
   default_shifts_view?: string;
 }) {
+  const { user } = await verifySession();
   const supabase = await createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) throw new Error('Not authenticated');
 
   const { error } = await supabase
     .from('user_settings')
@@ -137,10 +130,8 @@ export async function updatePreferencesSettings(data: {
   direct_time_input?: boolean;
   full_minute_range?: boolean;
 }) {
-  const supabase = await createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) throw new Error('Not authenticated');
+  const { user } = await verifySession();
+  const supabase = await createSupabaseServerClient(); // Still needed for DB operations
 
   const { error } = await supabase
     .from('user_settings')
@@ -157,10 +148,8 @@ export async function updatePreferencesSettings(data: {
 }
 
 export async function restartOnboarding() {
+  const { user } = await verifySession();
   const supabase = await createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) throw new Error('Not authenticated');
 
   const existingMetadata = user.user_metadata ?? {};
 
@@ -183,10 +172,8 @@ export async function restartOnboarding() {
 }
 
 export async function connectGoogleAccount(redirectUrl: string) {
+  await verifySession();
   const supabase = await createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) throw new Error('Not authenticated');
 
   // linkIdentity returns a URL that the client needs to navigate to
   const { data, error } = await supabase.auth.linkIdentity({
@@ -210,10 +197,8 @@ export async function connectGoogleAccount(redirectUrl: string) {
 }
 
 export async function disconnectGoogleAccount() {
+  const { user } = await verifySession();
   const supabase = await createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) throw new Error('Not authenticated');
 
   // Find Google identity
   const googleIdentity = user.identities?.find(
@@ -243,10 +228,8 @@ export async function disconnectGoogleAccount() {
 }
 
 export async function linkPhoneNumber(phone: string) {
+  const { user } = await verifySession();
   const supabase = await createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) throw new Error('Not authenticated');
 
   // Store the pending phone number in user metadata and send OTP
   // We don't use updateUser({ phone }) directly because it might not require confirmation
@@ -282,11 +265,8 @@ export async function linkPhoneNumber(phone: string) {
 }
 
 export async function verifyAndLinkPhone(phone: string, otp: string) {
+  const { user: currentUser } = await verifySession();
   const supabase = await createSupabaseServerClient();
-
-  // Get current user to check pending phone
-  const { data: { user: currentUser } } = await supabase.auth.getUser();
-  if (!currentUser) throw new Error('Not authenticated');
 
   // Verify that this phone matches the pending phone
   const pendingPhone = currentUser.user_metadata?.pendingPhone;
@@ -335,10 +315,8 @@ export async function verifyAndLinkPhone(phone: string, otp: string) {
 }
 
 export async function unlinkPhoneNumber() {
+  const { user } = await verifySession();
   const supabase = await createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) throw new Error('Not authenticated');
 
   // Find phone identity
   const phoneIdentity = user.identities?.find(
@@ -368,10 +346,8 @@ export async function unlinkPhoneNumber() {
 }
 
 export async function setPassword(password: string) {
+  await verifySession();
   const supabase = await createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) throw new Error('Not authenticated');
 
   // Validate password length
   if (password.length < 6) {
@@ -393,10 +369,8 @@ export async function setPassword(password: string) {
 }
 
 export async function initiateEmailChange(newEmail: string) {
+  const { user } = await verifySession();
   const supabase = await createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) throw new Error('Not authenticated');
 
   // Validate email format
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
