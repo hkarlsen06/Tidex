@@ -8,6 +8,7 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart";
 import { MonthlyData } from "@/data-access/stats";
+import { formatCurrency } from "@/lib/formatters";
 
 type CumulativeAreaChartProps = {
   data: MonthlyData[];
@@ -70,10 +71,10 @@ export function CumulativeAreaChart({ data }: CumulativeAreaChartProps) {
                 return label;
               }}
               formatter={(value, _name) => {
-                const amount = Math.round(value as number).toLocaleString('nb-NO');
+                const amount = formatCurrency(value as number);
                 return (
                   <div className="flex items-center gap-2">
-                    <span className="font-mono font-semibold text-base tabular-nums">{amount} kr</span>
+                    <span className="font-mono font-semibold text-base tabular-nums">{amount}</span>
                     <span className="text-muted-foreground text-base">totalt</span>
                   </div>
                 );

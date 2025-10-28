@@ -2,18 +2,9 @@
 
 import type { ReactNode } from "react";
 import { useTranslations } from "@/lib/i18n/client";
+import { formatCurrency, formatHours } from "@/lib/formatters";
 
 const MINUTES_PER_DAY = 24 * 60;
-
-const currencyFormatter = new Intl.NumberFormat("nb-NO", {
-  minimumFractionDigits: 0,
-  maximumFractionDigits: 0,
-});
-
-const hoursFormatter = new Intl.NumberFormat("nb-NO", {
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
 
 function timeToMinutes(time: string): number | null {
   if (!time) return null;
@@ -109,7 +100,7 @@ export function SupplementBreakdown(props: SupplementBreakdownProps) {
       <div className="flex items-center justify-between">
         <div className="text-sm text-text-secondary">{t.pages.shifts.details.totalSupplement}</div>
         <div className="text-base font-medium text-text-primary">
-          {currencyFormatter.format(Math.round(total))} kr
+          {formatCurrency(total)}
         </div>
       </div>
       <div className="space-y-2">
@@ -121,12 +112,12 @@ export function SupplementBreakdown(props: SupplementBreakdownProps) {
             <div className="flex items-center justify-between text-sm text-text-primary">
               <span>{row.period.replace("23:59", "24:00")}</span>
               <span>
-                {hoursFormatter.format(row.hours)}t × {currencyFormatter.format(Math.round(row.rate))} kr
+                {formatHours(row.hours)} × {formatCurrency(row.rate)}
               </span>
             </div>
             <div className="flex items-center justify-between text-sm font-semibold text-text-primary">
               <span>{t.pages.shifts.details.supplement}</span>
-              <span>{currencyFormatter.format(Math.round(row.amount))} kr</span>
+              <span>{formatCurrency(row.amount)}</span>
             </div>
             {row.note ? (
               <div className="text-xs text-text-secondary">{row.note}</div>

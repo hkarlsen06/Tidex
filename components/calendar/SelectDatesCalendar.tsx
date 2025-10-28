@@ -5,6 +5,7 @@ import { DayPicker } from "react-day-picker";
 import { nb, enUS } from "date-fns/locale";
 import { toISODate, type ISODate, formatNOKInt } from "./calendar.utils";
 import { cn } from "@/lib/utils";
+import { formatInteger } from "@/lib/formatters";
 import { useLocale } from "@/lib/i18n/client";
 
 export type SelectDatesCalendarProps = {
@@ -88,9 +89,7 @@ export function SelectDatesCalendar({
           <div className="relative z-[1] flex flex-col items-center justify-start gap-0.5 w-full h-full p-1">
             {isMonday && (
               <span className="absolute left-1 top-1 text-[9px] leading-none text-text-muted">
-                {new Intl.NumberFormat("nb-NO", { minimumIntegerDigits: 2 }).format(
-                  week as number
-                )}
+                {formatInteger(week as number)}
               </span>
             )}
             <div

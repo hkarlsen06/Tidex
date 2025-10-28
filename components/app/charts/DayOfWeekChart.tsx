@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/chart";
 import { DayOfWeekData } from "@/data-access/stats";
 import { useTranslations } from "@/lib/i18n/client";
+import { formatCurrency } from "@/lib/formatters";
 
 type DayOfWeekChartProps = {
   data: DayOfWeekData[];
@@ -126,10 +127,10 @@ export function DayOfWeekChart({ data }: DayOfWeekChartProps) {
                 return label;
               }}
               formatter={(value, _name) => {
-                const amount = Math.round(value as number).toLocaleString('nb-NO');
+                const amount = formatCurrency(value as number);
                 return (
                   <div className="flex items-center gap-2">
-                    <span className="font-mono font-semibold text-base tabular-nums">{amount} kr</span>
+                    <span className="font-mono font-semibold text-base tabular-nums">{amount}</span>
                     <span className="text-muted-foreground text-base">gjennomsnitt per vakt</span>
                   </div>
                 );
