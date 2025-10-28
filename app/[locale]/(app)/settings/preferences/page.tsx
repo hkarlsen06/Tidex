@@ -22,6 +22,7 @@ export default async function PreferencesPage({
 }: {
   params: Promise<{ locale: string }>;
 }) {
+  await connection();
   const { locale } = await params;
   const t = getTranslations(locale as Locale);
 
