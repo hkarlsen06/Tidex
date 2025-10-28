@@ -190,6 +190,99 @@ export default async function Page() {
 
 **Important**: Pages should NEVER call Supabase directly. Always use DAL functions. See `docs/dal-migration.md` for migration guide.
 
+### Server Actions & Utilities
+
+**Centralized utilities for consistent server action implementation**
+
+Server actions use shared utilities from `lib/` to ensure consistency across the application:
+
+**Validation (`lib/validation/shift-validators.ts`):**
+
+```tsx
+import { isISODate, isHHMM, shiftTypeFromISODate } from '@/lib/validation/shift-validators';
+
+// Validate date formats
+if (!isISODate(date)) return { error: "Ugyldig dato" };
+
+// Validate time formats
+if (!isHHMM(start) || !isHHMM(end)) return { error: "Ugyldig tid" };
+
+// Determine shift type from date
+const shift_type = shiftTypeFromISODate(date); // 0=weekday, 1=Saturday, 2=Sunday
+```
+
+**Revalidation (`lib/revalidation/paths.ts`):**
+
+```tsx
+import { revalidateShiftData, invalidateAndRevalidate } from '@/lib/revalidation/paths';
+
+// After any shift modification
+revalidateShiftData(); // Revalidates /shifts, /, and /stats pages
+
+// After data modification with cache invalidation
+const user = await verifySession();
+invalidateAndRevalidate(user.id); // Clears cache + revalidates pages
+```
+
+**Error Messages (`lib/errors/messages.ts`):**
+
+```tsx
+import { ERRORS } from '@/lib/errors/messages';
+
+// Use standard error messages
+return { error: ERRORS.INVALID_DATE };
+return { error: ERRORS.SHIFT_NOT_FOUND };
+return { error: ERRORS.UNAUTHORIZED };
+```
+
+**Snapshot Preparation (`data-access/snapshots.ts`):**
+
+```tsx
+import { getCurrentSnapshots } from '@/data-access/snapshots';
+
+// Get current wage/supplement snapshots for shift creation
+const snapshots = await getCurrentSnapshots();
+// Returns: { hourly_wage_snapshot, supplement_rules_snapshot }
+```
+
+**Server action pattern:**
+
+```tsx
+'use server';
+
+import { verifySession } from '@/data-access/auth';
+import { isISODate, isHHMM } from '@/lib/validation/shift-validators';
+import { getCurrentSnapshots } from '@/data-access/snapshots';
+import { invalidateAndRevalidate } from '@/lib/revalidation/paths';
+import { ERRORS } from '@/lib/errors/messages';
+
+export async function createShift(data: ShiftData) {
+  // 1. Verify authentication
+  const user = await verifySession();
+
+  // 2. Validate input
+  if (!isISODate(data.date)) return { error: ERRORS.INVALID_DATE };
+  if (!isHHMM(data.start)) return { error: ERRORS.INVALID_TIME };
+
+  // 3. Get snapshots
+  const snapshots = await getCurrentSnapshots();
+
+  // 4. Perform database operation
+  const { error } = await supabase.from('shifts').insert({
+    ...data,
+    ...snapshots,
+    user_id: user.id
+  });
+
+  if (error) return { error: ERRORS.DB_ERROR };
+
+  // 5. Invalidate cache and revalidate
+  invalidateAndRevalidate(user.id);
+
+  return { success: true };
+}
+```
+
 ## Configuration Files
 
 Configuration files are in the project root:
@@ -229,3 +322,4 @@ Environment variables are validated at module load in `lib/env.ts` (throws error
 6. **Theme-aware components** - all UI must respond to light/dark mode via CSS variables
 7. **Respect locale routing** - all user-facing URLs should include `[locale]` parameter
 8. **Use translation dictionaries** - import from `lib/i18n/dictionaries/` for user-facing text
+9. **Use centralized utilities in server actions** - use validators, error messages, revalidation helpers, and snapshot preparation from `lib/` and `data-access/` for consistency
