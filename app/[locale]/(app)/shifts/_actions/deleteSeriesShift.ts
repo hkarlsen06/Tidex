@@ -1,9 +1,8 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
-import { invalidateUserCache } from "@/data-access/cache";
+import { invalidateAndRevalidate } from "@/lib/revalidation/paths";
 import { verifySession } from "@/data-access/auth";
 
 /**
@@ -45,10 +44,6 @@ export async function deleteSeriesShift(seriesId: string): Promise<void> {
 
   logger.info("deleteSeriesShift: Series deleted successfully", { seriesId, deletedCount: count });
 
-  // Invalidate all cached data for this user
-  invalidateUserCache(user.id);
-
-  revalidatePath("/[locale]/shifts", "page");
-  revalidatePath("/[locale]", "page");
-  revalidatePath("/[locale]/stats", "page");
+  // Invalidate cache and revalidate paths
+  invalidateAndRevalidate(user.id);
 }

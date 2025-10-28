@@ -1,13 +1,14 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { verifySession } from "@/data-access/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getUserSubscriptionData } from "@/data-access/subscription";
 import { hasProAccess, getUniqueShiftMonths } from "@/lib/subscription/hasProAccess";
-import { invalidateUserCache } from "@/data-access/cache";
+import { invalidateAndRevalidate } from "@/lib/revalidation/paths";
 import { getUserSettings } from "@/data-access/settings";
 import { prepareShiftSnapshots } from "@/lib/payroll/snapshot";
+import { isISODate, isHHMM, shiftTypeFromISODate } from "@/lib/validation/shift-validators";
+import { ERRORS } from "@/lib/errors/messages";
 
 type CreateShiftsInput = {
   dates: string[]; // ISO YYYY-MM-DD (local date)
@@ -16,28 +17,14 @@ type CreateShiftsInput = {
   seriesId?: string;
 };
 
-function isISODate(s: string) {
-  return /^\d{4}-\d{2}-\d{2}$/.test(s);
-}
-
-function isHHMM(s: string) {
-  return /^\d{2}:\d{2}$/.test(s);
-}
-
-function shiftTypeFromISODate(iso: string) {
-  const d = new Date(iso + "T00:00:00Z");
-  const wd = d.getUTCDay(); // 0..6
-  return wd === 6 ? 1 : wd === 0 ? 2 : 0; // 0=weekday,1=Sat,2=Sun
-}
-
 export async function createShifts(input: CreateShiftsInput) {
   const { user } = await verifySession();
   const supabase = await createSupabaseServerClient();
 
   const dates = Array.isArray(input.dates) ? input.dates.filter(Boolean) : [];
   if (dates.length === 0) throw new Error("Minst én dato er påkrevd");
-  if (!isHHMM(input.start) || !isHHMM(input.end)) throw new Error("Ugyldig tid");
-  if (!dates.every(isISODate)) throw new Error("Ugyldig datoformat");
+  if (!isHHMM(input.start) || !isHHMM(input.end)) throw new Error(ERRORS.INVALID_TIME);
+  if (!dates.every(isISODate)) throw new Error(ERRORS.INVALID_DATE);
 
   // Server-side validation: Check free tier limitation
   const { subscription, profile } = await getUserSubscriptionData();
@@ -87,13 +74,8 @@ export async function createShifts(input: CreateShiftsInput) {
   const { error } = await supabase.from("user_shifts").insert(rows);
   if (error) throw new Error(error.message);
 
-  // Invalidate all cached data for this user
-  invalidateUserCache(user.id);
-
-  // Ensure any cached data is fresh on next view
-  revalidatePath("/shifts");
-  revalidatePath("/");
-  revalidatePath("/stats");
+  // Invalidate cache and revalidate paths
+  invalidateAndRevalidate(user.id);
 
   return { inserted: rows.length };
 }

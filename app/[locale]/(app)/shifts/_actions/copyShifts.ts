@@ -1,29 +1,20 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getUserSubscriptionData } from "@/data-access/subscription";
 import { hasProAccess, getUniqueShiftMonths } from "@/lib/subscription/hasProAccess";
-import { invalidateUserCache } from "@/data-access/cache";
+import { invalidateAndRevalidate } from "@/lib/revalidation/paths";
 import { cleanTime } from "@/lib/time-utils";
 import { verifySession } from "@/data-access/auth";
 import { getUserSettings } from "@/data-access/settings";
 import { prepareShiftSnapshots } from "@/lib/payroll/snapshot";
+import { isISODate, shiftTypeFromISODate } from "@/lib/validation/shift-validators";
+import { ERRORS } from "@/lib/errors/messages";
 
 type CopyShiftsInput = {
   shiftIds: string[];
   targetDate: string; // ISO YYYY-MM-DD (local date)
 };
-
-function isISODate(s: string) {
-  return /^\d{4}-\d{2}-\d{2}$/.test(s);
-}
-
-function shiftTypeFromISODate(iso: string) {
-  const d = new Date(iso + "T00:00:00Z");
-  const wd = d.getUTCDay(); // 0..6
-  return wd === 6 ? 1 : wd === 0 ? 2 : 0; // 0=weekday,1=Sat,2=Sun
-}
 
 export async function copyShifts(input: CopyShiftsInput) {
   const { user } = await verifySession();
@@ -31,7 +22,7 @@ export async function copyShifts(input: CopyShiftsInput) {
 
   const shiftIds = Array.isArray(input.shiftIds) ? input.shiftIds.filter(Boolean) : [];
   if (shiftIds.length === 0) throw new Error("Minst én vakt er påkrevd");
-  if (!isISODate(input.targetDate)) throw new Error("Ugyldig datoformat");
+  if (!isISODate(input.targetDate)) throw new Error(ERRORS.INVALID_DATE);
 
   // Separate ghost shifts from regular shifts
   const ghostIds = shiftIds.filter((id) => id.startsWith("ghost-"));
@@ -149,13 +140,8 @@ export async function copyShifts(input: CopyShiftsInput) {
   const { error } = await supabase.from("user_shifts").insert(rows);
   if (error) throw new Error(error.message);
 
-  // Invalidate all cached data for this user
-  invalidateUserCache(user.id);
-
-  // Ensure any cached data is fresh on next view
-  revalidatePath("/[locale]/shifts", "page");
-  revalidatePath("/[locale]", "page");
-  revalidatePath("/[locale]/stats", "page");
+  // Invalidate cache and revalidate paths
+  invalidateAndRevalidate(user.id);
 
   return { copied: rows.length };
 }

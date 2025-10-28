@@ -1,9 +1,8 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
-import { invalidateUserCache } from "@/data-access/cache";
+import { invalidateAndRevalidate } from "@/lib/revalidation/paths";
 import { verifySession } from "@/data-access/auth";
 import { getUserSettings } from "@/data-access/settings";
 import { prepareShiftSnapshots } from "@/lib/payroll/snapshot";
@@ -82,10 +81,6 @@ export async function convertSeriesShiftToStandalone({
     throw new Error("Failed to create shift");
   }
 
-  // Invalidate all cached data for this user
-  invalidateUserCache(user.id);
-
-  revalidatePath("/[locale]/shifts", "page");
-  revalidatePath("/[locale]", "page");
-  revalidatePath("/[locale]/stats", "page");
+  // Invalidate cache and revalidate paths
+  invalidateAndRevalidate(user.id);
 }

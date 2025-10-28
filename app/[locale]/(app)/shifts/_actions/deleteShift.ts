@@ -1,10 +1,10 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { invalidateUserCache } from "@/data-access/cache";
+import { invalidateAndRevalidate } from "@/lib/revalidation/paths";
 import { logger } from "@/lib/logger";
 import { verifySession } from "@/data-access/auth";
+import { ERRORS } from "@/lib/errors/messages";
 
 type DeleteShiftInput = {
   shiftId: string;
@@ -21,7 +21,7 @@ export async function deleteShift(input: string | DeleteShiftInput) {
   const { user } = await verifySession();
   const supabase = await createSupabaseServerClient();
 
-  if (!shiftId) throw new Error("Ugyldig skift-ID");
+  if (!shiftId) throw new Error(ERRORS.INVALID_SHIFT_ID);
 
   // Case 1: Deleting a series ghost - add to exclusions instead
   if (seriesId && shiftDate) {
@@ -53,12 +53,8 @@ export async function deleteShift(input: string | DeleteShiftInput) {
       throw new Error("Failed to update series");
     }
 
-    // Invalidate all cached data for this user
-    invalidateUserCache(user.id);
-
-    revalidatePath("/[locale]/shifts", "page");
-    revalidatePath("/[locale]", "page");
-    revalidatePath("/[locale]/stats", "page");
+    // Invalidate cache and revalidate paths
+    invalidateAndRevalidate(user.id);
 
     return { deleted: 1 };
   }
@@ -73,7 +69,7 @@ export async function deleteShift(input: string | DeleteShiftInput) {
     .single();
 
   if (fetchError || !shift) {
-    throw new Error("Fant ikke skiftet");
+    throw new Error(ERRORS.SHIFT_NOT_FOUND);
   }
 
   const deletedDate = shift.shift_date;
@@ -135,12 +131,8 @@ export async function deleteShift(input: string | DeleteShiftInput) {
     }
   }
 
-  // Invalidate all cached data for this user
-  invalidateUserCache(user.id);
-
-  revalidatePath("/[locale]/shifts", "page");
-  revalidatePath("/[locale]", "page");
-  revalidatePath("/[locale]/stats", "page");
+  // Invalidate cache and revalidate paths
+  invalidateAndRevalidate(user.id);
 
   return { deleted: 1 };
 }
