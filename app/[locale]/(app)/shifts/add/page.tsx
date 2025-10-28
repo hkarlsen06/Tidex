@@ -1,7 +1,8 @@
-import { redirect } from "next/navigation";
+import { verifySession } from "@/data-access/auth";
+import { connection } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import AddShiftForm from "@/components/shifts/add/AddShiftForm";
-import { PRESET_RULES } from "../_data/getShifts";
+import { PRESET_RULES } from "@/data-access/shifts";
 import type { UserSettings } from "@/lib/payroll";
 import { getTranslations } from "@/lib/i18n/server";
 import type { Locale } from "@/lib/i18n/config";
@@ -20,17 +21,12 @@ export async function generateMetadata({ params }: AddShiftsPageProps) {
 }
 
 export default async function AddShiftsPage({ params }: AddShiftsPageProps) {
+  await connection(); // Opt out of prerendering for dynamic authenticated pages
   const { locale: _locale } = await params;
-  // Layout guarantees user is authenticated
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
 
-  // This should never happen (layout redirects), but TypeScript needs the guard
-  if (!user) {
-    redirect("/login");
-  }
+  // Verify authentication and get user
+  const { user } = await verifySession();
+  const supabase = await createSupabaseServerClient();
 
   const { data: settingsRow, error: settingsError } = await supabase
     .from("user_settings")

@@ -1,7 +1,7 @@
 "use client";
 
 import { Card, CardContent } from "@/components/app/Card";
-import { MonthlyGoal } from "@/app/[locale]/(app)/stats/_data/getStatsData";
+import { MonthlyGoal } from "@/data-access/stats";
 import { Target, TrendingUp } from "lucide-react";
 import { useTranslations } from "@/lib/i18n/client";
 

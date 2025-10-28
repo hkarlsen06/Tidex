@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
-import { invalidateUserCache } from "@/app/[locale]/(app)/shifts/_data/cache";
+import { invalidateUserCache } from "@/data-access/cache";
+import { verifySession } from "@/data-access/auth";
 
 /**
  * Delete an entire series shift from the database
@@ -11,16 +12,8 @@ import { invalidateUserCache } from "@/app/[locale]/(app)/shifts/_data/cache";
  * - Revalidates the shifts page
  */
 export async function deleteSeriesShift(seriesId: string): Promise<void> {
+  const { user } = await verifySession();
   const supabase = await createSupabaseServerClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    logger.error("deleteSeriesShift: No user found");
-    throw new Error("Unauthorized");
-  }
 
   logger.info("deleteSeriesShift: Attempting to delete series", { seriesId, userId: user.id });
 

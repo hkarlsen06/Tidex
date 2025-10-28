@@ -1,7 +1,8 @@
 'use server';
 
+import { verifySession } from '@/data-access/auth';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
-import { getUserSubscriptionData } from '@/app/[locale]/(app)/settings/subscription/_data/getSubscription';
+import { getUserSubscriptionData } from '@/data-access/subscription';
 import { hasProAccess, getUniqueShiftMonths } from '@/lib/subscription/hasProAccess';
 
 export interface ShiftLimitCheckResult {
@@ -19,15 +20,11 @@ export interface ShiftLimitCheckResult {
  * @returns Result indicating if allowed and which months currently have shifts
  */
 export async function checkShiftLimit(targetMonth: string): Promise<ShiftLimitCheckResult> {
+  const { user } = await verifySession();
   const supabase = await createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    return { allowed: false, reason: 'Unauthorized', isFreeTier: false };
-  }
 
   // Fetch subscription status
-  const { subscription, profile } = await getUserSubscriptionData(user.id);
+  const { subscription, profile } = await getUserSubscriptionData();
 
   const isFreeTier = !hasProAccess(subscription, profile);
 

@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
 
-import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getComputedShifts } from "@/app/[locale]/(app)/shifts/_data/getShifts";
+import { verifySession } from "@/data-access/auth";
+import { getComputedShifts } from "@/data-access/shifts";
 import {
   getPreviousYearMonth,
   getNextYearMonth,
@@ -26,17 +27,11 @@ export async function generateMetadata({ params }: HomeProps) {
 }
 
 export default async function Home({ params }: HomeProps) {
+  await connection(); // Opt out of prerendering for dynamic authenticated pages
   const { locale: _locale } = await params;
-  // Layout guarantees user is authenticated
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
 
-  // This should never happen (layout redirects), but TypeScript needs the guard
-  if (!user) {
-    redirect("/login");
-  }
+  // Verify authentication and get user
+  const { user } = await verifySession();
 
   // Redirect to onboarding if user hasn't finished onboarding
   const finishedOnboarding = user.user_metadata?.finishedOnboarding ?? false;
@@ -49,7 +44,7 @@ export default async function Home({ params }: HomeProps) {
   const prevMonth = getPreviousYearMonth();
   const nextMonth = getNextYearMonth();
 
-  const { shifts, settings } = await getComputedShifts(user.id, {
+  const { shifts, settings } = await getComputedShifts({
     startDate: getMonthStart(prevMonth.year, prevMonth.month),
     endDate: getMonthEnd(nextMonth.year, nextMonth.month),
     limit: 150 // Accommodate up to ~50 shifts per month across 3 months

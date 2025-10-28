@@ -2,17 +2,14 @@
 
 import { NextRequest, NextResponse } from "next/server";
 
-import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getStatsData } from "@/app/[locale]/(app)/stats/_data/getStatsData";
+import { getSession } from "@/data-access/auth";
+import { getStatsDataForApi } from "@/data-access/stats";
 import type { Locale } from "@/lib/i18n/config";
 
 export async function GET(request: NextRequest) {
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
+  // Manual auth check for API routes (redirect() not supported)
+  const session = await getSession();
+  if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -39,7 +36,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const data = await getStatsData(user.id, { year, month, locale: localeParam as Locale });
+    const data = await getStatsDataForApi({ year, month, locale: localeParam as Locale });
     return NextResponse.json(data, {
       headers: {
         // Cache for 5 minutes (300 seconds)

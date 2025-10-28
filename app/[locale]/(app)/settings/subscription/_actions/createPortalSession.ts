@@ -3,6 +3,7 @@
 import Stripe from 'stripe';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
+import { verifySession } from '@/data-access/auth';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-09-30.clover',
@@ -16,14 +17,8 @@ interface PortalSessionResult {
 
 export async function createPortalSession(): Promise<PortalSessionResult> {
   try {
-    // Get authenticated user
+    const { user } = await verifySession();
     const supabase = await createSupabaseServerClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      logger.error('User not authenticated', authError);
-      return { success: false, error: 'Du må være logget inn' };
-    }
 
     // Get user's subscription to find their Stripe customer ID
     const { data: subscription, error: subError } = await supabase

@@ -1,16 +1,152 @@
 import "server-only";
 import { cache } from "react";
-import { getComputedShifts } from "@/app/[locale]/(app)/shifts/_data/getShifts";
+import { unstable_cache } from "next/cache";
+import { verifySession } from "@/data-access/auth";
+import { getComputedShifts } from "@/data-access/shifts";
 import {
   getCurrentYearMonth,
-  getCurrentYearStart,
-  getCurrentYearEnd,
+  getPreviousYearMonth,
+  getMonthStart,
+  getMonthEnd,
   isDateInMonth,
   parseDateAsUTC,
   getYearMonth,
+  getCurrentYearStart,
+  getCurrentYearEnd,
 } from "@/lib/date-utils";
+import { hasShiftEnded } from "@/lib/shifts/hasShiftEnded";
 import { getTranslations } from "@/lib/i18n/server";
 import type { Locale } from "@/lib/i18n/config";
+
+const numberFormatter = new Intl.NumberFormat("nb-NO", {
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 0,
+});
+
+/**
+ * Format currency amount in Norwegian format
+ * @example formatCurrency(15234.56) => "15 234 kr"
+ */
+function formatCurrency(value: number): string {
+  return `${numberFormatter.format(Math.round(value))} kr`;
+}
+
+/**
+ * Internal implementation of getMonthlyTotal
+ */
+async function getMonthlyTotalInternal(): Promise<{
+  total: string;
+  percentageChange?: number | "..";
+  tillegg: string;
+  gross: number;
+  supplementPay: number;
+  shiftCount: number;
+  earnedToDate: string;
+  earnedToDateGross: number;
+}> {
+  await verifySession();
+
+  // Load current month + previous month only (2 months total)
+  const { year, month } = getCurrentYearMonth();
+  const { year: prevYear, month: prevMonth } = getPreviousYearMonth();
+
+  const { shifts } = await getComputedShifts({
+    startDate: getMonthStart(prevYear, prevMonth),
+    endDate: getMonthEnd(year, month),
+    limit: 100 // Reasonable limit for 2 months
+  });
+
+  // Get current month and year in UTC to ensure consistent date comparisons
+  const { year: currentYear, month: currentMonth } = getCurrentYearMonth();
+  const { year: lastMonthYear, month: lastMonth } = getPreviousYearMonth();
+
+  // Filter shifts for current month
+  const currentMonthShifts = shifts.filter((shift) =>
+    isDateInMonth(shift.shift_date, currentYear, currentMonth)
+  );
+
+  // Filter shifts for last month
+  const lastMonthShifts = shifts.filter((shift) =>
+    isDateInMonth(shift.shift_date, lastMonthYear, lastMonth)
+  );
+
+  // Calculate current month totals
+  const gross = currentMonthShifts.reduce(
+    (sum, shift) => sum + (shift.computed.gross || 0),
+    0
+  );
+
+  const supplementPay = currentMonthShifts.reduce(
+    (sum, shift) => sum + (shift.computed.supplementPay || 0),
+    0
+  );
+
+  const completedShifts = currentMonthShifts.filter((shift) =>
+    hasShiftEnded(shift)
+  );
+
+  const earnedToDateGross = completedShifts.reduce(
+    (sum, shift) => sum + (shift.computed.gross || 0),
+    0
+  );
+
+  // Calculate last month total for comparison
+  const lastMonthGross = lastMonthShifts.reduce(
+    (sum, shift) => sum + (shift.computed.gross || 0),
+    0
+  );
+
+  // Calculate percentage change
+  let percentageChange: number | ".." | undefined;
+  if (lastMonthGross > 0) {
+    percentageChange = Math.round(((gross - lastMonthGross) / lastMonthGross) * 100);
+  } else if (gross > 0) {
+    // New earnings from zero - show ".." indicator
+    percentageChange = "..";
+  }
+
+  return {
+    total: formatCurrency(gross),
+    percentageChange,
+    tillegg: formatCurrency(supplementPay),
+    gross,
+    supplementPay,
+    shiftCount: currentMonthShifts.length,
+    earnedToDate: formatCurrency(earnedToDateGross),
+    earnedToDateGross,
+  };
+}
+
+/**
+ * Get the current month's total gross earnings for a user with comparison to last month
+ * - Uses React cache() for request deduplication
+ * - Uses Next.js Data Cache for persistent caching (5 min TTL)
+ * - Automatically verifies user session
+ */
+export const getMonthlyTotal = cache(async (): Promise<{
+  total: string;
+  percentageChange?: number | "..";
+  tillegg: string;
+  gross: number;
+  supplementPay: number;
+  shiftCount: number;
+  earnedToDate: string;
+  earnedToDateGross: number;
+}> => {
+  const { user } = await verifySession();
+  const cacheKey = `monthly-total-${user.id}`;
+
+  const getCached = unstable_cache(
+    async () => getMonthlyTotalInternal(),
+    [cacheKey],
+    {
+      tags: [`user-shifts-${user.id}`],
+      revalidate: 300 // 5 minutes
+    }
+  );
+
+  return getCached();
+});
 
 /**
  * Helper to get date range for stats based on the target year
@@ -151,11 +287,10 @@ type StatsOptions = {
 };
 
 /**
- * Get comprehensive stats data with caching
- * - Uses React cache() for request deduplication within a single request
- * - Includes monthly summaries, charts data, and projections
+ * Internal implementation of getStatsData
+ * @internal - Do not call directly, use getStatsData() or getStatsDataForApi()
  */
-export const getStatsData = cache(async (userId: string, options: StatsOptions = {}): Promise<StatsData> => {
+async function getStatsDataInternal(options: StatsOptions = {}): Promise<StatsData> {
   // Get translations for month/day names
   const locale = options.locale || 'no';
   const t = getTranslations(locale);
@@ -165,7 +300,7 @@ export const getStatsData = cache(async (userId: string, options: StatsOptions =
   const FULL_DAY_NAMES = t.dateTime.daysFull;
   // Load full year of shifts for comprehensive stats calculations
   const dateRange = getStatsDateRange(options);
-  const { shifts, settings } = await getComputedShifts(userId, {
+  const { shifts, settings } = await getComputedShifts({
     ...dateRange,
     limit: 1000 // Reasonable limit for 1 year of data
   });
@@ -570,6 +705,28 @@ export const getStatsData = cache(async (userId: string, options: StatsOptions =
       remaining: +goalRemaining.toFixed(2),
     },
   };
+}
+
+/**
+ * Get comprehensive stats data with caching
+ * - Uses React cache() for request deduplication within a single request
+ * - Includes monthly summaries, charts data, and projections
+ * - Automatically verifies user session
+ * - Use this in Server Components and Server Actions
+ */
+export const getStatsData = cache(async (options: StatsOptions = {}): Promise<StatsData> => {
+  await verifySession();
+  return getStatsDataInternal(options);
+});
+
+/**
+ * Get stats data for API routes (no automatic auth)
+ * - Requires manual authentication before calling
+ * - Use this in API route handlers where redirect() is not supported
+ * - Call getSession() first to verify auth
+ */
+export const getStatsDataForApi = cache(async (options: StatsOptions = {}): Promise<StatsData> => {
+  return getStatsDataInternal(options);
 });
 
 /**
@@ -590,12 +747,12 @@ export type CriticalStatsData = Pick<
  * - Loads only essential current month stats
  * - Much faster than full stats data
  * - Charts data loaded separately via API
+ * - Automatically verifies user session
  */
 export const getCriticalStatsData = cache(async (
-  userId: string,
   options: StatsOptions = {}
 ): Promise<CriticalStatsData> => {
-  const fullData = await getStatsData(userId, options);
+  const fullData = await getStatsData(options);
 
   // Return only critical fields needed for hero section
   return {

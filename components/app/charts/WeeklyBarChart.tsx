@@ -6,7 +6,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
-import { DailyData } from "@/app/[locale]/(app)/stats/_data/getStatsData";
+import { DailyData } from "@/data-access/stats";
 
 type WeeklyBarChartProps = {
   data: DailyData[];

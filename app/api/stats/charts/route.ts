@@ -2,20 +2,17 @@
 
 import { NextRequest, NextResponse } from "next/server";
 
-import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getStatsData } from "@/app/[locale]/(app)/stats/_data/getStatsData";
+import { getSession } from "@/data-access/auth";
+import { getStatsDataForApi } from "@/data-access/stats";
 
 /**
  * API endpoint for chart data only
  * Separates heavy chart computations from critical stats data
  */
 export async function GET(request: NextRequest) {
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
+  // Manual auth check for API routes (redirect() not supported)
+  const session = await getSession();
+  if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -41,7 +38,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const data = await getStatsData(user.id, { year, month });
+    const data = await getStatsDataForApi({ year, month });
 
     // Return only chart data, excluding critical stats
     const chartData = {

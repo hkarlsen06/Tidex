@@ -1,5 +1,5 @@
 // lib/subscription/hasProAccess.ts
-import type { Subscription, UserProfile } from '@/app/[locale]/(app)/settings/subscription/_data/getSubscription';
+import type { Subscription, UserProfile } from '@/data-access/subscription';
 
 /**
  * Determines if a user has Pro-level access.

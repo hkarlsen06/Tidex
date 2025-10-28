@@ -6,7 +6,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
-import { YearlyCumulativeData } from "@/app/[locale]/(app)/stats/_data/getStatsData";
+import { YearlyCumulativeData } from "@/data-access/stats";
 
 type YearlyCumulativeChartProps = {
   data: YearlyCumulativeData[];

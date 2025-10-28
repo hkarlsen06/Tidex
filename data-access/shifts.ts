@@ -1,5 +1,6 @@
 import "server-only";
 import { cache } from "react";
+import { verifySession } from "@/data-access/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   computeShift,
@@ -46,11 +47,10 @@ function getDefaultEndDate(): string {
 }
 
 /**
- * Get computed shifts with pagination and caching
- * - Uses React cache() for request deduplication within a single request
- * - Supports date range filtering and limits
+ * Internal implementation of getComputedShifts
+ * @internal - Do not call directly, use getComputedShifts() or getComputedShiftsForApi()
  */
-export const getComputedShifts = cache(async (
+async function getComputedShiftsInternal(
   userId: string,
   options: ShiftLoadOptions = {}
 ): Promise<{
@@ -58,7 +58,7 @@ export const getComputedShifts = cache(async (
   defaultView: string,
   settings: UserSettings,
   aggregates: ShiftsAggregates
-}> => {
+}> {
   const {
     startDate = getDefaultStartDate(), // Default: current month start
     endDate = getDefaultEndDate(),     // Default: current month end
@@ -209,4 +209,41 @@ export const getComputedShifts = cache(async (
     settings,
     aggregates
   };
+}
+
+/**
+ * Get computed shifts with pagination and caching
+ * - Uses React cache() for request deduplication within a single request
+ * - Supports date range filtering and limits
+ * - Automatically verifies user session
+ * - Use this in Server Components and Server Actions
+ */
+export const getComputedShifts = cache(async (
+  options: ShiftLoadOptions = {}
+): Promise<{
+  shifts: ShiftWithComputations[],
+  defaultView: string,
+  settings: UserSettings,
+  aggregates: ShiftsAggregates
+}> => {
+  const { user } = await verifySession();
+  return getComputedShiftsInternal(user.id, options);
+});
+
+/**
+ * Get computed shifts for API routes (no automatic auth)
+ * - Requires manual authentication before calling
+ * - Use this in API route handlers where redirect() is not supported
+ * - Call getSession() first to verify auth, then pass user.id
+ */
+export const getComputedShiftsForApi = cache(async (
+  userId: string,
+  options: ShiftLoadOptions = {}
+): Promise<{
+  shifts: ShiftWithComputations[],
+  defaultView: string,
+  settings: UserSettings,
+  aggregates: ShiftsAggregates
+}> => {
+  return getComputedShiftsInternal(userId, options);
 });

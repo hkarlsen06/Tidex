@@ -3,8 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
-import { invalidateUserCache } from "@/app/[locale]/(app)/shifts/_data/cache";
+import { invalidateUserCache } from "@/data-access/cache";
 import { cleanTime } from "@/lib/time-utils";
+import { verifySession } from "@/data-access/auth";
 
 type MoveSeriesShiftInput = {
   seriesId: string;
@@ -41,15 +42,8 @@ export async function moveSeriesShift({
   startTime,
   endTime,
 }: MoveSeriesShiftInput): Promise<void> {
+  const { user } = await verifySession();
   const supabase = await createSupabaseServerClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    throw new Error("Unauthorized");
-  }
 
   if (!isISODate(sourceDate) || !isISODate(targetDate)) {
     throw new Error("Ugyldig dato");

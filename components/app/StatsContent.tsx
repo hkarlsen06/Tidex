@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import dynamic from "next/dynamic";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/app/Card";
-import type { StatsData } from "@/app/[locale]/(app)/stats/_data/getStatsData";
+import type { StatsData } from "@/data-access/stats";
 import { MonthlyGoalProgress } from "@/components/app/MonthlyGoalProgress";
 import { TrendingUp, TrendingDown, Clock, Briefcase, DollarSign } from "lucide-react";
 import { MonthPicker } from "@/components/app/MonthPicker";

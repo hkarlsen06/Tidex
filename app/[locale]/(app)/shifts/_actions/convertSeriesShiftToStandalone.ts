@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
-import { invalidateUserCache } from "../_data/cache";
+import { invalidateUserCache } from "@/data-access/cache";
+import { verifySession } from "@/data-access/auth";
 
 type ConvertInput = {
   seriesId: string;
@@ -24,15 +25,8 @@ export async function convertSeriesShiftToStandalone({
   startTime,
   endTime,
 }: ConvertInput): Promise<void> {
+  const { user } = await verifySession();
   const supabase = await createSupabaseServerClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    throw new Error("Unauthorized");
-  }
 
   // Load the series to get current exclusions
   const { data: series, error: seriesError } = await supabase

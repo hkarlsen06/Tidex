@@ -6,7 +6,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
-import { MonthlyData } from "@/app/[locale]/(app)/stats/_data/getStatsData";
+import { MonthlyData } from "@/data-access/stats";
 
 type MonthlyBarChartProps = {
   data: MonthlyData[];

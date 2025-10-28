@@ -4,6 +4,7 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
 import type { SeriesDraft } from '@/lib/series/types';
 import { detectAllSeriesConflicts } from '@/lib/series/conflicts';
 import type { ExistingShift } from '@/lib/series/conflicts';
+import { verifySession } from '@/data-access/auth';
 
 /**
  * Create a new series shift pattern
@@ -16,17 +17,8 @@ import type { ExistingShift } from '@/lib/series/conflicts';
  * @returns Created series shift ID
  */
 export async function createSeriesShift(draft: SeriesDraft): Promise<{ id: string }> {
+  const { user } = await verifySession();
   const supabase = await createSupabaseServerClient();
-
-  // Get authenticated user
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-
-  if (authError || !user) {
-    throw new Error('Not authenticated');
-  }
 
   // Validate draft
   if (!draft.start_time || !/^\d{2}:\d{2}$/.test(draft.start_time)) {

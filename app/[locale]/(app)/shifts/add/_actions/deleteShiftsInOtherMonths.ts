@@ -2,7 +2,8 @@
 
 import { revalidatePath } from 'next/cache';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
-import { invalidateUserCache } from '@/app/[locale]/(app)/shifts/_data/cache';
+import { invalidateUserCache } from '@/data-access/cache';
+import { verifySession } from '@/data-access/auth';
 
 export interface DeleteShiftsResult {
   success: boolean;
@@ -18,12 +19,8 @@ export interface DeleteShiftsResult {
  * @returns Result with number of deleted shifts
  */
 export async function deleteShiftsInOtherMonths(targetMonth: string): Promise<DeleteShiftsResult> {
+  const { user } = await verifySession();
   const supabase = await createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    return { success: false, deletedCount: 0, error: 'Unauthorized' };
-  }
 
   // Validate targetMonth format (YYYY-MM)
   if (!/^\d{4}-\d{2}$/.test(targetMonth)) {

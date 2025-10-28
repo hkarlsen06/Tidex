@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getComputedShifts } from "@/app/[locale]/(app)/shifts/_data/getShifts";
+import { getSession } from "@/data-access/auth";
+import { getComputedShiftsForApi } from "@/data-access/shifts";
 import { getMonthStart, getMonthEnd } from "@/lib/date-utils";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 /**
  * API route for fetching shifts for a specific month
@@ -12,10 +12,9 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
  * - month: number (1-12)
  */
 export async function GET(request: NextRequest) {
-  const supabase = await createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
+  // Manual auth check for API routes (redirect() not supported)
+  const session = await getSession();
+  if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -29,7 +28,7 @@ export async function GET(request: NextRequest) {
 
   try {
     // getComputedShifts already includes series ghosts, so no need to generate them again
-    const { shifts, settings } = await getComputedShifts(user.id, {
+    const { shifts, settings } = await getComputedShiftsForApi(session.user.id, {
       startDate: getMonthStart(year, month),
       endDate: getMonthEnd(year, month),
       limit: 100

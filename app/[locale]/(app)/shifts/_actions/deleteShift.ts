@@ -2,8 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { invalidateUserCache } from "@/app/[locale]/(app)/shifts/_data/cache";
+import { invalidateUserCache } from "@/data-access/cache";
 import { logger } from "@/lib/logger";
+import { verifySession } from "@/data-access/auth";
 
 type DeleteShiftInput = {
   shiftId: string;
@@ -17,12 +18,9 @@ export async function deleteShift(input: string | DeleteShiftInput) {
   const seriesId = typeof input === "string" ? undefined : input.seriesId;
   const shiftDate = typeof input === "string" ? undefined : input.shiftDate;
 
+  const { user } = await verifySession();
   const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
 
-  if (!user) throw new Error("Unauthorized");
   if (!shiftId) throw new Error("Ugyldig skift-ID");
 
   // Case 1: Deleting a series ghost - add to exclusions instead

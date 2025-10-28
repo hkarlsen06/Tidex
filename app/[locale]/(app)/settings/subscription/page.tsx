@@ -1,7 +1,6 @@
-import { redirect } from 'next/navigation';
 import type { Metadata } from 'next';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
-import { getUserSubscriptionData } from './_data/getSubscription';
+import { connection } from "next/server";
+import { getUserSubscriptionData } from '@/data-access/subscription';
 import { SubscriptionStatus } from '@/components/settings/subscription/SubscriptionStatus';
 import { EarlySupporterStatus } from '@/components/settings/subscription/EarlySupporterStatus';
 import { GrandfatheredSubscriberBanner } from '@/components/settings/subscription/GrandfatheredSubscriberBanner';
@@ -30,16 +29,7 @@ export default async function SubscriptionPage({
   const { locale } = await params;
   const t = getTranslations(locale as Locale);
 
-  // Layout guarantees user is authenticated
-  const supabase = await createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  // This should never happen (layout redirects), but TypeScript needs the guard
-  if (!user) {
-    redirect('/login');
-  }
-
-  const { subscription, profile } = await getUserSubscriptionData(user.id);
+  const { subscription, profile } = await getUserSubscriptionData();
 
   // Check if user is an early supporter (before paywall)
   const isEarlySupporter = profile?.before_paywall === true;
