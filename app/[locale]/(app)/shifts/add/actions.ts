@@ -27,15 +27,23 @@ export async function createShifts(input: CreateShiftsInput) {
   // Check shift limit (free tier enforcement) for all target months
   const targetMonths = Array.from(new Set(dates.map(date => date.slice(0, 7)))); // Extract unique YYYY-MM
 
-  for (const targetMonth of targetMonths) {
-    const limitCheck = await checkShiftLimit(targetMonth);
+  // First check: if trying to create shifts in multiple months at once, check limit for the first month
+  // This will tell us if the user is on free tier
+  const firstMonthCheck = await checkShiftLimit(targetMonths[0]);
 
-    if (!limitCheck.allowed) {
-      throw new Error(
-        limitCheck.reason ||
-        "Du er på gratisplanen og kan bare ha skift i én måned om gangen. Oppgrader til Pro eller slett skift i andre måneder."
-      );
-    }
+  // If user is on free tier and trying to add to multiple months at once, reject immediately
+  if (firstMonthCheck.isFreeTier && targetMonths.length > 1) {
+    throw new Error(
+      "Du er på gratisplanen og kan bare ha skift i én måned om gangen. Oppgrader til Pro eller slett skift i andre måneder."
+    );
+  }
+
+  // If user is on free tier, verify the single target month is allowed
+  if (firstMonthCheck.isFreeTier && !firstMonthCheck.allowed) {
+    throw new Error(
+      firstMonthCheck.reason ||
+      "Du er på gratisplanen og kan bare ha skift i én måned om gangen. Oppgrader til Pro eller slett skift i andre måneder."
+    );
   }
 
   const sid = input.seriesId && input.seriesId.trim().length > 0 ? input.seriesId : undefined;
