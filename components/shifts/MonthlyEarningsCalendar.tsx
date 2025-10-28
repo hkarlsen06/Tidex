@@ -11,6 +11,7 @@ import { ShiftWithComputations } from "@/lib/payroll";
 import type { ISODate, EarningsByDate, HoursByDate } from "@/components/calendar/calendar.types";
 import { cn } from "@/lib/cn";
 import { useTranslations } from "@/lib/i18n/client";
+import { getMonthlyTotals } from "@/lib/shifts/monthlyTotals";
 
 type MonthlyEarningsCalendarProps = {
   shifts: ShiftWithComputations[];
@@ -84,10 +85,6 @@ function buildHoursByDate(shifts: ShiftWithComputations[]): HoursByDate {
   });
 
   return result;
-}
-
-function getTotalEarnings(earningsByDate: EarningsByDate): number {
-  return Object.values(earningsByDate).reduce((sum, val) => sum + val, 0);
 }
 
 function formatYear(date: Date): string {
@@ -190,10 +187,15 @@ export function MonthlyEarningsCalendar({
     [monthlyShifts]
   );
 
-  const totalEarnings = useMemo(
-    () => getTotalEarnings(earningsByDate),
-    [earningsByDate]
-  );
+  const totalEarnings = useMemo(() => {
+    const { gross } = getMonthlyTotals({
+      shifts: monthlyShifts,
+      year: month.getFullYear(),
+      month: month.getMonth() + 1,
+    });
+
+    return gross;
+  }, [monthlyShifts, month]);
 
   return (
     <Card ref={containerRef} className="rounded-card border-0">

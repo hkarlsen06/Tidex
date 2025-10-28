@@ -8,9 +8,9 @@ import { ShiftCard } from "@/components/app/ShiftCard";
 import ShiftDetails from "@/components/shifts/ShiftDetails";
 import { ShiftWithComputations, UserSettings } from "@/lib/payroll";
 import { getRelativeTime } from "@/lib/utils/relativeTime";
-import { hasShiftEnded } from "@/lib/shifts/hasShiftEnded";
 import { useMonth } from "./MonthContext";
 import { useTranslations } from "@/lib/i18n/client";
+import { summarizeShiftTotals } from "@/lib/shifts/monthlyTotals";
 
 type HomeContentProps = {
   shifts: ShiftWithComputations[];
@@ -52,53 +52,28 @@ function calculateMonthData(
   const lastMonthKey = `${lastMonthYear}-${String(lastMonth).padStart(2, '0')}`;
   const lastMonthShifts = shiftsByMonth.get(lastMonthKey) || [];
 
-  // Calculate totals
-  const gross = currentMonthShifts.reduce(
-    (sum, shift) => sum + (shift.computed.gross || 0),
-    0
-  );
-
-  const supplementPay = currentMonthShifts.reduce(
-    (sum, shift) => sum + (shift.computed.supplementPay || 0),
-    0
-  );
+  const taxSettings = {
+    enabled: settings.tax_deduction_enabled ?? false,
+    percentage: Number(settings.tax_percentage) || 0,
+  };
 
   const now = new Date();
-  const completedShifts = currentMonthShifts.filter((shift) =>
-    hasShiftEnded(shift, now)
-  );
+  const currentTotals = summarizeShiftTotals({
+    shifts: currentMonthShifts,
+    taxSettings,
+    now,
+  });
+  const lastMonthTotals = summarizeShiftTotals({
+    shifts: lastMonthShifts,
+    taxSettings,
+    now,
+  });
 
-  const completedGross = completedShifts.reduce(
-    (sum, shift) => sum + (shift.computed.gross || 0),
-    0
-  );
+  const taxEnabled = taxSettings.enabled;
+  const displayCurrent = taxEnabled ? currentTotals.net : currentTotals.gross;
+  const displayLastMonth = taxEnabled ? lastMonthTotals.net : lastMonthTotals.gross;
 
-  const lastMonthGross = lastMonthShifts.reduce(
-    (sum, shift) => sum + (shift.computed.gross || 0),
-    0
-  );
-
-  // Calculate tax deduction if enabled
-  const taxDeductionEnabled = settings.tax_deduction_enabled ?? false;
-  const taxPercentage = Number(settings.tax_percentage) || 0;
-
-  const netAmount = taxDeductionEnabled
-    ? gross * (1 - taxPercentage / 100)
-    : gross;
-
-  const lastMonthNetAmount = taxDeductionEnabled
-    ? lastMonthGross * (1 - taxPercentage / 100)
-    : lastMonthGross;
-
-  const earnedToDateAmount = taxDeductionEnabled
-    ? completedGross * (1 - taxPercentage / 100)
-    : completedGross;
-
-  // Calculate percentage change based on display amount (net if tax enabled, gross otherwise)
   let percentageChange: number | undefined;
-  const displayLastMonth = taxDeductionEnabled ? lastMonthNetAmount : lastMonthGross;
-  const displayCurrent = taxDeductionEnabled ? netAmount : gross;
-
   if (displayLastMonth > 0) {
     percentageChange = Math.round(
       ((displayCurrent - displayLastMonth) / displayLastMonth) * 100
@@ -106,12 +81,14 @@ function calculateMonthData(
   }
 
   return {
-    total: formatCurrency(taxDeductionEnabled ? netAmount : gross),
+    total: formatCurrency(displayCurrent),
     percentageChange,
-    tillegg: formatCurrency(supplementPay),
-    grossBeforeTax: taxDeductionEnabled ? formatCurrency(gross) : undefined,
-    lastMonthNet: lastMonthNetAmount,
-    earnedToDate: formatCurrency(earnedToDateAmount),
+    tillegg: formatCurrency(currentTotals.supplement),
+    grossBeforeTax: taxEnabled ? formatCurrency(currentTotals.gross) : undefined,
+    lastMonthNet: lastMonthTotals.net,
+    earnedToDate: formatCurrency(
+      taxEnabled ? currentTotals.completedNet : currentTotals.completedGross
+    ),
   };
 }
 
@@ -273,31 +250,29 @@ export function HomeContent({ shifts: initialShifts, settings }: HomeContentProp
     const earningsKey = `${targetYear}-${String(targetMonth).padStart(2, '0')}`;
     const relevantShifts = shiftsByMonth.get(earningsKey) || [];
 
-    const gross = relevantShifts.reduce(
-      (sum, shift) => sum + (shift.computed.gross || 0),
-      0
-    );
-
     const basePay = relevantShifts.reduce(
       (sum, shift) => sum + (shift.computed.basePay || 0),
       0
     );
 
-    const supplementPay = relevantShifts.reduce(
-      (sum, shift) => sum + (shift.computed.supplementPay || 0),
-      0
-    );
+    const taxSettings = {
+      enabled: settings.tax_deduction_enabled ?? false,
+      percentage: Number(settings.tax_percentage) || 0,
+    };
 
-    const taxDeductionEnabled = settings.tax_deduction_enabled ?? false;
-    const taxPercentage = Number(settings.tax_percentage) || 0;
-    const taxAmount = taxDeductionEnabled ? gross * (taxPercentage / 100) : 0;
-    const netAmount = gross - taxAmount;
+    const totals = summarizeShiftTotals({
+      shifts: relevantShifts,
+      taxSettings,
+    });
+
+    const taxAmount = totals.gross - totals.net;
+    const netAmount = totals.net;
 
     return {
       netAmount,
-      grossAmount: gross,
+      grossAmount: totals.gross,
       baseAmount: basePay,
-      supplementAmount: supplementPay,
+      supplementAmount: totals.supplement,
       taxAmount,
       payrollMonthDate,
       hasPayout: relevantShifts.length > 0,
