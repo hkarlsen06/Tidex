@@ -57,12 +57,13 @@ The app supports multiple locales (Norwegian and English) via:
 Uses `@supabase/ssr` with cookie-based sessions following Next.js 16 best practices:
 
 1. **Token refresh & locale routing**: `proxy.ts` middleware handles both Supabase token refresh and locale routing (~1-5ms, no auth logic)
-2. **Authentication enforcement**: `app/[locale]/(app)/layout.tsx` calls `getUser()` and redirects to `/login` (single source of truth)
-3. **Server-side**: Use `createSupabaseServerClient()` from `lib/supabase/server.ts` in Server Components and data loaders
-4. **Client-side**: Import the shared `supabase` instance from `lib/supabase/browser.ts` in Client Components
-5. **Session sync**: `app/supabase-listener.tsx` subscribes to auth changes via the shared client and calls `router.refresh()` to update server components
+2. **Authentication enforcement**: Centralized in Data Access Layer via `verifySession()` from `data-access/auth.ts` (single source of truth)
+3. **Prerender opt-out**: Protected pages call `connection()` from "next/server" to ensure dynamic rendering
+4. **Server-side**: Use `createSupabaseServerClient()` from `lib/supabase/server.ts` in Server Components and data loaders
+5. **Client-side**: Import the shared `supabase` instance from `lib/supabase/browser.ts` in Client Components
+6. **Session sync**: `app/supabase-listener.tsx` subscribes to auth changes via the shared client and calls `router.refresh()` to update server components
 
-**Important**: Authentication happens in Server Components (data access layer), NOT in proxy.ts. All routes under `app/[locale]/(app)/` are protected by the layout. See `docs/auth.md` for detailed flow.
+**Important**: Authentication happens in the Data Access Layer via `verifySession()`, NOT in pages or layouts. All DAL functions verify authentication before data access. See `docs/auth.md` and `docs/dal-migration.md` for detailed flow.
 
 ### Component System
 
@@ -89,6 +90,7 @@ Defined in `tsconfig.json`:
 - `@components/*` - `components/`
 - `@ui/*` - `components/ui/`
 - `@appui/*` - `components/app/`
+- `@dal/*` - `data-access/` (Data Access Layer)
 
 ### Theming & Styling
 
@@ -121,7 +123,7 @@ Pure, deterministic wage calculations live in `lib/payroll/`:
 
 - **Entry point**: `computeShift(shift, settings, presetRules)` from `lib/payroll/calc.ts`
 - **Zero I/O**: All inputs explicit, no dates from system clock
-- **Server-side only**: Compute once per fetch in data loaders (e.g., `app/(app)/shifts/_data/getShifts.ts`)
+- **Server-side only**: Compute once per fetch in Data Access Layer (e.g., `data-access/shifts.ts`)
 - **Client receives precomputed data**: UI renders `gross`, `paidHours`, etc. without recalculation
 
 Key concepts:
@@ -133,22 +135,60 @@ Key concepts:
 - Cross-midnight shifts supported (when `end <= start`, treat as next day)
 - High precision calculations: 3 decimal places for hours, 2 for currency
 
-### Data Loading Pattern
+### Data Access Layer (DAL)
 
-Server Components fetch and compute data:
+**Centralized data loading in `data-access/` directory**
+
+All database queries go through the DAL, which provides:
+
+- **Authentication**: All DAL functions call `verifySession()` to ensure user is authenticated
+- **Caching**: Uses React `cache()` for request deduplication and Next.js `unstable_cache()` for persistent caching
+- **Computation**: Server-side payroll calculations via `computeShift()`
+- **Type safety**: Returns fully typed, enriched data to pages
+
+**Available DAL functions:**
 
 ```tsx
-// app/(app)/shifts/_data/getShifts.ts
-export async function getComputedShifts(userId: string) {
-  const supabase = await createSupabaseServerClient();
-  // 1. Load user settings
-  // 2. Load raw shifts
-  // 3. Compute each shift with computeShift()
-  // 4. Return enriched shifts with derived fields
+// data-access/auth.ts
+export async function verifySession() // Returns authenticated user or redirects
+
+// data-access/settings.ts
+export async function getUserSettings() // Get user's pay/display settings
+export async function getUserProfile()  // Get user profile data
+
+// data-access/shifts.ts
+export async function getComputedShifts(options) // Get shifts with payroll computations
+
+// data-access/stats.ts
+export async function getStatsData()    // Get aggregated statistics
+export async function getChartsData()   // Get chart data for stats page
+
+// data-access/subscription.ts
+export async function getUserSubscriptionData() // Get subscription status
+```
+
+**Usage pattern:**
+
+```tsx
+// app/[locale]/(app)/page.tsx
+import { connection } from "next/server";
+import { getComputedShifts } from "@/data-access/shifts";
+
+export default async function Page() {
+  await connection(); // Opt out of prerendering
+
+  // DAL handles auth verification internally
+  const { shifts, settings } = await getComputedShifts({
+    startDate: "2025-01-01",
+    endDate: "2025-01-31"
+  });
+
+  // Render with precomputed data
+  return <ShiftsList shifts={shifts} />;
 }
 ```
 
-Pages import and await these loaders, never calling Supabase directly.
+**Important**: Pages should NEVER call Supabase directly. Always use DAL functions. See `docs/dal-migration.md` for migration guide.
 
 ## Configuration Files
 
@@ -157,7 +197,7 @@ Configuration files are in the project root:
 - `tailwind.config.js` - Tailwind theme and semantic colors
 - `postcss.config.cjs` - PostCSS with Tailwind plugin
 - `tsconfig.json` - TypeScript configuration with path aliases
-- `next.config.js` - Next.js configuration with PWA settings
+- `next.config.js` - Next.js configuration with PWA settings and `cacheComponents: true`
 
 ## Environment Variables
 
@@ -183,9 +223,9 @@ Environment variables are validated at module load in `lib/env.ts` (throws error
 
 1. **Never import from `components/ui` directly** - always wrap and import from `components/app`
 2. **Use semantic color tokens** - avoid hardcoded Tailwind colors like `slate-*` or `gray-*`
-3. **Centralize Supabase access** - use helpers in `lib/supabase`, never instantiate clients elsewhere
-4. **Compute wages server-side** - `lib/payroll` functions are pure and called in data loaders
-5. **Theme-aware components** - all UI must respond to light/dark mode via CSS variables
-6. **Server-first auth checks** - redirect before render to avoid unauthenticated UI flashes
+3. **Use the Data Access Layer** - all database queries go through `data-access/`, never call Supabase directly in pages
+4. **Opt out of prerendering** - protected pages must call `connection()` from "next/server" at the top
+5. **Compute wages server-side** - `lib/payroll` functions are pure and called in DAL functions
+6. **Theme-aware components** - all UI must respond to light/dark mode via CSS variables
 7. **Respect locale routing** - all user-facing URLs should include `[locale]` parameter
 8. **Use translation dictionaries** - import from `lib/i18n/dictionaries/` for user-facing text

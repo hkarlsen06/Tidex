@@ -6,7 +6,7 @@ import {
   getMonthStart,
   getMonthEnd
 } from "@/lib/date-utils";
-import { ShiftsView } from "@components//shifts/ShiftsView";
+import { ShiftsView } from "@components/shifts/ShiftsView";
 import { getTranslations } from "@/lib/i18n/server";
 import type { Locale } from "@/lib/i18n/config";
 
