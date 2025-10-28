@@ -44,9 +44,14 @@ export function computeShift(
   const weekday = WEEKDAYS[date.getUTCDay()]; // 1-7
 
   const baseRate = resolveBaseRate(s, settings);
-  const rules: SupplementRule[] = settings.use_preset
-    ? presetRules
-    : (settings.custom_supplements?.rules?.length ? settings.custom_supplements.rules : []);
+
+  // Prefer snapshotted supplement rules for historical accuracy
+  // If snapshot exists, use it. Otherwise fall back to current settings.
+  const rules: SupplementRule[] = s.supplement_rules_snapshot?.rules?.length
+    ? s.supplement_rules_snapshot.rules
+    : settings.use_preset
+      ? presetRules
+      : (settings.custom_supplements?.rules?.length ? settings.custom_supplements.rules : []);
 
   let periods: WagePeriod[] = buildWagePeriods(st, et, weekday, baseRate, rules);
 

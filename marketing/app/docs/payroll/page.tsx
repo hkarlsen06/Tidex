@@ -57,7 +57,7 @@ const payrollDocs = {
         {
           heading: 'What this guide covers',
           list: [
-            'Base wage: Snapshot preservation and fallback to current settings (preset tariffs or custom rate)',
+            'Base wage: Snapshot preservation for both hourly rates and supplement rules, with fallback to current settings',
             'Time periods: How a shift is segmented to honour supplement rules',
             'Supplements: Fixed NOK/hour and percentage-based adjustments for specific days or hours',
             'Break deductions: Three deduction strategies with audit trails',
@@ -91,13 +91,21 @@ const payrollDocs = {
         {
           heading: '1. Snapshot rate (highest priority)',
           paragraphs: [
-            'When a shift is created, Tidex can snapshot the hourly rate at that moment and store it with the shift. This ensures historical shifts remain accurate even after you adjust your wage settings in the future.',
+            'When a shift is created, Tidex snapshots both the hourly rate and supplement rules at that moment and stores them with the shift. This ensures historical shifts remain accurate even after you adjust your wage settings or when tariff rates change year-to-year.',
           ],
           code: {
             language: 'typescript',
-            content: `if (shift.hourly_wage_snapshot && shift.hourly_wage_snapshot > 0) {
+            content: `// Hourly wage snapshot
+if (shift.hourly_wage_snapshot && shift.hourly_wage_snapshot > 0) {
   return shift.hourly_wage_snapshot;
-}`,
+}
+
+// Supplement rules snapshot
+const rules = shift.supplement_rules_snapshot?.rules?.length
+  ? shift.supplement_rules_snapshot.rules  // Use snapshot
+  : settings.use_preset
+    ? presetRules                          // Fall back to current preset
+    : settings.custom_supplements.rules;   // Or current custom`,
           },
         },
         {
