@@ -16,20 +16,8 @@ import {
 } from "@/lib/date-utils";
 import { getTranslations } from "@/lib/i18n/server";
 import type { Locale } from "@/lib/i18n/config";
+import { formatCurrency } from "@/lib/formatters";
 import { getMonthlyTotals } from "@/lib/shifts/monthlyTotals";
-
-const numberFormatter = new Intl.NumberFormat("nb-NO", {
-  minimumFractionDigits: 0,
-  maximumFractionDigits: 0,
-});
-
-/**
- * Format currency amount in Norwegian format
- * @example formatCurrency(15234.56) => "15 234 kr"
- */
-function formatCurrency(value: number): string {
-  return `${numberFormatter.format(Math.round(value))} kr`;
-}
 
 /**
  * Internal implementation of getMonthlyTotal

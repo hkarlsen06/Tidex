@@ -35,6 +35,8 @@ import { IconArrowRight, IconArrowLeft } from "@tabler/icons-react";
 import { cn } from "@/lib/cn";
 import { useTranslations } from "@/lib/i18n/client";
 import type { Locale } from "@/lib/i18n/config";
+import { formatCurrency, formatInteger } from "@/lib/formatters";
+import { getDateFormatter } from "@/lib/i18n/locale";
 
 // Lazy load the calendar to reduce initial bundle size (~40KB savings)
 const MonthlyEarningsCalendar = dynamic(
@@ -52,15 +54,6 @@ export type WeekGroup = {
   shifts: ShiftWithComputations[];
 };
 
-const weekFormatter = new Intl.NumberFormat("nb-NO", {
-  minimumIntegerDigits: 2,
-});
-
-const currencyFormatter = new Intl.NumberFormat("nb-NO", {
-  minimumFractionDigits: 0,
-  maximumFractionDigits: 0,
-});
-
 function getIsoWeek(date: Date) {
   const d = new Date(
     Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())
@@ -75,7 +68,7 @@ function getIsoWeek(date: Date) {
 }
 
 function formatWeekTotal(value: number) {
-  return `${currencyFormatter.format(Math.round(value))} kr`;
+  return formatCurrency(value);
 }
 
 // Combined filter and group operation for better performance
@@ -105,7 +98,7 @@ function filterAndGroupByWeek(
     if (!group) {
       group = {
         id,
-        label: `${weekFormatter.format(weekNumber)}`,
+        label: `${formatInteger(weekNumber)}`,
         totalGross: 0,
         shifts: [],
       };
@@ -127,16 +120,6 @@ function filterAndGroupByWeek(
 
 function startOfMonth(date: Date) {
   return new Date(date.getFullYear(), date.getMonth(), 1);
-}
-
-// Map our locale codes to BCP 47 locale tags for Intl.DateTimeFormat
-function getDateLocale(locale: Locale): string {
-  const localeMap: Record<Locale, string> = {
-    no: 'nb-NO',
-    en: 'en-US',
-    de: 'de-DE',
-  };
-  return localeMap[locale];
 }
 
 function capitalize(input: string) {
@@ -188,7 +171,7 @@ function CalendarCellPreview({
   t,
 }: CalendarCellPreviewProps) {
   const moveDateFormatter = useMemo(() => {
-    return new Intl.DateTimeFormat(getDateLocale(locale), {
+    return getDateFormatter(locale, {
       day: "2-digit",
       month: "long",
     });

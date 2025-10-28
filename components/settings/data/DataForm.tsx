@@ -9,6 +9,8 @@ import { cn } from '@/lib/cn';
 import type { Dictionary } from '@/lib/i18n/dictionaries/no';
 import { useTranslations } from '@/lib/i18n/client';
 import type { Locale } from '@/lib/i18n/config';
+import { formatCurrency } from '@/lib/formatters';
+import { getDateFormatter } from '@/lib/i18n/locale';
 import { ReSnapshotCard } from './ReSnapshotCard';
 
 const JSPDF_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
@@ -91,16 +93,6 @@ const PRESET_ORDER: ReadonlyArray<Exclude<PeriodPreset, 'custom'>> = [
   'current_month',
   'current_year',
 ];
-
-// Map our locale codes to BCP 47 locale tags for Intl.DateTimeFormat
-function getDateLocale(locale: Locale): string {
-  const localeMap: Record<Locale, string> = {
-    no: 'nb-NO',
-    en: 'en-US',
-    de: 'de-DE',
-  };
-  return localeMap[locale];
-}
 
 function capitalize(value: string): string {
   if (!value) return value;
@@ -202,12 +194,12 @@ function getPresetLabel(preset: Exclude<PeriodPreset, 'custom'>, locale: Locale)
       ? new Date(now.getFullYear(), now.getMonth(), 1)
       : new Date(now.getFullYear(), now.getMonth() - 1, 1);
 
-  const monthFormatter = new Intl.DateTimeFormat(getDateLocale(locale), { month: 'long' });
+  const monthFormatter = getDateFormatter(locale, { month: 'long' });
   return capitalize(monthFormatter.format(baseMonth));
 }
 
 function formatCurrencyShort(value: number): string {
-  return Math.round(value).toLocaleString('nb-NO');
+  return formatCurrency(value, { display: 'none' });
 }
 
 function weekdayAbbrev(date: Date, t: Dictionary): string {
@@ -345,7 +337,7 @@ function prepareExportData(payload: ExportPayload): PreparedExportData {
 
 function formatLongDate(date: Date | null, locale: Locale): string {
   if (!date) return '';
-  return new Intl.DateTimeFormat(getDateLocale(locale), {
+  return getDateFormatter(locale, {
     day: '2-digit',
     month: '2-digit',
     year: '2-digit',
