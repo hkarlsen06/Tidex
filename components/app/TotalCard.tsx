@@ -71,7 +71,7 @@ export const TotalCard: React.FC<TotalCardProps> = ({
     : undefined;
 
   const primaryContent = useMemo(() => {
-    if (taxDeductionEnabled && grossBeforeTax) {
+    if (taxDeductionEnabled && grossBeforeTax && grossBeforeTax !== '0 kr') {
       return (
         <>
           <span className="font-semibold text-text-primary">{grossBeforeTax}</span> {t.components.totalCard.beforeTax}
@@ -79,7 +79,7 @@ export const TotalCard: React.FC<TotalCardProps> = ({
       );
     }
 
-    if (tillegg) {
+    if (tillegg && tillegg !== '0 kr') {
       return (
         <>
           {t.components.totalCard.supplements}: <span className="font-semibold text-text-primary">{tillegg}</span>
@@ -91,7 +91,7 @@ export const TotalCard: React.FC<TotalCardProps> = ({
   }, [taxDeductionEnabled, grossBeforeTax, tillegg, t]);
 
   const alternateContent = useMemo(() => {
-    if (!earnedToDate) {
+    if (!earnedToDate || earnedToDate === '0 kr') {
       return null;
     }
 
@@ -193,7 +193,7 @@ export const TotalCard: React.FC<TotalCardProps> = ({
             <div
               key={`total-${total}`}
               className={`mt-3 text-6xl font-bold text-brand-highlight ${getAnimationClasses(animationDirection)}`}
-            >{total}</div>
+            >{total === '0 kr' ? '---' : total}</div>
             {textOptions.length > 0 ? (
               <div
                 key={`subtitle-container-${total}`}

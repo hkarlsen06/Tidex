@@ -105,6 +105,9 @@ type StatCardProps = {
 };
 
 function StatCard({ label, value, suffix, trend, icon }: StatCardProps) {
+  const isZero = value === '0' || value === '0,0';
+  const displayValue = isZero ? '---' : value;
+
   return (
     <Card className="border-border bg-surface-primary overflow-hidden">
       <CardContent className="p-5">
@@ -116,9 +119,9 @@ function StatCard({ label, value, suffix, trend, icon }: StatCardProps) {
         </div>
         <div className="flex items-baseline gap-1.5">
           <p className="text-3xl font-bold tabular-nums leading-none text-text-primary">
-            {value}
+            {displayValue}
           </p>
-          {suffix && (
+          {suffix && !isZero && (
             <p className="text-xl font-medium flex-shrink-0 text-text-secondary">
               {suffix}
             </p>
@@ -244,6 +247,7 @@ export function StatsContent({ data }: StatsContentProps) {
   const grossEarnings = activeData.currentMonth.totalEarnings;
   const netEarnings = activeData.currentMonth.totalEarningsNet;
   const displayedEarnings = activeData.tax.enabled ? netEarnings : grossEarnings;
+  const isEarningsZero = displayedEarnings === 0;
 
   const selectedHours = activeData.currentMonth.totalHours;
   const selectedShiftCount = activeData.currentMonth.shiftCount;
@@ -286,11 +290,11 @@ export function StatsContent({ data }: StatsContentProps) {
             </p>
             <div className="flex items-baseline gap-2">
               <p className="text-5xl font-bold tabular-nums text-text-primary">
-                {formatCurrency(displayedEarnings, true)}
+                {isEarningsZero ? '---' : formatCurrency(displayedEarnings, true)}
               </p>
-              <p className="text-2xl font-medium text-text-secondary">{t.common.currency}</p>
+              {!isEarningsZero && <p className="text-2xl font-medium text-text-secondary">{t.common.currency}</p>}
             </div>
-            {activeData.tax.enabled && (
+            {activeData.tax.enabled && grossEarnings > 0 && (
               <div className="mt-3 space-y-1">
                 <p className="text-base font-medium text-text-secondary">
                   {t.pages.stats.cards.afterTax}
