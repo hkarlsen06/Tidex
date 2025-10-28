@@ -21,8 +21,15 @@ Analyze the git changes, create a commit, and push to the remote repository foll
 
 5. Stage all changes if nothing is staged (using `git add .`)
 6. Create the commit using the generated message
-7. Push to the remote repository (using `git push`)
-8. Show the commit summary, SHA, and push result to confirm success
+7. Run `npm run lint` to check for linting errors
+8. Run `npm run build` to verify the build succeeds
+9. If lint or build fails:
+   - Show the errors to the user
+   - Do NOT push to remote
+   - Explain that the commit was created but not pushed due to errors
+   - Suggest fixing the issues before pushing manually or running `/smart-push` again
+10. If lint and build pass, push to the remote repository (using `git push`)
+11. Show the commit summary, SHA, and push result to confirm success
 
 IMPORTANT: This command WILL create the commit AND push to remote automatically. Use `/smart-commit` if you don't want to push yet, or `/commit-summary` if you only want to see the message first.
 
