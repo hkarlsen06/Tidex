@@ -13,9 +13,8 @@ import { Button } from '@appui/Button';
 import { AlertTriangle, Trash2, Sparkles } from 'lucide-react';
 import { formatMonth } from '@/lib/subscription/hasProAccess';
 import { deleteShiftsInOtherMonths } from '@/app/[locale]/(app)/shifts/add/_actions/deleteShiftsInOtherMonths';
-import { createCheckoutSession } from '@/app/[locale]/(app)/settings/subscription/_actions/createCheckoutSession';
-import { ENV } from '@/lib/env';
 import { useTranslations } from '@/lib/i18n/client';
+import { useRouter } from 'next/navigation';
 
 interface FreeTierLimitModalProps {
   open: boolean;
@@ -32,9 +31,9 @@ export function FreeTierLimitModal({
   targetMonth,
   onDeleteComplete,
 }: FreeTierLimitModalProps) {
-  const { t } = useTranslations();
+  const { t, locale } = useTranslations();
+  const router = useRouter();
   const [isDeleting, setIsDeleting] = useState(false);
-  const [isUpgrading, setIsUpgrading] = useState(false);
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -65,25 +64,8 @@ export function FreeTierLimitModal({
     }
   };
 
-  const handleUpgrade = async () => {
-    setIsUpgrading(true);
-    setError(null);
-
-    try {
-      const result = await createCheckoutSession(ENV.PRO_PRICE_ID!);
-
-      if (result.success && result.url) {
-        // Redirect to Stripe checkout
-        window.location.href = result.url;
-      } else {
-        setError(result.error || t.pages.shifts.add.freeTierLimit.couldNotStartUpgrade);
-        setIsUpgrading(false);
-      }
-    } catch (err) {
-      console.error('Error creating checkout session:', err);
-      setError(t.pages.shifts.add.freeTierLimit.unexpectedError);
-      setIsUpgrading(false);
-    }
+  const handleViewPlans = () => {
+    router.push(`/${locale}/settings/subscription`);
   };
 
   const formattedTargetMonth = formatMonth(targetMonth);
@@ -127,8 +109,8 @@ export function FreeTierLimitModal({
           <div className="space-y-3">
             {/* Upgrade option */}
             <button
-              onClick={handleUpgrade}
-              disabled={isDeleting || isUpgrading}
+              onClick={handleViewPlans}
+              disabled={isDeleting}
               className="w-full text-left rounded-2xl border-2 border-brand-gradientMid/30 bg-gradient-to-br from-brand-gradientStart/5 to-brand-gradientMid/5 p-4 transition hover:border-brand-gradientMid/50 disabled:opacity-50"
             >
               <div className="flex items-start gap-3">
@@ -138,7 +120,6 @@ export function FreeTierLimitModal({
                   <p className="text-xs text-text-secondary mt-1">
                     {t.pages.shifts.add.freeTierLimit.upgradeDescription}
                   </p>
-                  <p className="text-sm font-bold text-brand-highlight mt-2">{t.pages.shifts.add.freeTierLimit.upgradePrice}</p>
                 </div>
               </div>
             </button>
@@ -147,7 +128,7 @@ export function FreeTierLimitModal({
             {!showConfirmDelete ? (
               <button
                 onClick={handleDeleteClick}
-                disabled={isDeleting || isUpgrading}
+                disabled={isDeleting}
                 className="w-full text-left rounded-2xl border-2 border-red-500/30 bg-red-500/5 p-4 transition hover:border-red-500/50 hover:bg-red-500/10 disabled:opacity-50"
               >
                 <div className="flex items-start gap-3">
@@ -210,7 +191,7 @@ export function FreeTierLimitModal({
             type="button"
             variant="ghost"
             onClick={() => onOpenChange(false)}
-            disabled={isDeleting || isUpgrading}
+            disabled={isDeleting}
             className="w-full rounded-xl px-4 py-2"
           >
             {t.pages.shifts.add.freeTierLimit.cancel}
