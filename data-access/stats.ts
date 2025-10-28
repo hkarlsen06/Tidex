@@ -14,9 +14,9 @@ import {
   getCurrentYearStart,
   getCurrentYearEnd,
 } from "@/lib/date-utils";
-import { hasShiftEnded } from "@/lib/shifts/hasShiftEnded";
 import { getTranslations } from "@/lib/i18n/server";
 import type { Locale } from "@/lib/i18n/config";
+import { getMonthlyTotals } from "@/lib/shifts/monthlyTotals";
 
 const numberFormatter = new Intl.NumberFormat("nb-NO", {
   minimumFractionDigits: 0,
@@ -61,40 +61,22 @@ async function getMonthlyTotalInternal(): Promise<{
   const { year: lastMonthYear, month: lastMonth } = getPreviousYearMonth();
 
   // Filter shifts for current month
-  const currentMonthShifts = shifts.filter((shift) =>
-    isDateInMonth(shift.shift_date, currentYear, currentMonth)
-  );
+  const currentMonthTotals = getMonthlyTotals({
+    shifts,
+    year: currentYear,
+    month: currentMonth,
+  });
 
-  // Filter shifts for last month
-  const lastMonthShifts = shifts.filter((shift) =>
-    isDateInMonth(shift.shift_date, lastMonthYear, lastMonth)
-  );
+  const lastMonthTotals = getMonthlyTotals({
+    shifts,
+    year: lastMonthYear,
+    month: lastMonth,
+  });
 
-  // Calculate current month totals
-  const gross = currentMonthShifts.reduce(
-    (sum, shift) => sum + (shift.computed.gross || 0),
-    0
-  );
-
-  const supplementPay = currentMonthShifts.reduce(
-    (sum, shift) => sum + (shift.computed.supplementPay || 0),
-    0
-  );
-
-  const completedShifts = currentMonthShifts.filter((shift) =>
-    hasShiftEnded(shift)
-  );
-
-  const earnedToDateGross = completedShifts.reduce(
-    (sum, shift) => sum + (shift.computed.gross || 0),
-    0
-  );
-
-  // Calculate last month total for comparison
-  const lastMonthGross = lastMonthShifts.reduce(
-    (sum, shift) => sum + (shift.computed.gross || 0),
-    0
-  );
+  const gross = currentMonthTotals.gross;
+  const supplementPay = currentMonthTotals.supplement;
+  const earnedToDateGross = currentMonthTotals.completedGross;
+  const lastMonthGross = lastMonthTotals.gross;
 
   // Calculate percentage change
   let percentageChange: number | ".." | undefined;
@@ -111,7 +93,7 @@ async function getMonthlyTotalInternal(): Promise<{
     tillegg: formatCurrency(supplementPay),
     gross,
     supplementPay,
-    shiftCount: currentMonthShifts.length,
+    shiftCount: currentMonthTotals.shiftCount,
     earnedToDate: formatCurrency(earnedToDateGross),
     earnedToDateGross,
   };
