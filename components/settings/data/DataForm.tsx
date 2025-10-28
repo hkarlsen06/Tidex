@@ -9,6 +9,7 @@ import { cn } from '@/lib/cn';
 import type { Dictionary } from '@/lib/i18n/dictionaries/no';
 import { useTranslations } from '@/lib/i18n/client';
 import type { Locale } from '@/lib/i18n/config';
+import { ReSnapshotCard } from './ReSnapshotCard';
 
 const JSPDF_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
 
@@ -925,6 +926,10 @@ export function DataForm({ t }: DataFormProps) {
           {t.pages.settings.data.export.about.description}
         </p>
       </div>
+
+      <Separator className="mt-6" />
+
+      <ReSnapshotCard t={t} />
     </div>
   );
 }
