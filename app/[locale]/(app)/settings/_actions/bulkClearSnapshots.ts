@@ -4,7 +4,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { invalidateAndRevalidate } from "@/lib/revalidation/paths";
 import { verifySession } from "@/data-access/auth";
 import { logger } from "@/lib/logger";
-import { prepareShiftSnapshots } from "@/lib/payroll/snapshot";
+import { getCurrentSnapshots } from "@/data-access/snapshots";
 
 export async function bulkClearSnapshots(
   startDate: string,
@@ -13,20 +13,8 @@ export async function bulkClearSnapshots(
   const { user } = await verifySession();
   const supabase = await createSupabaseServerClient();
 
-  // Fetch current user settings
-  const { data: settings, error: settingsError } = await supabase
-    .from("user_settings")
-    .select("use_preset, current_wage_level, custom_wage, custom_supplements")
-    .eq("user_id", user.id)
-    .single();
-
-  if (settingsError) {
-    logger.error("Failed to fetch user settings:", settingsError);
-    throw settingsError;
-  }
-
-  // Prepare snapshots with current values
-  const snapshots = prepareShiftSnapshots(settings);
+  // Get current snapshots based on user settings
+  const snapshots = await getCurrentSnapshots();
 
   const { data, error } = await supabase
     .from("user_shifts")

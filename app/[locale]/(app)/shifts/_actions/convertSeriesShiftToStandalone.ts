@@ -4,8 +4,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import { invalidateAndRevalidate } from "@/lib/revalidation/paths";
 import { verifySession } from "@/data-access/auth";
-import { getUserSettings } from "@/data-access/settings";
-import { prepareShiftSnapshots } from "@/lib/payroll/snapshot";
+import { getCurrentSnapshots } from "@/data-access/snapshots";
 
 type ConvertInput = {
   seriesId: string;
@@ -60,9 +59,8 @@ export async function convertSeriesShiftToStandalone({
     throw new Error("Failed to update series");
   }
 
-  // Get current settings and prepare snapshots
-  const settings = await getUserSettings();
-  const snapshots = settings ? prepareShiftSnapshots(settings) : { hourly_wage_snapshot: null, supplement_rules_snapshot: null };
+  // Get current snapshots
+  const snapshots = await getCurrentSnapshots();
 
   // Create standalone shift
   const { error: insertError } = await supabase

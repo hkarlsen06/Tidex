@@ -2,11 +2,9 @@
 
 import { verifySession } from "@/data-access/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getUserSubscriptionData } from "@/data-access/subscription";
-import { hasProAccess, getUniqueShiftMonths } from "@/lib/subscription/hasProAccess";
+import { checkShiftLimit } from "@/app/[locale]/(app)/shifts/add/_checks/checkShiftLimit";
 import { invalidateAndRevalidate } from "@/lib/revalidation/paths";
-import { getUserSettings } from "@/data-access/settings";
-import { prepareShiftSnapshots } from "@/lib/payroll/snapshot";
+import { getCurrentSnapshots } from "@/data-access/snapshots";
 import { isISODate, isHHMM, shiftTypeFromISODate } from "@/lib/validation/shift-validators";
 import { ERRORS } from "@/lib/errors/messages";
 
@@ -26,29 +24,15 @@ export async function createShifts(input: CreateShiftsInput) {
   if (!isHHMM(input.start) || !isHHMM(input.end)) throw new Error(ERRORS.INVALID_TIME);
   if (!dates.every(isISODate)) throw new Error(ERRORS.INVALID_DATE);
 
-  // Server-side validation: Check free tier limitation
-  const { subscription, profile } = await getUserSubscriptionData();
+  // Check shift limit (free tier enforcement) for all target months
+  const targetMonths = Array.from(new Set(dates.map(date => date.slice(0, 7)))); // Extract unique YYYY-MM
 
-  if (!hasProAccess(subscription, profile)) {
-    // User is on free tier - enforce single month limitation
-    const { data: existingShifts } = await supabase
-      .from("user_shifts")
-      .select("shift_date")
-      .eq("user_id", user.id);
+  for (const targetMonth of targetMonths) {
+    const limitCheck = await checkShiftLimit(targetMonth);
 
-    const existingMonths = existingShifts
-      ? getUniqueShiftMonths(existingShifts)
-      : new Set<string>();
-    const newMonths = getUniqueShiftMonths(
-      dates.map((shift_date) => ({ shift_date }))
-    );
-    const allMonths = new Set([
-      ...Array.from(existingMonths),
-      ...Array.from(newMonths),
-    ]);
-
-    if (allMonths.size > 1) {
+    if (!limitCheck.allowed) {
       throw new Error(
+        limitCheck.reason ||
         "Du er på gratisplanen og kan bare ha skift i én måned om gangen. Oppgrader til Pro eller slett skift i andre måneder."
       );
     }
@@ -56,9 +40,8 @@ export async function createShifts(input: CreateShiftsInput) {
 
   const sid = input.seriesId && input.seriesId.trim().length > 0 ? input.seriesId : undefined;
 
-  // Get current settings and prepare snapshots
-  const settings = await getUserSettings();
-  const snapshots = settings ? prepareShiftSnapshots(settings) : { hourly_wage_snapshot: null, supplement_rules_snapshot: null };
+  // Get current snapshots
+  const snapshots = await getCurrentSnapshots();
 
   const rows = dates.map((shift_date) => ({
     user_id: user.id,
