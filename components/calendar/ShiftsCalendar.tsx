@@ -75,6 +75,7 @@ const DayButton = React.memo(function DayButton({
   const isToday = Boolean(modifiers?.today);
   const isMonday = date.getDay() === 1;
   const isSelected = selectedDate === iso;
+  const isOutside = Boolean(modifiers?.outside);
   const hasShift =
     earnings !== undefined || hours !== undefined || employees.length > 0;
   const week = isMonday ? getIsoWeek(date) : null;
@@ -88,7 +89,8 @@ const DayButton = React.memo(function DayButton({
         isSelected &&
           "border-brand-gradientMid bg-brand-gradientMid/10 text-brand-highlight shadow-app-sm",
         isToday && "ring-1 ring-brand-highlight",
-        isToday && !isSelected && "border-brand-highlight"
+        isToday && !isSelected && "border-brand-highlight",
+        isOutside && "opacity-40"
       )}
     >
       <div className="relative flex flex-col w-full h-full p-1 overflow-hidden">
@@ -239,7 +241,7 @@ export function ShiftsCalendar({
         day: "aspect-square p-0",
         day_button: "w-full h-full rounded-lg hover:bg-surface-secondary transition-colors border border-border-subtle",
         selected: "",
-        outside: "opacity-40",
+        outside: "",
         today: "",
       }}
     />
