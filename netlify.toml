@@ -15,3 +15,15 @@
   to = "https://www.tidex.no/:splat"
   status = 308
   force = true
+
+[[redirects]]
+  from = "https://kkarlsen.art/*"
+  to = "https://www.tidex.no/:splat"
+  status = 308
+  force = true
+
+[[redirects]]
+  from = "https://www.kkarlsen.art/*"
+  to = "https://www.tidex.no/:splat"
+  status = 308
+  force = true
