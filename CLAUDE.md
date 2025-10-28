@@ -251,6 +251,7 @@ const snapshots = await getCurrentSnapshots();
 'use server';
 
 import { verifySession } from '@/data-access/auth';
+import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { isISODate, isHHMM } from '@/lib/validation/shift-validators';
 import { getCurrentSnapshots } from '@/data-access/snapshots';
 import { invalidateAndRevalidate } from '@/lib/revalidation/paths';
@@ -260,14 +261,17 @@ export async function createShift(data: ShiftData) {
   // 1. Verify authentication
   const user = await verifySession();
 
-  // 2. Validate input
+  // 2. Initialize Supabase client
+  const supabase = await createSupabaseServerClient();
+
+  // 3. Validate input
   if (!isISODate(data.date)) return { error: ERRORS.INVALID_DATE };
   if (!isHHMM(data.start)) return { error: ERRORS.INVALID_TIME };
 
-  // 3. Get snapshots
+  // 4. Get snapshots
   const snapshots = await getCurrentSnapshots();
 
-  // 4. Perform database operation
+  // 5. Perform database operation
   const { error } = await supabase.from('shifts').insert({
     ...data,
     ...snapshots,
@@ -276,7 +280,7 @@ export async function createShift(data: ShiftData) {
 
   if (error) return { error: ERRORS.DB_ERROR };
 
-  // 5. Invalidate cache and revalidate
+  // 6. Invalidate cache and revalidate
   invalidateAndRevalidate(user.id);
 
   return { success: true };
