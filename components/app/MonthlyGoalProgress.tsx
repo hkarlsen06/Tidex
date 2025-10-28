@@ -4,27 +4,17 @@ import { Card, CardContent } from "@/components/app/Card";
 import { MonthlyGoal } from "@/data-access/stats";
 import { Target, TrendingUp } from "lucide-react";
 import { useTranslations } from "@/lib/i18n/client";
+import { formatCurrency } from "@/lib/formatters";
 
 type MonthlyGoalProgressProps = {
   data: MonthlyGoal;
 };
 
-const numberFormatter = new Intl.NumberFormat("nb-NO", {
-  minimumFractionDigits: 0,
-  maximumFractionDigits: 0,
-});
-
-const compactFormatter = new Intl.NumberFormat("nb-NO", {
-  minimumFractionDigits: 0,
-  maximumFractionDigits: 0,
-  notation: "compact",
-});
-
-function formatCurrency(value: number, compact = false): string {
+function formatCurrencyValue(value: number, compact = false): string {
   if (compact && value >= 100000) {
-    return compactFormatter.format(Math.round(value));
+    return formatCurrency(value, { display: "none", notation: "compact" });
   }
-  return numberFormatter.format(Math.round(value));
+  return formatCurrency(value, { display: "none" });
 }
 
 export function MonthlyGoalProgress({ data }: MonthlyGoalProgressProps) {
@@ -83,7 +73,7 @@ export function MonthlyGoalProgress({ data }: MonthlyGoalProgressProps) {
           {/* Left side: Text content */}
           <div className="flex flex-col justify-center space-y-3">
             <p className="text-sm text-text-secondary">
-              {t.pages.stats.monthlyGoal.goalLabel}: {formatCurrency(data.target)} {t.common.currency}
+              {t.pages.stats.monthlyGoal.goalLabel}: {formatCurrencyValue(data.target)} {t.common.currency}
             </p>
 
             {/* Progress bar */}
@@ -109,12 +99,12 @@ export function MonthlyGoalProgress({ data }: MonthlyGoalProgressProps) {
                   </p>
                 </div>
                 <p className="text-base font-medium" style={{ color: progressColor }}>
-                  {t.pages.stats.monthlyGoal.overTarget.replace('{amount}', formatCurrency(progressOverTarget))}
+                  {t.pages.stats.monthlyGoal.overTarget.replace('{amount}', formatCurrencyValue(progressOverTarget))}
                 </p>
               </div>
             ) : (
               <p className="text-base font-medium text-text-secondary">
-                {t.pages.stats.monthlyGoal.remaining.replace('{amount}', formatCurrency(data.remaining))}
+                {t.pages.stats.monthlyGoal.remaining.replace('{amount}', formatCurrencyValue(data.remaining))}
               </p>
             )}
           </div>
@@ -165,7 +155,7 @@ export function MonthlyGoalProgress({ data }: MonthlyGoalProgressProps) {
                 {data.percentage.toFixed(0)}%
               </p>
               <p className="text-sm text-text-muted mt-1">
-                {formatCurrency(data.progress, true)} {t.common.currency}
+                {formatCurrencyValue(data.progress, true)} {t.common.currency}
               </p>
             </div>
           </div>

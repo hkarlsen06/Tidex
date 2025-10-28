@@ -7,6 +7,7 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart";
 import { DailyData } from "@/data-access/stats";
+import { formatCurrency, formatNumber } from "@/lib/formatters";
 
 type WeeklyBarChartProps = {
   data: DailyData[];
@@ -125,26 +126,22 @@ const createTickFormatter = (ticks: number[]) => {
   const thousandsDigits = determineFractionDigits(step, 1000);
   const standardDigits = determineFractionDigits(step, 1);
 
-  const thousandsFormatter = new Intl.NumberFormat("nb-NO", {
-    minimumFractionDigits: thousandsDigits,
-    maximumFractionDigits: thousandsDigits,
-  });
-
-  const standardFormatter = new Intl.NumberFormat("nb-NO", {
-    minimumFractionDigits: standardDigits,
-    maximumFractionDigits: standardDigits,
-  });
-
   return (value: number) => {
     if (value === 0) {
       return "0";
     }
 
     if (Math.abs(value) >= 1000) {
-      return `${thousandsFormatter.format(value / 1000)}k`;
+      return `${formatNumber(value / 1000, {
+        minimumFractionDigits: thousandsDigits,
+        maximumFractionDigits: thousandsDigits,
+      })}k`;
     }
 
-    return standardFormatter.format(value);
+    return formatNumber(value, {
+      minimumFractionDigits: standardDigits,
+      maximumFractionDigits: standardDigits,
+    });
   };
 };
 
@@ -227,10 +224,10 @@ export function WeeklyBarChart({ data }: WeeklyBarChartProps) {
                 return label;
               }}
               formatter={(value, _name) => {
-                const amount = Math.round(value as number).toLocaleString('nb-NO');
+                const amount = formatCurrency(value as number);
                 return (
                   <div className="flex items-center gap-2">
-                    <span className="font-mono font-semibold text-base tabular-nums">{amount} kr</span>
+                    <span className="font-mono font-semibold text-base tabular-nums">{amount}</span>
                     <span className="text-muted-foreground text-base">inntjening</span>
                   </div>
                 );

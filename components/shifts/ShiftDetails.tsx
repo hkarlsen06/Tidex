@@ -19,7 +19,12 @@ import { clearShiftSnapshots } from "@/app/[locale]/(app)/shifts/_actions/clearS
 import { cn } from "@/lib/cn";
 import { TimeInput } from "@/components/app/TimeInput";
 import { useTranslations } from "@/lib/i18n/client";
-import type { Locale } from "@/lib/i18n/config";
+import {
+  formatCurrency,
+  formatHours as formatHoursValue,
+  formatPlainAmount,
+} from "@/lib/formatters";
+import { getDateFormatter } from "@/lib/i18n/locale";
 import { SeriesEditModal } from "./SeriesEditModal";
 import type { ExistingShift } from "@/lib/series/conflicts";
 import { PRESET_WAGE_RATES } from "@/lib/payroll/calc";
@@ -110,26 +115,6 @@ export type ShiftDetailsProps = {
   presetRules?: SupplementRule[];
 };
 
-const numberFormatter = new Intl.NumberFormat("nb-NO", {
-  minimumFractionDigits: 0,
-  maximumFractionDigits: 0,
-});
-
-const hoursFormatter = new Intl.NumberFormat("nb-NO", {
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
-
-// Map our locale codes to BCP 47 locale tags for Intl.DateTimeFormat
-function getDateLocale(locale: Locale): string {
-  const localeMap: Record<Locale, string> = {
-    no: 'nb-NO',
-    en: 'en-US',
-    de: 'de-DE',
-  };
-  return localeMap[locale];
-}
-
 function capitalize(input: string) {
   return input.charAt(0).toUpperCase() + input.slice(1);
 }
@@ -139,15 +124,18 @@ function formatTimeRange(start: string, end: string) {
 }
 
 function formatHours(value: number) {
-  return `${hoursFormatter.format(value)}t`;
+  return formatHoursValue(value);
 }
 
 function formatCurrencyNOKInt(value: number) {
-  return `${numberFormatter.format(Math.round(value))} kr`;
+  return formatCurrency(value);
 }
 
 function formatHourlyRate(value: number) {
-  return `${numberFormatter.format(Math.round(value * 100) / 100)} kr/t`;
+  return `${formatPlainAmount(value, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })} kr/t`;
 }
 
 // Helper to resolve current wage rate from settings
@@ -201,11 +189,11 @@ export function ShiftDetails({
 
   // Create locale-aware date formatters
   const dayFormatter = useMemo(() => {
-    return new Intl.DateTimeFormat(getDateLocale(locale), { weekday: "long" });
+    return getDateFormatter(locale, { weekday: "long" });
   }, [locale]);
 
   const dateFormatter = useMemo(() => {
-    return new Intl.DateTimeFormat(getDateLocale(locale), {
+    return getDateFormatter(locale, {
       day: "2-digit",
       month: "long",
     });

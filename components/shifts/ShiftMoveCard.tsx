@@ -3,25 +3,11 @@
 import { KeyboardEvent, useMemo } from "react";
 import { ShiftWithComputations, UserSettings, SupplementRule, computeShift } from "@/lib/payroll";
 import { cn } from "@/lib/cn";
-import {
-  formatCurrency as baseFormatCurrency,
-  formatPlainAmount as baseFormatPlainAmount,
-  formatTimeRange as baseFormatTimeRange,
-  formatHours as baseFormatHours,
-} from "@/components/app/ShiftCard";
+import { formatTimeRange as baseFormatTimeRange } from "@/components/app/ShiftCard";
 import { Card, CardHeader } from "@/components/app/Card";
 import { useTranslations } from "@/lib/i18n/client";
-import type { Locale } from "@/lib/i18n/config";
-
-// Map our locale codes to BCP 47 locale tags for Intl.DateTimeFormat
-function getDateLocale(locale: Locale): string {
-  const localeMap: Record<Locale, string> = {
-    no: 'nb-NO',
-    en: 'en-US',
-    de: 'de-DE',
-  };
-  return localeMap[locale];
-}
+import { formatCurrency, formatHours, formatPlainAmount } from "@/lib/formatters";
+import { getDateFormatter } from "@/lib/i18n/locale";
 
 // Parse ISO date string consistently as UTC to avoid timezone issues
 function parseISODate(isoDate: string): Date {
@@ -47,15 +33,15 @@ export function ShiftMoveCard({ shift, targetDate, selected, onToggle, userSetti
 
   // Create locale-aware date formatters
   const dayNumberFormatter = useMemo(() => {
-    return new Intl.DateTimeFormat(getDateLocale(locale), { day: "numeric" });
+    return getDateFormatter(locale, { day: "numeric" });
   }, [locale]);
 
   const monthFormatter = useMemo(() => {
-    return new Intl.DateTimeFormat(getDateLocale(locale), { month: "long" });
+    return getDateFormatter(locale, { month: "long" });
   }, [locale]);
 
   const dayFormatter = useMemo(() => {
-    return new Intl.DateTimeFormat(getDateLocale(locale), { weekday: "short" });
+    return getDateFormatter(locale, { weekday: "short" });
   }, [locale]);
 
   const sourceDate = parseISODate(shift.shift_date);
@@ -106,7 +92,7 @@ export function ShiftMoveCard({ shift, targetDate, selected, onToggle, userSetti
     };
   }, [target, targetDate, shift, userSettings, presetRules, originalGross]);
 
-  const normalBreakdown = `${baseFormatPlainAmount(basePay)}${supplementPay > 0 ? ` + ${baseFormatPlainAmount(supplementPay)}` : ""}`;
+  const normalBreakdown = `${formatPlainAmount(basePay)}${supplementPay > 0 ? ` + ${formatPlainAmount(supplementPay)}` : ""}`;
 
   const handleToggle = () => onToggle(shift.id);
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -162,7 +148,7 @@ export function ShiftMoveCard({ shift, targetDate, selected, onToggle, userSetti
               {baseFormatTimeRange(shift.start_time, shift.end_time)}
             </span>
             <span className="text-text-muted">→</span>
-            <span className="font-medium text-text-primary">{baseFormatHours(paidHours)}</span>
+            <span className="font-medium text-text-primary">{formatHours(paidHours)}</span>
           </div>
         </div>
         <div className="text-right">
@@ -170,13 +156,13 @@ export function ShiftMoveCard({ shift, targetDate, selected, onToggle, userSetti
             "text-2xl font-semibold tracking-tight",
             wageChanged ? "text-brand-highlight" : "text-text-primary"
           )}>
-            {baseFormatCurrency(wageChanged ? newGross : originalGross)}
+            {formatCurrency(wageChanged ? newGross : originalGross)}
           </p>
           {wageChanged ? (
             <p className="text-xs text-text-secondary">
-              {baseFormatPlainAmount(originalGross)}{" "}
+              {formatPlainAmount(originalGross)}{" "}
               <span className="text-brand-highlight">
-                {grossDifference >= 0 ? '+' : ''}{baseFormatPlainAmount(grossDifference)}
+                {grossDifference >= 0 ? '+' : ''}{formatPlainAmount(grossDifference)}
               </span>
             </p>
           ) : (

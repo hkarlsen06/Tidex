@@ -11,6 +11,7 @@ import {
 } from "./calendar.utils";
 import type { EarningsByDate, HoursByDate } from "./calendar.types";
 import { cn } from "@/lib/cn";
+import { formatInteger } from "@/lib/formatters";
 import { useLocale } from "@/lib/i18n/client";
 
 export type ShiftsCalendarProps = {
@@ -98,9 +99,7 @@ const DayButton = React.memo(function DayButton({
         <span className={`absolute left-1 text-[9px] leading-none text-text-muted ${
           weekNumberPosition === "top-left" ? "top-1" : "bottom-1"
         }`}>
-          {new Intl.NumberFormat("nb-NO", { minimumIntegerDigits: 2 }).format(
-            week as number
-          )}
+          {formatInteger(week as number)}
         </span>
       )}
       <div
