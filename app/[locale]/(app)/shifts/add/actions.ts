@@ -6,6 +6,8 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getUserSubscriptionData } from "@/data-access/subscription";
 import { hasProAccess, getUniqueShiftMonths } from "@/lib/subscription/hasProAccess";
 import { invalidateUserCache } from "@/data-access/cache";
+import { getUserSettings } from "@/data-access/settings";
+import { prepareShiftSnapshots } from "@/lib/payroll/snapshot";
 
 type CreateShiftsInput = {
   dates: string[]; // ISO YYYY-MM-DD (local date)
@@ -67,12 +69,18 @@ export async function createShifts(input: CreateShiftsInput) {
 
   const sid = input.seriesId && input.seriesId.trim().length > 0 ? input.seriesId : undefined;
 
+  // Get current settings and prepare snapshots
+  const settings = await getUserSettings();
+  const snapshots = settings ? prepareShiftSnapshots(settings) : { hourly_wage_snapshot: null, supplement_rules_snapshot: null };
+
   const rows = dates.map((shift_date) => ({
     user_id: user.id,
     shift_date,
     start_time: input.start,
     end_time: input.end,
     shift_type: shiftTypeFromISODate(shift_date),
+    hourly_wage_snapshot: snapshots.hourly_wage_snapshot,
+    supplement_rules_snapshot: snapshots.supplement_rules_snapshot,
     ...(sid ? { series_id: sid } : {}),
   }));
 

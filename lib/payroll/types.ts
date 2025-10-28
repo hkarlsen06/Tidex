@@ -6,7 +6,8 @@ export type ShiftRow = {
   shift_date: string;           // ISO date
   start_time: string;           // "HH:mm"
   end_time: string;             // "HH:mm"
-  hourly_wage_snapshot?: number | null; // optional if you snapshot on insert
+  hourly_wage_snapshot?: number | null; // Snapshot of hourly wage at creation time
+  supplement_rules_snapshot?: { rules: SupplementRule[] } | null; // Snapshot of supplement rules at creation time
   series_id?: string;           // Links to series_shifts if this is a ghost
   series_anchor_weekday?: number; // Which weekday anchor (0-6) generated this ghost
 };

@@ -7,6 +7,8 @@ import { hasProAccess, getUniqueShiftMonths } from "@/lib/subscription/hasProAcc
 import { invalidateUserCache } from "@/data-access/cache";
 import { cleanTime } from "@/lib/time-utils";
 import { verifySession } from "@/data-access/auth";
+import { getUserSettings } from "@/data-access/settings";
+import { prepareShiftSnapshots } from "@/lib/payroll/snapshot";
 
 type CopyShiftsInput = {
   shiftIds: string[];
@@ -128,6 +130,10 @@ export async function copyShifts(input: CopyShiftsInput) {
     }
   }
 
+  // Get current settings and prepare snapshots for copied shifts
+  const settings = await getUserSettings();
+  const snapshots = settings ? prepareShiftSnapshots(settings) : { hourly_wage_snapshot: null, supplement_rules_snapshot: null };
+
   // Create new shifts based on source shifts but with the target date
   const rows = sourceShifts.map((shift) => ({
     user_id: user.id,
@@ -135,6 +141,8 @@ export async function copyShifts(input: CopyShiftsInput) {
     start_time: cleanTime(shift.start_time),
     end_time: cleanTime(shift.end_time),
     shift_type: shiftTypeFromISODate(input.targetDate),
+    hourly_wage_snapshot: snapshots.hourly_wage_snapshot,
+    supplement_rules_snapshot: snapshots.supplement_rules_snapshot,
     ...(shift.series_id ? { series_id: shift.series_id } : {}),
   }));
 

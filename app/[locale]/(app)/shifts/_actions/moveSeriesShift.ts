@@ -6,6 +6,8 @@ import { logger } from "@/lib/logger";
 import { invalidateUserCache } from "@/data-access/cache";
 import { cleanTime } from "@/lib/time-utils";
 import { verifySession } from "@/data-access/auth";
+import { getUserSettings } from "@/data-access/settings";
+import { prepareShiftSnapshots } from "@/lib/payroll/snapshot";
 
 type MoveSeriesShiftInput = {
   seriesId: string;
@@ -88,6 +90,10 @@ export async function moveSeriesShift({
     throw new Error("Kunne ikke oppdatere serien");
   }
 
+  // Get current settings and prepare snapshots
+  const settings = await getUserSettings();
+  const snapshots = settings ? prepareShiftSnapshots(settings) : { hourly_wage_snapshot: null, supplement_rules_snapshot: null };
+
   // Create standalone shift at target date
   const shiftType = shiftTypeFromISODate(targetDate);
 
@@ -99,6 +105,8 @@ export async function moveSeriesShift({
       start_time: cleanedStartTime,
       end_time: cleanedEndTime,
       shift_type: shiftType,
+      hourly_wage_snapshot: snapshots.hourly_wage_snapshot,
+      supplement_rules_snapshot: snapshots.supplement_rules_snapshot,
     });
 
   if (insertError) {
