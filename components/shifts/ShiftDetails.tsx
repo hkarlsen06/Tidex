@@ -15,6 +15,7 @@ import { Input } from "@components/app/Input";
 import type { ShiftWithComputations, UserSettings, SupplementRule } from "@/lib/payroll";
 import SupplementBreakdown, { type SupplementSegmentInput } from "./SupplementBreakdown";
 import { updateShift } from "@/app/[locale]/(app)/shifts/_actions/updateShift";
+import { clearShiftSnapshots } from "@/app/[locale]/(app)/shifts/_actions/clearShiftSnapshots";
 import { cn } from "@/lib/cn";
 import { TimeInput } from "@/components/app/TimeInput";
 import { useTranslations } from "@/lib/i18n/client";
@@ -161,6 +162,29 @@ function resolveCurrentWage(settings: UserSettings): number | null {
   return null;
 }
 
+function compareSupplementRules(rules1: SupplementRule[], rules2: SupplementRule[]): boolean {
+  if (rules1.length !== rules2.length) return false;
+
+  // Compare each rule
+  for (let i = 0; i < rules1.length; i++) {
+    const r1 = rules1[i];
+    const r2 = rules2[i];
+
+    // Compare days arrays
+    if (r1.days.length !== r2.days.length) return false;
+    if (!r1.days.every((day, idx) => day === r2.days[idx])) return false;
+
+    // Compare time ranges
+    if (r1.from !== r2.from || r1.to !== r2.to) return false;
+
+    // Compare rate/percent (handle optional fields)
+    if (r1.rate !== r2.rate) return false;
+    if (r1.percent !== r2.percent) return false;
+  }
+
+  return true;
+}
+
 export function ShiftDetails({
   isOpen,
   shift,
@@ -201,6 +225,7 @@ export function ShiftDetails({
   const [shiftDate, setShiftDate] = useState("");
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, startTransition] = useTransition();
+  const [clearingSnapshots, startClearingSnapshots] = useTransition();
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const startInputRef = useRef<HTMLInputElement>(null);
   const endInputRef = useRef<HTMLInputElement>(null);
@@ -250,6 +275,19 @@ export function ShiftDetails({
     setSeriesModalOpen(true);
   };
 
+  const handleClearSnapshots = () => {
+    if (!shift) return;
+    startClearingSnapshots(async () => {
+      try {
+        await clearShiftSnapshots(shift.id);
+        router.refresh();
+        onClose();
+      } catch (error) {
+        console.error("Failed to clear snapshots:", error);
+      }
+    });
+  };
+
   const handleSave = () => {
     if (!shift) return;
     if (!DATE_PATTERN.test(shiftDate)) {
@@ -296,19 +334,26 @@ export function ShiftDetails({
   // Check if shift uses snapshots and compare with current settings
   const hasWageSnapshot = Boolean(shift && shift.hourly_wage_snapshot && shift.hourly_wage_snapshot > 0);
   const hasSupplementSnapshot = Boolean(shift && shift.supplement_rules_snapshot?.rules?.length);
-  const hasAnySnapshot = hasWageSnapshot || hasSupplementSnapshot;
 
   const currentWage = shift ? resolveCurrentWage(userSettings) : null;
   const snapshotWage = shift?.hourly_wage_snapshot;
 
-  // Compare supplement rules counts (simplified comparison)
-  const currentSupplementsCount = userSettings.use_preset
-    ? presetRules.length
-    : (userSettings.custom_supplements?.rules?.length ?? 0);
-  const snapshotSupplementsCount = shift?.supplement_rules_snapshot?.rules?.length ?? 0;
+  // Get current supplement rules for comparison
+  const currentSupplementRules = userSettings.use_preset
+    ? presetRules
+    : (userSettings.custom_supplements?.rules ?? []);
+  const snapshotSupplementRules = shift?.supplement_rules_snapshot?.rules ?? [];
 
-  // Always show the comparison section if there's any snapshot data
-  const showSnapshotComparison = hasAnySnapshot;
+  const currentSupplementsCount = currentSupplementRules.length;
+  const snapshotSupplementsCount = snapshotSupplementRules.length;
+
+  // Check if values actually differ
+  const wagesDiffer = hasWageSnapshot && snapshotWage !== currentWage;
+  const supplementsDiffer = hasSupplementSnapshot &&
+    !compareSupplementRules(snapshotSupplementRules, currentSupplementRules);
+
+  // Only show the comparison section if values actually differ
+  const showSnapshotComparison = wagesDiffer || supplementsDiffer;
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
@@ -423,7 +468,7 @@ export function ShiftDetails({
                     </p>
                   </div>
 
-                  {hasWageSnapshot && (
+                  {wagesDiffer && (
                     <div className="grid grid-cols-2 gap-3 text-sm">
                       <div className="space-y-1">
                         <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">
@@ -444,7 +489,7 @@ export function ShiftDetails({
                     </div>
                   )}
 
-                  {hasSupplementSnapshot && (
+                  {supplementsDiffer && (
                     <div className="grid grid-cols-2 gap-3 text-sm">
                       <div className="space-y-1">
                         <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">
@@ -464,6 +509,15 @@ export function ShiftDetails({
                       </div>
                     </div>
                   )}
+
+                  <Button
+                    onClick={handleClearSnapshots}
+                    disabled={clearingSnapshots}
+                    variant="default"
+                    className="w-full mt-3"
+                  >
+                    {clearingSnapshots ? `${t.pages.shifts.details.useCurrentRates}...` : t.pages.shifts.details.useCurrentRates}
+                  </Button>
                 </div>
               </>
             )}
