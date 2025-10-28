@@ -3,12 +3,15 @@
 import { Card } from '@appui/Card';
 import { Button } from '@appui/Button';
 import { Separator } from '@appui/Separator';
+import { Tabs, TabsList, TabsTrigger } from '@appui/Tabs';
 import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 import { createCheckoutSession } from '@/app/[locale]/(app)/settings/subscription/_actions/createCheckoutSession';
 import { ENV } from '@/lib/env';
 import type { Dictionary } from '@/lib/i18n/dictionaries/no';
+
+type BillingPeriod = 'monthly' | 'yearly';
 
 interface PlanCardProps {
   name: string;
@@ -18,10 +21,16 @@ interface PlanCardProps {
   isPopular?: boolean;
   onUpgrade: () => void;
   isLoading?: boolean;
+  billingPeriod: BillingPeriod;
+  showSavingsBadge?: boolean;
   t: Dictionary;
 }
 
-function PlanCard({ name, price, description, features, isPopular, onUpgrade, isLoading, t }: PlanCardProps) {
+function PlanCard({ name, price, description, features, isPopular, onUpgrade, isLoading, billingPeriod, showSavingsBadge, t }: PlanCardProps) {
+  const periodLabel = billingPeriod === 'monthly'
+    ? t.pages.settings.subscription.upgradePlans.perMonth
+    : t.pages.settings.subscription.upgradePlans.perYear;
+
   return (
     <Card
       className={cn(
@@ -43,9 +52,16 @@ function PlanCard({ name, price, description, features, isPopular, onUpgrade, is
           <p className="text-sm text-text-secondary mt-1">{description}</p>
         </div>
 
-        <div className="flex items-baseline gap-1">
-          <span className="text-4xl font-bold">{price}</span>
-          <span className="text-text-secondary">{t.pages.settings.subscription.upgradePlans.perMonth}</span>
+        <div className="space-y-2">
+          <div className="flex items-baseline gap-1">
+            <span className="text-4xl font-bold">{price}</span>
+            <span className="text-text-secondary">{periodLabel}</span>
+          </div>
+          {showSavingsBadge && billingPeriod === 'yearly' && (
+            <div className="inline-flex items-center bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-2 py-1 rounded-md text-xs font-medium">
+              {t.pages.settings.subscription.upgradePlans.saveBadge}
+            </div>
+          )}
         </div>
 
         <Separator />
@@ -78,6 +94,7 @@ interface UpgradeOptionsProps {
 
 export function UpgradeOptions({ t }: UpgradeOptionsProps) {
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
+  const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>('monthly');
 
   const handleUpgrade = async (planName: string, priceId: string) => {
     try {
@@ -99,6 +116,22 @@ export function UpgradeOptions({ t }: UpgradeOptionsProps) {
     }
   };
 
+  const getProPrice = () => billingPeriod === 'monthly'
+    ? t.pages.settings.subscription.upgradePlans.proPrice
+    : t.pages.settings.subscription.upgradePlans.proYearlyPrice;
+
+  const getMaxPrice = () => billingPeriod === 'monthly'
+    ? t.pages.settings.subscription.upgradePlans.maxPrice
+    : t.pages.settings.subscription.upgradePlans.maxYearlyPrice;
+
+  const getProPriceId = () => billingPeriod === 'monthly'
+    ? ENV.PRO_PRICE_ID!
+    : ENV.PRO_YEARLY_PRICE_ID!;
+
+  const getMaxPriceId = () => billingPeriod === 'monthly'
+    ? ENV.MAX_PRICE_ID!
+    : ENV.MAX_YEARLY_PRICE_ID!;
+
   return (
     <div className="space-y-6">
       <div>
@@ -108,24 +141,41 @@ export function UpgradeOptions({ t }: UpgradeOptionsProps) {
         </p>
       </div>
 
+      <div className="flex justify-center">
+        <Tabs value={billingPeriod} onValueChange={(value) => setBillingPeriod(value as BillingPeriod)}>
+          <TabsList>
+            <TabsTrigger value="monthly">
+              {t.pages.settings.subscription.upgradePlans.billingPeriodMonthly}
+            </TabsTrigger>
+            <TabsTrigger value="yearly">
+              {t.pages.settings.subscription.upgradePlans.billingPeriodYearly}
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
+
       <div className="flex flex-col gap-6">
         <PlanCard
           name={t.pages.settings.subscription.upgradePlans.proName}
-          price={t.pages.settings.subscription.upgradePlans.proPrice}
+          price={getProPrice()}
           description={t.pages.settings.subscription.upgradePlans.proDescription}
           features={t.pages.settings.subscription.upgradePlans.proFeatures}
           isPopular={true}
-          onUpgrade={() => handleUpgrade('Pro', ENV.PRO_PRICE_ID!)}
+          billingPeriod={billingPeriod}
+          showSavingsBadge={true}
+          onUpgrade={() => handleUpgrade('Pro', getProPriceId())}
           isLoading={loadingPlan === 'Pro'}
           t={t}
         />
 
         <PlanCard
           name={t.pages.settings.subscription.upgradePlans.maxName}
-          price={t.pages.settings.subscription.upgradePlans.maxPrice}
+          price={getMaxPrice()}
           description={t.pages.settings.subscription.upgradePlans.maxDescription}
           features={t.pages.settings.subscription.upgradePlans.maxFeatures}
-          onUpgrade={() => handleUpgrade('Max', ENV.MAX_PRICE_ID!)}
+          billingPeriod={billingPeriod}
+          showSavingsBadge={true}
+          onUpgrade={() => handleUpgrade('Max', getMaxPriceId())}
           isLoading={loadingPlan === 'Max'}
           t={t}
         />

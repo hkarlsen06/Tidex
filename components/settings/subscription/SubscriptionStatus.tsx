@@ -29,21 +29,30 @@ function formatDate(dateString: string | null, naText: string): string {
   return `${day}. ${month} ${year}`;
 }
 
-function getPlanInfo(priceId: string | null, t: any): { name: string; price: string } {
+function getPlanInfo(priceId: string | null, t: any): { name: string; price: string; period: string } {
   const tokens = t.pages.settings.subscription.status;
 
   if (priceId) {
     if (priceId === ENV.PRO_PRICE_ID) {
-      return { name: t.pages.settings.subscription.upgradePlans.proName, price: tokens.proPriceNew };
+      return { name: t.pages.settings.subscription.upgradePlans.proName, price: tokens.proPriceNew, period: tokens.pricePerMonth };
+    }
+    if (priceId === ENV.PRO_YEARLY_PRICE_ID) {
+      return { name: t.pages.settings.subscription.upgradePlans.proName, price: tokens.proYearlyPrice, period: tokens.pricePerYear };
     }
     if (LEGACY_PRO_PRICE_IDS.includes(priceId)) {
-      return { name: t.pages.settings.subscription.upgradePlans.proName, price: tokens.proPriceLegacy };
+      return { name: t.pages.settings.subscription.upgradePlans.proName, price: tokens.proPriceLegacy, period: tokens.pricePerMonth };
+    }
+    if (priceId === ENV.MAX_PRICE_ID) {
+      return { name: t.pages.settings.subscription.upgradePlans.maxName, price: tokens.maxPrice, period: tokens.pricePerMonth };
+    }
+    if (priceId === ENV.MAX_YEARLY_PRICE_ID) {
+      return { name: t.pages.settings.subscription.upgradePlans.maxName, price: tokens.maxYearlyPrice, period: tokens.pricePerYear };
+    }
+    if (LEGACY_MAX_PRICE_IDS.includes(priceId)) {
+      return { name: t.pages.settings.subscription.upgradePlans.maxName, price: tokens.maxPrice, period: tokens.pricePerMonth };
     }
   }
-  if (priceId && (priceId === ENV.MAX_PRICE_ID || LEGACY_MAX_PRICE_IDS.includes(priceId))) {
-    return { name: t.pages.settings.subscription.upgradePlans.maxName, price: tokens.maxPrice };
-  }
-  return { name: tokens.planUnknown, price: tokens.priceNA };
+  return { name: tokens.planUnknown, price: tokens.priceNA, period: '' };
 }
 
 function getStatusBadge(status: string, t: any) {
@@ -167,7 +176,7 @@ export function SubscriptionStatus({ subscription, isGrandfathered = false }: Su
 
           <div>
             <p className="text-sm text-text-secondary mb-1">{tokens.priceLabel}</p>
-            <p className="text-lg font-semibold">{planInfo.price}{tokens.pricePerMonth}</p>
+            <p className="text-lg font-semibold">{planInfo.price}{planInfo.period}</p>
           </div>
 
           {(subscription.current_period_end || subscription.cancel_at || subscription.canceled_at) && (
