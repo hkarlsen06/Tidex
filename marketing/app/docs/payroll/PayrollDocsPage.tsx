@@ -10,7 +10,7 @@ interface PayrollDocsType {
   badge: string;
   title: string;
   subtitle: string;
-  navigation: Array<{ id: string; label: string }>;
+  navigation: ReadonlyArray<{ readonly id: string; readonly label: string }>;
   bugReportCta: {
     heading: string;
     description: string;
@@ -18,7 +18,7 @@ interface PayrollDocsType {
     emailSubject: string;
     emailBody: string;
   };
-  sections: any[];
+  sections: readonly any[];
 }
 
 interface PayrollDocsPageProps {
