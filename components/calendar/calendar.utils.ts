@@ -1,3 +1,5 @@
+import { formatPlainAmount } from "@/lib/formatters";
+
 // calendar.utils.ts
 export type ISODate = `${number}-${number}-${number}`;
 
@@ -9,8 +11,7 @@ export const toISODate = (d: Date): ISODate => {
   return `${year}-${month}-${day}` as ISODate;
 };
 
-export const formatNOKInt = (n: number) =>
-  new Intl.NumberFormat("nb-NO", { maximumFractionDigits: 0 }).format(n);
+export const formatNOKInt = (n: number) => formatPlainAmount(n);
 
 export const initials = (name: string) =>
   name

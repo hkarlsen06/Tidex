@@ -12,6 +12,7 @@ import type { ISODate, EarningsByDate, HoursByDate } from "@/components/calendar
 import { cn } from "@/lib/cn";
 import { useTranslations } from "@/lib/i18n/client";
 import { getMonthlyTotals } from "@/lib/shifts/monthlyTotals";
+import { formatCurrency } from "@/lib/formatters";
 
 type MonthlyEarningsCalendarProps = {
   shifts: ShiftWithComputations[];
@@ -89,13 +90,6 @@ function buildHoursByDate(shifts: ShiftWithComputations[]): HoursByDate {
 
 function formatYear(date: Date): string {
   return date.getFullYear().toString();
-}
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat("nb-NO", {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value);
 }
 
 // Helper to get animation classes based on direction
@@ -212,7 +206,7 @@ export function MonthlyEarningsCalendar({
           key={`total-${month.getFullYear()}-${month.getMonth()}`}
           className={`font-semibold text-text-primary ${getAnimationClasses(localDirection)}`}
         >
-          {formatCurrency(totalEarnings)} kr
+          {formatCurrency(totalEarnings)}
         </div>
       </CardHeader>
       <div className="pb-6">

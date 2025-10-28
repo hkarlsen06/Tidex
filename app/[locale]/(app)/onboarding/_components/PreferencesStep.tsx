@@ -6,6 +6,7 @@ import { Button } from "@appui/Button";
 import { Separator } from "@appui/Separator";
 import { IconListDetails, IconCalendarWeek, IconSun, IconMoon, IconScreenShare } from '@tabler/icons-react';
 import { cn } from '@/lib/utils';
+import { formatPlainAmount } from '@/lib/formatters';
 import { useTranslations } from '@/lib/i18n/client';
 
 interface PreferencesStepProps {
@@ -166,7 +167,7 @@ export function PreferencesStep({
                   className="w-full"
                   onClick={() => setMonthlyGoal(value)}
                 >
-                  {new Intl.NumberFormat("nb-NO").format(numericValue)} {t.onboarding.preferencesStep.currency}
+                  {formatPlainAmount(numericValue)} {t.onboarding.preferencesStep.currency}
                 </Button>
               );
             })}

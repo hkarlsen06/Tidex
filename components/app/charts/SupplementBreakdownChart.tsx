@@ -8,15 +8,11 @@ import {
 } from "@/components/ui/chart";
 import { SupplementBreakdown } from "@/data-access/stats";
 import { useTranslations } from "@/lib/i18n/client";
+import { formatCurrency } from "@/lib/formatters";
 
 type SupplementBreakdownChartProps = {
   data: SupplementBreakdown;
 };
-
-const numberFormatter = new Intl.NumberFormat("nb-NO", {
-  minimumFractionDigits: 0,
-  maximumFractionDigits: 0,
-});
 
 export function SupplementBreakdownChart({ data }: SupplementBreakdownChartProps) {
   const { t } = useTranslations();
@@ -49,7 +45,7 @@ export function SupplementBreakdownChart({ data }: SupplementBreakdownChartProps
       <div className="flex flex-col items-center justify-center h-[280px] gap-4">
         <div className="text-center">
           <p className="text-2xl font-bold text-text-primary mb-2">
-            {numberFormatter.format(data.basePay)} kr
+            {formatCurrency(data.basePay)}
           </p>
           <p className="text-base text-text-muted">
             {t.components.charts.supplementBreakdown.percentBasePay}
@@ -86,7 +82,7 @@ export function SupplementBreakdownChart({ data }: SupplementBreakdownChartProps
         {/* Total earnings */}
         <div>
           <p className="text-2xl font-bold text-text-primary tabular-nums">
-            {numberFormatter.format(totalEarnings)} kr
+            {formatCurrency(totalEarnings)}
           </p>
         </div>
 
@@ -120,7 +116,7 @@ export function SupplementBreakdownChart({ data }: SupplementBreakdownChartProps
                 className="min-w-[200px] p-4"
                 hideLabel
                 formatter={(value, _name, item) => {
-                  const amount = numberFormatter.format(value as number);
+                  const amount = formatCurrency(value as number);
                   const percentage = (item.payload.percentage as number).toFixed(1);
                   const label = item.payload.label as string;
                   return (
@@ -128,7 +124,7 @@ export function SupplementBreakdownChart({ data }: SupplementBreakdownChartProps
                       <span className="text-lg font-semibold">{label}</span>
                       <div className="flex items-baseline gap-2">
                         <span className="font-mono font-semibold text-base tabular-nums">
-                          {amount} kr
+                          {amount}
                         </span>
                         <span className="text-muted-foreground text-sm">
                           ({percentage}%)

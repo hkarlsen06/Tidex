@@ -11,20 +11,12 @@ import { getRelativeTime } from "@/lib/utils/relativeTime";
 import { useMonth } from "./MonthContext";
 import { useTranslations } from "@/lib/i18n/client";
 import { summarizeShiftTotals } from "@/lib/shifts/monthlyTotals";
+import { formatCurrency } from "@/lib/formatters";
 
 type HomeContentProps = {
   shifts: ShiftWithComputations[];
   settings: UserSettings;
 };
-
-const numberFormatter = new Intl.NumberFormat("nb-NO", {
-  minimumFractionDigits: 0,
-  maximumFractionDigits: 0,
-});
-
-function formatCurrency(value: number): string {
-  return `${numberFormatter.format(Math.round(value))} kr`;
-}
 
 function calculateMonthData(
   shiftsByMonth: Map<string, ShiftWithComputations[]>,

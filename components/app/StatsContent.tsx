@@ -12,6 +12,7 @@ import { MonthPicker } from "@/components/app/MonthPicker";
 import { useMonth } from "@/components/app/MonthContext";
 import { useTranslations } from "@/lib/i18n/client";
 import { useParams } from "next/navigation";
+import { formatCurrency, formatNumber } from "@/lib/formatters";
 
 /**
  * Chart data type - matches what the /api/stats/charts endpoint returns
@@ -66,31 +67,18 @@ type StatsContentProps = {
   data: StatsData;
 };
 
-const numberFormatter = new Intl.NumberFormat("nb-NO", {
-  minimumFractionDigits: 0,
-  maximumFractionDigits: 0,
-});
-
-const compactFormatter = new Intl.NumberFormat("nb-NO", {
-  minimumFractionDigits: 0,
-  maximumFractionDigits: 0,
-  notation: "compact",
-});
-
-const hourFormatter = new Intl.NumberFormat("nb-NO", {
-  minimumFractionDigits: 0,
-  maximumFractionDigits: 1,
-});
-
-function formatCurrency(value: number, compact = false): string {
+function formatCurrencyValue(value: number, compact = false): string {
   if (compact && value >= 100000) {
-    return compactFormatter.format(Math.round(value));
+    return formatCurrency(value, { display: "none", notation: "compact" });
   }
-  return numberFormatter.format(Math.round(value));
+  return formatCurrency(value, { display: "none" });
 }
 
 function formatHours(value: number): string {
-  return hourFormatter.format(value);
+  return formatNumber(value, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 1,
+  });
 }
 
 type StatCardProps = {
@@ -290,7 +278,7 @@ export function StatsContent({ data }: StatsContentProps) {
             </p>
             <div className="flex items-baseline gap-2">
               <p className="text-5xl font-bold tabular-nums text-text-primary">
-                {isEarningsZero ? '---' : formatCurrency(displayedEarnings, true)}
+                {isEarningsZero ? '---' : formatCurrencyValue(displayedEarnings, true)}
               </p>
               {!isEarningsZero && <p className="text-2xl font-medium text-text-secondary">{t.common.currency}</p>}
             </div>
@@ -300,7 +288,7 @@ export function StatsContent({ data }: StatsContentProps) {
                   {t.pages.stats.cards.afterTax}
                 </p>
                 <p className="text-sm text-text-muted">
-                  {t.pages.stats.cards.beforeTax}: {formatCurrency(grossEarnings, true)} {t.common.currency}
+                  {t.pages.stats.cards.beforeTax}: {formatCurrencyValue(grossEarnings, true)} {t.common.currency}
                 </p>
               </div>
             )}
@@ -391,7 +379,7 @@ export function StatsContent({ data }: StatsContentProps) {
       {/* Average hourly rate */}
       <StatCard
         label={t.pages.stats.cards.average}
-        value={formatCurrency(selectedAverageRate, true)}
+        value={formatCurrencyValue(selectedAverageRate, true)}
         suffix={t.common.perHour}
         icon={<DollarSign className="w-4 h-4" />}
       />
@@ -460,7 +448,7 @@ export function StatsContent({ data }: StatsContentProps) {
             <>
               <StatCard
                 label={t.pages.stats.cards.total}
-                value={formatCurrency(chartData.yearToDate.totalEarnings)}
+                value={formatCurrencyValue(chartData.yearToDate.totalEarnings)}
                 suffix={t.common.currency}
               />
               <StatCard

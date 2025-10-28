@@ -7,6 +7,7 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart";
 import { YearlyCumulativeData } from "@/data-access/stats";
+import { formatCurrency } from "@/lib/formatters";
 
 type YearlyCumulativeChartProps = {
   data: YearlyCumulativeData[];
@@ -124,11 +125,11 @@ export function YearlyCumulativeChart({ data }: YearlyCumulativeChartProps) {
                 return label;
               }}
               formatter={(value, name) => {
-                const amount = Math.round(value as number).toLocaleString('nb-NO');
+                const amount = formatCurrency(value as number);
                 const label = name === "projected" ? "Projisert totalt" : "Totalt";
                 return (
                   <div className="flex items-center gap-2">
-                    <span className="font-mono font-semibold text-base tabular-nums">{amount} kr</span>
+                    <span className="font-mono font-semibold text-base tabular-nums">{amount}</span>
                     <span className="text-muted-foreground text-base">{label}</span>
                   </div>
                 );

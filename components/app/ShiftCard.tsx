@@ -4,38 +4,24 @@ import { ShiftWithComputations } from "@/lib/payroll";
 import { Card, CardHeader } from "@/components/app/Card";
 import { cn } from "@/lib/cn";
 import { useTranslations } from "@/lib/i18n/client";
+import {
+  formatCurrency as formatCurrencyValue,
+  formatPlainAmount as formatPlainAmountValue,
+  formatHours as formatHoursValue,
+} from "@/lib/formatters";
+import { getDateFormatter } from "@/lib/i18n/locale";
 
 type ShiftCardProps = {
   shift: ShiftWithComputations;
   onClick?: () => void;
 };
 
-const numberFormatter = new Intl.NumberFormat("nb-NO", {
-  minimumFractionDigits: 0,
-  maximumFractionDigits: 0,
-});
-
-const hoursFormatter = new Intl.NumberFormat("nb-NO", {
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
-
-// Map our locale codes to BCP 47 locale tags for Intl.DateTimeFormat
-function getDateLocale(locale: string): string {
-  const localeMap: Record<string, string> = {
-    no: 'nb-NO',
-    en: 'en-US',
-    de: 'de-DE',
-  };
-  return localeMap[locale] || 'en-US';
-}
-
 export function formatDateParts(date: string, locale: string, daysShort: readonly string[]) {
   const parsed = new Date(`${date}T00:00:00Z`);
   const weekday = parsed.getUTCDay();
 
   // Use Intl.DateTimeFormat for locale-aware date formatting (consistent with NextPayrollCard)
-  const dateFormatter = new Intl.DateTimeFormat(getDateLocale(locale), {
+  const dateFormatter = getDateFormatter(locale, {
     day: "numeric",
     month: "long",
   });
@@ -53,15 +39,15 @@ export function formatTimeRange(start: string, end: string) {
 }
 
 export function formatHours(value: number) {
-  return `${hoursFormatter.format(value)}t`;
+  return formatHoursValue(value);
 }
 
 export function formatCurrency(value: number) {
-  return `${numberFormatter.format(Math.round(value))} kr`;
+  return formatCurrencyValue(value);
 }
 
 export function formatPlainAmount(value: number) {
-  return numberFormatter.format(Math.round(value));
+  return formatPlainAmountValue(value);
 }
 
 export function ShiftCard({ shift, onClick }: ShiftCardProps) {

@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/chart";
 import { DailyCumulativeData } from "@/data-access/stats";
 import { useTranslations } from "@/lib/i18n/client";
+import { formatCurrency } from "@/lib/formatters";
 
 type MonthlyCumulativeChartProps = {
   data: DailyCumulativeData[];
@@ -133,18 +134,18 @@ export function MonthlyCumulativeChart({ data }: MonthlyCumulativeChartProps) {
                 const isCurrent = name === "currentMonthActual" || name === "currentMonthProjected";
 
                 if (isCurrent) {
-                  const amount = Math.round(data.currentMonth).toLocaleString('nb-NO');
+                  const amount = formatCurrency(data.currentMonth);
                   return (
                     <div className="flex flex-col gap-1">
                       <div className="flex items-center gap-2">
-                        <span className="font-mono font-semibold text-base tabular-nums">{amount} kr</span>
+                        <span className="font-mono font-semibold text-base tabular-nums">{amount}</span>
                         <span className="text-muted-foreground text-base">
                           {data.isFuture ? t.components.charts.monthlyCumulative.projected : t.components.charts.monthlyCumulative.thisMonth}
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="font-mono text-sm tabular-nums text-muted-foreground">
-                          {Math.round(data.lastMonth).toLocaleString('nb-NO')} kr
+                          {formatCurrency(data.lastMonth)}
                         </span>
                         <span className="text-muted-foreground text-sm">{t.components.charts.monthlyCumulative.lastMonthShort}</span>
                       </div>
