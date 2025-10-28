@@ -38,6 +38,7 @@ export function LandingPage({ locale, dictionary, path = '' }: LandingPageProps)
   const faqs = marketing.faq.items;
   const privacyHref = buildLocalizedMarketingPath(locale, '/privacy');
   const termsHref = buildLocalizedMarketingPath(locale, '/terms');
+  const payrollDocsHref = '/docs/payroll'; // English-only route
   const mailtoHref = `mailto:${dictionary.legal.contactEmail}?subject=${encodeURIComponent(marketing.contact.emailSubject)}&body=${encodeURIComponent(marketing.contact.emailBody)}`;
 
   return (
@@ -229,8 +230,12 @@ export function LandingPage({ locale, dictionary, path = '' }: LandingPageProps)
       </section>
 
       <footer className="px-6 pb-10">
-        <div className="mx-auto w-full max-w-6xl space-y-2 text-center">
-          <div className="flex items-center justify-center gap-3 text-sm">
+        <div className="mx-auto w-full max-w-6xl space-y-3 text-center">
+          <div className="flex items-center justify-center gap-3 text-sm flex-wrap">
+            <Link href={payrollDocsHref} className="text-text-secondary hover:text-text-primary transition-colors font-medium">
+              {marketing.footer.payrollDocs}
+            </Link>
+            <span className="text-text-muted">•</span>
             <Link href={privacyHref} className="text-text-secondary hover:text-text-primary transition-colors">
               {marketing.footer.privacy}
             </Link>

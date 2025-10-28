@@ -110,6 +110,7 @@ export const marketingEn = {
     emailBody: 'Hi!\n\nI have a question about ...',
   },
   footer: {
+    payrollDocs: 'Payroll Documentation',
     privacy: 'Privacy policy',
     terms: 'Terms of use',
     copyright: '© 2025 Hjalmar Kristensen-Karlsen',
