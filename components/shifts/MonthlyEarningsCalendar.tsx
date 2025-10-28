@@ -149,16 +149,33 @@ export function MonthlyEarningsCalendar({
   }, [month, prevMonth]);
 
   // Filter shifts once per month change
+  // Include shifts from previous and next month to show on "outside days"
   const monthlyShifts = useMemo(() => {
     const targetMonth = month.getMonth();
     const targetYear = month.getFullYear();
 
+    // Get first day of current month
+    const firstDayOfMonth = new Date(targetYear, targetMonth, 1);
+    // Get last day of current month
+    const lastDayOfMonth = new Date(targetYear, targetMonth + 1, 0);
+
+    // Calculate how many days from previous month are shown
+    // (days before the first Monday/week start)
+    const firstWeekday = firstDayOfMonth.getDay();
+    const daysFromPrevMonth = firstWeekday === 0 ? 6 : firstWeekday - 1; // Monday is week start
+
+    // Calculate how many days from next month are shown
+    // (days after the last day to complete the last week)
+    const lastWeekday = lastDayOfMonth.getDay();
+    const daysFromNextMonth = lastWeekday === 0 ? 0 : 7 - lastWeekday;
+
+    // Create date range that includes outside days
+    const rangeStart = new Date(targetYear, targetMonth, 1 - daysFromPrevMonth);
+    const rangeEnd = new Date(targetYear, targetMonth + 1, daysFromNextMonth);
+
     return shifts.filter((shift) => {
-      const shiftDate = new Date(`${shift.shift_date}T00:00:00Z`);
-      return (
-        shiftDate.getUTCMonth() === targetMonth &&
-        shiftDate.getUTCFullYear() === targetYear
-      );
+      const shiftDate = new Date(`${shift.shift_date}T00:00:00`);
+      return shiftDate >= rangeStart && shiftDate <= rangeEnd;
     });
   }, [shifts, month]);
 
