@@ -76,40 +76,43 @@ export function SupplementBreakdownChart({ data }: SupplementBreakdownChartProps
   const totalEarnings = data.basePay + data.supplementPay;
 
   return (
-    <div className="flex items-center gap-8 h-[280px] w-full pl-4">
-      {/* Left side: Total and legend */}
-      <div className="flex flex-col gap-5 flex-shrink-0">
-        {/* Total earnings */}
-        <div>
-          <p className="text-2xl font-bold text-text-primary tabular-nums">
-            {formatCurrency(totalEarnings)}
-          </p>
-        </div>
+    <div className="flex items-center gap-4 sm:gap-6 w-full h-[180px] sm:h-[200px]">
+      {/* Left cell: Total and legend - centered, takes remaining space */}
+      <div className="flex-1 flex items-center justify-center">
+        <div className="flex flex-col gap-2.5 sm:gap-3">
+          {/* Total earnings */}
+          <div>
+            <p className="text-xl sm:text-2xl font-bold text-text-primary tabular-nums">
+              {formatCurrency(totalEarnings)}
+            </p>
+          </div>
 
-        {/* Legend items */}
-        <div className="flex flex-col gap-3">
-          {chartData.map((item, index) => (
-            <div key={`legend-${index}`} className="flex items-center gap-2.5">
-              <div
-                className="w-3 h-3 rounded-full flex-shrink-0"
-                style={{
-                  backgroundColor: item.name === "basePay"
-                    ? chartConfig.basePay.color
-                    : chartConfig.supplementPay.color
-                }}
-              />
-              <span className="text-sm text-text-secondary whitespace-nowrap">
-                {item.label} ({item.percentage.toFixed(1)}%)
-              </span>
-            </div>
-          ))}
+          {/* Legend items */}
+          <div className="flex flex-col gap-1.5 sm:gap-2">
+            {chartData.map((item, index) => (
+              <div key={`legend-${index}`} className="flex items-center gap-2">
+                <div
+                  className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full flex-shrink-0"
+                  style={{
+                    backgroundColor: item.name === "basePay"
+                      ? chartConfig.basePay.color
+                      : chartConfig.supplementPay.color
+                  }}
+                />
+                <span className="text-xs sm:text-sm text-text-secondary whitespace-nowrap">
+                  {item.label} ({item.percentage.toFixed(1)}%)
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* Right side: Pie chart */}
-      <div className="relative flex-1 h-full">
-        <ChartContainer config={chartConfig} className="h-full w-full">
-        <PieChart>
+      {/* Right cell: Pie chart - takes full height, width determined by aspect ratio */}
+      <div className="flex items-center justify-center h-full">
+        <div className="relative h-full aspect-square">
+          <ChartContainer config={chartConfig} className="h-full w-full">
+          <PieChart>
           <ChartTooltip
             content={
               <ChartTooltipContent
@@ -142,8 +145,8 @@ export function SupplementBreakdownChart({ data }: SupplementBreakdownChartProps
             nameKey="name"
             cx="50%"
             cy="50%"
-            innerRadius={70}
-            outerRadius={105}
+            innerRadius="35%"
+            outerRadius="55%"
             paddingAngle={2}
             strokeWidth={0}
           >
@@ -160,6 +163,7 @@ export function SupplementBreakdownChart({ data }: SupplementBreakdownChartProps
           </Pie>
         </PieChart>
       </ChartContainer>
+        </div>
       </div>
     </div>
   );
