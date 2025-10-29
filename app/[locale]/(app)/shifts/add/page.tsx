@@ -33,7 +33,7 @@ export default async function AddShiftsPage({ params }: AddShiftsPageProps) {
   const { user } = await verifySession();
 
   // Load user settings via DAL
-  const userSettings: UserSettings = (await getUserSettings()) ?? {};
+  const userSettings: UserSettings = (await getUserSettings(user.id)) ?? {};
 
   const supabase = await createSupabaseServerClient();
 

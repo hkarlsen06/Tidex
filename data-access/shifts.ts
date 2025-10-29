@@ -214,11 +214,13 @@ async function getComputedShiftsInternal(
 /**
  * Get computed shifts with pagination and caching
  * - Uses React cache() for request deduplication within a single request
+ * - Cache is scoped by userId to prevent cross-user data leaks
  * - Supports date range filtering and limits
- * - Automatically verifies user session
+ * - Automatically verifies user session matches provided userId
  * - Use this in Server Components and Server Actions
  */
 export const getComputedShifts = cache(async (
+  userId: string,
   options: ShiftLoadOptions = {}
 ): Promise<{
   shifts: ShiftWithComputations[],
@@ -227,6 +229,12 @@ export const getComputedShifts = cache(async (
   aggregates: ShiftsAggregates
 }> => {
   const { user } = await verifySession();
+
+  // SECURITY: Verify the provided userId matches the authenticated user
+  if (user.id !== userId) {
+    throw new Error('User ID mismatch - potential security violation');
+  }
+
   return getComputedShiftsInternal(user.id, options);
 });
 

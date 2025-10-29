@@ -36,11 +36,17 @@ export interface SubscriptionData {
 
 /**
  * Get user subscription for the authenticated user
- * - Automatically verifies user session
+ * - Automatically verifies user session matches provided userId
  */
-export async function getUserSubscription(): Promise<Subscription | null> {
+export async function getUserSubscription(userId: string): Promise<Subscription | null> {
   try {
     const { user } = await verifySession();
+
+    // SECURITY: Verify the provided userId matches the authenticated user
+    if (user.id !== userId) {
+      throw new Error('User ID mismatch - potential security violation');
+    }
+
     const supabase = await createSupabaseServerClient();
 
     const { data, error } = await supabase
@@ -67,11 +73,17 @@ export async function getUserSubscription(): Promise<Subscription | null> {
 
 /**
  * Get user subscription data including profile for the authenticated user
- * - Automatically verifies user session
+ * - Automatically verifies user session matches provided userId
  */
-export async function getUserSubscriptionData(): Promise<SubscriptionData> {
+export async function getUserSubscriptionData(userId: string): Promise<SubscriptionData> {
   try {
     const { user } = await verifySession();
+
+    // SECURITY: Verify the provided userId matches the authenticated user
+    if (user.id !== userId) {
+      throw new Error('User ID mismatch - potential security violation');
+    }
+
     const supabase = await createSupabaseServerClient();
 
     // Fetch both subscription and profile data

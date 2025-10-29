@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const data = await getStatsDataForApi({ year, month, locale: localeParam as Locale });
+    const data = await getStatsDataForApi(session.user.id, { year, month, locale: localeParam as Locale });
     return NextResponse.json(data, {
       headers: {
         // Cache for 5 minutes (300 seconds)

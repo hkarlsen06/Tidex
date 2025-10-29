@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { connection } from "next/server";
+import { verifySession } from '@/data-access/auth';
 import { getUserProfile } from '@/data-access/settings';
 import { ProfileForm } from '@components/settings/profile/ProfileForm';
 import { PhoneConnectionCard } from '@components/settings/profile/PhoneConnectionCard';
@@ -30,7 +31,10 @@ export default async function ProfilePage({
   const { locale } = await params;
   const t = getTranslations(locale as Locale);
 
-  const profile = await getUserProfile();
+  // Verify authentication and get user
+  const { user } = await verifySession();
+
+  const profile = await getUserProfile(user.id);
 
   return (
     <div className="container mx-auto py-8 max-w-2xl">

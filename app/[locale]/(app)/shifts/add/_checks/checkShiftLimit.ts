@@ -24,7 +24,7 @@ export async function checkShiftLimit(targetMonth: string): Promise<ShiftLimitCh
   const supabase = await createSupabaseServerClient();
 
   // Fetch subscription status
-  const { subscription, profile } = await getUserSubscriptionData();
+  const { subscription, profile } = await getUserSubscriptionData(user.id);
 
   const isFreeTier = !hasProAccess(subscription, profile);
 

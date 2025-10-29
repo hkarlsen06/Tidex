@@ -1,6 +1,5 @@
 // lib/supabase/server.ts
 import "server-only";
-import { cache } from "react";
 import { cookies } from "next/headers";
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import type { NextRequest, NextResponse } from "next/server";
@@ -70,9 +69,9 @@ const isReadonlyCookiesError = (err: unknown) =>
  * - Uses new cookies adapter (getAll/setAll) to avoid deprecated signature
  * - Does NOT override cookie name; Supabase will use sb-<project-ref>-auth-token.*
  * - Safely ignores writes when running in a read-only context
- * - Wrapped with React cache() to deduplicate requests within the same render
+ * - Creates fresh client per call to ensure proper user isolation (SECURITY)
  */
-export const createSupabaseServerClient = cache(async () => {
+export async function createSupabaseServerClient() {
   const store = await cookies();
 
   return createServerClient(ENV.URL!, ENV.PUBLISHABLE!, {
@@ -100,7 +99,7 @@ export const createSupabaseServerClient = cache(async () => {
       },
     },
   });
-});
+}
 
 /**
  * Route Handlers (can write headers/cookies on the response)

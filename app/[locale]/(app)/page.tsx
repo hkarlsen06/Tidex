@@ -44,7 +44,7 @@ export default async function Home({ params }: HomeProps) {
   const prevMonth = getPreviousYearMonth();
   const nextMonth = getNextYearMonth();
 
-  const { shifts, settings } = await getComputedShifts({
+  const { shifts, settings } = await getComputedShifts(user.id, {
     startDate: getMonthStart(prevMonth.year, prevMonth.month),
     endDate: getMonthEnd(nextMonth.year, nextMonth.month),
     limit: 150 // Accommodate up to ~50 shifts per month across 3 months

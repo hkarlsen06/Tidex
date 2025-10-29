@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { connection } from "next/server";
+import { verifySession } from '@/data-access/auth';
 import { getUserSubscriptionData } from '@/data-access/subscription';
 import { SubscriptionStatus } from '@/components/settings/subscription/SubscriptionStatus';
 import { EarlySupporterStatus } from '@/components/settings/subscription/EarlySupporterStatus';
@@ -30,7 +31,10 @@ export default async function SubscriptionPage({
   const { locale } = await params;
   const t = getTranslations(locale as Locale);
 
-  const { subscription, profile } = await getUserSubscriptionData();
+  // Verify authentication and get user
+  const { user } = await verifySession();
+
+  const { subscription, profile } = await getUserSubscriptionData(user.id);
 
   // Check if user is an early supporter (before paywall)
   const isEarlySupporter = profile?.before_paywall === true;
