@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect, type Ref } from "react";
+import { useMemo, useState, useEffect, useRef, useCallback, type Ref, type MutableRefObject } from "react";
 import { IconClock, IconCopy, IconArrowsExchange, IconInfoCircle } from "@tabler/icons-react";
 import { ShiftsCalendar } from "@/components/app/ShiftsCalendar";
 import { Card, CardHeader } from "@/components/app/Card";
@@ -105,6 +105,19 @@ function getAnimationClasses(direction: 'next' | 'previous' | null): string {
   }
 }
 
+function assignRef<T>(ref: Ref<T> | undefined, value: T) {
+  if (!ref) {
+    return;
+  }
+
+  if (typeof ref === "function") {
+    ref(value);
+    return;
+  }
+
+  (ref as MutableRefObject<T>).current = value;
+}
+
 export function MonthlyEarningsCalendar({
   shifts,
   month,
@@ -126,18 +139,200 @@ export function MonthlyEarningsCalendar({
   const { goToPreviousMonth, goToNextMonth } = useMonth();
   const [viewMode, setViewMode] = useState<"money" | "hours">("money");
   const [localDirection, setLocalDirection] = useState<'next' | 'previous' | null>(null);
-  const [prevMonth, setPrevMonth] = useState(month);
+  const internalCardRef = useRef<HTMLDivElement | null>(null);
+  const swipeAreaRef = useRef<HTMLDivElement | null>(null);
+  const suppressClickRef = useRef(false);
+  const swipeResetTimeoutRef = useRef<number | null>(null);
+  const [swipeEnabled, setSwipeEnabled] = useState(false);
 
-  // Track month changes and determine direction locally
-  useEffect(() => {
-    if (month.getTime() !== prevMonth.getTime()) {
-      const isForward = month > prevMonth;
-      // Note: These setState calls are intentional to trigger animation state changes when month prop changes
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setLocalDirection(isForward ? 'next' : 'previous');
-      setPrevMonth(month);
+  const setCombinedCardRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      internalCardRef.current = node;
+      assignRef(containerRef, node);
+    },
+    [containerRef]
+  );
+
+  const handleGoToPreviousMonth = useCallback(() => {
+    setLocalDirection('previous');
+    goToPreviousMonth();
+  }, [goToPreviousMonth]);
+
+  const handleGoToNextMonth = useCallback(() => {
+    setLocalDirection('next');
+    goToNextMonth();
+  }, [goToNextMonth]);
+
+  const handleCalendarMonthChange = useCallback((nextMonth: Date) => {
+    const normalizedNext = new Date(nextMonth.getFullYear(), nextMonth.getMonth(), 1);
+    const normalizedCurrent = new Date(month.getFullYear(), month.getMonth(), 1);
+
+    if (normalizedNext.getTime() !== normalizedCurrent.getTime()) {
+      setLocalDirection(normalizedNext > normalizedCurrent ? 'next' : 'previous');
     }
-  }, [month, prevMonth]);
+
+    onMonthChange(nextMonth);
+  }, [month, onMonthChange]);
+
+  const handleCalendarDayClick = useCallback(
+    (isoDate: ISODate, hasShifts: boolean) => {
+      if (suppressClickRef.current) {
+        suppressClickRef.current = false;
+        return;
+      }
+
+      onDayClick?.(isoDate, hasShifts);
+    },
+    [onDayClick]
+  );
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const mediaQuery = window.matchMedia("(pointer: coarse)");
+    const update = () => setSwipeEnabled(mediaQuery.matches);
+
+    update();
+
+    if (typeof mediaQuery.addEventListener === "function") {
+      mediaQuery.addEventListener("change", update);
+      return () => mediaQuery.removeEventListener("change", update);
+    }
+
+    mediaQuery.addListener(update);
+    return () => mediaQuery.removeListener(update);
+  }, []);
+
+  useEffect(() => {
+    if (!swipeEnabled) {
+      return;
+    }
+
+    const node = swipeAreaRef.current;
+    if (!node) {
+      return;
+    }
+
+    const SWIPE_DISTANCE_THRESHOLD = 60;
+    const SWIPE_VERTICAL_LIMIT = 80;
+    const SWIPE_ALLOWED_TIME = 600;
+    const HORIZONTAL_ACTIVATION_DISTANCE = 10;
+
+    let pointerId: number | null = null;
+    let startX = 0;
+    let startY = 0;
+    let startTime = 0;
+    let isHorizontalGesture = false;
+
+    const reset = () => {
+      pointerId = null;
+      startX = 0;
+      startY = 0;
+      startTime = 0;
+      isHorizontalGesture = false;
+    };
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (event.pointerType !== "touch") {
+        return;
+      }
+
+      pointerId = event.pointerId;
+      startX = event.clientX;
+      startY = event.clientY;
+      startTime = event.timeStamp;
+      isHorizontalGesture = false;
+    };
+
+    const handlePointerMove = (event: PointerEvent) => {
+      if (pointerId === null || event.pointerId !== pointerId || event.pointerType !== "touch") {
+        return;
+      }
+
+      const deltaX = event.clientX - startX;
+      const deltaY = event.clientY - startY;
+
+      if (!isHorizontalGesture) {
+        if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > HORIZONTAL_ACTIVATION_DISTANCE) {
+          reset();
+          return;
+        }
+
+        if (Math.abs(deltaX) > HORIZONTAL_ACTIVATION_DISTANCE) {
+          isHorizontalGesture = true;
+        }
+      }
+    };
+
+    const triggerSwipe = (direction: "next" | "previous") => {
+      suppressClickRef.current = true;
+
+      if (swipeResetTimeoutRef.current !== null) {
+        window.clearTimeout(swipeResetTimeoutRef.current);
+      }
+
+      swipeResetTimeoutRef.current = window.setTimeout(() => {
+        suppressClickRef.current = false;
+        swipeResetTimeoutRef.current = null;
+      }, 250);
+
+      if (direction === "next") {
+        handleGoToNextMonth();
+      } else {
+        handleGoToPreviousMonth();
+      }
+    };
+
+    const handlePointerUp = (event: PointerEvent) => {
+      if (pointerId === null || event.pointerId !== pointerId || event.pointerType !== "touch") {
+        reset();
+        return;
+      }
+
+      const elapsed = event.timeStamp - startTime;
+      const deltaX = event.clientX - startX;
+      const deltaY = event.clientY - startY;
+
+      if (
+        isHorizontalGesture &&
+        elapsed <= SWIPE_ALLOWED_TIME &&
+        Math.abs(deltaX) >= SWIPE_DISTANCE_THRESHOLD &&
+        Math.abs(deltaY) <= SWIPE_VERTICAL_LIMIT
+      ) {
+        triggerSwipe(deltaX < 0 ? "next" : "previous");
+      }
+
+      reset();
+    };
+
+    const handlePointerCancel = () => {
+      reset();
+    };
+
+    node.addEventListener("pointerdown", handlePointerDown);
+    node.addEventListener("pointermove", handlePointerMove);
+    node.addEventListener("pointerup", handlePointerUp);
+    node.addEventListener("pointercancel", handlePointerCancel);
+    node.addEventListener("pointerleave", handlePointerCancel);
+
+    return () => {
+      node.removeEventListener("pointerdown", handlePointerDown);
+      node.removeEventListener("pointermove", handlePointerMove);
+      node.removeEventListener("pointerup", handlePointerUp);
+      node.removeEventListener("pointercancel", handlePointerCancel);
+      node.removeEventListener("pointerleave", handlePointerCancel);
+    };
+  }, [handleGoToNextMonth, handleGoToPreviousMonth, swipeEnabled]);
+
+  useEffect(() => {
+    return () => {
+      if (swipeResetTimeoutRef.current !== null) {
+        window.clearTimeout(swipeResetTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Filter shifts once per month change
   // Include shifts from previous and next month to show on "outside days"
@@ -192,13 +387,13 @@ export function MonthlyEarningsCalendar({
   }, [monthlyShifts, month]);
 
   return (
-    <Card ref={containerRef} className="rounded-card border-0">
+    <Card ref={setCombinedCardRef} className="rounded-card border-0">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 py-3 px-0">
         <div className="flex items-center gap-1">
           <MonthPicker
             month={month}
-            onPreviousMonth={goToPreviousMonth}
-            onNextMonth={goToNextMonth}
+            onPreviousMonth={handleGoToPreviousMonth}
+            onNextMonth={handleGoToNextMonth}
           />
           <span className="font-medium text-text-muted ml-1">{formatYear(month)}</span>
         </div>
@@ -209,14 +404,14 @@ export function MonthlyEarningsCalendar({
           {formatCurrency(totalEarnings)}
         </div>
       </CardHeader>
-      <div className="pb-6">
+      <div className="pb-6" ref={swipeAreaRef}>
         <ShiftsCalendar
           month={month}
           mode={viewMode}
           earningsByDate={earningsByDate}
           hoursByDate={hoursByDate}
-          onMonthChange={onMonthChange}
-          onDayClick={onDayClick}
+          onMonthChange={handleCalendarMonthChange}
+          onDayClick={handleCalendarDayClick}
           selectedDate={selectedDate}
           weekNumberPosition="top-left"
         />
