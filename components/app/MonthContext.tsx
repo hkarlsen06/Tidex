@@ -31,28 +31,28 @@ export function MonthProvider({ children }: { children: ReactNode }) {
   const [selectedMonth, setSelectedMonthState] = useState<Date>(initialMonth);
   const [direction, setDirection] = useState<'next' | 'previous' | null>(null);
 
-  // Restore from localStorage after mount (client-side only)
+  // Restore from sessionStorage after mount (client-side only)
   useEffect(() => {
-    const stored = localStorage.getItem("selectedMonth");
+    const stored = sessionStorage.getItem("selectedMonth");
     if (stored) {
       try {
         const restoredMonth = deserializeMonth(stored);
         // Only update if different from initial month to avoid unnecessary re-renders
         if (restoredMonth.getTime() !== initialMonth.getTime()) {
           // Note: This setState in effect is intentional - we restore persisted state
-          // after SSR hydration to sync with localStorage. This only runs once on mount.
+          // after SSR hydration to sync with sessionStorage. This only runs once on mount.
           setSelectedMonthState(restoredMonth);
         }
       } catch (err) {
-        console.warn("Failed to restore selectedMonth from localStorage:", err);
+        console.warn("Failed to restore selectedMonth from sessionStorage:", err);
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Only run once on mount - initialMonth is stable from useMemo
 
-  // Sync to localStorage whenever selectedMonth changes
+  // Sync to sessionStorage whenever selectedMonth changes
   useEffect(() => {
-    localStorage.setItem("selectedMonth", serializeMonth(selectedMonth));
+    sessionStorage.setItem("selectedMonth", serializeMonth(selectedMonth));
   }, [selectedMonth]);
 
   const setSelectedMonth = useCallback((month: Date) => {
