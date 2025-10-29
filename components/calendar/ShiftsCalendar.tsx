@@ -120,7 +120,7 @@ const DayButton = React.memo(function DayButton({
         </div>
       )}
       {mode === "hours" && hours && (
-        <div className="flex-1 flex flex-col items-center justify-center text-sm font-semibold text-text-secondary leading-tight">
+        <div className="flex-1 flex flex-col items-center justify-center text-xs font-semibold text-text-secondary leading-tight">
           <div>
             {hours.start}
             {hours.start && "-"}
