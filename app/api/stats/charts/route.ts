@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const data = await getStatsDataForApi({ year, month });
+    const data = await getStatsDataForApi(session.user.id, { year, month });
 
     // Return only chart data, excluding critical stats
     const chartData = {

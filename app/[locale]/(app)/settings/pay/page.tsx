@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { connection } from "next/server";
+import { verifySession } from '@/data-access/auth';
 import { getUserSettings } from '@/data-access/settings';
 import { PayForm } from '@components/settings/pay/PayForm';
 import { getTranslations } from '@/lib/i18n/server';
@@ -26,7 +27,10 @@ export default async function PayPage({
   const { locale } = await params;
   const t = getTranslations(locale as Locale);
 
-  const settings = await getUserSettings();
+  // Verify authentication and get user
+  const { user } = await verifySession();
+
+  const settings = await getUserSettings(user.id);
 
   return (
     <div className="container mx-auto py-8 max-w-2xl">

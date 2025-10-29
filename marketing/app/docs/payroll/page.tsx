@@ -634,10 +634,12 @@ return {
           code: {
             language: 'typescript',
             content: `// app/[locale]/(app)/page.tsx
+import { verifySession } from "@/data-access/auth";
 import { getComputedShifts } from "@/data-access/shifts";
 
 export default async function Page() {
-  const { shifts, aggregates } = await getComputedShifts();
+  const { user } = await verifySession();
+  const { shifts, aggregates } = await getComputedShifts(user.id);
 
   return <ShiftsList shifts={shifts} totals={aggregates} />;
 }`,

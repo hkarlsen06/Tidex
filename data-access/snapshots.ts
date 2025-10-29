@@ -18,9 +18,9 @@ export type ShiftSnapshots = {
  * ensuring consistent snapshot preparation across all server actions.
  */
 export async function getCurrentSnapshots(): Promise<ShiftSnapshots> {
-  await verifySession(); // Ensures user is authenticated
+  const { user } = await verifySession(); // Ensures user is authenticated
 
-  const settings = await getUserSettings();
+  const settings = await getUserSettings(user.id);
 
   if (!settings) {
     // Return null snapshots if settings cannot be loaded

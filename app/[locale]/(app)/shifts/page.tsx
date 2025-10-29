@@ -1,4 +1,5 @@
 import { getComputedShifts, PRESET_RULES } from "@/data-access/shifts";
+import { verifySession } from "@/data-access/auth";
 import { connection } from "next/server";
 import {
   getPreviousYearMonth,
@@ -27,12 +28,15 @@ export default async function ShiftsPage({ params }: ShiftsPageProps) {
   await connection(); // Opt out of prerendering for dynamic authenticated pages
   const { locale: _locale } = await params;
 
+  // Verify authentication and get user
+  const { user } = await verifySession();
+
   // Fetch 3 months of data (previous + current + next) for smooth navigation
   // This covers 90% of user navigation patterns without loading states
   const prevMonth = getPreviousYearMonth();
   const nextMonth = getNextYearMonth();
 
-  const { shifts, defaultView, settings } = await getComputedShifts({
+  const { shifts, defaultView, settings } = await getComputedShifts(user.id, {
     startDate: getMonthStart(prevMonth.year, prevMonth.month),
     endDate: getMonthEnd(nextMonth.year, nextMonth.month),
     limit: 150 // Accommodate up to ~50 shifts per month across 3 months

@@ -6,11 +6,17 @@ import { logger } from '@/lib/logger';
 
 /**
  * Get user settings for the authenticated user
- * - Automatically verifies user session
+ * - Automatically verifies user session matches provided userId
  */
-export async function getUserSettings() {
+export async function getUserSettings(userId: string) {
   try {
     const { user } = await verifySession();
+
+    // SECURITY: Verify the provided userId matches the authenticated user
+    if (user.id !== userId) {
+      throw new Error('User ID mismatch - potential security violation');
+    }
+
     const supabase = await createSupabaseServerClient();
 
     const { data, error } = await supabase
@@ -32,10 +38,16 @@ export async function getUserSettings() {
 
 /**
  * Get user profile information including authentication methods
- * - Automatically verifies user session
+ * - Automatically verifies user session matches provided userId
  */
-export async function getUserProfile() {
+export async function getUserProfile(userId: string) {
   const { user } = await verifySession();
+
+  // SECURITY: Verify the provided userId matches the authenticated user
+  if (user.id !== userId) {
+    throw new Error('User ID mismatch - potential security violation');
+  }
+
   const supabase = await createSupabaseServerClient();
 
   // Get settings for profile picture

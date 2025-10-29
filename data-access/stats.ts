@@ -22,7 +22,7 @@ import { getMonthlyTotals } from "@/lib/shifts/monthlyTotals";
 /**
  * Internal implementation of getMonthlyTotal
  */
-async function getMonthlyTotalInternal(): Promise<{
+async function getMonthlyTotalInternal(userId: string): Promise<{
   total: string;
   percentageChange?: number | "..";
   tillegg: string;
@@ -32,13 +32,11 @@ async function getMonthlyTotalInternal(): Promise<{
   earnedToDate: string;
   earnedToDateGross: number;
 }> {
-  await verifySession();
-
   // Load current month + previous month only (2 months total)
   const { year, month } = getCurrentYearMonth();
   const { year: prevYear, month: prevMonth } = getPreviousYearMonth();
 
-  const { shifts } = await getComputedShifts({
+  const { shifts } = await getComputedShifts(userId, {
     startDate: getMonthStart(prevYear, prevMonth),
     endDate: getMonthEnd(year, month),
     limit: 100 // Reasonable limit for 2 months
@@ -89,11 +87,10 @@ async function getMonthlyTotalInternal(): Promise<{
 
 /**
  * Get the current month's total gross earnings for a user with comparison to last month
- * - Uses React cache() for request deduplication
- * - Uses Next.js Data Cache for persistent caching (5 min TTL)
- * - Automatically verifies user session
+ * - Uses React cache() for request deduplication, scoped by userId
+ * - Automatically verifies user session matches provided userId
  */
-export const getMonthlyTotal = cache(async (): Promise<{
+export const getMonthlyTotal = cache(async (userId: string): Promise<{
   total: string;
   percentageChange?: number | "..";
   tillegg: string;
@@ -104,18 +101,13 @@ export const getMonthlyTotal = cache(async (): Promise<{
   earnedToDateGross: number;
 }> => {
   const { user } = await verifySession();
-  const cacheKey = `monthly-total-${user.id}`;
 
-  const getCached = unstable_cache(
-    async () => getMonthlyTotalInternal(),
-    [cacheKey],
-    {
-      tags: [`user-shifts-${user.id}`],
-      revalidate: 300 // 5 minutes
-    }
-  );
+  // SECURITY: Verify the provided userId matches the authenticated user
+  if (user.id !== userId) {
+    throw new Error('User ID mismatch - potential security violation');
+  }
 
-  return getCached();
+  return getMonthlyTotalInternal(userId);
 });
 
 /**
@@ -260,7 +252,7 @@ type StatsOptions = {
  * Internal implementation of getStatsData
  * @internal - Do not call directly, use getStatsData() or getStatsDataForApi()
  */
-async function getStatsDataInternal(options: StatsOptions = {}): Promise<StatsData> {
+async function getStatsDataInternal(userId: string, options: StatsOptions = {}): Promise<StatsData> {
   // Get translations for month/day names
   const locale = options.locale || 'no';
   const t = getTranslations(locale);
@@ -270,7 +262,7 @@ async function getStatsDataInternal(options: StatsOptions = {}): Promise<StatsDa
   const FULL_DAY_NAMES = t.dateTime.daysFull;
   // Load full year of shifts for comprehensive stats calculations
   const dateRange = getStatsDateRange(options);
-  const { shifts, settings } = await getComputedShifts({
+  const { shifts, settings } = await getComputedShifts(userId, {
     ...dateRange,
     limit: 1000 // Reasonable limit for 1 year of data
   });
@@ -679,14 +671,20 @@ async function getStatsDataInternal(options: StatsOptions = {}): Promise<StatsDa
 
 /**
  * Get comprehensive stats data with caching
- * - Uses React cache() for request deduplication within a single request
+ * - Uses React cache() for request deduplication, scoped by userId
  * - Includes monthly summaries, charts data, and projections
- * - Automatically verifies user session
+ * - Automatically verifies user session matches provided userId
  * - Use this in Server Components and Server Actions
  */
-export const getStatsData = cache(async (options: StatsOptions = {}): Promise<StatsData> => {
-  await verifySession();
-  return getStatsDataInternal(options);
+export const getStatsData = cache(async (userId: string, options: StatsOptions = {}): Promise<StatsData> => {
+  const { user } = await verifySession();
+
+  // SECURITY: Verify the provided userId matches the authenticated user
+  if (user.id !== userId) {
+    throw new Error('User ID mismatch - potential security violation');
+  }
+
+  return getStatsDataInternal(userId, options);
 });
 
 /**
@@ -695,8 +693,8 @@ export const getStatsData = cache(async (options: StatsOptions = {}): Promise<St
  * - Use this in API route handlers where redirect() is not supported
  * - Call getSession() first to verify auth
  */
-export const getStatsDataForApi = cache(async (options: StatsOptions = {}): Promise<StatsData> => {
-  return getStatsDataInternal(options);
+export const getStatsDataForApi = cache(async (userId: string, options: StatsOptions = {}): Promise<StatsData> => {
+  return getStatsDataInternal(userId, options);
 });
 
 /**
@@ -717,12 +715,13 @@ export type CriticalStatsData = Pick<
  * - Loads only essential current month stats
  * - Much faster than full stats data
  * - Charts data loaded separately via API
- * - Automatically verifies user session
+ * - Automatically verifies user session matches provided userId
  */
 export const getCriticalStatsData = cache(async (
+  userId: string,
   options: StatsOptions = {}
 ): Promise<CriticalStatsData> => {
-  const fullData = await getStatsData(options);
+  const fullData = await getStatsData(userId, options);
 
   // Return only critical fields needed for hero section
   return {
