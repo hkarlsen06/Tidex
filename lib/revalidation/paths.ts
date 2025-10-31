@@ -22,9 +22,9 @@ import { invalidateUserCache } from "@/data-access/cache";
  * }
  */
 export function revalidateShiftData() {
-  revalidatePath("/[locale]/shifts", "page");
-  revalidatePath("/[locale]", "page");
-  revalidatePath("/[locale]/stats", "page");
+  // Use layout revalidation to ensure all localized routes are revalidated
+  // This is more reliable than page-level revalidation for dynamic [locale] segments
+  revalidatePath("/", "layout");
 }
 
 /**
@@ -46,7 +46,7 @@ export function revalidateShiftData() {
  */
 export function invalidateAndRevalidate(userId: string) {
   invalidateUserCache(userId);
-  revalidatePath("/[locale]/shifts", "page");
-  revalidatePath("/[locale]", "page");
-  revalidatePath("/[locale]/stats", "page");
+  // Use layout revalidation to ensure all localized routes are revalidated
+  // This is more reliable than page-level revalidation for dynamic [locale] segments
+  revalidatePath("/", "layout");
 }
