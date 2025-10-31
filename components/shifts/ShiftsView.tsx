@@ -490,15 +490,16 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
   const [loadingMonth, setLoadingMonth] = useState(false);
   const shiftsListRef = useRef<HTMLDivElement>(null);
   const calendarContainerRef = useRef<HTMLDivElement>(null);
+  const [deletedShiftIds, setDeletedShiftIds] = useState<Set<string>>(new Set());
 
   // Track which months have been loaded or are currently loading
   const [loadedMonths, setLoadedMonths] = useState<Set<string>>(new Set());
   const [loadingMonths, setLoadingMonths] = useState<Set<string>>(new Set());
 
-  // Combine initial shifts with any dynamically loaded shifts
+  // Combine initial shifts with any dynamically loaded shifts, filtering out deleted ones
   const shifts = useMemo(
-    () => [...initialShifts, ...additionalShifts],
-    [initialShifts, additionalShifts]
+    () => [...initialShifts, ...additionalShifts].filter(shift => !deletedShiftIds.has(shift.id)),
+    [initialShifts, additionalShifts, deletedShiftIds]
   );
 
   const clearSelection = useCallback(() => {
@@ -593,6 +594,11 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
       loaded.add(key);
     }
     setLoadedMonths(loaded);
+  }, [initialShifts]);
+
+  // Reset deleted shifts when new data arrives from server (after router.refresh())
+  useEffect(() => {
+    setDeletedShiftIds(new Set());
   }, [initialShifts]);
 
   // Proactive prefetch: Load adjacent months (prev, current, next) whenever selectedMonth changes
@@ -1030,14 +1036,23 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
       }}
       isDeleting={pending}
       onDelete={(id) => {
+        // Optimistically remove the shift from UI immediately
+        setDeletedShiftIds(prev => new Set(prev).add(id));
+        setDetailsOpen(false);
+        setSelectedShift(null);
+        clearSelection();
+
         startTransition(async () => {
           try {
             await deleteShift(id);
-            setDetailsOpen(false);
-            setSelectedShift(null);
-            clearSelection();
             router.refresh();
           } catch (error) {
+            // Revert optimistic update on error
+            setDeletedShiftIds(prev => {
+              const next = new Set(prev);
+              next.delete(id);
+              return next;
+            });
             // TODO: Add error state to ShiftDetails component and display user-friendly error
             // For now, log the error for debugging
             console.error("Failed to delete shift", error);
