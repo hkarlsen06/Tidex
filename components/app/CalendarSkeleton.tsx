@@ -1,12 +1,12 @@
-import { Card, CardHeader } from "@/components/app/Card";
+import { Card } from "@/components/app/Card";
 
 export function CalendarSkeleton() {
   // Create 35 day cells (5 weeks x 7 days)
   const dayCells = Array.from({ length: 35 }, (_, i) => i);
 
   return (
-    <Card className="rounded-card border-0 animate-pulse">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 py-3 px-0">
+    <Card className="rounded-card border-0 bg-transparent animate-pulse">
+      <div className="flex flex-row items-center justify-between py-3">
         <div className="flex items-center gap-1 flex-1">
           {/* Month picker skeleton */}
           <div className="flex items-center gap-2">
@@ -22,7 +22,7 @@ export function CalendarSkeleton() {
         </div>
         {/* Total earnings */}
         <div className="h-6 w-24 bg-surface-secondary rounded" />
-      </CardHeader>
+      </div>
 
       {/* Weekday headers */}
       <div className="grid grid-cols-7 mb-2">
