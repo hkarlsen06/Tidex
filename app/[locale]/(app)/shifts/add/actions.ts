@@ -4,7 +4,6 @@ import { verifySession } from "@/data-access/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { checkShiftLimit } from "@/app/[locale]/(app)/shifts/add/_checks/checkShiftLimit";
 import { invalidateAndRevalidate } from "@/lib/revalidation/paths";
-import { getCurrentSnapshots } from "@/data-access/snapshots";
 import { isISODate, isHHMM, shiftTypeFromISODate } from "@/lib/validation/shift-validators";
 import { ERRORS } from "@/lib/errors/messages";
 
@@ -48,17 +47,12 @@ export async function createShifts(input: CreateShiftsInput) {
 
   const sid = input.seriesId && input.seriesId.trim().length > 0 ? input.seriesId : undefined;
 
-  // Get current snapshots
-  const snapshots = await getCurrentSnapshots();
-
   const rows = dates.map((shift_date) => ({
     user_id: user.id,
     shift_date,
     start_time: input.start,
     end_time: input.end,
     shift_type: shiftTypeFromISODate(shift_date),
-    hourly_wage_snapshot: snapshots.hourly_wage_snapshot,
-    supplement_rules_snapshot: snapshots.supplement_rules_snapshot,
     ...(sid ? { series_id: sid } : {}),
   }));
 

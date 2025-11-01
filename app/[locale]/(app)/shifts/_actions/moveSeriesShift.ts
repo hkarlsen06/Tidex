@@ -5,7 +5,6 @@ import { logger } from "@/lib/logger";
 import { invalidateAndRevalidate } from "@/lib/revalidation/paths";
 import { cleanTime } from "@/lib/time-utils";
 import { verifySession } from "@/data-access/auth";
-import { getCurrentSnapshots } from "@/data-access/snapshots";
 import { isISODate, isHHMM, shiftTypeFromISODate } from "@/lib/validation/shift-validators";
 import { ERRORS } from "@/lib/errors/messages";
 
@@ -76,9 +75,6 @@ export async function moveSeriesShift({
     throw new Error("Kunne ikke oppdatere serien");
   }
 
-  // Get current snapshots
-  const snapshots = await getCurrentSnapshots();
-
   // Create standalone shift at target date
   const shiftType = shiftTypeFromISODate(targetDate);
 
@@ -90,8 +86,6 @@ export async function moveSeriesShift({
       start_time: cleanedStartTime,
       end_time: cleanedEndTime,
       shift_type: shiftType,
-      hourly_wage_snapshot: snapshots.hourly_wage_snapshot,
-      supplement_rules_snapshot: snapshots.supplement_rules_snapshot,
     });
 
   if (insertError) {
