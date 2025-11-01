@@ -24,6 +24,7 @@ export type ShiftsCalendarProps = {
   onMonthChange?: (month: Date) => void;
   weekNumberPosition?: "top-left" | "bottom-left";
   selectedDate?: ISODate | null;
+  newlyAddedDates?: Set<string>;
 };
 
 type DayButtonProps = {
@@ -40,6 +41,7 @@ type DayButtonProps = {
   mode: "money" | "hours";
   weekNumberPosition: "top-left" | "bottom-left";
   selectedDate?: ISODate | null;
+  newlyAddedDates?: Set<string>;
   [key: string]: any;
 };
 
@@ -66,6 +68,7 @@ const DayButton = React.memo(function DayButton({
   mode,
   weekNumberPosition,
   selectedDate,
+  newlyAddedDates,
   ...buttonProps
 }: DayButtonProps) {
   const date: Date = day.date;
@@ -77,6 +80,7 @@ const DayButton = React.memo(function DayButton({
   const isMonday = date.getDay() === 1;
   const isSelected = selectedDate === iso;
   const isOutside = Boolean(modifiers?.outside);
+  const isNewlyAdded = newlyAddedDates?.has(iso) ?? false;
   const hasShift =
     earnings !== undefined || hours !== undefined || employees.length > 0;
   const week = isMonday ? getIsoWeek(date) : null;
@@ -84,6 +88,7 @@ const DayButton = React.memo(function DayButton({
   return (
     <button
       {...buttonProps}
+      data-day={iso}
       aria-pressed={isSelected}
       className={cn(
         className,
@@ -91,7 +96,8 @@ const DayButton = React.memo(function DayButton({
           "border-brand-gradientMid bg-brand-gradientMid/10 text-brand-highlight shadow-app-sm",
         isToday && "ring-1 ring-brand-highlight",
         isToday && !isSelected && "border-brand-highlight",
-        isOutside && "opacity-40"
+        isOutside && "opacity-40",
+        isNewlyAdded && !isSelected && "animate-[pulse_1.5s_ease-in-out_3] ring-2 ring-blue-500/50 bg-blue-500/10"
       )}
     >
       <div className="relative flex flex-col w-full h-full p-1 overflow-hidden">
@@ -164,6 +170,7 @@ export function ShiftsCalendar({
   onMonthChange,
   weekNumberPosition = "bottom-left",
   selectedDate = null,
+  newlyAddedDates,
 }: ShiftsCalendarProps) {
   const locale = useLocale();
   const dateFnsLocale = locale === 'en' ? enUS : nb;
@@ -191,9 +198,10 @@ export function ShiftsCalendar({
         mode={mode}
         weekNumberPosition={weekNumberPosition}
         selectedDate={selectedDate}
+        newlyAddedDates={newlyAddedDates}
       />
     ),
-    [mode, earningsByDate, hoursByDate, employeesByDate, weekNumberPosition, selectedDate]
+    [mode, earningsByDate, hoursByDate, employeesByDate, weekNumberPosition, selectedDate, newlyAddedDates]
   );
 
   const handleDayClick = React.useCallback(

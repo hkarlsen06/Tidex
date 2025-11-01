@@ -76,7 +76,7 @@ export function SelectDatesCalendar({
             className,
             "w-full h-full rounded-lg transition-colors focus:outline-none focus-visible:outline-none border hover:bg-surface-secondary",
             !hasConflict && "border-border-subtle",
-            hasConflict && !isSelected && "border-warning border-dashed",
+            hasConflict && !isSelected && "border-border dark:border-border-subtle border-dashed opacity-60",
             hasConflict && isSelected && "ring-1 ring-warning border-transparent",
             isSelected &&
               (hasConflict

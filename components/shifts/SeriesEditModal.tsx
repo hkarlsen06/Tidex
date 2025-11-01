@@ -180,7 +180,7 @@ export function SeriesEditModal({
   if (!draft || loading) {
     return (
       <Dialog open={isOpen} onOpenChange={(open) => { if (!open && !pending) onClose(); }}>
-        <DialogContent className="sm:rounded-3xl max-w-full sm:max-w-2xl max-h-[90vh] overflow-y-auto overflow-x-hidden">
+        <DialogContent className="sm:rounded-3xl max-w-[480px] max-h-[90vh] overflow-y-auto overflow-x-hidden">
           <DialogTitle className="sr-only">{t.pages.shifts.seriesEdit.title}</DialogTitle>
           <div className="flex items-center justify-center py-8">
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-border-subtle border-t-brand-highlight" />
@@ -192,7 +192,7 @@ export function SeriesEditModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open && !pending) onClose(); }}>
-      <DialogContent className="sm:rounded-3xl max-w-full sm:max-w-2xl max-h-[90vh] overflow-y-auto overflow-x-hidden">
+      <DialogContent className="sm:rounded-3xl max-w-[480px] max-h-[90vh] overflow-y-auto overflow-x-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-text-primary">
             <IconClock className="h-5 w-5 text-text-muted" aria-hidden />

@@ -62,11 +62,19 @@ export async function createShifts(input: CreateShiftsInput) {
     ...(sid ? { series_id: sid } : {}),
   }));
 
-  const { error } = await supabase.from("user_shifts").insert(rows);
+  const { data: insertedShifts, error } = await supabase
+    .from("user_shifts")
+    .insert(rows)
+    .select('id, shift_date');
+
   if (error) throw new Error(error.message);
 
   // Invalidate cache and revalidate paths
   invalidateAndRevalidate(user.id);
 
-  return { inserted: rows.length };
+  return {
+    inserted: rows.length,
+    shiftIds: insertedShifts?.map(s => s.id) || [],
+    dates: insertedShifts?.map(s => s.shift_date) || []
+  };
 }
