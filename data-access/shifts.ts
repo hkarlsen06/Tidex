@@ -1,5 +1,6 @@
 import "server-only";
 import { cache } from "react";
+import { cacheTag } from "next/cache";
 import { verifySession } from "@/data-access/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
@@ -60,6 +61,8 @@ async function getComputedShiftsInternal(
   settings: UserSettings,
   aggregates: ShiftsAggregates
 }> {
+  'use cache: private';
+  cacheTag(`user-${userId}`, 'user-shifts');
   const {
     startDate = getDefaultStartDate(), // Default: current month start
     endDate = getDefaultEndDate(),     // Default: current month end

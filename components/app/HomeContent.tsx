@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo, useEffect, useCallback, useRef } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { TotalCard } from "@/components/app/TotalCard";
 import { NextPayrollCard } from "@/components/app/NextPayrollCard";
 import { MonthPicker } from "./MonthPicker";
@@ -12,6 +13,7 @@ import { useMonth } from "./MonthContext";
 import { useTranslations } from "@/lib/i18n/client";
 import { summarizeShiftTotals } from "@/lib/shifts/monthlyTotals";
 import { formatCurrency } from "@/lib/formatters";
+import { deleteShift } from "@/app/[locale]/(app)/shifts/_actions/deleteShift";
 
 type HomeContentProps = {
   shifts: ShiftWithComputations[];
@@ -94,10 +96,13 @@ function isCurrentMonth(date: Date): boolean {
 
 export function HomeContent({ shifts: initialShifts, settings }: HomeContentProps) {
   const { t } = useTranslations();
+  const router = useRouter();
   const { selectedMonth: month, goToPreviousMonth, goToNextMonth, direction } = useMonth();
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [selectedShift, setSelectedShift] = useState<ShiftWithComputations | null>(null);
   const [additionalShifts, setAdditionalShifts] = useState<ShiftWithComputations[]>([]);
+  const [deleting, startDeleteTransition] = useTransition();
+  const [deletedShiftIds, setDeletedShiftIds] = useState<Set<string>>(new Set());
   const selectedMonthIsCurrent = isCurrentMonth(month);
   const swipeContainerRef = useRef<HTMLDivElement>(null);
   const touchStartX = useRef<number | null>(null);
@@ -108,11 +113,16 @@ export function HomeContent({ shifts: initialShifts, settings }: HomeContentProp
   const [loadedMonths, setLoadedMonths] = useState<Set<string>>(new Set());
   const [loadingMonths, setLoadingMonths] = useState<Set<string>>(new Set());
 
-  // Combine initial shifts with any dynamically loaded shifts
+  // Combine initial shifts with any dynamically loaded shifts, filtering out deleted ones
   const shifts = useMemo(
-    () => [...initialShifts, ...additionalShifts],
-    [initialShifts, additionalShifts]
+    () => [...initialShifts, ...additionalShifts].filter(shift => !deletedShiftIds.has(shift.id)),
+    [initialShifts, additionalShifts, deletedShiftIds]
   );
+
+  // Reset optimistic updates when new data arrives from server (after router.refresh())
+  useEffect(() => {
+    setDeletedShiftIds(new Set());
+  }, [initialShifts]);
 
   // Helper to generate month key for tracking
   const getMonthKey = useCallback((year: number, month: number): string => {
@@ -467,6 +477,29 @@ export function HomeContent({ shifts: initialShifts, settings }: HomeContentProp
         onClose={() => {
           setDetailsOpen(false);
           setSelectedShift(null);
+        }}
+        isDeleting={deleting}
+        onDelete={(id) => {
+          // Optimistically remove the shift from UI immediately
+          const shiftId = typeof id === 'string' ? id : id.shiftId;
+          setDeletedShiftIds(prev => new Set(prev).add(shiftId));
+          setDetailsOpen(false);
+          setSelectedShift(null);
+
+          startDeleteTransition(async () => {
+            try {
+              await deleteShift(id);
+              router.refresh();
+            } catch (error) {
+              // Revert optimistic update on error
+              setDeletedShiftIds(prev => {
+                const next = new Set(prev);
+                next.delete(shiftId);
+                return next;
+              });
+              console.error("Failed to delete shift", error);
+            }
+          });
         }}
       />
     </>
