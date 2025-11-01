@@ -3,7 +3,7 @@
 import { useMemo, useState, useEffect, useRef, type Ref } from "react";
 import { IconClock, IconCopy, IconArrowsExchange, IconInfoCircle } from "@tabler/icons-react";
 import { ShiftsCalendar } from "@/components/app/ShiftsCalendar";
-import { Card, CardHeader } from "@/components/app/Card";
+import { Card } from "@/components/app/Card";
 import { Button } from "@/components/app/Button";
 import { MonthPicker } from "@/components/app/MonthPicker";
 import { useMonth } from "@/components/app/MonthContext";
@@ -264,9 +264,9 @@ export function MonthlyEarningsCalendar({
   }, [goToPreviousMonth, goToNextMonth]);
 
   return (
-    <Card ref={containerRef} className="rounded-card border-0">
+    <Card ref={containerRef} className="rounded-card border-0 bg-transparent">
       <div ref={swipeContainerRef}>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 py-3 px-4">
+        <div className="flex flex-row items-center justify-between py-3">
           <div className="flex items-center gap-1">
             <MonthPicker
               month={month}
@@ -281,7 +281,7 @@ export function MonthlyEarningsCalendar({
           >
             {formatCurrency(totalEarnings)}
           </div>
-        </CardHeader>
+        </div>
         <div className="pb-6">
           <ShiftsCalendar
             month={month}
