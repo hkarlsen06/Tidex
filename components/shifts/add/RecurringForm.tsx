@@ -13,7 +13,6 @@ import { MonthPicker } from "@/components/app/MonthPicker";
 import { createSeriesShift } from "@/app/[locale]/(app)/shifts/add/_actions/createSeriesShift";
 import { IconClock } from "@tabler/icons-react";
 import { cn } from "@/lib/cn";
-import { useNavigationFeedback } from "@/components/app/navigation-feedback";
 import { useMonth } from "@/components/app/MonthContext";
 import { useTranslations, useLocale } from "@/lib/i18n/client";
 import type { SeriesDraft } from "@/lib/series/types";
@@ -33,7 +32,6 @@ export default function RecurringForm({ existingShifts, userSettings, presetRule
   const { t } = useTranslations();
   const locale = useLocale();
   const router = useRouter();
-  const { navigate } = useNavigationFeedback();
   const [pending, startTransition] = useTransition();
   const { selectedMonth: month, setSelectedMonth: _setMonth, goToPreviousMonth, goToNextMonth } = useMonth();
 
