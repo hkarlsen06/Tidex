@@ -98,7 +98,8 @@ export default function LoginClient({
 
   const handleSignIn = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    resetAll();
+    resetMessage();
+    resetFieldErrors();
 
     const errors: FieldErrors = {};
 
@@ -262,7 +263,8 @@ export default function LoginClient({
 
   const handleVerifyOtp = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    resetAll();
+    resetMessage();
+    resetFieldErrors();
 
     const errors: FieldErrors = {};
 
@@ -477,7 +479,8 @@ export default function LoginClient({
                   onClick={() => {
                     setPhoneLoginMethod('otp');
                     setPassword('');
-                    resetAll();
+                    resetMessage();
+                    resetFieldErrors();
                   }}
                   className="w-full"
                 >
@@ -498,7 +501,8 @@ export default function LoginClient({
                 maxLength={6}
                 value={otp}
                 onChange={(value) => {
-                  resetAll();
+                  resetMessage();
+                  resetFieldErrors();
                   setOtp(value);
                 }}
               >
@@ -536,7 +540,8 @@ export default function LoginClient({
               onClick={() => {
                 setStep('input');
                 setOtp('');
-                resetAll();
+                resetMessage();
+                resetFieldErrors();
               }}
               className="w-full"
             >
