@@ -5,7 +5,7 @@ import { checkShiftLimit } from "@/app/[locale]/(app)/shifts/add/_checks/checkSh
 import { invalidateAndRevalidate } from "@/lib/revalidation/paths";
 import { cleanTime } from "@/lib/time-utils";
 import { verifySession } from "@/data-access/auth";
-import { isISODate, shiftTypeFromISODate } from "@/lib/validation/shift-validators";
+import { isISODate } from "@/lib/validation/shift-validators";
 import { ERRORS } from "@/lib/errors/messages";
 
 type CopyShiftsInput = {
@@ -107,7 +107,6 @@ export async function copyShifts(input: CopyShiftsInput) {
     shift_date: input.targetDate,
     start_time: cleanTime(shift.start_time),
     end_time: cleanTime(shift.end_time),
-    shift_type: shiftTypeFromISODate(input.targetDate),
     ...(shift.series_id ? { series_id: shift.series_id } : {}),
   }));
 

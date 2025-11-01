@@ -12,10 +12,6 @@ import { logger } from "@/lib/logger";
 
 const CACHE_CONTROL = { headers: { "cache-control": "no-store" } };
 
-type ShiftRowWithMeta = ShiftRow & {
-  shift_type?: number | null;
-};
-
 export async function GET(request: NextRequest) {
   const baseResponse = new NextResponse(null, CACHE_CONTROL);
   const supabase = createSupabaseRouteHandlerClient(request, baseResponse);
@@ -152,13 +148,11 @@ export async function GET(request: NextRequest) {
   const computedShifts = (shifts ?? []).map((shift) => {
     const snapshot = getSnapshotForDate(shift.shift_date);
     const computed = computeShift(shift as ShiftRow, settings, PRESET_SUPPLEMENT_RULES, snapshot);
-    const { shift_type, ...rest } = shift as ShiftRowWithMeta;
     return {
-      id: rest.id,
-      date: rest.shift_date,
-      startTime: rest.start_time,
-      endTime: rest.end_time,
-      type: shift_type ?? 0,
+      id: shift.id,
+      date: shift.shift_date,
+      startTime: shift.start_time,
+      endTime: shift.end_time,
       seriesId: null,
       calc: {
         hours: computed.paidHours,

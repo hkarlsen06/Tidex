@@ -5,7 +5,7 @@ import { logger } from "@/lib/logger";
 import { invalidateAndRevalidate } from "@/lib/revalidation/paths";
 import { cleanTime } from "@/lib/time-utils";
 import { verifySession } from "@/data-access/auth";
-import { isISODate, isHHMM, shiftTypeFromISODate } from "@/lib/validation/shift-validators";
+import { isISODate, isHHMM } from "@/lib/validation/shift-validators";
 import { ERRORS } from "@/lib/errors/messages";
 
 type MoveSeriesShiftInput = {
@@ -76,8 +76,6 @@ export async function moveSeriesShift({
   }
 
   // Create standalone shift at target date
-  const shiftType = shiftTypeFromISODate(targetDate);
-
   const { error: insertError } = await supabase
     .from("user_shifts")
     .insert({
@@ -85,7 +83,6 @@ export async function moveSeriesShift({
       shift_date: targetDate,
       start_time: cleanedStartTime,
       end_time: cleanedEndTime,
-      shift_type: shiftType,
     });
 
   if (insertError) {

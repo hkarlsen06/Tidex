@@ -199,16 +199,13 @@ Server actions use shared utilities from `lib/` to ensure consistency across the
 **Validation (`lib/validation/shift-validators.ts`):**
 
 ```tsx
-import { isISODate, isHHMM, shiftTypeFromISODate } from '@/lib/validation/shift-validators';
+import { isISODate, isHHMM } from '@/lib/validation/shift-validators';
 
 // Validate date formats
 if (!isISODate(date)) return { error: "Ugyldig dato" };
 
 // Validate time formats
 if (!isHHMM(start) || !isHHMM(end)) return { error: "Ugyldig tid" };
-
-// Determine shift type from date
-const shift_type = shiftTypeFromISODate(date); // 0=weekday, 1=Saturday, 2=Sunday
 ```
 
 **Revalidation (`lib/revalidation/paths.ts`):**

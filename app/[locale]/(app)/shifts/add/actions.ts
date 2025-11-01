@@ -4,7 +4,7 @@ import { verifySession } from "@/data-access/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { checkShiftLimit } from "@/app/[locale]/(app)/shifts/add/_checks/checkShiftLimit";
 import { invalidateAndRevalidate } from "@/lib/revalidation/paths";
-import { isISODate, isHHMM, shiftTypeFromISODate } from "@/lib/validation/shift-validators";
+import { isISODate, isHHMM } from "@/lib/validation/shift-validators";
 import { ERRORS } from "@/lib/errors/messages";
 
 type CreateShiftsInput = {
@@ -52,7 +52,6 @@ export async function createShifts(input: CreateShiftsInput) {
     shift_date,
     start_time: input.start,
     end_time: input.end,
-    shift_type: shiftTypeFromISODate(shift_date),
     ...(sid ? { series_id: sid } : {}),
   }));
 
