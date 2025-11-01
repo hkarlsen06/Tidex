@@ -527,7 +527,7 @@ function applyFooters(doc: JsPDFInstance) {
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
 
-    doc.text('Generert av Vaktkalkulator', PAGE_CONFIG.margins.left, PAGE_CONFIG.footerY);
+    doc.text('Generert av Tidex', PAGE_CONFIG.margins.left, PAGE_CONFIG.footerY);
     doc.text(
       `Side ${page} av ${totalPages}`,
       PAGE_CONFIG.margins.right - 20,

@@ -841,7 +841,7 @@ export const no = {
             detailedList: 'Detaljert vaktliste',
             noShifts: 'Ingen vakter tilgjengelig for eksport.',
             sum: 'Sum:',
-            generatedBy: 'Generert av Vaktkalkulator',
+            generatedBy: 'Generert av Tidex lønnskalkulator',
             pageCounter: 'Side {page} av {total}',
           },
           csvFields: {
