@@ -1118,27 +1118,25 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
         ) : (
           <div className="flex flex-col gap-8">
             {grouped.map((group) => (
-              <section key={group.id} className="space-y-4">
-                <Card className="rounded-card border-0 bg-surface-primary/50 backdrop-blur">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 py-3">
-                    <div className="flex items-center gap-2 font-medium text-text-primary">
-                      <span>{t.pages.shifts.list.weekLabel} {group.label}</span>
-                      <svg
-                        aria-hidden="true"
-                        className="h-4 w-4 text-text-muted"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="1.5"
-                      >
-                        <path d="m6 9 6 6 6-6" />
-                      </svg>
-                    </div>
-                    <span className="font-semibold text-text-primary">
-                      {formatWeekTotal(group.totalGross)}
-                    </span>
-                  </CardHeader>
-                </Card>
+              <section key={group.id} className="rounded-card border-0 bg-surface-primary/50 backdrop-blur p-4 space-y-4">
+                <div className="flex flex-row items-center justify-between">
+                  <div className="flex items-center gap-2 font-medium text-text-primary">
+                    <span>{t.pages.shifts.list.weekLabel} {group.label}</span>
+                    <svg
+                      aria-hidden="true"
+                      className="h-4 w-4 text-text-muted"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                    >
+                      <path d="m6 9 6 6 6-6" />
+                    </svg>
+                  </div>
+                  <span className="font-semibold text-text-primary">
+                    {formatWeekTotal(group.totalGross)}
+                  </span>
+                </div>
                 <div className="space-y-4">
                   {group.shifts.map((shift) => (
                     <ShiftCard
