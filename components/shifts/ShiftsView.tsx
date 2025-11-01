@@ -111,10 +111,21 @@ function filterAndGroupByWeek(
     group.totalGross += shift.computed.gross;
   }
 
-  // Sort once at the end
+  // Sort shifts within each week by date
   for (const group of groups) {
     group.shifts.sort((a, b) => a.shift_date.localeCompare(b.shift_date));
   }
+
+  // Sort week groups chronologically by year and week number
+  groups.sort((a, b) => {
+    const [yearA, weekA] = a.id.split('-').map(Number);
+    const [yearB, weekB] = b.id.split('-').map(Number);
+
+    if (yearA !== yearB) {
+      return yearA - yearB;
+    }
+    return weekA - weekB;
+  });
 
   return groups;
 }
@@ -494,15 +505,31 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
   const calendarContainerRef = useRef<HTMLDivElement>(null);
   const [deletedShiftIds, setDeletedShiftIds] = useState<Set<string>>(new Set());
   const [newlyAddedDates, setNewlyAddedDates] = useState<Set<string>>(new Set());
+  const [movedShifts, setMovedShifts] = useState<Map<string, { newDate: string; newStartTime: string; newEndTime: string }>>(new Map());
+  const [copiedShifts, setCopiedShifts] = useState<ShiftWithComputations[]>([]);
 
   // Track which months have been loaded or are currently loading
   const [loadedMonths, setLoadedMonths] = useState<Set<string>>(new Set());
   const [loadingMonths, setLoadingMonths] = useState<Set<string>>(new Set());
 
   // Combine initial shifts with any dynamically loaded shifts, filtering out deleted ones
+  // and applying optimistic move/copy updates
   const shifts = useMemo(
-    () => [...initialShifts, ...additionalShifts].filter(shift => !deletedShiftIds.has(shift.id)),
-    [initialShifts, additionalShifts, deletedShiftIds]
+    () => [...initialShifts, ...additionalShifts, ...copiedShifts]
+      .filter(shift => !deletedShiftIds.has(shift.id))
+      .map(shift => {
+        const moved = movedShifts.get(shift.id);
+        if (moved) {
+          return {
+            ...shift,
+            shift_date: moved.newDate,
+            start_time: moved.newStartTime,
+            end_time: moved.newEndTime,
+          };
+        }
+        return shift;
+      }),
+    [initialShifts, additionalShifts, deletedShiftIds, movedShifts, copiedShifts]
   );
 
   const clearSelection = useCallback(() => {
@@ -599,9 +626,11 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
     setLoadedMonths(loaded);
   }, [initialShifts]);
 
-  // Reset deleted shifts when new data arrives from server (after router.refresh())
+  // Reset optimistic updates when new data arrives from server (after router.refresh())
   useEffect(() => {
     setDeletedShiftIds(new Set());
+    setMovedShifts(new Map());
+    setCopiedShifts([]);
   }, [initialShifts]);
 
   // Proactive prefetch: Load adjacent months (prev, current, next) whenever selectedMonth changes
@@ -764,15 +793,28 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
           const sourceShifts = shiftsByDate.get(selectedDate) ?? [];
           if (sourceShifts.length > 0) {
             const shiftIds = sourceShifts.map((shift) => shift.id);
+
+            // Optimistically add copied shifts to UI
+            const optimisticCopies = sourceShifts.map((shift, index) => ({
+              ...shift,
+              id: `optimistic-copy-${Date.now()}-${index}`, // Temporary ID
+              shift_date: isoDate,
+            }));
+            setCopiedShifts(prev => [...prev, ...optimisticCopies]);
+            clearSelection();
+
             startCopyTransition(async () => {
               try {
                 await copyShifts({
                   shiftIds,
                   targetDate: isoDate,
                 });
-                clearSelection();
                 router.refresh();
               } catch (error) {
+                // Revert optimistic updates on error
+                setCopiedShifts(prev =>
+                  prev.filter(shift => !optimisticCopies.some(opt => opt.id === shift.id))
+                );
                 // TODO: Add error handling UI
                 console.error("Failed to copy shifts", error);
               }
@@ -913,6 +955,19 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
     }
 
     setMoveError(null);
+
+    // Optimistically update the UI immediately
+    const optimisticUpdates = new Map(movedShifts);
+    shiftsToMove.forEach((shift) => {
+      optimisticUpdates.set(shift.id, {
+        newDate: moveTargetDate,
+        newStartTime: shift.start_time,
+        newEndTime: shift.end_time,
+      });
+    });
+    setMovedShifts(optimisticUpdates);
+    clearSelection();
+
     startMoveTransition(async () => {
       try {
         const results = await Promise.allSettled(
@@ -942,6 +997,14 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
         const succeeded = results.filter((r) => r.status === "fulfilled");
 
         if (failed.length > 0) {
+          // Revert optimistic updates for failed shifts
+          const revertedUpdates = new Map(optimisticUpdates);
+          failed.forEach((result, index) => {
+            const failedShift = shiftsToMove[index];
+            revertedUpdates.delete(failedShift.id);
+          });
+          setMovedShifts(revertedUpdates);
+
           if (succeeded.length > 0) {
             // Partial success - show which ones failed
             setMoveError(
@@ -952,7 +1015,8 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
             );
             router.refresh(); // Refresh to show partial success
           } else {
-            // Complete failure
+            // Complete failure - revert all optimistic updates
+            setMovedShifts(movedShifts);
             const firstError = (failed[0] as PromiseRejectedResult).reason;
             const message =
               firstError instanceof Error
@@ -961,12 +1025,12 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
             setMoveError(message);
           }
         } else {
-          // Complete success
-          clearSelection();
+          // Complete success - refresh to get server state
           router.refresh();
         }
       } catch (error) {
-        // Unexpected error outside Promise.allSettled
+        // Unexpected error outside Promise.allSettled - revert all optimistic updates
+        setMovedShifts(movedShifts);
         const message =
           error instanceof Error ? error.message : errorUnexpected;
         setMoveError(message);
@@ -984,11 +1048,11 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
     errorPartial,
     errorComplete,
     errorUnexpected,
+    movedShifts,
   ]);
 
   const grouped = useMemo(() => {
-    const groups = filterAndGroupByWeek(shifts, selectedMonth);
-    return [...groups].reverse();
+    return filterAndGroupByWeek(shifts, selectedMonth);
   }, [shifts, selectedMonth]);
 
   // Check if we have data for the selected month

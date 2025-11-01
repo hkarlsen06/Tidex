@@ -5,7 +5,6 @@ import { checkShiftLimit } from "@/app/[locale]/(app)/shifts/add/_checks/checkSh
 import { invalidateAndRevalidate } from "@/lib/revalidation/paths";
 import { cleanTime } from "@/lib/time-utils";
 import { verifySession } from "@/data-access/auth";
-import { getCurrentSnapshots } from "@/data-access/snapshots";
 import { isISODate, shiftTypeFromISODate } from "@/lib/validation/shift-validators";
 import { ERRORS } from "@/lib/errors/messages";
 
@@ -102,9 +101,6 @@ export async function copyShifts(input: CopyShiftsInput) {
     );
   }
 
-  // Get current snapshots for copied shifts
-  const snapshots = await getCurrentSnapshots();
-
   // Create new shifts based on source shifts but with the target date
   const rows = sourceShifts.map((shift) => ({
     user_id: user.id,
@@ -112,8 +108,6 @@ export async function copyShifts(input: CopyShiftsInput) {
     start_time: cleanTime(shift.start_time),
     end_time: cleanTime(shift.end_time),
     shift_type: shiftTypeFromISODate(input.targetDate),
-    hourly_wage_snapshot: snapshots.hourly_wage_snapshot,
-    supplement_rules_snapshot: snapshots.supplement_rules_snapshot,
     ...(shift.series_id ? { series_id: shift.series_id } : {}),
   }));
 
