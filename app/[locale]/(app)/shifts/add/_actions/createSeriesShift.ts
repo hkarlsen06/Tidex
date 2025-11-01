@@ -5,6 +5,7 @@ import type { SeriesDraft } from '@/lib/series/types';
 import { detectAllSeriesConflicts } from '@/lib/series/conflicts';
 import type { ExistingShift } from '@/lib/series/conflicts';
 import { verifySession } from '@/data-access/auth';
+import { invalidateAndRevalidate } from '@/lib/revalidation/paths';
 
 /**
  * Create a new series shift pattern
@@ -97,6 +98,9 @@ export async function createSeriesShift(draft: SeriesDraft): Promise<{ id: strin
   if (!data) {
     throw new Error('Failed to create series shift: no data returned');
   }
+
+  // Invalidate cache and revalidate paths to show new series shifts
+  invalidateAndRevalidate(user.id);
 
   return { id: data.id };
 }

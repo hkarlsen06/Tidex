@@ -237,9 +237,10 @@ export default function AddShiftForm({ existingShifts, userSettings, presetRules
       // User is allowed - proceed with shift creation in transition
       startTransition(async () => {
         try {
-          await createShifts({ dates: isoDates, start, end });
-          // Navigate and refresh to show new data immediately
-          navigate(`/${locale}/shifts`);
+          const result = await createShifts({ dates: isoDates, start, end });
+          // Navigate with new shift dates to trigger celebration
+          const newDates = result.dates.join(',');
+          navigate(`/${locale}/shifts?new=${encodeURIComponent(newDates)}`);
           router.refresh();
         } catch (e: any) {
           setError(e?.message || t.pages.shifts.add.form.couldNotSaveShift);
@@ -255,8 +256,10 @@ export default function AddShiftForm({ existingShifts, userSettings, presetRules
     setError(null);
     startTransition(async () => {
       try {
-        await createShifts({ dates: isoDates, start, end });
-        navigate(`/${locale}/shifts`);
+        const result = await createShifts({ dates: isoDates, start, end });
+        // Navigate with new shift dates to trigger celebration
+        const newDates = result.dates.join(',');
+        navigate(`/${locale}/shifts?new=${encodeURIComponent(newDates)}`);
         router.refresh();
       } catch (e: any) {
         setError(e?.message || t.pages.shifts.add.form.couldNotSaveShift);

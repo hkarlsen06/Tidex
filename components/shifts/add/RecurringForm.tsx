@@ -61,7 +61,7 @@ export default function RecurringForm({ existingShifts, userSettings, presetRule
   const startTimeId = useId();
   const endTimeId = useId();
 
-  // Save draft to localStorage on every change
+  // Save draft to sessionStorage on every change
   useEffect(() => {
     saveSeriesDraft(draft);
   }, [draft]);
@@ -156,16 +156,29 @@ export default function RecurringForm({ existingShifts, userSettings, presetRule
 
   const handleConfirm = async () => {
     setError(null);
+    // Close modal immediately
+    setShowPreview(false);
 
     startTransition(async () => {
       try {
-        await createSeriesShift(draft);
+        const result = await createSeriesShift(draft);
+        // Clear sessionStorage immediately
         clearSeriesDraft();
-        navigate(`/${locale}/shifts`);
-        router.refresh();
+        // Reset draft state to prevent useEffect from re-saving
+        setDraft({
+          start_time: "",
+          end_time: "",
+          repeat_interval_weeks: 0,
+          selected_days: {},
+          end_condition: { type: 'months', value: 6 },
+          exclusions: [],
+        });
+        // Navigate with series ID to trigger celebration
+        router.push(`/${locale}/shifts?newSeries=${result.id}`);
       } catch (e: any) {
         setError(e?.message || t.pages.shifts.add.form.couldNotSaveShift);
-        setShowPreview(false);
+        // Reopen modal on error to show the error message
+        setShowPreview(true);
       }
     });
   };
@@ -386,7 +399,9 @@ export default function RecurringForm({ existingShifts, userSettings, presetRule
           loading={pending}
           className="rounded-2xl bg-brand-gradientMid px-6 py-3 text-base font-semibold text-text-inverse shadow-app transition hover:bg-brand-gradientEnd"
         >
-          {t.pages.shifts.add.series.previewSeries.replace('{count}', projectedDates.length.toString())}
+          {draft.end_condition === null
+            ? t.pages.shifts.add.series.previewInfiniteSeries || 'Forhåndsvis fast vakt'
+            : t.pages.shifts.add.series.previewSeries.replace('{count}', projectedDates.length.toString())}
         </Button>
       </div>
 
@@ -396,7 +411,9 @@ export default function RecurringForm({ existingShifts, userSettings, presetRule
           <DialogHeader>
             <DialogTitle>{t.pages.shifts.add.series.confirmSeries}</DialogTitle>
             <DialogDescription className="space-y-2">
-              {t.pages.shifts.add.series.confirmingSeriesDescription.replace('{count}', projectedDates.length.toString())}
+              {draft.end_condition === null
+                ? t.pages.shifts.add.series.confirmingInfiniteSeriesDescription || 'Du er i ferd med å opprette en fast vakt som gjentar seg uendelig.'
+                : t.pages.shifts.add.series.confirmingSeriesDescription.replace('{count}', projectedDates.length.toString())}
               {previewConflicts.size > 0 && (
                 <>
                   <br />

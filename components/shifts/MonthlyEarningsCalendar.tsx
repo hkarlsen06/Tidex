@@ -31,6 +31,7 @@ type MonthlyEarningsCalendarProps = {
   moveMode?: boolean;
   moving?: boolean;
   onCancelMoveMode?: () => void;
+  newlyAddedDates?: Set<string>;
 };
 
 function buildEarningsByDate(shifts: ShiftWithComputations[]): EarningsByDate {
@@ -121,6 +122,7 @@ export function MonthlyEarningsCalendar({
   moveMode = false,
   moving = false,
   onCancelMoveMode,
+  newlyAddedDates,
 }: MonthlyEarningsCalendarProps) {
   const { t } = useTranslations();
   const { goToPreviousMonth, goToNextMonth } = useMonth();
@@ -219,6 +221,7 @@ export function MonthlyEarningsCalendar({
           onDayClick={onDayClick}
           selectedDate={selectedDate}
           weekNumberPosition="top-left"
+          newlyAddedDates={newlyAddedDates}
         />
       </div>
       <div className="flex flex-col items-center gap-2 pb-6">

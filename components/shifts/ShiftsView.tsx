@@ -1,8 +1,9 @@
 "use client";
 
 import { useMemo, useState, useCallback, useTransition, useRef, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
+import confetti from "canvas-confetti";
 
 import ShiftCard from "@/components/app/ShiftCard";
 import ShiftMoveCard from "./ShiftMoveCard";
@@ -470,6 +471,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
     errorUnexpected,
   } = t.pages.shifts.move;
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { navigate } = useNavigationFeedback();
   const [pending, startTransition] = useTransition();
   const [moving, startMoveTransition] = useTransition();
@@ -491,6 +493,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
   const shiftsListRef = useRef<HTMLDivElement>(null);
   const calendarContainerRef = useRef<HTMLDivElement>(null);
   const [deletedShiftIds, setDeletedShiftIds] = useState<Set<string>>(new Set());
+  const [newlyAddedDates, setNewlyAddedDates] = useState<Set<string>>(new Set());
 
   // Track which months have been loaded or are currently loading
   const [loadedMonths, setLoadedMonths] = useState<Set<string>>(new Set());
@@ -654,6 +657,88 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
     document.addEventListener("pointerdown", handlePointerDown);
     return () => document.removeEventListener("pointerdown", handlePointerDown);
   }, [selectedDate, detailsOpen, moveModalOpen, clearSelection]);
+
+  // Confetti celebration for newly added shifts
+  useEffect(() => {
+    const newDates = searchParams.get('new');
+    const newSeries = searchParams.get('newSeries');
+
+    if (newDates || newSeries) {
+      let addedDates: string[] = [];
+
+      // Track newly added dates for highlighting
+      if (newDates) {
+        addedDates = newDates.split(',');
+        setNewlyAddedDates(new Set(addedDates));
+      } else if (newSeries) {
+        // For series, highlight all visible shifts from that series
+        const seriesShifts = shifts.filter(s => s.series_id === newSeries);
+        addedDates = seriesShifts.map(s => s.shift_date);
+        setNewlyAddedDates(new Set(addedDates));
+      }
+
+      // Find all dates in the current month
+      const currentMonth = selectedMonth.getMonth();
+      const currentYear = selectedMonth.getFullYear();
+      const datesInCurrentMonth = addedDates.filter(date => {
+        const d = new Date(date + 'T00:00:00');
+        return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+      });
+
+      // Small delay to let the page render
+      const timer = setTimeout(() => {
+        if (datesInCurrentMonth.length > 0) {
+          // Fire confetti from each newly added shift in the current month
+          datesInCurrentMonth.forEach((date, index) => {
+            const calendarCell = document.querySelector(
+              `[data-day="${date}"]`
+            ) as HTMLElement;
+
+            if (calendarCell) {
+              // Get position of the calendar cell
+              const rect = calendarCell.getBoundingClientRect();
+              const x = (rect.left + rect.width / 2) / window.innerWidth;
+              const y = (rect.top + rect.height / 2) / window.innerHeight;
+
+              // Stagger the confetti slightly for multiple dates
+              setTimeout(() => {
+                confetti({
+                  particleCount: 80,
+                  spread: 60,
+                  origin: { x, y },
+                  colors: ['#3b82f6', '#8b5cf6', '#ec4899'],
+                  startVelocity: 35,
+                  ticks: 60
+                });
+              }, index * 100);
+            }
+          });
+        } else {
+          // No dates in current month, use default position
+          confetti({
+            particleCount: 100,
+            spread: 70,
+            origin: { y: 0.6 },
+            colors: ['#3b82f6', '#8b5cf6', '#ec4899']
+          });
+        }
+      }, 300);
+
+      // Clean up URL and highlighting after celebration
+      const cleanTimer = setTimeout(() => {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('new');
+        url.searchParams.delete('newSeries');
+        window.history.replaceState({}, '', url.toString());
+        setNewlyAddedDates(new Set());
+      }, 3000);
+
+      return () => {
+        clearTimeout(timer);
+        clearTimeout(cleanTimer);
+      };
+    }
+  }, [searchParams, shifts, selectedMonth]);
 
   const handleMonthChange = useCallback(
     (month: Date) => {
@@ -942,6 +1027,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
             moveMode={moveMode}
             moving={moving}
             onCancelMoveMode={handleCancelMoveMode}
+            newlyAddedDates={newlyAddedDates}
           />
         </div>
       </div>
