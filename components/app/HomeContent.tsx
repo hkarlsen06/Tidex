@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { TotalCard } from "@/components/app/TotalCard";
 import { NextPayrollCard } from "@/components/app/NextPayrollCard";
 import { MonthPicker } from "./MonthPicker";
@@ -99,6 +99,10 @@ export function HomeContent({ shifts: initialShifts, settings }: HomeContentProp
   const [selectedShift, setSelectedShift] = useState<ShiftWithComputations | null>(null);
   const [additionalShifts, setAdditionalShifts] = useState<ShiftWithComputations[]>([]);
   const selectedMonthIsCurrent = isCurrentMonth(month);
+  const swipeContainerRef = useRef<HTMLDivElement>(null);
+  const touchStartX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
+  const isSwiping = useRef<boolean>(false);
 
   // Track which months have been loaded or are currently loading
   const [loadedMonths, setLoadedMonths] = useState<Set<string>>(new Set());
@@ -340,9 +344,75 @@ export function HomeContent({ shifts: initialShifts, settings }: HomeContentProp
 
   const taxDeductionEnabled = settings.tax_deduction_enabled ?? false;
 
+  // Swipe gesture handling
+  useEffect(() => {
+    const container = swipeContainerRef.current;
+    if (!container) return;
+
+    const handleTouchStart = (e: TouchEvent) => {
+      touchStartX.current = e.touches[0].clientX;
+      touchStartY.current = e.touches[0].clientY;
+      isSwiping.current = false;
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (touchStartX.current === null || touchStartY.current === null) return;
+
+      const deltaX = e.touches[0].clientX - touchStartX.current;
+      const deltaY = e.touches[0].clientY - touchStartY.current;
+
+      // Determine if this is a horizontal swipe (more horizontal than vertical)
+      if (!isSwiping.current && Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 10) {
+        isSwiping.current = true;
+      }
+
+      // If we're swiping horizontally, prevent default scrolling
+      if (isSwiping.current) {
+        e.preventDefault();
+      }
+    };
+
+    const handleTouchEnd = (e: TouchEvent) => {
+      if (touchStartX.current === null || !isSwiping.current) {
+        touchStartX.current = null;
+        touchStartY.current = null;
+        isSwiping.current = false;
+        return;
+      }
+
+      const deltaX = e.changedTouches[0].clientX - touchStartX.current;
+      const threshold = 50; // Minimum swipe distance in pixels
+
+      if (Math.abs(deltaX) > threshold) {
+        if (deltaX > 0) {
+          // Swipe right - go to previous month
+          goToPreviousMonth();
+        } else {
+          // Swipe left - go to next month
+          goToNextMonth();
+        }
+      }
+
+      touchStartX.current = null;
+      touchStartY.current = null;
+      isSwiping.current = false;
+    };
+
+    // Add passive: false to allow preventDefault on touchmove
+    container.addEventListener('touchstart', handleTouchStart, { passive: true });
+    container.addEventListener('touchmove', handleTouchMove, { passive: false });
+    container.addEventListener('touchend', handleTouchEnd, { passive: true });
+
+    return () => {
+      container.removeEventListener('touchstart', handleTouchStart);
+      container.removeEventListener('touchmove', handleTouchMove);
+      container.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [goToPreviousMonth, goToNextMonth]);
+
   return (
     <>
-      <div className="flex items-center justify-center h-full">
+      <div ref={swipeContainerRef} className="flex items-center justify-center h-full">
         <div className="flex flex-col gap-6 w-full max-w-md">
           {payrollDay && (
             <NextPayrollCard
