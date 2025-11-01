@@ -377,6 +377,16 @@ input[type="time"] {
   }
 }
 
+/* Wave squeeze animation - compresses dots vertically */
+@keyframes wave-squeeze {
+  0%, 100% {
+    transform: scaleY(1);
+  }
+  50% {
+    transform: scaleY(0.85);
+  }
+}
+
 @layer base {
   input[type="number"] {
     appearance: textfield;
