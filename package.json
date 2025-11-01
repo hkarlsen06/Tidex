@@ -58,14 +58,14 @@
     "tailwindcss": "^3.4.17",
     "tailwindcss-animate": "^1.0.7",
     "typescript": "5.9.3",
-    "zod": "^4.1.12"
+    "zod": "^4.1.12",
+    "@types/canvas-confetti": "^1.9.0"
   },
   "devDependencies": {
     "@eslint/config-array": "^0.21.0",
     "@eslint/js": "^9.14.0",
     "@eslint/object-schema": "^2.1.6",
     "@playwright/test": "^1.56.1",
-    "@types/canvas-confetti": "^1.9.0",
     "eslint": "^9.37.0",
     "eslint-config-next": "16.0.0",
     "glob": "^10.4.5",
