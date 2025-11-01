@@ -841,7 +841,7 @@ export const de = {
             detailedList: 'Detaillierte Schichtliste',
             noShifts: 'Keine Schichten zum Exportieren verfügbar.',
             sum: 'Summe:',
-            generatedBy: 'Generiert von Schichtrechner',
+            generatedBy: 'Generiert von Tidex Schichtrechner',
             pageCounter: 'Seite {page} von {total}',
           },
           csvFields: {

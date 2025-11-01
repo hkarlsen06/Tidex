@@ -13,7 +13,6 @@ const CACHE_CONTROL = { headers: { "cache-control": "no-store" } };
 
 type ShiftRowWithMeta = ShiftRow & {
   shift_type?: number | null;
-  series_id?: string | null;
 };
 
 export async function GET(request: NextRequest) {
@@ -99,7 +98,7 @@ export async function GET(request: NextRequest) {
 
   let query = supabase
     .from("user_shifts")
-    .select("id, user_id, shift_date, start_time, end_time, shift_type, series_id")
+    .select("id, user_id, shift_date, start_time, end_time, shift_type")
     .eq("user_id", user.id)
     .order("shift_date", { ascending: true })
     .order("start_time", { ascending: true });
@@ -126,14 +125,14 @@ export async function GET(request: NextRequest) {
 
   const computedShifts = (shifts ?? []).map((shift) => {
     const computed = computeShift(shift as ShiftRow, settings, PRESET_SUPPLEMENT_RULES);
-    const { shift_type, series_id, ...rest } = shift as ShiftRowWithMeta;
+    const { shift_type, ...rest } = shift as ShiftRowWithMeta;
     return {
       id: rest.id,
       date: rest.shift_date,
       startTime: rest.start_time,
       endTime: rest.end_time,
       type: shift_type ?? 0,
-      seriesId: series_id ?? null,
+      seriesId: null,
       calc: {
         hours: computed.paidHours,
         baseWage: computed.basePay,
