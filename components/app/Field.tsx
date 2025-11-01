@@ -9,7 +9,6 @@ import {
   FieldGroup as UIFieldGroup,
   FieldLabel as UIFieldLabel,
   FieldLegend as UIFieldLegend,
-  FieldSeparator as UIFieldSeparator,
   FieldSet as UIFieldSet,
   FieldTitle as UIFieldTitle,
 } from "@ui/field";
