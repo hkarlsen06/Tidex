@@ -24,6 +24,10 @@ export const ERRORS = {
 
   // Database errors
   DB_ERROR: "Databasefeil",
+
+  // Wage snapshot errors
+  WAGE_SNAPSHOT_CONFLICT: "En lønnsoppføring eksisterer allerede for denne datoen",
+  WAGE_SNAPSHOT_NOT_FOUND: "Fant ikke lønnsoppføringen",
 } as const;
 
 export type ErrorMessage = (typeof ERRORS)[keyof typeof ERRORS];

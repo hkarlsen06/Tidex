@@ -14,6 +14,7 @@ import { logger } from "@/lib/logger";
 import { generateGhostsForMonth } from "@/lib/series/utils";
 import type { SeriesShiftRow } from "@/lib/series/types";
 import { cleanTime } from "@/lib/time-utils";
+import { getSnapshotsForDates } from "@/data-access/wage-snapshots";
 
 export const PRESET_RULES = PRESET_SUPPLEMENT_RULES;
 
@@ -108,10 +109,19 @@ async function getComputedShiftsInternal(
     };
   }
 
-  const computedShifts = ((shifts ?? []) as ShiftRow[]).map((shift) => ({
-    ...shift,
-    computed: computeShift(shift, settings, PRESET_RULES),
-  }));
+  // Collect all shift dates for batch snapshot lookup
+  const shiftDates = (shifts ?? []).map((s) => s.shift_date);
+
+  // Fetch wage snapshots for all shift dates in one query (cached)
+  const snapshotMap = await getSnapshotsForDates(shiftDates);
+
+  const computedShifts = ((shifts ?? []) as ShiftRow[]).map((shift) => {
+    const snapshot = snapshotMap.get(shift.shift_date) ?? null;
+    return {
+      ...shift,
+      computed: computeShift(shift, settings, PRESET_RULES, snapshot),
+    };
+  });
 
   // Load series shifts and generate ghosts for the date range
   const { data: seriesShifts, error: seriesError } = await supabase
@@ -131,6 +141,9 @@ async function getComputedShiftsInternal(
     const endYear = new Date(endDate).getFullYear();
     const endMonth = new Date(endDate).getMonth() + 1;
 
+    // Collect all ghost dates for batch snapshot lookup
+    const ghostDates: string[] = [];
+
     for (const series of seriesShifts as SeriesShiftRow[]) {
       // Generate for each month in range
       let currentYear = startYear;
@@ -149,9 +162,42 @@ async function getComputedShiftsInternal(
           exclusions: series.exclusions || []
         });
 
-        // Compute each ghost
+        ghostDates.push(...ghosts.map(g => g.date));
+
+        // Move to next month
+        currentMonth++;
+        if (currentMonth > 12) {
+          currentMonth = 1;
+          currentYear++;
+        }
+      }
+    }
+
+    // Fetch snapshots for all ghost dates in one batch (reuses cache from earlier)
+    const ghostSnapshotMap = await getSnapshotsForDates(ghostDates);
+
+    // Now compute ghosts with their snapshots
+    for (const series of seriesShifts as SeriesShiftRow[]) {
+      let currentYear = startYear;
+      let currentMonth = startMonth;
+
+      while (
+        currentYear < endYear ||
+        (currentYear === endYear && currentMonth <= endMonth)
+      ) {
+        const ghosts = generateGhostsForMonth({ year: currentYear, month: currentMonth }, {
+          start_time: cleanTime(series.start_time),
+          end_time: cleanTime(series.end_time),
+          repeat_interval_weeks: series.repeat_interval_weeks as 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8,
+          selected_days: series.selected_days,
+          end_condition: series.end_condition,
+          exclusions: series.exclusions || []
+        });
+
+        // Compute each ghost with its snapshot
         for (const ghost of ghosts) {
           try {
+            const snapshot = ghostSnapshotMap.get(ghost.date) ?? null;
             const computed = computeShift(
               {
                 id: `ghost-${series.id}-${ghost.date}`,
@@ -163,7 +209,8 @@ async function getComputedShiftsInternal(
                 series_anchor_weekday: ghost.weekday
               },
               settings,
-              PRESET_RULES
+              PRESET_RULES,
+              snapshot
             );
 
             seriesGhosts.push({

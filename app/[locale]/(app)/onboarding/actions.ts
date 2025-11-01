@@ -2,6 +2,7 @@
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { PRESET_WAGE_RATES, PRESET_SUPPLEMENT_RULES } from "@/lib/payroll";
 
 interface OnboardingSettings {
   use_preset: boolean;
@@ -33,13 +34,9 @@ export async function completeOnboarding(settings: OnboardingSettings) {
     throw new Error("User not authenticated");
   }
 
-  // Upsert user_settings
+  // Upsert user_settings (without wage fields - those go to wage_snapshots)
   const settingsData = {
     user_id: user.id,
-    use_preset: settings.use_preset,
-    current_wage_level: settings.current_wage_level,
-    custom_wage: settings.custom_wage,
-    custom_supplements: settings.custom_supplements,
     pause_deduction_enabled: settings.pause_deduction_enabled,
     pause_deduction_method: settings.pause_deduction_method,
     pause_threshold_hours: settings.pause_threshold_hours,
@@ -61,6 +58,30 @@ export async function completeOnboarding(settings: OnboardingSettings) {
 
   if (settingsError) {
     throw new Error(`Failed to save settings: ${settingsError.message}`);
+  }
+
+  // Create initial wage snapshot
+  const today = new Date().toISOString().split('T')[0];
+  const hourly_wage = settings.use_preset
+    ? PRESET_WAGE_RATES[settings.current_wage_level!]
+    : settings.custom_wage!;
+
+  const supplements = settings.use_preset
+    ? { rules: PRESET_SUPPLEMENT_RULES }
+    : (settings.custom_supplements || { rules: [] });
+
+  const { error: snapshotError } = await supabase
+    .from("wage_snapshots")
+    .insert({
+      user_id: user.id,
+      from_date: today,
+      hourly_wage,
+      wage_level: settings.use_preset ? settings.current_wage_level : null,
+      supplements,
+    });
+
+  if (snapshotError) {
+    throw new Error(`Failed to create wage snapshot: ${snapshotError.message}`);
   }
 
   // Mark onboarding as complete in user metadata

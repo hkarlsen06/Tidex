@@ -71,3 +71,17 @@ export type ShiftComputed = {
 export type ShiftWithComputations = ShiftRow & {
   computed: ShiftComputed;
 };
+
+/**
+ * WageSnapshot from the wage_snapshots table
+ * Represents a point-in-time capture of wage and supplement settings
+ */
+export type WageSnapshot = {
+  id: string;
+  user_id: string;
+  from_date: string; // ISO date (YYYY-MM-DD)
+  hourly_wage: number;
+  wage_level: number | null; // NULL = custom wage, NUMBER (1-9) = tariff level
+  supplements: { rules: SupplementRule[] };
+  created_at?: string;
+};

@@ -2,6 +2,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { OnboardingForm } from "./_components/OnboardingForm";
+import { getSnapshotForDate } from "@/data-access/wage-snapshots";
 
 export const metadata: Metadata = {
   title: "Kom i gang",
@@ -34,5 +35,20 @@ export default async function OnboardingPage() {
     .eq("user_id", user.id)
     .single();
 
-  return <OnboardingForm initialSettings={settings || undefined} />;
+  // Load current wage snapshot if it exists (for users restarting onboarding)
+  const today = new Date().toISOString().split('T')[0];
+  const currentSnapshot = await getSnapshotForDate(today);
+
+  // Merge settings with wage snapshot data
+  const initialSettings = {
+    ...settings,
+    ...(currentSnapshot && {
+      use_preset: currentSnapshot.wage_level !== null,
+      current_wage_level: currentSnapshot.wage_level,
+      custom_wage: currentSnapshot.hourly_wage,
+      custom_supplements: currentSnapshot.wage_level === null ? currentSnapshot.supplements : null,
+    }),
+  };
+
+  return <OnboardingForm initialSettings={initialSettings || undefined} />;
 }

@@ -1,7 +1,7 @@
 import { buildWagePeriods } from "./periods";
 import { applyBreakDeduction } from "./breaks";
 import {
-  SupplementRule, ShiftComputed, ShiftRow, UserSettings, WagePeriod, BreakMethod
+  SupplementRule, ShiftComputed, ShiftRow, UserSettings, WagePeriod, BreakMethod, WageSnapshot
 } from "./types";
 
 const WEEKDAYS = [7,1,2,3,4,5,6]; // JS getDay(): 0=Sun → 7, then 1..6 Mon..Sat
@@ -17,24 +17,60 @@ const defaultSettings = {
   pause_deduction_minutes: 30,
 };
 
-function resolveBaseRate(s: ShiftRow, settings: UserSettings): number {
-  if (s.hourly_wage_snapshot && s.hourly_wage_snapshot > 0) return s.hourly_wage_snapshot;
+/**
+ * Resolve the base hourly wage rate for a shift
+ * Priority order:
+ * 1. New wage snapshot system (if provided)
+ * 2. Old per-shift snapshot (for backward compatibility during migration)
+ * 3. Current user settings (tariff or custom wage)
+ * 4. Fallback to default rate
+ */
+function resolveBaseRate(
+  s: ShiftRow,
+  snapshot: WageSnapshot | null,
+  settings: UserSettings
+): number {
+  // Priority 1: Use new snapshot system
+  if (snapshot?.hourly_wage && snapshot.hourly_wage > 0) {
+    return snapshot.hourly_wage;
+  }
+
+  // Priority 2: Backward compatibility - old per-shift snapshot
+  if (s.hourly_wage_snapshot && s.hourly_wage_snapshot > 0) {
+    return s.hourly_wage_snapshot;
+  }
+
+  // Priority 3: Current user settings
   if (settings.use_preset && settings.current_wage_level != null) {
     const key = String(settings.current_wage_level);
     if (PRESET_WAGE_RATES[key] != null) return PRESET_WAGE_RATES[key];
   }
-  if (settings.custom_wage && settings.custom_wage > 0) return settings.custom_wage;
-  return PRESET_WAGE_RATES["1"]; // sane fallback
+  if (settings.custom_wage && settings.custom_wage > 0) {
+    return settings.custom_wage;
+  }
+
+  // Priority 4: Sane fallback
+  return PRESET_WAGE_RATES["1"];
 }
 
 // Precision constants for payroll calculations
 const HOUR_DECIMAL_PRECISION = 1000; // 3 decimal places (0.001 hours)
 const CURRENCY_PRECISION = 100; // 2 decimal places (cents)
 
+/**
+ * Compute payroll for a single shift
+ *
+ * @param shift - The shift data
+ * @param settings - User's current settings (used as fallback)
+ * @param presetRules - Preset supplement rules (used when on tariff)
+ * @param snapshot - Optional wage snapshot for historical accuracy (new system)
+ * @returns Computed payroll data including gross pay, hours, and breakdown
+ */
 export function computeShift(
   shift: ShiftRow,
   settings: UserSettings,
-  presetRules: SupplementRule[]
+  presetRules: SupplementRule[],
+  snapshot: WageSnapshot | null = null
 ): ShiftComputed {
   const s = { ...shift };
   const st = s.start_time;
@@ -43,11 +79,15 @@ export function computeShift(
   const date = new Date(s.shift_date + "T00:00:00Z");
   const weekday = WEEKDAYS[date.getUTCDay()]; // 1-7
 
-  const baseRate = resolveBaseRate(s, settings);
+  const baseRate = resolveBaseRate(s, snapshot, settings);
 
-  // Prefer snapshotted supplement rules for historical accuracy
-  // If snapshot exists, use it. Otherwise fall back to current settings.
-  const rules: SupplementRule[] = s.supplement_rules_snapshot?.rules?.length
+  // Supplement rules resolution priority:
+  // 1. New snapshot system (if provided)
+  // 2. Old per-shift snapshot (backward compatibility)
+  // 3. Current user settings (preset or custom)
+  const rules: SupplementRule[] = snapshot?.supplements?.rules?.length
+    ? snapshot.supplements.rules
+    : s.supplement_rules_snapshot?.rules?.length
     ? s.supplement_rules_snapshot.rules
     : settings.use_preset
       ? presetRules

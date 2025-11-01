@@ -2,22 +2,8 @@
 
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
-import { z } from 'zod';
 import { logger } from '@/lib/logger';
 import { verifySession } from '@/data-access/auth';
-
-// Validation schema for supplement rules
-const SupplementRuleSchema = z.object({
-  days: z.array(z.number().int().min(1).max(7)),
-  from: z.string().regex(/^\d{2}:\d{2}$/),
-  to: z.string().regex(/^\d{2}:\d{2}$/),
-  rate: z.number().optional(),
-  percent: z.number().optional(),
-});
-
-const CustomSupplementsSchema = z.object({
-  rules: z.array(SupplementRuleSchema),
-});
 
 export async function updateProfileSettings(data: {
   firstName: string;
@@ -65,10 +51,6 @@ export async function clearAllShifts() {
 }
 
 export async function updatePaySettings(data: {
-  use_preset?: boolean;
-  current_wage_level?: number | null;
-  custom_wage?: number | null;
-  custom_supplements?: any;
   monthly_goal?: number | null;
   payroll_day?: number | null;
   pause_deduction_enabled?: boolean;
@@ -80,16 +62,6 @@ export async function updatePaySettings(data: {
 }) {
   const { user } = await verifySession();
   const supabase = await createSupabaseServerClient();
-
-  // Validate custom_supplements if provided
-  if (data.custom_supplements !== undefined && data.custom_supplements !== null) {
-    try {
-      CustomSupplementsSchema.parse(data.custom_supplements);
-    } catch (error) {
-      logger.error('Invalid custom_supplements format:', error);
-      throw new Error('Ugyldig supplementkonfigurasjon');
-    }
-  }
 
   const { error } = await supabase
     .from('user_settings')
