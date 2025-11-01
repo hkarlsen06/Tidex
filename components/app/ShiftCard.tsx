@@ -58,6 +58,9 @@ export function ShiftCard({ shift, onClick }: ShiftCardProps) {
 
   const breakdown = `${formatPlainAmount(basePay)}${supplementPay > 0 ? ` + ${formatPlainAmount(supplementPay)}` : ""}`;
 
+  // Lowercase day names for Norwegian locale
+  const displayDayName = locale === 'no' ? dayName.toLowerCase() : dayName;
+
   return (
     <Card
       className={cn(
@@ -74,7 +77,7 @@ export function ShiftCard({ shift, onClick }: ShiftCardProps) {
             {dateLabel}
             <span className="text-text-muted"> · </span>
             <span className="text-text-secondary">
-              {dayName}
+              {displayDayName}
             </span>
           </p>
           <div className="flex items-center gap-3 text-sm text-text-secondary">
