@@ -59,6 +59,5 @@ Lookup file. Keep updated when new columns are added.
 - **shift_date** → `date`
 - **start_time** → `text`
 - **end_time** → `text`
-- **shift_type** → `integer`
 - **created_at** → `timestamp with time zone`
 - **series_id** → `uuid`

@@ -4,7 +4,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { invalidateAndRevalidate } from "@/lib/revalidation/paths";
 import { convertSeriesShiftToStandalone } from "./convertSeriesShiftToStandalone";
 import { verifySession } from "@/data-access/auth";
-import { isISODate, isHHMM, shiftTypeFromISODate } from "@/lib/validation/shift-validators";
+import { isISODate, isHHMM } from "@/lib/validation/shift-validators";
 import { ERRORS } from "@/lib/errors/messages";
 
 export type UpdateShiftInput = {
@@ -46,8 +46,6 @@ export async function updateShift(input: UpdateShiftInput) {
     return { updated: 1 };
   }
 
-  const shiftType = shiftTypeFromISODate(input.shift_date);
-
   const { data: existing, error: fetchError } = await supabase
     .from("user_shifts")
     .select("id")
@@ -65,7 +63,6 @@ export async function updateShift(input: UpdateShiftInput) {
       shift_date: input.shift_date,
       start_time: input.start,
       end_time: input.end,
-      shift_type: shiftType,
     })
     .eq("id", input.id)
     .eq("user_id", user.id);
