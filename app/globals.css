@@ -55,7 +55,7 @@ a {
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222.2 47.4% 11.2%;
     --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted-foreground: 215.4 16.3% 40%;
     --accent: 210 40% 96.1%;
     --accent-foreground: 222.2 47.4% 11.2%;
     --destructive: 0 84.2% 60.2%;
@@ -74,8 +74,8 @@ a {
     --surface-secondary: 240 10% 98%;
     --background-secondary: 240 10% 96%;
     --text-primary: 222.2 84% 4.9%;
-    --text-secondary: 215.4 16.3% 46.9%;
-    --text-muted: 215 20.2% 65.1%;
+    --text-secondary: 215.4 16.3% 40%;
+    --text-muted: 215 20.2% 52%;
     --text-inverse: 210 40% 98%;
     --border-subtle: 214.3 31.8% 94%;
     --brand-gradientStart: 199 89% 48%;
@@ -83,19 +83,19 @@ a {
     --brand-gradientEnd: 192 91% 36%;
     --brand-highlight: 188 86% 53%;
 
-    /* Semantic state colors */
-    --success: 142 76% 36%;
+    /* Semantic state colors - improved contrast */
+    --success: 142 76% 28%;
     --success-foreground: 138 76% 97%;
-    --success-subtle: 142 76% 36% / 0.1;
-    --warning: 38 92% 50%;
+    --success-subtle: 142 76% 28% / 0.1;
+    --warning: 30 100% 35%;
     --warning-foreground: 48 96% 89%;
-    --warning-subtle: 38 92% 50% / 0.3;
-    --error: 0 72% 51%;
+    --warning-subtle: 30 100% 35% / 0.15;
+    --error: 0 84% 44%;
     --error-foreground: 0 86% 97%;
-    --error-subtle: 0 72% 51% / 0.1;
-    --info: 221 83% 53%;
+    --error-subtle: 0 84% 44% / 0.1;
+    --info: 221 83% 45%;
     --info-foreground: 210 40% 98%;
-    --info-subtle: 221 83% 53% / 0.1;
+    --info-subtle: 221 83% 45% / 0.1;
 
     /* Shadow colors */
     --shadow-color: 0 0% 0% / 0.05;
@@ -113,7 +113,7 @@ a {
     --secondary: 217.2 32.6% 17.5%;
     --secondary-foreground: 210 40% 98%;
     --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted-foreground: 215 20.2% 70%;
     --accent: 217.2 32.6% 17.5%;
     --accent-foreground: 210 40% 98%;
     --destructive: 0 62.8% 30.6%;
@@ -131,8 +131,8 @@ a {
     --surface-secondary: 221 39% 11%;
     --background-secondary: 222.2 84% 4.9%;
     --text-primary: 210 40% 98%;
-    --text-secondary: 214 32% 91%;
-    --text-muted: 215 20% 65%;
+    --text-secondary: 214 32% 85%;
+    --text-muted: 215 20% 70%;
     --text-inverse: 222 47% 11%;
     --border-subtle: 217.2 32.6% 17.5%;
     --brand-gradientStart: 199 89% 48%;
@@ -140,19 +140,19 @@ a {
     --brand-gradientEnd: 192 91% 36%;
     --brand-highlight: 188 86% 53%;
 
-    /* Semantic state colors */
-    --success: 142 71% 45%;
+    /* Semantic state colors - improved contrast */
+    --success: 142 71% 50%;
     --success-foreground: 138 76% 97%;
-    --success-subtle: 142 71% 45% / 0.15;
-    --warning: 38 92% 50%;
+    --success-subtle: 142 71% 50% / 0.15;
+    --warning: 38 100% 55%;
     --warning-foreground: 48 96% 89%;
-    --warning-subtle: 38 92% 50% / 0.3;
-    --error: 0 63% 31%;
+    --warning-subtle: 38 100% 55% / 0.25;
+    --error: 0 91% 60%;
     --error-foreground: 0 86% 97%;
-    --error-subtle: 0 63% 31% / 0.3;
-    --info: 217 91% 60%;
+    --error-subtle: 0 91% 60% / 0.25;
+    --info: 217 91% 65%;
     --info-foreground: 210 40% 98%;
-    --info-subtle: 217 91% 60% / 0.15;
+    --info-subtle: 217 91% 65% / 0.15;
 
     /* Shadow colors */
     --shadow-color: 222 47% 4% / 0.4;
