@@ -23,7 +23,7 @@ export const getUserWageSnapshots = cache(async (): Promise<WageSnapshot[]> => {
       .from('wage_snapshots')
       .select('*')
       .eq('user_id', user.id)
-      .order('from_date', { ascending: false });
+      .order('from_date', { ascending: false, nullsFirst: false });
 
     if (error) {
       logger.error('Failed to fetch wage snapshots:', error);

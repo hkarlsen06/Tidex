@@ -3,25 +3,41 @@
 import { useState } from 'react';
 import { Card } from '@appui/Card';
 import { Button } from '@appui/Button';
-import { IconEye, IconCoins, IconStack2 } from '@tabler/icons-react';
+import { IconEdit } from '@tabler/icons-react';
 import { WageHistoryModal } from './WageHistoryModal';
 import type { WageSnapshot } from '@/data-access/wage-snapshots';
+import type { Dictionary } from '@/lib/i18n/dictionaries/no';
 
 interface CurrentWageCardProps {
   currentSnapshot: WageSnapshot | null;
+  t: Dictionary;
 }
 
-export function CurrentWageCard({ currentSnapshot }: CurrentWageCardProps) {
-  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+/**
+ * Format date for display
+ */
+function formatDate(isoDate: string, locale: string = 'no-NO'): string {
+  const date = new Date(isoDate + 'T00:00:00');
+  return date.toLocaleDateString(locale, {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+}
+
+export function CurrentWageCard({ currentSnapshot, t }: CurrentWageCardProps) {
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   if (!currentSnapshot) {
     return (
       <Card className="p-6">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-semibold text-text-secondary">Ingen lønnsinnstillinger funnet</h3>
+            <h3 className="text-lg font-semibold text-text-secondary">
+              {t.pages.settings.pay.currentWageCard.noSettingsTitle}
+            </h3>
             <p className="text-sm text-text-secondary mt-1">
-              Opprett en lønnsoppføring nedenfor for å komme i gang
+              {t.pages.settings.pay.currentWageCard.noSettingsDescription}
             </p>
           </div>
         </div>
@@ -31,64 +47,58 @@ export function CurrentWageCard({ currentSnapshot }: CurrentWageCardProps) {
 
   const supplementCount = currentSnapshot.supplements?.rules?.length ?? 0;
   const isPreset = currentSnapshot.wage_level !== null;
+  const locale = t.common.currency === 'kr' ? 'no-NO' : 'en-US';
 
   return (
     <>
-      <Card className="p-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-6 flex-1">
-            {/* Wage Display */}
-            <div className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded-full bg-brand-gradientStart/10 flex items-center justify-center">
-                <IconCoins className="h-6 w-6 text-brand-gradientStart" stroke={2} />
-              </div>
-              <div>
-                <p className="text-sm text-text-secondary">Nåværende timelønn</p>
-                <p className="text-2xl font-bold">
-                  {currentSnapshot.hourly_wage.toFixed(2)} kr/time
-                </p>
-                {isPreset && (
-                  <p className="text-xs text-text-secondary">
-                    Tariffsteg {currentSnapshot.wage_level}
-                  </p>
-                )}
-              </div>
+      <Card className="p-6 border-2 border-blue-500/30 dark:border-blue-400/30">
+        <div className="flex items-center gap-3">
+          {/* Left content */}
+          <div className="flex-1 min-w-0 space-y-3">
+            {/* Wage */}
+            <div className="flex items-baseline gap-2 flex-wrap">
+              <span className="text-3xl font-bold text-text-primary">
+                {currentSnapshot.hourly_wage.toFixed(2)}
+              </span>
+              <span className="text-sm text-text-secondary">kr/time</span>
+              {isPreset && (
+                <span className="text-sm text-text-muted">
+                  • {t.pages.settings.pay.wage.wageLevelPrefix} {currentSnapshot.wage_level}
+                </span>
+              )}
             </div>
 
-            {/* Supplements Count */}
-            <div className="flex items-center gap-3 border-l border-border pl-6">
-              <div className="h-12 w-12 rounded-full bg-blue-500/10 flex items-center justify-center">
-                <IconStack2 className="h-6 w-6 text-blue-500" stroke={2} />
-              </div>
-              <div>
-                <p className="text-sm text-text-secondary">Tillegg</p>
-                <p className="text-2xl font-bold">{supplementCount}</p>
-                <p className="text-xs text-text-secondary">
-                  {supplementCount === 1 ? 'tillegg' : 'tillegg'}
-                </p>
-              </div>
-            </div>
+            {/* Info */}
+            <p className="text-xs text-text-secondary max-w-prose">
+              {currentSnapshot.from_date === null
+                ? t.pages.settings.pay.wageHistory.baselineDescription
+                : t.pages.settings.pay.wageHistory.validFrom.replace('{date}', formatDate(currentSnapshot.from_date, locale))}
+              {' • '}
+              {supplementCount} {supplementCount === 1 ? t.pages.settings.pay.currentWageCard.supplementsSingular : t.pages.settings.pay.currentWageCard.supplementsPlural}
+            </p>
           </div>
 
-          {/* View Button */}
+          {/* Right button */}
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setIsViewModalOpen(true)}
-            className="gap-2"
+            onClick={() => setIsEditModalOpen(true)}
+            className="gap-2 flex-shrink-0"
           >
-            <IconEye className="h-4 w-4" />
-            Vis detaljer
+            <IconEdit className="h-4 w-4" />
+            <span className="hidden sm:inline">{t.pages.settings.pay.wageHistory.edit}</span>
           </Button>
         </div>
       </Card>
 
-      {/* View Modal */}
+      {/* Edit Modal */}
       <WageHistoryModal
-        isOpen={isViewModalOpen}
-        onClose={() => setIsViewModalOpen(false)}
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
         snapshot={currentSnapshot}
-        mode="view"
+        mode="edit"
+        t={t}
+        locale={locale}
       />
     </>
   );

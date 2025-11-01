@@ -16,19 +16,34 @@ import { Label } from '@appui/Label';
 import { SupplementsEditor, SupplementsData } from '@/components/settings/SupplementsEditor';
 import { WageSourceCard } from '@/components/settings/pay/WageSourceCard';
 import { PRESET_WAGE_RATES, PRESET_SUPPLEMENT_RULES } from '@/lib/payroll';
-import { IconCalendar, IconAlertTriangle } from '@tabler/icons-react';
+import { IconCalendar, IconAlertTriangle, IconTrash, IconCheck, IconX } from '@tabler/icons-react';
 import {
   createWageSnapshotAction,
   updateWageSnapshotAction,
   deleteWageSnapshotAction,
 } from '@/app/[locale]/(app)/settings/pay/_actions/wage-snapshots';
 import type { WageSnapshot, SupplementRule } from '@/data-access/wage-snapshots';
+import type { Dictionary } from '@/lib/i18n/dictionaries/no';
+
+/**
+ * Format date for display
+ */
+function formatDate(isoDate: string, locale: string = 'no-NO'): string {
+  const date = new Date(isoDate + 'T00:00:00');
+  return date.toLocaleDateString(locale, {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+}
 
 interface WageHistoryModalProps {
   isOpen: boolean;
   onClose: () => void;
   snapshot?: WageSnapshot | null; // If provided, edit mode; otherwise create mode
-  mode: 'create' | 'edit' | 'delete' | 'view';
+  mode: 'create' | 'edit' | 'view';
+  t: Dictionary;
+  locale?: string;
 }
 
 const TARIFF_SUPPLEMENTS_DATA: SupplementsData = {
@@ -40,6 +55,8 @@ export function WageHistoryModal({
   onClose,
   snapshot,
   mode,
+  t,
+  locale = 'no-NO',
 }: WageHistoryModalProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -65,6 +82,7 @@ export function WageHistoryModal({
       : null
   );
   const [affectedShiftCount, setAffectedShiftCount] = useState<number | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const handleClose = () => {
     // Reset form state when closing
@@ -83,7 +101,7 @@ export function WageHistoryModal({
 
     // Validation: date required for create mode (edit can be baseline)
     if (mode === 'create' && !fromDate) {
-      setError('Dato er påkrevd');
+      setError(t.pages.settings.pay.wageHistory.modal.errors.dateRequired);
       return;
     }
 
@@ -92,7 +110,7 @@ export function WageHistoryModal({
       : parseFloat(customWage);
 
     if (!wage || wage <= 0) {
-      setError('Ugyldig timelønn');
+      setError(t.pages.settings.pay.wageHistory.modal.errors.invalidWage);
       return;
     }
 
@@ -148,15 +166,20 @@ export function WageHistoryModal({
         handleClose();
       } catch (err) {
         console.error('Failed to save wage snapshot:', err);
-        setError('En uventet feil oppstod');
+        setError(t.pages.settings.pay.wageHistory.modal.errors.unexpectedError);
       }
     });
   };
 
-  const handleDelete = () => {
+  const handleDeleteClick = () => {
+    setShowDeleteConfirm(true);
+  };
+
+  const handleDeleteConfirm = () => {
     if (!snapshot) return;
 
     setError(null);
+    setShowDeleteConfirm(false);
 
     startTransition(async () => {
       try {
@@ -176,70 +199,25 @@ export function WageHistoryModal({
         }, 1500);
       } catch (err) {
         console.error('Failed to delete wage snapshot:', err);
-        setError('En uventet feil oppstod');
+        setError(t.pages.settings.pay.wageHistory.modal.errors.unexpectedError);
       }
     });
   };
-
-  // Delete confirmation dialog
-  if (mode === 'delete' && snapshot) {
-    return (
-      <Dialog open={isOpen} onOpenChange={(open) => !open && !pending && handleClose()}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-destructive">
-              <IconAlertTriangle className="h-5 w-5" />
-              Slett lønnsoppføring
-            </DialogTitle>
-            <DialogDescription>
-              Er du sikker på at du vil slette lønnsoppføringen fra{' '}
-              <strong>{new Date(snapshot.from_date + 'T00:00:00').toLocaleDateString('no-NO')}</strong>?
-            </DialogDescription>
-          </DialogHeader>
-
-          {affectedShiftCount !== null && (
-            <div className="rounded-md bg-blue-50 dark:bg-blue-900/10 p-3">
-              <p className="text-sm text-blue-800 dark:text-blue-200">
-                {affectedShiftCount === 0
-                  ? 'Ingen skift vil bli påvirket.'
-                  : `${affectedShiftCount} skift vil bruke en annen lønnsoppføring.`}
-              </p>
-            </div>
-          )}
-
-          {error && (
-            <div className="rounded-md bg-red-50 dark:bg-red-900/10 p-3">
-              <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
-            </div>
-          )}
-
-          <DialogFooter>
-            <Button variant="outline" onClick={handleClose} disabled={pending}>
-              Avbryt
-            </Button>
-            <Button variant="destructive" onClick={handleDelete} disabled={pending}>
-              {pending ? 'Sletter...' : 'Slett'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    );
-  }
 
   // View-only dialog
   if (mode === 'view' && snapshot) {
     return (
       <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:rounded-3xl sm:max-w-[520px] max-h-[90vh] overflow-y-auto overflow-x-hidden">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <IconCalendar className="h-5 w-5 text-text-muted" />
-              Nåværende lønnsinnstillinger
+            <DialogTitle className="flex items-start gap-2">
+              <IconCalendar className="h-5 w-5 text-text-muted flex-shrink-0 mt-0.5" />
+              <span className="flex-1 min-w-0">{t.pages.settings.pay.currentWageCard.title}</span>
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-left">
               {snapshot.from_date === null
-                ? 'Grunntariff (gjelder for alle datoer som ikke har en spesifikk endring)'
-                : `Gyldig fra ${new Date(snapshot.from_date + 'T00:00:00').toLocaleDateString('no-NO')}`}
+                ? t.pages.settings.pay.wageHistory.baselineDescription
+                : t.pages.settings.pay.wageHistory.validFrom.replace('{date}', formatDate(snapshot.from_date, locale))}
             </DialogDescription>
           </DialogHeader>
 
@@ -254,25 +232,25 @@ export function WageHistoryModal({
               disabled={true}
               showCurrentWage={false}
               labels={{
-                tariffButton: 'Tariff',
-                customButton: 'Egendefinert',
-                wageLevelLabel: 'Tariffsteg',
-                customWageLabel: 'Egendefinert timelønn (kr)',
-                wageLevelPrefix: 'Steg',
-                wageLevelUnder16: 'Under 16 år',
-                wageLevel16to18: '16-18 år',
-                perHour: 'kr/time',
+                tariffButton: t.pages.settings.pay.wageHistory.modal.useTariff,
+                customButton: t.common.cancel, // Reusing generic label
+                wageLevelLabel: t.pages.settings.pay.wageHistory.modal.tariffLevelLabel,
+                customWageLabel: t.pages.settings.pay.wageHistory.modal.customWageLabel,
+                wageLevelPrefix: t.pages.settings.pay.wage.wageLevelPrefix,
+                wageLevelUnder16: t.pages.settings.pay.wage.wageLevelUnder16,
+                wageLevel16to18: t.pages.settings.pay.wage.wageLevel16to18,
+                perHour: t.common.perHour,
               }}
             />
 
             {/* Supplements */}
             <div className="space-y-4">
               <div>
-                <h3 className="text-sm font-semibold">Tillegg</h3>
+                <h3 className="text-sm font-semibold">{t.pages.settings.pay.wageHistory.modal.supplementsTitle}</h3>
                 <p className="text-sm text-text-secondary mt-1">
                   {snapshot.wage_level !== null
-                    ? 'Tariffavtalens tillegg'
-                    : 'Egendefinerte tillegg'}
+                    ? t.pages.settings.pay.wageHistory.modal.supplementsTariff
+                    : t.pages.settings.pay.wageHistory.modal.supplementsCustom}
                 </p>
               </div>
 
@@ -286,10 +264,16 @@ export function WageHistoryModal({
             </div>
           </div>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={handleClose}>
-              Lukk
-            </Button>
+          <DialogFooter className="mt-4">
+            <div className="grid w-full gap-2 grid-cols-1">
+              <Button
+                onClick={handleClose}
+                className="col-span-1 h-11 w-full rounded-full px-4 text-sm font-medium border border-border-subtle bg-white text-neutral-900 hover:bg-surface-secondary dark:text-neutral-900 gap-2"
+              >
+                <IconX className="h-4 w-4" />
+                {t.common.close}
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -298,14 +282,12 @@ export function WageHistoryModal({
 
   // Create/Edit dialog
   const title = mode === 'edit'
-    ? (isBaseline ? 'Rediger grunntariff' : 'Rediger lønnsoppføring')
-    : 'Ny lønnsoppføring';
+    ? t.pages.settings.pay.wageHistory.modal.editTitle
+    : t.pages.settings.pay.wageHistory.modal.createTitle;
   const description =
     mode === 'edit'
-      ? (isBaseline
-          ? 'Rediger grunntariffen din. Dette gjelder for alle datoer som ikke har en spesifikk lønnsendring.'
-          : 'Endre historisk lønnsinnstilling. Dette vil påvirke beregningen av eksisterende skift på eller etter denne datoen.')
-      : 'Legg til en historisk lønnsinnstilling. Bruk dette for å rette opp lønnshistorikken din.';
+      ? t.pages.settings.pay.wageHistory.modal.editDescription
+      : t.pages.settings.pay.wageHistory.modal.createDescription;
 
   const customWageValue = parseFloat(customWage);
   const isCustomWageInvalid =
@@ -314,13 +296,13 @@ export function WageHistoryModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && !pending && handleClose()}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:rounded-3xl sm:max-w-[520px] max-h-[90vh] overflow-y-auto overflow-x-hidden">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <IconCalendar className="h-5 w-5 text-text-muted" />
-            {title}
+          <DialogTitle className="flex items-start gap-2">
+            <IconCalendar className="h-5 w-5 text-text-muted flex-shrink-0 mt-0.5" />
+            <span className="flex-1 min-w-0">{title}</span>
           </DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
+          <DialogDescription className="text-left">{description}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6 py-4">
@@ -328,12 +310,12 @@ export function WageHistoryModal({
           {mode === 'edit' && isBaseline ? (
             <div className="rounded-md bg-blue-50 dark:bg-blue-900/10 p-3">
               <p className="text-sm text-blue-800 dark:text-blue-200">
-                Dette er grunntariffen din som gjelder for alle datoer som ikke har en spesifikk lønnsendring.
+                {t.pages.settings.pay.wageHistory.baselineDescription}
               </p>
             </div>
           ) : (
             <div className="space-y-2">
-              <Label htmlFor="fromDate">Gyldig fra dato</Label>
+              <Label htmlFor="fromDate">{t.pages.settings.pay.wageHistory.modal.fromDateLabel}</Label>
               <Input
                 id="fromDate"
                 type="date"
@@ -342,7 +324,7 @@ export function WageHistoryModal({
                 disabled={pending}
               />
               <p className="text-xs text-text-secondary">
-                Skift på eller etter denne datoen vil bruke denne lønnsinnstillingen
+                {t.pages.settings.pay.wageHistory.modal.fromDateHelp}
               </p>
             </div>
           )}
@@ -357,34 +339,47 @@ export function WageHistoryModal({
             disabled={pending}
             showCurrentWage={false}
             labels={{
-              tariffButton: 'Tariff',
-              customButton: 'Egendefinert',
-              wageLevelLabel: 'Tariffsteg',
-              customWageLabel: 'Egendefinert timelønn (kr)',
-              wageLevelPrefix: 'Steg',
-              wageLevelUnder16: 'Under 16 år',
-              wageLevel16to18: '16-18 år',
-              perHour: 'kr/time',
+              tariffButton: t.pages.settings.pay.wageHistory.modal.useTariff,
+              customButton: t.common.cancel, // Reusing generic label
+              wageLevelLabel: t.pages.settings.pay.wageHistory.modal.tariffLevelLabel,
+              customWageLabel: t.pages.settings.pay.wageHistory.modal.customWageLabel,
+              wageLevelPrefix: t.pages.settings.pay.wage.wageLevelPrefix,
+              wageLevelUnder16: t.pages.settings.pay.wage.wageLevelUnder16,
+              wageLevel16to18: t.pages.settings.pay.wage.wageLevel16to18,
+              perHour: t.common.perHour,
             }}
           />
+
+          {/* Save Button */}
+          <div className="flex justify-end">
+            <Button
+              onClick={handleSave}
+              disabled={pending || isCustomWageInvalid}
+              className="w-full sm:w-auto"
+            >
+              {pending ? t.pages.settings.pay.wageHistory.modal.saving : mode === 'edit' ? t.pages.settings.pay.wageHistory.modal.save : t.pages.settings.pay.wageHistory.modal.create}
+            </Button>
+          </div>
 
           {/* Supplements */}
           <div className="space-y-4">
             <div>
-              <h3 className="text-sm font-semibold">Tillegg</h3>
+              <h3 className="text-sm font-semibold">{t.pages.settings.pay.wageHistory.modal.supplementsTitle}</h3>
               <p className="text-sm text-text-secondary mt-1">
                 {usePreset
-                  ? 'Tariffavtalens tillegg brukes automatisk'
-                  : 'Konfigurer egne tillegg for denne perioden'}
+                  ? t.pages.settings.pay.wageHistory.modal.supplementsTariff
+                  : t.pages.settings.pay.wageHistory.modal.supplementsCustom}
               </p>
             </div>
 
-            <SupplementsEditor
-              key={usePreset ? 'tariff' : 'custom'}
-              value={usePreset ? TARIFF_SUPPLEMENTS_DATA : customSupplements}
-              onChange={setCustomSupplements}
-              readOnly={usePreset}
-            />
+            <div className="max-w-full">
+              <SupplementsEditor
+                key={usePreset ? 'tariff' : 'custom'}
+                value={usePreset ? TARIFF_SUPPLEMENTS_DATA : customSupplements}
+                onChange={setCustomSupplements}
+                readOnly={usePreset}
+              />
+            </div>
           </div>
 
           {error && (
@@ -394,15 +389,90 @@ export function WageHistoryModal({
           )}
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={handleClose} disabled={pending}>
-            Avbryt
-          </Button>
-          <Button onClick={handleSave} disabled={pending || isCustomWageInvalid}>
-            {pending ? 'Lagrer...' : mode === 'edit' ? 'Lagre endringer' : 'Opprett'}
-          </Button>
+        <DialogFooter className="mt-4">
+          <div className={`grid w-full gap-2 ${mode === 'edit' && !isBaseline ? 'grid-cols-3' : 'grid-cols-2'}`}>
+            {mode === 'edit' && !isBaseline && (
+              <Button
+                onClick={handleDeleteClick}
+                disabled={pending}
+                className="col-span-1 h-11 w-full rounded-full px-4 text-sm font-medium transition-colors gap-2 bg-rose-600 text-white hover:bg-rose-700"
+              >
+                <IconTrash className="h-4 w-4" />
+                {t.common.delete}
+              </Button>
+            )}
+            <Button
+              onClick={handleSave}
+              disabled={pending || isCustomWageInvalid}
+              className="col-span-1 h-11 w-full rounded-full px-4 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 gap-2"
+            >
+              <IconCheck className="h-4 w-4" />
+              {pending ? t.pages.settings.pay.wageHistory.modal.saving : mode === 'edit' ? t.pages.settings.pay.wageHistory.modal.save : t.pages.settings.pay.wageHistory.modal.create}
+            </Button>
+            <Button
+              onClick={handleClose}
+              disabled={pending}
+              className="col-span-1 h-11 w-full rounded-full px-4 text-sm font-medium border border-border-subtle bg-white text-neutral-900 hover:bg-surface-secondary dark:text-neutral-900 gap-2"
+            >
+              <IconX className="h-4 w-4" />
+              {t.pages.settings.pay.wageHistory.modal.cancel}
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <DialogContent className="sm:rounded-3xl sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-start gap-2 text-destructive">
+              <IconAlertTriangle className="h-5 w-5 flex-shrink-0 mt-0.5" />
+              <span className="flex-1 min-w-0">{t.pages.settings.pay.wageHistory.modal.deleteTitle}</span>
+            </DialogTitle>
+            <DialogDescription className="text-left">
+              {snapshot?.from_date && t.pages.settings.pay.wageHistory.modal.deleteDescription.replace('{date}', formatDate(snapshot.from_date, locale))}
+            </DialogDescription>
+          </DialogHeader>
+
+          {affectedShiftCount !== null && (
+            <div className="rounded-md bg-blue-50 dark:bg-blue-900/10 p-3">
+              <p className="text-sm text-blue-800 dark:text-blue-200">
+                {affectedShiftCount === 0
+                  ? t.pages.settings.pay.wageHistory.modal.noShiftsAffected
+                  : t.pages.settings.pay.wageHistory.modal.shiftsAffected.replace('{count}', affectedShiftCount.toString())}
+              </p>
+            </div>
+          )}
+
+          {error && (
+            <div className="rounded-md bg-red-50 dark:bg-red-900/10 p-3">
+              <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
+            </div>
+          )}
+
+          <DialogFooter className="mt-4">
+            <div className="grid w-full gap-2 grid-cols-2">
+              <Button
+                onClick={handleDeleteConfirm}
+                disabled={pending}
+                loading={pending}
+                className="col-span-1 h-11 w-full rounded-full px-4 text-sm font-medium transition-colors gap-2 bg-rose-600 text-white hover:bg-rose-700"
+              >
+                <IconTrash className="h-4 w-4" />
+                {t.pages.settings.pay.wageHistory.modal.deleteTitle}
+              </Button>
+              <Button
+                onClick={() => setShowDeleteConfirm(false)}
+                disabled={pending}
+                className="col-span-1 h-11 w-full rounded-full px-4 text-sm font-medium border border-border-subtle bg-white text-neutral-900 hover:bg-surface-secondary dark:text-neutral-900 gap-2"
+              >
+                <IconX className="h-4 w-4" />
+                {t.pages.settings.pay.wageHistory.modal.cancel}
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }
