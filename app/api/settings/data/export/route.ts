@@ -6,6 +6,7 @@ import {
   PRESET_SUPPLEMENT_RULES,
   type ShiftRow,
   type UserSettings,
+  type WageSnapshot,
 } from "@/lib/payroll";
 import { logger } from "@/lib/logger";
 
@@ -98,7 +99,7 @@ export async function GET(request: NextRequest) {
 
   let query = supabase
     .from("user_shifts")
-    .select("id, user_id, shift_date, start_time, end_time, shift_type")
+    .select("*")
     .eq("user_id", user.id)
     .order("shift_date", { ascending: true })
     .order("start_time", { ascending: true });
@@ -123,8 +124,34 @@ export async function GET(request: NextRequest) {
     return response;
   }
 
+  // Fetch wage snapshots for all shift dates
+  const { data: allSnapshots, error: snapshotsError } = await supabase
+    .from('wage_snapshots')
+    .select('*')
+    .eq('user_id', user.id)
+    .order('from_date', { ascending: false, nullsFirst: false });
+
+  if (snapshotsError) {
+    logger.error("[data export] Failed to load wage snapshots:", snapshotsError);
+  }
+
+  const snapshots = (allSnapshots ?? []) as WageSnapshot[];
+  const baselineSnapshot = snapshots.find((snapshot) => snapshot.from_date === null);
+
+  // Create a function to get the applicable snapshot for a shift date
+  const getSnapshotForDate = (shiftDate: string): WageSnapshot | null => {
+    // Find the first dated snapshot where from_date <= shiftDate
+    const applicableSnapshot = snapshots.find(
+      (snapshot) => snapshot.from_date !== null && snapshot.from_date <= shiftDate
+    );
+
+    // Use dated snapshot if found, otherwise fall back to baseline
+    return applicableSnapshot || baselineSnapshot || null;
+  };
+
   const computedShifts = (shifts ?? []).map((shift) => {
-    const computed = computeShift(shift as ShiftRow, settings, PRESET_SUPPLEMENT_RULES);
+    const snapshot = getSnapshotForDate(shift.shift_date);
+    const computed = computeShift(shift as ShiftRow, settings, PRESET_SUPPLEMENT_RULES, snapshot);
     const { shift_type, ...rest } = shift as ShiftRowWithMeta;
     return {
       id: rest.id,

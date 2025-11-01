@@ -209,9 +209,9 @@ export function WageHistoryModal({
     return (
       <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
         <DialogContent className="sm:rounded-3xl sm:max-w-[520px] max-h-[90vh] overflow-y-auto overflow-x-hidden">
-          <DialogHeader>
-            <DialogTitle className="flex items-start gap-2">
-              <IconCalendar className="h-5 w-5 text-text-muted flex-shrink-0 mt-0.5" />
+          <DialogHeader className="pb-2 text-left">
+            <DialogTitle className="flex items-center gap-2 text-left">
+              <IconCalendar className="h-5 w-5 text-text-muted flex-shrink-0" />
               <span className="flex-1 min-w-0">{t.pages.settings.pay.currentWageCard.title}</span>
             </DialogTitle>
             <DialogDescription className="text-left">
@@ -221,7 +221,7 @@ export function WageHistoryModal({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-6 py-4">
+          <div className="space-y-6 py-6">
             <WageSourceCard
               usePreset={snapshot.wage_level !== null}
               setUsePreset={() => {}}
@@ -233,7 +233,7 @@ export function WageHistoryModal({
               showCurrentWage={false}
               labels={{
                 tariffButton: t.pages.settings.pay.wageHistory.modal.useTariff,
-                customButton: t.common.cancel, // Reusing generic label
+                customButton: t.pages.settings.pay.wage.customButton,
                 wageLevelLabel: t.pages.settings.pay.wageHistory.modal.tariffLevelLabel,
                 customWageLabel: t.pages.settings.pay.wageHistory.modal.customWageLabel,
                 wageLevelPrefix: t.pages.settings.pay.wage.wageLevelPrefix,
@@ -284,10 +284,6 @@ export function WageHistoryModal({
   const title = mode === 'edit'
     ? t.pages.settings.pay.wageHistory.modal.editTitle
     : t.pages.settings.pay.wageHistory.modal.createTitle;
-  const description =
-    mode === 'edit'
-      ? t.pages.settings.pay.wageHistory.modal.editDescription
-      : t.pages.settings.pay.wageHistory.modal.createDescription;
 
   const customWageValue = parseFloat(customWage);
   const isCustomWageInvalid =
@@ -297,15 +293,14 @@ export function WageHistoryModal({
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && !pending && handleClose()}>
       <DialogContent className="sm:rounded-3xl sm:max-w-[520px] max-h-[90vh] overflow-y-auto overflow-x-hidden">
-        <DialogHeader>
-          <DialogTitle className="flex items-start gap-2">
-            <IconCalendar className="h-5 w-5 text-text-muted flex-shrink-0 mt-0.5" />
+        <DialogHeader className="pb-2 text-left">
+          <DialogTitle className="flex items-center gap-2 text-left">
+            <IconCalendar className="h-5 w-5 text-text-muted flex-shrink-0" />
             <span className="flex-1 min-w-0">{title}</span>
           </DialogTitle>
-          <DialogDescription className="text-left">{description}</DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6 py-4">
+        <div className="space-y-6 py-6">
           {/* Date input or baseline indicator */}
           {mode === 'edit' && isBaseline ? (
             <div className="rounded-md bg-blue-50 dark:bg-blue-900/10 p-3">
@@ -340,7 +335,7 @@ export function WageHistoryModal({
             showCurrentWage={false}
             labels={{
               tariffButton: t.pages.settings.pay.wageHistory.modal.useTariff,
-              customButton: t.common.cancel, // Reusing generic label
+              customButton: t.pages.settings.pay.wage.customButton,
               wageLevelLabel: t.pages.settings.pay.wageHistory.modal.tariffLevelLabel,
               customWageLabel: t.pages.settings.pay.wageHistory.modal.customWageLabel,
               wageLevelPrefix: t.pages.settings.pay.wage.wageLevelPrefix,
@@ -424,9 +419,9 @@ export function WageHistoryModal({
       {/* Delete Confirmation Dialog */}
       <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <DialogContent className="sm:rounded-3xl sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle className="flex items-start gap-2 text-destructive">
-              <IconAlertTriangle className="h-5 w-5 flex-shrink-0 mt-0.5" />
+          <DialogHeader className="text-left">
+            <DialogTitle className="flex items-center gap-2 text-destructive text-left">
+              <IconAlertTriangle className="h-5 w-5 flex-shrink-0" />
               <span className="flex-1 min-w-0">{t.pages.settings.pay.wageHistory.modal.deleteTitle}</span>
             </DialogTitle>
             <DialogDescription className="text-left">

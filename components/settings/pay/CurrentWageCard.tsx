@@ -51,31 +51,35 @@ export function CurrentWageCard({ currentSnapshot, t }: CurrentWageCardProps) {
 
   return (
     <>
-      <Card className="p-6 border-2 border-blue-500/30 dark:border-blue-400/30">
-        <div className="flex items-center gap-3">
+      <Card className="p-8 border-2 border-blue-500/30 dark:border-blue-400/30">
+        <div className="flex items-center gap-4">
           {/* Left content */}
-          <div className="flex-1 min-w-0 space-y-3">
+          <div className="flex-1 min-w-0 space-y-4">
             {/* Wage */}
             <div className="flex items-baseline gap-2 flex-wrap">
               <span className="text-3xl font-bold text-text-primary">
                 {currentSnapshot.hourly_wage.toFixed(2)}
               </span>
-              <span className="text-sm text-text-secondary">kr/time</span>
-              {isPreset && (
-                <span className="text-sm text-text-muted">
-                  • {t.pages.settings.pay.wage.wageLevelPrefix} {currentSnapshot.wage_level}
-                </span>
-              )}
+              <span className="text-base text-text-secondary">kr/time</span>
             </div>
 
             {/* Info */}
-            <p className="text-xs text-text-secondary max-w-prose">
-              {currentSnapshot.from_date === null
-                ? t.pages.settings.pay.wageHistory.baselineDescription
-                : t.pages.settings.pay.wageHistory.validFrom.replace('{date}', formatDate(currentSnapshot.from_date, locale))}
-              {' • '}
-              {supplementCount} {supplementCount === 1 ? t.pages.settings.pay.currentWageCard.supplementsSingular : t.pages.settings.pay.currentWageCard.supplementsPlural}
-            </p>
+            <div className="text-sm text-text-secondary space-y-1">
+              <p className="leading-relaxed">
+                {currentSnapshot.from_date === null
+                  ? t.pages.settings.pay.wageHistory.baselineDescription
+                  : t.pages.settings.pay.wageHistory.validFrom.replace('{date}', formatDate(currentSnapshot.from_date, locale))}
+              </p>
+              <p className="leading-relaxed">
+                {supplementCount} {supplementCount === 1 ? t.pages.settings.pay.currentWageCard.supplementsSingular : t.pages.settings.pay.currentWageCard.supplementsPlural}
+                {isPreset && (
+                  <span>
+                    {' • '}
+                    {t.pages.settings.pay.wage.wageLevelPrefix} {currentSnapshot.wage_level}
+                  </span>
+                )}
+              </p>
+            </div>
           </div>
 
           {/* Right button */}
