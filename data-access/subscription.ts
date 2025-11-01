@@ -1,5 +1,6 @@
 'use server';
 
+import { cacheTag } from 'next/cache';
 import { verifySession } from '@/data-access/auth';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
@@ -39,6 +40,8 @@ export interface SubscriptionData {
  * - Automatically verifies user session matches provided userId
  */
 export async function getUserSubscription(userId: string): Promise<Subscription | null> {
+  'use cache: private';
+  cacheTag(`user-${userId}`, 'user-subscription');
   try {
     const { user } = await verifySession();
 
@@ -76,6 +79,8 @@ export async function getUserSubscription(userId: string): Promise<Subscription 
  * - Automatically verifies user session matches provided userId
  */
 export async function getUserSubscriptionData(userId: string): Promise<SubscriptionData> {
+  'use cache: private';
+  cacheTag(`user-${userId}`, 'user-subscription');
   try {
     const { user } = await verifySession();
 

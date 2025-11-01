@@ -1,5 +1,6 @@
 'use server';
 
+import { cacheTag } from 'next/cache';
 import { verifySession } from '@/data-access/auth';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
@@ -9,6 +10,8 @@ import { logger } from '@/lib/logger';
  * - Automatically verifies user session matches provided userId
  */
 export async function getUserSettings(userId: string) {
+  'use cache: private';
+  cacheTag(`user-${userId}`, 'user-settings');
   try {
     const { user } = await verifySession();
 
@@ -41,6 +44,8 @@ export async function getUserSettings(userId: string) {
  * - Automatically verifies user session matches provided userId
  */
 export async function getUserProfile(userId: string) {
+  'use cache: private';
+  cacheTag(`user-${userId}`, 'user-profile');
   const { user } = await verifySession();
 
   // SECURITY: Verify the provided userId matches the authenticated user

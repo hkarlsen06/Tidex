@@ -1,5 +1,6 @@
 import "server-only";
 import { cache } from "react";
+import { cacheTag } from "next/cache";
 import { verifySession } from "@/data-access/auth";
 import { getComputedShifts } from "@/data-access/shifts";
 import {
@@ -31,6 +32,8 @@ async function getMonthlyTotalInternal(userId: string): Promise<{
   earnedToDate: string;
   earnedToDateGross: number;
 }> {
+  'use cache: private';
+  cacheTag(`user-${userId}`, 'user-stats');
   // Load current month + previous month only (2 months total)
   const { year, month } = getCurrentYearMonth();
   const { year: prevYear, month: prevMonth } = getPreviousYearMonth();
@@ -252,6 +255,8 @@ type StatsOptions = {
  * @internal - Do not call directly, use getStatsData() or getStatsDataForApi()
  */
 async function getStatsDataInternal(userId: string, options: StatsOptions = {}): Promise<StatsData> {
+  'use cache: private';
+  cacheTag(`user-${userId}`, 'user-stats');
   // Get translations for month/day names
   const locale = options.locale || 'no';
   const t = getTranslations(locale);

@@ -1,5 +1,6 @@
 import 'server-only';
 import { cache } from 'react';
+import { cacheTag } from 'next/cache';
 import { verifySession } from '@/data-access/auth';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
@@ -15,8 +16,10 @@ export type { WageSnapshot, SupplementRule };
  * - Automatically verifies user session
  */
 export const getUserWageSnapshots = cache(async (): Promise<WageSnapshot[]> => {
+  'use cache: private';
   try {
     const { user } = await verifySession();
+    cacheTag(`user-${user.id}`, 'user-wages');
     const supabase = await createSupabaseServerClient();
 
     const { data, error } = await supabase
