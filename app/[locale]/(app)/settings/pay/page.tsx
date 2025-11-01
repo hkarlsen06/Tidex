@@ -2,7 +2,10 @@ import type { Metadata } from 'next';
 import { connection } from "next/server";
 import { verifySession } from '@/data-access/auth';
 import { getUserSettings } from '@/data-access/settings';
+import { getUserWageSnapshots, getSnapshotForDate } from '@/data-access/wage-snapshots';
 import { PayForm } from '@components/settings/pay/PayForm';
+import { WageHistoryList } from '@components/settings/pay/WageHistoryList';
+import { CurrentWageCard } from '@components/settings/pay/CurrentWageCard';
 import { ReSnapshotCard } from '@components/settings/data/ReSnapshotCard';
 import { Separator } from '@appui/Separator';
 import { getTranslations } from '@/lib/i18n/server';
@@ -33,6 +36,11 @@ export default async function PayPage({
   const { user } = await verifySession();
 
   const settings = await getUserSettings(user.id);
+  const wageSnapshots = await getUserWageSnapshots();
+
+  // Get current wage snapshot (applicable today)
+  const today = new Date().toISOString().split('T')[0];
+  const currentSnapshot = await getSnapshotForDate(today);
 
   return (
     <div className="container mx-auto py-8 max-w-2xl">
@@ -43,6 +51,14 @@ export default async function PayPage({
             {t.pages.settings.pay.subtitle}
           </p>
         </div>
+
+        <CurrentWageCard currentSnapshot={currentSnapshot} />
+
+        <Separator />
+
+        <WageHistoryList snapshots={wageSnapshots} />
+
+        <Separator className="mt-6" />
 
         <PayForm initialData={settings} />
 

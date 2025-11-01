@@ -7,78 +7,18 @@ import { Input } from '@appui/Input';
 import { Switch } from '@appui/Switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@appui/Select';
 import { Separator } from '@appui/Separator';
-import { SupplementsEditor, SupplementsData } from '@/components/settings/SupplementsEditor';
 import { updatePaySettings } from '@/app/[locale]/(app)/settings/_actions/updateSettings';
 import { useRouter } from 'next/navigation';
-import { PRESET_WAGE_RATES, PRESET_SUPPLEMENT_RULES } from '@/lib/payroll';
-import { IconBuilding, IconAdjustments } from '@tabler/icons-react';
-import { cn } from '@/lib/utils';
 import { useTranslations } from '@/lib/i18n/client';
 
 interface PayFormProps {
   initialData: any;
 }
 
-const TARIFF_SUPPLEMENTS_DATA: SupplementsData = {
-  rules: PRESET_SUPPLEMENT_RULES.map((rule) => ({ ...rule })),
-};
-
-interface SupplementsCardProps {
-  usePreset: boolean;
-  customSupplements: SupplementsData | null;
-  setCustomSupplements: React.Dispatch<React.SetStateAction<SupplementsData | null>>;
-}
-
-function SupplementsCard({ usePreset, customSupplements, setCustomSupplements }: SupplementsCardProps) {
-  const { t } = useTranslations();
-
-  return (
-    <Card className="p-6">
-      <div className="space-y-6">
-        <div>
-          <h3 className="text-lg font-semibold">{t.pages.settings.pay.supplements.title}</h3>
-          <p className="text-sm text-text-secondary mt-1">
-            {usePreset
-              ? t.pages.settings.pay.supplements.descriptionPreset
-              : t.pages.settings.pay.supplements.descriptionCustom}
-          </p>
-        </div>
-
-        <Separator />
-
-        <SupplementsEditor
-          key={usePreset ? 'tariff' : 'custom'}
-          value={usePreset ? TARIFF_SUPPLEMENTS_DATA : customSupplements}
-          onChange={setCustomSupplements}
-          readOnly={usePreset}
-        />
-
-        {usePreset && (
-          <p className="text-xs text-text-secondary">
-            {t.pages.settings.pay.supplements.tariffNote}
-          </p>
-        )}
-      </div>
-    </Card>
-  );
-}
-
 export function PayForm({ initialData }: PayFormProps) {
   const { t } = useTranslations();
   const router = useRouter();
   const isInitialMount = useRef(true);
-
-  // Wage settings
-  const [usePreset, setUsePreset] = useState(initialData.use_preset ?? true);
-  const [wageLevel, setWageLevel] = useState(initialData.current_wage_level?.toString() || '1');
-  const [customWage, setCustomWage] = useState(initialData.custom_wage?.toString() || '200');
-  const [customSupplements, setCustomSupplements] = useState<SupplementsData | null>(
-    initialData.custom_supplements || null
-  );
-  const customWageValue = parseFloat(customWage);
-  const isCustomWageInvalid =
-    !usePreset &&
-    (!customWage || Number.isNaN(customWageValue) || customWageValue < 1 || customWageValue > 10000);
 
   // Break settings
   const [pauseDeductionEnabled, setPauseDeductionEnabled] = useState(
@@ -111,16 +51,8 @@ export function PayForm({ initialData }: PayFormProps) {
   );
 
   const saveSettings = useCallback(async () => {
-    if (isCustomWageInvalid) {
-      return;
-    }
-
     try {
       await updatePaySettings({
-        use_preset: usePreset,
-        current_wage_level: parseInt(wageLevel),
-        custom_wage: customWageValue,
-        custom_supplements: customSupplements,
         monthly_goal: monthlyGoal ? parseFloat(monthlyGoal) : null,
         payroll_day: payrollDay ? parseInt(payrollDay) : null,
         pause_deduction_enabled: pauseDeductionEnabled,
@@ -135,9 +67,6 @@ export function PayForm({ initialData }: PayFormProps) {
       console.error('Failed to save pay settings:', error);
     }
   }, [
-    customSupplements,
-    customWageValue,
-    isCustomWageInvalid,
     monthlyGoal,
     pauseDeductionEnabled,
     pauseDeductionMinutes,
@@ -147,8 +76,6 @@ export function PayForm({ initialData }: PayFormProps) {
     router,
     taxDeductionEnabled,
     taxPercentage,
-    usePreset,
-    wageLevel,
   ]);
 
   // Auto-save for immediate changes (buttons, switches, selects)
@@ -158,7 +85,7 @@ export function PayForm({ initialData }: PayFormProps) {
       return;
     }
     saveSettings();
-  }, [customSupplements, pauseDeductionEnabled, pauseMethod, saveSettings, taxDeductionEnabled, usePreset, wageLevel]);
+  }, [pauseDeductionEnabled, pauseMethod, saveSettings, taxDeductionEnabled]);
 
   // Debounced auto-save for text inputs (1 second)
   useEffect(() => {
@@ -169,122 +96,11 @@ export function PayForm({ initialData }: PayFormProps) {
     }, 1000);
 
     return () => clearTimeout(timer);
-  }, [customWage, monthlyGoal, pauseDeductionMinutes, pauseThresholdHours, payrollDay, saveSettings, taxPercentage]);
-
-  const getCurrentWage = () => {
-    if (usePreset) {
-      const rate = PRESET_WAGE_RATES[wageLevel];
-      return `${rate?.toFixed(2) || '0'} ${t.common.perHour}`;
-    }
-    return `${customWage} ${t.common.perHour}`;
-  };
+  }, [monthlyGoal, pauseDeductionMinutes, pauseThresholdHours, payrollDay, saveSettings, taxPercentage]);
 
 
   return (
     <div className="space-y-6">
-      {/* Wage Configuration */}
-      <Card className="p-6">
-        <div className="space-y-6">
-          <div>
-            <h3 className="text-lg font-semibold">{t.pages.settings.pay.wage.title}</h3>
-            <p className="text-sm text-text-secondary mt-1">
-              {t.pages.settings.pay.wage.description}
-            </p>
-          </div>
-
-          <Separator />
-
-          <div className="flex gap-4">
-            <button
-              type="button"
-              onClick={() => setUsePreset(true)}
-              className={cn(
-                'flex-1 flex flex-col items-center justify-center gap-2 rounded-2xl px-8 py-6 transition-all',
-                'border-2',
-                usePreset
-                  ? 'border-text-primary bg-surface-secondary'
-                  : 'border-border hover:border-border-subtle hover:bg-surface-primary'
-              )}
-            >
-              <IconBuilding stroke={2} className="h-8 w-8" />
-              <span className="text-xs font-medium">{t.pages.settings.pay.wage.tariffButton}</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setUsePreset(false)}
-              className={cn(
-                'flex-1 flex flex-col items-center justify-center gap-2 rounded-2xl px-8 py-6 transition-all',
-                'border-2',
-                !usePreset
-                  ? 'border-text-primary bg-surface-secondary'
-                  : 'border-border hover:border-border-subtle hover:bg-surface-primary'
-              )}
-            >
-              <IconAdjustments stroke={2} className="h-8 w-8" />
-              <span className="text-xs font-medium">{t.pages.settings.pay.wage.customButton}</span>
-            </button>
-          </div>
-
-          {usePreset ? (
-            <div className="space-y-2">
-              <Label htmlFor="wageLevel">{t.pages.settings.pay.wage.wageLevelLabel}</Label>
-              <Select value={wageLevel} onValueChange={setWageLevel}>
-                <SelectTrigger id="wageLevel">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.keys(PRESET_WAGE_RATES).map((level) => {
-                    const levelNum = parseInt(level);
-                    let label = `${t.pages.settings.pay.wage.wageLevelPrefix} ${level}`;
-
-                    if (levelNum === -1) {
-                      label = t.pages.settings.pay.wage.wageLevelUnder16;
-                    } else if (levelNum === -2) {
-                      label = t.pages.settings.pay.wage.wageLevel16to18;
-                    }
-
-                    return (
-                      <SelectItem key={level} value={level}>
-                        {label} - {PRESET_WAGE_RATES[level].toFixed(2)} {t.common.perHour}
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              <Label htmlFor="customWage">{t.pages.settings.pay.wage.customWageLabel}</Label>
-              <Input
-                id="customWage"
-                type="number"
-                min={1}
-                max={10000}
-                step={0.01}
-                invalid={isCustomWageInvalid}
-                value={customWage}
-                onChange={(e) => setCustomWage(e.target.value)}
-              />
-            </div>
-          )}
-
-          <div className="p-4 bg-surface-primary rounded-lg">
-            <p className="text-sm text-text-secondary">{t.pages.settings.pay.wage.currentWage}</p>
-            <p className="text-xl font-semibold mt-1">{getCurrentWage()}</p>
-          </div>
-        </div>
-      </Card>
-
-      {/* Supplements - for custom wage users, show here */}
-      {!usePreset && (
-        <SupplementsCard
-          usePreset={usePreset}
-          customSupplements={customSupplements}
-          setCustomSupplements={setCustomSupplements}
-        />
-      )}
-
       {/* Break Deduction */}
       <Card className="p-6">
         <div className="space-y-6">
@@ -434,14 +250,6 @@ export function PayForm({ initialData }: PayFormProps) {
         </div>
       </Card>
 
-      {/* Supplements - for tariff users, show at the bottom */}
-      {usePreset && (
-        <SupplementsCard
-          usePreset={usePreset}
-          customSupplements={customSupplements}
-          setCustomSupplements={setCustomSupplements}
-        />
-      )}
     </div>
   );
 }
