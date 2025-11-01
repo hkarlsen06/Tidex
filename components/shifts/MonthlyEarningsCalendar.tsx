@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect, type Ref } from "react";
+import { useMemo, useState, useEffect, useRef, type Ref } from "react";
 import { IconClock, IconCopy, IconArrowsExchange, IconInfoCircle } from "@tabler/icons-react";
 import { ShiftsCalendar } from "@/components/app/ShiftsCalendar";
 import { Card, CardHeader } from "@/components/app/Card";
@@ -129,6 +129,10 @@ export function MonthlyEarningsCalendar({
   const [viewMode, setViewMode] = useState<"money" | "hours">("money");
   const [localDirection, setLocalDirection] = useState<'next' | 'previous' | null>(null);
   const [prevMonth, setPrevMonth] = useState(month);
+  const swipeContainerRef = useRef<HTMLDivElement>(null);
+  const touchStartX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
+  const isSwiping = useRef<boolean>(false);
 
   // Track month changes and determine direction locally
   useEffect(() => {
@@ -193,36 +197,104 @@ export function MonthlyEarningsCalendar({
     return gross;
   }, [monthlyShifts, month]);
 
+  // Swipe gesture handling
+  useEffect(() => {
+    const container = swipeContainerRef.current;
+    if (!container) return;
+
+    const handleTouchStart = (e: TouchEvent) => {
+      touchStartX.current = e.touches[0].clientX;
+      touchStartY.current = e.touches[0].clientY;
+      isSwiping.current = false;
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (touchStartX.current === null || touchStartY.current === null) return;
+
+      const deltaX = e.touches[0].clientX - touchStartX.current;
+      const deltaY = e.touches[0].clientY - touchStartY.current;
+
+      // Determine if this is a horizontal swipe (more horizontal than vertical)
+      if (!isSwiping.current && Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 10) {
+        isSwiping.current = true;
+      }
+
+      // If we're swiping horizontally, prevent default scrolling
+      if (isSwiping.current) {
+        e.preventDefault();
+      }
+    };
+
+    const handleTouchEnd = (e: TouchEvent) => {
+      if (touchStartX.current === null || !isSwiping.current) {
+        touchStartX.current = null;
+        touchStartY.current = null;
+        isSwiping.current = false;
+        return;
+      }
+
+      const deltaX = e.changedTouches[0].clientX - touchStartX.current;
+      const threshold = 50; // Minimum swipe distance in pixels
+
+      if (Math.abs(deltaX) > threshold) {
+        if (deltaX > 0) {
+          // Swipe right - go to previous month
+          goToPreviousMonth();
+        } else {
+          // Swipe left - go to next month
+          goToNextMonth();
+        }
+      }
+
+      touchStartX.current = null;
+      touchStartY.current = null;
+      isSwiping.current = false;
+    };
+
+    // Add passive: false to allow preventDefault on touchmove
+    container.addEventListener('touchstart', handleTouchStart, { passive: true });
+    container.addEventListener('touchmove', handleTouchMove, { passive: false });
+    container.addEventListener('touchend', handleTouchEnd, { passive: true });
+
+    return () => {
+      container.removeEventListener('touchstart', handleTouchStart);
+      container.removeEventListener('touchmove', handleTouchMove);
+      container.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [goToPreviousMonth, goToNextMonth]);
+
   return (
     <Card ref={containerRef} className="rounded-card border-0">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 py-3 px-0">
-        <div className="flex items-center gap-1">
-          <MonthPicker
+      <div ref={swipeContainerRef}>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 py-3 px-0">
+          <div className="flex items-center gap-1">
+            <MonthPicker
+              month={month}
+              onPreviousMonth={goToPreviousMonth}
+              onNextMonth={goToNextMonth}
+            />
+            <span className="font-medium text-text-muted ml-1">{formatYear(month)}</span>
+          </div>
+          <div
+            key={`total-${month.getFullYear()}-${month.getMonth()}`}
+            className={`font-semibold text-text-primary ${getAnimationClasses(localDirection)}`}
+          >
+            {formatCurrency(totalEarnings)}
+          </div>
+        </CardHeader>
+        <div className="pb-6">
+          <ShiftsCalendar
             month={month}
-            onPreviousMonth={goToPreviousMonth}
-            onNextMonth={goToNextMonth}
+            mode={viewMode}
+            earningsByDate={earningsByDate}
+            hoursByDate={hoursByDate}
+            onMonthChange={onMonthChange}
+            onDayClick={onDayClick}
+            selectedDate={selectedDate}
+            weekNumberPosition="top-left"
+            newlyAddedDates={newlyAddedDates}
           />
-          <span className="font-medium text-text-muted ml-1">{formatYear(month)}</span>
         </div>
-        <div
-          key={`total-${month.getFullYear()}-${month.getMonth()}`}
-          className={`font-semibold text-text-primary ${getAnimationClasses(localDirection)}`}
-        >
-          {formatCurrency(totalEarnings)}
-        </div>
-      </CardHeader>
-      <div className="pb-6">
-        <ShiftsCalendar
-          month={month}
-          mode={viewMode}
-          earningsByDate={earningsByDate}
-          hoursByDate={hoursByDate}
-          onMonthChange={onMonthChange}
-          onDayClick={onDayClick}
-          selectedDate={selectedDate}
-          weekNumberPosition="top-left"
-          newlyAddedDates={newlyAddedDates}
-        />
       </div>
       <div className="flex flex-col items-center gap-2 pb-6">
         <div className="inline-flex min-h-[44px] w-[90%] items-center gap-1 rounded-full border border-border-subtle bg-surface-secondary/80 px-1 py-1 shadow-app-sm dark:shadow-app-inner">
