@@ -75,11 +75,14 @@ export type ShiftWithComputations = ShiftRow & {
 /**
  * WageSnapshot from the wage_snapshots table
  * Represents a point-in-time capture of wage and supplement settings
+ *
+ * Note: from_date can be NULL for the baseline snapshot, which serves as
+ * the fallback for all shifts that don't match any dated snapshot
  */
 export type WageSnapshot = {
   id: string;
   user_id: string;
-  from_date: string; // ISO date (YYYY-MM-DD)
+  from_date: string | null; // ISO date (YYYY-MM-DD) or NULL for baseline
   hourly_wage: number;
   wage_level: number | null; // NULL = custom wage, NUMBER (1-9) = tariff level
   supplements: { rules: SupplementRule[] };

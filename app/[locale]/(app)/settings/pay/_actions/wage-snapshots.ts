@@ -16,7 +16,7 @@ import type { SupplementRule } from '@/data-access/wage-snapshots';
  * Input type for creating/updating wage snapshots
  */
 export type WageSnapshotInput = {
-  from_date: string; // ISO date (YYYY-MM-DD)
+  from_date: string | null; // ISO date (YYYY-MM-DD) or NULL for baseline
   hourly_wage: number;
   wage_level: number | null; // NULL = custom wage, NUMBER = tariff level
   supplements: { rules: SupplementRule[] };
@@ -27,12 +27,12 @@ export type WageSnapshotInput = {
  *
  * Flow:
  * 1. Verify authentication
- * 2. Validate from_date format
+ * 2. Validate from_date format (if not NULL)
  * 3. Check for date conflicts
  * 4. Create snapshot
  * 5. Invalidate cache and revalidate
  *
- * @param data - Wage snapshot data
+ * @param data - Wage snapshot data (from_date can be null for baseline)
  * @returns { success: true, id: string } or { error: string }
  */
 export async function createWageSnapshotAction(
@@ -41,8 +41,8 @@ export async function createWageSnapshotAction(
   // 1. Verify authentication
   const { user } = await verifySession();
 
-  // 2. Validate from_date format
-  if (!isISODate(data.from_date)) {
+  // 2. Validate from_date format (if not NULL)
+  if (data.from_date !== null && !isISODate(data.from_date)) {
     return { error: ERRORS.INVALID_DATE };
   }
 
@@ -70,13 +70,13 @@ export async function createWageSnapshotAction(
  *
  * Flow:
  * 1. Verify authentication
- * 2. Validate from_date format
+ * 2. Validate from_date format (if not NULL)
  * 3. Check for date conflicts (excluding current snapshot)
  * 4. Update snapshot
  * 5. Invalidate cache and revalidate
  *
  * @param id - Snapshot ID to update
- * @param data - New wage snapshot data
+ * @param data - New wage snapshot data (from_date can be null for baseline)
  * @returns { success: true } or { error: string }
  */
 export async function updateWageSnapshotAction(
@@ -86,8 +86,8 @@ export async function updateWageSnapshotAction(
   // 1. Verify authentication
   const { user } = await verifySession();
 
-  // 2. Validate from_date format
-  if (!isISODate(data.from_date)) {
+  // 2. Validate from_date format (if not NULL)
+  if (data.from_date !== null && !isISODate(data.from_date)) {
     return { error: ERRORS.INVALID_DATE };
   }
 

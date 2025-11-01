@@ -125,7 +125,9 @@ export function WageHistoryList({
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <h4 className="font-semibold text-text-primary">
-                            {formatDate(snapshot.from_date)}
+                            {snapshot.from_date === null
+                              ? 'Grunntariff'
+                              : formatDate(snapshot.from_date)}
                           </h4>
                           {isLatest && (
                             <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-brand-primary text-white">
@@ -134,7 +136,9 @@ export function WageHistoryList({
                           )}
                         </div>
                         <p className="text-xs text-text-secondary mt-0.5">
-                          {nextSnapshot
+                          {snapshot.from_date === null
+                            ? 'Gjelder for alle datoer uten spesifikk endring'
+                            : nextSnapshot && nextSnapshot.from_date !== null
                             ? `Gyldig fra ${formatDate(snapshot.from_date)} til ${formatDate(nextSnapshot.from_date)}`
                             : `Gyldig fra ${formatDate(snapshot.from_date)}`}
                         </p>
