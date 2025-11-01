@@ -90,12 +90,6 @@ export default function LoginClient({
     setFieldErrors({});
   };
 
-  const resetAll = () => {
-    resetMessage();
-    resetFieldErrors();
-    setCaptchaToken(null);
-  };
-
   const handleSignIn = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     resetMessage();
