@@ -104,7 +104,7 @@ a {
   .dark {
     --background: 222.2 84% 4.9%;
     --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
+    --card: 220 49% 11%;
     --card-foreground: 210 40% 98%;
     --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
@@ -127,8 +127,8 @@ a {
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
 
-    --surface-primary: 220 49% 8%;
-    --surface-secondary: 221 39% 11%;
+    --surface-primary: 220 49% 11%;
+    --surface-secondary: 221 39% 14%;
     --background-secondary: 222.2 84% 4.9%;
     --text-primary: 210 40% 98%;
     --text-secondary: 214 32% 85%;

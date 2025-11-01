@@ -6,6 +6,7 @@ import { Analytics } from "@vercel/analytics/next"
 import { SpeedInsights } from "@vercel/speed-insights/next"
 
 import SWRegister from "./sw-register";
+import { BackgroundTexture } from "@/components/app/BackgroundTexture";
 import "./globals.css";
 
 const inter = Inter({
@@ -80,6 +81,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         />
       </head>
       <body className={`${inter.className} bg-background text-foreground antialiased`}>
+        <BackgroundTexture intensity="subtle" />
         <SWRegister />
         {children}
         <Analytics />

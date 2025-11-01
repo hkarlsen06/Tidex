@@ -104,7 +104,7 @@ export const NextPayrollCard: React.FC<NextPayrollCardProps> = ({
   return (
     <Card
       className={cn(
-        "rounded-3xl cursor-pointer transition-colors hover:bg-surface-secondary",
+        "bg-surface-primary rounded-3xl cursor-pointer transition-colors hover:bg-surface-secondary",
         className
       )}
       onClick={handleClick}
