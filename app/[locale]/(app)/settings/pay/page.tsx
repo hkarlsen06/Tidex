@@ -3,6 +3,8 @@ import { connection } from "next/server";
 import { verifySession } from '@/data-access/auth';
 import { getUserSettings } from '@/data-access/settings';
 import { PayForm } from '@components/settings/pay/PayForm';
+import { ReSnapshotCard } from '@components/settings/data/ReSnapshotCard';
+import { Separator } from '@appui/Separator';
 import { getTranslations } from '@/lib/i18n/server';
 import type { Locale } from '@/lib/i18n/config';
 
@@ -43,6 +45,10 @@ export default async function PayPage({
         </div>
 
         <PayForm initialData={settings} />
+
+        <Separator className="mt-6" />
+
+        <ReSnapshotCard t={t} />
       </div>
     </div>
   );
