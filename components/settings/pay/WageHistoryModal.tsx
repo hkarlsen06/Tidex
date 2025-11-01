@@ -46,8 +46,9 @@ export function WageHistoryModal({
   const [error, setError] = useState<string | null>(null);
 
   // Form state
+  const isBaseline = snapshot?.from_date === null;
   const [fromDate, setFromDate] = useState(() =>
-    snapshot ? snapshot.from_date : new Date().toISOString().split('T')[0]
+    snapshot && snapshot.from_date !== null ? snapshot.from_date : new Date().toISOString().split('T')[0]
   );
   const [usePreset, setUsePreset] = useState(() =>
     snapshot ? snapshot.wage_level !== null : true
@@ -80,8 +81,8 @@ export function WageHistoryModal({
   const handleSave = () => {
     setError(null);
 
-    // Validation
-    if (!fromDate) {
+    // Validation: date required for create mode (edit can be baseline)
+    if (mode === 'create' && !fromDate) {
       setError('Dato er påkrevd');
       return;
     }
@@ -123,7 +124,9 @@ export function WageHistoryModal({
         };
 
         const data = {
-          from_date: fromDate,
+          // In create mode: always use date
+          // In edit mode: preserve baseline (null) or use date
+          from_date: mode === 'create' ? fromDate : (isBaseline ? null : fromDate),
           hourly_wage: wage,
           wage_level: usePreset ? parseInt(wageLevel) : null,
           supplements: usePreset
@@ -234,7 +237,9 @@ export function WageHistoryModal({
               Nåværende lønnsinnstillinger
             </DialogTitle>
             <DialogDescription>
-              Gyldig fra {new Date(snapshot.from_date + 'T00:00:00').toLocaleDateString('no-NO')}
+              {snapshot.from_date === null
+                ? 'Grunntariff (gjelder for alle datoer som ikke har en spesifikk endring)'
+                : `Gyldig fra ${new Date(snapshot.from_date + 'T00:00:00').toLocaleDateString('no-NO')}`}
             </DialogDescription>
           </DialogHeader>
 
@@ -292,10 +297,14 @@ export function WageHistoryModal({
   }
 
   // Create/Edit dialog
-  const title = mode === 'edit' ? 'Rediger lønnsoppføring' : 'Ny lønnsoppføring';
+  const title = mode === 'edit'
+    ? (isBaseline ? 'Rediger grunntariff' : 'Rediger lønnsoppføring')
+    : 'Ny lønnsoppføring';
   const description =
     mode === 'edit'
-      ? 'Endre historisk lønnsinnstilling. Dette vil påvirke beregningen av eksisterende skift på eller etter denne datoen.'
+      ? (isBaseline
+          ? 'Rediger grunntariffen din. Dette gjelder for alle datoer som ikke har en spesifikk lønnsendring.'
+          : 'Endre historisk lønnsinnstilling. Dette vil påvirke beregningen av eksisterende skift på eller etter denne datoen.')
       : 'Legg til en historisk lønnsinnstilling. Bruk dette for å rette opp lønnshistorikken din.';
 
   const customWageValue = parseFloat(customWage);
@@ -315,20 +324,28 @@ export function WageHistoryModal({
         </DialogHeader>
 
         <div className="space-y-6 py-4">
-          {/* Date input */}
-          <div className="space-y-2">
-            <Label htmlFor="fromDate">Gyldig fra dato</Label>
-            <Input
-              id="fromDate"
-              type="date"
-              value={fromDate}
-              onChange={(e) => setFromDate(e.target.value)}
-              disabled={pending}
-            />
-            <p className="text-xs text-text-secondary">
-              Skift på eller etter denne datoen vil bruke denne lønnsinnstillingen
-            </p>
-          </div>
+          {/* Date input or baseline indicator */}
+          {mode === 'edit' && isBaseline ? (
+            <div className="rounded-md bg-blue-50 dark:bg-blue-900/10 p-3">
+              <p className="text-sm text-blue-800 dark:text-blue-200">
+                Dette er grunntariffen din som gjelder for alle datoer som ikke har en spesifikk lønnsendring.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <Label htmlFor="fromDate">Gyldig fra dato</Label>
+              <Input
+                id="fromDate"
+                type="date"
+                value={fromDate}
+                onChange={(e) => setFromDate(e.target.value)}
+                disabled={pending}
+              />
+              <p className="text-xs text-text-secondary">
+                Skift på eller etter denne datoen vil bruke denne lønnsinnstillingen
+              </p>
+            </div>
+          )}
 
           <WageSourceCard
             usePreset={usePreset}

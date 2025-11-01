@@ -40,6 +40,7 @@ export const getUserWageSnapshots = cache(async (): Promise<WageSnapshot[]> => {
 /**
  * Get the applicable wage snapshot for a specific shift date
  * - Finds the most recent snapshot where from_date <= shiftDate
+ * - Falls back to baseline snapshot (from_date = NULL) if no dated snapshot matches
  * - Returns null if no applicable snapshot found
  * - Uses getUserWageSnapshots() which is cached
  *
@@ -52,18 +53,26 @@ export async function getSnapshotForDate(
   const snapshots = await getUserWageSnapshots();
 
   // snapshots are already ordered by from_date DESC (newest first)
-  // Find the first snapshot where from_date <= shiftDate
+  // Find the first dated snapshot where from_date <= shiftDate
   const applicableSnapshot = snapshots.find(
-    (snapshot) => snapshot.from_date <= shiftDate
+    (snapshot) => snapshot.from_date !== null && snapshot.from_date <= shiftDate
   );
 
-  return applicableSnapshot ?? null;
+  if (applicableSnapshot) {
+    return applicableSnapshot;
+  }
+
+  // If no dated snapshot matches, use the baseline snapshot (from_date = NULL)
+  const baselineSnapshot = snapshots.find((snapshot) => snapshot.from_date === null);
+
+  return baselineSnapshot ?? null;
 }
 
 /**
  * Get applicable snapshots for multiple shift dates (batch lookup)
  * - Optimized for performance: fetches all snapshots once, then maps them
  * - Returns a Map of shiftDate -> WageSnapshot
+ * - Falls back to baseline snapshot (from_date = NULL) if no dated snapshot matches
  * - Dates without applicable snapshots are omitted from the map
  *
  * @param shiftDates - Array of ISO date strings (YYYY-MM-DD)
@@ -75,14 +84,20 @@ export async function getSnapshotsForDates(
   const snapshots = await getUserWageSnapshots();
   const snapshotMap = new Map<string, WageSnapshot>();
 
+  // Find baseline snapshot once for fallback
+  const baselineSnapshot = snapshots.find((snapshot) => snapshot.from_date === null);
+
   for (const shiftDate of shiftDates) {
-    // Find the first snapshot where from_date <= shiftDate
+    // Find the first dated snapshot where from_date <= shiftDate
     const applicableSnapshot = snapshots.find(
-      (snapshot) => snapshot.from_date <= shiftDate
+      (snapshot) => snapshot.from_date !== null && snapshot.from_date <= shiftDate
     );
 
-    if (applicableSnapshot) {
-      snapshotMap.set(shiftDate, applicableSnapshot);
+    // Use dated snapshot if found, otherwise fall back to baseline
+    const snapshotToUse = applicableSnapshot || baselineSnapshot;
+
+    if (snapshotToUse) {
+      snapshotMap.set(shiftDate, snapshotToUse);
     }
   }
 
@@ -92,13 +107,14 @@ export async function getSnapshotsForDates(
 /**
  * Check if a wage snapshot with the given from_date already exists
  * - Used for validation before creating/updating snapshots
+ * - Handles both dated snapshots and baseline (NULL from_date)
  *
- * @param fromDate - ISO date string (YYYY-MM-DD)
+ * @param fromDate - ISO date string (YYYY-MM-DD) or null for baseline
  * @param excludeId - Optional snapshot ID to exclude (for update operations)
  * @returns true if a snapshot exists for this date
  */
 export async function checkExistingSnapshot(
-  fromDate: string,
+  fromDate: string | null,
   excludeId?: string
 ): Promise<boolean> {
   try {
@@ -108,8 +124,14 @@ export async function checkExistingSnapshot(
     let query = supabase
       .from('wage_snapshots')
       .select('id')
-      .eq('user_id', user.id)
-      .eq('from_date', fromDate);
+      .eq('user_id', user.id);
+
+    // Handle NULL from_date (baseline snapshot)
+    if (fromDate === null) {
+      query = query.is('from_date', null);
+    } else {
+      query = query.eq('from_date', fromDate);
+    }
 
     // Exclude specific snapshot (for update validation)
     if (excludeId) {
@@ -135,10 +157,11 @@ export async function checkExistingSnapshot(
  * Create a new wage snapshot
  *
  * @param data - Wage snapshot data (without id and user_id)
+ *              - from_date can be null for baseline snapshot
  * @returns { success: true, id: string } or { error: string }
  */
 export async function createWageSnapshot(data: {
-  from_date: string;
+  from_date: string | null;
   hourly_wage: number;
   wage_level: number | null;
   supplements: { rules: SupplementRule[] };
@@ -175,13 +198,13 @@ export async function createWageSnapshot(data: {
  * Update an existing wage snapshot
  *
  * @param id - Snapshot ID to update
- * @param data - New wage snapshot data
+ * @param data - New wage snapshot data (from_date can be null for baseline)
  * @returns { success: true } or { error: string }
  */
 export async function updateWageSnapshot(
   id: string,
   data: {
-    from_date: string;
+    from_date: string | null;
     hourly_wage: number;
     wage_level: number | null;
     supplements: { rules: SupplementRule[] };
@@ -278,6 +301,10 @@ export async function countAffectedShifts(
 /**
  * Delete a wage snapshot
  *
+ * Restrictions:
+ * - Cannot delete the baseline snapshot (from_date = NULL) if other dated snapshots exist
+ * - This ensures there's always a fallback for wage calculations
+ *
  * @param id - Snapshot ID to delete
  * @returns { success: true, affectedShiftCount: number } or { error: string }
  */
@@ -287,6 +314,31 @@ export async function deleteWageSnapshot(
   try {
     const { user } = await verifySession();
     const supabase = await createSupabaseServerClient();
+
+    // First, get the snapshot to check if it's baseline
+    const { data: snapshot, error: fetchError } = await supabase
+      .from('wage_snapshots')
+      .select('from_date')
+      .eq('id', id)
+      .eq('user_id', user.id)
+      .single();
+
+    if (fetchError || !snapshot) {
+      logger.error('Failed to fetch snapshot for deletion:', fetchError);
+      return { error: 'Kunne ikke finne lønnsoppføringen' };
+    }
+
+    // If this is the baseline snapshot, check if other snapshots exist
+    if (snapshot.from_date === null) {
+      const snapshots = await getUserWageSnapshots();
+      const datedSnapshots = snapshots.filter(s => s.from_date !== null);
+
+      if (datedSnapshots.length > 0) {
+        return {
+          error: 'Kan ikke slette grunntariffen når det finnes andre lønnsendringer. Slett de andre først.',
+        };
+      }
+    }
 
     // Count affected shifts before deletion
     const affectedShiftCount = await countAffectedShifts(id);

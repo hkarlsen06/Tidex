@@ -60,8 +60,8 @@ export async function completeOnboarding(settings: OnboardingSettings) {
     throw new Error(`Failed to save settings: ${settingsError.message}`);
   }
 
-  // Create initial wage snapshot
-  const today = new Date().toISOString().split('T')[0];
+  // Create baseline wage snapshot (from_date = null)
+  // This serves as the fallback for all shifts that don't match a dated snapshot
   const hourly_wage = settings.use_preset
     ? PRESET_WAGE_RATES[settings.current_wage_level!]
     : settings.custom_wage!;
@@ -74,7 +74,7 @@ export async function completeOnboarding(settings: OnboardingSettings) {
     .from("wage_snapshots")
     .insert({
       user_id: user.id,
-      from_date: today,
+      from_date: null, // Baseline snapshot (grunntariff)
       hourly_wage,
       wage_level: settings.use_preset ? settings.current_wage_level : null,
       supplements,
