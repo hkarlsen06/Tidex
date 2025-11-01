@@ -266,7 +266,7 @@ export function MonthlyEarningsCalendar({
   return (
     <Card ref={containerRef} className="rounded-card border-0">
       <div ref={swipeContainerRef}>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 py-3 px-0">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 py-3 px-4">
           <div className="flex items-center gap-1">
             <MonthPicker
               month={month}

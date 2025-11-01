@@ -61,7 +61,7 @@ export function ShiftCard({ shift, onClick }: ShiftCardProps) {
   return (
     <Card
       className={cn(
-        "rounded-3xl",
+        "bg-surface-primary rounded-3xl",
         onClick && "cursor-pointer transition-colors hover:bg-surface-secondary"
       )}
       onClick={onClick}
