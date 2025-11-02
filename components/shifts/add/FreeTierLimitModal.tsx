@@ -4,17 +4,14 @@ import { useState } from 'react';
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
 } from '@appui/Dialog';
 import { Button } from '@appui/Button';
-import { AlertTriangle, Trash2, Sparkles } from 'lucide-react';
+import { AlertTriangle, Trash2, Sparkles, Check, X } from 'lucide-react';
 import { formatMonth } from '@/lib/subscription/hasProAccess';
 import { deleteShiftsInOtherMonths } from '@/app/[locale]/(app)/shifts/add/_actions/deleteShiftsInOtherMonths';
 import { useTranslations } from '@/lib/i18n/client';
 import { useRouter } from 'next/navigation';
+import { cn } from '@/lib/cn';
 
 interface FreeTierLimitModalProps {
   open: boolean;
@@ -35,6 +32,7 @@ export function FreeTierLimitModal({
   const router = useRouter();
   const [isDeleting, setIsDeleting] = useState(false);
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
+  const [showDeleteSection, setShowDeleteSection] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleDeleteClick = () => {
@@ -79,124 +77,165 @@ export function FreeTierLimitModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md rounded-3xl border border-border-subtle bg-surface-primary/95 shadow-app-lg">
-        <DialogHeader>
-          <div className="flex flex-col items-center text-center gap-3 pb-2">
-            <div className="rounded-full bg-yellow-500/10 p-3">
-              <AlertTriangle className="h-6 w-6 text-yellow-600 dark:text-yellow-500" />
-            </div>
-            <div>
-              <DialogTitle className="text-xl mb-2">{t.pages.shifts.add.freeTierLimit.title}</DialogTitle>
-              <DialogDescription className="text-sm text-text-secondary">
-                {t.pages.shifts.add.freeTierLimit.description}
-              </DialogDescription>
-            </div>
-          </div>
-        </DialogHeader>
+      <DialogContent className="max-w-[90vw] sm:max-w-sm rounded-3xl border-0 bg-surface-primary p-0 shadow-2xl overflow-hidden">
+        {/* Close button */}
+        <button
+          onClick={() => onOpenChange(false)}
+          disabled={isDeleting}
+          className="absolute right-4 top-4 z-10 rounded-full p-2 text-text-muted transition hover:bg-surface-secondary/50 hover:text-text-primary disabled:opacity-50"
+          aria-label="Close"
+        >
+          <X className="h-5 w-5" />
+        </button>
 
-        <div className="space-y-4 py-2">
-          <div className="rounded-2xl border border-border-subtle bg-surface-secondary/70 p-4 text-sm">
-            <p className="text-text-secondary">
-              {t.pages.shifts.add.freeTierLimit.tryingToAdd}
-              <strong className="text-text-primary">{formattedTargetMonth}</strong>
-              {t.pages.shifts.add.freeTierLimit.butAlreadyHaveIn}
-              <strong className="text-text-primary">{formattedOtherMonths}</strong>.
-            </p>
+        {/* Hero section with gradient background */}
+        <div className="relative overflow-hidden bg-gradient-to-br from-brand-gradientStart via-brand-gradientMid to-brand-gradientEnd px-6 pb-8 pt-12 text-center">
+          {/* Decorative elements */}
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.1),transparent_50%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(255,255,255,0.08),transparent_50%)]" />
+
+          {/* Icon */}
+          <div className="relative mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-white/20 shadow-lg backdrop-blur-sm">
+            <Sparkles className="h-10 w-10 text-white" strokeWidth={2} />
           </div>
 
-          <p className="text-sm font-semibold text-text-primary">{t.pages.shifts.add.freeTierLimit.chooseOption}</p>
+          {/* Title */}
+          <h2 className="relative mb-2 text-2xl font-bold text-white">
+            {t.pages.shifts.add.freeTierLimit.upgradeHeadline}
+          </h2>
+          <p className="relative text-sm text-white/90">
+            {t.pages.shifts.add.freeTierLimit.upgradeSubheadline}
+          </p>
+        </div>
 
+        {/* Content section */}
+        <div className="space-y-6 px-6 py-6">
+          {/* Features list */}
           <div className="space-y-3">
-            {/* Upgrade option */}
+            <div className="flex items-start gap-3">
+              <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-brand-gradientMid/10">
+                <Check className="h-4 w-4 text-brand-gradientMid" strokeWidth={3} />
+              </div>
+              <p className="text-sm text-text-primary">
+                {t.pages.shifts.add.freeTierLimit.feature1}
+              </p>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-brand-gradientMid/10">
+                <Check className="h-4 w-4 text-brand-gradientMid" strokeWidth={3} />
+              </div>
+              <p className="text-sm text-text-primary">
+                {t.pages.shifts.add.freeTierLimit.feature2}
+              </p>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-brand-gradientMid/10">
+                <Check className="h-4 w-4 text-brand-gradientMid" strokeWidth={3} />
+              </div>
+              <p className="text-sm text-text-primary">
+                {t.pages.shifts.add.freeTierLimit.feature3}
+              </p>
+            </div>
+          </div>
+
+          {/* Primary CTA */}
+          <Button
+            onClick={handleViewPlans}
+            disabled={isDeleting}
+            className="w-full rounded-full bg-gradient-to-r from-brand-gradientStart via-brand-gradientMid to-brand-gradientEnd py-6 text-base font-semibold text-white shadow-lg transition hover:shadow-xl disabled:opacity-50"
+          >
+            {t.pages.shifts.add.freeTierLimit.viewPlansButton}
+          </Button>
+
+          {/* Divider with "or" */}
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-border-subtle" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-surface-primary px-2 text-text-muted">
+                {t.pages.shifts.add.freeTierLimit.or}
+              </span>
+            </div>
+          </div>
+
+          {/* Delete section - collapsed by default */}
+          {!showDeleteSection ? (
             <button
-              onClick={handleViewPlans}
+              onClick={() => setShowDeleteSection(true)}
               disabled={isDeleting}
-              className="w-full text-left rounded-2xl border-2 border-brand-gradientMid/30 bg-gradient-to-br from-brand-gradientStart/5 to-brand-gradientMid/5 p-4 transition hover:border-brand-gradientMid/50 disabled:opacity-50"
+              className="w-full text-center text-sm font-medium text-text-secondary transition hover:text-text-primary disabled:opacity-50"
             >
+              {t.pages.shifts.add.freeTierLimit.deleteShiftsLink}
+            </button>
+          ) : (
+            <div className="space-y-3 rounded-2xl border border-border-subtle bg-surface-secondary/50 p-4">
               <div className="flex items-start gap-3">
-                <Sparkles className="h-5 w-5 text-brand-highlight flex-shrink-0 mt-0.5" />
+                <Trash2 className="h-5 w-5 flex-shrink-0 text-text-muted" strokeWidth={2} />
                 <div className="flex-1 min-w-0">
-                  <h4 className="font-semibold text-sm">{t.pages.shifts.add.freeTierLimit.upgradeTitle}</h4>
-                  <p className="text-xs text-text-secondary mt-1">
-                    {t.pages.shifts.add.freeTierLimit.upgradeDescription}
+                  <h4 className="text-sm font-semibold text-text-primary">
+                    {t.pages.shifts.add.freeTierLimit.deleteTitle}
+                  </h4>
+                  <p className="mt-1 text-xs text-text-secondary">
+                    {t.pages.shifts.add.freeTierLimit.deleteExplanation
+                      .replace('{targetMonth}', formattedTargetMonth)
+                      .replace('{otherMonths}', formattedOtherMonths)}
                   </p>
                 </div>
               </div>
-            </button>
 
-            {/* Delete option */}
-            {!showConfirmDelete ? (
-              <button
-                onClick={handleDeleteClick}
-                disabled={isDeleting}
-                className="w-full text-left rounded-2xl border-2 border-red-500/30 bg-red-500/5 p-4 transition hover:border-red-500/50 hover:bg-red-500/10 disabled:opacity-50"
-              >
-                <div className="flex items-start gap-3">
-                  <Trash2 className="h-5 w-5 text-red-600 dark:text-red-500 flex-shrink-0 mt-0.5" />
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-semibold text-sm text-red-900 dark:text-red-300">{t.pages.shifts.add.freeTierLimit.deleteTitle}</h4>
-                    <p className="text-xs text-red-700 dark:text-red-400 mt-1">
-                      {t.pages.shifts.add.freeTierLimit.deleteDescription.replace('{months}', formattedOtherMonths)}
+              {!showConfirmDelete ? (
+                <Button
+                  onClick={handleDeleteClick}
+                  disabled={isDeleting}
+                  variant="outline"
+                  className="w-full rounded-full border-error/30 text-error hover:bg-error/10 hover:border-error/50"
+                >
+                  {t.pages.shifts.add.freeTierLimit.deleteButton}
+                </Button>
+              ) : (
+                <div className="space-y-3 rounded-xl border border-error/30 bg-error/5 p-3">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="h-4 w-4 flex-shrink-0 text-error" />
+                    <p className="text-xs font-medium text-error">
+                      {t.pages.shifts.add.freeTierLimit.confirmDeleteMessage.replace('{months}', formattedOtherMonths)}
                     </p>
                   </div>
-                </div>
-              </button>
-            ) : (
-              <div className="rounded-2xl border-2 border-red-500/50 bg-red-500/10 p-4">
-                <div className="flex items-start gap-3 mb-3">
-                  <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-500 flex-shrink-0 mt-0.5" />
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-semibold text-sm text-red-900 dark:text-red-300">{t.pages.shifts.add.freeTierLimit.confirmDeleteTitle}</h4>
-                    <p className="text-xs text-red-700 dark:text-red-400 mt-1">
-                      {t.pages.shifts.add.freeTierLimit.confirmDeleteDescription.replace('{months}', formattedOtherMonths)}
-                    </p>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      onClick={() => setShowConfirmDelete(false)}
+                      disabled={isDeleting}
+                      variant="outline"
+                      className="flex-1 rounded-full text-xs"
+                    >
+                      {t.pages.shifts.add.freeTierLimit.cancelDelete}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      onClick={handleDeleteConfirm}
+                      disabled={isDeleting}
+                      loading={isDeleting}
+                      className="flex-1 rounded-full text-xs"
+                    >
+                      {deleteCount === 1
+                        ? t.pages.shifts.add.freeTierLimit.confirmDeleteButton.replace('{count}', '1')
+                        : t.pages.shifts.add.freeTierLimit.confirmDeleteButtonPlural.replace('{count}', deleteCount.toString())
+                      }
+                    </Button>
                   </div>
                 </div>
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    onClick={handleDeleteConfirm}
-                    disabled={isDeleting}
-                    loading={isDeleting}
-                    className="flex-1 text-xs"
-                  >
-                    {deleteCount === 1
-                      ? t.pages.shifts.add.freeTierLimit.deleteMonths.replace('{count}', '1')
-                      : t.pages.shifts.add.freeTierLimit.deleteMonthsPlural.replace('{count}', deleteCount.toString())
-                    }
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={() => setShowConfirmDelete(false)}
-                    disabled={isDeleting}
-                    className="flex-1 text-xs bg-green-600 hover:bg-green-700 text-white"
-                  >
-                    {t.pages.shifts.add.freeTierLimit.cancel}
-                  </Button>
-                </div>
-              </div>
-            )}
-          </div>
+              )}
 
-          {error && (
-            <div className="rounded-2xl border border-error/30 bg-error-subtle px-4 py-3 text-sm text-error">
-              {error}
+              {error && (
+                <div className="rounded-xl border border-error/30 bg-error-subtle px-3 py-2 text-xs text-error">
+                  {error}
+                </div>
+              )}
             </div>
           )}
         </div>
-
-        <DialogFooter className="pt-2">
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={() => onOpenChange(false)}
-            disabled={isDeleting}
-            className="w-full rounded-xl px-4 py-2"
-          >
-            {t.pages.shifts.add.freeTierLimit.cancel}
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
