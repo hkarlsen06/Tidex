@@ -1116,10 +1116,10 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
             </CardHeader>
           </Card>
         ) : (
-          <div className="flex flex-col gap-8">
+          <div className="flex flex-col gap-12">
             {grouped.map((group) => (
-              <section key={group.id} className="rounded-card border-0 bg-surface-primary/50 backdrop-blur p-4 space-y-4">
-                <div className="flex flex-row items-center justify-between">
+              <section key={group.id} className="space-y-4">
+                <div className="flex flex-row items-center justify-between bg-transparent">
                   <div className="flex items-center gap-2 font-medium text-text-primary">
                     <span>{t.pages.shifts.list.weekLabel} {group.label}</span>
                     <svg

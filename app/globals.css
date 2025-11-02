@@ -78,10 +78,10 @@ a {
     --text-muted: 215 20% 50%;
     --text-inverse: 210 40% 98%;
     --border-subtle: 217 25% 92%;
-    --brand-gradientStart: 199 89% 48%;
-    --brand-gradientMid: 189 94% 43%;
-    --brand-gradientEnd: 192 91% 36%;
-    --brand-highlight: 188 86% 53%;
+    --brand-gradientStart: 221 83% 53%;
+    --brand-gradientMid: 221 83% 53%;
+    --brand-gradientEnd: 221 83% 53%;
+    --brand-highlight: 221 83% 53%;
 
     /* Semantic state colors - improved contrast */
     --success: 142 76% 28%;
@@ -135,10 +135,10 @@ a {
     --text-muted: 215 20% 70%;
     --text-inverse: 222 47% 11%;
     --border-subtle: 217.2 32.6% 17.5%;
-    --brand-gradientStart: 199 89% 48%;
-    --brand-gradientMid: 189 94% 43%;
-    --brand-gradientEnd: 192 91% 36%;
-    --brand-highlight: 188 86% 53%;
+    --brand-gradientStart: 217 91% 65%;
+    --brand-gradientMid: 217 91% 65%;
+    --brand-gradientEnd: 217 91% 65%;
+    --brand-highlight: 217 91% 65%;
 
     /* Semantic state colors - improved contrast */
     --success: 142 71% 50%;
