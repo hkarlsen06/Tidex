@@ -1,17 +1,17 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
+  DialogTitle,
 } from '@appui/Dialog';
 import { Button } from '@appui/Button';
-import { AlertTriangle, Trash2, Sparkles, Check, X } from 'lucide-react';
+import { AlertTriangle, Trash2, Sparkles, Check } from 'lucide-react';
 import { formatMonth } from '@/lib/subscription/hasProAccess';
 import { deleteShiftsInOtherMonths } from '@/app/[locale]/(app)/shifts/add/_actions/deleteShiftsInOtherMonths';
 import { useTranslations } from '@/lib/i18n/client';
 import { useRouter } from 'next/navigation';
-import { cn } from '@/lib/cn';
 
 interface FreeTierLimitModalProps {
   open: boolean;
@@ -34,6 +34,17 @@ export function FreeTierLimitModal({
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [showDeleteSection, setShowDeleteSection] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Reset state when modal opens
+  useEffect(() => {
+    if (open) {
+      // Note: These setState calls are intentional to reset UI state when the modal opens
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setShowDeleteSection(false);
+      setShowConfirmDelete(false);
+      setError(null);
+    }
+  }, [open]);
 
   const handleDeleteClick = () => {
     setShowConfirmDelete(true);
@@ -63,7 +74,11 @@ export function FreeTierLimitModal({
   };
 
   const handleViewPlans = () => {
-    router.push(`/${locale}/settings/subscription`);
+    onOpenChange(false);
+    // Small delay to ensure modal closes before navigation
+    setTimeout(() => {
+      router.push(`/${locale}/settings/subscription`);
+    }, 100);
   };
 
   const formattedTargetMonth = formatMonth(targetMonth);
@@ -77,17 +92,10 @@ export function FreeTierLimitModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[90vw] sm:max-w-sm rounded-3xl border-0 bg-surface-primary p-0 shadow-2xl overflow-hidden">
-        {/* Close button */}
-        <button
-          onClick={() => onOpenChange(false)}
-          disabled={isDeleting}
-          className="absolute right-4 top-4 z-10 rounded-full p-2 text-text-muted transition hover:bg-surface-secondary/50 hover:text-text-primary disabled:opacity-50"
-          aria-label="Close"
-        >
-          <X className="h-5 w-5" />
-        </button>
-
+      <DialogContent hideCloseButton className="max-w-[90vw] sm:max-w-sm rounded-3xl border-0 bg-surface-primary p-0 shadow-2xl overflow-hidden">
+        <DialogTitle className="sr-only">
+          {t.pages.shifts.add.freeTierLimit.upgradeHeadline}
+        </DialogTitle>
         {/* Hero section with gradient background */}
         <div className="relative overflow-hidden bg-gradient-to-br from-brand-gradientStart via-brand-gradientMid to-brand-gradientEnd px-6 pb-8 pt-12 text-center">
           {/* Decorative elements */}
