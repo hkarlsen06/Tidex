@@ -173,12 +173,20 @@ export async function POST(request: NextRequest) {
     if (typeof previousUrl === "string" && previousUrl) {
       const previousPath = parseStoragePath(previousUrl);
       if (previousPath) {
-        const { error: removeError } = await supabase.storage
-          .from(BUCKET)
-          .remove([previousPath]);
+        // Verify the path belongs to this user (security check)
+        if (!previousPath.startsWith(`${user.id}/`)) {
+          console.error("[PROFILE PICTURE] Security: User attempted to delete file not owned by them");
+          // Don't fail the upload, but log the security issue
+        } else {
+          const { error: removeError } = await supabase.storage
+            .from(BUCKET)
+            .remove([previousPath]);
 
-        if (removeError) {
-          console.error("[PROFILE PICTURE] Failed to remove previous image:", removeError);
+          if (removeError) {
+            console.error("[PROFILE PICTURE] Failed to remove previous image:", removeError);
+            // Note: We don't fail the upload if old image deletion fails
+            // The new image was uploaded successfully, which is the primary operation
+          }
         }
       }
     }
@@ -258,12 +266,26 @@ export async function DELETE(request: NextRequest) {
       return errorResponse;
     }
 
+    // Security check: Verify the path belongs to the authenticated user
+    if (!path.startsWith(`${user.id}/`)) {
+      console.error("[PROFILE PICTURE] Security: User attempted to delete file not owned by them", {
+        userId: user.id,
+        attemptedPath: path
+      });
+      const errorResponse = NextResponse.json(
+        { error: "Ingen tilgang til å slette dette bildet." },
+        { status: 403, headers: { "cache-control": "no-store" } }
+      );
+      propagateCookies(baseResponse, errorResponse);
+      return errorResponse;
+    }
+
     const { error: removeError } = await supabase.storage.from(BUCKET).remove([path]);
 
     if (removeError) {
       console.error("[PROFILE PICTURE] Failed to delete image:", removeError);
       const errorResponse = NextResponse.json(
-        { error: "Kunne ikke fjerne profilbildet." },
+        { error: "Kunne ikke fjerne profilbildet fra lagring." },
         { status: 500, headers: { "cache-control": "no-store" } }
       );
       propagateCookies(baseResponse, errorResponse);
