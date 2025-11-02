@@ -489,7 +489,13 @@ export default function AddShiftForm({ existingShifts, userSettings, presetRules
       {limitModalData && (
         <FreeTierLimitModal
           open={showLimitModal}
-          onOpenChange={setShowLimitModal}
+          onOpenChange={(open) => {
+            setShowLimitModal(open);
+            // Clear modal data when closing to prevent reopening
+            if (!open) {
+              setLimitModalData(null);
+            }
+          }}
           existingMonths={limitModalData.existingMonths}
           targetMonth={limitModalData.targetMonth}
           onDeleteComplete={handleDeleteAndProceed}
