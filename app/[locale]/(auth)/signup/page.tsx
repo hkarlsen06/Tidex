@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useState, use } from "react";
+import { FormEvent, useState, use, useRef, useEffect } from "react";
 import { useTranslations } from "@/lib/i18n/client";
 
 import { supabase } from "@/lib/supabase/browser";
@@ -27,7 +27,7 @@ import {
 import { Input } from "@/components/app/Input";
 import { Button } from "@/components/app/Button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/app/Card";
-import { TurnstileCaptcha } from "@/components/app/TurnstileCaptcha";
+import { TurnstileCaptcha, type TurnstileCaptchaHandle } from "@/components/app/TurnstileCaptcha";
 import { Checkbox } from "@/components/app/Checkbox";
 import { LegalModal } from "@/components/legal";
 
@@ -58,6 +58,10 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [legalModalOpen, setLegalModalOpen] = useState(false);
+  const [isCaptchaValidating, setIsCaptchaValidating] = useState(false);
+
+  const turnstileRef = useRef<TurnstileCaptchaHandle>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
   const resetMessage = () => setMessage(null);
   const resetFieldErrors = () => setFieldErrors({});
@@ -67,9 +71,17 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
     setCaptchaToken(null);
   };
 
+  // When captcha token is received, automatically re-submit the form
+  useEffect(() => {
+    if (captchaToken) {
+      formRef.current?.requestSubmit();
+    }
+  }, [captchaToken]);
+
   const handleSignUp = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    resetAll();
+    resetMessage();
+    resetFieldErrors();
 
     const errors: FieldErrors = {};
 
@@ -81,13 +93,19 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
       errors.emailOrPhone = t.pages.auth.signup.errors.fillEmailOrPhone;
     }
 
-    if (!captchaToken) {
-      setMessage({ type: "error", text: t.pages.auth.signup.errors.completeCaptcha });
+    if (!agreedToTerms) {
+      setMessage({ type: "error", text: t.pages.auth.signup.errors.acceptTerms });
       return;
     }
 
-    if (!agreedToTerms) {
-      setMessage({ type: "error", text: t.pages.auth.signup.errors.acceptTerms });
+    // If no captcha token yet, trigger captcha execution
+    if (!captchaToken) {
+      if (Object.keys(errors).length === 0) {
+        setIsCaptchaValidating(true);
+        turnstileRef.current?.execute();
+      } else {
+        setFieldErrors(errors);
+      }
       return;
     }
 
@@ -301,7 +319,7 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
         <CardContent>
           {/* Step 1: Input Form */}
           {step === "input" && (
-            <form className="space-y-6" noValidate onSubmit={handleSignUp}>
+            <form ref={formRef} className="space-y-6" noValidate onSubmit={handleSignUp}>
               <FieldGroup>
                 <Field data-invalid={!!fieldErrors.fullName}>
                   <FieldLabel htmlFor="fullName">{t.pages.auth.signup.fullNameLabel}</FieldLabel>
@@ -416,24 +434,10 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
                 </CardContent>
               </Card>
 
-              <div className="flex justify-center overflow-hidden rounded-lg bg-surface-primary/50">
-                <TurnstileCaptcha
-                  onSuccess={(token) => {
-                    setCaptchaToken(token);
-                    resetMessage();
-                  }}
-                  onError={() => {
-                    setCaptchaToken(null);
-                    setMessage({ type: "error", text: t.pages.auth.signup.errors.captchaFailed });
-                  }}
-                  className="scale-[1.01] -my-[1px] brightness-90 contrast-110"
-                />
-              </div>
-
               <Button
                 type="submit"
-                disabled={isSubmitting || !captchaToken || !agreedToTerms}
-                loading={isSubmitting}
+                disabled={isSubmitting || !agreedToTerms || isCaptchaValidating}
+                loading={isSubmitting || isCaptchaValidating}
                 size="lg"
                 className="w-full"
               >
@@ -538,6 +542,22 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
         showActions={true}
         onAccept={() => setAgreedToTerms(true)}
         onDecline={() => setAgreedToTerms(false)}
+      />
+
+      {/* Hidden Turnstile widget with execution mode */}
+      <TurnstileCaptcha
+        ref={turnstileRef}
+        execution="execute"
+        onSuccess={(token) => {
+          setCaptchaToken(token);
+          setIsCaptchaValidating(false);
+          resetMessage();
+        }}
+        onError={() => {
+          setCaptchaToken(null);
+          setIsCaptchaValidating(false);
+          setMessage({ type: "error", text: t.pages.auth.signup.errors.captchaFailed });
+        }}
       />
     </div>
   );

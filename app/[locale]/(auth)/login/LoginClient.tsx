@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
-import { FormEvent, useState, use } from 'react';
+import { FormEvent, useState, use, useRef, useEffect } from 'react';
 import { useTranslations } from '@/lib/i18n/client';
 
 import { supabase } from '@/lib/supabase/browser';
@@ -29,19 +29,7 @@ import {
 import { Input } from '@/components/app/Input';
 import { Button } from '@/components/app/Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/app/Card';
-
-// Lazy load Turnstile CAPTCHA to avoid blocking initial render
-const TurnstileCaptcha = dynamic(
-  () => import('@/components/app/TurnstileCaptcha').then(mod => mod.TurnstileCaptcha),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="flex h-[65px] items-center justify-center rounded-lg bg-surface-primary/50">
-        <div className="h-5 w-5 animate-spin rounded-full border-2 border-border border-t-primary"></div>
-      </div>
-    )
-  }
-);
+import { TurnstileCaptcha, type TurnstileCaptchaHandle } from '@/components/app/TurnstileCaptcha';
 
 // Lazy load Google icon SVG
 const GoogleIcon = dynamic(() => import('./GoogleIcon'), {
@@ -80,6 +68,11 @@ export default function LoginClient({
   const [isOAuthRedirecting, setIsOAuthRedirecting] = useState(false);
   const [showSignupPrompt, setShowSignupPrompt] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [pendingAction, setPendingAction] = useState<'login' | 'oauth' | null>(null);
+  const [isCaptchaValidating, setIsCaptchaValidating] = useState(false);
+
+  const turnstileRef = useRef<TurnstileCaptchaHandle>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
   const resetMessage = () => {
     setMessage(null);
@@ -88,6 +81,66 @@ export default function LoginClient({
 
   const resetFieldErrors = () => {
     setFieldErrors({});
+  };
+
+  // When captcha token is received, automatically proceed with pending action
+  useEffect(() => {
+    if (captchaToken && pendingAction === 'login') {
+      setPendingAction(null);
+      // Re-submit the form programmatically
+      formRef.current?.requestSubmit();
+    } else if (captchaToken && pendingAction === 'oauth') {
+      setPendingAction(null);
+      // Directly call the OAuth flow
+      performGoogleSignIn();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [captchaToken, pendingAction]);
+
+  const performGoogleSignIn = async () => {
+    setIsOAuthRedirecting(true);
+
+    const redirectPath = getRedirectPath();
+    const configuredBaseUrl = process.env.NEXT_PUBLIC_SITE_URL;
+    const fallbackOrigin =
+      typeof window !== 'undefined' ? window.location.origin : undefined;
+    const baseUrl =
+      configuredBaseUrl && configuredBaseUrl.startsWith('http')
+        ? configuredBaseUrl
+        : fallbackOrigin;
+
+    if (!baseUrl) {
+      setIsOAuthRedirecting(false);
+      setMessage({
+        type: 'error',
+        text: t.pages.auth.login.errors.googleSignInFailed,
+      });
+      return;
+    }
+
+    const redirectUrl = new URL('/auth/callback', baseUrl);
+    redirectUrl.searchParams.set('next', redirectPath);
+
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: redirectUrl.toString(),
+        queryParams: {
+          access_type: 'offline',
+        },
+      },
+    });
+
+    if (error) {
+      setIsOAuthRedirecting(false);
+      setMessage({ type: 'error', text: translateError(error.message) });
+      return;
+    }
+
+    setMessage({
+      type: 'success',
+      text: t.pages.auth.login.waitingForGoogle,
+    });
   };
 
   const handleSignIn = async (event: FormEvent<HTMLFormElement>) => {
@@ -101,10 +154,20 @@ export default function LoginClient({
       errors.emailOrPhone = t.pages.auth.login.errors.fillEmailOrPhone;
     }
 
+    // If no captcha token yet, trigger captcha execution
     if (!captchaToken) {
-      setMessage({ type: 'error', text: t.pages.auth.login.errors.completeCaptcha });
+      if (Object.keys(errors).length === 0) {
+        setPendingAction('login');
+        setIsCaptchaValidating(true);
+        turnstileRef.current?.execute();
+      } else {
+        setFieldErrors(errors);
+      }
       return;
     }
+
+    // Reset pending action if we're proceeding
+    setPendingAction(null);
 
     const inputType = detectInputType(emailOrPhone);
 
@@ -307,56 +370,24 @@ export default function LoginClient({
   };
 
   const handleGoogleSignIn = async () => {
-    setIsOAuthRedirecting(true);
     setMessage(null);
 
-    const redirectPath = getRedirectPath();
-    // Build redirect URL dynamically based on configured site URL, but tolerate misconfiguration.
-    const configuredBaseUrl = process.env.NEXT_PUBLIC_SITE_URL;
-    const fallbackOrigin =
-      typeof window !== 'undefined' ? window.location.origin : undefined;
-    const baseUrl =
-      configuredBaseUrl && configuredBaseUrl.startsWith('http')
-        ? configuredBaseUrl
-        : fallbackOrigin;
-
-    if (!baseUrl) {
-      setIsOAuthRedirecting(false);
-      setMessage({
-        type: 'error',
-        text: t.pages.auth.login.errors.googleSignInFailed,
-      });
+    // If no captcha token yet, trigger captcha execution
+    if (!captchaToken) {
+      setPendingAction('oauth');
+      setIsCaptchaValidating(true);
+      turnstileRef.current?.execute();
       return;
     }
 
-    const redirectUrl = new URL('/auth/callback', baseUrl);
-    redirectUrl.searchParams.set('next', redirectPath);
-
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: redirectUrl.toString(),
-        queryParams: {
-          access_type: 'offline',
-        },
-      },
-    });
-
-    if (error) {
-      setIsOAuthRedirecting(false);
-      setMessage({ type: 'error', text: translateError(error.message) });
-      return;
-    }
-
-    setMessage({
-      type: 'success',
-      text: t.pages.auth.login.waitingForGoogle,
-    });
+    // Reset pending action if we're proceeding
+    setPendingAction(null);
+    await performGoogleSignIn();
   };
 
   const detectedInputType = detectInputType(emailOrPhone);
   const isPhoneInput = detectedInputType === 'phone';
-  const buttonDisabled = isSubmitting || isOAuthRedirecting;
+  const buttonDisabled = isSubmitting || isOAuthRedirecting || isCaptchaValidating;
 
   return (
     <div className="relative flex min-h-screen items-center justify-center py-16">
@@ -388,7 +419,7 @@ export default function LoginClient({
 
         {/* Step 1: Email/Phone and Password Input */}
         {step === 'input' && (
-          <form className="space-y-6" noValidate onSubmit={handleSignIn}>
+          <form ref={formRef} className="space-y-6" noValidate onSubmit={handleSignIn}>
             <FieldGroup>
               <Field data-invalid={!!fieldErrors.emailOrPhone}>
                 <FieldLabel htmlFor="emailOrPhone">{t.pages.auth.login.emailOrPhoneLabel}</FieldLabel>
@@ -438,24 +469,10 @@ export default function LoginClient({
               </Field>
             </FieldGroup>
 
-            <div className="flex justify-center overflow-hidden rounded-lg bg-surface-primary/50">
-              <TurnstileCaptcha
-                onSuccess={(token) => {
-                  setCaptchaToken(token);
-                  resetMessage();
-                }}
-                onError={() => {
-                  setCaptchaToken(null);
-                  setMessage({ type: 'error', text: t.pages.auth.login.errors.captchaFailed });
-                }}
-                className="scale-[1.01] -my-[1px] brightness-90 contrast-110"
-              />
-            </div>
-
             <Button
               type="submit"
-              disabled={buttonDisabled || !captchaToken}
-              loading={isSubmitting}
+              disabled={buttonDisabled}
+              loading={isSubmitting || isCaptchaValidating}
               size="lg"
               className="w-full"
             >
@@ -599,8 +616,8 @@ export default function LoginClient({
                 variant="outline"
                 size="lg"
                 onClick={handleGoogleSignIn}
-                disabled={buttonDisabled || !captchaToken}
-                loading={isOAuthRedirecting}
+                disabled={buttonDisabled}
+                loading={isOAuthRedirecting || (isCaptchaValidating && pendingAction === 'oauth')}
                 aria-label={t.pages.auth.login.continueWithGoogle}
                 className="w-full"
               >
@@ -626,6 +643,25 @@ export default function LoginClient({
         )}
         </CardContent>
       </Card>
+
+      {/* Hidden Turnstile widget with execution mode */}
+      <div className="sr-only">
+        <TurnstileCaptcha
+          ref={turnstileRef}
+          execution="execute"
+          onSuccess={(token) => {
+            setCaptchaToken(token);
+            setIsCaptchaValidating(false);
+            resetMessage();
+          }}
+          onError={() => {
+            setCaptchaToken(null);
+            setPendingAction(null);
+            setIsCaptchaValidating(false);
+            setMessage({ type: 'error', text: t.pages.auth.login.errors.captchaFailed });
+          }}
+        />
+      </div>
     </div>
   );
 }
