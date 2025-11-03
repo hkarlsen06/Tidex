@@ -5,10 +5,16 @@ export const metadata: Metadata = {
   title: 'Payroll Documentation - How Tidex calculates your pay',
   description:
     'A transparent, auditable reference for every payroll rule we apply—from the shift you log to the amount you see on screen.',
+  alternates: {
+    canonical: 'https://tidex.no/docs/payroll',
+  },
   openGraph: {
     title: 'Payroll Documentation - How Tidex calculates your pay',
     description:
       'A transparent, auditable reference for every payroll rule we apply—from the shift you log to the amount you see on screen.',
+    url: 'https://tidex.no/docs/payroll',
+    type: 'article',
+    locale: 'en',
   },
   twitter: {
     title: 'Payroll Documentation - How Tidex calculates your pay',

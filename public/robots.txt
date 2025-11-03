@@ -1,0 +1,42 @@
+# Robots.txt for app.tidex.no
+# App subdomain - Allow public auth pages, block authenticated content
+
+User-agent: *
+
+# Allow public authentication pages
+Allow: /no/login
+Allow: /en/login
+Allow: /de/login
+Allow: /no/signup
+Allow: /en/signup
+Allow: /de/signup
+Allow: /no/reset-password
+Allow: /en/reset-password
+Allow: /de/reset-password
+
+# Block authenticated pages
+Disallow: /no/shifts
+Disallow: /en/shifts
+Disallow: /de/shifts
+Disallow: /no/stats
+Disallow: /en/stats
+Disallow: /de/stats
+Disallow: /no/settings
+Disallow: /en/settings
+Disallow: /de/settings
+Disallow: /no/onboarding
+Disallow: /en/onboarding
+Disallow: /de/onboarding
+
+# Block auth callback
+Disallow: /auth/callback
+
+# Allow static assets
+Allow: /*.css$
+Allow: /*.js$
+Allow: /*.png$
+Allow: /*.jpg$
+Allow: /*.svg$
+Allow: /*.ico$
+
+Sitemap: https://tidex.no/sitemap.xml

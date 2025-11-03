@@ -22,14 +22,25 @@ export async function generateMetadata({ params }: LocalePageProps): Promise<Met
   const dictionary = getDictionary(locale as Locale);
   const url = locale === defaultLocale ? 'https://tidex.no' : `https://tidex.no/${locale}`;
 
+  // Build language alternates for hreflang tags
+  const languages: Record<string, string> = {};
+  locales.forEach((loc) => {
+    languages[loc] = `https://tidex.no/${loc}`;
+  });
+
   return {
     title: dictionary.marketing.meta.title,
     description: dictionary.marketing.meta.description,
+    alternates: {
+      canonical: url,
+      languages,
+    },
     openGraph: {
       title: dictionary.marketing.meta.ogTitle,
       description: dictionary.marketing.meta.ogDescription,
       url,
       type: 'website',
+      locale: locale,
       images: [
         {
           url: '/og/landing.png',

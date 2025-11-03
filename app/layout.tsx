@@ -1,12 +1,14 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import { Inter } from "next/font/google";
+import { headers } from "next/headers";
 
 import { Analytics } from "@vercel/analytics/next"
 import { SpeedInsights } from "@vercel/speed-insights/next"
 
 import SWRegister from "./sw-register";
 import { BackgroundTexture } from "@/components/app/BackgroundTexture";
+import { defaultLocale, type Locale } from "@/lib/i18n/config";
 import "./globals.css";
 
 const inter = Inter({
@@ -56,9 +58,13 @@ export const viewport: Viewport = {
   themeColor: "#2563eb",
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  // Get locale from proxy-injected header for proper lang attribute
+  const headersList = await headers();
+  const locale = (headersList.get('x-tidex-locale') as Locale) || defaultLocale;
+
   return (
-    <html lang="no" suppressHydrationWarning>
+    <html lang={locale} suppressHydrationWarning>
       <head>
         <meta name="mobile-web-app-capable" content="yes" />
         {/* Resource hints for faster loading */}

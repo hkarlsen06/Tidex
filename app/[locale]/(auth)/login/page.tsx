@@ -1,8 +1,9 @@
 import { Suspense } from 'react';
+import type { Metadata } from 'next';
 import LoginClient from './LoginClient';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/app/Card';
 import { getTranslations } from '@/lib/i18n/server';
-import type { Locale } from '@/lib/i18n/config';
+import { locales, type Locale } from '@/lib/i18n/config';
 
 type LoginSearchParams = {
   next?: string | string[];
@@ -34,6 +35,30 @@ function resolveInitialNext(searchParams: LoginSearchParams): string {
   }
 
   return raw;
+}
+
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
+  const { locale } = await params;
+  const t = getTranslations(locale as Locale);
+
+  // Build language alternates for hreflang tags
+  const languages: Record<string, string> = {};
+  locales.forEach((loc) => {
+    languages[loc] = `https://app.tidex.no/${loc}/login`;
+  });
+
+  return {
+    title: t.pages.auth.login.skeletonTitle,
+    description: 'Logg inn på Tidex for å administrere dine vakter og lønnsberegninger.',
+    alternates: {
+      canonical: `https://app.tidex.no/${locale}/login`,
+      languages,
+    },
+    robots: {
+      index: true,
+      follow: true,
+    },
+  };
 }
 
 // Loading skeleton for instant paint

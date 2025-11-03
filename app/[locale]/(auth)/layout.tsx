@@ -3,6 +3,10 @@ import type { ReactNode } from "react";
 
 export const metadata: Metadata = {
   manifest: "/manifest.json",
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 // server component

@@ -22,14 +22,25 @@ export async function generateMetadata({ params }: LocalePrivacyPageProps): Prom
   const dictionary = getDictionary(locale as Locale);
   const url = locale === defaultLocale ? 'https://tidex.no/privacy' : `https://tidex.no/${locale}/privacy`;
 
+  // Build language alternates for hreflang tags
+  const languages: Record<string, string> = {};
+  locales.forEach((loc) => {
+    languages[loc] = `https://tidex.no/${loc}/privacy`;
+  });
+
   return {
     title: dictionary.legal.privacy.meta.title,
     description: dictionary.legal.privacy.meta.description,
+    alternates: {
+      canonical: url,
+      languages,
+    },
     openGraph: {
       title: dictionary.legal.privacy.meta.title,
       description: dictionary.legal.privacy.meta.description,
       url,
       type: 'website',
+      locale: locale,
     },
   };
 }

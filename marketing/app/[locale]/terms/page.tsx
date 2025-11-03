@@ -22,14 +22,25 @@ export async function generateMetadata({ params }: LocaleTermsPageProps): Promis
   const dictionary = getDictionary(locale as Locale);
   const url = locale === defaultLocale ? 'https://tidex.no/terms' : `https://tidex.no/${locale}/terms`;
 
+  // Build language alternates for hreflang tags
+  const languages: Record<string, string> = {};
+  locales.forEach((loc) => {
+    languages[loc] = `https://tidex.no/${loc}/terms`;
+  });
+
   return {
     title: dictionary.legal.terms.meta.title,
     description: dictionary.legal.terms.meta.description,
+    alternates: {
+      canonical: url,
+      languages,
+    },
     openGraph: {
       title: dictionary.legal.terms.meta.title,
       description: dictionary.legal.terms.meta.description,
       url,
       type: 'website',
+      locale: locale,
     },
   };
 }

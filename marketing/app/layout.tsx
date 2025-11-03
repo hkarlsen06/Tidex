@@ -1,6 +1,9 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import { Inter } from 'next/font/google';
+import { headers } from 'next/headers';
+import { defaultLocale, type Locale } from '@/lib/i18n/config';
+import { StructuredData } from '../components/StructuredData';
 import './globals.css';
 
 const inter = Inter({ subsets: ['latin'], display: 'swap' });
@@ -43,13 +46,20 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: ReactNode;
 }) {
+  // Get locale from proxy-injected header for proper lang attribute
+  const headersList = await headers();
+  const locale = (headersList.get('x-tidex-locale') as Locale) || defaultLocale;
+
   return (
-    <html lang="no" className="dark">
+    <html lang={locale} className="dark">
+      <head>
+        <StructuredData />
+      </head>
       <body className={`${inter.className} bg-background text-foreground`}>
         {children}
       </body>

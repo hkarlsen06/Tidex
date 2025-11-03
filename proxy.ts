@@ -131,9 +131,14 @@ export async function proxy(request: NextRequest) {
   if (localeFromPath) {
     // Path has locale - update cookie and continue
     const cookieBase = buildCookieBase(request);
+
+    // Create request headers with locale for Server Components
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set('x-tidex-locale', localeFromPath);
+
     const response = NextResponse.next({
       request: {
-        headers: request.headers,
+        headers: requestHeaders,
       },
     });
 
