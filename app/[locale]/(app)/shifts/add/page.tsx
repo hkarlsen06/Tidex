@@ -11,6 +11,7 @@ import { generateGhostsForMonth } from "@/lib/series/utils";
 import type { SeriesShiftRow } from "@/lib/series/types";
 import { cleanTime } from "@/lib/time-utils";
 import { logger } from "@/lib/logger";
+import { getUserWageSnapshots } from "@/data-access/wage-snapshots";
 
 interface AddShiftsPageProps {
   params: Promise<{ locale: string }>;
@@ -110,11 +111,15 @@ export default async function AddShiftsPage({ params }: AddShiftsPageProps) {
   // Combine regular shifts and series ghosts
   const allExistingShifts = [...existingShifts, ...seriesGhosts];
 
+  // Load wage snapshots for accurate preview calculations
+  const wageSnapshots = await getUserWageSnapshots();
+
   return (
     <AddShiftForm
       existingShifts={allExistingShifts}
       userSettings={userSettings}
       presetRules={PRESET_RULES}
+      wageSnapshots={wageSnapshots}
     />
   );
 }

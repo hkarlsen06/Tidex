@@ -7,7 +7,7 @@ import { Button } from "@/components/app/Button";
 import { TimeInput } from "@/components/app/TimeInput";
 import { SelectDatesCalendar } from "@/components/app/SelectDatesCalendar";
 import type { ISODate } from "@/components/calendar/calendar.utils";
-import { computeShift, type UserSettings, type SupplementRule } from "@/lib/payroll";
+import { computeShift, type UserSettings, type SupplementRule, type WageSnapshot } from "@/lib/payroll";
 import { createShifts } from "@/app/[locale]/(app)/shifts/add/actions";
 import RecurringForm from "./RecurringForm";
 import { MonthPicker } from "@/components/app/MonthPicker";
@@ -64,9 +64,10 @@ type Props = {
   existingShifts: ExistingShift[];
   userSettings: UserSettings;
   presetRules: SupplementRule[];
+  wageSnapshots: WageSnapshot[];
 };
 
-export default function AddShiftForm({ existingShifts, userSettings, presetRules }: Props) {
+export default function AddShiftForm({ existingShifts, userSettings, presetRules, wageSnapshots }: Props) {
   const { t } = useTranslations();
   const locale = useLocale();
   const router = useRouter();
@@ -287,6 +288,16 @@ export default function AddShiftForm({ existingShifts, userSettings, presetRules
     const result: Record<ISODate, number> = {};
     for (const iso of isoDates) {
       try {
+        // Find the applicable wage snapshot for this shift date
+        // Snapshots are ordered by from_date DESC (newest first)
+        const applicableSnapshot = wageSnapshots.find(
+          (snapshot) => snapshot.from_date !== null && snapshot.from_date <= iso
+        );
+
+        // Fall back to baseline snapshot (from_date = NULL) if no dated snapshot matches
+        const baselineSnapshot = wageSnapshots.find((snapshot) => snapshot.from_date === null);
+        const snapshot = applicableSnapshot || baselineSnapshot || null;
+
         const computed = computeShift(
           {
             id: `preview-${iso}`,
@@ -296,7 +307,8 @@ export default function AddShiftForm({ existingShifts, userSettings, presetRules
             end_time: end,
           },
           userSettings,
-          presetRules
+          presetRules,
+          snapshot
         );
         result[iso as ISODate] = computed.gross;
       } catch (err) {
@@ -305,7 +317,7 @@ export default function AddShiftForm({ existingShifts, userSettings, presetRules
       }
     }
     return result;
-  }, [start, end, isoDates, userSettings, presetRules]);
+  }, [start, end, isoDates, userSettings, presetRules, wageSnapshots]);
 
   const openNativePicker = (input: HTMLInputElement | null) => {
     if (!input) return;
