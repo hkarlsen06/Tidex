@@ -98,15 +98,35 @@ Uses `@supabase/ssr` with cookie-based sessions following Next.js 16 best practi
 
 #### Cookie Configuration (CRITICAL)
 
-**See skill:** Use the `troubleshoot-supabase-cookies` skill if you encounter "Refresh Token Not Found" errors.
+**All Supabase clients MUST use consistent cookie configuration to prevent "Refresh Token Not Found" errors.**
 
-All Supabase clients MUST use consistent cookie configuration from `lib/auth/cookie-config.ts`. The three clients (proxy, server, browser) each have dedicated builder functions that ensure matching cookie settings. Never create cookie configurations inline.
+- **Shared config**: All cookie options come from `lib/auth/cookie-config.ts`
+- **Three clients, one config**:
+  - `proxy.ts` → uses `buildProxyCookieOptions()` (request-aware)
+  - `lib/supabase/server.ts` → uses `buildServerCookieOptions()` (environment-based)
+  - `lib/supabase/browser.ts` → uses `buildBrowserCookieOptions()` (window-aware)
+
+**NEVER** create cookie configurations inline. **ALWAYS** import from `lib/auth/cookie-config.ts` to ensure:
+- Consistent `secure` flag resolution (critical for localhost vs production)
+- Matching `httpOnly`, `sameSite`, `path`, and `maxAge` settings
+- Prevention of cookie read/write mismatches that break token refresh
 
 ### Component System
 
-**See skill:** Use the `add-shadcn-component` skill for detailed instructions on adding UI components.
+**Critical: Two-tier component architecture**
 
-The project uses a two-tier component architecture: `components/ui/*` contains raw shadcn/ui components (never import directly), and `components/app/*` contains wrapped components with app-specific logic. Always import from `components/app`.
+- `components/ui/*` - Raw shadcn/ui components (generated, do not import directly)
+- `components/app/*` - Wrapped components with app-specific logic and styling
+
+**Always import from `components/app`, never from `components/ui`**
+
+To add new shadcn components:
+
+```bash
+npm dlx shadcn@latest add <component-name>
+```
+
+Then create a wrapper in `components/app/` following existing patterns in that directory.
 
 ### Import Aliases
 
@@ -193,19 +213,122 @@ export async function getChartsData()   // Get chart data for stats page
 export async function getUserSubscriptionData() // Get subscription status
 ```
 
-**See skill:** Use the `use-data-access-layer` skill for complete DAL usage patterns and examples.
+**Usage pattern:**
 
-Pages should NEVER call Supabase directly. Always use DAL functions which handle authentication, caching, and computations automatically.
+```tsx
+// app/[locale]/(app)/page.tsx
+import { connection } from "next/server";
+import { getComputedShifts } from "@/data-access/shifts";
+
+export default async function Page() {
+  await connection(); // Opt out of prerendering
+
+  // DAL handles auth verification internally
+  const { shifts, settings } = await getComputedShifts({
+    startDate: "2025-01-01",
+    endDate: "2025-01-31"
+  });
+
+  // Render with precomputed data
+  return <ShiftsList shifts={shifts} />;
+}
+```
+
+**Important**: Pages should NEVER call Supabase directly. Always use DAL functions. See `docs/dal-migration.md` for migration guide.
 
 ### Server Actions & Utilities
 
-**See skill:** Use the `create-server-action` skill for complete server action implementation patterns.
+**Centralized utilities for consistent server action implementation**
 
-Server actions use centralized utilities from `lib/` for consistency:
-- **Validation**: `lib/validation/shift-validators.ts` (isISODate, isHHMM)
-- **Error messages**: `lib/errors/messages.ts` (ERRORS constants)
-- **Revalidation**: `lib/revalidation/paths.ts` (invalidateAndRevalidate, revalidateShiftData)
-- **Snapshots**: `data-access/snapshots.ts` (getCurrentSnapshots)
+Server actions use shared utilities from `lib/` to ensure consistency across the application:
+
+**Validation (`lib/validation/shift-validators.ts`):**
+
+```tsx
+import { isISODate, isHHMM } from '@/lib/validation/shift-validators';
+
+// Validate date formats
+if (!isISODate(date)) return { error: "Ugyldig dato" };
+
+// Validate time formats
+if (!isHHMM(start) || !isHHMM(end)) return { error: "Ugyldig tid" };
+```
+
+**Revalidation (`lib/revalidation/paths.ts`):**
+
+```tsx
+import { revalidateShiftData, invalidateAndRevalidate } from '@/lib/revalidation/paths';
+
+// After any shift modification
+revalidateShiftData(); // Revalidates /shifts, /, and /stats pages
+
+// After data modification with cache invalidation
+const user = await verifySession();
+invalidateAndRevalidate(user.id); // Clears cache + revalidates pages
+```
+
+**Error Messages (`lib/errors/messages.ts`):**
+
+```tsx
+import { ERRORS } from '@/lib/errors/messages';
+
+// Use standard error messages
+return { error: ERRORS.INVALID_DATE };
+return { error: ERRORS.SHIFT_NOT_FOUND };
+return { error: ERRORS.UNAUTHORIZED };
+```
+
+**Snapshot Preparation (`data-access/snapshots.ts`):**
+
+```tsx
+import { getCurrentSnapshots } from '@/data-access/snapshots';
+
+// Get current wage/supplement snapshots for shift creation
+const snapshots = await getCurrentSnapshots();
+// Returns: { hourly_wage_snapshot, supplement_rules_snapshot }
+```
+
+**Server action pattern:**
+
+```tsx
+'use server';
+
+import { verifySession } from '@/data-access/auth';
+import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { isISODate, isHHMM } from '@/lib/validation/shift-validators';
+import { getCurrentSnapshots } from '@/data-access/snapshots';
+import { invalidateAndRevalidate } from '@/lib/revalidation/paths';
+import { ERRORS } from '@/lib/errors/messages';
+
+export async function createShift(data: ShiftData) {
+  // 1. Verify authentication
+  const user = await verifySession();
+
+  // 2. Initialize Supabase client
+  const supabase = await createSupabaseServerClient();
+
+  // 3. Validate input
+  if (!isISODate(data.date)) return { error: ERRORS.INVALID_DATE };
+  if (!isHHMM(data.start)) return { error: ERRORS.INVALID_TIME };
+
+  // 4. Get snapshots
+  const snapshots = await getCurrentSnapshots();
+
+  // 5. Perform database operation
+  const { error } = await supabase.from('shifts').insert({
+    ...data,
+    ...snapshots,
+    user_id: user.id
+  });
+
+  if (error) return { error: ERRORS.DB_ERROR };
+
+  // 6. Invalidate cache and revalidate
+  invalidateAndRevalidate(user.id);
+
+  return { success: true };
+}
+```
 
 ## Configuration Files
 
