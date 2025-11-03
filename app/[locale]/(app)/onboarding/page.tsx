@@ -1,5 +1,6 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
 import type { Metadata } from "next";
 import { OnboardingForm } from "./_components/OnboardingForm";
 import { getSnapshotForDate } from "@/data-access/wage-snapshots";
@@ -9,6 +10,9 @@ export const metadata: Metadata = {
 };
 
 export default async function OnboardingPage() {
+  // Opt out of prerendering (required for dynamic layouts accessing headers)
+  await connection();
+
   // Layout guarantees user is authenticated
   const supabase = await createSupabaseServerClient();
 

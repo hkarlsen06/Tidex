@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation';
+import { connection } from 'next/server';
 import type { Metadata } from 'next';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { Card } from '@appui/Card';
@@ -10,6 +11,8 @@ export const metadata: Metadata = {
 };
 
 export default async function SubscriptionSuccessPage() {
+  await connection(); // Opt out of prerendering for dynamic authenticated pages
+
   // Layout guarantees user is authenticated
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();

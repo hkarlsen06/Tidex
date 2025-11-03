@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation';
+import { connection } from 'next/server';
 import type { Metadata } from 'next';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { DataForm } from '@components/settings/data/DataForm';
@@ -22,6 +23,7 @@ export default async function DataPage({
 }: {
   params: Promise<{ locale: string }>;
 }) {
+  await connection(); // Opt out of prerendering for dynamic authenticated pages
   const { locale } = await params;
   const t = getTranslations(locale as Locale);
 
