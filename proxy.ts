@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { locales, defaultLocale, LOCALE_COOKIE, type Locale } from "@/lib/i18n/config";
+import { buildProxyCookieOptions, resolveSecureFlag } from "@/lib/auth/cookie-config";
 
 /**
  * Next.js 16 Proxy for Supabase Token Refresh and Locale Routing
@@ -19,42 +20,8 @@ import { locales, defaultLocale, LOCALE_COOKIE, type Locale } from "@/lib/i18n/c
  * - No network I/O beyond what Supabase SSR needs for token refresh
  */
 
-function isLoopbackHost(hostname: string) {
-  const lower = hostname.toLowerCase();
-  return (
-    lower === "localhost" ||
-    lower.startsWith("localhost:") ||
-    lower === "127.0.0.1" ||
-    lower.startsWith("127.0.0.1:") ||
-    lower === "[::1]" ||
-    lower.startsWith("[::1]:")
-  );
-}
-
-function shouldUseSecureCookies(protocol: string, hostname: string) {
-  if (protocol === "https:") return true;
-  if (protocol === "http:") {
-    if (isLoopbackHost(hostname)) {
-      return false;
-    }
-    return false;
-  }
-
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
-  if (siteUrl) {
-    return siteUrl.startsWith("https");
-  }
-
-  return process.env.NODE_ENV === "production";
-}
-
 function buildCookieBase(request: NextRequest): Partial<CookieOptions> {
-  return {
-    httpOnly: true,
-    secure: shouldUseSecureCookies(request.nextUrl.protocol, request.nextUrl.hostname),
-    sameSite: "lax",
-    path: "/",
-  };
+  return buildProxyCookieOptions(request.nextUrl.protocol, request.nextUrl.hostname);
 }
 
 /**
@@ -177,7 +144,7 @@ export async function proxy(request: NextRequest) {
         path: '/',
         sameSite: 'lax',
         maxAge: 60 * 60 * 24 * 365, // 1 year
-        secure: shouldUseSecureCookies(request.nextUrl.protocol, request.nextUrl.hostname),
+        secure: resolveSecureFlag(request.nextUrl.protocol, request.nextUrl.hostname),
       });
     }
 
@@ -225,7 +192,7 @@ export async function proxy(request: NextRequest) {
     path: '/',
     sameSite: 'lax',
     maxAge: 60 * 60 * 24 * 365, // 1 year
-    secure: shouldUseSecureCookies(request.nextUrl.protocol, request.nextUrl.hostname),
+    secure: resolveSecureFlag(request.nextUrl.protocol, request.nextUrl.hostname),
   });
 
   return response;

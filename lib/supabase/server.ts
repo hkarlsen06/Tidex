@@ -1,63 +1,13 @@
 // lib/supabase/server.ts
 import "server-only";
 import { cookies } from "next/headers";
-import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { createServerClient } from "@supabase/ssr";
 import type { NextRequest, NextResponse } from "next/server";
 import { ENV } from "@/lib/env";
-
-const ONE_WEEK_SECONDS = 60 * 60 * 24 * 7;
-
-function envPrefersSecureCookies() {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
-  if (siteUrl) {
-    return siteUrl.startsWith("https");
-  }
-  return process.env.NODE_ENV === "production";
-}
-
-function isLoopbackHost(hostname: string) {
-  const lower = hostname.toLowerCase();
-  return (
-    lower === "localhost" ||
-    lower.startsWith("localhost:") ||
-    lower === "127.0.0.1" ||
-    lower.startsWith("127.0.0.1:") ||
-    lower === "[::1]" ||
-    lower.startsWith("[::1]:")
-  );
-}
-
-function resolveSecureFlag(protocol: string | undefined, hostname: string | undefined) {
-  if (protocol === "https:") return true;
-  if (protocol === "http:") {
-    if (hostname && isLoopbackHost(hostname)) {
-      return false;
-    }
-    return false;
-  }
-  if (hostname && isLoopbackHost(hostname)) return false;
-  return envPrefersSecureCookies();
-}
-
-function buildCookieBase(): Partial<CookieOptions> {
-  return {
-    httpOnly: true,
-    secure: envPrefersSecureCookies(),
-    sameSite: "lax",
-    path: "/",
-    maxAge: ONE_WEEK_SECONDS,
-  };
-}
-
-function buildCookieBaseForRequest(request: NextRequest): Partial<CookieOptions> {
-  return {
-    ...buildCookieBase(),
-    secure: resolveSecureFlag(request.nextUrl.protocol, request.nextUrl.hostname),
-  };
-}
+import { buildServerCookieOptions, buildProxyCookieOptions } from "@/lib/auth/cookie-config";
 
 // Security defaults applied when we WRITE cookies (reading is unaffected)
-const COOKIE_SECURITY_OPTIONS = buildCookieBase();
+const COOKIE_SECURITY_OPTIONS = buildServerCookieOptions();
 
 // Helper: Next.js throws when attempting to set cookies in RSC render phase
 const isReadonlyCookiesError = (err: unknown) =>
@@ -109,7 +59,7 @@ export function createSupabaseRouteHandlerClient(
   request: NextRequest,
   response: NextResponse
 ) {
-  const base = buildCookieBaseForRequest(request);
+  const base = buildProxyCookieOptions(request.nextUrl.protocol, request.nextUrl.hostname);
 
   return createServerClient(ENV.URL!, ENV.PUBLISHABLE!, {
     cookies: {

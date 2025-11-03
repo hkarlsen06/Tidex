@@ -6,6 +6,37 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A Next.js 16 application for tracking work shifts and calculating wages with Supabase authentication. Supports internationalization (i18n) with Norwegian and English locales. Uses Tailwind CSS for styling with a custom design system and supports both light and dark modes.
 
+## Next.js 16 Critical Updates
+
+**IMPORTANT: This project uses Next.js 16. Key breaking changes:**
+
+### Proxy (formerly Middleware)
+
+- **File name**: `proxy.ts` (NOT `middleware.ts` - that name is deprecated)
+- **Export name**: `proxy` (NOT `middleware`)
+- **Runtime**: Node.js only (Edge runtime NOT supported)
+- **Purpose**: Network boundary operations ONLY (routing, redirects, cookie management, token refresh)
+- **NOT for**: Heavy logic, database queries, or complex operations (those belong in Server Components/Actions)
+- **Confusion warning**: "Middleware" was renamed to "proxy" because developers confused it with Express.js middleware and did inappropriate heavy operations
+
+### Async Request APIs (Breaking Change)
+
+All these APIs are now **fully asynchronous** and must be awaited:
+- `cookies()` → `await cookies()`
+- `headers()` → `await headers()`
+- `draftMode()` → `await draftMode()`
+- `params` in pages/layouts → `const params = await props.params`
+- `searchParams` in pages → `const searchParams = await props.searchParams`
+
+### Other Breaking Changes
+
+- **Node.js 20.9+** required (Node 18 dropped)
+- **Turbopack** is now default (webpack requires explicit `--webpack` flag)
+- **Parallel routes** require explicit `default.js` files or build fails
+- **React 19** is supported (was React 18 before)
+- **AMP support removed** completely
+- **`next lint`** command removed (use ESLint/Biome directly)
+
 ## Development Commands
 
 ```bash
@@ -56,7 +87,7 @@ The app supports multiple locales (Norwegian and English) via:
 
 Uses `@supabase/ssr` with cookie-based sessions following Next.js 16 best practices:
 
-1. **Token refresh & locale routing**: `proxy.ts` middleware handles both Supabase token refresh and locale routing (~1-5ms, no auth logic)
+1. **Token refresh & locale routing**: `proxy.ts` handles both Supabase token refresh and locale routing (~1-5ms, no auth logic)
 2. **Authentication enforcement**: Centralized in Data Access Layer via `verifySession()` from `data-access/auth.ts` (single source of truth)
 3. **Prerender opt-out**: Protected pages call `connection()` from "next/server" to ensure dynamic rendering
 4. **Server-side**: Use `createSupabaseServerClient()` from `lib/supabase/server.ts` in Server Components and data loaders
@@ -64,6 +95,21 @@ Uses `@supabase/ssr` with cookie-based sessions following Next.js 16 best practi
 6. **Session sync**: `app/supabase-listener.tsx` subscribes to auth changes via the shared client and calls `router.refresh()` to update server components
 
 **Important**: Authentication happens in the Data Access Layer via `verifySession()`, NOT in pages or layouts. All DAL functions verify authentication before data access. See `docs/auth.md` and `docs/dal-migration.md` for detailed flow.
+
+#### Cookie Configuration (CRITICAL)
+
+**All Supabase clients MUST use consistent cookie configuration to prevent "Refresh Token Not Found" errors.**
+
+- **Shared config**: All cookie options come from `lib/auth/cookie-config.ts`
+- **Three clients, one config**:
+  - `proxy.ts` → uses `buildProxyCookieOptions()` (request-aware)
+  - `lib/supabase/server.ts` → uses `buildServerCookieOptions()` (environment-based)
+  - `lib/supabase/browser.ts` → uses `buildBrowserCookieOptions()` (window-aware)
+
+**NEVER** create cookie configurations inline. **ALWAYS** import from `lib/auth/cookie-config.ts` to ensure:
+- Consistent `secure` flag resolution (critical for localhost vs production)
+- Matching `httpOnly`, `sameSite`, `path`, and `maxAge` settings
+- Prevention of cookie read/write mismatches that break token refresh
 
 ### Component System
 
@@ -324,3 +370,14 @@ Environment variables are validated at module load in `lib/env.ts` (throws error
 7. **Respect locale routing** - all user-facing URLs should include `[locale]` parameter
 8. **Use translation dictionaries** - import from `lib/i18n/dictionaries/` for user-facing text
 9. **Use centralized utilities in server actions** - use validators, error messages, revalidation helpers, and snapshot preparation from `lib/` and `data-access/` for consistency
+
+## Claude Code Behavior Guidelines
+
+**IMPORTANT: Do NOT create unnecessary files or documentation:**
+
+- **NO summary documents** (e.g., SUMMARY.md, CHANGES.md, REPORT.md) - waste of tokens
+- **NO audit reports** unless explicitly requested for security/compliance
+- **NO markdown files** unless they serve a critical project purpose (like this CLAUDE.md)
+- **NO README files** unless user explicitly asks
+- **Focus on code changes only** - communicate findings verbally in chat, not in files
+- When asked to investigate or analyze, report findings in chat responses, not new files
