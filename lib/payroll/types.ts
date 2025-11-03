@@ -13,10 +13,9 @@ export type ShiftRow = {
 };
 
 export type UserSettings = {
-  use_preset?: boolean | null;
-  custom_wage?: number | null;
-  current_wage_level?: number | null; // maps to preset table
-  custom_supplements?: { rules: SupplementRule[] } | null;
+  // NOTE: Wage-related fields (use_preset, custom_wage, current_wage_level, custom_supplements)
+  // have been removed. Wage data is now stored in the wage_snapshots table.
+  // See migration: 20251101130000_remove_wage_from_user_settings.sql
 
   // Pause settings
   pause_deduction_enabled?: boolean | null; // Master switch for automatic break deductions

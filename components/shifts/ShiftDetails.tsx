@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { IconPencil, IconTrash, IconClock, IconCheck, IconX, IconRefresh, IconInfoCircle } from "@tabler/icons-react";
+import { IconPencil, IconTrash, IconClock, IconCheck, IconX, IconRefresh } from "@tabler/icons-react";
 import {
   Dialog,
   DialogContent,
@@ -15,19 +15,16 @@ import { Input } from "@components/app/Input";
 import type { ShiftWithComputations, UserSettings, SupplementRule } from "@/lib/payroll";
 import SupplementBreakdown, { type SupplementSegmentInput } from "./SupplementBreakdown";
 import { updateShift } from "@/app/[locale]/(app)/shifts/_actions/updateShift";
-import { clearShiftSnapshots } from "@/app/[locale]/(app)/shifts/_actions/clearShiftSnapshots";
 import { cn } from "@/lib/cn";
 import { TimeInput } from "@/components/app/TimeInput";
 import { useTranslations } from "@/lib/i18n/client";
 import {
   formatCurrency,
   formatHours as formatHoursValue,
-  formatPlainAmount,
 } from "@/lib/formatters";
 import { getDateFormatter } from "@/lib/i18n/locale";
 import { SeriesEditModal } from "./SeriesEditModal";
 import type { ExistingShift } from "@/lib/series/conflicts";
-import { PRESET_WAGE_RATES } from "@/lib/payroll/calc";
 
 const MINUTES_PER_DAY = 24 * 60;
 
@@ -131,47 +128,9 @@ function formatCurrencyNOKInt(value: number) {
   return formatCurrency(value);
 }
 
-function formatHourlyRate(value: number) {
-  return `${formatPlainAmount(value, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })} kr/t`;
-}
-
-// Helper to resolve current wage rate from settings
-function resolveCurrentWage(settings: UserSettings): number | null {
-  if (settings.use_preset && settings.current_wage_level != null) {
-    const key = String(settings.current_wage_level);
-    return PRESET_WAGE_RATES[key] ?? null;
-  }
-  if (settings.custom_wage && settings.custom_wage > 0) {
-    return settings.custom_wage;
-  }
-  return null;
-}
-
-function compareSupplementRules(rules1: SupplementRule[], rules2: SupplementRule[]): boolean {
-  if (rules1.length !== rules2.length) return false;
-
-  // Compare each rule
-  for (let i = 0; i < rules1.length; i++) {
-    const r1 = rules1[i];
-    const r2 = rules2[i];
-
-    // Compare days arrays
-    if (r1.days.length !== r2.days.length) return false;
-    if (!r1.days.every((day, idx) => day === r2.days[idx])) return false;
-
-    // Compare time ranges
-    if (r1.from !== r2.from || r1.to !== r2.to) return false;
-
-    // Compare rate/percent (handle optional fields)
-    if (r1.rate !== r2.rate) return false;
-    if (r1.percent !== r2.percent) return false;
-  }
-
-  return true;
-}
+// NOTE: Wage comparison functionality removed
+// Old per-shift snapshots are deprecated in favor of the wage_snapshots table
+// No need to compare with "current" settings since those fields no longer exist
 
 export function ShiftDetails({
   isOpen,
@@ -213,7 +172,6 @@ export function ShiftDetails({
   const [shiftDate, setShiftDate] = useState("");
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, startTransition] = useTransition();
-  const [clearingSnapshots, startClearingSnapshots] = useTransition();
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const startInputRef = useRef<HTMLInputElement>(null);
   const endInputRef = useRef<HTMLInputElement>(null);
@@ -263,18 +221,6 @@ export function ShiftDetails({
     setSeriesModalOpen(true);
   };
 
-  const handleClearSnapshots = () => {
-    if (!shift) return;
-    startClearingSnapshots(async () => {
-      try {
-        await clearShiftSnapshots(shift.id);
-        router.refresh();
-        onClose();
-      } catch (error) {
-        console.error("Failed to clear snapshots:", error);
-      }
-    });
-  };
 
   const handleSave = () => {
     if (!shift) return;
@@ -318,30 +264,6 @@ export function ShiftDetails({
     DATE_PATTERN.test(shiftDate) &&
     TIME_PATTERN.test(startTime) &&
     TIME_PATTERN.test(endTime);
-
-  // Check if shift uses snapshots and compare with current settings
-  const hasWageSnapshot = Boolean(shift && shift.hourly_wage_snapshot && shift.hourly_wage_snapshot > 0);
-  const hasSupplementSnapshot = Boolean(shift && shift.supplement_rules_snapshot?.rules?.length);
-
-  const currentWage = shift ? resolveCurrentWage(userSettings) : null;
-  const snapshotWage = shift?.hourly_wage_snapshot;
-
-  // Get current supplement rules for comparison
-  const currentSupplementRules = userSettings.use_preset
-    ? presetRules
-    : (userSettings.custom_supplements?.rules ?? []);
-  const snapshotSupplementRules = shift?.supplement_rules_snapshot?.rules ?? [];
-
-  const currentSupplementsCount = currentSupplementRules.length;
-  const snapshotSupplementsCount = snapshotSupplementRules.length;
-
-  // Check if values actually differ
-  const wagesDiffer = hasWageSnapshot && snapshotWage !== currentWage;
-  const supplementsDiffer = hasSupplementSnapshot &&
-    !compareSupplementRules(snapshotSupplementRules, currentSupplementRules);
-
-  // Only show the comparison section if values actually differ
-  const showSnapshotComparison = wagesDiffer || supplementsDiffer;
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
@@ -440,75 +362,7 @@ export function ShiftDetails({
             </div>
 
             {/* Snapshot comparison section */}
-            {showSnapshotComparison && (
-              <>
-                <div className="h-px bg-border-subtle mt-4" />
-                <div className="rounded-lg bg-blue-50 dark:bg-blue-900/10 p-4 space-y-3">
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <IconInfoCircle className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
-                      <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
-                        {t.pages.shifts.details.historicalRates}
-                      </p>
-                    </div>
-                    <p className="text-xs text-blue-700 dark:text-blue-300">
-                      {t.pages.shifts.details.usingHistoricalRatesTooltip}
-                    </p>
-                  </div>
-
-                  {wagesDiffer && (
-                    <div className="grid grid-cols-2 gap-3 text-sm">
-                      <div className="space-y-1">
-                        <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">
-                          {t.pages.shifts.details.snapshotWage}
-                        </p>
-                        <p className="text-sm font-semibold text-blue-900 dark:text-blue-100">
-                          {snapshotWage ? formatHourlyRate(snapshotWage) : '—'}
-                        </p>
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-xs text-text-muted font-medium">
-                          {t.pages.shifts.details.currentWage}
-                        </p>
-                        <p className="text-sm text-text-secondary">
-                          {currentWage ? formatHourlyRate(currentWage) : '—'}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  {supplementsDiffer && (
-                    <div className="grid grid-cols-2 gap-3 text-sm">
-                      <div className="space-y-1">
-                        <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">
-                          {t.pages.shifts.details.snapshotSupplements}
-                        </p>
-                        <p className="text-sm font-semibold text-blue-900 dark:text-blue-100">
-                          {snapshotSupplementsCount} {snapshotSupplementsCount === 1 ? 'regel' : 'regler'}
-                        </p>
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-xs text-text-muted font-medium">
-                          {t.pages.shifts.details.currentSupplements}
-                        </p>
-                        <p className="text-sm text-text-secondary">
-                          {currentSupplementsCount} {currentSupplementsCount === 1 ? 'regel' : 'regler'}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-
-                  <Button
-                    onClick={handleClearSnapshots}
-                    disabled={clearingSnapshots}
-                    variant="default"
-                    className="w-full mt-3"
-                  >
-                    {clearingSnapshots ? `${t.pages.shifts.details.useCurrentRates}...` : t.pages.shifts.details.useCurrentRates}
-                  </Button>
-                </div>
-              </>
-            )}
+            {/* NOTE: Snapshot comparison UI removed - wage data is now in wage_snapshots table */}
           </div>
         )}
 
