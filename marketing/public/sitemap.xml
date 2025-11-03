@@ -1,8 +1,128 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <!-- Marketing Site (tidex.no) - Home Pages -->
   <url>
     <loc>https://tidex.no/</loc>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
+    <lastmod>2025-11-03</lastmod>
+  </url>
+  <url>
+    <loc>https://tidex.no/no</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+    <lastmod>2025-11-03</lastmod>
+  </url>
+  <url>
+    <loc>https://tidex.no/en</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+    <lastmod>2025-11-03</lastmod>
+  </url>
+  <url>
+    <loc>https://tidex.no/de</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+    <lastmod>2025-11-03</lastmod>
+  </url>
+
+  <!-- Marketing Site - Privacy Pages -->
+  <url>
+    <loc>https://tidex.no/privacy</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+    <lastmod>2025-11-03</lastmod>
+  </url>
+  <url>
+    <loc>https://tidex.no/no/privacy</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+    <lastmod>2025-11-03</lastmod>
+  </url>
+  <url>
+    <loc>https://tidex.no/en/privacy</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+    <lastmod>2025-11-03</lastmod>
+  </url>
+  <url>
+    <loc>https://tidex.no/de/privacy</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+    <lastmod>2025-11-03</lastmod>
+  </url>
+
+  <!-- Marketing Site - Terms Pages -->
+  <url>
+    <loc>https://tidex.no/terms</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+    <lastmod>2025-11-03</lastmod>
+  </url>
+  <url>
+    <loc>https://tidex.no/no/terms</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+    <lastmod>2025-11-03</lastmod>
+  </url>
+  <url>
+    <loc>https://tidex.no/en/terms</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+    <lastmod>2025-11-03</lastmod>
+  </url>
+  <url>
+    <loc>https://tidex.no/de/terms</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+    <lastmod>2025-11-03</lastmod>
+  </url>
+
+  <!-- Marketing Site - Documentation -->
+  <url>
+    <loc>https://tidex.no/docs/payroll</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+    <lastmod>2025-11-03</lastmod>
+  </url>
+
+  <!-- App Subdomain (app.tidex.no) - Login Pages -->
+  <url>
+    <loc>https://app.tidex.no/no/login</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+    <lastmod>2025-11-03</lastmod>
+  </url>
+  <url>
+    <loc>https://app.tidex.no/en/login</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+    <lastmod>2025-11-03</lastmod>
+  </url>
+  <url>
+    <loc>https://app.tidex.no/de/login</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+    <lastmod>2025-11-03</lastmod>
+  </url>
+
+  <!-- App Subdomain - Signup Pages -->
+  <url>
+    <loc>https://app.tidex.no/no/signup</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+    <lastmod>2025-11-03</lastmod>
+  </url>
+  <url>
+    <loc>https://app.tidex.no/en/signup</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+    <lastmod>2025-11-03</lastmod>
+  </url>
+  <url>
+    <loc>https://app.tidex.no/de/signup</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+    <lastmod>2025-11-03</lastmod>
   </url>
 </urlset>
