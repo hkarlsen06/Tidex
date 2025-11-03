@@ -1,4 +1,5 @@
 import { createBrowserClient } from "@supabase/ssr";
+import { buildBrowserCookieOptions } from "@/lib/auth/cookie-config";
 
 const missingEnvError = (name: string) =>
   new Error(`Missing required environment variable: ${name}`);
@@ -14,4 +15,6 @@ if (!supabasePublishableKey) {
   throw missingEnvError("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY");
 }
 
-export const supabase = createBrowserClient(supabaseUrl, supabasePublishableKey);
+export const supabase = createBrowserClient(supabaseUrl, supabasePublishableKey, {
+  cookieOptions: buildBrowserCookieOptions(),
+});
