@@ -54,6 +54,7 @@
     "node_modules",
     "marketing",
     "supabase",
-    "tests" // Exclude test files from Next.js build (handled by Vitest)
+    "tests",
+    "vitest.config.ts" // Exclude Vitest config from Next.js build
   ]
 }
