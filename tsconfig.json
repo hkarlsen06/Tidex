@@ -53,6 +53,7 @@
   "exclude": [
     "node_modules",
     "marketing",
-    "supabase"
+    "supabase",
+    "tests" // Exclude test files from Next.js build (handled by Vitest)
   ]
 }
