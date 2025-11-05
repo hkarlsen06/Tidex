@@ -53,6 +53,8 @@
   "exclude": [
     "node_modules",
     "marketing",
-    "supabase"
+    "supabase",
+    "tests",
+    "vitest.config.ts" // Exclude Vitest config from Next.js build
   ]
 }
