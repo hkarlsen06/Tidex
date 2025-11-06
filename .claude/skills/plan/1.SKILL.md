@@ -1,0 +1,724 @@
+---
+name: plan-optimization
+description: Optimize development plans before implementation. Covers TDD-first planning, progressive disclosure, context window preservation, `/dev-docs` format compliance (plan/context/tasks files), breaking features into testable increments, dependency sequencing, risk assessment, architecture alignment with project constraints (no-ORM, multitenancy), estimation strategies, and ensuring plans follow Red-Green-Refactor methodology. Externalizes code samples to quick reference files to preserve context. Integrates with `/dev-docs` and `/dev-docs-update` commands. Use when creating plans, reviewing implementation strategies, optimizing roadmaps, or before starting major features.
+---
+
+# Plan Optimization
+
+## Purpose
+
+Optimize development plans to ensure:
+- Progressive disclosure (reveal information incrementally)
+- Context window preservation (avoid context drift)
+- TDD-compliant incremental implementation
+- Architecture alignment with project constraints
+- Proper dependency sequencing
+- Early risk identification
+- Realistic estimation and scoping
+- Code samples externalized to reference files
+
+## When to Use
+
+Activate this skill when:
+- Creating a new feature or implementation plan
+- Reviewing an existing plan before starting work
+- Breaking down a large feature into smaller tasks
+- Estimating complexity or effort
+- Identifying dependencies and critical paths
+- Planning multi-phase projects
+- Preparing PRDs (Product Requirements Documents)
+
+## Core Principles
+
+### 1. Progressive Disclosure & Context Preservation
+
+**Plans MUST use progressive disclosure to preserve context window:**
+
+**Three-Level Structure:**
+1. **Level 1 - Overview**: High-level goals, timeline, risks (always visible)
+2. **Level 2 - Phase Summary**: Dependencies, estimates, exit criteria (expand when active)
+3. **Level 3 - Detailed Steps**: Granular tasks with references (expand when executing)
+
+**Context Window Optimization:**
+- Externalize code samples to `PATTERNS.md` reference file
+- Use references instead of embedding examples inline
+- Keep plans focused on WHAT and WHY, not HOW
+- Provide quick reference links for implementation details
+- Avoid context bloat that causes drift in long sessions
+
+**Code Sample Management:**
+```markdown
+❌ BAD (context bloat):
+Implement DAL like this: [50 lines of code]
+
+✅ GOOD (context efficient):
+Implement DAL using ADO.NET pattern
+**Reference:** PATTERNS.md#data-access-layer
+**Quick Check:** Parameterized queries, tenant context
+```
+
+See **[PATTERNS.md](PATTERNS.md)** for all code examples and detailed patterns.
+
+### 2. TDD-First Planning
+
+**Every feature MUST be planned with Red-Green-Refactor in mind.**
+
+**Reference:** [PATTERNS.md#tdd-planning-patterns](PATTERNS.md#tdd-planning-patterns)
+
+**Plan Optimization Checklist:**
+- [ ] Each implementation step has corresponding test step BEFORE it
+- [ ] RED phase explicitly defined (verify failure)
+- [ ] GREEN phase explicitly defined (make it pass)
+- [ ] Refactor phase explicitly defined (improve quality)
+- [ ] Final verification step included
+- [ ] Test coverage target defined (minimum 70%)
+
+### 3. Architecture Constraint Compliance
+
+**ALL plans MUST respect project architectural principles:**
+
+- **No ORM**: Use ADO.NET with stored procedures only
+- **Multitenancy**: URL-based tenant detection from request start
+- **TDD Methodology**: Test-first, Red-Green-Refactor cycle
+- **Security**: Parameterized queries, no SQL injection, XSS prevention
+
+**Reference:** [PATTERNS.md#architecture-constraint-examples](PATTERNS.md#architecture-constraint-examples)
+
+### 4. Dependency Sequencing
+
+**Identify and order dependencies properly.**
+
+**Reference:** [PATTERNS.md#dependency-sequencing-examples](PATTERNS.md#dependency-sequencing-examples)
+
+**Dependency Graph Analysis:**
+- Identify all external dependencies (APIs, services, database)
+- List all internal dependencies (other modules, shared libraries)
+- Define critical path (longest dependency chain)
+- Identify parallelizable work
+- Flag circular dependencies (architectural smell)
+
+### 5. Risk Assessment Matrix
+
+**Rate risks on Impact (1-5) × Likelihood (1-5) = Risk Score:**
+
+**Reference:** [PATTERNS.md#risk-assessment-examples](PATTERNS.md#risk-assessment-examples)
+
+**Risk Mitigation Strategies:**
+1. **Proof of Concept** - Spike to validate technical approach
+2. **Incremental Rollout** - Feature flags, gradual tenant migration
+3. **Fallback Plan** - Define rollback strategy before starting
+4. **Early Validation** - Clarify requirements before coding
+5. **Parallel Development** - Don't block on external dependencies
+
+### 6. Estimation and Scoping
+
+**Use T-Shirt sizing for high-level estimates:**
+
+- **XS (< 2 hours)**: Simple model changes, single method, straightforward test
+- **S (2-4 hours)**: Single controller action with tests, simple DAL method
+- **M (4-8 hours)**: Complete CRUD for entity, full test coverage, views
+- **L (1-2 days)**: Multi-entity feature, integration points, E2E tests
+- **XL (2-5 days)**: Complex business logic, multiple integrations, full testing
+- **XXL (5+ days)**: Consider breaking down into smaller features
+
+**Estimation Red Flags (break it down further):**
+- More than 10 steps in a single phase
+- Step estimated > 4 hours
+- Unclear success criteria
+- "And" appearing multiple times in single step
+- No testable outcomes defined
+
+## Optimized Plan Template (Progressive Disclosure)
+
+**Use this three-level structure to preserve context window:**
+
+```markdown
+# Feature: [Feature Name]
+
+## 📋 LEVEL 1: Overview (Always Visible)
+
+**Goal:** Brief description of feature and business value
+**Timeline:** 2 weeks | **Risk:** Medium | **Complexity:** Large
+**Architecture:** ✅ No-ORM | ✅ Multitenancy | ✅ TDD
+
+### Success Criteria
+- [ ] Criterion 1 (measurable)
+- [ ] Criterion 2 (testable)
+- [ ] Criterion 3 (observable)
+
+### Quick Status
+| Phase | Est | Status | Blocker |
+|-------|-----|--------|---------|
+| 1. Database & Models | 4h | ⬜ Pending | None |
+| 2. Data Access | 6h | ⬜ Pending | Phase 1 |
+| 3. Business Logic | 8h | ⬜ Pending | Phase 2 |
+| 4. Controller/UI | 6h | ⬜ Pending | Phase 3 |
+
+---
+
+## 🎯 LEVEL 2: Phase Summaries (Expand When Active)
+
+<details>
+<summary><strong>Phase 1: Database & Models (Est: 4h)</strong></summary>
+
+**Goal:** Foundation data structures with validation
+**Dependencies:** None
+**Exit Criteria:** Tests pass, models validated, stored procedures tested
+**Patterns:** [PATTERNS.md#database-migrations](PATTERNS.md#database-migrations)
+
+#### Checklist
+- [ ] Migration script written and applied
+- [ ] Stored procedures created (CRUD)
+- [ ] Model classes with validation
+- [ ] 70%+ test coverage achieved
+
+#### Next Phase Readiness
+✅ Phase 2 can start when all tests pass
+
+</details>
+
+<details>
+<summary><strong>Phase 2: Data Access Layer (Est: 6h)</strong></summary>
+
+**Goal:** Database interaction with full test coverage
+**Dependencies:** Phase 1 complete
+**Exit Criteria:** DAL tests pass, no SQL injection risks, tenant-safe
+**Patterns:** [PATTERNS.md#data-access-layer](PATTERNS.md#data-access-layer)
+
+#### Checklist
+- [ ] DAL tests written (RED)
+- [ ] Implementation complete (GREEN)
+- [ ] Refactored and optimized
+- [ ] Tenant isolation verified
+
+#### Next Phase Readiness
+✅ Phase 3 can start when DAL fully tested
+
+</details>
+
+---
+
+## 🔧 LEVEL 3: Detailed Steps (Expand When Executing)
+
+<details>
+<summary><strong>Phase 1 > Step 1: Create Database Schema (1h)</strong></summary>
+
+**Tasks:**
+- [ ] Write migration script for tables
+- [ ] Create stored procedures (GetById, Insert, Update, Delete)
+- [ ] Apply to dev database
+- [ ] Verify schema with query
+
+**Patterns:** [PATTERNS.md#database-migrations](PATTERNS.md#database-migrations)
+**Quick Check:** Parameterized procs, tenant columns included
+
+</details>
+
+<details>
+<summary><strong>Phase 1 > Step 2: Define Data Models (1h)</strong></summary>
+
+**Tasks:**
+- [ ] Write model validation tests (RED)
+- [ ] Create model classes with properties
+- [ ] Add validation attributes
+- [ ] Verify tests pass (GREEN)
+
+**Patterns:** [PATTERNS.md#model-validation](PATTERNS.md#model-validation)
+**Quick Check:** Required fields, data types, constraints
+
+</details>
+
+...continue for all steps...
+
+---
+
+## 📚 Reference Materials
+
+- **Code Patterns:** [PATTERNS.md](PATTERNS.md)
+- **TDD Examples:** [PATTERNS.md#tdd-planning-patterns](PATTERNS.md#tdd-planning-patterns)
+- **Architecture:** [PATTERNS.md#architecture-constraint-examples](PATTERNS.md#architecture-constraint-examples)
+- **Anti-Patterns:** [PATTERNS.md#anti-patterns](PATTERNS.md#anti-patterns)
+
+## 🔄 Definition of Done
+
+- [ ] All unit tests pass
+- [ ] All integration tests pass
+- [ ] Code coverage ≥ 70%
+- [ ] Security review passed
+- [ ] Deployed to dev environment
+
+```
+
+**Key Features of This Template:**
+- **Progressive Disclosure**: Use `<details>` tags to collapse sections
+- **Context Efficient**: Code samples externalized to PATTERNS.md
+- **Three-Level Structure**: Overview → Phases → Steps
+- **Quick Navigation**: Status table for at-a-glance progress
+- **Reference Links**: Pattern links instead of inline examples
+
+## `/dev-docs` Command Format
+
+**IMPORTANT**: When using the `/dev-docs` or `/dev-docs-update` commands, plans MUST follow the standard three-file structure:
+
+### Required Files
+
+Plans created with `/dev-docs` generate three files in `dev/active/[task-name]/`:
+
+**1. `[task-name]-plan.md` - Comprehensive Implementation Plan**
+- Executive summary with goals, timeline, status
+- Current state analysis (what exists today)
+- Proposed future state (what will be built)
+- Implementation phases with detailed tasks
+- Risk assessment and mitigation strategies
+- Success metrics and acceptance criteria
+- Required resources and dependencies
+- Timeline estimates with confidence levels
+
+**Structure:**
+```markdown
+# [Task Name]
+
+**Last Updated**: YYYY-MM-DD
+**Status**: 🟡 Planning | 🔵 In Progress | ✅ Complete
+**Effort**: Xh over Y weeks
+**Priority**: Critical | Important | Normal
+
+## Executive Summary
+- Business value and goals
+- Key innovations or approaches
+- Success criteria overview
+
+## Current State Analysis
+- Existing assets and capabilities
+- Gaps and pain points
+- Technical debt or blockers
+
+## Proposed Future State
+- Architecture diagrams
+- System components
+- Integration points
+
+## Implementation Phases
+- Phase 1: [Name] (Xh)
+  - Sub-Phase 1.1: [Task] (Xh)
+    - Task 1: [Description] - ⬜ NOT STARTED
+      - Acceptance criteria
+      - Effort: S/M/L/XL
+      - Dependencies
+      - Reference: [PATTERNS.md#link]
+
+## Risk Assessment and Mitigation Strategies
+- Risk 1: [Description]
+  - Impact: X/5, Likelihood: Y/5, Score: Z
+  - Mitigation: [Strategy]
+
+## Success Metrics
+- Technical metrics (tests pass, coverage, etc.)
+- Content metrics (documentation quality)
+- Operational metrics (maintenance time)
+
+## Required Resources and Dependencies
+- External tools (need installation)
+- Azure/cloud resources (need provisioning)
+- Internal dependencies (files, access)
+
+## Timeline Estimates
+- Week 1: [Phases]
+- Total: Xh over Y weeks
+- Confidence: High | Medium | Low
+
+## Supporting Documentation
+- Links to PATTERNS.md, context, tasks files
+```
+
+**2. `[task-name]-context.md` - Key Files, Decisions, Dependencies**
+- Current implementation state (what's done, in progress, pending)
+- Key decisions made this session
+- Architecture, timeline, technical decisions with rationale
+- Files modified and to be created
+- Blockers, issues discovered, and next immediate steps
+- Session tracking (work completed each session)
+
+**Structure:**
+```markdown
+# [Task Name]: Development Context & Key Decisions
+
+**Last Updated**: YYYY-MM-DD
+**Current Phase**: Phase X - [Name]
+**Status**: 🟡 In Progress
+
+## Current Implementation State
+- ✅ Completed Work
+- 🔵 In Progress
+- ⬜ Not Started
+
+## Key Decisions Made
+### Decision 1: [Name]
+- Date: YYYY-MM-DD
+- Decision: [What was decided]
+- Rationale: [Why]
+- Impact: [Consequences]
+- Alternatives Considered: [What was rejected and why]
+
+## Files Modified
+- File 1: [path/to/file.cs] - [What changed]
+- File 2: [path/to/file.md] - [What changed]
+
+## Files to Create
+- File 1: [path/to/new-file.ps1] - [Purpose]
+
+## Blockers and Issues
+### Current Blockers
+- [None] or [Description of blocker]
+
+### Known Issues
+- Issue 1: [Description]
+  - Impact: High/Medium/Low
+  - Mitigation: [Strategy]
+  - Status: [Resolution status]
+
+## Next Immediate Steps
+1. [Exact next action]
+2. [Command to run]
+3. [File to edit]
+
+## Session Tracking
+### Session 1: [Topic] (YYYY-MM-DD)
+- Duration: Xh
+- Work Completed: [Bullets]
+- Decisions Made: [Bullets]
+- Next Session: [What to do next]
+```
+
+**3. `[task-name]-tasks.md` - Progress Tracking Checklist**
+- All tasks in checkbox format (✅/🔵/⬜/⏸️/❌)
+- Phase progress (% complete, hours spent/remaining)
+- Overall project metrics (total tasks, completion %)
+- Updated frequently with `/dev-docs-update`
+
+**Structure:**
+```markdown
+# [Task Name]: Task Checklist
+
+**Last Updated**: YYYY-MM-DD
+**Overall Progress**: X% (Y/Z hours complete)
+**Current Phase**: Phase X - [Name]
+**Phase Progress**: X% (Y/Z hours complete)
+
+## Legend
+- ✅ Completed
+- 🔵 In Progress
+- ⬜ Not Started
+- ⏸️ Blocked
+- ❌ Failed/Skipped
+
+## Phase 1: [Name] (Xh) - 🔵 IN PROGRESS
+
+**Phase Goal**: [Brief description]
+**Estimated**: Xh | **Actual**: Yh | **Remaining**: Zh
+**Status**: X% Complete
+
+### Task 1.1: [Name] (Xh) - ✅ COMPLETE
+- [x] Subtask 1
+- [x] Subtask 2
+- **Status**: ✅ Complete (Yh actual)
+- **Notes**: [Any issues or decisions]
+
+### Task 1.2: [Name] (Xh) - 🔵 IN PROGRESS
+- [x] Subtask 1 (done)
+- [ ] Subtask 2 (in progress)
+- [ ] Subtask 3 (pending)
+- **Estimated**: Xh
+- **Acceptance**: [Criteria]
+- **Dependencies**: Task 1.1 complete
+
+### Task 1.3: [Name] (Xh) - ⬜ NOT STARTED
+- [ ] Subtask 1
+- [ ] Subtask 2
+- **Estimated**: Xh
+- **Acceptance**: [Criteria]
+
+### Phase 1 Gate Criteria
+- [ ] All tools installed
+- [ ] All tests pass
+- [ ] Documentation complete
+
+## Phase 2: [Name] (Xh) - ⬜ NOT STARTED
+[Similar structure]
+
+## Overall Project Metrics
+**Total Tasks**: X
+**Completed**: Y
+**In Progress**: Z
+**Not Started**: W
+**Blocked**: 0
+
+**Total Estimated Hours**: Xh
+**Actual Hours Spent**: Yh
+**Remaining Hours**: Zh
+**On Track**: Yes/No (X% complete)
+```
+
+### File Naming Convention
+
+- Pattern: `[task-name]-[type].md`
+- Example: `008-tw-ai-docs-plan.md`, `008-tw-ai-docs-context.md`, `008-tw-ai-docs-tasks.md`
+- Task name should match directory name: `dev/active/008-tw-ai-docs/`
+
+### Using `/dev-docs-update`
+
+The `/dev-docs-update` command updates context and tasks files:
+
+**What it updates:**
+1. `[task-name]-context.md`:
+   - Current implementation state
+   - Key decisions made this session
+   - Files modified
+   - Blockers discovered
+   - Next immediate steps
+   - Session tracking entry
+
+2. `[task-name]-tasks.md`:
+   - Mark completed tasks as ✅
+   - Update in-progress tasks with status
+   - Add new tasks discovered
+   - Update actual hours spent
+   - Recalculate progress percentages
+
+**When to run:**
+- Before context limits (preserve session work)
+- After completing major milestone
+- Before switching tasks
+- End of work session
+- When blockers are discovered
+
+**Example usage:**
+```bash
+# Update all active tasks
+/dev-docs-update
+
+# Update with specific context
+/dev-docs-update "Completed Phase 1, discovered issue with DocFX path resolution"
+```
+
+### Best Practices
+
+1. **Keep plan file stable** - Don't edit frequently, it's the source of truth
+2. **Update context file regularly** - Capture decisions as they're made
+3. **Update tasks file constantly** - Mark ✅ immediately when done
+4. **Use PATTERNS.md for code** - Keep samples out of plan/context/tasks
+5. **Session tracking** - Document what happened each session in context file
+6. **Blockers visibility** - Always update context file when blocked
+7. **Metrics accuracy** - Keep hours and percentages current in tasks file
+
+### Integration with Progressive Disclosure
+
+The three-file format works WITH progressive disclosure:
+- **Plan file**: Use progressive disclosure (collapsible sections)
+- **Context file**: Flat structure (always need quick access)
+- **Tasks file**: Grouped by phase (easy scanning)
+- **PATTERNS.md**: External reference (preserve context)
+
+**Combined approach:**
+```
+dev/active/008-tw-ai-docs/
+├── 008-tw-ai-docs-plan.md          (26KB - progressive disclosure)
+├── 008-tw-ai-docs-context.md       (15KB - flat structure)
+├── 008-tw-ai-docs-tasks.md         (18KB - phase-grouped)
+├── PATTERNS.md                      (21KB - code samples)
+├── README.md                        (overview, links to core files)
+└── archive/                         (old detailed docs)
+```
+
+**Total active context**: ~80KB (plan + context + tasks + patterns)
+**Archive context**: ~280KB (reference only, rarely accessed)
+**Context reduction**: 14x improvement over flat structure
+
+## Plan Review Checklist
+
+Before starting implementation, verify:
+
+### `/dev-docs` Format Compliance
+- [ ] All three required files exist (`[task-name]-plan.md`, `-context.md`, `-tasks.md`)
+- [ ] File naming follows convention (`[task-name]-[type].md`)
+- [ ] Plan file includes: Executive Summary, Current State, Future State, Phases, Risks, Metrics
+- [ ] Context file includes: Current State, Decisions, Files, Blockers, Next Steps, Session Tracking
+- [ ] Tasks file includes: Legend, Phase checklists, Gate Criteria, Overall Metrics
+- [ ] "Last Updated" timestamp in all three files
+- [ ] PATTERNS.md exists for code samples (separate from core three files)
+
+### Progressive Disclosure
+- [ ] Three-level structure in plan file (Overview → Phases → Steps)
+- [ ] Code samples externalized to PATTERNS.md
+- [ ] Collapsible sections for detailed steps (using `<details>` tags)
+- [ ] Quick status table at top of plan
+- [ ] Reference links instead of inline code
+
+### Context Window Preservation
+- [ ] Plan focused on WHAT and WHY, not HOW
+- [ ] No embedded code blocks > 10 lines
+- [ ] Patterns referenced, not duplicated
+- [ ] Total plan < 300 lines
+- [ ] Quick reference links provided
+
+### TDD Compliance
+- [ ] Every implementation step preceded by test step
+- [ ] RED-GREEN-REFACTOR cycle clearly defined
+- [ ] Test coverage targets specified
+- [ ] Test strategy documented
+
+### Architecture Compliance
+- [ ] No ORM usage anywhere in plan
+- [ ] Multitenancy considered at each layer
+- [ ] ADO.NET + stored procedures pattern followed
+- [ ] ASP.NET Core MVC conventions followed
+
+### Dependency Management
+- [ ] All dependencies identified
+- [ ] Dependencies properly sequenced
+- [ ] No circular dependencies
+- [ ] Critical path identified
+- [ ] Blockers flagged early
+
+### Risk Management
+- [ ] Risks identified and scored
+- [ ] High risks have mitigation strategies
+- [ ] Rollback plan defined
+- [ ] Proof of concept for unknowns
+
+### Estimation Quality
+- [ ] Each phase estimated (use T-shirt sizing)
+- [ ] No single step > 4 hours
+- [ ] Clear exit criteria per phase
+- [ ] Success criteria measurable
+
+### Completeness
+- [ ] Success criteria defined
+- [ ] Test strategy documented
+- [ ] Security considerations addressed
+- [ ] Performance considerations addressed
+- [ ] Documentation plan included
+
+## Common Planning Anti-Patterns
+
+**Reference:** [PATTERNS.md#anti-patterns](PATTERNS.md#anti-patterns)
+
+Key anti-patterns to avoid:
+- ❌ Implementation-first planning (not TDD)
+- ❌ Big-bang integration (not incremental)
+- ❌ Vague success criteria (not measurable)
+- ❌ Ignoring architecture constraints (causes rework)
+- ❌ Context bloat (embedding code samples inline)
+- ❌ Flat plans (no progressive disclosure)
+
+## Optimization Techniques
+
+**Reference:** [PATTERNS.md#optimization-techniques](PATTERNS.md#optimization-techniques)
+
+Key optimization strategies:
+1. **Incremental Delivery** - Break into valuable increments
+2. **Parallel Development** - Identify independent work streams
+3. **De-Risk Early** - Tackle highest-risk items first
+4. **Testable Milestones** - Define clear checkpoints
+5. **Progressive Disclosure** - Use three-level structure
+6. **Code Sample Externalization** - Reference, don't embed
+
+## Integration with Project Workflow
+
+### Creating Plans with `/dev-docs`
+
+**Recommended workflow:**
+1. **Use `/dev-docs` command** to generate standard three-file structure
+2. **Apply plan-optimization skill** to the generated plan:
+   - Add progressive disclosure (collapsible sections)
+   - Externalize code samples to PATTERNS.md
+   - Break into TDD-compliant phases
+   - Add risk assessment and mitigation
+3. **Result**: Optimized plan in standard format, compatible with `/dev-docs-update`
+
+**Example:**
+```bash
+# Generate initial plan
+/dev-docs "Create comprehensive documentation system for TailorWell.Admin"
+
+# Then optimize the generated plan using this skill
+# - Add PATTERNS.md with code samples
+# - Apply progressive disclosure to plan file
+# - Ensure TDD compliance in all phases
+# - Archive detailed docs if context too large
+```
+
+### Development Context Updates
+
+Use `/dev-docs-update` command throughout development:
+- **Before context limits** - Preserve session work
+- **After major milestones** - Capture decisions and progress
+- **When blocked** - Document blockers in context file
+- **End of session** - Update tasks checklist, session tracking
+
+**What gets updated:**
+- `[task-name]-context.md` - Decisions, files modified, blockers, next steps
+- `[task-name]-tasks.md` - Mark ✅ completed, update hours, add new tasks
+
+### Feature Implementation
+
+Before starting any feature:
+1. **Verify `/dev-docs` format** - All three files exist and are current
+2. Review plan against this skill's checklist
+3. Verify TDD compliance (RED-GREEN-REFACTOR in plan)
+4. Confirm architecture alignment (no-ORM, multitenancy)
+5. Validate dependency sequencing
+6. Ensure PATTERNS.md exists for code samples
+7. Get stakeholder approval on estimates
+
+**During implementation:**
+1. Update `[task-name]-tasks.md` after each task completion
+2. Document decisions in `[task-name]-context.md` as they're made
+3. Reference PATTERNS.md instead of copying code inline
+4. Run `/dev-docs-update` before context limits
+
+## Quick Reference
+
+**Plan Creation Flow:**
+1. Define success criteria (measurable outcomes)
+2. List architecture constraints (no-ORM, multitenancy)
+3. Identify dependencies (external, internal)
+4. Assess risks (impact × likelihood)
+5. Break into TDD phases (RED-GREEN-REFACTOR)
+6. Estimate each phase (T-shirt sizing)
+7. Define exit criteria per phase
+8. Document rollback plan
+9. Review against checklist
+10. Get approval before starting
+
+**Optimization Questions:**
+- Does plan follow `/dev-docs` format? (three files: plan, context, tasks)
+- Is plan using progressive disclosure? (three-level structure)
+- Are code samples externalized? (reference PATTERNS.md)
+- Is context preserved? (plan < 300 lines, focused on WHAT/WHY)
+- Can this be smaller? (aim for < 5 day increments)
+- Can we deliver value earlier? (incremental delivery)
+- What's the highest risk? (de-risk first)
+- Are tests written first? (TDD compliance)
+- Does it respect architecture? (no-ORM, multitenancy)
+- Is it testable? (clear success criteria)
+- Can parts run in parallel? (resource optimization)
+- Is `/dev-docs-update` ready? (context and tasks files current)
+
+## Reference Files
+
+- **[PATTERNS.md](PATTERNS.md)** - Code examples, patterns, anti-patterns (externalized to preserve context)
+
+---
+
+**Skill Status:** COMPLETE ✅
+**Last Updated:** 2025-11-03
+**Features:**
+- Progressive disclosure (three-level structure) ✅
+- Context preservation (< 300 line plans) ✅
+- Externalized code samples (PATTERNS.md) ✅
+- `/dev-docs` format compliance (plan, context, tasks) ✅
+- `/dev-docs-update` integration ✅
+
+**Line Count:** 724 lines (comprehensive with `/dev-docs` format guide)
+**Format Compatibility:** `/dev-docs` and `/dev-docs-update` commands ✅
