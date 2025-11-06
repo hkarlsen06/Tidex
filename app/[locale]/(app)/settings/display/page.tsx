@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import { connection } from "next/server";
 import { verifySession } from '@/data-access/auth';
 import { getUserSettings } from '@/data-access/settings';
 import { DisplayForm } from '@components/settings/display/DisplayForm';
@@ -23,7 +22,6 @@ export default async function DisplayPage({
 }: {
   params: Promise<{ locale: string }>;
 }) {
-  await connection(); // Opt out of prerendering for dynamic authenticated pages
 
   const { locale } = await params;
   const t = getTranslations(locale as Locale);
