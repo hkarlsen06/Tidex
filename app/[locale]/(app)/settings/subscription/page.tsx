@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import { connection } from "next/server";
 import { verifySession } from '@/data-access/auth';
 import { getUserSubscriptionData } from '@/data-access/subscription';
 import { SubscriptionStatus } from '@/components/settings/subscription/SubscriptionStatus';
@@ -27,7 +26,6 @@ export default async function SubscriptionPage({
 }: {
   params: Promise<{ locale: string }>;
 }) {
-  await connection();
   const { locale } = await params;
   const t = getTranslations(locale as Locale);
 

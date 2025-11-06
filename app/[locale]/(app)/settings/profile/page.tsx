@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import { connection } from "next/server";
 import { verifySession } from '@/data-access/auth';
 import { getUserProfile } from '@/data-access/settings';
 import { ProfileForm } from '@components/settings/profile/ProfileForm';
@@ -27,7 +26,6 @@ export default async function ProfilePage({
 }: {
   params: Promise<{ locale: string }>;
 }) {
-  await connection();
   const { locale } = await params;
   const t = getTranslations(locale as Locale);
 

@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { randomUUID } from "crypto";
 import sharp from "sharp";
 
 import { createSupabaseRouteHandlerClient } from "@/lib/supabase/server";
@@ -150,7 +149,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const storagePath = `${user.id}/${randomUUID()}.${fileExt}`;
+    const storagePath = `${user.id}/${crypto.randomUUID()}.${fileExt}`;
 
     const { error: uploadError } = await supabase.storage
       .from(BUCKET)
