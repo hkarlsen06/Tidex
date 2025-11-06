@@ -1,0 +1,283 @@
+# Plan Optimization Patterns Library
+
+Quick reference for common planning patterns, examples, and anti-patterns.
+
+## Table of Contents
+
+- [TDD Planning Patterns](#tdd-planning-patterns)
+- [Architecture Constraint Examples](#architecture-constraint-examples)
+- [Dependency Sequencing Examples](#dependency-sequencing-examples)
+- [Risk Assessment Examples](#risk-assessment-examples)
+- [Anti-Patterns](#anti-patterns)
+- [Optimization Techniques](#optimization-techniques)
+
+---
+
+## TDD Planning Patterns
+
+### ✅ CORRECT Planning Pattern
+```
+├── 1. Write test for authentication service
+├── 2. Verify test fails (RED)
+├── 3. Implement authentication logic (GREEN)
+├── 4. Verify test passes
+├── 5. Refactor and optimize
+└── 6. Verify tests still pass
+```
+
+### ❌ INCORRECT Planning Pattern
+```
+├── 1. Implement authentication service
+└── 2. Write tests later (❌ NOT TDD)
+```
+
+---
+
+## Architecture Constraint Examples
+
+### No ORM Constraint
+
+#### ✅ CORRECT Approach
+```
+- Step 1: Create stored procedure GetUserById
+- Step 2: Write test for UserDAL.GetUserById()
+- Step 3: Implement DAL method using ADO.NET
+- Step 4: Parameterized query for security
+```
+
+#### ❌ INCORRECT Approach
+```
+- Step 1: Define Entity Framework DbContext
+- Step 2: Create User entity with EF migrations
+```
+
+### Multitenancy Constraint
+
+#### ✅ CORRECT Approach
+```
+- Step 1: Extract tenant key from request URL
+- Step 2: Load tenant-specific configuration
+- Step 3: Apply tenant context to data access
+- Step 4: Test with multiple tenant scenarios
+```
+
+#### ❌ INCORRECT Approach
+```
+- Step 1: Implement feature without tenant context
+- Step 2: Add multitenancy later (retrofitting)
+```
+
+---
+
+## Dependency Sequencing Examples
+
+### Example: Commission Calculation Feature
+
+```
+PHASE 1: Foundation (no dependencies)
+├── Create database tables/stored procedures
+├── Define data models
+└── Write model validation tests
+
+PHASE 2: Data Access (depends on Phase 1)
+├── Implement DAL layer
+├── Write DAL unit tests
+└── Verify database integration
+
+PHASE 3: Business Logic (depends on Phase 2)
+├── Implement calculation service
+├── Write service unit tests
+└── Test edge cases
+
+PHASE 4: Controller/UI (depends on Phase 3)
+├── Create MVC controller
+├── Write controller tests
+├── Implement views
+└── E2E tests with Playwright
+```
+
+### Example: Parallel Development
+
+```
+Phase 2 Options:
+├── Team A: User Management Module
+├── Team B: Report Generation Module (independent)
+└── Must complete before Phase 3: Integration Layer
+```
+
+---
+
+## Risk Assessment Examples
+
+### HIGH RISK (Score 15-25): Address immediately
+- Database schema doesn't support requirement
+- Missing third-party API access/credentials
+- Architectural constraint violation
+- Critical security vulnerability
+- Breaking change to public API
+
+### MEDIUM RISK (Score 8-14): Mitigate early
+- Unclear requirements
+- Complex integration with legacy code
+- Performance concerns at scale
+- Test data availability
+- Multitenant edge cases
+
+### LOW RISK (Score 1-7): Monitor
+- UI styling variations
+- Minor refactoring needs
+- Documentation gaps
+
+### De-Risk Early Example
+```
+Week 1 Priority:
+- Proof of concept for unclear integration
+- Validate performance with production data volume
+- Confirm API access and credentials
+- Test multitenant edge cases
+```
+
+---
+
+## Anti-Patterns
+
+### ❌ Implementation-First Planning
+
+**BAD:**
+```
+1. Build the feature
+2. Write tests later
+3. Deploy
+```
+
+**GOOD:**
+```
+1. Write tests (RED)
+2. Implement feature (GREEN)
+3. Refactor
+4. Deploy
+```
+
+### ❌ Big-Bang Integration
+
+**BAD:**
+```
+- Complete all features
+- Integrate everything at once
+- Test at the end
+```
+
+**GOOD:**
+```
+- Implement incrementally
+- Integrate continuously
+- Test at each step
+```
+
+### ❌ Vague Success Criteria
+
+**BAD:**
+```
+- "Make it work"
+- "User can use the feature"
+- "Fix the bugs"
+```
+
+**GOOD:**
+```
+- "User can login with email/password in <2s"
+- "Commission calculated correctly for 10K+ records"
+- "Zero SQL injection vulnerabilities (verified by scanner)"
+```
+
+### ❌ Ignoring Architecture Constraints
+
+**BAD:**
+```
+- "We'll use EF Core for speed" (violates no-ORM)
+- "Add multitenancy later" (retrofit nightmare)
+- "Skip tests for now" (violates TDD)
+```
+
+**GOOD:**
+```
+- "Use ADO.NET with stored procedures per architecture"
+- "Design with tenant context from start"
+- "Write tests first per TDD methodology"
+```
+
+---
+
+## Optimization Techniques
+
+### 1. Incremental Delivery
+
+**Instead of:**
+```
+"Complete Commission System"
+```
+
+**Break into:**
+```
+- V1: Basic commission calculation (core algorithm)
+- V2: Batch processing (efficiency)
+- V3: Exclusion rules (business logic)
+- V4: Reporting UI (visibility)
+```
+
+### 2. Testable Milestones
+
+**Examples:**
+```
+Milestone 1: ✅ "Can retrieve user data via DAL with 100% test pass"
+Milestone 2: ✅ "Can calculate basic commission with 70%+ coverage"
+Milestone 3: ✅ "UI displays results correctly in dev tenant"
+```
+
+### 3. Progressive Disclosure Structure
+
+**Level 1: Overview (Always visible)**
+```markdown
+# Feature: User Authentication
+**Goal:** Secure login system with MFA support
+**Timeline:** 2 weeks | **Risk:** Medium | **Complexity:** Large
+```
+
+**Level 2: Phase Summary (Expand when working on phase)**
+```markdown
+## Phase 1: Database & Models (Est: 4h)
+**Dependencies:** None
+**Exit Criteria:** Tests pass, models validated
+```
+
+**Level 3: Detailed Steps (Expand when executing)**
+```markdown
+### 1. Create Database Schema (1h)
+- [ ] Write migration script
+- [ ] Create stored procedures
+- [ ] Apply to dev database
+**Code Patterns:** See PATTERNS.md#database-migrations
+```
+
+### 4. Code Sample References
+
+**Instead of embedding code:**
+```markdown
+❌ BAD (context bloat):
+Create the DAL class like this:
+[50 lines of code example]
+```
+
+**Reference pattern file:**
+```markdown
+✅ GOOD (context efficient):
+Create DAL class following ADO.NET pattern
+**Reference:** PATTERNS.md#data-access-layer
+**Quick Check:** Use parameterized queries, tenant context
+```
+
+---
+
+**File Status:** COMPLETE ✅
+**Purpose:** Quick reference for plan optimization patterns
+**Usage:** Reference from main plan instead of embedding examples
