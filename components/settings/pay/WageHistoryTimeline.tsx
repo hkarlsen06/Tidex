@@ -217,9 +217,9 @@ export function WageHistoryTimeline({
           <h3 className="text-lg font-semibold text-text-primary">
             {t.pages.settings.pay.wageHistory.timelineTitle}
           </h3>
-          <Button onClick={handleAddNew} variant="outline" size="sm">
-            <IconPlus className="h-4 w-4 mr-2" />
-            {t.pages.settings.pay.wageHistory.addNew}
+          <Button onClick={handleAddNew} variant="outline" size="sm" className="w-9 md:w-auto md:px-3">
+            <IconPlus className="h-5 w-5 md:h-4 md:w-4 md:mr-2" />
+            <span className="hidden md:inline">{t.pages.settings.pay.wageHistory.addNew}</span>
           </Button>
         </div>
 
@@ -291,7 +291,7 @@ export function WageHistoryTimeline({
 
                     {/* Content */}
                     <div
-                      className={`relative pl-6 pr-2 ${
+                      className={`relative pl-6 pr-0 ${
                         isCurrent ? 'py-4' : 'py-2'
                       } flex items-center justify-between gap-4 z-[2]`}
                     >
@@ -303,17 +303,18 @@ export function WageHistoryTimeline({
                           isCurrent ? 'text-2xl' : 'text-base'
                         }`}
                       >
-                        {snapshot.hourly_wage.toFixed(2)} kr/t
-                        {!isCurrent && supplementCount > 0 && (
-                          <span className="text-text-secondary">
-                            {' '}
-                            •{' '}
-                            {t.pages.settings.pay.wageHistory.supplementsCountShort.replace(
-                              '{count}',
-                              String(supplementCount)
-                            )}
-                          </span>
-                        )}
+                        <span>
+                          {snapshot.hourly_wage.toFixed(2)} kr/t
+                          {!isCurrent && supplementCount > 0 && (
+                            <span className="text-text-secondary">
+                              {' '}•{' '}
+                              {t.pages.settings.pay.wageHistory.supplementsCountShort.replace(
+                                '{count}',
+                                String(supplementCount)
+                              )}
+                            </span>
+                          )}
+                        </span>
                       </div>
 
                       {/* Date range */}
@@ -329,10 +330,12 @@ export function WageHistoryTimeline({
                       variant="outline"
                       size="sm"
                       onClick={() => handleEdit(snapshot)}
-                      className="flex-shrink-0"
+                      className="flex-shrink-0 w-9 md:w-auto md:px-3"
                     >
-                      <IconEdit className="h-4 w-4 mr-2" />
-                      {t.pages.settings.pay.wageHistory.edit}
+                      <IconEdit className="h-5 w-5 md:h-4 md:w-4 md:mr-2" />
+                      <span className="hidden md:inline">
+                        {t.pages.settings.pay.wageHistory.edit}
+                      </span>
                     </Button>
                   </div>
                   </div>
