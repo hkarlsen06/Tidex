@@ -672,6 +672,8 @@ export const en: Dictionary = {
         wageHistory: {
           title: 'Wage History',
           subtitle: 'Keep track of your pay raises',
+          timelineTitle: 'Your pay rate history',
+          now: 'now',
           emptyTitle: 'No wage history',
           emptyDescription: 'Wage history is created automatically when you change your wage settings.',
           addNew: 'Pay raise',
@@ -680,6 +682,7 @@ export const en: Dictionary = {
           validFrom: 'Valid from {date}',
           validFromTo: 'Valid from {fromDate} to {toDate}',
           supplementsCount: '{count} supplements configured',
+          supplementsCountShort: '{count} supplements',
           edit: 'Edit',
           delete: 'Delete',
           infoTip: 'Shifts automatically use the wage settings that were in effect on the shift date. This ensures that historical shifts are calculated with the correct wage, even if you have changed your wage later.',

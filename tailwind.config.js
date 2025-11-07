@@ -15,9 +15,15 @@ export default {
   				DEFAULT: 'hsl(var(--background))',
   				secondary: 'hsl(var(--background-secondary))'
   			},
+  			button: {
+  				background: 'hsl(var(--button-background))'
+  			},
   			surface: {
   				primary: 'hsl(var(--surface-primary))',
   				secondary: 'hsl(var(--surface-secondary))'
+  			},
+  			wage: {
+  				current: 'hsl(var(--wage-current-bg))'
   			},
   			text: {
   				primary: 'hsl(var(--text-primary))',

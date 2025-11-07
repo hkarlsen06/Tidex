@@ -2,10 +2,9 @@ import type { Metadata } from 'next';
 import { connection } from "next/server";
 import { verifySession } from '@/data-access/auth';
 import { getUserSettings } from '@/data-access/settings';
-import { getUserWageSnapshots, getSnapshotForDate } from '@/data-access/wage-snapshots';
+import { getUserWageSnapshots } from '@/data-access/wage-snapshots';
 import { PayForm } from '@components/settings/pay/PayForm';
-import { WageHistoryList } from '@components/settings/pay/WageHistoryList';
-import { CurrentWageCard } from '@components/settings/pay/CurrentWageCard';
+import { WageHistoryTimeline } from '@components/settings/pay/WageHistoryTimeline';
 import { Separator } from '@appui/Separator';
 import { getTranslations } from '@/lib/i18n/server';
 import type { Locale } from '@/lib/i18n/config';
@@ -37,10 +36,6 @@ export default async function PayPage({
   const settings = await getUserSettings(user.id);
   const wageSnapshots = await getUserWageSnapshots();
 
-  // Get current wage snapshot (applicable today)
-  const today = new Date().toISOString().split('T')[0];
-  const currentSnapshot = await getSnapshotForDate(today);
-
   return (
     <div className="container mx-auto py-8 max-w-2xl">
       <div className="space-y-6">
@@ -51,13 +46,9 @@ export default async function PayPage({
           </p>
         </div>
 
-        <CurrentWageCard currentSnapshot={currentSnapshot} t={t} />
+        <WageHistoryTimeline snapshots={wageSnapshots} t={t} />
 
         <Separator />
-
-        <WageHistoryList snapshots={wageSnapshots} t={t} />
-
-        <Separator className="mt-6" />
 
         <PayForm initialData={settings} />
       </div>
