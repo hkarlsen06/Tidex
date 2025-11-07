@@ -80,7 +80,7 @@ const DayButton = React.memo(function DayButton({
   const isMonday = date.getDay() === 1;
   const isSelected = selectedDate === iso;
   const isOutside = Boolean(modifiers?.outside);
-  const isNewlyAdded = newlyAddedDates?.has(iso) ?? false;
+  const _isNewlyAdded = newlyAddedDates?.has(iso) ?? false;
   const hasShift =
     earnings !== undefined || hours !== undefined || employees.length > 0;
   const week = isMonday ? getIsoWeek(date) : null;
