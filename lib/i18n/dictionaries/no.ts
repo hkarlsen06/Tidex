@@ -671,6 +671,8 @@ export const no = {
         wageHistory: {
           title: 'Lønnshistorikk',
           subtitle: 'Hold styr på lønnsøkningene',
+          timelineTitle: 'Din lønnshistorikk',
+          now: 'nå',
           emptyTitle: 'Ingen lønnshistorikk',
           emptyDescription: 'Lønnshistorikk opprettes automatisk når du endrer lønnsinnstillingene dine.',
           addNew: 'Lønnsøkning',
@@ -679,6 +681,7 @@ export const no = {
           validFrom: 'Gyldig fra {date}',
           validFromTo: 'Gyldig fra {fromDate} til {toDate}',
           supplementsCount: '{count} tillegg konfigurert',
+          supplementsCountShort: '{count} tillegg',
           edit: 'Rediger',
           delete: 'Slett',
           infoTip: 'Skift bruker automatisk lønnsinnstillingene som var gjeldende på skiftets dato. Dette sikrer at historiske skift beregnes med riktig lønn, selv om du har endret lønnen senere.',

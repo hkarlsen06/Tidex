@@ -671,6 +671,8 @@ export const de = {
         wageHistory: {
           title: 'Lohnhistorie',
           subtitle: 'Gehaltserhöhungen im Blick behalten',
+          timelineTitle: 'Ihre Lohnhistorie',
+          now: 'jetzt',
           emptyTitle: 'Keine Lohnhistorie',
           emptyDescription: 'Die Lohnhistorie wird automatisch erstellt, wenn Sie Ihre Lohneinstellungen ändern.',
           addNew: 'Gehaltserhöhung',
@@ -679,6 +681,7 @@ export const de = {
           validFrom: 'Gültig ab {date}',
           validFromTo: 'Gültig von {fromDate} bis {toDate}',
           supplementsCount: '{count} Zulagen konfiguriert',
+          supplementsCountShort: '{count} Zulagen',
           edit: 'Bearbeiten',
           delete: 'Löschen',
           infoTip: 'Schichten verwenden automatisch die Lohneinstellungen, die am Schichtdatum gültig waren. Dies stellt sicher, dass historische Schichten mit dem korrekten Lohn berechnet werden, auch wenn Sie den Lohn später geändert haben.',

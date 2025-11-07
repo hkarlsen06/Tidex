@@ -73,6 +73,8 @@ a {
     --surface-primary: 220 35% 96%;
     --surface-secondary: 221 30% 94%;
     --background-secondary: 220 35% 95%;
+    --button-background: 220 40% 98%;
+    --wage-current-bg: 221 70% 94%;
     --text-primary: 222 84% 8%;
     --text-secondary: 214 28% 35%;
     --text-muted: 215 20% 50%;
@@ -130,6 +132,8 @@ a {
     --surface-primary: 220 49% 11%;
     --surface-secondary: 221 39% 14%;
     --background-secondary: 222.2 84% 4.9%;
+    --button-background: 220 45% 15%;
+    --wage-current-bg: 221 50% 18%;
     --text-primary: 210 40% 98%;
     --text-secondary: 214 32% 85%;
     --text-muted: 215 20% 70%;

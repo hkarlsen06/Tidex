@@ -96,8 +96,7 @@ const DayButton = React.memo(function DayButton({
           "border-brand-gradientMid bg-brand-gradientMid/10 text-brand-highlight shadow-app-sm",
         isToday && "ring-1 ring-brand-highlight",
         isToday && !isSelected && "border-brand-highlight",
-        isOutside && "opacity-40",
-        isNewlyAdded && !isSelected && "animate-[pulse_1.5s_ease-in-out_3] ring-2 ring-blue-500/50 bg-blue-500/10"
+        isOutside && "opacity-40"
       )}
     >
       <div className="relative flex flex-col w-full h-full p-1 overflow-hidden">

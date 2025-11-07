@@ -500,17 +500,19 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
   const [copyMode, setCopyMode] = useState(false);
   const [copying, startCopyTransition] = useTransition();
   const [additionalShifts, setAdditionalShifts] = useState<ShiftWithComputations[]>([]);
-  const [loadingMonth, setLoadingMonth] = useState(false);
   const shiftsListRef = useRef<HTMLDivElement>(null);
   const calendarContainerRef = useRef<HTMLDivElement>(null);
   const [deletedShiftIds, setDeletedShiftIds] = useState<Set<string>>(new Set());
   const [newlyAddedDates, setNewlyAddedDates] = useState<Set<string>>(new Set());
   const [movedShifts, setMovedShifts] = useState<Map<string, { newDate: string; newStartTime: string; newEndTime: string }>>(new Map());
+  const hasTriggeredConfetti = useRef<Set<string>>(new Set());
   const [copiedShifts, setCopiedShifts] = useState<ShiftWithComputations[]>([]);
 
   // Track which months have been loaded or are currently loading
   const [loadedMonths, setLoadedMonths] = useState<Set<string>>(new Set());
   const [loadingMonths, setLoadingMonths] = useState<Set<string>>(new Set());
+  // Cache buster timestamp to force fresh fetches after server mutations
+  const [cacheBuster, setCacheBuster] = useState<number>(Date.now());
 
   // Combine initial shifts with any dynamically loaded shifts, filtering out deleted ones
   // and applying optimistic move/copy updates
@@ -562,7 +564,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
     setLoadingMonths(prev => new Set(prev).add(key));
 
     try {
-      const response = await fetch(`/api/shifts?year=${year}&month=${month}`);
+      const response = await fetch(`/api/shifts?year=${year}&month=${month}&_=${cacheBuster}`);
       const data = await response.json();
 
       if (data.shifts && Array.isArray(data.shifts)) {
@@ -586,18 +588,8 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
         return next;
       });
     }
-  }, [getMonthKey, loadedMonths, loadingMonths, initialShifts]);
+  }, [getMonthKey, loadedMonths, loadingMonths, initialShifts, cacheBuster]);
 
-  // Manual load button handler (fallback if prefetch didn't trigger)
-  const handleLoadMonth = useCallback(() => {
-    const selectedYear = selectedMonth.getFullYear();
-    const selectedMonthNum = selectedMonth.getMonth() + 1;
-
-    setLoadingMonth(true);
-    fetchMonth(selectedYear, selectedMonthNum).finally(() => {
-      setLoadingMonth(false);
-    });
-  }, [selectedMonth, fetchMonth]);
   const shiftsByDate = useMemo(() => {
     const map = new Map<ISODate, ShiftWithComputations[]>();
     for (const shift of shifts) {
@@ -615,8 +607,18 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
     return map;
   }, [shifts]);
 
-  // Initialize loaded months from SSR data on mount
+  // Reset all client-side state when new data arrives from server (after router.refresh())
+  // This includes: optimistic updates, client-fetched shifts, and loaded months tracking
   useEffect(() => {
+    // Clear optimistic updates
+    setDeletedShiftIds(new Set());
+    setMovedShifts(new Map());
+    setCopiedShifts([]);
+
+    // Clear client-side fetched shifts to force refetch with fresh data
+    setAdditionalShifts([]);
+
+    // Recalculate loaded months from fresh SSR data
     const loaded = new Set<string>();
     for (const shift of initialShifts) {
       const [year, month] = shift.shift_date.split('-');
@@ -624,13 +626,9 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
       loaded.add(key);
     }
     setLoadedMonths(loaded);
-  }, [initialShifts]);
 
-  // Reset optimistic updates when new data arrives from server (after router.refresh())
-  useEffect(() => {
-    setDeletedShiftIds(new Set());
-    setMovedShifts(new Map());
-    setCopiedShifts([]);
+    // Update cache buster to force fresh API fetches (bypasses HTTP cache)
+    setCacheBuster(Date.now());
   }, [initialShifts]);
 
   // Proactive prefetch: Load adjacent months (prev, current, next) whenever selectedMonth changes
@@ -693,6 +691,14 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
     const newSeries = searchParams.get('newSeries');
 
     if (newDates || newSeries) {
+      // Create unique key for this celebration
+      const celebrationKey = `${newDates || ''}-${newSeries || ''}`;
+
+      // Skip if we already triggered confetti for these params
+      if (hasTriggeredConfetti.current.has(celebrationKey)) {
+        return;
+      }
+
       let addedDates: string[] = [];
 
       // Track newly added dates for highlighting
@@ -704,6 +710,11 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
         const seriesShifts = shifts.filter(s => s.series_id === newSeries);
         addedDates = seriesShifts.map(s => s.shift_date);
         setNewlyAddedDates(new Set(addedDates));
+
+        // If no shifts found yet for series, wait for them to load
+        if (seriesShifts.length === 0) {
+          return;
+        }
       }
 
       // Find all dates in the current month
@@ -716,6 +727,9 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
 
       // Small delay to let the page render
       const timer = setTimeout(() => {
+        // Mark that we're triggering confetti for these params (do this right before firing)
+        hasTriggeredConfetti.current.add(celebrationKey);
+
         if (datesInCurrentMonth.length > 0) {
           // Fire confetti from each newly added shift in the current month
           datesInCurrentMonth.forEach((date, index) => {
@@ -760,6 +774,8 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
         url.searchParams.delete('newSeries');
         window.history.replaceState({}, '', url.toString());
         setNewlyAddedDates(new Set());
+        // Remove from tracking set after cleanup
+        hasTriggeredConfetti.current.delete(celebrationKey);
       }, 3000);
 
       return () => {
@@ -1055,12 +1071,6 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
     return filterAndGroupByWeek(shifts, selectedMonth);
   }, [shifts, selectedMonth]);
 
-  // Check if we have data for the selected month
-  const selectedYear = selectedMonth.getFullYear();
-  const selectedMonthNum = selectedMonth.getMonth() + 1;
-  const targetKey = `${selectedYear}-${String(selectedMonthNum).padStart(2, '0')}`;
-  const hasDataForSelectedMonth = shifts.some(s => s.shift_date.startsWith(targetKey));
-
   const hasAnyShifts = shifts.length > 0;
   const emptyTitle = hasAnyShifts
     ? t.pages.shifts.list.emptyMonthTitle
@@ -1101,18 +1111,6 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
             <CardHeader>
               <CardTitle>{emptyTitle}</CardTitle>
               <CardDescription>{emptyDescription}</CardDescription>
-              {!hasDataForSelectedMonth && hasAnyShifts && (
-                <div className="pt-4">
-                  <Button
-                    onClick={handleLoadMonth}
-                    disabled={loadingMonth}
-                    variant="default"
-                    className="mx-auto"
-                  >
-                    {loadingMonth ? t.pages.shifts.list.loading : t.pages.shifts.list.loadMonth.replace('{month}', selectedMonth.toLocaleDateString('nb-NO', { month: 'long', year: 'numeric' }))}
-                  </Button>
-                </div>
-              )}
             </CardHeader>
           </Card>
         ) : (

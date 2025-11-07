@@ -63,6 +63,9 @@ export function FreeTierLimitModal({
         return;
       }
 
+      // Refresh router to show updated data immediately after deletion
+      router.refresh();
+
       // Close modal and trigger callback to proceed with shift creation
       onOpenChange(false);
       onDeleteComplete();
