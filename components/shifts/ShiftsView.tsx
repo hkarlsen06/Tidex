@@ -690,14 +690,13 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
     const newDates = searchParams.get('new');
     const newSeries = searchParams.get('newSeries');
 
+    // Always clean up URL params if they exist, regardless of confetti
     if (newDates || newSeries) {
       // Create unique key for this celebration
       const celebrationKey = `${newDates || ''}-${newSeries || ''}`;
 
-      // Skip if we already triggered confetti for these params
-      if (hasTriggeredConfetti.current.has(celebrationKey)) {
-        return;
-      }
+      // Skip confetti if we already triggered for these params
+      const shouldSkipConfetti = hasTriggeredConfetti.current.has(celebrationKey);
 
       let addedDates: string[] = [];
 
@@ -712,7 +711,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
         setNewlyAddedDates(new Set(addedDates));
 
         // If no shifts found yet for series, wait for them to load
-        if (seriesShifts.length === 0) {
+        if (seriesShifts.length === 0 && !shouldSkipConfetti) {
           return;
         }
       }
@@ -725,8 +724,8 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
         return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
       });
 
-      // Small delay to let the page render
-      const timer = setTimeout(() => {
+      // Small delay to let the page render (only for confetti)
+      const timer = !shouldSkipConfetti ? setTimeout(() => {
         // Mark that we're triggering confetti for these params (do this right before firing)
         hasTriggeredConfetti.current.add(celebrationKey);
 
@@ -765,9 +764,9 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
             colors: ['#3b82f6', '#8b5cf6', '#ec4899']
           });
         }
-      }, 300);
+      }, 300) : undefined;
 
-      // Clean up URL and highlighting after celebration
+      // Clean up URL and highlighting after celebration (always runs)
       const cleanTimer = setTimeout(() => {
         const url = new URL(window.location.href);
         url.searchParams.delete('new');
@@ -779,7 +778,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
       }, 3000);
 
       return () => {
-        clearTimeout(timer);
+        if (timer) clearTimeout(timer);
         clearTimeout(cleanTimer);
       };
     }
