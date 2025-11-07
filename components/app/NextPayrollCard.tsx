@@ -7,6 +7,8 @@ import { useNavigationFeedback } from './navigation-feedback';
 import { useTranslations } from '@/lib/i18n/client';
 import { formatCurrency, formatPlainAmount } from '@/lib/formatters';
 import { getDateFormatter } from '@/lib/i18n/locale';
+import { adjustPayrollDate } from '@/lib/payroll/adjust-payroll-date';
+import type { Locale } from '@/lib/i18n';
 
 interface NextPayrollCardProps {
   payrollDay: number;
@@ -23,13 +25,18 @@ interface NextPayrollCardProps {
   showPreviousPayroll?: boolean;
 }
 
-function getPayrollDateForMonth(payrollDay: number, selectedMonth?: Date): Date {
+function getPayrollDateForMonth(
+  payrollDay: number,
+  selectedMonth: Date | undefined,
+  locale: Locale
+): Date {
   const referenceDate = selectedMonth ?? new Date();
 
-  return new Date(
-    referenceDate.getFullYear(),
+  return adjustPayrollDate(
+    payrollDay,
     referenceDate.getMonth(),
-    payrollDay
+    referenceDate.getFullYear(),
+    locale
   );
 }
 
@@ -58,16 +65,21 @@ export const NextPayrollCard: React.FC<NextPayrollCardProps> = ({
     });
   }, [locale]);
 
-  const payrollDate = getPayrollDateForMonth(payrollDay, selectedMonth);
+  const payrollDate = getPayrollDateForMonth(payrollDay, selectedMonth, locale);
   const formattedDate = dateFormatter.format(payrollDate);
 
   const showNoPayoutPlaceholder = !hasPayout;
-  const today = useMemo(() => new Date(), []);
+  const today = useMemo(() => {
+    const now = new Date();
+    // Normalize to start of day for accurate date comparison
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  }, []);
   const matchesCurrentMonth = selectedMonth
     ? selectedMonth.getFullYear() === today.getFullYear() &&
       selectedMonth.getMonth() === today.getMonth()
     : true;
-  const defaultShowPreviousPayroll = matchesCurrentMonth && today.getDate() >= payrollDay;
+  // Compare full dates (not just day numbers) to handle adjusted dates correctly
+  const defaultShowPreviousPayroll = matchesCurrentMonth && today > payrollDate;
   const shouldShowPreviousPayroll =
     showPreviousPayroll ?? defaultShowPreviousPayroll;
   const payrollLabel = matchesCurrentMonth

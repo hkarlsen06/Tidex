@@ -14,6 +14,7 @@ import { useTranslations } from "@/lib/i18n/client";
 import { summarizeShiftTotals } from "@/lib/shifts/monthlyTotals";
 import { formatCurrency } from "@/lib/formatters";
 import { deleteShift } from "@/app/[locale]/(app)/shifts/_actions/deleteShift";
+import { adjustPayrollDate } from "@/lib/payroll/adjust-payroll-date";
 
 type HomeContentProps = {
   shifts: ShiftWithComputations[];
@@ -95,7 +96,7 @@ function isCurrentMonth(date: Date): boolean {
 }
 
 export function HomeContent({ shifts: initialShifts, settings }: HomeContentProps) {
-  const { t } = useTranslations();
+  const { t, locale } = useTranslations();
   const router = useRouter();
   const { selectedMonth: month, goToPreviousMonth, goToNextMonth, direction } = useMonth();
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -225,7 +226,8 @@ export function HomeContent({ shifts: initialShifts, settings }: HomeContentProp
 
   // Calculate payroll data and date based on selected month
   const payrollData = useMemo(() => {
-    const today = new Date();
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
     let payrollMonthDate: Date;
     let earningsMonthDate: Date;
@@ -239,7 +241,14 @@ export function HomeContent({ shifts: initialShifts, settings }: HomeContentProp
         today.getMonth() - 1,
         1
       );
-      showPreviousPayroll = today.getDate() >= payrollDay;
+      // Calculate the adjusted payroll date and compare
+      const adjustedPayrollDate = adjustPayrollDate(
+        payrollDay,
+        today.getMonth(),
+        today.getFullYear(),
+        locale
+      );
+      showPreviousPayroll = today > adjustedPayrollDate;
     } else {
       // For non-current months: show the selected month's payroll paying for previous month
       payrollMonthDate = new Date(month.getFullYear(), month.getMonth(), 1);
@@ -284,7 +293,7 @@ export function HomeContent({ shifts: initialShifts, settings }: HomeContentProp
       hasPayout: relevantShifts.length > 0,
       showPreviousPayroll,
     };
-  }, [month, settings, shiftsByMonth, payrollDay, selectedMonthIsCurrent]);
+  }, [month, settings, shiftsByMonth, payrollDay, selectedMonthIsCurrent, locale]);
 
   // Find shift to display based on selected month
   const displayShift = useMemo(() => {
