@@ -14,6 +14,7 @@ import { getDateFormatter } from "@/lib/i18n/locale";
 type ShiftCardProps = {
   shift: ShiftWithComputations;
   onClick?: () => void;
+  isToday?: boolean;
 };
 
 export function formatDateParts(date: string, locale: string, daysShort: readonly string[]) {
@@ -50,7 +51,7 @@ export function formatPlainAmount(value: number) {
   return formatPlainAmountValue(value);
 }
 
-export function ShiftCard({ shift, onClick }: ShiftCardProps) {
+export function ShiftCard({ shift, onClick, isToday = false }: ShiftCardProps) {
   const { t, locale } = useTranslations();
   const { computed } = shift;
   const { dayName, dateLabel } = formatDateParts(shift.shift_date, locale, t.dateTime.daysShort);
@@ -65,7 +66,8 @@ export function ShiftCard({ shift, onClick }: ShiftCardProps) {
     <Card
       className={cn(
         "bg-surface-primary rounded-3xl",
-        onClick && "cursor-pointer transition-colors hover:bg-surface-secondary"
+        onClick && "cursor-pointer transition-colors hover:bg-surface-secondary",
+        isToday && "ring-2 ring-brand-highlight"
       )}
       onClick={onClick}
       role={onClick ? "button" : undefined}

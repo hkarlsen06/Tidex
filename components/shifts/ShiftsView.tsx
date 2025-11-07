@@ -38,6 +38,7 @@ import { useTranslations } from "@/lib/i18n/client";
 import type { Locale } from "@/lib/i18n/config";
 import { formatCurrency, formatInteger } from "@/lib/formatters";
 import { getDateFormatter } from "@/lib/i18n/locale";
+import { TodayPlaceholderCard } from "./TodayPlaceholderCard";
 
 // Lazy load the calendar to reduce initial bundle size (~40KB savings)
 const MonthlyEarningsCalendar = dynamic(
@@ -1070,6 +1071,20 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
     return filterAndGroupByWeek(shifts, selectedMonth);
   }, [shifts, selectedMonth]);
 
+  // Check if we're viewing the current month and get today's date
+  // Use local date (not UTC) since shift dates represent local dates
+  const todayDate = useMemo(() => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }, []);
+  const isCurrentMonth = useMemo(() => {
+    const now = new Date();
+    return selectedMonth.getFullYear() === now.getFullYear() && selectedMonth.getMonth() === now.getMonth();
+  }, [selectedMonth]);
+
   const hasAnyShifts = shifts.length > 0;
   const emptyTitle = hasAnyShifts
     ? t.pages.shifts.list.emptyMonthTitle
@@ -1114,41 +1129,73 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
           </Card>
         ) : (
           <div className="flex flex-col gap-12">
-            {grouped.map((group) => (
-              <section key={group.id} className="space-y-4">
-                <div className="flex flex-row items-center justify-between bg-transparent">
-                  <div className="flex items-center gap-2 font-medium text-text-primary">
-                    <span>{t.pages.shifts.list.weekLabel} {group.label}</span>
-                    <svg
-                      aria-hidden="true"
-                      className="h-4 w-4 text-text-muted"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                    >
-                      <path d="m6 9 6 6 6-6" />
-                    </svg>
+            {grouped.map((group, groupIndex) => {
+              // Find if today falls within this week's shifts
+              const todayIndex = isCurrentMonth
+                ? group.shifts.findIndex(shift => shift.shift_date === todayDate)
+                : -1;
+
+              // Check if today is before the first shift in the first group (only for very first group)
+              const isTodayBeforeFirstShift = isCurrentMonth && groupIndex === 0 && todayIndex === -1
+                && group.shifts.length > 0 && todayDate < group.shifts[0].shift_date;
+
+              // Check if today is after the last shift in this week group
+              // This happens when we're still in the same week but haven't worked yet
+              const lastShiftDate = group.shifts.length > 0 ? group.shifts[group.shifts.length - 1].shift_date : null;
+              const nextGroup = grouped[groupIndex + 1];
+              const nextGroupFirstDate = nextGroup?.shifts[0]?.shift_date;
+
+              const isTodayAfterLastShift = isCurrentMonth && todayIndex === -1 && lastShiftDate
+                && todayDate > lastShiftDate
+                && (!nextGroupFirstDate || todayDate < nextGroupFirstDate);
+
+              return (
+                <section key={group.id} className="space-y-4">
+                  <div className="flex flex-row items-center justify-between bg-transparent">
+                    <div className="flex items-center gap-2 font-medium text-text-primary">
+                      <span>{t.pages.shifts.list.weekLabel} {group.label}</span>
+                      <svg
+                        aria-hidden="true"
+                        className="h-4 w-4 text-text-muted"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                      >
+                        <path d="m6 9 6 6 6-6" />
+                      </svg>
+                    </div>
+                    <span className="font-semibold text-text-primary">
+                      {formatWeekTotal(group.totalGross)}
+                    </span>
                   </div>
-                  <span className="font-semibold text-text-primary">
-                    {formatWeekTotal(group.totalGross)}
-                  </span>
-                </div>
-                <div className="space-y-4">
-                  {group.shifts.map((shift) => (
-                    <ShiftCard
-                      key={shift.id}
-                      shift={shift}
-                      onClick={() => {
-                        clearSelection();
-                        setSelectedShift(shift);
-                        setDetailsOpen(true);
-                      }}
-                    />
-                  ))}
-                </div>
-              </section>
-            ))}
+                  <div className="space-y-4">
+                    {isTodayBeforeFirstShift && <TodayPlaceholderCard />}
+                    {group.shifts.map((shift, shiftIndex) => {
+                      const isToday = shift.shift_date === todayDate;
+                      const showPlaceholderAfter = todayIndex === -1 && shiftIndex < group.shifts.length - 1
+                        && shift.shift_date < todayDate && group.shifts[shiftIndex + 1].shift_date > todayDate;
+
+                      return (
+                        <div key={shift.id}>
+                          <ShiftCard
+                            shift={shift}
+                            isToday={isCurrentMonth && isToday}
+                            onClick={() => {
+                              clearSelection();
+                              setSelectedShift(shift);
+                              setDetailsOpen(true);
+                            }}
+                          />
+                          {showPlaceholderAfter && <TodayPlaceholderCard />}
+                        </div>
+                      );
+                    })}
+                    {isTodayAfterLastShift && <TodayPlaceholderCard />}
+                  </div>
+                </section>
+              );
+            })}
           </div>
         )}
       </div>
