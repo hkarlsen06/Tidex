@@ -25,6 +25,7 @@ const nextConfig = {
 };
 
 // Injected content via Sentry wizard below
+// eslint-disable-next-line import/named
 import { withSentryConfig } from "@sentry/nextjs";
 
 export default withSentryConfig(

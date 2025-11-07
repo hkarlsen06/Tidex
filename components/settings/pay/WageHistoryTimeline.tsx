@@ -141,7 +141,6 @@ function categorizeSnapshots(snapshots: WageSnapshot[], nowText: string, locale:
   });
 
   // Find the current entry (only one should exist)
-  const currentEntry = entriesWithTypes.find(e => e.type === 'current');
   const hasFutureEntries = entriesWithTypes.some(e => e.type === 'future');
 
   // Second pass: format date ranges
@@ -206,8 +205,8 @@ export function WageHistoryTimeline({
   const entries = categorizeSnapshots(snapshots, nowText, locale);
 
   // Find current entry index
-  const currentIndex = entries.findIndex(e => e.type === 'current');
-  const hasFutureEntries = entries.some(e => e.type === 'future');
+  const _currentIndex = entries.findIndex(e => e.type === 'current');
+  const _hasFutureEntries = entries.some(e => e.type === 'future');
 
   return (
     <div className="space-y-6">
@@ -232,13 +231,13 @@ export function WageHistoryTimeline({
               const { snapshot, type, dateRange } = entry;
               const isCurrent = type === 'current';
               const isFuture = type === 'future';
-              const isPast = type === 'past';
+              const _isPast = type === 'past';
               const supplementCount = snapshot.supplements?.rules?.length || 0;
               const isLast = index === entries.length - 1;
               // Check if any previous entry (index < current) is future
               const hasFutureAbove = entries.slice(0, index).some(e => e.type === 'future');
               // Only show dashed line for future entries and current entry if there's a future above
-              const shouldBeDashed = isFuture || (isCurrent && hasFutureAbove);
+              const _shouldBeDashed = isFuture || (isCurrent && hasFutureAbove);
 
               return (
                 <div

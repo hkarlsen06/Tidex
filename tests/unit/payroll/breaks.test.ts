@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { applyBreakDeduction } from '@/lib/payroll/breaks';
-import type { WagePeriod, BreakMethod } from '@/lib/payroll/types';
+import type { WagePeriod } from '@/lib/payroll/types';
 
 describe('payroll/breaks', () => {
   const createPeriod = (
