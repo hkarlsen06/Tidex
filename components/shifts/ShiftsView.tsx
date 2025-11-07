@@ -1073,13 +1073,12 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
 
   // Check if we're viewing the current month and get today's date
   // Use local date (not UTC) since shift dates represent local dates
-  const todayDate = useMemo(() => {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, "0");
-    const day = String(now.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
-  }, []);
+  // Recalculated on every render to ensure it stays current (lightweight operation)
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  const todayDate = `${year}-${month}-${day}`;
   const isCurrentMonth = useMemo(() => {
     const now = new Date();
     return selectedMonth.getFullYear() === now.getFullYear() && selectedMonth.getMonth() === now.getMonth();
@@ -1177,8 +1176,9 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
                         && shift.shift_date < todayDate && group.shifts[shiftIndex + 1].shift_date > todayDate;
 
                       return (
-                        <div key={shift.id}>
+                        <>
                           <ShiftCard
+                            key={shift.id}
                             shift={shift}
                             isToday={isCurrentMonth && isToday}
                             onClick={() => {
@@ -1188,7 +1188,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
                             }}
                           />
                           {showPlaceholderAfter && <TodayPlaceholderCard />}
-                        </div>
+                        </>
                       );
                     })}
                     {isTodayAfterLastShift && <TodayPlaceholderCard />}

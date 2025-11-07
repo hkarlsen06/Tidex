@@ -21,8 +21,9 @@ export function TodayPlaceholderCard() {
   const todayDateString = `${year}-${month}-${day}`;
 
   // Parse and format the date (same as ShiftCard)
-  const parsed = new Date(`${todayDateString}T00:00:00Z`);
-  const weekday = parsed.getUTCDay();
+  // Use local time parsing (not UTC) to match shift_date format
+  const parsed = new Date(todayDateString);
+  const weekday = parsed.getDay();
 
   const dateFormatter = getDateFormatter(locale, {
     day: "numeric",
