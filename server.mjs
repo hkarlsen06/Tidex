@@ -4,6 +4,9 @@ import next from 'next';
 import fs from 'fs';
 import path from 'path';
 
+// Suppress util._extend deprecation warning from third-party dependencies
+process.noDeprecation = true;
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
