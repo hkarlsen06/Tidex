@@ -26,7 +26,7 @@ const payrollDocs = {
 
   navigation: [
     { id: 'overview', label: 'Overview' },
-    { id: 'base-wage', label: 'Base Wage' },
+    { id: 'base-wage', label: 'Wage Snapshots' },
     { id: 'time-periods', label: 'Time Periods' },
     { id: 'supplements', label: 'Supplements' },
     { id: 'breaks', label: 'Break Deductions' },
@@ -57,10 +57,11 @@ const payrollDocs = {
         {
           heading: 'What this guide covers',
           list: [
-            'Base wage: Snapshot preservation for both hourly rates and supplement rules, with fallback to current settings',
+            'Wage snapshots: Interval-based system preserving historical wage accuracy',
+            'Base wage: How hourly rates are resolved from snapshots or current settings',
             'Time periods: How a shift is segmented to honour supplement rules',
             'Supplements: Fixed NOK/hour and percentage-based adjustments for specific days or hours',
-            'Break deductions: Three deduction strategies with audit trails',
+            'Break deductions: Four deduction strategies with audit trails',
             'Examples: End-to-end code flow from Supabase to the UI render',
           ],
         },
@@ -80,64 +81,121 @@ const payrollDocs = {
     },
     {
       id: 'base-wage',
-      title: 'Base Wage',
+      title: 'Wage Snapshots & Base Wage',
       subsections: [
         {
-          heading: 'How we resolve the hourly rate',
+          heading: 'Wage snapshot system',
           paragraphs: [
-            'Each shift requires an explicit base rate. Tidex resolves the hourly rate using a priority system designed to preserve historical accuracy while respecting your current settings:',
+            'Tidex uses an interval-based wage snapshot system to maintain historical accuracy. Instead of storing wage data per shift, snapshots mark when your wage changes over time.',
           ],
         },
         {
-          heading: '1. Snapshot rate (highest priority)',
+          heading: 'How snapshots work',
           paragraphs: [
-            'When a shift is created, Tidex snapshots both the hourly rate and supplement rules at that moment and stores them with the shift. This ensures historical shifts remain accurate even after you adjust your wage settings or when tariff rates change year-to-year.',
+            'Each user has one or more wage snapshots:',
+          ],
+          list: [
+            'Baseline snapshot (from_date = NULL): Your default wage, applies to all shifts unless overridden',
+            'Dated snapshots (from_date = "2025-03-01"): Mark when wage changes occur',
+            'Automatic resolution: For any shift, Tidex finds the most recent snapshot where from_date ≤ shift_date',
+          ],
+          note: 'This system works seamlessly with recurring series shifts and allows retroactive wage corrections.',
+        },
+        {
+          heading: 'Snapshot contents',
+          paragraphs: [
+            'Each snapshot captures:',
           ],
           code: {
             language: 'typescript',
-            content: `// Hourly wage snapshot
-if (shift.hourly_wage_snapshot && shift.hourly_wage_snapshot > 0) {
-  return shift.hourly_wage_snapshot;
-}
-
-// Supplement rules snapshot
-const rules = shift.supplement_rules_snapshot?.rules?.length
-  ? shift.supplement_rules_snapshot.rules  // Use snapshot
-  : settings.use_preset
-    ? presetRules                          // Fall back to current preset
-    : settings.custom_supplements.rules;   // Or current custom`,
+            content: `{
+  id: string;
+  user_id: string;
+  from_date: string | null;      // NULL for baseline
+  hourly_wage: number;            // Resolved base rate (NOK/hour)
+  wage_level: number | null;      // NULL = custom, -2 to 6 = tariff
+  supplements: {
+    rules: SupplementRule[]       // Active supplement rules
+  };
+}`,
           },
         },
         {
-          heading: '2. Current wage settings',
+          heading: 'Resolution algorithm',
           paragraphs: [
-            'If no snapshot exists (e.g., for older shifts or when the feature is disabled), Tidex uses your current wage settings. You can choose between two wage models:',
+            'For a shift dated 2025-01-15, Tidex resolves the wage snapshot as follows:',
           ],
-          list: [
-            'Preset tariff levels: Standard Norwegian tariff rates updated annually',
-            'Custom hourly wage: Your own rate that you configure manually',
+          code: {
+            language: 'typescript',
+            content: `// From data-access/wage-snapshots.ts
+export async function getSnapshotForDate(shiftDate: string) {
+  const snapshots = await getUserWageSnapshots();
+
+  // 1. Find most recent dated snapshot where from_date <= shiftDate
+  const dated = snapshots.find(s =>
+    s.from_date !== null && s.from_date <= shiftDate
+  );
+  if (dated) return dated;
+
+  // 2. Fall back to baseline snapshot (from_date = NULL)
+  return snapshots.find(s => s.from_date === null) ?? null;
+}`,
+          },
+        },
+        {
+          heading: 'How we resolve the hourly rate',
+          paragraphs: [
+            'With the snapshot system in place, Tidex resolves the base rate using this priority:',
           ],
+        },
+        {
+          heading: '1. New snapshot system (recommended)',
+          paragraphs: [
+            'The wage snapshot for the shift date provides the hourly wage. This is the primary source for all new shifts.',
+          ],
+          code: {
+            language: 'typescript',
+            content: `// From lib/payroll/calc.ts
+if (snapshot?.hourly_wage && snapshot.hourly_wage > 0) {
+  return snapshot.hourly_wage;
+}`,
+          },
+        },
+        {
+          heading: '2. Legacy per-shift snapshot (backward compatibility)',
+          paragraphs: [
+            'Older shifts may have per-shift snapshots stored directly on the shift record. These are preserved for backward compatibility.',
+          ],
+          code: {
+            language: 'typescript',
+            content: `// Backward compatibility with old per-shift snapshots
+if (shift.hourly_wage_snapshot && shift.hourly_wage_snapshot > 0) {
+  return shift.hourly_wage_snapshot;
+}`,
+          },
+        },
+        {
+          heading: '3. Safe default (fallback)',
+          paragraphs: [
+            'As a last resort, if no snapshot exists, Tidex defaults to wage level 1 (184.54 NOK) to prevent calculation errors:',
+          ],
+          code: {
+            language: 'typescript',
+            content: `// Safety net - should only happen if snapshots aren't configured
+return PRESET_WAGE_RATES["1"];`,
+          },
         },
         {
           heading: 'Preset tariff levels',
           paragraphs: [
-            'When using preset mode, Tidex looks up your configured level from the tariff table:',
+            'Tidex supports standard Norwegian tariff levels. When creating a snapshot, users can choose a tariff level or set a custom wage.',
           ],
-          code: {
-            language: 'typescript',
-            content: `if (settings.use_preset && settings.current_wage_level != null) {
-  const key = String(settings.current_wage_level);
-  if (PRESET_WAGE_RATES[key] != null) {
-    return PRESET_WAGE_RATES[key];
-  }
-}`,
-          },
           table: {
-            caption: 'Preset wage levels (2024/2025 rates)',
+            caption: 'Preset wage levels (2025 rates)',
             headers: ['Level', 'Hourly Rate (NOK)'],
             rows: [
-              ['-1', '129.91'],
               ['-2', '132.90'],
+              ['-1', '129.91'],
               ['1', '184.54'],
               ['2', '185.38'],
               ['3', '187.46'],
@@ -148,26 +206,14 @@ const rules = shift.supplement_rules_snapshot?.rules?.length
           },
         },
         {
-          heading: 'Custom hourly wage',
-          paragraphs: [
-            'When using custom mode, Tidex applies your manually configured rate:',
+          heading: 'Benefits of the snapshot system',
+          list: [
+            'Historical accuracy: Past shifts remain correct even after wage changes',
+            'Mid-month wage changes: Record raises that take effect on specific dates',
+            'Minimal storage: Only store when wages change, not per shift',
+            'Works with series: Recurring shifts automatically use the correct snapshot for their date',
+            'Retroactive corrections: Add snapshots to fix historical data',
           ],
-          code: {
-            language: 'typescript',
-            content: `if (settings.custom_wage && settings.custom_wage > 0) {
-  return settings.custom_wage;
-}`,
-          },
-        },
-        {
-          heading: '3. Safe default',
-          paragraphs: [
-            'As a last resort, Tidex defaults to wage level 1 (184.54 NOK) to prevent calculation errors:',
-          ],
-          code: {
-            language: 'typescript',
-            content: `return PRESET_WAGE_RATES["1"]; // Safe fallback`,
-          },
         },
         {
           heading: 'Source code',
@@ -391,7 +437,7 @@ supplement = Math.max(supplement, supplementValue);`,
         {
           heading: 'Automatic break deductions',
           paragraphs: [
-            'Tidex can deduct unpaid breaks automatically based on your configuration. Three deduction strategies are available:',
+            'Tidex can deduct unpaid breaks automatically based on your configuration. Four deduction strategies are available:',
           ],
         },
         {
@@ -450,7 +496,7 @@ supplement = Math.max(supplement, supplementValue);`,
           },
         },
         {
-          heading: 'Method 3: Base first',
+          heading: 'Method 3: Base only',
           paragraphs: [
             'Deducts from periods with the lowest supplement first (typically the base rate) to preserve premium hours.',
             'Example: A shift with base pay (185 NOK/h) and evening supplement (230 NOK/h).',
@@ -476,6 +522,20 @@ for (const i of order) {
             '30 min break deducted first from base pay period',
             'Evening supplement period preserved entirely',
           ],
+        },
+        {
+          heading: 'Method 4: None',
+          paragraphs: [
+            'No automatic break deduction is applied. All hours are paid.',
+            'Use this if you manually track breaks elsewhere or prefer to pay all logged hours.',
+          ],
+          code: {
+            language: 'typescript',
+            content: `if (method === "none") {
+  // Skip break deduction entirely
+  toDeduct = 0;
+}`,
+          },
         },
         {
           heading: 'Threshold',
@@ -544,15 +604,33 @@ const { data: shifts } = await supabase
           },
         },
         {
-          heading: 'Step 2: Payroll computation',
-          paragraphs: ['For each shift, call computeShift() to calculate wages:'],
+          heading: 'Step 2: Fetch wage snapshots',
+          paragraphs: ['Collect all shift dates and batch-fetch applicable snapshots:'],
           code: {
             language: 'typescript',
             content: `// data-access/shifts.ts
-const computedShifts = shifts.map((shift) => ({
-  ...shift,
-  computed: computeShift(shift, settings, PRESET_RULES),
-}));`,
+import { getSnapshotsForDates } from '@/data-access/wage-snapshots';
+
+// Collect all shift dates for batch lookup
+const shiftDates = shifts.map((s) => s.shift_date);
+
+// Fetch wage snapshots for all dates in one query (cached)
+const snapshotMap = await getSnapshotsForDates(shiftDates);`,
+          },
+        },
+        {
+          heading: 'Step 3: Payroll computation',
+          paragraphs: ['For each shift, resolve its snapshot and call computeShift() to calculate wages:'],
+          code: {
+            language: 'typescript',
+            content: `// data-access/shifts.ts
+const computedShifts = shifts.map((shift) => {
+  const snapshot = snapshotMap.get(shift.shift_date) ?? null;
+  return {
+    ...shift,
+    computed: computeShift(shift, settings, PRESET_RULES, snapshot),
+  };
+});`,
           },
           note: 'Inside computeShift() (from lib/payroll/calc.ts):',
           additionalCode: {
@@ -560,12 +638,18 @@ const computedShifts = shifts.map((shift) => ({
             content: `export function computeShift(
   shift: ShiftRow,
   settings: UserSettings,
-  presetRules: SupplementRule[]
+  presetRules: SupplementRule[],
+  snapshot: WageSnapshot | null = null
 ): ShiftComputed {
-  // 1. Determine base wage
-  const baseRate = resolveBaseRate(shift, settings);
+  // 1. Resolve base wage from snapshot (or fallback)
+  const baseRate = resolveBaseRate(shift, snapshot);
 
-  // 2. Build wage periods with supplements
+  // 2. Resolve supplement rules from snapshot (or fallback)
+  const rules = snapshot?.supplements?.rules?.length
+    ? snapshot.supplements.rules
+    : presetRules;
+
+  // 3. Build wage periods with supplements
   let periods = buildWagePeriods(
     shift.start_time,
     shift.end_time,
@@ -574,13 +658,13 @@ const computedShifts = shifts.map((shift) => ({
     rules
   );
 
-  // 3. Calculate total duration
+  // 4. Calculate total duration
   const totalMinutes = periods.reduce((sum, p) =>
     sum + (p.toMin - p.fromMin), 0
   );
   const durationHours = totalMinutes / 60;
 
-  // 4. Deduct break
+  // 5. Deduct break
   const afterBreak = applyBreakDeduction(
     periods,
     settings.pause_deduction_method,
@@ -589,7 +673,7 @@ const computedShifts = shifts.map((shift) => ({
   );
   periods = afterBreak.periods;
 
-  // 5. Calculate pay
+  // 6. Calculate pay
   let basePay = 0, supplementPay = 0;
   for (const p of periods) {
     const h = (p.toMin - p.fromMin) / 60;
@@ -613,7 +697,7 @@ const computedShifts = shifts.map((shift) => ({
           },
         },
         {
-          heading: 'Step 3: Return to page',
+          heading: 'Step 4: Return to page',
           paragraphs: ['DAL returns shifts with pre-computed values:'],
           code: {
             language: 'typescript',
@@ -629,7 +713,7 @@ return {
           },
         },
         {
-          heading: 'Step 4: UI rendering',
+          heading: 'Step 5: UI rendering',
           paragraphs: ['Page receives pre-computed data and displays it:'],
           code: {
             language: 'typescript',
