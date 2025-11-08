@@ -8,13 +8,17 @@ You are performing a bug analysis. Follow these steps:
 
    - First check for staged changes: `git diff --cached --name-only`
    - If no staged changes, check for unstaged changes: `git diff --name-only`
-   - If no changes at all, analyze the last commit: `git show --name-only --format="" HEAD`
+   - If no changes at all (clean working tree):
+     - Check if there are unpushed commits: `git rev-list @{u}..HEAD --count`
+     - If unpushed commits exist, analyze all commits since diverging from origin
+     - If no unpushed commits, analyze the last commit: `git show --name-only --format="" HEAD`
 
 2. **Get the actual diff/changes:**
 
    - For staged changes: `git diff --cached`
    - For unstaged changes: `git diff`
-   - For last commit: `git show HEAD`
+   - For unpushed commits (when working tree is clean): `git diff @{u}..HEAD`
+   - For last commit (when no unpushed commits): `git show HEAD`
 
 3. **Analyze the code for potential bugs:**
    Review the changes looking for:
