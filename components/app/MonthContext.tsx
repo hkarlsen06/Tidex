@@ -67,6 +67,8 @@ export function MonthProvider({ children }: { children: ReactNode }) {
       const newMonth = new Date(prev.getFullYear(), prev.getMonth() - 1, 1);
       return newMonth;
     });
+    // Reset direction after animation duration to prevent stale state
+    setTimeout(() => setDirection(null), 300);
   }, []);
 
   const goToNextMonth = useCallback(() => {
@@ -75,6 +77,8 @@ export function MonthProvider({ children }: { children: ReactNode }) {
       const newMonth = new Date(prev.getFullYear(), prev.getMonth() + 1, 1);
       return newMonth;
     });
+    // Reset direction after animation duration to prevent stale state
+    setTimeout(() => setDirection(null), 300);
   }, []);
 
   return (
