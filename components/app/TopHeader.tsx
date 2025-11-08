@@ -25,7 +25,7 @@ export function TopHeader({ userName, avatarUrl }: TopHeaderProps) {
             aria-label={t.header.goToTidex}
           >
             <Image
-              src="/icons/image.png"
+              src="/icons/tidex-wordmark.webp"
               alt="Tidex"
               width={100}
               height={28}

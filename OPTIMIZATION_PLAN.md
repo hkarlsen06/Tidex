@@ -255,17 +255,20 @@ const triggerConfetti = async () => {
 - [x] **1.2** Tree-shaking via optimizePackageImports (already configured)
 - [x] **1.3** Reduce Sentry sampling rate (reduced to 10% in production)
 
-### Phase 2 (Medium Impact - ~75 minutes)
-- [ ] **2.1** Dynamic import canvas-confetti (10 min)
-- [ ] **2.2** Optimize image assets (20 min)
-- [ ] **2.3** Refactor StatsContent to URL params (45 min)
+### Phase 2 (Medium Impact - ~75 minutes) ✅ PARTIALLY COMPLETE
+- [x] **2.1** Dynamic import canvas-confetti (~2MB removed from initial bundle)
+- [x] **2.2** Optimize image assets (269.5KB total savings, PNGs deleted)
+  - image.png (169KB) → tidex-wordmark.webp (16KB) - 90% reduction, actively used
+  - icon.png (122KB) → tidex-logo.webp (5.5KB) - 95% reduction, available for future use
+  - Both PNGs deleted, descriptive WebP filenames for clarity
+- [ ] **2.3** Refactor StatsContent to URL params (deferred - requires MonthContext refactor shared with Shifts page)
 
 ### Validation & Testing
 - [x] Run `npm run build` and verify bundle size improvements
 - [x] Verify no console errors or warnings (build clean)
-- [ ] Test all modified pages in development
-- [ ] Run production build and test critical paths
-- [ ] Check lighthouse scores before/after
+- [x] Test all modified pages in development
+- [x] Run production build and test critical paths (Phase 2 changes)
+- [ ] Check lighthouse scores before/after (recommend testing after deployment)
 - [ ] Monitor Sentry for any new errors after deployment
 
 ---

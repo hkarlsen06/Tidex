@@ -71,7 +71,7 @@ export function LandingPage({ locale, dictionary, path = '' }: LandingPageProps)
                     }}
                   />
                   <Image
-                    src="/icons/image.png"
+                    src="/icons/tidex-wordmark.webp"
                     alt={marketing.hero.imageAlt}
                     width={280}
                     height={80}
