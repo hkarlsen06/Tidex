@@ -5,11 +5,11 @@ import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import type { MouseEvent } from "react";
 import {
-  Home,
-  CalendarDays,
+  Gauge,
+  Calendar,
   Plus,
-  Layers,
-  Settings,
+  ChartNoAxesCombined,
+  Bolt,
   ArrowDown,
   X,
   ArrowLeft,
@@ -19,7 +19,7 @@ import { useScrollDirection } from "./use-scroll-direction";
 import { supabase } from "@/lib/supabase/browser";
 import { useTranslations } from "@/lib/i18n/client";
 
-type LucideIcon = typeof Home;
+type LucideIcon = typeof Gauge;
 type NavItem = {
   href: string;
   label: string;
@@ -32,12 +32,12 @@ const navItems: NavItem[] = [
   {
     href: "/",
     label: "Home",
-    icon: Home,
+    icon: Gauge,
   },
   {
     href: "/shifts",
     label: "Shifts",
-    icon: CalendarDays,
+    icon: Calendar,
   },
   {
     href: "/shifts/add",
@@ -48,12 +48,12 @@ const navItems: NavItem[] = [
   {
     href: "/stats",
     label: "Stats",
-    icon: Layers,
+    icon: ChartNoAxesCombined,
   },
   {
     href: "/settings",
     label: "Settings",
-    icon: Settings,
+    icon: Bolt,
     matchPrefix: true,
   },
 ];
@@ -210,66 +210,31 @@ export function NavBar() {
   const isOnAddPage = normalizedPath === "/shifts/add";
   const isOnShiftsPage = normalizedPath === "/shifts";
   const isOnSettingsSubPage = normalizedPath?.startsWith("/settings/") ?? false;
+  const isOnStatsPage = normalizedPath === "/stats";
   const minimizeToClose = isMinimized && isOnAddPage;
   const minimizeToPlus = isMinimized && isOnShiftsPage;
   const minimizeToSettings = isMinimized && isOnSettingsSubPage;
+  const minimizeToHome = isMinimized && isOnStatsPage;
 
   return (
-    <nav className="fixed bottom-4 left-0 right-0 z-40" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
-      <div className={`mx-auto max-w-[480px] px-4 transition-all duration-500 ease-in-out ${isMinimized ? (minimizeToClose || minimizeToPlus ? "" : minimizeToSettings ? "flex justify-end" : "!px-4") : ""}`}>
-        <div className={`flex items-center rounded-3xl border border-border-subtle bg-surface-primary/80 shadow-app-lg backdrop-blur transition-all duration-500 ease-in-out ${
+    <nav className={`fixed left-0 right-0 z-40 transition-all duration-500 ease-in-out pb-[env(safe-area-inset-bottom)] ${
+      isMinimized ? "bottom-4" : "bottom-0 md:bottom-4"
+    }`}>
+      <div className={`mx-auto transition-all duration-500 ease-in-out ${
+        isMinimized ? "max-w-[480px] px-4" : "max-w-[520px] md:px-4"
+      }`}>
+        <div className={`flex items-center transition-all duration-500 ease-in-out ${
           isMinimized
             ? minimizeToClose || minimizeToPlus
-              ? "w-16 mx-auto justify-center px-4 py-3"
+              ? "w-16 mx-auto justify-center py-3 rounded-3xl border border-border-subtle bg-surface-primary/80 shadow-app-lg backdrop-blur"
               : minimizeToSettings
-              ? "w-16 justify-center px-4 py-3"
-              : "w-16 justify-center px-4 py-3"
-            : "justify-around px-6 py-3"
+              ? "w-16 ml-auto justify-center py-3 rounded-3xl border border-border-subtle bg-surface-primary/80 shadow-app-lg backdrop-blur"
+              : minimizeToHome
+              ? "w-16 justify-center py-3 rounded-3xl border border-border-subtle bg-surface-primary/80 shadow-app-lg backdrop-blur"
+              : "w-16 mx-auto justify-center py-3 rounded-3xl border border-border-subtle bg-surface-primary/80 shadow-app-lg backdrop-blur"
+            : "justify-around py-4 bg-surface-primary/95 backdrop-blur border-t border-border-subtle md:border md:rounded-2xl md:shadow-app-lg"
         }`}>
-          {isMinimized ? (
-            minimizeToClose ? (
-              // Minimized to close button in center for /shifts/add
-              <Link
-                href="/shifts"
-                onClick={handleItemClick("/shifts")}
-                className="flex items-center justify-center p-2 -m-2 navbar-icon-fade-in"
-              >
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-gradientMid navbar-scale-in">
-                  <X className="h-6 w-6 text-text-inverse transition-transform duration-200" strokeWidth={2} />
-                </div>
-              </Link>
-            ) : minimizeToPlus ? (
-              // Minimized to plus button in center for /shifts
-              <Link
-                href="/shifts/add"
-                onClick={handleItemClick("/shifts/add")}
-                className="flex items-center justify-center p-2 -m-2 navbar-icon-fade-in"
-              >
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-gradientMid navbar-scale-in">
-                  <Plus className="h-6 w-6 text-text-inverse" strokeWidth={2} />
-                </div>
-              </Link>
-            ) : minimizeToSettings ? (
-              // Minimized to back arrow for settings sub-routes
-              <Link
-                href="/settings"
-                onClick={handleItemClick("/settings")}
-                className="flex items-center justify-center p-3 -m-3 navbar-icon-fade-in"
-              >
-                <ArrowLeft className="h-6 w-6 text-text-primary navbar-scale-in" strokeWidth={2} />
-              </Link>
-            ) : (
-              // Minimized to home icon on left
-              <Link
-                href="/"
-                onClick={handleItemClick("/")}
-                className="flex items-center justify-center p-3 -m-3 navbar-icon-fade-in"
-              >
-                <Home className="h-6 w-6 text-text-primary navbar-scale-in" strokeWidth={2} />
-              </Link>
-            )
-          ) : (
-            navItems.map((item) => {
+          {navItems.map((item) => {
             const isActive = isPathActive(item);
             const Icon = item.icon;
 
@@ -281,9 +246,22 @@ export function NavBar() {
                 !isOnAddPage &&
                 (isEligibleForHint(pathname) || isEligibleForHint(pendingPath));
 
+              // Show center button when minimized on /shifts or /shifts/add
+              const shouldShow = !isMinimized || minimizeToClose || minimizeToPlus;
+
+              // Don't render at all when hidden and minimized
+              if (!shouldShow && isMinimized) {
+                return null;
+              }
+
               return (
-                <div key={item.href} className="relative flex items-center justify-center">
-                  {shouldShowHint ? (
+                <div
+                  key={item.href}
+                  className={`relative flex items-center justify-center transition-all duration-500 ${
+                    shouldShow ? "opacity-100 scale-100" : "opacity-0 scale-0 w-0"
+                  }`}
+                >
+                  {shouldShowHint && shouldShow ? (
                     <div className="pointer-events-none absolute bottom-[calc(100%+1.5rem)] left-1/2 flex -translate-x-1/2 flex-col items-center gap-3">
                       <span className="animate-gentle-pulse flex w-max flex-col items-center gap-0.5 rounded-lg border border-border-subtle bg-surface-primary px-3 py-1.5 text-center text-xs font-semibold text-text-primary shadow-app leading-tight">
                         <span>{t.navigation.addFirstShiftLine1}</span>
@@ -320,25 +298,34 @@ export function NavBar() {
             // Use ArrowLeft icon when on settings sub-page, otherwise use the item's icon
             const DisplayIcon = showBackArrow ? ArrowLeft : Icon;
 
+            // Determine if this icon should be visible when minimized
+            const shouldShowWhenMinimized =
+              (minimizeToSettings && item.href === "/settings") ||
+              (!minimizeToClose && !minimizeToPlus && !minimizeToSettings && item.href === "/");
+
+            // Don't render side icons at all when minimized (except the one that should show)
+            if (isMinimized && !shouldShowWhenMinimized) {
+              return null;
+            }
+
             return (
               <Link
                 key={item.href}
                 href={item.href}
                 onClick={handleItemClick(item.href)}
-                className="flex items-center justify-center p-3 -m-3 navbar-icon-fade-in"
+                className="flex items-center justify-center p-3 -m-3"
               >
                 <DisplayIcon
-                  className={`navbar-scale-in h-6 w-6 ${
+                  className={`h-6 w-6 ${
                     isActive
                       ? "text-brand-highlight"
                       : "text-text-muted"
                   }`}
-                  strokeWidth={isActive ? 3.5 : 2}
+                  strokeWidth={isActive ? 2.5 : 2}
                 />
               </Link>
             );
-          })
-          )}
+          })}
         </div>
       </div>
     </nav>
