@@ -181,10 +181,12 @@ export function NavBar() {
   const isOnSettingsSubPage = normalizedPath?.startsWith("/settings/") ?? false;
 
   return (
-    <>
-      <nav className="fixed left-0 right-0 z-40 bottom-0 md:bottom-4">
-        <div className="mx-auto max-w-[520px] md:px-4">
-          <div className="flex items-center justify-around py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] bg-surface-primary/95 backdrop-blur border-t border-border-subtle md:border md:rounded-2xl md:shadow-app-lg md:pb-4">
+    <nav className="fixed left-0 right-0 z-40 bottom-0 md:bottom-4 md:bg-transparent">
+      {/* Background that extends into safe area on mobile */}
+      <div className="absolute inset-x-0 top-0 bottom-0 bg-surface-primary/95 backdrop-blur md:hidden" />
+
+      <div className="relative mx-auto max-w-[520px] md:px-4 pb-[env(safe-area-inset-bottom)] md:pb-0">
+        <div className="flex items-center justify-around pt-4 pb-4 border-t border-border-subtle md:bg-surface-primary/95 md:backdrop-blur md:border md:rounded-2xl md:shadow-app-lg">
           {navItems.map((item) => {
             const isActive = isPathActive(item);
             const Icon = item.icon;
@@ -257,11 +259,8 @@ export function NavBar() {
               </Link>
             );
           })}
-          </div>
         </div>
-      </nav>
-      {/* Background extension for safe area on mobile devices */}
-      <div className="fixed bottom-0 left-0 right-0 z-30 h-[env(safe-area-inset-bottom)] bg-surface-primary/95 backdrop-blur md:hidden" />
-    </>
+      </div>
+    </nav>
   );
 }
