@@ -3,7 +3,6 @@
 import { useMemo, useState, useCallback, useTransition, useRef, useEffect, Fragment } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
-import confetti from "canvas-confetti";
 
 import ShiftCard from "@/components/app/ShiftCard";
 import ShiftMoveCard from "./ShiftMoveCard";
@@ -726,9 +725,12 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
       });
 
       // Small delay to let the page render (only for confetti)
-      const timer = !shouldSkipConfetti ? setTimeout(() => {
+      const timer = !shouldSkipConfetti ? setTimeout(async () => {
         // Mark that we're triggering confetti for these params (do this right before firing)
         hasTriggeredConfetti.current.add(celebrationKey);
+
+        // Dynamically import confetti only when needed (reduces initial bundle by ~2MB)
+        const confetti = (await import('canvas-confetti')).default;
 
         if (datesInCurrentMonth.length > 0) {
           // Fire confetti from each newly added shift in the current month
