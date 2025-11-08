@@ -5,7 +5,7 @@ import { Card } from '@appui/Card';
 import { Button } from '@appui/Button';
 import { Input } from '@appui/Input';
 import { Label } from '@appui/Label';
-import { IconPhone } from '@tabler/icons-react';
+import { Phone } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import {
   linkPhoneNumber,
@@ -135,7 +135,7 @@ export function PhoneConnectionCard({
         <div className="space-y-4">
           <div className="flex items-center gap-4">
             <div className="p-3 rounded-lg bg-surface-secondary flex-shrink-0">
-              <IconPhone className="h-6 w-6 text-text-primary" />
+              <Phone className="h-6 w-6 text-text-primary" />
             </div>
             <div className="flex-1">
               <h3 className="font-semibold text-text-primary">
@@ -241,7 +241,7 @@ export function PhoneConnectionCard({
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
         <div className="flex items-center gap-4 flex-1 min-w-0">
           <div className="p-3 rounded-lg bg-surface-secondary flex-shrink-0">
-            <IconPhone className="h-6 w-6 text-text-primary" />
+            <Phone className="h-6 w-6 text-text-primary" />
           </div>
           <div className="flex-1 min-w-0">
             <h3 className="font-semibold text-text-primary">{t.pages.settings.profile.phone.titleConnected}</h3>

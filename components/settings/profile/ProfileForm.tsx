@@ -7,7 +7,7 @@ import { Label } from '@appui/Label';
 import { Button } from '@appui/Button';
 import { Avatar, AvatarFallback, AvatarImage } from '@appui/Avatar';
 import { updateProfileSettings } from '@/app/[locale]/(app)/settings/_actions/updateSettings';
-import { IconArrowsExchange, IconTrash } from '@tabler/icons-react';
+import { ArrowRightLeft, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { EmailChangeCard } from './EmailChangeCard';
 import { useTranslations } from '@/lib/i18n/client';
@@ -220,7 +220,7 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
                   onClick={handleUploadClick}
                   disabled={isUploading}
                 >
-                  <IconArrowsExchange className="h-4 w-4" aria-hidden />
+                  <ArrowRightLeft className="h-4 w-4" aria-hidden />
                   {isUploading ? t.pages.settings.profile.personalInfo.uploadingImage : profilePictureUrl ? t.pages.settings.profile.personalInfo.changeImage : t.pages.settings.profile.personalInfo.uploadImage}
                 </Button>
                 {profilePictureUrl && (
@@ -232,7 +232,7 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
                     onClick={handleRemoveProfilePicture}
                     disabled={isUploading}
                   >
-                    <IconTrash className="h-4 w-4" aria-hidden />
+                    <Trash2 className="h-4 w-4" aria-hidden />
                     {t.pages.settings.profile.personalInfo.removeImage}
                   </Button>
                 )}

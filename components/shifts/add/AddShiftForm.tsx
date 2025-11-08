@@ -12,7 +12,7 @@ import { createShifts } from "@/app/[locale]/(app)/shifts/add/actions";
 import RecurringForm from "./RecurringForm";
 import { MonthPicker } from "@/components/app/MonthPicker";
 import { cn } from "@/lib/cn";
-import { IconClock } from "@tabler/icons-react";
+import { Clock } from "lucide-react";
 import { FreeTierLimitModal } from "./FreeTierLimitModal";
 import { checkShiftLimit } from "@/app/[locale]/(app)/shifts/add/_checks/checkShiftLimit";
 import { useNavigationFeedback } from "@/components/app/navigation-feedback";
@@ -433,7 +433,7 @@ export default function AddShiftForm({ existingShifts, userSettings, presetRules
                     className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border border-border-subtle bg-surface-secondary/70 text-text-muted transition hover:border-border hover:text-text-primary focus:outline-none focus-visible:outline-none"
                     aria-label={t.pages.shifts.add.form.selectStartTime}
                   >
-                    <IconClock className="h-5 w-5" stroke={1.5} />
+                    <Clock className="h-5 w-5" strokeWidth={1.5} />
                   </button>
                 </div>
               </label>
@@ -455,7 +455,7 @@ export default function AddShiftForm({ existingShifts, userSettings, presetRules
                     className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border border-border-subtle bg-surface-secondary/70 text-text-muted transition hover:border-border hover:text-text-primary focus:outline-none focus-visible:outline-none"
                     aria-label={t.pages.shifts.add.form.selectEndTime}
                   >
-                    <IconClock className="h-5 w-5" stroke={1.5} />
+                    <Clock className="h-5 w-5" strokeWidth={1.5} />
                   </button>
                 </div>
               </label>

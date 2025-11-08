@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@appui/Input";
 import { Button } from "@appui/Button";
 import { PRESET_WAGE_RATES } from "@/lib/payroll/calc";
-import { IconBuilding, IconAdjustments } from "@tabler/icons-react";
+import { Building, SlidersHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslations } from "@/lib/i18n/client";
 
@@ -65,7 +65,7 @@ export function WageStep({
                   : "border-border hover:border-border-subtle hover:bg-surface-primary"
               )}
             >
-              <IconBuilding stroke={2} className="h-8 w-8" />
+              <Building strokeWidth={2} className="h-8 w-8" />
               <span className="text-xs font-medium">{t.onboarding.wageStep.preset}</span>
             </button>
 
@@ -80,7 +80,7 @@ export function WageStep({
                   : "border-border hover:border-border-subtle hover:bg-surface-primary"
               )}
             >
-              <IconAdjustments stroke={2} className="h-8 w-8" />
+              <SlidersHorizontal strokeWidth={2} className="h-8 w-8" />
               <span className="text-xs font-medium">{t.onboarding.wageStep.custom}</span>
             </button>
           </div>

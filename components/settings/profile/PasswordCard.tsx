@@ -5,7 +5,7 @@ import { Card } from '@appui/Card';
 import { Button } from '@appui/Button';
 import { Input } from '@appui/Input';
 import { Label } from '@appui/Label';
-import { IconLock } from '@tabler/icons-react';
+import { Lock } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { setPassword } from '@/app/[locale]/(app)/settings/_actions/updateSettings';
 import { translateError } from '@/lib/errors/translate';
@@ -79,7 +79,7 @@ export function PasswordCard({ hasPassword }: PasswordCardProps) {
         <div className="space-y-4">
           <div className="flex items-center gap-4">
             <div className="p-3 rounded-lg bg-surface-secondary flex-shrink-0">
-              <IconLock className="h-6 w-6 text-text-primary" />
+              <Lock className="h-6 w-6 text-text-primary" />
             </div>
             <div className="flex-1">
               <h3 className="font-semibold text-text-primary">
@@ -162,7 +162,7 @@ export function PasswordCard({ hasPassword }: PasswordCardProps) {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
         <div className="flex items-center gap-4 flex-1 min-w-0">
           <div className="p-3 rounded-lg bg-surface-secondary flex-shrink-0">
-            <IconLock className="h-6 w-6 text-text-primary" />
+            <Lock className="h-6 w-6 text-text-primary" />
           </div>
           <div className="flex-1 min-w-0">
             <h3 className="font-semibold text-text-primary">{t.pages.settings.profile.password.titleCard}</h3>

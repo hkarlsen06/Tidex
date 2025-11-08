@@ -1,6 +1,6 @@
 "use client";
 
-import { IconChevronLeft, IconChevronRight } from "@tabler/icons-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslations } from "@/lib/i18n/client";
 
@@ -75,7 +75,7 @@ export function MonthPicker({
         className="flex h-10 w-10 items-center justify-center rounded-md text-text-primary transition-colors hover:bg-surface-secondary focus:outline-none focus-visible:outline-none disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
         aria-label="Forrige måned"
       >
-        <IconChevronLeft size={18} />
+        <ChevronLeft size={18} />
       </button>
       <div className="relative w-24 overflow-hidden" style={{ minHeight: '1.5rem' }}>
         {/* Current/Previous month - exits when transitioning */}
@@ -108,7 +108,7 @@ export function MonthPicker({
         className="flex h-10 w-10 items-center justify-center rounded-md text-text-primary transition-colors hover:bg-surface-secondary focus:outline-none focus-visible:outline-none disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
         aria-label="Neste måned"
       >
-        <IconChevronRight size={18} />
+        <ChevronRight size={18} />
       </button>
     </div>
   );

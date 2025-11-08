@@ -4,7 +4,7 @@ import { Label } from "@appui/Label";
 import { Input } from "@appui/Input";
 import { Button } from "@appui/Button";
 import { Separator } from "@appui/Separator";
-import { IconListDetails, IconCalendarWeek, IconSun, IconMoon, IconScreenShare } from '@tabler/icons-react';
+import { List, CalendarDays, Sun, Moon, ScreenShare } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatPlainAmount } from '@/lib/formatters';
 import { useTranslations } from '@/lib/i18n/client';
@@ -58,7 +58,7 @@ export function PreferencesStep({
                   : 'border-border hover:border-border-subtle hover:bg-surface-primary'
               )}
             >
-              <IconSun stroke={2} className="h-8 w-8" />
+              <Sun strokeWidth={2} className="h-8 w-8" />
               <span className="text-xs font-medium">{t.onboarding.preferencesStep.themeLight}</span>
             </button>
 
@@ -73,7 +73,7 @@ export function PreferencesStep({
                   : 'border-border hover:border-border-subtle hover:bg-surface-primary'
               )}
             >
-              <IconMoon stroke={2} className="h-8 w-8" />
+              <Moon strokeWidth={2} className="h-8 w-8" />
               <span className="text-xs font-medium">{t.onboarding.preferencesStep.themeDark}</span>
             </button>
 
@@ -88,7 +88,7 @@ export function PreferencesStep({
                   : 'border-border hover:border-border-subtle hover:bg-surface-primary'
               )}
             >
-              <IconScreenShare stroke={2} className="h-8 w-8" />
+              <ScreenShare strokeWidth={2} className="h-8 w-8" />
               <span className="text-xs font-medium">{t.onboarding.preferencesStep.themeSystem}</span>
             </button>
           </div>
@@ -113,7 +113,7 @@ export function PreferencesStep({
                   : 'border-border hover:border-border-subtle hover:bg-surface-primary'
               )}
             >
-              <IconCalendarWeek stroke={2} className="h-8 w-8" />
+              <CalendarDays strokeWidth={2} className="h-8 w-8" />
               <span className="text-xs font-medium">{t.onboarding.preferencesStep.viewCalendar}</span>
             </button>
 
@@ -128,7 +128,7 @@ export function PreferencesStep({
                   : 'border-border hover:border-border-subtle hover:bg-surface-primary'
               )}
             >
-              <IconListDetails stroke={2} className="h-8 w-8" />
+              <List strokeWidth={2} className="h-8 w-8" />
               <span className="text-xs font-medium">{t.onboarding.preferencesStep.viewList}</span>
             </button>
           </div>

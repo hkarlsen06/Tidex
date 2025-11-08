@@ -16,7 +16,7 @@ import { Label } from '@appui/Label';
 import { SupplementsEditor, SupplementsData } from '@/components/settings/SupplementsEditor';
 import { WageSourceCard } from '@/components/settings/pay/WageSourceCard';
 import { PRESET_WAGE_RATES, PRESET_SUPPLEMENT_RULES } from '@/lib/payroll';
-import { IconCalendar, IconAlertTriangle, IconTrash, IconCheck, IconX } from '@tabler/icons-react';
+import { Calendar, AlertTriangle, Trash2, Check, X } from 'lucide-react';
 import {
   createWageSnapshotAction,
   updateWageSnapshotAction,
@@ -211,7 +211,7 @@ export function WageHistoryModal({
         <DialogContent className="sm:rounded-3xl sm:max-w-[520px] max-h-[90vh] overflow-y-auto overflow-x-hidden">
           <DialogHeader className="pb-2 text-left">
             <DialogTitle className="flex items-center gap-2 text-left">
-              <IconCalendar className="h-5 w-5 text-text-muted flex-shrink-0" />
+              <Calendar className="h-5 w-5 text-text-muted flex-shrink-0" />
               <span className="flex-1 min-w-0">{t.pages.settings.pay.currentWageCard.title}</span>
             </DialogTitle>
             <DialogDescription className="text-left">
@@ -270,7 +270,7 @@ export function WageHistoryModal({
                 onClick={handleClose}
                 className="col-span-1 h-11 w-full rounded-full px-4 text-sm font-medium border border-border-subtle bg-white text-neutral-900 hover:bg-surface-secondary dark:text-neutral-900 gap-2"
               >
-                <IconX className="h-4 w-4" />
+                <X className="h-4 w-4" />
                 {t.common.close}
               </Button>
             </div>
@@ -295,7 +295,7 @@ export function WageHistoryModal({
       <DialogContent className="sm:rounded-3xl sm:max-w-[520px] max-h-[90vh] overflow-y-auto overflow-x-hidden">
         <DialogHeader className="pb-2 text-left">
           <DialogTitle className="flex items-center gap-2 text-left">
-            <IconCalendar className="h-5 w-5 text-text-muted flex-shrink-0" />
+            <Calendar className="h-5 w-5 text-text-muted flex-shrink-0" />
             <span className="flex-1 min-w-0">{title}</span>
           </DialogTitle>
         </DialogHeader>
@@ -392,7 +392,7 @@ export function WageHistoryModal({
                 disabled={pending}
                 className="col-span-1 h-11 w-full rounded-full px-4 text-sm font-medium transition-colors gap-2 bg-rose-600 text-white hover:bg-rose-700"
               >
-                <IconTrash className="h-4 w-4" />
+                <Trash2 className="h-4 w-4" />
                 {t.common.delete}
               </Button>
             )}
@@ -401,7 +401,7 @@ export function WageHistoryModal({
               disabled={pending || isCustomWageInvalid}
               className="col-span-1 h-11 w-full rounded-full px-4 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 gap-2"
             >
-              <IconCheck className="h-4 w-4" />
+              <Check className="h-4 w-4" />
               {pending ? t.pages.settings.pay.wageHistory.modal.saving : mode === 'edit' ? t.pages.settings.pay.wageHistory.modal.save : t.pages.settings.pay.wageHistory.modal.create}
             </Button>
             <Button
@@ -409,7 +409,7 @@ export function WageHistoryModal({
               disabled={pending}
               className="col-span-1 h-11 w-full rounded-full px-4 text-sm font-medium border border-border-subtle bg-white text-neutral-900 hover:bg-surface-secondary dark:text-neutral-900 gap-2"
             >
-              <IconX className="h-4 w-4" />
+              <X className="h-4 w-4" />
               {t.pages.settings.pay.wageHistory.modal.cancel}
             </Button>
           </div>
@@ -421,7 +421,7 @@ export function WageHistoryModal({
         <DialogContent className="sm:rounded-3xl sm:max-w-[425px]">
           <DialogHeader className="text-left">
             <DialogTitle className="flex items-center gap-2 text-destructive text-left">
-              <IconAlertTriangle className="h-5 w-5 flex-shrink-0" />
+              <AlertTriangle className="h-5 w-5 flex-shrink-0" />
               <span className="flex-1 min-w-0">{t.pages.settings.pay.wageHistory.modal.deleteTitle}</span>
             </DialogTitle>
             <DialogDescription className="text-left">
@@ -453,7 +453,7 @@ export function WageHistoryModal({
                 loading={pending}
                 className="col-span-1 h-11 w-full rounded-full px-4 text-sm font-medium transition-colors gap-2 bg-rose-600 text-white hover:bg-rose-700"
               >
-                <IconTrash className="h-4 w-4" />
+                <Trash2 className="h-4 w-4" />
                 {t.pages.settings.pay.wageHistory.modal.deleteTitle}
               </Button>
               <Button
@@ -461,7 +461,7 @@ export function WageHistoryModal({
                 disabled={pending}
                 className="col-span-1 h-11 w-full rounded-full px-4 text-sm font-medium border border-border-subtle bg-white text-neutral-900 hover:bg-surface-secondary dark:text-neutral-900 gap-2"
               >
-                <IconX className="h-4 w-4" />
+                <X className="h-4 w-4" />
                 {t.pages.settings.pay.wageHistory.modal.cancel}
               </Button>
             </div>

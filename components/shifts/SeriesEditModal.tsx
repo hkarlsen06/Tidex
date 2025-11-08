@@ -12,7 +12,7 @@ import { DurationSection } from "@/components/app/DurationSection";
 import { MonthPicker } from "@/components/app/MonthPicker";
 import { updateSeriesShift } from "@/app/[locale]/(app)/shifts/_actions/updateSeriesShift";
 import { deleteSeriesShift } from "@/app/[locale]/(app)/shifts/_actions/deleteSeriesShift";
-import { IconClock, IconTrash } from "@tabler/icons-react";
+import { Clock, Trash2 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { useMonth } from "@/components/app/MonthContext";
 import { useTranslations, useLocale } from "@/lib/i18n/client";
@@ -195,7 +195,7 @@ export function SeriesEditModal({
       <DialogContent className="sm:rounded-3xl max-w-[480px] max-h-[90vh] overflow-y-auto overflow-x-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-text-primary">
-            <IconClock className="h-5 w-5 text-text-muted" aria-hidden />
+            <Clock className="h-5 w-5 text-text-muted" aria-hidden />
             {t.pages.shifts.seriesEdit.title}
           </DialogTitle>
           <DialogDescription className="text-text-muted">
@@ -321,7 +321,7 @@ export function SeriesEditModal({
               "bg-rose-600 text-white hover:bg-rose-700"
             )}
           >
-            <IconTrash className="h-4 w-4" />
+            <Trash2 className="h-4 w-4" />
             {confirmingDelete ? t.pages.shifts.seriesEdit.confirmDeleteSeriesButton : t.pages.shifts.seriesEdit.deleteSeriesButton}
           </Button>
           <Button

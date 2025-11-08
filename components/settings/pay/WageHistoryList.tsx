@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Card } from '@appui/Card';
 import { Button } from '@appui/Button';
-import { IconPlus, IconHistory, IconEdit } from '@tabler/icons-react';
+import { Plus, History, Pencil } from 'lucide-react';
 import { WageHistoryModal } from './WageHistoryModal';
 import type { WageSnapshot } from '@/data-access/wage-snapshots';
 import type { Dictionary } from '@/lib/i18n/dictionaries/no';
@@ -65,7 +65,7 @@ export function WageHistoryList({
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-lg font-semibold text-text-primary flex items-center gap-2">
-            <IconHistory className="h-5 w-5" />
+            <History className="h-5 w-5" />
             {t.pages.settings.pay.wageHistory.title}
           </h3>
           <p className="text-sm text-text-secondary mt-1">
@@ -73,7 +73,7 @@ export function WageHistoryList({
           </p>
         </div>
         <Button onClick={handleAddNew} size="sm">
-          <IconPlus className="h-4 w-4 mr-2" />
+          <Plus className="h-4 w-4 mr-2" />
           {t.pages.settings.pay.wageHistory.addNew}
         </Button>
       </div>
@@ -86,14 +86,14 @@ export function WageHistoryList({
             <Card className="p-8">
               <div className="text-center">
                 <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-surface-secondary mb-4">
-                  <IconHistory className="h-6 w-6 text-text-secondary" />
+                  <History className="h-6 w-6 text-text-secondary" />
                 </div>
                 <h4 className="font-medium text-text-primary mb-2">{t.pages.settings.pay.wageHistory.emptyTitle}</h4>
                 <p className="text-sm text-text-secondary mb-4">
                   {t.pages.settings.pay.wageHistory.emptyDescription}
                 </p>
                 <Button onClick={handleAddNew} variant="outline">
-                  <IconPlus className="h-4 w-4 mr-2" />
+                  <Plus className="h-4 w-4 mr-2" />
                   {t.pages.settings.pay.wageHistory.addHistorical}
                 </Button>
               </div>
@@ -138,7 +138,7 @@ export function WageHistoryList({
                         onClick={() => handleEdit(snapshot)}
                         className="gap-1 flex-shrink-0"
                       >
-                        <IconEdit className="h-4 w-4" />
+                        <Pencil className="h-4 w-4" />
                         <span className="hidden sm:inline">{t.pages.settings.pay.wageHistory.edit}</span>
                       </Button>
                     </div>

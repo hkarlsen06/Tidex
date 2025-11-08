@@ -17,7 +17,11 @@ const nextConfig = {
 
   experimental: {
     // Optimize package imports to reduce bundle size
-    optimizePackageImports: ["@tabler/icons-react", "recharts", "lucide-react"],
+    optimizePackageImports: [
+      "recharts",
+      "lucide-react",
+      "@sentry/nextjs",
+    ],
   },
 
   // No `eslint` key (Next 16 doesn't lint in build).
@@ -54,6 +58,15 @@ export default withSentryConfig(
 
     // Automatically tree-shake Sentry logger statements to reduce bundle size
     disableLogger: true,
+
+    // Bundle size optimizations - tree-shake unused Sentry features
+    // See: https://docs.sentry.io/platforms/javascript/configuration/tree-shaking/
+    bundleSizeOptimizations: {
+      excludeDebugStatements: true,
+      excludeReplayIframe: true,
+      excludeReplayShadowDom: true,
+      excludeReplayWorker: true,
+    },
 
     // Enables automatic instrumentation of Vercel Cron Monitors. (Does not yet work with App Router route handlers.)
     // See the following for more information:

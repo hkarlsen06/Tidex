@@ -32,7 +32,7 @@ import {
   DialogFooter,
   DialogDescription,
 } from "@/components/app/Dialog";
-import { IconArrowRight, IconArrowLeft } from "@tabler/icons-react";
+import { ArrowRight, ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { useTranslations } from "@/lib/i18n/client";
 import type { Locale } from "@/lib/i18n/config";
@@ -360,9 +360,9 @@ function MoveShiftModal({
   );
 
   const directionArrow = isReverseDirection ? (
-    <IconArrowLeft className="h-8 w-8 text-brand-highlight" aria-hidden="true" />
+    <ArrowLeft className="h-8 w-8 text-brand-highlight" aria-hidden="true" />
   ) : (
-    <IconArrowRight className="h-8 w-8 text-brand-highlight" aria-hidden="true" />
+    <ArrowRight className="h-8 w-8 text-brand-highlight" aria-hidden="true" />
   );
 
   return (

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { IconPencil, IconTrash, IconClock, IconCheck, IconX, IconRefresh } from "@tabler/icons-react";
+import { Pencil, Trash2, Clock, Check, X, RefreshCw } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -271,7 +271,7 @@ export function ShiftDetails({
         <DialogContent hideCloseButton className="sm:rounded-3xl max-w-[480px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-text-primary">
-              <IconClock className="h-5 w-5 text-text-muted" aria-hidden />
+              <Clock className="h-5 w-5 text-text-muted" aria-hidden />
               {t.pages.shifts.details.title}
             </DialogTitle>
           </DialogHeader>
@@ -386,7 +386,7 @@ export function ShiftDetails({
                     : "bg-rose-600 text-white hover:bg-rose-700"
                 )}
               >
-                <IconTrash className="h-4 w-4" />
+                <Trash2 className="h-4 w-4" />
                 {confirmingDelete ? t.pages.shifts.details.confirmDeleteButton : t.pages.shifts.details.deleteButton}
               </Button>
               {isEditing ? (
@@ -395,7 +395,7 @@ export function ShiftDetails({
                   disabled={saving || !canSave}
                   className="col-span-1 h-11 w-full rounded-full px-4 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 gap-2"
                 >
-                  <IconCheck className="h-4 w-4" />
+                  <Check className="h-4 w-4" />
                   {t.pages.shifts.details.saveButton}
                 </Button>
               ) : (
@@ -404,7 +404,7 @@ export function ShiftDetails({
                   disabled={saving || isDeleting || confirmingDelete}
                   className="col-span-1 h-11 w-full rounded-full px-4 text-sm font-medium transition-colors gap-2 bg-blue-600 text-white hover:bg-blue-700"
                 >
-                  <IconPencil className="h-4 w-4" />
+                  <Pencil className="h-4 w-4" />
                   {t.pages.shifts.details.editButton}
                 </Button>
               )}
@@ -414,7 +414,7 @@ export function ShiftDetails({
                   disabled={saving || isDeleting}
                   className="col-span-1 h-11 w-full rounded-full px-4 text-sm font-medium transition-colors gap-2 bg-purple-600 text-white hover:bg-purple-700"
                 >
-                  <IconRefresh className="h-4 w-4" />
+                  <RefreshCw className="h-4 w-4" />
                   {t.pages.shifts.details.editSeriesButton}
                 </Button>
               )}
@@ -432,7 +432,7 @@ export function ShiftDetails({
                   disabled={saving || isDeleting}
                   className="col-span-1 h-11 w-full rounded-full px-4 text-sm font-medium border border-border-subtle bg-white text-neutral-900 hover:bg-surface-secondary dark:text-neutral-900 gap-2"
                 >
-                  <IconX className="h-4 w-4" />
+                  <X className="h-4 w-4" />
                   {t.pages.shifts.details.cancelButton}
                 </Button>
               ) : confirmingDelete ? (
@@ -443,7 +443,7 @@ export function ShiftDetails({
                   disabled={isDeleting}
                   className="col-span-1 h-11 w-full rounded-full px-4 text-sm font-medium border border-border-subtle bg-white text-neutral-900 hover:bg-surface-secondary dark:text-neutral-900 gap-2"
                 >
-                  <IconX className="h-4 w-4" />
+                  <X className="h-4 w-4" />
                   {t.pages.shifts.details.cancelButton}
                 </Button>
               ) : (

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useEffect, useRef, type Ref } from "react";
-import { IconClock, IconCopy, IconArrowsExchange, IconInfoCircle } from "@tabler/icons-react";
+import { Clock, Copy, ArrowRightLeft, Info } from "lucide-react";
 import { ShiftsCalendar } from "@/components/app/ShiftsCalendar";
 import { Card } from "@/components/app/Card";
 import { Button } from "@/components/app/Button";
@@ -313,7 +313,7 @@ export function MonthlyEarningsCalendar({
                 loading={copying}
                 className="flex-1 h-9 gap-2 rounded-full bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 dark:text-blue-400"
               >
-                <IconCopy stroke={2} className="h-4 w-4" />
+                <Copy strokeWidth={2} className="h-4 w-4" />
                 {t.pages.shifts.actions.copy}
               </Button>
               <Button
@@ -342,7 +342,7 @@ export function MonthlyEarningsCalendar({
                   t.pages.shifts.actions.cancel
                 ) : (
                   <>
-                    <IconInfoCircle stroke={2} className="h-4 w-4" />
+                    <Info strokeWidth={2} className="h-4 w-4" />
                     {t.pages.shifts.actions.details}
                   </>
                 )}
@@ -364,7 +364,7 @@ export function MonthlyEarningsCalendar({
                     : "bg-amber-500/10 text-amber-700 hover:bg-amber-500/20 dark:text-amber-300"
                 )}
               >
-                <IconArrowsExchange stroke={2} className="h-4 w-4" />
+                <ArrowRightLeft strokeWidth={2} className="h-4 w-4" />
                 {t.pages.shifts.actions.move}
               </Button>
             </div>
@@ -397,7 +397,7 @@ export function MonthlyEarningsCalendar({
                 )}
               >
                 <span>--:--</span>
-                <IconClock stroke={2} aria-hidden="true" />
+                <Clock strokeWidth={2} aria-hidden="true" />
               </Button>
             </div>
           )}
