@@ -28,7 +28,7 @@ export function WeekdayChips({ selected, onRemove, className }: WeekdayChipsProp
   const weekdayKeys: Array<'0' | '1' | '2' | '3' | '4' | '5' | '6'> = ['1', '2', '3', '4', '5', '6', '0'];
 
   return (
-    <div className={cn("flex items-center justify-between gap-2", className)}>
+    <div className={cn("flex items-center justify-between gap-1.5 w-full", className)}>
       {weekdayKeys.map((weekdayKey) => {
         const isSelected = selected[weekdayKey] !== undefined;
         const label = formatWeekdayShort(weekdayKey, locale);
@@ -40,7 +40,7 @@ export function WeekdayChips({ selected, onRemove, className }: WeekdayChipsProp
             onClick={() => isSelected && onRemove(weekdayKey)}
             disabled={!isSelected}
             className={cn(
-              "flex h-9 flex-1 items-center justify-center rounded-xl px-3 text-sm font-semibold transition-all",
+              "flex h-9 flex-1 items-center justify-center rounded-xl px-1.5 text-sm font-semibold transition-all min-w-0",
               "border focus:outline-none focus-visible:outline-none",
               isSelected
                 ? "border-brand-highlight bg-brand-gradientStart text-text-inverse shadow-app hover:bg-brand-gradientMid cursor-pointer"
