@@ -11,11 +11,9 @@ import {
   ChartNoAxesCombined,
   Bolt,
   ArrowDown,
-  X,
   ArrowLeft,
 } from "lucide-react";
 import { useNavigationFeedback } from "./navigation-feedback";
-import { useScrollDirection } from "./use-scroll-direction";
 import { supabase } from "@/lib/supabase/browser";
 import { useTranslations } from "@/lib/i18n/client";
 
@@ -62,7 +60,6 @@ export function NavBar() {
   const { t } = useTranslations();
   const rawPathname = usePathname();
   const { navigate, pendingPath } = useNavigationFeedback();
-  const { scrollDirection, scrollY } = useScrollDirection(50);
   const [showAddShiftHint, setShowAddShiftHint] = useState(false);
 
   // Strip locale prefix from pathname for consistent nav item matching
@@ -180,60 +177,14 @@ export function NavBar() {
     return matches(pathname) || matches(pendingPath);
   };
 
-  // Determine if navbar should be minimized
-  const shouldMinimize = () => {
-    if (scrollDirection !== "down" || scrollY < 100) {
-      return false;
-    }
-
-    const normalizedPath = normalizePath(pathname);
-    if (!normalizedPath) {
-      return false;
-    }
-
-    // Minimize on /stats route only (not /settings since it has little content)
-    const shouldMinimizeToHome = normalizedPath === "/stats";
-
-    // Minimize on /settings/* sub-routes (but not /settings itself)
-    const shouldMinimizeToSettings =
-      normalizedPath.startsWith("/settings/");
-
-    // Minimize on /shifts and /shifts/add routes to close button
-    const shouldMinimizeToClose =
-      normalizedPath === "/shifts/add" || normalizedPath === "/shifts";
-
-    return shouldMinimizeToHome || shouldMinimizeToSettings || shouldMinimizeToClose;
-  };
-
-  const isMinimized = shouldMinimize();
   const normalizedPath = normalizePath(pathname);
-  const isOnAddPage = normalizedPath === "/shifts/add";
-  const isOnShiftsPage = normalizedPath === "/shifts";
   const isOnSettingsSubPage = normalizedPath?.startsWith("/settings/") ?? false;
-  const isOnStatsPage = normalizedPath === "/stats";
-  const minimizeToClose = isMinimized && isOnAddPage;
-  const minimizeToPlus = isMinimized && isOnShiftsPage;
-  const minimizeToSettings = isMinimized && isOnSettingsSubPage;
-  const minimizeToHome = isMinimized && isOnStatsPage;
 
   return (
-    <nav className={`fixed left-0 right-0 z-40 transition-all duration-500 ease-in-out pb-[env(safe-area-inset-bottom)] ${
-      isMinimized ? "bottom-4" : "bottom-0 md:bottom-4"
-    }`}>
-      <div className={`mx-auto transition-all duration-500 ease-in-out ${
-        isMinimized ? "max-w-[480px] px-4" : "max-w-[520px] md:px-4"
-      }`}>
-        <div className={`flex items-center transition-all duration-500 ease-in-out ${
-          isMinimized
-            ? minimizeToClose || minimizeToPlus
-              ? "w-16 mx-auto justify-center py-3 rounded-3xl border border-border-subtle bg-surface-primary/80 shadow-app-lg backdrop-blur"
-              : minimizeToSettings
-              ? "w-16 ml-auto justify-center py-3 rounded-3xl border border-border-subtle bg-surface-primary/80 shadow-app-lg backdrop-blur"
-              : minimizeToHome
-              ? "w-16 justify-center py-3 rounded-3xl border border-border-subtle bg-surface-primary/80 shadow-app-lg backdrop-blur"
-              : "w-16 mx-auto justify-center py-3 rounded-3xl border border-border-subtle bg-surface-primary/80 shadow-app-lg backdrop-blur"
-            : "justify-around py-4 bg-surface-primary/95 backdrop-blur border-t border-border-subtle md:border md:rounded-2xl md:shadow-app-lg"
-        }`}>
+    <>
+      <nav className="fixed left-0 right-0 z-40 bottom-0 md:bottom-4">
+        <div className="mx-auto max-w-[520px] md:px-4">
+          <div className="flex items-center justify-around py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] bg-surface-primary/95 backdrop-blur border-t border-border-subtle md:border md:rounded-2xl md:shadow-app-lg md:pb-4">
           {navItems.map((item) => {
             const isActive = isPathActive(item);
             const Icon = item.icon;
@@ -246,22 +197,12 @@ export function NavBar() {
                 !isOnAddPage &&
                 (isEligibleForHint(pathname) || isEligibleForHint(pendingPath));
 
-              // Show center button when minimized on /shifts or /shifts/add
-              const shouldShow = !isMinimized || minimizeToClose || minimizeToPlus;
-
-              // Don't render at all when hidden and minimized
-              if (!shouldShow && isMinimized) {
-                return null;
-              }
-
               return (
                 <div
                   key={item.href}
-                  className={`relative flex items-center justify-center transition-all duration-500 ${
-                    shouldShow ? "opacity-100 scale-100" : "opacity-0 scale-0 w-0"
-                  }`}
+                  className="relative flex items-center justify-center"
                 >
-                  {shouldShowHint && shouldShow ? (
+                  {shouldShowHint ? (
                     <div className="pointer-events-none absolute bottom-[calc(100%+1.5rem)] left-1/2 flex -translate-x-1/2 flex-col items-center gap-3">
                       <span className="animate-gentle-pulse flex w-max flex-col items-center gap-0.5 rounded-lg border border-border-subtle bg-surface-primary px-3 py-1.5 text-center text-xs font-semibold text-text-primary shadow-app leading-tight">
                         <span>{t.navigation.addFirstShiftLine1}</span>
@@ -298,16 +239,6 @@ export function NavBar() {
             // Use ArrowLeft icon when on settings sub-page, otherwise use the item's icon
             const DisplayIcon = showBackArrow ? ArrowLeft : Icon;
 
-            // Determine if this icon should be visible when minimized
-            const shouldShowWhenMinimized =
-              (minimizeToSettings && item.href === "/settings") ||
-              (!minimizeToClose && !minimizeToPlus && !minimizeToSettings && item.href === "/");
-
-            // Don't render side icons at all when minimized (except the one that should show)
-            if (isMinimized && !shouldShowWhenMinimized) {
-              return null;
-            }
-
             return (
               <Link
                 key={item.href}
@@ -326,8 +257,11 @@ export function NavBar() {
               </Link>
             );
           })}
+          </div>
         </div>
-      </div>
-    </nav>
+      </nav>
+      {/* Background extension for safe area on mobile devices */}
+      <div className="fixed bottom-0 left-0 right-0 z-30 h-[env(safe-area-inset-bottom)] bg-surface-primary/95 backdrop-blur md:hidden" />
+    </>
   );
 }

@@ -2,7 +2,7 @@
   "name": "Tidex",
   "short_name": "Tidex",
   "description": "App for å regne ut lønn basert på skiftene dine med tillegg!",
-  "theme_color": "#2563eb",
+  "theme_color": "#3b82f6",
   "background_color": "#ffffff",
   "display": "standalone",
   "orientation": "portrait",
