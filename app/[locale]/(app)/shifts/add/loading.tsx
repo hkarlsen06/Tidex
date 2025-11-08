@@ -2,7 +2,7 @@ import { AddCalendarSkeleton } from "@/components/app/AddCalendarSkeleton";
 
 export default function AddShiftLoading() {
   return (
-    <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 pb-24">
+    <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 pt-8 pb-24">
       {/* Header skeleton */}
       <div className="flex flex-col gap-4 animate-pulse">
         <div className="space-y-1">
@@ -15,7 +15,9 @@ export default function AddShiftLoading() {
             </div>
           </div>
         </div>
-        <div className="h-4 w-64 bg-surface-secondary rounded" />
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div className="h-4 w-64 bg-surface-secondary rounded" />
+        </div>
       </div>
 
       {/* Loading skeletons for the interactive parts */}

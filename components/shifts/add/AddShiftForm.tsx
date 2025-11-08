@@ -330,7 +330,7 @@ export default function AddShiftForm({ existingShifts, userSettings, presetRules
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 pb-24">
+    <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 pt-8 pb-24">
       <div className="flex flex-col gap-4">
         <div className="space-y-1">
           <span className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-highlight">
