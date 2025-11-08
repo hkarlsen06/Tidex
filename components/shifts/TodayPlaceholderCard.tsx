@@ -1,7 +1,8 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { Card, CardHeader } from "@/components/app/Card";
-import { useTranslations } from "@/lib/i18n/client";
+import { useTranslations, useLocale } from "@/lib/i18n/client";
 import { getDateFormatter } from "@/lib/i18n/locale";
 
 /**
@@ -9,9 +10,12 @@ import { getDateFormatter } from "@/lib/i18n/locale";
  *
  * Visually matches ShiftCard styling but shows placeholder dashes for earnings.
  * Appears in chronological position within the shifts list.
+ * Clicking navigates to /shifts/add with today's date pre-selected.
  */
 export function TodayPlaceholderCard() {
-  const { t, locale } = useTranslations();
+  const { t } = useTranslations();
+  const locale = useLocale();
+  const router = useRouter();
 
   // Get today's date in local timezone
   const now = new Date();
@@ -21,9 +25,8 @@ export function TodayPlaceholderCard() {
   const todayDateString = `${year}-${month}-${day}`;
 
   // Parse and format the date (same as ShiftCard)
-  // Use local time parsing (not UTC) to match shift_date format
-  const parsed = new Date(todayDateString);
-  const weekday = parsed.getDay();
+  const parsed = new Date(`${todayDateString}T00:00:00Z`);
+  const weekday = parsed.getUTCDay();
 
   const dateFormatter = getDateFormatter(locale, {
     day: "numeric",
@@ -34,9 +37,22 @@ export function TodayPlaceholderCard() {
   const dayName = t.dateTime.daysShort[weekday];
   const displayDayName = locale === 'no' ? dayName.toLowerCase() : dayName;
 
+  const handleClick = () => {
+    router.push(`/${locale}/shifts/add?date=${todayDateString}`);
+  };
+
   return (
     <Card
-      className="bg-surface-primary rounded-3xl ring-2 ring-brand-highlight"
+      className="bg-surface-primary rounded-3xl ring-2 ring-brand-highlight cursor-pointer transition-colors hover:bg-surface-secondary"
+      onClick={handleClick}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          handleClick();
+        }
+      }}
     >
       <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0 py-4">
         <div>
