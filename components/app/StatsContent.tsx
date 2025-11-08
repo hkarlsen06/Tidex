@@ -166,6 +166,7 @@ export function StatsContent({ data }: StatsContentProps) {
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
   const isSwiping = useRef<boolean>(false);
+  const touchStartTarget = useRef<EventTarget | null>(null);
 
   const selectedYear = selectedMonth.getFullYear();
   const selectedMonthNumber = selectedMonth.getMonth() + 1;
@@ -329,6 +330,13 @@ export function StatsContent({ data }: StatsContentProps) {
     selectedYear === realNow.getUTCFullYear() &&
     selectedMonthNumber === realNow.getUTCMonth() + 1;
 
+  // Helper function to check if touch started inside a chart
+  const isInsideChart = (target: EventTarget | null): boolean => {
+    if (!(target instanceof Element)) return false;
+    // Check if the touch started inside a recharts container
+    return target.closest('.recharts-wrapper') !== null;
+  };
+
   // Swipe gesture detection for month navigation
   useEffect(() => {
     const container = swipeContainerRef.current;
@@ -337,11 +345,17 @@ export function StatsContent({ data }: StatsContentProps) {
     const handleTouchStart = (e: TouchEvent) => {
       touchStartX.current = e.touches[0].clientX;
       touchStartY.current = e.touches[0].clientY;
+      touchStartTarget.current = e.target;
       isSwiping.current = false;
     };
 
     const handleTouchMove = (e: TouchEvent) => {
       if (touchStartX.current === null || touchStartY.current === null) {
+        return;
+      }
+
+      // Skip swipe detection if touch started inside a chart
+      if (isInsideChart(touchStartTarget.current)) {
         return;
       }
 
@@ -366,25 +380,30 @@ export function StatsContent({ data }: StatsContentProps) {
       if (touchStartX.current === null || isLoadingStats) {
         touchStartX.current = null;
         touchStartY.current = null;
+        touchStartTarget.current = null;
         isSwiping.current = false;
         return;
       }
 
-      const deltaX = e.changedTouches[0].clientX - touchStartX.current;
-      const threshold = 50;
+      // Skip month navigation if touch started inside a chart
+      if (!isInsideChart(touchStartTarget.current)) {
+        const deltaX = e.changedTouches[0].clientX - touchStartX.current;
+        const threshold = 50;
 
-      if (Math.abs(deltaX) > threshold) {
-        if (deltaX > 0) {
-          // Swipe right -> previous month
-          goToPreviousMonth();
-        } else {
-          // Swipe left -> next month
-          goToNextMonth();
+        if (Math.abs(deltaX) > threshold) {
+          if (deltaX > 0) {
+            // Swipe right -> previous month
+            goToPreviousMonth();
+          } else {
+            // Swipe left -> next month
+            goToNextMonth();
+          }
         }
       }
 
       touchStartX.current = null;
       touchStartY.current = null;
+      touchStartTarget.current = null;
       isSwiping.current = false;
     };
 
@@ -411,7 +430,7 @@ export function StatsContent({ data }: StatsContentProps) {
     <>
       {/* Loading overlay - fixed to viewport center, covers page content */}
       {isLoadingStats && (
-        <div className="fixed inset-x-0 top-0 bottom-0 bg-background/70 backdrop-blur-sm z-50 flex items-center justify-center">
+        <div className="fixed inset-x-0 top-0 bottom-[calc(5rem+env(safe-area-inset-bottom))] md:bottom-20 bg-background/70 backdrop-blur-sm z-50 flex items-center justify-center">
           <div className="bg-surface-primary border border-border rounded-lg p-4 shadow-lg">
             <div className="flex items-center gap-3">
               <div className="w-6 h-6 border-2 border-brand-gradientStart border-t-transparent rounded-full animate-spin" />
