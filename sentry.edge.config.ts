@@ -16,7 +16,8 @@ if (process.env.NODE_ENV === "production") {
     ],
 
     // Define how likely traces are sampled. Adjust this value in production, or use tracesSampler for greater control.
-    tracesSampleRate: 1,
+    // 10% sampling in production to reduce overhead and Sentry quota usage
+    tracesSampleRate: 0.1,
 
     // Enable logs to be sent to Sentry
     enableLogs: true,
