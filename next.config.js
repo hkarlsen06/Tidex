@@ -17,6 +17,7 @@ const nextConfig = {
 
   experimental: {
     // Optimize package imports to reduce bundle size
+    // optimizePackageImports handles tree-shaking for these packages
     optimizePackageImports: [
       "recharts",
       "lucide-react",
