@@ -84,15 +84,14 @@ function LayoutContent({
   avatarUrl,
 }: AppLayoutClientProps) {
   return (
-    <div className="app-container grid min-h-dvh grid-rows-[auto_1fr]">
+    <>
       <TopHeader userName={userName} avatarUrl={avatarUrl} />
-      <main
-        className="relative px-4 pt-8"
-        style={{ paddingBottom: "calc(6rem + env(safe-area-inset-bottom))" }}
-      >
-        {children}
+      <main className="flex items-center min-h-dvh pt-[calc(3.75rem+env(safe-area-inset-top))] pb-[calc(5rem+env(safe-area-inset-bottom))] md:pt-20 md:pb-20">
+        <div className="mx-auto max-w-md px-4 w-full">
+          {children}
+        </div>
       </main>
       <NavBar />
-    </div>
+    </>
   );
 }
