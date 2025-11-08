@@ -5,7 +5,7 @@ import { Card } from '@appui/Card';
 import { Label } from '@appui/Label';
 import { updateDisplaySettings } from '@/app/[locale]/(app)/settings/_actions/updateSettings';
 import { useRouter } from 'next/navigation';
-import { IconListDetails, IconCalendarWeek, IconSun, IconMoon, IconScreenShare } from '@tabler/icons-react';
+import { List, CalendarDays, Sun, Moon, ScreenShare } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Dictionary } from '@/lib/i18n/dictionaries/no';
 
@@ -94,7 +94,7 @@ export function DisplayForm({ initialData, t }: DisplayFormProps) {
                     isSaving && 'opacity-50 cursor-not-allowed'
                   )}
                 >
-                  <IconSun stroke={2} className="h-8 w-8" />
+                  <Sun strokeWidth={2} className="h-8 w-8" />
                   <span className="text-xs font-medium">{t.pages.settings.display.theme.light}</span>
                 </button>
 
@@ -111,7 +111,7 @@ export function DisplayForm({ initialData, t }: DisplayFormProps) {
                     isSaving && 'opacity-50 cursor-not-allowed'
                   )}
                 >
-                  <IconMoon stroke={2} className="h-8 w-8" />
+                  <Moon strokeWidth={2} className="h-8 w-8" />
                   <span className="text-xs font-medium">{t.pages.settings.display.theme.dark}</span>
                 </button>
 
@@ -128,7 +128,7 @@ export function DisplayForm({ initialData, t }: DisplayFormProps) {
                     isSaving && 'opacity-50 cursor-not-allowed'
                   )}
                 >
-                  <IconScreenShare stroke={2} className="h-8 w-8" />
+                  <ScreenShare strokeWidth={2} className="h-8 w-8" />
                   <span className="text-xs font-medium">{t.pages.settings.display.theme.system}</span>
                 </button>
               </div>
@@ -159,7 +159,7 @@ export function DisplayForm({ initialData, t }: DisplayFormProps) {
                     isSaving && 'opacity-50 cursor-not-allowed'
                   )}
                 >
-                  <IconCalendarWeek stroke={2} className="h-8 w-8" />
+                  <CalendarDays strokeWidth={2} className="h-8 w-8" />
                   <span className="text-xs font-medium">{t.pages.settings.display.defaultView.calendar}</span>
                 </button>
 
@@ -176,7 +176,7 @@ export function DisplayForm({ initialData, t }: DisplayFormProps) {
                     isSaving && 'opacity-50 cursor-not-allowed'
                   )}
                 >
-                  <IconListDetails stroke={2} className="h-8 w-8" />
+                  <List strokeWidth={2} className="h-8 w-8" />
                   <span className="text-xs font-medium">{t.pages.settings.display.defaultView.list}</span>
                 </button>
               </div>

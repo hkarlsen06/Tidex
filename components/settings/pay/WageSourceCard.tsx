@@ -7,7 +7,7 @@ import { Input } from '@appui/Input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@appui/Select';
 import { Separator } from '@appui/Separator';
 import { PRESET_WAGE_RATES } from '@/lib/payroll';
-import { IconBuilding, IconAdjustments } from '@tabler/icons-react';
+import { Building, SlidersHorizontal } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface WageSourceCardProps {
@@ -87,7 +87,7 @@ export function WageSourceCard({
               disabled && 'opacity-50 cursor-not-allowed'
             )}
           >
-            <IconBuilding stroke={2} className="h-8 w-8" />
+            <Building strokeWidth={2} className="h-8 w-8" />
             <span className="text-xs font-medium">{labels.tariffButton || 'Tariff'}</span>
           </button>
 
@@ -104,7 +104,7 @@ export function WageSourceCard({
               disabled && 'opacity-50 cursor-not-allowed'
             )}
           >
-            <IconAdjustments stroke={2} className="h-8 w-8" />
+            <SlidersHorizontal strokeWidth={2} className="h-8 w-8" />
             <span className="text-xs font-medium">{labels.customButton || 'Egendefinert'}</span>
           </button>
         </div>

@@ -5,30 +5,25 @@ import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import type { MouseEvent } from "react";
 import {
-  IconHome,
-  IconHomeFilled,
-  IconCalendarWeek,
-  IconCalendarWeekFilled,
-  IconPlus,
-  IconStack,
-  IconStackFilled,
-  IconSettings,
-  IconSettingsFilled,
-  IconArrowDown,
-  IconX,
-  IconSettingsShare,
-} from "@tabler/icons-react";
+  Home,
+  CalendarDays,
+  Plus,
+  Layers,
+  Settings,
+  ArrowDown,
+  X,
+  ArrowLeft,
+} from "lucide-react";
 import { useNavigationFeedback } from "./navigation-feedback";
 import { useScrollDirection } from "./use-scroll-direction";
 import { supabase } from "@/lib/supabase/browser";
 import { useTranslations } from "@/lib/i18n/client";
 
-type TablerIcon = typeof IconHome;
+type LucideIcon = typeof Home;
 type NavItem = {
   href: string;
   label: string;
-  icon: TablerIcon;
-  iconFilled: TablerIcon;
+  icon: LucideIcon;
   isCenter?: boolean;
   matchPrefix?: boolean;
 };
@@ -37,33 +32,28 @@ const navItems: NavItem[] = [
   {
     href: "/",
     label: "Home",
-    icon: IconHome,
-    iconFilled: IconHomeFilled,
+    icon: Home,
   },
   {
     href: "/shifts",
     label: "Shifts",
-    icon: IconCalendarWeek,
-    iconFilled: IconCalendarWeekFilled,
+    icon: CalendarDays,
   },
   {
     href: "/shifts/add",
     label: "Add",
-    icon: IconPlus,
-    iconFilled: IconPlus,
+    icon: Plus,
     isCenter: true,
   },
   {
     href: "/stats",
     label: "Stats",
-    icon: IconStack,
-    iconFilled: IconStackFilled,
+    icon: Layers,
   },
   {
     href: "/settings",
     label: "Settings",
-    icon: IconSettings,
-    iconFilled: IconSettingsFilled,
+    icon: Settings,
     matchPrefix: true,
   },
 ];
@@ -245,7 +235,7 @@ export function NavBar() {
                 className="flex items-center justify-center p-2 -m-2 navbar-icon-fade-in"
               >
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-gradientMid navbar-scale-in">
-                  <IconX className="h-6 w-6 text-text-inverse transition-transform duration-200" stroke={2} />
+                  <X className="h-6 w-6 text-text-inverse transition-transform duration-200" strokeWidth={2} />
                 </div>
               </Link>
             ) : minimizeToPlus ? (
@@ -256,17 +246,17 @@ export function NavBar() {
                 className="flex items-center justify-center p-2 -m-2 navbar-icon-fade-in"
               >
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-gradientMid navbar-scale-in">
-                  <IconPlus className="h-6 w-6 text-text-inverse" stroke={2} />
+                  <Plus className="h-6 w-6 text-text-inverse" strokeWidth={2} />
                 </div>
               </Link>
             ) : minimizeToSettings ? (
-              // Minimized to settings share icon for sub-routes
+              // Minimized to back arrow for settings sub-routes
               <Link
                 href="/settings"
                 onClick={handleItemClick("/settings")}
                 className="flex items-center justify-center p-3 -m-3 navbar-icon-fade-in"
               >
-                <IconSettingsShare className="h-6 w-6 text-text-primary navbar-scale-in" stroke={2} />
+                <ArrowLeft className="h-6 w-6 text-text-primary navbar-scale-in" strokeWidth={2} />
               </Link>
             ) : (
               // Minimized to home icon on left
@@ -275,13 +265,13 @@ export function NavBar() {
                 onClick={handleItemClick("/")}
                 className="flex items-center justify-center p-3 -m-3 navbar-icon-fade-in"
               >
-                <IconHome className="h-6 w-6 text-text-primary navbar-scale-in" stroke={2} />
+                <Home className="h-6 w-6 text-text-primary navbar-scale-in" strokeWidth={2} />
               </Link>
             )
           ) : (
             navItems.map((item) => {
             const isActive = isPathActive(item);
-            const Icon = isActive && !item.isCenter ? item.iconFilled : item.icon;
+            const Icon = item.icon;
 
             if (item.isCenter) {
               const isOnAddPage = pathname === "/shifts/add" || pendingPath === "/shifts/add";
@@ -299,9 +289,9 @@ export function NavBar() {
                         <span>{t.navigation.addFirstShiftLine1}</span>
                         <span>{t.navigation.addFirstShiftLine2}</span>
                       </span>
-                      <IconArrowDown
+                      <ArrowDown
                         className="h-10 w-10 text-brand-highlight animate-gentle-bob drop-shadow"
-                        stroke={2}
+                        strokeWidth={2}
                       />
                     </div>
                   ) : null}
@@ -315,7 +305,7 @@ export function NavBar() {
                         className={`h-6 w-6 text-text-inverse transition-transform duration-200 ${
                           isOnAddPage ? "rotate-45" : ""
                         }`}
-                        stroke={2}
+                        strokeWidth={2}
                       />
                     </div>
                   </Link>
@@ -323,9 +313,12 @@ export function NavBar() {
               );
             }
 
-            // Show back arrow badge on settings icon when on sub-routes
+            // Show back arrow on settings icon when on sub-routes
             const isSettingsItem = item.href === "/settings";
-            const showSettingsBadge = isSettingsItem && isOnSettingsSubPage;
+            const showBackArrow = isSettingsItem && isOnSettingsSubPage;
+
+            // Use ArrowLeft icon when on settings sub-page, otherwise use the item's icon
+            const DisplayIcon = showBackArrow ? ArrowLeft : Icon;
 
             return (
               <Link
@@ -334,25 +327,14 @@ export function NavBar() {
                 onClick={handleItemClick(item.href)}
                 className="flex items-center justify-center p-3 -m-3 navbar-icon-fade-in"
               >
-                {showSettingsBadge ? (
-                  <IconSettingsShare
-                    className={`navbar-scale-in ${
-                      isActive
-                        ? "h-6 w-6 text-text-primary"
-                        : "h-6 w-6 text-text-muted"
-                    }`}
-                    stroke={2}
-                  />
-                ) : (
-                  <Icon
-                    className={`navbar-scale-in ${
-                      isActive
-                        ? "h-6 w-6 text-text-primary"
-                        : "h-6 w-6 text-text-muted"
-                    }`}
-                    stroke={2}
-                  />
-                )}
+                <DisplayIcon
+                  className={`navbar-scale-in h-6 w-6 ${
+                    isActive
+                      ? "text-brand-highlight"
+                      : "text-text-muted"
+                  }`}
+                  strokeWidth={isActive ? 3.5 : 2}
+                />
               </Link>
             );
           })

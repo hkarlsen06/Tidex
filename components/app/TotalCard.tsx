@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { IconArrowDown, IconArrowUp } from '@tabler/icons-react';
+import { ArrowDown, ArrowUp } from 'lucide-react';
 import { Card, CardContent } from '@appui/Card';
 import { useTranslations } from '@/lib/i18n/client';
 
@@ -59,7 +59,7 @@ export const TotalCard: React.FC<TotalCardProps> = ({
 
   const isPositive = percentageChange !== undefined && percentageChange >= 0;
   const hasChange = percentageChange !== undefined && percentageChange !== 0;
-  const ArrowIcon = isPositive ? IconArrowUp : IconArrowDown;
+  const ArrowIcon = isPositive ? ArrowUp : ArrowDown;
 
   const handleKeyDown = onClick
     ? (event: React.KeyboardEvent<HTMLDivElement>) => {
@@ -183,7 +183,7 @@ export const TotalCard: React.FC<TotalCardProps> = ({
               >
                 <ArrowIcon
                   className={`h-6 w-6 ${isPositive ? 'text-success' : 'text-error'}`}
-                  stroke={2}
+                  strokeWidth={2}
                 />
                 <span className={`text-lg font-semibold ${isPositive ? 'text-success' : 'text-error'}`}>
                   {Math.abs(percentageChange as number)}%

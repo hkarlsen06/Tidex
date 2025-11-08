@@ -7,8 +7,7 @@ import { Input } from "@appui/Input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@appui/Select";
 import { Button } from "@appui/Button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@appui/Tooltip";
-import { InfoIcon } from "lucide-react";
-import { IconArrowNarrowDown } from "@tabler/icons-react";
+import { InfoIcon, ArrowDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslations } from "@/lib/i18n/client";
 
@@ -182,7 +181,7 @@ export function BreakStep({
                     pressed: thresholdButtonPressed,
                   })}
                 >
-                  <IconArrowNarrowDown stroke={2} className="h-4 w-4" />
+                  <ArrowDown strokeWidth={2} className="h-4 w-4" />
                 </button>
               </div>
             </div>
@@ -219,7 +218,7 @@ export function BreakStep({
                     pressed: durationButtonPressed,
                   })}
                 >
-                  <IconArrowNarrowDown stroke={2} className="h-4 w-4" />
+                  <ArrowDown strokeWidth={2} className="h-4 w-4" />
                 </button>
               </div>
             </div>
@@ -264,7 +263,7 @@ export function BreakStep({
                     pressed: methodButtonPressed,
                   })}
                 >
-                  <IconArrowNarrowDown stroke={2} className="h-4 w-4" />
+                  <ArrowDown strokeWidth={2} className="h-4 w-4" />
                 </button>
               </div>
 

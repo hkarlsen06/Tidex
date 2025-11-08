@@ -11,7 +11,7 @@ import { WeekdayChips } from "@/components/app/WeekdayChips";
 import { DurationSection } from "@/components/app/DurationSection";
 import { MonthPicker } from "@/components/app/MonthPicker";
 import { createSeriesShift } from "@/app/[locale]/(app)/shifts/add/_actions/createSeriesShift";
-import { IconClock } from "@tabler/icons-react";
+import { Clock } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { useMonth } from "@/components/app/MonthContext";
 import { useTranslations, useLocale } from "@/lib/i18n/client";
@@ -266,7 +266,7 @@ export default function RecurringForm({ existingShifts, userSettings, presetRule
               className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border border-border-subtle bg-surface-secondary/70 text-text-muted transition hover:border-border hover:text-text-primary focus:outline-none focus-visible:outline-none"
               aria-label={t.pages.shifts.add.form.selectStartTime}
             >
-              <IconClock className="h-5 w-5" stroke={1.5} />
+              <Clock className="h-5 w-5" strokeWidth={1.5} />
             </button>
           </div>
         </label>
@@ -285,7 +285,7 @@ export default function RecurringForm({ existingShifts, userSettings, presetRule
               className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border border-border-subtle bg-surface-secondary/70 text-text-muted transition hover:border-border hover:text-text-primary focus:outline-none focus-visible:outline-none"
               aria-label={t.pages.shifts.add.form.selectEndTime}
             >
-              <IconClock className="h-5 w-5" stroke={1.5} />
+              <Clock className="h-5 w-5" strokeWidth={1.5} />
             </button>
           </div>
         </label>

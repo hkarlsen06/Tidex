@@ -5,7 +5,7 @@ import { Card } from '@appui/Card';
 import { Button } from '@appui/Button';
 import { Input } from '@appui/Input';
 import { Label } from '@appui/Label';
-import { IconMail, IconCheck } from '@tabler/icons-react';
+import { Mail, Check } from 'lucide-react';
 import {
   initiateEmailChange,
 } from '@/app/[locale]/(app)/settings/_actions/updateSettings';
@@ -63,7 +63,7 @@ export function EmailChangeCard({ currentEmail, onCancel }: EmailChangeCardProps
       <div className="space-y-4">
         <div className="flex items-center gap-4">
           <div className="p-3 rounded-lg bg-surface-secondary flex-shrink-0">
-            <IconMail className="h-6 w-6 text-text-primary" />
+            <Mail className="h-6 w-6 text-text-primary" />
           </div>
           <div className="flex-1">
             <h3 className="font-semibold text-text-primary">
@@ -128,7 +128,7 @@ export function EmailChangeCard({ currentEmail, onCancel }: EmailChangeCardProps
           <div className="space-y-4">
             <div className="flex flex-col items-center justify-center py-6">
               <div className="mb-4 p-4 rounded-full bg-green-100 dark:bg-green-900/30">
-                <IconCheck className="h-8 w-8 text-green-600 dark:text-green-400" />
+                <Check className="h-8 w-8 text-green-600 dark:text-green-400" />
               </div>
               <h4 className="text-lg font-semibold text-text-primary mb-2">
                 {t.pages.settings.profile.emailChange.confirmationSent}

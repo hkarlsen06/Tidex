@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Card } from '@appui/Card';
 import { Button } from '@appui/Button';
-import { IconPlus, IconEdit } from '@tabler/icons-react';
+import { Plus, Pencil } from 'lucide-react';
 import { WageHistoryModal } from './WageHistoryModal';
 import type { WageSnapshot } from '@/data-access/wage-snapshots';
 import type { Dictionary } from '@/lib/i18n/dictionaries/no';
@@ -218,7 +218,7 @@ export function WageHistoryTimeline({
             {t.pages.settings.pay.wageHistory.timelineTitle}
           </h3>
           <Button onClick={handleAddNew} variant="outline" size="sm" className="w-9 md:w-auto md:px-3">
-            <IconPlus className="h-5 w-5 md:h-4 md:w-4 md:mr-2" />
+            <Plus className="h-5 w-5 md:h-4 md:w-4 md:mr-2" />
             <span className="hidden md:inline">{t.pages.settings.pay.wageHistory.addNew}</span>
           </Button>
         </div>
@@ -332,7 +332,7 @@ export function WageHistoryTimeline({
                       onClick={() => handleEdit(snapshot)}
                       className="flex-shrink-0 w-9 md:w-auto md:px-3"
                     >
-                      <IconEdit className="h-5 w-5 md:h-4 md:w-4 md:mr-2" />
+                      <Pencil className="h-5 w-5 md:h-4 md:w-4 md:mr-2" />
                       <span className="hidden md:inline">
                         {t.pages.settings.pay.wageHistory.edit}
                       </span>

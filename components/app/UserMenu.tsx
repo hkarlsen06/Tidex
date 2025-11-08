@@ -5,7 +5,7 @@ import type { MouseEvent as ReactMouseEvent } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { IconUserCircle, IconLogout2 } from "@tabler/icons-react";
+import { UserCircle, LogOut } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
 import { LocaleToggle } from "./LocaleToggle";
 import { cn } from "@/lib/utils";
@@ -137,7 +137,7 @@ export function UserMenu({
               isProfileDisabled && "cursor-not-allowed opacity-50 hover:bg-surface-primary/95"
             )}
           >
-            <IconUserCircle stroke={2} className="h-4 w-4" />
+            <UserCircle strokeWidth={2} className="h-4 w-4" />
             {t.userMenu.profile}
           </Link>
           <ThemeToggle />
@@ -149,7 +149,7 @@ export function UserMenu({
             role="menuitem"
             className="flex items-center gap-2 px-4 py-2 text-sm text-error hover:bg-error-subtle"
           >
-            <IconLogout2 stroke={2} className="h-4 w-4" />
+            <LogOut strokeWidth={2} className="h-4 w-4" />
             {t.userMenu.logout}
           </Link>
         </div>
