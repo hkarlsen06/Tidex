@@ -1176,9 +1176,8 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
                         && shift.shift_date < todayDate && group.shifts[shiftIndex + 1].shift_date > todayDate;
 
                       return (
-                        <>
+                        <div key={shift.id}>
                           <ShiftCard
-                            key={shift.id}
                             shift={shift}
                             isToday={isCurrentMonth && isToday}
                             onClick={() => {
@@ -1188,7 +1187,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
                             }}
                           />
                           {showPlaceholderAfter && <TodayPlaceholderCard />}
-                        </>
+                        </div>
                       );
                     })}
                     {isTodayAfterLastShift && <TodayPlaceholderCard />}

@@ -279,7 +279,7 @@ export function MonthlyEarningsCalendar({
             key={`total-${month.getFullYear()}-${month.getMonth()}`}
             className={`font-semibold text-text-primary ${getAnimationClasses(localDirection)}`}
           >
-            {formatCurrency(totalEarnings)}
+            {totalEarnings === 0 ? '— kr' : formatCurrency(totalEarnings)}
           </div>
         </div>
         <div className="pb-6">
