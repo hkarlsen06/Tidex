@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
-import { FormEvent, useState, use, useRef, useEffect } from 'react';
+import { FormEvent, useState, use, useRef } from 'react';
 import { useTranslations } from '@/lib/i18n/client';
 
 import { supabase } from '@/lib/supabase/browser';
@@ -68,7 +68,7 @@ export default function LoginClient({
   const [isOAuthRedirecting, setIsOAuthRedirecting] = useState(false);
   const [showSignupPrompt, setShowSignupPrompt] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
-  const [pendingAction, setPendingAction] = useState<'login' | 'oauth' | null>(null);
+  const pendingActionRef = useRef<'login' | 'oauth' | null>(null);
   const [isCaptchaValidating, setIsCaptchaValidating] = useState(false);
 
   const turnstileRef = useRef<TurnstileCaptchaHandle>(null);
@@ -82,20 +82,6 @@ export default function LoginClient({
   const resetFieldErrors = () => {
     setFieldErrors({});
   };
-
-  // When captcha token is received, automatically proceed with pending action
-  useEffect(() => {
-    if (captchaToken && pendingAction === 'login') {
-      setPendingAction(null);
-      // Re-submit the form programmatically
-      formRef.current?.requestSubmit();
-    } else if (captchaToken && pendingAction === 'oauth') {
-      setPendingAction(null);
-      // Directly call the OAuth flow
-      performGoogleSignIn();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [captchaToken, pendingAction]);
 
   const performGoogleSignIn = async () => {
     setIsOAuthRedirecting(true);
@@ -157,8 +143,9 @@ export default function LoginClient({
     // If no captcha token yet, trigger captcha execution
     if (!captchaToken) {
       if (Object.keys(errors).length === 0) {
-        setPendingAction('login');
+        pendingActionRef.current = 'login';
         setIsCaptchaValidating(true);
+        turnstileRef.current?.reset();
         turnstileRef.current?.execute();
       } else {
         setFieldErrors(errors);
@@ -166,8 +153,10 @@ export default function LoginClient({
       return;
     }
 
-    // Reset pending action if we're proceeding
-    setPendingAction(null);
+    // Reset pending action and captcha token since we're using it now
+    pendingActionRef.current = null;
+    const usedCaptchaToken = captchaToken;
+    setCaptchaToken(null);
 
     const inputType = detectInputType(emailOrPhone);
 
@@ -197,7 +186,7 @@ export default function LoginClient({
         email: emailOrPhone,
         password,
         options: {
-          captchaToken,
+          captchaToken: usedCaptchaToken,
         },
       });
 
@@ -238,7 +227,7 @@ export default function LoginClient({
             phone: phoneE164,
             password,
             options: {
-              captchaToken,
+              captchaToken: usedCaptchaToken,
             },
           });
 
@@ -273,7 +262,7 @@ export default function LoginClient({
             phone: phoneE164,
             options: {
               shouldCreateUser: false, // Don't create user if doesn't exist
-              captchaToken,
+              captchaToken: usedCaptchaToken,
             },
           });
 
@@ -374,14 +363,16 @@ export default function LoginClient({
 
     // If no captcha token yet, trigger captcha execution
     if (!captchaToken) {
-      setPendingAction('oauth');
+      pendingActionRef.current = 'oauth';
       setIsCaptchaValidating(true);
+      turnstileRef.current?.reset();
       turnstileRef.current?.execute();
       return;
     }
 
-    // Reset pending action if we're proceeding
-    setPendingAction(null);
+    // Reset pending action and captcha token since we're using it now
+    pendingActionRef.current = null;
+    setCaptchaToken(null);
     await performGoogleSignIn();
   };
 
@@ -617,7 +608,7 @@ export default function LoginClient({
                 size="lg"
                 onClick={handleGoogleSignIn}
                 disabled={buttonDisabled}
-                loading={isOAuthRedirecting || (isCaptchaValidating && pendingAction === 'oauth')}
+                loading={isOAuthRedirecting || isCaptchaValidating}
                 aria-label={t.pages.auth.login.continueWithGoogle}
                 className="w-full"
               >
@@ -653,10 +644,20 @@ export default function LoginClient({
             setCaptchaToken(token);
             setIsCaptchaValidating(false);
             resetMessage();
+
+            // Immediately consume the pending action
+            const action = pendingActionRef.current;
+            pendingActionRef.current = null;
+
+            if (action === 'login') {
+              formRef.current?.requestSubmit();
+            } else if (action === 'oauth') {
+              performGoogleSignIn();
+            }
           }}
           onError={() => {
             setCaptchaToken(null);
-            setPendingAction(null);
+            pendingActionRef.current = null;
             setIsCaptchaValidating(false);
             setMessage({ type: 'error', text: t.pages.auth.login.errors.captchaFailed });
           }}
