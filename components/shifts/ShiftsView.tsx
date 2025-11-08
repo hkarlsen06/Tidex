@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useCallback, useTransition, useRef, useEffect } from "react";
+import { useMemo, useState, useCallback, useTransition, useRef, useEffect, Fragment } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import confetti from "canvas-confetti";
@@ -1176,7 +1176,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
                         && shift.shift_date < todayDate && group.shifts[shiftIndex + 1].shift_date > todayDate;
 
                       return (
-                        <div key={shift.id}>
+                        <Fragment key={shift.id}>
                           <ShiftCard
                             shift={shift}
                             isToday={isCurrentMonth && isToday}
@@ -1187,7 +1187,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
                             }}
                           />
                           {showPlaceholderAfter && <TodayPlaceholderCard />}
-                        </div>
+                        </Fragment>
                       );
                     })}
                     {isTodayAfterLastShift && <TodayPlaceholderCard />}

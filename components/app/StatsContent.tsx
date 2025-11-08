@@ -197,7 +197,7 @@ export function StatsContent({ data }: StatsContentProps) {
 
         if (response.status === 401) {
           if (typeof window !== "undefined") {
-            window.location.href = "/login";
+            window.location.href = `/${locale}/login`;
           }
           throw new Error("Unauthorized");
         }
@@ -245,8 +245,6 @@ export function StatsContent({ data }: StatsContentProps) {
     }
 
     // Data not cached - show loading state and fetch
-    // Note: These setState calls are intentional to show loading state before async fetch
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsLoadingStats(true);
     setFetchError(null);
 
