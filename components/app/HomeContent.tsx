@@ -431,8 +431,8 @@ export function HomeContent({ shifts: initialShifts, settings }: HomeContentProp
 
   return (
     <>
-      <div ref={swipeContainerRef} className="flex items-center justify-center h-full">
-        <div className="flex flex-col gap-6 w-full max-w-md">
+      <div ref={swipeContainerRef} className="flex items-center">
+        <div className="flex flex-col gap-6 w-full">
           {payrollDay && (
             <NextPayrollCard
               payrollDay={payrollDay}

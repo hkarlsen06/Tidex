@@ -4,8 +4,8 @@ import { ShiftCardSkeleton } from "../ShiftCardSkeleton";
 
 export function HomeSkeleton() {
   return (
-    <div className="flex items-center justify-center h-full">
-      <div className="flex flex-col gap-6 w-full max-w-md">
+    <div className="flex items-center">
+      <div className="flex flex-col gap-6 w-full">
         {/* NextPayrollCard first (match actual order) */}
         <NextPayrollCardSkeleton />
 
