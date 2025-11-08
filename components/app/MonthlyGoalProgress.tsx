@@ -115,11 +115,6 @@ export function MonthlyGoalProgress({ data }: MonthlyGoalProgressProps) {
               width={size}
               height={size}
               className="transform -rotate-90"
-              style={{
-                filter: isGoalReached
-                  ? `drop-shadow(0 0 8px ${progressColor}) drop-shadow(0 0 4px ${progressColor})`
-                  : 'none'
-              }}
             >
               {/* Background circle */}
               <circle
