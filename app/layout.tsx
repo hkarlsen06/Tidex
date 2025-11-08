@@ -7,6 +7,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next"
 
 import SWRegister from "./sw-register";
 import { BackgroundTexture } from "@/components/app/BackgroundTexture";
+import { DynamicThemeColor } from "@/components/app/DynamicThemeColor";
 import "./globals.css";
 
 const inter = Inter({
@@ -53,7 +54,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#2563eb",
+  themeColor: "#3b82f6",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
@@ -82,6 +83,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       </head>
       <body className={`${inter.className} bg-background text-foreground antialiased`}>
         <BackgroundTexture intensity="subtle" />
+        <DynamicThemeColor />
         <SWRegister />
         {children}
         <Analytics />
