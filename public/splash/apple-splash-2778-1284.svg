@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="2778" height="1284" viewBox="0 0 2778 1284" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="2778" height="1284" fill="#0c0e14"/>
+
+  <!-- Logo placeholder - centered circle with app initial -->
+  <circle cx="1389" cy="590.64" r="128.4" fill="#ffffff" opacity="0.1"/>
+  <text x="1389" y="590.64"
+        font-family="system-ui, -apple-system, sans-serif"
+        font-size="154.08"
+        font-weight="bold"
+        fill="#ffffff"
+        text-anchor="middle"
+        dominant-baseline="central">T</text>
+
+  <!-- App name -->
+  <text x="1389" y="821.76"
+        font-family="system-ui, -apple-system, sans-serif"
+        font-size="38.52"
+        font-weight="600"
+        fill="#ffffff"
+        text-anchor="middle"
+        dominant-baseline="hanging">Tidex</text>
+</svg>

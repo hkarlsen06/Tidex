@@ -10,7 +10,7 @@ const nextConfig = {
   allowedDevOrigins: ["192.168.68.50"],
 
   outputFileTracingRoot: __dirname,
-  // Tell Next “yes, I know I’m on Turbopack”.
+  // Tell Next "yes, I know I'm on Turbopack".
   turbopack: {},
 
   cacheComponents: true,
@@ -23,6 +23,43 @@ const nextConfig = {
       "lucide-react",
       "@sentry/nextjs",
     ],
+  },
+
+  // Configure headers for service worker and PWA assets
+  async headers() {
+    return [
+      {
+        source: '/sw.js',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'no-cache, no-store, must-revalidate',
+          },
+          {
+            key: 'Service-Worker-Allowed',
+            value: '/',
+          },
+        ],
+      },
+      {
+        source: '/offline.html',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=86400, stale-while-revalidate',
+          },
+        ],
+      },
+      {
+        source: '/manifest.json',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=86400, stale-while-revalidate',
+          },
+        ],
+      },
+    ];
   },
 
   // No `eslint` key (Next 16 doesn't lint in build).
