@@ -43,7 +43,6 @@ const splashSizes = [
  */
 function generateSVG(width, height) {
   const logoSize = Math.min(width, height) * 0.2; // Logo is 20% of smallest dimension
-  const logoX = (width - logoSize) / 2;
   const logoY = (height - logoSize) / 2 - logoSize * 0.2; // Slightly above center
 
   return `<?xml version="1.0" encoding="UTF-8"?>
