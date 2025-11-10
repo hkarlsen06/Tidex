@@ -4,6 +4,7 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { logger } from '@/lib/logger';
 import { verifySession } from '@/data-access/auth';
+import { invalidateAndRevalidate } from '@/lib/revalidation/paths';
 
 export async function updateProfileSettings(data: {
   firstName: string;
@@ -74,7 +75,8 @@ export async function updatePaySettings(data: {
     throw error;
   }
 
-  revalidatePath('/settings/pay');
+  // Invalidate cache and revalidate all pages since tax settings affect home page
+  invalidateAndRevalidate(user.id);
   return { success: true };
 }
 

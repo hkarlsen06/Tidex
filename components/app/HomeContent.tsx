@@ -53,18 +53,22 @@ function calculateMonthData(
     halfTaxMonth: settings.half_tax_month ?? null,
   };
 
+  // Calculate payout month for half tax check (income earned in targetMonth is paid out next month)
+  const payoutMonth = targetMonth === 12 ? 1 : targetMonth + 1;
+  const lastMonthPayoutMonth = lastMonth === 12 ? 1 : lastMonth + 1;
+
   const now = new Date();
   const currentTotals = summarizeShiftTotals({
     shifts: currentMonthShifts,
     taxSettings,
     now,
-    month: targetMonth,
+    month: payoutMonth,
   });
   const lastMonthTotals = summarizeShiftTotals({
     shifts: lastMonthShifts,
     taxSettings,
     now,
-    month: lastMonth,
+    month: lastMonthPayoutMonth,
   });
 
   const taxEnabled = taxSettings.enabled;
@@ -279,10 +283,13 @@ export function HomeContent({ shifts: initialShifts, settings }: HomeContentProp
       halfTaxMonth: settings.half_tax_month ?? null,
     };
 
+    // Use payout month (payrollMonthDate) for half tax check, not earnings month
+    const payoutMonth = payrollMonthDate.getMonth() + 1;
+
     const totals = summarizeShiftTotals({
       shifts: relevantShifts,
       taxSettings,
-      month: targetMonth,
+      month: payoutMonth,
     });
 
     const taxAmount = totals.gross - totals.net;
