@@ -18,7 +18,8 @@ export default function SplashScreen() {
 
     if (!isColdStart) {
       // Not a cold start, don't show splash
-      setShouldRender(false);
+      // Schedule state update to avoid synchronous setState in effect
+      Promise.resolve().then(() => setShouldRender(false));
       return;
     }
 
