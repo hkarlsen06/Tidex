@@ -652,6 +652,11 @@ export const en: Dictionary = {
           description: 'Show wage after tax deduction',
           percentageLabel: 'Tax rate (%)',
           disclaimer: 'This is for display only - actual tax may vary',
+          halfTaxMonthLabel: 'Half tax',
+          halfTaxMonthDescription: 'Select month for half tax deduction (usually November or December)',
+          halfTaxMonthOff: 'Off',
+          halfTaxMonthNovember: 'November',
+          halfTaxMonthDecember: 'December',
         },
         other: {
           title: 'Other settings',

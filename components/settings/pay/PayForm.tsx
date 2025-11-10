@@ -41,6 +41,9 @@ export function PayForm({ initialData }: PayFormProps) {
   const [taxPercentage, setTaxPercentage] = useState(
     initialData.tax_percentage?.toString() || '30'
   );
+  const [halfTaxMonth, setHalfTaxMonth] = useState(
+    initialData.half_tax_month?.toString() || 'none'
+  );
 
   // Other settings
   const [monthlyGoal, setMonthlyGoal] = useState(
@@ -61,6 +64,7 @@ export function PayForm({ initialData }: PayFormProps) {
         pause_deduction_minutes: pauseDeductionEnabled ? parseInt(pauseDeductionMinutes) : null,
         tax_deduction_enabled: taxDeductionEnabled,
         tax_percentage: taxDeductionEnabled ? parseFloat(taxPercentage) : null,
+        half_tax_month: taxDeductionEnabled && halfTaxMonth !== 'none' ? parseInt(halfTaxMonth) : null,
       });
       router.refresh();
     } catch (error) {
@@ -76,6 +80,7 @@ export function PayForm({ initialData }: PayFormProps) {
     router,
     taxDeductionEnabled,
     taxPercentage,
+    halfTaxMonth,
   ]);
 
   // Auto-save for immediate changes (buttons, switches, selects)
@@ -85,7 +90,7 @@ export function PayForm({ initialData }: PayFormProps) {
       return;
     }
     saveSettings();
-  }, [pauseDeductionEnabled, pauseMethod, saveSettings, taxDeductionEnabled]);
+  }, [pauseDeductionEnabled, pauseMethod, saveSettings, taxDeductionEnabled, halfTaxMonth]);
 
   // Debounced auto-save for text inputs (1 second)
   useEffect(() => {
@@ -191,20 +196,39 @@ export function PayForm({ initialData }: PayFormProps) {
             <>
               <Separator />
 
-              <div className="space-y-2">
-                <Label htmlFor="taxPercentage">{t.pages.settings.pay.tax.percentageLabel}</Label>
-                <Input
-                  id="taxPercentage"
-                  type="number"
-                  min={0}
-                  max={100}
-                  step={0.1}
-                  value={taxPercentage}
-                  onChange={(e) => setTaxPercentage(e.target.value)}
-                />
-                <p className="text-xs text-text-secondary">
-                  {t.pages.settings.pay.tax.disclaimer}
-                </p>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="taxPercentage">{t.pages.settings.pay.tax.percentageLabel}</Label>
+                  <Input
+                    id="taxPercentage"
+                    type="number"
+                    min={0}
+                    max={100}
+                    step={0.1}
+                    value={taxPercentage}
+                    onChange={(e) => setTaxPercentage(e.target.value)}
+                  />
+                  <p className="text-xs text-text-secondary">
+                    {t.pages.settings.pay.tax.disclaimer}
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="halfTaxMonth">{t.pages.settings.pay.tax.halfTaxMonthLabel}</Label>
+                  <Select value={halfTaxMonth} onValueChange={setHalfTaxMonth}>
+                    <SelectTrigger id="halfTaxMonth">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">{t.pages.settings.pay.tax.halfTaxMonthOff}</SelectItem>
+                      <SelectItem value="11">{t.pages.settings.pay.tax.halfTaxMonthNovember}</SelectItem>
+                      <SelectItem value="12">{t.pages.settings.pay.tax.halfTaxMonthDecember}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-text-secondary">
+                    {t.pages.settings.pay.tax.halfTaxMonthDescription}
+                  </p>
+                </div>
               </div>
             </>
           )}

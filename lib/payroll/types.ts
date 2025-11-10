@@ -26,6 +26,7 @@ export type UserSettings = {
   // Tax settings
   tax_deduction_enabled?: boolean | null;
   tax_percentage?: number | null;
+  half_tax_month?: number | null; // Month number (11=November, 12=December) for half tax deduction
   payroll_day?: number | null;
   monthly_goal?: number | null;
 };
