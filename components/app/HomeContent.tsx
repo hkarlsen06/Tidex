@@ -50,6 +50,7 @@ function calculateMonthData(
   const taxSettings = {
     enabled: settings.tax_deduction_enabled ?? false,
     percentage: Number(settings.tax_percentage) || 0,
+    halfTaxMonth: settings.half_tax_month ?? null,
   };
 
   const now = new Date();
@@ -57,11 +58,13 @@ function calculateMonthData(
     shifts: currentMonthShifts,
     taxSettings,
     now,
+    month: targetMonth,
   });
   const lastMonthTotals = summarizeShiftTotals({
     shifts: lastMonthShifts,
     taxSettings,
     now,
+    month: lastMonth,
   });
 
   const taxEnabled = taxSettings.enabled;
@@ -273,11 +276,13 @@ export function HomeContent({ shifts: initialShifts, settings }: HomeContentProp
     const taxSettings = {
       enabled: settings.tax_deduction_enabled ?? false,
       percentage: Number(settings.tax_percentage) || 0,
+      halfTaxMonth: settings.half_tax_month ?? null,
     };
 
     const totals = summarizeShiftTotals({
       shifts: relevantShifts,
       taxSettings,
+      month: targetMonth,
     });
 
     const taxAmount = totals.gross - totals.net;

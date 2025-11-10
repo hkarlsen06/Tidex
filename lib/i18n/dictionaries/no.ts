@@ -651,6 +651,11 @@ export const no = {
           description: 'Vis lønn etter skattetrekk',
           percentageLabel: 'Skattesats (%)',
           disclaimer: 'Dette er kun for visning - faktisk skatt kan variere',
+          halfTaxMonthLabel: 'Halv skatt',
+          halfTaxMonthDescription: 'Velg måned for halv skattetrekk (vanligvis november eller desember)',
+          halfTaxMonthOff: 'Av',
+          halfTaxMonthNovember: 'November',
+          halfTaxMonthDecember: 'Desember',
         },
         other: {
           title: 'Andre innstillinger',

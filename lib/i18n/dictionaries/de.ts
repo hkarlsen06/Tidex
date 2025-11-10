@@ -651,6 +651,11 @@ export const de = {
           description: 'Gehalt nach Steuerabzug anzeigen',
           percentageLabel: 'Steuersatz (%)',
           disclaimer: 'Dies dient nur zur Anzeige - tatsächliche Steuer kann variieren',
+          halfTaxMonthLabel: 'Halbe Steuer',
+          halfTaxMonthDescription: 'Monat für halben Steuerabzug wählen (normalerweise November oder Dezember)',
+          halfTaxMonthOff: 'Aus',
+          halfTaxMonthNovember: 'November',
+          halfTaxMonthDecember: 'Dezember',
         },
         other: {
           title: 'Weitere Einstellungen',
