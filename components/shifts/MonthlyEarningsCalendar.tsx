@@ -126,7 +126,7 @@ export function MonthlyEarningsCalendar({
 }: MonthlyEarningsCalendarProps) {
   const { t } = useTranslations();
   const { goToPreviousMonth, goToNextMonth } = useMonth();
-  const [viewMode, setViewMode] = useState<"money" | "hours">("money");
+  const [viewMode, setViewMode] = useState<"money" | "hours">("hours");
   const [localDirection, setLocalDirection] = useState<'next' | 'previous' | null>(null);
   const [prevMonth, setPrevMonth] = useState(month);
   const swipeContainerRef = useRef<HTMLDivElement>(null);
@@ -373,20 +373,6 @@ export function MonthlyEarningsCalendar({
               <Button
                 type="button"
                 variant="ghost"
-                aria-pressed={viewMode === "money"}
-                onClick={() => setViewMode("money")}
-                className={cn(
-                  "h-9 rounded-full px-4 text-sm flex-1 whitespace-nowrap transition-none",
-                  viewMode === "money"
-                    ? "bg-white dark:bg-slate-700 text-black dark:text-white shadow-app-md font-semibold"
-                    : "text-text-muted hover:text-text-primary hover:bg-surface-secondary/50"
-                )}
-              >
-                ---- kr
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
                 aria-pressed={viewMode === "hours"}
                 onClick={() => setViewMode("hours")}
                 className={cn(
@@ -398,6 +384,20 @@ export function MonthlyEarningsCalendar({
               >
                 <span>--:--</span>
                 <Clock strokeWidth={2} aria-hidden="true" />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                aria-pressed={viewMode === "money"}
+                onClick={() => setViewMode("money")}
+                className={cn(
+                  "h-9 rounded-full px-4 text-sm flex-1 whitespace-nowrap transition-none",
+                  viewMode === "money"
+                    ? "bg-white dark:bg-slate-700 text-black dark:text-white shadow-app-md font-semibold"
+                    : "text-text-muted hover:text-text-primary hover:bg-surface-secondary/50"
+                )}
+              >
+                ---- kr
               </Button>
             </div>
           )}
