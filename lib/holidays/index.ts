@@ -1,21 +1,26 @@
-import Holidays from 'date-holidays';
 import type { Locale } from '@/lib/i18n';
+import {
+  isNorwegianPublicHoliday,
+  getNorwegianHolidayName,
+  getNorwegianHolidays,
+} from './norwegian-holidays';
 
-// Initialize holiday instances for supported locales
-// All locales use Norwegian holidays since this is a Norwegian payroll app
-const holidaysByLocale: Record<Locale, Holidays> = {
-  no: new Holidays('NO'),
-  en: new Holidays('NO'),
-  de: new Holidays('NO'),
-};
+/**
+ * Format a Date object as YYYY-MM-DD
+ */
+function formatDate(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
 
 /**
  * Check if a given date is a public holiday in Norway
  */
 export function isPublicHoliday(date: Date, locale: Locale = 'no'): boolean {
-  const hd = holidaysByLocale[locale];
-  const holiday = hd.isHoliday(date);
-  return holiday !== false;
+  const dateStr = formatDate(date);
+  return isNorwegianPublicHoliday(dateStr);
 }
 
 /**
@@ -45,19 +50,15 @@ export function isInvalidPayrollDay(date: Date, locale: Locale = 'no'): boolean 
  * Get the name of a holiday (if the date is a holiday)
  */
 export function getHolidayName(date: Date, locale: Locale = 'no'): string | null {
-  const hd = holidaysByLocale[locale];
-  const holiday = hd.isHoliday(date);
-
-  if (holiday && typeof holiday === 'object' && 'name' in holiday) {
-    return String(holiday.name);
-  }
-
-  return null;
+  const dateStr = formatDate(date);
+  // Map 'de' locale to 'en' for Norwegian holidays (only support no/en)
+  const holidayLocale = locale === 'de' ? 'en' : locale === 'en' ? 'en' : 'no';
+  return getNorwegianHolidayName(dateStr, holidayLocale);
 }
 
 /**
  * Get all holidays for a specific year
  */
 export function getHolidaysForYear(year: number, locale: Locale = 'no') {
-  return holidaysByLocale[locale].getHolidays(year);
+  return getNorwegianHolidays(year);
 }
