@@ -1,8 +1,13 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import bundleAnalyzer from "@next/bundle-analyzer";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+const withBundleAnalyzer = bundleAnalyzer({
+  enabled: process.env.ANALYZE === "true",
+});
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -14,6 +19,10 @@ const nextConfig = {
   turbopack: {},
 
   cacheComponents: true,
+
+  // Enable React 19 Compiler for automatic optimization
+  // Reduces need for manual useMemo/useCallback/memo
+  reactCompiler: true,
 
   experimental: {
     // Optimize package imports to reduce bundle size
@@ -65,4 +74,4 @@ const nextConfig = {
   // No `webpack` function (Turbopack ignores it, and it's what caused the error).
 };
 
-export default nextConfig;
+export default withBundleAnalyzer(nextConfig);

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useTransition } from 'react';
 import { Card } from '@appui/Card';
 import { Label } from '@appui/Label';
 import { Input } from '@appui/Input';
@@ -18,6 +18,7 @@ interface PayFormProps {
 export function PayForm({ initialData }: PayFormProps) {
   const { t } = useTranslations();
   const router = useRouter();
+  const [isPending, startTransition] = useTransition();
   const isInitialMount = useRef(true);
 
   // Break settings
@@ -54,22 +55,24 @@ export function PayForm({ initialData }: PayFormProps) {
   );
 
   const saveSettings = useCallback(async () => {
-    try {
-      await updatePaySettings({
-        monthly_goal: monthlyGoal ? parseFloat(monthlyGoal) : null,
-        payroll_day: payrollDay ? parseInt(payrollDay) : null,
-        pause_deduction_enabled: pauseDeductionEnabled,
-        pause_deduction_method: pauseDeductionEnabled ? pauseMethod : null,
-        pause_threshold_hours: pauseDeductionEnabled ? parseFloat(pauseThresholdHours) : null,
-        pause_deduction_minutes: pauseDeductionEnabled ? parseInt(pauseDeductionMinutes) : null,
-        tax_deduction_enabled: taxDeductionEnabled,
-        tax_percentage: taxDeductionEnabled ? parseFloat(taxPercentage) : null,
-        half_tax_month: taxDeductionEnabled && halfTaxMonth !== 'none' ? parseInt(halfTaxMonth) : null,
-      });
-      router.refresh();
-    } catch (error) {
-      console.error('Failed to save pay settings:', error);
-    }
+    startTransition(async () => {
+      try {
+        await updatePaySettings({
+          monthly_goal: monthlyGoal ? parseFloat(monthlyGoal) : null,
+          payroll_day: payrollDay ? parseInt(payrollDay) : null,
+          pause_deduction_enabled: pauseDeductionEnabled,
+          pause_deduction_method: pauseDeductionEnabled ? pauseMethod : null,
+          pause_threshold_hours: pauseDeductionEnabled ? parseFloat(pauseThresholdHours) : null,
+          pause_deduction_minutes: pauseDeductionEnabled ? parseInt(pauseDeductionMinutes) : null,
+          tax_deduction_enabled: taxDeductionEnabled,
+          tax_percentage: taxDeductionEnabled ? parseFloat(taxPercentage) : null,
+          half_tax_month: taxDeductionEnabled && halfTaxMonth !== 'none' ? parseInt(halfTaxMonth) : null,
+        });
+        router.refresh();
+      } catch (error) {
+        console.error('Failed to save pay settings:', error);
+      }
+    });
   }, [
     monthlyGoal,
     pauseDeductionEnabled,

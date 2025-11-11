@@ -83,6 +83,17 @@ function shouldSkipLocaleRouting(pathname: string): boolean {
 }
 
 export async function proxy(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  // Early exit for static assets (before Supabase initialization)
+  if (
+    pathname.startsWith('/_next/static') ||
+    pathname.startsWith('/_next/image') ||
+    /\.(css|js|map)$/.test(pathname)
+  ) {
+    return NextResponse.next();
+  }
+
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
@@ -91,8 +102,6 @@ export async function proxy(request: NextRequest) {
   if (!supabaseUrl || !supabaseKey) {
     return NextResponse.next();
   }
-
-  const { pathname } = request.nextUrl;
 
   // Skip locale routing for API routes, static files, etc.
   if (shouldSkipLocaleRouting(pathname)) {
