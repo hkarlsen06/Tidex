@@ -24,13 +24,13 @@ export function AppLayoutClient({
 }: AppLayoutClientProps) {
   const router = useRouter();
 
-  // Proactively prefetch common routes to speed up transitions
+  // Optimized prefetch: Only prefetch critical routes
+  // Stats page is heavy (recharts) - let it lazy load on demand
+  // Settings routes are prefetched on hover via Link components
   useEffect(() => {
     try {
       router.prefetch("/");
       router.prefetch("/shifts");
-      router.prefetch("/stats");
-      router.prefetch("/settings");
     } catch {
       // Ignore if prefetch isn't available in this environment
     }

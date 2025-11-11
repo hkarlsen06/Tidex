@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, type ChangeEvent } from 'react';
+import { useState, useEffect, useRef, useTransition, type ChangeEvent } from 'react';
 import { Card } from '@appui/Card';
 import { Input } from '@appui/Input';
 import { Label } from '@appui/Label';
@@ -23,6 +23,7 @@ interface ProfileFormProps {
 export function ProfileForm({ initialData }: ProfileFormProps) {
   const { t } = useTranslations();
   const router = useRouter();
+  const [isPending, startTransition] = useTransition();
   const [firstName, setFirstName] = useState(initialData.firstName);
   const [profilePictureUrl, setProfilePictureUrl] = useState(initialData.profilePictureUrl);
   const [isSaving, setIsSaving] = useState(false);
@@ -49,16 +50,18 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
     }
 
     // Debounce save for 1 second
-    saveTimeoutRef.current = setTimeout(async () => {
-      setIsSaving(true);
-      try {
-        await updateProfileSettings({ firstName });
-        router.refresh();
-      } catch (error) {
-        console.error('Failed to save profile:', error);
-      } finally {
-        setIsSaving(false);
-      }
+    saveTimeoutRef.current = setTimeout(() => {
+      startTransition(async () => {
+        setIsSaving(true);
+        try {
+          await updateProfileSettings({ firstName });
+          router.refresh();
+        } catch (error) {
+          console.error('Failed to save profile:', error);
+        } finally {
+          setIsSaving(false);
+        }
+      });
     }, 1000);
 
     return () => {
