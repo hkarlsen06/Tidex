@@ -216,6 +216,28 @@ Configuration files are in the project root:
 - `tsconfig.json` - TypeScript configuration with path aliases
 - `next.config.js` - Next.js configuration with PWA settings and `cacheComponents: true`
 
+## Dependency Management
+
+**CRITICAL: Next.js Build-Time Dependencies**
+
+Some packages must be in `dependencies` (not `devDependencies`) because they're required during production builds on Vercel:
+
+**Required in `dependencies`:**
+- `@next/bundle-analyzer` - Used by `next.config.js` at build time when wrapping the config
+- `babel-plugin-react-compiler` - Required by Next.js React Compiler feature at build time
+- Any package imported in `next.config.js` or used by Next.js plugins
+
+**Why this matters:**
+- Vercel's production builds install only `dependencies`, not `devDependencies`
+- If Next.js imports a package at build time (via `next.config.js`), it must be in `dependencies`
+- Build errors like `Cannot find package '@next/bundle-analyzer'` indicate a misplaced dependency
+
+**General rule:** If a package is:
+- Used only in tests → `devDependencies`
+- Used only during local development → `devDependencies`
+- Imported in `next.config.js` or required at build time → `dependencies`
+- Used at runtime (imported in app code) → `dependencies`
+
 ## Environment Variables
 
 Required in `.env.local`:
