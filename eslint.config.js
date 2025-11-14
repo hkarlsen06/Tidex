@@ -23,6 +23,7 @@ const config = [
       "node_modules/**",
       "public/**",
       "tailwind.config.js",
+      "dev-site/tailwind.config.js",
       "components/ui/react-day-picker/dist/**",
     ],
   },
