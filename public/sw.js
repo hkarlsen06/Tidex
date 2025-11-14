@@ -27,7 +27,7 @@
 // ============================================================================
 
 /** @type {string} Cache version - increment on each deploy to invalidate old caches */
-const CACHE_VERSION = 'v9';
+const CACHE_VERSION = 'v10';
 
 /** @type {string} Cache for immutable static assets (JS, CSS, fonts, images) */
 const STATIC_CACHE = `tidex-static-${CACHE_VERSION}`;
@@ -481,12 +481,16 @@ async function handleStaticAsset(request) {
  * @returns {Promise<Response>}
  */
 async function handleDataRequest(request) {
+  const requestUrl = request.url;
+  console.log('[SW] Handling data request:', requestUrl);
+
   try {
     // Try network first with short timeout
     const response = await fetchWithTimeout(request, NETWORK_TIMEOUT.data);
 
     // Cache successful responses in background (stale-while-revalidate)
     if (response && response.ok) {
+      console.log('[SW] Caching successful data response:', requestUrl);
       const responseToCache = response.clone();
       caches.open(DATA_CACHE).then((cache) => {
         cache.put(request, responseToCache);
@@ -495,14 +499,24 @@ async function handleDataRequest(request) {
 
     return response;
   } catch (error) {
-    console.log('[SW] Data request failed, trying cache:', request.url);
+    console.log('[SW] Data request failed, trying cache:', requestUrl, error);
 
     // Serve stale cached data if available
     const cachedResponse = await caches.match(request);
     if (cachedResponse) {
-      console.log('[SW] Serving stale cached data:', request.url);
+      console.log('[SW] Serving cached data:', requestUrl);
       return cachedResponse;
     }
+
+    // Also try matching without query params
+    const urlWithoutQuery = requestUrl.split('?')[0];
+    const cachedResponseNoQuery = await caches.match(urlWithoutQuery);
+    if (cachedResponseNoQuery) {
+      console.log('[SW] Serving cached data (no query):', urlWithoutQuery);
+      return cachedResponseNoQuery;
+    }
+
+    console.warn('[SW] No cache available for:', requestUrl);
 
     // No cache available, return friendly JSON error
     return new Response(
