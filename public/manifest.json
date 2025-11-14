@@ -1,13 +1,117 @@
 {
+  "id": "com.tidex.app",
   "name": "Tidex",
   "short_name": "Tidex",
   "description": "App for å regne ut lønn basert på skiftene dine med tillegg!",
+  "lang": "no",
+  "dir": "ltr",
   "theme_color": "#0e172a",
   "background_color": "#0c0e14",
   "display": "standalone",
+  "display_override": [
+    "tabbed",
+    "window-controls-overlay",
+    "standalone"
+  ],
   "orientation": "portrait",
   "scope": "/",
+  "scope_extensions": [
+    {
+      "origin": "*.tidex.no"
+    }
+  ],
   "start_url": "/",
+  "categories": [
+    "productivity",
+    "finance",
+    "business"
+  ],
+  "launch_handler": {
+    "client_mode": "focus-existing"
+  },
+  "shortcuts": [
+    {
+      "name": "Add New Shift",
+      "short_name": "New Shift",
+      "description": "Quickly add a new work shift",
+      "url": "/en/shifts?action=add",
+      "icons": [
+        {
+          "src": "/icon-192x192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "View Statistics",
+      "short_name": "Stats",
+      "description": "View your earnings statistics",
+      "url": "/en/stats",
+      "icons": [
+        {
+          "src": "/icon-192x192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Settings",
+      "short_name": "Settings",
+      "description": "Manage your app settings",
+      "url": "/en/settings",
+      "icons": [
+        {
+          "src": "/icon-192x192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ],
+  "file_handlers": [
+    {
+      "action": "/en/shifts?import=true",
+      "accept": {
+        "text/csv": [".csv"],
+        "application/json": [".json"]
+      },
+      "icons": [
+        {
+          "src": "/icon-192x192.png",
+          "sizes": "192x192"
+        }
+      ],
+      "launch_type": "single-client"
+    }
+  ],
+  "protocol_handlers": [
+    {
+      "protocol": "web+tidex",
+      "url": "/en?action=%s"
+    }
+  ],
+  "share_target": {
+    "action": "/en/shifts?share=true",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url",
+      "files": [
+        {
+          "name": "file",
+          "accept": ["text/csv", "application/json", ".csv", ".json"]
+        }
+      ]
+    }
+  },
+  "prefer_related_applications": false,
+  "related_applications": [
+    {
+      "platform": "webapp",
+      "url": "https://app.tidex.no/manifest.json"
+    }
+  ],
   "icons": [
     {
       "src": "/icon-192x192.png",
@@ -20,6 +124,36 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshots/mobile-home.png",
+      "sizes": "750x1334",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Dashboard showing your work shifts and earnings overview"
+    },
+    {
+      "src": "/screenshots/mobile-shifts.png",
+      "sizes": "750x1334",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Manage your shifts with detailed wage calculations"
+    },
+    {
+      "src": "/screenshots/mobile-stats.png",
+      "sizes": "750x1334",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "View statistics and analytics of your earnings"
+    },
+    {
+      "src": "/screenshots/desktop-home.png",
+      "sizes": "1920x1080",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Full-featured desktop experience with responsive design"
     }
   ]
 }

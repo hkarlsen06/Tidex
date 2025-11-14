@@ -25,6 +25,7 @@ import {
 import { getDateFormatter } from "@/lib/i18n/locale";
 import { SeriesEditModal } from "./SeriesEditModal";
 import type { ExistingShift } from "@/lib/series/conflicts";
+import { queueMutation, isOfflineQueueSupported } from "@/lib/pwa/offline-queue";
 
 const MINUTES_PER_DAY = 24 * 60;
 
@@ -245,7 +246,30 @@ export function ShiftDetails({
         setIsEditing(false);
         router.refresh();
       } catch (error: any) {
-        setSaveError(error?.message || t.pages.shifts.details.errorUpdate);
+        // If offline and queue is supported, queue the mutation
+        if (!navigator.onLine && isOfflineQueueSupported()) {
+          try {
+            await queueMutation({
+              type: 'UPDATE',
+              endpoint: `/api/shifts/${shift.id}`,
+              method: 'PATCH',
+              body: JSON.stringify({
+                shift_date: shiftDate,
+                start: startTime,
+                end: endTime,
+                series_id: shift.series_id,
+              }),
+            });
+
+            // Close editing and show success (queued)
+            setIsEditing(false);
+            setSaveError(null);
+          } catch {
+            setSaveError(t.pages.shifts.details.errorUpdate);
+          }
+        } else {
+          setSaveError(error?.message || t.pages.shifts.details.errorUpdate);
+        }
       }
     });
   };
