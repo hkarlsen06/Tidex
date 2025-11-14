@@ -4,18 +4,7 @@
   publish = "marketing/out"
 
 # Domain redirects (308 = Permanent Redirect preserving HTTP method)
-[[redirects]]
-  from = "https://kkarlsen.dev/*"
-  to = "https://www.tidex.no/:splat"
-  status = 308
-  force = true
-
-[[redirects]]
-  from = "https://www.kkarlsen.dev/*"
-  to = "https://www.tidex.no/:splat"
-  status = 308
-  force = true
-
+# Note: kkarlsen.dev is now deployed separately as dev-site portfolio
 [[redirects]]
   from = "https://kkarlsen.art/*"
   to = "https://www.tidex.no/:splat"
