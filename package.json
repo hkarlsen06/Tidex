@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "workspaces": [
-    "marketing"
+    "marketing",
+    "dev-site"
   ],
   "scripts": {
     "dev": "node server.mjs",
@@ -20,7 +21,10 @@
     "test:coverage": "vitest run --coverage",
     "marketing:dev": "npm run dev --workspace marketing",
     "marketing:build": "npm run build --workspace marketing",
-    "marketing:start": "npm run start --workspace marketing"
+    "marketing:start": "npm run start --workspace marketing",
+    "dev-site:dev": "npm run dev --workspace dev-site",
+    "dev-site:build": "npm run build --workspace dev-site",
+    "dev-site:start": "npm run start --workspace dev-site"
   },
   "dependencies": {
     "@marsidev/react-turnstile": "^1.3.1",
