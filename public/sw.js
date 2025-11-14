@@ -27,7 +27,7 @@
 // ============================================================================
 
 /** @type {string} Cache version - increment on each deploy to invalidate old caches */
-const CACHE_VERSION = 'v8';
+const CACHE_VERSION = 'v9';
 
 /** @type {string} Cache for immutable static assets (JS, CSS, fonts, images) */
 const STATIC_CACHE = `tidex-static-${CACHE_VERSION}`;
@@ -188,8 +188,24 @@ async function precacheAppRoutes() {
     const locale = await getUserLocale();
     console.log('[SW] Detected user locale:', locale);
 
-    const cache = await caches.open(PAGES_CACHE);
+    const pagesCache = await caches.open(PAGES_CACHE);
+    const dataCache = await caches.open(DATA_CACHE);
+
     console.log('[SW] Precaching', APP_ROUTES_TO_PRECACHE.length, 'app routes for locale:', locale);
+
+    // First, precache the API route for add shift data
+    try {
+      const apiResponse = await fetch('/api/shifts/add-data', {
+        credentials: 'same-origin',
+        headers: { 'Accept': 'application/json' },
+      });
+      if (apiResponse.ok) {
+        await dataCache.put('/api/shifts/add-data', apiResponse);
+        console.log('[SW] Precached API route: /api/shifts/add-data');
+      }
+    } catch (error) {
+      console.warn('[SW] Failed to precache API route:', error);
+    }
 
     // Fetch all routes in parallel (but don't fail if one fails)
     const results = await Promise.allSettled(
@@ -200,16 +216,21 @@ async function precacheAppRoutes() {
 
           const response = await fetch(localizedRoute, {
             credentials: 'same-origin',
-            redirect: 'follow', // Follow redirects automatically
+            redirect: 'manual', // Don't follow redirects - manual mode prevents redirect errors
             headers: {
               'Accept': 'text/html',
             },
           });
 
-          if (response.ok && response.type !== 'opaqueredirect') {
-            // Only cache the localized route (not the base route)
-            // Caching base routes causes redirect errors
-            await cache.put(localizedRoute, response);
+          // Check if response is a redirect
+          if (response.type === 'opaqueredirect' || response.status === 301 || response.status === 302 || response.status === 307 || response.status === 308) {
+            console.warn('[SW] Skipping redirect response for:', localizedRoute);
+            return { route: localizedRoute, success: false };
+          }
+
+          if (response.ok && response.status === 200) {
+            // Only cache successful, non-redirect responses
+            await pagesCache.put(localizedRoute, response);
             console.log('[SW] Precached route:', localizedRoute);
             return { route: localizedRoute, success: true };
           } else {
