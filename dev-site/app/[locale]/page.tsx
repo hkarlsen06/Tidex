@@ -4,7 +4,7 @@ import { getDevDictionary } from '../../lib/dictionaries';
 import { DevLandingPage } from '../../components/DevLandingPage';
 
 interface HomePageProps {
-  params: Promise<{ locale: DevLocale }>;
+  params: Promise<{ locale: string }>;
 }
 
 export async function generateStaticParams() {
@@ -13,7 +13,8 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: HomePageProps): Promise<Metadata> {
   const { locale } = await params;
-  const dictionary = getDevDictionary(locale);
+  const validLocale = locale as DevLocale;
+  const dictionary = getDevDictionary(validLocale);
 
   return {
     title: dictionary.home.hero.name + ' — ' + dictionary.home.hero.title,
@@ -23,7 +24,8 @@ export async function generateMetadata({ params }: HomePageProps): Promise<Metad
 
 export default async function HomePage({ params }: HomePageProps) {
   const { locale } = await params;
-  const dictionary = getDevDictionary(locale);
+  const validLocale = locale as DevLocale;
+  const dictionary = getDevDictionary(validLocale);
 
-  return <DevLandingPage locale={locale} dictionary={dictionary} />;
+  return <DevLandingPage locale={validLocale} dictionary={dictionary} />;
 }

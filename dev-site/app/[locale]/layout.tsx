@@ -7,7 +7,7 @@ import ViewportHeightSetter from '../../components/ViewportHeightSetter';
 
 interface LocaleLayoutProps {
   children: ReactNode;
-  params: Promise<{ locale: DevLocale }>;
+  params: Promise<{ locale: string }>;
 }
 
 export async function generateStaticParams() {
@@ -16,13 +16,14 @@ export async function generateStaticParams() {
 
 export default async function LocaleLayout({ children, params }: LocaleLayoutProps) {
   const { locale } = await params;
-  const dictionary = getDevDictionary(locale);
+  const validLocale = locale as DevLocale;
+  const dictionary = getDevDictionary(validLocale);
 
   return (
     <>
-      <LocaleLangSetter locale={locale as any} />
+      <LocaleLangSetter locale={validLocale as any} />
       <ViewportHeightSetter />
-      <DevHeader locale={locale} dictionary={dictionary} />
+      <DevHeader locale={validLocale} dictionary={dictionary} />
       <main>{children}</main>
     </>
   );
