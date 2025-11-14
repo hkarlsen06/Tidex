@@ -27,7 +27,7 @@
 // ============================================================================
 
 /** @type {string} Cache version - increment on each deploy to invalidate old caches */
-const CACHE_VERSION = 'v5';
+const CACHE_VERSION = 'v6';
 
 /** @type {string} Cache for immutable static assets (JS, CSS, fonts, images) */
 const STATIC_CACHE = `tidex-static-${CACHE_VERSION}`;
@@ -62,6 +62,28 @@ const PRECACHE_ASSETS = [
   // Branding assets for offline experience
   '/icons/tidex-logo.webp',
   '/icons/tidex-wordmark.webp',
+];
+
+/**
+ * App routes to precache for offline navigation
+ * These are the main app pages users can access offline
+ * Will be fetched after initial install to avoid blocking
+ *
+ * Note: Settings pages are read-only when offline (no mutations allowed)
+ *
+ * @type {string[]}
+ */
+const APP_ROUTES_TO_PRECACHE = [
+  '/',           // Home/dashboard
+  '/shifts',     // Shifts view
+  '/shifts/add', // Add shift form (queues mutations when offline)
+  '/stats',      // Statistics page
+  '/settings',   // Settings hub (read-only offline)
+  '/settings/pay',         // Pay settings (read-only offline)
+  '/settings/display',     // Display settings (read-only offline)
+  '/settings/preferences', // Preferences (read-only offline)
+  '/settings/profile',     // Profile settings (read-only offline)
+  '/settings/subscription', // Subscription page (read-only offline)
 ];
 
 /**
@@ -119,6 +141,7 @@ self.addEventListener('install', (event) => {
  * Strategy:
  * 1. Delete all caches that don't match current version
  * 2. Call clients.claim() to control existing pages immediately
+ * 3. Precache app routes in the background (after activation)
  */
 self.addEventListener('activate', (event) => {
   console.log('[SW] Activate event - version:', CACHE_VERSION);
@@ -146,8 +169,56 @@ self.addEventListener('activate', (event) => {
         // Take control of all pages immediately
         return self.clients.claim();
       })
+      .then(() => {
+        // Precache app routes in the background (don't block activation)
+        console.log('[SW] Starting background precache of app routes');
+        precacheAppRoutes();
+      })
   );
 });
+
+/**
+ * Precache all app routes for offline navigation
+ * Runs in the background after service worker activation
+ * Fetches all routes and caches them for offline use
+ */
+async function precacheAppRoutes() {
+  try {
+    const cache = await caches.open(PAGES_CACHE);
+    console.log('[SW] Precaching', APP_ROUTES_TO_PRECACHE.length, 'app routes');
+
+    // Fetch all routes in parallel (but don't fail if one fails)
+    const results = await Promise.allSettled(
+      APP_ROUTES_TO_PRECACHE.map(async (route) => {
+        try {
+          const response = await fetch(route, {
+            credentials: 'same-origin',
+            headers: {
+              'Accept': 'text/html',
+            },
+          });
+
+          if (response.ok) {
+            await cache.put(route, response);
+            console.log('[SW] Precached route:', route);
+            return { route, success: true };
+          } else {
+            console.warn('[SW] Failed to precache route (status', response.status + '):', route);
+            return { route, success: false };
+          }
+        } catch (error) {
+          console.warn('[SW] Failed to precache route:', route, error);
+          return { route, success: false };
+        }
+      })
+    );
+
+    const successful = results.filter(r => r.status === 'fulfilled' && r.value.success).length;
+    console.log('[SW] Precached', successful, 'of', APP_ROUTES_TO_PRECACHE.length, 'app routes');
+  } catch (error) {
+    console.error('[SW] Failed to precache app routes:', error);
+  }
+}
 
 // ============================================================================
 // FETCH EVENT - Request Interception & Caching

@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { UserMenu } from "./UserMenu";
+import { OfflineIndicator } from "./OfflineIndicator";
 import { useTranslations } from "@/lib/i18n/client";
 
 export type TopHeaderProps = {
@@ -36,6 +37,7 @@ export function TopHeader({ userName, avatarUrl }: TopHeaderProps) {
                 priority
               />
             </a>
+            <OfflineIndicator />
           </div>
 
           <UserMenu displayName={displayName} avatarUrl={avatarUrl ?? null} />
