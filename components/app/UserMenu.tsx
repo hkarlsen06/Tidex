@@ -129,6 +129,7 @@ export function UserMenu({
               }
               handleNavigationClick("/settings/profile")(event);
             }}
+            prefetch={true}
             role="menuitem"
             aria-disabled={isProfileDisabled}
             tabIndex={isProfileDisabled ? -1 : undefined}

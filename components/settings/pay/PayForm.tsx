@@ -18,7 +18,7 @@ interface PayFormProps {
 export function PayForm({ initialData }: PayFormProps) {
   const { t } = useTranslations();
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
+  const [_isPending, startTransition] = useTransition();
   const isInitialMount = useRef(true);
 
   // Break settings

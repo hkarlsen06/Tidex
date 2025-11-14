@@ -18,7 +18,7 @@ function formatDate(date: Date): string {
 /**
  * Check if a given date is a public holiday in Norway
  */
-export function isPublicHoliday(date: Date, locale: Locale = 'no'): boolean {
+export function isPublicHoliday(date: Date, _locale: Locale = 'no'): boolean {
   const dateStr = formatDate(date);
   return isNorwegianPublicHoliday(dateStr);
 }
@@ -59,6 +59,6 @@ export function getHolidayName(date: Date, locale: Locale = 'no'): string | null
 /**
  * Get all holidays for a specific year
  */
-export function getHolidaysForYear(year: number, locale: Locale = 'no') {
+export function getHolidaysForYear(year: number, _locale: Locale = 'no') {
   return getNorwegianHolidays(year);
 }

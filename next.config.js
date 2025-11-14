@@ -31,6 +31,15 @@ const nextConfig = {
       "recharts",
       "lucide-react",
     ],
+
+    // Enable router cache for prefetched and dynamic pages
+    // Required for 'use cache: private' to persist across navigations
+    // dynamic: cache duration for dynamic pages (30s)
+    // static: cache duration for static/prefetched pages (3 min)
+    staleTimes: {
+      dynamic: 30,
+      static: 180,
+    },
   },
 
   // Configure headers for service worker and PWA assets
