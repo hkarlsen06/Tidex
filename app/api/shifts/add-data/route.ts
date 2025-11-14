@@ -1,58 +1,48 @@
-import { verifySession } from "@/data-access/auth";
+import { NextRequest, NextResponse } from "next/server";
+import { getSession } from "@/data-access/auth";
 import { getUserSettings } from "@/data-access/settings";
-import { connection } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { AddShiftFormWrapper } from "@/components/shifts/add/AddShiftFormWrapper";
 import { PRESET_RULES } from "@/data-access/shifts";
-import type { UserSettings } from "@/lib/payroll";
-import { getTranslations } from "@/lib/i18n/server";
-import type { Locale } from "@/lib/i18n/config";
 import { generateGhostsForMonth } from "@/lib/series/utils";
 import type { SeriesShiftRow } from "@/lib/series/types";
 import { cleanTime } from "@/lib/time-utils";
 import { logger } from "@/lib/logger";
 import { getUserWageSnapshots } from "@/data-access/wage-snapshots";
 
-interface AddShiftsPageProps {
-  params: Promise<{ locale: string }>;
-}
-
-export async function generateMetadata({ params }: AddShiftsPageProps) {
-  const { locale } = await params;
-  const t = getTranslations(locale as Locale);
-
-  return {
-    title: t.pages.shifts.add.title,
-  };
-}
-
-export default async function AddShiftsPage({ params }: AddShiftsPageProps) {
-  await connection(); // Opt out of prerendering for dynamic authenticated pages
-  const { locale: _locale } = await params;
-
-  // Verify authentication and get user
-  const { user } = await verifySession();
-
-  // Try to load data server-side, but handle failures gracefully for offline
-  let userSettings: UserSettings = {};
-  let allExistingShifts: Array<{ shift_date: string; start_time: string; end_time: string }> = [];
-  let wageSnapshots: any[] = [];
+/**
+ * GET /api/shifts/add-data
+ * Fetch data needed for the add shift form
+ *
+ * Returns:
+ * - existingShifts: Array of existing shifts (for conflict detection)
+ * - userSettings: User's pay/display settings
+ * - presetRules: Preset wage rules
+ * - wageSnapshots: Historical wage snapshots
+ */
+export async function GET(request: NextRequest) {
+  // Manual auth check for API routes
+  const session = await getSession();
+  if (!session) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
 
   try {
-    // Load user settings via DAL
-    userSettings = (await getUserSettings(user.id)) ?? {};
+    const userId = session.user.id;
+
+    // Load user settings
+    const userSettings = (await getUserSettings(userId)) ?? {};
 
     const supabase = await createSupabaseServerClient();
 
-    // Load only the minimal data needed to highlight conflicts in the calendar
+    // Load existing shifts (minimal data for conflict detection)
     const { data: rows, error } = await supabase
       .from("user_shifts")
       .select("shift_date,start_time,end_time")
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .order("shift_date", { ascending: false });
 
     if (error) {
-      console.error("Failed to load existing shifts for add page:", error);
+      console.error("Failed to load existing shifts:", error);
     }
 
     const existingShifts = (rows ?? []).map((s) => ({
@@ -65,10 +55,10 @@ export default async function AddShiftsPage({ params }: AddShiftsPageProps) {
     const { data: seriesShifts, error: seriesError } = await supabase
       .from("series_shifts")
       .select("*")
-      .eq("user_id", user.id);
+      .eq("user_id", userId);
 
     if (seriesError) {
-      logger.error("Failed to load series shifts for add page:", seriesError);
+      logger.error("Failed to load series shifts:", seriesError);
     }
 
     const seriesGhosts: Array<{ shift_date: string; start_time: string; end_time: string }> = [];
@@ -111,24 +101,30 @@ export default async function AddShiftsPage({ params }: AddShiftsPageProps) {
     }
 
     // Combine regular shifts and series ghosts
-    allExistingShifts = [...existingShifts, ...seriesGhosts];
+    const allExistingShifts = [...existingShifts, ...seriesGhosts];
 
-    // Load wage snapshots for accurate preview calculations
-    wageSnapshots = await getUserWageSnapshots();
-  } catch (error) {
-    // If server-side data loading fails (e.g., offline), return empty data
-    // The wrapper component will attempt to fetch from API route
-    console.error("Failed to load add shift data server-side:", error);
-  }
+    // Load wage snapshots
+    const wageSnapshots = await getUserWageSnapshots();
 
-  return (
-    <AddShiftFormWrapper
-      initialData={{
+    return NextResponse.json(
+      {
         existingShifts: allExistingShifts,
         userSettings,
         presetRules: PRESET_RULES,
         wageSnapshots,
-      }}
-    />
-  );
+      },
+      {
+        headers: {
+          // Cache for 5 minutes
+          'Cache-Control': 'private, max-age=300, stale-while-revalidate=60',
+        },
+      }
+    );
+  } catch (error) {
+    console.error('Failed to fetch add shift data:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch add shift data' },
+      { status: 500 }
+    );
+  }
 }
