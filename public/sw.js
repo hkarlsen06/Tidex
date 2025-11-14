@@ -27,7 +27,7 @@
 // ============================================================================
 
 /** @type {string} Cache version - increment on each deploy to invalidate old caches */
-const CACHE_VERSION = 'v6';
+const CACHE_VERSION = 'v7';
 
 /** @type {string} Cache for immutable static assets (JS, CSS, fonts, images) */
 const STATIC_CACHE = `tidex-static-${CACHE_VERSION}`;
@@ -184,27 +184,37 @@ self.addEventListener('activate', (event) => {
  */
 async function precacheAppRoutes() {
   try {
+    // Get user's locale from cookie or default to 'no'
+    const locale = await getUserLocale();
+    console.log('[SW] Detected user locale:', locale);
+
     const cache = await caches.open(PAGES_CACHE);
-    console.log('[SW] Precaching', APP_ROUTES_TO_PRECACHE.length, 'app routes');
+    console.log('[SW] Precaching', APP_ROUTES_TO_PRECACHE.length, 'app routes for locale:', locale);
 
     // Fetch all routes in parallel (but don't fail if one fails)
     const results = await Promise.allSettled(
       APP_ROUTES_TO_PRECACHE.map(async (route) => {
         try {
-          const response = await fetch(route, {
+          // Add locale prefix to route
+          const localizedRoute = `/${locale}${route}`;
+
+          const response = await fetch(localizedRoute, {
             credentials: 'same-origin',
+            redirect: 'follow', // Follow redirects automatically
             headers: {
               'Accept': 'text/html',
             },
           });
 
           if (response.ok) {
+            // Cache both the localized route and the base route
+            await cache.put(localizedRoute, response.clone());
             await cache.put(route, response);
-            console.log('[SW] Precached route:', route);
-            return { route, success: true };
+            console.log('[SW] Precached route:', localizedRoute);
+            return { route: localizedRoute, success: true };
           } else {
-            console.warn('[SW] Failed to precache route (status', response.status + '):', route);
-            return { route, success: false };
+            console.warn('[SW] Failed to precache route (status', response.status + '):', localizedRoute);
+            return { route: localizedRoute, success: false };
           }
         } catch (error) {
           console.warn('[SW] Failed to precache route:', route, error);
@@ -218,6 +228,28 @@ async function precacheAppRoutes() {
   } catch (error) {
     console.error('[SW] Failed to precache app routes:', error);
   }
+}
+
+/**
+ * Get user's locale from NEXT_LOCALE cookie or default to 'no'
+ * @returns {Promise<string>} User's locale code (e.g., 'no', 'en', 'de')
+ */
+async function getUserLocale() {
+  try {
+    // Try to get locale from cookie
+    const cookies = await self.cookieStore?.getAll();
+    if (cookies) {
+      const localeCookie = cookies.find(c => c.name === 'NEXT_LOCALE');
+      if (localeCookie) {
+        return localeCookie.value;
+      }
+    }
+  } catch (error) {
+    // cookieStore API not available, fall back to default
+  }
+
+  // Default to Norwegian
+  return 'no';
 }
 
 // ============================================================================
