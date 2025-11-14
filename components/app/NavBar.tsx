@@ -219,6 +219,7 @@ export function NavBar() {
                   <Link
                     href={targetHref}
                     onClick={handleItemClick(targetHref)}
+                    prefetch={true}
                     className="flex items-center justify-center p-2 -m-2"
                   >
                     <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-gradientMid">
@@ -246,6 +247,7 @@ export function NavBar() {
                 key={item.href}
                 href={item.href}
                 onClick={handleItemClick(item.href)}
+                prefetch={true}
                 className="flex items-center justify-center p-3 -m-3"
               >
                 <DisplayIcon

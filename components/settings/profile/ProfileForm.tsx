@@ -23,7 +23,7 @@ interface ProfileFormProps {
 export function ProfileForm({ initialData }: ProfileFormProps) {
   const { t } = useTranslations();
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
+  const [_isPending, startTransition] = useTransition();
   const [firstName, setFirstName] = useState(initialData.firstName);
   const [profilePictureUrl, setProfilePictureUrl] = useState(initialData.profilePictureUrl);
   const [isSaving, setIsSaving] = useState(false);
