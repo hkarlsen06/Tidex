@@ -32,24 +32,40 @@ export function AddShiftFormWrapper({ initialData }: Props) {
 
   // If initial data is empty/missing (offline SSR failed), fetch from API
   useEffect(() => {
-    if (!initialData.userSettings || Object.keys(initialData.userSettings).length === 0) {
+    // Check if we need to fetch data (server-side loading failed)
+    // userSettings is empty object {} when server-side loading fails offline
+    const needsFetch = !initialData.userSettings ||
+                       Object.keys(initialData.userSettings).length === 0;
+
+    if (needsFetch) {
+      console.log('[AddShiftFormWrapper] Server data missing, fetching from API');
       setIsLoading(true);
-      fetch('/api/shifts/add-data')
+      fetch('/api/shifts/add-data', {
+        credentials: 'same-origin',
+        headers: { 'Accept': 'application/json' }
+      })
         .then(res => {
-          if (!res.ok) throw new Error('Failed to load');
+          console.log('[AddShiftFormWrapper] API response status:', res.status);
+          if (!res.ok) {
+            throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+          }
           return res.json();
         })
         .then(apiData => {
+          console.log('[AddShiftFormWrapper] API data loaded successfully');
           setData(apiData);
           setError(null);
         })
         .catch(err => {
           console.error('[AddShiftFormWrapper] Failed to fetch data:', err);
-          setError('Failed to load shift data');
+          // If offline and we have no data, show a better error
+          setError(navigator.onLine ? 'Failed to load shift data' : 'Offline - data not cached yet');
         })
         .finally(() => {
           setIsLoading(false);
         });
+    } else {
+      console.log('[AddShiftFormWrapper] Using server-provided data');
     }
   }, [initialData]);
 
