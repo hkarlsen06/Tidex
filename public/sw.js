@@ -27,7 +27,7 @@
 // ============================================================================
 
 /** @type {string} Cache version - increment on each deploy to invalidate old caches */
-const CACHE_VERSION = 'v7';
+const CACHE_VERSION = 'v8';
 
 /** @type {string} Cache for immutable static assets (JS, CSS, fonts, images) */
 const STATIC_CACHE = `tidex-static-${CACHE_VERSION}`;
@@ -206,14 +206,14 @@ async function precacheAppRoutes() {
             },
           });
 
-          if (response.ok) {
-            // Cache both the localized route and the base route
-            await cache.put(localizedRoute, response.clone());
-            await cache.put(route, response);
+          if (response.ok && response.type !== 'opaqueredirect') {
+            // Only cache the localized route (not the base route)
+            // Caching base routes causes redirect errors
+            await cache.put(localizedRoute, response);
             console.log('[SW] Precached route:', localizedRoute);
             return { route: localizedRoute, success: true };
           } else {
-            console.warn('[SW] Failed to precache route (status', response.status + '):', localizedRoute);
+            console.warn('[SW] Failed to precache route (status', response.status + ', type:', response.type + '):', localizedRoute);
             return { route: localizedRoute, success: false };
           }
         } catch (error) {
@@ -358,7 +358,8 @@ async function handleNavigationRequest(request) {
     const response = await fetchWithTimeout(request, NETWORK_TIMEOUT.navigation);
 
     // Cache successful navigation responses for offline access
-    if (response && response.ok) {
+    // IMPORTANT: Don't cache redirects - they cause "service worker has redirections" error
+    if (response && response.ok && response.type !== 'opaqueredirect' && !response.redirected) {
       // Clone before caching (response body can only be read once)
       const responseToCache = response.clone();
       caches.open(PAGES_CACHE).then((cache) => {
