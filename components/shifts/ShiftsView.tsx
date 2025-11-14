@@ -22,6 +22,7 @@ import { copyShifts } from "@/app/[locale]/(app)/shifts/_actions/copyShifts";
 import { moveSeriesShift } from "@/app/[locale]/(app)/shifts/_actions/moveSeriesShift";
 import { useNavigationFeedback } from "@/components/app/navigation-feedback";
 import { useMonth } from "@/components/app/MonthContext";
+import { queueMutation, isOfflineQueueSupported } from "@/lib/pwa/offline-queue";
 import type { ISODate } from "@/components/calendar/calendar.types";
 import {
   Dialog,
@@ -31,7 +32,7 @@ import {
   DialogFooter,
   DialogDescription,
 } from "@/components/app/Dialog";
-import { ArrowRight, ArrowLeft } from "lucide-react";
+import { ArrowRight, ArrowLeft, X, CloudOff } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { useTranslations } from "@/lib/i18n/client";
 import type { Locale } from "@/lib/i18n/config";
@@ -685,6 +686,36 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
     return () => document.removeEventListener("pointerdown", handlePointerDown);
   }, [selectedDate, detailsOpen, moveModalOpen, clearSelection]);
 
+  // Handle queued shift notification
+  const [queuedNotification, setQueuedNotification] = useState<{ type: string; count: number } | null>(null);
+
+  useEffect(() => {
+    const queued = searchParams.get('queued');
+    const count = parseInt(searchParams.get('count') || '1', 10);
+
+    if (queued) {
+      setQueuedNotification({ type: queued, count });
+
+      // Clear URL params after showing notification
+      const timer = setTimeout(() => {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('queued');
+        url.searchParams.delete('count');
+        window.history.replaceState({}, '', url.toString());
+      }, 100);
+
+      // Auto-dismiss notification after 5 seconds
+      const dismissTimer = setTimeout(() => {
+        setQueuedNotification(null);
+      }, 5000);
+
+      return () => {
+        clearTimeout(timer);
+        clearTimeout(dismissTimer);
+      };
+    }
+  }, [searchParams]);
+
   // Confetti celebration for newly added shifts
   useEffect(() => {
     const newDates = searchParams.get('new');
@@ -1096,6 +1127,35 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
 
   return (
     <>
+    {/* Queued Shift Notification */}
+    {queuedNotification && (
+      <div className="fixed top-20 left-1/2 -translate-x-1/2 z-40 animate-in slide-in-from-top-2 fade-in">
+        <div className="rounded-lg border border-blue-500/20 bg-blue-500/10 px-4 py-3 shadow-lg backdrop-blur-sm">
+          <div className="flex items-center gap-2">
+            <CloudOff className="h-4 w-4 text-blue-500" />
+            <div className="text-sm">
+              <span className="text-blue-500 font-medium">
+                {queuedNotification.type === 'create' &&
+                  `${queuedNotification.count} ${queuedNotification.count === 1 ? 'shift' : 'shifts'} queued`}
+                {queuedNotification.type === 'update' && 'Shift update queued'}
+                {queuedNotification.type === 'delete' && 'Shift deletion queued'}
+              </span>
+              <span className="text-blue-400 text-xs ml-2">
+                Will sync when online
+              </span>
+            </div>
+            <button
+              onClick={() => setQueuedNotification(null)}
+              className="ml-2 text-blue-400 hover:text-blue-500"
+              aria-label="Dismiss"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
     <div className="flex w-full flex-col">
       <div className="flex items-center justify-center min-h-[calc(100dvh-3.75rem-env(safe-area-inset-top))] -mx-4 pb-[calc(5rem+env(safe-area-inset-bottom))] md:min-h-[calc(100dvh-5rem)] md:pb-20">
         <div className="w-full px-4">
@@ -1240,15 +1300,43 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
             await deleteShift(id);
             router.refresh();
           } catch (error) {
-            // Revert optimistic update on error
-            setDeletedShiftIds(prev => {
-              const next = new Set(prev);
-              next.delete(id);
-              return next;
-            });
-            // TODO: Add error state to ShiftDetails component and display user-friendly error
-            // For now, log the error for debugging
-            console.error("Failed to delete shift", error);
+            // If offline and queue is supported, queue the mutation
+            if (!navigator.onLine && isOfflineQueueSupported()) {
+              try {
+                // Find the shift to get series_id and shift_date if needed
+                const shiftToDelete = shifts.find(s => s.id === id);
+
+                await queueMutation({
+                  type: 'DELETE',
+                  endpoint: `/api/shifts/${id}${
+                    shiftToDelete?.series_id
+                      ? `?seriesId=${shiftToDelete.series_id}&shiftDate=${shiftToDelete.shift_date}`
+                      : ''
+                  }`,
+                  method: 'DELETE',
+                });
+
+                // Keep optimistic update - shift stays hidden
+                // Will refresh when sync completes
+                console.log('[Offline] Shift delete queued:', id);
+              } catch (queueError) {
+                // Revert optimistic update if queue fails
+                setDeletedShiftIds(prev => {
+                  const next = new Set(prev);
+                  next.delete(id);
+                  return next;
+                });
+                console.error("Failed to queue shift deletion", queueError);
+              }
+            } else {
+              // Revert optimistic update on online error
+              setDeletedShiftIds(prev => {
+                const next = new Set(prev);
+                next.delete(id);
+                return next;
+              });
+              console.error("Failed to delete shift", error);
+            }
           }
         });
       }}

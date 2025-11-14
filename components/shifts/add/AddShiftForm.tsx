@@ -18,6 +18,7 @@ import { checkShiftLimit } from "@/app/[locale]/(app)/shifts/add/_checks/checkSh
 import { useNavigationFeedback } from "@/components/app/navigation-feedback";
 import { useMonth } from "@/components/app/MonthContext";
 import { useTranslations, useLocale } from "@/lib/i18n/client";
+import { queueMutation, isOfflineQueueSupported } from "@/lib/pwa/offline-queue";
 
 type ExistingShift = {
   shift_date: string; // YYYY-MM-DD
@@ -238,13 +239,33 @@ export default function AddShiftForm({ existingShifts, userSettings, presetRules
       // User is allowed - proceed with shift creation in transition
       startTransition(async () => {
         try {
+          // Try server action first (works online and offline)
           const result = await createShifts({ dates: isoDates, start, end });
           // Navigate with new shift dates to trigger celebration
           const newDates = result.dates.join(',');
           navigate(`/${locale}/shifts?new=${encodeURIComponent(newDates)}`);
           router.refresh();
         } catch (e: any) {
-          setError(e?.message || t.pages.shifts.add.form.couldNotSaveShift);
+          // If offline and queue is supported, queue the mutation
+          if (!navigator.onLine && isOfflineQueueSupported()) {
+            try {
+              await queueMutation({
+                type: 'CREATE',
+                endpoint: '/api/shifts',
+                method: 'POST',
+                body: JSON.stringify({ dates: isoDates, start, end }),
+              });
+
+              // Show success message for queued mutation
+              setError(null);
+              // Navigate back to shifts page (show optimistic message there)
+              navigate(`/${locale}/shifts?queued=create&count=${isoDates.length}`);
+            } catch {
+              setError(t.pages.shifts.add.form.couldNotSaveShift);
+            }
+          } else {
+            setError(e?.message || t.pages.shifts.add.form.couldNotSaveShift);
+          }
         }
       });
     } catch (e: any) {
@@ -263,7 +284,24 @@ export default function AddShiftForm({ existingShifts, userSettings, presetRules
         navigate(`/${locale}/shifts?new=${encodeURIComponent(newDates)}`);
         router.refresh();
       } catch (e: any) {
-        setError(e?.message || t.pages.shifts.add.form.couldNotSaveShift);
+        // If offline and queue is supported, queue the mutation
+        if (!navigator.onLine && isOfflineQueueSupported()) {
+          try {
+            await queueMutation({
+              type: 'CREATE',
+              endpoint: '/api/shifts',
+              method: 'POST',
+              body: JSON.stringify({ dates: isoDates, start, end }),
+            });
+
+            setError(null);
+            navigate(`/${locale}/shifts?queued=create&count=${isoDates.length}`);
+          } catch {
+            setError(t.pages.shifts.add.form.couldNotSaveShift);
+          }
+        } else {
+          setError(e?.message || t.pages.shifts.add.form.couldNotSaveShift);
+        }
       }
     });
   };

@@ -10,6 +10,7 @@ import { logSessionRefresh } from "@/lib/auth/session-telemetry";
 import { NavigationFeedbackProvider } from "./navigation-feedback";
 import { TopHeader } from "./TopHeader";
 import { NavBar } from "./NavBar";
+import { OfflineIndicator } from "./OfflineIndicator";
 
 type AppLayoutClientProps = {
   children: ReactNode;
@@ -92,6 +93,7 @@ function LayoutContent({
         </div>
       </main>
       <NavBar />
+      <OfflineIndicator />
     </>
   );
 }
