@@ -4,7 +4,7 @@ import { getDevDictionary } from '../../../lib/dictionaries';
 import { ProjectsPage } from '../../../components/ProjectsPage';
 
 interface ProjectsPageProps {
-  params: Promise<{ locale: DevLocale }>;
+  params: Promise<{ locale: string }>;
 }
 
 export async function generateStaticParams() {
@@ -13,7 +13,8 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: ProjectsPageProps): Promise<Metadata> {
   const { locale } = await params;
-  const dictionary = getDevDictionary(locale);
+  const validLocale = locale as DevLocale;
+  const dictionary = getDevDictionary(validLocale);
 
   return {
     title: dictionary.projects.title + ' — Hjalmar Karlsen',
@@ -23,7 +24,8 @@ export async function generateMetadata({ params }: ProjectsPageProps): Promise<M
 
 export default async function Projects({ params }: ProjectsPageProps) {
   const { locale } = await params;
-  const dictionary = getDevDictionary(locale);
+  const validLocale = locale as DevLocale;
+  const dictionary = getDevDictionary(validLocale);
 
   return <ProjectsPage dictionary={dictionary} />;
 }

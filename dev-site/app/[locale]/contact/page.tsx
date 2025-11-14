@@ -4,7 +4,7 @@ import { getDevDictionary } from '../../../lib/dictionaries';
 import { ContactPage } from '../../../components/ContactPage';
 
 interface ContactPageProps {
-  params: Promise<{ locale: DevLocale }>;
+  params: Promise<{ locale: string }>;
 }
 
 export async function generateStaticParams() {
@@ -13,7 +13,8 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: ContactPageProps): Promise<Metadata> {
   const { locale } = await params;
-  const dictionary = getDevDictionary(locale);
+  const validLocale = locale as DevLocale;
+  const dictionary = getDevDictionary(validLocale);
 
   return {
     title: dictionary.contact.title + ' — Hjalmar Karlsen',
@@ -23,7 +24,8 @@ export async function generateMetadata({ params }: ContactPageProps): Promise<Me
 
 export default async function Contact({ params }: ContactPageProps) {
   const { locale } = await params;
-  const dictionary = getDevDictionary(locale);
+  const validLocale = locale as DevLocale;
+  const dictionary = getDevDictionary(validLocale);
 
   return <ContactPage dictionary={dictionary} />;
 }
