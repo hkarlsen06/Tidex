@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import type { Metadata } from "next";
 import { getTranslations } from "@/lib/i18n/server";
 import type { Locale } from "@/lib/i18n/config";
+import { SettingsLayoutClient } from "@/components/settings/SettingsLayoutClient";
 
 export async function generateMetadata({
   params,
@@ -20,5 +21,5 @@ export default function SettingsLayout({
 }: {
   children: ReactNode;
 }) {
-  return <>{children}</>;
+  return <SettingsLayoutClient>{children}</SettingsLayoutClient>;
 }
