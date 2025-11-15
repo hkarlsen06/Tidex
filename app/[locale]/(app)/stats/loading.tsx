@@ -112,7 +112,7 @@ export default function StatsLoading() {
           </div>
 
           {/* Year to date summary header - spans full width on desktop */}
-          <h2 className="h-7 w-32 bg-surface-secondary rounded animate-pulse pl-6 md:col-span-full" />
+          <div className="h-7 w-32 bg-surface-secondary rounded animate-pulse pl-6 md:col-span-full" />
 
           {/* Cumulative earnings chart */}
           <div className="rounded-3xl border border-border bg-surface-primary">
