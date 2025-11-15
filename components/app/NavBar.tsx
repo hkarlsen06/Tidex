@@ -60,13 +60,16 @@ const navItems: NavItem[] = [
 export function NavBar() {
   const { t } = useTranslations();
   const rawPathname = usePathname();
-  const { navigate, pendingPath } = useNavigationFeedback();
+  const { navigate, pendingPath: rawPendingPath } = useNavigationFeedback();
   const [showAddShiftHint, setShowAddShiftHint] = useState(false);
   const scrollDirection = useScrollDirection({ threshold: 10 });
 
   // Strip locale prefix from pathname for consistent nav item matching
   // usePathname() returns paths like "/no/settings", "/en/shifts", or "/de/stats"
   const pathname = rawPathname.replace(/^\/(no|en|de)(?=\/|$)/, '') || '/';
+
+  // Also strip locale from pendingPath for consistent matching
+  const pendingPath = rawPendingPath ? rawPendingPath.replace(/^\/(no|en|de)(?=\/|$)/, '') || '/' : null;
 
   // Fetch shift count client-side to determine if hint should be shown
   // This is deferred to avoid blocking the initial render
@@ -191,14 +194,14 @@ export function NavBar() {
   const isHidden = shouldHideOnScroll && scrollDirection === "down";
 
   return (
-    <nav className={`fixed left-0 right-0 z-40 bottom-0 md:bottom-4 md:bg-transparent transition-transform duration-300 ${
-      isHidden ? "translate-y-full md:translate-y-[calc(100%+1rem)]" : "translate-y-0"
+    <nav className={`fixed left-0 right-0 z-40 bottom-0 transition-transform duration-300 md:hidden ${
+      isHidden ? "translate-y-full" : "translate-y-0"
     }`}>
       {/* Background that extends into safe area on mobile */}
-      <div className="absolute inset-x-0 top-0 bottom-0 bg-surface-primary/95 backdrop-blur md:hidden" />
+      <div className="absolute inset-x-0 top-0 bottom-0 bg-background/80 backdrop-blur-md" />
 
-      <div className="relative mx-auto max-w-[520px] md:px-4 pb-[env(safe-area-inset-bottom)] md:pb-0">
-        <div className="flex items-center justify-around pt-4 pb-4 border-t border-border-subtle md:bg-surface-primary/95 md:backdrop-blur md:border md:rounded-2xl md:shadow-app-lg">
+      <div className="relative mx-auto max-w-[520px] pb-[env(safe-area-inset-bottom)]">
+        <div className="flex items-center justify-around pt-4 pb-4 border-t border-border/40">
           {navItems.map((item) => {
             const isActive = isPathActive(item);
             const Icon = item.icon;

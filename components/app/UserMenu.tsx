@@ -92,10 +92,10 @@ export function UserMenu({
           if (e.key === "Escape") setOpen(false);
           if (e.key === "ArrowDown") setOpen(true);
         }}
-        className="flex items-center gap-3 rounded-2xl bg-surface-secondary/80 pl-4 pr-2 py-2 shadow-app-sm dark:shadow-app-inner focus:outline-none focus:ring-2 focus:ring-border"
+        className="flex items-center gap-3 rounded-2xl bg-background/80 pl-4 pr-2 py-2 border border-border/40 focus:outline-none focus:ring-2 focus:ring-border"
       >
         <span className="text-sm font-medium text-text-primary">{displayName}</span>
-        <span className="relative inline-flex h-8 w-8 items-center justify-center overflow-hidden rounded-xl bg-surface-secondary text-xs font-semibold uppercase text-text-primary">
+        <span className="relative inline-flex h-8 w-8 items-center justify-center overflow-hidden rounded-xl bg-background text-xs font-semibold uppercase text-text-primary">
           {avatarUrl ? (
             <Image
               src={avatarUrl}
@@ -117,7 +117,7 @@ export function UserMenu({
           ref={menuRef}
           role="menu"
           aria-label="User menu"
-          className="absolute right-0 mt-2 w-48 overflow-hidden rounded-xl border border-border-subtle bg-surface-primary/95 shadow-app-lg backdrop-blur"
+          className="absolute right-0 mt-2 w-48 overflow-hidden rounded-xl border border-border/40 bg-background shadow-app-lg"
         >
           <Link
             href="/settings/profile"
@@ -134,8 +134,8 @@ export function UserMenu({
             aria-disabled={isProfileDisabled}
             tabIndex={isProfileDisabled ? -1 : undefined}
             className={cn(
-              "flex items-center gap-2 px-4 py-2 text-sm text-text-primary hover:bg-surface-secondary/70",
-              isProfileDisabled && "cursor-not-allowed opacity-50 hover:bg-surface-primary/95"
+              "flex items-center gap-2 px-4 py-2 text-sm text-text-primary hover:bg-accent",
+              isProfileDisabled && "cursor-not-allowed opacity-50 hover:bg-background"
             )}
           >
             <UserCircle strokeWidth={2} className="h-4 w-4" />

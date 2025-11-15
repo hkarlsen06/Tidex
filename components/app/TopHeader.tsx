@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { UserMenu } from "./UserMenu";
 import { OfflineIndicator } from "./OfflineIndicator";
+import { NavigationMenu } from "./NavigationMenu";
 import { useTranslations } from "@/lib/i18n/client";
 
 export type TopHeaderProps = {
@@ -17,31 +18,30 @@ export function TopHeader({ userName, avatarUrl }: TopHeaderProps) {
   const displayName = (firstWord ?? cleanedName) || "Guest";
 
   return (
-    <header className="sticky top-0 z-50 pt-[env(safe-area-inset-top)] md:pt-0">
-      {/* Safe area background - uses ::before to extend above viewport */}
-      <div className="absolute inset-x-0 -top-[100vh] bottom-0 bg-surface-primary/95 backdrop-blur -z-10 md:bg-transparent" />
-        <div className="mx-auto max-w-[520px] md:px-4">
-          <div className="flex items-center justify-between pt-2 pb-2 px-4 border-b border-border-subtle md:bg-surface-primary/95 md:backdrop-blur md:border md:rounded-2xl md:shadow-app-lg">
-          <div className="flex items-center gap-3">
-            <a
-              href="https://tidex.no/"
-              className="inline-flex items-center justify-center"
-              aria-label={t.header.goToTidex}
-            >
-              <Image
-                src="/icons/tidex-wordmark.webp"
-                alt="Tidex"
-                width={100}
-                height={28}
-                className="h-7 w-auto"
-                priority
-              />
-            </a>
-            <OfflineIndicator />
-          </div>
-
-          <UserMenu displayName={displayName} avatarUrl={avatarUrl ?? null} />
+    <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-md pt-[env(safe-area-inset-top)] md:pt-0">
+      <div className="container mx-auto flex h-16 items-center justify-between px-4">
+        <div className="flex items-center gap-3">
+          <a
+            href="https://tidex.no/"
+            className="inline-flex items-center justify-center"
+            aria-label={t.header.goToTidex}
+          >
+            <Image
+              src="/icons/tidex-wordmark.webp"
+              alt="Tidex"
+              width={100}
+              height={28}
+              className="h-7 w-auto"
+              priority
+            />
+          </a>
+          <OfflineIndicator />
         </div>
+
+        {/* Desktop navigation - hidden on mobile */}
+        <NavigationMenu className="hidden md:flex" />
+
+        <UserMenu displayName={displayName} avatarUrl={avatarUrl ?? null} />
       </div>
     </header>
   );
