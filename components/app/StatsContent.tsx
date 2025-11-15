@@ -444,25 +444,30 @@ export function StatsContent({ data }: StatsContentProps) {
 
       <div
         ref={swipeContainerRef}
-        className="flex flex-col w-full max-w-md mx-auto pb-6 pt-2 space-y-6"
+        className="w-full pb-6 pt-2 flex flex-col space-y-6 md:grid md:auto-rows-max md:gap-6 md:space-y-0"
+        style={{
+          gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 400px), 1fr))'
+        }}
       >
+
+      {/* Month picker - spans full width on desktop */}
+      <div className="flex items-center justify-between mb-2 md:col-span-full">
+        <MonthPicker
+          month={selectedMonth}
+          onPreviousMonth={goToPreviousMonth}
+          onNextMonth={goToNextMonth}
+        />
+        <span className="font-medium text-text-muted mr-3">{selectedMonth.getFullYear()}</span>
+      </div>
+
+      {fetchError && (
+        <p className="text-sm text-error md:col-span-full">
+          {fetchError}
+        </p>
+      )}
 
       {/* Hero section with key metrics */}
       <div className={`space-y-5 ${animationClass}`}>
-        <div className="flex items-center justify-between -mb-3">
-          <MonthPicker
-            month={selectedMonth}
-            onPreviousMonth={goToPreviousMonth}
-            onNextMonth={goToNextMonth}
-          />
-          <span className="font-medium text-text-muted mr-3">{selectedMonth.getFullYear()}</span>
-        </div>
-        {fetchError && (
-          <p className="text-sm text-error">
-            {fetchError}
-          </p>
-        )}
-
         <Card className="border-border bg-surface-primary overflow-hidden">
           <CardContent className="p-6">
             <p className="text-lg font-semibold text-text-muted mb-3">
@@ -580,84 +585,83 @@ export function StatsContent({ data }: StatsContentProps) {
         />
       </div>
 
-      {/* Year to date summary */}
-      <div className={`space-y-5 ${animationClass}`}>
-        <h2 className="text-xl font-bold text-text-primary pl-6">
-          {selectedYear} {t.pages.stats.cards.yearTotal}
-        </h2>
+      {/* Year to date summary header - spans full width on desktop */}
+      <h2 className="text-xl font-bold text-text-primary pl-6 md:col-span-full">
+        {selectedYear} {t.pages.stats.cards.yearTotal}
+      </h2>
 
-        {/* Cumulative earnings chart */}
-        <Card className="border-border bg-surface-primary">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-xl font-bold text-text-primary">
-              {t.pages.stats.cards.cumulativeProgress}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="px-3 pb-4 pt-1">
-            {!chartData ? (
-              <ChartSkeleton />
-            ) : (
-              <YearlyCumulativeChart data={chartData.yearlyCumulative} />
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="border-border bg-surface-primary">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-xl font-bold text-text-primary">
-              {t.pages.stats.cards.last6Months}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="px-3 pb-4 pt-1">
-            {!chartData ? (
-              <ChartSkeleton />
-            ) : (
-              <MonthlyBarChart data={chartData.last6Months} />
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Day of week breakdown */}
-        <Card className="border-border bg-surface-primary">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-xl font-bold text-text-primary">
-              {t.pages.stats.cards.averageByWeekday}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="px-3 pb-4 pt-1">
-            {!chartData ? (
-              <ChartSkeleton />
-            ) : (
-              <DayOfWeekChart data={chartData.byDayOfWeek} />
-            )}
-          </CardContent>
-        </Card>
-
-        <div className="grid grid-cols-1 gap-3">
+      {/* Cumulative earnings chart */}
+      <Card className={`border-border bg-surface-primary ${animationClass}`}>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-xl font-bold text-text-primary">
+            {t.pages.stats.cards.cumulativeProgress}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="px-3 pb-4 pt-1">
           {!chartData ? (
-            <>
-              <ChartSkeleton />
-              <ChartSkeleton />
-              <ChartSkeleton />
-            </>
+            <ChartSkeleton />
           ) : (
-            <>
-              <StatCard
-                label={t.pages.stats.cards.total}
-                value={formatCurrencyValue(chartData.yearToDate.totalEarnings)}
-                suffix={t.common.currency}
-              />
-              <StatCard
-                label={t.pages.stats.hours}
-                value={formatHours(chartData.yearToDate.totalHours)}
-              />
-              <StatCard
-                label={t.pages.stats.shifts}
-                value={chartData.yearToDate.shiftCount.toString()}
-              />
-            </>
+            <YearlyCumulativeChart data={chartData.yearlyCumulative} />
           )}
-        </div>
+        </CardContent>
+      </Card>
+
+      <Card className={`border-border bg-surface-primary ${animationClass}`}>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-xl font-bold text-text-primary">
+            {t.pages.stats.cards.last6Months}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="px-3 pb-4 pt-1">
+          {!chartData ? (
+            <ChartSkeleton />
+          ) : (
+            <MonthlyBarChart data={chartData.last6Months} />
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Day of week breakdown */}
+      <Card className={`border-border bg-surface-primary ${animationClass}`}>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-xl font-bold text-text-primary">
+            {t.pages.stats.cards.averageByWeekday}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="px-3 pb-4 pt-1">
+          {!chartData ? (
+            <ChartSkeleton />
+          ) : (
+            <DayOfWeekChart data={chartData.byDayOfWeek} />
+          )}
+        </CardContent>
+      </Card>
+
+      {/* YTD stat cards - grouped together in one grid cell with internal grid */}
+      <div className={`grid grid-cols-1 gap-3 ${animationClass}`}>
+        {!chartData ? (
+          <>
+            <ChartSkeleton />
+            <ChartSkeleton />
+            <ChartSkeleton />
+          </>
+        ) : (
+          <>
+            <StatCard
+              label={t.pages.stats.cards.total}
+              value={formatCurrencyValue(chartData.yearToDate.totalEarnings)}
+              suffix={t.common.currency}
+            />
+            <StatCard
+              label={t.pages.stats.hours}
+              value={formatHours(chartData.yearToDate.totalHours)}
+            />
+            <StatCard
+              label={t.pages.stats.shifts}
+              value={chartData.yearToDate.shiftCount.toString()}
+            />
+          </>
+        )}
       </div>
       </div>
     </>
