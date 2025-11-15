@@ -53,6 +53,31 @@ export const de = {
   header: {
     goToTidex: 'Zu tidex.no gehen',
   },
+  footer: {
+    product: {
+      title: 'Produkt',
+      dashboard: 'Dashboard',
+      shifts: 'Schichten',
+      statistics: 'Statistiken',
+      settings: 'Einstellungen',
+    },
+    resources: {
+      title: 'Ressourcen',
+      payrollDocs: 'Lohndokumentation',
+      github: 'GitHub',
+    },
+    legal: {
+      title: 'Rechtliches',
+      privacy: 'Datenschutz',
+      terms: 'Nutzungsbedingungen',
+    },
+    company: {
+      title: 'Unternehmen',
+      support: 'Support',
+      website: 'tidex.no',
+    },
+    copyright: '© 2025 Hjalmar Kristensen-Karlsen',
+  },
   userMenu: {
     profile: 'Profil',
     lightMode: 'Heller Modus',
@@ -584,7 +609,7 @@ export const de = {
           confirmationSent: 'Bestätigung gesendet!',
           confirmationMessage: 'Wir haben Bestätigungslinks an {oldEmail} und {newEmail} gesendet. Klicken Sie auf beide Links, um die Änderung abzuschließen.',
           contactSupport: 'Wenn Sie die E-Mails nicht erhalten, kontaktieren Sie',
-          supportEmail: 'support@tidex.no',
+          supportEmail: 'contact@tidex.no',
           errors: {
             emailInvalid: 'Ungültige E-Mail-Adresse.',
             emailSameAsCurrent: 'Die neue E-Mail-Adresse muss sich von der aktuellen unterscheiden.',

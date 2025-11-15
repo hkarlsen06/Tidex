@@ -53,6 +53,31 @@ export const no = {
   header: {
     goToTidex: 'Gå til tidex.no',
   },
+  footer: {
+    product: {
+      title: 'Produkt',
+      dashboard: 'Oversikt',
+      shifts: 'Vakter',
+      statistics: 'Statistikk',
+      settings: 'Innstillinger',
+    },
+    resources: {
+      title: 'Ressurser',
+      payrollDocs: 'Lønnsdokumentasjon',
+      github: 'GitHub',
+    },
+    legal: {
+      title: 'Juridisk',
+      privacy: 'Personvern',
+      terms: 'Vilkår',
+    },
+    company: {
+      title: 'Selskap',
+      support: 'Support',
+      website: 'tidex.no',
+    },
+    copyright: '© 2025 Hjalmar Kristensen-Karlsen',
+  },
   userMenu: {
     profile: 'Profil',
     lightMode: 'Lys modus',
@@ -584,7 +609,7 @@ export const no = {
           confirmationSent: 'Bekreftelse sendt!',
           confirmationMessage: 'Vi har sendt bekreftelseslenker til både {oldEmail} og {newEmail}. Klikk på begge lenkene for å fullføre endringen.',
           contactSupport: 'Hvis du ikke mottar e-postene, kontakt',
-          supportEmail: 'support@tidex.no',
+          supportEmail: 'contact@tidex.no',
           errors: {
             emailInvalid: 'Ugyldig e-postadresse.',
             emailSameAsCurrent: 'Den nye e-postadressen må være forskjellig fra den nåværende.',
