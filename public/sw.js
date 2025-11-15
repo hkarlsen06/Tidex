@@ -27,7 +27,7 @@
 // ============================================================================
 
 /** @type {string} Cache version - increment on each deploy to invalidate old caches */
-const CACHE_VERSION = 'v11';
+const CACHE_VERSION = 'v12';
 
 /** @type {string} Cache for immutable static assets (JS, CSS, fonts, images) */
 const STATIC_CACHE = `tidex-static-${CACHE_VERSION}`;
@@ -397,21 +397,45 @@ async function handleNavigationRequest(request) {
 
     return response;
   } catch (error) {
-    console.log('[SW] Navigation network failed, trying cache:', request.url);
+    console.log('[SW] Navigation network failed, trying cache:', request.url, error);
 
-    // Try to serve cached version
-    const cachedResponse = await caches.match(request);
+    // Try to serve cached version - try exact match first
+    let cachedResponse = await caches.match(request);
+
+    // If no exact match, try without query params
+    if (!cachedResponse) {
+      const urlWithoutQuery = request.url.split('?')[0];
+      cachedResponse = await caches.match(urlWithoutQuery);
+      if (cachedResponse) {
+        console.log('[SW] Serving cached page (no query):', urlWithoutQuery);
+      }
+    }
+
     if (cachedResponse) {
       console.log('[SW] Serving cached page:', request.url);
       return cachedResponse;
     }
 
+    // Try to match the root path for the current locale
+    // e.g., if /no/shifts/something fails, try /no/shifts
+    const url = new URL(request.url);
+    const pathParts = url.pathname.split('/').filter(Boolean);
+    if (pathParts.length > 1) {
+      // Try parent path (remove last segment)
+      const parentPath = '/' + pathParts.slice(0, -1).join('/');
+      const parentResponse = await caches.match(parentPath);
+      if (parentResponse) {
+        console.log('[SW] Serving parent page for failed navigation:', parentPath);
+        return parentResponse;
+      }
+    }
+
     // Last resort: serve offline page
-    console.log('[SW] No cache available, serving offline page');
+    console.warn('[SW] No cache available for navigation, serving offline page');
     const offlineResponse = await caches.match(OFFLINE_URL);
     return offlineResponse || new Response(
-      '<html><body><h1>Offline</h1><p>No cached content available.</p></body></html>',
-      { headers: { 'Content-Type': 'text/html' } }
+      '<html><body><h1>Offline</h1><p>No cached content available. Please connect to the internet and try again.</p></body></html>',
+      { headers: { 'Content-Type': 'text/html' }, status: 503, statusText: 'Service Unavailable' }
     );
   }
 }

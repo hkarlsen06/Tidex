@@ -19,6 +19,7 @@ import { useNavigationFeedback } from "@/components/app/navigation-feedback";
 import { useMonth } from "@/components/app/MonthContext";
 import { useTranslations, useLocale } from "@/lib/i18n/client";
 import { queueMutation, isOfflineQueueSupported } from "@/lib/pwa/offline-queue";
+import { useOnlineStatus } from "@/lib/hooks/useOnlineStatus";
 
 type ExistingShift = {
   shift_date: string; // YYYY-MM-DD
@@ -90,8 +91,9 @@ export default function AddShiftForm({ existingShifts, userSettings, presetRules
   const [isFreeTier, setIsFreeTier] = useState<boolean | null>(null);
   const [showMultiMonthWarning, setShowMultiMonthWarning] = useState(false);
   const limitStatusLoadingRef = useRef(false);
+  const isOffline = useOnlineStatus();
 
-  const canSubmit = dates.length > 0 && /^\d{2}:\d{2}$/.test(start) && /^\d{2}:\d{2}$/.test(end);
+  const canSubmit = !isOffline && dates.length > 0 && /^\d{2}:\d{2}$/.test(start) && /^\d{2}:\d{2}$/.test(end);
 
   const isoDates = useMemo(() => dates.map(toLocalISODate), [dates]);
 
@@ -415,6 +417,15 @@ export default function AddShiftForm({ existingShifts, userSettings, presetRules
             {mode === "single" ? t.pages.shifts.add.description : t.pages.shifts.add.descriptionSeries}
           </p>
         </div>
+
+        {/* Offline Mode Banner */}
+        {isOffline && (
+          <div className="rounded-2xl border border-warning/40 bg-warning-subtle px-4 py-3 shadow-app-inner">
+            <p className="text-sm font-medium text-warning">
+              📱 <strong>Calculator Mode</strong> - You're offline. Use this page to preview shift earnings, but you won't be able to save shifts until you're back online.
+            </p>
+          </div>
+        )}
       </div>
       <div className="space-y-6">
         {mode === "single" ? (
@@ -517,11 +528,14 @@ export default function AddShiftForm({ existingShifts, userSettings, presetRules
                 onClick={onSubmit}
                 disabled={!canSubmit}
                 loading={pending}
-                className="rounded-2xl bg-brand-gradientMid px-6 py-3 text-base font-semibold text-text-inverse shadow-app transition hover:bg-brand-gradientEnd"
+                className="rounded-2xl bg-brand-gradientMid px-6 py-3 text-base font-semibold text-text-inverse shadow-app transition hover:bg-brand-gradientEnd disabled:opacity-50 disabled:cursor-not-allowed"
+                title={isOffline ? "Cannot save shifts while offline" : undefined}
               >
-                {dates.length === 1
-                  ? t.pages.shifts.add.form.addShifts.replace('{count}', '1')
-                  : t.pages.shifts.add.form.addShiftsPlural.replace('{count}', (dates.length || 0).toString())
+                {isOffline
+                  ? "📱 Calculator Mode (Offline)"
+                  : dates.length === 1
+                    ? t.pages.shifts.add.form.addShifts.replace('{count}', '1')
+                    : t.pages.shifts.add.form.addShiftsPlural.replace('{count}', (dates.length || 0).toString())
                 }
               </Button>
             </div>
