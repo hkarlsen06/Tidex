@@ -24,12 +24,17 @@ const nextConfig = {
   // Reduces need for manual useMemo/useCallback/memo
   reactCompiler: true,
 
+  // Enable compression for smaller file sizes
+  compress: true,
+
   experimental: {
     // Optimize package imports to reduce bundle size
     // optimizePackageImports handles tree-shaking for these packages
     optimizePackageImports: [
       "recharts",
       "lucide-react",
+      "@vercel/analytics",
+      "@vercel/speed-insights",
     ],
 
     // Enable router cache for prefetched and dynamic pages
@@ -73,6 +78,34 @@ const nextConfig = {
           {
             key: 'Cache-Control',
             value: 'public, max-age=86400, stale-while-revalidate',
+          },
+        ],
+      },
+      // Cache static assets aggressively
+      {
+        source: '/:path(icon-.*\\.png)',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
+      {
+        source: '/apple-touch-icon.png',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
+      {
+        source: '/splash/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
           },
         ],
       },
