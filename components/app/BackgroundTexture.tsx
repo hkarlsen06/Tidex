@@ -58,41 +58,14 @@ export function BackgroundTexture({ intensity = 'subtle' }: BackgroundTexturePro
             />
             <feColorMatrix type="saturate" values="0" />
           </filter>
-
-          {/* Wave displacement filter - smooth horizontal waves */}
-          <filter id="wave-filter" x="-20%" y="-20%" width="140%" height="140%">
-            <feTurbulence
-              type="fractalNoise"
-              baseFrequency="0.005 0.03"
-              numOctaves="2"
-              seed="1"
-              result="turbulence"
-            />
-            <feDisplacementMap
-              in="SourceGraphic"
-              in2="turbulence"
-              scale="10"
-              xChannelSelector="R"
-              yChannelSelector="G"
-            >
-              <animate
-                attributeName="scale"
-                dur="4s"
-                values="0;10;20;10;0"
-                repeatCount="indefinite"
-                calcMode="spline"
-                keySplines="0.4 0 0.6 1; 0.4 0 0.6 1; 0.4 0 0.6 1; 0.4 0 0.6 1"
-              />
-            </feDisplacementMap>
-          </filter>
         </defs>
       </svg>
 
-      {/* Background Texture Container */}
+      {/* Background Texture Container - Optimized with fewer layers */}
       <div
         className="fixed inset-0 -z-10 overflow-hidden"
         aria-hidden="true"
-        style={{ pointerEvents: 'none' }}
+        style={{ pointerEvents: 'none', willChange: 'auto' }}
       >
         {/* Layer 1: Radial Gradient - Subtle depth using brand colors */}
         <div
@@ -112,26 +85,15 @@ export function BackgroundTexture({ intensity = 'subtle' }: BackgroundTexturePro
           }}
         />
 
-        {/* Layer 3: Geometric Dot Pattern with Wave Effect */}
-        <div className="absolute inset-0 overflow-hidden">
-          {Array.from({ length: 10 }).map((_, i) => (
-            <div
-              key={i}
-              className="absolute top-0 bottom-0"
-              style={{
-                left: `${i * 10}%`,
-                width: '10%',
-                opacity: config.dotOpacity,
-                backgroundImage: `radial-gradient(circle at center, hsl(188, 86%, 53%) 1px, transparent 1px)`,
-                backgroundSize: '32px 32px',
-                backgroundPosition: '0 0',
-                transformOrigin: 'center',
-                animation: `wave-squeeze ${8}s ease-in-out infinite`,
-                animationDelay: `${i * 0.8}s`,
-              }}
-            />
-          ))}
-        </div>
+        {/* Layer 3: Simplified Dot Pattern - Single element instead of 10 */}
+        <div
+          className="absolute inset-0"
+          style={{
+            opacity: config.dotOpacity,
+            backgroundImage: `radial-gradient(circle at center, hsl(188, 86%, 53%) 1px, transparent 1px)`,
+            backgroundSize: '32px 32px',
+          }}
+        />
 
         {/* Additional subtle radial gradient at top for depth */}
         <div

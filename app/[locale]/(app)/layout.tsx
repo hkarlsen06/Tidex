@@ -8,7 +8,6 @@ import { SupabaseListener } from "@/app/supabase-listener";
 import { ThemeProvider } from "@/components/app/ThemeProvider";
 import { MonthProvider } from "@/components/app/MonthContext";
 import { AppLayoutClient } from "@/components/app/AppLayoutClient";
-import "react-day-picker/style.css";
 
 /**
  * Protected App Layout

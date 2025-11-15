@@ -14,10 +14,11 @@ import "./globals.css";
 const inter = Inter({
   subsets: ["latin"],
   weight: ["400", "600", "700"], // Reduced to only critical weights
-  display: "swap", // Changed from 'optional' to 'swap' for faster FCP
+  display: "optional", // Prevents layout shift, allows system font during load
   variable: "--font-inter",
   preload: true,
   fallback: ["system-ui", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "sans-serif"],
+  adjustFontFallback: true, // Size-adjust fallback font to match Inter metrics
 });
 
 export const metadata: Metadata = {
@@ -151,11 +152,13 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="no" suppressHydrationWarning>
       <head>
         <meta name="mobile-web-app-capable" content="yes" />
-        {/* Resource hints for faster loading */}
-        <link rel="preconnect" href="https://id.tidex.no" />
+        {/* Critical resource hints for faster loading */}
+        <link rel="preconnect" href="https://id.tidex.no" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://id.tidex.no" />
-        <link rel="preconnect" href="https://vercel.live" />
+        {/* Defer non-critical third-party connections */}
+        <link rel="preconnect" href="https://vercel.live" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://vercel.live" />
+        {/* Inline critical theme script for instant paint */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -174,8 +177,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <SplashScreen />
         <BackgroundTexture intensity="subtle" />
         <DynamicThemeColor />
-        <SWRegister />
         {children}
+        <SWRegister />
         <Analytics />
         <SpeedInsights />
       </body>

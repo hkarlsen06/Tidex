@@ -4,31 +4,37 @@ import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 
 /**
- * SplashScreen component
+ * SplashScreen component - Optimized for performance
  * Shows a loading screen on initial app launch (cold start only)
- * Does not show on route transitions
+ * Does not show on route transitions or block FCP
  */
 export default function SplashScreen() {
-  const [isVisible, setIsVisible] = useState(true);
-  const [shouldRender, setShouldRender] = useState(true);
+  // Start hidden to not block FCP, show only if cold start
+  const [isVisible, setIsVisible] = useState(false);
+  const [shouldRender, setShouldRender] = useState(false);
 
   useEffect(() => {
     // Check if this is a cold start or a navigation
     const isColdStart = !window.sessionStorage.getItem('app-hydrated');
 
     if (!isColdStart) {
-      // Not a cold start, don't show splash
-      // Schedule state update to avoid synchronous setState in effect
-      Promise.resolve().then(() => setShouldRender(false));
+      // Not a cold start, don't show splash at all
       return;
     }
+
+    // Show splash immediately (we're in cold start)
+    setShouldRender(true);
+    // Use requestAnimationFrame to ensure DOM is ready before fading in
+    requestAnimationFrame(() => {
+      setIsVisible(true);
+    });
 
     // Mark as hydrated so splash doesn't show on subsequent navigations
     window.sessionStorage.setItem('app-hydrated', 'true');
 
-    // Hide splash after a short delay or when app is ready
-    const minDisplayTime = 800; // Minimum time to show splash (prevents flash)
-    const maxDisplayTime = 2000; // Maximum time to show splash
+    // Hide splash after a short delay
+    const minDisplayTime = 600; // Reduced from 800ms
+    const maxDisplayTime = 1500; // Reduced from 2000ms
 
     const startTime = Date.now();
 
@@ -71,22 +77,20 @@ export default function SplashScreen() {
         'bg-background transition-opacity duration-300',
         isVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'
       )}
+      aria-hidden="true"
     >
-      {/* Logo */}
-      <div className="mb-8 flex h-20 w-20 items-center justify-center rounded-2xl bg-surface-secondary shadow-lg">
-        <span className="text-4xl font-bold text-brand-gradientStart">T</span>
+      {/* Logo - Simplified for faster paint */}
+      <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-surface-secondary">
+        <span className="text-3xl font-bold text-brand-gradientStart">T</span>
       </div>
 
       {/* App name */}
-      <h1 className="mb-6 text-2xl font-bold text-text-primary">Tidex</h1>
+      <h1 className="mb-4 text-xl font-bold text-text-primary">Tidex</h1>
 
-      {/* Loading spinner */}
-      <div className="relative h-8 w-8">
-        <div className="absolute inset-0 animate-spin rounded-full border-4 border-surface-secondary border-t-brand-gradientStart" />
+      {/* Loading spinner - CSS only, no JS */}
+      <div className="relative h-6 w-6">
+        <div className="absolute inset-0 animate-spin rounded-full border-2 border-surface-secondary border-t-brand-gradientStart" />
       </div>
-
-      {/* Loading text */}
-      <p className="mt-4 text-sm text-text-secondary">Laster...</p>
     </div>
   );
 }
