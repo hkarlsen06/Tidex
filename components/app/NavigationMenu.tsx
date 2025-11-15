@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { defaultLocale } from "@/lib/i18n/config";
 import {
   NavigationMenu as NavigationMenuPrimitive,
   NavigationMenuItem,
@@ -46,6 +47,10 @@ export function NavigationMenu({ className }: NavigationMenuProps) {
   // usePathname() returns paths like "/no/settings", "/en/shifts", or "/de/stats"
   const pathname = rawPathname.replace(/^\/(no|en|de)(?=\/|$)/, '') || '/';
 
+  // Extract locale from current pathname
+  const localeMatch = rawPathname.match(/^\/(en|no|de)/);
+  const locale = localeMatch ? localeMatch[1] : defaultLocale;
+
   return (
     <NavigationMenuPrimitive className={className}>
       <NavigationMenuList>
@@ -59,7 +64,7 @@ export function NavigationMenu({ className }: NavigationMenuProps) {
             <NavigationMenuItem key={item.href}>
               <NavigationMenuLink asChild>
                 <Link
-                  href={item.href}
+                  href={`/${locale}${item.href}`}
                   className={cn(
                     navigationMenuTriggerStyle(),
                     isActive && "bg-accent/50 text-accent-foreground"

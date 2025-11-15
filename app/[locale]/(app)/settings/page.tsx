@@ -8,6 +8,7 @@ import { ChevronRight, User, Banknote, Palette, Database, CreditCard, Loader2 } 
 import { useNavigationFeedback } from '@/components/app/navigation-feedback';
 import { useTranslations } from '@/lib/i18n/client';
 import type { Dictionary } from '@/lib/i18n/dictionaries/no';
+import { defaultLocale } from '@/lib/i18n/config';
 
 const getSettingsItems = (t: Dictionary) => [
   {
@@ -49,11 +50,11 @@ export default function SettingsPage() {
   const settingsItems = getSettingsItems(t);
 
   // Extract locale from current pathname
-  const localeMatch = pathname.match(/^\/(en|no)/);
-  const locale = localeMatch ? localeMatch[1] : 'no';
+  const localeMatch = pathname.match(/^\/(en|no|de)/);
+  const locale = localeMatch ? localeMatch[1] : defaultLocale;
 
   // Normalize pending path for comparison
-  const normalizedPendingPath = pendingPath?.replace(/^\/(en|no)/, "").replace(/\/$/, "") ?? null;
+  const normalizedPendingPath = pendingPath?.replace(/^\/(en|no|de)/, "").replace(/\/$/, "") ?? null;
 
   const handleItemClick = (href: string) => (event: MouseEvent<HTMLAnchorElement>) => {
     if (
@@ -83,7 +84,7 @@ export default function SettingsPage() {
           const Icon = item.icon;
           const isNavigating = normalizedPendingPath === item.href;
           return (
-            <Link key={item.href} href={item.href} onClick={handleItemClick(item.href)}>
+            <Link key={item.href} href={`/${locale}${item.href}`} onClick={handleItemClick(item.href)}>
               <Card className="p-5 hover:bg-surface-secondary/50 transition-colors cursor-pointer">
                 <div className="flex items-center gap-4">
                   <div className="p-3 rounded-lg bg-surface-secondary">
