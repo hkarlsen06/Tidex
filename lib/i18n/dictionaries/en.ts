@@ -54,6 +54,31 @@ export const en: Dictionary = {
   header: {
     goToTidex: 'Go to tidex.no',
   },
+  footer: {
+    product: {
+      title: 'Product',
+      dashboard: 'Dashboard',
+      shifts: 'Shifts',
+      statistics: 'Statistics',
+      settings: 'Settings',
+    },
+    resources: {
+      title: 'Resources',
+      payrollDocs: 'Payroll Documentation',
+      github: 'GitHub',
+    },
+    legal: {
+      title: 'Legal',
+      privacy: 'Privacy Policy',
+      terms: 'Terms of Use',
+    },
+    company: {
+      title: 'Company',
+      support: 'Support',
+      website: 'tidex.no',
+    },
+    copyright: '© 2025 Hjalmar Kristensen-Karlsen',
+  },
   userMenu: {
     profile: 'Profile',
     lightMode: 'Light mode',
@@ -585,7 +610,7 @@ export const en: Dictionary = {
           confirmationSent: 'Confirmation sent!',
           confirmationMessage: 'We have sent confirmation links to both {oldEmail} and {newEmail}. Click on both links to complete the change.',
           contactSupport: 'If you do not receive the emails, contact',
-          supportEmail: 'support@tidex.no',
+          supportEmail: 'contact@tidex.no',
           errors: {
             emailInvalid: 'Invalid email address.',
             emailSameAsCurrent: 'The new email address must be different from the current one.',
