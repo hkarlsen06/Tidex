@@ -86,8 +86,8 @@ function LayoutContent({
   return (
     <>
       <TopHeader userName={userName} avatarUrl={avatarUrl} />
-      <main className="flex items-center min-h-[calc(100dvh-3.75rem-env(safe-area-inset-top))] pb-[calc(5rem+env(safe-area-inset-bottom))] md:min-h-[calc(100dvh-5rem)] md:pb-20">
-        <div className="mx-auto max-w-md px-4 w-full">
+      <main className="flex items-center min-h-[calc(100dvh-3.75rem-env(safe-area-inset-top))] pb-[calc(5rem+env(safe-area-inset-bottom))] md:min-h-[calc(100dvh-4rem)] md:pb-8">
+        <div className="mx-auto max-w-md md:max-w-lg px-4 w-full">
           {children}
         </div>
       </main>

@@ -11,7 +11,7 @@ export function ThemeToggle() {
     <button
       type="button"
       onClick={toggleTheme}
-      className="flex w-full items-center gap-3 px-4 py-2 text-sm text-text-primary hover:bg-surface-secondary/70"
+      className="flex w-full items-center gap-3 px-4 py-2 text-sm text-text-primary hover:bg-accent"
       role="menuitem"
     >
       {theme === "dark" ? (
