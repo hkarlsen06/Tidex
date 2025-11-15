@@ -109,7 +109,7 @@ const DayButton = React.memo(function DayButton({
       )}
       <div
         className={cn(
-          "w-full text-xs font-semibold text-right pr-1 leading-none",
+          "w-full text-xs font-semibold text-right pr-1 leading-none h-3",
           isSelected
             ? "text-brand-highlight"
             : hasShift
@@ -120,12 +120,12 @@ const DayButton = React.memo(function DayButton({
         {date.getDate()}
       </div>
       {mode === "money" && earnings !== undefined && (
-        <div className="flex-1 flex flex-col items-center justify-end pb-1 text-sm text-text-secondary font-semibold">
+        <div className="flex-1 flex flex-col items-center justify-end pb-1 text-sm text-text-secondary font-semibold min-h-0">
           {formatNOKInt(earnings)}
         </div>
       )}
       {mode === "hours" && hours && (
-        <div className="flex-1 flex flex-col items-center justify-center text-xs font-semibold text-text-secondary leading-tight">
+        <div className="flex-1 flex flex-col items-center justify-center text-xs font-semibold text-text-secondary leading-tight min-h-0">
           <div>
             {hours.start}
             {hours.start && "-"}
@@ -137,7 +137,7 @@ const DayButton = React.memo(function DayButton({
         </div>
       )}
       {employees.length > 0 && (
-        <div className="flex gap-0.5 flex-wrap justify-center">
+        <div className="flex gap-0.5 flex-wrap justify-center min-h-0">
           {employees.slice(0, 3).map((emp, idx) => (
             <div
               key={idx}
