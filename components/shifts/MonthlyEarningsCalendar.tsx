@@ -32,6 +32,7 @@ type MonthlyEarningsCalendarProps = {
   moving?: boolean;
   onCancelMoveMode?: () => void;
   newlyAddedDates?: Set<string>;
+  isOffline?: boolean;
 };
 
 function buildEarningsByDate(shifts: ShiftWithComputations[]): EarningsByDate {
@@ -123,6 +124,7 @@ export function MonthlyEarningsCalendar({
   moving = false,
   onCancelMoveMode,
   newlyAddedDates,
+  isOffline = false,
 }: MonthlyEarningsCalendarProps) {
   const { t } = useTranslations();
   const { goToPreviousMonth, goToNextMonth } = useMonth();
@@ -308,10 +310,12 @@ export function MonthlyEarningsCalendar({
                   !onInitiateCopy ||
                   copyMode ||
                   copying ||
-                  moveMode
+                  moveMode ||
+                  isOffline
                 }
                 loading={copying}
-                className="flex-1 h-9 gap-2 rounded-full bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 dark:text-blue-400"
+                title={isOffline ? "Cannot copy shifts while offline" : undefined}
+                className="flex-1 h-9 gap-2 rounded-full bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 dark:text-blue-400 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Copy strokeWidth={2} className="h-4 w-4" />
                 {t.pages.shifts.actions.copy}
@@ -355,10 +359,12 @@ export function MonthlyEarningsCalendar({
                   !onInitiateMove ||
                   copyMode ||
                   moving ||
-                  moveMode
+                  moveMode ||
+                  isOffline
                 }
+                title={isOffline ? "Cannot move shifts while offline" : undefined}
                 className={cn(
-                  "flex-1 h-9 gap-2 rounded-full px-4 text-sm transition-all",
+                  "flex-1 h-9 gap-2 rounded-full px-4 text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed",
                   moveMode
                     ? "bg-amber-500/20 text-amber-700 dark:text-amber-400"
                     : "bg-amber-500/10 text-amber-700 hover:bg-amber-500/20 dark:text-amber-300"

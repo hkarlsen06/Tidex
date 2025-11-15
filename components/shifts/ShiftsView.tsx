@@ -38,6 +38,7 @@ import { useTranslations } from "@/lib/i18n/client";
 import type { Locale } from "@/lib/i18n/config";
 import { formatCurrency, formatInteger } from "@/lib/formatters";
 import { getDateFormatter } from "@/lib/i18n/locale";
+import { useOnlineStatus } from "@/lib/hooks/useOnlineStatus";
 import { TodayPlaceholderCard } from "./TodayPlaceholderCard";
 
 // Lazy load the calendar to reduce initial bundle size (~40KB savings)
@@ -500,6 +501,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
   const [openedFromCalendar, setOpenedFromCalendar] = useState(false);
   const [copyMode, setCopyMode] = useState(false);
   const [copying, startCopyTransition] = useTransition();
+  const isOffline = useOnlineStatus();
   const [additionalShifts, setAdditionalShifts] = useState<ShiftWithComputations[]>([]);
   const shiftsListRef = useRef<HTMLDivElement>(null);
   const calendarContainerRef = useRef<HTMLDivElement>(null);
@@ -937,13 +939,13 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
   }, [selectedDate, shiftsByDate, calendarSelectedShiftId]);
 
   const handleInitiateMoveMode = useCallback(() => {
-    if (!selectedDate) return;
+    if (!selectedDate || isOffline) return;
     setMoveMode(true);
     setMoveSelection([]);
     setMoveTargetDate(null);
     setMoveError(null);
     setCopyMode(false);
-  }, [selectedDate]);
+  }, [selectedDate, isOffline]);
 
   const handleCancelMoveMode = useCallback(() => {
     setMoveMode(false);
@@ -953,10 +955,10 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
   }, []);
 
   const handleInitiateCopy = useCallback(() => {
-    if (!selectedDate) return;
+    if (!selectedDate || isOffline) return;
     setMoveMode(false);
     setCopyMode(true);
-  }, [selectedDate]);
+  }, [selectedDate, isOffline]);
 
   const handleCancelCopy = useCallback(() => {
     setCopyMode(false);
@@ -1177,6 +1179,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
             moving={moving}
             onCancelMoveMode={handleCancelMoveMode}
             newlyAddedDates={newlyAddedDates}
+            isOffline={isOffline}
           />
         </div>
       </div>

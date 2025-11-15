@@ -26,6 +26,7 @@ import { getDateFormatter } from "@/lib/i18n/locale";
 import { SeriesEditModal } from "./SeriesEditModal";
 import type { ExistingShift } from "@/lib/series/conflicts";
 import { queueMutation, isOfflineQueueSupported } from "@/lib/pwa/offline-queue";
+import { useOnlineStatus } from "@/lib/hooks/useOnlineStatus";
 
 const MINUTES_PER_DAY = 24 * 60;
 
@@ -146,6 +147,7 @@ export function ShiftDetails({
   const { t, locale } = useTranslations();
   const router = useRouter();
   const [seriesModalOpen, setSeriesModalOpen] = useState(false);
+  const isOffline = useOnlineStatus();
 
   // Create locale-aware date formatters
   const dayFormatter = useMemo(() => {
@@ -390,6 +392,15 @@ export function ShiftDetails({
           </div>
         )}
 
+        {/* Offline Mode Banner */}
+        {isOffline && (
+          <div className="mt-4 rounded-xl border border-warning/40 bg-warning-subtle px-3 py-2">
+            <p className="text-xs font-medium text-warning">
+              📱 <strong>Read-Only Mode</strong> - You're offline. Cannot edit or delete shifts.
+            </p>
+          </div>
+        )}
+
         <DialogFooter className="mt-4">
           {shift && (
             <div className={cn("grid w-full gap-2", isSeriesGhost && !isEditing && !confirmingDelete ? "grid-cols-2" : "grid-cols-3")}>
@@ -401,11 +412,12 @@ export function ShiftDetails({
                     handleDeleteClick();
                   }
                 }}
-                disabled={saving || isDeleting || isEditing}
+                disabled={saving || isDeleting || isEditing || isOffline}
                 loading={confirmingDelete && isDeleting}
+                title={isOffline ? "Cannot delete shifts while offline" : undefined}
                 className={cn(
                   "col-span-1 h-11 w-full rounded-full px-4 text-sm font-medium transition-colors gap-2",
-                  isEditing
+                  isEditing || isOffline
                     ? "bg-surface-secondary text-text-muted cursor-not-allowed"
                     : "bg-rose-600 text-white hover:bg-rose-700"
                 )}
@@ -425,8 +437,14 @@ export function ShiftDetails({
               ) : (
                 <Button
                   onClick={handleEdit}
-                  disabled={saving || isDeleting || confirmingDelete}
-                  className="col-span-1 h-11 w-full rounded-full px-4 text-sm font-medium transition-colors gap-2 bg-blue-600 text-white hover:bg-blue-700"
+                  disabled={saving || isDeleting || confirmingDelete || isOffline}
+                  title={isOffline ? "Cannot edit shifts while offline" : undefined}
+                  className={cn(
+                    "col-span-1 h-11 w-full rounded-full px-4 text-sm font-medium transition-colors gap-2",
+                    isOffline
+                      ? "bg-surface-secondary text-text-muted cursor-not-allowed"
+                      : "bg-blue-600 text-white hover:bg-blue-700"
+                  )}
                 >
                   <Pencil className="h-4 w-4" />
                   {t.pages.shifts.details.editButton}
@@ -435,8 +453,14 @@ export function ShiftDetails({
               {isSeriesGhost && !isEditing && !confirmingDelete && (
                 <Button
                   onClick={handleEditSeries}
-                  disabled={saving || isDeleting}
-                  className="col-span-1 h-11 w-full rounded-full px-4 text-sm font-medium transition-colors gap-2 bg-purple-600 text-white hover:bg-purple-700"
+                  disabled={saving || isDeleting || isOffline}
+                  title={isOffline ? "Cannot edit series while offline" : undefined}
+                  className={cn(
+                    "col-span-1 h-11 w-full rounded-full px-4 text-sm font-medium transition-colors gap-2",
+                    isOffline
+                      ? "bg-surface-secondary text-text-muted cursor-not-allowed"
+                      : "bg-purple-600 text-white hover:bg-purple-700"
+                  )}
                 >
                   <RefreshCw className="h-4 w-4" />
                   {t.pages.shifts.details.editSeriesButton}
