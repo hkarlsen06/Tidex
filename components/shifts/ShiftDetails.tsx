@@ -396,7 +396,7 @@ export function ShiftDetails({
         {isOffline && (
           <div className="mt-4 rounded-xl border border-warning/40 bg-warning-subtle px-3 py-2">
             <p className="text-xs font-medium text-warning">
-              📱 <strong>Read-Only Mode</strong> - You're offline. Cannot edit or delete shifts.
+              📱 <strong>Read-Only Mode</strong> - You&apos;re offline. Cannot edit or delete shifts.
             </p>
           </div>
         )}

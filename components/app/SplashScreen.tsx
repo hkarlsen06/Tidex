@@ -11,19 +11,19 @@ import { cn } from '@/lib/utils';
 export default function SplashScreen() {
   // Start hidden to not block FCP, show only if cold start
   const [isVisible, setIsVisible] = useState(false);
-  const [shouldRender, setShouldRender] = useState(false);
+  // Determine render state from cold start check (avoids setState in effect)
+  const [shouldRender, setShouldRender] = useState(() => {
+    // This runs once during initial render
+    if (typeof window === 'undefined') return false;
+    return !window.sessionStorage.getItem('app-hydrated');
+  });
 
   useEffect(() => {
-    // Check if this is a cold start or a navigation
-    const isColdStart = !window.sessionStorage.getItem('app-hydrated');
-
-    if (!isColdStart) {
-      // Not a cold start, don't show splash at all
+    // Don't show splash if not a cold start
+    if (!shouldRender) {
       return;
     }
 
-    // Show splash immediately (we're in cold start)
-    setShouldRender(true);
     // Use requestAnimationFrame to ensure DOM is ready before fading in
     requestAnimationFrame(() => {
       setIsVisible(true);
@@ -64,7 +64,7 @@ export default function SplashScreen() {
         clearTimeout(fallbackTimer);
       };
     }
-  }, []);
+  }, [shouldRender]);
 
   if (!shouldRender) {
     return null;

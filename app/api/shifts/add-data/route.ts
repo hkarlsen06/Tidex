@@ -19,7 +19,7 @@ import { getUserWageSnapshots } from "@/data-access/wage-snapshots";
  * - presetRules: Preset wage rules
  * - wageSnapshots: Historical wage snapshots
  */
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   // Manual auth check for API routes
   const session = await getSession();
   if (!session) {
