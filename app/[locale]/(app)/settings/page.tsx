@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import type { MouseEvent } from 'react';
 import { Card } from '@appui/Card';
 import { ChevronRight, User, Banknote, Palette, Database, CreditCard, Loader2 } from 'lucide-react';
@@ -42,9 +43,17 @@ const getSettingsItems = (t: Dictionary) => [
 ];
 
 export default function SettingsPage() {
+  const pathname = usePathname();
   const { navigate, pendingPath } = useNavigationFeedback();
   const { t } = useTranslations();
   const settingsItems = getSettingsItems(t);
+
+  // Extract locale from current pathname
+  const localeMatch = pathname.match(/^\/(en|no)/);
+  const locale = localeMatch ? localeMatch[1] : 'no';
+
+  // Normalize pending path for comparison
+  const normalizedPendingPath = pendingPath?.replace(/^\/(en|no)/, "").replace(/\/$/, "") ?? null;
 
   const handleItemClick = (href: string) => (event: MouseEvent<HTMLAnchorElement>) => {
     if (
@@ -58,7 +67,8 @@ export default function SettingsPage() {
     }
 
     event.preventDefault();
-    navigate(href);
+    // Include locale in navigation
+    navigate(`/${locale}${href}`);
   };
 
   return (
@@ -71,7 +81,7 @@ export default function SettingsPage() {
       <div className="flex flex-col gap-6">
         {settingsItems.map((item) => {
           const Icon = item.icon;
-          const isNavigating = pendingPath === item.href;
+          const isNavigating = normalizedPendingPath === item.href;
           return (
             <Link key={item.href} href={item.href} onClick={handleItemClick(item.href)}>
               <Card className="p-5 hover:bg-surface-secondary/50 transition-colors cursor-pointer">
