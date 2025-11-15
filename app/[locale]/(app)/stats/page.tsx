@@ -2,6 +2,7 @@ import { getStatsData } from "@/data-access/stats";
 import { verifySession } from "@/data-access/auth";
 import { connection } from "next/server";
 import { StatsContent } from "@/components/app/StatsContent";
+import { StatsLayoutWrapper } from "@/components/app/StatsLayoutWrapper";
 import { getTranslations } from "@/lib/i18n/server";
 import type { Locale } from "@/lib/i18n/config";
 
@@ -27,5 +28,9 @@ export default async function StatsPage({ params }: StatsPageProps) {
 
   // Fetch data directly - loading.tsx handles the loading state
   const data = await getStatsData(user.id, { locale: locale as Locale });
-  return <StatsContent data={data} />;
+  return (
+    <StatsLayoutWrapper>
+      <StatsContent data={data} />
+    </StatsLayoutWrapper>
+  );
 }
