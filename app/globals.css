@@ -12,14 +12,14 @@ body {
   margin: 0;
   font-family: "Inter", ui-sans-serif, system-ui, -apple-system,
     BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background: var(--background, #f5f5f5);
-  color: var(--foreground, #111111);
+  background: transparent;
+  color: hsl(var(--foreground));
 }
 
 html {
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
-  background: var(--background, #f5f5f5);
+  background: hsl(var(--background));
 }
 
 /* Hide scrollbar for all browsers while maintaining scroll functionality */

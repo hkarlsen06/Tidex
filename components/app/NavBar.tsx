@@ -16,6 +16,7 @@ import {
 import { useNavigationFeedback } from "./navigation-feedback";
 import { supabase } from "@/lib/supabase/browser";
 import { useTranslations } from "@/lib/i18n/client";
+import { useScrollDirection } from "@/lib/hooks/useScrollDirection";
 
 type LucideIcon = typeof Gauge;
 type NavItem = {
@@ -61,6 +62,7 @@ export function NavBar() {
   const rawPathname = usePathname();
   const { navigate, pendingPath } = useNavigationFeedback();
   const [showAddShiftHint, setShowAddShiftHint] = useState(false);
+  const scrollDirection = useScrollDirection({ threshold: 10 });
 
   // Strip locale prefix from pathname for consistent nav item matching
   // usePathname() returns paths like "/no/settings", "/en/shifts", or "/de/stats"
@@ -180,8 +182,18 @@ export function NavBar() {
   const normalizedPath = normalizePath(pathname);
   const isOnSettingsSubPage = normalizedPath?.startsWith("/settings/") ?? false;
 
+  // Determine if navbar should hide on scroll for current path
+  const shouldHideOnScroll =
+    normalizedPath === "/shifts" ||
+    normalizedPath === "/stats" ||
+    normalizedPath?.startsWith("/settings");
+
+  const isHidden = shouldHideOnScroll && scrollDirection === "down";
+
   return (
-    <nav className="fixed left-0 right-0 z-40 bottom-0 md:bottom-4 md:bg-transparent">
+    <nav className={`fixed left-0 right-0 z-40 bottom-0 md:bottom-4 md:bg-transparent transition-transform duration-300 ${
+      isHidden ? "translate-y-full md:translate-y-[calc(100%+1rem)]" : "translate-y-0"
+    }`}>
       {/* Background that extends into safe area on mobile */}
       <div className="absolute inset-x-0 top-0 bottom-0 bg-surface-primary/95 backdrop-blur md:hidden" />
 
