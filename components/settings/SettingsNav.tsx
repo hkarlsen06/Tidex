@@ -18,6 +18,7 @@ import { useNavigationFeedback } from "@/components/app/navigation-feedback";
 import { useTranslations } from "@/lib/i18n/client";
 import type { Dictionary } from "@/lib/i18n/dictionaries/no";
 import { cn } from "@/lib/cn";
+import { defaultLocale } from "@/lib/i18n/config";
 
 const getSettingsItems = (t: Dictionary) => [
   {
@@ -59,13 +60,13 @@ export function SettingsNav() {
   const settingsItems = getSettingsItems(t);
 
   // Extract locale from current pathname
-  const localeMatch = pathname.match(/^\/(en|no)/);
-  const locale = localeMatch ? localeMatch[1] : 'no';
+  const localeMatch = pathname.match(/^\/(en|no|de)/);
+  const locale = localeMatch ? localeMatch[1] : defaultLocale;
 
   // Normalize pathname to remove locale prefix for comparison
   // Handle both with and without trailing slash
-  const normalizedPath = pathname.replace(/^\/(en|no)/, "").replace(/\/$/, "");
-  const normalizedPendingPath = pendingPath?.replace(/^\/(en|no)/, "").replace(/\/$/, "") ?? null;
+  const normalizedPath = pathname.replace(/^\/(en|no|de)/, "").replace(/\/$/, "");
+  const normalizedPendingPath = pendingPath?.replace(/^\/(en|no|de)/, "").replace(/\/$/, "") ?? null;
 
   const handleItemClick =
     (href: string) => (event: MouseEvent<HTMLAnchorElement>) => {
@@ -108,7 +109,7 @@ export function SettingsNav() {
           return (
             <Link
               key={item.href}
-              href={item.href}
+              href={`/${locale}${item.href}`}
               onClick={handleItemClick(item.href)}
               className={cn(
                 "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors relative",
