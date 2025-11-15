@@ -99,7 +99,7 @@ const DayButton = React.memo(function DayButton({
         isOutside && "opacity-40"
       )}
     >
-      <div className="relative flex flex-col w-full h-full p-1 overflow-hidden">
+      <div className="relative flex flex-col w-full h-full p-1">
       {isMonday && (
         <span className={`absolute left-1 text-[9px] leading-none text-text-muted ${
           weekNumberPosition === "top-left" ? "top-1" : "bottom-1"
@@ -109,51 +109,54 @@ const DayButton = React.memo(function DayButton({
       )}
       <div
         className={cn(
-          "w-full text-xs font-semibold text-right pr-1 leading-none h-3",
+          "w-full text-xs font-semibold text-right pr-1 mb-1",
           isSelected
             ? "text-brand-highlight"
             : hasShift
               ? "text-brand-highlight"
               : "text-text-primary"
         )}
+        style={{ lineHeight: '12px', height: '12px' }}
       >
         {date.getDate()}
       </div>
-      {mode === "money" && earnings !== undefined && (
-        <div className="flex-1 flex flex-col items-center justify-end pb-1 text-sm text-text-secondary font-semibold min-h-0">
-          {formatNOKInt(earnings)}
-        </div>
-      )}
-      {mode === "hours" && hours && (
-        <div className="flex-1 flex flex-col items-center justify-center text-xs font-semibold text-text-secondary leading-tight min-h-0">
-          <div>
-            {hours.start}
-            {hours.start && "-"}
+      <div className="flex-1 flex flex-col items-center justify-center overflow-hidden">
+        {mode === "money" && earnings !== undefined && (
+          <div className="text-sm text-text-secondary font-semibold">
+            {formatNOKInt(earnings)}
           </div>
-          <div>
-            {hours.end}
-            {hours.crossesMidnight && "*"}
+        )}
+        {mode === "hours" && hours && (
+          <div className="flex flex-col items-center justify-center text-xs font-semibold text-text-secondary leading-tight">
+            <div>
+              {hours.start}
+              {hours.start && "-"}
+            </div>
+            <div>
+              {hours.end}
+              {hours.crossesMidnight && "*"}
+            </div>
           </div>
-        </div>
-      )}
-      {employees.length > 0 && (
-        <div className="flex gap-0.5 flex-wrap justify-center min-h-0">
-          {employees.slice(0, 3).map((emp, idx) => (
-            <div
-              key={idx}
-              className="inline-flex h-4 min-w-4 items-center justify-center rounded-full text-[9px] text-text-inverse px-0.5"
-              style={{ backgroundColor: emp.color || "hsl(var(--info))" }}
-            >
-              {initials(emp.name)}
-            </div>
-          ))}
-          {employees.length > 3 && (
-            <div className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-surface-secondary text-[9px] text-text-muted px-0.5">
-              +{employees.length - 3}
-            </div>
-          )}
-        </div>
-      )}
+        )}
+        {employees.length > 0 && (
+          <div className="flex gap-0.5 flex-wrap justify-center">
+            {employees.slice(0, 3).map((emp, idx) => (
+              <div
+                key={idx}
+                className="inline-flex h-4 min-w-4 items-center justify-center rounded-full text-[9px] text-text-inverse px-0.5"
+                style={{ backgroundColor: emp.color || "hsl(var(--info))" }}
+              >
+                {initials(emp.name)}
+              </div>
+            ))}
+            {employees.length > 3 && (
+              <div className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-surface-secondary text-[9px] text-text-muted px-0.5">
+                +{employees.length - 3}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
       </div>
     </button>
   );
