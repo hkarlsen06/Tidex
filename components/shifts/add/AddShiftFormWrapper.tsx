@@ -26,20 +26,19 @@ type Props = {
  * Falls back to API route when server-side rendering fails (offline)
  */
 export function AddShiftFormWrapper({ initialData }: Props) {
+  // Check if we need to fetch data (server-side loading failed)
+  // userSettings is empty object {} when server-side loading fails offline
+  const needsFetch = !initialData.userSettings ||
+                     Object.keys(initialData.userSettings).length === 0;
+
   const [data, setData] = useState<AddShiftData>(initialData);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(needsFetch);
   const [error, setError] = useState<string | null>(null);
 
   // If initial data is empty/missing (offline SSR failed), fetch from API
   useEffect(() => {
-    // Check if we need to fetch data (server-side loading failed)
-    // userSettings is empty object {} when server-side loading fails offline
-    const needsFetch = !initialData.userSettings ||
-                       Object.keys(initialData.userSettings).length === 0;
-
     if (needsFetch) {
       console.log('[AddShiftFormWrapper] Server data missing, fetching from API');
-      setIsLoading(true);
       fetch('/api/shifts/add-data', {
         credentials: 'same-origin',
         headers: { 'Accept': 'application/json' }
@@ -67,7 +66,7 @@ export function AddShiftFormWrapper({ initialData }: Props) {
     } else {
       console.log('[AddShiftFormWrapper] Using server-provided data');
     }
-  }, [initialData]);
+  }, [needsFetch]);
 
   if (isLoading) {
     return (

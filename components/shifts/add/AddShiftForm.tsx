@@ -422,7 +422,7 @@ export default function AddShiftForm({ existingShifts, userSettings, presetRules
         {isOffline && (
           <div className="rounded-2xl border border-warning/40 bg-warning-subtle px-4 py-3 shadow-app-inner">
             <p className="text-sm font-medium text-warning">
-              📱 <strong>Calculator Mode</strong> - You're offline. Use this page to preview shift earnings, but you won't be able to save shifts until you're back online.
+              📱 <strong>Calculator Mode</strong> - You&apos;re offline. Use this page to preview shift earnings, but you won&apos;t be able to save shifts until you&apos;re back online.
             </p>
           </div>
         )}

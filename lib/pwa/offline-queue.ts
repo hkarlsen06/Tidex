@@ -66,7 +66,6 @@ export async function queueMutation(mutation: Omit<QueuedMutation, 'id' | 'times
       // Trigger background sync registration
       // This will be retried when online
       // TypeScript doesn't have types for Background Sync API yet
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await (registration as any).sync.register('sync-mutations');
     }
   } catch (error) {

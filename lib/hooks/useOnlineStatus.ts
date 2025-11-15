@@ -9,11 +9,13 @@ import { useState, useEffect } from "react";
  * @returns {boolean} isOffline - true when the browser is offline
  */
 export function useOnlineStatus(): boolean {
-  const [isOffline, setIsOffline] = useState(false);
+  // Initialize state from navigator.onLine (avoids setState in effect)
+  const [isOffline, setIsOffline] = useState(() => {
+    if (typeof navigator === 'undefined') return false;
+    return !navigator.onLine;
+  });
 
   useEffect(() => {
-    // Set initial state
-    setIsOffline(!navigator.onLine);
 
     const handleOnline = () => setIsOffline(false);
     const handleOffline = () => setIsOffline(true);
