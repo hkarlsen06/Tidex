@@ -27,7 +27,7 @@
 // ============================================================================
 
 /** @type {string} Cache version - increment on each deploy to invalidate old caches */
-const CACHE_VERSION = 'v10';
+const CACHE_VERSION = 'v11';
 
 /** @type {string} Cache for immutable static assets (JS, CSS, fonts, images) */
 const STATIC_CACHE = `tidex-static-${CACHE_VERSION}`;
@@ -164,6 +164,22 @@ self.addEventListener('activate', (event) => {
           cachesToDelete.map((cacheName) => caches.delete(cacheName))
         );
       })
+      .then(async () => {
+        // Clean up any authenticated routes that were incorrectly cached by older versions
+        console.log('[SW] Cleaning up authenticated routes from DATA_CACHE');
+        try {
+          const dataCache = await caches.open(DATA_CACHE);
+          const keys = await dataCache.keys();
+          for (const request of keys) {
+            if (request.url.includes('/api/shifts')) {
+              await dataCache.delete(request);
+              console.log('[SW] Removed cached authenticated route:', request.url);
+            }
+          }
+        } catch (error) {
+          console.warn('[SW] Failed to clean up authenticated routes:', error);
+        }
+      })
       .then(() => {
         console.log('[SW] Cache cleanup complete, claiming clients');
         // Take control of all pages immediately
@@ -189,23 +205,14 @@ async function precacheAppRoutes() {
     console.log('[SW] Detected user locale:', locale);
 
     const pagesCache = await caches.open(PAGES_CACHE);
-    const dataCache = await caches.open(DATA_CACHE);
 
     console.log('[SW] Precaching', APP_ROUTES_TO_PRECACHE.length, 'app routes for locale:', locale);
 
-    // First, precache the API route for add shift data
-    try {
-      const apiResponse = await fetch('/api/shifts/add-data', {
-        credentials: 'same-origin',
-        headers: { 'Accept': 'application/json' },
-      });
-      if (apiResponse.ok) {
-        await dataCache.put('/api/shifts/add-data', apiResponse);
-        console.log('[SW] Precached API route: /api/shifts/add-data');
-      }
-    } catch (error) {
-      console.warn('[SW] Failed to precache API route:', error);
-    }
+    // IMPORTANT: Do NOT precache authenticated API routes like /api/shifts/add-data
+    // Reason: They trigger auth checks (supabase.auth.getUser()) which can cause
+    // "Refresh Token Not Found" errors when the service worker activates in the
+    // background with expired tokens. Authenticated data should only be fetched
+    // on-demand by the main thread, never by the service worker during precache.
 
     // Fetch all routes in parallel (but don't fail if one fails)
     const results = await Promise.allSettled(
@@ -466,8 +473,8 @@ async function handleStaticAsset(request) {
  *
  * Strategy: Network-first with stale-while-revalidate
  * 1. Try network with 2s timeout (fast failure for offline UX)
- * 2. If network fails, serve stale cached data
- * 3. Background update: cache fresh response for next request
+ * 2. If network fails, serve stale cached data (only for public routes)
+ * 3. Background update: cache fresh response for next request (only for public routes)
  *
  * Why network-first with timeout?
  * - Prioritizes fresh data from Supabase/API
@@ -484,12 +491,19 @@ async function handleDataRequest(request) {
   const requestUrl = request.url;
   console.log('[SW] Handling data request:', requestUrl);
 
+  // Check if this is an authenticated API route that should not be cached
+  const isAuthenticatedRoute = requestUrl.includes('/api/shifts');
+
   try {
     // Try network first with short timeout
     const response = await fetchWithTimeout(request, NETWORK_TIMEOUT.data);
 
-    // Cache successful responses in background (stale-while-revalidate)
-    if (response && response.ok) {
+    // Only cache non-authenticated, successful responses
+    // CRITICAL: Do not cache authenticated routes to prevent:
+    // 1. Serving stale user data across sessions
+    // 2. Auth token refresh errors from cached responses
+    // 3. Background service worker auth checks causing token errors
+    if (response && response.ok && !isAuthenticatedRoute) {
       console.log('[SW] Caching successful data response:', requestUrl);
       const responseToCache = response.clone();
       caches.open(DATA_CACHE).then((cache) => {
@@ -501,7 +515,23 @@ async function handleDataRequest(request) {
   } catch (error) {
     console.log('[SW] Data request failed, trying cache:', requestUrl, error);
 
-    // Serve stale cached data if available
+    // Do not serve cached authenticated data - it could be stale or from a different session
+    if (isAuthenticatedRoute) {
+      console.warn('[SW] Authenticated route unavailable offline:', requestUrl);
+      return new Response(
+        JSON.stringify({
+          error: 'Authentication Required',
+          message: 'This data requires authentication and is not available offline.',
+        }),
+        {
+          status: 401,
+          statusText: 'Unauthorized',
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
+    // Serve stale cached data if available (public routes only)
     const cachedResponse = await caches.match(request);
     if (cachedResponse) {
       console.log('[SW] Serving cached data:', requestUrl);

@@ -34,19 +34,19 @@ export default async function RootLayout({
     redirect("/login");
   }
 
-  // Run subsequent queries in parallel to minimize latency
-  const [sessionRes, settingsRes] = await Promise.all([
-    supabase.auth.getSession(),
-    supabase
-      .from("user_settings")
-      .select("profile_picture_url,theme")
-      .eq("user_id", user.id)
-      .maybeSingle(),
-  ]);
-
-  const {
-    data: { session },
-  } = sessionRes;
+  // Fetch user settings
+  // IMPORTANT: Do NOT call getSession() on the server side
+  // Reason: getSession() can trigger token refresh network calls, which can cause
+  // "Refresh Token Not Found" errors when racing with:
+  // 1. Proxy token refresh in proxy.ts
+  // 2. Client-side session checks in SupabaseListener and AppLayoutClient
+  // 3. Service worker background operations
+  // Server-side should ONLY use getUser() for auth validation.
+  const { data: settings } = await supabase
+    .from("user_settings")
+    .select("profile_picture_url,theme")
+    .eq("user_id", user.id)
+    .maybeSingle();
 
   // Sanitize user metadata from OAuth providers for defense-in-depth
   const rawUserName =
@@ -89,8 +89,6 @@ export default async function RootLayout({
   const identityAvatarUrl = sanitizeUrl(rawIdentityAvatarUrl);
 
   const avatarUrl = metadataAvatarUrl ?? identityAvatarUrl;
-
-  const { data: settings } = settingsRes;
   const profilePictureUrl = sanitizeUrl(settings?.profile_picture_url ?? null);
   const resolvedAvatarUrl = profilePictureUrl ?? avatarUrl;
 
@@ -103,7 +101,7 @@ export default async function RootLayout({
   return (
     <ThemeProvider serverTheme={serverTheme}>
       <MonthProvider>
-        <SupabaseListener accessToken={session?.access_token} />
+        <SupabaseListener />
         <AppLayoutClient
           userName={userName}
           avatarUrl={resolvedAvatarUrl}
