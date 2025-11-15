@@ -4,8 +4,7 @@ import { connection } from "next/server";
 import { verifySession } from "@/data-access/auth";
 import { getComputedShifts } from "@/data-access/shifts";
 import {
-  getPreviousYearMonth,
-  getNextYearMonth,
+  getCurrentYearMonth,
   getMonthStart,
   getMonthEnd
 } from "@/lib/date-utils";
@@ -39,15 +38,14 @@ export default async function Home({ params }: HomeProps) {
     redirect("/onboarding");
   }
 
-  // Fetch 3 months of data (previous + current + next) for smooth navigation
-  // This covers 90% of user navigation patterns without loading states
-  const prevMonth = getPreviousYearMonth();
-  const nextMonth = getNextYearMonth();
-
+  // Performance: Load only the current month on the initial request
+  // Adjacent months are fetched on the client after hydration (see HomeContent)
+  // This reduces TTFB and payload size significantly, improving FCP/LCP.
+  const current = getCurrentYearMonth();
   const { shifts, settings } = await getComputedShifts(user.id, {
-    startDate: getMonthStart(prevMonth.year, prevMonth.month),
-    endDate: getMonthEnd(nextMonth.year, nextMonth.month),
-    limit: 150 // Accommodate up to ~50 shifts per month across 3 months
+    startDate: getMonthStart(current.year, current.month),
+    endDate: getMonthEnd(current.year, current.month),
+    limit: 60 // ~50 shifts is typical for a month; leave headroom
   });
 
   return <HomeContent shifts={shifts} settings={settings} />;

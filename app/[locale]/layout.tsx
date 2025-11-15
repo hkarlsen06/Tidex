@@ -8,9 +8,7 @@
 import type { ReactNode } from "react";
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
-import { I18nProvider } from "@/components/providers/I18nProvider";
 import { locales, type Locale } from "@/lib/i18n/config";
-import { getDictionary } from "@/lib/i18n/dictionaries";
 
 interface LocaleLayoutProps {
   children: ReactNode;
@@ -29,13 +27,9 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
     notFound();
   }
 
-  const dictionary = getDictionary(locale as Locale);
-
   return (
     <Suspense fallback={null}>
-      <I18nProvider locale={locale as Locale} dictionary={dictionary}>
-        {children}
-      </I18nProvider>
+      {children}
     </Suspense>
   );
 }

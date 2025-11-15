@@ -8,6 +8,9 @@ import { SupabaseListener } from "@/app/supabase-listener";
 import { ThemeProvider } from "@/components/app/ThemeProvider";
 import { MonthProvider } from "@/components/app/MonthContext";
 import { AppLayoutClient } from "@/components/app/AppLayoutClient";
+import { I18nProvider } from "@/components/providers/I18nProvider";
+import { getDictionary } from "@/lib/i18n/dictionaries";
+import type { Locale } from "@/lib/i18n/config";
 
 /**
  * Protected App Layout
@@ -20,9 +23,12 @@ import { AppLayoutClient } from "@/components/app/AppLayoutClient";
  */
 export default async function RootLayout({
   children,
+  params,
 }: {
   children: ReactNode;
+  params: Promise<{ locale: string }>;
 }) {
+  const { locale } = await params;
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
@@ -97,16 +103,20 @@ export default async function RootLayout({
       ? (settings.theme as "light" | "dark" | "system")
       : null;
 
+  // Provide a trimmed dictionary for the authenticated app to reduce RSC payload.
+  // Remove heavy sections not used in the app shell (marketing/legal).
+  const fullDictionary = getDictionary(locale as Locale);
+  const { marketing: _omitMarketing, legal: _omitLegal, ...appDictionary } = fullDictionary as any;
+
   return (
     <ThemeProvider serverTheme={serverTheme}>
       <MonthProvider>
-        <SupabaseListener />
-        <AppLayoutClient
-          userName={userName}
-          avatarUrl={resolvedAvatarUrl}
-        >
-          {children}
-        </AppLayoutClient>
+        <I18nProvider locale={locale as Locale} dictionary={appDictionary}>
+          <SupabaseListener />
+          <AppLayoutClient userName={userName} avatarUrl={resolvedAvatarUrl}>
+            {children}
+          </AppLayoutClient>
+        </I18nProvider>
       </MonthProvider>
     </ThemeProvider>
   );
