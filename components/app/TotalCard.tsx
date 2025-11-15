@@ -57,8 +57,10 @@ export const TotalCard: React.FC<TotalCardProps> = ({
     .filter(Boolean)
     .join(' ');
 
-  const isPositive = percentageChange !== undefined && percentageChange >= 0;
-  const hasChange = percentageChange !== undefined && percentageChange !== 0;
+  const isPercentageReady = typeof percentageChange === 'number';
+  const isPositive = isPercentageReady && (percentageChange as number) >= 0;
+  const hasChange = isPercentageReady && (percentageChange as number) !== 0;
+  const isZeroChange = isPercentageReady && (percentageChange as number) === 0;
   const ArrowIcon = isPositive ? ArrowUp : ArrowDown;
 
   const handleKeyDown = onClick
@@ -176,18 +178,24 @@ export const TotalCard: React.FC<TotalCardProps> = ({
           </div>
         ) : (
           <div className="text-center">
-            {hasChange && (
+            {(hasChange || !isPercentageReady || isZeroChange) && (
               <div
-                key={`percentage-${percentageChange}`}
+                key={`percentage-${isPercentageReady ? percentageChange : 'placeholder'}`}
                 className={`flex items-center justify-center gap-2 ${getAnimationClasses(animationDirection)}`}
               >
-                <ArrowIcon
-                  className={`h-6 w-6 ${isPositive ? 'text-success' : 'text-error'}`}
-                  strokeWidth={2}
-                />
-                <span className={`text-lg font-semibold ${isPositive ? 'text-success' : 'text-error'}`}>
-                  {Math.abs(percentageChange as number)}%
-                </span>
+                {hasChange ? (
+                  <>
+                    <ArrowIcon
+                      className={`h-6 w-6 ${isPositive ? 'text-success' : 'text-error'}`}
+                      strokeWidth={2}
+                    />
+                    <span className={`text-lg font-semibold ${isPositive ? 'text-success' : 'text-error'}`}>
+                      {Math.abs(percentageChange as number)}%
+                    </span>
+                  </>
+                ) : (
+                  <span className="text-lg font-semibold text-text-muted">— — —</span>
+                )}
               </div>
             )}
             <div

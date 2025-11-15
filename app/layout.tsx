@@ -5,7 +5,6 @@ import { Inter } from "next/font/google";
 import TelemetryDefer from "@/components/app/TelemetryDefer";
 
 import SWRegister from "./sw-register";
-import SplashScreen from "@/components/app/SplashScreen";
 import BackgroundTextureDefer from "@/components/app/BackgroundTextureDefer";
 import { DynamicThemeColor } from "@/components/app/DynamicThemeColor";
 import "./globals.css";
@@ -173,7 +172,6 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         />
       </head>
       <body className={`${inter.className} bg-background text-foreground antialiased`}>
-        <SplashScreen />
         {/* Defer decorative background until after first paint */}
         <BackgroundTextureDefer />
         <DynamicThemeColor />
