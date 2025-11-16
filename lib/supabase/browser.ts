@@ -1,5 +1,4 @@
 import { createBrowserClient } from "@supabase/ssr";
-import { buildBrowserCookieOptions } from "@/lib/auth/cookie-config";
 
 const missingEnvError = (name: string) =>
   new Error(`Missing required environment variable: ${name}`);
@@ -15,6 +14,13 @@ if (!supabasePublishableKey) {
   throw missingEnvError("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY");
 }
 
-export const supabase = createBrowserClient(supabaseUrl, supabasePublishableKey, {
-  cookieOptions: buildBrowserCookieOptions(),
-});
+/**
+ * Browser client for Supabase
+ *
+ * IMPORTANT: Browser clients should NOT use cookieOptions parameter.
+ * The @supabase/ssr library handles browser cookies automatically using
+ * the document.cookie API with appropriate defaults.
+ *
+ * Only server-side clients (proxy, server) should configure cookie options.
+ */
+export const supabase = createBrowserClient(supabaseUrl, supabasePublishableKey);
