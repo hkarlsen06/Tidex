@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
-import { Card } from '@appui/Card';
-import { Button } from '@appui/Button';
+import { Card } from '@/components/app/Card';
+import { Button } from '@/components/app/Button';
 import { useRouter } from 'next/navigation';
 import { connectGoogleAccount, disconnectGoogleAccount } from '@/app/[locale]/(app)/settings/_actions/updateSettings';
 import { useTranslations } from '@/lib/i18n/client';

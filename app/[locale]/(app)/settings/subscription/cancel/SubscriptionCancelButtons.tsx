@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import type { MouseEvent } from 'react';
-import { Button } from '@appui/Button';
+import { Button } from '@/components/app/Button';
 import { useNavigationFeedback } from '@/components/app/navigation-feedback';
 
 export function SubscriptionCancelButtons() {

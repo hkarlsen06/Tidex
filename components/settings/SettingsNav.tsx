@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { MouseEvent } from "react";
-import { Card } from "@appui/Card";
-import { Separator } from "@appui/Separator";
+import { Card } from "@/components/app/Card";
+import { Separator } from "@/components/app/Separator";
 import {
   User,
   Banknote,

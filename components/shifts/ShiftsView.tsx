@@ -23,7 +23,7 @@ import { moveSeriesShift } from "@/app/[locale]/(app)/shifts/_actions/moveSeries
 import { useNavigationFeedback } from "@/components/app/navigation-feedback";
 import { useMonth } from "@/components/app/MonthContext";
 import { queueMutation, isOfflineQueueSupported } from "@/lib/pwa/offline-queue";
-import type { ISODate } from "@/components/calendar/calendar.types";
+import type { ISODate } from "@/components/app/calendar-types";
 import {
   Dialog,
   DialogContent,

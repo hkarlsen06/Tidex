@@ -72,7 +72,7 @@ export async function moveSeriesShift({
 
   if (updateError) {
     logger.error("Failed to update series exclusions:", updateError);
-    throw new Error("Kunne ikke oppdatere serien");
+    throw new Error(ERRORS.FAILED_TO_UPDATE_SERIES);
   }
 
   // Create standalone shift at target date
@@ -87,7 +87,7 @@ export async function moveSeriesShift({
 
   if (insertError) {
     logger.error("Failed to create standalone shift:", insertError);
-    throw new Error("Kunne ikke opprette skift");
+    throw new Error(ERRORS.FAILED_TO_CREATE_SHIFT);
   }
 
   // Invalidate cache and revalidate paths

@@ -1,11 +1,11 @@
 'use client';
 
 import React from 'react';
-import { Card } from '@appui/Card';
-import { Label } from '@appui/Label';
-import { Input } from '@appui/Input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@appui/Select';
-import { Separator } from '@appui/Separator';
+import { Card } from '@/components/app/Card';
+import { Label } from '@/components/app/Label';
+import { Input } from '@/components/app/Input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/app/Select';
+import { Separator } from '@/components/app/Separator';
 import { PRESET_WAGE_RATES } from '@/lib/payroll';
 import { Building, SlidersHorizontal } from 'lucide-react';
 import { cn } from '@/lib/utils';

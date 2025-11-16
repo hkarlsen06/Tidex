@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Card } from '@appui/Card';
-import { Button } from '@appui/Button';
+import { Card } from '@/components/app/Card';
+import { Button } from '@/components/app/Button';
 import { Plus, History, Pencil } from 'lucide-react';
 import { WageHistoryModal } from './WageHistoryModal';
 import type { WageSnapshot } from '@/data-access/wage-snapshots';

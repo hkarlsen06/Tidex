@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { ChevronLeft } from 'lucide-react';
-import { Button } from '@appui/Button';
+import { Button } from '@/components/app/Button';
 import { useNavigationFeedback } from './navigation-feedback';
 import { useTranslations } from '@/lib/i18n/client';
 

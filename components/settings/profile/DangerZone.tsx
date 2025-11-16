@@ -1,9 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { Card } from '@appui/Card';
-import { Button } from '@appui/Button';
-import { Separator } from '@appui/Separator';
+import { Card } from '@/components/app/Card';
+import { Button } from '@/components/app/Button';
+import { Separator } from '@/components/app/Separator';
 import {
   Dialog,
   DialogContent,
@@ -11,7 +11,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@appui/Dialog';
+} from '@/components/app/Dialog';
 import { clearAllShifts, restartOnboarding } from '@/app/[locale]/(app)/settings/_actions/updateSettings';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from '@/lib/i18n/client';

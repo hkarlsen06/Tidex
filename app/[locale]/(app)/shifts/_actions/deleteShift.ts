@@ -34,7 +34,7 @@ export async function deleteShift(input: string | DeleteShiftInput) {
 
     if (seriesError || !series) {
       logger.error("Failed to load series for deletion:", seriesError);
-      throw new Error("Failed to load series");
+      throw new Error(ERRORS.FAILED_TO_LOAD_SERIES);
     }
 
     const currentExclusions = series.exclusions || [];
@@ -50,7 +50,7 @@ export async function deleteShift(input: string | DeleteShiftInput) {
 
     if (updateError) {
       logger.error("Failed to update series exclusions:", updateError);
-      throw new Error("Failed to update series");
+      throw new Error(ERRORS.FAILED_TO_UPDATE_SERIES);
     }
 
     // Invalidate cache and revalidate paths

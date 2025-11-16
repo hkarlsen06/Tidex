@@ -1,12 +1,12 @@
 'use client';
 
 import { useState, useId, useRef } from 'react';
-import { Label } from '@appui/Label';
-import { Button } from '@appui/Button';
+import { Label } from '@/components/app/Label';
+import { Button } from '@/components/app/Button';
 import { Input } from '@/components/app/Input';
 import { TimeInput } from '@/components/app/TimeInput';
-import { Card } from '@appui/Card';
-import { Badge } from '@appui/Badge';
+import { Card } from '@/components/app/Card';
+import { Badge } from '@/components/app/Badge';
 import { Trash2, Plus } from 'lucide-react';
 import { SupplementRule, SupplementsData } from './types';
 import { useTranslations } from '@/lib/i18n/client';

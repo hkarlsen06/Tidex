@@ -1,9 +1,9 @@
 'use client';
 
-import { Card } from '@appui/Card';
-import { Button } from '@appui/Button';
-import { Separator } from '@appui/Separator';
-import { Tabs, TabsList, TabsTrigger } from '@appui/Tabs';
+import { Card } from '@/components/app/Card';
+import { Button } from '@/components/app/Button';
+import { Separator } from '@/components/app/Separator';
+import { Tabs, TabsList, TabsTrigger } from '@/components/app/Tabs';
 import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';

@@ -1,4 +1,4 @@
-import { Progress } from "@appui/Progress";
+import { Progress } from "@/components/app/Progress";
 
 interface StepIndicatorProps {
   currentStep: number;

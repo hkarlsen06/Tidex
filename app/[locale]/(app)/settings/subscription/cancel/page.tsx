@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import type { Metadata } from 'next';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
-import { Card } from '@appui/Card';
+import { Card } from '@/components/app/Card';
 import { XCircle } from 'lucide-react';
 import { SubscriptionCancelButtons } from './SubscriptionCancelButtons';
 

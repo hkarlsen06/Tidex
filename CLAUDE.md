@@ -112,11 +112,12 @@ The project uses a two-tier component architecture: `components/ui/*` contains r
 
 Defined in `tsconfig.json`:
 
-- `@/*` - Project root
+- `@/*` - Project root (use `@/components/app/*` for app-specific components)
 - `@components/*` - `components/`
-- `@ui/*` - `components/ui/`
-- `@appui/*` - `components/app/`
+- `@ui/*` - `components/ui/` (never import directly; shadcn/ui raw components)
 - `@dal/*` - `data-access/` (Data Access Layer)
+
+**Component imports:** Always use `@/components/app/*` (e.g., `import { Button } from '@/components/app/Button'`). Never import from `@ui/*` directly.
 
 ### Theming & Styling
 

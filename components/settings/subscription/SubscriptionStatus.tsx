@@ -1,9 +1,9 @@
 'use client';
 
-import { Card } from '@appui/Card';
-import { Badge } from '@appui/Badge';
-import { Separator } from '@appui/Separator';
-import { Button } from '@appui/Button';
+import { Card } from '@/components/app/Card';
+import { Badge } from '@/components/app/Badge';
+import { Separator } from '@/components/app/Separator';
+import { Button } from '@/components/app/Button';
 import { ENV } from '@/lib/env';
 import { Subscription } from '@/data-access/subscription';
 import { createPortalSession } from '@/app/[locale]/(app)/settings/subscription/_actions/createPortalSession';

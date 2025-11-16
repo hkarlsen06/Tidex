@@ -9,10 +9,10 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from '@appui/Dialog';
-import { Button } from '@appui/Button';
-import { Input } from '@appui/Input';
-import { Label } from '@appui/Label';
+} from '@/components/app/Dialog';
+import { Button } from '@/components/app/Button';
+import { Input } from '@/components/app/Input';
+import { Label } from '@/components/app/Label';
 import { SupplementsEditor, SupplementsData } from '@/components/settings/SupplementsEditor';
 import { WageSourceCard } from '@/components/settings/pay/WageSourceCard';
 import { PRESET_WAGE_RATES, PRESET_SUPPLEMENT_RULES } from '@/lib/payroll';

@@ -4,6 +4,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import { invalidateAndRevalidate } from "@/lib/revalidation/paths";
 import { verifySession } from "@/data-access/auth";
+import { ERRORS } from "@/lib/errors/messages";
 
 type ConvertInput = {
   seriesId: string;
@@ -37,7 +38,7 @@ export async function convertSeriesShiftToStandalone({
 
   if (seriesError || !series) {
     logger.error("Failed to load series for conversion:", seriesError);
-    throw new Error("Failed to load series");
+    throw new Error(ERRORS.FAILED_TO_LOAD_SERIES);
   }
 
   // Add date to exclusions
@@ -55,7 +56,7 @@ export async function convertSeriesShiftToStandalone({
 
   if (updateError) {
     logger.error("Failed to update series exclusions:", updateError);
-    throw new Error("Failed to update series");
+    throw new Error(ERRORS.FAILED_TO_UPDATE_SERIES);
   }
 
   // Create standalone shift
@@ -70,7 +71,7 @@ export async function convertSeriesShiftToStandalone({
 
   if (insertError) {
     logger.error("Failed to create standalone shift:", insertError);
-    throw new Error("Failed to create shift");
+    throw new Error(ERRORS.FAILED_TO_CREATE_SHIFT);
   }
 
   // Invalidate cache and revalidate paths

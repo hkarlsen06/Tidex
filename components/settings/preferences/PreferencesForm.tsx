@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Card } from '@appui/Card';
-import { Label } from '@appui/Label';
-import { Switch } from '@appui/Switch';
-import { Separator } from '@appui/Separator';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@appui/Tooltip';
+import { Card } from '@/components/app/Card';
+import { Label } from '@/components/app/Label';
+import { Switch } from '@/components/app/Switch';
+import { Separator } from '@/components/app/Separator';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/app/Tooltip';
 import { updatePreferencesSettings } from '@/app/[locale]/(app)/settings/_actions/updateSettings';
 import { useRouter } from 'next/navigation';
 import type { Dictionary } from '@/lib/i18n/dictionaries/no';

@@ -1,10 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { Card } from '@appui/Card';
-import { Button } from '@appui/Button';
-import { Input } from '@appui/Input';
-import { Label } from '@appui/Label';
+import { Card } from '@/components/app/Card';
+import { Button } from '@/components/app/Button';
+import { Input } from '@/components/app/Input';
+import { Label } from '@/components/app/Label';
 import { Phone } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import {
@@ -22,7 +22,7 @@ import {
   InputOTPGroup,
   InputOTPSeparator,
   InputOTPSlot,
-} from '@appui/InputOTP';
+} from '@/components/app/InputOTP';
 import { translateError } from '@/lib/errors/translate';
 import { useTranslations } from '@/lib/i18n/client';
 

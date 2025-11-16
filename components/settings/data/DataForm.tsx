@@ -1,9 +1,9 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Button } from '@appui/Button';
-import { Input } from '@appui/Input';
-import { Separator } from '@appui/Separator';
+import { Button } from '@/components/app/Button';
+import { Input } from '@/components/app/Input';
+import { Separator } from '@/components/app/Separator';
 import { Download } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import type { Dictionary } from '@/lib/i18n/dictionaries/no';
