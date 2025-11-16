@@ -56,10 +56,8 @@ export const no = {
   footer: {
     product: {
       title: 'Produkt',
-      dashboard: 'Oversikt',
-      shifts: 'Vakter',
-      statistics: 'Statistikk',
-      settings: 'Innstillinger',
+      subscription: 'Abonnement',
+      exportData: 'Eksporter data',
     },
     resources: {
       title: 'Ressurser',
@@ -74,7 +72,7 @@ export const no = {
     company: {
       title: 'Selskap',
       support: 'Support',
-      website: 'tidex.no',
+      website: 'Tidex.no',
     },
     copyright: '© 2025 Hjalmar Kristensen-Karlsen',
   },

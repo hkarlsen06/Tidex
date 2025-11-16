@@ -57,10 +57,8 @@ export const en: Dictionary = {
   footer: {
     product: {
       title: 'Product',
-      dashboard: 'Dashboard',
-      shifts: 'Shifts',
-      statistics: 'Statistics',
-      settings: 'Settings',
+      subscription: 'Subscription',
+      exportData: 'Export Data',
     },
     resources: {
       title: 'Resources',
@@ -75,7 +73,7 @@ export const en: Dictionary = {
     company: {
       title: 'Company',
       support: 'Support',
-      website: 'tidex.no',
+      website: 'Tidex.no',
     },
     copyright: '© 2025 Hjalmar Kristensen-Karlsen',
   },
