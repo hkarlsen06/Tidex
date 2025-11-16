@@ -22,7 +22,7 @@ export function TopHeader({ userName, avatarUrl }: TopHeaderProps) {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-md pt-[env(safe-area-inset-top)] md:pt-0">
       <div className="container mx-auto px-4">
-        <div className="grid grid-cols-[1fr_auto_1fr] items-center h-16 gap-4">
+        <div className="flex md:grid md:grid-cols-[1fr_auto_1fr] items-center justify-between h-16 gap-4">
           {/* Left section */}
           <div className="flex items-center gap-3">
             <a
