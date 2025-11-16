@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { defaultLocale } from "@/lib/i18n/config";
+import { useTranslations } from "@/lib/i18n/client";
 import {
   NavigationMenu as NavigationMenuPrimitive,
   NavigationMenuItem,
@@ -14,25 +14,25 @@ import {
 
 type NavItem = {
   href: string;
-  label: string;
+  labelKey: 'home' | 'shifts' | 'stats' | 'settings';
 };
 
 const navItems: NavItem[] = [
   {
     href: "/",
-    label: "Home",
+    labelKey: "home",
   },
   {
     href: "/shifts",
-    label: "Shifts",
+    labelKey: "shifts",
   },
   {
     href: "/stats",
-    label: "Stats",
+    labelKey: "stats",
   },
   {
     href: "/settings",
-    label: "Settings",
+    labelKey: "settings",
   },
 ];
 
@@ -41,15 +41,12 @@ type NavigationMenuProps = {
 };
 
 export function NavigationMenu({ className }: NavigationMenuProps) {
+  const { t, locale } = useTranslations();
   const rawPathname = usePathname();
 
   // Strip locale prefix from pathname for consistent nav item matching
   // usePathname() returns paths like "/no/settings", "/en/shifts", or "/de/stats"
   const pathname = rawPathname.replace(/^\/(no|en|de)(?=\/|$)/, '') || '/';
-
-  // Extract locale from current pathname
-  const localeMatch = rawPathname.match(/^\/(en|no|de)/);
-  const locale = localeMatch ? localeMatch[1] : defaultLocale;
 
   return (
     <NavigationMenuPrimitive className={className}>
@@ -70,7 +67,7 @@ export function NavigationMenu({ className }: NavigationMenuProps) {
                     isActive && "bg-accent/50 text-accent-foreground"
                   )}
                 >
-                  {item.label}
+                  {t.navigation[item.labelKey]}
                 </Link>
               </NavigationMenuLink>
             </NavigationMenuItem>

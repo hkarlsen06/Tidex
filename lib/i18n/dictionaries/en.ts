@@ -29,6 +29,7 @@ export const en: Dictionary = {
     currency: 'kr',
     perHour: 'kr/h',
     or: 'or',
+    guest: 'Guest',
     relativeTime: {
       tomorrow: 'Tomorrow',
       yesterday: 'Yesterday',
@@ -87,6 +88,10 @@ export const en: Dictionary = {
     back: 'Back',
     addFirstShiftLine1: 'Add your',
     addFirstShiftLine2: 'first shift!',
+    home: 'Dashboard',
+    shifts: 'Shifts',
+    stats: 'Stats',
+    settings: 'Settings',
   },
   pages: {
     home: {

@@ -28,6 +28,7 @@ export const no = {
     currency: 'kr',
     perHour: 'kr/t',
     or: 'eller',
+    guest: 'Gjest',
     relativeTime: {
       tomorrow: 'I morgen',
       yesterday: 'I går',
@@ -86,6 +87,10 @@ export const no = {
     back: 'Tilbake',
     addFirstShiftLine1: 'Legg til din',
     addFirstShiftLine2: 'første vakt!',
+    home: 'Dashboard',
+    shifts: 'Vakter',
+    stats: 'Statistikk',
+    settings: 'Innstillinger',
   },
   pages: {
     home: {

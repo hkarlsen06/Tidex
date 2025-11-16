@@ -17,7 +17,7 @@ export function TopHeader({ userName, avatarUrl }: TopHeaderProps) {
   const { t, locale } = useTranslations();
   const cleanedName = userName.trim();
   const [firstWord] = cleanedName.split(/\s+/).filter(Boolean);
-  const displayName = (firstWord ?? cleanedName) || "Guest";
+  const displayName = (firstWord ?? cleanedName) || t.common.guest;
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-md pt-[env(safe-area-inset-top)] md:pt-0">

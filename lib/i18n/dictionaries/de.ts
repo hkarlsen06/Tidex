@@ -28,6 +28,7 @@ export const de = {
     currency: '€',
     perHour: '€/Std',
     or: 'oder',
+    guest: 'Gast',
     relativeTime: {
       tomorrow: 'Morgen',
       yesterday: 'Gestern',
@@ -86,6 +87,10 @@ export const de = {
     back: 'Zurück',
     addFirstShiftLine1: 'Fügen Sie Ihre',
     addFirstShiftLine2: 'erste Schicht hinzu!',
+    home: 'Dashboard',
+    shifts: 'Schichten',
+    stats: 'Statistiken',
+    settings: 'Einstellungen',
   },
   pages: {
     home: {
