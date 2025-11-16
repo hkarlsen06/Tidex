@@ -39,7 +39,7 @@ const payrollDocs = {
     buttonText: 'Email the payroll team',
     emailSubject: 'Payroll calculation discrepancy',
     emailBody:
-      'Hello Tidex payroll team,\\n\\nI believe there may be an issue with the payroll calculation engine:\\n\\n',
+      'Hello Tidex payroll team. I believe there may be an issue with the payroll calculation engine:'
   },
 
   sections: [
