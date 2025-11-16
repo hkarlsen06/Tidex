@@ -86,8 +86,8 @@ function LayoutContent({
   return (
     <div className="flex flex-col min-h-screen">
       <TopHeader userName={userName} avatarUrl={avatarUrl} />
-      <main className="flex-1 flex items-center pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-8">
-        <div className="mx-auto max-w-md md:max-w-lg px-4 w-full">
+      <main className="flex-1 flex items-center justify-center md:pb-8">
+        <div className="mx-auto max-w-md md:max-w-lg px-4 w-full pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0">
           {children}
         </div>
       </main>
