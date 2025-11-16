@@ -1,9 +1,12 @@
 /**
  * Shared cookie configuration for Supabase auth
  *
- * CRITICAL: All Supabase clients (proxy, server, browser) must use identical
+ * CRITICAL: Server-side Supabase clients (proxy, server) must use identical
  * cookie settings to prevent "Refresh Token Not Found" errors caused by
  * cookie read/write mismatches.
+ *
+ * IMPORTANT: Browser clients should NOT use cookieOptions - @supabase/ssr
+ * handles browser cookies automatically via document.cookie API.
  */
 
 import type { CookieOptions } from "@supabase/ssr";
@@ -99,28 +102,16 @@ export function buildProxyCookieOptions(
 }
 
 /**
- * Build cookie options for browser client
- * Uses environment-based secure flag since window.location may not be available
- * during SSR hydration
+ * DEPRECATED: Browser clients should NOT use cookieOptions parameter
+ *
+ * The @supabase/ssr library's createBrowserClient handles cookies automatically
+ * using the document.cookie API. Passing cookieOptions to browser clients causes
+ * cookie mismatch issues with server-side clients.
+ *
+ * This function is kept for reference but should not be used.
  */
 export function buildBrowserCookieOptions(): Partial<CookieOptions> {
-  // In browser, we can check window.location if available
-  if (typeof window !== "undefined") {
-    return {
-      httpOnly: false, // Browser can't set httpOnly
-      secure: resolveSecureFlag(window.location.protocol, window.location.hostname),
-      sameSite: "lax",
-      path: "/",
-      maxAge: ONE_WEEK_SECONDS,
-    };
-  }
-
-  // During SSR, use environment preference
-  return {
-    httpOnly: false,
-    secure: envPrefersSecureCookies(),
-    sameSite: "lax",
-    path: "/",
-    maxAge: ONE_WEEK_SECONDS,
-  };
+  throw new Error(
+    "buildBrowserCookieOptions is deprecated. Browser clients should not use cookieOptions parameter."
+  );
 }
