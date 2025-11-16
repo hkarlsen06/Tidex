@@ -8,7 +8,7 @@ export function AppFooter() {
   const footer = t.footer;
 
   return (
-    <footer className="mt-auto border-t border-border-subtle bg-surface-primary pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0">
+    <footer className="mt-auto border-t border-border-subtle bg-background pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0">
       <div className="mx-auto max-w-7xl px-4 pt-6 sm:px-6 lg:px-8">
         <div className="grid gap-x-4 gap-y-6 grid-cols-2 lg:grid-cols-4">
           {/* Product Column */}
@@ -17,34 +17,18 @@ export function AppFooter() {
             <ul className="space-y-1.5">
               <li>
                 <Link
-                  href={`/${locale}/`}
+                  href={`/${locale}/settings/subscription`}
                   className="text-xs text-text-secondary hover:text-text-primary transition-colors"
                 >
-                  {footer.product.dashboard}
+                  {footer.product.subscription}
                 </Link>
               </li>
               <li>
                 <Link
-                  href={`/${locale}/shifts`}
+                  href={`/${locale}/settings/data`}
                   className="text-xs text-text-secondary hover:text-text-primary transition-colors"
                 >
-                  {footer.product.shifts}
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href={`/${locale}/stats`}
-                  className="text-xs text-text-secondary hover:text-text-primary transition-colors"
-                >
-                  {footer.product.statistics}
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href={`/${locale}/settings`}
-                  className="text-xs text-text-secondary hover:text-text-primary transition-colors"
-                >
-                  {footer.product.settings}
+                  {footer.product.exportData}
                 </Link>
               </li>
             </ul>
