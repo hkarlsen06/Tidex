@@ -1,8 +1,8 @@
 'use client';
 
-import { Card } from '@appui/Card';
-import { Badge } from '@appui/Badge';
-import { Separator } from '@appui/Separator';
+import { Card } from '@/components/app/Card';
+import { Badge } from '@/components/app/Badge';
+import { Separator } from '@/components/app/Separator';
 import { Heart } from 'lucide-react';
 import type { Dictionary } from '@/lib/i18n/dictionaries/no';
 

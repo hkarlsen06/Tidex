@@ -15,7 +15,7 @@ import { useParams } from "next/navigation";
 import { formatCurrency, formatNumber } from "@/lib/formatters";
 
 /**
- * Chart data type - matches what the /api/stats/charts endpoint returns
+ * Chart data type - subset of StatsData used for chart components
  */
 type ChartData = Pick<
   StatsData,

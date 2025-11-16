@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Label } from "@appui/Label";
-import { Switch } from "@appui/Switch";
-import { Input } from "@appui/Input";
-import { Button } from "@appui/Button";
-import { Separator } from "@appui/Separator";
+import { Label } from "@/components/app/Label";
+import { Switch } from "@/components/app/Switch";
+import { Input } from "@/components/app/Input";
+import { Button } from "@/components/app/Button";
+import { Separator } from "@/components/app/Separator";
 import { InfoIcon } from "lucide-react";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@appui/Tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/app/Tooltip";
 import { useTranslations } from "@/lib/i18n/client";
 
 interface TaxPayrollStepProps {

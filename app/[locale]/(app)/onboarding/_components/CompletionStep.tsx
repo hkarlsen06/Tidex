@@ -1,8 +1,8 @@
 "use client";
 
-import { Button } from "@appui/Button";
-import { Badge } from "@appui/Badge";
-import { Separator } from "@appui/Separator";
+import { Button } from "@/components/app/Button";
+import { Badge } from "@/components/app/Badge";
+import { Separator } from "@/components/app/Separator";
 import { CheckCircle } from "lucide-react";
 import { useTranslations } from "@/lib/i18n/client";
 

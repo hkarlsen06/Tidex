@@ -1,9 +1,9 @@
 "use client";
 
-import { Label } from "@appui/Label";
-import { Input } from "@appui/Input";
-import { Button } from "@appui/Button";
-import { Separator } from "@appui/Separator";
+import { Label } from "@/components/app/Label";
+import { Input } from "@/components/app/Input";
+import { Button } from "@/components/app/Button";
+import { Separator } from "@/components/app/Separator";
 import { List, CalendarDays, Sun, Moon, ScreenShare } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatPlainAmount } from '@/lib/formatters';

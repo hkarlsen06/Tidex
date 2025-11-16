@@ -1,12 +1,12 @@
 "use client";
 
 import { MutableRefObject, useCallback, useEffect, useRef, useState } from "react";
-import { Label } from "@appui/Label";
-import { Switch } from "@appui/Switch";
-import { Input } from "@appui/Input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@appui/Select";
-import { Button } from "@appui/Button";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@appui/Tooltip";
+import { Label } from "@/components/app/Label";
+import { Switch } from "@/components/app/Switch";
+import { Input } from "@/components/app/Input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/app/Select";
+import { Button } from "@/components/app/Button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/app/Tooltip";
 import { InfoIcon, ArrowDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslations } from "@/lib/i18n/client";

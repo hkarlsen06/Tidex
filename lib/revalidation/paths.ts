@@ -9,25 +9,6 @@ import { revalidatePath } from "next/cache";
 import { invalidateUserCache } from "@/data-access/cache";
 
 /**
- * Revalidates all pages that display shift data
- *
- * Call this after any shift modification to ensure the UI shows
- * updated data across all relevant pages.
- *
- * @example
- * export async function updateShift(id: string, data: ShiftData) {
- *   // ... update logic
- *   revalidateShiftData();
- *   return { success: true };
- * }
- */
-export function revalidateShiftData() {
-  // Use layout revalidation to ensure all localized routes are revalidated
-  // This is more reliable than page-level revalidation for dynamic [locale] segments
-  revalidatePath("/", "layout");
-}
-
-/**
  * Invalidates user cache and revalidates all shift-related pages
  *
  * Use this after any data modification for a user. This combines cache
@@ -46,7 +27,5 @@ export function revalidateShiftData() {
  */
 export function invalidateAndRevalidate(userId: string) {
   invalidateUserCache(userId);
-  // Use layout revalidation to ensure all localized routes are revalidated
-  // This is more reliable than page-level revalidation for dynamic [locale] segments
   revalidatePath("/", "layout");
 }

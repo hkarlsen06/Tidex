@@ -18,7 +18,7 @@ export async function copyShifts(input: CopyShiftsInput) {
   const supabase = await createSupabaseServerClient();
 
   const shiftIds = Array.isArray(input.shiftIds) ? input.shiftIds.filter(Boolean) : [];
-  if (shiftIds.length === 0) throw new Error("Minst én vakt er påkrevd");
+  if (shiftIds.length === 0) throw new Error(ERRORS.MIN_ONE_SHIFT_REQUIRED);
   if (!isISODate(input.targetDate)) throw new Error(ERRORS.INVALID_DATE);
 
   // Separate ghost shifts from regular shifts
@@ -87,7 +87,7 @@ export async function copyShifts(input: CopyShiftsInput) {
   }
 
   if (sourceShifts.length === 0) {
-    throw new Error("Ingen vakter funnet");
+    throw new Error(ERRORS.NO_SHIFTS_FOUND);
   }
 
   // Check shift limit (free tier enforcement)

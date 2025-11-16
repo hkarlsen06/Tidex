@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Card } from "@appui/Card";
-import { TooltipProvider } from "@appui/Tooltip";
+import { Card } from "@/components/app/Card";
+import { TooltipProvider } from "@/components/app/Tooltip";
 import { StepIndicator } from "./StepIndicator";
 import { WageStep } from "./WageStep";
 import { SupplementsStep } from "./SupplementsStep";

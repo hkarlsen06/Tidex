@@ -6,7 +6,7 @@ import { TimeInput } from "@/components/app/TimeInput";
 import { Button } from "@/components/app/Button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/app/Dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/app/Select";
-import { SeriesCalendar } from "@/components/calendar/SeriesCalendar";
+import { SeriesCalendar } from "@/components/app/SeriesCalendar";
 import { WeekdayChips } from "@/components/app/WeekdayChips";
 import { DurationSection } from "@/components/app/DurationSection";
 import { MonthPicker } from "@/components/app/MonthPicker";

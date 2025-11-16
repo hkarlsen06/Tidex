@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ArrowDown, ArrowUp } from 'lucide-react';
-import { Card, CardContent } from '@appui/Card';
+import { Card, CardContent } from '@/components/app/Card';
 import { useTranslations } from '@/lib/i18n/client';
 
 interface TotalCardProps {

@@ -195,3 +195,74 @@ export function getMonthEnd(year: number, month: number): string {
   const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
   return `${year}-${String(month).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
 }
+
+/**
+ * Calculate ISO week number for a given date
+ * Used for calendar week display
+ *
+ * @param date - Date object
+ * @returns ISO week number (1-53)
+ *
+ * @example
+ * getISOWeek(new Date('2024-01-01')) // 1
+ */
+export function getISOWeek(date: Date): number {
+  const d = new Date(
+    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())
+  );
+  const day = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - day);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  const weekNumber = Math.ceil(
+    ((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7
+  );
+  return weekNumber;
+}
+
+/**
+ * Format weekday name as 2-letter abbreviation
+ * Supports Norwegian and English locales
+ *
+ * @param date - Date object
+ * @param locale - Locale code ('no' or 'en')
+ * @returns 2-letter weekday abbreviation
+ *
+ * @example
+ * formatWeekdayAbbreviation(new Date('2024-03-15'), 'en') // 'FR'
+ * formatWeekdayAbbreviation(new Date('2024-03-15'), 'no') // 'FR'
+ */
+export function formatWeekdayAbbreviation(date: Date, locale: string): string {
+  const day = date.getDay();
+  const shortNames = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
+  const shortNamesNb = ['SØ', 'MA', 'TI', 'ON', 'TO', 'FR', 'LØ'];
+  const names = locale === 'no' ? shortNamesNb : shortNames;
+  return names[day];
+}
+
+/**
+ * Clean time string to HH:mm format
+ * Handles various input formats from database/API
+ *
+ * @param time - Time string in various formats
+ * @returns Time string in HH:mm format
+ *
+ * @example
+ * cleanTime("12:30:00+01:00") // "12:30"
+ * cleanTime("12:30:00") // "12:30"
+ * cleanTime("12:30") // "12:30"
+ */
+export function cleanTime(time: string): string {
+  if (!time) return time;
+
+  let cleaned = time;
+  const plusIndex = cleaned.indexOf('+');
+  const minusIndex = cleaned.lastIndexOf('-');
+
+  if (plusIndex > 0) {
+    cleaned = cleaned.substring(0, plusIndex);
+  } else if (minusIndex > 2) {
+    cleaned = cleaned.substring(0, minusIndex);
+  }
+
+  return cleaned.substring(0, 5);
+}

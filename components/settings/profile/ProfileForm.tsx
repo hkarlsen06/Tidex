@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, useEffect, useRef, useTransition, type ChangeEvent } from 'react';
-import { Card } from '@appui/Card';
-import { Input } from '@appui/Input';
-import { Label } from '@appui/Label';
-import { Button } from '@appui/Button';
-import { Avatar, AvatarFallback, AvatarImage } from '@appui/Avatar';
+import { Card } from '@/components/app/Card';
+import { Input } from '@/components/app/Input';
+import { Label } from '@/components/app/Label';
+import { Button } from '@/components/app/Button';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/app/Avatar';
 import { updateProfileSettings } from '@/app/[locale]/(app)/settings/_actions/updateSettings';
 import { ArrowRightLeft, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';

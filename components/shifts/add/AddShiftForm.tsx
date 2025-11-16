@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/app/Button";
 import { TimeInput } from "@/components/app/TimeInput";
 import { SelectDatesCalendar } from "@/components/app/SelectDatesCalendar";
-import type { ISODate } from "@/components/calendar/calendar.utils";
+import type { ISODate } from "@/components/app/calendar-utils";
 import { computeShift, type UserSettings, type SupplementRule, type WageSnapshot } from "@/lib/payroll";
 import { createShifts } from "@/app/[locale]/(app)/shifts/add/actions";
 import RecurringForm from "./RecurringForm";

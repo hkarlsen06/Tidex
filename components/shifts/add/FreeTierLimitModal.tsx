@@ -5,8 +5,8 @@ import {
   Dialog,
   DialogContent,
   DialogTitle,
-} from '@appui/Dialog';
-import { Button } from '@appui/Button';
+} from '@/components/app/Dialog';
+import { Button } from '@/components/app/Button';
 import { AlertTriangle, Trash2, Sparkles, Check } from 'lucide-react';
 import { formatMonth } from '@/lib/subscription/hasProAccess';
 import { deleteShiftsInOtherMonths } from '@/app/[locale]/(app)/shifts/add/_actions/deleteShiftsInOtherMonths';

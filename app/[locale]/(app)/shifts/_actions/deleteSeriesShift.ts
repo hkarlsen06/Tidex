@@ -4,6 +4,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import { invalidateAndRevalidate } from "@/lib/revalidation/paths";
 import { verifySession } from "@/data-access/auth";
+import { ERRORS } from "@/lib/errors/messages";
 
 /**
  * Delete an entire series shift from the database
@@ -26,7 +27,7 @@ export async function deleteSeriesShift(seriesId: string): Promise<void> {
 
   if (fetchError) {
     logger.error("Failed to find series for deletion:", fetchError);
-    throw new Error("Series not found");
+    throw new Error(ERRORS.SERIES_NOT_FOUND);
   }
 
   logger.info("deleteSeriesShift: Found series, proceeding with delete", { existingSeries });
@@ -39,7 +40,7 @@ export async function deleteSeriesShift(seriesId: string): Promise<void> {
 
   if (error) {
     logger.error("Failed to delete series:", error);
-    throw new Error("Failed to delete series");
+    throw new Error(ERRORS.FAILED_TO_DELETE_SERIES);
   }
 
   logger.info("deleteSeriesShift: Series deleted successfully", { seriesId, deletedCount: count });

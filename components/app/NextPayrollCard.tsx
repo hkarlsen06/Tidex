@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useMemo } from 'react';
-import { Card, CardHeader } from '@appui/Card';
+import { Card, CardHeader } from '@/components/app/Card';
 import { cn } from '@/lib/cn';
 import { useNavigationFeedback } from './navigation-feedback';
 import { useTranslations } from '@/lib/i18n/client';

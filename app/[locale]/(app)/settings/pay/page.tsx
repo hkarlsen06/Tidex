@@ -5,7 +5,7 @@ import { getUserSettings } from '@/data-access/settings';
 import { getUserWageSnapshots } from '@/data-access/wage-snapshots';
 import { PayForm } from '@components/settings/pay/PayForm';
 import { WageHistoryTimeline } from '@components/settings/pay/WageHistoryTimeline';
-import { Separator } from '@appui/Separator';
+import { Separator } from '@/components/app/Separator';
 import { getTranslations } from '@/lib/i18n/server';
 import type { Locale } from '@/lib/i18n/config';
 

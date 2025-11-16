@@ -1,6 +1,6 @@
 'use client';
 
-import { Card } from '@appui/Card';
+import { Card } from '@/components/app/Card';
 import { Heart } from 'lucide-react';
 import type { Dictionary } from '@/lib/i18n/dictionaries/no';
 

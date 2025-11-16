@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Card } from '@appui/Card';
-import { Label } from '@appui/Label';
+import { Card } from '@/components/app/Card';
+import { Label } from '@/components/app/Label';
 import { updateDisplaySettings } from '@/app/[locale]/(app)/settings/_actions/updateSettings';
 import { useRouter } from 'next/navigation';
 import { List, CalendarDays, Sun, Moon, ScreenShare } from 'lucide-react';

@@ -30,9 +30,6 @@
       "@ui/*": [
         "components/ui/*"
       ],
-      "@appui/*": [
-        "components/app/*"
-      ],
       "@dal/*": [
         "data-access/*"
       ]

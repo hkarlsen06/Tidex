@@ -1,9 +1,9 @@
 "use client";
 
-import { Label } from "@appui/Label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@appui/Select";
-import { Input } from "@appui/Input";
-import { Button } from "@appui/Button";
+import { Label } from "@/components/app/Label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/app/Select";
+import { Input } from "@/components/app/Input";
+import { Button } from "@/components/app/Button";
 import { PRESET_WAGE_RATES } from "@/lib/payroll/calc";
 import { Building, SlidersHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";

@@ -8,7 +8,7 @@ import { Button } from "@/components/app/Button";
 import { MonthPicker } from "@/components/app/MonthPicker";
 import { useMonth } from "@/components/app/MonthContext";
 import { ShiftWithComputations } from "@/lib/payroll";
-import type { ISODate, EarningsByDate, HoursByDate } from "@/components/calendar/calendar.types";
+import type { ISODate, EarningsByDate, HoursByDate } from "@/components/app/calendar-types";
 import { cn } from "@/lib/cn";
 import { useTranslations } from "@/lib/i18n/client";
 import { getMonthlyTotals } from "@/lib/shifts/monthlyTotals";

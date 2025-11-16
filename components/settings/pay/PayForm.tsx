@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback, useTransition } from 'react';
-import { Card } from '@appui/Card';
-import { Label } from '@appui/Label';
-import { Input } from '@appui/Input';
-import { Switch } from '@appui/Switch';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@appui/Select';
-import { Separator } from '@appui/Separator';
+import { Card } from '@/components/app/Card';
+import { Label } from '@/components/app/Label';
+import { Input } from '@/components/app/Input';
+import { Switch } from '@/components/app/Switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/app/Select';
+import { Separator } from '@/components/app/Separator';
 import { updatePaySettings } from '@/app/[locale]/(app)/settings/_actions/updateSettings';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from '@/lib/i18n/client';

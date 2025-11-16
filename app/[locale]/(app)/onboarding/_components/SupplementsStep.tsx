@@ -1,10 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { Button } from '@appui/Button';
-import { Card } from '@appui/Card';
+import { Button } from '@/components/app/Button';
+import { Card } from '@/components/app/Card';
 import { InfoIcon } from 'lucide-react';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@appui/Tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/app/Tooltip';
 import { SupplementsEditor, SupplementsData } from '@/components/settings/SupplementsEditor';
 import { useTranslations } from '@/lib/i18n/client';
 

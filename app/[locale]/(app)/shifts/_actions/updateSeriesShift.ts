@@ -5,6 +5,7 @@ import { logger } from "@/lib/logger";
 import type { SelectedDays, EndCondition } from "@/lib/series/types";
 import { invalidateAndRevalidate } from "@/lib/revalidation/paths";
 import { verifySession } from "@/data-access/auth";
+import { ERRORS } from "@/lib/errors/messages";
 
 type UpdateSeriesInput = {
   id: string;
@@ -49,7 +50,7 @@ export async function updateSeriesShift({
 
   if (error) {
     logger.error("Failed to update series:", error);
-    throw new Error("Failed to update series");
+    throw new Error(ERRORS.FAILED_TO_UPDATE_SERIES);
   }
 
   // Invalidate cache and revalidate paths
