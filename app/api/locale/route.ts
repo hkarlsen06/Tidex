@@ -29,13 +29,16 @@ export async function POST(request: NextRequest) {
       maxAge: 60 * 60 * 24 * 365, // 1 year
     });
 
-    // Return new dictionary
-    const dictionary = getDictionary(locale as Locale);
+    // Return a trimmed dictionary optimized for the authenticated app shell.
+    // Heavy sections used only on marketing/legal pages are omitted to keep
+    // the payload smaller for locale switches inside the app.
+    const fullDictionary = getDictionary(locale as Locale);
+    const { marketing: _omitMarketing, legal: _omitLegal, ...appDictionary } = fullDictionary as any;
 
     return NextResponse.json({
       success: true,
       locale,
-      dictionary
+      dictionary: appDictionary
     });
   } catch (error) {
     console.error('Failed to update locale:', error);

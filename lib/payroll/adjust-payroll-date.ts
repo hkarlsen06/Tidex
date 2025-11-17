@@ -11,7 +11,7 @@ import type { Locale } from '@/lib/i18n';
  * @param payrollDay - Day of month (1-31)
  * @param month - Month (0-11, JavaScript Date format)
  * @param year - Full year (e.g., 2025)
- * @param locale - Locale for holiday detection (supports 'no', 'en', 'de')
+ * @param locale - Locale for holiday detection (supports 'no', 'en')
  * @returns Adjusted Date object guaranteed to be a valid payroll day (Tue-Fri, non-holiday)
  *
  * @example

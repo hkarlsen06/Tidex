@@ -51,8 +51,8 @@ export function isInvalidPayrollDay(date: Date, locale: Locale = 'no'): boolean 
  */
 export function getHolidayName(date: Date, locale: Locale = 'no'): string | null {
   const dateStr = formatDate(date);
-  // Map 'de' locale to 'en' for Norwegian holidays (only support no/en)
-  const holidayLocale = locale === 'de' ? 'en' : locale === 'en' ? 'en' : 'no';
+  // Map locale to the underlying Norwegian holiday dataset (no/en)
+  const holidayLocale = locale === 'en' ? 'en' : 'no';
   return getNorwegianHolidayName(dateStr, holidayLocale);
 }
 
