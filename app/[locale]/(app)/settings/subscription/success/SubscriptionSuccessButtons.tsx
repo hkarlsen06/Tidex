@@ -5,7 +5,15 @@ import type { MouseEvent } from 'react';
 import { Button } from '@/components/app/Button';
 import { useNavigationFeedback } from '@/components/app/navigation-feedback';
 
-export function SubscriptionSuccessButtons() {
+type SubscriptionSuccessButtonsProps = {
+  dict: {
+    goToDashboard: string;
+    viewSubscription: string;
+  };
+  locale: string;
+};
+
+export function SubscriptionSuccessButtons({ dict, locale }: SubscriptionSuccessButtonsProps) {
   const { navigate } = useNavigationFeedback();
 
   const handleClick = (href: string) => (event: MouseEvent<HTMLAnchorElement>) => {
@@ -26,10 +34,10 @@ export function SubscriptionSuccessButtons() {
   return (
     <div className="flex gap-4 w-full">
       <Button asChild className="flex-1">
-        <Link href="/home" onClick={handleClick('/home')}>Gå til Dashboard</Link>
+        <Link href={`/${locale}/home`} onClick={handleClick(`/${locale}/home`)}>{dict.goToDashboard}</Link>
       </Button>
       <Button asChild variant="outline" className="flex-1">
-        <Link href="/settings/subscription" onClick={handleClick('/settings/subscription')}>Se abonnement</Link>
+        <Link href={`/${locale}/settings/subscription`} onClick={handleClick(`/${locale}/settings/subscription`)}>{dict.viewSubscription}</Link>
       </Button>
     </div>
   );

@@ -4,12 +4,27 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { Card } from '@/components/app/Card';
 import { XCircle } from 'lucide-react';
 import { SubscriptionCancelButtons } from './SubscriptionCancelButtons';
+import { getAppDictionary } from '@/lib/i18n/dictionaries';
+import type { Locale } from '@/lib/i18n/config';
 
-export const metadata: Metadata = {
-  title: "Oppgradering avbrutt",
+type Props = {
+  params: Promise<{ locale: Locale }>;
 };
 
-export default async function SubscriptionCancelPage() {
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { locale } = await params;
+  const dict = await getAppDictionary(locale, ['pages.settings.subscription']);
+
+  return {
+    title: dict.pages.settings.subscription.cancel.metadataTitle,
+  };
+}
+
+export default async function SubscriptionCancelPage({ params }: Props) {
+  const { locale } = await params;
+  const dict = await getAppDictionary(locale, ['pages.settings.subscription']);
+  const t = dict.pages.settings.subscription.cancel;
+
   // Layout guarantees user is authenticated
   const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -28,20 +43,20 @@ export default async function SubscriptionCancelPage() {
           </div>
 
           <div className="space-y-2">
-            <h1 className="text-3xl font-bold">Oppgradering avbrutt</h1>
+            <h1 className="text-3xl font-bold">{t.heading}</h1>
             <p className="text-text-secondary">
-              Betalingsprosessen ble avbrutt. Ingen bekymring - du kan prøve igjen når som helst.
+              {t.description}
             </p>
           </div>
 
           <div className="w-full p-4 bg-surface-secondary rounded-lg text-left">
-            <h3 className="font-semibold mb-2">Trenger du hjelp?</h3>
+            <h3 className="font-semibold mb-2">{t.needHelpTitle}</h3>
             <p className="text-sm text-text-secondary">
-              Hvis du opplevde problemer eller har spørsmål om våre planer, ikke nøl med å ta kontakt med oss.
+              {t.needHelpDescription}
             </p>
           </div>
 
-          <SubscriptionCancelButtons />
+          <SubscriptionCancelButtons dict={t} locale={locale} />
         </div>
       </Card>
     </div>
