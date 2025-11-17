@@ -9,7 +9,9 @@ import {
 } from "@/lib/date-utils";
 import { ShiftsView } from "@components/shifts/ShiftsView";
 import { getTranslations } from "@/lib/i18n/server";
+import { getAppDictionary } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/i18n/config";
+import { I18nProvider } from "@/components/providers/I18nProvider";
 
 interface ShiftsPageProps {
   params: Promise<{ locale: string }>;
@@ -17,7 +19,7 @@ interface ShiftsPageProps {
 
 export async function generateMetadata({ params }: ShiftsPageProps) {
   const { locale } = await params;
-  const t = getTranslations(locale as Locale);
+  const t = getTranslations(locale as Locale, ['pages.shifts']);
 
   return {
     title: t.pages.shifts.title,
@@ -27,6 +29,7 @@ export async function generateMetadata({ params }: ShiftsPageProps) {
 export default async function ShiftsPage({ params }: ShiftsPageProps) {
   await connection(); // Opt out of prerendering for dynamic authenticated pages
   const { locale: _locale } = await params;
+  const dictionary = getAppDictionary(_locale as Locale, ['pages.shifts']);
 
   // Verify authentication and get user
   const { user } = await verifySession();
@@ -42,5 +45,9 @@ export default async function ShiftsPage({ params }: ShiftsPageProps) {
     limit: 150 // Accommodate up to ~50 shifts per month across 3 months
   });
 
-  return <ShiftsView shifts={shifts} defaultView={defaultView} userSettings={settings} presetRules={PRESET_RULES} />;
+  return (
+    <I18nProvider locale={_locale as Locale} dictionary={dictionary} namespaces={['pages.shifts']}>
+      <ShiftsView shifts={shifts} defaultView={defaultView} userSettings={settings} presetRules={PRESET_RULES} />
+    </I18nProvider>
+  );
 }

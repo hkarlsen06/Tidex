@@ -6,12 +6,14 @@ import { AddShiftFormWrapper } from "@/components/shifts/add/AddShiftFormWrapper
 import { PRESET_RULES } from "@/data-access/shifts";
 import type { UserSettings } from "@/lib/payroll";
 import { getTranslations } from "@/lib/i18n/server";
+import { getAppDictionary } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/i18n/config";
 import { generateGhostsForMonth } from "@/lib/series/utils";
 import type { SeriesShiftRow } from "@/lib/series/types";
 import { cleanTime } from "@/lib/time-utils";
 import { logger } from "@/lib/logger";
 import { getUserWageSnapshots } from "@/data-access/wage-snapshots";
+import { I18nProvider } from "@/components/providers/I18nProvider";
 
 interface AddShiftsPageProps {
   params: Promise<{ locale: string }>;
@@ -19,7 +21,7 @@ interface AddShiftsPageProps {
 
 export async function generateMetadata({ params }: AddShiftsPageProps) {
   const { locale } = await params;
-  const t = getTranslations(locale as Locale);
+  const t = getTranslations(locale as Locale, ['pages.shifts']);
 
   return {
     title: t.pages.shifts.add.title,
@@ -29,6 +31,7 @@ export async function generateMetadata({ params }: AddShiftsPageProps) {
 export default async function AddShiftsPage({ params }: AddShiftsPageProps) {
   await connection(); // Opt out of prerendering for dynamic authenticated pages
   const { locale: _locale } = await params;
+  const dictionary = getAppDictionary(_locale as Locale, ['pages.shifts']);
 
   // Verify authentication and get user
   const { user } = await verifySession();
@@ -122,13 +125,15 @@ export default async function AddShiftsPage({ params }: AddShiftsPageProps) {
   }
 
   return (
-    <AddShiftFormWrapper
-      initialData={{
-        existingShifts: allExistingShifts,
-        userSettings,
-        presetRules: PRESET_RULES,
-        wageSnapshots,
-      }}
-    />
+    <I18nProvider locale={_locale as Locale} dictionary={dictionary} namespaces={['pages.shifts']}>
+      <AddShiftFormWrapper
+        initialData={{
+          existingShifts: allExistingShifts,
+          userSettings,
+          presetRules: PRESET_RULES,
+          wageSnapshots,
+        }}
+      />
+    </I18nProvider>
   );
 }

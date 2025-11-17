@@ -15,7 +15,7 @@ export async function generateMetadata({
   params: Promise<{ locale: string }>;
 }): Promise<Metadata> {
   const { locale } = await params;
-  const t = getTranslations(locale as Locale);
+  const t = getTranslations(locale as Locale, ['pages.settings']);
   return {
     title: t.pages.settings.pay.title,
   };
@@ -28,7 +28,7 @@ export default async function PayPage({
 }) {
   await connection();
   const { locale } = await params;
-  const t = getTranslations(locale as Locale);
+  const t = getTranslations(locale as Locale, ['pages.settings']);
 
   // Verify authentication and get user
   const { user } = await verifySession();

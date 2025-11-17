@@ -7,16 +7,17 @@
 
 import { cookies } from 'next/headers';
 import { type Locale, LOCALE_COOKIE } from './config';
-import { getDictionary } from './dictionaries';
+import { getAppDictionary, type AppNamespace } from './dictionaries';
 
 /**
  * Get translations for a specific locale
  * Use this in Server Components within [locale] routes
  *
  * @param locale - The locale from route params
+ * @param namespaces - Namespaces required for the current route (app shell is always included)
  */
-export function getTranslations(locale: Locale) {
-  return getDictionary(locale);
+export function getTranslations(locale: Locale, namespaces: AppNamespace[] = []) {
+  return getAppDictionary(locale, namespaces);
 }
 
 /**

@@ -12,14 +12,25 @@ import { useRouter } from 'next/navigation';
 import { I18nContext } from '@/lib/i18n/client';
 import type { Locale } from '@/lib/i18n/config';
 import type { Dictionary } from '@/lib/i18n/dictionaries/no';
+import type { AppNamespace } from '@/lib/i18n';
 
 interface I18nProviderProps {
   locale: Locale;
   dictionary: Dictionary;
+  /**
+   * Namespaces to request when switching locale.
+   * App shell is always included by the server loader.
+   */
+  namespaces?: AppNamespace[];
   children: ReactNode;
 }
 
-export function I18nProvider({ locale: initialLocale, dictionary: initialDictionary, children }: I18nProviderProps) {
+export function I18nProvider({
+  locale: initialLocale,
+  dictionary: initialDictionary,
+  namespaces,
+  children,
+}: I18nProviderProps) {
   const router = useRouter();
   const [_isPending, startTransition] = useTransition();
   const [locale, setLocaleState] = useState(initialLocale);
@@ -31,7 +42,7 @@ export function I18nProvider({ locale: initialLocale, dictionary: initialDiction
       const response = await fetch('/api/locale', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ locale: newLocale }),
+        body: JSON.stringify({ locale: newLocale, namespaces }),
       });
 
       if (response.ok) {

@@ -39,7 +39,7 @@ function resolveInitialNext(searchParams: LoginSearchParams): string {
 // Loading skeleton for instant paint
 async function LoginSkeleton({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
-  const t = getTranslations(locale as Locale);
+  const t = getTranslations(locale as Locale, ['pages.auth']);
 
   return (
     <div className="relative flex min-h-screen items-center justify-center py-16">
