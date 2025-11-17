@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { createServerClient } from "@supabase/ssr";
 import { locales, defaultLocale, LOCALE_COOKIE, type Locale } from "@/lib/i18n/config";
-import { buildProxyCookieOptions, resolveSecureFlag } from "@/lib/auth/cookie-config";
+import { resolveSecureFlag } from "@/lib/auth/cookie-config";
 
 /**
  * Next.js 16 Proxy for Supabase Token Refresh and Locale Routing
@@ -18,11 +18,8 @@ import { buildProxyCookieOptions, resolveSecureFlag } from "@/lib/auth/cookie-co
  * - Proxy handles token refresh and locale routing (cookie management)
  * - Authentication logic lives in the data access layer (Server Components)
  * - No network I/O beyond what Supabase SSR needs for token refresh
+ * - IMPORTANT: Uses Supabase's cookie options directly without overriding
  */
-
-function buildCookieBase(request: NextRequest): Partial<CookieOptions> {
-  return buildProxyCookieOptions(request.nextUrl.protocol, request.nextUrl.hostname);
-}
 
 /**
  * Extract locale from pathname
@@ -105,7 +102,6 @@ export async function proxy(request: NextRequest) {
 
   // Skip locale routing for API routes, static files, etc.
   if (shouldSkipLocaleRouting(pathname)) {
-    const cookieBase = buildCookieBase(request);
     const response = NextResponse.next({
       request: {
         headers: request.headers,
@@ -120,16 +116,10 @@ export async function proxy(request: NextRequest) {
         },
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value, options }) => {
-            response.cookies.set({
-              name,
-              value,
-              ...cookieBase,
-              ...(options ?? {}),
-            });
+            response.cookies.set(name, value, options);
           });
         },
       },
-      cookieOptions: cookieBase,
     });
 
     return response;
@@ -140,7 +130,6 @@ export async function proxy(request: NextRequest) {
 
   if (localeFromPath) {
     // Path has locale - update cookie and continue
-    const cookieBase = buildCookieBase(request);
     const response = NextResponse.next({
       request: {
         headers: request.headers,
@@ -166,16 +155,10 @@ export async function proxy(request: NextRequest) {
         },
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value, options }) => {
-            response.cookies.set({
-              name,
-              value,
-              ...cookieBase,
-              ...(options ?? {}),
-            });
+            response.cookies.set(name, value, options);
           });
         },
       },
-      cookieOptions: cookieBase,
     });
 
     return response;
