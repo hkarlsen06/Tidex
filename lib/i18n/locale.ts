@@ -5,7 +5,6 @@ type SupportedLocale = Locale | string;
 const localeMap: Record<Locale, string> = {
   no: "nb-NO",
   en: "en-US",
-  de: "de-DE",
 };
 
 function normalizeLocale(locale: SupportedLocale): Locale | undefined {

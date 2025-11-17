@@ -8,7 +8,7 @@ export function SettingsLayoutClient({ children }: { children: ReactNode }) {
   const pathname = usePathname();
 
   // Normalize pathname to remove locale prefix
-  const normalizedPath = pathname.replace(/^\/(en|no|de)/, "").replace(/\/$/, "");
+  const normalizedPath = pathname.replace(/^\/(en|no)/, "").replace(/\/$/, "");
 
   // Check if we're on the settings landing page
   const isLandingPage = normalizedPath === "/settings";

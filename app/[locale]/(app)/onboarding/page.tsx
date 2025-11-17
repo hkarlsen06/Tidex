@@ -14,10 +14,10 @@ export const metadata: Metadata = {
 export default async function OnboardingPage({
   params,
 }: {
-  params: Promise<{ locale: string }>;
+  params: Promise<{ locale: Locale }>;
 }) {
   const { locale } = await params;
-  const dictionary = getAppDictionary(locale as Locale, ['onboarding']);
+  const dictionary = getAppDictionary(locale, ['onboarding']);
 
   // Layout guarantees user is authenticated
   const supabase = await createSupabaseServerClient();
