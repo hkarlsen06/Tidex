@@ -13,6 +13,7 @@ export type AppNamespace =
   | 'pages.shifts'
   | 'pages.stats'
   | 'pages.settings'
+  | 'pages.settings.subscription'
   | 'pages.auth'
   | 'onboarding';
 export const APP_NAMESPACES: readonly AppNamespace[] = [
@@ -20,6 +21,7 @@ export const APP_NAMESPACES: readonly AppNamespace[] = [
   'pages.shifts',
   'pages.stats',
   'pages.settings',
+  'pages.settings.subscription',
   'pages.auth',
   'onboarding',
 ];
