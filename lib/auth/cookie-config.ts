@@ -1,17 +1,16 @@
 /**
- * Shared cookie configuration for Supabase auth
+ * Shared cookie configuration utilities for locale and other non-Supabase cookies
  *
- * CRITICAL: Server-side Supabase clients (proxy, server) must use identical
- * cookie settings to prevent "Refresh Token Not Found" errors caused by
- * cookie read/write mismatches.
+ * IMPORTANT: Supabase auth cookie configuration has been removed.
+ * As of the latest @supabase/ssr best practices (2025), cookie options should
+ * be managed by Supabase itself via the options parameter passed to setAll().
  *
- * IMPORTANT: Browser clients should NOT use cookieOptions - @supabase/ssr
- * handles browser cookies automatically via document.cookie API.
+ * DO NOT override Supabase's cookie options in the setAll callback:
+ * ✅ Correct: response.cookies.set(name, value, options)
+ * ❌ Wrong:   response.cookies.set(name, value, { ...CUSTOM_OPTIONS, ...options })
+ *
+ * This file now only contains utilities for non-Supabase cookies (like locale).
  */
-
-import type { CookieOptions } from "@supabase/ssr";
-
-const ONE_WEEK_SECONDS = 60 * 60 * 24 * 7;
 
 /**
  * Determine if cookies should have the secure flag based on environment
@@ -68,50 +67,18 @@ export function resolveSecureFlag(
 }
 
 /**
- * Build base cookie options for server-side use (RSC, Server Actions)
- * Uses environment-based secure flag
- */
-export function buildServerCookieOptions(): Partial<CookieOptions> {
-  return {
-    httpOnly: true,
-    secure: envPrefersSecureCookies(),
-    sameSite: "lax",
-    path: "/",
-    maxAge: ONE_WEEK_SECONDS,
-  };
-}
-
-/**
- * Build base cookie options for proxy/middleware use
- * Uses request-based secure flag
+ * DEPRECATED: All Supabase cookie configuration functions have been removed
  *
- * @param protocol - Request protocol from NextRequest.nextUrl.protocol
- * @param hostname - Request hostname from NextRequest.nextUrl.hostname
- */
-export function buildProxyCookieOptions(
-  protocol: string,
-  hostname: string
-): Partial<CookieOptions> {
-  return {
-    httpOnly: true,
-    secure: resolveSecureFlag(protocol, hostname),
-    sameSite: "lax",
-    path: "/",
-    maxAge: ONE_WEEK_SECONDS,
-  };
-}
-
-/**
- * DEPRECATED: Browser clients should NOT use cookieOptions parameter
+ * As of @supabase/ssr latest best practices (2025), Supabase manages its own
+ * cookie options internally. You should pass the options parameter from
+ * Supabase's setAll callback directly to your cookie-setting method without
+ * modification.
  *
- * The @supabase/ssr library's createBrowserClient handles cookies automatically
- * using the document.cookie API. Passing cookieOptions to browser clients causes
- * cookie mismatch issues with server-side clients.
+ * These functions are deprecated and should not be used:
+ * - buildServerCookieOptions() - REMOVED
+ * - buildProxyCookieOptions() - REMOVED
+ * - buildBrowserCookieOptions() - REMOVED
  *
- * This function is kept for reference but should not be used.
+ * For non-Supabase cookies (like locale), use resolveSecureFlag() to determine
+ * the appropriate secure flag value.
  */
-export function buildBrowserCookieOptions(): Partial<CookieOptions> {
-  throw new Error(
-    "buildBrowserCookieOptions is deprecated. Browser clients should not use cookieOptions parameter."
-  );
-}
