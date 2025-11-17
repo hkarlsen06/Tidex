@@ -7,11 +7,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { locales, LOCALE_COOKIE, type Locale } from '@/lib/i18n/config';
-import { getDictionary } from '@/lib/i18n/dictionaries';
+import { APP_NAMESPACES, getAppDictionary, type AppNamespace } from '@/lib/i18n/dictionaries';
 
 export async function POST(request: NextRequest) {
   try {
-    const { locale } = await request.json();
+    const { locale, namespaces } = await request.json();
 
     // Validate locale
     if (!locale || !locales.includes(locale as Locale)) {
@@ -29,11 +29,11 @@ export async function POST(request: NextRequest) {
       maxAge: 60 * 60 * 24 * 365, // 1 year
     });
 
-    // Return a trimmed dictionary optimized for the authenticated app shell.
-    // Heavy sections used only on marketing/legal pages are omitted to keep
-    // the payload smaller for locale switches inside the app.
-    const fullDictionary = getDictionary(locale as Locale);
-    const { marketing: _omitMarketing, legal: _omitLegal, ...appDictionary } = fullDictionary as any;
+    const requestedNamespaces: AppNamespace[] = Array.isArray(namespaces)
+      ? namespaces.filter((ns): ns is AppNamespace => typeof ns === 'string' && APP_NAMESPACES.includes(ns as AppNamespace))
+      : [];
+
+    const appDictionary = getAppDictionary(locale as Locale, requestedNamespaces);
 
     return NextResponse.json({
       success: true,

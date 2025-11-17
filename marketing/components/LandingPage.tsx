@@ -24,7 +24,7 @@ const featureIcons = {
 
 interface LandingPageProps {
   locale: Locale;
-  dictionary: Dictionary;
+  dictionary: Pick<Dictionary, 'marketing' | 'legal'>;
   path?: string;
 }
 

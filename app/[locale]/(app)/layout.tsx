@@ -10,7 +10,7 @@ import { MonthProvider } from "@/components/app/MonthContext";
 import { AppLayoutClient } from "@/components/app/AppLayoutClient";
 import { AppFooter } from "@/components/app/AppFooter";
 import { I18nProvider } from "@/components/providers/I18nProvider";
-import { getDictionary } from "@/lib/i18n/dictionaries";
+import { getAppDictionary } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/i18n/config";
 
 /**
@@ -104,15 +104,13 @@ export default async function RootLayout({
       ? (settings.theme as "light" | "dark" | "system")
       : null;
 
-  // Provide a trimmed dictionary for the authenticated app to reduce RSC payload.
-  // Remove heavy sections not used in the app shell (marketing/legal).
-  const fullDictionary = getDictionary(locale as Locale);
-  const { marketing: _omitMarketing, legal: _omitLegal, ...appDictionary } = fullDictionary as any;
+  // Provide a trimmed dictionary for the authenticated app shell.
+  const appDictionary = getAppDictionary(locale as Locale, []);
 
   return (
     <ThemeProvider serverTheme={serverTheme}>
       <MonthProvider>
-        <I18nProvider locale={locale as Locale} dictionary={appDictionary}>
+        <I18nProvider locale={locale as Locale} dictionary={appDictionary} namespaces={[]}>
           <SupabaseListener />
           <AppLayoutClient userName={userName} avatarUrl={resolvedAvatarUrl}>
             {children}

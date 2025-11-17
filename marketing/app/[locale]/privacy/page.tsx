@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { MarketingLegalPage } from '../../../components/MarketingLegalPage';
-import { getDictionary } from '@/lib/i18n/dictionaries';
+import { getMarketingDictionary } from '@/lib/i18n/dictionaries';
 import { defaultLocale, locales, type Locale } from '@/lib/i18n/config';
 
 interface LocalePrivacyPageProps {
@@ -19,7 +19,7 @@ export async function generateMetadata({ params }: LocalePrivacyPageProps): Prom
     return {};
   }
 
-  const dictionary = getDictionary(locale as Locale);
+  const dictionary = getMarketingDictionary(locale as Locale);
   const url = locale === defaultLocale ? 'https://tidex.no/privacy' : `https://tidex.no/${locale}/privacy`;
 
   return {
@@ -41,7 +41,7 @@ export default async function LocalePrivacyPage({ params }: LocalePrivacyPagePro
     notFound();
   }
 
-  const dictionary = getDictionary(locale as Locale);
+  const dictionary = getMarketingDictionary(locale as Locale);
 
   return (
     <MarketingLegalPage

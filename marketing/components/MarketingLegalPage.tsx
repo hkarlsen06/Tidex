@@ -8,7 +8,7 @@ import { LocaleLangSetter } from './LocaleLangSetter';
 
 interface MarketingLegalPageProps {
   locale: Locale;
-  dictionary: Dictionary;
+  dictionary: Pick<Dictionary, 'marketing' | 'legal'>;
   variant: 'terms' | 'privacy';
   path: '/terms' | '/privacy';
 }

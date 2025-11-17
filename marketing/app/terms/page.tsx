@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
 import { defaultLocale } from '@/lib/i18n/config';
-import { getDictionary } from '@/lib/i18n/dictionaries';
+import { getMarketingDictionary } from '@/lib/i18n/dictionaries';
 import { MarketingLegalPage } from '../../components/MarketingLegalPage';
 
-const dictionary = getDictionary(defaultLocale);
+const dictionary = getMarketingDictionary(defaultLocale);
 
 export const metadata: Metadata = {
   title: dictionary.legal.terms.meta.title,

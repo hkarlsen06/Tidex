@@ -10,7 +10,9 @@ import {
 } from "@/lib/date-utils";
 import { HomeContent } from "@/components/app/HomeContent";
 import { getTranslations } from "@/lib/i18n/server";
+import { getAppDictionary } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/i18n/config";
+import { I18nProvider } from "@/components/providers/I18nProvider";
 
 interface HomeProps {
   params: Promise<{ locale: string }>;
@@ -18,7 +20,7 @@ interface HomeProps {
 
 export async function generateMetadata({ params }: HomeProps) {
   const { locale } = await params;
-  const t = getTranslations(locale as Locale);
+  const t = getTranslations(locale as Locale, ['pages.home']);
 
   return {
     title: t.pages.home.title,
@@ -28,6 +30,7 @@ export async function generateMetadata({ params }: HomeProps) {
 export default async function Home({ params }: HomeProps) {
   await connection(); // Opt out of prerendering for dynamic authenticated pages
   const { locale: _locale } = await params;
+  const dictionary = getAppDictionary(_locale as Locale, ['pages.home', 'pages.shifts']);
 
   // Verify authentication and get user
   const { user } = await verifySession();
@@ -48,5 +51,9 @@ export default async function Home({ params }: HomeProps) {
     limit: 60 // ~50 shifts is typical for a month; leave headroom
   });
 
-  return <HomeContent shifts={shifts} settings={settings} />;
+  return (
+    <I18nProvider locale={_locale as Locale} dictionary={dictionary} namespaces={['pages.home', 'pages.shifts']}>
+      <HomeContent shifts={shifts} settings={settings} />
+    </I18nProvider>
+  );
 }

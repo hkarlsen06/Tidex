@@ -3,12 +3,22 @@ import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { OnboardingForm } from "./_components/OnboardingForm";
 import { getSnapshotForDate } from "@/data-access/wage-snapshots";
+import { I18nProvider } from "@/components/providers/I18nProvider";
+import { getAppDictionary } from "@/lib/i18n/dictionaries";
+import type { Locale } from "@/lib/i18n/config";
 
 export const metadata: Metadata = {
   title: "Kom i gang",
 };
 
-export default async function OnboardingPage() {
+export default async function OnboardingPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  const dictionary = getAppDictionary(locale as Locale, ['onboarding']);
+
   // Layout guarantees user is authenticated
   const supabase = await createSupabaseServerClient();
 
@@ -50,5 +60,9 @@ export default async function OnboardingPage() {
     }),
   };
 
-  return <OnboardingForm initialSettings={initialSettings || undefined} />;
+  return (
+    <I18nProvider locale={locale} dictionary={dictionary} namespaces={['onboarding']}>
+      <OnboardingForm initialSettings={initialSettings || undefined} />
+    </I18nProvider>
+  );
 }
