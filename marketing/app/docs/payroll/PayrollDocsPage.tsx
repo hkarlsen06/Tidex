@@ -100,7 +100,7 @@ export function PayrollDocsPage({ docs }: PayrollDocsPageProps) {
             {/* Back Button */}
             <a
               href="/"
-              className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-secondary hover:text-text-primary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
+              className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-secondary hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -128,7 +128,7 @@ export function PayrollDocsPage({ docs }: PayrollDocsPageProps) {
                 <li key={item.id}>
                   <button
                     onClick={() => scrollToSection(item.id)}
-                    className="whitespace-nowrap rounded-lg px-4 py-2 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-secondary hover:text-text-primary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
+                    className="whitespace-nowrap rounded-lg px-4 py-2 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-secondary hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     {item.label}
                   </button>

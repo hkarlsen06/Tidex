@@ -505,7 +505,7 @@ export default function AddShiftForm({ existingShifts, userSettings, presetRules
                   <button
                     type="button"
                     onClick={() => openNativePicker(startInputRef.current)}
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border-subtle bg-surface-secondary/70 text-text-muted transition hover:border-border hover:text-text-primary focus:outline-hidden focus-visible:outline-hidden"
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border-subtle bg-surface-secondary/70 text-text-muted transition hover:border-border hover:text-text-primary focus:outline-none focus-visible:outline-none"
                     aria-label={t.pages.shifts.add.form.selectStartTime}
                   >
                     <Clock className="h-5 w-5" strokeWidth={1.5} />
@@ -527,7 +527,7 @@ export default function AddShiftForm({ existingShifts, userSettings, presetRules
                   <button
                     type="button"
                     onClick={() => openNativePicker(endInputRef.current)}
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border-subtle bg-surface-secondary/70 text-text-muted transition hover:border-border hover:text-text-primary focus:outline-hidden focus-visible:outline-hidden"
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border-subtle bg-surface-secondary/70 text-text-muted transition hover:border-border hover:text-text-primary focus:outline-none focus-visible:outline-none"
                     aria-label={t.pages.shifts.add.form.selectEndTime}
                   >
                     <Clock className="h-5 w-5" strokeWidth={1.5} />
