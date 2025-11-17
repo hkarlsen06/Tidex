@@ -65,11 +65,11 @@ export function NavBar() {
   const scrollDirection = useScrollDirection({ threshold: 10 });
 
   // Strip locale prefix from pathname for consistent nav item matching
-  // usePathname() returns paths like "/no/settings", "/en/shifts", or "/de/stats"
-  const pathname = rawPathname.replace(/^\/(no|en|de)(?=\/|$)/, '') || '/';
+  // usePathname() returns paths like "/no/settings" or "/en/shifts"
+  const pathname = rawPathname.replace(/^\/(no|en)(?=\/|$)/, '') || '/';
 
   // Also strip locale from pendingPath for consistent matching
-  const pendingPath = rawPendingPath ? rawPendingPath.replace(/^\/(no|en|de)(?=\/|$)/, '') || '/' : null;
+  const pendingPath = rawPendingPath ? rawPendingPath.replace(/^\/(no|en)(?=\/|$)/, '') || '/' : null;
 
   // Fetch shift count client-side to determine if hint should be shown
   // This is deferred to avoid blocking the initial render

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { I18nProvider } from "@/components/providers/I18nProvider";
-import { getAuthDictionary } from "@/lib/i18n/dictionaries";
+import { getDictionary } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/i18n/config";
 
 export const metadata: Metadata = {
@@ -17,7 +17,7 @@ export default async function AuthLayout({
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
-  const dictionary = getAuthDictionary(locale as Locale);
+  const dictionary = getDictionary(locale as Locale);
   return (
     <I18nProvider locale={locale as Locale} dictionary={dictionary} namespaces={['pages.auth']}>
       <div className="min-h-screen bg-background text-foreground antialiased">

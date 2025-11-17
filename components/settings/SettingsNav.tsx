@@ -60,13 +60,13 @@ export function SettingsNav() {
   const settingsItems = getSettingsItems(t);
 
   // Extract locale from current pathname
-  const localeMatch = pathname.match(/^\/(en|no|de)/);
+  const localeMatch = pathname.match(/^\/(en|no)/);
   const locale = localeMatch ? localeMatch[1] : defaultLocale;
 
   // Normalize pathname to remove locale prefix for comparison
   // Handle both with and without trailing slash
-  const normalizedPath = pathname.replace(/^\/(en|no|de)/, "").replace(/\/$/, "");
-  const normalizedPendingPath = pendingPath?.replace(/^\/(en|no|de)/, "").replace(/\/$/, "") ?? null;
+  const normalizedPath = pathname.replace(/^\/(en|no)/, "").replace(/\/$/, "");
+  const normalizedPendingPath = pendingPath?.replace(/^\/(en|no)/, "").replace(/\/$/, "") ?? null;
 
   const handleItemClick =
     (href: string) => (event: MouseEvent<HTMLAnchorElement>) => {

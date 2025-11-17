@@ -45,8 +45,8 @@ export function NavigationMenu({ className }: NavigationMenuProps) {
   const rawPathname = usePathname();
 
   // Strip locale prefix from pathname for consistent nav item matching
-  // usePathname() returns paths like "/no/settings", "/en/shifts", or "/de/stats"
-  const pathname = rawPathname.replace(/^\/(no|en|de)(?=\/|$)/, '') || '/';
+  // usePathname() returns paths like "/no/settings" or "/en/shifts"
+  const pathname = rawPathname.replace(/^\/(no|en)(?=\/|$)/, '') || '/';
 
   return (
     <NavigationMenuPrimitive className={className}>

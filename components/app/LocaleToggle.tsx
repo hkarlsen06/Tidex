@@ -8,7 +8,6 @@ import type { Locale } from "@/lib/i18n/config";
 const locales: { code: Locale; flag: string; label: string }[] = [
   { code: "no", flag: "🇳🇴", label: "NO" },
   { code: "en", flag: "🇬🇧", label: "EN" },
-  { code: "de", flag: "🇩🇪", label: "DE" },
 ];
 
 export function LocaleToggle() {
@@ -32,7 +31,7 @@ export function LocaleToggle() {
 
       // Navigate to the same route but with the new locale
       // Remove the current locale from pathname and add the new one
-      const pathWithoutLocale = pathname.replace(/^\/(no|en|de)/, "");
+      const pathWithoutLocale = pathname.replace(/^\/(no|en)/, '');
       const newPath = `/${newLocale}${pathWithoutLocale || ""}`;
 
       startTransition(() => {

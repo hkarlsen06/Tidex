@@ -83,6 +83,22 @@ The app supports multiple locales (Norwegian and English) via:
 - **Configuration**: See `lib/i18n/config.ts` for supported locales and settings
 - **Translations**: Dictionary files in `lib/i18n/dictionaries/` provide localized strings
 
+**Dictionary Loading (Optimized):**
+
+To minimize bundle size and improve performance, the i18n system uses namespace-based filtering:
+
+- **`getDictionary(locale)`** - Loads the complete dictionary for a locale (use sparingly)
+- **`getAppDictionary(locale, namespaces[])`** - Loads only app shell + specified namespaces (preferred for most pages)
+- **`getAuthDictionary(locale)`** - Shorthand for auth pages (loads `pages.auth` namespace)
+- **`getMarketingDictionary(locale)`** - Loads `marketing` and `legal` namespaces
+
+**App shell** always includes: `common`, `dateTime`, `header`, `footer`, `userMenu`, `navigation`, `components`
+
+**When to use each:**
+- Auth pages that use `LegalModal` must use `getDictionary()` to include the `legal` namespace
+- Protected pages should use `getAppDictionary(locale, ['pages.home'])` with specific namespaces
+- Only load namespaces actually used by the page to reduce serialization overhead
+
 ### Authentication Flow (Next.js 16)
 
 Uses `@supabase/ssr` with cookie-based sessions following Next.js 16 best practices:
