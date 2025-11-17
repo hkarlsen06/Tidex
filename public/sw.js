@@ -3,15 +3,13 @@
  * Minimal implementation focused on PWA requirements
  *
  * @fileoverview
- * This service worker provides basic PWA functionality without heavy caching
- * that could impact page load performance.
+ * This service worker provides only basic static asset caching.
  *
  * Features:
- * - Minimal precaching (manifest + icons only)
- * - Simple offline fallback page
+ * - Cache-first for static assets (icons, fonts, Next.js static files)
+ * - No offline page or HTML routing
  * - No background sync or mutation queues
- * - No aggressive route precaching
- * - Cache-first only for truly static assets
+ * - No caching of API/data requests
  *
  * VERSIONING:
  * Increment CACHE_VERSION when deploying updates.
@@ -27,36 +25,14 @@ const CACHE_VERSION = 'v13';
 /** @type {string} Cache for immutable static assets (JS, CSS, fonts, images) */
 const STATIC_CACHE = `tidex-static-${CACHE_VERSION}`;
 
-/** @type {string} Path to offline fallback page */
-const OFFLINE_URL = '/offline.html';
-
-/**
- * Minimal assets to precache - only PWA essentials
- * @type {string[]}
- */
-const PRECACHE_ASSETS = [
-  OFFLINE_URL,
-  '/manifest.json',
-  '/icon-192x192.png',
-  '/icon-512x512.png',
-];
-
 // ============================================================================
-// INSTALL EVENT - Precache Critical Assets
+// INSTALL EVENT
 // ============================================================================
 
-self.addEventListener('install', (event) => {
+self.addEventListener('install', () => {
   console.log('[SW] Install event - version:', CACHE_VERSION);
-
-  event.waitUntil(
-    caches.open(STATIC_CACHE)
-      .then((cache) => cache.addAll(PRECACHE_ASSETS))
-      .then(() => self.skipWaiting())
-      .catch((error) => {
-        console.error('[SW] Precaching failed:', error);
-        return self.skipWaiting();
-      })
-  );
+  // No precache: everything is cached lazily on first request
+  self.skipWaiting();
 });
 
 // ============================================================================
@@ -104,9 +80,11 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Navigation requests: Network-first with offline fallback
+  // Navigation requests: Let the browser handle them directly.
+  // This avoids Safari/iOS quirks where SW-controlled navigations
+  // can cause very long blank loads and URL bar flicker.
+  // We still keep SW for static asset caching.
   if (mode === 'navigate') {
-    event.respondWith(handleNavigationRequest(request));
     return;
   }
 
@@ -118,25 +96,6 @@ self.addEventListener('fetch', (event) => {
 
   // Everything else: Network-only (no caching for API/data)
 });
-
-// ============================================================================
-// CACHING STRATEGIES
-// ============================================================================
-
-async function handleNavigationRequest(request) {
-  try {
-    // Always try network first for fresh content
-    const response = await fetch(request);
-    return response;
-  } catch (error) {
-    // Network failed - serve offline page
-    const offlineResponse = await caches.match(OFFLINE_URL);
-    return offlineResponse || new Response(
-      '<html><body><h1>Offline</h1><p>Please connect to the internet.</p></body></html>',
-      { headers: { 'Content-Type': 'text/html' }, status: 503 }
-    );
-  }
-}
 
 async function handleStaticAsset(request) {
   const cachedResponse = await caches.match(request);
@@ -154,13 +113,9 @@ async function handleStaticAsset(request) {
     }
     return response;
   } catch (error) {
-    if (request.destination === 'image') {
-      return new Response(
-        'R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7',
-        { headers: { 'Content-Type': 'image/gif' } }
-      );
-    }
-    return new Response('Asset unavailable', { status: 503 });
+    // On failure, just let the request fail normally.
+    // No custom offline responses.
+    throw error;
   }
 }
 
