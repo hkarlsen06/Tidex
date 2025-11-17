@@ -87,7 +87,7 @@ export const no = {
     back: 'Tilbake',
     addFirstShiftLine1: 'Legg til din',
     addFirstShiftLine2: 'første vakt!',
-    home: 'Dashboard',
+    home: 'Dashbord',
     shifts: 'Vakter',
     stats: 'Statistikk',
     settings: 'Innstillinger',

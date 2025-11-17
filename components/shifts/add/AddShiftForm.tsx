@@ -243,6 +243,13 @@ export default function AddShiftForm({ existingShifts, userSettings, presetRules
         try {
           // Try server action first (works online and offline)
           const result = await createShifts({ dates: isoDates, start, end });
+
+          // Clear form state on success
+          setDates([]);
+          setStart("");
+          setEnd("");
+          setError(null);
+
           // Navigate with new shift dates to trigger celebration
           const newDates = result.dates.join(',');
           navigate(`/${locale}/shifts?new=${encodeURIComponent(newDates)}`);
@@ -260,6 +267,12 @@ export default function AddShiftForm({ existingShifts, userSettings, presetRules
 
               // Show success message for queued mutation
               setError(null);
+
+              // Clear form state on successful queue
+              setDates([]);
+              setStart("");
+              setEnd("");
+
               // Navigate back to shifts page (show optimistic message there)
               navigate(`/${locale}/shifts?queued=create&count=${isoDates.length}`);
             } catch {
@@ -281,6 +294,13 @@ export default function AddShiftForm({ existingShifts, userSettings, presetRules
     startTransition(async () => {
       try {
         const result = await createShifts({ dates: isoDates, start, end });
+
+        // Clear form state on success
+        setDates([]);
+        setStart("");
+        setEnd("");
+        setError(null);
+
         // Navigate with new shift dates to trigger celebration
         const newDates = result.dates.join(',');
         navigate(`/${locale}/shifts?new=${encodeURIComponent(newDates)}`);
@@ -297,6 +317,12 @@ export default function AddShiftForm({ existingShifts, userSettings, presetRules
             });
 
             setError(null);
+
+            // Clear form state on successful queue
+            setDates([]);
+            setStart("");
+            setEnd("");
+
             navigate(`/${locale}/shifts?queued=create&count=${isoDates.length}`);
           } catch {
             setError(t.pages.shifts.add.form.couldNotSaveShift);
@@ -528,7 +554,7 @@ export default function AddShiftForm({ existingShifts, userSettings, presetRules
                 onClick={onSubmit}
                 disabled={!canSubmit}
                 loading={pending}
-                className="rounded-2xl bg-brand-gradientMid px-6 py-3 text-base font-semibold text-text-inverse shadow-app transition hover:bg-brand-gradientEnd disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full max-w-md rounded-2xl bg-brand-gradientMid px-8 py-5 text-lg font-semibold text-text-inverse shadow-app transition hover:bg-brand-gradientEnd disabled:opacity-50 disabled:cursor-not-allowed"
                 title={isOffline ? "Cannot save shifts while offline" : undefined}
               >
                 {isOffline
