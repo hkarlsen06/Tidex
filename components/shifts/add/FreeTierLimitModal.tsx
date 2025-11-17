@@ -95,7 +95,7 @@ export function FreeTierLimitModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent hideCloseButton className="max-w-[90vw] sm:max-w-sm rounded-3xl border-0 bg-surface-primary p-0 shadow-2xl overflow-hidden">
+      <DialogContent hideCloseButton className="max-w-[90vw] sm:max-w-sm rounded-3xl border-0 bg-surface-primary p-0 shadow-2xl overflow-y-auto">
         <DialogTitle className="sr-only">
           {t.pages.shifts.add.freeTierLimit.upgradeHeadline}
         </DialogTitle>
