@@ -9,8 +9,8 @@ export default function TelemetryDefer() {
 
   useEffect(() => {
     const id = (window as any).requestIdleCallback
-      ? (window as any).requestIdleCallback(() => setReady(true), { timeout: 3000 })
-      : setTimeout(() => setReady(true), 1500);
+      ? (window as any).requestIdleCallback(() => setReady(true), { timeout: 100 })
+      : setTimeout(() => setReady(true), 50);
     return () => {
       if (typeof id === "number") clearTimeout(id);
       else if ((window as any).cancelIdleCallback) (window as any).cancelIdleCallback(id);
