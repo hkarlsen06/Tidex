@@ -57,7 +57,7 @@ export function SelectDatesCalendar({
           {...buttonProps}
           className={cn(
             className,
-            "w-full h-full rounded-lg transition-colors focus:outline-hidden focus-visible:outline-hidden border hover:bg-surface-secondary",
+            "w-full h-full rounded-lg transition-colors focus:outline-none focus-visible:outline-none border hover:bg-surface-secondary",
             !hasConflict && "border-border-subtle",
             hasConflict && !isSelected && "border-border dark:border-border-subtle border-dashed opacity-60",
             hasConflict && isSelected && "ring-1 ring-warning border-transparent",
@@ -154,7 +154,7 @@ export function SelectDatesCalendar({
         weekday: "text-text-muted font-normal text-xs text-center py-2 uppercase",
         week: "grid grid-cols-7 gap-1 mb-1",
         day: "relative aspect-square p-0",
-        day_button: "w-full h-full rounded-lg hover:bg-surface-secondary transition-colors border border-border-subtle focus:outline-hidden focus-visible:outline-hidden",
+        day_button: "w-full h-full rounded-lg hover:bg-surface-secondary transition-colors border border-border-subtle focus:outline-none focus-visible:outline-none",
         outside: disabledOutsideMonth ? "opacity-50 pointer-events-none" : "opacity-50",
         disabled: "text-text-muted opacity-50",
         hidden: "invisible",
