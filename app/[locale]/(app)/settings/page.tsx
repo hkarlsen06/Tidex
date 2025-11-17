@@ -95,9 +95,9 @@ export default function SettingsPage() {
                     <p className="text-sm text-text-secondary">{item.description}</p>
                   </div>
                   {isNavigating ? (
-                    <Loader2 className="h-5 w-5 text-text-secondary flex-shrink-0 animate-spin" />
+                    <Loader2 className="h-5 w-5 text-text-secondary shrink-0 animate-spin" />
                   ) : (
-                    <ChevronRight className="h-5 w-5 text-text-secondary flex-shrink-0" />
+                    <ChevronRight className="h-5 w-5 text-text-secondary shrink-0" />
                   )}
                 </div>
               </Card>

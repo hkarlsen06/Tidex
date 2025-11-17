@@ -170,7 +170,7 @@ export function OnboardingForm({ initialSettings }: OnboardingFormProps) {
   return (
     <TooltipProvider>
       <div className="min-h-full flex justify-center pt-8 pb-32 px-4 bg-background">
-        <Card className="w-full max-w-2xl h-fit p-8 shadow-app-lg backdrop-blur border-border bg-surface-secondary">
+        <Card className="w-full max-w-2xl h-fit p-8 shadow-app-lg backdrop-blur-sm border-border bg-surface-secondary">
         {currentStep < totalSteps && (
           <StepIndicator currentStep={currentStep} totalSteps={totalSteps} />
         )}

@@ -65,7 +65,7 @@ export function DangerZone() {
           <Separator />
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch sm:gap-8">
-            <div className="space-y-1 sm:w-52 sm:flex-shrink-0">
+            <div className="space-y-1 sm:w-52 sm:shrink-0">
               <h4 className="font-medium">{t.pages.settings.profile.dangerZone.restartOnboarding.title}</h4>
               <p className="text-sm text-text-secondary">
                 {t.pages.settings.profile.dangerZone.restartOnboarding.description}
@@ -83,7 +83,7 @@ export function DangerZone() {
           <Separator />
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch sm:gap-8">
-            <div className="space-y-1 sm:w-52 sm:flex-shrink-0">
+            <div className="space-y-1 sm:w-52 sm:shrink-0">
               <h4 className="font-medium">{t.pages.settings.profile.dangerZone.deleteAllShifts.title}</h4>
               <p className="text-sm text-text-secondary">
                 {t.pages.settings.profile.dangerZone.deleteAllShifts.description}

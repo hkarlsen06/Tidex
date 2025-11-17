@@ -73,7 +73,7 @@ export default function SplashScreen() {
   return (
     <div
       className={cn(
-        'fixed inset-0 z-[9999] flex flex-col items-center justify-center',
+        'fixed inset-0 z-9999 flex flex-col items-center justify-center',
         'bg-background transition-opacity duration-300',
         isVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'
       )}
@@ -81,7 +81,7 @@ export default function SplashScreen() {
     >
       {/* Logo - Simplified for faster paint */}
       <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-surface-secondary">
-        <span className="text-3xl font-bold text-brand-gradientStart">T</span>
+        <span className="text-3xl font-bold text-brand-gradient-start">T</span>
       </div>
 
       {/* App name */}
@@ -89,7 +89,7 @@ export default function SplashScreen() {
 
       {/* Loading spinner - CSS only, no JS */}
       <div className="relative h-6 w-6">
-        <div className="absolute inset-0 animate-spin rounded-full border-2 border-surface-secondary border-t-brand-gradientStart" />
+        <div className="absolute inset-0 animate-spin rounded-full border-2 border-surface-secondary border-t-brand-gradient-start" />
       </div>
     </div>
   );

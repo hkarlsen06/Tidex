@@ -19,11 +19,11 @@ interface ArrowButtonConfig {
 
 const arrowButtonClasses = ({ available, activated, pressed }: ArrowButtonConfig) =>
   cn(
-    "flex h-9 w-9 items-center justify-center rounded-md border border-border transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background touch-manipulation",
+    "flex h-9 w-9 items-center justify-center rounded-md border border-border transition-all focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background touch-manipulation",
     available
       ? activated
         ? "cursor-default bg-surface-secondary text-text-secondary opacity-70"
-        : "cursor-pointer bg-black text-white shadow-sm hover:opacity-90 dark:bg-white dark:text-black"
+        : "cursor-pointer bg-black text-white shadow-xs hover:opacity-90 dark:bg-white dark:text-black"
       : "cursor-not-allowed bg-surface-secondary text-text-muted opacity-40",
     pressed && "opacity-70"
   );

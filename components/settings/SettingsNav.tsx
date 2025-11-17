@@ -118,12 +118,12 @@ export function SettingsNav() {
                   : "text-text-secondary hover:bg-surface-secondary/50 hover:text-text-primary"
               )}
             >
-              <Icon className="h-5 w-5 flex-shrink-0" />
+              <Icon className="h-5 w-5 shrink-0" />
               <span className="flex-1 text-sm">{item.label}</span>
               {isNavigating ? (
-                <Loader2 className="h-4 w-4 flex-shrink-0 animate-spin" />
+                <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
               ) : (
-                <ChevronRight className="h-4 w-4 flex-shrink-0 text-text-muted" />
+                <ChevronRight className="h-4 w-4 shrink-0 text-text-muted" />
               )}
             </Link>
           );

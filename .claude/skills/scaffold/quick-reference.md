@@ -84,8 +84,8 @@ hover:bg-accent                            // Hover states
 
 ### Brand
 ```typescript
-bg-brand-gradientStart
-bg-brand-gradientEnd
+bg-brand-gradient-start
+bg-brand-gradient-end
 // ... gradient tokens
 ```
 

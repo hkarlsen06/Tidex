@@ -14,17 +14,17 @@ export function ProjectsPage({ dictionary }: ProjectsPageProps) {
       <div className="mx-auto max-w-6xl">
         {/* Header */}
         <div className="mb-16 text-center">
-          <h1 className="mb-4 bg-gradient-to-r from-brand-gradientStart via-brand-gradientMid to-brand-gradientEnd bg-clip-text text-5xl font-bold text-transparent">
+          <h1 className="mb-4 bg-linear-to-r from-brand-gradient-start via-brand-gradient-mid to-brand-gradient-end bg-clip-text text-5xl font-bold text-transparent">
             {projects.title}
           </h1>
           <p className="text-xl text-text-secondary">{projects.subtitle}</p>
         </div>
 
         {/* Tidex Project Card */}
-        <div className="overflow-hidden rounded-3xl border border-border/40 bg-surface-primary/50 shadow-app-lg backdrop-blur-sm">
+        <div className="overflow-hidden rounded-3xl border border-border/40 bg-surface-primary/50 shadow-app-lg backdrop-blur-xs">
           <div className="grid gap-8 md:grid-cols-2">
             {/* Project Image/Preview */}
-            <div className="flex items-center justify-center bg-gradient-to-br from-brand-gradientStart/10 to-brand-gradientEnd/10 p-12">
+            <div className="flex items-center justify-center bg-linear-to-br from-brand-gradient-start/10 to-brand-gradient-end/10 p-12">
               <div className="text-center">
                 <div className="mb-6 flex justify-center">
                   <Image
@@ -70,23 +70,23 @@ export function ProjectsPage({ dictionary }: ProjectsPageProps) {
                 </h3>
                 <ul className="space-y-2 text-text-secondary">
                   <li className="flex items-start gap-2">
-                    <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-brand-gradientMid" />
+                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-brand-gradient-mid" />
                     {projects.tidex.feature1}
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-brand-gradientMid" />
+                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-brand-gradient-mid" />
                     {projects.tidex.feature2}
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-brand-gradientMid" />
+                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-brand-gradient-mid" />
                     {projects.tidex.feature3}
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-brand-gradientMid" />
+                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-brand-gradient-mid" />
                     {projects.tidex.feature4}
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-brand-gradientMid" />
+                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-brand-gradient-mid" />
                     {projects.tidex.feature5}
                   </li>
                 </ul>
@@ -98,7 +98,7 @@ export function ProjectsPage({ dictionary }: ProjectsPageProps) {
                   href="https://app.tidex.no"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-brand-gradientStart to-brand-gradientEnd px-6 py-3 font-semibold text-text-inverse shadow-app transition-transform hover:scale-105"
+                  className="inline-flex items-center gap-2 rounded-full bg-linear-to-r from-brand-gradient-start to-brand-gradient-end px-6 py-3 font-semibold text-text-inverse shadow-app transition-transform hover:scale-105"
                 >
                   <ExternalLink className="h-4 w-4" />
                   {projects.tidex.viewLive}

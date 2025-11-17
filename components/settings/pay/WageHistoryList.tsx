@@ -136,7 +136,7 @@ export function WageHistoryList({
                         variant="outline"
                         size="sm"
                         onClick={() => handleEdit(snapshot)}
-                        className="gap-1 flex-shrink-0"
+                        className="gap-1 shrink-0"
                       >
                         <Pencil className="h-4 w-4" />
                         <span className="hidden sm:inline">{t.pages.settings.pay.wageHistory.edit}</span>

@@ -72,7 +72,7 @@ export function MonthPicker({
       <button
         onClick={handlePreviousMonth}
         disabled={!canNavigateToPreviousMonth}
-        className="flex h-10 w-10 items-center justify-center rounded-md text-text-primary transition-colors hover:bg-surface-secondary focus:outline-none focus-visible:outline-none disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+        className="flex h-10 w-10 items-center justify-center rounded-md text-text-primary transition-colors hover:bg-surface-secondary focus:outline-hidden focus-visible:outline-hidden disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
         aria-label="Forrige måned"
       >
         <ChevronLeft size={18} />
@@ -105,7 +105,7 @@ export function MonthPicker({
       <button
         onClick={handleNextMonth}
         disabled={!canNavigateToNextMonth}
-        className="flex h-10 w-10 items-center justify-center rounded-md text-text-primary transition-colors hover:bg-surface-secondary focus:outline-none focus-visible:outline-none disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+        className="flex h-10 w-10 items-center justify-center rounded-md text-text-primary transition-colors hover:bg-surface-secondary focus:outline-hidden focus-visible:outline-hidden disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
         aria-label="Neste måned"
       >
         <ChevronRight size={18} />

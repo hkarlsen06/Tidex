@@ -24,7 +24,7 @@ export function SettingsLayoutClient({ children }: { children: ReactNode }) {
       {/* Mobile/Tablet: vertical stack. Desktop: side-by-side, break out of parent container */}
       <div className="flex w-full flex-col lg:relative lg:left-1/2 lg:right-1/2 lg:-ml-[50vw] lg:-mr-[50vw] lg:w-screen lg:flex-row lg:gap-0 lg:px-0 lg:items-start lg:pt-6">
         {/* Navigation Sidebar - Left side, sticky on desktop */}
-        <div className="hidden lg:flex lg:w-1/3 lg:flex-shrink-0 lg:sticky lg:top-[5.5rem] lg:z-40 lg:justify-end lg:pr-6">
+        <div className="hidden lg:flex lg:w-1/3 lg:shrink-0 lg:sticky lg:top-22 lg:z-40 lg:justify-end lg:pr-6">
           <div className="w-full max-w-[320px]">
             <SettingsNav />
           </div>

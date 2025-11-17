@@ -197,7 +197,7 @@ export function PayrollDocsRenderer({ section }: PayrollDocsRendererProps) {
                     {subsection.table.caption}
                   </figcaption>
                 )}
-                <div className="overflow-x-auto rounded-lg border border-border shadow-sm">
+                <div className="overflow-x-auto rounded-lg border border-border shadow-xs">
                   <table className="w-full border-collapse">
                     <thead>
                       <tr className="bg-surface-secondary">

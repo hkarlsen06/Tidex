@@ -42,9 +42,9 @@ export function SupplementsStep({
           </p>
         </div>
 
-        <Card className="p-6 bg-surface-primary border-brand-gradientStart/20">
+        <Card className="p-6 bg-surface-primary border-brand-gradient-start/20">
           <div className="flex items-start gap-3">
-            <InfoIcon className="h-5 w-5 text-brand-gradientStart mt-0.5 flex-shrink-0" />
+            <InfoIcon className="h-5 w-5 text-brand-gradient-start mt-0.5 shrink-0" />
             <div className="space-y-2">
               <p className="font-medium">{t.onboarding.supplementsStep.presetInfoTitle}</p>
               <p className="text-sm text-text-secondary">

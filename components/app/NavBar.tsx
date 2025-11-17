@@ -226,7 +226,7 @@ export function NavBar() {
                         <span>{t.navigation.addFirstShiftLine2}</span>
                       </span>
                       <ArrowDown
-                        className="h-10 w-10 text-brand-highlight animate-gentle-bob drop-shadow"
+                        className="h-10 w-10 text-brand-highlight animate-gentle-bob drop-shadow-sm"
                         strokeWidth={2}
                       />
                     </div>
@@ -237,7 +237,7 @@ export function NavBar() {
                     prefetch={true}
                     className="flex items-center justify-center p-2 -m-2"
                   >
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-gradientMid">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-gradient-mid">
                       <Icon
                         className={`h-6 w-6 text-text-inverse transition-transform duration-200 ${
                           isOnAddPage ? "rotate-45" : ""

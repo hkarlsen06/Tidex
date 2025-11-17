@@ -69,7 +69,7 @@ export function MonthlyGoalProgress({ data }: MonthlyGoalProgressProps) {
           </div>
         </div>
 
-        <div className="grid grid-cols-[1fr,auto] gap-6 items-center">
+        <div className="grid grid-cols-[1fr_auto] gap-6 items-center">
           {/* Left side: Text content */}
           <div className="flex flex-col justify-center space-y-3">
             <p className="text-sm text-text-secondary">
@@ -110,7 +110,7 @@ export function MonthlyGoalProgress({ data }: MonthlyGoalProgressProps) {
           </div>
 
           {/* Right side: Circular progress indicator */}
-          <div className="relative flex-shrink-0">
+          <div className="relative shrink-0">
             <svg
               width={size}
               height={size}

@@ -96,13 +96,13 @@ export function DurationSection({ value, onChange, className }: DurationSectionP
     cn(
       "rounded-xl border px-4 py-3 transition-all",
       isActive
-        ? "border-brand-gradientMid bg-brand-gradientMid/10"
+        ? "border-brand-gradient-mid bg-brand-gradient-mid/10"
         : "border-border-subtle bg-surface-secondary/70 hover:border-border"
     );
 
   return (
     <div className={cn("space-y-3", className)}>
-      <span className="text-xs font-semibold uppercase tracking-[0.1em] text-text-muted">
+      <span className="text-xs font-semibold uppercase tracking-widest text-text-muted">
         {t.pages.shifts.add.series.duration}
       </span>
 
@@ -113,7 +113,7 @@ export function DurationSection({ value, onChange, className }: DurationSectionP
         className={cn(
           "flex w-full items-center justify-center rounded-xl border px-4 py-3 text-center transition-all",
           activeType === 'no_end'
-            ? "border-brand-gradientMid bg-brand-gradientMid/10 text-text-primary"
+            ? "border-brand-gradient-mid bg-brand-gradient-mid/10 text-text-primary"
             : "border-border-subtle bg-surface-secondary/70 text-text-secondary hover:border-border hover:text-text-primary"
         )}
       >
@@ -129,7 +129,7 @@ export function DurationSection({ value, onChange, className }: DurationSectionP
           className={cn(
             "flex flex-1 items-center justify-center gap-2 rounded-xl border px-4 py-3 text-center transition-all",
             activeType === 'months'
-              ? "border-brand-gradientMid bg-brand-gradientMid/10 text-text-primary"
+              ? "border-brand-gradient-mid bg-brand-gradient-mid/10 text-text-primary"
               : "border-border-subtle bg-surface-secondary/70 text-text-secondary hover:border-border hover:text-text-primary"
           )}
         >
@@ -161,7 +161,7 @@ export function DurationSection({ value, onChange, className }: DurationSectionP
           className={cn(
             "flex flex-1 items-center justify-center gap-2 rounded-xl border px-4 py-3 text-center transition-all",
             activeType === 'years'
-              ? "border-brand-gradientMid bg-brand-gradientMid/10 text-text-primary"
+              ? "border-brand-gradient-mid bg-brand-gradient-mid/10 text-text-primary"
               : "border-border-subtle bg-surface-secondary/70 text-text-secondary hover:border-border hover:text-text-primary"
           )}
         >

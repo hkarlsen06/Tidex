@@ -9,7 +9,7 @@ export default function AddShiftLoading() {
           <div className="h-3 w-20 bg-surface-secondary rounded" />
           <div className="flex items-center justify-between gap-3">
             <div className="h-8 w-40 bg-surface-secondary rounded" />
-            <div className="inline-flex items-center gap-1 rounded-full border border-border-subtle bg-surface-secondary/80 p-1 shadow-app-sm dark:shadow-app-inner flex-shrink-0">
+            <div className="inline-flex items-center gap-1 rounded-full border border-border-subtle bg-surface-secondary/80 p-1 shadow-app-sm dark:shadow-app-inner shrink-0">
               <div className="h-9 w-20 bg-surface-secondary rounded-full" />
               <div className="h-9 w-20 bg-surface-secondary/50 rounded-full" />
             </div>

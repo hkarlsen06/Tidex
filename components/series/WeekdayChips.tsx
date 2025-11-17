@@ -41,9 +41,9 @@ export function WeekdayChips({ selected, onRemove, className }: WeekdayChipsProp
             disabled={!isSelected}
             className={cn(
               "flex h-9 flex-1 items-center justify-center rounded-xl px-1.5 text-sm font-semibold transition-all min-w-0",
-              "border focus:outline-none focus-visible:outline-none",
+              "border focus:outline-hidden focus-visible:outline-hidden",
               isSelected
-                ? "border-brand-highlight bg-brand-gradientStart text-text-inverse shadow-app hover:bg-brand-gradientMid cursor-pointer"
+                ? "border-brand-highlight bg-brand-gradient-start text-text-inverse shadow-app hover:bg-brand-gradient-mid cursor-pointer"
                 : "border-border-subtle bg-surface-secondary/50 text-text-muted cursor-not-allowed opacity-60"
             )}
             title={

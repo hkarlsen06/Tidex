@@ -57,19 +57,19 @@ export function SelectDatesCalendar({
           {...buttonProps}
           className={cn(
             className,
-            "w-full h-full rounded-lg transition-colors focus:outline-none focus-visible:outline-none border hover:bg-surface-secondary",
+            "w-full h-full rounded-lg transition-colors focus:outline-hidden focus-visible:outline-hidden border hover:bg-surface-secondary",
             !hasConflict && "border-border-subtle",
             hasConflict && !isSelected && "border-border dark:border-border-subtle border-dashed opacity-60",
             hasConflict && isSelected && "ring-1 ring-warning border-transparent",
             isSelected &&
               (hasConflict
                 ? "bg-warning-subtle text-text-primary hover:bg-warning-subtle"
-                : "bg-brand-gradientStart text-text-inverse hover:bg-brand-gradientStart border-transparent"),
+                : "bg-brand-gradient-start text-text-inverse hover:bg-brand-gradient-start border-transparent"),
             isToday && "ring-1 ring-brand-highlight",
             isToday && !isSelected && "border-brand-highlight"
           )}
         >
-          <div className="relative z-[1] flex flex-col items-center justify-start gap-0.5 w-full h-full p-1">
+          <div className="relative z-1 flex flex-col items-center justify-start gap-0.5 w-full h-full p-1">
             {isMonday && (
               <span className="absolute left-1 top-1 text-[9px] leading-none text-text-muted">
                 {formatInteger(week as number)}
@@ -154,7 +154,7 @@ export function SelectDatesCalendar({
         weekday: "text-text-muted font-normal text-xs text-center py-2 uppercase",
         week: "grid grid-cols-7 gap-1 mb-1",
         day: "relative aspect-square p-0",
-        day_button: "w-full h-full rounded-lg hover:bg-surface-secondary transition-colors border border-border-subtle focus:outline-none focus-visible:outline-none",
+        day_button: "w-full h-full rounded-lg hover:bg-surface-secondary transition-colors border border-border-subtle focus:outline-hidden focus-visible:outline-hidden",
         outside: disabledOutsideMonth ? "opacity-50 pointer-events-none" : "opacity-50",
         disabled: "text-text-muted opacity-50",
         hidden: "invisible",

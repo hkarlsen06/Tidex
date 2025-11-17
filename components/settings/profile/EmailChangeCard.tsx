@@ -62,7 +62,7 @@ export function EmailChangeCard({ currentEmail, onCancel }: EmailChangeCardProps
     <Card className="p-6">
       <div className="space-y-4">
         <div className="flex items-center gap-4">
-          <div className="p-3 rounded-lg bg-surface-secondary flex-shrink-0">
+          <div className="p-3 rounded-lg bg-surface-secondary shrink-0">
             <Mail className="h-6 w-6 text-text-primary" />
           </div>
           <div className="flex-1">

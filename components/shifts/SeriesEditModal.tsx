@@ -269,7 +269,7 @@ export function SeriesEditModal({
           <div className="h-px bg-border-subtle" />
 
           {/* Calendar instructions */}
-          <span className="text-xs font-semibold uppercase tracking-[0.1em] text-text-muted">
+          <span className="text-xs font-semibold uppercase tracking-widest text-text-muted">
             {t.pages.shifts.add.series.calendarInstructionsHeader}
           </span>
 

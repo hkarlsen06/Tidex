@@ -224,7 +224,7 @@ export default function RecurringForm({ existingShifts, userSettings, presetRule
   }, [draft, projectedDates, t]);
 
   const fieldWrapperClass = "block min-w-0 space-y-3 rounded-2xl border border-border-subtle bg-surface-secondary/70 p-4 shadow-app-inner transition hover:border-border";
-  const fieldLabelClass = "text-xs font-semibold uppercase tracking-[0.1em] text-text-muted";
+  const fieldLabelClass = "text-xs font-semibold uppercase tracking-widest text-text-muted";
 
   const openNativePicker = (input: HTMLInputElement | null) => {
     if (!input) return;
@@ -263,7 +263,7 @@ export default function RecurringForm({ existingShifts, userSettings, presetRule
             <button
               type="button"
               onClick={() => openNativePicker(startInputRef.current)}
-              className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border border-border-subtle bg-surface-secondary/70 text-text-muted transition hover:border-border hover:text-text-primary focus:outline-none focus-visible:outline-none"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border-subtle bg-surface-secondary/70 text-text-muted transition hover:border-border hover:text-text-primary focus:outline-hidden focus-visible:outline-hidden"
               aria-label={t.pages.shifts.add.form.selectStartTime}
             >
               <Clock className="h-5 w-5" strokeWidth={1.5} />
@@ -282,7 +282,7 @@ export default function RecurringForm({ existingShifts, userSettings, presetRule
             <button
               type="button"
               onClick={() => openNativePicker(endInputRef.current)}
-              className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border border-border-subtle bg-surface-secondary/70 text-text-muted transition hover:border-border hover:text-text-primary focus:outline-none focus-visible:outline-none"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border-subtle bg-surface-secondary/70 text-text-muted transition hover:border-border hover:text-text-primary focus:outline-hidden focus-visible:outline-hidden"
               aria-label={t.pages.shifts.add.form.selectEndTime}
             >
               <Clock className="h-5 w-5" strokeWidth={1.5} />
@@ -333,7 +333,7 @@ export default function RecurringForm({ existingShifts, userSettings, presetRule
 
       {/* Calendar instructions */}
       <div className="space-y-2 pt-2">
-        <h3 className="text-xs font-semibold uppercase tracking-[0.1em] text-text-muted">
+        <h3 className="text-xs font-semibold uppercase tracking-widest text-text-muted">
           {t.pages.shifts.add.series.calendarInstructionsHeader}
         </h3>
         <p className="text-sm text-text-secondary leading-relaxed">
@@ -395,7 +395,7 @@ export default function RecurringForm({ existingShifts, userSettings, presetRule
           onClick={handlePreview}
           disabled={!canSubmit}
           loading={pending}
-          className="rounded-2xl bg-brand-gradientMid px-6 py-3 text-base font-semibold text-text-inverse shadow-app transition hover:bg-brand-gradientEnd"
+          className="rounded-2xl bg-brand-gradient-mid px-6 py-3 text-base font-semibold text-text-inverse shadow-app transition hover:bg-brand-gradient-end"
         >
           {draft.end_condition === null
             ? t.pages.shifts.add.series.previewInfiniteSeries || 'Forhåndsvis fast vakt'
@@ -466,7 +466,7 @@ export default function RecurringForm({ existingShifts, userSettings, presetRule
               type="button"
               onClick={handleConfirm}
               loading={pending}
-              className="rounded-xl bg-brand-gradientMid px-5 py-2 font-semibold text-text-inverse shadow-app transition hover:bg-brand-gradientEnd"
+              className="rounded-xl bg-brand-gradient-mid px-5 py-2 font-semibold text-text-inverse shadow-app transition hover:bg-brand-gradient-end"
             >
               {t.pages.shifts.add.series.confirm}
             </Button>

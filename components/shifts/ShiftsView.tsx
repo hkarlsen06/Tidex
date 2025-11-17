@@ -237,7 +237,7 @@ function CalendarCellPreview({
     "flex h-28 w-24 flex-col justify-start rounded-2xl border bg-surface-primary text-center shadow-app-sm";
   const variantClasses =
     variant === "target"
-      ? "border-brand-gradientMid bg-brand-gradientMid/10"
+      ? "border-brand-gradient-mid bg-brand-gradient-mid/10"
       : "border-border-subtle";
   const dayNumberClasses = cn(
     "w-full text-2xl font-bold text-right pr-1",
@@ -376,7 +376,7 @@ function MoveShiftModal({
           </DialogDescription>
         </DialogHeader>
         {isSubmitting && (
-          <div className="absolute inset-0 z-50 flex items-center justify-center rounded-3xl bg-surface-primary/80 backdrop-blur-sm">
+          <div className="absolute inset-0 z-50 flex items-center justify-center rounded-3xl bg-surface-primary/80 backdrop-blur-xs">
             <div className="flex flex-col items-center gap-3">
               <div className="h-8 w-8 animate-spin rounded-full border-4 border-border-subtle border-t-brand-highlight" />
               <p className="text-sm font-medium text-text-secondary">{t.pages.shifts.move.moving}</p>
@@ -1132,7 +1132,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
     {/* Queued Shift Notification */}
     {queuedNotification && (
       <div className="fixed top-20 left-1/2 -translate-x-1/2 z-40 animate-in slide-in-from-top-2 fade-in">
-        <div className="rounded-lg border border-blue-500/20 bg-blue-500/10 px-4 py-3 shadow-lg backdrop-blur-sm">
+        <div className="rounded-lg border border-blue-500/20 bg-blue-500/10 px-4 py-3 shadow-lg backdrop-blur-xs">
           <div className="flex items-center gap-2">
             <CloudOff className="h-4 w-4 text-blue-500" />
             <div className="text-sm">
@@ -1161,7 +1161,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
     {/* Mobile/Tablet: vertical stack. Desktop: side-by-side, break out of parent container */}
     <div className="flex w-full flex-col lg:relative lg:left-1/2 lg:right-1/2 lg:-ml-[50vw] lg:-mr-[50vw] lg:w-screen lg:flex-row lg:gap-0 lg:px-0 lg:items-start lg:pt-6">
       {/* Calendar Section - Left half of screen, centered within */}
-      <div className="flex items-center justify-center min-h-[calc(100dvh-3.75rem-env(safe-area-inset-top))] -mx-4 pb-[calc(5rem+env(safe-area-inset-bottom))] md:min-h-[calc(100dvh-5rem)] md:pb-20 lg:min-h-0 lg:pb-0 lg:mx-0 lg:w-1/2 lg:flex-shrink-0 lg:sticky lg:top-6 lg:justify-center">
+      <div className="flex items-center justify-center min-h-[calc(100dvh-3.75rem-env(safe-area-inset-top))] -mx-4 pb-[calc(5rem+env(safe-area-inset-bottom))] md:min-h-[calc(100dvh-5rem)] md:pb-20 lg:min-h-0 lg:pb-0 lg:mx-0 lg:w-1/2 lg:shrink-0 lg:sticky lg:top-6 lg:justify-center">
         <div className="w-full px-4 lg:px-0 lg:w-[480px]">
           <MonthlyEarningsCalendar
             shifts={shifts}

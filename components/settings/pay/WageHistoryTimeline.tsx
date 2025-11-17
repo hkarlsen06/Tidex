@@ -246,43 +246,43 @@ export function WageHistoryTimeline({
                 >
                   {/* Vertical line - full height solid for non-future, non-current */}
                   {!isCurrent && !isFuture && (
-                    <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-border z-[5]" />
+                    <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-border z-5" />
                   )}
 
                   {/* Future entry - fully dashed */}
                   {isFuture && (
-                    <div className="absolute left-0 top-0 bottom-0 w-0.5 border-l-2 border-dashed border-border z-[5]" />
+                    <div className="absolute left-0 top-0 bottom-0 w-0.5 border-l-2 border-dashed border-border z-5" />
                   )}
 
                   {/* Content wrapper - excludes bottom spacing */}
                   <div className="relative">
                     {/* Current wage background - full width, no border radius */}
                     {isCurrent && (
-                      <div className="absolute inset-0 -left-6 -right-6 bg-wage-current z-[1]" />
+                      <div className="absolute inset-0 -left-6 -right-6 bg-wage-current z-1" />
                     )}
 
                     {/* Current entry lines - split at dot */}
                     {isCurrent && (
                       <>
                         {/* Line from top to dot - dashed if future above, solid otherwise */}
-                        <div className={`absolute left-0 top-0 bottom-1/2 w-0.5 z-[5] ${
+                        <div className={`absolute left-0 top-0 bottom-1/2 w-0.5 z-5 ${
                           hasFutureAbove
                             ? 'border-l-2 border-dashed border-border'
                             : 'bg-border'
                         }`} />
                         {/* Line from dot to bottom of content - always solid */}
-                        <div className="absolute left-0 top-1/2 bottom-0 w-0.5 bg-border z-[5]" />
+                        <div className="absolute left-0 top-1/2 bottom-0 w-0.5 bg-border z-5" />
                       </>
                     )}
 
                     {/* Line from bottom of content to next entry - only for current with spacing */}
                     {isCurrent && !isLast && (
-                      <div className="absolute left-0 top-full h-4 w-0.5 bg-border z-[5]" />
+                      <div className="absolute left-0 top-full h-4 w-0.5 bg-border z-5" />
                     )}
 
                     {/* Timeline dot - centered vertically within content */}
                     <div
-                      className={`absolute z-20 rounded-full bg-brand-gradientStart border-2 left-[1px] top-1/2 -translate-y-1/2 ${
+                      className={`absolute z-20 rounded-full bg-brand-gradient-start border-2 left-px top-1/2 -translate-y-1/2 ${
                         isCurrent
                           ? 'w-5 h-5 -translate-x-1/2 border-surface-secondary'
                           : 'w-3 h-3 -translate-x-1/2 border-background'
@@ -293,7 +293,7 @@ export function WageHistoryTimeline({
                     <div
                       className={`relative pl-6 pr-0 ${
                         isCurrent ? 'py-4' : 'py-2'
-                      } flex items-center justify-between gap-4 z-[2]`}
+                      } flex items-center justify-between gap-4 z-2`}
                     >
                     {/* Left: Wage info */}
                     <div className="flex-1 min-w-0">
@@ -330,7 +330,7 @@ export function WageHistoryTimeline({
                       variant="outline"
                       size="sm"
                       onClick={() => handleEdit(snapshot)}
-                      className="flex-shrink-0 w-9 md:w-auto md:px-3"
+                      className="shrink-0 w-9 md:w-auto md:px-3"
                     >
                       <Pencil className="h-5 w-5 md:h-4 md:w-4 md:mr-2" />
                       <span className="hidden md:inline">

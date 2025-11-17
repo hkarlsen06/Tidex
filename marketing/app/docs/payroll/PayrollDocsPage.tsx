@@ -72,7 +72,7 @@ export function PayrollDocsPage({ docs }: PayrollDocsPageProps) {
       <header className="relative border-b border-border-subtle bg-surface-primary">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,hsla(var(--brand-gradientStart)/0.12),transparent_70%)]" />
         <div
-          className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-brand-gradientStart/20 via-transparent to-transparent"
+          className="absolute inset-x-0 top-0 h-28 bg-linear-to-b from-brand-gradient-start/20 via-transparent to-transparent"
           aria-hidden
         />
         <div className="container relative mx-auto px-6 py-12 sm:px-8 sm:py-14 lg:py-16">
@@ -94,13 +94,13 @@ export function PayrollDocsPage({ docs }: PayrollDocsPageProps) {
       </header>
 
       {/* Simple Navigation */}
-      <nav className="sticky top-0 z-10 border-b border-border-subtle bg-surface-primary/95 backdrop-blur-sm">
+      <nav className="sticky top-0 z-10 border-b border-border-subtle bg-surface-primary/95 backdrop-blur-xs">
         <div className="container mx-auto px-6 sm:px-8">
           <div className="flex items-center gap-4 py-3">
             {/* Back Button */}
             <a
               href="/"
-              className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-secondary hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-secondary hover:text-text-primary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -112,7 +112,7 @@ export function PayrollDocsPage({ docs }: PayrollDocsPageProps) {
                 strokeWidth="2"
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                className="flex-shrink-0"
+                className="shrink-0"
               >
                 <path d="m15 18-6-6 6-6" />
               </svg>
@@ -128,7 +128,7 @@ export function PayrollDocsPage({ docs }: PayrollDocsPageProps) {
                 <li key={item.id}>
                   <button
                     onClick={() => scrollToSection(item.id)}
-                    className="whitespace-nowrap rounded-lg px-4 py-2 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-secondary hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="whitespace-nowrap rounded-lg px-4 py-2 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-secondary hover:text-text-primary focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     {item.label}
                   </button>
@@ -152,7 +152,7 @@ export function PayrollDocsPage({ docs }: PayrollDocsPageProps) {
         <Separator className="my-20 sm:my-24" />
 
         {/* Bug Report CTA */}
-        <section className="relative overflow-hidden rounded-2xl border border-border-subtle/40 bg-gradient-to-br from-surface-secondary via-surface-primary to-surface-primary/90 p-12 text-center shadow-app sm:rounded-3xl sm:p-14 lg:p-16">
+        <section className="relative overflow-hidden rounded-2xl border border-border-subtle/40 bg-linear-to-br from-surface-secondary via-surface-primary to-surface-primary/90 p-12 text-center shadow-app sm:rounded-3xl sm:p-14 lg:p-16">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_right,hsla(var(--brand-gradientEnd)/0.1),transparent_55%)]" />
           <div className="absolute inset-0 opacity-40 mix-blend-screen bg-[radial-gradient(60%_60%_at_50%_50%,hsla(var(--brand-gradientMid)/0.35),transparent)]" />
           <div className="relative mx-auto max-w-xl space-y-6 sm:space-y-8">
@@ -165,7 +165,7 @@ export function PayrollDocsPage({ docs }: PayrollDocsPageProps) {
             <Button
               onClick={handleBugReport}
               size="lg"
-              className="h-12 rounded-xl bg-gradient-to-r from-brand-gradientStart via-brand-gradientMid to-brand-gradientEnd px-8 text-base font-semibold shadow-app-lg transition-all hover:brightness-110 sm:h-14 sm:px-10 sm:text-lg"
+              className="h-12 rounded-xl bg-linear-to-r from-brand-gradient-start via-brand-gradient-mid to-brand-gradient-end px-8 text-base font-semibold shadow-app-lg transition-all hover:brightness-110 sm:h-14 sm:px-10 sm:text-lg"
             >
               {docs.bugReportCta.buttonText}
             </Button>
@@ -174,7 +174,7 @@ export function PayrollDocsPage({ docs }: PayrollDocsPageProps) {
       </main>
 
       {/* Footer */}
-      <footer className="mt-20 border-t border-border-subtle bg-surface-primary/60 py-12 backdrop-blur-sm sm:mt-24 sm:py-14">
+      <footer className="mt-20 border-t border-border-subtle bg-surface-primary/60 py-12 backdrop-blur-xs sm:mt-24 sm:py-14">
         <div className="container mx-auto px-6 text-center sm:px-8">
           <p className="text-sm text-text-muted sm:text-base">
             © 2025 Tidex — Complete transparency in payroll calculations

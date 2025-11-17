@@ -61,7 +61,7 @@ export function GoogleConnectionCard({ hasGoogleConnected, canDisconnectGoogle }
     <Card className="p-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
         <div className="flex items-center gap-4 flex-1 min-w-0">
-          <div className="p-3 rounded-lg bg-surface-secondary flex-shrink-0">
+          <div className="p-3 rounded-lg bg-surface-secondary shrink-0">
             <Image src="/icons/google.svg" alt="Google" width={24} height={24} />
           </div>
           <div className="flex-1 min-w-0">
@@ -78,7 +78,7 @@ export function GoogleConnectionCard({ hasGoogleConnected, canDisconnectGoogle }
             )}
           </div>
         </div>
-        <div className="w-full sm:w-auto sm:flex-shrink-0 flex flex-col gap-2 sm:items-end">
+        <div className="w-full sm:w-auto sm:shrink-0 flex flex-col gap-2 sm:items-end">
           <Button
             variant={hasGoogleConnected ? 'outline' : 'default'}
             onClick={hasGoogleConnected ? handleDisconnect : handleConnect}

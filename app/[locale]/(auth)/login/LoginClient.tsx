@@ -384,7 +384,7 @@ export default function LoginClient({
     <div className="relative flex min-h-screen items-center justify-center py-16">
       {/* Full-screen loading overlay during OAuth redirect */}
       {isOAuthRedirecting && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-xs">
           <Card className="max-w-sm shadow-lg">
             <CardContent className="pt-6">
               <div className="flex flex-col items-center gap-4">

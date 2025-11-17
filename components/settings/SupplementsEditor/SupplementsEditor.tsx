@@ -193,8 +193,8 @@ export function SupplementsEditor({
                         disabled={readOnly}
                         className={`px-2 py-1.5 text-xs sm:text-sm rounded border transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
                           isSelected
-                            ? 'bg-brand-gradientStart text-white border-brand-gradientStart'
-                            : 'bg-surface-secondary border-border text-text-secondary hover:border-brand-gradientStart/50'
+                            ? 'bg-brand-gradient-start text-white border-brand-gradient-start'
+                            : 'bg-surface-secondary border-border text-text-secondary hover:border-brand-gradient-start/50'
                         }`}
                       >
                         {label}
@@ -272,8 +272,8 @@ export function SupplementsEditor({
                     disabled={readOnly || !hasToTime}
                     className={`flex-1 px-3 py-2 text-sm rounded border transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
                       rule.mode === 'percent'
-                        ? 'bg-brand-gradientStart text-white border-brand-gradientStart'
-                        : 'bg-surface-secondary border-border text-text-secondary hover:border-brand-gradientStart/50'
+                        ? 'bg-brand-gradient-start text-white border-brand-gradient-start'
+                        : 'bg-surface-secondary border-border text-text-secondary hover:border-brand-gradient-start/50'
                     } disabled:hover:border-border`}
                   >
                     {t.components.supplementsEditor.typePercent}
@@ -286,8 +286,8 @@ export function SupplementsEditor({
                     disabled={readOnly || !hasToTime}
                     className={`flex-1 px-3 py-2 text-sm rounded border transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
                       rule.mode === 'rate'
-                        ? 'bg-brand-gradientStart text-white border-brand-gradientStart'
-                        : 'bg-surface-secondary border-border text-text-secondary hover:border-brand-gradientStart/50'
+                        ? 'bg-brand-gradient-start text-white border-brand-gradient-start'
+                        : 'bg-surface-secondary border-border text-text-secondary hover:border-brand-gradient-start/50'
                     } disabled:hover:border-border`}
                   >
                     {t.components.supplementsEditor.typeFixed}

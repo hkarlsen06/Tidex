@@ -152,7 +152,7 @@ Theme management:
 - Text: `text-text-primary`, `text-text-secondary`, `text-text-muted`
 - Background: `bg-background`, `bg-background-secondary`
 - Borders: `border-border`, `border-border-subtle`
-- Brand: `bg-brand-gradientStart`, etc.
+- Brand: `bg-brand-gradient-start`, etc.
 
 **Never use hardcoded colors** (e.g., `bg-slate-900`, `text-gray-400`). Always use semantic tokens so components respond to theme changes.
 
