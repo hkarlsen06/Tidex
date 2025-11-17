@@ -60,7 +60,7 @@ export async function completeOnboarding(settings: OnboardingSettings) {
     throw new Error(`Failed to save settings: ${settingsError.message}`);
   }
 
-  // Create baseline wage snapshot (from_date = null)
+  // Create or update baseline wage snapshot (from_date = null)
   // This serves as the fallback for all shifts that don't match a dated snapshot
   const hourly_wage = settings.use_preset
     ? PRESET_WAGE_RATES[settings.current_wage_level!]
@@ -70,18 +70,43 @@ export async function completeOnboarding(settings: OnboardingSettings) {
     ? { rules: PRESET_SUPPLEMENT_RULES }
     : (settings.custom_supplements || { rules: [] });
 
-  const { error: snapshotError } = await supabase
+  // Check if baseline snapshot already exists
+  const { data: existingBaseline } = await supabase
     .from("wage_snapshots")
-    .insert({
-      user_id: user.id,
-      from_date: null, // Baseline snapshot (grunntariff)
-      hourly_wage,
-      wage_level: settings.use_preset ? settings.current_wage_level : null,
-      supplements,
-    });
+    .select("id")
+    .eq("user_id", user.id)
+    .is("from_date", null)
+    .maybeSingle();
 
-  if (snapshotError) {
-    throw new Error(`Failed to create wage snapshot: ${snapshotError.message}`);
+  if (existingBaseline) {
+    // Update existing baseline snapshot
+    const { error: updateError } = await supabase
+      .from("wage_snapshots")
+      .update({
+        hourly_wage,
+        wage_level: settings.use_preset ? settings.current_wage_level : null,
+        supplements,
+      })
+      .eq("id", existingBaseline.id);
+
+    if (updateError) {
+      throw new Error(`Failed to update wage snapshot: ${updateError.message}`);
+    }
+  } else {
+    // Create new baseline snapshot
+    const { error: insertError } = await supabase
+      .from("wage_snapshots")
+      .insert({
+        user_id: user.id,
+        from_date: null, // Baseline snapshot (grunntariff)
+        hourly_wage,
+        wage_level: settings.use_preset ? settings.current_wage_level : null,
+        supplements,
+      });
+
+    if (insertError) {
+      throw new Error(`Failed to create wage snapshot: ${insertError.message}`);
+    }
   }
 
   // Mark onboarding as complete in user metadata
