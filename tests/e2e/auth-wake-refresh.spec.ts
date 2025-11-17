@@ -75,7 +75,7 @@ test.describe("Session Refresh on Wake", () => {
     // Step 4: Simulate app wake (blur then focus)
     await page.evaluate(() => {
       // Blur window
-      window.dispatchEvent(new Event("blur"));
+      window.dispatchEvent(new Event("blur-sm"));
       // Wait a moment
       return new Promise((resolve) => setTimeout(resolve, 100));
     });

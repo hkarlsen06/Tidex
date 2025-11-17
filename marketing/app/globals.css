@@ -1,56 +1,89 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
 
-:root {
-  color-scheme: dark;
-  --background: 222.2 84% 4.9%;
-  --foreground: 210 40% 98%;
-  --card: 222.2 84% 4.9%;
-  --card-foreground: 210 40% 98%;
-  --popover: 222.2 84% 4.9%;
-  --popover-foreground: 210 40% 98%;
-  --primary: 210 40% 98%;
-  --primary-foreground: 222.2 47.4% 11.2%;
-  --secondary: 217.2 32.6% 17.5%;
-  --secondary-foreground: 210 40% 98%;
-  --muted: 217.2 32.6% 17.5%;
-  --muted-foreground: 215 20.2% 65.1%;
-  --accent: 217.2 32.6% 17.5%;
-  --accent-foreground: 210 40% 98%;
-  --destructive: 0 62.8% 30.6%;
-  --destructive-foreground: 210 40% 98%;
-  --border: 217.2 32.6% 17.5%;
-  --input: 217.2 32.6% 17.5%;
-  --ring: 212.7 26.8% 83.9%;
-  --surface-primary: 220 49% 8%;
-  --surface-secondary: 221 39% 11%;
-  --background-secondary: 222.2 84% 4.9%;
-  --text-primary: 210 40% 98%;
-  --text-secondary: 214 32% 91%;
-  --text-muted: 215 20% 65%;
-  --text-inverse: 222 47% 11%;
-  --border-subtle: 217.2 32.6% 17.5%;
-  --brand-gradientStart: 199 89% 48%;
-  --brand-gradientMid: 189 94% 43%;
-  --brand-gradientEnd: 192 91% 36%;
-  --brand-highlight: 188 86% 53%;
-  --success: 142 71% 45%;
-  --success-foreground: 138 76% 97%;
-  --success-subtle: 142 71% 45% / 0.15;
-  --warning: 38 92% 50%;
-  --warning-foreground: 48 96% 89%;
-  --warning-subtle: 38 92% 50% / 0.3;
-  --error: 0 63% 31%;
-  --error-foreground: 0 86% 97%;
-  --error-subtle: 0 63% 31% / 0.3;
-  --info: 217 91% 60%;
-  --info-foreground: 210 40% 98%;
-  --info-subtle: 217 91% 60% / 0.15;
-  --shadow-color: 222 47% 4% / 0.4;
-  --shadow-color-strong: 222 47% 4% / 0.6;
-  --hero-initial-dvh: 100dvh;
-  --radius: 24px;
+@source '../app/**/*.{js,ts,jsx,tsx}';
+@source '../components/**/*.{js,ts,jsx,tsx}';
+
+/*
+  The default border color has changed to `currentcolor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: hsl(var(--border));
+  }
+}
+
+@utility shadow-app {
+  box-shadow:
+    0 24px 48px -24px hsl(var(--shadow-color)),
+    0 12px 24px -12px hsl(var(--shadow-color-strong));
+}
+
+@utility shadow-app-lg {
+  box-shadow:
+    0 40px 80px -40px hsl(var(--shadow-color)),
+    0 20px 40px -20px hsl(var(--shadow-color-strong));
+}
+
+@layer utilities {
+  :root {
+    color-scheme: dark;
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+    --surface-primary: 220 49% 8%;
+    --surface-secondary: 221 39% 11%;
+    --background-secondary: 222.2 84% 4.9%;
+    --text-primary: 210 40% 98%;
+    --text-secondary: 214 32% 91%;
+    --text-muted: 215 20% 65%;
+    --text-inverse: 222 47% 11%;
+    --border-subtle: 217.2 32.6% 17.5%;
+    --brand-gradientStart: 199 89% 48%;
+    --brand-gradientMid: 189 94% 43%;
+    --brand-gradientEnd: 192 91% 36%;
+    --brand-highlight: 188 86% 53%;
+    --success: 142 71% 45%;
+    --success-foreground: 138 76% 97%;
+    --success-subtle: 142 71% 45% / 0.15;
+    --warning: 38 92% 50%;
+    --warning-foreground: 48 96% 89%;
+    --warning-subtle: 38 92% 50% / 0.3;
+    --error: 0 63% 31%;
+    --error-foreground: 0 86% 97%;
+    --error-subtle: 0 63% 31% / 0.3;
+    --info: 217 91% 60%;
+    --info-foreground: 210 40% 98%;
+    --info-subtle: 217 91% 60% / 0.15;
+    --shadow-color: 222 47% 4% / 0.4;
+    --shadow-color-strong: 222 47% 4% / 0.6;
+    --hero-initial-dvh: 100dvh;
+    --radius: 24px;
+  }
 }
 
 @layer base {
@@ -80,16 +113,6 @@
     font-size: 0.875rem;
     line-height: 1.25rem;
     color: hsl(var(--text-secondary));
-  }
-}
-
-@layer utilities {
-  .shadow-app {
-    box-shadow: 0 24px 48px -24px hsl(var(--shadow-color)), 0 12px 24px -12px hsl(var(--shadow-color-strong));
-  }
-
-  .shadow-app-lg {
-    box-shadow: 0 40px 80px -40px hsl(var(--shadow-color)), 0 20px 40px -20px hsl(var(--shadow-color-strong));
   }
 }
 

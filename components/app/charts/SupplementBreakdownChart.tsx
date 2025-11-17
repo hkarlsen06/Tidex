@@ -92,7 +92,7 @@ export function SupplementBreakdownChart({ data }: SupplementBreakdownChartProps
             {chartData.map((item, index) => (
               <div key={`legend-${index}`} className="flex items-center gap-2">
                 <div
-                  className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full flex-shrink-0"
+                  className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full shrink-0"
                   style={{
                     backgroundColor: item.name === "basePay"
                       ? chartConfig.basePay.color

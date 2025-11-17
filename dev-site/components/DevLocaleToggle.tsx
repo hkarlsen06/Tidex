@@ -21,7 +21,7 @@ export function DevLocaleToggle({ currentLocale, path = '' }: DevLocaleTogglePro
             aria-current={isActive ? 'page' : undefined}
             className={`rounded-full px-3 py-1 transition-colors ${
               isActive
-                ? 'bg-brand-gradientMid/90 text-text-inverse'
+                ? 'bg-brand-gradient-mid/90 text-text-inverse'
                 : 'text-text-secondary hover:text-text-primary'
             }`}
           >

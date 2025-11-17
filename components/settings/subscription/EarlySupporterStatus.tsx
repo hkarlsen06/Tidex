@@ -12,7 +12,7 @@ interface EarlySupporterStatusProps {
 
 export function EarlySupporterStatus({ t }: EarlySupporterStatusProps) {
   return (
-    <Card className="p-6 border-2 border-text-primary bg-gradient-to-br from-surface-primary to-surface-secondary">
+    <Card className="p-6 border-2 border-text-primary bg-linear-to-br from-surface-primary to-surface-secondary">
       <div className="space-y-6">
         <div className="flex items-start justify-between">
           <div className="flex items-start gap-3">

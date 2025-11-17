@@ -50,10 +50,10 @@ export function TopHeader({ userName, avatarUrl }: TopHeaderProps) {
             {/* Add button - desktop only, matches UserMenu style with CTA color */}
             <Link
               href={`/${locale}/shifts/add`}
-              className="hidden md:flex items-center gap-2 rounded-2xl bg-brand-gradientMid/10 px-4 h-12 border border-brand-gradientMid/30 hover:bg-brand-gradientMid/20 transition-colors"
+              className="hidden md:flex items-center gap-2 rounded-2xl bg-brand-gradient-mid/10 px-4 h-12 border border-brand-gradient-mid/30 hover:bg-brand-gradient-mid/20 transition-colors"
             >
-              <Plus className="h-4 w-4 text-brand-gradientMid" strokeWidth={2} />
-              <span className="text-sm font-medium text-brand-gradientMid">{t.common.add}</span>
+              <Plus className="h-4 w-4 text-brand-gradient-mid" strokeWidth={2} />
+              <span className="text-sm font-medium text-brand-gradient-mid">{t.common.add}</span>
             </Link>
 
             <UserMenu displayName={displayName} avatarUrl={avatarUrl ?? null} />

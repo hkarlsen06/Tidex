@@ -93,7 +93,7 @@ const DayButton = React.memo(function DayButton({
       className={cn(
         className,
         isSelected &&
-          "border-brand-gradientMid bg-brand-gradientMid/10 text-brand-highlight shadow-app-sm",
+          "border-brand-gradient-mid bg-brand-gradient-mid/10 text-brand-highlight shadow-app-sm",
         isToday && "ring-1 ring-brand-highlight",
         isToday && !isSelected && "border-brand-highlight",
         isOutside && "opacity-40"

@@ -110,7 +110,7 @@ function StatCard({ label, value, suffix, trend, icon }: StatCardProps) {
             {displayValue}
           </p>
           {suffix && !isZero && (
-            <p className="text-xl font-medium flex-shrink-0 text-text-secondary">
+            <p className="text-xl font-medium shrink-0 text-text-secondary">
               {suffix}
             </p>
           )}
@@ -430,10 +430,10 @@ export function StatsContent({ data }: StatsContentProps) {
     <>
       {/* Loading overlay - fixed to viewport center, covers page content */}
       {isLoadingStats && (
-        <div className="fixed inset-x-0 top-0 bottom-[calc(5rem+env(safe-area-inset-bottom))] md:bottom-20 bg-background/70 backdrop-blur-sm z-50 flex items-center justify-center">
+        <div className="fixed inset-x-0 top-0 bottom-[calc(5rem+env(safe-area-inset-bottom))] md:bottom-20 bg-background/70 backdrop-blur-xs z-50 flex items-center justify-center">
           <div className="bg-surface-primary border border-border rounded-lg p-4 shadow-lg">
             <div className="flex items-center gap-3">
-              <div className="w-6 h-6 border-2 border-brand-gradientStart border-t-transparent rounded-full animate-spin" />
+              <div className="w-6 h-6 border-2 border-brand-gradient-start border-t-transparent rounded-full animate-spin" />
               <p className="text-sm font-medium text-text-primary">
                 {t.common.loading || "Loading..."}
               </p>

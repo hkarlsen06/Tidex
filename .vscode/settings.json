@@ -19,6 +19,8 @@
   "files.associations": {
     "*.css": "tailwindcss"
   },
+  "css.validate": false,
+  "css.customData": [".vscode/css-custom-data.json"],
   "peacock.color": "#1857a4",
   "workbench.colorCustomizations": {
     "activityBar.activeBackground": "#1f6fd0",

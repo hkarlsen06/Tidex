@@ -100,13 +100,13 @@ export function FreeTierLimitModal({
           {t.pages.shifts.add.freeTierLimit.upgradeHeadline}
         </DialogTitle>
         {/* Hero section with gradient background */}
-        <div className="relative overflow-hidden bg-gradient-to-br from-brand-gradientStart via-brand-gradientMid to-brand-gradientEnd px-6 pb-8 pt-12 text-center">
+        <div className="relative overflow-hidden bg-linear-to-br from-brand-gradient-start via-brand-gradient-mid to-brand-gradient-end px-6 pb-8 pt-12 text-center">
           {/* Decorative elements */}
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.1),transparent_50%)]" />
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(255,255,255,0.08),transparent_50%)]" />
 
           {/* Icon */}
-          <div className="relative mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-white/20 shadow-lg backdrop-blur-sm">
+          <div className="relative mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-white/20 shadow-lg backdrop-blur-xs">
             <Sparkles className="h-10 w-10 text-white" strokeWidth={2} />
           </div>
 
@@ -124,24 +124,24 @@ export function FreeTierLimitModal({
           {/* Features list */}
           <div className="space-y-3">
             <div className="flex items-start gap-3">
-              <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-brand-gradientMid/10">
-                <Check className="h-4 w-4 text-brand-gradientMid" strokeWidth={3} />
+              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-gradient-mid/10">
+                <Check className="h-4 w-4 text-brand-gradient-mid" strokeWidth={3} />
               </div>
               <p className="text-sm text-text-primary">
                 {t.pages.shifts.add.freeTierLimit.feature1}
               </p>
             </div>
             <div className="flex items-start gap-3">
-              <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-brand-gradientMid/10">
-                <Check className="h-4 w-4 text-brand-gradientMid" strokeWidth={3} />
+              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-gradient-mid/10">
+                <Check className="h-4 w-4 text-brand-gradient-mid" strokeWidth={3} />
               </div>
               <p className="text-sm text-text-primary">
                 {t.pages.shifts.add.freeTierLimit.feature2}
               </p>
             </div>
             <div className="flex items-start gap-3">
-              <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-brand-gradientMid/10">
-                <Check className="h-4 w-4 text-brand-gradientMid" strokeWidth={3} />
+              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-gradient-mid/10">
+                <Check className="h-4 w-4 text-brand-gradient-mid" strokeWidth={3} />
               </div>
               <p className="text-sm text-text-primary">
                 {t.pages.shifts.add.freeTierLimit.feature3}
@@ -153,7 +153,7 @@ export function FreeTierLimitModal({
           <Button
             onClick={handleViewPlans}
             disabled={isDeleting}
-            className="w-full rounded-full bg-gradient-to-r from-brand-gradientStart via-brand-gradientMid to-brand-gradientEnd py-6 text-base font-semibold text-white shadow-lg transition hover:shadow-xl disabled:opacity-50"
+            className="w-full rounded-full bg-linear-to-r from-brand-gradient-start via-brand-gradient-mid to-brand-gradient-end py-6 text-base font-semibold text-white shadow-lg transition hover:shadow-xl disabled:opacity-50"
           >
             {t.pages.shifts.add.freeTierLimit.viewPlansButton}
           </Button>
@@ -182,7 +182,7 @@ export function FreeTierLimitModal({
           ) : (
             <div className="space-y-3 rounded-2xl border border-border-subtle bg-surface-secondary/50 p-4">
               <div className="flex items-start gap-3">
-                <Trash2 className="h-5 w-5 flex-shrink-0 text-text-muted" strokeWidth={2} />
+                <Trash2 className="h-5 w-5 shrink-0 text-text-muted" strokeWidth={2} />
                 <div className="flex-1 min-w-0">
                   <h4 className="text-sm font-semibold text-text-primary">
                     {t.pages.shifts.add.freeTierLimit.deleteTitle}
@@ -207,7 +207,7 @@ export function FreeTierLimitModal({
               ) : (
                 <div className="space-y-3 rounded-xl border border-error/30 bg-error/5 p-3">
                   <div className="flex items-start gap-2">
-                    <AlertTriangle className="h-4 w-4 flex-shrink-0 text-error" />
+                    <AlertTriangle className="h-4 w-4 shrink-0 text-error" />
                     <p className="text-xs font-medium text-error">
                       {t.pages.shifts.add.freeTierLimit.confirmDeleteMessage.replace('{months}', formattedOtherMonths)}
                     </p>

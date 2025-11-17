@@ -51,7 +51,7 @@ export const TotalCard: React.FC<TotalCardProps> = ({
     'total-card',
     'transition-all duration-300',
     onClick
-      ? 'cursor-pointer hover:shadow-app dark:hover:shadow-app-lg hover:bg-surface-secondary focus:outline-none focus:ring-2 focus:ring-brand-highlight focus:ring-offset-2'
+      ? 'cursor-pointer hover:shadow-app dark:hover:shadow-app-lg hover:bg-surface-secondary focus:outline-hidden focus:ring-2 focus:ring-brand-highlight focus:ring-offset-2'
       : '',
   ]
     .filter(Boolean)

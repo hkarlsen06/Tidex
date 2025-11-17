@@ -1,0 +1,29 @@
+{
+  "version": 1.1,
+  "atDirectives": [
+    {
+      "name": "@theme",
+      "description": "Define theme variables for Tailwind CSS v4"
+    },
+    {
+      "name": "@plugin",
+      "description": "Import a Tailwind CSS plugin"
+    },
+    {
+      "name": "@custom-variant",
+      "description": "Define custom variants for Tailwind CSS v4"
+    },
+    {
+      "name": "@utility",
+      "description": "Define custom utilities for Tailwind CSS v4"
+    },
+    {
+      "name": "@source",
+      "description": "Define content sources for Tailwind CSS v4"
+    },
+    {
+      "name": "@config",
+      "description": "Import a configuration file for Tailwind CSS v4"
+    }
+  ]
+}

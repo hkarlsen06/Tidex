@@ -406,7 +406,7 @@ export default function AddShiftForm({ existingShifts, userSettings, presetRules
             <h1 className="whitespace-nowrap text-2xl font-semibold text-text-primary sm:text-3xl">
               {t.pages.shifts.add.heading}
             </h1>
-            <div className="inline-flex items-center gap-1 rounded-full border border-border-subtle bg-surface-secondary/80 p-1 shadow-app-sm dark:shadow-app-inner flex-shrink-0">
+            <div className="inline-flex items-center gap-1 rounded-full border border-border-subtle bg-surface-secondary/80 p-1 shadow-app-sm dark:shadow-app-inner shrink-0">
               <Button
                 type="button"
                 variant="ghost"
@@ -415,7 +415,7 @@ export default function AddShiftForm({ existingShifts, userSettings, presetRules
                 className={cn(
                   "h-9 rounded-full px-4 text-sm transition-all whitespace-nowrap",
                   mode === "single"
-                    ? "bg-brand-gradientMid text-text-inverse shadow-app"
+                    ? "bg-brand-gradient-mid text-text-inverse shadow-app"
                     : "text-text-secondary hover:text-text-primary"
                 )}
               >
@@ -429,7 +429,7 @@ export default function AddShiftForm({ existingShifts, userSettings, presetRules
                 className={cn(
                   "h-9 rounded-full px-4 text-sm transition-all whitespace-nowrap",
                   mode === "recurring"
-                    ? "bg-brand-gradientMid text-text-inverse shadow-app"
+                    ? "bg-brand-gradient-mid text-text-inverse shadow-app"
                     : "text-text-secondary hover:text-text-primary"
                 )}
               >
@@ -490,7 +490,7 @@ export default function AddShiftForm({ existingShifts, userSettings, presetRules
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <label htmlFor={startTimeId} className="block min-w-0 space-y-3 rounded-2xl border border-border-subtle bg-surface-secondary/70 p-4 shadow-app-inner transition hover:border-border">
-                <span className="text-xs font-semibold uppercase tracking-[0.1em] text-text-muted">
+                <span className="text-xs font-semibold uppercase tracking-widest text-text-muted">
                   {t.pages.shifts.add.form.start}
                 </span>
                 <div className="flex min-w-0 items-center gap-2">
@@ -505,7 +505,7 @@ export default function AddShiftForm({ existingShifts, userSettings, presetRules
                   <button
                     type="button"
                     onClick={() => openNativePicker(startInputRef.current)}
-                    className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border border-border-subtle bg-surface-secondary/70 text-text-muted transition hover:border-border hover:text-text-primary focus:outline-none focus-visible:outline-none"
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border-subtle bg-surface-secondary/70 text-text-muted transition hover:border-border hover:text-text-primary focus:outline-hidden focus-visible:outline-hidden"
                     aria-label={t.pages.shifts.add.form.selectStartTime}
                   >
                     <Clock className="h-5 w-5" strokeWidth={1.5} />
@@ -513,7 +513,7 @@ export default function AddShiftForm({ existingShifts, userSettings, presetRules
                 </div>
               </label>
               <label htmlFor={endTimeId} className="block min-w-0 space-y-3 rounded-2xl border border-border-subtle bg-surface-secondary/70 p-4 shadow-app-inner transition hover:border-border">
-                <span className="text-xs font-semibold uppercase tracking-[0.1em] text-text-muted">
+                <span className="text-xs font-semibold uppercase tracking-widest text-text-muted">
                   {t.pages.shifts.add.form.end}
                 </span>
                 <div className="flex min-w-0 items-center gap-2">
@@ -527,7 +527,7 @@ export default function AddShiftForm({ existingShifts, userSettings, presetRules
                   <button
                     type="button"
                     onClick={() => openNativePicker(endInputRef.current)}
-                    className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border border-border-subtle bg-surface-secondary/70 text-text-muted transition hover:border-border hover:text-text-primary focus:outline-none focus-visible:outline-none"
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border-subtle bg-surface-secondary/70 text-text-muted transition hover:border-border hover:text-text-primary focus:outline-hidden focus-visible:outline-hidden"
                     aria-label={t.pages.shifts.add.form.selectEndTime}
                   >
                     <Clock className="h-5 w-5" strokeWidth={1.5} />
@@ -554,7 +554,7 @@ export default function AddShiftForm({ existingShifts, userSettings, presetRules
                 onClick={onSubmit}
                 disabled={!canSubmit}
                 loading={pending}
-                className="w-full max-w-md rounded-2xl bg-brand-gradientMid px-8 py-5 text-lg font-semibold text-text-inverse shadow-app transition hover:bg-brand-gradientEnd disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full max-w-md rounded-2xl bg-brand-gradient-mid px-8 py-5 text-lg font-semibold text-text-inverse shadow-app transition hover:bg-brand-gradient-end disabled:opacity-50 disabled:cursor-not-allowed"
                 title={isOffline ? "Cannot save shifts while offline" : undefined}
               >
                 {isOffline

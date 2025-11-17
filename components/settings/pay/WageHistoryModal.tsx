@@ -211,7 +211,7 @@ export function WageHistoryModal({
         <DialogContent className="sm:rounded-3xl sm:max-w-[520px] max-h-[90vh] overflow-y-auto overflow-x-hidden">
           <DialogHeader className="pb-2 text-left">
             <DialogTitle className="flex items-center gap-2 text-left">
-              <Calendar className="h-5 w-5 text-text-muted flex-shrink-0" />
+              <Calendar className="h-5 w-5 text-text-muted shrink-0" />
               <span className="flex-1 min-w-0">{t.pages.settings.pay.currentWageCard.title}</span>
             </DialogTitle>
             <DialogDescription className="text-left">
@@ -295,7 +295,7 @@ export function WageHistoryModal({
       <DialogContent className="sm:rounded-3xl sm:max-w-[520px] max-h-[90vh] overflow-y-auto overflow-x-hidden">
         <DialogHeader className="pb-2 text-left">
           <DialogTitle className="flex items-center gap-2 text-left">
-            <Calendar className="h-5 w-5 text-text-muted flex-shrink-0" />
+            <Calendar className="h-5 w-5 text-text-muted shrink-0" />
             <span className="flex-1 min-w-0">{title}</span>
           </DialogTitle>
         </DialogHeader>
@@ -421,7 +421,7 @@ export function WageHistoryModal({
         <DialogContent className="sm:rounded-3xl sm:max-w-[425px]">
           <DialogHeader className="text-left">
             <DialogTitle className="flex items-center gap-2 text-destructive text-left">
-              <AlertTriangle className="h-5 w-5 flex-shrink-0" />
+              <AlertTriangle className="h-5 w-5 shrink-0" />
               <span className="flex-1 min-w-0">{t.pages.settings.pay.wageHistory.modal.deleteTitle}</span>
             </DialogTitle>
             <DialogDescription className="text-left">

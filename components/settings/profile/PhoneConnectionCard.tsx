@@ -134,7 +134,7 @@ export function PhoneConnectionCard({
       <Card className="p-6">
         <div className="space-y-4">
           <div className="flex items-center gap-4">
-            <div className="p-3 rounded-lg bg-surface-secondary flex-shrink-0">
+            <div className="p-3 rounded-lg bg-surface-secondary shrink-0">
               <Phone className="h-6 w-6 text-text-primary" />
             </div>
             <div className="flex-1">
@@ -240,7 +240,7 @@ export function PhoneConnectionCard({
     <Card className="p-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
         <div className="flex items-center gap-4 flex-1 min-w-0">
-          <div className="p-3 rounded-lg bg-surface-secondary flex-shrink-0">
+          <div className="p-3 rounded-lg bg-surface-secondary shrink-0">
             <Phone className="h-6 w-6 text-text-primary" />
           </div>
           <div className="flex-1 min-w-0">
@@ -253,7 +253,7 @@ export function PhoneConnectionCard({
             {error && <p className="text-sm text-destructive mt-2">{error}</p>}
           </div>
         </div>
-        <div className="w-full sm:w-auto sm:flex-shrink-0 flex flex-col gap-2 sm:items-end">
+        <div className="w-full sm:w-auto sm:shrink-0 flex flex-col gap-2 sm:items-end">
           <Button
             variant={hasPhoneConnected ? 'outline' : 'default'}
             onClick={

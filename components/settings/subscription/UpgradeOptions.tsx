@@ -69,7 +69,7 @@ function PlanCard({ name, price, description, features, isPopular, onUpgrade, is
         <ul className="space-y-3">
           {features.map((feature, index) => (
             <li key={index} className="flex gap-3 items-start">
-              <Check className="h-5 w-5 text-green-600 dark:text-green-500 flex-shrink-0 mt-0.5" />
+              <Check className="h-5 w-5 text-green-600 dark:text-green-500 shrink-0 mt-0.5" />
               <span className="text-sm text-text-secondary">{feature}</span>
             </li>
           ))}

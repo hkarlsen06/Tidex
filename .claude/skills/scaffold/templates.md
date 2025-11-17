@@ -375,7 +375,7 @@ Always use these instead of hardcoded colors:
 - `hover:bg-accent` - Hover states
 
 **Brand:**
-- `bg-brand-gradientStart` to `bg-brand-gradientEnd` - Brand gradients
+- `bg-brand-gradient-start` to `bg-brand-gradient-end` - Brand gradients
 
 ---
 
