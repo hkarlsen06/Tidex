@@ -122,30 +122,6 @@ export async function updatePreferencesSettings(data: {
   return { success: true };
 }
 
-export async function restartOnboarding() {
-  const { user } = await verifySession();
-  const supabase = await createSupabaseServerClient();
-
-  const existingMetadata = user.user_metadata ?? {};
-
-  const { error } = await supabase.auth.updateUser({
-    data: {
-      ...existingMetadata,
-      finishedOnboarding: false,
-    },
-  });
-
-  if (error) {
-    logger.error('Failed to reset onboarding flag:', error);
-    throw error;
-  }
-
-  revalidatePath('/');
-  revalidatePath('/settings/profile');
-
-  return { success: true };
-}
-
 export async function connectGoogleAccount(redirectUrl: string) {
   await verifySession();
   const supabase = await createSupabaseServerClient();

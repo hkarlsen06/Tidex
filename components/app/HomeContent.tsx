@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect, useCallback, useTransition } from "react";
+import { useState, useMemo, useEffect, useCallback, useTransition, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { TotalCard } from "@/components/app/TotalCard";
 import { NextPayrollCard } from "@/components/app/NextPayrollCard";
@@ -115,8 +115,23 @@ export function HomeContent({ shifts: initialShifts, settings }: HomeContentProp
   const selectedMonthIsCurrent = isCurrentMonth(month);
 
   // Track which months have been loaded or are currently loading
-  const [loadedMonths, setLoadedMonths] = useState<Set<string>>(new Set());
-  const [loadingMonths, setLoadingMonths] = useState<Set<string>>(new Set());
+  // Using refs to avoid recreating fetchMonth callback on every state change
+  const loadedMonthsRef = useRef<Set<string>>(new Set());
+  const loadingMonthsRef = useRef<Set<string>>(new Set());
+
+  // Initialize loaded months synchronously on first render
+  // This must happen before any effects run
+  if (loadedMonthsRef.current.size === 0) {
+    // Always mark current month as loaded (SSR data covers it)
+    const now = new Date();
+    const currentKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    loadedMonthsRef.current.add(currentKey);
+    // Also mark any months that have shifts from SSR
+    for (const shift of initialShifts) {
+      const yearMonth = shift.shift_date.substring(0, 7);
+      loadedMonthsRef.current.add(yearMonth);
+    }
+  }
 
   // Combine initial shifts with any dynamically loaded shifts, filtering out deleted ones
   const shifts = useMemo(
@@ -139,12 +154,12 @@ export function HomeContent({ shifts: initialShifts, settings }: HomeContentProp
     const key = getMonthKey(year, month);
 
     // Skip if already loaded or currently loading
-    if (loadedMonths.has(key) || loadingMonths.has(key)) {
+    if (loadedMonthsRef.current.has(key) || loadingMonthsRef.current.has(key)) {
       return;
     }
 
     // Mark as loading
-    setLoadingMonths(prev => new Set(prev).add(key));
+    loadingMonthsRef.current.add(key);
 
     try {
       const response = await fetch(`/api/shifts?year=${year}&month=${month}`);
@@ -159,30 +174,15 @@ export function HomeContent({ shifts: initialShifts, settings }: HomeContentProp
         });
 
         // Mark as successfully loaded
-        setLoadedMonths(prev => new Set(prev).add(key));
+        loadedMonthsRef.current.add(key);
       }
     } catch (err) {
       console.error(`Failed to fetch month ${key}:`, err);
     } finally {
       // Remove from loading set
-      setLoadingMonths(prev => {
-        const next = new Set(prev);
-        next.delete(key);
-        return next;
-      });
+      loadingMonthsRef.current.delete(key);
     }
-  }, [getMonthKey, loadedMonths, loadingMonths, initialShifts]);
-
-  // Initialize loaded months from SSR data on mount
-  useEffect(() => {
-    const loaded = new Set<string>();
-    for (const shift of initialShifts) {
-      const [year, month] = shift.shift_date.split('-');
-      const key = `${year}-${month}`;
-      loaded.add(key);
-    }
-    setLoadedMonths(loaded);
-  }, [initialShifts]);
+  }, [getMonthKey, initialShifts]);
 
   // Proactive prefetch: Load adjacent months (prev, current, next) whenever month changes
   useEffect(() => {
