@@ -29,6 +29,7 @@ export function translateError(message: string): string {
     "OTP expired": "Koden har utløpt",
     "Token expired": "Koden har utløpt",
     "Phone number already in use": "Telefonnummeret er allerede i bruk",
+    "A user with this phone number has already been registered": "Dette telefonnummeret er allerede registrert på en annen konto",
     "Unable to send SMS": "Kunne ikke sende SMS",
     "SMS rate limit exceeded": "For mange SMS-forespørsler. Prøv igjen senere.",
     "Signups not allowed for otp": "Du må registrere deg før du kan logge inn",

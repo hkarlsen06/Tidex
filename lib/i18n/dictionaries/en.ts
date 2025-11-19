@@ -552,6 +552,8 @@ export const en: Dictionary = {
           sending: 'Sending...',
           verifying: 'Verifying...',
           processing: 'Processing...',
+          sendCode: 'Send code',
+          verify: 'Verify code',
           disconnect: 'Disconnect',
           connect: 'Connect',
           connectedAs: 'Connected as {phone}',
