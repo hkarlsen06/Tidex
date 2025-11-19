@@ -85,6 +85,7 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
 
     const errors: FieldErrors = {};
 
+    // Validate all inputs before triggering captcha
     if (!fullName) {
       errors.fullName = t.pages.auth.signup.errors.fillFullName;
     }
@@ -98,49 +99,61 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
       return;
     }
 
-    // If no captcha token yet, trigger captcha execution
-    if (!captchaToken) {
-      if (Object.keys(errors).length === 0) {
-        setIsCaptchaValidating(true);
-        turnstileRef.current?.execute();
-      } else {
-        setFieldErrors(errors);
-      }
-      return;
-    }
-
     const inputType = detectInputType(emailOrPhone);
 
     if (emailOrPhone && inputType === "unknown") {
       errors.emailOrPhone = t.pages.auth.signup.errors.invalidEmailOrPhone;
     }
 
+    // Validate based on input type
     if (inputType === "email") {
-      // Email signup requires password
       if (!password) {
         errors.password = t.pages.auth.signup.errors.fillPassword;
       }
-
       if (!confirmPassword) {
         errors.confirmPassword = t.pages.auth.signup.errors.fillConfirmPassword;
       }
-
       if (password && confirmPassword && password !== confirmPassword) {
         errors.confirmPassword = t.pages.auth.signup.errors.passwordMismatch;
       }
-
       if (password && password.length < 6) {
         errors.password = t.pages.auth.signup.errors.passwordTooShort;
       }
-
       if (emailOrPhone && !isValidEmail(emailOrPhone)) {
         errors.emailOrPhone = t.pages.auth.signup.errors.invalidEmail;
       }
-
-      if (Object.keys(errors).length > 0) {
-        setFieldErrors(errors);
-        return;
+    } else if (inputType === "phone") {
+      if (!isValidNorwegianPhone(emailOrPhone)) {
+        errors.emailOrPhone = t.pages.auth.signup.errors.invalidPhone;
       }
+      if (!password) {
+        errors.password = t.pages.auth.signup.errors.fillPassword;
+      }
+      if (!confirmPassword) {
+        errors.confirmPassword = t.pages.auth.signup.errors.fillConfirmPassword;
+      }
+      if (password && confirmPassword && password !== confirmPassword) {
+        errors.confirmPassword = t.pages.auth.signup.errors.passwordMismatch;
+      }
+      if (password && password.length < 6) {
+        errors.password = t.pages.auth.signup.errors.passwordTooShort;
+      }
+    }
+
+    // If there are validation errors, show them and don't trigger captcha
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      return;
+    }
+
+    // If no captcha token yet, trigger captcha execution
+    if (!captchaToken) {
+      setIsCaptchaValidating(true);
+      turnstileRef.current?.execute();
+      return;
+    }
+
+    if (inputType === "email") {
 
       setIsSubmitting(true);
 
@@ -173,39 +186,13 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
         router.replace(`/${locale}/verify-email?email=${encodeURIComponent(emailOrPhone)}`);
       }, 1500);
     } else {
-      // Phone signup with OTP
-      if (!isValidNorwegianPhone(emailOrPhone)) {
-        errors.emailOrPhone = t.pages.auth.signup.errors.invalidPhone;
-      }
-
-      // Password is required for phone signup
-      if (!password) {
-        errors.password = t.pages.auth.signup.errors.fillPassword;
-      }
-
-      if (!confirmPassword) {
-        errors.confirmPassword = t.pages.auth.signup.errors.fillConfirmPassword;
-      }
-
-      if (password && confirmPassword && password !== confirmPassword) {
-        errors.confirmPassword = t.pages.auth.signup.errors.passwordMismatch;
-      }
-
-      if (password && password.length < 6) {
-        errors.password = t.pages.auth.signup.errors.passwordTooShort;
-      }
-
-      if (Object.keys(errors).length > 0) {
-        setFieldErrors(errors);
-        return;
-      }
-
+      // Phone signup with OTP verification
       setIsSubmitting(true);
 
       try {
         const phoneE164 = normalizePhoneToE164(emailOrPhone);
 
-        const { error } = await supabase.auth.signUp({
+        const { error, data } = await supabase.auth.signUp({
           phone: phoneE164,
           password: password,
           options: {
@@ -231,6 +218,7 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
           return;
         }
 
+        // Phone signup requires OTP verification to confirm phone ownership
         setStep("otp");
         setMessage({
           type: "success",

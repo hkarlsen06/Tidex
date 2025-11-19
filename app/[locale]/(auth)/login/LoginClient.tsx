@@ -38,6 +38,7 @@ const GoogleIcon = dynamic(() => import('./GoogleIcon'), {
 });
 
 type MessageState = { type: 'error' | 'success'; text: string } | null;
+// NOTE: 'otp' step preserved for future MFA implementation
 type LoginStep = 'input' | 'otp';
 type FieldErrors = {
   emailOrPhone?: string;
@@ -59,9 +60,11 @@ export default function LoginClient({
   const [emailOrPhone, setEmailOrPhone] = useState('');
   const [password, setPassword] = useState('');
   const [otp, setOtp] = useState('');
+  // NOTE: step state preserved for future MFA implementation
   const [step, setStep] = useState<LoginStep>('input');
   const [, setLoginType] = useState<'email' | 'phone' | null>(null);
-  const [phoneLoginMethod, setPhoneLoginMethod] = useState<'otp' | 'password'>('otp');
+  // NOTE: phoneLoginMethod preserved for future MFA implementation
+  const [, setPhoneLoginMethod] = useState<'otp' | 'password'>('password');
   const [message, setMessage] = useState<MessageState>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -136,27 +139,10 @@ export default function LoginClient({
 
     const errors: FieldErrors = {};
 
+    // Validate all inputs before triggering captcha
     if (!emailOrPhone) {
       errors.emailOrPhone = t.pages.auth.login.errors.fillEmailOrPhone;
     }
-
-    // If no captcha token yet, trigger captcha execution
-    if (!captchaToken) {
-      if (Object.keys(errors).length === 0) {
-        pendingActionRef.current = 'login';
-        setIsCaptchaValidating(true);
-        turnstileRef.current?.reset();
-        turnstileRef.current?.execute();
-      } else {
-        setFieldErrors(errors);
-      }
-      return;
-    }
-
-    // Reset pending action and captcha token since we're using it now
-    pendingActionRef.current = null;
-    const usedCaptchaToken = captchaToken;
-    setCaptchaToken(null);
 
     const inputType = detectInputType(emailOrPhone);
 
@@ -165,19 +151,42 @@ export default function LoginClient({
     }
 
     if (inputType === 'email') {
-      // Email login requires password
       if (!password) {
         errors.password = t.pages.auth.login.errors.fillPassword;
       }
-
       if (emailOrPhone && !isValidEmail(emailOrPhone)) {
         errors.emailOrPhone = t.pages.auth.login.errors.invalidEmail;
       }
-
-      if (Object.keys(errors).length > 0) {
-        setFieldErrors(errors);
-        return;
+    } else if (inputType === 'phone') {
+      if (!isValidNorwegianPhone(emailOrPhone)) {
+        errors.emailOrPhone = t.pages.auth.login.errors.invalidPhone;
       }
+      if (!password) {
+        errors.password = t.pages.auth.login.errors.fillPassword;
+      }
+    }
+
+    // If there are validation errors, show them and don't trigger captcha
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      return;
+    }
+
+    // If no captcha token yet, trigger captcha execution
+    if (!captchaToken) {
+      pendingActionRef.current = 'login';
+      setIsCaptchaValidating(true);
+      turnstileRef.current?.reset();
+      turnstileRef.current?.execute();
+      return;
+    }
+
+    // Reset pending action and captcha token since we're using it now
+    pendingActionRef.current = null;
+    const usedCaptchaToken = captchaToken;
+    setCaptchaToken(null);
+
+    if (inputType === 'email') {
 
       setIsSubmitting(true);
       setMessage(null);
@@ -201,109 +210,96 @@ export default function LoginClient({
       // Use full page navigation to ensure cookies are properly set
       window.location.href = destination;
     } else {
-      // Phone login
-      if (!isValidNorwegianPhone(emailOrPhone)) {
-        errors.emailOrPhone = t.pages.auth.login.errors.invalidPhone;
-      }
+      // Phone login with password
+      setPhoneLoginMethod('password');
 
-      // Determine if user wants password login (has entered a password)
-      const usePasswordLogin = password.trim().length > 0;
+      setIsSubmitting(true);
+      setMessage(null);
 
-      if (Object.keys(errors).length > 0) {
-        setFieldErrors(errors);
-        return;
-      }
+      try {
+        const phoneE164 = normalizePhoneToE164(emailOrPhone);
+        const { error } = await supabase.auth.signInWithPassword({
+          phone: phoneE164,
+          password,
+          options: {
+            captchaToken: usedCaptchaToken,
+          },
+        });
 
-      if (usePasswordLogin) {
-        // Phone login with password
-        setPhoneLoginMethod('password'); // Update state for UI consistency
+        setIsSubmitting(false);
 
-        setIsSubmitting(true);
-        setMessage(null);
-
-        try {
-          const phoneE164 = normalizePhoneToE164(emailOrPhone);
-          const { error } = await supabase.auth.signInWithPassword({
-            phone: phoneE164,
-            password,
-            options: {
-              captchaToken: usedCaptchaToken,
-            },
-          });
-
-          setIsSubmitting(false);
-
-          if (error) {
-            setMessage({ type: 'error', text: translateError(error.message) });
-            return;
-          }
-
-          const destination = getRedirectPath();
-          // Use full page navigation to ensure cookies are properly set
-          window.location.href = destination;
-        } catch (err) {
-          setIsSubmitting(false);
-          setMessage({
-            type: 'error',
-            text: err instanceof Error ? err.message : t.pages.auth.login.errors.genericError,
-          });
+        if (error) {
+          setMessage({ type: 'error', text: translateError(error.message) });
+          return;
         }
-      } else {
-        // Phone login with OTP
-        setIsSubmitting(true);
-        setMessage(null);
 
-        try {
-          const phoneE164 = normalizePhoneToE164(emailOrPhone);
-
-          // First, check if the phone number exists in the system
-          // We do this by attempting to send OTP with shouldCreateUser: false
-          const { error } = await supabase.auth.signInWithOtp({
-            phone: phoneE164,
-            options: {
-              shouldCreateUser: false, // Don't create user if doesn't exist
-              captchaToken: usedCaptchaToken,
-            },
-          });
-
-          setIsSubmitting(false);
-
-          if (error) {
-            // Check if error is because user doesn't exist
-            if (
-              error.message.includes('User not found') ||
-              error.message.includes('not found') ||
-              error.message.includes('No user') ||
-              error.message.includes('Signups not allowed')
-            ) {
-              setMessage({
-                type: 'error',
-                text: t.pages.auth.login.mustRegister,
-              });
-              setShowSignupPrompt(true);
-            } else {
-              setMessage({
-                type: 'error',
-                text: translateError(error.message),
-              });
-            }
-            return;
-          }
-
-          setLoginType('phone');
-          setStep('otp');
-          setMessage({
-            type: 'success',
-            text: t.pages.auth.login.success.smsSent,
-          });
-        } catch (err) {
-          setIsSubmitting(false);
-          setMessage({
-            type: 'error',
-            text: err instanceof Error ? err.message : t.pages.auth.login.errors.genericError,
-          });
-        }
+        const destination = getRedirectPath();
+        // Use full page navigation to ensure cookies are properly set
+        window.location.href = destination;
+      } catch (err) {
+        setIsSubmitting(false);
+        setMessage({
+          type: 'error',
+          text: err instanceof Error ? err.message : t.pages.auth.login.errors.genericError,
+        });
       }
+
+      /* NOTE: OTP login path preserved for future MFA implementation
+      // Phone login with OTP
+      setIsSubmitting(true);
+      setMessage(null);
+
+      try {
+        const phoneE164 = normalizePhoneToE164(emailOrPhone);
+
+        // First, check if the phone number exists in the system
+        // We do this by attempting to send OTP with shouldCreateUser: false
+        const { error } = await supabase.auth.signInWithOtp({
+          phone: phoneE164,
+          options: {
+            shouldCreateUser: false, // Don't create user if doesn't exist
+            captchaToken: usedCaptchaToken,
+          },
+        });
+
+        setIsSubmitting(false);
+
+        if (error) {
+          // Check if error is because user doesn't exist
+          if (
+            error.message.includes('User not found') ||
+            error.message.includes('not found') ||
+            error.message.includes('No user') ||
+            error.message.includes('Signups not allowed')
+          ) {
+            setMessage({
+              type: 'error',
+              text: t.pages.auth.login.mustRegister,
+            });
+            setShowSignupPrompt(true);
+          } else {
+            setMessage({
+              type: 'error',
+              text: translateError(error.message),
+            });
+          }
+          return;
+        }
+
+        setLoginType('phone');
+        setStep('otp');
+        setMessage({
+          type: 'success',
+          text: t.pages.auth.login.success.smsSent,
+        });
+      } catch (err) {
+        setIsSubmitting(false);
+        setMessage({
+          type: 'error',
+          text: err instanceof Error ? err.message : t.pages.auth.login.errors.genericError,
+        });
+      }
+      */
     }
   };
 
@@ -376,8 +372,6 @@ export default function LoginClient({
     await performGoogleSignIn();
   };
 
-  const detectedInputType = detectInputType(emailOrPhone);
-  const isPhoneInput = detectedInputType === 'phone';
   const buttonDisabled = isSubmitting || isOAuthRedirecting || isCaptchaValidating;
 
   return (
@@ -438,9 +432,6 @@ export default function LoginClient({
               <Field data-invalid={!!fieldErrors.password}>
                 <FieldLabel htmlFor="password">
                   {t.pages.auth.login.passwordLabel}
-                  {isPhoneInput && (
-                    <span className="text-sm text-muted-foreground font-normal ml-2">{t.pages.auth.login.passwordOptional}</span>
-                  )}
                 </FieldLabel>
                 <Input
                   id="password"
@@ -467,32 +458,12 @@ export default function LoginClient({
               size="lg"
               className="w-full"
             >
-              {isPhoneInput && !password.trim() && phoneLoginMethod === 'otp' ? t.pages.auth.login.submitButtonSendCode : t.pages.auth.login.submitButton}
+              {t.pages.auth.login.submitButton}
             </Button>
-
-            {/* Show "Engangskode" button for phone users with password */}
-            {emailOrPhone &&
-              isPhoneInput &&
-              password.trim() && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setPhoneLoginMethod('otp');
-                    setPassword('');
-                    resetMessage();
-                    resetFieldErrors();
-                  }}
-                  className="w-full"
-                >
-                  {t.pages.auth.login.useOtpInstead}
-                </Button>
-              )}
           </form>
         )}
 
-        {/* Step 2: OTP Verification (for phone login) */}
+        {/* NOTE: OTP Verification step preserved for future MFA implementation
         {step === 'otp' && (
           <form className="space-y-6" noValidate onSubmit={handleVerifyOtp}>
             <Field data-invalid={!!fieldErrors.otp} className="items-center">
@@ -551,6 +522,7 @@ export default function LoginClient({
             </Button>
           </form>
         )}
+        */}
 
         {message && (
           <div
