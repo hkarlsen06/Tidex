@@ -551,6 +551,8 @@ export const no = {
           sending: 'Sender...',
           verifying: 'Verifiserer...',
           processing: 'Behandler...',
+          sendCode: 'Send kode',
+          verify: 'Verifiser kode',
           disconnect: 'Koble fra',
           connect: 'Koble til',
           connectedAs: 'Koblet til som {phone}',

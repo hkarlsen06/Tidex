@@ -175,7 +175,7 @@ export function PhoneConnectionCard({
                   disabled={isLoading || !phoneInput}
                   className="flex-1"
                 >
-                  {isLoading ? t.pages.settings.profile.phone.sending : t.pages.auth.login.submitButtonSendCode}
+                  {isLoading ? t.pages.settings.profile.phone.sending : t.pages.settings.profile.phone.sendCode}
                 </Button>
                 <Button
                   variant="outline"
@@ -219,7 +219,7 @@ export function PhoneConnectionCard({
                   disabled={isLoading || otp.length !== 6}
                   className="flex-1"
                 >
-                  {isLoading ? t.pages.settings.profile.phone.verifying : t.pages.auth.login.verifyButton}
+                  {isLoading ? t.pages.settings.profile.phone.verifying : t.pages.settings.profile.phone.verify}
                 </Button>
                 <Button
                   variant="outline"
