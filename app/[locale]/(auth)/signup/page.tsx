@@ -545,20 +545,22 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
       />
 
       {/* Hidden Turnstile widget with execution mode */}
-      <TurnstileCaptcha
-        ref={turnstileRef}
-        execution="execute"
-        onSuccess={(token) => {
-          setCaptchaToken(token);
-          setIsCaptchaValidating(false);
-          resetMessage();
-        }}
-        onError={() => {
-          setCaptchaToken(null);
-          setIsCaptchaValidating(false);
-          setMessage({ type: "error", text: t.pages.auth.signup.errors.captchaFailed });
-        }}
-      />
+      <div className="sr-only">
+        <TurnstileCaptcha
+          ref={turnstileRef}
+          execution="execute"
+          onSuccess={(token) => {
+            setCaptchaToken(token);
+            setIsCaptchaValidating(false);
+            resetMessage();
+          }}
+          onError={() => {
+            setCaptchaToken(null);
+            setIsCaptchaValidating(false);
+            setMessage({ type: "error", text: t.pages.auth.signup.errors.captchaFailed });
+          }}
+        />
+      </div>
     </div>
   );
 }

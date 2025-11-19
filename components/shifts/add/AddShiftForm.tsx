@@ -523,6 +523,11 @@ export default function AddShiftForm({ existingShifts, userSettings, presetRules
                     step={900}
                     value={end}
                     onChange={setEnd}
+                    onEnter={() => {
+                      if (canSubmit) {
+                        onSubmit();
+                      }
+                    }}
                   />
                   <button
                     type="button"

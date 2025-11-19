@@ -11,12 +11,13 @@ type TimeInputProps = {
   onChange: (value: string) => void;
   className?: string;
   onComplete?: () => void; // Called when user finishes entering time
+  onEnter?: () => void; // Called when user presses Enter key
   step?: number;
   disabled?: boolean;
 };
 
 export const TimeInput = React.forwardRef<HTMLInputElement, TimeInputProps>(
-  ({ id, value, onChange, className, onComplete, step: _step = 900, disabled }, ref) => {
+  ({ id, value, onChange, className, onComplete, onEnter, step: _step = 900, disabled }, ref) => {
     const [inputValue, setInputValue] = React.useState(value);
     const internalRef = React.useRef<HTMLInputElement>(null);
     const inputRef = (ref as React.RefObject<HTMLInputElement | null>) || internalRef;
@@ -70,6 +71,13 @@ export const TimeInput = React.forwardRef<HTMLInputElement, TimeInputProps>(
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+      // Handle Enter key - call onEnter callback if provided
+      if (e.key === 'Enter' && onEnter) {
+        e.preventDefault();
+        onEnter();
+        return;
+      }
+
       // Allow: backspace, delete, tab, escape, enter, arrow keys
       if ([
         'Backspace', 'Delete', 'Tab', 'Escape', 'Enter',
