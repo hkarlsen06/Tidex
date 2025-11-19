@@ -128,7 +128,7 @@ export default function MfaVerifyPage({ params }: { params: Promise<{ locale: st
       return;
     }
 
-    if (!challengeId) {
+    if (!challengeId || !selectedFactor) {
       setMessage({ type: "error", text: t.pages.auth.mfaVerify.errors.challengeFailed });
       return;
     }
@@ -137,7 +137,7 @@ export default function MfaVerifyPage({ params }: { params: Promise<{ locale: st
 
     try {
       const { error } = await supabase.auth.mfa.verify({
-        factorId: selectedFactor!.id,
+        factorId: selectedFactor.id,
         challengeId,
         code,
       });
