@@ -86,6 +86,20 @@ export default function LoginClient({
     setFieldErrors({});
   };
 
+  // Check if user needs MFA verification and redirect accordingly
+  const checkMfaAndRedirect = async (destination: string) => {
+    const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+
+    if (aalData && aalData.currentLevel === 'aal1' && aalData.nextLevel === 'aal2') {
+      // User has MFA enrolled but hasn't verified - redirect to MFA verify
+      const mfaUrl = `/${locale}/mfa-verify?next=${encodeURIComponent(destination)}`;
+      window.location.href = mfaUrl;
+    } else {
+      // No MFA required or already verified
+      window.location.href = destination;
+    }
+  };
+
   const performGoogleSignIn = async () => {
     setIsOAuthRedirecting(true);
 
@@ -199,16 +213,16 @@ export default function LoginClient({
         },
       });
 
-      setIsSubmitting(false);
-
       if (error) {
+        setIsSubmitting(false);
         setMessage({ type: 'error', text: translateError(error.message) });
         return;
       }
 
       const destination = getRedirectPath();
-      // Use full page navigation to ensure cookies are properly set
-      window.location.href = destination;
+      // Check MFA and redirect appropriately
+      await checkMfaAndRedirect(destination);
+      setIsSubmitting(false);
     } else {
       // Phone login with password
       setPhoneLoginMethod('password');
@@ -226,16 +240,16 @@ export default function LoginClient({
           },
         });
 
-        setIsSubmitting(false);
-
         if (error) {
+          setIsSubmitting(false);
           setMessage({ type: 'error', text: translateError(error.message) });
           return;
         }
 
         const destination = getRedirectPath();
-        // Use full page navigation to ensure cookies are properly set
-        window.location.href = destination;
+        // Check MFA and redirect appropriately
+        await checkMfaAndRedirect(destination);
+        setIsSubmitting(false);
       } catch (err) {
         setIsSubmitting(false);
         setMessage({

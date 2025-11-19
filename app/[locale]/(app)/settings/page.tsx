@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { MouseEvent } from 'react';
 import { Card } from '@/components/app/Card';
-import { ChevronRight, User, Banknote, Palette, Database, CreditCard, Loader2 } from 'lucide-react';
+import { ChevronRight, User, Banknote, Palette, Database, CreditCard, Shield, Loader2 } from 'lucide-react';
 import { useNavigationFeedback } from '@/components/app/navigation-feedback';
 import { useTranslations } from '@/lib/i18n/client';
 import type { Dictionary } from '@/lib/i18n/dictionaries/no';
@@ -22,6 +22,12 @@ const getSettingsItems = (t: Dictionary) => [
     label: t.pages.settings.menu.pay.label,
     description: t.pages.settings.menu.pay.description,
     icon: Banknote,
+  },
+  {
+    href: '/settings/security',
+    label: t.pages.settings.menu.security.label,
+    description: t.pages.settings.menu.security.description,
+    icon: Shield,
   },
   {
     href: '/settings/subscription',

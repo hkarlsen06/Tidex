@@ -1,13 +1,14 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useState, Suspense, use } from "react";
+import { useState, Suspense, use, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useTranslations } from "@/lib/i18n/client";
 
 import { supabase } from "@/lib/supabase/browser";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/app/Card";
 import { Button } from "@/components/app/Button";
+import { TurnstileCaptcha, type TurnstileCaptchaHandle } from "@/components/app/TurnstileCaptcha";
 
 type MessageState = { type: "error" | "success"; text: string } | null;
 
@@ -19,26 +20,34 @@ function VerifyEmailContent({ params }: { params: Promise<{ locale: string }> })
 
   const [message, setMessage] = useState<MessageState>(null);
   const [isResending, setIsResending] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [isCaptchaValidating, setIsCaptchaValidating] = useState(false);
 
-  const handleResendEmail = async () => {
-    if (!email) {
-      setMessage({ type: "error", text: t.pages.auth.verifyEmail.errors.emailMissing });
-      return;
+  const turnstileRef = useRef<TurnstileCaptchaHandle>(null);
+
+  // When captcha token is received, perform the resend
+  useEffect(() => {
+    if (captchaToken) {
+      performResend(captchaToken);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [captchaToken]);
 
-    setIsResending(true);
-    setMessage(null);
-
+  const performResend = async (token: string) => {
     try {
       const { error } = await supabase.auth.resend({
         type: "signup",
-        email,
+        email: email!,
         options: {
           emailRedirectTo: `${window.location.origin}/auth/callback?next=/onboarding`,
+          captchaToken: token,
         },
       });
 
       setIsResending(false);
+      setIsCaptchaValidating(false);
+      setCaptchaToken(null);
+      turnstileRef.current?.reset();
 
       if (error) {
         setMessage({ type: "error", text: error.message });
@@ -51,11 +60,26 @@ function VerifyEmailContent({ params }: { params: Promise<{ locale: string }> })
       });
     } catch (err) {
       setIsResending(false);
+      setIsCaptchaValidating(false);
+      setCaptchaToken(null);
+      turnstileRef.current?.reset();
       setMessage({
         type: "error",
         text: err instanceof Error ? err.message : t.pages.auth.verifyEmail.errors.genericError,
       });
     }
+  };
+
+  const handleResendEmail = () => {
+    if (!email) {
+      setMessage({ type: "error", text: t.pages.auth.verifyEmail.errors.emailMissing });
+      return;
+    }
+
+    setIsResending(true);
+    setMessage(null);
+    setIsCaptchaValidating(true);
+    turnstileRef.current?.execute();
   };
 
   return (
@@ -96,14 +120,26 @@ function VerifyEmailContent({ params }: { params: Promise<{ locale: string }> })
           <div className="space-y-3">
             <Button
               onClick={handleResendEmail}
-              disabled={isResending || !email}
-              loading={isResending}
+              disabled={isResending || !email || isCaptchaValidating}
+              loading={isResending || isCaptchaValidating}
               variant="outline"
               size="lg"
               className="w-full"
             >
               {t.pages.auth.verifyEmail.resendButton}
             </Button>
+
+            <TurnstileCaptcha
+              ref={turnstileRef}
+              onSuccess={setCaptchaToken}
+              onError={() => {
+                setIsResending(false);
+                setIsCaptchaValidating(false);
+                setMessage({ type: "error", text: t.pages.auth.verifyEmail.errors.captchaFailed });
+              }}
+              execution="execute"
+              className="hidden"
+            />
 
             {message && (
               <div

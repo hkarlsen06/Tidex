@@ -10,6 +10,7 @@ import { SupplementsStep } from "./SupplementsStep";
 import { BreakStep } from "./BreakStep";
 import { TaxPayrollStep } from "./TaxPayrollStep";
 import { PreferencesStep } from "./PreferencesStep";
+import { SecurityStep } from "./SecurityStep";
 import { CompletionStep } from "./CompletionStep";
 import { completeOnboarding } from "../actions";
 import { PRESET_WAGE_RATES } from "@/lib/payroll/calc";
@@ -165,7 +166,7 @@ export function OnboardingForm({ initialSettings }: OnboardingFormProps) {
     return `${customWage} kr/t`;
   };
 
-  const totalSteps = 6;
+  const totalSteps = 7;
 
   return (
     <TooltipProvider>
@@ -245,6 +246,13 @@ export function OnboardingForm({ initialSettings }: OnboardingFormProps) {
         )}
 
         {currentStep === 6 && (
+          <SecurityStep
+            onNext={() => setCurrentStep(7)}
+            onBack={() => setCurrentStep(5)}
+          />
+        )}
+
+        {currentStep === 7 && (
           <CompletionStep
             wageDisplay={getWageDisplay()}
             customSupplements={customSupplements}

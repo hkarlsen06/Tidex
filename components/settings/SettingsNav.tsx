@@ -11,6 +11,7 @@ import {
   Palette,
   Database,
   CreditCard,
+  Shield,
   ChevronRight,
   Loader2,
 } from "lucide-react";
@@ -32,6 +33,12 @@ const getSettingsItems = (t: Dictionary) => [
     label: t.pages.settings.menu.pay.label,
     description: t.pages.settings.menu.pay.description,
     icon: Banknote,
+  },
+  {
+    href: "/settings/security",
+    label: t.pages.settings.menu.security.label,
+    description: t.pages.settings.menu.security.description,
+    icon: Shield,
   },
   {
     href: "/settings/subscription",
