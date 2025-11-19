@@ -360,13 +360,20 @@ export function HomeContent({ shifts: initialShifts, settings }: HomeContentProp
     }
   }, [shifts, shiftsByMonth, month, selectedMonthIsCurrent]);
 
-  const relativeTimeText = useMemo(() => {
-    if (!displayShift) return null;
+  // Calculate relative time on client only to avoid hydration mismatch
+  // (server and client would have different "now" timestamps)
+  const [relativeTimeText, setRelativeTimeText] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!displayShift) {
+      setRelativeTimeText(null);
+      return;
+    }
 
     if (selectedMonthIsCurrent) {
-      return getRelativeTime(displayShift.shift_date, displayShift.start_time, t);
+      setRelativeTimeText(getRelativeTime(displayShift.shift_date, displayShift.start_time, t));
     } else {
-      return "Beste vakt";
+      setRelativeTimeText(t.common.bestShift ?? "Beste vakt");
     }
   }, [displayShift, selectedMonthIsCurrent, t]);
 
