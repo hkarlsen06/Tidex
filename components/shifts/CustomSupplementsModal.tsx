@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition, useEffect } from 'react';
+import { useState, useTransition, useEffect, useRef } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -14,7 +14,6 @@ import { CustomSupplementModeDialog } from './CustomSupplementModeDialog';
 import type { CustomSupplementsEditorData, CustomSupplementMode, CustomSupplementsData } from '@/lib/custom-supplements/types';
 import { useTranslations } from '@/lib/i18n/client';
 import { updateCustomSupplements } from '@/app/[locale]/(app)/shifts/_actions/updateCustomSupplements';
-import { useRouter } from 'next/navigation';
 
 interface CustomSupplementsModalProps {
   open: boolean;
@@ -49,7 +48,7 @@ function toEditorData(data: CustomSupplementsData | null): CustomSupplementsEdit
 function fromEditorData(data: CustomSupplementsEditorData): CustomSupplementsData {
   return {
     mode: data.mode,
-    rules: data.rules.map(({ id, mode, ...rule }) => rule as any),
+    rules: data.rules.map(({ id: _id, mode: _mode, ...rule }) => rule as any),
   };
 }
 
@@ -64,7 +63,7 @@ export function CustomSupplementsModal({
   onSaveSuccess,
 }: CustomSupplementsModalProps) {
   const { t } = useTranslations();
-  const router = useRouter();
+  const prevOpenRef = useRef(open);
   const [modeDialogOpen, setModeDialogOpen] = useState(false);
   const [editorOpen, setEditorOpen] = useState(false);
   const [customSupplements, setCustomSupplements] = useState<CustomSupplementsEditorData>(
@@ -73,56 +72,47 @@ export function CustomSupplementsModal({
   const [saving, startTransition] = useTransition();
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  // Sync external open prop with internal flow
+  // Sync external open prop with internal flow state
+  // Only update when transitioning from closed to open (avoids setState cascades)
   useEffect(() => {
-    if (open) {
-      if (existingSupplements) {
-        // Editing existing - go straight to editor
-        setCustomSupplements(toEditorData(existingSupplements));
-        setEditorOpen(true);
+    const openedNow = open && !prevOpenRef.current;
+    const closedNow = !open && prevOpenRef.current;
+    prevOpenRef.current = open;
+
+    if (closedNow) {
+      // Reset state on close using queueMicrotask to batch updates
+      queueMicrotask(() => {
         setModeDialogOpen(false);
-      } else if (hasPredefinedSupplements) {
-        // New + has predefined - show mode dialog
-        setModeDialogOpen(true);
         setEditorOpen(false);
-      } else {
-        // New + no predefined - go straight to editor with merge mode
-        setCustomSupplements({ mode: 'merge', rules: [] });
-        setEditorOpen(true);
-        setModeDialogOpen(false);
-      }
-    } else {
-      // Reset state when closing
-      setModeDialogOpen(false);
-      setEditorOpen(false);
-      setSaveError(null);
+        setSaveError(null);
+      });
+      return;
+    }
+
+    if (openedNow) {
+      // Batch state updates when opening
+      queueMicrotask(() => {
+        if (existingSupplements) {
+          // Editing existing - show editor directly
+          setCustomSupplements(toEditorData(existingSupplements));
+          setModeDialogOpen(false);
+          setEditorOpen(true);
+        } else if (hasPredefinedSupplements) {
+          // New + has predefined - show mode selection first
+          setModeDialogOpen(true);
+          setEditorOpen(false);
+        } else {
+          // New + no predefined - show editor directly with merge mode
+          setCustomSupplements({ mode: 'merge', rules: [] });
+          setModeDialogOpen(false);
+          setEditorOpen(true);
+        }
+      });
     }
   }, [open, existingSupplements, hasPredefinedSupplements]);
 
-  // When modal opens, determine flow
+  // When modal opens/closes, notify parent
   const handleOpenChange = (isOpen: boolean) => {
-    if (isOpen) {
-      if (existingSupplements) {
-        // Editing existing - go straight to editor
-        setCustomSupplements(toEditorData(existingSupplements));
-        setEditorOpen(true);
-        setModeDialogOpen(false);
-      } else if (hasPredefinedSupplements) {
-        // New + has predefined - show mode dialog
-        setModeDialogOpen(true);
-        setEditorOpen(false);
-      } else {
-        // New + no predefined - go straight to editor with merge mode
-        setCustomSupplements({ mode: 'merge', rules: [] });
-        setEditorOpen(true);
-        setModeDialogOpen(false);
-      }
-    } else {
-      // Reset state when closing
-      setModeDialogOpen(false);
-      setEditorOpen(false);
-      setSaveError(null);
-    }
     onOpenChange(isOpen);
   };
 
