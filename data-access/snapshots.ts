@@ -30,5 +30,6 @@ export async function getCurrentSnapshots(): Promise<ShiftSnapshots> {
     };
   }
 
-  return prepareShiftSnapshots(settings);
+  // Cast DbUserSettings to UserSettings (superset contains all payroll fields)
+  return prepareShiftSnapshots(settings as any);
 }

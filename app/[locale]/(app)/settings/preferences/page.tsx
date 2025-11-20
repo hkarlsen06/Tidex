@@ -44,8 +44,8 @@ export default async function PreferencesPage({
 
         <PreferencesForm
           initialData={{
-            directTimeInput: settings.direct_time_input ?? false,
-            fullMinuteRange: settings.full_minute_range ?? false,
+            directTimeInput: settings?.direct_time_input ?? false,
+            fullMinuteRange: settings?.full_minute_range ?? false,
           }}
           t={t}
         />

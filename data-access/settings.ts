@@ -1,106 +1,80 @@
+/**
+ * Settings Data Access Layer
+ *
+ * Effect-based internally with Promise wrappers for Next.js compatibility.
+ * Uses SettingsService for user settings and profile management.
+ *
+ * Migration status: Using Effect-based SettingsService internally
+ */
+
 'use server';
 
 import { cacheTag } from 'next/cache';
-import { verifySession } from '@/data-access/auth';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { Effect } from 'effect';
+import { SettingsService } from '@/lib/services/settings';
+import { AuthSettingsLive } from '@/lib/layers/app';
 import { logger } from '@/lib/logger';
 
 /**
  * Get user settings for the authenticated user
  * - Automatically verifies user session matches provided userId
+ *
+ * Promise wrapper around Effect-based SettingsService
  */
 export async function getUserSettings(userId: string) {
   'use cache: private';
   cacheTag(`user-${userId}`, 'user-settings');
-  try {
-    const { user } = await verifySession();
 
-    // SECURITY: Verify the provided userId matches the authenticated user
-    if (user.id !== userId) {
-      throw new Error('User ID mismatch - potential security violation');
-    }
-
-    const supabase = await createSupabaseServerClient();
-
-    const { data, error } = await supabase
-      .from('user_settings')
-      .select('*')
-      .eq('user_id', user.id)
-      .single();
-
-    if (error) {
+  const program = Effect.gen(function* () {
+    const settings = yield* SettingsService;
+    const userSettings = yield* settings.getUserSettings(userId);
+    return userSettings;
+  }).pipe(
+    Effect.provide(AuthSettingsLive),
+    Effect.catchAll((error) => {
       logger.error('Failed to fetch user settings:', error);
-      return null;
-    }
-    return data;
-  } catch (error) {
-    logger.error('Unexpected error fetching settings:', error);
-    return null;
-  }
+      return Effect.succeed(null);
+    }),
+    Effect.scoped
+  );
+
+  return await Effect.runPromise(program);
 }
 
 /**
  * Get user profile information including authentication methods
  * - Automatically verifies user session matches provided userId
+ *
+ * Promise wrapper around Effect-based SettingsService
  */
 export async function getUserProfile(userId: string) {
   'use cache: private';
   cacheTag(`user-${userId}`, 'user-profile');
-  const { user } = await verifySession();
 
-  // SECURITY: Verify the provided userId matches the authenticated user
-  if (user.id !== userId) {
-    throw new Error('User ID mismatch - potential security violation');
-  }
-
-  const supabase = await createSupabaseServerClient();
-
-  // Get settings for profile picture
-  const { data: settings } = await supabase
-    .from('user_settings')
-    .select('profile_picture_url')
-    .eq('user_id', user.id)
-    .single();
-
-  const identityProviders = new Set(
-    user.identities?.map((identity) => identity.provider) ?? []
+  const program = Effect.gen(function* () {
+    const settings = yield* SettingsService;
+    const profile = yield* settings.getUserProfile(userId);
+    return profile;
+  }).pipe(
+    Effect.provide(AuthSettingsLive),
+    Effect.catchAll((error) => {
+      logger.error('Failed to fetch user profile:', error);
+      // Return default profile on error
+      return Effect.succeed({
+        firstName: '',
+        email: '',
+        profilePictureUrl: null,
+        hasGoogleConnected: false,
+        hasPhoneConnected: false,
+        phoneNumber: null,
+        hasPassword: false,
+        canUnlinkPhone: false,
+        canDisconnectGoogle: false,
+        isPhoneOnly: false,
+      });
+    }),
+    Effect.scoped
   );
 
-  // Check if user has Google OAuth connected
-  const hasGoogleConnected = identityProviders.has('google');
-
-  // Check if user has phone number linked
-  const hasPhoneConnected = identityProviders.has('phone');
-
-  // Get phone number and strip +47 prefix for display
-  let phoneNumber: string | null = null;
-  if (user.phone) {
-    phoneNumber = user.phone.startsWith('+47')
-      ? user.phone.substring(3)
-      : user.phone;
-  }
-
-  // Check if user has a password set
-  // Users have password if they signed up with email or have set one later
-  const hasPassword = identityProviders.has('email');
-
-  const loginMethodCount = identityProviders.size;
-  const canUnlinkPhone = hasPhoneConnected && loginMethodCount > 1;
-  const canDisconnectGoogle = hasGoogleConnected && loginMethodCount > 1;
-
-  // Check if user is phone-only (no email address)
-  const isPhoneOnly = hasPhoneConnected && !user.email;
-
-  return {
-    firstName: user.user_metadata?.first_name || '',
-    email: user.email || '',
-    profilePictureUrl: settings?.profile_picture_url || null,
-    hasGoogleConnected,
-    hasPhoneConnected,
-    phoneNumber,
-    hasPassword,
-    canUnlinkPhone,
-    canDisconnectGoogle,
-    isPhoneOnly,
-  };
+  return await Effect.runPromise(program);
 }

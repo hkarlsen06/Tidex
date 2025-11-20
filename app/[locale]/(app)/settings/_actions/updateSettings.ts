@@ -153,7 +153,7 @@ export async function disconnectGoogleAccount() {
 
   // Find Google identity
   const googleIdentity = user.identities?.find(
-    (identity) => identity.provider === 'google'
+    (identity: { provider: string }) => identity.provider === 'google'
   );
 
   if (!googleIdentity) {
@@ -271,7 +271,7 @@ export async function unlinkPhoneNumber() {
 
   // Find phone identity
   const phoneIdentity = user.identities?.find(
-    (identity) => identity.provider === 'phone'
+    (identity: { provider: string }) => identity.provider === 'phone'
   );
 
   if (!phoneIdentity) {

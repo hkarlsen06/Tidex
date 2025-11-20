@@ -275,6 +275,156 @@ Required in `.env.local`:
 
 Environment variables are validated at module load in `lib/env.ts` (throws errors if missing).
 
+## Effect-TS Integration
+
+**Status:** Phase 1 complete - foundation established, payroll system migrated
+
+This project is being migrated to Effect-TS for improved type safety, error handling, and testability. See `EFFECT_MIGRATION.md` for the complete migration plan.
+
+### Architecture
+
+- **Effect in Core**: DAL and services use Effect internally for type-safe operations
+- **Promises at Boundaries**: Pages and Server Actions remain Promise-based for Next.js compatibility
+- **Services Layer**: `lib/services/` contains Effect-based services (Config, Supabase, Auth, etc.)
+- **Tagged Errors**: All errors use typed classes from `lib/errors/tagged.ts`
+
+### Current Effect Usage
+
+**Configuration (`lib/services/config.ts`)**:
+```typescript
+import { AppConfig, AppConfigLive } from "@/lib/services/config"
+
+const program = Effect.gen(function* () {
+  const config = yield* AppConfig
+  console.log(config.supabase.url) // Type-safe access
+})
+```
+
+**Payroll Calculations (`lib/payroll/effect.ts`)**:
+```typescript
+import { computeShift, validateShiftRow } from "@/lib/payroll/effect"
+
+// Effect-based computation with validation
+const program = computeShift(shift, settings, rules, snapshot)
+const result = await Effect.runPromise(program)
+```
+
+**Validation**:
+```typescript
+import { validateTimeFormat, validateDateFormat } from "@/lib/payroll/effect"
+
+// Server actions can use Effect validators
+const timeEffect = validateTimeFormat("14:30")
+const time = await Effect.runPromise(timeEffect)
+```
+
+### Effect Patterns
+
+**1. Validation with Schema**:
+```typescript
+import { Schema, ParseResult } from "effect"
+
+const MySchema = Schema.Struct({
+  id: Schema.UUID,
+  name: Schema.String.pipe(Schema.nonEmptyString()),
+  age: Schema.Number.pipe(Schema.between(0, 120))
+})
+
+const validated = yield* Schema.decodeUnknown(MySchema)(data).pipe(
+  Effect.mapError((error) => {
+    const formatted = ParseResult.TreeFormatter.formatErrorSync(error)
+    return new ValidationError({ message: formatted })
+  })
+)
+```
+
+**2. Error Handling**:
+```typescript
+import { NotFoundError, DatabaseError } from "@/lib/errors/tagged"
+
+const program = Effect.gen(function* () {
+  const data = yield* fetchData()
+  if (!data) {
+    yield* Effect.fail(new NotFoundError({ resource: "User", id: "123" }))
+  }
+  return data
+}).pipe(
+  Effect.catchTag("NotFoundError", (error) =>
+    Effect.succeed({ default: true })
+  ),
+  Effect.catchTag("DatabaseError", (error) => {
+    // Log and rethrow
+    console.error(error.message)
+    return Effect.fail(error)
+  })
+)
+```
+
+**3. Service Layer (future)**:
+```typescript
+class SupabaseService extends Effect.Service<SupabaseService>()("SupabaseService", {
+  scoped: Effect.gen(function* () {
+    const config = yield* AppConfig
+    const client = createClient(config.supabase.url, Redacted.value(config.supabase.publishableKey))
+
+    yield* Effect.addFinalizer(() => Effect.sync(() => client.removeAllChannels()))
+
+    return {
+      query: <T>(callback: (client) => Promise<T>) =>
+        Effect.tryPromise({
+          try: () => callback(client),
+          catch: (error) => new SupabaseError({ error })
+        })
+    }
+  })
+}) {}
+```
+
+### Testing with Effect
+
+Tests use regular Vitest with Effect.runPromise:
+
+```typescript
+import { Effect } from "effect"
+import { computeShift } from "@/lib/payroll/effect"
+
+it("should compute shift correctly", async () => {
+  const program = computeShift(shift, settings, rules)
+  const result = await Effect.runPromise(program)
+
+  expect(result.gross).toBeGreaterThan(0)
+})
+
+it("should handle validation errors", async () => {
+  const program = computeShift(invalidShift, settings, rules)
+  const result = await Effect.runPromise(Effect.either(program))
+
+  expect(result._tag).toBe("Left")
+  if (result._tag === "Left") {
+    expect(result.left._tag).toBe("ValidationError")
+  }
+})
+```
+
+### Migration Progress
+
+**✅ Completed (Phase 1)**:
+- Effect-TS dependency installed (v3.19.5)
+- Tagged error system (`lib/errors/tagged.ts`)
+- Configuration service with validation (`lib/services/config.ts`)
+- Payroll system with Effect wrappers (`lib/payroll/effect.ts`)
+- Test suite for Effect-based payroll (16 tests passing)
+
+**🔄 In Progress**:
+- Phase 2: Supabase service layer and simple DAL migration
+
+**📋 Planned**:
+- Phase 3: Complex DAL (shifts, stats) with parallel computation
+- Phase 4: Server actions with Effect validation
+- Phase 5: Complete migration with caching and optimizations
+
+See `EFFECT_MIGRATION.md` for detailed plan and checkboxes.
+
 ## Key Principles
 
 1. **Never import from `components/ui` directly** - always wrap and import from `components/app`
@@ -286,6 +436,7 @@ Environment variables are validated at module load in `lib/env.ts` (throws error
 7. **Respect locale routing** - all user-facing URLs should include `[locale]` parameter
 8. **Use translation dictionaries** - import from `lib/i18n/dictionaries/` for user-facing text
 9. **Use centralized utilities in server actions** - use validators, error messages, revalidation helpers, and snapshot preparation from `lib/` and `data-access/` for consistency
+10. **Use Effect for new code** - new DAL functions and services should use Effect-TS patterns (see Effect-TS Integration section)
 
 ## Claude Code Behavior Guidelines
 

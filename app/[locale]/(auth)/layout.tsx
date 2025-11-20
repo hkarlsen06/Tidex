@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
 import { I18nProvider } from "@/components/providers/I18nProvider";
 import { getDictionary } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/i18n/config";
@@ -18,6 +19,9 @@ export default async function AuthLayout({
   children: ReactNode;
   params: Promise<{ locale: string }>;
 }) {
+  // Opt out of prerendering - auth pages need dynamic session check
+  connection();
+
   const { locale } = await params;
 
   // Redirect authenticated users to dashboard
