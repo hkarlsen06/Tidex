@@ -43,7 +43,7 @@ export default async function AddShiftsPage({ params }: AddShiftsPageProps) {
 
   try {
     // Load user settings via DAL
-    userSettings = (await getUserSettings(user.id)) ?? {};
+    userSettings = (await getUserSettings(user.id)) as UserSettings ?? {};
 
     const supabase = await createSupabaseServerClient();
 

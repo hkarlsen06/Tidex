@@ -209,6 +209,7 @@ export function SecurityStep({ onNext, onBack }: SecurityStepProps) {
       <div className="flex flex-col items-center gap-4">
         {enrollment.qrCode && (
           <div className="p-4 bg-white rounded-lg">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={enrollment.qrCode}
               alt="QR Code for authenticator app"

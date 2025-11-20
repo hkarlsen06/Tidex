@@ -1,28 +1,31 @@
+/**
+ * Shifts Data Access Layer
+ *
+ * Effect-based internally with Promise wrappers for Next.js compatibility.
+ * Uses ShiftsService for shift data access and payroll computations.
+ *
+ * Migration status: Using Effect-based ShiftsService internally
+ */
+
 import "server-only";
 import { cache } from "react";
 import { cacheTag } from "next/cache";
-import { verifySession } from "@/data-access/auth";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { cookies } from "next/headers";
+import { Effect } from "effect";
+import { ShiftsService, type ShiftsAggregates } from "@/lib/services/shifts";
+import { ShiftsLive } from "@/lib/layers/app";
+import { logger } from "@/lib/logger";
 import {
-  computeShift,
-  type ShiftRow,
   type ShiftWithComputations,
   type UserSettings,
   PRESET_SUPPLEMENT_RULES,
 } from "@/lib/payroll";
-import { getCurrentYearMonth, getMonthStart, getMonthEnd } from "@/lib/date-utils";
-import { logger } from "@/lib/logger";
-import { generateGhostsForMonth } from "@/lib/series/utils";
-import type { SeriesShiftRow } from "@/lib/series/types";
-import { cleanTime } from "@/lib/time-utils";
-import { getSnapshotsForDates } from "@/data-access/wage-snapshots";
+import { verifySession } from "@/data-access/auth";
 
 export const PRESET_RULES = PRESET_SUPPLEMENT_RULES;
 
-export type ShiftsAggregates = {
-  totalHours: number;
-  totalEarnings: number;
-};
+// Re-export types for backward compatibility
+export type { ShiftsAggregates };
 
 export type ShiftLoadOptions = {
   startDate?: string; // YYYY-MM-DD
@@ -31,234 +34,57 @@ export type ShiftLoadOptions = {
 };
 
 /**
- * Get default start date for shift loading (current month start)
- * Used when no explicit startDate is provided
- */
-function getDefaultStartDate(): string {
-  const { year, month } = getCurrentYearMonth();
-  return getMonthStart(year, month);
-}
-
-/**
- * Get default end date for shift loading (current month end)
- * Used when no explicit endDate is provided
- */
-function getDefaultEndDate(): string {
-  const { year, month } = getCurrentYearMonth();
-  return getMonthEnd(year, month);
-}
-
-/**
- * Internal implementation of getComputedShifts
+ * Internal implementation of getComputedShifts using Effect
  * @internal - Do not call directly, use getComputedShifts() or getComputedShiftsForApi()
  */
 async function getComputedShiftsInternal(
   userId: string,
   options: ShiftLoadOptions = {}
 ): Promise<{
-  shifts: ShiftWithComputations[],
-  defaultView: string,
-  settings: UserSettings,
-  aggregates: ShiftsAggregates
+  shifts: ShiftWithComputations[];
+  defaultView: string;
+  settings: UserSettings;
+  aggregates: ShiftsAggregates;
 }> {
-  'use cache: private';
-  cacheTag(`user-${userId}`, 'user-shifts');
-  const {
-    startDate = getDefaultStartDate(), // Default: current month start
-    endDate = getDefaultEndDate(),     // Default: current month end
-    limit = 50                          // Default: reasonable limit for 1 month
-  } = options;
+  "use cache: private";
+  cacheTag(`user-${userId}`, "user-shifts");
 
-  const supabase = await createSupabaseServerClient();
+  // Call cookies() early to satisfy Next.js 16 prerendering requirements
+  await cookies();
 
-  const { data: settingsRow, error: settingsErr } = await supabase
-    .from("user_settings")
-    .select("*")
-    .eq("user_id", userId)
-    .single();
+  const program = Effect.gen(function* () {
+    const shifts = yield* ShiftsService;
+    const data = yield* shifts.getShiftsWithComputations({
+      userId,
+      startDate: options.startDate,
+      endDate: options.endDate,
+      limit: options.limit,
+    });
+    return data;
+  }).pipe(
+    Effect.provide(ShiftsLive),
+    Effect.scoped
+  );
 
-  if (settingsErr && settingsErr.code !== "PGRST116") {
-    logger.error("Failed to load user settings:", settingsErr);
-    throw new Error("Kunne ikke laste brukerinnstillinger. Vennligst prøv igjen senere.");
-  }
-  const settings: UserSettings = settingsRow ?? {};
-
-  let query = supabase
-    .from("user_shifts")
-    .select("*")
-    .eq("user_id", userId)
-    .order("shift_date", { ascending: false });
-
-  // Apply date range filters
-  if (startDate) {
-    query = query.gte("shift_date", startDate);
-  }
-  if (endDate) {
-    query = query.lte("shift_date", endDate);
-  }
-  if (limit) {
-    query = query.limit(limit);
-  }
-
-  const { data: shifts, error: shiftsErr } = await query;
-
-  if (shiftsErr) {
-    logger.error("user_shifts error:", shiftsErr);
+  try {
+    const result = await Effect.runPromise(program);
+    // Convert readonly arrays to mutable for backward compatibility
+    return {
+      shifts: [...result.shifts],
+      defaultView: result.defaultView,
+      settings: result.settings,
+      aggregates: result.aggregates,
+    };
+  } catch (error: any) {
+    logger.error("Failed to fetch computed shifts:", error);
+    // Return empty result on error for backward compatibility
     return {
       shifts: [],
       defaultView: "calendar",
-      settings,
-      aggregates: { totalHours: 0, totalEarnings: 0 }
+      settings: {},
+      aggregates: { totalHours: 0, totalEarnings: 0 },
     };
   }
-
-  // Collect all shift dates for batch snapshot lookup
-  const shiftDates = (shifts ?? []).map((s) => s.shift_date);
-
-  // Fetch wage snapshots for all shift dates in one query (cached)
-  const snapshotMap = await getSnapshotsForDates(shiftDates);
-
-  const computedShifts = ((shifts ?? []) as ShiftRow[]).map((shift) => {
-    const snapshot = snapshotMap.get(shift.shift_date) ?? null;
-    return {
-      ...shift,
-      computed: computeShift(shift, settings, PRESET_RULES, snapshot),
-    };
-  });
-
-  // Load series shifts and generate ghosts for the date range
-  const { data: seriesShifts, error: seriesError } = await supabase
-    .from("series_shifts")
-    .select("*")
-    .eq("user_id", userId);
-
-  if (seriesError) {
-    logger.error("Failed to load series shifts:", seriesError);
-  }
-
-  const seriesGhosts: ShiftWithComputations[] = [];
-  if (seriesShifts && seriesShifts.length > 0) {
-    // Generate ghosts for all months in the range
-    const startYear = new Date(startDate).getFullYear();
-    const startMonth = new Date(startDate).getMonth() + 1;
-    const endYear = new Date(endDate).getFullYear();
-    const endMonth = new Date(endDate).getMonth() + 1;
-
-    // Collect all ghost dates for batch snapshot lookup
-    const ghostDates: string[] = [];
-
-    for (const series of seriesShifts as SeriesShiftRow[]) {
-      // Generate for each month in range
-      let currentYear = startYear;
-      let currentMonth = startMonth;
-
-      while (
-        currentYear < endYear ||
-        (currentYear === endYear && currentMonth <= endMonth)
-      ) {
-        const ghosts = generateGhostsForMonth({ year: currentYear, month: currentMonth }, {
-          start_time: cleanTime(series.start_time),
-          end_time: cleanTime(series.end_time),
-          repeat_interval_weeks: series.repeat_interval_weeks as 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8,
-          selected_days: series.selected_days,
-          end_condition: series.end_condition,
-          exclusions: series.exclusions || []
-        });
-
-        ghostDates.push(...ghosts.map(g => g.date));
-
-        // Move to next month
-        currentMonth++;
-        if (currentMonth > 12) {
-          currentMonth = 1;
-          currentYear++;
-        }
-      }
-    }
-
-    // Fetch snapshots for all ghost dates in one batch (reuses cache from earlier)
-    const ghostSnapshotMap = await getSnapshotsForDates(ghostDates);
-
-    // Now compute ghosts with their snapshots
-    for (const series of seriesShifts as SeriesShiftRow[]) {
-      let currentYear = startYear;
-      let currentMonth = startMonth;
-
-      while (
-        currentYear < endYear ||
-        (currentYear === endYear && currentMonth <= endMonth)
-      ) {
-        const ghosts = generateGhostsForMonth({ year: currentYear, month: currentMonth }, {
-          start_time: cleanTime(series.start_time),
-          end_time: cleanTime(series.end_time),
-          repeat_interval_weeks: series.repeat_interval_weeks as 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8,
-          selected_days: series.selected_days,
-          end_condition: series.end_condition,
-          exclusions: series.exclusions || []
-        });
-
-        // Compute each ghost with its snapshot
-        for (const ghost of ghosts) {
-          try {
-            const snapshot = ghostSnapshotMap.get(ghost.date) ?? null;
-            const computed = computeShift(
-              {
-                id: `ghost-${series.id}-${ghost.date}`,
-                user_id: userId,
-                shift_date: ghost.date,
-                start_time: cleanTime(series.start_time),
-                end_time: cleanTime(series.end_time),
-                series_id: series.id,
-                series_anchor_weekday: ghost.weekday
-              },
-              settings,
-              PRESET_RULES,
-              snapshot
-            );
-
-            seriesGhosts.push({
-              id: `ghost-${series.id}-${ghost.date}`,
-              user_id: userId,
-              shift_date: ghost.date,
-              start_time: cleanTime(series.start_time),
-              end_time: cleanTime(series.end_time),
-              series_id: series.id,
-              series_anchor_weekday: ghost.weekday,
-              computed
-            });
-          } catch (err) {
-            logger.error(`Failed to compute ghost for series ${series.id} on ${ghost.date}:`, err);
-          }
-        }
-
-        // Move to next month
-        currentMonth++;
-        if (currentMonth > 12) {
-          currentMonth = 1;
-          currentYear++;
-        }
-      }
-    }
-  }
-
-  // Merge shifts and series ghosts
-  const allShifts = [...computedShifts, ...seriesGhosts];
-
-  // Compute aggregates once on the server
-  const aggregates: ShiftsAggregates = allShifts.reduce(
-    (acc, shift) => ({
-      totalHours: acc.totalHours + shift.computed.paidHours,
-      totalEarnings: acc.totalEarnings + shift.computed.gross,
-    }),
-    { totalHours: 0, totalEarnings: 0 }
-  );
-
-  return {
-    shifts: allShifts,
-    defaultView: (settingsRow as any)?.default_shifts_view || "calendar",
-    settings,
-    aggregates
-  };
 }
 
 /**
@@ -268,40 +94,48 @@ async function getComputedShiftsInternal(
  * - Supports date range filtering and limits
  * - Automatically verifies user session matches provided userId
  * - Use this in Server Components and Server Actions
+ *
+ * Promise wrapper around Effect-based ShiftsService
  */
-export const getComputedShifts = cache(async (
-  userId: string,
-  options: ShiftLoadOptions = {}
-): Promise<{
-  shifts: ShiftWithComputations[],
-  defaultView: string,
-  settings: UserSettings,
-  aggregates: ShiftsAggregates
-}> => {
-  const { user } = await verifySession();
+export const getComputedShifts = cache(
+  async (
+    userId: string,
+    options: ShiftLoadOptions = {}
+  ): Promise<{
+    shifts: ShiftWithComputations[];
+    defaultView: string;
+    settings: UserSettings;
+    aggregates: ShiftsAggregates;
+  }> => {
+    const { user } = await verifySession();
 
-  // SECURITY: Verify the provided userId matches the authenticated user
-  if (user.id !== userId) {
-    throw new Error('User ID mismatch - potential security violation');
+    // SECURITY: Verify the provided userId matches the authenticated user
+    if (user.id !== userId) {
+      throw new Error("User ID mismatch - potential security violation");
+    }
+
+    return getComputedShiftsInternal(user.id, options);
   }
-
-  return getComputedShiftsInternal(user.id, options);
-});
+);
 
 /**
  * Get computed shifts for API routes (no automatic auth)
  * - Requires manual authentication before calling
  * - Use this in API route handlers where redirect() is not supported
  * - Call getSession() first to verify auth, then pass user.id
+ *
+ * Promise wrapper around Effect-based ShiftsService
  */
-export const getComputedShiftsForApi = cache(async (
-  userId: string,
-  options: ShiftLoadOptions = {}
-): Promise<{
-  shifts: ShiftWithComputations[],
-  defaultView: string,
-  settings: UserSettings,
-  aggregates: ShiftsAggregates
-}> => {
-  return getComputedShiftsInternal(userId, options);
-});
+export const getComputedShiftsForApi = cache(
+  async (
+    userId: string,
+    options: ShiftLoadOptions = {}
+  ): Promise<{
+    shifts: ShiftWithComputations[];
+    defaultView: string;
+    settings: UserSettings;
+    aggregates: ShiftsAggregates;
+  }> => {
+    return getComputedShiftsInternal(userId, options);
+  }
+);

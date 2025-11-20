@@ -1,127 +1,126 @@
-'use server';
+/**
+ * Subscription Data Access Layer
+ *
+ * Effect-based internally with Promise wrappers for Next.js compatibility.
+ * Uses SubscriptionService for subscription and profile data.
+ *
+ * Migration status: Using Effect-based SubscriptionService internally
+ */
 
-import { cacheTag } from 'next/cache';
-import { verifySession } from '@/data-access/auth';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
-import { logger } from '@/lib/logger';
+import "server-only";
+import { cache } from "react";
+import { cacheTag } from "next/cache";
+import { cookies } from "next/headers";
+import { Effect } from "effect";
+import {
+  SubscriptionService,
+  type Subscription,
+  type UserProfile,
+  type SubscriptionData,
+} from "@/lib/services/subscription";
+import { SubscriptionLive } from "@/lib/layers/app";
+import { logger } from "@/lib/logger";
+import { verifySession } from "@/data-access/auth";
 
-export interface Subscription {
-  id: string;
-  user_id: string;
-  stripe_customer_id: string | null;
-  stripe_subscription_id: string | null;
-  status: string;
-  current_period_end: string | null;
-  created_at: string;
-  updated_at: string;
-  price_id: string | null;
-  cancel_at_period_end: boolean;
-  canceled_at: string | null;
-  cancel_at: string | null;
-  cancellation_reason: string | null;
-  cancellation_feedback: string | null;
-  cancellation_comment: string | null;
-}
-
-export interface UserProfile {
-  id: string;
-  before_paywall: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface SubscriptionData {
-  subscription: Subscription | null;
-  profile: UserProfile | null;
-}
+// Re-export types for backward compatibility
+export type { Subscription, UserProfile, SubscriptionData };
 
 /**
- * Get user subscription for the authenticated user
- * - Automatically verifies user session matches provided userId
+ * Internal implementation of getUserSubscription using Effect
+ * @internal - Do not call directly, use getUserSubscription()
  */
-export async function getUserSubscription(userId: string): Promise<Subscription | null> {
-  'use cache: private';
-  cacheTag(`user-${userId}`, 'user-subscription');
-  try {
-    const { user } = await verifySession();
+async function getUserSubscriptionInternal(
+  userId: string
+): Promise<Subscription | null> {
+  "use cache: private";
+  cacheTag(`user-${userId}`, "user-subscription");
 
-    // SECURITY: Verify the provided userId matches the authenticated user
-    if (user.id !== userId) {
-      throw new Error('User ID mismatch - potential security violation');
-    }
+  // Call cookies() early to satisfy Next.js 16 prerendering requirements
+  await cookies();
 
-    const supabase = await createSupabaseServerClient();
-
-    const { data, error } = await supabase
-      .from('subscriptions')
-      .select('*')
-      .eq('user_id', user.id)
-      .single();
-
-    if (error) {
-      // If no subscription found, that's okay - user is on free plan
-      if (error.code === 'PGRST116') {
-        return null;
-      }
-      logger.error('Failed to fetch user subscription:', error);
-      return null;
-    }
-
+  const program = Effect.gen(function* () {
+    const subscription = yield* SubscriptionService;
+    const data = yield* subscription.getUserSubscription(userId);
     return data;
-  } catch (error) {
-    logger.error('Unexpected error fetching subscription:', error);
+  }).pipe(Effect.provide(SubscriptionLive), Effect.scoped);
+
+  try {
+    const result = await Effect.runPromise(program);
+    return result;
+  } catch (error: any) {
+    logger.error("Failed to fetch user subscription:", error);
+    // Return null on error (free tier fallback)
     return null;
   }
 }
 
 /**
- * Get user subscription data including profile for the authenticated user
+ * Get user subscription for the authenticated user
+ * - Uses React cache() for request deduplication, scoped by userId
  * - Automatically verifies user session matches provided userId
+ * - Returns null if no subscription exists (free tier)
+ *
+ * Promise wrapper around Effect-based SubscriptionService
  */
-export async function getUserSubscriptionData(userId: string): Promise<SubscriptionData> {
-  'use cache: private';
-  cacheTag(`user-${userId}`, 'user-subscription');
-  try {
+export const getUserSubscription = cache(
+  async (userId: string): Promise<Subscription | null> => {
     const { user } = await verifySession();
 
     // SECURITY: Verify the provided userId matches the authenticated user
     if (user.id !== userId) {
-      throw new Error('User ID mismatch - potential security violation');
+      throw new Error("User ID mismatch - potential security violation");
     }
 
-    const supabase = await createSupabaseServerClient();
+    return getUserSubscriptionInternal(userId);
+  }
+);
 
-    // Fetch both subscription and profile data
-    const [subscriptionResult, profileResult] = await Promise.all([
-      supabase
-        .from('subscriptions')
-        .select('*')
-        .eq('user_id', user.id)
-        .single(),
-      supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single(),
-    ]);
+/**
+ * Internal implementation of getUserSubscriptionData using Effect
+ * @internal - Do not call directly, use getUserSubscriptionData()
+ */
+async function getUserSubscriptionDataInternal(
+  userId: string
+): Promise<SubscriptionData> {
+  "use cache: private";
+  cacheTag(`user-${userId}`, "user-subscription");
 
-    const subscription = subscriptionResult.error && subscriptionResult.error.code === 'PGRST116'
-      ? null
-      : subscriptionResult.data;
+  // Call cookies() early to satisfy Next.js 16 prerendering requirements
+  await cookies();
 
-    const profile = profileResult.error ? null : profileResult.data;
+  const program = Effect.gen(function* () {
+    const subscription = yield* SubscriptionService;
+    const data = yield* subscription.getUserSubscriptionData(userId);
+    return data;
+  }).pipe(Effect.provide(SubscriptionLive), Effect.scoped);
 
-    if (subscriptionResult.error && subscriptionResult.error.code !== 'PGRST116') {
-      logger.error('Failed to fetch user subscription:', subscriptionResult.error);
-    }
-
-    if (profileResult.error) {
-      logger.error('Failed to fetch user profile:', profileResult.error);
-    }
-
-    return { subscription, profile };
-  } catch (error) {
-    logger.error('Unexpected error fetching subscription data:', error);
+  try {
+    const result = await Effect.runPromise(program);
+    return result;
+  } catch (error: any) {
+    logger.error("Failed to fetch subscription data:", error);
+    // Return empty data on error (graceful degradation)
     return { subscription: null, profile: null };
   }
 }
+
+/**
+ * Get user subscription data including profile for the authenticated user
+ * - Uses React cache() for request deduplication, scoped by userId
+ * - Automatically verifies user session matches provided userId
+ * - Returns null values for missing data (graceful degradation)
+ *
+ * Promise wrapper around Effect-based SubscriptionService
+ */
+export const getUserSubscriptionData = cache(
+  async (userId: string): Promise<SubscriptionData> => {
+    const { user } = await verifySession();
+
+    // SECURITY: Verify the provided userId matches the authenticated user
+    if (user.id !== userId) {
+      throw new Error("User ID mismatch - potential security violation");
+    }
+
+    return getUserSubscriptionDataInternal(userId);
+  }
+);
