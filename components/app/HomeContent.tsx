@@ -122,15 +122,12 @@ export function HomeContent({ shifts: initialShifts, settings }: HomeContentProp
   // Initialize loaded months synchronously on first render
   // This must happen before any effects run
   if (loadedMonthsRef.current.size === 0) {
-    // Always mark current month as loaded (SSR data covers it)
+    // Only mark current month as loaded (SSR data explicitly loads current month only)
+    // Do NOT mark other months even if they have shifts in initialShifts,
+    // as those might be incomplete data (e.g., series ghosts spanning multiple months)
     const now = new Date();
     const currentKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     loadedMonthsRef.current.add(currentKey);
-    // Also mark any months that have shifts from SSR
-    for (const shift of initialShifts) {
-      const yearMonth = shift.shift_date.substring(0, 7);
-      loadedMonthsRef.current.add(yearMonth);
-    }
   }
 
   // Combine initial shifts with any dynamically loaded shifts, filtering out deleted ones
