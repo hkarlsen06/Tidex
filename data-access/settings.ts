@@ -88,6 +88,9 @@ export async function getUserProfile(userId: string) {
   const canUnlinkPhone = hasPhoneConnected && loginMethodCount > 1;
   const canDisconnectGoogle = hasGoogleConnected && loginMethodCount > 1;
 
+  // Check if user is phone-only (no email address)
+  const isPhoneOnly = hasPhoneConnected && !user.email;
+
   return {
     firstName: user.user_metadata?.first_name || '',
     email: user.email || '',
@@ -98,5 +101,6 @@ export async function getUserProfile(userId: string) {
     hasPassword,
     canUnlinkPhone,
     canDisconnectGoogle,
+    isPhoneOnly,
   };
 }

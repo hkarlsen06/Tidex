@@ -34,6 +34,11 @@ export function translateError(message: string): string {
     "SMS rate limit exceeded": "For mange SMS-forespørsler. Prøv igjen senere.",
     "Signups not allowed for otp": "Du må registrere deg før du kan logge inn",
     "Signups not allowed": "Du må registrere deg før du kan logge inn",
+    // Reauthentication errors
+    "Reauthentication not valid": "Ugyldig bekreftelseskode. Prøv igjen.",
+    "Reauthentication required": "Du må bekrefte identiteten din før du kan endre passordet",
+    "Invalid nonce": "Ugyldig eller utløpt bekreftelseskode",
+    "Nonce has expired": "Bekreftelseskoden har utløpt. Be om en ny kode.",
   };
 
   // Check for exact match

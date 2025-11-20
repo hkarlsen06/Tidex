@@ -296,7 +296,29 @@ export async function unlinkPhoneNumber() {
   return { success: true };
 }
 
-export async function setPassword(password: string) {
+/**
+ * Request reauthentication OTP for phone-only users
+ * This is required before they can set/update their password
+ */
+export async function requestReauthentication() {
+  await verifySession();
+  const supabase = await createSupabaseServerClient();
+
+  const { data, error } = await supabase.auth.reauthenticate();
+
+  if (error) {
+    logger.error('Failed to request reauthentication:', error);
+    throw error;
+  }
+
+  return { success: true };
+}
+
+/**
+ * Set or update user password
+ * For phone-only users, nonce (OTP) is required after calling requestReauthentication()
+ */
+export async function setPassword(password: string, nonce?: string) {
   await verifySession();
   const supabase = await createSupabaseServerClient();
 
@@ -305,10 +327,13 @@ export async function setPassword(password: string) {
     throw new Error('Passordet må være minst 6 tegn langt');
   }
 
-  // Update user password
-  const { error } = await supabase.auth.updateUser({
-    password,
-  });
+  // Update user password (with nonce if provided for phone-only users)
+  const updateData: { password: string; nonce?: string } = { password };
+  if (nonce) {
+    updateData.nonce = nonce;
+  }
+
+  const { error } = await supabase.auth.updateUser(updateData);
 
   if (error) {
     logger.error('Failed to set password:', error);
