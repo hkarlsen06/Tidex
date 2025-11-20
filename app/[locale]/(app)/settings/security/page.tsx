@@ -44,7 +44,7 @@ export default async function SecurityPage({
         </div>
 
         {/* Password section */}
-        <PasswordCard hasPassword={profile.hasPassword} />
+        <PasswordCard hasPassword={profile.hasPassword} isPhoneOnly={profile.isPhoneOnly} />
 
         {/* Connected accounts section */}
         <div className="space-y-4 pt-4">
