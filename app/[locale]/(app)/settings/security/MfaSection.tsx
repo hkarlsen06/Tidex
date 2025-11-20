@@ -64,11 +64,6 @@ export function MfaSection() {
   }>({ open: false, factor: null });
   const [isUnenrolling, setIsUnenrolling] = useState(false);
 
-  // Load enrolled factors
-  useEffect(() => {
-    loadFactors();
-  }, []);
-
   const loadFactors = async () => {
     try {
       const { data, error } = await supabase.auth.mfa.listFactors();
@@ -88,6 +83,12 @@ export function MfaSection() {
       setIsLoading(false);
     }
   };
+
+  // Load enrolled factors
+  useEffect(() => {
+    loadFactors();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleStartEnrollment = async () => {
     setIsEnrolling(true);
@@ -322,6 +323,7 @@ export function MfaSection() {
                 {enrollment.qrCode && (
                   <div className="p-4 bg-white rounded-lg">
                     {/* Using img tag because Next.js Image doesn't support inline SVG data URIs */}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={enrollment.qrCode}
                       alt="QR Code for authenticator app"

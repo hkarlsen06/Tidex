@@ -43,8 +43,8 @@ export default async function DisplayPage({
 
         <DisplayForm
           initialData={{
-            theme: settings.theme || 'system',
-            defaultShiftsView: settings.default_shifts_view || 'list',
+            theme: settings?.theme || 'system',
+            defaultShiftsView: settings?.default_shifts_view || 'list',
           }}
           t={t}
         />

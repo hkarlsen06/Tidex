@@ -1,0 +1,239 @@
+/**
+ * Settings Service Layer
+ *
+ * Effect-based service for user settings and profile management with:
+ * - Caching for performance
+ * - Automatic authentication
+ * - Typed error handling
+ * - Security checks
+ *
+ * Usage:
+ * ```typescript
+ * const program = Effect.gen(function* () {
+ *   const settings = yield* SettingsService
+ *   const userSettings = yield* settings.getUserSettings(userId)
+ *   return userSettings
+ * }).pipe(
+ *   Effect.provide(SettingsServiceLive)
+ * )
+ * ```
+ */
+
+import "server-only";
+import { Context, Effect, Layer, Cache, Duration } from "effect";
+import { AuthService } from "./auth";
+import { SupabaseService } from "./supabase";
+import { DatabaseError, AuthError, NotFoundError, TimeoutError, SupabaseError } from "../errors/tagged";
+
+/**
+ * Database user_settings row type
+ * This is the complete type from the database, including display and payroll settings
+ */
+export type DbUserSettings = {
+  user_id: string;
+  theme?: string | null;
+  default_shifts_view?: string | null;
+  direct_time_input?: boolean | null;
+  full_minute_range?: boolean | null;
+  use_preset?: boolean | null;
+  current_wage_level?: number | null;
+  custom_wage?: number | null;
+  custom_supplements?: { rules: any[] } | null;
+  pause_deduction_enabled?: boolean | null;
+  pause_deduction_method?: string | null;
+  pause_threshold_hours?: number | null;
+  pause_deduction_minutes?: number | null;
+  tax_deduction_enabled?: boolean | null;
+  tax_percentage?: number | null;
+  half_tax_month?: number | null;
+  payroll_day?: number | null;
+  monthly_goal?: number | null;
+  profile_picture_url?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+/**
+ * User profile data with authentication methods
+ */
+export type UserProfile = {
+  readonly firstName: string;
+  readonly email: string;
+  readonly profilePictureUrl: string | null;
+  readonly hasGoogleConnected: boolean;
+  readonly hasPhoneConnected: boolean;
+  readonly phoneNumber: string | null;
+  readonly hasPassword: boolean;
+  readonly canUnlinkPhone: boolean;
+  readonly canDisconnectGoogle: boolean;
+  readonly isPhoneOnly: boolean;
+};
+
+/**
+ * Settings Service Interface
+ */
+export class SettingsService extends Context.Tag("SettingsService")<
+  SettingsService,
+  {
+    /**
+     * Get user settings for authenticated user
+     * Automatically verifies user ID matches authenticated user
+     */
+    readonly getUserSettings: (
+      userId: string
+    ) => Effect.Effect<
+      DbUserSettings | null,
+      DatabaseError | AuthError | NotFoundError | TimeoutError | SupabaseError,
+      never
+    >;
+
+    /**
+     * Get user profile information
+     * Includes authentication methods and connection status
+     */
+    readonly getUserProfile: (
+      userId: string
+    ) => Effect.Effect<UserProfile, DatabaseError | AuthError | NotFoundError | TimeoutError | SupabaseError, never>;
+  }
+>() {}
+
+/**
+ * Live implementation of SettingsService
+ *
+ * Uses Effect Cache for settings/profile caching
+ */
+export const SettingsServiceLive = Layer.effect(
+  SettingsService,
+  Effect.gen(function* () {
+    const auth = yield* AuthService;
+    const supabase = yield* SupabaseService;
+
+    // Create cache for user settings (10 minute TTL)
+    const settingsCache = yield* Cache.make({
+      capacity: 100,
+      timeToLive: Duration.minutes(10),
+      lookup: (userId: string) =>
+        Effect.gen(function* () {
+          // Verify user ID matches authenticated user (security check)
+          yield* auth.verifyUserId(userId);
+
+          // Query user settings
+          const result = yield* supabase.query(
+            async (client) =>
+              await client
+                .from("user_settings")
+                .select("*")
+                .eq("user_id", userId)
+                .single(),
+            { retries: 2 }
+          );
+
+          return result as unknown as DbUserSettings;
+        }).pipe(
+          Effect.catchTag("DatabaseError", (error) => {
+            // If NO_DATA error, return null (user has no settings yet)
+            if (error.code === "NO_DATA") {
+              return Effect.succeed(null);
+            }
+            // Otherwise, rethrow the error
+            return Effect.fail(error);
+          })
+        ),
+    });
+
+    // Create cache for user profile (5 minute TTL)
+    const profileCache = yield* Cache.make({
+      capacity: 100,
+      timeToLive: Duration.minutes(5),
+      lookup: (userId: string) =>
+        Effect.gen(function* () {
+          // Verify user ID and get session
+          const session = yield* auth.getSession();
+
+          if (session.user.id !== userId) {
+            return yield* Effect.fail(
+              new AuthError({
+                reason: "unauthorized",
+                cause: new Error("User ID mismatch - potential security violation"),
+              })
+            );
+          }
+
+          // Get profile picture from settings
+          const settingsResult = yield* supabase
+            .query(
+              async (client) =>
+                await client
+                  .from("user_settings")
+                  .select("profile_picture_url")
+                  .eq("user_id", userId)
+                  .single(),
+              { retries: 2 }
+            )
+            .pipe(
+              Effect.catchTag("DatabaseError", () =>
+                Effect.succeed({ profile_picture_url: null })
+              )
+            );
+
+          // Extract identity providers
+          const identityProviders = session.user.identityProviders;
+
+          const hasGoogleConnected = identityProviders.has("google");
+          const hasPhoneConnected = identityProviders.has("phone");
+          const hasPassword = identityProviders.has("email");
+
+          // Format phone number (strip +47 prefix for display)
+          let phoneNumber: string | null = null;
+          if (session.user.phone) {
+            phoneNumber = session.user.phone.startsWith("+47")
+              ? session.user.phone.substring(3)
+              : session.user.phone;
+          }
+
+          // Calculate connection capabilities
+          const loginMethodCount = identityProviders.size;
+          const canUnlinkPhone = hasPhoneConnected && loginMethodCount > 1;
+          const canDisconnectGoogle = hasGoogleConnected && loginMethodCount > 1;
+          const isPhoneOnly = hasPhoneConnected && !session.user.email;
+
+          const profile: UserProfile = {
+            firstName: session.user.firstName ?? "",
+            email: session.user.email ?? "",
+            profilePictureUrl:
+              (settingsResult as { profile_picture_url: string | null })
+                ?.profile_picture_url ?? null,
+            hasGoogleConnected,
+            hasPhoneConnected,
+            phoneNumber,
+            hasPassword,
+            canUnlinkPhone,
+            canDisconnectGoogle,
+            isPhoneOnly,
+          };
+
+          return profile;
+        }),
+    });
+
+    return {
+      /**
+       * Get user settings with caching
+       */
+      getUserSettings: (userId: string) => settingsCache.get(userId),
+
+      /**
+       * Get user profile with caching
+       */
+      getUserProfile: (userId: string) => profileCache.get(userId),
+    };
+  })
+);
+
+/**
+ * Convenience function to provide SettingsServiceLive with dependencies
+ */
+export const withSettings = <A, E, R>(
+  effect: Effect.Effect<A, E, R | SettingsService>
+): Effect.Effect<A, E, Exclude<R, SettingsService> | AuthService | SupabaseService> =>
+  Effect.provide(effect, SettingsServiceLive);

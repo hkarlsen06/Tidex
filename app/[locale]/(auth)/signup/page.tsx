@@ -192,7 +192,7 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
       try {
         const phoneE164 = normalizePhoneToE164(emailOrPhone);
 
-        const { error, data } = await supabase.auth.signUp({
+        const { error } = await supabase.auth.signUp({
           phone: phoneE164,
           password: password,
           options: {

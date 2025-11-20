@@ -153,7 +153,7 @@ export async function disconnectGoogleAccount() {
 
   // Find Google identity
   const googleIdentity = user.identities?.find(
-    (identity) => identity.provider === 'google'
+    (identity: { provider: string }) => identity.provider === 'google'
   );
 
   if (!googleIdentity) {
@@ -271,7 +271,7 @@ export async function unlinkPhoneNumber() {
 
   // Find phone identity
   const phoneIdentity = user.identities?.find(
-    (identity) => identity.provider === 'phone'
+    (identity: { provider: string }) => identity.provider === 'phone'
   );
 
   if (!phoneIdentity) {
@@ -304,7 +304,7 @@ export async function requestReauthentication() {
   await verifySession();
   const supabase = await createSupabaseServerClient();
 
-  const { data, error } = await supabase.auth.reauthenticate();
+  const { error } = await supabase.auth.reauthenticate();
 
   if (error) {
     logger.error('Failed to request reauthentication:', error);

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { FormEvent, useState, use, useEffect } from "react";
+import { FormEvent, useState, use, useEffect, useCallback } from "react";
 import { useTranslations } from "@/lib/i18n/client";
 
 import { supabase } from "@/lib/supabase/browser";
@@ -37,6 +37,25 @@ export default function MfaVerifyPage({ params }: { params: Promise<{ locale: st
   const [fieldError, setFieldError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const createChallenge = useCallback(async (factor: Factor) => {
+    try {
+      const { data, error } = await supabase.auth.mfa.challenge({
+        factorId: factor.id,
+      });
+
+      if (error) {
+        setMessage({ type: "error", text: t.pages.auth.mfaVerify.errors.challengeFailed });
+        return false;
+      }
+
+      setChallengeId(data.id);
+      return true;
+    } catch {
+      setMessage({ type: "error", text: t.pages.auth.mfaVerify.errors.challengeFailed });
+      return false;
+    }
+  }, [t]);
 
   // Load user's MFA factors on mount
   useEffect(() => {
@@ -88,26 +107,7 @@ export default function MfaVerifyPage({ params }: { params: Promise<{ locale: st
     };
 
     loadFactors();
-  }, [t]);
-
-  const createChallenge = async (factor: Factor) => {
-    try {
-      const { data, error } = await supabase.auth.mfa.challenge({
-        factorId: factor.id,
-      });
-
-      if (error) {
-        setMessage({ type: "error", text: t.pages.auth.mfaVerify.errors.challengeFailed });
-        return false;
-      }
-
-      setChallengeId(data.id);
-      return true;
-    } catch {
-      setMessage({ type: "error", text: t.pages.auth.mfaVerify.errors.challengeFailed });
-      return false;
-    }
-  };
+  }, [createChallenge, t]);
 
   const handleSelectFactor = async (factor: Factor) => {
     setSelectedFactor(factor);

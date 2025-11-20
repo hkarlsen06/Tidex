@@ -14,12 +14,6 @@ import {
   isValidEmail,
 } from '@/lib/validation/phone';
 import {
-  InputOTP,
-  InputOTPGroup,
-  InputOTPSeparator,
-  InputOTPSlot,
-} from '@/components/app/InputOTP';
-import {
   Field,
   FieldLabel,
   FieldError,
@@ -59,12 +53,12 @@ export default function LoginClient({
 
   const [emailOrPhone, setEmailOrPhone] = useState('');
   const [password, setPassword] = useState('');
-  const [otp, setOtp] = useState('');
+  const [otp, _setOtp] = useState('');
   // NOTE: step state preserved for future MFA implementation
-  const [step, setStep] = useState<LoginStep>('input');
-  const [, setLoginType] = useState<'email' | 'phone' | null>(null);
+  const [step, _setStep] = useState<LoginStep>('input');
+  const [, _setLoginType] = useState<'email' | 'phone' | null>(null);
   // NOTE: phoneLoginMethod preserved for future MFA implementation
-  const [, setPhoneLoginMethod] = useState<'otp' | 'password'>('password');
+  const [, _setPhoneLoginMethod] = useState<'otp' | 'password'>('password');
   const [message, setMessage] = useState<MessageState>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -225,7 +219,7 @@ export default function LoginClient({
       setIsSubmitting(false);
     } else {
       // Phone login with password
-      setPhoneLoginMethod('password');
+      _setPhoneLoginMethod('password');
 
       setIsSubmitting(true);
       setMessage(null);
@@ -300,8 +294,8 @@ export default function LoginClient({
           return;
         }
 
-        setLoginType('phone');
-        setStep('otp');
+        _setLoginType('phone');
+        _setStep('otp');
         setMessage({
           type: 'success',
           text: t.pages.auth.login.success.smsSent,
@@ -317,7 +311,7 @@ export default function LoginClient({
     }
   };
 
-  const handleVerifyOtp = async (event: FormEvent<HTMLFormElement>) => {
+  const _handleVerifyOtp = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     resetMessage();
     resetFieldErrors();
@@ -479,7 +473,7 @@ export default function LoginClient({
 
         {/* NOTE: OTP Verification step preserved for future MFA implementation
         {step === 'otp' && (
-          <form className="space-y-6" noValidate onSubmit={handleVerifyOtp}>
+          <form className="space-y-6" noValidate onSubmit={_handleVerifyOtp}>
             <Field data-invalid={!!fieldErrors.otp} className="items-center">
               <FieldLabel htmlFor="otp" className="sr-only">
                 {t.pages.auth.login.otpLabel}
@@ -490,7 +484,7 @@ export default function LoginClient({
                 onChange={(value) => {
                   resetMessage();
                   resetFieldErrors();
-                  setOtp(value);
+                  _setOtp(value);
                 }}
               >
                 <InputOTPGroup>
@@ -525,8 +519,8 @@ export default function LoginClient({
               variant="ghost"
               size="sm"
               onClick={() => {
-                setStep('input');
-                setOtp('');
+                _setStep('input');
+                _setOtp('');
                 resetMessage();
                 resetFieldErrors();
               }}
