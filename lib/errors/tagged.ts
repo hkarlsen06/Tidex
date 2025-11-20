@@ -25,12 +25,12 @@ export class DatabaseError extends Data.TaggedError("DatabaseError")<{
   readonly query?: string;
   readonly table?: string;
   readonly code?: string;
-  readonly message?: string;
+  readonly errorMessage?: string;
   readonly cause?: unknown;
 }> {
   get message(): string {
-    if (this.message) {
-      return this.message;
+    if (this.errorMessage) {
+      return this.errorMessage;
     }
     return `Database error${this.query ? ` in query: ${this.query}` : ""}${this.table ? ` on table: ${this.table}` : ""}`;
   }

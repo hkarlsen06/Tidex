@@ -162,7 +162,7 @@ export const SupabaseServiceLive = Layer.effect(
                 new DatabaseError({
                   query: "supabase query",
                   code: result.error.code ?? "UNKNOWN",
-                  message: result.error.message,
+                  errorMessage: result.error.message,
                   cause: result.error,
                 })
               );
@@ -172,7 +172,7 @@ export const SupabaseServiceLive = Layer.effect(
                 new DatabaseError({
                   query: "supabase query",
                   code: "NO_DATA",
-                  message: "Query returned null data",
+                  errorMessage: "Query returned null data",
                 })
               );
             }

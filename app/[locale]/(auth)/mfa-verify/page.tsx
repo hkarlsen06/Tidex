@@ -107,7 +107,7 @@ export default function MfaVerifyPage({ params }: { params: Promise<{ locale: st
     };
 
     loadFactors();
-  }, [t, createChallenge]);
+  }, [createChallenge, t]);
 
   const handleSelectFactor = async (factor: Factor) => {
     setSelectedFactor(factor);
