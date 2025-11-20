@@ -120,7 +120,7 @@ export const AuthServiceLive = Layer.effect(
     const sessionCache = yield* Cache.make({
       capacity: 100,
       timeToLive: Duration.minutes(5),
-      lookup: (key: "current-session") =>
+      lookup: (_key: "current-session") =>
         Effect.gen(function* () {
           const client = yield* supabase.getClient();
 

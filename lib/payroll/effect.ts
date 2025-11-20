@@ -20,7 +20,6 @@ import type {
   SupplementRule,
   WageSnapshot,
   ShiftComputed,
-  BreakMethod,
   HHMM,
 } from "./types";
 

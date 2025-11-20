@@ -39,7 +39,7 @@ export const verifySession = cache(async () => {
     const result = await Effect.runPromise(program);
     // Return format compatible with existing code
     return { user: result.rawUser };
-  } catch (error: any) {
+  } catch {
     // Handle authentication errors by redirecting
     // redirect() throws a NEXT_REDIRECT error that Next.js catches
     redirect('/login');
@@ -71,9 +71,9 @@ export const getSession = cache(async () => {
     const result = await Effect.runPromise(program);
     // Return format compatible with existing code
     return { user: result.rawUser };
-  } catch (error: any) {
+  } catch {
     // Authentication failed - return null without redirecting
-    console.error('[Auth] Authentication error:', error);
+    // This is expected behavior (e.g., on login page before authentication)
     return null;
   }
 });

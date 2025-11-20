@@ -90,11 +90,6 @@ const AppConfigSchema = Schema.Struct({
 });
 
 /**
- * Application Configuration Type (from schema)
- */
-type AppConfigType = Schema.Schema.Type<typeof AppConfigSchema>;
-
-/**
  * Application Configuration Service
  * Context.Tag for dependency injection
  */

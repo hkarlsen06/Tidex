@@ -10,162 +10,161 @@
  */
 
 import { Schema } from "effect";
-import { ValidationError } from "../errors/tagged";
 
 /**
  * ISO Date format (YYYY-MM-DD)
  * @example "2025-01-15"
  */
-export const ISODateString = Schema.String.pipe(
+export const ISODateStringSchema = Schema.String.pipe(
   Schema.pattern(/^\d{4}-\d{2}-\d{2}$/),
   Schema.brand("ISODateString")
 );
 
-export type ISODateString = typeof ISODateString.Type;
+export type ISODateString = typeof ISODateStringSchema.Type;
 
 /**
  * Time format (HH:MM)
  * @example "14:30", "09:00"
  */
-export const TimeString = Schema.String.pipe(
+export const TimeStringSchema = Schema.String.pipe(
   Schema.pattern(/^\d{2}:\d{2}$/),
   Schema.brand("TimeString")
 );
 
-export type TimeString = typeof TimeString.Type;
+export type TimeString = typeof TimeStringSchema.Type;
 
 /**
  * Positive number
  */
-export const PositiveNumber = Schema.Number.pipe(
+export const PositiveNumberSchema = Schema.Number.pipe(
   Schema.positive(),
   Schema.brand("PositiveNumber")
 );
 
-export type PositiveNumber = typeof PositiveNumber.Type;
+export type PositiveNumber = typeof PositiveNumberSchema.Type;
 
 /**
  * Non-negative number (>= 0)
  */
-export const NonNegativeNumber = Schema.Number.pipe(
+export const NonNegativeNumberSchema = Schema.Number.pipe(
   Schema.nonNegative(),
   Schema.brand("NonNegativeNumber")
 );
 
-export type NonNegativeNumber = typeof NonNegativeNumber.Type;
+export type NonNegativeNumber = typeof NonNegativeNumberSchema.Type;
 
 /**
  * Hourly wage (positive number, max 9999 for database limits)
  */
-export const HourlyWage = Schema.Number.pipe(
+export const HourlyWageSchema = Schema.Number.pipe(
   Schema.positive(),
   Schema.lessThanOrEqualTo(9999),
   Schema.brand("HourlyWage")
 );
 
-export type HourlyWage = typeof HourlyWage.Type;
+export type HourlyWage = typeof HourlyWageSchema.Type;
 
 /**
  * Hours worked (0-24 for single shift)
  */
-export const HoursWorked = Schema.Number.pipe(
+export const HoursWorkedSchema = Schema.Number.pipe(
   Schema.nonNegative(),
   Schema.lessThanOrEqualTo(24),
   Schema.brand("HoursWorked")
 );
 
-export type HoursWorked = typeof HoursWorked.Type;
+export type HoursWorked = typeof HoursWorkedSchema.Type;
 
 /**
  * Tax percentage (0-100)
  */
-export const TaxPercentage = Schema.Number.pipe(
+export const TaxPercentageSchema = Schema.Number.pipe(
   Schema.between(0, 100),
   Schema.brand("TaxPercentage")
 );
 
-export type TaxPercentage = typeof TaxPercentage.Type;
+export type TaxPercentage = typeof TaxPercentageSchema.Type;
 
 /**
  * UUID string
  */
-export const UUIDString = Schema.String.pipe(
+export const UUIDStringSchema = Schema.String.pipe(
   Schema.pattern(
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
   ),
   Schema.brand("UUIDString")
 );
 
-export type UUIDString = typeof UUIDString.Type;
+export type UUIDString = typeof UUIDStringSchema.Type;
 
 /**
  * Shift type enum
  */
-export const ShiftType = Schema.Literal("single", "series");
-export type ShiftType = typeof ShiftType.Type;
+export const ShiftTypeSchema = Schema.Literal("single", "series");
+export type ShiftType = typeof ShiftTypeSchema.Type;
 
 /**
  * Pause deduction method enum
  */
-export const PauseDeductionMethod = Schema.Literal(
+export const PauseDeductionMethodSchema = Schema.Literal(
   "none",
   "fixed",
   "proportional",
   "threshold"
 );
-export type PauseDeductionMethod = typeof PauseDeductionMethod.Type;
+export type PauseDeductionMethod = typeof PauseDeductionMethodSchema.Type;
 
 /**
  * Shift validation schema (for create/update operations)
  */
-export const ShiftInput = Schema.Struct({
-  date: ISODateString,
-  start: TimeString,
-  end: TimeString,
-  hourly_wage: Schema.optional(HourlyWage),
+export const ShiftInputSchema = Schema.Struct({
+  date: ISODateStringSchema,
+  start: TimeStringSchema,
+  end: TimeStringSchema,
+  hourly_wage: Schema.optional(HourlyWageSchema),
   description: Schema.optional(Schema.String),
-  shift_type: Schema.optional(ShiftType),
+  shift_type: Schema.optional(ShiftTypeSchema),
 });
 
-export type ShiftInput = typeof ShiftInput.Type;
+export type ShiftInput = typeof ShiftInputSchema.Type;
 
 /**
  * Settings update schema (partial updates allowed)
  */
-export const SettingsUpdate = Schema.Struct({
+export const SettingsUpdateSchema = Schema.Struct({
   theme: Schema.optional(Schema.String),
   default_shifts_view: Schema.optional(Schema.String),
   direct_time_input: Schema.optional(Schema.Boolean),
   use_preset: Schema.optional(Schema.Boolean),
   current_wage_level: Schema.optional(Schema.Number),
-  custom_wage: Schema.optional(Schema.NullOr(HourlyWage)),
+  custom_wage: Schema.optional(Schema.NullOr(HourlyWageSchema)),
   tax_deduction_enabled: Schema.optional(Schema.Boolean),
-  tax_percentage: Schema.optional(Schema.NullOr(TaxPercentage)),
-  monthly_goal: Schema.optional(Schema.NullOr(PositiveNumber)),
+  tax_percentage: Schema.optional(Schema.NullOr(TaxPercentageSchema)),
+  monthly_goal: Schema.optional(Schema.NullOr(PositiveNumberSchema)),
 });
 
-export type SettingsUpdate = typeof SettingsUpdate.Type;
+export type SettingsUpdate = typeof SettingsUpdateSchema.Type;
 
 /**
  * Helper to validate ISO date string
  */
 export const validateISODate = (input: string) =>
-  Schema.decodeUnknown(ISODateString)(input);
+  Schema.decodeUnknown(ISODateStringSchema)(input);
 
 /**
  * Helper to validate time string
  */
 export const validateTime = (input: string) =>
-  Schema.decodeUnknown(TimeString)(input);
+  Schema.decodeUnknown(TimeStringSchema)(input);
 
 /**
  * Helper to validate shift input
  */
 export const validateShiftInput = (input: unknown) =>
-  Schema.decodeUnknown(ShiftInput)(input);
+  Schema.decodeUnknown(ShiftInputSchema)(input);
 
 /**
  * Helper to validate settings update
  */
 export const validateSettingsUpdate = (input: unknown) =>
-  Schema.decodeUnknown(SettingsUpdate)(input);
+  Schema.decodeUnknown(SettingsUpdateSchema)(input);

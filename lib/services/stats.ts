@@ -29,7 +29,7 @@ import { Context, Effect, Layer } from "effect";
 import { ShiftsService } from "./shifts";
 import { SettingsService, type DbUserSettings } from "./settings";
 import { DatabaseError, AuthError, NotFoundError, TimeoutError, SupabaseError } from "../errors/tagged";
-import type { ShiftWithComputations, UserSettings } from "../payroll";
+import type { ShiftWithComputations } from "../payroll";
 import {
   getCurrentYearMonth,
   getPreviousYearMonth,
@@ -268,7 +268,6 @@ export const StatsServiceLive = Layer.effect(
   StatsService,
   Effect.gen(function* () {
     const shifts = yield* ShiftsService;
-    const settings = yield* SettingsService;
 
     /**
      * Get date range for stats based on target year

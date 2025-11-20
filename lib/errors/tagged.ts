@@ -67,6 +67,8 @@ export class AuthError extends Data.TaggedError("AuthError")<{
         return "Authentication token has expired";
       case "missing_credentials":
         return "Missing authentication credentials";
+      default:
+        return "Authentication error";
     }
   }
 }
@@ -133,6 +135,8 @@ export class ConfigError extends Data.TaggedError("ConfigError")<{
         return `Configuration key '${this.configKey}' is invalid`;
       case "parse_failed":
         return `Failed to parse configuration key '${this.configKey}'`;
+      default:
+        return `Configuration error for key '${this.configKey}'`;
     }
   }
 }

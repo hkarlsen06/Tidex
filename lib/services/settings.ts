@@ -20,7 +20,7 @@
  */
 
 import "server-only";
-import { Context, Effect, Layer, Cache, Duration, Schema } from "effect";
+import { Context, Effect, Layer, Cache, Duration } from "effect";
 import { AuthService } from "./auth";
 import { SupabaseService } from "./supabase";
 import { DatabaseError, AuthError, NotFoundError, TimeoutError, SupabaseError } from "../errors/tagged";

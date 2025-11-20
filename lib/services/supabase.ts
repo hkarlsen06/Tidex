@@ -147,8 +147,6 @@ export const SupabaseServiceLive = Layer.effect(
           retries?: number;
         }
       ): Effect.Effect<T, SupabaseError | TimeoutError | DatabaseError, never> => {
-        const timeoutDuration = options?.timeout ?? Duration.seconds(5);
-
         const queryEffect = Effect.tryPromise({
           try: () => callback(client),
           catch: (error) =>
