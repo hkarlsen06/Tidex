@@ -164,10 +164,17 @@ See `docs/THEME.md` for color token management.
 
 Pure, deterministic wage calculations live in `lib/payroll/`:
 
-- **Entry point**: `computeShift(shift, settings, presetRules)` from `lib/payroll/calc.ts`
+- **Entry point (pure)**: `computeShift(shift, settings, presetRules)` from `lib/payroll/calc.ts`
+- **Entry point (Effect)**: `computeShift` from `lib/payroll/effect.ts` with validation and typed errors
 - **Zero I/O**: All inputs explicit, no dates from system clock
-- **Server-side only**: Compute once per fetch in Data Access Layer (e.g., `data-access/shifts.ts`)
+- **Server-side only**: Compute once per fetch in Data Access Layer via services
 - **Client receives precomputed data**: UI renders `gross`, `paidHours`, etc. without recalculation
+
+**Effect Integration:**
+- Services use Effect-wrapped `computeShift` for type-safe validation
+- Schema validation ensures valid shift inputs (dates, times, wages)
+- Tagged errors (`ValidationError`, `ComputationError`) for failures
+- Property-based tests verify computation invariants
 
 Key concepts:
 
@@ -185,9 +192,11 @@ Key concepts:
 All database queries go through the DAL, which provides:
 
 - **Authentication**: All DAL functions call `verifySession()` to ensure user is authenticated
-- **Caching**: Uses React `cache()` for request deduplication and Next.js `unstable_cache()` for persistent caching
-- **Computation**: Server-side payroll calculations via `computeShift()`
-- **Type safety**: Returns fully typed, enriched data to pages
+- **Effect-based services**: All DAL functions use Effect internally via `lib/services/` for type-safe operations
+- **Caching**: Uses React `cache()` for request deduplication and Effect Cache for persistent caching
+- **Computation**: Server-side payroll calculations via Effect-wrapped `computeShift()`
+- **Type safety**: Returns fully typed, enriched data with typed errors
+- **Promise boundaries**: DAL exports Promise-based APIs for Next.js compatibility
 
 **Available DAL functions:**
 
@@ -219,10 +228,13 @@ Pages should NEVER call Supabase directly. Always use DAL functions which handle
 **See skill:** Use the `create-server-action` skill for complete server action implementation patterns.
 
 Server actions use centralized utilities from `lib/` for consistency:
-- **Validation**: `lib/validation/shift-validators.ts` (isISODate, isHHMM)
-- **Error messages**: `lib/errors/messages.ts` (ERRORS constants)
-- **Revalidation**: `lib/revalidation/paths.ts` (invalidateAndRevalidate, revalidateShiftData)
-- **Snapshots**: `data-access/snapshots.ts` (getCurrentSnapshots)
+- **Validation**:
+  - `lib/validation/schemas.ts` - Effect Schema validation with branded types
+  - `lib/validation/shift-validators.ts` - Legacy validators (isISODate, isHHMM) for backward compatibility
+- **Error messages**: `lib/errors/messages.ts` (ERRORS constants for user-facing Norwegian messages)
+- **Tagged errors**: `lib/errors/tagged.ts` (typed error classes for Effect pipelines)
+- **Revalidation**: `lib/revalidation/paths.ts` (Effect-wrapped cache invalidation)
+- **Snapshots**: `data-access/snapshots.ts` (Effect-based snapshot preparation)
 
 ## Configuration Files
 
@@ -277,9 +289,9 @@ Environment variables are validated at module load in `lib/env.ts` (throws error
 
 ## Effect-TS Integration
 
-**Status:** Phase 5 complete - All DAL and services migrated ✅
+**Status:** Phase 6 complete - Migration finished ✅
 
-This project uses Effect-TS for improved type safety, error handling, and testability. See `EFFECT_MIGRATION.md` for the complete migration plan.
+This project uses Effect-TS for improved type safety, error handling, and testability across all DAL and services. See `EFFECT_MIGRATION.md` for the complete migration plan and `docs/error-handling-audit.md` for error handling patterns.
 
 ### Architecture
 
