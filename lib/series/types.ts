@@ -82,8 +82,27 @@ export type SeriesShiftRow = {
   end_condition: EndCondition;
   /** Excluded dates (JSONB array) */
   exclusions: string[];
+  /** Date-specific supplement overrides (JSONB, nullable) */
+  date_specific_supplements?: DateSpecificSupplements | null;
   created_at?: string;
   updated_at?: string;
+};
+
+/**
+ * Date-specific supplement overrides for series shifts
+ * Key: ISO date string (YYYY-MM-DD)
+ * Value: Custom supplement data for that specific date
+ */
+export type DateSpecificSupplements = {
+  [isoDate: string]: {
+    mode: 'replace' | 'merge';
+    rules: Array<{
+      from: string;    // HHMM format
+      to: string;      // HHMM format
+      rate?: number;
+      percent?: number;
+    }>;
+  };
 };
 
 /**

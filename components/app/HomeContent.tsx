@@ -7,7 +7,7 @@ import { NextPayrollCard } from "@/components/app/NextPayrollCard";
 import { MonthPicker } from "./MonthPicker";
 import { ShiftCard } from "@/components/app/ShiftCard";
 import ShiftDetails from "@/components/shifts/ShiftDetails";
-import { ShiftWithComputations, UserSettings } from "@/lib/payroll";
+import { ShiftWithComputations, UserSettings, computeShift, PRESET_SUPPLEMENT_RULES } from "@/lib/payroll";
 import { getRelativeTime } from "@/lib/utils/relativeTime";
 import { useMonth } from "./MonthContext";
 import { useTranslations } from "@/lib/i18n/client";
@@ -112,16 +112,20 @@ export function HomeContent({ shifts: initialShifts, settings }: HomeContentProp
   const [additionalShifts, setAdditionalShifts] = useState<ShiftWithComputations[]>([]);
   const [deleting, startDeleteTransition] = useTransition();
   const [deletedShiftIds, setDeletedShiftIds] = useState<Set<string>>(new Set());
+  const [shiftOverrides, setShiftOverrides] = useState<Map<string, ShiftWithComputations>>(new Map());
   const selectedMonthIsCurrent = isCurrentMonth(month);
 
   // Track which months have been loaded or are currently loading
   // Using refs to avoid recreating fetchMonth callback on every state change
   const loadedMonthsRef = useRef<Set<string>>(new Set());
   const loadingMonthsRef = useRef<Set<string>>(new Set());
+  const hasInitializedRef = useRef(false);
 
   // Initialize loaded months synchronously on first render
   // This must happen before any effects run
-  if (loadedMonthsRef.current.size === 0) {
+  // Use a separate flag to prevent re-initialization in React Strict Mode
+  if (!hasInitializedRef.current) {
+    hasInitializedRef.current = true;
     // Only mark current month as loaded (SSR data explicitly loads current month only)
     // Do NOT mark other months even if they have shifts in initialShifts,
     // as those might be incomplete data (e.g., series ghosts spanning multiple months)
@@ -132,13 +136,19 @@ export function HomeContent({ shifts: initialShifts, settings }: HomeContentProp
 
   // Combine initial shifts with any dynamically loaded shifts, filtering out deleted ones
   const shifts = useMemo(
-    () => [...initialShifts, ...additionalShifts].filter(shift => !deletedShiftIds.has(shift.id)),
-    [initialShifts, additionalShifts, deletedShiftIds]
+    () => [...initialShifts, ...additionalShifts]
+      .filter(shift => !deletedShiftIds.has(shift.id))
+      .map(shift => {
+        const override = shiftOverrides.get(shift.id);
+        return override ? { ...shift, ...override } : shift;
+      }),
+    [initialShifts, additionalShifts, deletedShiftIds, shiftOverrides]
   );
 
   // Reset optimistic updates when new data arrives from server (after router.refresh())
   useEffect(() => {
     setDeletedShiftIds(new Set());
+    setShiftOverrides(new Map());
   }, [initialShifts]);
 
   // Helper to generate month key for tracking
@@ -441,6 +451,36 @@ export function HomeContent({ shifts: initialShifts, settings }: HomeContentProp
           setDetailsOpen(false);
           setSelectedShift(null);
         }}
+        onShiftUpdate={(updatedSupplements) => {
+          if (!selectedShift) return;
+
+          const baseRate = selectedShift.hourly_wage_snapshot
+            ?? selectedShift.computed?.wagePeriods?.[0]?.baseRate
+            ?? undefined;
+          const rulesForCompute = selectedShift.supplement_rules_snapshot?.rules ?? PRESET_SUPPLEMENT_RULES;
+
+          const shiftForCompute = {
+            ...selectedShift,
+            custom_supplements: updatedSupplements,
+            ...(typeof baseRate === "number" ? { hourly_wage_snapshot: baseRate } : {}),
+          };
+
+          let updatedShift: ShiftWithComputations = shiftForCompute;
+          try {
+            const recomputed = computeShift(shiftForCompute, settings, rulesForCompute);
+            updatedShift = { ...shiftForCompute, computed: recomputed };
+          } catch (err) {
+            console.error("Failed to recompute shift with custom supplements (HomeContent)", err);
+          }
+
+          setSelectedShift(updatedShift);
+          setShiftOverrides(prev => {
+            const next = new Map(prev);
+            next.set(updatedShift.id, updatedShift);
+            return next;
+          });
+        }}
+        readOnly={true}
         isDeleting={deleting}
         onDelete={(id) => {
           // Optimistically remove the shift from UI immediately

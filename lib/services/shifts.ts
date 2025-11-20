@@ -338,6 +338,10 @@ export const ShiftsServiceLive = Layer.effect(
 
             for (const ghost of ghosts) {
               const snapshot = snapshotMap.get(ghost.date) ?? null;
+
+              // Check if series has date-specific custom supplements for this ghost date
+              const customSupplements = series.date_specific_supplements?.[ghost.date] ?? null;
+
               const computed = computeShift(
                 {
                   id: `ghost-${series.id}-${ghost.date}`,
@@ -345,6 +349,7 @@ export const ShiftsServiceLive = Layer.effect(
                   shift_date: ghost.date,
                   start_time: cleanTime(series.start_time),
                   end_time: cleanTime(series.end_time),
+                  custom_supplements: customSupplements as any,
                   series_id: series.id,
                   series_anchor_weekday: ghost.weekday,
                 },
@@ -359,6 +364,7 @@ export const ShiftsServiceLive = Layer.effect(
                 shift_date: ghost.date,
                 start_time: cleanTime(series.start_time),
                 end_time: cleanTime(series.end_time),
+                custom_supplements: customSupplements as any,
                 series_id: series.id,
                 series_anchor_weekday: ghost.weekday,
                 computed,

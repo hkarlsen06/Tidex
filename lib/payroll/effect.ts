@@ -25,12 +25,13 @@ import type {
 
 /**
  * Schema for HH:MM time format validation
+ * Allows 00:00-23:59 and 24:00 (end-of-day)
  */
 const HHMMSchema = Schema.String.pipe(
-  Schema.pattern(/^([01]\d|2[0-3]):([0-5]\d)$/),
+  Schema.pattern(/^(([01]\d|2[0-3]):([0-5]\d)|24:00)$/),
   Schema.brand("HHMM"),
   Schema.annotations({
-    message: () => "Time must be in HH:MM format (00:00-23:59)",
+    message: () => "Time must be in HH:MM format (00:00-24:00)",
   })
 );
 
@@ -89,6 +90,38 @@ const SupplementRuleSchema = Schema.Struct({
 });
 
 /**
+ * Schema for Custom Supplement Rule (without days field)
+ */
+const CustomSupplementRuleSchema = Schema.Struct({
+  from: HHMMSchema,
+  to: HHMMSchema,
+  rate: Schema.optional(
+    Schema.Number.pipe(
+      Schema.greaterThanOrEqualTo(0),
+      Schema.annotations({
+        message: () => "Rate must be non-negative",
+      })
+    )
+  ),
+  percent: Schema.optional(
+    Schema.Number.pipe(
+      Schema.greaterThanOrEqualTo(0),
+      Schema.annotations({
+        message: () => "Percent must be non-negative",
+      })
+    )
+  ),
+});
+
+/**
+ * Schema for Custom Supplements Data
+ */
+const CustomSupplementsDataSchema = Schema.Struct({
+  mode: Schema.Literal("replace", "merge"),
+  rules: Schema.Array(CustomSupplementRuleSchema),
+});
+
+/**
  * Schema for Shift Row
  */
 const ShiftRowSchema = Schema.Struct({
@@ -105,6 +138,7 @@ const ShiftRowSchema = Schema.Struct({
       })
     )
   ),
+  custom_supplements: Schema.optional(Schema.NullOr(CustomSupplementsDataSchema)),
   series_id: Schema.optional(Schema.String),
   series_anchor_weekday: Schema.optional(Schema.Number.pipe(Schema.int(), Schema.between(0, 6))),
 });
@@ -372,6 +406,47 @@ export const calculateDuration = (
   });
 
 /**
+ * Validate custom supplements data
+ */
+export const validateCustomSupplements = (
+  data: unknown
+): Effect.Effect<import("./types").CustomSupplementsData, ValidationError, never> =>
+  Schema.decodeUnknown(CustomSupplementsDataSchema)(data).pipe(
+    Effect.mapError((parseError) => {
+      const formatted = ParseResult.TreeFormatter.formatErrorSync(parseError);
+      return new ValidationError({
+        field: "customSupplements",
+        message: `Invalid custom supplements: ${formatted}`,
+        cause: parseError,
+      });
+    }),
+    Effect.flatMap((validated) =>
+      // Enforce exactly one of rate/percent for each rule
+      Effect.try({
+        try: () => {
+          for (const [index, rule] of validated.rules.entries()) {
+            const hasRate = rule.rate !== undefined && rule.rate !== null;
+            const hasPercent = rule.percent !== undefined && rule.percent !== null;
+            if (!hasRate && !hasPercent) {
+              throw new Error(`Rule ${index + 1} must have either rate or percent`);
+            }
+            if (hasRate && hasPercent) {
+              throw new Error(`Rule ${index + 1} cannot have both rate and percent`);
+            }
+          }
+          return validated as unknown as import("./types").CustomSupplementsData;
+        },
+        catch: (err) =>
+          new ValidationError({
+            field: "customSupplements",
+            message: String(err),
+            cause: err,
+          }),
+      })
+    )
+  );
+
+/**
  * Export schemas for use in other modules
  */
 export const schemas = {
@@ -379,6 +454,8 @@ export const schemas = {
   UserSettings: UserSettingsSchema,
   WageSnapshot: WageSnapshotSchema,
   SupplementRule: SupplementRuleSchema,
+  CustomSupplementRule: CustomSupplementRuleSchema,
+  CustomSupplementsData: CustomSupplementsDataSchema,
   HHMM: HHMMSchema,
   ISODate: ISODateSchema,
   BreakMethod: BreakMethodSchema,
