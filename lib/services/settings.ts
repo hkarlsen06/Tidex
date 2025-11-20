@@ -35,6 +35,10 @@ export type DbUserSettings = {
   default_shifts_view?: string | null;
   direct_time_input?: boolean | null;
   full_minute_range?: boolean | null;
+  use_preset?: boolean | null;
+  current_wage_level?: number | null;
+  custom_wage?: number | null;
+  custom_supplements?: { rules: any[] } | null;
   pause_deduction_enabled?: boolean | null;
   pause_deduction_method?: string | null;
   pause_threshold_hours?: number | null;

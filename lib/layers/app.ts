@@ -35,6 +35,7 @@ import { SettingsServiceLive } from "../services/settings";
 import { SnapshotsServiceLive } from "../services/snapshots";
 import { ShiftsServiceLive } from "../services/shifts";
 import { StatsServiceLive } from "../services/stats";
+import { SubscriptionServiceLive } from "../services/subscription";
 
 /**
  * Layer for just configuration and Supabase
@@ -103,6 +104,17 @@ export const StatsLive = Layer.provideMerge(
 );
 
 /**
+ * Layer for subscription operations
+ * Use this when you need subscription and profile data
+ *
+ * Dependencies: none (provides all services including SubscriptionService)
+ */
+export const SubscriptionLive = Layer.provideMerge(
+  SubscriptionServiceLive,
+  SupabaseAuthLive
+);
+
+/**
  * Complete application layer with all services
  *
  * Provides:
@@ -113,6 +125,7 @@ export const StatsLive = Layer.provideMerge(
  * - SnapshotsService: Wage snapshot management
  * - ShiftsService: Shift data with payroll computations
  * - StatsService: Statistics and analytics with projections
+ * - SubscriptionService: Subscription and profile management
  *
  * Dependencies: none (fully self-contained)
  */
@@ -120,5 +133,6 @@ export const AppLive = Layer.mergeAll(
   AuthSettingsLive,
   AuthSnapshotsLive,
   ShiftsLive,
-  StatsLive
+  StatsLive,
+  SubscriptionLive
 );
