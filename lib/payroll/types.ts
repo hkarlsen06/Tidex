@@ -8,8 +8,17 @@ export type ShiftRow = {
   end_time: string;             // "HH:mm"
   hourly_wage_snapshot?: number | null; // Snapshot of hourly wage at creation time
   supplement_rules_snapshot?: { rules: SupplementRule[] } | null; // Snapshot of supplement rules at creation time
+  custom_supplements?: CustomSupplementsData | null; // Shift-specific supplement overrides
   series_id?: string;           // Links to series_shifts if this is a ghost
   series_anchor_weekday?: number; // Which weekday anchor (0-6) generated this ghost
+};
+
+/**
+ * Custom supplement data for a shift
+ */
+export type CustomSupplementsData = {
+  mode: 'replace' | 'merge';
+  rules: Omit<SupplementRule, 'days'>[]; // No days field since it applies to one specific day
 };
 
 export type UserSettings = {

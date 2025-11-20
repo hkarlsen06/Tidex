@@ -2,6 +2,8 @@ import { SupplementRule, WagePeriod } from "./types";
 
 const toMin = (hhmm: string) => {
   const [h, m] = hhmm.split(":").map(Number);
+  // Normalize 24:00 to 1440 minutes (end of day, which equals 00:00 next day)
+  // The cross-midnight logic will handle this correctly
   return h * 60 + m;
 };
 

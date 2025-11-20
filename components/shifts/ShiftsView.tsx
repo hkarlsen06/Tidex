@@ -14,7 +14,7 @@ import {
 } from "@/components/app/Card";
 import { CalendarSkeleton } from "@/components/app/CalendarSkeleton";
 import { Button } from "@/components/app/Button";
-import { ShiftWithComputations, UserSettings, SupplementRule } from "@/lib/payroll";
+import { ShiftWithComputations, UserSettings, SupplementRule, computeShift } from "@/lib/payroll";
 import ShiftDetails from "@/components/shifts/ShiftDetails";
 import { deleteShift } from "@/app/[locale]/(app)/shifts/_actions/deleteShift";
 import { updateShift } from "@/app/[locale]/(app)/shifts/_actions/updateShift";
@@ -510,6 +510,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
   const [movedShifts, setMovedShifts] = useState<Map<string, { newDate: string; newStartTime: string; newEndTime: string }>>(new Map());
   const hasTriggeredConfetti = useRef<Set<string>>(new Set());
   const [copiedShifts, setCopiedShifts] = useState<ShiftWithComputations[]>([]);
+  const [shiftOverrides, setShiftOverrides] = useState<Map<string, ShiftWithComputations>>(new Map());
 
   // Track which months have been loaded or are currently loading
   const [loadedMonths, setLoadedMonths] = useState<Set<string>>(new Set());
@@ -523,18 +524,22 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
     () => [...initialShifts, ...additionalShifts, ...copiedShifts]
       .filter(shift => !deletedShiftIds.has(shift.id))
       .map(shift => {
-        const moved = movedShifts.get(shift.id);
+        // Apply locally fetched overrides (e.g., after saving custom supplements)
+        const overridden = shiftOverrides.get(shift.id);
+        const baseShift = overridden ? { ...shift, ...overridden } : shift;
+
+        const moved = movedShifts.get(baseShift.id);
         if (moved) {
           return {
-            ...shift,
+            ...baseShift,
             shift_date: moved.newDate,
             start_time: moved.newStartTime,
             end_time: moved.newEndTime,
           };
         }
-        return shift;
+        return baseShift;
       }),
-    [initialShifts, additionalShifts, deletedShiftIds, movedShifts, copiedShifts]
+    [initialShifts, additionalShifts, deletedShiftIds, movedShifts, copiedShifts, shiftOverrides]
   );
 
   const clearSelection = useCallback(() => {
@@ -593,6 +598,38 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
     }
   }, [getMonthKey, loadedMonths, loadingMonths, initialShifts, cacheBuster]);
 
+  // Fetch a single shift (by month) to refresh computed data after local updates
+  const refreshShiftFromServer = useCallback(async (shiftId: string, shiftDate: string) => {
+    const [yearStr, monthStr] = shiftDate.split("-");
+    const year = Number(yearStr);
+    const month = Number(monthStr);
+
+    if (!year || !month) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/shifts?year=${year}&month=${month}&_=${cacheBuster}`);
+      if (!response.ok) return;
+
+      const data = await response.json();
+      const freshShift = Array.isArray(data?.shifts)
+        ? (data.shifts as ShiftWithComputations[]).find((s) => s.id === shiftId)
+        : null;
+
+      if (freshShift) {
+        setShiftOverrides((prev) => {
+          const next = new Map(prev);
+          next.set(freshShift.id, freshShift);
+          return next;
+        });
+        setSelectedShift((prev) => (prev?.id === shiftId ? freshShift : prev));
+      }
+    } catch (err) {
+      console.error("Failed to refresh shift after custom supplements save", err);
+    }
+  }, [cacheBuster]);
+
   const shiftsByDate = useMemo(() => {
     const map = new Map<ISODate, ShiftWithComputations[]>();
     for (const shift of shifts) {
@@ -617,6 +654,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
     setDeletedShiftIds(new Set());
     setMovedShifts(new Map());
     setCopiedShifts([]);
+    setShiftOverrides(new Map());
 
     // Clear client-side fetched shifts to force refetch with fresh data
     setAdditionalShifts([]);
@@ -1188,7 +1226,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
 
       {/* Shifts List Section - Right half of screen, centered within */}
       <div className="lg:w-1/2 lg:flex lg:justify-center">
-        <div ref={shiftsListRef} className="pb-10 lg:w-full lg:max-w-[512px] lg:overflow-y-auto lg:max-h-[calc(100vh-8rem)] lg:px-4">
+        <div ref={shiftsListRef} className="pb-10 lg:w-full lg:max-w-lg lg:overflow-y-auto lg:max-h-[calc(100vh-8rem)] lg:px-4">
         {grouped.length === 0 ? (
           <Card className="text-center">
             <CardHeader>
@@ -1295,6 +1333,40 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
         if (openedFromCalendar) {
           clearSelection();
         }
+      }}
+      onShiftUpdate={(updatedSupplements) => {
+        if (!selectedShift) return;
+
+        // Use existing computed wage periods to preserve the applied base rate locally
+        const baseRate = selectedShift.hourly_wage_snapshot
+          ?? selectedShift.computed?.wagePeriods?.[0]?.baseRate
+          ?? undefined;
+        const rulesForCompute = selectedShift.supplement_rules_snapshot?.rules ?? presetRules;
+
+        const shiftForCompute = {
+          ...selectedShift,
+          custom_supplements: updatedSupplements,
+          ...(typeof baseRate === "number" ? { hourly_wage_snapshot: baseRate } : {}),
+        };
+
+        // Optimistically recompute so the breakdown updates immediately
+        let updatedShift: ShiftWithComputations = shiftForCompute;
+        try {
+          const recomputed = computeShift(shiftForCompute, userSettings, rulesForCompute);
+          updatedShift = { ...shiftForCompute, computed: recomputed };
+        } catch (err) {
+          console.error("Failed to recompute shift with custom supplements", err);
+        }
+
+        setSelectedShift(updatedShift);
+        setShiftOverrides((prev) => {
+          const next = new Map(prev);
+          next.set(updatedShift.id, updatedShift);
+          return next;
+        });
+
+        // Fetch authoritative computed shift from the server to stay in sync
+        refreshShiftFromServer(updatedShift.id, updatedShift.shift_date);
       }}
       isDeleting={pending}
       onDelete={(id) => {

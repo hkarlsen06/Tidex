@@ -345,16 +345,18 @@ export function WageHistoryModal({
             }}
           />
 
-          {/* Save Button */}
-          <div className="flex justify-end">
-            <Button
-              onClick={handleSave}
-              disabled={pending || isCustomWageInvalid}
-              className="w-full sm:w-auto"
-            >
-              {pending ? t.pages.settings.pay.wageHistory.modal.saving : mode === 'edit' ? t.pages.settings.pay.wageHistory.modal.save : t.pages.settings.pay.wageHistory.modal.create}
-            </Button>
-          </div>
+          {/* Save Button - only show for tariff/preset mode */}
+          {usePreset && (
+            <div className="flex justify-end">
+              <Button
+                onClick={handleSave}
+                disabled={pending || isCustomWageInvalid}
+                className="w-full sm:w-auto"
+              >
+                {pending ? t.pages.settings.pay.wageHistory.modal.saving : mode === 'edit' ? t.pages.settings.pay.wageHistory.modal.save : t.pages.settings.pay.wageHistory.modal.create}
+              </Button>
+            </div>
+          )}
 
           {/* Supplements */}
           <div className="space-y-4">

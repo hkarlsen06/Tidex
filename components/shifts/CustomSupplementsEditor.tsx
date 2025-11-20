@@ -8,37 +8,35 @@ import { TimeInput } from '@/components/app/TimeInput';
 import { Card } from '@/components/app/Card';
 import { Badge } from '@/components/app/Badge';
 import { Trash2, Plus } from 'lucide-react';
-import { SupplementRule, SupplementsData } from './types';
+import type { CustomSupplementsEditorData, CustomSupplementRuleWithId } from '@/lib/custom-supplements/types';
 import { useTranslations } from '@/lib/i18n/client';
 
-interface SupplementsEditorProps {
-  value: SupplementsData | null;
-  onChange: (value: SupplementsData | null) => void;
+interface CustomSupplementsEditorProps {
+  value: CustomSupplementsEditorData;
+  onChange: (value: CustomSupplementsEditorData) => void;
   className?: string;
   readOnly?: boolean;
 }
 
-export function SupplementsEditor({
+export function CustomSupplementsEditor({
   value,
   onChange,
   className,
   readOnly = false,
-}: SupplementsEditorProps) {
+}: CustomSupplementsEditorProps) {
   const { t } = useTranslations();
   const baseId = useId();
-  const DAY_LABELS = t.dateTime.daysShort.slice(1).concat(t.dateTime.daysShort[0]); // Mon-Sun (reorder from Sun-Sat)
-  const createEmptyRule = (id: string): SupplementRule => ({
+
+  const createEmptyRule = (id: string): CustomSupplementRuleWithId => ({
     id,
-    days: [],
     from: '',
     to: '',
   });
 
-  // Initialize with one empty rule if no existing rules, or use existing rules
-  const getInitialRules = (): SupplementRule[] => {
-    if (value?.rules && value.rules.length > 0) {
+  const [rules, setRules] = useState<CustomSupplementRuleWithId[]>(() => {
+    if (value.rules && value.rules.length > 0) {
       return value.rules.map((rule, index) => {
-        // Infer mode from existing data for backward compatibility
+        // Infer mode from existing data
         let mode: 'percent' | 'rate' | undefined = rule.mode;
         if (!mode) {
           if (rule.percent !== undefined) {
@@ -49,7 +47,7 @@ export function SupplementsEditor({
         }
         return {
           ...rule,
-          id: `${index}`,
+          id: rule.id || `${index}`,
           mode,
         };
       });
@@ -57,11 +55,10 @@ export function SupplementsEditor({
     if (readOnly) {
       return [];
     }
-    // Start with one empty rule so form is visible
+    // Start with one empty rule
     return [createEmptyRule('0')];
-  };
+  });
 
-  const [rules, setRules] = useState<SupplementRule[]>(getInitialRules());
   const [nextId, setNextId] = useState(() => rules.length);
   const fromInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const toInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
@@ -87,7 +84,6 @@ export function SupplementsEditor({
     // Update parent immediately
     const validRules = newRules.filter(
       (rule) =>
-        rule.days.length > 0 &&
         rule.from &&
         rule.to &&
         rule.mode &&
@@ -95,15 +91,13 @@ export function SupplementsEditor({
          (rule.mode === 'rate' && rule.rate !== undefined && rule.rate !== 0))
     );
 
-    if (validRules.length > 0) {
-      const cleanedRules = validRules.map(({ id: _id, mode: _mode, ...rest }) => rest) as any[];
-      onChange({ rules: cleanedRules });
-    } else {
-      onChange(null);
-    }
+    onChange({
+      mode: value.mode,
+      rules: validRules.map(({ id: _id, mode: _mode, ...rest }) => rest) as any[],
+    });
   };
 
-  const updateRule = (id: string, updates: Partial<SupplementRule>) => {
+  const updateRule = (id: string, updates: Partial<CustomSupplementRuleWithId>) => {
     if (readOnly) {
       return;
     }
@@ -113,7 +107,6 @@ export function SupplementsEditor({
     // Update parent immediately
     const validRules = newRules.filter(
       (rule) =>
-        rule.days.length > 0 &&
         rule.from &&
         rule.to &&
         rule.mode &&
@@ -121,33 +114,17 @@ export function SupplementsEditor({
          (rule.mode === 'rate' && rule.rate !== undefined && rule.rate !== 0))
     );
 
-    if (validRules.length > 0) {
-      const cleanedRules = validRules.map(({ id: _id, mode: _mode, ...rest }) => rest) as any[];
-      onChange({ rules: cleanedRules });
-    } else {
-      onChange(null);
-    }
-  };
-
-  const toggleDay = (ruleId: string, day: number) => {
-    if (readOnly) {
-      return;
-    }
-    const rule = rules.find((r) => r.id === ruleId);
-    if (!rule) return;
-
-    const days = rule.days.includes(day)
-      ? rule.days.filter((d) => d !== day)
-      : [...rule.days, day].sort();
-
-    updateRule(ruleId, { days });
+    onChange({
+      mode: value.mode,
+      rules: validRules.map(({ id: _id, mode: _mode, ...rest }) => rest) as any[],
+    });
   };
 
   // Helper to check if value is invalid
-  const isValueInvalid = (rule: SupplementRule) => {
+  const isValueInvalid = (rule: CustomSupplementRuleWithId) => {
     if (!rule.mode) return false;
-    const value = rule.mode === 'percent' ? rule.percent : rule.rate;
-    return value === undefined || value === 0;
+    const val = rule.mode === 'percent' ? rule.percent : rule.rate;
+    return val === undefined || val === 0;
   };
 
   return (
@@ -155,7 +132,6 @@ export function SupplementsEditor({
       <div className="space-y-4">
         {rules.map((rule) => {
           // Progressive enablement logic
-          const hasDays = rule.days.length > 0;
           const hasFromTime = rule.from.length > 0;
           const hasToTime = rule.to.length > 0;
           const hasType = rule.mode === 'percent' || rule.mode === 'rate';
@@ -164,7 +140,7 @@ export function SupplementsEditor({
             <Card key={rule.id} className="p-4 space-y-4 bg-surface-primary">
               <div className="flex items-center justify-between">
                 <Badge variant="secondary">
-                  {t.components.supplementsEditor.badge.replace('{number}', String(rules.indexOf(rule) + 1))}
+                  {t.components.customSupplementsEditor.badge.replace('{number}', String(rules.indexOf(rule) + 1))}
                 </Badge>
                 {!readOnly && (
                   <Button
@@ -178,41 +154,11 @@ export function SupplementsEditor({
                 )}
               </div>
 
-              {/* Days selector - always enabled */}
-              <div className="space-y-2">
-                <Label className="text-sm">{t.components.supplementsEditor.daysLabel}</Label>
-                <div className="grid grid-cols-4 gap-2">
-                  {DAY_LABELS.map((label, idx) => {
-                    const dayNum = idx + 1;
-                    const isSelected = rule.days.includes(dayNum);
-                    return (
-                      <button
-                        key={dayNum}
-                        type="button"
-                        onClick={() => toggleDay(rule.id, dayNum)}
-                        disabled={readOnly}
-                        className={`px-2 py-1.5 text-xs sm:text-sm rounded border transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
-                          isSelected
-                            ? 'bg-brand-gradient-start text-white border-brand-gradient-start'
-                            : 'bg-surface-secondary border-border text-text-secondary hover:border-brand-gradient-start/50'
-                        }`}
-                      >
-                        {label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Time range - disabled until days selected */}
-              <div
-                className={`grid grid-cols-1 gap-3 sm:grid-cols-2 transition-opacity ${
-                  !hasDays ? 'opacity-40' : 'opacity-100'
-                }`}
-              >
+              {/* Time range */}
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor={`${baseId}-from-${rule.id}`} className="text-sm">
-                    {t.components.supplementsEditor.fromLabel}
+                    {t.components.customSupplementsEditor.fromLabel}
                   </Label>
                   <TimeInput
                     id={`${baseId}-from-${rule.id}`}
@@ -231,14 +177,14 @@ export function SupplementsEditor({
                         next.focus();
                       }
                     }}
-                    disabled={readOnly || !hasDays}
+                    disabled={readOnly}
                     placeholder="00:00"
                     className="w-full"
                   />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor={`${baseId}-to-${rule.id}`} className="text-sm">
-                    {t.components.supplementsEditor.toLabel}
+                    {t.components.customSupplementsEditor.toLabel}
                   </Label>
                   <TimeInput
                     id={`${baseId}-to-${rule.id}`}
@@ -251,7 +197,7 @@ export function SupplementsEditor({
                     }}
                     value={rule.to}
                     onChange={(val) => updateRule(rule.id, { to: val })}
-                    disabled={readOnly || !hasDays || !hasFromTime}
+                    disabled={readOnly || !hasFromTime}
                     placeholder="24:00"
                     className="w-full"
                   />
@@ -259,7 +205,7 @@ export function SupplementsEditor({
               </div>
 
               {/* Full Day Quick-fill Button */}
-              {!readOnly && hasDays && (
+              {!readOnly && (
                 <Button
                   type="button"
                   variant="outline"
@@ -267,7 +213,7 @@ export function SupplementsEditor({
                   onClick={() => updateRule(rule.id, { from: '00:00', to: '24:00' })}
                   className="w-full text-sm"
                 >
-                  {t.components.supplementsEditor.fullDay}
+                  {t.components.customSupplementsEditor.fullDay}
                 </Button>
               )}
 
@@ -277,7 +223,7 @@ export function SupplementsEditor({
                   !hasToTime ? 'opacity-40' : 'opacity-100'
                 }`}
               >
-                <Label className="text-sm">{t.components.supplementsEditor.typeLabel}</Label>
+                <Label className="text-sm">{t.components.customSupplementsEditor.typeLabel}</Label>
                 <div className="flex flex-col gap-2 sm:flex-row">
                   <button
                     type="button"
@@ -291,7 +237,7 @@ export function SupplementsEditor({
                         : 'bg-surface-secondary border-border text-text-secondary hover:border-brand-gradient-start/50'
                     } disabled:hover:border-border`}
                   >
-                    {t.components.supplementsEditor.typePercent}
+                    {t.components.customSupplementsEditor.typePercent}
                   </button>
                   <button
                     type="button"
@@ -305,7 +251,7 @@ export function SupplementsEditor({
                         : 'bg-surface-secondary border-border text-text-secondary hover:border-brand-gradient-start/50'
                     } disabled:hover:border-border`}
                   >
-                    {t.components.supplementsEditor.typeFixed}
+                    {t.components.customSupplementsEditor.typeFixed}
                   </button>
                 </div>
               </div>
@@ -319,9 +265,9 @@ export function SupplementsEditor({
                 <Label htmlFor={`${baseId}-value-${rule.id}`} className="text-sm">
                   {hasType
                     ? rule.mode === 'percent'
-                      ? t.components.supplementsEditor.valuePercentLabel
-                      : t.components.supplementsEditor.valueFixedLabel
-                    : t.components.supplementsEditor.valueLabel}
+                      ? t.components.customSupplementsEditor.valuePercentLabel
+                      : t.components.customSupplementsEditor.valueFixedLabel
+                    : t.components.customSupplementsEditor.valueLabel}
                 </Label>
                 <div className="relative">
                   <Input
@@ -332,7 +278,6 @@ export function SupplementsEditor({
                     value={rule.mode === 'percent' ? (rule.percent ?? '') : (rule.rate ?? '')}
                     onChange={(e) => {
                       const inputValue = e.target.value;
-                      // Allow empty string (user clearing the field)
                       const val = inputValue === '' ? undefined : parseFloat(inputValue);
 
                       if (rule.mode === 'percent') {
@@ -349,7 +294,7 @@ export function SupplementsEditor({
                   />
                   {hasType && (
                     <span className="absolute right-4 top-1/2 -translate-y-1/2 text-text-secondary text-sm">
-                      {rule.mode === 'percent' ? t.components.supplementsEditor.percentUnit : t.components.supplementsEditor.fixedUnit}
+                      {rule.mode === 'percent' ? t.components.customSupplementsEditor.percentUnit : t.components.customSupplementsEditor.fixedUnit}
                     </span>
                   )}
                 </div>
@@ -360,7 +305,7 @@ export function SupplementsEditor({
 
         {readOnly && rules.length === 0 && (
           <p className="text-sm text-text-secondary italic">
-            {t.components.supplementsEditor.noSupplements}
+            {t.components.customSupplementsEditor.noSupplements}
           </p>
         )}
 
@@ -370,7 +315,6 @@ export function SupplementsEditor({
             onClick={addRule}
             disabled={rules.some(
               (r) =>
-                r.days.length === 0 ||
                 !r.from ||
                 !r.to ||
                 !r.mode ||
@@ -380,7 +324,7 @@ export function SupplementsEditor({
             className="w-full rounded-3xl"
           >
             <Plus className="h-4 w-4 mr-2" />
-            {rules.length === 1 ? t.components.supplementsEditor.addOne : t.components.supplementsEditor.addMultiple}
+            {rules.length === 1 ? t.components.customSupplementsEditor.addOne : t.components.customSupplementsEditor.addMultiple}
           </Button>
         )}
       </div>

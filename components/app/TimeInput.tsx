@@ -14,10 +14,11 @@ type TimeInputProps = {
   onEnter?: () => void; // Called when user presses Enter key
   step?: number;
   disabled?: boolean;
+  placeholder?: string;
 };
 
 export const TimeInput = React.forwardRef<HTMLInputElement, TimeInputProps>(
-  ({ id, value, onChange, className, onComplete, onEnter, step: _step = 900, disabled }, ref) => {
+  ({ id, value, onChange, className, onComplete, onEnter, step: _step = 900, disabled, placeholder = "00:00" }, ref) => {
     const [inputValue, setInputValue] = React.useState(value);
     const internalRef = React.useRef<HTMLInputElement>(null);
     const inputRef = (ref as React.RefObject<HTMLInputElement | null>) || internalRef;
@@ -42,6 +43,8 @@ export const TimeInput = React.forwardRef<HTMLInputElement, TimeInputProps>(
     const isValidTime = (time: string): boolean => {
       if (!/^\d{2}:\d{2}$/.test(time)) return false;
       const [h, m] = time.split(":").map(Number);
+      // Allow 24:00 as special case for end-of-day
+      if (h === 24) return m === 0;
       return h >= 0 && h <= 23 && m >= 0 && m <= 59;
     };
 
@@ -120,7 +123,8 @@ export const TimeInput = React.forwardRef<HTMLInputElement, TimeInputProps>(
       } else if (digits.length === 2) {
         // After two hour digits, add colon automatically
         const hours = parseInt(digits);
-        if (hours > 23) {
+        // Allow up to 24 for 24:00 end-of-day
+        if (hours > 24) {
           e.preventDefault();
           return;
         }
@@ -189,7 +193,7 @@ export const TimeInput = React.forwardRef<HTMLInputElement, TimeInputProps>(
         ref={inputRef}
         type="text"
         inputMode="numeric"
-        placeholder="HH:MM"
+        placeholder={placeholder}
         value={inputValue}
         onChange={handleChange}
         onKeyDown={handleKeyDown}

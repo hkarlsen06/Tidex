@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Pencil, Trash2, Clock, Check, X, RefreshCw } from "lucide-react";
+import { Pencil, Trash2, Clock, Check, X, RefreshCw, Plus } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -14,6 +14,7 @@ import { Button } from "@components/app/Button";
 import { Input } from "@components/app/Input";
 import type { ShiftWithComputations, UserSettings, SupplementRule } from "@/lib/payroll";
 import SupplementBreakdown, { type SupplementSegmentInput } from "./SupplementBreakdown";
+import { CustomSupplementsModal } from "./CustomSupplementsModal";
 import { updateShift } from "@/app/[locale]/(app)/shifts/_actions/updateShift";
 import { cn } from "@/lib/cn";
 import { TimeInput } from "@/components/app/TimeInput";
@@ -112,6 +113,8 @@ export type ShiftDetailsProps = {
   existingShifts?: ExistingShift[];
   userSettings?: UserSettings;
   presetRules?: SupplementRule[];
+  readOnly?: boolean; // Hide edit/delete buttons when true (e.g., from dashboard)
+  onShiftUpdate?: (updatedSupplements: any) => void; // Called after shift is updated with new custom supplements
 };
 
 function capitalize(input: string) {
@@ -143,10 +146,13 @@ export function ShiftDetails({
   existingShifts = [],
   userSettings = {},
   presetRules = [],
+  readOnly = false,
+  onShiftUpdate,
 }: ShiftDetailsProps) {
   const { t, locale } = useTranslations();
   const router = useRouter();
   const [seriesModalOpen, setSeriesModalOpen] = useState(false);
+  const [customSupplementsModalOpen, setCustomSupplementsModalOpen] = useState(false);
   const isOffline = useOnlineStatus();
 
   // Create locale-aware date formatters
@@ -314,7 +320,7 @@ export function ShiftDetails({
                   value={shiftDate}
                   onChange={(event) => setShiftDate(event.target.value)}
                   disabled={saving}
-                  className="w-[160px]"
+                  className="w-40"
                 />
               ) : (
                 <div className="text-base font-medium text-text-primary">
@@ -375,8 +381,29 @@ export function ShiftDetails({
               <SupplementBreakdown
                 baseWage={baseWageRate}
                 segments={supplementSegments}
+                customSupplements={shift.custom_supplements}
               />
             ) : null}
+
+            {/* Custom Supplements Button */}
+            {isEditing && !confirmingDelete && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setCustomSupplementsModalOpen(true)}
+                disabled={isOffline}
+                className="w-full justify-center gap-2 text-sm text-text-secondary hover:text-text-primary"
+              >
+                {shift.custom_supplements ? (
+                  <Pencil className="h-4 w-4" />
+                ) : (
+                  <Plus className="h-4 w-4" />
+                )}
+                {shift.custom_supplements
+                  ? t.pages.shifts.details.editCustomSupplements
+                  : t.pages.shifts.details.addCustomSupplements}
+              </Button>
+            )}
 
             {hasSupplementBreakdown ? <div className="h-px bg-border-subtle" /> : null}
 
@@ -403,29 +430,31 @@ export function ShiftDetails({
 
         <DialogFooter className="mt-4">
           {shift && (
-            <div className={cn("grid w-full gap-2", isSeriesGhost && !isEditing && !confirmingDelete ? "grid-cols-2" : "grid-cols-3")}>
-              <Button
-                onClick={() => {
-                  if (confirmingDelete) {
-                    handleConfirmDelete();
-                  } else {
-                    handleDeleteClick();
-                  }
-                }}
-                disabled={saving || isDeleting || isEditing || isOffline}
-                loading={confirmingDelete && isDeleting}
-                title={isOffline ? "Cannot delete shifts while offline" : undefined}
-                className={cn(
-                  "col-span-1 h-11 w-full rounded-full px-4 text-sm font-medium transition-colors gap-2",
-                  isEditing || isOffline
-                    ? "bg-surface-secondary text-text-muted cursor-not-allowed"
-                    : "bg-rose-600 text-white hover:bg-rose-700"
-                )}
-              >
-                <Trash2 className="h-4 w-4" />
-                {confirmingDelete ? t.pages.shifts.details.confirmDeleteButton : t.pages.shifts.details.deleteButton}
-              </Button>
-              {isEditing ? (
+            <div className={cn("grid w-full gap-2", readOnly ? "grid-cols-1" : isSeriesGhost && !isEditing && !confirmingDelete ? "grid-cols-2" : "grid-cols-3")}>
+              {!readOnly && (
+                <Button
+                  onClick={() => {
+                    if (confirmingDelete) {
+                      handleConfirmDelete();
+                    } else {
+                      handleDeleteClick();
+                    }
+                  }}
+                  disabled={saving || isDeleting || isEditing || isOffline}
+                  loading={confirmingDelete && isDeleting}
+                  title={isOffline ? "Cannot delete shifts while offline" : undefined}
+                  className={cn(
+                    "col-span-1 h-11 w-full rounded-full px-4 text-sm font-medium transition-colors gap-2",
+                    isEditing || isOffline
+                      ? "bg-surface-secondary text-text-muted cursor-not-allowed"
+                      : "bg-rose-600 text-white hover:bg-rose-700"
+                  )}
+                >
+                  <Trash2 className="h-4 w-4" />
+                  {confirmingDelete ? t.pages.shifts.details.confirmDeleteButton : t.pages.shifts.details.deleteButton}
+                </Button>
+              )}
+              {!readOnly && isEditing ? (
                 <Button
                   onClick={handleSave}
                   disabled={saving || !canSave}
@@ -434,7 +463,7 @@ export function ShiftDetails({
                   <Check className="h-4 w-4" />
                   {t.pages.shifts.details.saveButton}
                 </Button>
-              ) : (
+              ) : !readOnly ? (
                 <Button
                   onClick={handleEdit}
                   disabled={saving || isDeleting || confirmingDelete || isOffline}
@@ -449,8 +478,8 @@ export function ShiftDetails({
                   <Pencil className="h-4 w-4" />
                   {t.pages.shifts.details.editButton}
                 </Button>
-              )}
-              {isSeriesGhost && !isEditing && !confirmingDelete && (
+              ) : null}
+              {!readOnly && isSeriesGhost && !isEditing && !confirmingDelete && (
                 <Button
                   onClick={handleEditSeries}
                   disabled={saving || isDeleting || isOffline}
@@ -466,7 +495,7 @@ export function ShiftDetails({
                   {t.pages.shifts.details.editSeriesButton}
                 </Button>
               )}
-              {isEditing ? (
+              {!readOnly && isEditing ? (
                 <Button
                   onClick={() => {
                     if (shift) {
@@ -483,7 +512,7 @@ export function ShiftDetails({
                   <X className="h-4 w-4" />
                   {t.pages.shifts.details.cancelButton}
                 </Button>
-              ) : confirmingDelete ? (
+              ) : !readOnly && confirmingDelete ? (
                 <Button
                   onClick={() => {
                     setConfirmingDelete(false);
@@ -526,6 +555,24 @@ export function ShiftDetails({
           existingShifts={existingShifts}
           userSettings={userSettings}
           presetRules={presetRules}
+        />
+      )}
+      {shift && (
+        <CustomSupplementsModal
+          open={customSupplementsModalOpen}
+          onOpenChange={setCustomSupplementsModalOpen}
+          shiftId={shift.id}
+          seriesId={shift.series_id}
+          shiftDate={shift.shift_date}
+          existingSupplements={shift.custom_supplements ?? null}
+          hasPredefinedSupplements={supplementSegments.length > 0}
+          onSaveSuccess={(updatedSupplements) => {
+            // Exit edit mode and notify parent with updated supplements
+            setIsEditing(false);
+            onShiftUpdate?.(updatedSupplements);
+            // Trigger router refresh to get fresh computed data
+            router.refresh();
+          }}
         />
       )}
     </Dialog>

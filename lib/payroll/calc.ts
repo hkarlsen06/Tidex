@@ -1,7 +1,7 @@
 import { buildWagePeriods } from "./periods";
 import { applyBreakDeduction } from "./breaks";
 import {
-  SupplementRule, ShiftComputed, ShiftRow, UserSettings, WagePeriod, BreakMethod, WageSnapshot
+  SupplementRule, ShiftComputed, ShiftRow, UserSettings, WagePeriod, BreakMethod, WageSnapshot, CustomSupplementsData
 } from "./types";
 
 const WEEKDAYS = [7,1,2,3,4,5,6]; // JS getDay(): 0=Sun → 7, then 1..6 Mon..Sat
@@ -43,6 +43,40 @@ function resolveBaseRate(
   return PRESET_WAGE_RATES["1"];
 }
 
+/**
+ * Resolve supplement rules with custom supplements
+ * Handles merge/replace logic for shift-specific custom supplements
+ *
+ * @param weekday - Weekday of the shift (1-7)
+ * @param predefinedRules - Rules from snapshot or preset
+ * @param customSupplements - Shift-specific custom supplements
+ * @returns Final supplement rules to use
+ */
+function resolveSupplementRules(
+  weekday: number,
+  predefinedRules: SupplementRule[],
+  customSupplements: CustomSupplementsData | null | undefined
+): SupplementRule[] {
+  if (!customSupplements || !customSupplements.rules || customSupplements.rules.length === 0) {
+    return predefinedRules;
+  }
+
+  // Convert custom supplement rules to full SupplementRule format (add days field)
+  const customRules: SupplementRule[] = customSupplements.rules.map(rule => ({
+    ...rule,
+    days: [weekday], // Apply to this shift's weekday only
+  }));
+
+  if (customSupplements.mode === 'replace') {
+    // Replace: ignore all pre-defined supplements, use only custom
+    return customRules;
+  } else {
+    // Merge: combine pre-defined + custom
+    // The buildWagePeriods function will automatically take the highest rate where they overlap
+    return [...predefinedRules, ...customRules];
+  }
+}
+
 // Precision constants for payroll calculations
 const HOUR_DECIMAL_PRECISION = 1000; // 3 decimal places (0.001 hours)
 const CURRENCY_PRECISION = 100; // 2 decimal places (cents)
@@ -75,11 +109,14 @@ export function computeShift(
   // 1. New snapshot system (if provided)
   // 2. Old per-shift snapshot (backward compatibility)
   // 3. Fallback to preset rules (should never happen if snapshots are properly set up)
-  const rules: SupplementRule[] = snapshot?.supplements?.rules?.length
+  const predefinedRules: SupplementRule[] = snapshot?.supplements?.rules?.length
     ? snapshot.supplements.rules
     : s.supplement_rules_snapshot?.rules?.length
     ? s.supplement_rules_snapshot.rules
     : presetRules;
+
+  // Apply custom supplements (merge or replace based on mode)
+  const rules = resolveSupplementRules(weekday, predefinedRules, s.custom_supplements);
 
   let periods: WagePeriod[] = buildWagePeriods(st, et, weekday, baseRate, rules);
 
