@@ -8,7 +8,6 @@ import { SupabaseListener } from "@/app/supabase-listener";
 import { ThemeProvider } from "@/components/app/ThemeProvider";
 import { MonthProvider } from "@/components/app/MonthContext";
 import { AppLayoutClient } from "@/components/app/AppLayoutClient";
-import { AppFooter } from "@/components/app/AppFooter";
 import { I18nProvider } from "@/components/providers/I18nProvider";
 import { getAppDictionary } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/i18n/config";
@@ -115,7 +114,6 @@ export default async function RootLayout({
           <AppLayoutClient userName={userName} avatarUrl={resolvedAvatarUrl}>
             {children}
           </AppLayoutClient>
-          <AppFooter />
         </I18nProvider>
       </MonthProvider>
     </ThemeProvider>

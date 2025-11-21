@@ -62,7 +62,7 @@ export function ChatInput({
         placeholder={placeholder}
         disabled={disabled}
         rows={1}
-        className="flex-1 resize-none rounded-xl border border-border/40 bg-surface-secondary/60 px-3 py-2.5 text-sm leading-6 text-text-primary placeholder-text-muted/80 shadow-inner outline-none focus:border-brand-gradient-mid focus:ring-2 focus:ring-brand-gradient-mid/40 disabled:opacity-60 min-h-10 max-h-[200px]"
+        className="flex-1 resize-none rounded-xl border border-border/40 bg-surface-secondary/60 px-3 py-2.5 text-base leading-6 text-text-primary placeholder-text-muted/80 shadow-inner outline-none focus:border-brand-gradient-mid focus:ring-2 focus:ring-brand-gradient-mid/40 disabled:opacity-60 min-h-10 max-h-[200px]"
         aria-label="Chat input"
       />
       <Button
