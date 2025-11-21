@@ -9,9 +9,12 @@
 
 import { validateConfig, ENV as RAW_ENV } from "./services/config";
 
-// Validate configuration at module load time
-// This ensures the app fails fast if config is invalid
-validateConfig();
+// Validate configuration at module load time (server only).
+// Browser bundles don't have access to server-only keys (e.g. OpenRouter), so skip there.
+const isServer = typeof window === "undefined";
+if (isServer) {
+  validateConfig();
+}
 
 /**
  * Environment variables (backward compatible export)
