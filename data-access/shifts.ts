@@ -60,6 +60,7 @@ async function getComputedShiftsInternal(
       endDate: options.endDate,
       limit: options.limit,
     });
+
     return data;
   }).pipe(
     Effect.provide(ShiftsLive),

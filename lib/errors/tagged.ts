@@ -198,6 +198,21 @@ export class ParseError extends Data.TaggedError("ParseError")<{
 }
 
 /**
+ * AI/LLM provider errors
+ * Indicates failures in AI service operations
+ */
+export class AIError extends Data.TaggedError("AIError")<{
+  readonly provider: "openrouter" | "openai" | "anthropic";
+  readonly operation: string;
+  readonly message: string;
+  readonly cause?: unknown;
+}> {
+  get message(): string {
+    return `${this.provider} ${this.operation}: ${this.message}`;
+  }
+}
+
+/**
  * Type guard to check if an error is an Effect-based tagged error
  */
 export function isTaggedError(error: unknown): error is { _tag: string } {

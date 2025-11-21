@@ -9,9 +9,8 @@ import {
   Calendar,
   Plus,
   ChartNoAxesCombined,
-  Bolt,
+  Sparkles,
   ArrowDown,
-  ArrowLeft,
 } from "lucide-react";
 import { useNavigationFeedback } from "./navigation-feedback";
 import { supabase } from "@/lib/supabase/browser";
@@ -50,9 +49,9 @@ const navItems: NavItem[] = [
     icon: ChartNoAxesCombined,
   },
   {
-    href: "/settings",
-    label: "Settings",
-    icon: Bolt,
+    href: "/wagey",
+    label: "Wagey",
+    icon: Sparkles,
     matchPrefix: true,
   },
 ];
@@ -183,13 +182,12 @@ export function NavBar() {
   };
 
   const normalizedPath = normalizePath(pathname);
-  const isOnSettingsSubPage = normalizedPath?.startsWith("/settings/") ?? false;
 
   // Determine if navbar should hide on scroll for current path
   const shouldHideOnScroll =
     normalizedPath === "/shifts" ||
     normalizedPath === "/stats" ||
-    normalizedPath?.startsWith("/settings");
+    normalizedPath === "/wagey";
 
   const isHidden = shouldHideOnScroll && scrollDirection === "down";
 
@@ -250,13 +248,6 @@ export function NavBar() {
               );
             }
 
-            // Show back arrow on settings icon when on sub-routes
-            const isSettingsItem = item.href === "/settings";
-            const showBackArrow = isSettingsItem && isOnSettingsSubPage;
-
-            // Use ArrowLeft icon when on settings sub-page, otherwise use the item's icon
-            const DisplayIcon = showBackArrow ? ArrowLeft : Icon;
-
             return (
               <Link
                 key={item.href}
@@ -265,7 +256,7 @@ export function NavBar() {
                 prefetch={true}
                 className="flex items-center justify-center p-3 -m-3"
               >
-                <DisplayIcon
+                <Icon
                   className={`h-6 w-6 ${
                     isActive
                       ? "text-brand-highlight"

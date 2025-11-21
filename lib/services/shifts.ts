@@ -337,6 +337,11 @@ export const ShiftsServiceLive = Layer.effect(
             );
 
             for (const ghost of ghosts) {
+              // Filter ghosts to only include those within the date range
+              if (ghost.date < startDate || ghost.date > endDate) {
+                continue;
+              }
+
               const snapshot = snapshotMap.get(ghost.date) ?? null;
 
               // Check if series has date-specific custom supplements for this ghost date

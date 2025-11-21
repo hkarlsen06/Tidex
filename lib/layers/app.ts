@@ -36,6 +36,7 @@ import { SnapshotsServiceLive } from "../services/snapshots";
 import { ShiftsServiceLive } from "../services/shifts";
 import { StatsServiceLive } from "../services/stats";
 import { SubscriptionServiceLive } from "../services/subscription";
+import { OpenRouterServiceLive } from "../services/openrouter";
 
 /**
  * Layer for just configuration and Supabase
@@ -115,6 +116,17 @@ export const SubscriptionLive = Layer.provideMerge(
 );
 
 /**
+ * Layer for OpenRouter AI operations
+ * Use this when you need AI/LLM capabilities
+ *
+ * Dependencies: none (provides AppConfig and OpenRouterService)
+ */
+export const OpenRouterLive = Layer.provideMerge(
+  OpenRouterServiceLive,
+  AppConfigLive
+);
+
+/**
  * Complete application layer with all services
  *
  * Provides:
@@ -126,6 +138,7 @@ export const SubscriptionLive = Layer.provideMerge(
  * - ShiftsService: Shift data with payroll computations
  * - StatsService: Statistics and analytics with projections
  * - SubscriptionService: Subscription and profile management
+ * - OpenRouterService: AI/LLM capabilities via OpenRouter
  *
  * Dependencies: none (fully self-contained)
  */
@@ -134,5 +147,6 @@ export const AppLive = Layer.mergeAll(
   AuthSnapshotsLive,
   ShiftsLive,
   StatsLive,
-  SubscriptionLive
+  SubscriptionLive,
+  OpenRouterLive
 );

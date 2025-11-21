@@ -80,6 +80,7 @@ export const no = {
   },
   userMenu: {
     profile: 'Profil',
+    settings: 'Innstillinger',
     lightMode: 'Lys modus',
     darkMode: 'Mørk modus',
     logout: 'Logg ut',
@@ -91,7 +92,7 @@ export const no = {
     home: 'Dashbord',
     shifts: 'Vakter',
     stats: 'Statistikk',
-    settings: 'Innstillinger',
+    wagey: 'Wagey',
   },
   pages: {
     home: {
@@ -354,6 +355,26 @@ export const no = {
         goalReached: 'Mål nådd!',
         overTarget: '+{amount} kr over',
         remaining: '{amount} kr gjenstår',
+      },
+    },
+    wagey: {
+      title: 'Wagey',
+      subtitle: 'Din AI-assistent',
+      placeholder: 'Spør meg om noe...',
+      thinking: 'Tenker...',
+      executing: 'Utfører...',
+      send: 'Send',
+      working: 'Arbeider',
+      worked: 'Arbeidet',
+      toolFeedback: {
+        addingShift: 'Legger til skift...',
+        updatingShift: 'Oppdaterer skift...',
+        deletingShift: 'Sletter skift...',
+        queryingShifts: 'Henter skift...',
+      },
+      errors: {
+        connectionLost: 'Mistet tilkobling. Prøv igjen.',
+        streamFailed: 'Streaming feilet. Prøv igjen.',
       },
     },
     auth: {

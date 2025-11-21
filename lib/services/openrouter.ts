@@ -1,0 +1,315 @@
+/**
+ * OpenRouter Service
+ *
+ * Effect-based service for OpenRouter API calls with streaming and tool calling
+ */
+
+import "server-only";
+
+import { Context, Effect, Layer, Schema, Redacted } from "effect";
+import { AIError } from "@/lib/errors/tagged";
+import { AppConfig } from "./config";
+
+/**
+ * Message role type
+ */
+export type MessageRole = "system" | "user" | "assistant" | "tool";
+
+/**
+ * Tool call type
+ */
+export type ToolCall = {
+  id: string;
+  type: "function";
+  function: {
+    name: string;
+    arguments: string; // JSON string
+  };
+};
+
+/**
+ * Message type
+ */
+export type Message = {
+  role: MessageRole;
+  content: string | null;
+  tool_calls?: ToolCall[];
+  tool_call_id?: string;
+  name?: string;
+};
+
+/**
+ * Tool definition type (OpenAI format)
+ */
+export type Tool = {
+  type: "function";
+  function: {
+    name: string;
+    description: string;
+    parameters: Record<string, unknown>; // JSON Schema
+  };
+};
+
+/**
+ * Stream chunk types
+ */
+export type StreamChunk =
+  | {
+      type: "text";
+      content: string;
+    }
+  | {
+      type: "tool_call";
+      toolCall: ToolCall;
+    }
+  | {
+      type: "done";
+      finishReason: string;
+    };
+
+/**
+ * OpenRouter streaming options
+ */
+export type StreamOptions = {
+  messages: Message[];
+  tools?: Tool[];
+  temperature?: number;
+  maxTokens?: number;
+  model?: string;
+};
+
+/**
+ * OpenRouter Service
+ */
+export class OpenRouterService extends Context.Tag("OpenRouterService")<
+  OpenRouterService,
+  {
+    readonly streamChat: (
+      options: StreamOptions
+    ) => Effect.Effect<AsyncIterable<StreamChunk>, AIError, never>;
+  }
+>() {}
+
+
+/**
+ * OpenRouter API endpoint
+ */
+const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
+
+/**
+ * Parse SSE chunk from OpenRouter
+ */
+function parseOpenRouterChunk(line: string): any | null {
+  if (!line.startsWith("data: ")) {
+    return null;
+  }
+
+  const data = line.slice(6).trim();
+
+  if (data === "[DONE]") {
+    return { done: true };
+  }
+
+  try {
+    return JSON.parse(data);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Create OpenRouter Service (Live)
+ */
+export const OpenRouterServiceLive = Layer.effect(
+  OpenRouterService,
+  Effect.gen(function* () {
+    const config = yield* AppConfig;
+    const apiKey = Redacted.value(config.ai.openRouterApiKey);
+    const defaultModel = config.ai.openRouterModel;
+
+    /**
+     * Stream chat completion from OpenRouter
+     */
+    const streamChat = (
+      options: StreamOptions
+    ): Effect.Effect<AsyncIterable<StreamChunk>, AIError, never> =>
+      Effect.gen(function* () {
+        const {
+          messages,
+          tools,
+          temperature = 0.7,
+          maxTokens = 4000,
+          model = defaultModel,
+        } = options;
+
+        // Make API request
+        const response = yield* Effect.tryPromise({
+          try: () =>
+            fetch(OPENROUTER_API_URL, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${apiKey}`,
+                "HTTP-Referer": "https://tidex.no",
+                "X-Title": "Tidex",
+              },
+              body: JSON.stringify({
+                model,
+                messages,
+                tools,
+                temperature,
+                max_tokens: maxTokens,
+                stream: true,
+              }),
+            }),
+          catch: (error) =>
+            new AIError({
+              provider: "openrouter",
+              operation: "stream_chat",
+              message: error instanceof Error ? error.message : "Fetch failed",
+              cause: error,
+            }),
+        });
+
+        if (!response.ok) {
+          const errorText = yield* Effect.tryPromise({
+            try: () => response.text(),
+            catch: (error) => new AIError({
+              provider: "openrouter",
+              operation: "stream_chat",
+              message: "Failed to read error response",
+              cause: error,
+            }),
+          });
+
+          return yield* Effect.fail(
+            new AIError({
+              provider: "openrouter",
+              operation: "stream_chat",
+              message: `OpenRouter API error: ${response.status}`,
+              cause: errorText,
+            })
+          );
+        }
+
+        if (!response.body) {
+          return yield* Effect.fail(
+            new AIError({
+              provider: "openrouter",
+              operation: "stream_chat",
+              message: "No response body",
+            })
+          );
+        }
+
+        // Create async iterable from ReadableStream
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+
+        const asyncIterable: AsyncIterable<StreamChunk> = {
+          async *[Symbol.asyncIterator]() {
+            let buffer = "";
+            let currentToolCall: ToolCall | null = null;
+
+            try {
+              while (true) {
+                const { done, value } = await reader.read();
+
+                if (done) {
+                  break;
+                }
+
+                buffer += decoder.decode(value, { stream: true });
+
+                const lines = buffer.split("\n");
+                buffer = lines.pop() || "";
+
+                for (const line of lines) {
+                  if (!line.trim()) continue;
+
+                  const chunk = parseOpenRouterChunk(line);
+                  if (!chunk) continue;
+
+                  if (chunk.done) {
+                    yield { type: "done", finishReason: "stop" };
+                    return;
+                  }
+
+                  const delta = chunk.choices?.[0]?.delta;
+                  if (!delta) continue;
+
+                  // Handle text content
+                  if (delta.content) {
+                    yield { type: "text", content: delta.content };
+                  }
+
+                  // Handle tool calls
+                  if (delta.tool_calls) {
+                    for (const toolCallDelta of delta.tool_calls) {
+                      const index = toolCallDelta.index || 0;
+
+                      if (toolCallDelta.id) {
+                        // New tool call
+                        if (currentToolCall) {
+                          yield { type: "tool_call", toolCall: currentToolCall };
+                        }
+
+                        currentToolCall = {
+                          id: toolCallDelta.id,
+                          type: "function",
+                          function: {
+                            name: toolCallDelta.function?.name || "",
+                            arguments: "",
+                          },
+                        };
+                      }
+
+                      // Append to current tool call
+                      if (currentToolCall && toolCallDelta.function) {
+                        if (toolCallDelta.function.name) {
+                          // Tool name comes in one chunk, don't append
+                          currentToolCall.function.name =
+                            toolCallDelta.function.name;
+                        }
+                        if (toolCallDelta.function.arguments) {
+                          // Arguments stream incrementally, append them
+                          currentToolCall.function.arguments +=
+                            toolCallDelta.function.arguments;
+                        }
+                      }
+                    }
+                  }
+
+                  // Handle finish reason
+                  const finishReason = chunk.choices?.[0]?.finish_reason;
+                  if (finishReason) {
+                    // Yield final tool call if exists
+                    if (currentToolCall) {
+                      yield { type: "tool_call", toolCall: currentToolCall };
+                      currentToolCall = null;
+                    }
+
+                    yield { type: "done", finishReason };
+                    return;
+                  }
+                }
+              }
+
+              // Yield final tool call if stream ended without finish_reason
+              if (currentToolCall) {
+                yield { type: "tool_call", toolCall: currentToolCall };
+              }
+            } finally {
+              reader.releaseLock();
+            }
+          },
+        };
+
+        return asyncIterable;
+      });
+
+    return {
+      streamChat,
+    };
+  })
+);
