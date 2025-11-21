@@ -18,53 +18,46 @@ import type { EndCondition } from "@/lib/series/types";
 import type {
   ToolName,
   ToolResult,
-  AddShiftInput,
-  UpdateShiftInput,
-  DeleteShiftInput,
-  BulkDeleteShiftsInput,
+  ManageShiftInput,
   QueryShiftsInput,
   CalculateWagesInput,
   DraftSeriesShiftInput,
   ConfirmSeriesShiftInput,
-  UpdateSeriesShiftInput,
-  DeleteSeriesShiftInput,
-  QuerySeriesShiftsInput,
-  AddSeriesExclusionInput,
-  RemoveSeriesExclusionInput,
+  ManageSeriesShiftInput,
+  ManageSeriesExclusionInput,
+  GetStatisticsInput,
+  ManageSettingsInput,
 } from "./tools";
 import {
-  addShiftSchema,
-  updateShiftSchema,
-  deleteShiftSchema,
-  bulkDeleteShiftsSchema,
+  manageShiftSchema,
   queryShiftsSchema,
   calculateWagesSchema,
   draftSeriesShiftSchema,
   confirmSeriesShiftSchema,
-  updateSeriesShiftSchema,
-  deleteSeriesShiftSchema,
-  querySeriesShiftsSchema,
-  addSeriesExclusionSchema,
-  removeSeriesExclusionSchema,
+  manageSeriesShiftSchema,
+  manageSeriesExclusionSchema,
+  getStatisticsSchema,
+  manageSettingsSchema,
 } from "./tools";
+import { getStatsDataForApi } from "@/data-access/stats";
+import { SettingsService } from "@/lib/services/settings";
+import { AuthSettingsLive } from "@/lib/layers/app";
+import { Effect } from "effect";
+import { logger } from "@/lib/logger";
 
 /**
  * Execute a tool call with retry logic
  */
 const KNOWN_TOOL_NAMES: ToolName[] = [
-  "add_shift",
-  "update_shift",
-  "delete_shift",
-  "bulk_delete_shifts",
+  "manage_shift",
   "query_shifts",
   "calculate_wages",
   "draft_series_shift",
   "confirm_series_shift",
-  "update_series_shift",
-  "delete_series_shift",
-  "query_series_shifts",
-  "add_series_exclusion",
-  "remove_series_exclusion",
+  "manage_series_shift",
+  "manage_series_exclusion",
+  "get_statistics",
+  "manage_settings",
 ];
 
 function normalizeToolName(toolName: string): ToolName | null {
@@ -86,18 +79,26 @@ export async function executeTool(
   argumentsJson: string,
   userId: string
 ): Promise<ToolResult> {
+  console.log("[executeTool] Called with tool:", toolName, "userId:", userId);
+  console.log("[executeTool] Arguments JSON:", argumentsJson);
+
   try {
     const normalizedToolName = normalizeToolName(toolName);
 
     if (!normalizedToolName) {
+      console.error("[executeTool] Unknown tool:", toolName);
       return {
         success: false,
         message: `Ukjent verktøy: ${toolName}`,
       };
     }
 
-    // Parse arguments
-    const args = JSON.parse(argumentsJson);
+    console.log("[executeTool] Normalized tool name:", normalizedToolName);
+
+    // Parse arguments - handle empty string as empty object
+    const trimmedArgs = argumentsJson.trim();
+    const args = trimmedArgs === "" ? {} : JSON.parse(trimmedArgs);
+    console.log("[executeTool] Parsed arguments:", args);
 
     // Execute tool with retry (once)
     let attempt = 0;
@@ -105,12 +106,17 @@ export async function executeTool(
 
     while (attempt < 2) {
       try {
-        return await executeToolOnce(normalizedToolName, args, userId);
+        console.log("[executeTool] Attempting execution, attempt:", attempt + 1);
+        const result = await executeToolOnce(normalizedToolName, args, userId);
+        console.log("[executeTool] Execution successful:", result.success);
+        return result;
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error));
+        console.error("[executeTool] Execution failed, attempt:", attempt + 1, "error:", lastError.message);
         attempt++;
 
         if (attempt < 2) {
+          console.log("[executeTool] Retrying in 500ms...");
           // Wait 500ms before retry
           await new Promise((resolve) => setTimeout(resolve, 500));
         }
@@ -118,11 +124,13 @@ export async function executeTool(
     }
 
     // All attempts failed
+    console.error("[executeTool] All attempts failed");
     return {
       success: false,
       message: `Feilet etter ${attempt} forsøk: ${lastError?.message || "Ukjent feil"}`,
     };
   } catch (error) {
+    console.error("[executeTool] Error parsing arguments:", error);
     return {
       success: false,
       message: `Kunne ikke parse argumenter: ${error instanceof Error ? error.message : "Ukjent feil"}`,
@@ -139,17 +147,8 @@ async function executeToolOnce(
   userId: string
 ): Promise<ToolResult> {
   switch (toolName) {
-    case "add_shift":
-      return await executeAddShift(args, userId);
-
-    case "update_shift":
-      return await executeUpdateShift(args, userId);
-
-    case "delete_shift":
-      return await executeDeleteShift(args, userId);
-
-    case "bulk_delete_shifts":
-      return await executeBulkDeleteShifts(args, userId);
+    case "manage_shift":
+      return await executeManageShift(args, userId);
 
     case "query_shifts":
       return await executeQueryShifts(args, userId);
@@ -163,20 +162,17 @@ async function executeToolOnce(
     case "confirm_series_shift":
       return await executeConfirmSeriesShift(args, userId);
 
-    case "update_series_shift":
-      return await executeUpdateSeriesShift(args, userId);
+    case "manage_series_shift":
+      return await executeManageSeriesShift(args, userId);
 
-    case "delete_series_shift":
-      return await executeDeleteSeriesShift(args, userId);
+    case "manage_series_exclusion":
+      return await executeManageSeriesExclusion(args, userId);
 
-    case "query_series_shifts":
-      return await executeQuerySeriesShifts(args, userId);
+    case "get_statistics":
+      return await executeGetStatistics(args, userId);
 
-    case "add_series_exclusion":
-      return await executeAddSeriesExclusion(args, userId);
-
-    case "remove_series_exclusion":
-      return await executeRemoveSeriesExclusion(args, userId);
+    case "manage_settings":
+      return await executeManageSettings(args, userId);
 
     default:
       return {
@@ -187,49 +183,13 @@ async function executeToolOnce(
 }
 
 /**
- * Execute add_shift tool
+ * Execute manage_shift tool (consolidated CRUD)
  */
-async function executeAddShift(
-  args: unknown,
-  _userId: string
-): Promise<ToolResult> {
-  const parsed = addShiftSchema.safeParse(args);
-  if (!parsed.success) {
-    return {
-      success: false,
-      message: `Ugyldig input: ${parsed.error.issues.map((i) => i.message).join(", ")}`,
-    };
-  }
-
-  const input: AddShiftInput = parsed.data;
-
-  try {
-    const result = await createShifts({
-      dates: input.dates,
-      start: input.start,
-      end: input.end,
-    });
-
-    return {
-      success: true,
-      message: `Lagt til ${result.inserted} ${result.inserted === 1 ? "skift" : "skift"} for ${input.dates.join(", ")}`,
-      data: result,
-    };
-  } catch (error) {
-    throw new Error(
-      error instanceof Error ? error.message : "Kunne ikke legge til skift"
-    );
-  }
-}
-
-/**
- * Execute update_shift tool
- */
-async function executeUpdateShift(
+async function executeManageShift(
   args: unknown,
   userId: string
 ): Promise<ToolResult> {
-  const parsed = updateShiftSchema.safeParse(args);
+  const parsed = manageShiftSchema.safeParse(args);
   if (!parsed.success) {
     return {
       success: false,
@@ -237,105 +197,106 @@ async function executeUpdateShift(
     };
   }
 
-  const input: UpdateShiftInput = parsed.data;
-
-  // At least one field must be updated
-  if (!input.date && !input.start && !input.end) {
-    return {
-      success: false,
-      message: "Må oppgi minst én verdi å oppdatere (dato, start eller slutt)",
-    };
-  }
+  const input: ManageShiftInput = parsed.data;
 
   try {
-    // Fetch current shift to get existing values
-    const shifts = await getComputedShiftsForApi(userId, { limit: 1000 });
-    const shift = shifts.shifts.find((s) => s.id === input.shiftId);
+    switch (input.action) {
+      case "create": {
+        if (!input.dates || !input.start || !input.end) {
+          return {
+            success: false,
+            message: "Mangler påkrevde felter for oppretting: dates, start, end",
+          };
+        }
 
-    if (!shift) {
-      return {
-        success: false,
-        message: `Fant ikke skift med ID ${input.shiftId}`,
-      };
+        const result = await createShifts({
+          dates: input.dates,
+          start: input.start,
+          end: input.end,
+        });
+
+        return {
+          success: true,
+          message: `Lagt til ${result.inserted} ${result.inserted === 1 ? "skift" : "skift"} for ${input.dates.join(", ")}`,
+          data: result,
+        };
+      }
+
+      case "update": {
+        if (!input.shiftId) {
+          return {
+            success: false,
+            message: "Mangler shiftId for oppdatering",
+          };
+        }
+
+        // At least one field must be updated
+        if (!input.date && !input.start && !input.end) {
+          return {
+            success: false,
+            message: "Må oppgi minst én verdi å oppdatere (dato, start eller slutt)",
+          };
+        }
+
+        // Fetch current shift to get existing values
+        const shifts = await getComputedShiftsForApi(userId, { limit: 1000 });
+        const shift = shifts.shifts.find((s) => s.id === input.shiftId);
+
+        if (!shift) {
+          return {
+            success: false,
+            message: `Fant ikke skift med ID ${input.shiftId}`,
+          };
+        }
+
+        await updateShift({
+          id: input.shiftId,
+          shift_date: input.date || shift.shift_date,
+          start: input.start || shift.start_time,
+          end: input.end || shift.end_time,
+        });
+
+        return {
+          success: true,
+          message: `Oppdaterte skift ${input.shiftId}`,
+        };
+      }
+
+      case "delete": {
+        // Support both single and bulk delete
+        if (input.shiftIds && input.shiftIds.length > 0) {
+          // Bulk delete
+          await Promise.all(input.shiftIds.map((id) => deleteShift(id)));
+
+          return {
+            success: true,
+            message: `Slettet ${input.shiftIds.length} ${input.shiftIds.length === 1 ? "skift" : "skift"}`,
+          };
+        } else if (input.shiftId) {
+          // Single delete
+          await deleteShift(input.shiftId);
+
+          return {
+            success: true,
+            message: `Slettet skift ${input.shiftId}`,
+          };
+        } else {
+          return {
+            success: false,
+            message: "Mangler shiftId eller shiftIds for sletting",
+          };
+        }
+      }
+
+      default:
+        return {
+          success: false,
+          message: `Ukjent handling: ${input.action}`,
+        };
     }
-
-    await updateShift({
-      id: input.shiftId,
-      shift_date: input.date || shift.shift_date,
-      start: input.start || shift.start_time,
-      end: input.end || shift.end_time,
-    });
-
-    return {
-      success: true,
-      message: `Oppdaterte skift ${input.shiftId}`,
-    };
   } catch (error) {
     throw new Error(
-      error instanceof Error ? error.message : "Kunne ikke oppdatere skift"
-    );
-  }
-}
-
-/**
- * Execute delete_shift tool
- */
-async function executeDeleteShift(
-  args: unknown,
-  _userId: string
-): Promise<ToolResult> {
-  const parsed = deleteShiftSchema.safeParse(args);
-  if (!parsed.success) {
-    return {
-      success: false,
-      message: `Ugyldig input: ${parsed.error.issues.map((i) => i.message).join(", ")}`,
-    };
-  }
-
-  const input: DeleteShiftInput = parsed.data;
-
-  try {
-    await deleteShift(input.shiftId);
-
-    return {
-      success: true,
-      message: `Slettet skift ${input.shiftId}`,
-    };
-  } catch (error) {
-    throw new Error(
-      error instanceof Error ? error.message : "Kunne ikke slette skift"
-    );
-  }
-}
-
-/**
- * Execute bulk_delete_shifts tool
- */
-async function executeBulkDeleteShifts(
-  args: unknown,
-  _userId: string
-): Promise<ToolResult> {
-  const parsed = bulkDeleteShiftsSchema.safeParse(args);
-  if (!parsed.success) {
-    return {
-      success: false,
-      message: `Ugyldig input: ${parsed.error.issues.map((i) => i.message).join(", ")}`,
-    };
-  }
-
-  const input: BulkDeleteShiftsInput = parsed.data;
-
-  try {
-    // Delete all shifts
-    await Promise.all(input.shiftIds.map((id) => deleteShift(id)));
-
-    return {
-      success: true,
-      message: `Slettet ${input.shiftIds.length} ${input.shiftIds.length === 1 ? "skift" : "skift"}`,
-    };
-  } catch (error) {
-    throw new Error(
-      error instanceof Error ? error.message : "Kunne ikke slette skift"
+      error instanceof Error ? error.message : "Kunne ikke utføre skift-operasjon"
     );
   }
 }
@@ -354,7 +315,7 @@ function formatDateForDisplay(isoDate: string): string {
 }
 
 /**
- * Execute query_shifts tool
+ * Execute query_shifts tool (enhanced with filters)
  */
 async function executeQueryShifts(
   args: unknown,
@@ -364,7 +325,7 @@ async function executeQueryShifts(
   if (!parsed.success) {
     return {
       success: false,
-      message: `Ugyldig input: ${parsed.error.issues.map((i) => i.message).join(", ")}`,
+      message: `Ugyldig input: ${parsed.error.issues.map((i: any) => i.message).join(", ")}`,
     };
   }
 
@@ -398,11 +359,41 @@ async function executeQueryShifts(
     const result = await getComputedShiftsForApi(userId, {
       startDate: input.startDate ?? weekRange.startDate,
       endDate: input.endDate ?? weekRange.endDate,
-      limit: input.limit,
+      limit: 1000, // Fetch more to allow client-side filtering
     });
 
+    let filteredShifts = result.shifts;
+
+    // Apply time filters
+    if (input.minTime) {
+      filteredShifts = filteredShifts.filter(shift => shift.start_time >= input.minTime!);
+    }
+    if (input.maxTime) {
+      filteredShifts = filteredShifts.filter(shift => shift.start_time <= input.maxTime!);
+    }
+
+    // Apply weekday filter
+    if (input.weekdays && input.weekdays.length > 0) {
+      filteredShifts = filteredShifts.filter(shift => {
+        const date = new Date(shift.shift_date + "T12:00:00");
+        const weekday = date.getDay();
+        return input.weekdays!.includes(weekday);
+      });
+    }
+
+    // Sort shifts
+    if (input.sortBy === "earnings") {
+      filteredShifts = filteredShifts.sort((a, b) => b.computed.gross - a.computed.gross);
+    } else if (input.sortBy === "hours") {
+      filteredShifts = filteredShifts.sort((a, b) => b.computed.paidHours - a.computed.paidHours);
+    }
+    // Default sort by date is already handled by DAL
+
+    // Apply limit after filtering
+    const limitedShifts = filteredShifts.slice(0, input.limit || 30);
+
     // Format shifts for AI with pre-formatted display strings
-    const shiftsFormatted = result.shifts.map((shift) => ({
+    const shiftsFormatted = limitedShifts.map((shift) => ({
       id: shift.id,
       displayDate: formatDateForDisplay(shift.shift_date),
       date: shift.shift_date, // Keep ISO format for reference
@@ -414,7 +405,7 @@ async function executeQueryShifts(
 
     return {
       success: true,
-      message: `Fant ${result.shifts.length} ${result.shifts.length === 1 ? "skift" : "skift"}`,
+      message: `Fant ${shiftsFormatted.length} ${shiftsFormatted.length === 1 ? "skift" : "skift"}`,
       data: shiftsFormatted,
     };
   } catch (error) {
@@ -451,40 +442,7 @@ function calculateNetPay(
 }
 
 /**
- * Get date range for an ISO week number
- */
-function getWeekDateRange(week: number, year: number): { startDate: string; endDate: string } {
-  // ISO 8601: Week 1 is the week with the first Thursday of the year
-  // Week starts on Monday
-  const jan4 = new Date(Date.UTC(year, 0, 4)); // January 4th is always in week 1
-  const daysSinceMonday = (jan4.getUTCDay() + 6) % 7; // 0=Mon, 1=Tue, ..., 6=Sun
-  const week1Monday = new Date(jan4);
-  week1Monday.setUTCDate(jan4.getUTCDate() - daysSinceMonday);
-
-  // Calculate target week's Monday
-  const targetMonday = new Date(week1Monday);
-  targetMonday.setUTCDate(week1Monday.getUTCDate() + (week - 1) * 7);
-
-  // Calculate Sunday (end of week)
-  const targetSunday = new Date(targetMonday);
-  targetSunday.setUTCDate(targetMonday.getUTCDate() + 6);
-
-  // Format as YYYY-MM-DD
-  const formatDate = (date: Date) => {
-    const y = date.getUTCFullYear();
-    const m = String(date.getUTCMonth() + 1).padStart(2, "0");
-    const d = String(date.getUTCDate()).padStart(2, "0");
-    return `${y}-${m}-${d}`;
-  };
-
-  return {
-    startDate: formatDate(targetMonday),
-    endDate: formatDate(targetSunday),
-  };
-}
-
-/**
- * Execute calculate_wages tool
+ * Execute calculate_wages tool (date range only)
  */
 async function executeCalculateWages(
   args: unknown,
@@ -494,125 +452,41 @@ async function executeCalculateWages(
   if (!parsed.success) {
     return {
       success: false,
-      message: `Ugyldig input: ${parsed.error.issues.map((i) => i.message).join(", ")}`,
+      message: `Ugyldig input: ${parsed.error.issues.map((i: any) => i.message).join(", ")}`,
     };
   }
 
-  let input: CalculateWagesInput = parsed.data;
-
-  // Auto-correct mixed parameters by choosing the most appropriate method
-  const hasShiftIds = input.shiftIds && input.shiftIds.length > 0;
-  const hasDateRange = input.startDate || input.endDate;
-  const hasWeek = input.week !== undefined;
-
-  const methodCount = [hasShiftIds, hasDateRange, hasWeek].filter(Boolean).length;
-
-  if (methodCount === 0) {
-    return {
-      success: false,
-      message: "Må oppgi enten skift-IDer, datoperiode (startDato/sluttDato), eller ukenummer",
-    };
-  }
-
-  // AUTO-FIX: If multiple methods are provided, choose the best one intelligently
-  // Priority logic:
-  // 1. shiftIds (most specific - exact shift selection)
-  // 2. dateRange (explicit dates from user query - "today", "this month", etc.)
-  // 3. week (only if no dates provided - "this week", "last week")
-  //
-  // CRITICAL: Always prefer dateRange over week when both are present
-  // The AI correctly extracts explicit dates from questions like "today" or "this month"
-  // Week numbers are often hallucinated when the AI shouldn't send them
-  if (methodCount > 1) {
-    if (hasShiftIds) {
-      // Use shiftIds only (most specific - exact shift selection)
-      input = {
-        shiftIds: input.shiftIds,
-      };
-    } else if (hasDateRange) {
-      // Always prefer dateRange when present (explicit dates are more specific than weeks)
-      input = {
-        startDate: input.startDate,
-        endDate: input.endDate,
-      };
-    } else if (hasWeek) {
-      // Only use week if no dates provided
-      input = {
-        week: input.week,
-        year: input.year,
-      };
-    }
-  }
-
-  // Recalculate flags after auto-fix to reflect the actual method being used
-  const finalHasShiftIds = input.shiftIds && input.shiftIds.length > 0;
-  const finalHasDateRange = input.startDate || input.endDate;
-  const finalHasWeek = input.week !== undefined;
-
-  // If week is provided, convert to date range
-  let effectiveStartDate = input.startDate;
-  let effectiveEndDate = input.endDate;
-  let weekDisplay: string | null = null;
-
-  if (finalHasWeek) {
-    const year = input.year || new Date().getFullYear();
-    const weekRange = getWeekDateRange(input.week!, year);
-    effectiveStartDate = weekRange.startDate;
-    effectiveEndDate = weekRange.endDate;
-    weekDisplay = `uke ${input.week}, ${year}`;
-  }
+  const input: CalculateWagesInput = parsed.data;
 
   try {
-    let shifts;
-    let settings;
+    // Fetch shifts by date range
+    const result = await getComputedShiftsForApi(userId, {
+      startDate: input.startDate,
+      endDate: input.endDate,
+      limit: 1000,
+    });
 
-    if (finalHasShiftIds) {
-      // Fetch all shifts and filter by IDs
-      const result = await getComputedShiftsForApi(userId, { limit: 1000 });
-      shifts = result.shifts.filter((s) => input.shiftIds!.includes(s.id));
-      settings = result.settings;
+    const shifts = result.shifts;
+    const settings = result.settings;
 
-      if (shifts.length === 0) {
-        return {
-          success: false,
-          message: "Fant ingen skift med de oppgitte IDene",
-        };
-      }
+    // Handle case where no shifts found
+    if (shifts.length === 0) {
+      const periodDesc = input.startDate === input.endDate
+        ? formatDateForDisplay(input.startDate)
+        : `${formatDateForDisplay(input.startDate)} til ${formatDateForDisplay(input.endDate)}`;
 
-      if (shifts.length < input.shiftIds!.length) {
-        return {
-          success: false,
-          message: `Fant bare ${shifts.length} av ${input.shiftIds!.length} skift`,
-        };
-      }
-    } else {
-      // Fetch shifts by date range (or week converted to date range)
-      const result = await getComputedShiftsForApi(userId, {
-        startDate: effectiveStartDate,
-        endDate: effectiveEndDate,
-        limit: 1000,
-      });
-
-      shifts = result.shifts;
-      settings = result.settings;
-
-      if (shifts.length === 0) {
-        const periodDesc = weekDisplay || (effectiveStartDate && effectiveEndDate
-          ? `${formatDateForDisplay(effectiveStartDate)} til ${formatDateForDisplay(effectiveEndDate)}`
-          : "perioden");
-
-        return {
-          success: true,
-          message: `Ingen skift funnet i ${periodDesc}`,
-          data: {
-            totalShifts: 0,
-            totalHours: "0.00",
-            totalGross: "0.00 kr",
-            totalNet: "0.00 kr",
-            taxDeducted: "0.00 kr",
-          },
-        };
-      }
+      return {
+        success: true,
+        message: `Ingen skift funnet for ${periodDesc}`,
+        data: {
+          totalShifts: 0,
+          totalHours: "0.00",
+          totalGross: "0.00 kr",
+          totalNet: "0.00 kr",
+          taxDeducted: "0.00 kr",
+          period: periodDesc,
+        },
+      };
     }
 
     // Calculate totals
@@ -628,33 +502,13 @@ async function executeCalculateWages(
     const totalTaxDeducted = totalGross - totalNet;
 
     // Format period display
-    let periodDisplay: string | null = null;
-    if (finalHasWeek) {
-      periodDisplay = weekDisplay;
-    } else if (finalHasDateRange) {
-      // Handle single date vs date range
-      if (input.startDate && input.endDate && input.startDate === input.endDate) {
-        // Single date
-        periodDisplay = formatDateForDisplay(input.startDate);
-      } else if (input.startDate && input.endDate) {
-        // Date range
-        periodDisplay = `${formatDateForDisplay(input.startDate)} til ${formatDateForDisplay(input.endDate)}`;
-      } else if (input.startDate) {
-        periodDisplay = `fra ${formatDateForDisplay(input.startDate)}`;
-      } else if (input.endDate) {
-        periodDisplay = `til ${formatDateForDisplay(input.endDate)}`;
-      } else {
-        periodDisplay = "ukjent periode";
-      }
-    }
+    const periodDisplay = input.startDate === input.endDate
+      ? formatDateForDisplay(input.startDate)
+      : `${formatDateForDisplay(input.startDate)} til ${formatDateForDisplay(input.endDate)}`;
 
     return {
       success: true,
-      message: finalHasShiftIds
-        ? `Beregnet lønn for ${shifts.length} ${shifts.length === 1 ? "skift" : "skift"}`
-        : periodDisplay
-          ? `Beregnet lønn for ${periodDisplay}`
-          : `Beregnet lønn for ${shifts.length} skift`,
+      message: `Beregnet lønn for ${periodDisplay}`,
       data: {
         totalShifts: shifts.length,
         totalHours: totalHours.toFixed(2),
@@ -763,13 +617,13 @@ async function executeConfirmSeriesShift(
 }
 
 /**
- * Execute update_series_shift tool
+ * Execute manage_series_shift tool (consolidated update/delete/query)
  */
-async function executeUpdateSeriesShift(
+async function executeManageSeriesShift(
   args: unknown,
   _userId: string
 ): Promise<ToolResult> {
-  const parsed = updateSeriesShiftSchema.safeParse(args);
+  const parsed = manageSeriesShiftSchema.safeParse(args);
   if (!parsed.success) {
     return {
       success: false,
@@ -777,291 +631,528 @@ async function executeUpdateSeriesShift(
     };
   }
 
-  const input: UpdateSeriesShiftInput = parsed.data;
+  const input: ManageSeriesShiftInput = parsed.data;
 
-  // At least one field must be updated
-  if (
-    !input.selectedDays &&
-    !input.start &&
-    !input.end &&
-    input.repeatIntervalWeeks === undefined &&
-    input.endCondition === undefined
-  ) {
+  try {
+    switch (input.action) {
+      case "update": {
+        if (!input.seriesId) {
+          return {
+            success: false,
+            message: "Mangler seriesId for oppdatering",
+          };
+        }
+
+        // At least one field must be updated
+        if (
+          !input.selectedDays &&
+          !input.start &&
+          !input.end &&
+          input.repeatIntervalWeeks === undefined &&
+          input.endCondition === undefined
+        ) {
+          return {
+            success: false,
+            message: "Må oppgi minst én verdi å oppdatere",
+          };
+        }
+
+        const { user } = await verifySession();
+        const supabase = await createSupabaseServerClient();
+
+        // Fetch current series to merge with updates
+        const { data: currentSeries, error: fetchError } = await supabase
+          .from("series_shifts")
+          .select("*")
+          .eq("id", input.seriesId)
+          .eq("user_id", user.id)
+          .single();
+
+        if (fetchError || !currentSeries) {
+          return {
+            success: false,
+            message: `Fant ikke serie med ID ${input.seriesId}`,
+          };
+        }
+
+        // Parse times to HH:mm format (remove timezone if present)
+        const parseTime = (time: string): string => {
+          const match = time.match(/^(\d{2}:\d{2})/);
+          return match ? match[1] : time;
+        };
+
+        await updateSeriesShift({
+          id: input.seriesId,
+          selected_days: (input.selectedDays ?? currentSeries.selected_days) as Record<'0' | '1' | '2' | '3' | '4' | '5' | '6', string>,
+          start_time: input.start ?? parseTime(currentSeries.start_time),
+          end_time: input.end ?? parseTime(currentSeries.end_time),
+          repeat_interval_weeks: (input.repeatIntervalWeeks ?? currentSeries.repeat_interval_weeks) as 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8,
+          end_condition: (input.endCondition !== undefined ? input.endCondition : currentSeries.end_condition) as EndCondition,
+          exclusions: currentSeries.exclusions || [],
+        });
+
+        return {
+          success: true,
+          message: `Oppdaterte serie ${input.seriesId}`,
+        };
+      }
+
+      case "delete": {
+        if (!input.seriesId) {
+          return {
+            success: false,
+            message: "Mangler seriesId for sletting",
+          };
+        }
+
+        await deleteSeriesShift(input.seriesId);
+
+        return {
+          success: true,
+          message: `Slettet serie ${input.seriesId}`,
+        };
+      }
+
+      case "query": {
+        const { user } = await verifySession();
+        const supabase = await createSupabaseServerClient();
+
+        if (input.seriesId) {
+          // Query specific series
+          const { data, error } = await supabase
+            .from("series_shifts")
+            .select("*")
+            .eq("id", input.seriesId)
+            .eq("user_id", user.id)
+            .single();
+
+          if (error) {
+            throw new Error(`Kunne ikke hente serie: ${error.message}`);
+          }
+
+          if (!data) {
+            return {
+              success: false,
+              message: `Fant ikke serie med ID ${input.seriesId}`,
+            };
+          }
+
+          return {
+            success: true,
+            message: `Fant serie ${input.seriesId}`,
+            data: [data],
+          };
+        } else {
+          // Query all user's series shifts
+          const { data, error } = await supabase
+            .from("series_shifts")
+            .select("*")
+            .eq("user_id", user.id)
+            .order("created_at", { ascending: false });
+
+          if (error) {
+            throw new Error(`Kunne ikke hente serier: ${error.message}`);
+          }
+
+          return {
+            success: true,
+            message: `Fant ${data.length} ${data.length === 1 ? "serie" : "serier"}`,
+            data: data,
+          };
+        }
+      }
+
+      default:
+        return {
+          success: false,
+          message: `Ukjent handling: ${input.action}`,
+        };
+    }
+  } catch (error) {
+    throw new Error(
+      error instanceof Error ? error.message : "Kunne ikke utføre serie-operasjon"
+    );
+  }
+}
+
+/**
+ * Execute manage_series_exclusion tool (consolidated add/remove)
+ */
+async function executeManageSeriesExclusion(
+  args: unknown,
+  _userId: string
+): Promise<ToolResult> {
+  const parsed = manageSeriesExclusionSchema.safeParse(args);
+  if (!parsed.success) {
     return {
       success: false,
-      message: "Må oppgi minst én verdi å oppdatere",
+      message: `Ugyldig input: ${parsed.error.issues.map((i: any) => i.message).join(", ")}`,
     };
   }
+
+  const input: ManageSeriesExclusionInput = parsed.data;
 
   try {
     const { user } = await verifySession();
     const supabase = await createSupabaseServerClient();
 
-    // Fetch current series to merge with updates
-    const { data: currentSeries, error: fetchError } = await supabase
+    // Fetch current series
+    const { data: series, error: fetchError } = await supabase
       .from("series_shifts")
-      .select("*")
+      .select("exclusions")
       .eq("id", input.seriesId)
       .eq("user_id", user.id)
       .single();
 
-    if (fetchError || !currentSeries) {
+    if (fetchError || !series) {
       return {
         success: false,
         message: `Fant ikke serie med ID ${input.seriesId}`,
       };
     }
 
-    // Parse times to HH:mm format (remove timezone if present)
-    const parseTime = (time: string): string => {
-      // If time is in format "HH:mm+/-TZ", extract just HH:mm
-      const match = time.match(/^(\d{2}:\d{2})/);
-      return match ? match[1] : time;
-    };
+    const currentExclusions = (series.exclusions as string[]) || [];
+    let newExclusions: string[];
 
-    await updateSeriesShift({
-      id: input.seriesId,
-      selected_days: (input.selectedDays ?? currentSeries.selected_days) as Record<'0' | '1' | '2' | '3' | '4' | '5' | '6', string>,
-      start_time: input.start ?? parseTime(currentSeries.start_time),
-      end_time: input.end ?? parseTime(currentSeries.end_time),
-      repeat_interval_weeks: (input.repeatIntervalWeeks ?? currentSeries.repeat_interval_weeks) as 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8,
-      end_condition: (input.endCondition !== undefined ? input.endCondition : currentSeries.end_condition) as EndCondition,
-      exclusions: currentSeries.exclusions || [],
+    if (input.action === "add") {
+      // Add date to exclusions (deduplicate and sort)
+      newExclusions = Array.from(new Set([...currentExclusions, input.date])).sort();
+    } else {
+      // Remove date from exclusions
+      newExclusions = currentExclusions.filter((date) => date !== input.date);
+    }
+
+    // Update series
+    const { error: updateError } = await supabase
+      .from("series_shifts")
+      .update({ exclusions: newExclusions })
+      .eq("id", input.seriesId)
+      .eq("user_id", user.id);
+
+    if (updateError) {
+      throw new Error(`Kunne ikke oppdatere serie: ${updateError.message}`);
+    }
+
+    const actionMessage = input.action === "add"
+      ? `Ekskluderte ${input.date} fra serie ${input.seriesId}`
+      : `Fjernet ${input.date} fra ekskluderinger i serie ${input.seriesId}`;
+
+    return {
+      success: true,
+      message: actionMessage,
+    };
+  } catch (error) {
+    throw new Error(
+      error instanceof Error ? error.message : "Kunne ikke oppdatere ekskluderinger"
+    );
+  }
+}
+
+/**
+ * Execute get_statistics tool
+ */
+async function executeGetStatistics(
+  args: unknown,
+  userId: string
+): Promise<ToolResult> {
+  const parsed = getStatisticsSchema.safeParse(args);
+  if (!parsed.success) {
+    return {
+      success: false,
+      message: `Ugyldig input: ${parsed.error.issues.map((i: any) => i.message).join(", ")}`,
+    };
+  }
+
+  const input: GetStatisticsInput = parsed.data;
+
+  try {
+    const statsData = await getStatsDataForApi(userId, {
+      year: input.year,
+      month: input.month,
     });
 
-    return {
-      success: true,
-      message: `Oppdaterte serie ${input.seriesId}`,
-    };
-  } catch (error) {
-    throw new Error(
-      error instanceof Error ? error.message : "Kunne ikke oppdatere serie"
-    );
-  }
-}
+    // Extract requested metric
+    let data: any;
+    let message: string;
 
-/**
- * Execute delete_series_shift tool
- */
-async function executeDeleteSeriesShift(
-  args: unknown,
-  _userId: string
-): Promise<ToolResult> {
-  const parsed = deleteSeriesShiftSchema.safeParse(args);
-  if (!parsed.success) {
-    return {
-      success: false,
-      message: `Ugyldig input: ${parsed.error.issues.map((i) => i.message).join(", ")}`,
-    };
-  }
-
-  const input: DeleteSeriesShiftInput = parsed.data;
-
-  try {
-    await deleteSeriesShift(input.seriesId);
-
-    return {
-      success: true,
-      message: `Slettet serie ${input.seriesId}`,
-    };
-  } catch (error) {
-    throw new Error(
-      error instanceof Error ? error.message : "Kunne ikke slette serie"
-    );
-  }
-}
-
-/**
- * Execute query_series_shifts tool
- */
-async function executeQuerySeriesShifts(
-  args: unknown,
-  _userId: string
-): Promise<ToolResult> {
-  const parsed = querySeriesShiftsSchema.safeParse(args);
-  if (!parsed.success) {
-    return {
-      success: false,
-      message: `Ugyldig input: ${parsed.error.issues.map((i) => i.message).join(", ")}`,
-    };
-  }
-
-  const input: QuerySeriesShiftsInput = parsed.data;
-
-  try {
-    const { user } = await verifySession();
-    const supabase = await createSupabaseServerClient();
-
-    if (input.seriesId) {
-      // Query specific series
-      const { data, error } = await supabase
-        .from("series_shifts")
-        .select("*")
-        .eq("id", input.seriesId)
-        .eq("user_id", user.id)
-        .single();
-
-      if (error) {
-        throw new Error(`Kunne ikke hente serie: ${error.message}`);
-      }
-
-      if (!data) {
+    switch (input.metric) {
+      case "current_month":
+        data = statsData.currentMonth;
+        message = `Statistikk for inneværende måned`;
+        break;
+      case "last_month":
+        data = statsData.lastMonth;
+        message = `Statistikk for forrige måned`;
+        break;
+      case "year_to_date":
+        data = statsData.yearToDate;
+        message = `Statistikk år til dato`;
+        break;
+      case "last_6_months":
+        data = statsData.last6Months;
+        message = `Statistikk siste 6 måneder`;
+        break;
+      case "this_week":
+        data = statsData.thisWeek;
+        message = `Statistikk denne uken`;
+        break;
+      case "by_day_of_week":
+        data = statsData.byDayOfWeek;
+        message = `Statistikk per ukedag`;
+        break;
+      case "monthly_goal":
+        data = statsData.monthlyGoal;
+        message = `Månedsmål status`;
+        break;
+      case "supplement_breakdown":
+        data = statsData.currentMonthBreakdown;
+        message = `Tilleggsfordeling for inneværende måned`;
+        break;
+      default:
         return {
           success: false,
-          message: `Fant ikke serie med ID ${input.seriesId}`,
+          message: `Ukjent statistikk-metrikk: ${input.metric}`,
+        };
+    }
+
+    return {
+      success: true,
+      message,
+      data,
+    };
+  } catch (error) {
+    throw new Error(
+      error instanceof Error ? error.message : "Kunne ikke hente statistikk"
+    );
+  }
+}
+
+/**
+ * Execute manage_settings tool (consolidated view/update)
+ */
+async function executeManageSettings(
+  args: unknown,
+  userId: string
+): Promise<ToolResult> {
+  console.log("[manage_settings] Starting execution for userId:", userId);
+  console.log("[manage_settings] Args:", args);
+
+  const parsed = manageSettingsSchema.safeParse(args);
+  if (!parsed.success) {
+    console.error("[manage_settings] Validation failed:", parsed.error);
+    return {
+      success: false,
+      message: `Ugyldig input: ${parsed.error.issues.map((i: any) => i.message).join(", ")}`,
+    };
+  }
+
+  const input: ManageSettingsInput = parsed.data;
+  console.log("[manage_settings] Validation passed, action:", input.action);
+
+  try {
+    if (input.action === "update") {
+      // Update settings
+      if (!input.category || !input.settings) {
+        return {
+          success: false,
+          message: "Må oppgi både 'category' og 'settings' for å oppdatere",
+        };
+      }
+
+      console.log("[manage_settings] Updating settings, category:", input.category);
+
+      // Import the update actions
+      const { updateDisplaySettings, updatePaySettings, updatePreferencesSettings } = await import(
+        "@/app/[locale]/(app)/settings/_actions/updateSettings"
+      );
+
+      let result: { success: boolean };
+
+      switch (input.category) {
+        case "display": {
+          const displayData: { theme?: string; default_shifts_view?: string } = {};
+          if (input.settings.theme) displayData.theme = input.settings.theme;
+          if (input.settings.defaultShiftsView) displayData.default_shifts_view = input.settings.defaultShiftsView;
+
+          result = await updateDisplaySettings(displayData);
+          break;
+        }
+
+        case "payroll": {
+          const payrollData: {
+            pause_deduction_enabled?: boolean;
+            pause_deduction_method?: string | null;
+            pause_threshold_hours?: number | null;
+            pause_deduction_minutes?: number | null;
+          } = {};
+
+          if (input.settings.pauseDeductionEnabled !== undefined) {
+            payrollData.pause_deduction_enabled = input.settings.pauseDeductionEnabled;
+          }
+          if (input.settings.pauseDeductionMethod !== undefined) {
+            payrollData.pause_deduction_method = input.settings.pauseDeductionMethod;
+          }
+          if (input.settings.pauseThresholdHours !== undefined) {
+            payrollData.pause_threshold_hours = input.settings.pauseThresholdHours;
+          }
+          if (input.settings.pauseDeductionMinutes !== undefined) {
+            payrollData.pause_deduction_minutes = input.settings.pauseDeductionMinutes;
+          }
+
+          result = await updatePaySettings(payrollData);
+          break;
+        }
+
+        case "tax": {
+          const taxData: {
+            tax_deduction_enabled?: boolean;
+            tax_percentage?: number | null;
+            half_tax_month?: number | null;
+          } = {};
+
+          if (input.settings.taxDeductionEnabled !== undefined) {
+            taxData.tax_deduction_enabled = input.settings.taxDeductionEnabled;
+          }
+          if (input.settings.taxPercentage !== undefined) {
+            taxData.tax_percentage = input.settings.taxPercentage;
+          }
+          if (input.settings.halfTaxMonth !== undefined) {
+            taxData.half_tax_month = input.settings.halfTaxMonth;
+          }
+
+          result = await updatePaySettings(taxData);
+          break;
+        }
+
+        case "goals": {
+          const goalsData: {
+            monthly_goal?: number | null;
+            payroll_day?: number | null;
+          } = {};
+
+          if (input.settings.monthlyGoal !== undefined) {
+            goalsData.monthly_goal = input.settings.monthlyGoal;
+          }
+          if (input.settings.payrollDay !== undefined) {
+            goalsData.payroll_day = input.settings.payrollDay;
+          }
+
+          result = await updatePaySettings(goalsData);
+          break;
+        }
+
+        case "preferences": {
+          const preferencesData: {
+            direct_time_input?: boolean;
+            full_minute_range?: boolean;
+          } = {};
+
+          if (input.settings.directTimeInput !== undefined) {
+            preferencesData.direct_time_input = input.settings.directTimeInput;
+          }
+          if (input.settings.fullMinuteRange !== undefined) {
+            preferencesData.full_minute_range = input.settings.fullMinuteRange;
+          }
+
+          result = await updatePreferencesSettings(preferencesData);
+          break;
+        }
+
+        default:
+          return {
+            success: false,
+            message: `Ukjent kategori: ${input.category}`,
+          };
+      }
+
+      if (!result.success) {
+        return {
+          success: false,
+          message: "Kunne ikke oppdatere innstillinger",
         };
       }
 
       return {
         success: true,
-        message: `Fant serie ${input.seriesId}`,
-        data: [data],
+        message: `Oppdaterte ${input.category}-innstillinger`,
       };
     } else {
-      // Query all user's series shifts
-      const { data, error } = await supabase
-        .from("series_shifts")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
+      // View settings (default action)
+      console.log("[manage_settings] Calling SettingsService...");
 
-      if (error) {
-        throw new Error(`Kunne ikke hente serier: ${error.message}`);
+      // Call SettingsService directly without caching (API route context)
+      const program = Effect.gen(function* () {
+        const settingsService = yield* SettingsService;
+        console.log("[manage_settings] Got SettingsService");
+        const settings = yield* settingsService.getUserSettings(userId);
+        console.log("[manage_settings] Got settings:", settings ? "exists" : "null");
+        return settings;
+      }).pipe(
+        Effect.provide(AuthSettingsLive),
+        Effect.catchAll((error) => {
+          console.error("[manage_settings] Effect error:", error);
+          logger.error("Failed to fetch user settings:", error);
+          return Effect.succeed(null);
+        }),
+        Effect.scoped
+      );
+
+      const settings = await Effect.runPromise(program);
+      console.log("[manage_settings] Effect.runPromise completed, settings:", settings ? "exists" : "null");
+
+      if (!settings) {
+        console.log("[manage_settings] No settings found, returning defaults");
+        return {
+          success: true,
+          message: "Ingen innstillinger funnet (bruker standardverdier)",
+          data: {},
+        };
       }
+
+      console.log("[manage_settings] Formatting settings...");
+
+      // Format settings for AI consumption
+      const formattedSettings = {
+        display: {
+          theme: settings.theme || "system",
+          defaultShiftsView: settings.default_shifts_view || "calendar",
+        },
+        payroll: {
+          usePreset: settings.use_preset ?? true,
+          currentWageLevel: settings.current_wage_level,
+          customWage: settings.custom_wage,
+          pauseDeductionEnabled: settings.pause_deduction_enabled ?? false,
+          pauseDeductionMethod: settings.pause_deduction_method || "proportional",
+          pauseThresholdHours: settings.pause_threshold_hours || 5.5,
+          pauseDeductionMinutes: settings.pause_deduction_minutes || 30,
+        },
+        tax: {
+          taxDeductionEnabled: settings.tax_deduction_enabled ?? false,
+          taxPercentage: settings.tax_percentage || 0,
+          halfTaxMonth: settings.half_tax_month,
+        },
+        goals: {
+          monthlyGoal: settings.monthly_goal,
+          payrollDay: settings.payroll_day,
+        },
+        preferences: {
+          directTimeInput: settings.direct_time_input ?? false,
+          fullMinuteRange: settings.full_minute_range ?? false,
+        },
+      };
+
+      console.log("[manage_settings] Returning success with formatted settings");
 
       return {
         success: true,
-        message: `Fant ${data.length} ${data.length === 1 ? "serie" : "serier"}`,
-        data: data,
+        message: "Hentet brukerinnstillinger",
+        data: formattedSettings,
       };
     }
   } catch (error) {
+    console.error("[manage_settings] Caught error:", error);
     throw new Error(
-      error instanceof Error ? error.message : "Kunne ikke hente serier"
-    );
-  }
-}
-
-/**
- * Execute add_series_exclusion tool
- */
-async function executeAddSeriesExclusion(
-  args: unknown,
-  _userId: string
-): Promise<ToolResult> {
-  const parsed = addSeriesExclusionSchema.safeParse(args);
-  if (!parsed.success) {
-    return {
-      success: false,
-      message: `Ugyldig input: ${parsed.error.issues.map((i) => i.message).join(", ")}`,
-    };
-  }
-
-  const input: AddSeriesExclusionInput = parsed.data;
-
-  try {
-    const { user } = await verifySession();
-    const supabase = await createSupabaseServerClient();
-
-    // Fetch current series
-    const { data: series, error: fetchError } = await supabase
-      .from("series_shifts")
-      .select("exclusions")
-      .eq("id", input.seriesId)
-      .eq("user_id", user.id)
-      .single();
-
-    if (fetchError || !series) {
-      return {
-        success: false,
-        message: `Fant ikke serie med ID ${input.seriesId}`,
-      };
-    }
-
-    // Add date to exclusions
-    const currentExclusions = (series.exclusions as string[]) || [];
-    const newExclusions = Array.from(new Set([...currentExclusions, input.date])).sort();
-
-    // Update series
-    const { error: updateError } = await supabase
-      .from("series_shifts")
-      .update({ exclusions: newExclusions })
-      .eq("id", input.seriesId)
-      .eq("user_id", user.id);
-
-    if (updateError) {
-      throw new Error(`Kunne ikke oppdatere serie: ${updateError.message}`);
-    }
-
-    return {
-      success: true,
-      message: `Ekskluderte ${input.date} fra serie ${input.seriesId}`,
-    };
-  } catch (error) {
-    throw new Error(
-      error instanceof Error ? error.message : "Kunne ikke ekskludere dato"
-    );
-  }
-}
-
-/**
- * Execute remove_series_exclusion tool
- */
-async function executeRemoveSeriesExclusion(
-  args: unknown,
-  _userId: string
-): Promise<ToolResult> {
-  const parsed = removeSeriesExclusionSchema.safeParse(args);
-  if (!parsed.success) {
-    return {
-      success: false,
-      message: `Ugyldig input: ${parsed.error.issues.map((i) => i.message).join(", ")}`,
-    };
-  }
-
-  const input: RemoveSeriesExclusionInput = parsed.data;
-
-  try {
-    const { user } = await verifySession();
-    const supabase = await createSupabaseServerClient();
-
-    // Fetch current series
-    const { data: series, error: fetchError } = await supabase
-      .from("series_shifts")
-      .select("exclusions")
-      .eq("id", input.seriesId)
-      .eq("user_id", user.id)
-      .single();
-
-    if (fetchError || !series) {
-      return {
-        success: false,
-        message: `Fant ikke serie med ID ${input.seriesId}`,
-      };
-    }
-
-    // Remove date from exclusions
-    const currentExclusions = (series.exclusions as string[]) || [];
-    const newExclusions = currentExclusions.filter((date) => date !== input.date);
-
-    // Update series
-    const { error: updateError } = await supabase
-      .from("series_shifts")
-      .update({ exclusions: newExclusions })
-      .eq("id", input.seriesId)
-      .eq("user_id", user.id);
-
-    if (updateError) {
-      throw new Error(`Kunne ikke oppdatere serie: ${updateError.message}`);
-    }
-
-    return {
-      success: true,
-      message: `Fjernet ${input.date} fra ekskluderinger i serie ${input.seriesId}`,
-    };
-  } catch (error) {
-    throw new Error(
-      error instanceof Error ? error.message : "Kunne ikke fjerne ekskludering"
+      error instanceof Error ? error.message : "Kunne ikke utføre innstillingsoperasjon"
     );
   }
 }
