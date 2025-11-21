@@ -23,8 +23,10 @@ export default async function WageyPage({ params }: WageyPageProps) {
   const dictionary = await getDictionary(locale);
 
   return (
-    <I18nProvider locale={locale} dictionary={dictionary}>
-      <WageyInterface userId={user.id} userName={user.user_metadata?.full_name} />
-    </I18nProvider>
+    <div className="fixed inset-0 top-(--header-height,4rem) bottom-0 md:static md:inset-auto">
+      <I18nProvider locale={locale} dictionary={dictionary}>
+        <WageyInterface userId={user.id} userName={user.user_metadata?.full_name} />
+      </I18nProvider>
+    </div>
   );
 }
