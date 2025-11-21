@@ -41,29 +41,34 @@ const STORAGE_KEY = "wagey-conversation";
 export function WageyInterface({ userId, userName }: WageyInterfaceProps) {
   const { t, locale } = useTranslations();
   const router = useRouter();
-  const [messages, setMessages] = useState<Message[]>(() => {
-    // Load initial messages from sessionStorage
-    try {
-      const stored = sessionStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        return JSON.parse(stored) as Message[];
-      }
-    } catch (error) {
-      console.error("Failed to load conversation from sessionStorage:", error);
-    }
-    return [];
-  });
+  const [messages, setMessages] = useState<Message[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [currentChunk, setCurrentChunk] = useState("");
   const [resumptionToken, setResumptionToken] = useState<string | null>(null);
+  const [isHydrated, setIsHydrated] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const processedChunksRef = useRef<Set<string>>(new Set());
   const toolMessageMapRef = useRef<Map<string, string>>(new Map());
   const chunkSequenceRef = useRef(0);
 
-  // Save conversation to sessionStorage whenever messages change
+  // Load conversation from sessionStorage on client-side only (after hydration)
   useEffect(() => {
+    try {
+      const stored = sessionStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        setMessages(JSON.parse(stored) as Message[]);
+      }
+    } catch (error) {
+      console.error("Failed to load conversation from sessionStorage:", error);
+    }
+    setIsHydrated(true);
+  }, []);
+
+  // Save conversation to sessionStorage whenever messages change (but only after hydration)
+  useEffect(() => {
+    if (!isHydrated) return;
+
     try {
       if (messages.length > 0) {
         sessionStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
@@ -71,7 +76,7 @@ export function WageyInterface({ userId, userName }: WageyInterfaceProps) {
     } catch (error) {
       console.error("Failed to save conversation to sessionStorage:", error);
     }
-  }, [messages]);
+  }, [messages, isHydrated]);
 
   // Auto-scroll to bottom of messages container
   useEffect(() => {

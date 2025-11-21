@@ -15,9 +15,16 @@ import { invalidateAndRevalidate } from '@/lib/revalidation/paths';
  * Automatically detects and excludes conflicting dates.
  *
  * @param draft - Series shift draft with all configuration
+ * @param options - Optional configuration
+ * @param options.conflictResolution - How to handle conflicts: "exclude_conflicts" (default) or "keep_existing"
  * @returns Created series shift ID
  */
-export async function createSeriesShift(draft: SeriesDraft): Promise<{ id: string }> {
+export async function createSeriesShift(
+  draft: SeriesDraft,
+  options?: {
+    conflictResolution?: 'exclude_conflicts' | 'keep_existing';
+  }
+): Promise<{ id: string }> {
   const { user } = await verifySession();
   const supabase = await createSupabaseServerClient();
 
@@ -51,27 +58,36 @@ export async function createSeriesShift(draft: SeriesDraft): Promise<{ id: strin
   const startTimeWithTz = `${draft.start_time}${timezoneOffset}`;
   const endTimeWithTz = `${draft.end_time}${timezoneOffset}`;
 
-  // Fetch existing shifts to detect conflicts
-  const { data: existingShifts, error: fetchError } = await supabase
-    .from('user_shifts')
-    .select('shift_date, start_time, end_time')
-    .eq('user_id', user.id);
+  // Determine final exclusions based on conflict resolution strategy
+  let allExclusions: string[] = draft.exclusions || [];
 
-  if (fetchError) {
-    console.error('Failed to fetch existing shifts:', fetchError);
-    throw new Error(`Failed to fetch existing shifts: ${fetchError.message}`);
+  const conflictResolution = options?.conflictResolution || 'exclude_conflicts';
+
+  if (conflictResolution === 'exclude_conflicts') {
+    // Fetch existing shifts to detect conflicts
+    const { data: existingShifts, error: fetchError } = await supabase
+      .from('user_shifts')
+      .select('shift_date, start_time, end_time')
+      .eq('user_id', user.id);
+
+    if (fetchError) {
+      console.error('Failed to fetch existing shifts:', fetchError);
+      throw new Error(`Failed to fetch existing shifts: ${fetchError.message}`);
+    }
+
+    // Detect all conflicts across the entire series
+    const conflictDates = await detectAllSeriesConflicts(
+      draft,
+      (existingShifts || []) as ExistingShift[]
+    );
+
+    // Merge manual exclusions with detected conflicts
+    allExclusions = Array.from(
+      new Set([...(draft.exclusions || []), ...conflictDates])
+    ).sort();
   }
-
-  // Detect all conflicts across the entire series
-  const conflictDates = await detectAllSeriesConflicts(
-    draft,
-    (existingShifts || []) as ExistingShift[]
-  );
-
-  // Merge manual exclusions with detected conflicts
-  const allExclusions = Array.from(
-    new Set([...(draft.exclusions || []), ...conflictDates])
-  ).sort();
+  // If conflictResolution === 'keep_existing', we don't detect/exclude conflicts
+  // Series will create ghost shifts, and existing standalone shifts will remain
 
   // Insert series shift with all exclusions (manual + conflicts)
   const { data, error } = await supabase
