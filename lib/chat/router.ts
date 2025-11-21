@@ -86,7 +86,7 @@ const wageyChatStream = createRiverStream<ChatChunk, NextRequest>()
   .input(chatInputSchema)
   .provider(defaultRiverProvider())
   .runner(async ({ input, stream, abortSignal }) => {
-    const { messages, userId, userName } = input;
+    const { messages, userId } = input;
 
     // Add system prompt if not present
     const messagesWithSystem: Message[] =

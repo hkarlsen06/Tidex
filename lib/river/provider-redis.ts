@@ -5,7 +5,7 @@
  * Stores chunks in Redis so users can resume after page reload
  */
 
-import Redis from "ioredis";
+import type Redis from "ioredis";
 import type {
   RiverProvider,
   RiverRunnerFn,

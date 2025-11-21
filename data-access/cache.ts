@@ -9,7 +9,7 @@
 
 import "server-only";
 import { Effect } from "effect";
-import { updateTag, revalidateTag } from "next/cache";
+import { revalidateTag } from "next/cache";
 
 /**
  * Invalidate all cached shift data for a user

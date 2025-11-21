@@ -6,7 +6,6 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import type { RiverRouter } from "./types";
-import { RiverError } from "./types";
 import { decodeResumptionToken } from "./resumeToken";
 import { streamToSSE } from "./helpers";
 
