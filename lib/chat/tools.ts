@@ -8,69 +8,45 @@ import { z } from "zod";
 import type { Tool } from "@/lib/services/openrouter";
 
 /**
- * Add Shift Tool Schema
+ * Manage Shift Tool Schema (Consolidated CRUD)
  */
-export const addShiftSchema = z.object({
+export const manageShiftSchema = z.object({
+  action: z
+    .enum(["create", "update", "delete"])
+    .describe("Action to perform: create new shift(s), update existing shift, or delete shift(s)"),
   dates: z
     .array(z.string().regex(/^\d{4}-\d{2}-\d{2}$/))
     .min(1)
-    .describe("ISO date strings (YYYY-MM-DD) for the shifts to create"),
+    .optional()
+    .describe("[create] ISO date strings (YYYY-MM-DD) for the shifts to create"),
   start: z
     .string()
     .regex(/^\d{2}:\d{2}$/)
-    .describe("Start time in HH:mm format (24-hour)"),
+    .optional()
+    .describe("[create/update] Start time in HH:mm format (24-hour)"),
   end: z
     .string()
     .regex(/^\d{2}:\d{2}$/)
-    .describe("End time in HH:mm format (24-hour)"),
-});
-
-export type AddShiftInput = z.infer<typeof addShiftSchema>;
-
-/**
- * Update Shift Tool Schema
- */
-export const updateShiftSchema = z.object({
-  shiftId: z.string().uuid().describe("ID of the shift to update"),
+    .optional()
+    .describe("[create/update] End time in HH:mm format (24-hour)"),
+  shiftId: z
+    .string()
+    .uuid()
+    .optional()
+    .describe("[update/delete] ID of the shift to update or delete (for single operations)"),
+  shiftIds: z
+    .array(z.string().uuid())
+    .min(1)
+    .optional()
+    .describe("[delete] Array of shift IDs to delete (for bulk delete)"),
   date: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/)
     .optional()
-    .describe("New date in ISO format (YYYY-MM-DD)"),
-  start: z
-    .string()
-    .regex(/^\d{2}:\d{2}$/)
-    .optional()
-    .describe("New start time in HH:mm format"),
-  end: z
-    .string()
-    .regex(/^\d{2}:\d{2}$/)
-    .optional()
-    .describe("New end time in HH:mm format"),
+    .describe("[update] New date in ISO format (YYYY-MM-DD)"),
 });
 
-export type UpdateShiftInput = z.infer<typeof updateShiftSchema>;
-
-/**
- * Delete Shift Tool Schema
- */
-export const deleteShiftSchema = z.object({
-  shiftId: z.string().uuid().describe("ID of the shift to delete"),
-});
-
-export type DeleteShiftInput = z.infer<typeof deleteShiftSchema>;
-
-/**
- * Bulk Delete Shifts Tool Schema
- */
-export const bulkDeleteShiftsSchema = z.object({
-  shiftIds: z
-    .array(z.string().uuid())
-    .min(1)
-    .describe("Array of shift IDs to delete"),
-});
-
-export type BulkDeleteShiftsInput = z.infer<typeof bulkDeleteShiftsSchema>;
+export type ManageShiftInput = z.infer<typeof manageShiftSchema>;
 
 /**
  * Query Shifts Tool Schema
@@ -94,42 +70,41 @@ export const queryShiftsSchema = z.object({
     .optional()
     .default(30)
     .describe("Maximum number of shifts to return"),
+  minTime: z
+    .string()
+    .regex(/^\d{2}:\d{2}$/)
+    .optional()
+    .describe("Filter shifts starting at or after this time (HH:mm)"),
+  maxTime: z
+    .string()
+    .regex(/^\d{2}:\d{2}$/)
+    .optional()
+    .describe("Filter shifts starting at or before this time (HH:mm)"),
+  weekdays: z
+    .array(z.number().int().min(0).max(6))
+    .optional()
+    .describe("Filter by weekdays (0=Sunday, 1=Monday, ..., 6=Saturday)"),
+  sortBy: z
+    .enum(["date", "earnings", "hours"])
+    .optional()
+    .default("date")
+    .describe("Sort results by: date (default), earnings, or hours"),
 });
 
 export type QueryShiftsInput = z.infer<typeof queryShiftsSchema>;
 
 /**
- * Calculate Wages Tool Schema
+ * Calculate Wages Tool Schema (Date range only)
  */
 export const calculateWagesSchema = z.object({
-  shiftIds: z
-    .array(z.string().uuid())
-    .optional()
-    .describe("Array of specific shift IDs to calculate wages for"),
   startDate: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .optional()
-    .describe("Start date for date range calculation (YYYY-MM-DD)"),
+    .describe("Start date for calculation (YYYY-MM-DD)"),
   endDate: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .optional()
-    .describe("End date for date range calculation (YYYY-MM-DD)"),
-  week: z
-    .number()
-    .int()
-    .min(1)
-    .max(53)
-    .optional()
-    .describe("ISO week number (1-53) for calculation"),
-  year: z
-    .number()
-    .int()
-    .min(2020)
-    .max(2100)
-    .optional()
-    .describe("Year for week calculation (defaults to current year)"),
+    .describe("End date for calculation (YYYY-MM-DD)"),
 });
 
 export type CalculateWagesInput = z.infer<typeof calculateWagesSchema>;
@@ -210,31 +185,38 @@ export const confirmSeriesShiftSchema = z.object({
 export type ConfirmSeriesShiftInput = z.infer<typeof confirmSeriesShiftSchema>;
 
 /**
- * Update Series Shift Tool Schema
+ * Manage Series Shift Tool Schema (Consolidated update/delete/query)
  */
-export const updateSeriesShiftSchema = z.object({
-  seriesId: z.string().uuid().describe("ID of the series shift to update"),
+export const manageSeriesShiftSchema = z.object({
+  action: z
+    .enum(["update", "delete", "query"])
+    .describe("Action to perform: update series parameters, delete series, or query series details"),
+  seriesId: z
+    .string()
+    .uuid()
+    .optional()
+    .describe("ID of the series shift (required for update/delete, optional for query)"),
   selectedDays: z
     .record(z.string(), z.string().regex(/^\d{4}-\d{2}-\d{2}$/))
     .optional()
-    .describe("New weekday anchors"),
+    .describe("[update] New weekday anchors"),
   start: z
     .string()
     .regex(/^\d{2}:\d{2}$/)
     .optional()
-    .describe("New start time"),
+    .describe("[update] New start time"),
   end: z
     .string()
     .regex(/^\d{2}:\d{2}$/)
     .optional()
-    .describe("New end time"),
+    .describe("[update] New end time"),
   repeatIntervalWeeks: z
     .number()
     .int()
     .min(0)
     .max(8)
     .optional()
-    .describe("New repetition interval"),
+    .describe("[update] New repetition interval"),
   endCondition: z
     .nullable(
       z.object({
@@ -243,58 +225,81 @@ export const updateSeriesShiftSchema = z.object({
       })
     )
     .optional()
-    .describe("New end condition"),
+    .describe("[update] New end condition"),
 });
 
-export type UpdateSeriesShiftInput = z.infer<typeof updateSeriesShiftSchema>;
+export type ManageSeriesShiftInput = z.infer<typeof manageSeriesShiftSchema>;
 
 /**
- * Delete Series Shift Tool Schema
+ * Manage Series Exclusion Tool Schema (Consolidated)
  */
-export const deleteSeriesShiftSchema = z.object({
-  seriesId: z.string().uuid().describe("ID of the series shift to delete"),
-});
-
-export type DeleteSeriesShiftInput = z.infer<typeof deleteSeriesShiftSchema>;
-
-/**
- * Query Series Shifts Tool Schema
- */
-export const querySeriesShiftsSchema = z.object({
-  seriesId: z
+export const manageSeriesExclusionSchema = z.object({
+  seriesId: z.string().uuid().describe("ID of the series shift"),
+  date: z
     .string()
-    .uuid()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .describe("ISO date to add/remove from exclusions (YYYY-MM-DD)"),
+  action: z.enum(["add", "remove"]).describe("Whether to add or remove the exclusion"),
+});
+
+export type ManageSeriesExclusionInput = z.infer<typeof manageSeriesExclusionSchema>;
+
+/**
+ * Get Statistics Tool Schema
+ */
+export const getStatisticsSchema = z.object({
+  metric: z
+    .enum([
+      "current_month",
+      "last_month",
+      "year_to_date",
+      "last_6_months",
+      "this_week",
+      "by_day_of_week",
+      "monthly_goal",
+      "supplement_breakdown",
+    ])
+    .describe(
+      "Statistics metric to retrieve: current_month=current month totals, last_month=last month totals, year_to_date=YTD totals, last_6_months=6 month trend, this_week=daily breakdown Mon-Sun, by_day_of_week=average per weekday, monthly_goal=goal progress, supplement_breakdown=base vs supplement pay split"
+    ),
+  year: z
+    .number()
+    .int()
+    .min(2020)
+    .max(2100)
     .optional()
-    .describe("Optional: specific series ID to retrieve"),
+    .describe("Year for stats (defaults to current year)"),
+  month: z
+    .number()
+    .int()
+    .min(1)
+    .max(12)
+    .optional()
+    .describe("Month for stats (1-12, defaults to current month)"),
 });
 
-export type QuerySeriesShiftsInput = z.infer<typeof querySeriesShiftsSchema>;
+export type GetStatisticsInput = z.infer<typeof getStatisticsSchema>;
 
 /**
- * Add Series Exclusion Tool Schema
+ * Manage Settings Tool Schema (Consolidated view/update)
  */
-export const addSeriesExclusionSchema = z.object({
-  seriesId: z.string().uuid().describe("ID of the series shift"),
-  date: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .describe("ISO date to exclude from series (YYYY-MM-DD)"),
+export const manageSettingsSchema = z.object({
+  action: z
+    .enum(["view", "update"])
+    .optional()
+    .default("view")
+    .describe("Action: 'view' to read settings (default), 'update' to modify settings"),
+  category: z
+    .enum(["display", "payroll", "tax", "goals", "preferences"])
+    .optional()
+    .describe("[update] Settings category to update"),
+  settings: z
+    .record(z.string(), z.any())
+    .optional()
+    .describe("[update] Settings object with key-value pairs to update"),
 });
 
-export type AddSeriesExclusionInput = z.infer<typeof addSeriesExclusionSchema>;
-
-/**
- * Remove Series Exclusion Tool Schema
- */
-export const removeSeriesExclusionSchema = z.object({
-  seriesId: z.string().uuid().describe("ID of the series shift"),
-  date: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .describe("ISO date to remove from exclusions (YYYY-MM-DD)"),
-});
-
-export type RemoveSeriesExclusionInput = z.infer<typeof removeSeriesExclusionSchema>;
+export type ManageSettingsInput = z.infer<typeof manageSettingsSchema>;
 
 /**
  * Tool Definitions (OpenAI format)
@@ -303,105 +308,56 @@ export const tools: Tool[] = [
   {
     type: "function",
     function: {
-      name: "add_shift",
-      description: "Create new shifts. Supports multiple dates for batch creation.",
+      name: "manage_shift",
+      description: "Manage shifts: create new shift(s), update existing shift, or delete shift(s). Use query_shifts to get shift IDs first for update/delete.",
       parameters: {
         type: "object",
         properties: {
+          action: {
+            type: "string",
+            enum: ["create", "update", "delete"],
+            description: "Action: 'create' for new shifts, 'update' to modify, 'delete' to remove",
+          },
           dates: {
             type: "array",
             items: {
               type: "string",
               pattern: "^\\d{4}-\\d{2}-\\d{2}$",
             },
-            description: "Date(s) as YYYY-MM-DD",
+            description: "[create] Date(s) as YYYY-MM-DD",
             minItems: 1,
           },
           start: {
             type: "string",
             pattern: "^\\d{2}:\\d{2}$",
-            description: "Start time HH:mm (24-hour)",
+            description: "[create/update] Start time HH:mm (24-hour)",
           },
           end: {
             type: "string",
             pattern: "^\\d{2}:\\d{2}$",
-            description: "End time HH:mm (24-hour)",
-          },
-        },
-        required: ["dates", "start", "end"],
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
-      name: "update_shift",
-      description: "Modify shift date/times. Get ID from query_shifts first.",
-      parameters: {
-        type: "object",
-        properties: {
-          shiftId: {
-            type: "string",
-            format: "uuid",
-            description: "Shift ID",
+            description: "[create/update] End time HH:mm (24-hour)",
           },
           date: {
             type: "string",
             pattern: "^\\d{4}-\\d{2}-\\d{2}$",
-            description: "New date YYYY-MM-DD",
+            description: "[update] New date YYYY-MM-DD",
           },
-          start: {
-            type: "string",
-            pattern: "^\\d{2}:\\d{2}$",
-            description: "New start HH:mm",
-          },
-          end: {
-            type: "string",
-            pattern: "^\\d{2}:\\d{2}$",
-            description: "New end HH:mm",
-          },
-        },
-        required: ["shiftId"],
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
-      name: "delete_shift",
-      description: "Delete one shift. Get ID from query_shifts first.",
-      parameters: {
-        type: "object",
-        properties: {
           shiftId: {
             type: "string",
             format: "uuid",
-            description: "Shift ID",
+            description: "[update/delete] Shift ID for single operation",
           },
-        },
-        required: ["shiftId"],
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
-      name: "bulk_delete_shifts",
-      description: "Delete multiple shifts. Get IDs from query_shifts first.",
-      parameters: {
-        type: "object",
-        properties: {
           shiftIds: {
             type: "array",
             items: {
               type: "string",
               format: "uuid",
             },
-            description: "Shift IDs",
+            description: "[delete] Shift IDs for bulk delete",
             minItems: 1,
           },
         },
-        required: ["shiftIds"],
+        required: ["action"],
       },
     },
   },
@@ -409,7 +365,7 @@ export const tools: Tool[] = [
     type: "function",
     function: {
       name: "query_shifts",
-      description: "Get shifts in date range. Omit dates for current week. Returns shift IDs.",
+      description: "Get shifts with optional filters. Omit dates for current week. Returns shift IDs and details.",
       parameters: {
         type: "object",
         properties: {
@@ -430,6 +386,31 @@ export const tools: Tool[] = [
             default: 30,
             description: "Max shifts",
           },
+          minTime: {
+            type: "string",
+            pattern: "^\\d{2}:\\d{2}$",
+            description: "Filter shifts starting >= this time HH:mm",
+          },
+          maxTime: {
+            type: "string",
+            pattern: "^\\d{2}:\\d{2}$",
+            description: "Filter shifts starting <= this time HH:mm",
+          },
+          weekdays: {
+            type: "array",
+            items: {
+              type: "integer",
+              minimum: 0,
+              maximum: 6,
+            },
+            description: "Filter by weekdays: 0=Sun, 1=Mon, ..., 6=Sat",
+          },
+          sortBy: {
+            type: "string",
+            enum: ["date", "earnings", "hours"],
+            default: "date",
+            description: "Sort by date (default), earnings, or hours",
+          },
         },
       },
     },
@@ -438,18 +419,10 @@ export const tools: Tool[] = [
     type: "function",
     function: {
       name: "calculate_wages",
-      description: "Calculate wages. Use ONE method: (1) date range, (2) week+year, or (3) shift IDs.",
+      description: "Calculate total wages for date range. Returns gross, net, hours, tax.",
       parameters: {
         type: "object",
         properties: {
-          shiftIds: {
-            type: "array",
-            items: {
-              type: "string",
-              format: "uuid",
-            },
-            description: "Shift IDs",
-          },
           startDate: {
             type: "string",
             pattern: "^\\d{4}-\\d{2}-\\d{2}$",
@@ -460,19 +433,8 @@ export const tools: Tool[] = [
             pattern: "^\\d{4}-\\d{2}-\\d{2}$",
             description: "End date YYYY-MM-DD",
           },
-          week: {
-            type: "integer",
-            minimum: 1,
-            maximum: 53,
-            description: "ISO week (1-53)",
-          },
-          year: {
-            type: "integer",
-            minimum: 2020,
-            maximum: 2100,
-            description: "Year for week",
-          },
         },
+        required: ["startDate", "endDate"],
       },
     },
   },
@@ -591,19 +553,24 @@ export const tools: Tool[] = [
   {
     type: "function",
     function: {
-      name: "update_series_shift",
-      description: "Modify recurring series. Get ID from query_series_shifts first.",
+      name: "manage_series_shift",
+      description: "Manage recurring series: update parameters, delete series, or query series details. Use this for existing series only (not for creating new).",
       parameters: {
         type: "object",
         properties: {
+          action: {
+            type: "string",
+            enum: ["update", "delete", "query"],
+            description: "Action: 'update' to modify series, 'delete' to remove, 'query' to get details",
+          },
           seriesId: {
             type: "string",
             format: "uuid",
-            description: "Series ID",
+            description: "Series ID (required for update/delete, optional for query to get all series)",
           },
           selectedDays: {
             type: "object",
-            description: "New weekdays",
+            description: "[update] New weekdays: {'0': 'YYYY-MM-DD'} where 0=Sun to 6=Sat",
             additionalProperties: {
               type: "string",
               pattern: "^\\d{4}-\\d{2}-\\d{2}$",
@@ -612,18 +579,18 @@ export const tools: Tool[] = [
           start: {
             type: "string",
             pattern: "^\\d{2}:\\d{2}$",
-            description: "New start",
+            description: "[update] New start HH:mm",
           },
           end: {
             type: "string",
             pattern: "^\\d{2}:\\d{2}$",
-            description: "New end",
+            description: "[update] New end HH:mm",
           },
           repeatIntervalWeeks: {
             type: "integer",
             minimum: 0,
             maximum: 8,
-            description: "New interval",
+            description: "[update] New interval: 0=weekly, 1=biweekly, etc.",
           },
           endCondition: {
             type: ["object", "null"],
@@ -635,53 +602,18 @@ export const tools: Tool[] = [
               value: {},
             },
             required: ["type", "value"],
-            description: "New end",
+            description: "[update] New end condition (null = infinite)",
           },
         },
-        required: ["seriesId"],
+        required: ["action"],
       },
     },
   },
   {
     type: "function",
     function: {
-      name: "delete_series_shift",
-      description: "Delete recurring series pattern. Does NOT delete standalone shifts.",
-      parameters: {
-        type: "object",
-        properties: {
-          seriesId: {
-            type: "string",
-            format: "uuid",
-            description: "Series ID",
-          },
-        },
-        required: ["seriesId"],
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
-      name: "query_series_shifts",
-      description: "Get recurring series patterns. Returns definitions, not individual shifts.",
-      parameters: {
-        type: "object",
-        properties: {
-          seriesId: {
-            type: "string",
-            format: "uuid",
-            description: "Optional series ID",
-          },
-        },
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
-      name: "add_series_exclusion",
-      description: "Skip one occurrence of recurring series. Useful for holidays.",
+      name: "manage_series_exclusion",
+      description: "Add or remove date exclusion from recurring series. Useful for holidays/exceptions.",
       parameters: {
         type: "object",
         properties: {
@@ -693,33 +625,82 @@ export const tools: Tool[] = [
           date: {
             type: "string",
             pattern: "^\\d{4}-\\d{2}-\\d{2}$",
-            description: "Date to exclude YYYY-MM-DD",
+            description: "Date to exclude/restore YYYY-MM-DD",
+          },
+          action: {
+            type: "string",
+            enum: ["add", "remove"],
+            description: "'add' to exclude date, 'remove' to restore",
           },
         },
-        required: ["seriesId", "date"],
+        required: ["seriesId", "date", "action"],
       },
     },
   },
   {
     type: "function",
     function: {
-      name: "remove_series_exclusion",
-      description: "Restore previously excluded occurrence to recurring series.",
+      name: "get_statistics",
+      description: "Get statistics and analytics. Choose metric: current_month, last_month, year_to_date, last_6_months, this_week, by_day_of_week, monthly_goal, supplement_breakdown.",
       parameters: {
         type: "object",
         properties: {
-          seriesId: {
+          metric: {
             type: "string",
-            format: "uuid",
-            description: "Series ID",
+            enum: [
+              "current_month",
+              "last_month",
+              "year_to_date",
+              "last_6_months",
+              "this_week",
+              "by_day_of_week",
+              "monthly_goal",
+              "supplement_breakdown",
+            ],
+            description: "Statistic to retrieve",
           },
-          date: {
-            type: "string",
-            pattern: "^\\d{4}-\\d{2}-\\d{2}$",
-            description: "Date to restore YYYY-MM-DD",
+          year: {
+            type: "integer",
+            minimum: 2020,
+            maximum: 2100,
+            description: "Year (optional)",
+          },
+          month: {
+            type: "integer",
+            minimum: 1,
+            maximum: 12,
+            description: "Month 1-12 (optional)",
           },
         },
-        required: ["seriesId", "date"],
+        required: ["metric"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "manage_settings",
+      description: "View or update user settings. Without args, returns all settings (display, payroll, tax, goals, preferences). With args, updates specific category settings.",
+      parameters: {
+        type: "object",
+        properties: {
+          action: {
+            type: "string",
+            enum: ["view", "update"],
+            default: "view",
+            description: "Action: 'view' to read settings (default), 'update' to modify",
+          },
+          category: {
+            type: "string",
+            enum: ["display", "payroll", "tax", "goals", "preferences"],
+            description: "[update] Category: display (theme, view), payroll (wage, breaks), tax (rate, half-tax month), goals (monthly target, payroll day), preferences (time input, minute range)",
+          },
+          settings: {
+            type: "object",
+            description: "[update] Settings object with key-value pairs. Examples: {theme: 'dark'}, {monthlyGoal: 50000}, {taxPercentage: 35}",
+            additionalProperties: true,
+          },
+        },
       },
     },
   },
@@ -729,19 +710,15 @@ export const tools: Tool[] = [
  * Tool name type
  */
 export type ToolName =
-  | "add_shift"
-  | "update_shift"
-  | "delete_shift"
-  | "bulk_delete_shifts"
+  | "manage_shift"
   | "query_shifts"
   | "calculate_wages"
   | "draft_series_shift"
   | "confirm_series_shift"
-  | "update_series_shift"
-  | "delete_series_shift"
-  | "query_series_shifts"
-  | "add_series_exclusion"
-  | "remove_series_exclusion";
+  | "manage_series_shift"
+  | "manage_series_exclusion"
+  | "get_statistics"
+  | "manage_settings";
 
 /**
  * Tool result type

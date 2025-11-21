@@ -514,7 +514,7 @@ export function WageyInterface({ userId, userName }: WageyInterfaceProps) {
   };
 
   return (
-    <div className="flex flex-col h-full md:h-auto md:relative md:top-0 md:inset-auto md:max-w-3xl md:mx-auto md:mt-6 md:min-h-[calc(100vh-6rem)] md:rounded-card md:border md:border-border/60 md:shadow-app-lg overflow-hidden bg-background">
+    <div className="flex flex-col h-full md:relative md:top-0 md:inset-auto md:max-w-3xl md:mx-auto md:mt-6 md:h-[calc(100vh-6rem)] md:min-h-[calc(100vh-6rem)] md:max-h-[calc(100vh-6rem)] md:rounded-card md:border md:border-border/60 md:shadow-app-lg overflow-hidden bg-background">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,hsla(var(--brand-gradientStart)/0.08),transparent_45%),radial-gradient(circle_at_80%_10%,hsla(var(--brand-gradientEnd)/0.06),transparent_35%)] pointer-events-none" />
 
       {/* Fixed Header */}
