@@ -21,6 +21,7 @@ import {
   FieldSeparator,
 } from '@/components/app/Field';
 import { Input } from '@/components/app/Input';
+import { PasswordInput } from '@/components/app/PasswordInput';
 import { Button } from '@/components/app/Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/app/Card';
 import { TurnstileCaptcha, type TurnstileCaptchaHandle } from '@/components/app/TurnstileCaptcha';
@@ -441,10 +442,9 @@ export default function LoginClient({
                 <FieldLabel htmlFor="password">
                   {t.pages.auth.login.passwordLabel}
                 </FieldLabel>
-                <Input
+                <PasswordInput
                   id="password"
                   name="password"
-                  type="password"
                   placeholder={t.pages.auth.login.passwordPlaceholder}
                   autoComplete="current-password"
                   value={password}
@@ -453,7 +453,7 @@ export default function LoginClient({
                     resetFieldErrors();
                     setPassword(event.target.value);
                   }}
-                  aria-invalid={!!fieldErrors.password}
+                  invalid={!!fieldErrors.password}
                 />
                 <FieldError>{fieldErrors.password}</FieldError>
               </Field>

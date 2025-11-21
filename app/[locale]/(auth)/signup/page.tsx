@@ -25,6 +25,7 @@ import {
   FieldGroup,
 } from "@/components/app/Field";
 import { Input } from "@/components/app/Input";
+import { PasswordInput } from "@/components/app/PasswordInput";
 import { Button } from "@/components/app/Button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/app/Card";
 import { TurnstileCaptcha, type TurnstileCaptchaHandle } from "@/components/app/TurnstileCaptcha";
@@ -350,10 +351,9 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
                   <>
                     <Field data-invalid={!!fieldErrors.password}>
                       <FieldLabel htmlFor="password">{t.pages.auth.signup.passwordLabel}</FieldLabel>
-                      <Input
+                      <PasswordInput
                         id="password"
                         name="password"
-                        type="password"
                         placeholder={t.pages.auth.signup.passwordPlaceholder}
                         value={password}
                         onChange={(event) => {
@@ -361,17 +361,16 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
                           resetFieldErrors();
                           setPassword(event.target.value);
                         }}
-                        aria-invalid={!!fieldErrors.password}
+                        invalid={!!fieldErrors.password}
                       />
                       <FieldError>{fieldErrors.password}</FieldError>
                     </Field>
 
                     <Field data-invalid={!!fieldErrors.confirmPassword}>
                       <FieldLabel htmlFor="confirmPassword">{t.pages.auth.signup.confirmPasswordLabel}</FieldLabel>
-                      <Input
+                      <PasswordInput
                         id="confirmPassword"
                         name="confirmPassword"
-                        type="password"
                         placeholder={t.pages.auth.signup.confirmPasswordPlaceholder}
                         value={confirmPassword}
                         onChange={(event) => {
@@ -379,7 +378,7 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
                           resetFieldErrors();
                           setConfirmPassword(event.target.value);
                         }}
-                        aria-invalid={!!fieldErrors.confirmPassword}
+                        invalid={!!fieldErrors.confirmPassword}
                       />
                       <FieldError>{fieldErrors.confirmPassword}</FieldError>
                     </Field>
