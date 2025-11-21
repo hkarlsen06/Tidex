@@ -33,16 +33,79 @@ type MessageListProps = {
 const formatContent = (text: string | null | undefined) => {
   const safeText = `${text ?? ""}`;
 
-  return safeText.split(/(\*\*[^*]+?\*\*)/g).map((part, index) => {
-    const isBold = part.startsWith("**") && part.endsWith("**") && part.length > 4;
-    const content = isBold ? part.slice(2, -2) : part;
+  // Split by lines first to handle headings
+  const lines = safeText.split("\n");
+
+  return lines.map((line, lineIndex) => {
+    // Check if line is a heading (## text)
+    const headingMatch = line.match(/^(#{1,6})\s+(.+)$/);
+
+    if (headingMatch) {
+      const [, hashes, headingText] = headingMatch;
+      const level = hashes.length;
+
+      // Format the heading text (may contain bold)
+      const formattedHeading = headingText.split(/(\*\*[^*]+?\*\*)/g).map((part, index) => {
+        const isBold = part.startsWith("**") && part.endsWith("**") && part.length > 4;
+        const content = isBold ? part.slice(2, -2) : part;
+
+        return (
+          <span
+            key={`${lineIndex}-${index}`}
+            className={isBold ? "font-semibold text-current" : undefined}
+          >
+            {content}
+          </span>
+        );
+      });
+
+      // Render heading with appropriate styling
+      if (level === 1) {
+        return (
+          <h1 key={lineIndex} className="text-xl font-bold mb-2 mt-3">
+            {formattedHeading}
+          </h1>
+        );
+      } else if (level === 2) {
+        return (
+          <h2 key={lineIndex} className="text-lg font-bold mb-1.5 mt-2.5">
+            {formattedHeading}
+          </h2>
+        );
+      } else if (level === 3) {
+        return (
+          <h3 key={lineIndex} className="text-base font-semibold mb-1 mt-2">
+            {formattedHeading}
+          </h3>
+        );
+      } else {
+        return (
+          <h4 key={lineIndex} className="text-sm font-semibold mb-1 mt-1.5">
+            {formattedHeading}
+          </h4>
+        );
+      }
+    }
+
+    // Not a heading, handle as regular line with bold support
+    const parts = line.split(/(\*\*[^*]+?\*\*)/g).map((part, index) => {
+      const isBold = part.startsWith("**") && part.endsWith("**") && part.length > 4;
+      const content = isBold ? part.slice(2, -2) : part;
+
+      return (
+        <span
+          key={`${lineIndex}-${index}`}
+          className={isBold ? "font-semibold text-current" : undefined}
+        >
+          {content}
+        </span>
+      );
+    });
 
     return (
-      <span
-        key={`${part}-${index}`}
-        className={isBold ? "font-semibold text-current" : undefined}
-      >
-        {content}
+      <span key={lineIndex}>
+        {parts}
+        {lineIndex < lines.length - 1 && "\n"}
       </span>
     );
   });
