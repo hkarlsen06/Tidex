@@ -6,7 +6,7 @@
 
 import "server-only";
 
-import { Context, Effect, Layer, Schema, Redacted } from "effect";
+import { Context, Effect, Layer, Redacted } from "effect";
 import { AIError } from "@/lib/errors/tagged";
 import { AppConfig } from "./config";
 
@@ -246,8 +246,6 @@ export const OpenRouterServiceLive = Layer.effect(
                   // Handle tool calls
                   if (delta.tool_calls) {
                     for (const toolCallDelta of delta.tool_calls) {
-                      const index = toolCallDelta.index || 0;
-
                       if (toolCallDelta.id) {
                         // New tool call
                         if (currentToolCall) {

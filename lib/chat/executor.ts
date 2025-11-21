@@ -142,7 +142,7 @@ async function executeToolOnce(
  */
 async function executeAddShift(
   args: unknown,
-  userId: string
+  _userId: string
 ): Promise<ToolResult> {
   const parsed = addShiftSchema.safeParse(args);
   if (!parsed.success) {
@@ -233,7 +233,7 @@ async function executeUpdateShift(
  */
 async function executeDeleteShift(
   args: unknown,
-  userId: string
+  _userId: string
 ): Promise<ToolResult> {
   const parsed = deleteShiftSchema.safeParse(args);
   if (!parsed.success) {
@@ -264,7 +264,7 @@ async function executeDeleteShift(
  */
 async function executeBulkDeleteShifts(
   args: unknown,
-  userId: string
+  _userId: string
 ): Promise<ToolResult> {
   const parsed = bulkDeleteShiftsSchema.safeParse(args);
   if (!parsed.success) {

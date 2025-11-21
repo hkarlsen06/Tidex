@@ -124,19 +124,23 @@ function MessageBubble({
     const toolCall = message.toolCalls[0];
 
     // Parse arguments
-    let parsedArgs = null;
+    let parsedArgs: unknown = null;
     try {
       parsedArgs = toolCall.arguments ? JSON.parse(toolCall.arguments) : null;
     } catch {
-      parsedArgs = toolCall.arguments;
+      parsedArgs = toolCall.arguments ?? "Invalid JSON";
     }
 
-    // Parse result
-    let parsedResult = null;
-    try {
-      parsedResult = toolCall.result ? JSON.parse(toolCall.result) : null;
-    } catch {
-      parsedResult = toolCall.result;
+    // Parse result (only if defined)
+    let parsedResult: unknown = null;
+    if (toolCall.result !== undefined) {
+      try {
+        parsedResult = JSON.parse(toolCall.result);
+      } catch {
+        parsedResult = toolCall.result;
+      }
+    } else {
+      parsedResult = "No result yet";
     }
 
     const display = {
@@ -145,7 +149,17 @@ function MessageBubble({
       response: parsedResult,
     };
 
-    return JSON.stringify(display, null, 2);
+    try {
+      return JSON.stringify(display, null, 2);
+    } catch (error) {
+      // Handle circular references or other JSON.stringify errors
+      console.error("Failed to stringify tool display:", error);
+      return JSON.stringify({
+        tool: toolCall.name,
+        request: "Failed to serialize",
+        response: "Failed to serialize",
+      }, null, 2);
+    }
   };
 
   return (

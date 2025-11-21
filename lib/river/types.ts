@@ -221,7 +221,7 @@ export type RiverStreamCallbacks<TChunk> = {
 /**
  * Stream caller (client-side)
  */
-export type RiverStreamCaller<TInput, TChunk> = {
+export type RiverStreamCaller<TInput, _TChunk> = {
   start: (input: TInput) => void;
   resume: (resumeKey: string) => void;
   abort: () => void;

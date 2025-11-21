@@ -41,7 +41,18 @@ const STORAGE_KEY = "wagey-conversation";
 export function WageyInterface({ userId, userName }: WageyInterfaceProps) {
   const { t, locale } = useTranslations();
   const router = useRouter();
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>(() => {
+    // Load initial messages from sessionStorage
+    try {
+      const stored = sessionStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        return JSON.parse(stored) as Message[];
+      }
+    } catch (error) {
+      console.error("Failed to load conversation from sessionStorage:", error);
+    }
+    return [];
+  });
   const [isStreaming, setIsStreaming] = useState(false);
   const [currentChunk, setCurrentChunk] = useState("");
   const [resumptionToken, setResumptionToken] = useState<string | null>(null);
@@ -49,19 +60,6 @@ export function WageyInterface({ userId, userName }: WageyInterfaceProps) {
   const processedChunksRef = useRef<Set<string>>(new Set());
   const toolMessageMapRef = useRef<Map<string, string>>(new Map());
   const chunkSequenceRef = useRef(0);
-
-  // Load conversation from sessionStorage on mount
-  useEffect(() => {
-    try {
-      const stored = sessionStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored) as Message[];
-        setMessages(parsed);
-      }
-    } catch (error) {
-      console.error("Failed to load conversation from sessionStorage:", error);
-    }
-  }, []);
 
   // Save conversation to sessionStorage whenever messages change
   useEffect(() => {
@@ -125,11 +123,14 @@ export function WageyInterface({ userId, userName }: WageyInterfaceProps) {
       } else if (chunk.type === "tool_start") {
         // Finalize current streaming text first
         setCurrentChunk((prev) => {
-          if (prev) {
+          // Store current text for batch update
+          const currentText = prev;
+
+          if (currentText) {
             const textMessage: Message = {
               id: nextMessageId("assistant"),
               role: "assistant",
-              content: prev,
+              content: currentText,
             };
 
             const toolMessage: Message = {
@@ -145,6 +146,7 @@ export function WageyInterface({ userId, userName }: WageyInterfaceProps) {
               ],
             };
 
+            // Batch update to avoid race condition
             setMessages((messages) => {
               if (toolMessageMapRef.current.has(chunk.toolCallId)) {
                 return messages;
@@ -176,6 +178,8 @@ export function WageyInterface({ userId, userName }: WageyInterfaceProps) {
               return [...messages, toolMessage];
             });
           }
+
+          // Return empty string to clear current chunk
           return "";
         });
       } else if (chunk.type === "tool_result") {
@@ -213,26 +217,25 @@ export function WageyInterface({ userId, userName }: WageyInterfaceProps) {
         );
       } else if (chunk.type === "done") {
         // Finalize any remaining text
-        setCurrentChunk((prev) => {
-          if (prev) {
-            setMessages((messages) => {
-              const lastMessage = messages[messages.length - 1];
-              if (lastMessage?.role === "assistant" && lastMessage.content === prev) {
-                return messages;
-              }
+        const finalText = currentChunk;
+        if (finalText) {
+          setMessages((messages) => {
+            const lastMessage = messages[messages.length - 1];
+            if (lastMessage?.role === "assistant" && lastMessage.content === finalText) {
+              return messages;
+            }
 
-              return [
-                ...messages,
-                {
-                  id: nextMessageId("assistant"),
-                  role: "assistant",
-                  content: prev,
-                },
-              ];
-            });
-          }
-          return "";
-        });
+            return [
+              ...messages,
+              {
+                id: nextMessageId("assistant"),
+                role: "assistant",
+                content: finalText,
+              },
+            ];
+          });
+        }
+        setCurrentChunk("");
         processedChunksRef.current.clear();
         setIsStreaming(false);
       }
@@ -259,6 +262,17 @@ export function WageyInterface({ userId, userName }: WageyInterfaceProps) {
       toolMessageMapRef.current.clear();
       setIsStreaming(false);
       setCurrentChunk("");
+
+      // Save error state to sessionStorage
+      try {
+        sessionStorage.setItem(STORAGE_KEY, JSON.stringify([...messages, {
+          id: nextMessageId("error"),
+          role: "assistant",
+          content: `❌ Feil: ${error.message}`,
+        }]));
+      } catch (storageError) {
+        console.error("Failed to save error to sessionStorage:", storageError);
+      }
     },
 
     onFatalError: (error) => {
@@ -275,6 +289,17 @@ export function WageyInterface({ userId, userName }: WageyInterfaceProps) {
       toolMessageMapRef.current.clear();
       setIsStreaming(false);
       setCurrentChunk("");
+
+      // Save fatal error state to sessionStorage
+      try {
+        sessionStorage.setItem(STORAGE_KEY, JSON.stringify([...messages, {
+          id: nextMessageId("fatal-error"),
+          role: "assistant",
+          content: `❌ ${t.pages.wagey.errors.streamFailed}`,
+        }]));
+      } catch (storageError) {
+        console.error("Failed to save fatal error to sessionStorage:", storageError);
+      }
     },
 
     onInfo: ({ encodedResumptionToken }) => {
@@ -352,15 +377,31 @@ export function WageyInterface({ userId, userName }: WageyInterfaceProps) {
 
       const toolResponses: AIMessage[] = msg.toolCalls
         .filter((tc) => tc.result !== undefined)
-        .map((tc) => ({
-          role: "tool" as const,
-          content: JSON.stringify({
-            success: tc.success ?? true,
-            message: tc.result ?? "",
-          }),
-          tool_call_id: tc.id,
-          name: tc.name,
-        }));
+        .map((tc) => {
+          try {
+            return {
+              role: "tool" as const,
+              content: JSON.stringify({
+                success: tc.success ?? true,
+                message: tc.result ?? "",
+              }),
+              tool_call_id: tc.id,
+              name: tc.name,
+            };
+          } catch (error) {
+            // Handle JSON.stringify errors (circular references, etc.)
+            console.error("Failed to stringify tool result:", error);
+            return {
+              role: "tool" as const,
+              content: JSON.stringify({
+                success: false,
+                message: "Failed to serialize tool result",
+              }),
+              tool_call_id: tc.id,
+              name: tc.name,
+            };
+          }
+        });
 
       return [assistantWithTools, ...toolResponses];
     });
@@ -380,36 +421,39 @@ export function WageyInterface({ userId, userName }: WageyInterfaceProps) {
   };
 
   const handleNewChat = async () => {
-    // Cleanup Redis stream
-    if (resumptionToken) {
-      try {
-        await fetch("/api/chat/cleanup", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ streamRunId: resumptionToken }),
-        });
-      } catch (error) {
-        console.error("Cleanup error:", error);
-      }
-    }
-
-    // Clear sessionStorage
     try {
-      sessionStorage.removeItem(STORAGE_KEY);
-    } catch (error) {
-      console.error("Failed to clear sessionStorage:", error);
+      // Cleanup Redis stream
+      if (resumptionToken) {
+        try {
+          await fetch("/api/chat/cleanup", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ streamRunId: resumptionToken }),
+          });
+        } catch (error) {
+          console.error("Cleanup error:", error);
+          // Continue with cleanup even if fetch fails
+        }
+      }
+    } finally {
+      // Always clear sessionStorage and reset state, even if cleanup fails
+      try {
+        sessionStorage.removeItem(STORAGE_KEY);
+      } catch (error) {
+        console.error("Failed to clear sessionStorage:", error);
+      }
+
+      // Reset state
+      setMessages([]);
+      setCurrentChunk("");
+      setResumptionToken(null);
+      setIsStreaming(false);
+      processedChunksRef.current.clear();
+      toolMessageMapRef.current.clear();
+
+      // Clear URL
+      router.replace(`/${locale}/wagey`);
     }
-
-    // Reset state
-    setMessages([]);
-    setCurrentChunk("");
-    setResumptionToken(null);
-    setIsStreaming(false);
-    processedChunksRef.current.clear();
-    toolMessageMapRef.current.clear();
-
-    // Clear URL
-    router.replace(`/${locale}/wagey`);
   };
 
   const getToolDisplayName = (toolName: string): string => {
