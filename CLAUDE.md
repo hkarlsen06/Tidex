@@ -6,6 +6,41 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A Next.js 16 application for tracking work shifts and calculating wages with Supabase authentication. Supports internationalization (i18n) with Norwegian and English locales. Uses Tailwind CSS for styling with a custom design system and supports both light and dark modes.
 
+## CRITICAL: Cache Invalidation in Route Handlers vs Server Actions (Next.js 16)
+
+**NEVER use `updateTag()` - ALWAYS use `revalidateTag()` with second argument**
+
+- `updateTag()` only works in Server Actions (throws runtime error in Route Handlers)
+- `revalidateTag()` works in both Server Actions AND Route Handlers
+- **Next.js 16 requires second argument**: `revalidateTag(tag, "max")` to immediately expire cache
+- All cache invalidation functions in `data-access/cache.ts` use `revalidateTag()` for compatibility
+- When calling Server Actions from Route Handlers (e.g., Wagey chat executor), the actions MUST use `revalidateTag()` for cache invalidation
+
+**Example of the error if you use updateTag in a Route Handler:**
+```
+Error: updateTag can only be called from within a Server Action.
+To invalidate cache tags in Route Handlers or other contexts, use revalidateTag instead.
+```
+
+**Example of deprecation warning if you omit second argument:**
+```
+"revalidateTag" without the second argument is now deprecated, add second argument of "max" or use "updateTag".
+```
+
+**Correct usage (Next.js 16):**
+```typescript
+// ✅ CORRECT - Works everywhere and includes required second argument
+import { revalidateTag } from "next/cache";
+revalidateTag(`user-shifts-${userId}`, "max");
+
+// ❌ WRONG - Missing second argument (deprecated in Next.js 16)
+revalidateTag(`user-shifts-${userId}`);
+
+// ❌ WRONG - Only works in Server Actions
+import { updateTag } from "next/cache";
+updateTag(`user-shifts-${userId}`); // Throws error in Route Handlers
+```
+
 ## Next.js 16 Critical Updates
 
 **IMPORTANT: This project uses Next.js 16. Key breaking changes:**

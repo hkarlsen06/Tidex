@@ -81,12 +81,32 @@ const SecurityConfigSchema = Schema.Struct({
 });
 
 /**
+ * AI Configuration Schema
+ * Validates AI service settings (OpenRouter)
+ */
+const AIConfigSchema = Schema.Struct({
+  openRouterApiKey: Schema.String.pipe(
+    Schema.nonEmptyString(),
+    Schema.annotations({
+      message: () => "OpenRouter API key is required",
+    })
+  ),
+  openRouterModel: Schema.String.pipe(
+    Schema.nonEmptyString(),
+    Schema.annotations({
+      message: () => "OpenRouter model is required",
+    })
+  ),
+});
+
+/**
  * Complete Application Configuration Schema
  */
 const AppConfigSchema = Schema.Struct({
   supabase: SupabaseConfigSchema,
   stripe: StripeConfigSchema,
   security: SecurityConfigSchema,
+  ai: AIConfigSchema,
 });
 
 /**
@@ -108,6 +128,10 @@ export class AppConfig extends Context.Tag("AppConfig")<
     };
     readonly security: {
       readonly turnstileSiteKey: Redacted.Redacted<string>;
+    };
+    readonly ai: {
+      readonly openRouterApiKey: Redacted.Redacted<string>;
+      readonly openRouterModel: string;
     };
   }
 >() {}
@@ -131,6 +155,10 @@ const loadConfig = Effect.gen(function* () {
     },
     security: {
       turnstileSiteKey: process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY,
+    },
+    ai: {
+      openRouterApiKey: process.env.OPENROUTER_API_KEY,
+      openRouterModel: process.env.OPENROUTER_MODEL,
     },
   };
 
@@ -161,6 +189,10 @@ const loadConfig = Effect.gen(function* () {
     security: {
       turnstileSiteKey: Redacted.make(validated.security.turnstileSiteKey),
     },
+    ai: {
+      openRouterApiKey: Redacted.make(validated.ai.openRouterApiKey),
+      openRouterModel: validated.ai.openRouterModel,
+    },
   };
 });
 
@@ -171,7 +203,7 @@ const loadConfig = Effect.gen(function* () {
 export const AppConfigLive = Layer.effect(AppConfig, loadConfig);
 
 /**
- * Helper to access raw Supabase config (for backward compatibility)
+ * Helper to access raw config (for backward compatibility)
  * Returns unvalidated env vars - use AppConfig service in new code
  *
  * @deprecated Use AppConfig service instead
@@ -184,6 +216,7 @@ export const ENV = {
   PRO_YEARLY_PRICE_ID: process.env.NEXT_PUBLIC_PRO_YEARLY_ID,
   MAX_YEARLY_PRICE_ID: process.env.NEXT_PUBLIC_MAX_YEARLY_ID,
   TURNSTILE_SITE_KEY: process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY,
+  OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY,
 } as const;
 
 /**

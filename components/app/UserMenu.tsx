@@ -5,7 +5,7 @@ import type { MouseEvent as ReactMouseEvent } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { UserCircle, LogOut } from "lucide-react";
+import { Settings, LogOut } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
 import { LocaleToggle } from "./LocaleToggle";
 import { cn } from "@/lib/utils";
@@ -77,7 +77,7 @@ export function UserMenu({
     );
   };
 
-  const isProfileDisabled = isOnboardingPath(pathname);
+  const isSettingsDisabled = isOnboardingPath(pathname);
 
   return (
     <div className="relative">
@@ -120,26 +120,26 @@ export function UserMenu({
           className="absolute right-0 mt-2 w-48 overflow-hidden rounded-xl border border-border/40 bg-background shadow-app-lg"
         >
           <Link
-            href="/settings/profile"
+            href="/settings"
             onClick={(event) => {
-              if (isProfileDisabled) {
+              if (isSettingsDisabled) {
                 event.preventDefault();
                 event.stopPropagation();
                 return;
               }
-              handleNavigationClick("/settings/profile")(event);
+              handleNavigationClick("/settings")(event);
             }}
             prefetch={true}
             role="menuitem"
-            aria-disabled={isProfileDisabled}
-            tabIndex={isProfileDisabled ? -1 : undefined}
+            aria-disabled={isSettingsDisabled}
+            tabIndex={isSettingsDisabled ? -1 : undefined}
             className={cn(
               "flex items-center gap-2 px-4 py-2 text-sm text-text-primary hover:bg-accent",
-              isProfileDisabled && "cursor-not-allowed opacity-50 hover:bg-background"
+              isSettingsDisabled && "cursor-not-allowed opacity-50 hover:bg-background"
             )}
           >
-            <UserCircle strokeWidth={2} className="h-4 w-4" />
-            {t.userMenu.profile}
+            <Settings strokeWidth={2} className="h-4 w-4" />
+            {t.userMenu.settings}
           </Link>
           <ThemeToggle />
           <LocaleToggle />

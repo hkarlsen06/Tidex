@@ -81,6 +81,7 @@ export const en: Dictionary = {
   },
   userMenu: {
     profile: 'Profile',
+    settings: 'Settings',
     lightMode: 'Light mode',
     darkMode: 'Dark mode',
     logout: 'Log out',
@@ -92,7 +93,7 @@ export const en: Dictionary = {
     home: 'Dashboard',
     shifts: 'Shifts',
     stats: 'Stats',
-    settings: 'Settings',
+    wagey: 'Wagey',
   },
   pages: {
     home: {
@@ -355,6 +356,26 @@ export const en: Dictionary = {
         goalReached: 'Goal reached!',
         overTarget: '{amount} kr over',
         remaining: '{amount} kr remaining',
+      },
+    },
+    wagey: {
+      title: 'Wagey',
+      subtitle: 'Your AI assistant',
+      placeholder: 'Ask me something...',
+      thinking: 'Thinking...',
+      executing: 'Executing...',
+      send: 'Send',
+      working: 'Working',
+      worked: 'Worked',
+      toolFeedback: {
+        addingShift: 'Adding shift...',
+        updatingShift: 'Updating shift...',
+        deletingShift: 'Deleting shift...',
+        queryingShifts: 'Fetching shifts...',
+      },
+      errors: {
+        connectionLost: 'Connection lost. Please try again.',
+        streamFailed: 'Streaming failed. Please try again.',
       },
     },
     auth: {
