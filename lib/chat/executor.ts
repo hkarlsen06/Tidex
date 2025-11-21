@@ -8,6 +8,13 @@ import { createShifts } from "@/app/[locale]/(app)/shifts/add/actions";
 import { updateShift } from "@/app/[locale]/(app)/shifts/_actions/updateShift";
 import { deleteShift } from "@/app/[locale]/(app)/shifts/_actions/deleteShift";
 import { getComputedShiftsForApi } from "@/data-access/shifts";
+import { draftSeriesShift } from "@/app/[locale]/(app)/shifts/add/_actions/draftSeriesShift";
+import { createSeriesShift } from "@/app/[locale]/(app)/shifts/add/_actions/createSeriesShift";
+import { updateSeriesShift } from "@/app/[locale]/(app)/shifts/_actions/updateSeriesShift";
+import { deleteSeriesShift } from "@/app/[locale]/(app)/shifts/_actions/deleteSeriesShift";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { verifySession } from "@/data-access/auth";
+import type { EndCondition } from "@/lib/series/types";
 import type {
   ToolName,
   ToolResult,
@@ -17,6 +24,13 @@ import type {
   BulkDeleteShiftsInput,
   QueryShiftsInput,
   CalculateWagesInput,
+  DraftSeriesShiftInput,
+  ConfirmSeriesShiftInput,
+  UpdateSeriesShiftInput,
+  DeleteSeriesShiftInput,
+  QuerySeriesShiftsInput,
+  AddSeriesExclusionInput,
+  RemoveSeriesExclusionInput,
 } from "./tools";
 import {
   addShiftSchema,
@@ -25,6 +39,13 @@ import {
   bulkDeleteShiftsSchema,
   queryShiftsSchema,
   calculateWagesSchema,
+  draftSeriesShiftSchema,
+  confirmSeriesShiftSchema,
+  updateSeriesShiftSchema,
+  deleteSeriesShiftSchema,
+  querySeriesShiftsSchema,
+  addSeriesExclusionSchema,
+  removeSeriesExclusionSchema,
 } from "./tools";
 
 /**
@@ -37,6 +58,13 @@ const KNOWN_TOOL_NAMES: ToolName[] = [
   "bulk_delete_shifts",
   "query_shifts",
   "calculate_wages",
+  "draft_series_shift",
+  "confirm_series_shift",
+  "update_series_shift",
+  "delete_series_shift",
+  "query_series_shifts",
+  "add_series_exclusion",
+  "remove_series_exclusion",
 ];
 
 function normalizeToolName(toolName: string): ToolName | null {
@@ -128,6 +156,27 @@ async function executeToolOnce(
 
     case "calculate_wages":
       return await executeCalculateWages(args, userId);
+
+    case "draft_series_shift":
+      return await executeDraftSeriesShift(args, userId);
+
+    case "confirm_series_shift":
+      return await executeConfirmSeriesShift(args, userId);
+
+    case "update_series_shift":
+      return await executeUpdateSeriesShift(args, userId);
+
+    case "delete_series_shift":
+      return await executeDeleteSeriesShift(args, userId);
+
+    case "query_series_shifts":
+      return await executeQuerySeriesShifts(args, userId);
+
+    case "add_series_exclusion":
+      return await executeAddSeriesExclusion(args, userId);
+
+    case "remove_series_exclusion":
+      return await executeRemoveSeriesExclusion(args, userId);
 
     default:
       return {
@@ -618,6 +667,401 @@ async function executeCalculateWages(
   } catch (error) {
     throw new Error(
       error instanceof Error ? error.message : "Kunne ikke beregne lønn"
+    );
+  }
+}
+
+/**
+ * Execute draft_series_shift tool (Step 1 of 2)
+ */
+async function executeDraftSeriesShift(
+  args: unknown,
+  _userId: string
+): Promise<ToolResult> {
+  const parsed = draftSeriesShiftSchema.safeParse(args);
+  if (!parsed.success) {
+    return {
+      success: false,
+      message: `Ugyldig input: ${parsed.error.issues.map((i) => i.message).join(", ")}`,
+    };
+  }
+
+  const input: DraftSeriesShiftInput = parsed.data;
+
+  try {
+    const result = await draftSeriesShift({
+      selected_days: input.selectedDays as Record<'0' | '1' | '2' | '3' | '4' | '5' | '6', string>,
+      start_time: input.start,
+      end_time: input.end,
+      repeat_interval_weeks: input.repeatIntervalWeeks as 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8,
+      end_condition: input.endCondition as EndCondition,
+      exclusions: [],
+    });
+
+    if (result.conflictCount === 0) {
+      return {
+        success: true,
+        message: `Validert serie. Vil opprette ${result.projectedShiftCount} vakter. Ingen konflikter funnet.`,
+        data: result,
+      };
+    }
+
+    return {
+      success: true,
+      message: `Validert serie. Vil opprette ${result.projectedShiftCount} vakter, men fant ${result.conflictCount} ${result.conflictCount === 1 ? "konflikt" : "konflikter"} med eksisterende vakter.`,
+      data: result,
+    };
+  } catch (error) {
+    throw new Error(
+      error instanceof Error ? error.message : "Kunne ikke validere serie"
+    );
+  }
+}
+
+/**
+ * Execute confirm_series_shift tool (Step 2 of 2)
+ */
+async function executeConfirmSeriesShift(
+  args: unknown,
+  _userId: string
+): Promise<ToolResult> {
+  const parsed = confirmSeriesShiftSchema.safeParse(args);
+  if (!parsed.success) {
+    return {
+      success: false,
+      message: `Ugyldig input: ${parsed.error.issues.map((i) => i.message).join(", ")}`,
+    };
+  }
+
+  const input: ConfirmSeriesShiftInput = parsed.data;
+
+  try {
+    const result = await createSeriesShift(
+      {
+        selected_days: input.selectedDays as Record<'0' | '1' | '2' | '3' | '4' | '5' | '6', string>,
+        start_time: input.start,
+        end_time: input.end,
+        repeat_interval_weeks: input.repeatIntervalWeeks as 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8,
+        end_condition: input.endCondition as EndCondition,
+        exclusions: [],
+      },
+      {
+        conflictResolution: input.conflictResolution,
+      }
+    );
+
+    return {
+      success: true,
+      message: `Serie opprettet med ID ${result.id}. ${input.conflictResolution === "exclude_conflicts" ? "Konflikter ble ekskludert fra serien." : "Eksisterende vakter ble beholdt."}`,
+      data: result,
+    };
+  } catch (error) {
+    throw new Error(
+      error instanceof Error ? error.message : "Kunne ikke opprette serie"
+    );
+  }
+}
+
+/**
+ * Execute update_series_shift tool
+ */
+async function executeUpdateSeriesShift(
+  args: unknown,
+  _userId: string
+): Promise<ToolResult> {
+  const parsed = updateSeriesShiftSchema.safeParse(args);
+  if (!parsed.success) {
+    return {
+      success: false,
+      message: `Ugyldig input: ${parsed.error.issues.map((i) => i.message).join(", ")}`,
+    };
+  }
+
+  const input: UpdateSeriesShiftInput = parsed.data;
+
+  // At least one field must be updated
+  if (
+    !input.selectedDays &&
+    !input.start &&
+    !input.end &&
+    input.repeatIntervalWeeks === undefined &&
+    input.endCondition === undefined
+  ) {
+    return {
+      success: false,
+      message: "Må oppgi minst én verdi å oppdatere",
+    };
+  }
+
+  try {
+    const { user } = await verifySession();
+    const supabase = await createSupabaseServerClient();
+
+    // Fetch current series to merge with updates
+    const { data: currentSeries, error: fetchError } = await supabase
+      .from("series_shifts")
+      .select("*")
+      .eq("id", input.seriesId)
+      .eq("user_id", user.id)
+      .single();
+
+    if (fetchError || !currentSeries) {
+      return {
+        success: false,
+        message: `Fant ikke serie med ID ${input.seriesId}`,
+      };
+    }
+
+    // Parse times to HH:mm format (remove timezone if present)
+    const parseTime = (time: string): string => {
+      // If time is in format "HH:mm+/-TZ", extract just HH:mm
+      const match = time.match(/^(\d{2}:\d{2})/);
+      return match ? match[1] : time;
+    };
+
+    await updateSeriesShift({
+      id: input.seriesId,
+      selected_days: (input.selectedDays ?? currentSeries.selected_days) as Record<'0' | '1' | '2' | '3' | '4' | '5' | '6', string>,
+      start_time: input.start ?? parseTime(currentSeries.start_time),
+      end_time: input.end ?? parseTime(currentSeries.end_time),
+      repeat_interval_weeks: (input.repeatIntervalWeeks ?? currentSeries.repeat_interval_weeks) as 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8,
+      end_condition: (input.endCondition !== undefined ? input.endCondition : currentSeries.end_condition) as EndCondition,
+      exclusions: currentSeries.exclusions || [],
+    });
+
+    return {
+      success: true,
+      message: `Oppdaterte serie ${input.seriesId}`,
+    };
+  } catch (error) {
+    throw new Error(
+      error instanceof Error ? error.message : "Kunne ikke oppdatere serie"
+    );
+  }
+}
+
+/**
+ * Execute delete_series_shift tool
+ */
+async function executeDeleteSeriesShift(
+  args: unknown,
+  _userId: string
+): Promise<ToolResult> {
+  const parsed = deleteSeriesShiftSchema.safeParse(args);
+  if (!parsed.success) {
+    return {
+      success: false,
+      message: `Ugyldig input: ${parsed.error.issues.map((i) => i.message).join(", ")}`,
+    };
+  }
+
+  const input: DeleteSeriesShiftInput = parsed.data;
+
+  try {
+    await deleteSeriesShift(input.seriesId);
+
+    return {
+      success: true,
+      message: `Slettet serie ${input.seriesId}`,
+    };
+  } catch (error) {
+    throw new Error(
+      error instanceof Error ? error.message : "Kunne ikke slette serie"
+    );
+  }
+}
+
+/**
+ * Execute query_series_shifts tool
+ */
+async function executeQuerySeriesShifts(
+  args: unknown,
+  _userId: string
+): Promise<ToolResult> {
+  const parsed = querySeriesShiftsSchema.safeParse(args);
+  if (!parsed.success) {
+    return {
+      success: false,
+      message: `Ugyldig input: ${parsed.error.issues.map((i) => i.message).join(", ")}`,
+    };
+  }
+
+  const input: QuerySeriesShiftsInput = parsed.data;
+
+  try {
+    const { user } = await verifySession();
+    const supabase = await createSupabaseServerClient();
+
+    if (input.seriesId) {
+      // Query specific series
+      const { data, error } = await supabase
+        .from("series_shifts")
+        .select("*")
+        .eq("id", input.seriesId)
+        .eq("user_id", user.id)
+        .single();
+
+      if (error) {
+        throw new Error(`Kunne ikke hente serie: ${error.message}`);
+      }
+
+      if (!data) {
+        return {
+          success: false,
+          message: `Fant ikke serie med ID ${input.seriesId}`,
+        };
+      }
+
+      return {
+        success: true,
+        message: `Fant serie ${input.seriesId}`,
+        data: [data],
+      };
+    } else {
+      // Query all user's series shifts
+      const { data, error } = await supabase
+        .from("series_shifts")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        throw new Error(`Kunne ikke hente serier: ${error.message}`);
+      }
+
+      return {
+        success: true,
+        message: `Fant ${data.length} ${data.length === 1 ? "serie" : "serier"}`,
+        data: data,
+      };
+    }
+  } catch (error) {
+    throw new Error(
+      error instanceof Error ? error.message : "Kunne ikke hente serier"
+    );
+  }
+}
+
+/**
+ * Execute add_series_exclusion tool
+ */
+async function executeAddSeriesExclusion(
+  args: unknown,
+  _userId: string
+): Promise<ToolResult> {
+  const parsed = addSeriesExclusionSchema.safeParse(args);
+  if (!parsed.success) {
+    return {
+      success: false,
+      message: `Ugyldig input: ${parsed.error.issues.map((i) => i.message).join(", ")}`,
+    };
+  }
+
+  const input: AddSeriesExclusionInput = parsed.data;
+
+  try {
+    const { user } = await verifySession();
+    const supabase = await createSupabaseServerClient();
+
+    // Fetch current series
+    const { data: series, error: fetchError } = await supabase
+      .from("series_shifts")
+      .select("exclusions")
+      .eq("id", input.seriesId)
+      .eq("user_id", user.id)
+      .single();
+
+    if (fetchError || !series) {
+      return {
+        success: false,
+        message: `Fant ikke serie med ID ${input.seriesId}`,
+      };
+    }
+
+    // Add date to exclusions
+    const currentExclusions = (series.exclusions as string[]) || [];
+    const newExclusions = Array.from(new Set([...currentExclusions, input.date])).sort();
+
+    // Update series
+    const { error: updateError } = await supabase
+      .from("series_shifts")
+      .update({ exclusions: newExclusions })
+      .eq("id", input.seriesId)
+      .eq("user_id", user.id);
+
+    if (updateError) {
+      throw new Error(`Kunne ikke oppdatere serie: ${updateError.message}`);
+    }
+
+    return {
+      success: true,
+      message: `Ekskluderte ${input.date} fra serie ${input.seriesId}`,
+    };
+  } catch (error) {
+    throw new Error(
+      error instanceof Error ? error.message : "Kunne ikke ekskludere dato"
+    );
+  }
+}
+
+/**
+ * Execute remove_series_exclusion tool
+ */
+async function executeRemoveSeriesExclusion(
+  args: unknown,
+  _userId: string
+): Promise<ToolResult> {
+  const parsed = removeSeriesExclusionSchema.safeParse(args);
+  if (!parsed.success) {
+    return {
+      success: false,
+      message: `Ugyldig input: ${parsed.error.issues.map((i) => i.message).join(", ")}`,
+    };
+  }
+
+  const input: RemoveSeriesExclusionInput = parsed.data;
+
+  try {
+    const { user } = await verifySession();
+    const supabase = await createSupabaseServerClient();
+
+    // Fetch current series
+    const { data: series, error: fetchError } = await supabase
+      .from("series_shifts")
+      .select("exclusions")
+      .eq("id", input.seriesId)
+      .eq("user_id", user.id)
+      .single();
+
+    if (fetchError || !series) {
+      return {
+        success: false,
+        message: `Fant ikke serie med ID ${input.seriesId}`,
+      };
+    }
+
+    // Remove date from exclusions
+    const currentExclusions = (series.exclusions as string[]) || [];
+    const newExclusions = currentExclusions.filter((date) => date !== input.date);
+
+    // Update series
+    const { error: updateError } = await supabase
+      .from("series_shifts")
+      .update({ exclusions: newExclusions })
+      .eq("id", input.seriesId)
+      .eq("user_id", user.id);
+
+    if (updateError) {
+      throw new Error(`Kunne ikke oppdatere serie: ${updateError.message}`);
+    }
+
+    return {
+      success: true,
+      message: `Fjernet ${input.date} fra ekskluderinger i serie ${input.seriesId}`,
+    };
+  } catch (error) {
+    throw new Error(
+      error instanceof Error ? error.message : "Kunne ikke fjerne ekskludering"
     );
   }
 }

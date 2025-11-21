@@ -1,0 +1,99 @@
+'use server';
+
+import { createSupabaseServerClient } from '@/lib/supabase/server';
+import type { SeriesDraft } from '@/lib/series/types';
+import { detectAllSeriesConflicts } from '@/lib/series/conflicts';
+import type { ExistingShift } from '@/lib/series/conflicts';
+import { verifySession } from '@/data-access/auth';
+import { generateGhostsForMonth, resolveEndWindow } from '@/lib/series/utils';
+
+/**
+ * Draft and validate a series shift pattern (read-only, no DB writes)
+ *
+ * Validates the series definition and detects conflicts with existing shifts.
+ * Returns conflict information for user to review before confirming.
+ * This is step 1 of the two-step series creation flow.
+ *
+ * @param draft - Series shift draft with all configuration
+ * @returns Conflict data and projected shift count
+ */
+export async function draftSeriesShift(draft: SeriesDraft): Promise<{
+  conflictDates: string[];
+  conflictCount: number;
+  projectedShiftCount: number;
+}> {
+  const { user } = await verifySession();
+  const supabase = await createSupabaseServerClient();
+
+  // Validate draft
+  if (!draft.start_time || !/^\d{2}:\d{2}$/.test(draft.start_time)) {
+    throw new Error('Invalid start time format (expected HH:mm)');
+  }
+
+  if (!draft.end_time || !/^\d{2}:\d{2}$/.test(draft.end_time)) {
+    throw new Error('Invalid end time format (expected HH:mm)');
+  }
+
+  if (typeof draft.repeat_interval_weeks !== 'number' || draft.repeat_interval_weeks < 0 || draft.repeat_interval_weeks > 8) {
+    throw new Error('Invalid repeat interval (expected 0-8)');
+  }
+
+  if (!draft.selected_days || Object.keys(draft.selected_days).length === 0) {
+    throw new Error('No anchor dates selected');
+  }
+
+  // Validate all anchor dates
+  const isoDatePattern = /^\d{4}-\d{2}-\d{2}$/;
+  for (const [weekday, anchorDate] of Object.entries(draft.selected_days)) {
+    if (!isoDatePattern.test(anchorDate)) {
+      throw new Error(`Invalid anchor date format for weekday ${weekday}: ${anchorDate}`);
+    }
+  }
+
+  // Fetch existing shifts to detect conflicts
+  const { data: existingShifts, error: fetchError } = await supabase
+    .from('user_shifts')
+    .select('shift_date, start_time, end_time')
+    .eq('user_id', user.id);
+
+  if (fetchError) {
+    console.error('Failed to fetch existing shifts:', fetchError);
+    throw new Error(`Failed to fetch existing shifts: ${fetchError.message}`);
+  }
+
+  // Detect all conflicts across the entire series
+  const conflictDates = await detectAllSeriesConflicts(
+    draft,
+    (existingShifts || []) as ExistingShift[]
+  );
+
+  // Calculate projected shift count
+  // Generate ghosts for all months in the series window
+  const window = draft.end_condition !== null
+    ? resolveEndWindow(draft.selected_days, draft.end_condition)
+    : resolveEndWindow(draft.selected_days, null, 6); // 6 months default for infinite
+
+  let totalGhosts = 0;
+  if (window) {
+    const startYear = window.minMonth.getUTCFullYear();
+    const startMonth = window.minMonth.getUTCMonth() + 1;
+    const endYear = window.maxMonth.getUTCFullYear();
+    const endMonth = window.maxMonth.getUTCMonth() + 1;
+
+    for (let year = startYear; year <= endYear; year++) {
+      const monthStart = (year === startYear) ? startMonth : 1;
+      const monthEnd = (year === endYear) ? endMonth : 12;
+
+      for (let month = monthStart; month <= monthEnd; month++) {
+        const ghosts = generateGhostsForMonth({ year, month }, draft);
+        totalGhosts += ghosts.length;
+      }
+    }
+  }
+
+  return {
+    conflictDates: conflictDates.sort(),
+    conflictCount: conflictDates.length,
+    projectedShiftCount: totalGhosts,
+  };
+}
