@@ -407,6 +407,7 @@ export const no = {
           invalidPhoneNumber: 'Ugyldig telefonnummer.',
           genericError: 'En feil oppstod',
           captchaFailed: 'Captcha-verifisering feilet. Prøv igjen.',
+          captchaExpired: 'Sikkerhetssjekk utløpt. Vennligst prøv igjen.',
           googleSignInFailed: 'Kunne ikke starte Google-innlogging. Prøv igjen senere.',
         },
         success: {
@@ -451,6 +452,7 @@ export const no = {
           phoneAlreadyExists: 'Dette telefonnummeret er allerede registrert. Gå til innlogging.',
           genericError: 'En feil oppstod',
           captchaFailed: 'Captcha-verifisering feilet. Prøv igjen.',
+          captchaExpired: 'Sikkerhetssjekk utløpt. Vennligst prøv igjen.',
         },
         success: {
           emailSent: 'Konto opprettet! Sjekk e-posten din for å bekrefte kontoen.',
@@ -510,6 +512,7 @@ export const no = {
           passwordTooShort: 'Passordet må være minst 6 tegn langt.',
           genericError: 'En feil oppstod',
           captchaFailed: 'Captcha-verifisering feilet. Prøv igjen.',
+          captchaExpired: 'Sikkerhetssjekk utløpt. Vennligst prøv igjen.',
         },
         success: {
           emailCodeSent: 'En kode er sendt til din e-post. Sjekk innboksen din.',

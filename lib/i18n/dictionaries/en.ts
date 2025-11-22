@@ -408,6 +408,7 @@ export const en: Dictionary = {
           invalidPhoneNumber: 'Invalid phone number.',
           genericError: 'An error occurred',
           captchaFailed: 'Captcha verification failed. Try again.',
+          captchaExpired: 'Security check expired. Please try again.',
           googleSignInFailed: 'Could not start Google sign-in. Please try again later.',
         },
         success: {
@@ -452,6 +453,7 @@ export const en: Dictionary = {
           phoneAlreadyExists: 'This phone number is already registered. Go to login.',
           genericError: 'An error occurred',
           captchaFailed: 'Captcha verification failed. Try again.',
+          captchaExpired: 'Security check expired. Please try again.',
         },
         success: {
           emailSent: 'Account created! Check your email to confirm your account.',
@@ -511,6 +513,7 @@ export const en: Dictionary = {
           passwordTooShort: 'Password must be at least 6 characters long.',
           genericError: 'An error occurred',
           captchaFailed: 'Captcha verification failed. Try again.',
+          captchaExpired: 'Security check expired. Please try again.',
         },
         success: {
           emailCodeSent: 'A code has been sent to your email. Check your inbox.',

@@ -54,10 +54,8 @@ export default function ResetPasswordPage({ params }: { params: Promise<{ locale
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
-  const [isCaptchaValidating, setIsCaptchaValidating] = useState(false);
 
   const turnstileRef = useRef<TurnstileCaptchaHandle>(null);
-  const formRef = useRef<HTMLFormElement>(null);
 
   const resetMessage = () => setMessage(null);
   const resetFieldErrors = () => setFieldErrors({});
@@ -67,12 +65,10 @@ export default function ResetPasswordPage({ params }: { params: Promise<{ locale
     setCaptchaToken(null);
   };
 
-  // When captcha token is received, automatically re-submit the form
+  // Reset Turnstile widget on mount to prevent stale token issues
   useEffect(() => {
-    if (captchaToken) {
-      formRef.current?.requestSubmit();
-    }
-  }, [captchaToken]);
+    turnstileRef.current?.reset();
+  }, []);
 
   // Step 1: Send OTP to email or phone
   const handleSendOtp = async (event: FormEvent<HTMLFormElement>) => {
@@ -86,14 +82,15 @@ export default function ResetPasswordPage({ params }: { params: Promise<{ locale
       errors.emailOrPhone = t.pages.auth.resetPassword.errors.fillEmailOrPhone;
     }
 
-    // If no captcha token yet, trigger captcha execution
+    // Show field errors if any
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      return;
+    }
+
+    // Require captcha token before submission
     if (!captchaToken) {
-      if (Object.keys(errors).length === 0) {
-        setIsCaptchaValidating(true);
-        turnstileRef.current?.execute();
-      } else {
-        setFieldErrors(errors);
-      }
+      setMessage({ type: "error", text: t.pages.auth.resetPassword.errors.completeCaptcha });
       return;
     }
 
@@ -312,7 +309,7 @@ export default function ResetPasswordPage({ params }: { params: Promise<{ locale
         <CardContent>
           {/* Step 1: Email or Phone Input */}
           {step === "input" && (
-            <form ref={formRef} className="space-y-6" noValidate onSubmit={handleSendOtp}>
+            <form className="space-y-6" noValidate onSubmit={handleSendOtp}>
               <Field data-invalid={!!fieldErrors.emailOrPhone}>
                 <FieldLabel htmlFor="emailOrPhone">{t.pages.auth.resetPassword.emailOrPhoneLabel}</FieldLabel>
                 <Input
@@ -331,10 +328,32 @@ export default function ResetPasswordPage({ params }: { params: Promise<{ locale
                 <FieldError>{fieldErrors.emailOrPhone}</FieldError>
               </Field>
 
+              {/* Turnstile CAPTCHA Widget */}
+              <div className="flex justify-center">
+                <TurnstileCaptcha
+                  ref={turnstileRef}
+                  execution="render"
+                  appearance="always"
+                  size="flexible"
+                  onSuccess={(token) => {
+                    setCaptchaToken(token);
+                    resetMessage();
+                  }}
+                  onError={() => {
+                    setCaptchaToken(null);
+                    setMessage({ type: "error", text: t.pages.auth.resetPassword.errors.captchaFailed });
+                  }}
+                  onExpire={() => {
+                    setCaptchaToken(null);
+                    setMessage({ type: "error", text: t.pages.auth.resetPassword.errors.captchaExpired });
+                  }}
+                />
+              </div>
+
               <Button
                 type="submit"
-                disabled={isSubmitting || isCaptchaValidating}
-                loading={isSubmitting || isCaptchaValidating}
+                disabled={isSubmitting || !captchaToken}
+                loading={isSubmitting}
                 size="lg"
                 className="w-full"
               >
@@ -485,22 +504,6 @@ export default function ResetPasswordPage({ params }: { params: Promise<{ locale
           </div>
         </CardContent>
       </Card>
-
-      {/* Hidden Turnstile widget with execution mode */}
-      <TurnstileCaptcha
-        ref={turnstileRef}
-        execution="execute"
-        onSuccess={(token) => {
-          setCaptchaToken(token);
-          setIsCaptchaValidating(false);
-          resetMessage();
-        }}
-        onError={() => {
-          setCaptchaToken(null);
-          setIsCaptchaValidating(false);
-          setMessage({ type: "error", text: t.pages.auth.resetPassword.errors.captchaFailed });
-        }}
-      />
     </div>
   );
 }

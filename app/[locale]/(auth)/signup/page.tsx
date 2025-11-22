@@ -59,7 +59,6 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [legalModalOpen, setLegalModalOpen] = useState(false);
-  const [isCaptchaValidating, setIsCaptchaValidating] = useState(false);
 
   const turnstileRef = useRef<TurnstileCaptchaHandle>(null);
   const formRef = useRef<HTMLFormElement>(null);
@@ -145,10 +144,9 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
       return;
     }
 
-    // If no captcha token yet, trigger captcha execution
+    // Require captcha token before submission
     if (!captchaToken) {
-      setIsCaptchaValidating(true);
-      turnstileRef.current?.execute();
+      setMessage({ type: "error", text: t.pages.auth.signup.errors.completeCaptcha });
       return;
     }
 
@@ -428,10 +426,32 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
                 </CardContent>
               </Card>
 
+              {/* Turnstile CAPTCHA Widget */}
+              <div className="flex justify-center">
+                <TurnstileCaptcha
+                  ref={turnstileRef}
+                  execution="render"
+                  appearance="always"
+                  size="flexible"
+                  onSuccess={(token) => {
+                    setCaptchaToken(token);
+                    resetMessage();
+                  }}
+                  onError={() => {
+                    setCaptchaToken(null);
+                    setMessage({ type: "error", text: t.pages.auth.signup.errors.captchaFailed });
+                  }}
+                  onExpire={() => {
+                    setCaptchaToken(null);
+                    setMessage({ type: "error", text: t.pages.auth.signup.errors.captchaExpired });
+                  }}
+                />
+              </div>
+
               <Button
                 type="submit"
-                disabled={isSubmitting || !agreedToTerms || isCaptchaValidating}
-                loading={isSubmitting || isCaptchaValidating}
+                disabled={isSubmitting || !agreedToTerms || !captchaToken}
+                loading={isSubmitting}
                 size="lg"
                 className="w-full"
               >
@@ -537,26 +557,6 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
         onAccept={() => setAgreedToTerms(true)}
         onDecline={() => setAgreedToTerms(false)}
       />
-
-      {/* Hidden Turnstile widget with execution mode */}
-      <div className="sr-only">
-        <TurnstileCaptcha
-          ref={turnstileRef}
-          execution="execute"
-          onSuccess={(token) => {
-            setCaptchaToken(token);
-            setIsCaptchaValidating(false);
-            resetMessage();
-            // Trigger form submission after captcha success
-            formRef.current?.requestSubmit();
-          }}
-          onError={() => {
-            setCaptchaToken(null);
-            setIsCaptchaValidating(false);
-            setMessage({ type: "error", text: t.pages.auth.signup.errors.captchaFailed });
-          }}
-        />
-      </div>
     </div>
   );
 }
