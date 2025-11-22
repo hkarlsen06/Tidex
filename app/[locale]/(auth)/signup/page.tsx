@@ -72,12 +72,10 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
     setCaptchaToken(null);
   };
 
-  // When captcha token is received, automatically re-submit the form
+  // Reset Turnstile widget on mount to prevent stale token issues
   useEffect(() => {
-    if (captchaToken) {
-      formRef.current?.requestSubmit();
-    }
-  }, [captchaToken]);
+    turnstileRef.current?.reset();
+  }, []);
 
   const handleSignUp = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -174,6 +172,9 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
 
       if (error) {
         setMessage({ type: "error", text: error.message });
+        // Reset captcha token so user can retry with fresh token
+        setCaptchaToken(null);
+        turnstileRef.current?.reset();
         return;
       }
 
@@ -216,6 +217,9 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
           } else {
             setMessage({ type: "error", text: error.message });
           }
+          // Reset captcha token so user can retry with fresh token
+          setCaptchaToken(null);
+          turnstileRef.current?.reset();
           return;
         }
 
@@ -231,6 +235,9 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
           type: "error",
           text: err instanceof Error ? err.message : t.pages.auth.signup.errors.genericError,
         });
+        // Reset captcha token so user can retry with fresh token
+        setCaptchaToken(null);
+        turnstileRef.current?.reset();
       }
     }
   };
@@ -540,6 +547,8 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
             setCaptchaToken(token);
             setIsCaptchaValidating(false);
             resetMessage();
+            // Trigger form submission after captcha success
+            formRef.current?.requestSubmit();
           }}
           onError={() => {
             setCaptchaToken(null);

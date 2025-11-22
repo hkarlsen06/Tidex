@@ -90,25 +90,6 @@ export function WageyInterface({ userId, userName }: WageyInterfaceProps) {
     });
   }, [messages, currentChunk]);
 
-  // Fix Safari iOS keyboard bug: blur input when scrolling
-  useEffect(() => {
-    const container = messagesContainerRef.current;
-    if (!container) return;
-
-    const handleScroll = () => {
-      // Blur any active input to prevent Safari's white space bug
-      if (document.activeElement instanceof HTMLElement) {
-        document.activeElement.blur();
-      }
-    };
-
-    container.addEventListener("scroll", handleScroll, { passive: true });
-
-    return () => {
-      container.removeEventListener("scroll", handleScroll);
-    };
-  }, []);
-
   // Note: Auto-resume removed - streams expire in Redis
   // Users should start a new chat instead of trying to resume old sessions
 
