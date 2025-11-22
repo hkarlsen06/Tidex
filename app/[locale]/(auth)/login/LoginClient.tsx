@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
-import { FormEvent, useState, use, useRef } from 'react';
+import { FormEvent, useState, use, useRef, useEffect } from 'react';
 import { useTranslations } from '@/lib/i18n/client';
 
 import { supabase } from '@/lib/supabase/browser';
@@ -81,6 +81,13 @@ export default function LoginClient({
     setFieldErrors({});
   };
 
+  // Reset Turnstile widget on mount to prevent stale token issues
+  // Only reset the widget (external system) and refs, don't call setState
+  useEffect(() => {
+    turnstileRef.current?.reset();
+    pendingActionRef.current = null;
+  }, []);
+
   // Check if user needs MFA verification and redirect accordingly
   const checkMfaAndRedirect = async (destination: string) => {
     const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
@@ -132,6 +139,9 @@ export default function LoginClient({
     if (error) {
       setIsOAuthRedirecting(false);
       setMessage({ type: 'error', text: translateError(error.message) });
+      // Reset captcha token so user can retry with fresh token
+      setCaptchaToken(null);
+      turnstileRef.current?.reset();
       return;
     }
 
@@ -211,6 +221,9 @@ export default function LoginClient({
       if (error) {
         setIsSubmitting(false);
         setMessage({ type: 'error', text: translateError(error.message) });
+        // Reset captcha token so user can retry with fresh token
+        setCaptchaToken(null);
+        turnstileRef.current?.reset();
         return;
       }
 
@@ -238,6 +251,9 @@ export default function LoginClient({
         if (error) {
           setIsSubmitting(false);
           setMessage({ type: 'error', text: translateError(error.message) });
+          // Reset captcha token so user can retry with fresh token
+          setCaptchaToken(null);
+          turnstileRef.current?.reset();
           return;
         }
 
@@ -251,6 +267,9 @@ export default function LoginClient({
           type: 'error',
           text: err instanceof Error ? err.message : t.pages.auth.login.errors.genericError,
         });
+        // Reset captcha token so user can retry with fresh token
+        setCaptchaToken(null);
+        turnstileRef.current?.reset();
       }
 
       /* NOTE: OTP login path preserved for future MFA implementation
