@@ -517,6 +517,8 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
   const [loadingMonths, setLoadingMonths] = useState<Set<string>>(new Set());
   // Cache buster timestamp to force fresh fetches after server mutations
   const [cacheBuster, setCacheBuster] = useState<number>(Date.now());
+  // Use ref to track in-flight requests to prevent race conditions
+  const inflightRequests = useRef<Set<string>>(new Set());
 
   // Combine initial shifts with any dynamically loaded shifts, filtering out deleted ones
   // and applying optimistic move/copy updates
@@ -563,12 +565,14 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
   const fetchMonth = useCallback(async (year: number, month: number) => {
     const key = getMonthKey(year, month);
 
-    // Skip if already loaded or currently loading
-    if (loadedMonths.has(key) || loadingMonths.has(key)) {
+    // Skip if already loaded, currently loading (state), or in-flight (ref)
+    if (loadedMonths.has(key) || loadingMonths.has(key) || inflightRequests.current.has(key)) {
       return;
     }
 
-    // Mark as loading
+    // Mark as in-flight immediately (synchronous, prevents race conditions)
+    inflightRequests.current.add(key);
+    // Mark as loading in state (for UI feedback)
     setLoadingMonths(prev => new Set(prev).add(key));
 
     try {
@@ -589,7 +593,8 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
     } catch (err) {
       console.error(`Failed to fetch month ${key}:`, err);
     } finally {
-      // Remove from loading set
+      // Remove from both tracking mechanisms
+      inflightRequests.current.delete(key);
       setLoadingMonths(prev => {
         const next = new Set(prev);
         next.delete(key);
@@ -668,8 +673,20 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
     }
     setLoadedMonths(loaded);
 
+    // Also mark SSR-loaded months as complete in the ref (prevents race conditions)
+    // The ref is synchronous, so prefetch effect will immediately see these months
+    inflightRequests.current.clear();
+    loaded.forEach(key => inflightRequests.current.add(key));
+
+    // Clear inflight refs after a short delay (allows prefetch to see them first)
+    const timer = setTimeout(() => {
+      inflightRequests.current.clear();
+    }, 0);
+
     // Update cache buster to force fresh API fetches (bypasses HTTP cache)
     setCacheBuster(Date.now());
+
+    return () => clearTimeout(timer);
   }, [initialShifts]);
 
   // Proactive prefetch: Load adjacent months (prev, current, next) whenever selectedMonth changes
@@ -686,13 +703,15 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
     const nextYear = nextDate.getFullYear();
     const nextMonthNum = nextDate.getMonth() + 1;
 
-    // Prefetch all 3 months in parallel (fetchMonth checks if already loaded)
-    Promise.all([
-      fetchMonth(selectedYear, selectedMonthNum), // Current
-      fetchMonth(prevYear, prevMonthNum),         // Previous
-      fetchMonth(nextYear, nextMonthNum),         // Next
-    ]);
-  }, [selectedMonth, fetchMonth]);
+    // Prefetch in priority order: current first (most likely to be viewed),
+    // then previous (used in calculations), then next
+    (async () => {
+      await fetchMonth(selectedYear, selectedMonthNum); // Current - highest priority
+      await fetchMonth(prevYear, prevMonthNum);         // Previous - needed for calculations
+      await fetchMonth(nextYear, nextMonthNum);         // Next - lowest priority
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedMonth]);
 
   // Auto-scroll to shifts list if defaultView is "list"
   useEffect(() => {
