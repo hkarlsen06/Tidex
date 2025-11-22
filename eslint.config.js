@@ -25,7 +25,6 @@ const config = [
       "tailwind.config.js",
       "dev-site/tailwind.config.js",
       "dev-site/out/**",
-      "components/ui/react-day-picker/dist/**",
     ],
   },
   js.configs.recommended,
