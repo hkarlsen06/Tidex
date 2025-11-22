@@ -66,11 +66,8 @@ export default function LoginClient({
   const [isOAuthRedirecting, setIsOAuthRedirecting] = useState(false);
   const [showSignupPrompt, setShowSignupPrompt] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
-  const pendingActionRef = useRef<'login' | 'oauth' | null>(null);
-  const [isCaptchaValidating, setIsCaptchaValidating] = useState(false);
 
   const turnstileRef = useRef<TurnstileCaptchaHandle>(null);
-  const formRef = useRef<HTMLFormElement>(null);
 
   const resetMessage = () => {
     setMessage(null);
@@ -82,10 +79,8 @@ export default function LoginClient({
   };
 
   // Reset Turnstile widget on mount to prevent stale token issues
-  // Only reset the widget (external system) and refs, don't call setState
   useEffect(() => {
     turnstileRef.current?.reset();
-    pendingActionRef.current = null;
   }, []);
 
   // Check if user needs MFA verification and redirect accordingly
@@ -185,23 +180,19 @@ export default function LoginClient({
       }
     }
 
-    // If there are validation errors, show them and don't trigger captcha
+    // If there are validation errors, show them
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
       return;
     }
 
-    // If no captcha token yet, trigger captcha execution
+    // Require captcha token before submission
     if (!captchaToken) {
-      pendingActionRef.current = 'login';
-      setIsCaptchaValidating(true);
-      turnstileRef.current?.reset();
-      turnstileRef.current?.execute();
+      setMessage({ type: 'error', text: t.pages.auth.login.errors.completeCaptcha });
       return;
     }
 
-    // Reset pending action and captcha token since we're using it now
-    pendingActionRef.current = null;
+    // Use and consume the captcha token
     const usedCaptchaToken = captchaToken;
     setCaptchaToken(null);
 
@@ -385,22 +376,18 @@ export default function LoginClient({
   const handleGoogleSignIn = async () => {
     setMessage(null);
 
-    // If no captcha token yet, trigger captcha execution
+    // Require captcha token before OAuth
     if (!captchaToken) {
-      pendingActionRef.current = 'oauth';
-      setIsCaptchaValidating(true);
-      turnstileRef.current?.reset();
-      turnstileRef.current?.execute();
+      setMessage({ type: 'error', text: t.pages.auth.login.errors.completeCaptcha });
       return;
     }
 
-    // Reset pending action and captcha token since we're using it now
-    pendingActionRef.current = null;
+    // Consume the captcha token (verification happened, now proceed with OAuth)
     setCaptchaToken(null);
     await performGoogleSignIn();
   };
 
-  const buttonDisabled = isSubmitting || isOAuthRedirecting || isCaptchaValidating;
+  const buttonDisabled = isSubmitting || isOAuthRedirecting || !captchaToken;
 
   return (
     <div className="relative flex min-h-screen items-center justify-center py-16">
@@ -432,7 +419,7 @@ export default function LoginClient({
 
         {/* Step 1: Email/Phone and Password Input */}
         {step === 'input' && (
-          <form ref={formRef} className="space-y-6" noValidate onSubmit={handleSignIn}>
+          <form className="space-y-6" noValidate onSubmit={handleSignIn}>
             <FieldGroup>
               <Field data-invalid={!!fieldErrors.emailOrPhone}>
                 <FieldLabel htmlFor="emailOrPhone">{t.pages.auth.login.emailOrPhoneLabel}</FieldLabel>
@@ -478,10 +465,32 @@ export default function LoginClient({
               </Field>
             </FieldGroup>
 
+            {/* Turnstile CAPTCHA Widget */}
+            <div className="flex justify-center">
+              <TurnstileCaptcha
+                ref={turnstileRef}
+                execution="render"
+                appearance="always"
+                size="flexible"
+                onSuccess={(token) => {
+                  setCaptchaToken(token);
+                  resetMessage();
+                }}
+                onError={() => {
+                  setCaptchaToken(null);
+                  setMessage({ type: 'error', text: t.pages.auth.login.errors.captchaFailed });
+                }}
+                onExpire={() => {
+                  setCaptchaToken(null);
+                  setMessage({ type: 'error', text: t.pages.auth.login.errors.captchaExpired });
+                }}
+              />
+            </div>
+
             <Button
               type="submit"
               disabled={buttonDisabled}
-              loading={isSubmitting || isCaptchaValidating}
+              loading={isSubmitting}
               size="lg"
               className="w-full"
             >
@@ -607,7 +616,7 @@ export default function LoginClient({
                 size="lg"
                 onClick={handleGoogleSignIn}
                 disabled={buttonDisabled}
-                loading={isOAuthRedirecting || isCaptchaValidating}
+                loading={isOAuthRedirecting}
                 aria-label={t.pages.auth.login.continueWithGoogle}
                 className="w-full"
               >
@@ -633,35 +642,6 @@ export default function LoginClient({
         )}
         </CardContent>
       </Card>
-
-      {/* Hidden Turnstile widget with execution mode */}
-      <div className="sr-only">
-        <TurnstileCaptcha
-          ref={turnstileRef}
-          execution="execute"
-          onSuccess={(token) => {
-            setCaptchaToken(token);
-            setIsCaptchaValidating(false);
-            resetMessage();
-
-            // Immediately consume the pending action
-            const action = pendingActionRef.current;
-            pendingActionRef.current = null;
-
-            if (action === 'login') {
-              formRef.current?.requestSubmit();
-            } else if (action === 'oauth') {
-              performGoogleSignIn();
-            }
-          }}
-          onError={() => {
-            setCaptchaToken(null);
-            pendingActionRef.current = null;
-            setIsCaptchaValidating(false);
-            setMessage({ type: 'error', text: t.pages.auth.login.errors.captchaFailed });
-          }}
-        />
-      </div>
     </div>
   );
 }
