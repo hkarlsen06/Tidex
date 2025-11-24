@@ -31,15 +31,24 @@ To invalidate cache tags in Route Handlers or other contexts, use revalidateTag 
 ```typescript
 // ✅ CORRECT - Works everywhere and includes required second argument
 import { revalidateTag } from "next/cache";
-revalidateTag(`user-shifts-${userId}`, "max");
+revalidateTag(`user-${userId}`, "max");
 
 // ❌ WRONG - Missing second argument (deprecated in Next.js 16)
-revalidateTag(`user-shifts-${userId}`);
+revalidateTag(`user-${userId}`);
 
 // ❌ WRONG - Only works in Server Actions
 import { updateTag } from "next/cache";
-updateTag(`user-shifts-${userId}`); // Throws error in Route Handlers
+updateTag(`user-${userId}`); // Throws error in Route Handlers
+
+// ❌ WRONG - Tag doesn't match what DAL functions set
+revalidateTag(`user-shifts-${userId}`, "max"); // DAL uses `user-${userId}`, not `user-shifts-${userId}`
 ```
+
+**How cache tags work in this project:**
+- DAL functions set tags using: `cacheTag(`user-${userId}`, "category-name")`
+- This creates TWO tags: `user-${userId}` (per-user) and `"category-name"` (global category)
+- To invalidate a user's data, use: `revalidateTag(`user-${userId}`, "max")`
+- Use `invalidateUserCache(userId)` from `data-access/cache.ts` for consistency
 
 ## Next.js 16 Critical Updates
 
