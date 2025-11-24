@@ -677,7 +677,6 @@ async function executeManageSeriesShift(
           };
         }
 
-        const { user } = await verifySession();
         const supabase = await createSupabaseServerClient();
 
         // Fetch current series to merge with updates
@@ -685,7 +684,7 @@ async function executeManageSeriesShift(
           .from("series_shifts")
           .select("*")
           .eq("id", input.seriesId)
-          .eq("user_id", user.id)
+          .eq("user_id", _userId)
           .single();
 
         if (fetchError || !currentSeries) {
@@ -744,7 +743,6 @@ async function executeManageSeriesShift(
       }
 
       case "query": {
-        const { user } = await verifySession();
         const supabase = await createSupabaseServerClient();
 
         if (input.seriesId) {
@@ -753,7 +751,7 @@ async function executeManageSeriesShift(
             .from("series_shifts")
             .select("*")
             .eq("id", input.seriesId)
-            .eq("user_id", user.id)
+            .eq("user_id", _userId)
             .single();
 
           if (error) {
@@ -777,7 +775,7 @@ async function executeManageSeriesShift(
           const { data, error } = await supabase
             .from("series_shifts")
             .select("*")
-            .eq("user_id", user.id)
+            .eq("user_id", _userId)
             .order("created_at", { ascending: false });
 
           if (error) {
@@ -823,7 +821,6 @@ async function executeManageSeriesExclusion(
   const input: ManageSeriesExclusionInput = parsed.data;
 
   try {
-    const { user } = await verifySession();
     const supabase = await createSupabaseServerClient();
 
     // Fetch current series
@@ -831,7 +828,7 @@ async function executeManageSeriesExclusion(
       .from("series_shifts")
       .select("exclusions")
       .eq("id", input.seriesId)
-      .eq("user_id", user.id)
+      .eq("user_id", _userId)
       .single();
 
     if (fetchError || !series) {
@@ -857,7 +854,7 @@ async function executeManageSeriesExclusion(
       .from("series_shifts")
       .update({ exclusions: newExclusions })
       .eq("id", input.seriesId)
-      .eq("user_id", user.id);
+      .eq("user_id", _userId);
 
     if (updateError) {
       throw new Error(`Kunne ikke oppdatere serie: ${updateError.message}`);
