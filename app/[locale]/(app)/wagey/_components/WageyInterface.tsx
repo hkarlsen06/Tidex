@@ -51,6 +51,7 @@ export function WageyInterface({ userId, userName }: WageyInterfaceProps) {
   const processedChunksRef = useRef<Set<string>>(new Set());
   const toolMessageMapRef = useRef<Map<string, string>>(new Map());
   const chunkSequenceRef = useRef(0);
+  const hasSuccessfulToolCallsRef = useRef(false);
 
   // Load conversation from sessionStorage on client-side only (after hydration)
   useEffect(() => {
@@ -109,6 +110,7 @@ export function WageyInterface({ userId, userName }: WageyInterfaceProps) {
       processedChunksRef.current.clear();
       toolMessageMapRef.current.clear();
       chunkSequenceRef.current = 0;
+      hasSuccessfulToolCallsRef.current = false;
     },
 
     onChunk: (chunk: ChatChunk) => {
@@ -191,6 +193,11 @@ export function WageyInterface({ userId, userName }: WageyInterfaceProps) {
           return "";
         });
       } else if (chunk.type === "tool_result") {
+        // Track successful tool calls for cache invalidation
+        if (chunk.success) {
+          hasSuccessfulToolCallsRef.current = true;
+        }
+
         // Update tool call with result
         setMessages((prev) =>
           prev.map((msg) => {
@@ -247,6 +254,13 @@ export function WageyInterface({ userId, userName }: WageyInterfaceProps) {
         });
         processedChunksRef.current.clear();
         setIsStreaming(false);
+
+        // Refresh router cache if there were successful tool calls
+        // This ensures data is fresh when user navigates away
+        if (hasSuccessfulToolCallsRef.current) {
+          router.refresh();
+          hasSuccessfulToolCallsRef.current = false;
+        }
       }
     },
 
