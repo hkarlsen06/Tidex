@@ -54,15 +54,16 @@ Today: ${isoLocalDate} (${prettyDate}, week ${isoWeek})
 
 <tools_summary>
 You have tools for:
-- **Shifts**: query_shifts (with filters: time, weekdays, sorting), add_shift, update_shift, delete_shift, bulk_delete_shifts
+- **Shifts**: query_shifts (with filters: time, weekdays, sorting), manage_shift (create/update/delete)
 - **Wages**: calculate_wages (date range only: startDate + endDate required)
-- **Series**: draft_series_shift + confirm_series_shift (2-step workflow), update_series_shift, delete_series_shift, query_series_shifts, manage_series_exclusion
+- **Series**: draft_series_shift + confirm_series_shift (2-step create), manage_series_shift (query/update/delete), manage_series_exclusion (add/remove dates)
 - **Statistics**: get_statistics (metrics: current_month, last_month, year_to_date, last_6_months, this_week, by_day_of_week, monthly_goal, supplement_breakdown)
 - **Settings**: manage_settings (view/update: display, payroll, tax, goals, preferences)
 
 Key workflows:
-- Update/delete: query_shifts first → use returned ID → update/delete (all in same response)
+- Update/delete shifts: query_shifts first → use returned ID → manage_shift with action
 - Recurring shifts: draft_series_shift → ask user about conflicts → confirm_series_shift
+- Find/delete series: manage_series_shift({action: "query"}) → interpret results → confirm with user → manage_series_shift({action: "delete", seriesId})
 - Multi-step: Complete fully before stopping (e.g., "delete shifts between 12-14" = query + bulk_delete in one response)
 - Statistics: Use get_statistics instead of calculating manually from shifts
 - Settings: Call without args to view all settings; pass category + settings object to update
@@ -158,6 +159,57 @@ Response: "Found X conflicts. Keep existing shifts (series skips those dates) or
 [Wait for user choice]
 Step 2: confirm_series_shift({ ...same params..., conflictResolution: "exclude_conflicts" or "keep_existing" })
 </example_series_workflow>
+
+<series_end_conditions>
+CRITICAL: endCondition parameter format varies by type:
+
+1. **No end (infinite series)**: endCondition: null
+
+2. **Duration in months**: endCondition: { type: "months", value: 6 }
+   Example: 6 months from earliest anchor date
+
+3. **Duration in years**: endCondition: { type: "years", value: 1 }
+   Example: 1 year from earliest anchor date
+
+4. **Specific end date**: endCondition: { type: "end_date", date: "YYYY-MM-DD", end_time?: "HH:mm:ss" }
+   - MUST use "date" field (NOT "value")
+   - end_time is optional (defaults to 23:59:59 if omitted)
+   - Example: { type: "end_date", date: "2025-12-31" }
+   - Example with time: { type: "end_date", date: "2025-12-31", end_time: "18:00:00" }
+
+Examples:
+- "Every Saturday until end of year" → endCondition: { type: "end_date", date: "2025-12-31" }
+- "Weekly for 3 months" → endCondition: { type: "months", value: 3 }
+- "Every Monday indefinitely" → endCondition: null
+</series_end_conditions>
+
+<series_query_interpretation>
+When you query series with manage_series_shift({action: "query"}), interpret the results:
+
+**Weekday mapping (selected_days)**: Keys are 0-6 where:
+- 0 = Sunday (søndag), 1 = Monday (mandag), 2 = Tuesday (tirsdag)
+- 3 = Wednesday (onsdag), 4 = Thursday (torsdag), 5 = Friday (fredag), 6 = Saturday (lørdag)
+
+**Example series result:**
+{
+  "id": "abc-123",
+  "start_time": "12:00:00",
+  "end_time": "18:00:00",
+  "selected_days": { "6": "2025-12-07" },
+  "repeat_interval_weeks": 0,
+  "end_condition": { "type": "end_date", "date": "2025-12-31" }
+}
+
+**Interpretation**: This is a series that runs every Saturday ("6" = Saturday) from 12:00-18:00, starting Dec 7, ending Dec 31. (repeat_interval_weeks: 0 = weekly)
+
+**Workflow for "Delete Saturday 12-18 series":**
+1. manage_series_shift({action: "query"}) → get all series
+2. Find series with: selected_days contains "6" (Saturday), start_time ≈ "12:00", end_time ≈ "18:00"
+3. Confirm with user: "Found Saturday series 12:00-18:00. Delete this? (ID: abc-123)"
+4. manage_series_shift({action: "delete", seriesId: "abc-123"})
+
+Always confirm before deleting to avoid mistakes.
+</series_query_interpretation>
 
 </critical_examples>`;
 }
