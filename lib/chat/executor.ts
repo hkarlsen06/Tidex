@@ -542,13 +542,23 @@ async function executeDraftSeriesShift(
 
   const input: DraftSeriesShiftInput = parsed.data;
 
+  // Normalize end_condition: add default end_time for end_date type
+  let normalizedEndCondition: EndCondition = input.endCondition;
+  if (input.endCondition !== null && input.endCondition.type === 'end_date') {
+    normalizedEndCondition = {
+      type: 'end_date',
+      date: input.endCondition.date,
+      end_time: input.endCondition.end_time || '23:59:59',
+    };
+  }
+
   try {
     const result = await draftSeriesShift({
       selected_days: input.selectedDays as Record<'0' | '1' | '2' | '3' | '4' | '5' | '6', string>,
       start_time: input.start,
       end_time: input.end,
       repeat_interval_weeks: input.repeatIntervalWeeks as 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8,
-      end_condition: input.endCondition as EndCondition,
+      end_condition: normalizedEndCondition,
       exclusions: [],
     });
 
@@ -589,6 +599,16 @@ async function executeConfirmSeriesShift(
 
   const input: ConfirmSeriesShiftInput = parsed.data;
 
+  // Normalize end_condition: add default end_time for end_date type
+  let normalizedEndCondition: EndCondition = input.endCondition;
+  if (input.endCondition !== null && input.endCondition.type === 'end_date') {
+    normalizedEndCondition = {
+      type: 'end_date',
+      date: input.endCondition.date,
+      end_time: input.endCondition.end_time || '23:59:59',
+    };
+  }
+
   try {
     const result = await createSeriesShift(
       {
@@ -596,7 +616,7 @@ async function executeConfirmSeriesShift(
         start_time: input.start,
         end_time: input.end,
         repeat_interval_weeks: input.repeatIntervalWeeks as 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8,
-        end_condition: input.endCondition as EndCondition,
+        end_condition: normalizedEndCondition,
         exclusions: [],
       },
       {
@@ -657,7 +677,6 @@ async function executeManageSeriesShift(
           };
         }
 
-        const { user } = await verifySession();
         const supabase = await createSupabaseServerClient();
 
         // Fetch current series to merge with updates
@@ -665,7 +684,7 @@ async function executeManageSeriesShift(
           .from("series_shifts")
           .select("*")
           .eq("id", input.seriesId)
-          .eq("user_id", user.id)
+          .eq("user_id", _userId)
           .single();
 
         if (fetchError || !currentSeries) {
@@ -681,13 +700,23 @@ async function executeManageSeriesShift(
           return match ? match[1] : time;
         };
 
+        // Normalize end_condition if provided
+        let normalizedEndCondition: EndCondition = (input.endCondition !== undefined ? input.endCondition : currentSeries.end_condition) as EndCondition;
+        if (input.endCondition !== undefined && input.endCondition !== null && input.endCondition.type === 'end_date') {
+          normalizedEndCondition = {
+            type: 'end_date',
+            date: input.endCondition.date,
+            end_time: input.endCondition.end_time || '23:59:59',
+          };
+        }
+
         await updateSeriesShift({
           id: input.seriesId,
           selected_days: (input.selectedDays ?? currentSeries.selected_days) as Record<'0' | '1' | '2' | '3' | '4' | '5' | '6', string>,
           start_time: input.start ?? parseTime(currentSeries.start_time),
           end_time: input.end ?? parseTime(currentSeries.end_time),
           repeat_interval_weeks: (input.repeatIntervalWeeks ?? currentSeries.repeat_interval_weeks) as 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8,
-          end_condition: (input.endCondition !== undefined ? input.endCondition : currentSeries.end_condition) as EndCondition,
+          end_condition: normalizedEndCondition,
           exclusions: currentSeries.exclusions || [],
         });
 
@@ -714,7 +743,6 @@ async function executeManageSeriesShift(
       }
 
       case "query": {
-        const { user } = await verifySession();
         const supabase = await createSupabaseServerClient();
 
         if (input.seriesId) {
@@ -723,7 +751,7 @@ async function executeManageSeriesShift(
             .from("series_shifts")
             .select("*")
             .eq("id", input.seriesId)
-            .eq("user_id", user.id)
+            .eq("user_id", _userId)
             .single();
 
           if (error) {
@@ -747,7 +775,7 @@ async function executeManageSeriesShift(
           const { data, error } = await supabase
             .from("series_shifts")
             .select("*")
-            .eq("user_id", user.id)
+            .eq("user_id", _userId)
             .order("created_at", { ascending: false });
 
           if (error) {
@@ -793,7 +821,6 @@ async function executeManageSeriesExclusion(
   const input: ManageSeriesExclusionInput = parsed.data;
 
   try {
-    const { user } = await verifySession();
     const supabase = await createSupabaseServerClient();
 
     // Fetch current series
@@ -801,7 +828,7 @@ async function executeManageSeriesExclusion(
       .from("series_shifts")
       .select("exclusions")
       .eq("id", input.seriesId)
-      .eq("user_id", user.id)
+      .eq("user_id", _userId)
       .single();
 
     if (fetchError || !series) {
@@ -827,7 +854,7 @@ async function executeManageSeriesExclusion(
       .from("series_shifts")
       .update({ exclusions: newExclusions })
       .eq("id", input.seriesId)
-      .eq("user_id", user.id);
+      .eq("user_id", _userId);
 
     if (updateError) {
       throw new Error(`Kunne ikke oppdatere serie: ${updateError.message}`);
