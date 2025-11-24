@@ -13,13 +13,13 @@
  * - null: No end date (continues indefinitely, UI shows preview for 6 months)
  * - months: Duration in months from the earliest anchor
  * - years: Duration in years from the earliest anchor
- * - end_date: Specific end date with time
+ * - end_date: Specific end date with optional time (defaults to 23:59:59)
  */
 export type EndCondition =
   | null
   | { type: 'months'; value: number }
   | { type: 'years'; value: number }
-  | { type: 'end_date'; date: string; end_time: string };
+  | { type: 'end_date'; date: string; end_time?: string };
 
 /**
  * Selected anchor dates by weekday
