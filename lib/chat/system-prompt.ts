@@ -159,5 +159,28 @@ Response: "Found X conflicts. Keep existing shifts (series skips those dates) or
 Step 2: confirm_series_shift({ ...same params..., conflictResolution: "exclude_conflicts" or "keep_existing" })
 </example_series_workflow>
 
+<series_end_conditions>
+CRITICAL: endCondition parameter format varies by type:
+
+1. **No end (infinite series)**: endCondition: null
+
+2. **Duration in months**: endCondition: { type: "months", value: 6 }
+   Example: 6 months from earliest anchor date
+
+3. **Duration in years**: endCondition: { type: "years", value: 1 }
+   Example: 1 year from earliest anchor date
+
+4. **Specific end date**: endCondition: { type: "end_date", date: "YYYY-MM-DD", end_time?: "HH:mm:ss" }
+   - MUST use "date" field (NOT "value")
+   - end_time is optional (defaults to 23:59:59 if omitted)
+   - Example: { type: "end_date", date: "2025-12-31" }
+   - Example with time: { type: "end_date", date: "2025-12-31", end_time: "18:00:00" }
+
+Examples:
+- "Every Saturday until end of year" → endCondition: { type: "end_date", date: "2025-12-31" }
+- "Weekly for 3 months" → endCondition: { type: "months", value: 3 }
+- "Every Monday indefinitely" → endCondition: null
+</series_end_conditions>
+
 </critical_examples>`;
 }
