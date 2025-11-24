@@ -1,6 +1,7 @@
 "use server";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { invalidateAndRevalidate } from "@/lib/revalidation/paths";
 
 export async function updateTheme(theme: "light" | "dark"): Promise<{ success: boolean }> {
   const supabase = await createSupabaseServerClient();
@@ -22,6 +23,9 @@ export async function updateTheme(theme: "light" | "dark"): Promise<{ success: b
     console.error("Failed to update theme:", error);
     return { success: false };
   }
+
+  // Invalidate cache to ensure server-rendered components use new theme
+  invalidateAndRevalidate(user.id);
 
   return { success: true };
 }
