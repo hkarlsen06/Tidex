@@ -134,10 +134,21 @@ export const draftSeriesShiftSchema = z.object({
     .describe("Repetition interval: 0=weekly, 1=every 2 weeks, 2=every 3 weeks, etc."),
   endCondition: z
     .nullable(
-      z.object({
-        type: z.enum(["months", "years", "end_date"]).describe("Type of end condition"),
-        value: z.union([z.number(), z.string()]).describe("Value: number for months/years, ISO date string for end_date"),
-      })
+      z.discriminatedUnion("type", [
+        z.object({
+          type: z.literal("months"),
+          value: z.number().int().min(1).describe("Number of months from earliest anchor"),
+        }),
+        z.object({
+          type: z.literal("years"),
+          value: z.number().int().min(1).describe("Number of years from earliest anchor"),
+        }),
+        z.object({
+          type: z.literal("end_date"),
+          date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).describe("End date in YYYY-MM-DD format"),
+          end_time: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/).optional().describe("Optional end time (HH:mm or HH:mm:ss), defaults to 23:59:59"),
+        }),
+      ])
     )
     .describe("When the series ends (null = infinite)"),
 });
@@ -169,10 +180,21 @@ export const confirmSeriesShiftSchema = z.object({
     .describe("Same repetition interval from draft step"),
   endCondition: z
     .nullable(
-      z.object({
-        type: z.enum(["months", "years", "end_date"]),
-        value: z.union([z.number(), z.string()]),
-      })
+      z.discriminatedUnion("type", [
+        z.object({
+          type: z.literal("months"),
+          value: z.number().int().min(1),
+        }),
+        z.object({
+          type: z.literal("years"),
+          value: z.number().int().min(1),
+        }),
+        z.object({
+          type: z.literal("end_date"),
+          date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+          end_time: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/).optional(),
+        }),
+      ])
     )
     .describe("Same end condition from draft step"),
   conflictResolution: z
@@ -219,10 +241,21 @@ export const manageSeriesShiftSchema = z.object({
     .describe("[update] New repetition interval"),
   endCondition: z
     .nullable(
-      z.object({
-        type: z.enum(["months", "years", "end_date"]),
-        value: z.union([z.number(), z.string()]),
-      })
+      z.discriminatedUnion("type", [
+        z.object({
+          type: z.literal("months"),
+          value: z.number().int().min(1),
+        }),
+        z.object({
+          type: z.literal("years"),
+          value: z.number().int().min(1),
+        }),
+        z.object({
+          type: z.literal("end_date"),
+          date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+          end_time: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/).optional(),
+        }),
+      ])
     )
     .optional()
     .describe("[update] New end condition"),
@@ -472,17 +505,34 @@ export const tools: Tool[] = [
           },
           endCondition: {
             type: ["object", "null"],
-            properties: {
-              type: {
-                type: "string",
-                enum: ["months", "years", "end_date"],
+            description: "null = infinite, or object with type discriminator",
+            oneOf: [
+              {
+                type: "object",
+                properties: {
+                  type: { type: "string", const: "months" },
+                  value: { type: "integer", minimum: 1, description: "Number of months" },
+                },
+                required: ["type", "value"],
               },
-              value: {
-                description: "Number or date string",
+              {
+                type: "object",
+                properties: {
+                  type: { type: "string", const: "years" },
+                  value: { type: "integer", minimum: 1, description: "Number of years" },
+                },
+                required: ["type", "value"],
               },
-            },
-            required: ["type", "value"],
-            description: "null = infinite",
+              {
+                type: "object",
+                properties: {
+                  type: { type: "string", const: "end_date" },
+                  date: { type: "string", pattern: "^\\d{4}-\\d{2}-\\d{2}$", description: "End date YYYY-MM-DD" },
+                  end_time: { type: "string", pattern: "^\\d{2}:\\d{2}(:\\d{2})?$", description: "Optional end time (defaults to 23:59:59)" },
+                },
+                required: ["type", "date"],
+              },
+            ],
           },
         },
         required: ["selectedDays", "start", "end", "repeatIntervalWeeks", "endCondition"],
@@ -523,15 +573,34 @@ export const tools: Tool[] = [
           },
           endCondition: {
             type: ["object", "null"],
-            properties: {
-              type: {
-                type: "string",
-                enum: ["months", "years", "end_date"],
-              },
-              value: {},
-            },
-            required: ["type", "value"],
             description: "Same from draft",
+            oneOf: [
+              {
+                type: "object",
+                properties: {
+                  type: { type: "string", const: "months" },
+                  value: { type: "integer", minimum: 1 },
+                },
+                required: ["type", "value"],
+              },
+              {
+                type: "object",
+                properties: {
+                  type: { type: "string", const: "years" },
+                  value: { type: "integer", minimum: 1 },
+                },
+                required: ["type", "value"],
+              },
+              {
+                type: "object",
+                properties: {
+                  type: { type: "string", const: "end_date" },
+                  date: { type: "string", pattern: "^\\d{4}-\\d{2}-\\d{2}$" },
+                  end_time: { type: "string", pattern: "^\\d{2}:\\d{2}(:\\d{2})?$" },
+                },
+                required: ["type", "date"],
+              },
+            ],
           },
           conflictResolution: {
             type: "string",
@@ -594,15 +663,34 @@ export const tools: Tool[] = [
           },
           endCondition: {
             type: ["object", "null"],
-            properties: {
-              type: {
-                type: "string",
-                enum: ["months", "years", "end_date"],
-              },
-              value: {},
-            },
-            required: ["type", "value"],
             description: "[update] New end condition (null = infinite)",
+            oneOf: [
+              {
+                type: "object",
+                properties: {
+                  type: { type: "string", const: "months" },
+                  value: { type: "integer", minimum: 1 },
+                },
+                required: ["type", "value"],
+              },
+              {
+                type: "object",
+                properties: {
+                  type: { type: "string", const: "years" },
+                  value: { type: "integer", minimum: 1 },
+                },
+                required: ["type", "value"],
+              },
+              {
+                type: "object",
+                properties: {
+                  type: { type: "string", const: "end_date" },
+                  date: { type: "string", pattern: "^\\d{4}-\\d{2}-\\d{2}$" },
+                  end_time: { type: "string", pattern: "^\\d{2}:\\d{2}(:\\d{2})?$" },
+                },
+                required: ["type", "date"],
+              },
+            ],
           },
         },
         required: ["action"],
