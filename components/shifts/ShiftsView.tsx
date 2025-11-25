@@ -39,6 +39,7 @@ import type { Locale } from "@/lib/i18n/config";
 import { formatCurrency, formatInteger } from "@/lib/formatters";
 import { getDateFormatter } from "@/lib/i18n/locale";
 import { useOnlineStatus } from "@/lib/hooks/useOnlineStatus";
+import { useCountdown } from "@/lib/hooks/useCountdown";
 import { TodayPlaceholderCard } from "./TodayPlaceholderCard";
 
 // Lazy load the calendar to reduce initial bundle size (~40KB savings)
@@ -1177,6 +1178,69 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
     return selectedMonth.getFullYear() === now.getFullYear() && selectedMonth.getMonth() === now.getMonth();
   }, [selectedMonth]);
 
+  // Find the current active shift or next upcoming shift (only when viewing current month)
+  const nextUpcomingShift = useMemo(() => {
+    if (!isCurrentMonth) return null;
+
+    const now = new Date();
+
+    // Sort all shifts by date and time
+    const sortedShifts = [...shifts].sort((a, b) => {
+      const dateCompare = a.shift_date.localeCompare(b.shift_date);
+      if (dateCompare !== 0) return dateCompare;
+      return a.start_time.localeCompare(b.start_time);
+    });
+
+    // Helper to parse shift times, handling cross-midnight
+    const parseShiftTimes = (shift: typeof sortedShifts[0]) => {
+      const [startH, startM] = shift.start_time.split(':').map(Number);
+      const [endH, endM] = shift.end_time.split(':').map(Number);
+
+      const start = new Date(shift.shift_date + 'T00:00:00');
+      start.setHours(startH, startM, 0, 0);
+
+      const end = new Date(shift.shift_date + 'T00:00:00');
+      end.setHours(endH, endM, 0, 0);
+
+      // Handle cross-midnight: if end <= start, end is next day
+      if (end <= start) {
+        end.setDate(end.getDate() + 1);
+      }
+
+      return { start, end };
+    };
+
+    // First, check if there's a currently active shift
+    for (const shift of sortedShifts) {
+      const { start, end } = parseShiftTimes(shift);
+      if (now >= start && now <= end) {
+        return shift;
+      }
+    }
+
+    // No active shift, find first future shift
+    for (const shift of sortedShifts) {
+      const [hours, minutes] = shift.start_time.split(':').map(Number);
+      const shiftDateTime = new Date(shift.shift_date + 'T00:00:00');
+      shiftDateTime.setHours(hours, minutes, 0, 0);
+
+      if (shiftDateTime > now) {
+        return shift;
+      }
+    }
+
+    return null;
+  }, [shifts, isCurrentMonth]);
+
+  // Live countdown for the next upcoming shift (or current active shift)
+  const countdown = useCountdown({
+    shiftDate: nextUpcomingShift?.shift_date ?? null,
+    shiftTime: nextUpcomingShift?.start_time ?? null,
+    endTime: nextUpcomingShift?.end_time ?? null,
+    t,
+    highPrecision: true,
+  });
+
   // Auto-scroll to today's date on desktop when viewing current month
   useEffect(() => {
     // Only scroll on desktop (lg breakpoint = 1024px)
@@ -1336,19 +1400,26 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
                       const isToday = shift.shift_date === todayDate;
                       const showPlaceholderAfter = todayIndex === -1 && shiftIndex < group.shifts.length - 1
                         && shift.shift_date < todayDate && group.shifts[shiftIndex + 1].shift_date > todayDate;
+                      const isNextUpcomingShift = nextUpcomingShift?.id === shift.id;
 
                       return (
                         <Fragment key={shift.id}>
                           <div ref={isCurrentMonth && isToday ? todayRef : undefined}>
-                            <ShiftCard
-                              shift={shift}
-                              isToday={isCurrentMonth && isToday}
-                              onClick={() => {
-                                clearSelection();
-                                setSelectedShift(shift);
-                                setDetailsOpen(true);
-                              }}
-                            />
+                            <div className="flex flex-col gap-2">
+                              <ShiftCard
+                                shift={shift}
+                                isToday={isCurrentMonth && isToday}
+                                onClick={() => {
+                                  clearSelection();
+                                  setSelectedShift(shift);
+                                  setDetailsOpen(true);
+                                }}
+                                progress={isNextUpcomingShift && countdown.isActive ? countdown.progress : undefined}
+                              />
+                              {isNextUpcomingShift && countdown.text && (
+                                <p className="text-xs text-text-muted text-center">{countdown.text}</p>
+                              )}
+                            </div>
                           </div>
                           {showPlaceholderAfter && (
                             <div ref={todayRef}>
