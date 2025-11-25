@@ -55,11 +55,19 @@ export const calculateWagesSchema = z.object({
 export type CalculateWagesInput = z.infer<typeof calculateWagesSchema>;
 
 /**
+ * Weekday with anchor date for series shifts
+ */
+const weekdayAnchorSchema = z.object({
+  day: z.number().int().min(0).max(6),
+  anchorDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+});
+
+/**
  * Draft Series Shift Tool Schema (Step 1 of 2)
+ * Supports multiple weekdays in a single series (e.g., Mon/Wed/Fri)
  */
 export const draftSeriesShiftSchema = z.object({
-  weekday: z.number().int().min(0).max(6),
-  anchorDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  weekdays: z.array(weekdayAnchorSchema).min(1).max(7),
   start: z.string().regex(/^\d{2}:\d{2}$/),
   end: z.string().regex(/^\d{2}:\d{2}$/),
   frequency: z.enum(["weekly", "biweekly", "every_3_weeks", "every_4_weeks"]),
@@ -71,10 +79,10 @@ export type DraftSeriesShiftInput = z.infer<typeof draftSeriesShiftSchema>;
 
 /**
  * Confirm Series Shift Tool Schema (Step 2 of 2)
+ * Supports multiple weekdays in a single series (e.g., Mon/Wed/Fri)
  */
 export const confirmSeriesShiftSchema = z.object({
-  weekday: z.number().int().min(0).max(6),
-  anchorDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  weekdays: z.array(weekdayAnchorSchema).min(1).max(7),
   start: z.string().regex(/^\d{2}:\d{2}$/),
   end: z.string().regex(/^\d{2}:\d{2}$/),
   frequency: z.enum(["weekly", "biweekly", "every_3_weeks", "every_4_weeks"]),
@@ -91,9 +99,8 @@ export type ConfirmSeriesShiftInput = z.infer<typeof confirmSeriesShiftSchema>;
 export const manageSeriesShiftSchema = z.object({
   action: z.enum(["list", "update", "delete"]),
   seriesId: z.string().uuid().optional(),
-  // Update fields
-  weekday: z.number().int().min(0).max(6).optional(),
-  anchorDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  // Update fields - use weekdays array to replace all weekdays
+  weekdays: z.array(weekdayAnchorSchema).min(1).max(7).optional(),
   start: z.string().regex(/^\d{2}:\d{2}$/).optional(),
   end: z.string().regex(/^\d{2}:\d{2}$/).optional(),
   frequency: z.enum(["weekly", "biweekly", "every_3_weeks", "every_4_weeks"]).optional(),
@@ -371,23 +378,36 @@ Note: For quick monthly/yearly totals, prefer get_statistics which is optimized 
 Purpose: Validates the pattern and checks for conflicts with existing shifts before committing.
 
 Required parameters:
-- weekday: 0=Sunday, 1=Monday, 2=Tuesday, 3=Wednesday, 4=Thursday, 5=Friday, 6=Saturday
-- anchorDate: First occurrence (YYYY-MM-DD). MUST fall on the specified weekday.
+- weekdays: Array of {day, anchorDate} objects. Each day is 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat. anchorDate (YYYY-MM-DD) MUST fall on that weekday.
 - start/end: Times in HH:mm format
 - frequency: weekly, biweekly, every_3_weeks, or every_4_weeks
 - endType: never, after_months, after_years, or on_date (with endValue)
+
+IMPORTANT: Use weekdays array to create a SINGLE series with multiple weekdays (e.g., Mon/Wed/Fri). Do NOT create separate series for each day.
 
 Workflow: After this returns conflict info, ask user how to handle conflicts, then call confirm_series_shift.`,
     input_schema: {
       type: "object",
       properties: {
-        weekday: {
-          type: "integer",
-          description: "Day of week: 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat",
-        },
-        anchorDate: {
-          type: "string",
-          description: "First occurrence date (YYYY-MM-DD). Must be the correct weekday.",
+        weekdays: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              day: {
+                type: "integer",
+                description: "Day of week: 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat",
+              },
+              anchorDate: {
+                type: "string",
+                description: "First occurrence date (YYYY-MM-DD). Must fall on the correct weekday.",
+              },
+            },
+            required: ["day", "anchorDate"],
+          },
+          minItems: 1,
+          maxItems: 7,
+          description: "Array of weekdays with their anchor dates. Use multiple entries for multi-day patterns (e.g., Mon/Wed/Fri).",
         },
         start: {
           type: "string",
@@ -412,47 +432,55 @@ Workflow: After this returns conflict info, ask user how to handle conflicts, th
           description: "For after_months/after_years: number of months/years. For on_date: end date (YYYY-MM-DD).",
         },
       },
-      required: ["weekday", "anchorDate", "start", "end", "frequency", "endType"],
+      required: ["weekdays", "start", "end", "frequency", "endType"],
     },
     input_examples: [
-      // Weekly Monday shift 9-5, runs forever
+      // Weekly Monday shift 9-5, runs forever (single weekday)
       {
-        weekday: 1,
-        anchorDate: "2025-01-20",
+        weekdays: [{ day: 1, anchorDate: "2025-01-20" }],
         start: "09:00",
         end: "17:00",
         frequency: "weekly",
         endType: "never",
       },
-      // Every Saturday 12-6pm for 3 months
+      // Mon/Wed/Fri weekly shifts (multiple weekdays in ONE series)
       {
-        weekday: 6,
-        anchorDate: "2025-01-25",
-        start: "12:00",
+        weekdays: [
+          { day: 1, anchorDate: "2025-01-20" },
+          { day: 3, anchorDate: "2025-01-22" },
+          { day: 5, anchorDate: "2025-01-24" },
+        ],
+        start: "09:00",
+        end: "17:00",
+        frequency: "weekly",
+        endType: "after_months",
+        endValue: 6,
+      },
+      // All weekdays (Mon-Fri) for full-time work schedule
+      {
+        weekdays: [
+          { day: 1, anchorDate: "2025-01-20" },
+          { day: 2, anchorDate: "2025-01-21" },
+          { day: 3, anchorDate: "2025-01-22" },
+          { day: 4, anchorDate: "2025-01-23" },
+          { day: 5, anchorDate: "2025-01-24" },
+        ],
+        start: "08:00",
+        end: "16:00",
+        frequency: "weekly",
+        endType: "never",
+      },
+      // Weekend shifts (Sat/Sun)
+      {
+        weekdays: [
+          { day: 6, anchorDate: "2025-01-25" },
+          { day: 0, anchorDate: "2025-01-26" },
+        ],
+        start: "10:00",
         end: "18:00",
         frequency: "weekly",
         endType: "after_months",
         endValue: 3,
-      },
-      // Biweekly Friday evening shift until end of year
-      {
-        weekday: 5,
-        anchorDate: "2025-01-24",
-        start: "18:00",
-        end: "23:00",
-        frequency: "biweekly",
-        endType: "on_date",
-        endValue: "2025-12-31",
-      },
-      // Every 3 weeks on Wednesday for 1 year
-      {
-        weekday: 3,
-        anchorDate: "2025-01-22",
-        start: "08:00",
-        end: "16:00",
-        frequency: "every_3_weeks",
-        endType: "after_years",
-        endValue: 1,
       },
     ],
   },
@@ -470,13 +498,25 @@ The series will be created and shifts generated according to the pattern.`,
     input_schema: {
       type: "object",
       properties: {
-        weekday: {
-          type: "integer",
-          description: "Same weekday from draft (0-6)",
-        },
-        anchorDate: {
-          type: "string",
-          description: "Same anchor date from draft (YYYY-MM-DD)",
+        weekdays: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              day: {
+                type: "integer",
+                description: "Day of week: 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat",
+              },
+              anchorDate: {
+                type: "string",
+                description: "First occurrence date (YYYY-MM-DD). Must fall on the correct weekday.",
+              },
+            },
+            required: ["day", "anchorDate"],
+          },
+          minItems: 1,
+          maxItems: 7,
+          description: "Same weekdays array from draft.",
         },
         start: {
           type: "string",
@@ -506,28 +546,30 @@ The series will be created and shifts generated according to the pattern.`,
           description: "keep_both: series coexists with conflicts. skip_conflicts: series skips dates with existing shifts.",
         },
       },
-      required: ["weekday", "anchorDate", "start", "end", "frequency", "endType", "conflictResolution"],
+      required: ["weekdays", "start", "end", "frequency", "endType", "conflictResolution"],
     },
     input_examples: [
       // Confirm weekly Monday shift, skip conflicting dates
       {
-        weekday: 1,
-        anchorDate: "2025-01-20",
+        weekdays: [{ day: 1, anchorDate: "2025-01-20" }],
         start: "09:00",
         end: "17:00",
         frequency: "weekly",
         endType: "never",
         conflictResolution: "skip_conflicts",
       },
-      // Confirm Saturday series, allow both shifts on conflict dates
+      // Confirm Mon/Wed/Fri series, allow both shifts on conflict dates
       {
-        weekday: 6,
-        anchorDate: "2025-01-25",
-        start: "12:00",
-        end: "18:00",
+        weekdays: [
+          { day: 1, anchorDate: "2025-01-20" },
+          { day: 3, anchorDate: "2025-01-22" },
+          { day: 5, anchorDate: "2025-01-24" },
+        ],
+        start: "09:00",
+        end: "17:00",
         frequency: "weekly",
         endType: "after_months",
-        endValue: 3,
+        endValue: 6,
         conflictResolution: "keep_both",
       },
     ],
@@ -538,13 +580,14 @@ The series will be created and shifts generated according to the pattern.`,
     description: `List, update, or delete existing recurring series.
 
 Actions:
-- LIST: action="list" - Returns all series with IDs, patterns, and schedules
-- UPDATE: action="update", seriesId, plus fields to change (weekday, times, frequency, endType)
+- LIST: action="list" - Returns all series with IDs, patterns, and schedules (weekdays array format)
+- UPDATE: action="update", seriesId, plus fields to change (weekdays, times, frequency, endType)
 - DELETE: action="delete", seriesId - Removes the series definition (existing generated shifts remain)
 
 Workflow: Always LIST first to get series IDs before update/delete.
 
-Note: Updating a series affects future occurrences. Past generated shifts are not modified.`,
+Note: Updating a series affects future occurrences. Past generated shifts are not modified.
+When updating weekdays, provide the complete weekdays array (replaces all existing weekdays).`,
     input_schema: {
       type: "object",
       properties: {
@@ -557,13 +600,25 @@ Note: Updating a series affects future occurrences. Past generated shifts are no
           type: "string",
           description: "Series ID (required for update/delete)",
         },
-        weekday: {
-          type: "integer",
-          description: "New weekday (0-6) for update",
-        },
-        anchorDate: {
-          type: "string",
-          description: "New anchor date for update",
+        weekdays: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              day: {
+                type: "integer",
+                description: "Day of week: 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat",
+              },
+              anchorDate: {
+                type: "string",
+                description: "First occurrence date (YYYY-MM-DD). Must fall on the correct weekday.",
+              },
+            },
+            required: ["day", "anchorDate"],
+          },
+          minItems: 1,
+          maxItems: 7,
+          description: "New weekdays for update (replaces all existing weekdays)",
         },
         start: {
           type: "string",
@@ -601,6 +656,16 @@ Note: Updating a series affects future occurrences. Past generated shifts are no
         seriesId: "abc123-def456",
         start: "10:00",
         end: "18:00",
+      },
+      // Change series weekdays from Mon only to Mon/Wed/Fri
+      {
+        action: "update",
+        seriesId: "abc123-def456",
+        weekdays: [
+          { day: 1, anchorDate: "2025-01-20" },
+          { day: 3, anchorDate: "2025-01-22" },
+          { day: 5, anchorDate: "2025-01-24" },
+        ],
       },
       // Change series to end after 6 months
       {
