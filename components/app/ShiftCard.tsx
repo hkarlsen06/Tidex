@@ -15,6 +15,8 @@ type ShiftCardProps = {
   shift: ShiftWithComputations;
   onClick?: () => void;
   isToday?: boolean;
+  /** Progress through the shift (0-100), shows a subtle progress bar when provided */
+  progress?: number;
 };
 
 export function formatDateParts(date: string, locale: string, daysShort: readonly string[]) {
@@ -51,7 +53,7 @@ export function formatPlainAmount(value: number) {
   return formatPlainAmountValue(value);
 }
 
-export function ShiftCard({ shift, onClick, isToday = false }: ShiftCardProps) {
+export function ShiftCard({ shift, onClick, isToday = false, progress }: ShiftCardProps) {
   const { t, locale } = useTranslations();
   const { computed } = shift;
   const { dayName, dateLabel } = formatDateParts(shift.shift_date, locale, t.dateTime.daysShort);
@@ -62,10 +64,12 @@ export function ShiftCard({ shift, onClick, isToday = false }: ShiftCardProps) {
   // Lowercase day names for Norwegian locale
   const displayDayName = locale === 'no' ? dayName.toLowerCase() : dayName;
 
+  const isActive = typeof progress === 'number' && progress >= 0 && progress <= 100;
+
   return (
     <Card
       className={cn(
-        "bg-surface-primary rounded-3xl",
+        "bg-surface-primary rounded-3xl relative overflow-hidden",
         onClick && "cursor-pointer transition-colors hover:bg-surface-secondary",
         isToday && "ring-2 ring-brand-highlight"
       )}
@@ -73,7 +77,15 @@ export function ShiftCard({ shift, onClick, isToday = false }: ShiftCardProps) {
       role={onClick ? "button" : undefined}
       tabIndex={onClick ? 0 : undefined}
     >
-      <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0 py-6">
+      {/* Progress bar background for active shifts */}
+      {isActive && (
+        <div
+          className="absolute inset-0 bg-brand-highlight/10 transition-all duration-1000 ease-linear"
+          style={{ width: `${progress}%` }}
+          aria-hidden="true"
+        />
+      )}
+      <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0 py-6 relative z-10">
         <div className="space-y-1">
           <p className="text-lg font-medium text-text-primary">
             {dateLabel}

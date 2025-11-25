@@ -1178,7 +1178,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
     return selectedMonth.getFullYear() === now.getFullYear() && selectedMonth.getMonth() === now.getMonth();
   }, [selectedMonth]);
 
-  // Find the next upcoming shift (only when viewing current month)
+  // Find the current active shift or next upcoming shift (only when viewing current month)
   const nextUpcomingShift = useMemo(() => {
     if (!isCurrentMonth) return null;
 
@@ -1191,7 +1191,34 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
       return a.start_time.localeCompare(b.start_time);
     });
 
-    // Find first future shift
+    // Helper to parse shift times, handling cross-midnight
+    const parseShiftTimes = (shift: typeof sortedShifts[0]) => {
+      const [startH, startM] = shift.start_time.split(':').map(Number);
+      const [endH, endM] = shift.end_time.split(':').map(Number);
+
+      const start = new Date(shift.shift_date + 'T00:00:00');
+      start.setHours(startH, startM, 0, 0);
+
+      const end = new Date(shift.shift_date + 'T00:00:00');
+      end.setHours(endH, endM, 0, 0);
+
+      // Handle cross-midnight: if end <= start, end is next day
+      if (end <= start) {
+        end.setDate(end.getDate() + 1);
+      }
+
+      return { start, end };
+    };
+
+    // First, check if there's a currently active shift
+    for (const shift of sortedShifts) {
+      const { start, end } = parseShiftTimes(shift);
+      if (now >= start && now <= end) {
+        return shift;
+      }
+    }
+
+    // No active shift, find first future shift
     for (const shift of sortedShifts) {
       const [hours, minutes] = shift.start_time.split(':').map(Number);
       const shiftDateTime = new Date(shift.shift_date + 'T00:00:00');
@@ -1205,10 +1232,11 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
     return null;
   }, [shifts, isCurrentMonth]);
 
-  // Live countdown for the next upcoming shift
-  const countdownText = useCountdown({
+  // Live countdown for the next upcoming shift (or current active shift)
+  const countdown = useCountdown({
     shiftDate: nextUpcomingShift?.shift_date ?? null,
     shiftTime: nextUpcomingShift?.start_time ?? null,
+    endTime: nextUpcomingShift?.end_time ?? null,
     t,
     highPrecision: true,
   });
@@ -1386,9 +1414,10 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
                                   setSelectedShift(shift);
                                   setDetailsOpen(true);
                                 }}
+                                progress={isNextUpcomingShift && countdown.isActive ? countdown.progress : undefined}
                               />
-                              {isNextUpcomingShift && countdownText && (
-                                <p className="text-xs text-text-muted text-center">{countdownText}</p>
+                              {isNextUpcomingShift && countdown.text && (
+                                <p className="text-xs text-text-muted text-center">{countdown.text}</p>
                               )}
                             </div>
                           </div>

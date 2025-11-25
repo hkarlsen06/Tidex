@@ -48,6 +48,7 @@ export const no = {
       inOneDay: 'Om 1 dag',
       daysAgo: '{days} dager siden',
       oneDayAgo: '1 dag siden',
+      now: 'Pågår nå',
     },
     bestShift: 'Beste vakt',
   },

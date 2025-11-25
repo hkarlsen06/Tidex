@@ -49,6 +49,7 @@ export const en: Dictionary = {
       inOneDay: 'In 1 day',
       daysAgo: '{days} days ago',
       oneDayAgo: '1 day ago',
+      now: 'In progress',
     },
     bestShift: 'Best shift',
   },

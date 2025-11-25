@@ -316,7 +316,7 @@ export function HomeContent({ shifts: initialShifts, settings }: HomeContentProp
     if (shifts.length === 0) return null;
 
     if (selectedMonthIsCurrent) {
-      // For current month: show next upcoming shift or last shift
+      // For current month: show active shift, next upcoming shift, or last shift
       const now = new Date();
 
       // Sort shifts by date and time
@@ -326,7 +326,34 @@ export function HomeContent({ shifts: initialShifts, settings }: HomeContentProp
         return a.start_time.localeCompare(b.start_time);
       });
 
-      // Find next upcoming shift
+      // Helper to parse shift times, handling cross-midnight
+      const parseShiftTimes = (shift: typeof sortedShifts[0]) => {
+        const [startH, startM] = shift.start_time.split(':').map(Number);
+        const [endH, endM] = shift.end_time.split(':').map(Number);
+
+        const start = new Date(shift.shift_date + 'T00:00:00');
+        start.setHours(startH, startM, 0, 0);
+
+        const end = new Date(shift.shift_date + 'T00:00:00');
+        end.setHours(endH, endM, 0, 0);
+
+        // Handle cross-midnight: if end <= start, end is next day
+        if (end <= start) {
+          end.setDate(end.getDate() + 1);
+        }
+
+        return { start, end };
+      };
+
+      // First, check if there's a currently active shift
+      for (const shift of sortedShifts) {
+        const { start, end } = parseShiftTimes(shift);
+        if (now >= start && now <= end) {
+          return shift;
+        }
+      }
+
+      // No active shift, find next upcoming shift
       for (const shift of sortedShifts) {
         const [hours, minutes] = shift.start_time.split(':').map(Number);
         const shiftDateTime = new Date(shift.shift_date + 'T00:00:00');
@@ -367,17 +394,18 @@ export function HomeContent({ shifts: initialShifts, settings }: HomeContentProp
     }
   }, [shifts, shiftsByMonth, month, selectedMonthIsCurrent]);
 
-  // Live countdown to next shift - updates every second when close
-  const countdownText = useCountdown({
+  // Live countdown to next shift - updates every second when close or active
+  const countdown = useCountdown({
     shiftDate: selectedMonthIsCurrent && displayShift ? displayShift.shift_date : null,
     shiftTime: selectedMonthIsCurrent && displayShift ? displayShift.start_time : null,
+    endTime: selectedMonthIsCurrent && displayShift ? displayShift.end_time : null,
     t,
     highPrecision: true,
   });
 
   // For non-current months, show "Best shift" instead of countdown
   const relativeTimeText = selectedMonthIsCurrent
-    ? countdownText
+    ? countdown.text
     : displayShift
       ? (t.common.bestShift ?? "Beste vakt")
       : null;
@@ -434,6 +462,7 @@ export function HomeContent({ shifts: initialShifts, settings }: HomeContentProp
                   setSelectedShift(displayShift);
                   setDetailsOpen(true);
                 }}
+                progress={countdown.isActive ? countdown.progress : undefined}
               />
               {relativeTimeText && (
                 <p className="text-xs text-text-muted text-center">{relativeTimeText}</p>

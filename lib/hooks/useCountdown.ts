@@ -11,31 +11,81 @@ function interpolate(str: string, values: Record<string, number>): string {
 type CountdownResult = {
   text: string;
   isUpcoming: boolean;
+  isActive: boolean;
+  progress: number; // 0-100, only meaningful when isActive is true
   diffMs: number;
 };
 
 /**
+ * Parse a shift's start and end times into Date objects, handling cross-midnight shifts
+ */
+function parseShiftTimes(
+  shiftDate: string,
+  startTime: string,
+  endTime: string
+): { startDateTime: Date; endDateTime: Date } {
+  const [startHours, startMinutes] = startTime.split(':').map(Number);
+  const [endHours, endMinutes] = endTime.split(':').map(Number);
+
+  const startDateTime = new Date(shiftDate + 'T00:00:00');
+  startDateTime.setHours(startHours, startMinutes, 0, 0);
+
+  const endDateTime = new Date(shiftDate + 'T00:00:00');
+  endDateTime.setHours(endHours, endMinutes, 0, 0);
+
+  // Handle cross-midnight shifts: if end <= start, end is next day
+  if (endDateTime <= startDateTime) {
+    endDateTime.setDate(endDateTime.getDate() + 1);
+  }
+
+  return { startDateTime, endDateTime };
+}
+
+/**
  * Calculates the relative time between now and a given shift date/time with high precision
- * @param shiftDate - ISO date string (YYYY-MM-DD)
- * @param shiftTime - Time string (HH:MM)
- * @param t - Translations object from useTranslations()
- * @param highPrecision - If true, shows seconds when within 1 hour
- * @returns CountdownResult with text, isUpcoming flag, and diffMs
+ * Also detects if shift is currently active and calculates progress
  */
 function calculateCountdown(
   shiftDate: string,
-  shiftTime: string,
+  startTime: string,
+  endTime: string | null,
   t: Dictionary,
   highPrecision: boolean = true
 ): CountdownResult {
   const now = new Date();
 
-  // Parse shift date and time in local timezone
-  const [hours, minutes] = shiftTime.split(':').map(Number);
-  const shiftDateTime = new Date(shiftDate + 'T00:00:00');
-  shiftDateTime.setHours(hours, minutes, 0, 0);
+  // Parse shift start time
+  const [startHours, startMinutes] = startTime.split(':').map(Number);
+  const startDateTime = new Date(shiftDate + 'T00:00:00');
+  startDateTime.setHours(startHours, startMinutes, 0, 0);
 
-  const diffMs = shiftDateTime.getTime() - now.getTime();
+  // Check if shift is currently active (only if endTime is provided)
+  let isActive = false;
+  let progress = 0;
+
+  if (endTime) {
+    const { startDateTime: start, endDateTime: end } = parseShiftTimes(shiftDate, startTime, endTime);
+
+    if (now >= start && now <= end) {
+      isActive = true;
+      const totalDuration = end.getTime() - start.getTime();
+      const elapsed = now.getTime() - start.getTime();
+      progress = Math.min(100, Math.max(0, (elapsed / totalDuration) * 100));
+    }
+  }
+
+  // If shift is active, return "now" text
+  if (isActive) {
+    return {
+      text: t.common.relativeTime.now,
+      isUpcoming: false,
+      isActive: true,
+      progress,
+      diffMs: 0,
+    };
+  }
+
+  const diffMs = startDateTime.getTime() - now.getTime();
   const isFuture = diffMs > 0;
   const absDiffMs = Math.abs(diffMs);
 
@@ -58,6 +108,8 @@ function calculateCountdown(
           ? interpolate(rt.inSeconds, { seconds: s })
           : interpolate(rt.secondsAgo, { seconds: s }),
         isUpcoming: isFuture,
+        isActive: false,
+        progress: 0,
         diffMs,
       };
     }
@@ -68,6 +120,8 @@ function calculateCountdown(
         ? interpolate(rt.inMinutesAndSeconds, { minutes: m, seconds: s })
         : interpolate(rt.minutesAndSecondsAgo, { minutes: m, seconds: s }),
       isUpcoming: isFuture,
+      isActive: false,
+      progress: 0,
       diffMs,
     };
   }
@@ -89,6 +143,8 @@ function calculateCountdown(
             ? interpolate(rt.inMinutes, { minutes: m })
             : interpolate(rt.minutesAgo, { minutes: m }),
           isUpcoming: isFuture,
+          isActive: false,
+          progress: 0,
           diffMs,
         };
       }
@@ -99,6 +155,8 @@ function calculateCountdown(
           ? interpolate(rt.inHoursMinutesAndSeconds, { hours: h, minutes: m, seconds: s })
           : interpolate(rt.hoursMinutesAndSecondsAgo, { hours: h, minutes: m, seconds: s }),
         isUpcoming: isFuture,
+        isActive: false,
+        progress: 0,
         diffMs,
       };
     }
@@ -109,6 +167,8 @@ function calculateCountdown(
           ? interpolate(rt.inMinutes, { minutes: m })
           : interpolate(rt.minutesAgo, { minutes: m }),
         isUpcoming: isFuture,
+        isActive: false,
+        progress: 0,
         diffMs,
       };
     }
@@ -119,6 +179,8 @@ function calculateCountdown(
           ? interpolate(rt.inHours, { hours: h })
           : interpolate(rt.hoursAgo, { hours: h }),
         isUpcoming: isFuture,
+        isActive: false,
+        progress: 0,
         diffMs,
       };
     }
@@ -128,6 +190,8 @@ function calculateCountdown(
         ? interpolate(rt.inHoursAndMinutes, { hours: h, minutes: m })
         : interpolate(rt.hoursAndMinutesAgo, { hours: h, minutes: m }),
       isUpcoming: isFuture,
+      isActive: false,
+      progress: 0,
       diffMs,
     };
   }
@@ -136,14 +200,16 @@ function calculateCountdown(
   const tomorrow = new Date(now);
   tomorrow.setDate(tomorrow.getDate() + 1);
   const isTomorrow =
-    shiftDateTime.getDate() === tomorrow.getDate() &&
-    shiftDateTime.getMonth() === tomorrow.getMonth() &&
-    shiftDateTime.getFullYear() === tomorrow.getFullYear();
+    startDateTime.getDate() === tomorrow.getDate() &&
+    startDateTime.getMonth() === tomorrow.getMonth() &&
+    startDateTime.getFullYear() === tomorrow.getFullYear();
 
   if (isFuture && isTomorrow) {
     return {
       text: rt.tomorrow,
       isUpcoming: true,
+      isActive: false,
+      progress: 0,
       diffMs,
     };
   }
@@ -152,14 +218,16 @@ function calculateCountdown(
   const yesterday = new Date(now);
   yesterday.setDate(yesterday.getDate() - 1);
   const isYesterday =
-    shiftDateTime.getDate() === yesterday.getDate() &&
-    shiftDateTime.getMonth() === yesterday.getMonth() &&
-    shiftDateTime.getFullYear() === yesterday.getFullYear();
+    startDateTime.getDate() === yesterday.getDate() &&
+    startDateTime.getMonth() === yesterday.getMonth() &&
+    startDateTime.getFullYear() === yesterday.getFullYear();
 
   if (!isFuture && isYesterday) {
     return {
       text: rt.yesterday,
       isUpcoming: false,
+      isActive: false,
+      progress: 0,
       diffMs,
     };
   }
@@ -169,6 +237,8 @@ function calculateCountdown(
     return {
       text: isFuture ? rt.inOneDay : rt.oneDayAgo,
       isUpcoming: isFuture,
+      isActive: false,
+      progress: 0,
       diffMs,
     };
   }
@@ -178,6 +248,8 @@ function calculateCountdown(
       ? interpolate(rt.inDays, { days: totalDays })
       : interpolate(rt.daysAgo, { days: totalDays }),
     isUpcoming: isFuture,
+    isActive: false,
+    progress: 0,
     diffMs,
   };
 }
@@ -187,70 +259,97 @@ type UseCountdownOptions = {
   shiftDate: string | null;
   /** The shift start time (HH:MM) */
   shiftTime: string | null;
+  /** The shift end time (HH:MM) - optional, needed for active detection and progress */
+  endTime?: string | null;
   /** Translation dictionary */
   t: Dictionary;
   /** Whether to show seconds precision when close (default: true) */
   highPrecision?: boolean;
 };
 
+type UseCountdownResult = {
+  /** The countdown text string */
+  text: string | null;
+  /** Whether the shift is currently in progress */
+  isActive: boolean;
+  /** Progress through the shift (0-100), only meaningful when isActive */
+  progress: number;
+};
+
 /**
  * Hook that provides a live countdown to a shift's start time
- * Updates every second when within 6 hours, every minute otherwise
+ * Updates every second when within 6 hours or during active shift, every minute otherwise
  *
- * @returns The countdown text string, null if no shift provided
+ * @returns Object with text, isActive flag, and progress percentage
  */
 export function useCountdown({
   shiftDate,
   shiftTime,
+  endTime,
   t,
   highPrecision = true,
-}: UseCountdownOptions): string | null {
-  const [countdownText, setCountdownText] = useState<string | null>(null);
+}: UseCountdownOptions): UseCountdownResult {
+  const [result, setResult] = useState<UseCountdownResult>({
+    text: null,
+    isActive: false,
+    progress: 0,
+  });
 
   const updateCountdown = useCallback(() => {
     if (!shiftDate || !shiftTime) {
-      setCountdownText(null);
+      setResult({ text: null, isActive: false, progress: 0 });
       return null;
     }
 
-    const result = calculateCountdown(shiftDate, shiftTime, t, highPrecision);
-    setCountdownText(result.text);
-    return result;
-  }, [shiftDate, shiftTime, t, highPrecision]);
+    const countdownResult = calculateCountdown(
+      shiftDate,
+      shiftTime,
+      endTime ?? null,
+      t,
+      highPrecision
+    );
+    setResult({
+      text: countdownResult.text,
+      isActive: countdownResult.isActive,
+      progress: countdownResult.progress,
+    });
+    return countdownResult;
+  }, [shiftDate, shiftTime, endTime, t, highPrecision]);
 
   useEffect(() => {
     if (!shiftDate || !shiftTime) {
-      setCountdownText(null);
+      setResult({ text: null, isActive: false, progress: 0 });
       return;
     }
 
     // Initial calculation
-    const result = updateCountdown();
-    if (!result) return;
+    const countdownResult = updateCountdown();
+    if (!countdownResult) return;
 
-    // Determine update interval based on proximity
-    // Within 6 hours: update every second for high precision
+    // Determine update interval based on proximity and active state
+    // During active shift or within 6 hours: update every second for high precision
     // Otherwise: update every minute
     const sixHoursMs = 6 * 60 * 60 * 1000;
-    const isClose = Math.abs(result.diffMs) < sixHoursMs;
-    const intervalMs = highPrecision && isClose ? 1000 : 60000;
+    const isClose = Math.abs(countdownResult.diffMs) < sixHoursMs;
+    const needsFrequentUpdates = countdownResult.isActive || (highPrecision && isClose);
+    const intervalMs = needsFrequentUpdates ? 1000 : 60000;
 
     const interval = setInterval(() => {
       const newResult = updateCountdown();
 
-      // If shift has started (transition from future to past) or is far away,
-      // we might want to adjust the interval
+      // If proximity or active state changed, we might need to adjust the interval
       if (newResult && highPrecision) {
         const nowClose = Math.abs(newResult.diffMs) < sixHoursMs;
-        // If proximity changed, clear and let effect re-run
-        if (nowClose !== isClose) {
+        const nowNeedsFrequent = newResult.isActive || nowClose;
+        // If frequency need changed, clear and let effect re-run
+        if (nowNeedsFrequent !== needsFrequentUpdates) {
           clearInterval(interval);
         }
       }
     }, intervalMs);
 
     return () => clearInterval(interval);
-  }, [shiftDate, shiftTime, t, highPrecision, updateCountdown]);
+  }, [shiftDate, shiftTime, endTime, t, highPrecision, updateCountdown]);
 
-  return countdownText;
+  return result;
 }
