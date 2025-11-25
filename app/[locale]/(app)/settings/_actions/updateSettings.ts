@@ -1,7 +1,6 @@
 'use server';
 
 import { createSupabaseServerClient } from '@/lib/supabase/server';
-import { revalidatePath } from 'next/cache';
 import { logger } from '@/lib/logger';
 import { verifySession } from '@/data-access/auth';
 import { invalidateAndRevalidate } from '@/lib/revalidation/paths';
@@ -31,7 +30,7 @@ export async function updateProfileSettings(data: {
       .eq('user_id', user.id);
   }
 
-  revalidatePath('/settings/profile');
+  invalidateAndRevalidate(user.id);
   return { success: true };
 }
 
@@ -46,8 +45,8 @@ export async function clearAllShifts() {
 
   if (error) throw error;
 
-  // Only revalidate shifts page since that's what changed
-  revalidatePath('/shifts');
+  // Invalidate cache since all shifts were deleted - critical for consistency
+  invalidateAndRevalidate(user.id);
   return { success: true };
 }
 
@@ -97,7 +96,7 @@ export async function updateDisplaySettings(data: {
     throw error;
   }
 
-  revalidatePath('/settings/display');
+  invalidateAndRevalidate(user.id);
   return { success: true };
 }
 
@@ -118,7 +117,7 @@ export async function updatePreferencesSettings(data: {
     throw error;
   }
 
-  revalidatePath('/settings/preferences');
+  invalidateAndRevalidate(user.id);
   return { success: true };
 }
 
@@ -174,7 +173,7 @@ export async function disconnectGoogleAccount() {
     throw error;
   }
 
-  revalidatePath('/settings/profile');
+  invalidateAndRevalidate(user.id);
   return { success: true };
 }
 
@@ -261,7 +260,7 @@ export async function verifyAndLinkPhone(phone: string, otp: string) {
     confirmedAt: data.user.phone_confirmed_at,
   });
 
-  revalidatePath('/settings/profile');
+  invalidateAndRevalidate(data.user.id);
   return { success: true };
 }
 
@@ -292,7 +291,7 @@ export async function unlinkPhoneNumber() {
     throw error;
   }
 
-  revalidatePath('/settings/profile');
+  invalidateAndRevalidate(user.id);
   return { success: true };
 }
 
@@ -319,7 +318,7 @@ export async function requestReauthentication() {
  * For phone-only users, nonce (OTP) is required after calling requestReauthentication()
  */
 export async function setPassword(password: string, nonce?: string) {
-  await verifySession();
+  const { user } = await verifySession();
   const supabase = await createSupabaseServerClient();
 
   // Validate password length
@@ -340,7 +339,9 @@ export async function setPassword(password: string, nonce?: string) {
     throw error;
   }
 
-  revalidatePath('/settings/profile');
+  // Note: Password change doesn't modify user_settings, but we revalidate
+  // to ensure auth state is refreshed across the app
+  invalidateAndRevalidate(user.id);
   return { success: true };
 }
 
