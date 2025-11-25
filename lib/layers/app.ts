@@ -36,7 +36,7 @@ import { SnapshotsServiceLive } from "../services/snapshots";
 import { ShiftsServiceLive } from "../services/shifts";
 import { StatsServiceLive } from "../services/stats";
 import { SubscriptionServiceLive } from "../services/subscription";
-import { OpenRouterServiceLive } from "../services/openrouter";
+import { ClaudeServiceLive } from "../services/claude";
 
 /**
  * Layer for just configuration and Supabase
@@ -116,13 +116,13 @@ export const SubscriptionLive = Layer.provideMerge(
 );
 
 /**
- * Layer for OpenRouter AI operations
+ * Layer for Claude AI operations
  * Use this when you need AI/LLM capabilities
  *
- * Dependencies: none (provides AppConfig and OpenRouterService)
+ * Dependencies: none (provides AppConfig and ClaudeService)
  */
-export const OpenRouterLive = Layer.provideMerge(
-  OpenRouterServiceLive,
+export const ClaudeLive = Layer.provideMerge(
+  ClaudeServiceLive,
   AppConfigLive
 );
 
@@ -138,7 +138,7 @@ export const OpenRouterLive = Layer.provideMerge(
  * - ShiftsService: Shift data with payroll computations
  * - StatsService: Statistics and analytics with projections
  * - SubscriptionService: Subscription and profile management
- * - OpenRouterService: AI/LLM capabilities via OpenRouter
+ * - ClaudeService: AI/LLM capabilities via Claude API
  *
  * Dependencies: none (fully self-contained)
  */
@@ -148,5 +148,5 @@ export const AppLive = Layer.mergeAll(
   ShiftsLive,
   StatsLive,
   SubscriptionLive,
-  OpenRouterLive
+  ClaudeLive
 );
