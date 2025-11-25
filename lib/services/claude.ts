@@ -49,12 +49,10 @@ export type Message = {
 };
 
 /**
- * Tool input example
+ * Tool input example - raw object matching the tool's input_schema
+ * See: https://www.anthropic.com/engineering/advanced-tool-use
  */
-export type ToolInputExample = {
-  input: Record<string, unknown>;
-  description?: string;
-};
+export type ToolInputExample = Record<string, unknown>;
 
 /**
  * Tool definition type (Claude format with input_examples)
@@ -170,8 +168,9 @@ export const ClaudeServiceLive = Layer.effect(
         };
 
         // Add beta header if using tools with input_examples
+        // See: https://www.anthropic.com/engineering/advanced-tool-use
         if (tools?.some((t) => t.input_examples?.length)) {
-          headers["anthropic-beta"] = "interleaved-thinking-2025-05-14,tool-use-examples-2025-05-14";
+          headers["anthropic-beta"] = "advanced-tool-use-2025-11-20";
         }
 
         // Build request body
@@ -219,6 +218,10 @@ export const ClaudeServiceLive = Layer.effect(
                 cause: error,
               }),
           });
+
+          // Log the actual error for debugging
+          console.error(`[Claude API Error] Status: ${response.status}`);
+          console.error(`[Claude API Error] Body: ${errorText}`);
 
           return yield* Effect.fail(
             new AIError({
