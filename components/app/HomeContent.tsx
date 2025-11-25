@@ -8,7 +8,7 @@ import { MonthPicker } from "./MonthPicker";
 import { ShiftCard } from "@/components/app/ShiftCard";
 import ShiftDetails from "@/components/shifts/ShiftDetails";
 import { ShiftWithComputations, UserSettings, computeShift, PRESET_SUPPLEMENT_RULES } from "@/lib/payroll";
-import { getRelativeTime } from "@/lib/utils/relativeTime";
+import { useCountdown } from "@/lib/hooks/useCountdown";
 import { useMonth } from "./MonthContext";
 import { useTranslations } from "@/lib/i18n/client";
 import { summarizeShiftTotals } from "@/lib/shifts/monthlyTotals";
@@ -367,22 +367,20 @@ export function HomeContent({ shifts: initialShifts, settings }: HomeContentProp
     }
   }, [shifts, shiftsByMonth, month, selectedMonthIsCurrent]);
 
-  // Calculate relative time on client only to avoid hydration mismatch
-  // (server and client would have different "now" timestamps)
-  const [relativeTimeText, setRelativeTimeText] = useState<string | null>(null);
+  // Live countdown to next shift - updates every second when close
+  const countdownText = useCountdown({
+    shiftDate: selectedMonthIsCurrent && displayShift ? displayShift.shift_date : null,
+    shiftTime: selectedMonthIsCurrent && displayShift ? displayShift.start_time : null,
+    t,
+    highPrecision: true,
+  });
 
-  useEffect(() => {
-    if (!displayShift) {
-      setRelativeTimeText(null);
-      return;
-    }
-
-    if (selectedMonthIsCurrent) {
-      setRelativeTimeText(getRelativeTime(displayShift.shift_date, displayShift.start_time, t));
-    } else {
-      setRelativeTimeText(t.common.bestShift ?? "Beste vakt");
-    }
-  }, [displayShift, selectedMonthIsCurrent, t]);
+  // For non-current months, show "Best shift" instead of countdown
+  const relativeTimeText = selectedMonthIsCurrent
+    ? countdownText
+    : displayShift
+      ? (t.common.bestShift ?? "Beste vakt")
+      : null;
 
   const taxDeductionEnabled = settings.tax_deduction_enabled ?? false;
 
