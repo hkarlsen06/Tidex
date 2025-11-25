@@ -108,8 +108,9 @@ export async function proxy(request: NextRequest) {
       },
     });
 
-    // Still handle Supabase token refresh for API routes
-    createServerClient(supabaseUrl, supabaseKey, {
+    // Trigger Supabase token refresh for API routes
+    // Must call getUser() to actually trigger the refresh mechanism
+    const supabase = createServerClient(supabaseUrl, supabaseKey, {
       cookies: {
         getAll() {
           return request.cookies.getAll().map(({ name, value }) => ({ name, value }));
@@ -121,6 +122,9 @@ export async function proxy(request: NextRequest) {
         },
       },
     });
+
+    // getUser() triggers token refresh if needed and updates cookies via setAll
+    await supabase.auth.getUser();
 
     return response;
   }
@@ -147,8 +151,9 @@ export async function proxy(request: NextRequest) {
       });
     }
 
-    // Handle Supabase token refresh
-    createServerClient(supabaseUrl, supabaseKey, {
+    // Trigger Supabase token refresh
+    // Must call getUser() to actually trigger the refresh mechanism
+    const supabase = createServerClient(supabaseUrl, supabaseKey, {
       cookies: {
         getAll() {
           return request.cookies.getAll().map(({ name, value }) => ({ name, value }));
@@ -160,6 +165,9 @@ export async function proxy(request: NextRequest) {
         },
       },
     });
+
+    // getUser() triggers token refresh if needed and updates cookies via setAll
+    await supabase.auth.getUser();
 
     return response;
   }

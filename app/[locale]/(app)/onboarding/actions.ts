@@ -1,8 +1,8 @@
 "use server";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { revalidatePath } from "next/cache";
 import { PRESET_WAGE_RATES, PRESET_SUPPLEMENT_RULES } from "@/lib/payroll";
+import { invalidateAndRevalidate } from "@/lib/revalidation/paths";
 
 interface OnboardingSettings {
   use_preset: boolean;
@@ -120,9 +120,8 @@ export async function completeOnboarding(settings: OnboardingSettings) {
     throw new Error(`Failed to update user metadata: ${updateError.message}`);
   }
 
-  // Revalidate paths
-  revalidatePath("/");
-  revalidatePath("/onboarding");
+  // Invalidate cache since settings and wage snapshot were created/updated
+  invalidateAndRevalidate(user.id);
 
   return { success: true };
 }
