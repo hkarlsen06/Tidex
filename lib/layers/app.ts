@@ -37,6 +37,7 @@ import { ShiftsServiceLive } from "../services/shifts";
 import { StatsServiceLive } from "../services/stats";
 import { SubscriptionServiceLive } from "../services/subscription";
 import { ClaudeServiceLive } from "../services/claude";
+import { WageyServiceLive } from "../services/wagey";
 
 /**
  * Layer for just configuration and Supabase
@@ -127,6 +128,17 @@ export const ClaudeLive = Layer.provideMerge(
 );
 
 /**
+ * Layer for Wagey AI assistant operations
+ * Use this when you need Wagey access control and usage tracking
+ *
+ * Dependencies: none (provides all services including WageyService)
+ */
+export const WageyLive = Layer.provideMerge(
+  WageyServiceLive,
+  SubscriptionLive
+);
+
+/**
  * Complete application layer with all services
  *
  * Provides:
@@ -139,6 +151,7 @@ export const ClaudeLive = Layer.provideMerge(
  * - StatsService: Statistics and analytics with projections
  * - SubscriptionService: Subscription and profile management
  * - ClaudeService: AI/LLM capabilities via Claude API
+ * - WageyService: Wagey access control and usage tracking
  *
  * Dependencies: none (fully self-contained)
  */
@@ -148,5 +161,6 @@ export const AppLive = Layer.mergeAll(
   ShiftsLive,
   StatsLive,
   SubscriptionLive,
-  ClaudeLive
+  ClaudeLive,
+  WageyLive
 );

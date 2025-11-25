@@ -45,6 +45,14 @@ export type ChatChunk =
   | {
       type: "error";
       error: string;
+    }
+  | {
+      type: "wagey_limit";
+      remaining: number;
+      resetDays: number;
+    }
+  | {
+      type: "wagey_no_access";
     };
 
 /**
@@ -181,6 +189,36 @@ const wageyChatStream = createRiverStream<ChatChunk, NextRequest>()
   .provider(defaultRiverProvider())
   .runner(async ({ input, stream, abortSignal }) => {
     const { messages, userId } = input;
+
+    // Check Wagey access and usage limits BEFORE Claude API call
+    // Use getWageyAccessForUser (not getWageyAccess) because we're in a Route Handler
+    // where verifySession()/redirect() doesn't work
+    const { getWageyAccessForUser, useWageyInvocation } = await import("@/data-access/wagey");
+    const { getDaysUntilReset } = await import("@/lib/wagey/types");
+
+    const access = await getWageyAccessForUser(userId);
+
+    // Free users cannot use Wagey
+    if (!access.hasAccess) {
+      await stream.appendChunk({ type: "wagey_no_access" });
+      await stream.close();
+      return;
+    }
+
+    // Grandfathered users skip limit check
+    if (access.level !== "grandfathered") {
+      const result = await useWageyInvocation(userId);
+
+      if (!result.allowed) {
+        await stream.appendChunk({
+          type: "wagey_limit",
+          remaining: result.remaining,
+          resetDays: getDaysUntilReset(),
+        });
+        await stream.close();
+        return;
+      }
+    }
 
     // Convert messages and add system prompt if not present
     let { system, messages: claudeMessages } = convertToClaudeMessages(messages);

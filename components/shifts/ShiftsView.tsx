@@ -504,6 +504,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
   const isOffline = useOnlineStatus();
   const [additionalShifts, setAdditionalShifts] = useState<ShiftWithComputations[]>([]);
   const shiftsListRef = useRef<HTMLDivElement>(null);
+  const todayRef = useRef<HTMLDivElement>(null);
   const calendarContainerRef = useRef<HTMLDivElement>(null);
   const [deletedShiftIds, setDeletedShiftIds] = useState<Set<string>>(new Set());
   const [newlyAddedDates, setNewlyAddedDates] = useState<Set<string>>(new Set());
@@ -1176,6 +1177,36 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
     return selectedMonth.getFullYear() === now.getFullYear() && selectedMonth.getMonth() === now.getMonth();
   }, [selectedMonth]);
 
+  // Auto-scroll to today's date on desktop when viewing current month
+  useEffect(() => {
+    // Only scroll on desktop (lg breakpoint = 1024px)
+    const isDesktop = window.matchMedia("(min-width: 1024px)").matches;
+    if (!isDesktop || !isCurrentMonth || !todayRef.current || !shiftsListRef.current) {
+      return;
+    }
+
+    // Use requestAnimationFrame to ensure DOM is fully rendered
+    requestAnimationFrame(() => {
+      if (!todayRef.current || !shiftsListRef.current) return;
+
+      const container = shiftsListRef.current;
+      const todayElement = todayRef.current;
+
+      // Calculate scroll position to center today's element in the container
+      const containerHeight = container.clientHeight;
+      const elementTop = todayElement.offsetTop;
+      const elementHeight = todayElement.offsetHeight;
+
+      // Scroll so today is roughly centered in the visible area
+      const scrollTarget = elementTop - (containerHeight / 2) + (elementHeight / 2);
+
+      container.scrollTo({
+        top: Math.max(0, scrollTarget),
+        behavior: "instant"
+      });
+    });
+  }, [isCurrentMonth, grouped]);
+
   const hasAnyShifts = shifts.length > 0;
   const emptyTitle = hasAnyShifts
     ? t.pages.shifts.list.emptyMonthTitle
@@ -1296,7 +1327,11 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
                     </span>
                   </div>
                   <div className="space-y-4">
-                    {isTodayBeforeFirstShift && <TodayPlaceholderCard />}
+                    {isTodayBeforeFirstShift && (
+                      <div ref={todayRef}>
+                        <TodayPlaceholderCard />
+                      </div>
+                    )}
                     {group.shifts.map((shift, shiftIndex) => {
                       const isToday = shift.shift_date === todayDate;
                       const showPlaceholderAfter = todayIndex === -1 && shiftIndex < group.shifts.length - 1
@@ -1304,20 +1339,30 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
 
                       return (
                         <Fragment key={shift.id}>
-                          <ShiftCard
-                            shift={shift}
-                            isToday={isCurrentMonth && isToday}
-                            onClick={() => {
-                              clearSelection();
-                              setSelectedShift(shift);
-                              setDetailsOpen(true);
-                            }}
-                          />
-                          {showPlaceholderAfter && <TodayPlaceholderCard />}
+                          <div ref={isCurrentMonth && isToday ? todayRef : undefined}>
+                            <ShiftCard
+                              shift={shift}
+                              isToday={isCurrentMonth && isToday}
+                              onClick={() => {
+                                clearSelection();
+                                setSelectedShift(shift);
+                                setDetailsOpen(true);
+                              }}
+                            />
+                          </div>
+                          {showPlaceholderAfter && (
+                            <div ref={todayRef}>
+                              <TodayPlaceholderCard />
+                            </div>
+                          )}
                         </Fragment>
                       );
                     })}
-                    {isTodayAfterLastShift && <TodayPlaceholderCard />}
+                    {isTodayAfterLastShift && (
+                      <div ref={todayRef}>
+                        <TodayPlaceholderCard />
+                      </div>
+                    )}
                   </div>
                 </section>
               );

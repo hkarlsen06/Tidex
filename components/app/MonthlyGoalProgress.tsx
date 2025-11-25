@@ -110,7 +110,7 @@ export function MonthlyGoalProgress({ data }: MonthlyGoalProgressProps) {
           </div>
 
           {/* Right side: Circular progress indicator */}
-          <div className="relative shrink-0">
+          <div className="relative shrink-0" style={{ width: size, height: size }}>
             <svg
               width={size}
               height={size}

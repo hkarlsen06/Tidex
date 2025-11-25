@@ -10,11 +10,13 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createRiverClient } from "@/lib/river";
 import type { ChatRouter, ChatChunk } from "@/lib/chat/router";
+import type { WageyAccessResult } from "@/lib/wagey/types";
 import { useTranslations } from "@/lib/i18n/client";
 import { MessageList } from "./MessageList";
 import { ChatInput } from "./ChatInput";
 import { Button } from "@/components/app/Button";
-import { PlusIcon } from "lucide-react";
+import Link from "next/link";
+import { PlusIcon, AlertCircle, ArrowRight } from "lucide-react";
 
 type Message = {
   id: string;
@@ -32,13 +34,14 @@ type Message = {
 type WageyInterfaceProps = {
   userId: string;
   userName?: string;
+  wageyAccess: WageyAccessResult;
 };
 
 const client = createRiverClient<ChatRouter>("/api/chat");
 
 const STORAGE_KEY = "wagey-conversation";
 
-export function WageyInterface({ userId, userName }: WageyInterfaceProps) {
+export function WageyInterface({ userId, userName, wageyAccess }: WageyInterfaceProps) {
   const { t, locale } = useTranslations();
   const router = useRouter();
   const [messages, setMessages] = useState<Message[]>([]);
@@ -46,12 +49,19 @@ export function WageyInterface({ userId, userName }: WageyInterfaceProps) {
   const [currentChunk, setCurrentChunk] = useState("");
   const [resumptionToken, setResumptionToken] = useState<string | null>(null);
   const [isHydrated, setIsHydrated] = useState(false);
+  const [limitReached, setLimitReached] = useState(false);
+  const [limitResetDays, setLimitResetDays] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const processedChunksRef = useRef<Set<string>>(new Set());
   const toolMessageMapRef = useRef<Map<string, string>>(new Map());
   const chunkSequenceRef = useRef(0);
   const hasSuccessfulToolCallsRef = useRef(false);
+
+  // Track remaining messages for UI (decrements client-side after successful sends)
+  const [remainingMessages, setRemainingMessages] = useState<number | null>(
+    wageyAccess.remaining
+  );
 
   // Load conversation from sessionStorage on client-side only (after hydration)
   useEffect(() => {
@@ -230,6 +240,36 @@ export function WageyInterface({ userId, userName }: WageyInterfaceProps) {
             return msg;
           })
         );
+      } else if (chunk.type === "wagey_limit") {
+        // User hit their monthly limit
+        setLimitReached(true);
+        setLimitResetDays(chunk.resetDays);
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: nextMessageId("limit"),
+            role: "assistant",
+            content: t.pages.wagey.limitReached.message
+              .replace("{limit}", String(wageyAccess.limit ?? 0))
+              .replace("{days}", String(chunk.resetDays)),
+          },
+        ]);
+        processedChunksRef.current.clear();
+        setIsStreaming(false);
+        setCurrentChunk("");
+      } else if (chunk.type === "wagey_no_access") {
+        // User doesn't have access (shouldn't happen if page guards work)
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: nextMessageId("no-access"),
+            role: "assistant",
+            content: t.pages.wagey.noAccess,
+          },
+        ]);
+        processedChunksRef.current.clear();
+        setIsStreaming(false);
+        setCurrentChunk("");
       } else if (chunk.type === "done") {
         // Finalize any remaining text
         setCurrentChunk((currentText) => {
@@ -254,6 +294,11 @@ export function WageyInterface({ userId, userName }: WageyInterfaceProps) {
         });
         processedChunksRef.current.clear();
         setIsStreaming(false);
+
+        // Decrement remaining messages on successful completion (for UI only)
+        if (remainingMessages !== null && remainingMessages > 0) {
+          setRemainingMessages(remainingMessages - 1);
+        }
 
         // Refresh router cache if there were successful tool calls
         // This ensures data is fresh when user navigates away
@@ -522,19 +567,55 @@ export function WageyInterface({ userId, userName }: WageyInterfaceProps) {
             {t.pages.wagey.subtitle}
           </p>
         </div>
-        {messages.length > 0 && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleNewChat}
-            disabled={isStreaming}
-            className="shrink-0 backdrop-blur h-9 px-3 md:px-4 text-sm font-medium"
-          >
-            <PlusIcon className="h-4 w-4 mr-1.5 md:mr-2" />
-            <span className="hidden xs:inline">Ny chat</span>
-            <span className="xs:hidden">Ny</span>
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {/* Remaining messages badge - show when 1-3 left, clickable for Pro users */}
+          {remainingMessages !== null && remainingMessages > 0 && remainingMessages <= 3 && !limitReached && (
+            wageyAccess.level === "pro" ? (
+              <Link
+                href={`/${locale}/settings/subscription`}
+                className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 text-xs font-medium text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 transition-colors"
+              >
+                <AlertCircle className="h-3 w-3" />
+                {t.pages.wagey.messagesRemaining.replace("{count}", String(remainingMessages))}
+              </Link>
+            ) : (
+              <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 text-xs font-medium text-amber-600 dark:text-amber-400">
+                <AlertCircle className="h-3 w-3" />
+                {t.pages.wagey.messagesRemaining.replace("{count}", String(remainingMessages))}
+              </span>
+            )
+          )}
+          {/* Limit reached badge - shows upgrade prompt for Pro, limit reached for Max */}
+          {(limitReached || (remainingMessages !== null && remainingMessages === 0)) && (
+            wageyAccess.level === "pro" ? (
+              <Link
+                href={`/${locale}/settings/subscription`}
+                className="inline-flex items-center gap-1 rounded-full bg-linear-to-r from-brand-gradient-start/10 via-brand-gradient-mid/10 to-brand-gradient-end/10 border border-brand-gradient-mid/30 px-2 py-0.5 text-xs font-medium text-brand-gradient-mid hover:border-brand-gradient-mid/50 transition-colors"
+              >
+                <ArrowRight className="h-3 w-3" />
+                {t.pages.wagey.upgradePrompt.button}
+              </Link>
+            ) : (
+              <span className="inline-flex items-center gap-1 rounded-full bg-red-500/10 border border-red-500/20 px-2 py-0.5 text-xs font-medium text-red-600 dark:text-red-400">
+                <AlertCircle className="h-3 w-3" />
+                {t.pages.wagey.limitReached.badge}
+              </span>
+            )
+          )}
+          {messages.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleNewChat}
+              disabled={isStreaming}
+              className="shrink-0 backdrop-blur h-9 px-3 md:px-4 text-sm font-medium"
+            >
+              <PlusIcon className="h-4 w-4 mr-1.5 md:mr-2" />
+              <span className="hidden xs:inline">Ny chat</span>
+              <span className="xs:hidden">Ny</span>
+            </Button>
+          )}
+        </div>
       </header>
 
       {/* Scrollable Messages Area */}
@@ -553,13 +634,38 @@ export function WageyInterface({ userId, userName }: WageyInterfaceProps) {
         </div>
       </div>
 
+      {/* Upgrade prompt for Pro users when limit reached */}
+      {limitReached && wageyAccess.level === "pro" && (
+        <div className="relative z-15 shrink-0 px-4 pt-3">
+          <div className="max-w-3xl mx-auto">
+            <Link
+              href={`/${locale}/settings/subscription`}
+              className="flex items-center justify-between gap-3 rounded-2xl bg-linear-to-r from-brand-gradient-start/10 via-brand-gradient-mid/10 to-brand-gradient-end/10 border border-brand-gradient-mid/30 px-4 py-3 hover:border-brand-gradient-mid/50 transition-colors group"
+            >
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-text-primary">
+                  {t.pages.wagey.upgradePrompt.title}
+                </p>
+                <p className="text-xs text-text-secondary mt-0.5">
+                  {t.pages.wagey.upgradePrompt.description}
+                </p>
+              </div>
+              <div className="flex items-center gap-1 text-sm font-medium text-brand-gradient-mid group-hover:translate-x-0.5 transition-transform">
+                {t.pages.wagey.upgradePrompt.button}
+                <ArrowRight className="h-4 w-4" />
+              </div>
+            </Link>
+          </div>
+        </div>
+      )}
+
       {/* Fixed Input - stays at bottom, above navbar when closed */}
       <div className="relative z-20 shrink-0 px-4 pt-3 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-4 md:pt-4 bg-linear-to-t from-background via-background/95 to-transparent md:bg-none">
         <div className="max-w-3xl mx-auto">
           <ChatInput
             onSend={handleSend}
-            disabled={isStreaming}
-            placeholder={t.pages.wagey.placeholder}
+            disabled={isStreaming || limitReached}
+            placeholder={limitReached ? t.pages.wagey.limitReached.inputPlaceholder : t.pages.wagey.placeholder}
           />
         </div>
       </div>
