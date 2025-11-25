@@ -561,6 +561,18 @@ function convertEndCondition(endType: string, endValue?: number | string): EndCo
 }
 
 /**
+ * Convert weekdays array to selected_days object
+ */
+function weekdaysArrayToSelectedDays(
+  weekdays: Array<{ day: number; anchorDate: string }>
+): Record<'0' | '1' | '2' | '3' | '4' | '5' | '6', string> {
+  return weekdays.reduce((acc, { day, anchorDate }) => {
+    acc[String(day) as '0' | '1' | '2' | '3' | '4' | '5' | '6'] = anchorDate;
+    return acc;
+  }, {} as Record<'0' | '1' | '2' | '3' | '4' | '5' | '6', string>);
+}
+
+/**
  * Execute draft_series_shift tool (Step 1 of 2)
  */
 async function executeDraftSeriesShift(
@@ -577,10 +589,14 @@ async function executeDraftSeriesShift(
 
   const input: DraftSeriesShiftInput = parsed.data;
 
-  // Convert simplified schema to database format
-  const selectedDays = { [String(input.weekday)]: input.anchorDate } as Record<'0' | '1' | '2' | '3' | '4' | '5' | '6', string>;
+  // Convert weekdays array to selected_days object (supports multiple weekdays)
+  const selectedDays = weekdaysArrayToSelectedDays(input.weekdays);
   const repeatIntervalWeeks = frequencyToIntervalWeeks(input.frequency);
   const endCondition = convertEndCondition(input.endType, input.endValue);
+
+  // Format weekdays for display in message
+  const weekdayNames = ["søndag", "mandag", "tirsdag", "onsdag", "torsdag", "fredag", "lørdag"];
+  const selectedWeekdayNames = input.weekdays.map(w => weekdayNames[w.day]).join(", ");
 
   try {
     const result = await draftSeriesShift({
@@ -592,17 +608,21 @@ async function executeDraftSeriesShift(
       exclusions: [],
     });
 
+    const weekdaysInfo = input.weekdays.length > 1
+      ? ` på ${selectedWeekdayNames}`
+      : ` på ${selectedWeekdayNames}`;
+
     if (result.conflictCount === 0) {
       return {
         success: true,
-        message: `Validert serie. Vil opprette ${result.projectedShiftCount} vakter. Ingen konflikter funnet.`,
+        message: `Validert serie${weekdaysInfo}. Vil opprette ${result.projectedShiftCount} vakter. Ingen konflikter funnet.`,
         data: result,
       };
     }
 
     return {
       success: true,
-      message: `Validert serie. Vil opprette ${result.projectedShiftCount} vakter, men fant ${result.conflictCount} ${result.conflictCount === 1 ? "konflikt" : "konflikter"} med eksisterende vakter.`,
+      message: `Validert serie${weekdaysInfo}. Vil opprette ${result.projectedShiftCount} vakter, men fant ${result.conflictCount} ${result.conflictCount === 1 ? "konflikt" : "konflikter"} med eksisterende vakter.`,
       data: result,
     };
   } catch (error) {
@@ -629,13 +649,17 @@ async function executeConfirmSeriesShift(
 
   const input: ConfirmSeriesShiftInput = parsed.data;
 
-  // Convert simplified schema to database format
-  const selectedDays = { [String(input.weekday)]: input.anchorDate } as Record<'0' | '1' | '2' | '3' | '4' | '5' | '6', string>;
+  // Convert weekdays array to selected_days object (supports multiple weekdays)
+  const selectedDays = weekdaysArrayToSelectedDays(input.weekdays);
   const repeatIntervalWeeks = frequencyToIntervalWeeks(input.frequency);
   const endCondition = convertEndCondition(input.endType, input.endValue);
 
   // Map new conflict resolution names to old ones
   const conflictResolution = input.conflictResolution === "skip_conflicts" ? "exclude_conflicts" : "keep_existing";
+
+  // Format weekdays for display in message
+  const weekdayNames = ["søndag", "mandag", "tirsdag", "onsdag", "torsdag", "fredag", "lørdag"];
+  const selectedWeekdayNames = input.weekdays.map(w => weekdayNames[w.day]).join(", ");
 
   try {
     const result = await createSeriesShift(
@@ -652,9 +676,13 @@ async function executeConfirmSeriesShift(
       }
     );
 
+    const weekdaysInfo = input.weekdays.length > 1
+      ? ` for ${selectedWeekdayNames}`
+      : ` for ${selectedWeekdayNames}`;
+
     return {
       success: true,
-      message: `Serie opprettet med ID ${result.id}. ${input.conflictResolution === "skip_conflicts" ? "Ev. konflikter ble ekskludert fra serien." : "Eksisterende vakter ble beholdt."}`,
+      message: `Serie opprettet${weekdaysInfo}. ${input.conflictResolution === "skip_conflicts" ? "Ev. konflikter ble ekskludert fra serien." : "Eksisterende vakter ble beholdt."}`,
       data: result,
     };
   } catch (error) {
@@ -701,9 +729,14 @@ function formatEndConditionForAI(endCondition: EndCondition): { endType: string;
  */
 function formatSeriesForAI(series: any): any {
   const selectedDays = series.selected_days || {};
-  const weekdayKeys = Object.keys(selectedDays).map(Number);
-  const weekday = weekdayKeys.length > 0 ? weekdayKeys[0] : null;
-  const anchorDate = weekday !== null ? selectedDays[String(weekday)] : null;
+
+  // Convert selected_days object to weekdays array format
+  const weekdays = Object.entries(selectedDays)
+    .map(([day, anchorDate]) => ({
+      day: Number(day),
+      anchorDate: anchorDate as string,
+    }))
+    .sort((a, b) => a.day - b.day); // Sort by day number
 
   // Parse times to HH:mm format
   const parseTime = (time: string): string => {
@@ -715,8 +748,7 @@ function formatSeriesForAI(series: any): any {
 
   return {
     seriesId: series.id,
-    weekday,
-    anchorDate,
+    weekdays, // Array of {day, anchorDate} objects (supports multiple weekdays)
     start: parseTime(series.start_time),
     end: parseTime(series.end_time),
     frequency: intervalWeeksToFrequency(series.repeat_interval_weeks),
@@ -756,8 +788,7 @@ async function executeManageSeriesShift(
 
         // At least one field must be updated
         if (
-          input.weekday === undefined &&
-          input.anchorDate === undefined &&
+          input.weekdays === undefined &&
           !input.start &&
           !input.end &&
           input.frequency === undefined &&
@@ -792,10 +823,10 @@ async function executeManageSeriesShift(
           return match ? match[1] : time;
         };
 
-        // Build selected_days - either from new input or keep existing
+        // Build selected_days - either from new weekdays array or keep existing
         let selectedDays: Record<'0' | '1' | '2' | '3' | '4' | '5' | '6', string>;
-        if (input.weekday !== undefined && input.anchorDate !== undefined) {
-          selectedDays = { [String(input.weekday)]: input.anchorDate } as Record<'0' | '1' | '2' | '3' | '4' | '5' | '6', string>;
+        if (input.weekdays !== undefined) {
+          selectedDays = weekdaysArrayToSelectedDays(input.weekdays);
         } else {
           selectedDays = currentSeries.selected_days as Record<'0' | '1' | '2' | '3' | '4' | '5' | '6', string>;
         }
