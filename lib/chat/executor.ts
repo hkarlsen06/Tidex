@@ -526,6 +526,41 @@ async function executeCalculateWages(
 }
 
 /**
+ * Convert simplified frequency to repeat_interval_weeks
+ */
+function frequencyToIntervalWeeks(frequency: string): 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 {
+  switch (frequency) {
+    case "weekly": return 0;
+    case "biweekly": return 1;
+    case "every_3_weeks": return 2;
+    case "every_4_weeks": return 3;
+    default: return 0;
+  }
+}
+
+/**
+ * Convert simplified endType/endValue to EndCondition
+ */
+function convertEndCondition(endType: string, endValue?: number | string): EndCondition {
+  switch (endType) {
+    case "never":
+      return null;
+    case "after_months":
+      return { type: "months", value: typeof endValue === "number" ? endValue : 1 };
+    case "after_years":
+      return { type: "years", value: typeof endValue === "number" ? endValue : 1 };
+    case "on_date":
+      return {
+        type: "end_date",
+        date: typeof endValue === "string" ? endValue : "",
+        end_time: "23:59:59",
+      };
+    default:
+      return null;
+  }
+}
+
+/**
  * Execute draft_series_shift tool (Step 1 of 2)
  */
 async function executeDraftSeriesShift(
@@ -542,23 +577,18 @@ async function executeDraftSeriesShift(
 
   const input: DraftSeriesShiftInput = parsed.data;
 
-  // Normalize end_condition: add default end_time for end_date type
-  let normalizedEndCondition: EndCondition = input.endCondition;
-  if (input.endCondition !== null && input.endCondition.type === 'end_date') {
-    normalizedEndCondition = {
-      type: 'end_date',
-      date: input.endCondition.date,
-      end_time: input.endCondition.end_time || '23:59:59',
-    };
-  }
+  // Convert simplified schema to database format
+  const selectedDays = { [String(input.weekday)]: input.anchorDate } as Record<'0' | '1' | '2' | '3' | '4' | '5' | '6', string>;
+  const repeatIntervalWeeks = frequencyToIntervalWeeks(input.frequency);
+  const endCondition = convertEndCondition(input.endType, input.endValue);
 
   try {
     const result = await draftSeriesShift({
-      selected_days: input.selectedDays as Record<'0' | '1' | '2' | '3' | '4' | '5' | '6', string>,
+      selected_days: selectedDays,
       start_time: input.start,
       end_time: input.end,
-      repeat_interval_weeks: input.repeatIntervalWeeks as 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8,
-      end_condition: normalizedEndCondition,
+      repeat_interval_weeks: repeatIntervalWeeks,
+      end_condition: endCondition,
       exclusions: [],
     });
 
@@ -599,34 +629,32 @@ async function executeConfirmSeriesShift(
 
   const input: ConfirmSeriesShiftInput = parsed.data;
 
-  // Normalize end_condition: add default end_time for end_date type
-  let normalizedEndCondition: EndCondition = input.endCondition;
-  if (input.endCondition !== null && input.endCondition.type === 'end_date') {
-    normalizedEndCondition = {
-      type: 'end_date',
-      date: input.endCondition.date,
-      end_time: input.endCondition.end_time || '23:59:59',
-    };
-  }
+  // Convert simplified schema to database format
+  const selectedDays = { [String(input.weekday)]: input.anchorDate } as Record<'0' | '1' | '2' | '3' | '4' | '5' | '6', string>;
+  const repeatIntervalWeeks = frequencyToIntervalWeeks(input.frequency);
+  const endCondition = convertEndCondition(input.endType, input.endValue);
+
+  // Map new conflict resolution names to old ones
+  const conflictResolution = input.conflictResolution === "skip_conflicts" ? "exclude_conflicts" : "keep_existing";
 
   try {
     const result = await createSeriesShift(
       {
-        selected_days: input.selectedDays as Record<'0' | '1' | '2' | '3' | '4' | '5' | '6', string>,
+        selected_days: selectedDays,
         start_time: input.start,
         end_time: input.end,
-        repeat_interval_weeks: input.repeatIntervalWeeks as 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8,
-        end_condition: normalizedEndCondition,
+        repeat_interval_weeks: repeatIntervalWeeks,
+        end_condition: endCondition,
         exclusions: [],
       },
       {
-        conflictResolution: input.conflictResolution,
+        conflictResolution,
       }
     );
 
     return {
       success: true,
-      message: `Serie opprettet med ID ${result.id}. ${input.conflictResolution === "exclude_conflicts" ? "Konflikter ble ekskludert fra serien." : "Eksisterende vakter ble beholdt."}`,
+      message: `Serie opprettet med ID ${result.id}. ${input.conflictResolution === "skip_conflicts" ? "Konflikter ble ekskludert fra serien." : "Eksisterende vakter ble beholdt."}`,
       data: result,
     };
   } catch (error) {
@@ -637,7 +665,70 @@ async function executeConfirmSeriesShift(
 }
 
 /**
- * Execute manage_series_shift tool (consolidated update/delete/query)
+ * Convert interval weeks back to frequency string
+ */
+function intervalWeeksToFrequency(intervalWeeks: number): string {
+  switch (intervalWeeks) {
+    case 0: return "weekly";
+    case 1: return "biweekly";
+    case 2: return "every_3_weeks";
+    case 3: return "every_4_weeks";
+    default: return "weekly";
+  }
+}
+
+/**
+ * Convert database end_condition to simplified format for AI
+ */
+function formatEndConditionForAI(endCondition: EndCondition): { endType: string; endValue?: number | string } {
+  if (endCondition === null) {
+    return { endType: "never" };
+  }
+  switch (endCondition.type) {
+    case "months":
+      return { endType: "after_months", endValue: endCondition.value };
+    case "years":
+      return { endType: "after_years", endValue: endCondition.value };
+    case "end_date":
+      return { endType: "on_date", endValue: endCondition.date };
+    default:
+      return { endType: "never" };
+  }
+}
+
+/**
+ * Format series data for AI consumption
+ */
+function formatSeriesForAI(series: any): any {
+  const selectedDays = series.selected_days || {};
+  const weekdayKeys = Object.keys(selectedDays).map(Number);
+  const weekday = weekdayKeys.length > 0 ? weekdayKeys[0] : null;
+  const anchorDate = weekday !== null ? selectedDays[String(weekday)] : null;
+
+  // Parse times to HH:mm format
+  const parseTime = (time: string): string => {
+    const match = time?.match(/^(\d{2}:\d{2})/);
+    return match ? match[1] : time;
+  };
+
+  const { endType, endValue } = formatEndConditionForAI(series.end_condition as EndCondition);
+
+  return {
+    seriesId: series.id,
+    weekday,
+    anchorDate,
+    start: parseTime(series.start_time),
+    end: parseTime(series.end_time),
+    frequency: intervalWeeksToFrequency(series.repeat_interval_weeks),
+    endType,
+    endValue,
+    exclusions: series.exclusions || [],
+    createdAt: series.created_at,
+  };
+}
+
+/**
+ * Execute manage_series_shift tool (consolidated update/delete/list)
  */
 async function executeManageSeriesShift(
   args: unknown,
@@ -665,11 +756,12 @@ async function executeManageSeriesShift(
 
         // At least one field must be updated
         if (
-          !input.selectedDays &&
+          input.weekday === undefined &&
+          input.anchorDate === undefined &&
           !input.start &&
           !input.end &&
-          input.repeatIntervalWeeks === undefined &&
-          input.endCondition === undefined
+          input.frequency === undefined &&
+          input.endType === undefined
         ) {
           return {
             success: false,
@@ -700,23 +792,34 @@ async function executeManageSeriesShift(
           return match ? match[1] : time;
         };
 
-        // Normalize end_condition if provided
-        let normalizedEndCondition: EndCondition = (input.endCondition !== undefined ? input.endCondition : currentSeries.end_condition) as EndCondition;
-        if (input.endCondition !== undefined && input.endCondition !== null && input.endCondition.type === 'end_date') {
-          normalizedEndCondition = {
-            type: 'end_date',
-            date: input.endCondition.date,
-            end_time: input.endCondition.end_time || '23:59:59',
-          };
+        // Build selected_days - either from new input or keep existing
+        let selectedDays: Record<'0' | '1' | '2' | '3' | '4' | '5' | '6', string>;
+        if (input.weekday !== undefined && input.anchorDate !== undefined) {
+          selectedDays = { [String(input.weekday)]: input.anchorDate } as Record<'0' | '1' | '2' | '3' | '4' | '5' | '6', string>;
+        } else {
+          selectedDays = currentSeries.selected_days as Record<'0' | '1' | '2' | '3' | '4' | '5' | '6', string>;
         }
+
+        // Build end_condition - either from new input or keep existing
+        let endCondition: EndCondition;
+        if (input.endType !== undefined) {
+          endCondition = convertEndCondition(input.endType, input.endValue);
+        } else {
+          endCondition = currentSeries.end_condition as EndCondition;
+        }
+
+        // Build repeat_interval_weeks
+        const repeatIntervalWeeks = input.frequency !== undefined
+          ? frequencyToIntervalWeeks(input.frequency)
+          : (currentSeries.repeat_interval_weeks as 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8);
 
         await updateSeriesShift({
           id: input.seriesId,
-          selected_days: (input.selectedDays ?? currentSeries.selected_days) as Record<'0' | '1' | '2' | '3' | '4' | '5' | '6', string>,
+          selected_days: selectedDays,
           start_time: input.start ?? parseTime(currentSeries.start_time),
           end_time: input.end ?? parseTime(currentSeries.end_time),
-          repeat_interval_weeks: (input.repeatIntervalWeeks ?? currentSeries.repeat_interval_weeks) as 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8,
-          end_condition: normalizedEndCondition,
+          repeat_interval_weeks: repeatIntervalWeeks,
+          end_condition: endCondition,
           exclusions: currentSeries.exclusions || [],
         });
 
@@ -742,11 +845,11 @@ async function executeManageSeriesShift(
         };
       }
 
-      case "query": {
+      case "list": {
         const supabase = await createSupabaseServerClient();
 
         if (input.seriesId) {
-          // Query specific series
+          // List specific series
           const { data, error } = await supabase
             .from("series_shifts")
             .select("*")
@@ -768,10 +871,10 @@ async function executeManageSeriesShift(
           return {
             success: true,
             message: `Fant serie ${input.seriesId}`,
-            data: [data],
+            data: [formatSeriesForAI(data)],
           };
         } else {
-          // Query all user's series shifts
+          // List all user's series shifts
           const { data, error } = await supabase
             .from("series_shifts")
             .select("*")
@@ -785,7 +888,7 @@ async function executeManageSeriesShift(
           return {
             success: true,
             message: `Fant ${data.length} ${data.length === 1 ? "serie" : "serier"}`,
-            data: data,
+            data: data.map(formatSeriesForAI),
           };
         }
       }
