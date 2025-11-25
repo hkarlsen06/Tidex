@@ -82,19 +82,19 @@ const SecurityConfigSchema = Schema.Struct({
 
 /**
  * AI Configuration Schema
- * Validates AI service settings (OpenRouter)
+ * Validates AI service settings (Claude API)
  */
 const AIConfigSchema = Schema.Struct({
-  openRouterApiKey: Schema.String.pipe(
+  claudeApiKey: Schema.String.pipe(
     Schema.nonEmptyString(),
     Schema.annotations({
-      message: () => "OpenRouter API key is required",
+      message: () => "Claude API key is required (CLAUDE_API_KEY)",
     })
   ),
-  openRouterModel: Schema.String.pipe(
+  claudeModel: Schema.String.pipe(
     Schema.nonEmptyString(),
     Schema.annotations({
-      message: () => "OpenRouter model is required",
+      message: () => "Claude model is required (CLAUDE_MODEL)",
     })
   ),
 });
@@ -130,8 +130,8 @@ export class AppConfig extends Context.Tag("AppConfig")<
       readonly turnstileSiteKey: Redacted.Redacted<string>;
     };
     readonly ai: {
-      readonly openRouterApiKey: Redacted.Redacted<string>;
-      readonly openRouterModel: string;
+      readonly claudeApiKey: Redacted.Redacted<string>;
+      readonly claudeModel: string;
     };
   }
 >() {}
@@ -157,8 +157,8 @@ const loadConfig = Effect.gen(function* () {
       turnstileSiteKey: process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY,
     },
     ai: {
-      openRouterApiKey: process.env.OPENROUTER_API_KEY,
-      openRouterModel: process.env.OPENROUTER_MODEL,
+      claudeApiKey: process.env.CLAUDE_API_KEY,
+      claudeModel: process.env.CLAUDE_MODEL,
     },
   };
 
@@ -190,8 +190,8 @@ const loadConfig = Effect.gen(function* () {
       turnstileSiteKey: Redacted.make(validated.security.turnstileSiteKey),
     },
     ai: {
-      openRouterApiKey: Redacted.make(validated.ai.openRouterApiKey),
-      openRouterModel: validated.ai.openRouterModel,
+      claudeApiKey: Redacted.make(validated.ai.claudeApiKey),
+      claudeModel: validated.ai.claudeModel,
     },
   };
 });
@@ -216,7 +216,6 @@ export const ENV = {
   PRO_YEARLY_PRICE_ID: process.env.NEXT_PUBLIC_PRO_YEARLY_ID,
   MAX_YEARLY_PRICE_ID: process.env.NEXT_PUBLIC_MAX_YEARLY_ID,
   TURNSTILE_SITE_KEY: process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY,
-  OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY,
 } as const;
 
 /**
