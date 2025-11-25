@@ -157,11 +157,15 @@ export const tools: Tool[] = [
     name: "manage_shift",
     description: `Create, update, or delete shifts.
 
-For CREATE: provide action="create", dates (array), start, end
-For UPDATE: provide action="update", shiftId, and fields to change (start, end, date)
-For DELETE: provide action="delete" and either shiftId (single) or shiftIds (bulk)
+Actions:
+- CREATE: action="create", dates (array of YYYY-MM-DD), start (HH:mm), end (HH:mm)
+- UPDATE: action="update", shiftId, plus fields to change (start, end, date)
+- DELETE: action="delete", shiftId (single) or shiftIds (bulk delete)
 
-IMPORTANT: Always query_shifts first to get shift IDs before update/delete.`,
+Edge cases:
+- Cross-midnight shifts: If end time is before start time (e.g., 22:00-06:00), the shift spans to the next day
+- Multiple dates: Use dates array to create identical shifts on multiple days at once
+- Update requires ID: Always query_shifts first to get the shift ID before updating/deleting`,
     input_schema: {
       type: "object",
       properties: {
@@ -238,9 +242,18 @@ IMPORTANT: Always query_shifts first to get shift IDs before update/delete.`,
     name: "query_shifts",
     description: `Get shifts with optional filters. Returns shift IDs needed for update/delete operations.
 
-Without parameters: returns shifts for current week.
-With date range: returns shifts in that period.
-Filters can narrow results by time of day or weekday.`,
+Default behavior: Without parameters, returns shifts for the current week.
+
+Filters:
+- Date range: startDate and endDate (YYYY-MM-DD)
+- Time of day: minTime/maxTime filter by shift start time
+- Weekdays: array of day numbers (0=Sunday through 6=Saturday)
+- Sorting: by date (default), earnings, or hours
+
+Use cases:
+- Before update/delete: Query to get shift IDs
+- Finding specific shifts: Use filters to narrow down results
+- Analytics: Sort by earnings to find highest-paying shifts`,
     input_schema: {
       type: "object",
       properties: {
@@ -310,7 +323,16 @@ Filters can narrow results by time of day or weekday.`,
     name: "calculate_wages",
     description: `Calculate total wages for a date range. Returns gross pay, net pay, hours worked, and tax deducted.
 
-Both startDate and endDate are required.`,
+Required: Both startDate and endDate (YYYY-MM-DD format).
+
+Returns:
+- Gross pay (before tax)
+- Net pay (after tax, if tax settings are configured)
+- Total hours worked
+- Tax deducted
+- Number of shifts in the period
+
+Note: For quick monthly/yearly totals, prefer get_statistics which is optimized for common time periods.`,
     input_schema: {
       type: "object",
       properties: {
@@ -346,11 +368,16 @@ Both startDate and endDate are required.`,
     name: "draft_series_shift",
     description: `Step 1 of 2: Preview a recurring shift pattern WITHOUT creating it.
 
-This validates the pattern and checks for conflicts with existing shifts.
-After reviewing conflicts, use confirm_series_shift to actually create the series.
+Purpose: Validates the pattern and checks for conflicts with existing shifts before committing.
 
-Weekday numbers: 0=Sunday, 1=Monday, 2=Tuesday, 3=Wednesday, 4=Thursday, 5=Friday, 6=Saturday
-The anchorDate must fall on the specified weekday.`,
+Required parameters:
+- weekday: 0=Sunday, 1=Monday, 2=Tuesday, 3=Wednesday, 4=Thursday, 5=Friday, 6=Saturday
+- anchorDate: First occurrence (YYYY-MM-DD). MUST fall on the specified weekday.
+- start/end: Times in HH:mm format
+- frequency: weekly, biweekly, every_3_weeks, or every_4_weeks
+- endType: never, after_months, after_years, or on_date (with endValue)
+
+Workflow: After this returns conflict info, ask user how to handle conflicts, then call confirm_series_shift.`,
     input_schema: {
       type: "object",
       properties: {
@@ -434,9 +461,12 @@ The anchorDate must fall on the specified weekday.`,
     name: "confirm_series_shift",
     description: `Step 2 of 2: Actually create the recurring series after reviewing the draft.
 
-Use the SAME parameters from draft_series_shift, plus conflictResolution to handle any conflicts.
+IMPORTANT: Only call this AFTER draft_series_shift. Use identical parameters from the draft.
 
-IMPORTANT: Only call this after draft_series_shift. Use identical weekday, anchorDate, start, end, frequency, endType, and endValue.`,
+Required: All the same parameters from draft_series_shift, PLUS:
+- conflictResolution: "keep_both" (series coexists with existing shifts) or "skip_conflicts" (series skips dates with existing shifts)
+
+The series will be created and shifts generated according to the pattern.`,
     input_schema: {
       type: "object",
       properties: {
@@ -507,11 +537,14 @@ IMPORTANT: Only call this after draft_series_shift. Use identical weekday, ancho
     name: "manage_series_shift",
     description: `List, update, or delete existing recurring series.
 
-For LIST: action="list" returns all series with their IDs and details
-For UPDATE: action="update" + seriesId + fields to change
-For DELETE: action="delete" + seriesId
+Actions:
+- LIST: action="list" - Returns all series with IDs, patterns, and schedules
+- UPDATE: action="update", seriesId, plus fields to change (weekday, times, frequency, endType)
+- DELETE: action="delete", seriesId - Removes the series definition (existing generated shifts remain)
 
-IMPORTANT: Always list first to get series IDs before update/delete.`,
+Workflow: Always LIST first to get series IDs before update/delete.
+
+Note: Updating a series affects future occurrences. Past generated shifts are not modified.`,
     input_schema: {
       type: "object",
       properties: {
@@ -588,7 +621,15 @@ IMPORTANT: Always list first to get series IDs before update/delete.`,
     name: "manage_series_exclusion",
     description: `Add or remove a date exclusion from a recurring series.
 
-Use this when a user wants to skip a specific occurrence (e.g., holiday) or restore a previously skipped date.`,
+Use cases:
+- Skip a specific occurrence (e.g., holiday, vacation day)
+- Restore a previously skipped date
+
+Actions:
+- add: Exclude the date from the series (shift won't appear)
+- remove: Restore a previously excluded date
+
+Note: The date must be one that would normally occur in the series pattern.`,
     input_schema: {
       type: "object",
       properties: {
@@ -629,17 +670,19 @@ Use this when a user wants to skip a specific occurrence (e.g., holiday) or rest
   // ---------------------------------------------------------------------------
   {
     name: "get_statistics",
-    description: `Get statistics and analytics. Use this instead of calculating manually from shifts.
+    description: `Get pre-computed statistics and analytics. Always prefer this over manual calculations.
 
 Available metrics:
-- current_month: Earnings, hours, shifts for current month
-- last_month: Same metrics for previous month
-- year_to_date: Year total
-- last_6_months: Monthly trend (6 data points)
-- this_week: Daily breakdown Mon-Sun
-- by_day_of_week: Average per weekday
-- monthly_goal: Progress toward monthly goal
-- supplement_breakdown: Base pay vs supplements`,
+- current_month: Earnings, hours, shift count for current month
+- last_month: Same metrics for previous month (good for comparison)
+- year_to_date: Cumulative totals for the year
+- last_6_months: Monthly trend data (6 data points for charts)
+- this_week: Daily breakdown Monday through Sunday
+- by_day_of_week: Average earnings/hours per weekday (which days pay best?)
+- monthly_goal: Progress toward user's monthly goal (if set)
+- supplement_breakdown: How much is base pay vs evening/weekend supplements
+
+Optional: year and month parameters to query specific periods (defaults to current).`,
     input_schema: {
       type: "object",
       properties: {
@@ -689,15 +732,18 @@ Available metrics:
     name: "manage_settings",
     description: `View or update user settings.
 
-For VIEW: call with no parameters or action="view" to see all settings
-For UPDATE: action="update" + category + settings object with key-value pairs
+Actions:
+- VIEW: No parameters or action="view" - Returns all current settings
+- UPDATE: action="update", category, settings object with key-value pairs
 
-Categories:
-- display: theme, defaultShiftsView
+Categories and their settings:
+- display: theme ("light"/"dark"), defaultShiftsView
 - payroll: pauseDeductionEnabled, pauseDeductionMethod, pauseThresholdHours, pauseDeductionMinutes
-- tax: taxDeductionEnabled, taxPercentage, halfTaxMonth
-- goals: monthlyGoal, payrollDay
-- preferences: directTimeInput, fullMinuteRange`,
+- tax: taxDeductionEnabled, taxPercentage (0-100), halfTaxMonth (1-12, for December half-tax)
+- goals: monthlyGoal (target earnings in kr), payrollDay (1-31)
+- preferences: directTimeInput, fullMinuteRange
+
+Note: Only include settings you want to change in the settings object.`,
     input_schema: {
       type: "object",
       properties: {
