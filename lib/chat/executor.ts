@@ -654,7 +654,7 @@ async function executeConfirmSeriesShift(
 
     return {
       success: true,
-      message: `Serie opprettet med ID ${result.id}. ${input.conflictResolution === "skip_conflicts" ? "Konflikter ble ekskludert fra serien." : "Eksisterende vakter ble beholdt."}`,
+      message: `Serie opprettet med ID ${result.id}. ${input.conflictResolution === "skip_conflicts" ? "Ev. konflikter ble ekskludert fra serien." : "Eksisterende vakter ble beholdt."}`,
       data: result,
     };
   } catch (error) {

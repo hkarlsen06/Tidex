@@ -200,46 +200,36 @@ IMPORTANT: Always query_shifts first to get shift IDs before update/delete.`,
       required: ["action"],
     },
     input_examples: [
+      // Create a shift on January 15th from 9am to 5pm
       {
-        description: "Create a shift on January 15th from 9am to 5pm",
-        input: {
-          action: "create",
-          dates: ["2025-01-15"],
-          start: "09:00",
-          end: "17:00",
-        },
+        action: "create",
+        dates: ["2025-01-15"],
+        start: "09:00",
+        end: "17:00",
       },
+      // Create shifts on multiple dates
       {
-        description: "Create shifts on multiple dates",
-        input: {
-          action: "create",
-          dates: ["2025-01-15", "2025-01-16", "2025-01-17"],
-          start: "08:00",
-          end: "16:00",
-        },
+        action: "create",
+        dates: ["2025-01-15", "2025-01-16", "2025-01-17"],
+        start: "08:00",
+        end: "16:00",
       },
+      // Update a shift's times
       {
-        description: "Update a shift's times",
-        input: {
-          action: "update",
-          shiftId: "abc123-def456-ghi789",
-          start: "10:00",
-          end: "18:00",
-        },
+        action: "update",
+        shiftId: "abc123-def456-ghi789",
+        start: "10:00",
+        end: "18:00",
       },
+      // Delete a single shift
       {
-        description: "Delete a single shift",
-        input: {
-          action: "delete",
-          shiftId: "abc123-def456-ghi789",
-        },
+        action: "delete",
+        shiftId: "abc123-def456-ghi789",
       },
+      // Bulk delete multiple shifts
       {
-        description: "Bulk delete multiple shifts",
-        input: {
-          action: "delete",
-          shiftIds: ["id1", "id2", "id3"],
-        },
+        action: "delete",
+        shiftIds: ["id1", "id2", "id3"],
       },
     ],
   },
@@ -287,41 +277,31 @@ Filters can narrow results by time of day or weekday.`,
       },
     },
     input_examples: [
+      // Get this week's shifts (no parameters needed)
+      {},
+      // Get shifts for January 2025
       {
-        description: "Get this week's shifts (no parameters needed)",
-        input: {},
+        startDate: "2025-01-01",
+        endDate: "2025-01-31",
       },
+      // Get evening shifts (after 5pm)
       {
-        description: "Get shifts for January 2025",
-        input: {
-          startDate: "2025-01-01",
-          endDate: "2025-01-31",
-        },
+        startDate: "2025-01-01",
+        endDate: "2025-01-31",
+        minTime: "17:00",
       },
+      // Get weekend shifts only
       {
-        description: "Get evening shifts (after 5pm)",
-        input: {
-          startDate: "2025-01-01",
-          endDate: "2025-01-31",
-          minTime: "17:00",
-        },
+        startDate: "2025-01-01",
+        endDate: "2025-01-31",
+        weekdays: [0, 6],
       },
+      // Get top 10 highest earning shifts
       {
-        description: "Get weekend shifts only",
-        input: {
-          startDate: "2025-01-01",
-          endDate: "2025-01-31",
-          weekdays: [0, 6],
-        },
-      },
-      {
-        description: "Get top 10 highest earning shifts",
-        input: {
-          startDate: "2025-01-01",
-          endDate: "2025-12-31",
-          limit: 10,
-          sortBy: "earnings",
-        },
+        startDate: "2025-01-01",
+        endDate: "2025-12-31",
+        limit: 10,
+        sortBy: "earnings",
       },
     ],
   },
@@ -346,19 +326,15 @@ Both startDate and endDate are required.`,
       required: ["startDate", "endDate"],
     },
     input_examples: [
+      // Calculate wages for January 2025
       {
-        description: "Calculate wages for January 2025",
-        input: {
-          startDate: "2025-01-01",
-          endDate: "2025-01-31",
-        },
+        startDate: "2025-01-01",
+        endDate: "2025-01-31",
       },
+      // Calculate wages for a single day
       {
-        description: "Calculate wages for a single day",
-        input: {
-          startDate: "2025-01-15",
-          endDate: "2025-01-15",
-        },
+        startDate: "2025-01-15",
+        endDate: "2025-01-15",
       },
     ],
   },
@@ -412,52 +388,44 @@ The anchorDate must fall on the specified weekday.`,
       required: ["weekday", "anchorDate", "start", "end", "frequency", "endType"],
     },
     input_examples: [
+      // Weekly Monday shift 9-5, runs forever
       {
-        description: "Weekly Monday shift 9-5, runs forever",
-        input: {
-          weekday: 1,
-          anchorDate: "2025-01-20",
-          start: "09:00",
-          end: "17:00",
-          frequency: "weekly",
-          endType: "never",
-        },
+        weekday: 1,
+        anchorDate: "2025-01-20",
+        start: "09:00",
+        end: "17:00",
+        frequency: "weekly",
+        endType: "never",
       },
+      // Every Saturday 12-6pm for 3 months
       {
-        description: "Every Saturday 12-6pm for 3 months",
-        input: {
-          weekday: 6,
-          anchorDate: "2025-01-25",
-          start: "12:00",
-          end: "18:00",
-          frequency: "weekly",
-          endType: "after_months",
-          endValue: 3,
-        },
+        weekday: 6,
+        anchorDate: "2025-01-25",
+        start: "12:00",
+        end: "18:00",
+        frequency: "weekly",
+        endType: "after_months",
+        endValue: 3,
       },
+      // Biweekly Friday evening shift until end of year
       {
-        description: "Biweekly Friday evening shift until end of year",
-        input: {
-          weekday: 5,
-          anchorDate: "2025-01-24",
-          start: "18:00",
-          end: "23:00",
-          frequency: "biweekly",
-          endType: "on_date",
-          endValue: "2025-12-31",
-        },
+        weekday: 5,
+        anchorDate: "2025-01-24",
+        start: "18:00",
+        end: "23:00",
+        frequency: "biweekly",
+        endType: "on_date",
+        endValue: "2025-12-31",
       },
+      // Every 3 weeks on Wednesday for 1 year
       {
-        description: "Every 3 weeks on Wednesday for 1 year",
-        input: {
-          weekday: 3,
-          anchorDate: "2025-01-22",
-          start: "08:00",
-          end: "16:00",
-          frequency: "every_3_weeks",
-          endType: "after_years",
-          endValue: 1,
-        },
+        weekday: 3,
+        anchorDate: "2025-01-22",
+        start: "08:00",
+        end: "16:00",
+        frequency: "every_3_weeks",
+        endType: "after_years",
+        endValue: 1,
       },
     ],
   },
@@ -511,30 +479,26 @@ IMPORTANT: Only call this after draft_series_shift. Use identical weekday, ancho
       required: ["weekday", "anchorDate", "start", "end", "frequency", "endType", "conflictResolution"],
     },
     input_examples: [
+      // Confirm weekly Monday shift, skip conflicting dates
       {
-        description: "Confirm weekly Monday shift, skip conflicting dates",
-        input: {
-          weekday: 1,
-          anchorDate: "2025-01-20",
-          start: "09:00",
-          end: "17:00",
-          frequency: "weekly",
-          endType: "never",
-          conflictResolution: "skip_conflicts",
-        },
+        weekday: 1,
+        anchorDate: "2025-01-20",
+        start: "09:00",
+        end: "17:00",
+        frequency: "weekly",
+        endType: "never",
+        conflictResolution: "skip_conflicts",
       },
+      // Confirm Saturday series, allow both shifts on conflict dates
       {
-        description: "Confirm Saturday series, allow both shifts on conflict dates",
-        input: {
-          weekday: 6,
-          anchorDate: "2025-01-25",
-          start: "12:00",
-          end: "18:00",
-          frequency: "weekly",
-          endType: "after_months",
-          endValue: 3,
-          conflictResolution: "keep_both",
-        },
+        weekday: 6,
+        anchorDate: "2025-01-25",
+        start: "12:00",
+        end: "18:00",
+        frequency: "weekly",
+        endType: "after_months",
+        endValue: 3,
+        conflictResolution: "keep_both",
       },
     ],
   },
@@ -594,36 +558,28 @@ IMPORTANT: Always list first to get series IDs before update/delete.`,
       required: ["action"],
     },
     input_examples: [
+      // List all recurring series
       {
-        description: "List all recurring series",
-        input: {
-          action: "list",
-        },
+        action: "list",
       },
+      // Update series times
       {
-        description: "Update series times",
-        input: {
-          action: "update",
-          seriesId: "abc123-def456",
-          start: "10:00",
-          end: "18:00",
-        },
+        action: "update",
+        seriesId: "abc123-def456",
+        start: "10:00",
+        end: "18:00",
       },
+      // Change series to end after 6 months
       {
-        description: "Change series to end after 6 months",
-        input: {
-          action: "update",
-          seriesId: "abc123-def456",
-          endType: "after_months",
-          endValue: 6,
-        },
+        action: "update",
+        seriesId: "abc123-def456",
+        endType: "after_months",
+        endValue: 6,
       },
+      // Delete a series
       {
-        description: "Delete a series",
-        input: {
-          action: "delete",
-          seriesId: "abc123-def456",
-        },
+        action: "delete",
+        seriesId: "abc123-def456",
       },
     ],
   },
@@ -653,21 +609,17 @@ Use this when a user wants to skip a specific occurrence (e.g., holiday) or rest
       required: ["seriesId", "date", "action"],
     },
     input_examples: [
+      // Skip a series occurrence on Christmas
       {
-        description: "Skip a series occurrence on Christmas",
-        input: {
-          seriesId: "abc123-def456",
-          date: "2025-12-25",
-          action: "add",
-        },
+        seriesId: "abc123-def456",
+        date: "2025-12-25",
+        action: "add",
       },
+      // Restore a previously excluded date
       {
-        description: "Restore a previously excluded date",
-        input: {
-          seriesId: "abc123-def456",
-          date: "2025-12-25",
-          action: "remove",
-        },
+        seriesId: "abc123-def456",
+        date: "2025-12-25",
+        action: "remove",
       },
     ],
   },
@@ -717,36 +669,16 @@ Available metrics:
       required: ["metric"],
     },
     input_examples: [
-      {
-        description: "How much did I earn this month?",
-        input: {
-          metric: "current_month",
-        },
-      },
-      {
-        description: "Compare to last month",
-        input: {
-          metric: "last_month",
-        },
-      },
-      {
-        description: "Am I on track for my monthly goal?",
-        input: {
-          metric: "monthly_goal",
-        },
-      },
-      {
-        description: "Which day of the week do I earn most?",
-        input: {
-          metric: "by_day_of_week",
-        },
-      },
-      {
-        description: "Show earnings trend over last 6 months",
-        input: {
-          metric: "last_6_months",
-        },
-      },
+      // How much did I earn this month?
+      { metric: "current_month" },
+      // Compare to last month
+      { metric: "last_month" },
+      // Am I on track for my monthly goal?
+      { metric: "monthly_goal" },
+      // Which day of the week do I earn most?
+      { metric: "by_day_of_week" },
+      // Show earnings trend over last 6 months
+      { metric: "last_6_months" },
     ],
   },
 
@@ -786,33 +718,25 @@ Categories:
       },
     },
     input_examples: [
+      // View all current settings
+      {},
+      // Change to dark mode
       {
-        description: "View all current settings",
-        input: {},
+        action: "update",
+        category: "display",
+        settings: { theme: "dark" },
       },
+      // Set monthly goal to 50000 kr
       {
-        description: "Change to dark mode",
-        input: {
-          action: "update",
-          category: "display",
-          settings: { theme: "dark" },
-        },
+        action: "update",
+        category: "goals",
+        settings: { monthlyGoal: 50000 },
       },
+      // Enable tax deduction at 35%
       {
-        description: "Set monthly goal to 50000 kr",
-        input: {
-          action: "update",
-          category: "goals",
-          settings: { monthlyGoal: 50000 },
-        },
-      },
-      {
-        description: "Enable tax deduction at 35%",
-        input: {
-          action: "update",
-          category: "tax",
-          settings: { taxDeductionEnabled: true, taxPercentage: 35 },
-        },
+        action: "update",
+        category: "tax",
+        settings: { taxDeductionEnabled: true, taxPercentage: 35 },
       },
     ],
   },
