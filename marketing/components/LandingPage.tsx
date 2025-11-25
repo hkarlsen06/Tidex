@@ -144,7 +144,7 @@ export function LandingPage({ locale, dictionary, path = '' }: LandingPageProps)
             {features.map(({ Icon, title, description }) => (
               <div
                 key={title}
-                className="group flex h-full flex-col gap-4 rounded-[32px] border border-border-subtle/60 bg-surface-primary/80 p-6 shadow-app transition-all duration-200 hover:-translate-y-1 hover:border-brand-gradient-mid/60 hover:shadow-app-lg"
+                className="group flex h-full flex-col gap-4 rounded-4xl border border-border-subtle/60 bg-surface-primary/80 p-6 shadow-app transition-all duration-200 hover:-translate-y-1 hover:border-brand-gradient-mid/60 hover:shadow-app-lg"
               >
                 <span
                   className="flex h-12 w-12 items-center justify-center rounded-2xl bg-linear-to-br from-brand-gradient-start/20 via-brand-gradient-mid/15 to-brand-gradient-end/20 text-brand-gradient-start shadow-inner"

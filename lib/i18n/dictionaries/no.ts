@@ -63,7 +63,7 @@ export const no = {
     },
     resources: {
       title: 'Ressurser',
-      payrollDocs: 'Lønnsdokumentasjon',
+      payrollDocs: 'Dokumentasjon',
       github: 'GitHub',
     },
     legal: {
@@ -375,6 +375,75 @@ export const no = {
       errors: {
         connectionLost: 'Mistet tilkobling. Prøv igjen.',
         streamFailed: 'Streaming feilet. Prøv igjen.',
+      },
+      // Usage limits
+      messagesRemaining: '{count} meldinger igjen',
+      noAccess: 'Du har ikke tilgang til Wagey. Oppgrader til Pro eller Max for å bruke AI-assistenten.',
+      limitReached: {
+        badge: 'Grense nådd',
+        message: 'Du har brukt alle {limit} meldingene dine denne måneden. Grensen nullstilles om {days} dager.',
+        inputPlaceholder: 'Grensen er nådd - vent til neste måned',
+      },
+      // Upgrade prompt for Pro users
+      upgradePrompt: {
+        title: 'Vil du ha flere meldinger?',
+        description: 'Oppgrader til Max for 35 meldinger per måned.',
+        button: 'Oppgrader',
+      },
+      // Showcase page for free users
+      showcase: {
+        hero: {
+          title: 'Møt Wagey',
+          subtitle: 'Din AI-assistent for vaktplanlegging',
+          description: 'Legg til vakter, sjekk lønnsoversikten og få svar på spørsmål - alt med naturlig språk.',
+        },
+        features: {
+          title: 'Hva kan Wagey gjøre?',
+          items: {
+            naturalLanguage: {
+              title: 'Naturlig språk',
+              description: 'Skriv som du snakker. Wagey forstår norsk og engelsk, og gjør det enkelt å administrere vakter.',
+            },
+            quickActions: {
+              title: 'Raske handlinger',
+              description: 'Legg til, endre eller slett vakter med en enkel beskjed. Ingen kompliserte menyer.',
+            },
+            wageCalculations: {
+              title: 'Lønnsberegninger',
+              description: 'Få nøyaktige lønnsberegninger basert på dine innstillinger og tillegg.',
+            },
+            scheduling: {
+              title: 'Smart planlegging',
+              description: 'Opprett gjentakende vakter og serier med naturlige beskrivelser.',
+            },
+          },
+        },
+        examples: {
+          title: 'Se hvordan det fungerer',
+          example1User: 'Legg til en vakt i morgen fra 08:00 til 16:00',
+          example1Assistant: 'Vakt lagt til for i morgen, 08:00-16:00. Beregnet lønn: 1 456 kr.',
+          example2User: 'Hvor mye har jeg tjent denne måneden?',
+          example2Assistant: 'Denne måneden har du jobbet 87 timer fordelt på 12 vakter. Total brutto lønn: 18 234 kr.',
+        },
+        pricing: {
+          title: 'Velg din plan',
+          proMessages: '20 meldinger per måned',
+          maxMessages: '35 meldinger per måned',
+          recommended: 'Anbefalt',
+          features: {
+            shifts: 'Administrer vakter med AI',
+            calculations: 'Nøyaktige lønnsberegninger',
+            scheduling: 'Smart planlegging',
+            allPro: 'Alt i Pro',
+            moreMessages: '75% flere meldinger',
+            priority: 'Prioritert support',
+          },
+        },
+        cta: {
+          title: 'Klar til å prøve Wagey?',
+          description: 'Oppgrader til Pro eller Max for å få tilgang til din personlige AI-assistent.',
+          button: 'Se priser',
+        },
       },
     },
     auth: {

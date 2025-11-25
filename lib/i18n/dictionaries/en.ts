@@ -64,7 +64,7 @@ export const en: Dictionary = {
     },
     resources: {
       title: 'Resources',
-      payrollDocs: 'Payroll Documentation',
+      payrollDocs: 'Documentation',
       github: 'GitHub',
     },
     legal: {
@@ -376,6 +376,75 @@ export const en: Dictionary = {
       errors: {
         connectionLost: 'Connection lost. Please try again.',
         streamFailed: 'Streaming failed. Please try again.',
+      },
+      // Usage limits
+      messagesRemaining: '{count} messages left',
+      noAccess: 'You don\'t have access to Wagey. Upgrade to Pro or Max to use the AI assistant.',
+      limitReached: {
+        badge: 'Limit reached',
+        message: 'You\'ve used all {limit} messages this month. The limit resets in {days} days.',
+        inputPlaceholder: 'Limit reached - wait until next month',
+      },
+      // Upgrade prompt for Pro users
+      upgradePrompt: {
+        title: 'Want more messages?',
+        description: 'Upgrade to Max for 35 messages per month.',
+        button: 'Upgrade',
+      },
+      // Showcase page for free users
+      showcase: {
+        hero: {
+          title: 'Meet Wagey',
+          subtitle: 'Your AI assistant for shift management',
+          description: 'Add shifts, check your earnings, and get answers to questions - all with natural language.',
+        },
+        features: {
+          title: 'What can Wagey do?',
+          items: {
+            naturalLanguage: {
+              title: 'Natural language',
+              description: 'Write as you speak. Wagey understands Norwegian and English, making shift management easy.',
+            },
+            quickActions: {
+              title: 'Quick actions',
+              description: 'Add, edit, or delete shifts with a simple message. No complicated menus.',
+            },
+            wageCalculations: {
+              title: 'Wage calculations',
+              description: 'Get accurate wage calculations based on your settings and supplements.',
+            },
+            scheduling: {
+              title: 'Smart scheduling',
+              description: 'Create recurring shifts and series with natural descriptions.',
+            },
+          },
+        },
+        examples: {
+          title: 'See how it works',
+          example1User: 'Add a shift tomorrow from 08:00 to 16:00',
+          example1Assistant: 'Shift added for tomorrow, 08:00-16:00. Estimated pay: 1,456 kr.',
+          example2User: 'How much have I earned this month?',
+          example2Assistant: 'This month you\'ve worked 87 hours across 12 shifts. Total gross pay: 18,234 kr.',
+        },
+        pricing: {
+          title: 'Choose your plan',
+          proMessages: '20 messages per month',
+          maxMessages: '35 messages per month',
+          recommended: 'Recommended',
+          features: {
+            shifts: 'Manage shifts with AI',
+            calculations: 'Accurate wage calculations',
+            scheduling: 'Smart scheduling',
+            allPro: 'Everything in Pro',
+            moreMessages: '75% more messages',
+            priority: 'Priority support',
+          },
+        },
+        cta: {
+          title: 'Ready to try Wagey?',
+          description: 'Upgrade to Pro or Max to access your personal AI assistant.',
+          button: 'See pricing',
+        },
       },
     },
     auth: {

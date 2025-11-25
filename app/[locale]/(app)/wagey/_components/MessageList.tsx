@@ -132,6 +132,11 @@ export function MessageList({
         <MessageBubble key={message.id} message={message} userName={userName} />
       ))}
 
+      {/* Thinking indicator - show when streaming but no content yet */}
+      {isStreaming && !currentChunk && (
+        <ThinkingBubble />
+      )}
+
       {/* Current streaming message */}
       {isStreaming && currentChunk && (
         <MessageBubble
@@ -278,6 +283,26 @@ function MessageBubble({
             </Card>
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Thinking bubble with animated dots
+ * Shown while waiting for the AI response to start streaming
+ */
+function ThinkingBubble() {
+  return (
+    <div className="flex justify-start">
+      <div className="rounded-3xl bg-surface-secondary/90 text-text-muted border border-border/60 backdrop-blur shadow-app-sm">
+        <div className="px-4 py-3 md:px-5 md:py-4">
+          <span className="inline-flex gap-1">
+            <span className="w-2 h-2 rounded-full bg-text-muted/60 animate-bounce" style={{ animationDelay: "0ms" }} />
+            <span className="w-2 h-2 rounded-full bg-text-muted/60 animate-bounce" style={{ animationDelay: "150ms" }} />
+            <span className="w-2 h-2 rounded-full bg-text-muted/60 animate-bounce" style={{ animationDelay: "300ms" }} />
+          </span>
+        </div>
       </div>
     </div>
   );
