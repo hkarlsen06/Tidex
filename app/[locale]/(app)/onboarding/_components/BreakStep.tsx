@@ -6,7 +6,7 @@ import { Switch } from "@/components/app/Switch";
 import { Input } from "@/components/app/Input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/app/Select";
 import { Button } from "@/components/app/Button";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/app/Tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/app/Tooltip";
 import { InfoIcon, ArrowDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslations } from "@/lib/i18n/client";
@@ -79,7 +79,6 @@ export function BreakStep({
   onBack,
 }: BreakStepProps) {
   const { t } = useTranslations();
-  const [tooltipOpen, setTooltipOpen] = useState(false);
   const [thresholdButtonPressed, setThresholdButtonPressed] = useState(false);
   const [durationButtonPressed, setDurationButtonPressed] = useState(false);
   const [methodButtonPressed, setMethodButtonPressed] = useState(false);
@@ -268,31 +267,22 @@ export function BreakStep({
               </div>
 
               <div className="space-y-2 text-sm text-text-muted">
-                <Tooltip open={tooltipOpen} onOpenChange={setTooltipOpen} delayDuration={0}>
-                  <TooltipTrigger
-                    asChild
-                    onPointerDown={(e) => e.preventDefault()}
-                  >
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setTooltipOpen(!tooltipOpen);
-                      }}
-                      className="flex items-start gap-2 cursor-pointer hover:text-text-primary transition-colors text-left touch-manipulation"
-                    >
-                      <InfoIcon className="h-4 w-4 mt-0.5" />
-                      <span>{t.onboarding.breakStep.seeExplanation}</span>
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent
-                    className="max-w-xs bg-surface-primary border-border text-text-primary"
-                    onPointerDownOutside={() => setTooltipOpen(false)}
-                    onEscapeKeyDown={() => setTooltipOpen(false)}
-                  >
-                    <div className="space-y-2" dangerouslySetInnerHTML={{ __html: t.onboarding.breakStep.methodExplanations }} />
-                  </TooltipContent>
-                </Tooltip>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        className="flex items-start gap-2 cursor-pointer hover:text-text-primary transition-colors text-left touch-manipulation"
+                      >
+                        <InfoIcon className="h-4 w-4 mt-0.5" />
+                        <span>{t.onboarding.breakStep.seeExplanation}</span>
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <div className="space-y-2" dangerouslySetInnerHTML={{ __html: t.onboarding.breakStep.methodExplanations }} />
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
             </div>
           </div>

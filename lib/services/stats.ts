@@ -140,6 +140,18 @@ export type MonthlyGoal = {
 };
 
 /**
+ * Employment percentage data for a month
+ */
+export type EmploymentMonthlyData = {
+  readonly month: string; // "Jan", "Feb", etc.
+  readonly fullMonth: string; // "Januar", "Februar", etc.
+  readonly year: number;
+  readonly monthNumber: number; // 1-12
+  readonly averagePercentage: number; // Average employment percentage for the month
+  readonly hasShifts: boolean; // Whether the month has any shifts
+};
+
+/**
  * Complete stats data response
  */
 export type StatsData = {
@@ -178,6 +190,8 @@ export type StatsData = {
   readonly monthlySummaries: MonthlySummary[];
   readonly currentMonthBreakdown: SupplementBreakdown;
   readonly monthlyGoal: MonthlyGoal;
+  readonly employmentLast6Months: EmploymentMonthlyData[];
+  readonly employmentYearlyAverage: number | null; // null if no months with shifts
 };
 
 /**
@@ -724,6 +738,157 @@ export const StatsServiceLive = Layer.effect(
           }
         }
 
+        // Calculate employment percentage data
+        // Full-time hours per week: 37.5 if pause deduction enabled, 40 otherwise
+        const fullTimeHoursPerWeek = (userSettings as DbUserSettings).pause_deduction_enabled ? 37.5 : 40;
+
+        // Helper to get Monday of a week containing a date
+        const getMondayOfWeek = (date: Date): Date => {
+          const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+          const day = d.getUTCDay();
+          const diff = day === 0 ? -6 : 1 - day; // Sunday = 0, Monday = 1
+          d.setUTCDate(d.getUTCDate() + diff);
+          return d;
+        };
+
+        // Helper to get date string YYYY-MM-DD
+        const toDateString = (date: Date): string => date.toISOString().split("T")[0];
+
+        // Build a map of date -> hours worked
+        const hoursPerDay = new Map<string, number>();
+        for (const shift of allShifts) {
+          const dateStr = shift.shift_date;
+          const hours = shift.computed.paidHours || 0;
+          hoursPerDay.set(dateStr, (hoursPerDay.get(dateStr) || 0) + hours);
+        }
+
+        // Calculate employment percentages for all weeks in the focus year
+        // and accumulate into monthly data
+        type MonthAccumulator = {
+          totalWeightedPercentage: number;
+          totalWeight: number;
+          hasShifts: boolean;
+        };
+        const monthlyEmployment = new Map<string, MonthAccumulator>();
+
+        // Initialize all 12 months for the focus year
+        for (let m = 1; m <= 12; m++) {
+          const key = `${focusYear}-${String(m).padStart(2, "0")}`;
+          monthlyEmployment.set(key, { totalWeightedPercentage: 0, totalWeight: 0, hasShifts: false });
+        }
+
+        // Also initialize months from the previous year that fall within the last 6 months range
+        // This is needed when focusMonth is Jan-May (e.g., Jan 2025 needs Jul-Dec 2024)
+        for (let i = 5; i >= 0; i--) {
+          const targetDate = new Date(Date.UTC(focusYear, focusMonth - 1 - i, 1));
+          const { year, month } = getYearMonth(targetDate);
+          if (year < focusYear) {
+            const key = `${year}-${String(month).padStart(2, "0")}`;
+            if (!monthlyEmployment.has(key)) {
+              monthlyEmployment.set(key, { totalWeightedPercentage: 0, totalWeight: 0, hasShifts: false });
+            }
+          }
+        }
+
+        // Determine the earliest year we need to process for employment data
+        const earliestTargetDate = new Date(Date.UTC(focusYear, focusMonth - 1 - 5, 1));
+        const earliestYear = earliestTargetDate.getUTCFullYear();
+
+        // Find the first Monday of the earliest year we need
+        const processStartYear = new Date(Date.UTC(earliestYear, 0, 1));
+        let currentMonday = getMondayOfWeek(processStartYear);
+
+        // Process all weeks until we pass the end of the focus year
+        const yearEnd = new Date(Date.UTC(focusYear, 11, 31));
+
+        while (currentMonday <= yearEnd) {
+          const weekDays: Date[] = [];
+          for (let i = 0; i < 7; i++) {
+            const day = new Date(currentMonday);
+            day.setUTCDate(day.getUTCDate() + i);
+            weekDays.push(day);
+          }
+
+          // Calculate total hours worked this week
+          let totalWeekHours = 0;
+          for (const day of weekDays) {
+            const dateStr = toDateString(day);
+            totalWeekHours += hoursPerDay.get(dateStr) || 0;
+          }
+
+          // Calculate employment percentage for this week
+          const weekEmploymentPct = (totalWeekHours / fullTimeHoursPerWeek) * 100;
+
+          // Distribute this week's percentage to months based on how many days fall in each month
+          const daysPerMonth = new Map<string, number>();
+          for (const day of weekDays) {
+            // Only count days in months we're tracking (focus year + any previous year months in our range)
+            const monthKey = `${day.getUTCFullYear()}-${String(day.getUTCMonth() + 1).padStart(2, "0")}`;
+            if (monthlyEmployment.has(monthKey)) {
+              daysPerMonth.set(monthKey, (daysPerMonth.get(monthKey) || 0) + 1);
+            }
+          }
+
+          // Add weighted contribution to each month
+          for (const [monthKey, dayCount] of daysPerMonth) {
+            const weight = dayCount / 7; // Proportion of the week in this month
+            const monthData = monthlyEmployment.get(monthKey);
+            if (monthData) {
+              monthData.totalWeightedPercentage += weekEmploymentPct * weight;
+              monthData.totalWeight += weight;
+              // Check if any hours were worked on days in this month
+              for (const day of weekDays) {
+                const dayMonthKey = `${day.getUTCFullYear()}-${String(day.getUTCMonth() + 1).padStart(2, "0")}`;
+                if (dayMonthKey === monthKey) {
+                  const dateStr = toDateString(day);
+                  if ((hoursPerDay.get(dateStr) || 0) > 0) {
+                    monthData.hasShifts = true;
+                  }
+                }
+              }
+            }
+          }
+
+          // Move to next week
+          currentMonday.setUTCDate(currentMonday.getUTCDate() + 7);
+        }
+
+        // Build last 6 months employment data
+        const employmentLast6Months: EmploymentMonthlyData[] = [];
+        for (let i = 5; i >= 0; i--) {
+          const targetDate = new Date(Date.UTC(focusYear, focusMonth - 1 - i, 1));
+          const { year, month } = getYearMonth(targetDate);
+          const monthKey = `${year}-${String(month).padStart(2, "0")}`;
+          const monthData = monthlyEmployment.get(monthKey);
+
+          const averagePercentage = monthData && monthData.totalWeight > 0
+            ? monthData.totalWeightedPercentage / monthData.totalWeight
+            : 0;
+
+          employmentLast6Months.push({
+            month: MONTH_NAMES[month - 1],
+            fullMonth: FULL_MONTH_NAMES[month - 1],
+            year,
+            monthNumber: month,
+            averagePercentage: +averagePercentage.toFixed(1),
+            hasShifts: monthData?.hasShifts ?? false,
+          });
+        }
+
+        // Calculate yearly average (only months with shifts)
+        let yearlySum = 0;
+        let monthsWithShifts = 0;
+        for (const [, monthData] of monthlyEmployment) {
+          if (monthData.hasShifts && monthData.totalWeight > 0) {
+            const monthAvg = monthData.totalWeightedPercentage / monthData.totalWeight;
+            yearlySum += monthAvg;
+            monthsWithShifts++;
+          }
+        }
+        const employmentYearlyAverage = monthsWithShifts > 0
+          ? +(yearlySum / monthsWithShifts).toFixed(1)
+          : null;
+
         return {
           focusMonth: {
             year: focusYear,
@@ -771,6 +936,8 @@ export const StatsServiceLive = Layer.effect(
             percentage: +goalPercentage.toFixed(1),
             remaining: +goalRemaining.toFixed(2),
           },
+          employmentLast6Months: employmentLast6Months as readonly EmploymentMonthlyData[],
+          employmentYearlyAverage,
         } as StatsData;
       });
 
