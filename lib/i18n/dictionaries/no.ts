@@ -1202,6 +1202,11 @@ export const no = {
         thisMonth: 'denne mnd',
         lastMonthShort: 'forrige mnd',
       },
+      employment: {
+        title: 'Stillingsprosent',
+        yearlyAverage: 'Gj.snittlig stilling i år',
+        employment: 'stilling',
+      },
     },
     supplementsEditor: {
       badge: 'Tillegg #{number}',

@@ -25,6 +25,7 @@ import {
   type MonthlySummary,
   type SupplementBreakdown,
   type MonthlyGoal,
+  type EmploymentMonthlyData,
 } from "@/lib/services/stats";
 import { StatsLive } from "@/lib/layers/app";
 import { logger } from "@/lib/logger";
@@ -44,6 +45,7 @@ export type {
   MonthlySummary,
   SupplementBreakdown,
   MonthlyGoal,
+  EmploymentMonthlyData,
 };
 
 export type StatsOptions = {
@@ -138,6 +140,7 @@ async function getStatsDataInternal(userId: string, options: StatsOptions = {}):
       thisMonthCumulative: [...result.thisMonthCumulative],
       yearlyCumulative: [...result.yearlyCumulative],
       monthlySummaries: [...result.monthlySummaries],
+      employmentLast6Months: [...result.employmentLast6Months],
     };
   } catch (error: any) {
     logger.error("Failed to fetch stats data:", error);
@@ -189,6 +192,8 @@ async function getStatsDataInternal(userId: string, options: StatsOptions = {}):
         percentage: 0,
         remaining: 0,
       },
+      employmentLast6Months: [],
+      employmentYearlyAverage: null,
     };
   }
 }

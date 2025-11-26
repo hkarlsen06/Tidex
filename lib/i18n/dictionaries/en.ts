@@ -1203,6 +1203,11 @@ export const en: Dictionary = {
         thisMonth: 'this mo',
         lastMonthShort: 'last mo',
       },
+      employment: {
+        title: 'Employment rate',
+        yearlyAverage: 'Avg. employment this year',
+        employment: 'employment',
+      },
     },
     supplementsEditor: {
       badge: 'Supplement #{number}',
