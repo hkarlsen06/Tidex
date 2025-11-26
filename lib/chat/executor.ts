@@ -265,20 +265,36 @@ async function executeManageShift(
       case "delete": {
         // Support both single and bulk delete
         if (input.shiftIds && input.shiftIds.length > 0) {
-          // Bulk delete
+          // Bulk delete - fetch shifts first for display info
+          const shifts = await getComputedShiftsForApi(userId, { limit: 1000 });
+          const shiftsToDelete = shifts.shifts.filter((s) => input.shiftIds!.includes(s.id));
+
           await Promise.all(input.shiftIds.map((id) => deleteShift(id)));
 
-          return {
-            success: true,
-            message: `Slettet ${input.shiftIds.length} ${input.shiftIds.length === 1 ? "skift" : "skift"}`,
-          };
-        } else if (input.shiftId) {
-          // Single delete
-          await deleteShift(input.shiftId);
+          // Format deleted shifts info
+          const deletedInfo = shiftsToDelete.map((s) =>
+            `${formatDateForDisplay(s.shift_date)} ${s.start_time}-${s.end_time}`
+          ).join(", ");
 
           return {
             success: true,
-            message: `Slettet skift ${input.shiftId}`,
+            message: `Slettet ${input.shiftIds.length} ${input.shiftIds.length === 1 ? "skift" : "skift"}${deletedInfo ? `: ${deletedInfo}` : ""}`,
+          };
+        } else if (input.shiftId) {
+          // Single delete - fetch shift first for display info
+          const shifts = await getComputedShiftsForApi(userId, { limit: 1000 });
+          const shift = shifts.shifts.find((s) => s.id === input.shiftId);
+
+          await deleteShift(input.shiftId);
+
+          // Format message with date and times if shift was found
+          const shiftInfo = shift
+            ? `${formatDateForDisplay(shift.shift_date)} ${shift.start_time}-${shift.end_time}`
+            : input.shiftId;
+
+          return {
+            success: true,
+            message: `Slettet skift: ${shiftInfo}`,
           };
         } else {
           return {
