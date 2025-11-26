@@ -33,6 +33,7 @@ export type DbUserSettings = {
   user_id: string;
   theme?: string | null;
   default_shifts_view?: string | null;
+  currency?: string | null;
   direct_time_input?: boolean | null;
   full_minute_range?: boolean | null;
   use_preset?: boolean | null;

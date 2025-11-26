@@ -19,6 +19,7 @@ interface OnboardingSettings {
   theme: string;
   default_shifts_view: string;
   monthly_goal: number | null;
+  currency: string;
 }
 
 export async function completeOnboarding(settings: OnboardingSettings) {
@@ -47,6 +48,7 @@ export async function completeOnboarding(settings: OnboardingSettings) {
     theme: settings.theme,
     default_shifts_view: settings.default_shifts_view,
     monthly_goal: settings.monthly_goal,
+    currency: settings.currency,
     updated_at: new Date().toISOString(),
   };
 

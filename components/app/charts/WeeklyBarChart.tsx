@@ -7,7 +7,8 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart";
 import { DailyData } from "@/data-access/stats";
-import { formatCurrency, formatNumber } from "@/lib/formatters";
+import { formatNumber } from "@/lib/formatters";
+import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
 
 type WeeklyBarChartProps = {
   data: DailyData[];
@@ -180,6 +181,7 @@ function CustomXAxisTick({
 }
 
 export function WeeklyBarChart({ data }: WeeklyBarChartProps) {
+  const formatCurrency = useFormatCurrency();
   // Calculate domain for y-axis to focus on the range where data varies
   const earnings = data.map((d) => d.earnings);
   const { domain, ticks } = calculateYAxisScale(earnings);

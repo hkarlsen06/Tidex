@@ -19,10 +19,8 @@ import { updateShift } from "@/app/[locale]/(app)/shifts/_actions/updateShift";
 import { cn } from "@/lib/cn";
 import { TimeInput } from "@/components/app/TimeInput";
 import { useTranslations } from "@/lib/i18n/client";
-import {
-  formatCurrency,
-  formatHours as formatHoursValue,
-} from "@/lib/formatters";
+import { formatHours as formatHoursValue } from "@/lib/formatters";
+import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
 import { getDateFormatter } from "@/lib/i18n/locale";
 import { SeriesEditModal } from "./SeriesEditModal";
 import type { ExistingShift } from "@/lib/series/conflicts";
@@ -129,10 +127,6 @@ function formatHours(value: number) {
   return formatHoursValue(value);
 }
 
-function formatCurrencyNOKInt(value: number) {
-  return formatCurrency(value);
-}
-
 // NOTE: Wage comparison functionality removed
 // Old per-shift snapshots are deprecated in favor of the wage_snapshots table
 // No need to compare with "current" settings since those fields no longer exist
@@ -150,6 +144,7 @@ export function ShiftDetails({
   onShiftUpdate,
 }: ShiftDetailsProps) {
   const { t, locale } = useTranslations();
+  const formatCurrency = useFormatCurrency();
   const router = useRouter();
   const [seriesModalOpen, setSeriesModalOpen] = useState(false);
   const [customSupplementsModalOpen, setCustomSupplementsModalOpen] = useState(false);
@@ -371,7 +366,7 @@ export function ShiftDetails({
             <div className="flex items-center justify-between">
               <div className="text-sm text-text-secondary">{t.pages.shifts.details.basePay}</div>
               <div className="text-base font-medium text-text-primary">
-                {formatCurrencyNOKInt(shift.computed.basePay)}
+                {formatCurrency(shift.computed.basePay)}
               </div>
             </div>
 
@@ -410,7 +405,7 @@ export function ShiftDetails({
             <div className="flex items-center justify-between pt-2">
               <div className="text-sm text-text-secondary">{t.pages.shifts.details.total}</div>
               <div className="text-xl font-semibold text-text-primary">
-                {formatCurrencyNOKInt(shift.computed.gross)}
+                {formatCurrency(shift.computed.gross)}
               </div>
             </div>
 

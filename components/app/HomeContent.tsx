@@ -12,7 +12,7 @@ import { useCountdown } from "@/lib/hooks/useCountdown";
 import { useMonth } from "./MonthContext";
 import { useTranslations } from "@/lib/i18n/client";
 import { summarizeShiftTotals } from "@/lib/shifts/monthlyTotals";
-import { formatCurrency } from "@/lib/formatters";
+import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
 import { deleteShift } from "@/app/[locale]/(app)/shifts/_actions/deleteShift";
 import { adjustPayrollDate } from "@/lib/payroll/adjust-payroll-date";
 import { useSwipe } from "@/lib/hooks/useSwipe";
@@ -25,7 +25,8 @@ type HomeContentProps = {
 function calculateMonthData(
   shiftsByMonth: Map<string, ShiftWithComputations[]>,
   month: Date,
-  settings: UserSettings
+  settings: UserSettings,
+  formatCurrency: (value: number) => string
 ): {
   total: string;
   percentageChange?: number;
@@ -105,6 +106,7 @@ function isCurrentMonth(date: Date): boolean {
 
 export function HomeContent({ shifts: initialShifts, settings }: HomeContentProps) {
   const { t, locale } = useTranslations();
+  const formatCurrency = useFormatCurrency();
   const router = useRouter();
   const { selectedMonth: month, goToPreviousMonth, goToNextMonth, direction } = useMonth();
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -229,8 +231,8 @@ export function HomeContent({ shifts: initialShifts, settings }: HomeContentProp
   }, [shifts]);
 
   const data = useMemo(
-    () => calculateMonthData(shiftsByMonth, month, settings),
-    [shiftsByMonth, month, settings]
+    () => calculateMonthData(shiftsByMonth, month, settings, formatCurrency),
+    [shiftsByMonth, month, settings, formatCurrency]
   );
 
   const payrollDay = Number(settings.payroll_day) || 1;

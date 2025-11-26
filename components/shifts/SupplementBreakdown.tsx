@@ -2,7 +2,8 @@
 
 import type { ReactNode } from "react";
 import { useTranslations } from "@/lib/i18n/client";
-import { formatCurrency, formatHours } from "@/lib/formatters";
+import { formatHours } from "@/lib/formatters";
+import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
 
 const MINUTES_PER_DAY = 24 * 60;
 
@@ -91,6 +92,7 @@ function computeRows({ baseWage, segments }: SupplementBreakdownProps) {
 
 export function SupplementBreakdown(props: SupplementBreakdownProps) {
   const { t } = useTranslations();
+  const formatCurrency = useFormatCurrency();
   const rows = computeRows(props);
   if (rows.length === 0) return null;
 

@@ -26,7 +26,7 @@ export const no = {
     yes: 'Ja',
     no: 'Nei',
     currency: 'kr',
-    perHour: 'kr/t',
+    perHour: '/t',
     or: 'eller',
     guest: 'Gjest',
     relativeTime: {
@@ -952,6 +952,10 @@ export const no = {
           calendar: 'Kalender',
           list: 'Liste',
         },
+        currency: {
+          label: 'Valuta',
+          description: 'Velg hvilken valuta som vises i appen',
+        },
       },
       preferences: {
         title: 'Preferanser',
@@ -1268,8 +1272,10 @@ export const no = {
         '5': 'Lønnstrinn 5',
         '6': 'Lønnstrinn 6',
       },
+      selectCurrency: 'Velg din valuta',
+      confirmCurrency: 'Bekreft valutavalg',
       hourlyWage: 'Timelønn',
-      perHour: 'kr/t',
+      perHour: '/t',
     },
     breakStep: {
       title: 'Pauseinnstillinger',

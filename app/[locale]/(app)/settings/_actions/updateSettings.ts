@@ -82,6 +82,7 @@ export async function updatePaySettings(data: {
 export async function updateDisplaySettings(data: {
   theme?: string;
   default_shifts_view?: string;
+  currency?: string;
 }) {
   const { user } = await verifySession();
   const supabase = await createSupabaseServerClient();

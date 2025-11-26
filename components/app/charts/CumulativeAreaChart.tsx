@@ -8,7 +8,7 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart";
 import { MonthlyData } from "@/data-access/stats";
-import { formatCurrency } from "@/lib/formatters";
+import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
 
 type CumulativeAreaChartProps = {
   data: MonthlyData[];
@@ -22,6 +22,7 @@ const chartConfig = {
 };
 
 export function CumulativeAreaChart({ data }: CumulativeAreaChartProps) {
+  const formatCurrency = useFormatCurrency();
   // Calculate cumulative earnings using reduce without mutation
   const cumulativeData = useMemo(() => {
     const result: Array<MonthlyData & { cumulative: number }> = [];

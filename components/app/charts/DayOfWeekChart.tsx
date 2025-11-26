@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/chart";
 import { DayOfWeekData } from "@/data-access/stats";
 import { useTranslations } from "@/lib/i18n/client";
-import { formatCurrency } from "@/lib/formatters";
+import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
 
 type DayOfWeekChartProps = {
   data: DayOfWeekData[];
@@ -54,6 +54,7 @@ function CustomXAxisTick({
 
 export function DayOfWeekChart({ data }: DayOfWeekChartProps) {
   const { t } = useTranslations();
+  const formatCurrency = useFormatCurrency();
 
   // Calculate domain for y-axis to focus on the range where data varies
   const earnings = data.map((d) => d.averageEarnings);

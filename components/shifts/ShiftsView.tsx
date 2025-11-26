@@ -36,7 +36,8 @@ import { ArrowRight, ArrowLeft, X, CloudOff } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { useTranslations } from "@/lib/i18n/client";
 import type { Locale } from "@/lib/i18n/config";
-import { formatCurrency, formatInteger } from "@/lib/formatters";
+import { formatInteger } from "@/lib/formatters";
+import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
 import { getDateFormatter } from "@/lib/i18n/locale";
 import { useOnlineStatus } from "@/lib/hooks/useOnlineStatus";
 import { useCountdown } from "@/lib/hooks/useCountdown";
@@ -69,10 +70,6 @@ function getIsoWeek(date: Date) {
     ((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7
   );
   return { weekNumber, year: d.getUTCFullYear() };
-}
-
-function formatWeekTotal(value: number) {
-  return formatCurrency(value);
 }
 
 // Combined filter and group operation for better performance
@@ -478,6 +475,7 @@ type ShiftsViewProps = {
 
 export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", userSettings, presetRules }: ShiftsViewProps) {
   const { t, locale } = useTranslations();
+  const formatCurrency = useFormatCurrency();
   const {
     errorSelectOne,
     errorPartial,
@@ -1387,7 +1385,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
                       </svg>
                     </div>
                     <span className="font-semibold text-text-primary">
-                      {formatWeekTotal(group.totalGross)}
+                      {formatCurrency(group.totalGross)}
                     </span>
                   </div>
                   <div className="space-y-4">

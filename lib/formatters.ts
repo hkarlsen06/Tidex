@@ -51,7 +51,7 @@ export function formatCurrency(value: number, options?: FormatCurrencyOptions): 
   const {
     currencySymbol = DEFAULT_CURRENCY_SYMBOL,
     display = "suffix",
-    separator = " ",
+    separator,
     ...formatterOptions
   } = options ?? {};
 
@@ -61,7 +61,9 @@ export function formatCurrency(value: number, options?: FormatCurrencyOptions): 
     return formatted;
   }
 
-  const joiner = separator ?? "";
+  // Default separator: space for suffix currencies (e.g., "100 kr"), no space for prefix (e.g., "$100")
+  const defaultSeparator = display === "prefix" ? "" : " ";
+  const joiner = separator ?? defaultSeparator;
 
   if (display === "prefix") {
     return joiner ? `${currencySymbol}${joiner}${formatted}` : `${currencySymbol}${formatted}`;

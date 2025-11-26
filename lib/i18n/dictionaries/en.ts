@@ -27,7 +27,7 @@ export const en: Dictionary = {
     yes: 'Yes',
     no: 'No',
     currency: 'kr',
-    perHour: 'kr/h',
+    perHour: '/h',
     or: 'or',
     guest: 'Guest',
     relativeTime: {
@@ -953,6 +953,10 @@ export const en: Dictionary = {
           calendar: 'Calendar',
           list: 'List',
         },
+        currency: {
+          label: 'Currency',
+          description: 'Choose which currency is displayed in the app',
+        },
       },
       preferences: {
         title: 'Preferences',
@@ -1269,8 +1273,10 @@ export const en: Dictionary = {
         '5': 'Pay grade 5',
         '6': 'Pay grade 6',
       },
+      selectCurrency: 'Select your currency',
+      confirmCurrency: 'Confirm currency selection',
       hourlyWage: 'Hourly wage',
-      perHour: 'kr/h',
+      perHour: '/h',
     },
     breakStep: {
       title: 'Break settings',

@@ -12,7 +12,8 @@ import { MonthPicker } from "@/components/app/MonthPicker";
 import { useMonth } from "@/components/app/MonthContext";
 import { useTranslations } from "@/lib/i18n/client";
 import { useParams } from "next/navigation";
-import { formatCurrency, formatNumber } from "@/lib/formatters";
+import { formatNumber } from "@/lib/formatters";
+import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
 
 /**
  * Chart data type - subset of StatsData used for chart components
@@ -66,13 +67,6 @@ const SupplementBreakdownChart = dynamic(
 type StatsContentProps = {
   data: StatsData;
 };
-
-function formatCurrencyValue(value: number, compact = false): string {
-  if (compact && value >= 100000) {
-    return formatCurrency(value, { display: "none", notation: "compact" });
-  }
-  return formatCurrency(value, { display: "none" });
-}
 
 function formatHours(value: number): string {
   return formatNumber(value, {
@@ -136,6 +130,14 @@ export function StatsContent({ data }: StatsContentProps) {
   const { t } = useTranslations();
   const params = useParams();
   const locale = (params?.locale as string) || 'no';
+  const formatCurrency = useFormatCurrency();
+  // Format currency with full symbol (handles prefix/suffix positioning)
+  const formatCurrencyFull = useCallback((value: number, compact = false): string => {
+    if (compact && value >= 100000) {
+      return formatCurrency(value, { notation: "compact" });
+    }
+    return formatCurrency(value);
+  }, [formatCurrency]);
   const couldNotUpdateError = t.pages.stats.errors.couldNotUpdate;
   const {
     selectedMonth,
@@ -473,19 +475,16 @@ export function StatsContent({ data }: StatsContentProps) {
             <p className="text-lg font-semibold text-text-muted mb-3">
               {t.pages.stats.cards.monthlyEarnings}
             </p>
-            <div className="flex items-baseline gap-2">
-              <p className="text-5xl font-bold tabular-nums text-text-primary">
-                {isEarningsZero ? '---' : formatCurrencyValue(displayedEarnings, true)}
-              </p>
-              {!isEarningsZero && <p className="text-2xl font-medium text-text-secondary">{t.common.currency}</p>}
-            </div>
+            <p className="text-5xl font-bold tabular-nums text-text-primary">
+              {isEarningsZero ? '---' : formatCurrencyFull(displayedEarnings, true)}
+            </p>
             {activeData.tax.enabled && grossEarnings > 0 && (
               <div className="mt-3 space-y-1">
                 <p className="text-base font-medium text-text-secondary">
                   {t.pages.stats.cards.afterTax}
                 </p>
                 <p className="text-sm text-text-muted">
-                  {t.pages.stats.cards.beforeTax}: {formatCurrencyValue(grossEarnings, true)} {t.common.currency}
+                  {t.pages.stats.cards.beforeTax}: {formatCurrencyFull(grossEarnings, true)}
                 </p>
               </div>
             )}
@@ -579,7 +578,7 @@ export function StatsContent({ data }: StatsContentProps) {
       <div className={animationClass}>
         <StatCard
           label={t.pages.stats.cards.average}
-          value={formatCurrencyValue(selectedAverageRate, true)}
+          value={formatCurrencyFull(selectedAverageRate, true)}
           suffix={t.common.perHour}
           icon={<DollarSign className="w-4 h-4" />}
         />
@@ -649,8 +648,7 @@ export function StatsContent({ data }: StatsContentProps) {
           <>
             <StatCard
               label={t.pages.stats.cards.total}
-              value={formatCurrencyValue(chartData.yearToDate.totalEarnings)}
-              suffix={t.common.currency}
+              value={formatCurrencyFull(chartData.yearToDate.totalEarnings)}
             />
             <StatCard
               label={t.pages.stats.hours}

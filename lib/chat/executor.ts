@@ -13,7 +13,6 @@ import { createSeriesShift } from "@/app/[locale]/(app)/shifts/add/_actions/crea
 import { updateSeriesShift } from "@/app/[locale]/(app)/shifts/_actions/updateSeriesShift";
 import { deleteSeriesShift } from "@/app/[locale]/(app)/shifts/_actions/deleteSeriesShift";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { verifySession } from "@/data-access/auth";
 import type { EndCondition } from "@/lib/series/types";
 import type {
   ToolName,

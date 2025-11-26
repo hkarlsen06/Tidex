@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/chart";
 import { DailyCumulativeData } from "@/data-access/stats";
 import { useTranslations } from "@/lib/i18n/client";
-import { formatCurrency } from "@/lib/formatters";
+import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
 
 type MonthlyCumulativeChartProps = {
   data: DailyCumulativeData[];
@@ -48,6 +48,7 @@ function CustomXAxisTick({
 
 export function MonthlyCumulativeChart({ data }: MonthlyCumulativeChartProps) {
   const { t } = useTranslations();
+  const formatCurrency = useFormatCurrency();
 
   const chartConfig = {
     currentMonth: {

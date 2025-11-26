@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/chart";
 import { SupplementBreakdown } from "@/data-access/stats";
 import { useTranslations } from "@/lib/i18n/client";
-import { formatCurrency } from "@/lib/formatters";
+import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
 
 type SupplementBreakdownChartProps = {
   data: SupplementBreakdown;
@@ -16,6 +16,7 @@ type SupplementBreakdownChartProps = {
 
 export function SupplementBreakdownChart({ data }: SupplementBreakdownChartProps) {
   const { t } = useTranslations();
+  const formatCurrency = useFormatCurrency();
 
   const chartConfig = {
     basePay: {

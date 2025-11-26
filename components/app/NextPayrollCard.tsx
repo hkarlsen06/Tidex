@@ -5,7 +5,8 @@ import { Card, CardHeader } from '@/components/app/Card';
 import { cn } from '@/lib/cn';
 import { useNavigationFeedback } from './navigation-feedback';
 import { useTranslations } from '@/lib/i18n/client';
-import { formatCurrency, formatPlainAmount } from '@/lib/formatters';
+import { formatPlainAmount } from '@/lib/formatters';
+import { useFormatCurrency } from '@/lib/hooks/useFormatCurrency';
 import { getDateFormatter } from '@/lib/i18n/locale';
 import { adjustPayrollDate } from '@/lib/payroll/adjust-payroll-date';
 import type { Locale } from '@/lib/i18n';
@@ -56,6 +57,7 @@ export const NextPayrollCard: React.FC<NextPayrollCardProps> = ({
 }) => {
   const { navigate } = useNavigationFeedback();
   const { t, locale } = useTranslations();
+  const formatCurrency = useFormatCurrency();
 
   // Create locale-aware date formatter
   const dateFormatter = useMemo(() => {
