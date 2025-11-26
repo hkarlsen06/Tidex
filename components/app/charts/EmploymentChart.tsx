@@ -6,6 +6,8 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
+import { ClickTooltip } from "@/components/app/Tooltip";
+import { Info } from "lucide-react";
 import type { EmploymentMonthlyData } from "@/data-access/stats";
 import { useTranslations } from "@/lib/i18n/client";
 
@@ -67,12 +69,24 @@ export function EmploymentChart({ data, yearlyAverage }: EmploymentChartProps) {
     <div className="flex flex-col">
       {/* Elevated header with yearly average */}
       <div className="bg-surface-secondary rounded-t-lg px-4 py-3 border-b border-border">
-        <p className="text-sm font-medium text-text-muted">
-          {t.components.charts.employment.yearlyAverage}
-        </p>
-        <p className="text-2xl font-bold tabular-nums text-text-primary">
-          {yearlyAverage !== null ? `${yearlyAverage}%` : "---"}
-        </p>
+        <div className="flex items-center justify-between">
+          <p className="flex items-baseline gap-2">
+            <span className="text-2xl font-bold tabular-nums text-text-primary">
+              {yearlyAverage !== null ? `${yearlyAverage}%` : "---"}
+            </span>
+            <span className="text-sm font-medium text-text-muted">
+              {t.components.charts.employment.yearlyAverage}
+            </span>
+          </p>
+          <ClickTooltip
+            trigger={<Info className="h-4 w-4" />}
+            triggerClassName="p-1 rounded-full text-text-muted hover:text-text-secondary hover:bg-surface-primary transition-colors"
+            ariaLabel={t.components.charts.employment.averageInfoLabel}
+            className="max-w-[200px]"
+          >
+            <p>{t.components.charts.employment.averageInfo}</p>
+          </ClickTooltip>
+        </div>
       </div>
 
       {/* Bar chart */}

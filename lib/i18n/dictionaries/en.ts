@@ -1205,7 +1205,9 @@ export const en: Dictionary = {
       },
       employment: {
         title: 'Employment rate',
-        yearlyAverage: 'Avg. employment this year',
+        yearlyAverage: 'on average this year',
+        averageInfo: 'The average is only calculated based on months containing shifts.',
+        averageInfoLabel: 'Info about average',
         employment: 'employment',
       },
     },
