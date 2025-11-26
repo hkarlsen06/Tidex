@@ -7,7 +7,7 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart";
 import { YearlyCumulativeData } from "@/data-access/stats";
-import { formatCurrency } from "@/lib/formatters";
+import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
 
 type YearlyCumulativeChartProps = {
   data: YearlyCumulativeData[];
@@ -48,7 +48,7 @@ function CustomXAxisTick({
         y={0}
         dy={8}
         textAnchor="middle"
-        fontSize={16}
+        fontSize={12}
         fill={isCurrentMonth ? "hsl(var(--brand-highlight))" : "hsl(var(--foreground))"}
         fontWeight={isCurrentMonth ? 600 : 400}
       >
@@ -59,6 +59,7 @@ function CustomXAxisTick({
 }
 
 export function YearlyCumulativeChart({ data }: YearlyCumulativeChartProps) {
+  const formatCurrency = useFormatCurrency();
   // Create chart data with separate values for actual and projected
   const chartData = data.map((item, index) => {
     // For the transition point, include value in both actual and projected
@@ -94,6 +95,7 @@ export function YearlyCumulativeChart({ data }: YearlyCumulativeChartProps) {
           dataKey="month"
           tickLine={false}
           axisLine={false}
+          interval={1}
           padding={{ left: 8, right: 8 }}
           tick={(props) => <CustomXAxisTick {...props} data={data} currentMonth={currentMonth} />}
           tickMargin={8}

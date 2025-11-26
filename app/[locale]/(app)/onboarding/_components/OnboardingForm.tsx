@@ -32,6 +32,7 @@ interface OnboardingFormProps {
     theme?: string;
     default_shifts_view?: string;
     monthly_goal?: number;
+    currency?: string;
   };
 }
 
@@ -40,9 +41,14 @@ export function OnboardingForm({ initialSettings }: OnboardingFormProps) {
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Step 1: Wage
+  // Step 1: Currency
+  const [currency, setCurrency] = useState(
+    initialSettings?.currency || "kr"
+  );
+
+  // Step 2: Wage (custom is now the default)
   const [wageType, setWageType] = useState<"preset" | "custom">(
-    initialSettings?.use_preset !== false ? "preset" : "custom"
+    initialSettings?.use_preset === true ? "preset" : "custom"
   );
   const [wageLevel, setWageLevel] = useState(
     initialSettings?.current_wage_level?.toString() || "1"
@@ -147,6 +153,7 @@ export function OnboardingForm({ initialSettings }: OnboardingFormProps) {
         theme,
         default_shifts_view: shiftsView,
         monthly_goal: monthlyGoal ? parseFloat(monthlyGoal) : null,
+        currency,
       };
 
       await completeOnboarding(settings);
@@ -184,6 +191,8 @@ export function OnboardingForm({ initialSettings }: OnboardingFormProps) {
             setWageLevel={setWageLevel}
             customWage={customWage}
             setCustomWage={setCustomWage}
+            currency={currency}
+            setCurrency={setCurrency}
             onNext={() => setCurrentStep(2)}
           />
         )}

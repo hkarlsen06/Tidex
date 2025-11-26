@@ -9,6 +9,7 @@ import { ThemeProvider } from "@/components/app/ThemeProvider";
 import { MonthProvider } from "@/components/app/MonthContext";
 import { AppLayoutClient } from "@/components/app/AppLayoutClient";
 import { I18nProvider } from "@/components/providers/I18nProvider";
+import { CurrencyProvider } from "@/components/providers/CurrencyProvider";
 import { getAppDictionary } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/i18n/config";
 
@@ -49,7 +50,7 @@ export default async function RootLayout({
   // Server-side should ONLY use getUser() for auth validation.
   const { data: settings } = await supabase
     .from("user_settings")
-    .select("profile_picture_url,theme")
+    .select("profile_picture_url,theme,currency")
     .eq("user_id", user.id)
     .maybeSingle();
 
@@ -109,12 +110,14 @@ export default async function RootLayout({
   return (
     <ThemeProvider serverTheme={serverTheme}>
       <MonthProvider>
-        <I18nProvider locale={locale as Locale} dictionary={appDictionary} namespaces={[]}>
-          <SupabaseListener />
-          <AppLayoutClient userName={userName} avatarUrl={resolvedAvatarUrl}>
-            {children}
-          </AppLayoutClient>
-        </I18nProvider>
+        <CurrencyProvider currency={settings?.currency ?? "kr"}>
+          <I18nProvider locale={locale as Locale} dictionary={appDictionary} namespaces={[]}>
+            <SupabaseListener />
+            <AppLayoutClient userName={userName} avatarUrl={resolvedAvatarUrl}>
+              {children}
+            </AppLayoutClient>
+          </I18nProvider>
+        </CurrencyProvider>
       </MonthProvider>
     </ThemeProvider>
   );

@@ -7,7 +7,7 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart";
 import { MonthlyData } from "@/data-access/stats";
-import { formatCurrency } from "@/lib/formatters";
+import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
 
 type MonthlyBarChartProps = {
   data: MonthlyData[];
@@ -57,6 +57,7 @@ function CustomXAxisTick({
 }
 
 export function MonthlyBarChart({ data }: MonthlyBarChartProps) {
+  const formatCurrency = useFormatCurrency();
   const now = new Date();
   const currentMonth = now.getMonth() + 1; // Date#getMonth is 0-based
   const currentYear = now.getFullYear();

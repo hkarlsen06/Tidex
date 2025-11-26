@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useMemo } from "react";
 import type { Dictionary } from "@/lib/i18n/dictionaries/no";
 
 // Simple string interpolation helper
@@ -270,18 +270,11 @@ export function useCountdown({
   t,
   highPrecision = true,
 }: UseCountdownOptions): UseCountdownResult {
-  const [result, setResult] = useState<UseCountdownResult>({
-    text: null,
-    isActive: false,
-    progress: 0,
-  });
-
-  const updateCountdown = useCallback(() => {
+  // Compute initial state synchronously
+  const initialResult = useMemo((): UseCountdownResult => {
     if (!shiftDate || !shiftTime) {
-      setResult({ text: null, isActive: false, progress: 0 });
-      return null;
+      return { text: null, isActive: false, progress: 0 };
     }
-
     const countdownResult = calculateCountdown(
       shiftDate,
       shiftTime,
@@ -289,48 +282,80 @@ export function useCountdown({
       t,
       highPrecision
     );
-    setResult({
+    return {
       text: countdownResult.text,
       isActive: countdownResult.isActive,
       progress: countdownResult.progress,
-    });
-    return countdownResult;
+    };
   }, [shiftDate, shiftTime, endTime, t, highPrecision]);
 
-  useEffect(() => {
-    if (!shiftDate || !shiftTime) {
-      setResult({ text: null, isActive: false, progress: 0 });
-      return;
-    }
+  // Create a stable key from inputs to reset state when they change
+  const inputKey = useMemo(
+    () => `${shiftDate ?? ""}-${shiftTime ?? ""}-${endTime ?? ""}-${highPrecision}`,
+    [shiftDate, shiftTime, endTime, highPrecision]
+  );
 
-    // Initial calculation
-    const countdownResult = updateCountdown();
-    if (!countdownResult) return;
+  const [result, setResult] = useState<UseCountdownResult>(initialResult);
+  const [stateKey, setStateKey] = useState(inputKey);
 
-    // Determine update interval based on proximity and active state
-    // During active shift or within 6 hours: update every second for high precision
-    // Otherwise: update every minute
+  // Track interval frequency to trigger re-subscription when it needs to change
+  const [intervalMs, setIntervalMs] = useState<number>(() => {
+    if (!shiftDate || !shiftTime) return 60000;
+    const countdownResult = calculateCountdown(
+      shiftDate,
+      shiftTime,
+      endTime ?? null,
+      t,
+      highPrecision
+    );
     const sixHoursMs = 6 * 60 * 60 * 1000;
     const isClose = Math.abs(countdownResult.diffMs) < sixHoursMs;
     const needsFrequentUpdates = countdownResult.isActive || (highPrecision && isClose);
-    const intervalMs = needsFrequentUpdates ? 1000 : 60000;
+    return needsFrequentUpdates ? 1000 : 60000;
+  });
+
+  // Reset state when inputs change - using a key comparison to detect changes
+  // and updating state only when the key changes (not on every render)
+  if (inputKey !== stateKey) {
+    setStateKey(inputKey);
+    setResult(initialResult);
+  }
+
+  useEffect(() => {
+    if (!shiftDate || !shiftTime) {
+      return;
+    }
+
+    const sixHoursMs = 6 * 60 * 60 * 1000;
 
     const interval = setInterval(() => {
-      const newResult = updateCountdown();
+      const countdownResult = calculateCountdown(
+        shiftDate,
+        shiftTime,
+        endTime ?? null,
+        t,
+        highPrecision
+      );
 
-      // If proximity or active state changed, we might need to adjust the interval
-      if (newResult && highPrecision) {
-        const nowClose = Math.abs(newResult.diffMs) < sixHoursMs;
-        const nowNeedsFrequent = newResult.isActive || nowClose;
-        // If frequency need changed, clear and let effect re-run
-        if (nowNeedsFrequent !== needsFrequentUpdates) {
-          clearInterval(interval);
+      setResult({
+        text: countdownResult.text,
+        isActive: countdownResult.isActive,
+        progress: countdownResult.progress,
+      });
+
+      // Check if we need to change the interval frequency
+      if (highPrecision) {
+        const nowClose = Math.abs(countdownResult.diffMs) < sixHoursMs;
+        const nowNeedsFrequent = countdownResult.isActive || nowClose;
+        const newIntervalMs = nowNeedsFrequent ? 1000 : 60000;
+        if (newIntervalMs !== intervalMs) {
+          setIntervalMs(newIntervalMs);
         }
       }
     }, intervalMs);
 
     return () => clearInterval(interval);
-  }, [shiftDate, shiftTime, endTime, t, highPrecision, updateCountdown]);
+  }, [shiftDate, shiftTime, endTime, t, highPrecision, intervalMs]);
 
   return result;
 }

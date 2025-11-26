@@ -12,7 +12,8 @@ import type { ISODate, EarningsByDate, HoursByDate } from "@/components/app/cale
 import { cn } from "@/lib/cn";
 import { useTranslations } from "@/lib/i18n/client";
 import { getMonthlyTotals } from "@/lib/shifts/monthlyTotals";
-import { formatCurrency } from "@/lib/formatters";
+import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
+import { useCurrency } from "@/components/providers/CurrencyProvider";
 
 type MonthlyEarningsCalendarProps = {
   shifts: ShiftWithComputations[];
@@ -127,6 +128,8 @@ export function MonthlyEarningsCalendar({
   isOffline = false,
 }: MonthlyEarningsCalendarProps) {
   const { t } = useTranslations();
+  const formatCurrency = useFormatCurrency();
+  const { symbol: currencySymbol } = useCurrency();
   const { goToPreviousMonth, goToNextMonth } = useMonth();
   const [viewMode, setViewMode] = useState<"money" | "hours">("hours");
   const [localDirection, setLocalDirection] = useState<'next' | 'previous' | null>(null);
@@ -281,7 +284,7 @@ export function MonthlyEarningsCalendar({
             key={`total-${month.getFullYear()}-${month.getMonth()}`}
             className={`font-semibold text-text-primary ${getAnimationClasses(localDirection)}`}
           >
-            {totalEarnings === 0 ? '— kr' : formatCurrency(totalEarnings)}
+            {totalEarnings === 0 ? '—' : formatCurrency(totalEarnings)}
           </div>
         </div>
         <div className="pb-6">
@@ -299,7 +302,7 @@ export function MonthlyEarningsCalendar({
         </div>
       </div>
       <div className="flex flex-col items-center gap-2 pb-6">
-        <div className="inline-flex min-h-[44px] w-[90%] items-center gap-1 rounded-full border border-border-subtle bg-surface-secondary/80 px-1 py-1 shadow-app-sm dark:shadow-app-inner">
+        <div className="inline-flex min-h-11 w-[90%] items-center gap-1 rounded-full border border-border-subtle bg-surface-secondary/80 px-1 py-1 shadow-app-sm dark:shadow-app-inner">
           {selectedDate ? (
             <div className="flex w-full items-center gap-2 rounded-full bg-surface-primary px-1 py-0.5">
               <Button
@@ -403,7 +406,7 @@ export function MonthlyEarningsCalendar({
                     : "text-text-muted hover:text-text-primary hover:bg-surface-secondary/50"
                 )}
               >
-                ---- kr
+                ---- {currencySymbol}
               </Button>
             </div>
           )}

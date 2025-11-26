@@ -5,10 +5,10 @@ import { Card, CardHeader } from "@/components/app/Card";
 import { cn } from "@/lib/cn";
 import { useTranslations } from "@/lib/i18n/client";
 import {
-  formatCurrency as formatCurrencyValue,
   formatPlainAmount as formatPlainAmountValue,
   formatHours as formatHoursValue,
 } from "@/lib/formatters";
+import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
 import { getDateFormatter } from "@/lib/i18n/locale";
 
 type ShiftCardProps = {
@@ -45,16 +45,13 @@ export function formatHours(value: number) {
   return formatHoursValue(value);
 }
 
-export function formatCurrency(value: number) {
-  return formatCurrencyValue(value);
-}
-
 export function formatPlainAmount(value: number) {
   return formatPlainAmountValue(value);
 }
 
 export function ShiftCard({ shift, onClick, isToday = false, progress }: ShiftCardProps) {
   const { t, locale } = useTranslations();
+  const formatCurrency = useFormatCurrency();
   const { computed } = shift;
   const { dayName, dateLabel } = formatDateParts(shift.shift_date, locale, t.dateTime.daysShort);
   const { basePay, supplementPay, gross, paidHours } = computed;

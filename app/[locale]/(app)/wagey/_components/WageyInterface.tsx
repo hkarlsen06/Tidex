@@ -50,7 +50,7 @@ export function WageyInterface({ userId, userName, wageyAccess }: WageyInterface
   const [resumptionToken, setResumptionToken] = useState<string | null>(null);
   const [isHydrated, setIsHydrated] = useState(false);
   const [limitReached, setLimitReached] = useState(false);
-  const [limitResetDays, setLimitResetDays] = useState(0);
+  const [_limitResetDays, setLimitResetDays] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const processedChunksRef = useRef<Set<string>>(new Set());

@@ -6,7 +6,8 @@ import { cn } from "@/lib/cn";
 import { formatTimeRange as baseFormatTimeRange } from "@/components/app/ShiftCard";
 import { Card, CardHeader } from "@/components/app/Card";
 import { useTranslations } from "@/lib/i18n/client";
-import { formatCurrency, formatHours, formatPlainAmount } from "@/lib/formatters";
+import { formatHours, formatPlainAmount } from "@/lib/formatters";
+import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
 import { getDateFormatter } from "@/lib/i18n/locale";
 
 // Parse ISO date string consistently as UTC to avoid timezone issues
@@ -30,6 +31,7 @@ type ShiftMoveCardProps = {
 
 export function ShiftMoveCard({ shift, targetDate, selected, onToggle, userSettings, presetRules }: ShiftMoveCardProps) {
   const { locale } = useTranslations();
+  const formatCurrency = useFormatCurrency();
 
   // Create locale-aware date formatters
   const dayNumberFormatter = useMemo(() => {

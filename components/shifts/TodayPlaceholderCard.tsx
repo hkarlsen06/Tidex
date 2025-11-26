@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { Card, CardHeader } from "@/components/app/Card";
 import { useTranslations, useLocale } from "@/lib/i18n/client";
 import { getDateFormatter } from "@/lib/i18n/locale";
+import { useCurrency } from "@/components/providers/CurrencyProvider";
 
 /**
  * TodayPlaceholderCard - Shows today's date when no shifts exist for today
@@ -16,6 +17,7 @@ export function TodayPlaceholderCard() {
   const { t } = useTranslations();
   const locale = useLocale();
   const router = useRouter();
+  const { symbol: currencySymbol, display: currencyDisplay } = useCurrency();
 
   // Get today's date in local timezone
   const now = new Date();
@@ -66,7 +68,7 @@ export function TodayPlaceholderCard() {
         </div>
         <div className="text-right">
           <p className="text-2xl font-semibold tracking-tight text-text-muted">
-            —— kr
+            {currencyDisplay === "prefix" ? `${currencySymbol}——` : `—— ${currencySymbol}`}
           </p>
         </div>
       </CardHeader>

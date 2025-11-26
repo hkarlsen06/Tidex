@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { verifySession } from '@/data-access/auth';
 import { getUserSettings } from '@/data-access/settings';
 import { DisplayForm } from '@components/settings/display/DisplayForm';
+import { CurrencySelector } from '@components/settings/display/CurrencySelector';
 import { getTranslations } from '@/lib/i18n/server';
 import type { Locale } from '@/lib/i18n/config';
 
@@ -46,6 +47,11 @@ export default async function DisplayPage({
             theme: settings?.theme || 'system',
             defaultShiftsView: settings?.default_shifts_view || 'list',
           }}
+          t={t}
+        />
+
+        <CurrencySelector
+          initialCurrency={settings?.currency || 'kr'}
           t={t}
         />
       </div>
