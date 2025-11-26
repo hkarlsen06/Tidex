@@ -1,13 +1,12 @@
 "use client";
 
-import { useState } from "react";
 import { Label } from "@/components/app/Label";
 import { Switch } from "@/components/app/Switch";
 import { Input } from "@/components/app/Input";
 import { Button } from "@/components/app/Button";
 import { Separator } from "@/components/app/Separator";
 import { InfoIcon } from "lucide-react";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/app/Tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/app/Tooltip";
 import { useTranslations } from "@/lib/i18n/client";
 
 interface TaxPayrollStepProps {
@@ -32,8 +31,6 @@ export function TaxPayrollStep({
   onBack,
 }: TaxPayrollStepProps) {
   const { t } = useTranslations();
-  const [taxTooltipOpen, setTaxTooltipOpen] = useState(false);
-  const [payrollTooltipOpen, setPayrollTooltipOpen] = useState(false);
   const payrollDayPresets = ["10", "15", "20"];
   const taxPercentagePresets = ["25", "30", "40"];
 
@@ -57,33 +54,19 @@ export function TaxPayrollStep({
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <Label htmlFor="payroll-day">{t.onboarding.taxPayrollStep.payrollDayLabel}</Label>
-            <Tooltip open={payrollTooltipOpen} onOpenChange={setPayrollTooltipOpen} delayDuration={0}>
-              <TooltipTrigger
-                asChild
-                onPointerDown={(e) => e.preventDefault()}
-              >
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setPayrollTooltipOpen(!payrollTooltipOpen);
-                  }}
-                  className="touch-manipulation"
-                >
-                  <InfoIcon className="h-4 w-4 text-text-muted cursor-pointer hover:text-text-primary transition-colors" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent
-                className="max-w-xs bg-surface-primary border-border text-text-primary"
-                onPointerDownOutside={() => setPayrollTooltipOpen(false)}
-                onEscapeKeyDown={() => setPayrollTooltipOpen(false)}
-              >
-                <p>
-                  {t.onboarding.taxPayrollStep.payrollDayTooltip}
-                </p>
-              </TooltipContent>
-            </Tooltip>
-          </div>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button type="button" className="touch-manipulation">
+                      <InfoIcon className="h-4 w-4 text-text-muted cursor-pointer hover:text-text-primary transition-colors" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    <p>{t.onboarding.taxPayrollStep.payrollDayTooltip}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
           <p className="text-sm text-text-muted">
             {t.onboarding.taxPayrollStep.payrollDayDescription}
           </p>
@@ -137,32 +120,18 @@ export function TaxPayrollStep({
             <div className="space-y-0.5 flex-1">
               <div className="flex items-center gap-2">
                 <Label htmlFor="tax-enabled">{t.onboarding.taxPayrollStep.calculateTax}</Label>
-                <Tooltip open={taxTooltipOpen} onOpenChange={setTaxTooltipOpen} delayDuration={0}>
-                  <TooltipTrigger
-                    asChild
-                    onPointerDown={(e) => e.preventDefault()}
-                  >
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setTaxTooltipOpen(!taxTooltipOpen);
-                      }}
-                      className="touch-manipulation"
-                    >
-                      <InfoIcon className="h-4 w-4 text-text-muted cursor-pointer hover:text-text-primary transition-colors" />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent
-                    className="max-w-xs bg-surface-primary border-border text-text-primary"
-                    onPointerDownOutside={() => setTaxTooltipOpen(false)}
-                    onEscapeKeyDown={() => setTaxTooltipOpen(false)}
-                  >
-                    <p>
-                      {t.onboarding.taxPayrollStep.taxTooltip}
-                    </p>
-                  </TooltipContent>
-                </Tooltip>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button type="button" className="touch-manipulation">
+                        <InfoIcon className="h-4 w-4 text-text-muted cursor-pointer hover:text-text-primary transition-colors" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <p>{t.onboarding.taxPayrollStep.taxTooltip}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
               <p className="text-sm text-text-muted">
                 {t.onboarding.taxPayrollStep.taxDescription}

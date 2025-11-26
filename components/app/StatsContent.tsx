@@ -27,6 +27,8 @@ type ChartData = Pick<
   | 'yearlyCumulative'
   | 'currentMonthBreakdown'
   | 'yearToDate'
+  | 'employmentLast6Months'
+  | 'employmentYearlyAverage'
 >;
 
 // Lazy load all chart components to reduce initial bundle size
@@ -61,6 +63,11 @@ const MonthlyCumulativeChart = dynamic(
 
 const SupplementBreakdownChart = dynamic(
   () => import("@/components/app/charts/SupplementBreakdownChart").then(mod => mod.SupplementBreakdownChart),
+  { loading: () => <ChartSkeleton /> }
+);
+
+const EmploymentChart = dynamic(
+  () => import("@/components/app/charts/EmploymentChart").then(mod => mod.EmploymentChart),
   { loading: () => <ChartSkeleton /> }
 );
 
@@ -156,6 +163,8 @@ export function StatsContent({ data }: StatsContentProps) {
     yearlyCumulative: data.yearlyCumulative,
     currentMonthBreakdown: data.currentMonthBreakdown,
     yearToDate: data.yearToDate,
+    employmentLast6Months: data.employmentLast6Months,
+    employmentYearlyAverage: data.employmentYearlyAverage,
   });
   const [isLoadingStats, setIsLoadingStats] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -243,6 +252,8 @@ export function StatsContent({ data }: StatsContentProps) {
         yearlyCumulative: cachedData.yearlyCumulative,
         currentMonthBreakdown: cachedData.currentMonthBreakdown,
         yearToDate: cachedData.yearToDate,
+        employmentLast6Months: cachedData.employmentLast6Months,
+        employmentYearlyAverage: cachedData.employmentYearlyAverage,
       });
       return;
     }
@@ -270,6 +281,8 @@ export function StatsContent({ data }: StatsContentProps) {
           yearlyCumulative: payload.yearlyCumulative,
           currentMonthBreakdown: payload.currentMonthBreakdown,
           yearToDate: payload.yearToDate,
+          employmentLast6Months: payload.employmentLast6Months,
+          employmentYearlyAverage: payload.employmentYearlyAverage,
         });
       })
       .catch((error) => {
@@ -632,6 +645,25 @@ export function StatsContent({ data }: StatsContentProps) {
             <ChartSkeleton />
           ) : (
             <DayOfWeekChart data={chartData.byDayOfWeek} />
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Employment percentage chart */}
+      <Card className={`border-border bg-surface-primary overflow-hidden ${animationClass}`}>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-xl font-bold text-text-primary">
+            {t.components.charts.employment.title}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          {!chartData ? (
+            <ChartSkeleton />
+          ) : (
+            <EmploymentChart
+              data={chartData.employmentLast6Months}
+              yearlyAverage={chartData.employmentYearlyAverage}
+            />
           )}
         </CardContent>
       </Card>

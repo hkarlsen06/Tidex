@@ -1,10 +1,9 @@
 'use client';
 
-import { useState } from 'react';
 import { Button } from '@/components/app/Button';
 import { Card } from '@/components/app/Card';
 import { InfoIcon } from 'lucide-react';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/app/Tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/app/Tooltip';
 import { SupplementsEditor, SupplementsData } from '@/components/settings/SupplementsEditor';
 import { useTranslations } from '@/lib/i18n/client';
 
@@ -24,7 +23,6 @@ export function SupplementsStep({
   onBack,
 }: SupplementsStepProps) {
   const { t } = useTranslations();
-  const [tooltipOpen, setTooltipOpen] = useState(false);
 
   const handleSkip = () => {
     setCustomSupplements(null);
@@ -80,32 +78,18 @@ export function SupplementsStep({
       <div className="space-y-2">
         <div className="flex items-start gap-2">
           <h2 className="text-2xl font-bold">{t.onboarding.supplementsStep.title}</h2>
-          <Tooltip open={tooltipOpen} onOpenChange={setTooltipOpen} delayDuration={0}>
-            <TooltipTrigger
-              asChild
-              onPointerDown={(e) => e.preventDefault()}
-            >
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setTooltipOpen(!tooltipOpen);
-                }}
-                className="touch-manipulation mt-1"
-              >
-                <InfoIcon className="h-5 w-5 text-text-muted cursor-pointer hover:text-text-primary transition-colors" />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent
-              className="max-w-xs bg-surface-primary border-border text-text-primary"
-              onPointerDownOutside={() => setTooltipOpen(false)}
-              onEscapeKeyDown={() => setTooltipOpen(false)}
-            >
-              <p>
-                {t.onboarding.supplementsStep.tooltipText}
-              </p>
-            </TooltipContent>
-          </Tooltip>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button type="button" className="touch-manipulation mt-1">
+                  <InfoIcon className="h-5 w-5 text-text-muted cursor-pointer hover:text-text-primary transition-colors" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent className="max-w-xs">
+                <p>{t.onboarding.supplementsStep.tooltipText}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
         <p className="text-text-secondary">
           {t.onboarding.supplementsStep.customDescription}

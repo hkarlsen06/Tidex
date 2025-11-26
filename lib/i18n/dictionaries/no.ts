@@ -643,7 +643,7 @@ export const no = {
           description: 'Administrer ditt abonnement',
         },
         display: {
-          label: 'Utseende',
+          label: 'Visning',
           description: 'Tilpass hvordan appen ser ut',
         },
         data: {
@@ -937,7 +937,7 @@ export const no = {
         },
       },
       display: {
-        title: 'Utseende',
+        title: 'Visning',
         subtitle: 'Tilpass hvordan appen ser ut',
         theme: {
           label: 'Tema',
@@ -1201,6 +1201,13 @@ export const no = {
         projected: '(prognose)',
         thisMonth: 'denne mnd',
         lastMonthShort: 'forrige mnd',
+      },
+      employment: {
+        title: 'Stillingsprosent',
+        yearlyAverage: 'i snitt dette året',
+        averageInfo: 'Gjennomsnittet er kun beregnet basert på måneder med registrerte vakter.',
+        averageInfoLabel: 'Info om gjennomsnitt',
+        employment: 'stilling',
       },
     },
     supplementsEditor: {
