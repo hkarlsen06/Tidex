@@ -92,7 +92,24 @@ function calculateCountdown(
   const totalSeconds = Math.floor(absDiffMs / 1000);
   const totalMinutes = Math.floor(absDiffMs / (1000 * 60));
   const totalHours = Math.floor(absDiffMs / (1000 * 60 * 60));
-  const totalDays = Math.floor(absDiffMs / (1000 * 60 * 60 * 24));
+
+  // Count midnight crossings for more intuitive "days" display
+  // Users perceive "1 day" as "tomorrow", not "24 hours from now"
+  const countMidnightCrossings = (from: Date, to: Date): number => {
+    // Normalize to start of day (midnight)
+    const fromMidnight = new Date(from);
+    fromMidnight.setHours(0, 0, 0, 0);
+    const toMidnight = new Date(to);
+    toMidnight.setHours(0, 0, 0, 0);
+
+    // Count days between midnights
+    const diffDays = Math.round((toMidnight.getTime() - fromMidnight.getTime()) / (1000 * 60 * 60 * 24));
+    return Math.abs(diffDays);
+  };
+
+  const midnightDays = isFuture
+    ? countMidnightCrossings(now, startDateTime)
+    : countMidnightCrossings(startDateTime, now);
 
   const rt = t.common.relativeTime;
 
@@ -126,8 +143,8 @@ function calculateCountdown(
     };
   }
 
-  // For shifts very close in time (less than 24 hours)
-  if (totalHours < 24) {
+  // For shifts on the same day (0 midnight crossings), show hours/minutes
+  if (midnightDays === 0) {
     const h = Math.floor(totalMinutes / 60);
     const m = totalMinutes % 60;
 
@@ -196,46 +213,10 @@ function calculateCountdown(
     };
   }
 
-  // Check if tomorrow
-  const tomorrow = new Date(now);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const isTomorrow =
-    startDateTime.getDate() === tomorrow.getDate() &&
-    startDateTime.getMonth() === tomorrow.getMonth() &&
-    startDateTime.getFullYear() === tomorrow.getFullYear();
-
-  if (isFuture && isTomorrow) {
+  // 1 midnight crossing = tomorrow/yesterday (more user-friendly than "In 1 day")
+  if (midnightDays === 1) {
     return {
-      text: rt.tomorrow,
-      isUpcoming: true,
-      isActive: false,
-      progress: 0,
-      diffMs,
-    };
-  }
-
-  // Check if yesterday
-  const yesterday = new Date(now);
-  yesterday.setDate(yesterday.getDate() - 1);
-  const isYesterday =
-    startDateTime.getDate() === yesterday.getDate() &&
-    startDateTime.getMonth() === yesterday.getMonth() &&
-    startDateTime.getFullYear() === yesterday.getFullYear();
-
-  if (!isFuture && isYesterday) {
-    return {
-      text: rt.yesterday,
-      isUpcoming: false,
-      isActive: false,
-      progress: 0,
-      diffMs,
-    };
-  }
-
-  // For multiple days
-  if (totalDays === 1) {
-    return {
-      text: isFuture ? rt.inOneDay : rt.oneDayAgo,
+      text: isFuture ? rt.tomorrow : rt.yesterday,
       isUpcoming: isFuture,
       isActive: false,
       progress: 0,
@@ -245,8 +226,8 @@ function calculateCountdown(
 
   return {
     text: isFuture
-      ? interpolate(rt.inDays, { days: totalDays })
-      : interpolate(rt.daysAgo, { days: totalDays }),
+      ? interpolate(rt.inDays, { days: midnightDays })
+      : interpolate(rt.daysAgo, { days: midnightDays }),
     isUpcoming: isFuture,
     isActive: false,
     progress: 0,
