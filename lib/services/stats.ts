@@ -72,16 +72,6 @@ export type DailyData = {
 };
 
 /**
- * Day of week aggregation
- */
-export type DayOfWeekData = {
-  day: string;
-  fullDay: string; // "Mandag", "Tirsdag", etc.
-  averageEarnings: number;
-  totalShifts: number;
-};
-
-/**
  * Daily cumulative comparison data
  */
 export type DailyCumulativeData = {
@@ -184,7 +174,6 @@ export type StatsData = {
   };
   readonly last6Months: MonthlyData[];
   readonly thisWeek: DailyData[];
-  readonly byDayOfWeek: DayOfWeekData[];
   readonly thisMonthCumulative: DailyCumulativeData[];
   readonly yearlyCumulative: YearlyCumulativeData[];
   readonly monthlySummaries: MonthlySummary[];
@@ -284,25 +273,27 @@ export const StatsServiceLive = Layer.effect(
     const shifts = yield* ShiftsService;
 
     /**
-     * Get date range for stats based on target year
+     * Get date range for stats based on target year and month
+     * Includes previous year months needed for "last 6 months" charts
      */
     const getStatsDateRange = (options: StatsOptions): { startDate: string; endDate: string } => {
-      const { year: currentYear } = getCurrentYearMonth();
+      const { year: currentYear, month: currentMonth } = getCurrentYearMonth();
       const targetYear = options.year ?? currentYear;
+      const targetMonth = options.month ?? currentMonth;
 
-      if (targetYear === currentYear) {
-        // Current year: load full year for comprehensive stats
-        return {
-          startDate: getCurrentYearStart(),
-          endDate: getCurrentYearEnd(),
-        };
-      } else {
-        // Past/future year: load that specific year
-        return {
-          startDate: `${targetYear}-01-01`,
-          endDate: `${targetYear}-12-31`,
-        };
-      }
+      // Calculate the earliest month needed (5 months before target month)
+      // This is needed for the "last 6 months" charts
+      const earliestDate = new Date(Date.UTC(targetYear, targetMonth - 1 - 5, 1));
+      const earliestYear = earliestDate.getUTCFullYear();
+      const earliestMonth = earliestDate.getUTCMonth() + 1;
+
+      // Start date: first day of the earliest month needed
+      const startDate = `${earliestYear}-${String(earliestMonth).padStart(2, "0")}-01`;
+
+      // End date: last day of target year
+      const endDate = `${targetYear}-12-31`;
+
+      return { startDate, endDate };
     };
 
     /**
@@ -567,39 +558,6 @@ export const StatsServiceLive = Layer.effect(
           });
         }
 
-        // By day of week aggregation (using year-to-date data for consistency)
-        const dayOfWeekMap = new Map<number, { earnings: number; hours: number; shifts: number }>();
-
-        for (const shift of ytdShifts) {
-          const shiftDate = parseDateAsUTC(shift.shift_date);
-          const dayOfWeek = shiftDate.getUTCDay();
-
-          const existing = dayOfWeekMap.get(dayOfWeek) || { earnings: 0, hours: 0, shifts: 0 };
-          dayOfWeekMap.set(dayOfWeek, {
-            earnings: existing.earnings + (shift.computed.gross || 0),
-            hours: existing.hours + (shift.computed.paidHours || 0),
-            shifts: existing.shifts + 1,
-          });
-        }
-
-        // Prefer Monday first; only include Sunday if user has worked Sunday shifts
-        const sundayShifts = dayOfWeekMap.get(0)?.shifts ?? 0;
-        const dayOrder = [1, 2, 3, 4, 5, 6]; // Monday through Saturday
-        if (sundayShifts > 0) {
-          dayOrder.push(0); // Append Sunday last
-        }
-
-        const byDayOfWeek: DayOfWeekData[] = dayOrder.map((dayIndex) => {
-          const data = dayOfWeekMap.get(dayIndex) || { earnings: 0, hours: 0, shifts: 0 };
-          const averageEarnings = data.shifts > 0 ? data.earnings / data.shifts : 0;
-          return {
-            day: DAY_NAMES[dayIndex],
-            fullDay: FULL_DAY_NAMES[dayIndex],
-            averageEarnings,
-            totalShifts: data.shifts,
-          };
-        });
-
         // Monthly cumulative comparison (current month vs last month by day)
         const thisMonthCumulative: DailyCumulativeData[] = [];
 
@@ -853,9 +811,10 @@ export const StatsServiceLive = Layer.effect(
           currentMonday.setUTCDate(currentMonday.getUTCDate() + 7);
         }
 
-        // Build last 6 months employment data
+        // Build employment data for a wider window (6 months before + 5 months after focus month)
+        // This allows the frontend to shift the 6-month window forward if there are leading zeros
         const employmentLast6Months: EmploymentMonthlyData[] = [];
-        for (let i = 5; i >= 0; i--) {
+        for (let i = 5; i >= -5; i--) {
           const targetDate = new Date(Date.UTC(focusYear, focusMonth - 1 - i, 1));
           const { year, month } = getYearMonth(targetDate);
           const monthKey = `${year}-${String(month).padStart(2, "0")}`;
@@ -919,7 +878,6 @@ export const StatsServiceLive = Layer.effect(
           },
           last6Months: last6Months as readonly MonthlyData[],
           thisWeek: thisWeek as readonly DailyData[],
-          byDayOfWeek: byDayOfWeek as readonly DayOfWeekData[],
           thisMonthCumulative: thisMonthCumulative as readonly DailyCumulativeData[],
           yearlyCumulative: yearlyCumulative as readonly YearlyCumulativeData[],
           monthlySummaries: monthlySummaries as readonly MonthlySummary[],

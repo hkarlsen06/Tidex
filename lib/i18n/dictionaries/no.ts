@@ -351,9 +351,9 @@ export const no = {
         thisWeek: 'Denne uken',
         average: 'Gjennomsnitt',
         yearTotal: 'totalt',
+        totalFor: 'Totalt for',
         cumulativeProgress: 'Kumulativ utvikling',
         last6Months: 'Siste 6 måneder',
-        averageByWeekday: 'Gjennomsnitt per ukedag',
         total: 'Totalt',
       },
       monthlyGoal: {

@@ -14,6 +14,7 @@ import { useTranslations } from "@/lib/i18n/client";
 type EmploymentChartProps = {
   data: EmploymentMonthlyData[];
   yearlyAverage: number | null;
+  focusYear: number;
 };
 
 const chartConfig = {
@@ -30,7 +31,8 @@ function CustomXAxisTick({
   payload,
   data,
   currentMonth,
-  currentYear
+  currentYear,
+  focusYear,
 }: {
   x: number;
   y: number;
@@ -38,9 +40,18 @@ function CustomXAxisTick({
   data: EmploymentMonthlyData[];
   currentMonth: number;
   currentYear: number;
+  focusYear: number;
 }) {
   const monthData = data.find(d => d.month === payload.value);
   const isCurrentMonth = monthData?.monthNumber === currentMonth && monthData?.year === currentYear;
+  const isPreviousYear = monthData?.year !== focusYear;
+
+  // Grey out labels from previous years
+  const fill = isPreviousYear
+    ? "hsl(var(--muted-foreground))"
+    : isCurrentMonth
+      ? "hsl(var(--brand-gradientMid))"
+      : "hsl(var(--foreground))";
 
   return (
     <g transform={`translate(${x},${y})`}>
@@ -50,7 +61,7 @@ function CustomXAxisTick({
         dy={8}
         textAnchor="middle"
         fontSize={16}
-        fill={isCurrentMonth ? "hsl(var(--brand-gradientMid))" : "hsl(var(--foreground))"}
+        fill={fill}
         fontWeight={isCurrentMonth ? 600 : 400}
       >
         {payload.value}
@@ -59,11 +70,50 @@ function CustomXAxisTick({
   );
 }
 
-export function EmploymentChart({ data, yearlyAverage }: EmploymentChartProps) {
+export function EmploymentChart({ data, yearlyAverage, focusYear }: EmploymentChartProps) {
   const { t } = useTranslations();
   const now = new Date();
   const currentMonth = now.getMonth() + 1; // Date#getMonth is 0-based
   const currentYear = now.getFullYear();
+
+  // Select a 6-month window from the data, shifting forward to avoid leading zeros.
+  // The backend provides 11 months (6 before + 5 after focus month).
+  // We want to show 6 consecutive months, preferring to start from the first non-zero month.
+  // Only show fewer than 6 months if both ends of the possible window have zeros.
+  const filteredData = (() => {
+    const TARGET_MONTHS = 6;
+
+    // Find first non-zero index
+    const firstNonZeroIndex = data.findIndex(d => d.averagePercentage > 0);
+
+    // If all zeros, show first 6 months
+    if (firstNonZeroIndex === -1) {
+      return data.slice(0, TARGET_MONTHS);
+    }
+
+    // Calculate the ideal start index to show 6 months starting from first non-zero
+    // But we need to ensure we don't go past the end of the data
+    const idealStart = firstNonZeroIndex;
+    const maxStart = data.length - TARGET_MONTHS;
+
+    // Clamp the start index
+    const startIndex = Math.min(idealStart, Math.max(0, maxStart));
+    const endIndex = startIndex + TARGET_MONTHS;
+
+    // Extract the 6-month window
+    let window = data.slice(startIndex, endIndex);
+
+    // If the window still has leading zeros AND trailing zeros, trim to just the data range
+    const windowFirstNonZero = window.findIndex(d => d.averagePercentage > 0);
+    const windowLastNonZero = window.findLastIndex(d => d.averagePercentage > 0);
+
+    if (windowFirstNonZero > 0 && windowLastNonZero < window.length - 1) {
+      // Both ends have zeros - show only the months with data
+      window = window.slice(windowFirstNonZero, windowLastNonZero + 1);
+    }
+
+    return window;
+  })();
 
   return (
     <div className="flex flex-col">
@@ -91,7 +141,7 @@ export function EmploymentChart({ data, yearlyAverage }: EmploymentChartProps) {
 
       {/* Bar chart */}
       <ChartContainer config={chartConfig} className="h-[260px] w-full pt-4">
-        <BarChart data={data} margin={{ top: 12, right: 16, bottom: 16, left: 16 }}>
+        <BarChart data={filteredData} margin={{ top: 12, right: 16, bottom: 16, left: 16 }}>
           <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
           <XAxis
             dataKey="month"
@@ -101,9 +151,10 @@ export function EmploymentChart({ data, yearlyAverage }: EmploymentChartProps) {
             tick={(props) => (
               <CustomXAxisTick
                 {...props}
-                data={data}
+                data={filteredData}
                 currentMonth={currentMonth}
                 currentYear={currentYear}
+                focusYear={focusYear}
               />
             )}
             tickMargin={8}
@@ -142,22 +193,37 @@ export function EmploymentChart({ data, yearlyAverage }: EmploymentChartProps) {
           />
           <Bar
             dataKey="averagePercentage"
-            stroke="hsl(var(--brand-gradientMid))"
-            strokeWidth={2}
             radius={[8, 8, 0, 0]}
+            minPointSize={0}
           >
-            {data.map((entry) => {
+            {filteredData.map((entry) => {
               const isCurrentMonth =
                 entry.monthNumber === currentMonth && entry.year === currentYear;
+              const isPreviousYear = entry.year !== focusYear;
+
+              // Determine fill color: grey for previous year, brand color for current year
+              let fill: string;
+              let stroke: string;
+              if (isPreviousYear) {
+                // Grey for months from a different year than the focus year
+                fill = "hsl(var(--muted-foreground) / 0.3)";
+                stroke = "hsl(var(--muted-foreground) / 0.5)";
+              } else if (isCurrentMonth) {
+                // Solid brand color for the actual current month
+                fill = "hsl(var(--brand-gradientMid))";
+                stroke = "hsl(var(--brand-gradientMid))";
+              } else {
+                // Dimmed brand color for other months in the focus year
+                fill = "hsl(var(--brand-gradientMid) / 0.2)";
+                stroke = "hsl(var(--brand-gradientMid))";
+              }
 
               return (
                 <Cell
                   key={`${entry.year}-${entry.monthNumber}`}
-                  fill={
-                    isCurrentMonth
-                      ? "hsl(var(--brand-gradientMid))"
-                      : "hsl(var(--brand-gradientMid) / 0.2)"
-                  }
+                  fill={fill}
+                  stroke={stroke}
+                  strokeWidth={2}
                 />
               );
             })}

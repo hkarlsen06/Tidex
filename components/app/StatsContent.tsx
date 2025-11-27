@@ -9,6 +9,7 @@ import type { StatsData } from "@/data-access/stats";
 import { MonthlyGoalProgress } from "@/components/app/MonthlyGoalProgress";
 import { TrendingUp, TrendingDown, Clock, Briefcase, DollarSign } from "lucide-react";
 import { MonthPicker } from "@/components/app/MonthPicker";
+import { YearPicker } from "@/components/app/YearPicker";
 import { useMonth } from "@/components/app/MonthContext";
 import { useTranslations } from "@/lib/i18n/client";
 import { useParams } from "next/navigation";
@@ -22,7 +23,6 @@ type ChartData = Pick<
   StatsData,
   | 'last6Months'
   | 'thisWeek'
-  | 'byDayOfWeek'
   | 'thisMonthCumulative'
   | 'yearlyCumulative'
   | 'currentMonthBreakdown'
@@ -43,11 +43,6 @@ const MonthlyBarChart = dynamic(
 
 const WeeklyBarChart = dynamic(
   () => import("@/components/app/charts/WeeklyBarChart").then(mod => mod.WeeklyBarChart),
-  { loading: () => <ChartSkeleton /> }
-);
-
-const DayOfWeekChart = dynamic(
-  () => import("@/components/app/charts/DayOfWeekChart").then(mod => mod.DayOfWeekChart),
   { loading: () => <ChartSkeleton /> }
 );
 
@@ -148,17 +143,29 @@ export function StatsContent({ data }: StatsContentProps) {
   const couldNotUpdateError = t.pages.stats.errors.couldNotUpdate;
   const {
     selectedMonth,
+    setSelectedMonth,
     goToPreviousMonth,
     goToNextMonth,
     direction,
   } = useMonth();
+
+  // Navigate to January of the previous year
+  const goToPreviousYear = useCallback(() => {
+    const previousYear = selectedMonth.getFullYear() - 1;
+    setSelectedMonth(new Date(previousYear, 0, 1));
+  }, [selectedMonth, setSelectedMonth]);
+
+  // Navigate to January of the next year
+  const goToNextYear = useCallback(() => {
+    const nextYear = selectedMonth.getFullYear() + 1;
+    setSelectedMonth(new Date(nextYear, 0, 1));
+  }, [selectedMonth, setSelectedMonth]);
 
   const [activeData, setActiveData] = useState<StatsData>(data);
   // Initialize chart data from SSR props to avoid unnecessary skeleton UI
   const [chartData, setChartData] = useState<ChartData | null>({
     last6Months: data.last6Months,
     thisWeek: data.thisWeek,
-    byDayOfWeek: data.byDayOfWeek,
     thisMonthCumulative: data.thisMonthCumulative,
     yearlyCumulative: data.yearlyCumulative,
     currentMonthBreakdown: data.currentMonthBreakdown,
@@ -247,7 +254,6 @@ export function StatsContent({ data }: StatsContentProps) {
       setChartData({
         last6Months: cachedData.last6Months,
         thisWeek: cachedData.thisWeek,
-        byDayOfWeek: cachedData.byDayOfWeek,
         thisMonthCumulative: cachedData.thisMonthCumulative,
         yearlyCumulative: cachedData.yearlyCumulative,
         currentMonthBreakdown: cachedData.currentMonthBreakdown,
@@ -276,7 +282,6 @@ export function StatsContent({ data }: StatsContentProps) {
         setChartData({
           last6Months: payload.last6Months,
           thisWeek: payload.thisWeek,
-          byDayOfWeek: payload.byDayOfWeek,
           thisMonthCumulative: payload.thisMonthCumulative,
           yearlyCumulative: payload.yearlyCumulative,
           currentMonthBreakdown: payload.currentMonthBreakdown,
@@ -443,17 +448,10 @@ export function StatsContent({ data }: StatsContentProps) {
 
   return (
     <>
-      {/* Loading overlay - fixed to viewport center, covers page content */}
+      {/* Loading indicator - subtle spinner next to month picker */}
       {isLoadingStats && (
-        <div className="fixed inset-x-0 top-0 bottom-[calc(5rem+env(safe-area-inset-bottom))] md:bottom-20 bg-background/70 backdrop-blur-xs z-50 flex items-center justify-center">
-          <div className="bg-surface-primary border border-border rounded-lg p-4 shadow-lg">
-            <div className="flex items-center gap-3">
-              <div className="w-6 h-6 border-2 border-brand-gradient-start border-t-transparent rounded-full animate-spin" />
-              <p className="text-sm font-medium text-text-primary">
-                {t.common.loading || "Loading..."}
-              </p>
-            </div>
-          </div>
+        <div className="fixed top-4 right-4 z-50">
+          <div className="w-5 h-5 border-2 border-brand-gradient-start border-t-transparent rounded-full animate-spin" />
         </div>
       )}
 
@@ -597,10 +595,17 @@ export function StatsContent({ data }: StatsContentProps) {
         />
       </div>
 
-      {/* Year to date summary header - spans full width on desktop */}
-      <h2 className="text-xl font-bold text-text-primary pl-6 md:col-span-full">
-        {selectedYear} {t.pages.stats.cards.yearTotal}
-      </h2>
+      {/* Year to date summary header with year picker - spans full width on desktop */}
+      <div className="flex items-center gap-2 md:col-span-full">
+        <span className="text-xl font-bold text-text-primary pl-3">
+          {t.pages.stats.cards.totalFor}
+        </span>
+        <YearPicker
+          year={selectedYear}
+          onPreviousYear={goToPreviousYear}
+          onNextYear={goToNextYear}
+        />
+      </div>
 
       {/* Cumulative earnings chart */}
       <Card className={`border-border bg-surface-primary ${animationClass}`}>
@@ -633,22 +638,6 @@ export function StatsContent({ data }: StatsContentProps) {
         </CardContent>
       </Card>
 
-      {/* Day of week breakdown */}
-      <Card className={`border-border bg-surface-primary ${animationClass}`}>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-xl font-bold text-text-primary">
-            {t.pages.stats.cards.averageByWeekday}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="px-3 pb-4 pt-1">
-          {!chartData ? (
-            <ChartSkeleton />
-          ) : (
-            <DayOfWeekChart data={chartData.byDayOfWeek} />
-          )}
-        </CardContent>
-      </Card>
-
       {/* Employment percentage chart */}
       <Card className={`border-border bg-surface-primary overflow-hidden ${animationClass}`}>
         <CardHeader className="pb-3">
@@ -663,6 +652,7 @@ export function StatsContent({ data }: StatsContentProps) {
             <EmploymentChart
               data={chartData.employmentLast6Months}
               yearlyAverage={chartData.employmentYearlyAverage}
+              focusYear={focusYear}
             />
           )}
         </CardContent>
