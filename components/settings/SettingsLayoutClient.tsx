@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { SettingsNav } from "./SettingsNav";
+import { SettingsBackButton } from "./SettingsBackButton";
 
 export function SettingsLayoutClient({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -21,6 +22,11 @@ export function SettingsLayoutClient({ children }: { children: ReactNode }) {
   // On deep routes, show sidebar layout
   return (
     <>
+      {/* Mobile/Tablet: Back button (hidden on desktop where sidebar is visible) */}
+      <div className="container mx-auto max-w-2xl pt-4 lg:hidden">
+        <SettingsBackButton />
+      </div>
+
       {/* Mobile/Tablet: vertical stack. Desktop: side-by-side, break out of parent container */}
       <div className="flex w-full flex-col lg:relative lg:left-1/2 lg:right-1/2 lg:-ml-[50vw] lg:-mr-[50vw] lg:w-screen lg:flex-row lg:gap-0 lg:px-0 lg:items-start lg:pt-6">
         {/* Navigation Sidebar - Left side, sticky on desktop */}

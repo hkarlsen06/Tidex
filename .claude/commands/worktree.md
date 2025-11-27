@@ -32,12 +32,17 @@ Create a git worktree for feature development following the project's worktree w
    cd ../tidex-claude-<descriptive-name>
    ```
 
-6. **Install dependencies:**
+6. **Copy environment files** (worktrees don't share untracked files):
+   ```bash
+   cp ../tidex/.env.local .env.local
+   ```
+
+7. **Install dependencies:**
    ```bash
    npm install
    ```
 
-7. **Confirm to the user:**
+8. **Confirm to the user:**
    - Let them know the worktree is ready
    - Show the branch name and directory path
    - Remind them that when done, they can create a PR to merge back to main
@@ -46,5 +51,6 @@ Create a git worktree for feature development following the project's worktree w
 
 - Branch naming convention: `claude/<descriptive-name>`
 - Worktree directory: `../tidex-claude-<descriptive-name>` (sibling to main repo)
+- Always copy `.env.local` since worktrees don't share untracked files
 - Always install dependencies since worktrees don't share node_modules
 - Keep the branch name short but descriptive
