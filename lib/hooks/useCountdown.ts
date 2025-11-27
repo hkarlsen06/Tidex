@@ -270,24 +270,9 @@ export function useCountdown({
   t,
   highPrecision = true,
 }: UseCountdownOptions): UseCountdownResult {
-  // Compute initial state synchronously
-  const initialResult = useMemo((): UseCountdownResult => {
-    if (!shiftDate || !shiftTime) {
-      return { text: null, isActive: false, progress: 0 };
-    }
-    const countdownResult = calculateCountdown(
-      shiftDate,
-      shiftTime,
-      endTime ?? null,
-      t,
-      highPrecision
-    );
-    return {
-      text: countdownResult.text,
-      isActive: countdownResult.isActive,
-      progress: countdownResult.progress,
-    };
-  }, [shiftDate, shiftTime, endTime, t, highPrecision]);
+  // Track whether we've hydrated to avoid server/client mismatch
+  // Server always returns the "not yet calculated" state
+  const [isHydrated, setIsHydrated] = useState(false);
 
   // Create a stable key from inputs to reset state when they change
   const inputKey = useMemo(
@@ -295,12 +280,34 @@ export function useCountdown({
     [shiftDate, shiftTime, endTime, highPrecision]
   );
 
-  const [result, setResult] = useState<UseCountdownResult>(initialResult);
+  // Initial state: no progress, not active (safe for SSR)
+  const [result, setResult] = useState<UseCountdownResult>({
+    text: null,
+    isActive: false,
+    progress: 0,
+  });
   const [stateKey, setStateKey] = useState(inputKey);
 
   // Track interval frequency to trigger re-subscription when it needs to change
-  const [intervalMs, setIntervalMs] = useState<number>(() => {
-    if (!shiftDate || !shiftTime) return 60000;
+  // Start with a slower interval; will be adjusted after hydration
+  const [intervalMs, setIntervalMs] = useState<number>(60000);
+
+  // Reset state when inputs change - using a key comparison to detect changes
+  // and updating state only when the key changes (not on every render)
+  if (inputKey !== stateKey) {
+    setStateKey(inputKey);
+    // Reset to safe state; actual values will be computed in hydration effect
+    setResult({ text: null, isActive: false, progress: 0 });
+  }
+
+  // Hydration effect: calculate initial values only on client after mount
+  // This prevents server/client mismatch due to clock differences
+  useEffect(() => {
+    if (!shiftDate || !shiftTime) {
+      setIsHydrated(true);
+      return;
+    }
+
     const countdownResult = calculateCountdown(
       shiftDate,
       shiftTime,
@@ -308,21 +315,54 @@ export function useCountdown({
       t,
       highPrecision
     );
+
+    setResult({
+      text: countdownResult.text,
+      isActive: countdownResult.isActive,
+      progress: countdownResult.progress,
+    });
+
+    // Set appropriate interval based on how close the shift is
     const sixHoursMs = 6 * 60 * 60 * 1000;
     const isClose = Math.abs(countdownResult.diffMs) < sixHoursMs;
     const needsFrequentUpdates = countdownResult.isActive || (highPrecision && isClose);
-    return needsFrequentUpdates ? 1000 : 60000;
-  });
+    setIntervalMs(needsFrequentUpdates ? 1000 : 60000);
 
-  // Reset state when inputs change - using a key comparison to detect changes
-  // and updating state only when the key changes (not on every render)
-  if (inputKey !== stateKey) {
-    setStateKey(inputKey);
-    setResult(initialResult);
-  }
+    setIsHydrated(true);
+  }, []); // Run only once on mount
 
+  // Effect to handle input changes after initial hydration
   useEffect(() => {
-    if (!shiftDate || !shiftTime) {
+    // Skip during initial render and before hydration
+    if (!isHydrated || !shiftDate || !shiftTime) {
+      return;
+    }
+
+    // Recalculate immediately when inputs change
+    const countdownResult = calculateCountdown(
+      shiftDate,
+      shiftTime,
+      endTime ?? null,
+      t,
+      highPrecision
+    );
+
+    setResult({
+      text: countdownResult.text,
+      isActive: countdownResult.isActive,
+      progress: countdownResult.progress,
+    });
+
+    // Update interval if needed
+    const sixHoursMs = 6 * 60 * 60 * 1000;
+    const isClose = Math.abs(countdownResult.diffMs) < sixHoursMs;
+    const needsFrequentUpdates = countdownResult.isActive || (highPrecision && isClose);
+    setIntervalMs(needsFrequentUpdates ? 1000 : 60000);
+  }, [isHydrated, shiftDate, shiftTime, endTime, t, highPrecision]);
+
+  // Interval effect: updates countdown periodically (only after hydration)
+  useEffect(() => {
+    if (!isHydrated || !shiftDate || !shiftTime) {
       return;
     }
 
@@ -355,7 +395,7 @@ export function useCountdown({
     }, intervalMs);
 
     return () => clearInterval(interval);
-  }, [shiftDate, shiftTime, endTime, t, highPrecision, intervalMs]);
+  }, [isHydrated, shiftDate, shiftTime, endTime, t, highPrecision, intervalMs]);
 
   return result;
 }
