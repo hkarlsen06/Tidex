@@ -172,6 +172,48 @@
     display: none; /* Chrome, Safari, and Opera */
   }
 
+  /* Always show scrollbar indicator for scrollable content */
+  .show-scrollbar {
+    scrollbar-width: thin; /* Firefox */
+    -ms-overflow-style: scrollbar; /* IE and Edge */
+    overflow-x: scroll;
+    position: relative;
+    padding-bottom: 12px; /* Space for fake scrollbar */
+  }
+
+  /* Fake scrollbar track - always visible */
+  .show-scrollbar::after {
+    content: "";
+    position: absolute;
+    bottom: 2px;
+    left: 8px;
+    right: 8px;
+    height: 5px;
+    background: hsl(var(--border) / 0.5);
+    border-radius: 3px;
+    pointer-events: none;
+  }
+
+  .show-scrollbar::-webkit-scrollbar {
+    display: block;
+    height: 8px;
+    width: 8px;
+  }
+
+  .show-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+    border-radius: 4px;
+  }
+
+  .show-scrollbar::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground) / 0.6);
+    border-radius: 4px;
+  }
+
+  .show-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground));
+  }
+
   .recharts-cartesian-axis-tick-value {
     font-size: 16px;
     line-height: 1;

@@ -6,6 +6,7 @@
  * Displays chat messages with markdown support
  */
 
+import type { ReactNode } from "react";
 import { useState } from "react";
 import { Card } from "@/components/app/Card";
 import { useTranslations } from "@/lib/i18n/client";
@@ -33,8 +34,42 @@ type MessageListProps = {
 const formatContent = (text: string | null | undefined) => {
   const safeText = `${text ?? ""}`;
 
-  // Split by lines first to handle headings
-  const lines = safeText.split("\n");
+  // First, split by code blocks to handle them separately
+  const codeBlockRegex = /```[\s\S]*?```/g;
+  const parts = safeText.split(codeBlockRegex);
+  const codeBlocks = safeText.match(codeBlockRegex) || [];
+
+  const result: ReactNode[] = [];
+
+  parts.forEach((part, partIndex) => {
+    // Process regular text
+    if (part) {
+      result.push(...formatRegularText(part, `part-${partIndex}`));
+    }
+
+    // Insert code block after this part (if exists)
+    if (codeBlocks[partIndex]) {
+      const codeContent = codeBlocks[partIndex]
+        .replace(/^```\w*\n?/, "") // Remove opening ``` with optional language
+        .replace(/\n?```$/, "");   // Remove closing ```
+
+      result.push(
+        <pre
+          key={`code-${partIndex}`}
+          className="my-2 px-3 py-2 bg-black/10 dark:bg-white/10 rounded-lg text-[13px] font-mono overflow-x-auto whitespace-pre show-scrollbar"
+        >
+          {codeContent}
+        </pre>
+      );
+    }
+  });
+
+  return result;
+};
+
+const formatRegularText = (text: string, keyPrefix: string): ReactNode[] => {
+  // Split by lines to handle headings
+  const lines = text.split("\n");
 
   return lines.map((line, lineIndex) => {
     // Check if line is a heading (## text)
@@ -51,7 +86,7 @@ const formatContent = (text: string | null | undefined) => {
 
         return (
           <span
-            key={`${lineIndex}-${index}`}
+            key={`${keyPrefix}-${lineIndex}-${index}`}
             className={isBold ? "font-semibold text-current" : undefined}
           >
             {content}
@@ -62,25 +97,25 @@ const formatContent = (text: string | null | undefined) => {
       // Render heading with appropriate styling
       if (level === 1) {
         return (
-          <h1 key={lineIndex} className="text-xl font-bold mb-2 mt-3">
+          <h1 key={`${keyPrefix}-${lineIndex}`} className="text-xl font-bold mb-2 mt-3">
             {formattedHeading}
           </h1>
         );
       } else if (level === 2) {
         return (
-          <h2 key={lineIndex} className="text-lg font-bold mb-1.5 mt-2.5">
+          <h2 key={`${keyPrefix}-${lineIndex}`} className="text-lg font-bold mb-1.5 mt-2.5">
             {formattedHeading}
           </h2>
         );
       } else if (level === 3) {
         return (
-          <h3 key={lineIndex} className="text-base font-semibold mb-1 mt-2">
+          <h3 key={`${keyPrefix}-${lineIndex}`} className="text-base font-semibold mb-1 mt-2">
             {formattedHeading}
           </h3>
         );
       } else {
         return (
-          <h4 key={lineIndex} className="text-sm font-semibold mb-1 mt-1.5">
+          <h4 key={`${keyPrefix}-${lineIndex}`} className="text-sm font-semibold mb-1 mt-1.5">
             {formattedHeading}
           </h4>
         );
@@ -94,7 +129,7 @@ const formatContent = (text: string | null | undefined) => {
 
       return (
         <span
-          key={`${lineIndex}-${index}`}
+          key={`${keyPrefix}-${lineIndex}-${index}`}
           className={isBold ? "font-semibold text-current" : undefined}
         >
           {content}
@@ -103,7 +138,7 @@ const formatContent = (text: string | null | undefined) => {
     });
 
     return (
-      <span key={lineIndex}>
+      <span key={`${keyPrefix}-${lineIndex}`}>
         {parts}
         {lineIndex < lines.length - 1 && "\n"}
       </span>
@@ -231,59 +266,57 @@ function MessageBubble({
   };
 
   return (
-    <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
-      <div className="relative w-full">
-        <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
-          <Card
-            className={`max-w-[94%] md:max-w-[75%] rounded-3xl shadow-app-sm ${
-              isUser
-                ? "bg-linear-to-br from-brand-gradient-start via-brand-gradient-mid to-brand-gradient-end text-white shadow-app"
-                : isToolCall
-                  ? "bg-surface-secondary/90 text-text-muted cursor-pointer hover:bg-surface-primary transition-colors border border-border/60"
-                  : "bg-surface-secondary/90 text-text-primary border border-border/60"
-            } backdrop-blur`}
-            onClick={isToolCall ? handleToolCallClick : undefined}
-          >
-            <div className="p-3 md:p-4 flex flex-col gap-1">
-              <div className={`text-[11px] font-semibold ${labelClass} whitespace-nowrap`}>
-                {isUser ? userLabel : isToolCall ? (toolCallSucceeded ? `Wagey • ${t.pages.wagey.worked}` : `Wagey • ${t.pages.wagey.working}`) : "Wagey"}
+    <div className="flex flex-col gap-2">
+      <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
+        <Card
+          className={`max-w-[94%] md:max-w-[75%] rounded-3xl shadow-app-sm ${
+            isUser
+              ? "bg-linear-to-br from-brand-gradient-start via-brand-gradient-mid to-brand-gradient-end text-white shadow-app"
+              : isToolCall
+                ? "bg-surface-secondary/90 text-text-muted cursor-pointer hover:bg-surface-primary transition-colors border border-border/60"
+                : "bg-surface-secondary/90 text-text-primary border border-border/60"
+          } backdrop-blur`}
+          onClick={isToolCall ? handleToolCallClick : undefined}
+        >
+          <div className="p-3 md:p-4 flex flex-col gap-1">
+            <div className={`text-[11px] font-semibold ${labelClass} whitespace-nowrap`}>
+              {isUser ? userLabel : isToolCall ? (toolCallSucceeded ? `Wagey • ${t.pages.wagey.worked}` : `Wagey • ${t.pages.wagey.working}`) : "Wagey"}
+            </div>
+            <div className="whitespace-pre-wrap wrap-break-words text-sm md:text-base leading-relaxed">
+              {formatContent(message.content)}
+              {isStreaming && <span className="animate-pulse ml-0.5">▋</span>}
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      {/* Tool call details - inline in chat flow */}
+      {showTooltip && isToolCall && (
+        <div className="flex justify-start">
+          <Card className="max-w-[94%] md:max-w-[85%] bg-surface-primary border border-border shadow-app-sm rounded-2xl">
+            <div className="p-3 max-h-80 overflow-y-auto">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-semibold text-text-primary">
+                  Tool Call Details
+                </span>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowTooltip(false);
+                  }}
+                  className="text-text-secondary hover:text-text-primary transition-colors px-2 py-1 rounded hover:bg-surface-secondary text-sm"
+                  aria-label="Close"
+                >
+                  ✕
+                </button>
               </div>
-              <div className="whitespace-pre-wrap wrap-break-words text-sm md:text-base leading-relaxed">
-                {formatContent(message.content)}
-                {isStreaming && <span className="animate-pulse ml-0.5">▋</span>}
-              </div>
+              <pre className="text-xs text-text-primary whitespace-pre font-mono bg-background p-2 rounded border border-border overflow-x-auto show-scrollbar">
+                {getToolResultDisplay()}
+              </pre>
             </div>
           </Card>
         </div>
-
-        {/* Tooltip showing tool result - positioned absolutely with full width on mobile */}
-        {showTooltip && isToolCall && (
-          <div className="absolute z-50 mt-2 left-0 right-0 w-full md:max-w-md">
-            <Card className="bg-surface-primary border border-border shadow-app-lg">
-              <div className="p-3 max-h-96 overflow-y-auto">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-semibold text-text-primary">
-                    Tool Call Details
-                  </span>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowTooltip(false);
-                    }}
-                    className="text-text-secondary hover:text-text-primary transition-colors px-2 py-1 rounded hover:bg-surface-secondary"
-                    aria-label="Close"
-                  >
-                    ✕
-                  </button>
-                </div>
-                <pre className="text-xs text-text-primary whitespace-pre-wrap font-mono bg-background p-2 rounded border border-border">
-                  {getToolResultDisplay()}
-                </pre>
-              </div>
-            </Card>
-          </div>
-        )}
-      </div>
+      )}
     </div>
   );
 }
