@@ -1072,10 +1072,6 @@ async function executeGetStatistics(
         data = statsData.thisWeek;
         message = `Statistikk denne uken`;
         break;
-      case "by_day_of_week":
-        data = statsData.byDayOfWeek;
-        message = `Statistikk per ukedag`;
-        break;
       case "monthly_goal":
         data = statsData.monthlyGoal;
         message = `Månedsmål status`;

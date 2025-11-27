@@ -352,9 +352,9 @@ export const en: Dictionary = {
         thisWeek: 'This week',
         average: 'Average',
         yearTotal: 'total',
+        totalFor: 'Total for',
         cumulativeProgress: 'Cumulative progress',
         last6Months: 'Last 6 months',
-        averageByWeekday: 'Average by weekday',
         total: 'Total',
       },
       monthlyGoal: {
