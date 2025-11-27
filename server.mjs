@@ -3,6 +3,7 @@ import { parse, fileURLToPath } from 'url';
 import next from 'next';
 import fs from 'fs';
 import path from 'path';
+import { execSync } from 'child_process';
 
 // Suppress util._extend deprecation warning from third-party dependencies
 process.noDeprecation = true;
@@ -18,10 +19,58 @@ const port = 3000;
 const app = next({ dev, hostname, port });
 const handle = app.getRequestHandler();
 
+const getRepoRootFromGit = () => {
+  try {
+    const gitCommonDir = execSync('git rev-parse --git-common-dir', {
+      cwd: __dirname,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim();
+
+    const resolvedGitDir = path.isAbsolute(gitCommonDir)
+      ? gitCommonDir
+      : path.join(__dirname, gitCommonDir);
+
+    return path.dirname(resolvedGitDir);
+  } catch {
+    return null;
+  }
+};
+
+const repoRoot = getRepoRootFromGit();
+
+const certDirCandidates = [
+  process.env.TIDEX_CERT_DIR && path.resolve(process.env.TIDEX_CERT_DIR),
+  path.join(__dirname, '.cert'),
+  repoRoot && path.join(repoRoot, '.cert'),
+].filter(Boolean);
+
+const resolveCertPath = (fileName) => {
+  for (const dir of certDirCandidates) {
+    const candidate = path.join(dir, fileName);
+    if (fs.existsSync(candidate)) {
+      return candidate;
+    }
+  }
+
+  return null;
+};
+
+const keyPath = resolveCertPath('local.tidex.no-key.pem');
+const certPath = resolveCertPath('local.tidex.no.pem');
+
+if (!keyPath || !certPath) {
+  throw new Error(
+    `Missing TLS dev certificates. Looked in: ${certDirCandidates.join(
+      ', ',
+    )}. Set TIDEX_CERT_DIR to override.`
+  );
+}
+
 // HTTPS options with local certificates
 const httpsOptions = {
-  key: fs.readFileSync(path.join(__dirname, '.cert', 'local.tidex.no-key.pem')),
-  cert: fs.readFileSync(path.join(__dirname, '.cert', 'local.tidex.no.pem')),
+  key: fs.readFileSync(keyPath),
+  cert: fs.readFileSync(certPath),
 };
 
 app.prepare().then(() => {

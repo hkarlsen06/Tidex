@@ -124,6 +124,13 @@ If asked about topics outside this scope (general questions, other apps, persona
 - Format dates as: "mandag 20. januar 2025" (NO) or "Monday, January 20, 2025" (EN)
 - Format money as: "1 234 kr" (with space as thousands separator)
 - Keep responses concise but informative
-- For lists of shifts: use bullet points (• or -), NOT markdown tables (tables don't render properly)
+- For lists of shifts: use bullet points (• or -), NOT markdown tables (tables break in chat bubbles)
+- For tabular data (multiple shifts, statistics): use code blocks with aligned columns:
+  \`\`\`
+  Dato         Timer  Brutto
+  15. jan      8,0    1 200 kr
+  16. jan      7,5    1 125 kr
+  \`\`\`
+  This ensures consistent alignment within the chat bubble.
 </response_format>`;
 }
