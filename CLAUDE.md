@@ -666,3 +666,81 @@ See `docs/error-handling-audit.md` for comprehensive error handling audit.
 - **NO README files** unless user explicitly asks
 - **Focus on code changes only** - communicate findings verbally in chat, not in files
 - When asked to investigate or analyze, report findings in chat responses, not new files
+
+## Git Worktree Workflow
+
+**Use git worktrees for feature development to keep main branch clean and organized.**
+
+### When to Create a Worktree
+
+**CREATE a worktree when:**
+- Implementing a new feature (multi-file changes, new functionality)
+- Making significant refactors or architectural changes
+- Working on changes that will span multiple files or components
+- The task is not a quick hotfix
+
+**DO NOT create a worktree when:**
+- Already on a non-main branch (stay on current worktree/branch)
+- Making a quick hotfix (single file, simple change)
+- Fixing a typo or small bug
+- The change is trivial and isolated
+
+**If unsure**, ask the user whether to create a worktree.
+
+### Worktree Creation Process
+
+1. **Check current branch first:**
+   ```bash
+   git branch --show-current
+   ```
+   - If NOT on `main`, stay on current branch - do NOT create a new worktree
+   - If on `main` and task is a feature, create a worktree
+
+2. **Create the worktree** (when on main with a feature task):
+   ```bash
+   # Create branch and worktree in sibling directory
+   git worktree add ../tidex-claude-<descriptive-name> -b claude/<descriptive-name>
+   ```
+   - Branch naming: `claude/<descriptive-name>` (e.g., `claude/add-dark-mode-toggle`)
+   - Worktree directory: `../tidex-claude-<descriptive-name>` (sibling to main repo)
+
+3. **Change to the worktree immediately:**
+   ```bash
+   cd ../tidex-claude-<descriptive-name>
+   ```
+
+4. **Install dependencies** (worktrees don't share node_modules):
+   ```bash
+   npm install
+   ```
+
+### Staying on Worktrees
+
+**CRITICAL: If you are already on a worktree (not on main), STAY on that worktree.**
+
+- New Claude instances on a worktree should continue working there
+- Do NOT create a new worktree just because the user asks for unrelated changes
+- The worktree is for all work in that session, not just the original task
+- Only switch back to main when explicitly asked or when creating a PR
+
+### Escalating to Worktree Mid-Session
+
+If changes are growing in scope (started as a quick fix but becoming larger):
+- Ask the user: "This is becoming a larger change. Would you like me to create a worktree to keep things organized?"
+- If they agree, stash or commit current changes, create worktree, and continue there
+
+### Worktree Commands Reference
+
+```bash
+# List all worktrees
+git worktree list
+
+# Create new worktree with new branch
+git worktree add ../tidex-claude-<name> -b claude/<name>
+
+# Remove a worktree (after merging)
+git worktree remove ../tidex-claude-<name>
+
+# Prune stale worktree references
+git worktree prune
+```
