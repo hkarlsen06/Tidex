@@ -200,7 +200,10 @@ export const TotalCard: React.FC<TotalCardProps> = ({
             )}
             <div
               key={`total-${total}`}
-              className={`mt-3 text-6xl font-bold text-brand-highlight ${getAnimationClasses(animationDirection)}`}
+              className={`mt-3 text-6xl font-bold text-brand-highlight whitespace-nowrap ${getAnimationClasses(animationDirection)}`}
+              style={{
+                fontSize: 'clamp(1.875rem, 12vw, 3.75rem)',
+              }}
             >{total === '0 kr' ? '---' : total}</div>
             {textOptions.length > 0 ? (
               <div
