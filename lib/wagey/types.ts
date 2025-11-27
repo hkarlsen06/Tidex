@@ -16,7 +16,12 @@ export type WageyInvocations = {
 /**
  * Access level determines both access and monthly message limit
  */
-export type WageyAccessLevel = "grandfathered" | "max" | "pro" | "free";
+export type WageyAccessLevel = "grandfathered" | "grandfathered_plan" | "max" | "pro" | "free";
+
+/**
+ * Trial message limit for free users testing Wagey (client-side only, resets on navigation)
+ */
+export const WAGEY_TRIAL_LIMIT = 3;
 
 /**
  * Complete access result returned by DAL functions
@@ -50,13 +55,14 @@ export type WageyInvocationResult = {
 
 /**
  * Monthly message limits per tier
- * null = unlimited (for grandfathered users)
+ * Note: Free users get WAGEY_TRIAL_LIMIT as a one-time trial (resets monthly like other tiers)
  */
 export const WAGEY_LIMITS = {
-  grandfathered: null,
-  max: 35,
-  pro: 20,
-  free: 0,
+  grandfathered: 40,
+  grandfathered_plan: 100,
+  max: 90,
+  pro: 30,
+  free: WAGEY_TRIAL_LIMIT,
 } as const satisfies Record<WageyAccessLevel, number | null>;
 
 /**

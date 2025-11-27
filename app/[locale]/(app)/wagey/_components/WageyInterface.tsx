@@ -585,9 +585,9 @@ export function WageyInterface({ userId, userName, wageyAccess }: WageyInterface
               </span>
             )
           )}
-          {/* Limit reached badge - shows upgrade prompt for Pro, limit reached for Max */}
+          {/* Limit reached badge - shows upgrade prompt for Pro/free, limit reached for Max/grandfathered */}
           {(limitReached || (remainingMessages !== null && remainingMessages === 0)) && (
-            wageyAccess.level === "pro" ? (
+            (wageyAccess.level === "pro" || wageyAccess.level === "free") ? (
               <Link
                 href={`/${locale}/settings/subscription`}
                 className="inline-flex items-center gap-1 rounded-full bg-linear-to-r from-brand-gradient-start/10 via-brand-gradient-mid/10 to-brand-gradient-end/10 border border-brand-gradient-mid/30 px-2 py-0.5 text-xs font-medium text-brand-gradient-mid hover:border-brand-gradient-mid/50 transition-colors"
@@ -634,8 +634,8 @@ export function WageyInterface({ userId, userName, wageyAccess }: WageyInterface
         </div>
       </div>
 
-      {/* Upgrade prompt for Pro users when limit reached */}
-      {limitReached && wageyAccess.level === "pro" && (
+      {/* Upgrade prompt for Pro and free users when limit reached */}
+      {limitReached && (wageyAccess.level === "pro" || wageyAccess.level === "free") && (
         <div className="relative z-15 shrink-0 px-4 pt-3">
           <div className="max-w-3xl mx-auto">
             <Link
@@ -644,14 +644,20 @@ export function WageyInterface({ userId, userName, wageyAccess }: WageyInterface
             >
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-text-primary">
-                  {t.pages.wagey.upgradePrompt.title}
+                  {wageyAccess.level === "free"
+                    ? t.pages.wagey.upgradePrompt.free.title
+                    : t.pages.wagey.upgradePrompt.pro.title}
                 </p>
                 <p className="text-xs text-text-secondary mt-0.5">
-                  {t.pages.wagey.upgradePrompt.description}
+                  {wageyAccess.level === "free"
+                    ? t.pages.wagey.upgradePrompt.free.description
+                    : t.pages.wagey.upgradePrompt.pro.description}
                 </p>
               </div>
               <div className="flex items-center gap-1 text-sm font-medium text-brand-gradient-mid group-hover:translate-x-0.5 transition-transform">
-                {t.pages.wagey.upgradePrompt.button}
+                {wageyAccess.level === "free"
+                  ? t.pages.wagey.upgradePrompt.free.button
+                  : t.pages.wagey.upgradePrompt.pro.button}
                 <ArrowRight className="h-4 w-4" />
               </div>
             </Link>

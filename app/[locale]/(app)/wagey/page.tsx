@@ -3,10 +3,10 @@
  *
  * AI assistant for managing shifts.
  * Access controlled by subscription tier:
- * - Grandfathered users: Unlimited access
- * - Max subscribers: 20 messages/month
- * - Pro subscribers: 10 messages/month
- * - Free users: See marketing showcase
+ * - Grandfathered users: 40-100 messages/month
+ * - Max subscribers: 90 messages/month
+ * - Pro subscribers: 30 messages/month
+ * - Free users: See marketing showcase with option to try 3 messages
  */
 
 import { connection } from "next/server";
@@ -15,7 +15,7 @@ import { getWageyAccess } from "@/data-access/wagey";
 import { getDictionary } from "@/lib/i18n/dictionaries";
 import { I18nProvider } from "@/components/providers/I18nProvider";
 import { WageyInterface } from "./_components/WageyInterface";
-import { WageyShowcase } from "./_components/WageyShowcase";
+import { WageyTrialWrapper } from "./_components/WageyTrialWrapper";
 import type { Locale } from "@/lib/i18n/config";
 
 type WageyPageProps = {
@@ -32,12 +32,16 @@ export default async function WageyPage({ params }: WageyPageProps) {
   // Check Wagey access based on subscription
   const wageyAccess = await getWageyAccess();
 
-  // Free users see the marketing showcase
+  // Free users see the showcase with option to try Wagey
   if (!wageyAccess.hasAccess) {
     return (
       <div className="fixed inset-0 top-(--header-height,4rem) bottom-0 md:static md:inset-auto overflow-y-auto">
         <I18nProvider locale={locale} dictionary={dictionary}>
-          <WageyShowcase />
+          <WageyTrialWrapper
+            userId={user.id}
+            userName={user.user_metadata?.full_name}
+            wageyAccess={wageyAccess}
+          />
         </I18nProvider>
       </div>
     );

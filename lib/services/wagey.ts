@@ -98,19 +98,7 @@ export const WageyServiceLive = Layer.effect(
         const limit = WAGEY_LIMITS[level];
         const hasAccess = level !== "free";
 
-        // For grandfathered users, return unlimited access
-        if (level === "grandfathered") {
-          return {
-            level,
-            hasAccess: true,
-            limit: null,
-            used: 0,
-            remaining: null,
-            resetDate: null,
-          } satisfies WageyAccessResult;
-        }
-
-        // For non-grandfathered users, get current usage from profile
+        // Get current usage from profile
         const currentMonth = getCurrentMonth();
         let used = 0;
 
@@ -164,25 +152,7 @@ export const WageyServiceLive = Layer.effect(
         const subData = yield* subscription.getUserSubscriptionData(userId);
         const level = getWageyAccessLevel(subData.subscription, subData.profile);
 
-        // Grandfathered users always allowed (no tracking needed)
-        if (level === "grandfathered") {
-          return {
-            allowed: true,
-            count: 0,
-            remaining: Infinity,
-          } as unknown as WageyInvocationResult;
-        }
-
-        // Free users never allowed
-        if (level === "free") {
-          return {
-            allowed: false,
-            count: 0,
-            remaining: 0,
-          } satisfies WageyInvocationResult;
-        }
-
-        // For Pro/Max users, call atomic increment RPC
+        // Get limit for user's tier (free users get trial limit)
         const limit = WAGEY_LIMITS[level];
         const currentMonth = getCurrentMonth();
 

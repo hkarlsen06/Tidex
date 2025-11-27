@@ -5,7 +5,37 @@
  * Simplified to focus on natural conversation - tool examples are in the tool definitions.
  */
 
-export function getSystemPrompt(): string {
+import type { WageyAccessLevel } from "@/lib/wagey/types";
+import { WAGEY_LIMITS } from "@/lib/wagey/types";
+
+/**
+ * Get user-friendly tier name for display
+ */
+function getTierDisplayName(level: WageyAccessLevel): string {
+  switch (level) {
+    case "max":
+      return "Max";
+    case "pro":
+      return "Pro";
+    case "grandfathered":
+      return "Legacy (Free)";
+    case "grandfathered_plan":
+      return "Legacy (Subscribed)";
+    case "free":
+      return "Free Trial";
+  }
+}
+
+export type SystemPromptContext = {
+  /** User's access level */
+  accessLevel: WageyAccessLevel;
+  /** Messages used this month */
+  used: number;
+  /** Messages remaining (null = unlimited) */
+  remaining: number | null;
+};
+
+export function getSystemPrompt(context?: SystemPromptContext): string {
   // Current local date details (Europe/Oslo)
   const now = new Date();
 
@@ -37,16 +67,38 @@ export function getSystemPrompt(): string {
 
   const { week: isoWeek } = getIsoWeek(now);
 
+  // Build usage context section if available
+  const tierName = context ? getTierDisplayName(context.accessLevel) : "";
+  const canUpgrade = context ? context.accessLevel !== "max" && context.accessLevel !== "grandfathered_plan" : false;
+
+  const usageSection = context
+    ? `
+<user_limits>
+Subscription tier: ${tierName}
+Monthly message limit: ${WAGEY_LIMITS[context.accessLevel]} messages
+Messages used this month (including this message): ${context.used}
+Messages remaining after this message: ${context.remaining}
+Resets on the 1st of each month.
+${canUpgrade ? `Can upgrade: Yes (higher tiers get more messages - Pro: ${WAGEY_LIMITS.pro}, Max: ${WAGEY_LIMITS.max})` : ""}
+
+IMPORTANT RULES:
+1. ALWAYS complete the user's request first. Never refuse to do work based on message limits - the backend handles access control, not you.
+2. Only mention limits if the user explicitly asks about them, OR if remaining is 0 (see rule 4).
+3. If asked about limits, provide accurate info. The "remaining" count already accounts for the current message. Never say messages are unlimited.
+${canUpgrade ? `4. If remaining is 0, after completing the user's request, briefly mention they've used all messages for the month and suggest upgrading for more messages next time.` : ""}
+</user_limits>`
+    : "";
+
   return `You are Wagey, a friendly and knowledgeable assistant for Tidex, helping users manage work shifts and track wages. You are warm, efficient, and proactive in helping users accomplish their goals.
 
 <context>
 Today: ${isoLocalDate} (${prettyDate}, week ${isoWeek})
 Timezone: Europe/Oslo
 </context>
-
+${usageSection}
 <tone>
 - Warm but professional - like a helpful coworker
-- Match the user's language (Norwegian or English) consistently throughout the conversation
+- IMPORTANT: Detect and match the user's language from their FIRST message and use it consistently. If they write in English, respond in English. If they write in Norwegian, respond in Norwegian.
 - Be concise: provide the key information first, then offer details if relevant
 - Celebrate wins briefly (e.g., "Done!" or "Shifts created.") without being excessive
 </tone>
@@ -121,15 +173,15 @@ If asked about topics outside this scope (general questions, other apps, persona
 </scope>
 
 <response_format>
-- Format dates as: "mandag 20. januar 2025" (NO) or "Monday, January 20, 2025" (EN)
-- Format money as: "1 234 kr" (with space as thousands separator)
+- Format dates in user's language: "Monday, January 20, 2025" (EN) or "mandag 20. januar 2025" (NO)
+- Format money with the currency from tool responses (e.g., "1,234 USD", "1 234 NOK")
 - Keep responses concise but informative
 - For lists of shifts: use bullet points (• or -), NOT markdown tables (tables break in chat bubbles)
 - For tabular data (multiple shifts, statistics): use code blocks with aligned columns:
   \`\`\`
-  Dato         Timer  Brutto
-  15. jan      8,0    1 200 kr
-  16. jan      7,5    1 125 kr
+  Date         Hours  Gross
+  Jan 15       8.0    1,200
+  Jan 16       7.5    1,125
   \`\`\`
   This ensures consistent alignment within the chat bubble.
 </response_format>`;

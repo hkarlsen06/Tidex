@@ -43,6 +43,128 @@ import { SettingsService } from "@/lib/services/settings";
 import { AuthSettingsLive } from "@/lib/layers/app";
 import { Effect } from "effect";
 import { logger } from "@/lib/logger";
+import { getDictionary } from "@/lib/i18n/dictionaries";
+import { defaultLocale, type Locale } from "@/lib/i18n/config";
+
+// Type for tool result translations
+type ToolResultTranslations = ReturnType<typeof getDictionary>['pages']['wagey']['toolResults'];
+
+// Helper to interpolate translation strings
+function t(template: string, params: Record<string, string | number> = {}): string {
+  return template.replace(/{(\w+)}/g, (_, key) => String(params[key] ?? `{${key}}`));
+}
+
+// =============================================================================
+// USER SETTINGS HELPERS
+// =============================================================================
+
+/**
+ * Get user's selected currency (defaults to NOK if not set)
+ */
+async function getUserCurrency(userId: string): Promise<string> {
+  const program = Effect.gen(function* () {
+    const settingsService = yield* SettingsService;
+    const settings = yield* settingsService.getUserSettings(userId);
+    return settings?.currency || "NOK";
+  }).pipe(
+    Effect.provide(AuthSettingsLive),
+    Effect.catchAll(() => Effect.succeed("NOK")),
+    Effect.scoped
+  );
+
+  return Effect.runPromise(program);
+}
+
+// =============================================================================
+// SHORT ID UTILITIES
+// =============================================================================
+
+/**
+ * Convert a full UUID to a 5-character short ID.
+ * Uses first 5 chars of UUID (65k+ combinations, virtually no collision risk per user).
+ */
+function toShortId(uuid: string): string {
+  return uuid.slice(0, 5);
+}
+
+/**
+ * Check if a string looks like a short ID (5 hex chars) vs a full UUID.
+ */
+function isShortId(id: string): boolean {
+  return /^[a-f0-9]{4,8}$/i.test(id) && !id.includes("-");
+}
+
+/**
+ * Resolve a short ID to full UUID using pre-fetched shifts.
+ * Returns the full UUID if found, or null if not found/ambiguous.
+ */
+function resolveShortIdFromShifts(
+  shortOrFullId: string,
+  shifts: { id: string }[]
+): string | null {
+  // If it's already a full UUID, return as-is
+  if (!isShortId(shortOrFullId)) {
+    return shortOrFullId;
+  }
+
+  const matches = shifts.filter((s) =>
+    s.id.toLowerCase().startsWith(shortOrFullId.toLowerCase())
+  );
+
+  if (matches.length === 1) {
+    return matches[0].id;
+  }
+
+  // Ambiguous (multiple matches) or not found
+  return null;
+}
+
+/**
+ * Resolve multiple short IDs to full UUIDs using pre-fetched shifts.
+ * Returns array of resolved IDs (nulls filtered out).
+ */
+function resolveShortIdsFromShifts(
+  shortOrFullIds: string[],
+  shifts: { id: string }[]
+): string[] {
+  return shortOrFullIds
+    .map((id) => resolveShortIdFromShifts(id, shifts))
+    .filter((id): id is string => id !== null);
+}
+
+/**
+ * Resolve a short series ID to full UUID by prefix matching.
+ * Returns the full UUID if found, or null if not found/ambiguous.
+ */
+async function resolveSeriesId(
+  shortOrFullId: string,
+  userId: string
+): Promise<string | null> {
+  // If it's already a full UUID, return as-is
+  if (!isShortId(shortOrFullId)) {
+    return shortOrFullId;
+  }
+
+  // Fetch user's series and find by prefix
+  const supabase = await createSupabaseServerClient();
+  const { data: series } = await supabase
+    .from("series_shifts")
+    .select("id")
+    .eq("user_id", userId);
+
+  if (!series) return null;
+
+  const matches = series.filter((s) =>
+    s.id.toLowerCase().startsWith(shortOrFullId.toLowerCase())
+  );
+
+  if (matches.length === 1) {
+    return matches[0].id;
+  }
+
+  // Ambiguous (multiple matches) or not found
+  return null;
+}
 
 /**
  * Execute a tool call with retry logic
@@ -76,10 +198,15 @@ function normalizeToolName(toolName: string): ToolName | null {
 export async function executeTool(
   toolName: string,
   argumentsJson: string,
-  userId: string
+  userId: string,
+  locale: Locale = defaultLocale
 ): Promise<ToolResult> {
-  console.log("[executeTool] Called with tool:", toolName, "userId:", userId);
+  console.log("[executeTool] Called with tool:", toolName, "userId:", userId, "locale:", locale);
   console.log("[executeTool] Arguments JSON:", argumentsJson);
+
+  // Load translations once at start
+  const dict = getDictionary(locale);
+  const tr = dict.pages.wagey.toolResults;
 
   try {
     const normalizedToolName = normalizeToolName(toolName);
@@ -88,7 +215,7 @@ export async function executeTool(
       console.error("[executeTool] Unknown tool:", toolName);
       return {
         success: false,
-        message: `Ukjent verktøy: ${toolName}`,
+        message: t(tr.unknownTool, { name: toolName }),
       };
     }
 
@@ -106,7 +233,7 @@ export async function executeTool(
     while (attempt < 2) {
       try {
         console.log("[executeTool] Attempting execution, attempt:", attempt + 1);
-        const result = await executeToolOnce(normalizedToolName, args, userId);
+        const result = await executeToolOnce(normalizedToolName, args, userId, tr);
         console.log("[executeTool] Execution successful:", result.success);
         return result;
       } catch (error) {
@@ -126,13 +253,13 @@ export async function executeTool(
     console.error("[executeTool] All attempts failed");
     return {
       success: false,
-      message: `Feilet etter ${attempt} forsøk: ${lastError?.message || "Ukjent feil"}`,
+      message: t(tr.failedAfterAttempts, { count: attempt, error: lastError?.message || "Unknown error" }),
     };
   } catch (error) {
     console.error("[executeTool] Error parsing arguments:", error);
     return {
       success: false,
-      message: `Kunne ikke parse argumenter: ${error instanceof Error ? error.message : "Ukjent feil"}`,
+      message: t(tr.failedToParseArgs, { error: error instanceof Error ? error.message : "Unknown error" }),
     };
   }
 }
@@ -143,40 +270,41 @@ export async function executeTool(
 async function executeToolOnce(
   toolName: ToolName,
   args: unknown,
-  userId: string
+  userId: string,
+  tr: ToolResultTranslations
 ): Promise<ToolResult> {
   switch (toolName) {
     case "manage_shift":
-      return await executeManageShift(args, userId);
+      return await executeManageShift(args, userId, tr);
 
     case "query_shifts":
-      return await executeQueryShifts(args, userId);
+      return await executeQueryShifts(args, userId, tr);
 
     case "calculate_wages":
-      return await executeCalculateWages(args, userId);
+      return await executeCalculateWages(args, userId, tr);
 
     case "draft_series_shift":
-      return await executeDraftSeriesShift(args, userId);
+      return await executeDraftSeriesShift(args, userId, tr);
 
     case "confirm_series_shift":
-      return await executeConfirmSeriesShift(args, userId);
+      return await executeConfirmSeriesShift(args, userId, tr);
 
     case "manage_series_shift":
-      return await executeManageSeriesShift(args, userId);
+      return await executeManageSeriesShift(args, userId, tr);
 
     case "manage_series_exclusion":
-      return await executeManageSeriesExclusion(args, userId);
+      return await executeManageSeriesExclusion(args, userId, tr);
 
     case "get_statistics":
-      return await executeGetStatistics(args, userId);
+      return await executeGetStatistics(args, userId, tr);
 
     case "manage_settings":
-      return await executeManageSettings(args, userId);
+      return await executeManageSettings(args, userId, tr);
 
     default:
       return {
         success: false,
-        message: `Ukjent verktøy: ${toolName}`,
+        message: t(tr.unknownTool, { name: toolName }),
       };
   }
 }
@@ -186,13 +314,14 @@ async function executeToolOnce(
  */
 async function executeManageShift(
   args: unknown,
-  userId: string
+  userId: string,
+  tr: ToolResultTranslations
 ): Promise<ToolResult> {
   const parsed = manageShiftSchema.safeParse(args);
   if (!parsed.success) {
     return {
       success: false,
-      message: `Ugyldig input: ${parsed.error.issues.map((i) => i.message).join(", ")}`,
+      message: t(tr.invalidInput, { details: parsed.error.issues.map((i) => i.message).join(", ") }),
     };
   }
 
@@ -204,7 +333,7 @@ async function executeManageShift(
         if (!input.dates || !input.start || !input.end) {
           return {
             success: false,
-            message: "Mangler påkrevde felter for oppretting: dates, start, end",
+            message: t(tr.missingFields, { fields: "dates, start, end" }),
           };
         }
 
@@ -216,7 +345,9 @@ async function executeManageShift(
 
         return {
           success: true,
-          message: `Lagt til ${result.inserted} ${result.inserted === 1 ? "skift" : "skift"} for ${input.dates.join(", ")}`,
+          message: result.inserted === 1
+            ? t(tr.createdShift, { count: result.inserted })
+            : t(tr.createdShifts, { count: result.inserted }),
           data: result,
         };
       }
@@ -225,7 +356,7 @@ async function executeManageShift(
         if (!input.shiftId) {
           return {
             success: false,
-            message: "Mangler shiftId for oppdatering",
+            message: tr.missingShiftId,
           };
         }
 
@@ -233,72 +364,87 @@ async function executeManageShift(
         if (!input.date && !input.start && !input.end) {
           return {
             success: false,
-            message: "Må oppgi minst én verdi å oppdatere (dato, start eller slutt)",
+            message: tr.mustProvideDateStartEnd,
           };
         }
 
-        // Fetch current shift to get existing values
-        const shifts = await getComputedShiftsForApi(userId, { limit: 1000 });
-        const shift = shifts.shifts.find((s) => s.id === input.shiftId);
+        // Fetch shifts once for both ID resolution and getting shift details
+        const shiftsResult = await getComputedShiftsForApi(userId, { limit: 1000 });
+        const fullShiftId = resolveShortIdFromShifts(input.shiftId, shiftsResult.shifts);
+        if (!fullShiftId) {
+          return {
+            success: false,
+            message: t(tr.shiftNotFound, { id: input.shiftId }),
+          };
+        }
 
+        const shift = shiftsResult.shifts.find((s) => s.id === fullShiftId);
         if (!shift) {
           return {
             success: false,
-            message: `Fant ikke skift med ID ${input.shiftId}`,
+            message: t(tr.shiftNotFound, { id: input.shiftId }),
           };
         }
 
+        const updatedDate = input.date || shift.shift_date;
+
         await updateShift({
-          id: input.shiftId,
-          shift_date: input.date || shift.shift_date,
+          id: fullShiftId,
+          shift_date: updatedDate,
           start: input.start || shift.start_time,
           end: input.end || shift.end_time,
         });
 
         return {
           success: true,
-          message: `Oppdaterte skift ${input.shiftId}`,
+          message: t(tr.updatedShift, { date: formatDateCompact(updatedDate, tr) }),
         };
       }
 
       case "delete": {
+        // Fetch shifts once for ID resolution and display info
+        const shiftsResult = await getComputedShiftsForApi(userId, { limit: 1000 });
+
         // Support both single and bulk delete
         if (input.shiftIds && input.shiftIds.length > 0) {
-          // Bulk delete - fetch shifts first for display info
-          const shifts = await getComputedShiftsForApi(userId, { limit: 1000 });
-          const shiftsToDelete = shifts.shifts.filter((s) => input.shiftIds!.includes(s.id));
+          // Resolve short IDs to full UUIDs
+          const fullShiftIds = resolveShortIdsFromShifts(input.shiftIds, shiftsResult.shifts);
+          if (fullShiftIds.length === 0) {
+            return {
+              success: false,
+              message: tr.noShiftsWithIds,
+            };
+          }
 
-          await Promise.all(input.shiftIds.map((id) => deleteShift(id)));
-
-          // Format deleted shifts info
-          const deletedInfo = shiftsToDelete.map((s) =>
-            `${formatDateForDisplay(s.shift_date)} ${s.start_time}-${s.end_time}`
-          ).join(", ");
+          await Promise.all(fullShiftIds.map((id) => deleteShift(id)));
 
           return {
             success: true,
-            message: `Slettet ${input.shiftIds.length} ${input.shiftIds.length === 1 ? "skift" : "skift"}${deletedInfo ? `: ${deletedInfo}` : ""}`,
+            message: fullShiftIds.length === 1
+              ? t(tr.deletedShift, { date: "" }).replace(" on ", "").replace(" den ", "") // Single shift without date
+              : t(tr.deletedShifts, { count: fullShiftIds.length }),
           };
         } else if (input.shiftId) {
-          // Single delete - fetch shift first for display info
-          const shifts = await getComputedShiftsForApi(userId, { limit: 1000 });
-          const shift = shifts.shifts.find((s) => s.id === input.shiftId);
+          // Resolve short ID to full UUID
+          const fullShiftId = resolveShortIdFromShifts(input.shiftId, shiftsResult.shifts);
+          if (!fullShiftId) {
+            return {
+              success: false,
+              message: t(tr.shiftNotFound, { id: input.shiftId }),
+            };
+          }
 
-          await deleteShift(input.shiftId);
-
-          // Format message with date and times if shift was found
-          const shiftInfo = shift
-            ? `${formatDateForDisplay(shift.shift_date)} ${shift.start_time}-${shift.end_time}`
-            : input.shiftId;
+          const shift = shiftsResult.shifts.find((s) => s.id === fullShiftId);
+          await deleteShift(fullShiftId);
 
           return {
             success: true,
-            message: `Slettet skift: ${shiftInfo}`,
+            message: t(tr.deletedShift, { date: shift ? formatDateCompact(shift.shift_date, tr) : tr.unknownDate }),
           };
         } else {
           return {
             success: false,
-            message: "Mangler shiftId eller shiftIds for sletting",
+            message: tr.missingShiftIdOrIds,
           };
         }
       }
@@ -306,27 +452,64 @@ async function executeManageShift(
       default:
         return {
           success: false,
-          message: `Ukjent handling: ${input.action}`,
+          message: t(tr.unknownAction, { action: input.action }),
         };
     }
   } catch (error) {
     throw new Error(
-      error instanceof Error ? error.message : "Kunne ikke utføre skift-operasjon"
+      error instanceof Error ? error.message : "Failed to execute shift operation"
     );
   }
 }
 
 /**
- * Format date from YYYY-MM-DD to DD-MM-YYYY with weekday (Norwegian)
+ * Get localized weekday abbreviation from ISO date
  */
-function formatDateForDisplay(isoDate: string): string {
+function getWeekdayAbbr(isoDate: string, tr: ToolResultTranslations): string {
   const date = new Date(isoDate + "T12:00:00"); // Noon to avoid timezone issues
-  const weekdays = ["søndag", "mandag", "tirsdag", "onsdag", "torsdag", "fredag", "lørdag"];
-  const weekday = weekdays[date.getDay()];
-  const day = String(date.getDate()).padStart(2, "0");
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const year = date.getFullYear();
-  return `${weekday} ${day}-${month}-${year}`;
+  const weekdayKeys = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const;
+  return tr.weekdays[weekdayKeys[date.getDay()]];
+}
+
+/**
+ * Format ISO date as compact "26 Jan" format for messages (localized)
+ */
+function formatDateCompact(isoDate: string, tr: ToolResultTranslations): string {
+  const date = new Date(isoDate + "T12:00:00"); // Noon to avoid timezone issues
+  const day = date.getDate();
+  const monthKeys = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"] as const;
+  return `${day} ${tr.months[monthKeys[date.getMonth()]]}`;
+}
+
+/**
+ * Format series as readable description (e.g., "Mon/Wed 09:00-17:00") (localized)
+ */
+function formatSeriesDescription(
+  series: {
+    selected_days?: Record<string, string>;
+    start_time: string;
+    end_time: string;
+  },
+  tr: ToolResultTranslations
+): string {
+  const weekdayKeys = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const;
+  const selectedDays = series.selected_days || {};
+
+  // Get sorted day numbers
+  const dayNums = Object.keys(selectedDays)
+    .map(Number)
+    .sort((a, b) => a - b);
+
+  // Format days using localized abbreviations
+  const daysStr = dayNums.map(d => tr.weekdays[weekdayKeys[d]]).join("/");
+
+  // Parse times to HH:mm
+  const parseTime = (time: string): string => {
+    const match = time?.match(/^(\d{2}:\d{2})/);
+    return match ? match[1] : time;
+  };
+
+  return `${daysStr} ${parseTime(series.start_time)}-${parseTime(series.end_time)}`;
 }
 
 /**
@@ -334,13 +517,14 @@ function formatDateForDisplay(isoDate: string): string {
  */
 async function executeQueryShifts(
   args: unknown,
-  userId: string
+  userId: string,
+  tr: ToolResultTranslations
 ): Promise<ToolResult> {
   const parsed = queryShiftsSchema.safeParse(args);
   if (!parsed.success) {
     return {
       success: false,
-      message: `Ugyldig input: ${parsed.error.issues.map((i: any) => i.message).join(", ")}`,
+      message: t(tr.invalidInput, { details: parsed.error.issues.map((i: any) => i.message).join(", ") }),
     };
   }
 
@@ -407,25 +591,31 @@ async function executeQueryShifts(
     // Apply limit after filtering
     const limitedShifts = filteredShifts.slice(0, input.limit || 30);
 
-    // Format shifts for AI with pre-formatted display strings
+    // Get user's currency
+    const currency = await getUserCurrency(userId);
+
+    // Format shifts for AI - compact format to reduce tokens
     const shiftsFormatted = limitedShifts.map((shift) => ({
-      id: shift.id,
-      displayDate: formatDateForDisplay(shift.shift_date),
-      date: shift.shift_date, // Keep ISO format for reference
+      id: toShortId(shift.id),
+      date: shift.shift_date,
+      day: getWeekdayAbbr(shift.shift_date, tr),
       start: shift.start_time,
       end: shift.end_time,
-      hours: shift.computed.paidHours.toFixed(2),
-      gross: `${shift.computed.gross.toFixed(2)} kr`,
+      hours: Number(shift.computed.paidHours.toFixed(2)),
+      gross: Number(shift.computed.gross.toFixed(2)),
     }));
 
     return {
       success: true,
-      message: `Fant ${shiftsFormatted.length} ${shiftsFormatted.length === 1 ? "skift" : "skift"}`,
+      message: shiftsFormatted.length === 1
+        ? t(tr.foundShift, { count: shiftsFormatted.length })
+        : t(tr.foundShifts, { count: shiftsFormatted.length }),
       data: shiftsFormatted,
+      currency,
     };
   } catch (error) {
     throw new Error(
-      error instanceof Error ? error.message : "Kunne ikke hente skift"
+      error instanceof Error ? error.message : "Failed to fetch shifts"
     );
   }
 }
@@ -461,13 +651,14 @@ function calculateNetPay(
  */
 async function executeCalculateWages(
   args: unknown,
-  userId: string
+  userId: string,
+  tr: ToolResultTranslations
 ): Promise<ToolResult> {
   const parsed = calculateWagesSchema.safeParse(args);
   if (!parsed.success) {
     return {
       success: false,
-      message: `Ugyldig input: ${parsed.error.issues.map((i: any) => i.message).join(", ")}`,
+      message: t(tr.invalidInput, { details: parsed.error.issues.map((i: any) => i.message).join(", ") }),
     };
   }
 
@@ -484,23 +675,26 @@ async function executeCalculateWages(
     const shifts = result.shifts;
     const settings = result.settings;
 
+    // Get user's currency
+    const currency = await getUserCurrency(userId);
+
     // Handle case where no shifts found
     if (shifts.length === 0) {
       const periodDesc = input.startDate === input.endDate
-        ? formatDateForDisplay(input.startDate)
-        : `${formatDateForDisplay(input.startDate)} til ${formatDateForDisplay(input.endDate)}`;
+        ? input.startDate
+        : `${input.startDate} - ${input.endDate}`;
 
       return {
         success: true,
-        message: `Ingen skift funnet for ${periodDesc}`,
+        message: t(tr.noShiftsFound, { period: periodDesc }),
         data: {
           totalShifts: 0,
-          totalHours: "0.00",
-          totalGross: "0.00 kr",
-          totalNet: "0.00 kr",
-          taxDeducted: "0.00 kr",
-          period: periodDesc,
+          totalHours: 0,
+          totalGross: 0,
+          totalNet: 0,
+          taxDeducted: 0,
         },
+        currency,
       };
     }
 
@@ -516,26 +710,23 @@ async function executeCalculateWages(
 
     const totalTaxDeducted = totalGross - totalNet;
 
-    // Format period display
-    const periodDisplay = input.startDate === input.endDate
-      ? formatDateForDisplay(input.startDate)
-      : `${formatDateForDisplay(input.startDate)} til ${formatDateForDisplay(input.endDate)}`;
-
     return {
       success: true,
-      message: `Beregnet lønn for ${periodDisplay}`,
+      message: shifts.length === 1
+        ? t(tr.calculatedWages, { count: 1 }).replace("shifts", "shift")
+        : t(tr.calculatedWages, { count: shifts.length }),
       data: {
         totalShifts: shifts.length,
-        totalHours: totalHours.toFixed(2),
-        totalGross: `${totalGross.toFixed(2)} kr`,
-        totalNet: `${totalNet.toFixed(2)} kr`,
-        taxDeducted: `${totalTaxDeducted.toFixed(2)} kr`,
-        period: periodDisplay,
+        totalHours: Number(totalHours.toFixed(2)),
+        totalGross: Number(totalGross.toFixed(2)),
+        totalNet: Number(totalNet.toFixed(2)),
+        taxDeducted: Number(totalTaxDeducted.toFixed(2)),
       },
+      currency,
     };
   } catch (error) {
     throw new Error(
-      error instanceof Error ? error.message : "Kunne ikke beregne lønn"
+      error instanceof Error ? error.message : "Failed to calculate wages"
     );
   }
 }
@@ -592,13 +783,14 @@ function weekdaysArrayToSelectedDays(
  */
 async function executeDraftSeriesShift(
   args: unknown,
-  _userId: string
+  _userId: string,
+  tr: ToolResultTranslations
 ): Promise<ToolResult> {
   const parsed = draftSeriesShiftSchema.safeParse(args);
   if (!parsed.success) {
     return {
       success: false,
-      message: `Ugyldig input: ${parsed.error.issues.map((i) => i.message).join(", ")}`,
+      message: t(tr.invalidInput, { details: parsed.error.issues.map((i) => i.message).join(", ") }),
     };
   }
 
@@ -608,10 +800,6 @@ async function executeDraftSeriesShift(
   const selectedDays = weekdaysArrayToSelectedDays(input.weekdays);
   const repeatIntervalWeeks = frequencyToIntervalWeeks(input.frequency);
   const endCondition = convertEndCondition(input.endType, input.endValue);
-
-  // Format weekdays for display in message
-  const weekdayNames = ["søndag", "mandag", "tirsdag", "onsdag", "torsdag", "fredag", "lørdag"];
-  const selectedWeekdayNames = input.weekdays.map(w => weekdayNames[w.day]).join(", ");
 
   try {
     const result = await draftSeriesShift({
@@ -623,26 +811,22 @@ async function executeDraftSeriesShift(
       exclusions: [],
     });
 
-    const weekdaysInfo = input.weekdays.length > 1
-      ? ` på ${selectedWeekdayNames}`
-      : ` på ${selectedWeekdayNames}`;
-
     if (result.conflictCount === 0) {
       return {
         success: true,
-        message: `Validert serie${weekdaysInfo}. Vil opprette ${result.projectedShiftCount} vakter. Ingen konflikter funnet.`,
+        message: t(tr.validatedSeries, { count: result.projectedShiftCount }),
         data: result,
       };
     }
 
     return {
       success: true,
-      message: `Validert serie${weekdaysInfo}. Vil opprette ${result.projectedShiftCount} vakter, men fant ${result.conflictCount} ${result.conflictCount === 1 ? "konflikt" : "konflikter"} med eksisterende vakter.`,
+      message: t(tr.validatedSeriesConflicts, { count: result.projectedShiftCount, conflicts: result.conflictCount }),
       data: result,
     };
   } catch (error) {
     throw new Error(
-      error instanceof Error ? error.message : "Kunne ikke validere serie"
+      error instanceof Error ? error.message : "Failed to validate series"
     );
   }
 }
@@ -652,13 +836,14 @@ async function executeDraftSeriesShift(
  */
 async function executeConfirmSeriesShift(
   args: unknown,
-  _userId: string
+  _userId: string,
+  tr: ToolResultTranslations
 ): Promise<ToolResult> {
   const parsed = confirmSeriesShiftSchema.safeParse(args);
   if (!parsed.success) {
     return {
       success: false,
-      message: `Ugyldig input: ${parsed.error.issues.map((i) => i.message).join(", ")}`,
+      message: t(tr.invalidInput, { details: parsed.error.issues.map((i) => i.message).join(", ") }),
     };
   }
 
@@ -671,10 +856,6 @@ async function executeConfirmSeriesShift(
 
   // Map new conflict resolution names to old ones
   const conflictResolution = input.conflictResolution === "skip_conflicts" ? "exclude_conflicts" : "keep_existing";
-
-  // Format weekdays for display in message
-  const weekdayNames = ["søndag", "mandag", "tirsdag", "onsdag", "torsdag", "fredag", "lørdag"];
-  const selectedWeekdayNames = input.weekdays.map(w => weekdayNames[w.day]).join(", ");
 
   try {
     const result = await createSeriesShift(
@@ -691,18 +872,14 @@ async function executeConfirmSeriesShift(
       }
     );
 
-    const weekdaysInfo = input.weekdays.length > 1
-      ? ` for ${selectedWeekdayNames}`
-      : ` for ${selectedWeekdayNames}`;
-
     return {
       success: true,
-      message: `Serie opprettet${weekdaysInfo}. ${input.conflictResolution === "skip_conflicts" ? "Ev. konflikter ble ekskludert fra serien." : "Eksisterende vakter ble beholdt."}`,
+      message: input.conflictResolution === "skip_conflicts" ? tr.seriesCreatedSkipped : tr.seriesCreatedKept,
       data: result,
     };
   } catch (error) {
     throw new Error(
-      error instanceof Error ? error.message : "Kunne ikke opprette serie"
+      error instanceof Error ? error.message : "Failed to create series"
     );
   }
 }
@@ -762,7 +939,7 @@ function formatSeriesForAI(series: any): any {
   const { endType, endValue } = formatEndConditionForAI(series.end_condition as EndCondition);
 
   return {
-    seriesId: series.id,
+    seriesId: toShortId(series.id), // Use short ID to reduce tokens
     weekdays, // Array of {day, anchorDate} objects (supports multiple weekdays)
     start: parseTime(series.start_time),
     end: parseTime(series.end_time),
@@ -779,13 +956,14 @@ function formatSeriesForAI(series: any): any {
  */
 async function executeManageSeriesShift(
   args: unknown,
-  _userId: string
+  _userId: string,
+  tr: ToolResultTranslations
 ): Promise<ToolResult> {
   const parsed = manageSeriesShiftSchema.safeParse(args);
   if (!parsed.success) {
     return {
       success: false,
-      message: `Ugyldig input: ${parsed.error.issues.map((i) => i.message).join(", ")}`,
+      message: t(tr.invalidInput, { details: parsed.error.issues.map((i) => i.message).join(", ") }),
     };
   }
 
@@ -797,7 +975,7 @@ async function executeManageSeriesShift(
         if (!input.seriesId) {
           return {
             success: false,
-            message: "Mangler seriesId for oppdatering",
+            message: tr.missingSeriesId,
           };
         }
 
@@ -811,7 +989,16 @@ async function executeManageSeriesShift(
         ) {
           return {
             success: false,
-            message: "Må oppgi minst én verdi å oppdatere",
+            message: tr.mustProvideField,
+          };
+        }
+
+        // Resolve short ID to full UUID
+        const fullSeriesId = await resolveSeriesId(input.seriesId, _userId);
+        if (!fullSeriesId) {
+          return {
+            success: false,
+            message: t(tr.seriesNotFound, { id: input.seriesId }),
           };
         }
 
@@ -821,14 +1008,14 @@ async function executeManageSeriesShift(
         const { data: currentSeries, error: fetchError } = await supabase
           .from("series_shifts")
           .select("*")
-          .eq("id", input.seriesId)
+          .eq("id", fullSeriesId)
           .eq("user_id", _userId)
           .single();
 
         if (fetchError || !currentSeries) {
           return {
             success: false,
-            message: `Fant ikke serie med ID ${input.seriesId}`,
+            message: t(tr.seriesNotFound, { id: input.seriesId }),
           };
         }
 
@@ -859,11 +1046,14 @@ async function executeManageSeriesShift(
           ? frequencyToIntervalWeeks(input.frequency)
           : (currentSeries.repeat_interval_weeks as 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8);
 
+        const updatedStartTime = input.start ?? parseTime(currentSeries.start_time);
+        const updatedEndTime = input.end ?? parseTime(currentSeries.end_time);
+
         await updateSeriesShift({
-          id: input.seriesId,
+          id: fullSeriesId,
           selected_days: selectedDays,
-          start_time: input.start ?? parseTime(currentSeries.start_time),
-          end_time: input.end ?? parseTime(currentSeries.end_time),
+          start_time: updatedStartTime,
+          end_time: updatedEndTime,
           repeat_interval_weeks: repeatIntervalWeeks,
           end_condition: endCondition,
           exclusions: currentSeries.exclusions || [],
@@ -871,7 +1061,11 @@ async function executeManageSeriesShift(
 
         return {
           success: true,
-          message: `Oppdaterte serie ${input.seriesId}`,
+          message: t(tr.updatedSeries, { description: formatSeriesDescription({
+            selected_days: selectedDays,
+            start_time: updatedStartTime,
+            end_time: updatedEndTime,
+          }, tr) }),
         };
       }
 
@@ -879,15 +1073,37 @@ async function executeManageSeriesShift(
         if (!input.seriesId) {
           return {
             success: false,
-            message: "Mangler seriesId for sletting",
+            message: tr.missingSeriesId,
           };
         }
 
-        await deleteSeriesShift(input.seriesId);
+        // Resolve short ID to full UUID
+        const fullSeriesId = await resolveSeriesId(input.seriesId, _userId);
+        if (!fullSeriesId) {
+          return {
+            success: false,
+            message: t(tr.seriesNotFound, { id: input.seriesId }),
+          };
+        }
+
+        // Fetch series info for the message before deleting
+        const supabaseForDelete = await createSupabaseServerClient();
+        const { data: seriesToDelete } = await supabaseForDelete
+          .from("series_shifts")
+          .select("selected_days, start_time, end_time")
+          .eq("id", fullSeriesId)
+          .eq("user_id", _userId)
+          .single();
+
+        await deleteSeriesShift(fullSeriesId);
+
+        const seriesDesc = seriesToDelete
+          ? formatSeriesDescription(seriesToDelete, tr)
+          : "unknown";
 
         return {
           success: true,
-          message: `Slettet serie ${input.seriesId}`,
+          message: t(tr.deletedSeries, { description: seriesDesc }),
         };
       }
 
@@ -895,28 +1111,37 @@ async function executeManageSeriesShift(
         const supabase = await createSupabaseServerClient();
 
         if (input.seriesId) {
+          // Resolve short ID to full UUID
+          const fullSeriesId = await resolveSeriesId(input.seriesId, _userId);
+          if (!fullSeriesId) {
+            return {
+              success: false,
+              message: t(tr.seriesNotFound, { id: input.seriesId }),
+            };
+          }
+
           // List specific series
           const { data, error } = await supabase
             .from("series_shifts")
             .select("*")
-            .eq("id", input.seriesId)
+            .eq("id", fullSeriesId)
             .eq("user_id", _userId)
             .single();
 
           if (error) {
-            throw new Error(`Kunne ikke hente serie: ${error.message}`);
+            throw new Error(`Failed to fetch series: ${error.message}`);
           }
 
           if (!data) {
             return {
               success: false,
-              message: `Fant ikke serie med ID ${input.seriesId}`,
+              message: t(tr.seriesNotFound, { id: input.seriesId }),
             };
           }
 
           return {
             success: true,
-            message: `Fant serie ${input.seriesId}`,
+            message: t(tr.foundSeries, { description: formatSeriesDescription(data, tr) }),
             data: [formatSeriesForAI(data)],
           };
         } else {
@@ -928,12 +1153,12 @@ async function executeManageSeriesShift(
             .order("created_at", { ascending: false });
 
           if (error) {
-            throw new Error(`Kunne ikke hente serier: ${error.message}`);
+            throw new Error(`Failed to fetch series: ${error.message}`);
           }
 
           return {
             success: true,
-            message: `Fant ${data.length} ${data.length === 1 ? "serie" : "serier"}`,
+            message: t(tr.foundSeriesCount, { count: data.length }),
             data: data.map(formatSeriesForAI),
           };
         }
@@ -942,12 +1167,12 @@ async function executeManageSeriesShift(
       default:
         return {
           success: false,
-          message: `Ukjent handling: ${input.action}`,
+          message: t(tr.unknownAction, { action: input.action }),
         };
     }
   } catch (error) {
     throw new Error(
-      error instanceof Error ? error.message : "Kunne ikke utføre serie-operasjon"
+      error instanceof Error ? error.message : "Failed to execute series operation"
     );
   }
 }
@@ -957,33 +1182,43 @@ async function executeManageSeriesShift(
  */
 async function executeManageSeriesExclusion(
   args: unknown,
-  _userId: string
+  _userId: string,
+  tr: ToolResultTranslations
 ): Promise<ToolResult> {
   const parsed = manageSeriesExclusionSchema.safeParse(args);
   if (!parsed.success) {
     return {
       success: false,
-      message: `Ugyldig input: ${parsed.error.issues.map((i: any) => i.message).join(", ")}`,
+      message: t(tr.invalidInput, { details: parsed.error.issues.map((i: any) => i.message).join(", ") }),
     };
   }
 
   const input: ManageSeriesExclusionInput = parsed.data;
 
   try {
+    // Resolve short ID to full UUID
+    const fullSeriesId = await resolveSeriesId(input.seriesId, _userId);
+    if (!fullSeriesId) {
+      return {
+        success: false,
+        message: t(tr.seriesNotFound, { id: input.seriesId }),
+      };
+    }
+
     const supabase = await createSupabaseServerClient();
 
     // Fetch current series
     const { data: series, error: fetchError } = await supabase
       .from("series_shifts")
-      .select("exclusions")
-      .eq("id", input.seriesId)
+      .select("exclusions, selected_days, start_time, end_time")
+      .eq("id", fullSeriesId)
       .eq("user_id", _userId)
       .single();
 
     if (fetchError || !series) {
       return {
         success: false,
-        message: `Fant ikke serie med ID ${input.seriesId}`,
+        message: t(tr.seriesNotFound, { id: input.seriesId }),
       };
     }
 
@@ -1002,16 +1237,19 @@ async function executeManageSeriesExclusion(
     const { error: updateError } = await supabase
       .from("series_shifts")
       .update({ exclusions: newExclusions })
-      .eq("id", input.seriesId)
+      .eq("id", fullSeriesId)
       .eq("user_id", _userId);
 
     if (updateError) {
-      throw new Error(`Kunne ikke oppdatere serie: ${updateError.message}`);
+      throw new Error(`Failed to update series: ${updateError.message}`);
     }
 
+    const seriesDesc = formatSeriesDescription(series, tr);
+    const dateDesc = formatDateCompact(input.date, tr);
+    // Note: These messages aren't in the translation file, keeping them simple
     const actionMessage = input.action === "add"
-      ? `Ekskluderte ${input.date} fra serie ${input.seriesId}`
-      : `Fjernet ${input.date} fra ekskluderinger i serie ${input.seriesId}`;
+      ? `Excluded ${dateDesc} from series (${seriesDesc})`
+      : `Removed ${dateDesc} from exclusions in series (${seriesDesc})`;
 
     return {
       success: true,
@@ -1019,7 +1257,7 @@ async function executeManageSeriesExclusion(
     };
   } catch (error) {
     throw new Error(
-      error instanceof Error ? error.message : "Kunne ikke oppdatere ekskluderinger"
+      error instanceof Error ? error.message : "Failed to update exclusions"
     );
   }
 }
@@ -1029,23 +1267,28 @@ async function executeManageSeriesExclusion(
  */
 async function executeGetStatistics(
   args: unknown,
-  userId: string
+  userId: string,
+  tr: ToolResultTranslations
 ): Promise<ToolResult> {
   const parsed = getStatisticsSchema.safeParse(args);
   if (!parsed.success) {
     return {
       success: false,
-      message: `Ugyldig input: ${parsed.error.issues.map((i: any) => i.message).join(", ")}`,
+      message: t(tr.invalidInput, { details: parsed.error.issues.map((i: any) => i.message).join(", ") }),
     };
   }
 
   const input: GetStatisticsInput = parsed.data;
 
   try {
-    const statsData = await getStatsDataForApi(userId, {
-      year: input.year,
-      month: input.month,
-    });
+    // Get user's currency and stats data in parallel
+    const [currency, statsData] = await Promise.all([
+      getUserCurrency(userId),
+      getStatsDataForApi(userId, {
+        year: input.year,
+        month: input.month,
+      }),
+    ]);
 
     // Extract requested metric
     let data: any;
@@ -1054,36 +1297,36 @@ async function executeGetStatistics(
     switch (input.metric) {
       case "current_month":
         data = statsData.currentMonth;
-        message = `Statistikk for inneværende måned`;
+        message = tr.statsCurrentMonth;
         break;
       case "last_month":
         data = statsData.lastMonth;
-        message = `Statistikk for forrige måned`;
+        message = tr.statsLastMonth;
         break;
       case "year_to_date":
         data = statsData.yearToDate;
-        message = `Statistikk år til dato`;
+        message = tr.statsYearToDate;
         break;
       case "last_6_months":
         data = statsData.last6Months;
-        message = `Statistikk siste 6 måneder`;
+        message = tr.statsLast6Months;
         break;
       case "this_week":
         data = statsData.thisWeek;
-        message = `Statistikk denne uken`;
+        message = tr.statsThisWeek;
         break;
       case "monthly_goal":
         data = statsData.monthlyGoal;
-        message = `Månedsmål status`;
+        message = tr.statsMonthlyGoal;
         break;
       case "supplement_breakdown":
         data = statsData.currentMonthBreakdown;
-        message = `Tilleggsfordeling for inneværende måned`;
+        message = tr.statsSupplementBreakdown;
         break;
       default:
         return {
           success: false,
-          message: `Ukjent statistikk-metrikk: ${input.metric}`,
+          message: t(tr.unknownMetric, { metric: input.metric }),
         };
     }
 
@@ -1091,10 +1334,11 @@ async function executeGetStatistics(
       success: true,
       message,
       data,
+      currency,
     };
   } catch (error) {
     throw new Error(
-      error instanceof Error ? error.message : "Kunne ikke hente statistikk"
+      error instanceof Error ? error.message : tr.failedToFetchStatistics
     );
   }
 }
@@ -1104,7 +1348,8 @@ async function executeGetStatistics(
  */
 async function executeManageSettings(
   args: unknown,
-  userId: string
+  userId: string,
+  tr: ToolResultTranslations
 ): Promise<ToolResult> {
   console.log("[manage_settings] Starting execution for userId:", userId);
   console.log("[manage_settings] Args:", args);
@@ -1114,7 +1359,7 @@ async function executeManageSettings(
     console.error("[manage_settings] Validation failed:", parsed.error);
     return {
       success: false,
-      message: `Ugyldig input: ${parsed.error.issues.map((i: any) => i.message).join(", ")}`,
+      message: t(tr.invalidInput, { details: parsed.error.issues.map((i: any) => i.message).join(", ") }),
     };
   }
 
@@ -1127,7 +1372,7 @@ async function executeManageSettings(
       if (!input.category || !input.settings) {
         return {
           success: false,
-          message: "Må oppgi både 'category' og 'settings' for å oppdatere",
+          message: tr.mustProvideCategoryAndSettings,
         };
       }
 
@@ -1233,20 +1478,20 @@ async function executeManageSettings(
         default:
           return {
             success: false,
-            message: `Ukjent kategori: ${input.category}`,
+            message: t(tr.unknownCategory, { category: input.category }),
           };
       }
 
       if (!result.success) {
         return {
           success: false,
-          message: "Kunne ikke oppdatere innstillinger",
+          message: tr.failedToUpdateSettings,
         };
       }
 
       return {
         success: true,
-        message: `Oppdaterte ${input.category}-innstillinger`,
+        message: t(tr.updatedSettings, { category: input.category }),
       };
     } else {
       // View settings (default action)
@@ -1276,7 +1521,7 @@ async function executeManageSettings(
         console.log("[manage_settings] No settings found, returning defaults");
         return {
           success: true,
-          message: "Ingen innstillinger funnet (bruker standardverdier)",
+          message: tr.noSettingsFound,
           data: {},
         };
       }
@@ -1317,14 +1562,14 @@ async function executeManageSettings(
 
       return {
         success: true,
-        message: "Hentet brukerinnstillinger",
+        message: tr.retrievedSettings,
         data: formattedSettings,
       };
     }
   } catch (error) {
     console.error("[manage_settings] Caught error:", error);
     throw new Error(
-      error instanceof Error ? error.message : "Kunne ikke utføre innstillingsoperasjon"
+      error instanceof Error ? error.message : tr.failedToExecuteSettingsOperation
     );
   }
 }

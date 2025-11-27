@@ -8,8 +8,9 @@
  */
 
 import Link from "next/link";
-import { MessageSquare, Zap, Calculator, Calendar, Sparkles, ArrowRight } from "lucide-react";
+import { MessageSquare, Zap, Calculator, Calendar, Sparkles, ArrowRight, Play } from "lucide-react";
 import { Button } from "@/components/app/Button";
+import { Card } from "@/components/app/Card";
 import { useTranslations } from "@/lib/i18n/client";
 
 const features = [
@@ -20,13 +21,19 @@ const features = [
 ] as const;
 
 const exampleConversations = [
-  { role: "user", key: "example1User" },
-  { role: "assistant", key: "example1Assistant" },
-  { role: "user", key: "example2User" },
-  { role: "assistant", key: "example2Assistant" },
+  { role: "user", messageKey: "example1User" },
+  { role: "tool", toolKey: "example1Tool" },
+  { role: "assistant", messageKey: "example1Assistant" },
+  { role: "user", messageKey: "example2User" },
+  { role: "tool", toolKey: "example2Tool" },
+  { role: "assistant", messageKey: "example2Assistant" },
 ] as const;
 
-export function WageyShowcase() {
+type WageyShowcaseProps = {
+  onTryWagey?: () => void;
+};
+
+export function WageyShowcase({ onTryWagey }: WageyShowcaseProps) {
   const { t, locale } = useTranslations();
   const showcase = t.pages.wagey.showcase;
 
@@ -71,6 +78,17 @@ export function WageyShowcase() {
           <p className="mx-auto max-w-xl text-pretty text-base text-text-muted sm:text-lg">
             {showcase.hero.description}
           </p>
+
+          {/* Try Wagey Button */}
+          {onTryWagey && (
+            <Button
+              onClick={onTryWagey}
+              className="mt-8 h-12 rounded-full bg-linear-to-r from-brand-gradient-start via-brand-gradient-mid to-brand-gradient-end px-8 text-base font-semibold text-text-inverse shadow-app-lg"
+            >
+              <Play className="mr-2 h-4 w-4" />
+              {showcase.hero.tryButton}
+            </Button>
+          )}
         </div>
       </section>
 
@@ -119,23 +137,62 @@ export function WageyShowcase() {
 
           <div className="rounded-4xl border border-border-subtle/60 bg-surface-primary/70 p-6 shadow-app-lg sm:p-8">
             <div className="space-y-4">
-              {exampleConversations.map(({ role, key }, index) => {
-                const message = showcase.examples[key];
-                const isUser = role === "user";
+              {exampleConversations.map((item, index) => {
+                if (item.role === "user") {
+                  const message = showcase.examples[item.messageKey];
+                  return (
+                    <div key={index} className="flex flex-col gap-2">
+                      <div className="flex justify-end">
+                        <Card className="max-w-[85%] rounded-3xl shadow-app bg-linear-to-br from-brand-gradient-start via-brand-gradient-mid to-brand-gradient-end text-white backdrop-blur">
+                          <div className="p-3 md:p-4 flex flex-col gap-1">
+                            <div className="text-[11px] font-semibold text-white/90 whitespace-nowrap">
+                              {showcase.examples.you}
+                            </div>
+                            <div className="whitespace-pre-wrap text-sm md:text-base leading-relaxed">
+                              {message}
+                            </div>
+                          </div>
+                        </Card>
+                      </div>
+                    </div>
+                  );
+                }
 
+                if (item.role === "tool") {
+                  const toolMessage = showcase.examples[item.toolKey];
+                  return (
+                    <div key={index} className="flex flex-col gap-2">
+                      <div className="flex justify-start">
+                        <Card className="max-w-[85%] rounded-3xl shadow-app-sm bg-surface-secondary/90 text-text-muted border border-border/60 backdrop-blur">
+                          <div className="p-3 md:p-4 flex flex-col gap-1">
+                            <div className="text-[11px] font-semibold text-text-muted/70 whitespace-nowrap">
+                              {showcase.examples.wagey} • <span className="text-brand-gradient-mid">{t.pages.wagey.worked}</span>
+                            </div>
+                            <div className="whitespace-pre-wrap text-sm md:text-base leading-relaxed flex items-center gap-2">
+                              <span className="text-green-500">✓</span> {toolMessage}
+                            </div>
+                          </div>
+                        </Card>
+                      </div>
+                    </div>
+                  );
+                }
+
+                // Assistant message
+                const message = showcase.examples[item.messageKey];
                 return (
-                  <div
-                    key={index}
-                    className={`flex ${isUser ? "justify-end" : "justify-start"}`}
-                  >
-                    <div
-                      className={`max-w-[85%] rounded-2xl px-4 py-3 ${
-                        isUser
-                          ? "bg-linear-to-r from-brand-gradient-start via-brand-gradient-mid to-brand-gradient-end text-white"
-                          : "bg-white dark:bg-surface-secondary text-slate-700 dark:text-slate-200 border border-border"
-                      }`}
-                    >
-                      <p className={`text-sm sm:text-base ${isUser ? "text-white" : ""}`}>{message}</p>
+                  <div key={index} className="flex flex-col gap-2">
+                    <div className="flex justify-start">
+                      <Card className="max-w-[85%] rounded-3xl shadow-app-sm bg-surface-secondary/90 text-text-primary border border-border/60 backdrop-blur">
+                        <div className="p-3 md:p-4 flex flex-col gap-1">
+                          <div className="text-[11px] font-semibold text-text-muted/70 whitespace-nowrap">
+                            {showcase.examples.wagey}
+                          </div>
+                          <div className="whitespace-pre-wrap text-sm md:text-base leading-relaxed">
+                            {message}
+                          </div>
+                        </div>
+                      </Card>
                     </div>
                   </div>
                 );

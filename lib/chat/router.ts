@@ -14,9 +14,11 @@ import {
   defaultRiverProvider,
 } from "@/lib/river";
 import type { Message, ContentBlock, ToolResultContent } from "@/lib/services/claude";
-import { getSystemPrompt } from "./system-prompt";
+import { getSystemPrompt, type SystemPromptContext } from "./system-prompt";
 import { tools, type ToolName } from "./tools";
 import { executeTool } from "./executor";
+import { LOCALE_COOKIE, defaultLocale, type Locale } from "@/lib/i18n/config";
+import { getDictionary } from "@/lib/i18n/dictionaries";
 
 /**
  * Chat chunk types (sent to frontend)
@@ -187,45 +189,45 @@ function convertToClaudeMessages(
 const wageyChatStream = createRiverStream<ChatChunk, NextRequest>()
   .input(chatInputSchema)
   .provider(defaultRiverProvider())
-  .runner(async ({ input, stream, abortSignal }) => {
+  .runner(async ({ input, stream, abortSignal, adapterRequest }) => {
     const { messages, userId } = input;
 
-    // Check Wagey access and usage limits BEFORE Claude API call
-    // Use getWageyAccessForUser (not getWageyAccess) because we're in a Route Handler
-    // where verifySession()/redirect() doesn't work
-    const { getWageyAccessForUser, useWageyInvocation } = await import("@/data-access/wagey");
+    // Get locale from cookie for localized tool messages
+    const locale = (adapterRequest.cookies.get(LOCALE_COOKIE)?.value || defaultLocale) as Locale;
+
+    // Check usage limits BEFORE Claude API call (free users get trial limit)
+    const { useWageyInvocation, getWageyAccessForUser } = await import("@/data-access/wagey");
     const { getDaysUntilReset } = await import("@/lib/wagey/types");
 
-    const access = await getWageyAccessForUser(userId);
+    // Get access level for system prompt context (use ForUser variant for Route Handlers)
+    const accessInfo = await getWageyAccessForUser(userId);
 
-    // Free users cannot use Wagey
-    if (!access.hasAccess) {
-      await stream.appendChunk({ type: "wagey_no_access" });
+    // Check and track usage (free users get trial limit via useWageyInvocation)
+    const result = await useWageyInvocation(userId);
+
+    if (!result.allowed) {
+      await stream.appendChunk({
+        type: "wagey_limit",
+        remaining: result.remaining,
+        resetDays: getDaysUntilReset(),
+      });
       await stream.close();
       return;
     }
 
-    // Grandfathered users skip limit check
-    if (access.level !== "grandfathered") {
-      const result = await useWageyInvocation(userId);
-
-      if (!result.allowed) {
-        await stream.appendChunk({
-          type: "wagey_limit",
-          remaining: result.remaining,
-          resetDays: getDaysUntilReset(),
-        });
-        await stream.close();
-        return;
-      }
-    }
+    // Build system prompt context with usage info
+    const systemPromptContext: SystemPromptContext = {
+      accessLevel: accessInfo.level,
+      used: result.count,
+      remaining: result.remaining,
+    };
 
     // Convert messages and add system prompt if not present
     let { system, messages: claudeMessages } = convertToClaudeMessages(messages);
 
     // Use our system prompt if none provided
     if (!system) {
-      system = getSystemPrompt();
+      system = getSystemPrompt(systemPromptContext);
     }
 
     // Dynamically import Claude service to avoid static analysis issues
@@ -340,7 +342,8 @@ const wageyChatStream = createRiverStream<ChatChunk, NextRequest>()
           const result = await executeTool(
             toolUse.name as ToolName,
             JSON.stringify(toolUse.input),
-            userId
+            userId,
+            locale
           );
 
           // Only send tool_result chunk to UI if successful
@@ -362,7 +365,7 @@ const wageyChatStream = createRiverStream<ChatChunk, NextRequest>()
           });
         } catch (error) {
           const errorMessage =
-            error instanceof Error ? error.message : "Ukjent feil";
+            error instanceof Error ? error.message : "Unknown error";
 
           toolResults.push({
             type: "tool_result",
@@ -402,10 +405,10 @@ const wageyChatStream = createRiverStream<ChatChunk, NextRequest>()
 
     // If we hit max iterations, inform the user
     if (iterationCount >= MAX_ITERATIONS) {
+      const dict = getDictionary(locale);
       await stream.appendChunk({
         type: "text",
-        content:
-          "\n\n(Nådde maksimalt antall handlinger. Hvis du trenger mer hjelp, send en ny melding.)",
+        content: `\n\n${dict.pages.wagey.maxIterationsReached}`,
       });
     }
 
