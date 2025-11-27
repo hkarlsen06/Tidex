@@ -152,11 +152,13 @@ export function MessageList({
   isStreaming,
   userName,
 }: MessageListProps) {
+  const { t } = useTranslations();
+
   if (messages.length === 0 && !currentChunk) {
     return (
       <div className="text-center text-text-muted pt-2">
-        <p className="text-lg">👋 Hei! Jeg er Wagey.</p>
-        <p className="text-sm mt-2">Spør meg om å legge til, endre eller slette skift.</p>
+        <p className="text-lg">👋 {t.pages.wagey.greeting}</p>
+        <p className="text-sm mt-2">{t.pages.wagey.greetingSubtitle}</p>
       </div>
     );
   }
@@ -203,12 +205,12 @@ function MessageBubble({
   const [showTooltip, setShowTooltip] = useState(false);
   const labelClass = isUser ? "text-white/90" : "text-text-muted/70";
   const userLabel = (() => {
-    if (!userName) return "Deg";
+    if (!userName) return t.pages.wagey.you;
     const parts = userName
       .split(" ")
       .map((part) => part.trim())
     .filter(Boolean);
-    if (parts.length === 0) return "Deg";
+    if (parts.length === 0) return t.pages.wagey.you;
     if (parts.length === 1) return parts[0];
     if (parts.length === 2) return parts[0];
     return `${parts[0]} ${parts[1]}`;

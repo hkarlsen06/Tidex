@@ -13,6 +13,11 @@ import type { Tool } from "@/lib/services/claude";
 // =============================================================================
 
 /**
+ * Short ID schema - accepts 4-8 hex chars (short ID) or full UUID
+ */
+const shortOrFullId = z.string().regex(/^[a-f0-9]{4,8}$|^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i);
+
+/**
  * Manage Shift Tool Schema
  */
 export const manageShiftSchema = z.object({
@@ -21,9 +26,9 @@ export const manageShiftSchema = z.object({
   dates: z.array(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)).min(1).optional(),
   start: z.string().regex(/^\d{2}:\d{2}$/).optional(),
   end: z.string().regex(/^\d{2}:\d{2}$/).optional(),
-  // Update/delete action
-  shiftId: z.string().uuid().optional(),
-  shiftIds: z.array(z.string().uuid()).min(1).optional(),
+  // Update/delete action - accepts short IDs (5 chars) or full UUIDs
+  shiftId: shortOrFullId.optional(),
+  shiftIds: z.array(shortOrFullId).min(1).optional(),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
 });
 
@@ -98,7 +103,7 @@ export type ConfirmSeriesShiftInput = z.infer<typeof confirmSeriesShiftSchema>;
  */
 export const manageSeriesShiftSchema = z.object({
   action: z.enum(["list", "update", "delete"]),
-  seriesId: z.string().uuid().optional(),
+  seriesId: shortOrFullId.optional(),
   // Update fields - use weekdays array to replace all weekdays
   weekdays: z.array(weekdayAnchorSchema).min(1).max(7).optional(),
   start: z.string().regex(/^\d{2}:\d{2}$/).optional(),
@@ -114,7 +119,7 @@ export type ManageSeriesShiftInput = z.infer<typeof manageSeriesShiftSchema>;
  * Manage Series Exclusion Tool Schema
  */
 export const manageSeriesExclusionSchema = z.object({
-  seriesId: z.string().uuid(),
+  seriesId: shortOrFullId,
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   action: z.enum(["add", "remove"]),
 });
@@ -225,22 +230,22 @@ Edge cases:
         start: "08:00",
         end: "16:00",
       },
-      // Update a shift's times
+      // Update a shift's times (use short 5-char ID from query_shifts)
       {
         action: "update",
-        shiftId: "abc123-def456-ghi789",
+        shiftId: "a1b2c",
         start: "10:00",
         end: "18:00",
       },
-      // Delete a single shift
+      // Delete a single shift (use short 5-char ID from query_shifts)
       {
         action: "delete",
-        shiftId: "abc123-def456-ghi789",
+        shiftId: "a1b2c",
       },
       // Bulk delete multiple shifts
       {
         action: "delete",
-        shiftIds: ["id1", "id2", "id3"],
+        shiftIds: ["a1b2c", "d3e4f", "g5h6i"],
       },
     ],
   },
@@ -650,17 +655,17 @@ When updating weekdays, provide the complete weekdays array (replaces all existi
       {
         action: "list",
       },
-      // Update series times
+      // Update series times (use short 5-char ID from list)
       {
         action: "update",
-        seriesId: "abc123-def456",
+        seriesId: "a1b2c",
         start: "10:00",
         end: "18:00",
       },
       // Change series weekdays from Mon only to Mon/Wed/Fri
       {
         action: "update",
-        seriesId: "abc123-def456",
+        seriesId: "a1b2c",
         weekdays: [
           { day: 1, anchorDate: "2025-01-20" },
           { day: 3, anchorDate: "2025-01-22" },
@@ -670,14 +675,14 @@ When updating weekdays, provide the complete weekdays array (replaces all existi
       // Change series to end after 6 months
       {
         action: "update",
-        seriesId: "abc123-def456",
+        seriesId: "a1b2c",
         endType: "after_months",
         endValue: 6,
       },
       // Delete a series
       {
         action: "delete",
-        seriesId: "abc123-def456",
+        seriesId: "a1b2c",
       },
     ],
   },
@@ -715,15 +720,15 @@ Note: The date must be one that would normally occur in the series pattern.`,
       required: ["seriesId", "date", "action"],
     },
     input_examples: [
-      // Skip a series occurrence on Christmas
+      // Skip a series occurrence on Christmas (use short 5-char ID from list)
       {
-        seriesId: "abc123-def456",
+        seriesId: "a1b2c",
         date: "2025-12-25",
         action: "add",
       },
       // Restore a previously excluded date
       {
-        seriesId: "abc123-def456",
+        seriesId: "a1b2c",
         date: "2025-12-25",
         action: "remove",
       },
@@ -874,4 +879,5 @@ export type ToolResult = {
   success: boolean;
   message: string;
   data?: unknown;
+  currency?: string; // User's selected currency for earnings data
 };

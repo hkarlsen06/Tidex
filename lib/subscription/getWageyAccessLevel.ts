@@ -19,26 +19,29 @@ const LEGACY_MAX_PRICE_IDS = ["price_1RzQC1Qiotkj8G58tYo4U5oO"];
  * Determines user's Wagey access level based on subscription status and profile
  *
  * Priority order:
- * 1. Grandfathered users (before_paywall === true) get unlimited access
- * 2. Max subscribers (active + Max price) get 20 messages/month
- * 3. Pro subscribers (active + Pro price) get 10 messages/month
- * 4. Everyone else is free tier (no access)
+ * 1. Grandfathered users with active subscription get 100 messages/month
+ * 2. Grandfathered users without subscription get 40 messages/month
+ * 3. Max subscribers (active + Max price) get 90 messages/month
+ * 4. Pro subscribers (active + Pro price) get 30 messages/month
+ * 5. Everyone else is free tier (no access)
  *
  * @param subscription - User's subscription record (null if free tier)
  * @param profile - User's profile record (null if missing)
- * @returns WageyAccessLevel - "grandfathered" | "max" | "pro" | "free"
+ * @returns WageyAccessLevel - "grandfathered" | "grandfathered_plan" | "max" | "pro" | "free"
  */
 export function getWageyAccessLevel(
   subscription: Subscription | null,
   profile: UserProfile | null
 ): WageyAccessLevel {
-  // Grandfathered users get unlimited access regardless of subscription
+  const hasActiveSubscription = subscription?.status === "active";
+
+  // Grandfathered users get higher limits if they also have a subscription
   if (profile?.before_paywall === true) {
-    return "grandfathered";
+    return hasActiveSubscription ? "grandfathered_plan" : "grandfathered";
   }
 
   // Check for active subscription
-  if (!subscription || subscription.status !== "active") {
+  if (!hasActiveSubscription) {
     return "free";
   }
 
