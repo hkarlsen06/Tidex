@@ -1252,6 +1252,13 @@ export const en: Dictionary = {
       previousPayroll: 'Previous payroll',
       nextPayroll: 'Next payroll',
       payroll: 'Payroll',
+      today: 'Today',
+      inDays: 'In {days} days',
+      inDaysAndHours: 'In {days} days {hours} hours',
+      inDaysHoursAndMinutes: 'In {days} days {hours} hours {minutes} minutes',
+      inHoursAndMinutes: 'In {hours} hours {minutes} minutes',
+      daysAgo: '{days} days ago',
+      oneDayAgo: '1 day ago',
     },
     totalCard: {
       beforeTax: 'before tax',

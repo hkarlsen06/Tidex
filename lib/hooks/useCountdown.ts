@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import type { Dictionary } from "@/lib/i18n/dictionaries/no";
+import { countMidnightCrossings } from "@/lib/dates/midnight-crossings";
 
 // Simple string interpolation helper
 function interpolate(str: string, values: Record<string, number>): string {
@@ -92,20 +93,6 @@ function calculateCountdown(
   const totalSeconds = Math.floor(absDiffMs / 1000);
   const totalMinutes = Math.floor(absDiffMs / (1000 * 60));
   const totalHours = Math.floor(absDiffMs / (1000 * 60 * 60));
-
-  // Count midnight crossings for more intuitive "days" display
-  // Users perceive "1 day" as "tomorrow", not "24 hours from now"
-  const countMidnightCrossings = (from: Date, to: Date): number => {
-    // Normalize to start of day (midnight)
-    const fromMidnight = new Date(from);
-    fromMidnight.setHours(0, 0, 0, 0);
-    const toMidnight = new Date(to);
-    toMidnight.setHours(0, 0, 0, 0);
-
-    // Count days between midnights
-    const diffDays = Math.round((toMidnight.getTime() - fromMidnight.getTime()) / (1000 * 60 * 60 * 24));
-    return Math.abs(diffDays);
-  };
 
   const midnightDays = isFuture
     ? countMidnightCrossings(now, startDateTime)
