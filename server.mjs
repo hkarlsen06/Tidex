@@ -1,3 +1,13 @@
+// Suppress baseline-browser-mapping "data is over two months old" warning
+// This warning is hardcoded in Next.js's compiled browserslist bundle with no env var check.
+// The data timestamp is embedded at build time and becomes stale. Since we can't control
+// Next.js's release schedule, we intercept and suppress this specific warning.
+const originalWarn = console.warn;
+console.warn = (...args) => {
+  if (args[0]?.includes?.('[baseline-browser-mapping]')) return;
+  originalWarn.apply(console, args);
+};
+
 import { createServer } from 'https';
 import { parse, fileURLToPath } from 'url';
 import next from 'next';

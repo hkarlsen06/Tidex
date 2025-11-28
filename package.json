@@ -2,10 +2,7 @@
   "name": "next-tidex",
   "version": "0.1.0",
   "private": true,
-  "workspaces": [
-    "marketing",
-    "dev-site"
-  ],
+  "packageManager": "pnpm@10.24.0",
   "scripts": {
     "dev": "node server.mjs",
     "dev:http": "next dev",
@@ -19,12 +16,12 @@
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
-    "marketing:dev": "npm run dev --workspace marketing",
-    "marketing:build": "npm run build --workspace marketing",
-    "marketing:start": "npm run start --workspace marketing",
-    "dev-site:dev": "npm run dev --workspace dev-site",
-    "dev-site:build": "npm run build --workspace dev-site",
-    "dev-site:start": "npm run start --workspace dev-site"
+    "marketing:dev": "pnpm --filter marketing dev",
+    "marketing:build": "pnpm --filter marketing build",
+    "marketing:start": "pnpm --filter marketing start",
+    "dev-site:dev": "pnpm --filter dev-site dev",
+    "dev-site:build": "pnpm --filter dev-site build",
+    "dev-site:start": "pnpm --filter dev-site start"
   },
   "dependencies": {
     "@marsidev/react-turnstile": "^1.3.1",
@@ -33,6 +30,7 @@
     "@radix-ui/react-checkbox": "^1.3.3",
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-label": "^2.1.7",
+    "@radix-ui/react-navigation-menu": "^1.2.14",
     "@radix-ui/react-progress": "^1.1.7",
     "@radix-ui/react-radio-group": "^1.3.8",
     "@radix-ui/react-select": "^2.2.6",
@@ -48,6 +46,7 @@
     "@types/node": "^22.12.0",
     "@types/react": "19.2.2",
     "@types/react-dom": "19.2.2",
+    "@types/react-syntax-highlighter": "^15.5.13",
     "@vercel/analytics": "^1.5.0",
     "@vercel/speed-insights": "^1.2.0",
     "ai": "^5.0.98",
@@ -55,6 +54,7 @@
     "canvas-confetti": "^1.9.4",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
     "effect": "^3.19.5",
     "input-otp": "^1.4.2",
     "lucide-react": "^0.544.0",
@@ -65,6 +65,7 @@
     "react": "19.2.0",
     "react-day-picker": "^9.11.0",
     "react-dom": "19.2.0",
+    "react-syntax-highlighter": "^16.1.0",
     "recharts": "^2.15.4",
     "sharp": "0.33.5",
     "stripe": "^19.1.0",
@@ -76,17 +77,28 @@
   },
   "devDependencies": {
     "@eslint/config-array": "^0.21.0",
+    "@eslint/eslintrc": "^3.3.3",
     "@eslint/js": "^9.14.0",
     "@eslint/object-schema": "^2.1.6",
     "@fast-check/vitest": "^0.2.3",
+    "@next/eslint-plugin-next": "^16.0.5",
     "@playwright/test": "^1.56.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.0",
+    "@typescript-eslint/eslint-plugin": "^8.48.0",
+    "@typescript-eslint/parser": "^8.48.0",
     "@vitest/ui": "^4.0.7",
     "eslint": "^9.37.0",
     "eslint-config-next": "16.0.0",
+    "eslint-import-resolver-typescript": "^4.4.4",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.0.1",
     "glob": "^11.0.4",
+    "globals": "^16.5.0",
     "jsdom": "^27.1.0",
+    "playwright": "^1.57.0",
     "rimraf": "^6.0.1",
     "supabase": "^2.48.3",
     "vitest": "^4.0.7"
@@ -95,9 +107,11 @@
     "node": "v22.x"
   },
   "type": "module",
-  "overrides": {
-    "@types/react": "19.2.2",
-    "@types/react-dom": "19.2.2",
-    "glob": "^11.0.4"
+  "pnpm": {
+    "overrides": {
+      "@types/react": "19.2.2",
+      "@types/react-dom": "19.2.2",
+      "glob": "^11.0.4"
+    }
   }
 }

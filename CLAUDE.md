@@ -84,12 +84,12 @@ All these APIs are now **fully asynchronous** and must be awaited:
 ## Development Commands
 
 ```bash
-npm run dev         # Start HTTPS dev server via server.mjs (https://localhost:3000)
-npm run dev:http    # Start HTTP dev server (http://localhost:3000)
-npm run dev:turbo   # Start dev server with Turbo mode
-npm run build       # Production build
-npm start           # Run production server
-npm run lint        # Run ESLint
+pnpm dev         # Start HTTPS dev server via server.mjs (https://localhost:3000)
+pnpm dev:http    # Start HTTP dev server (http://localhost:3000)
+pnpm dev:turbo   # Start dev server with Turbo mode
+pnpm build       # Production build
+pnpm start       # Run production server
+pnpm lint        # Run ESLint
 ```
 
 ## Architecture
@@ -711,7 +711,7 @@ See `docs/error-handling-audit.md` for comprehensive error handling audit.
 
 4. **Install dependencies** (worktrees don't share node_modules):
    ```bash
-   npm install
+   pnpm install
    ```
 
 ### Staying on Worktrees
