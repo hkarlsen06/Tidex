@@ -1,5 +1,24 @@
 // Page skeletons
-export { HomeSkeleton, ShiftsSkeleton, StatsSkeleton } from "./pages";
+export {
+  HomeSkeleton,
+  ShiftsSkeleton,
+  StatsSkeleton,
+  OnboardingSkeleton,
+  WageySkeleton,
+  SettingsSkeleton,
+  AddShiftSkeleton,
+} from "./pages";
+
+// Settings page skeletons
+export {
+  ProfileSkeleton,
+  PaySkeleton,
+  SecuritySkeleton,
+  DisplaySkeleton,
+  DataSkeleton,
+  SubscriptionSkeleton,
+  PreferencesSkeleton,
+} from "./settings";
 
 // Card skeletons
 export {
@@ -9,4 +28,4 @@ export {
 } from "./cards";
 
 // Calendar skeletons
-export { CalendarSkeleton, AddCalendarSkeleton } from "./calendar";
+export { CalendarSkeleton } from "./calendar";

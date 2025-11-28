@@ -5,7 +5,6 @@ import type { Locale } from "@/lib/i18n/config";
 import { SettingsLayoutClient } from "@/components/settings/SettingsLayoutClient";
 import { getAppDictionary } from "@/lib/i18n/dictionaries";
 import { I18nProvider } from "@/components/providers/I18nProvider";
-import { AppFooter } from "@/components/app/AppFooter";
 
 export async function generateMetadata({
   params,
@@ -32,7 +31,6 @@ export default async function SettingsLayout({
   return (
     <I18nProvider locale={locale as Locale} dictionary={dictionary} namespaces={['pages.settings']}>
       <SettingsLayoutClient>{children}</SettingsLayoutClient>
-      <AppFooter />
     </I18nProvider>
   );
 }

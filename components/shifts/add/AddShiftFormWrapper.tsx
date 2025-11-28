@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import AddShiftForm from './AddShiftForm';
 import type { UserSettings, SupplementRule, WageSnapshot } from '@/lib/payroll';
+import { ScrollablePageWrapper } from '@/components/app/ScrollablePageWrapper';
 
 type ExistingShift = {
   shift_date: string;
@@ -70,37 +71,43 @@ export function AddShiftFormWrapper({ initialData }: Props) {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary"></div>
-          <p className="mt-4 text-text-secondary">Loading...</p>
+      <ScrollablePageWrapper routeKey="add-shift">
+        <div className="flex items-center justify-center min-h-[50vh]">
+          <div className="text-center">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary"></div>
+            <p className="mt-4 text-text-secondary">Loading...</p>
+          </div>
         </div>
-      </div>
+      </ScrollablePageWrapper>
     );
   }
 
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <div className="text-center">
-          <p className="text-red-500">{error}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="mt-4 px-4 py-2 bg-brand-primary text-white rounded-lg"
-          >
-            Retry
-          </button>
+      <ScrollablePageWrapper routeKey="add-shift">
+        <div className="flex items-center justify-center min-h-[50vh]">
+          <div className="text-center">
+            <p className="text-red-500">{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="mt-4 px-4 py-2 bg-brand-primary text-white rounded-lg"
+            >
+              Retry
+            </button>
+          </div>
         </div>
-      </div>
+      </ScrollablePageWrapper>
     );
   }
 
   return (
-    <AddShiftForm
-      existingShifts={data.existingShifts}
-      userSettings={data.userSettings}
-      presetRules={data.presetRules}
-      wageSnapshots={data.wageSnapshots}
-    />
+    <ScrollablePageWrapper routeKey="add-shift">
+      <AddShiftForm
+        existingShifts={data.existingShifts}
+        userSettings={data.userSettings}
+        presetRules={data.presetRules}
+        wageSnapshots={data.wageSnapshots}
+      />
+    </ScrollablePageWrapper>
   );
 }

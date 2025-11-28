@@ -5,6 +5,7 @@ import { ProfileForm } from '@components/settings/profile/ProfileForm';
 import { DangerZone } from '@components/settings/profile/DangerZone';
 import { getTranslations } from '@/lib/i18n/server';
 import type { Locale } from '@/lib/i18n/config';
+import { SettingsPageWrapper } from '@/components/app/SettingsPageWrapper';
 
 export async function generateMetadata({
   params,
@@ -32,7 +33,7 @@ export default async function ProfilePage({
   const profile = await getUserProfile(user.id);
 
   return (
-    <div className="container mx-auto py-8 max-w-2xl">
+    <SettingsPageWrapper routeKey="settings-profile">
       <div className="space-y-6">
         <div>
           <h2 className="text-2xl font-bold">{t.pages.settings.profile.title}</h2>
@@ -48,6 +49,6 @@ export default async function ProfilePage({
           <DangerZone />
         </div>
       </div>
-    </div>
+    </SettingsPageWrapper>
   );
 }

@@ -6,6 +6,7 @@ import { CheckCircle } from 'lucide-react';
 import { SubscriptionSuccessButtons } from './SubscriptionSuccessButtons';
 import { getAppDictionary } from '@/lib/i18n/dictionaries';
 import type { Locale } from '@/lib/i18n/config';
+import { SettingsPageWrapper } from '@/components/app/SettingsPageWrapper';
 
 type Props = {
   params: Promise<{ locale: Locale }>;
@@ -35,7 +36,7 @@ export default async function SubscriptionSuccessPage({ params }: Props) {
   }
 
   return (
-    <div className="container mx-auto py-8 max-w-2xl">
+    <SettingsPageWrapper routeKey="settings-subscription-success">
       <Card className="p-8">
         <div className="flex flex-col items-center text-center space-y-6">
           <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
@@ -62,6 +63,6 @@ export default async function SubscriptionSuccessPage({ params }: Props) {
           <SubscriptionSuccessButtons dict={t} locale={locale} />
         </div>
       </Card>
-    </div>
+    </SettingsPageWrapper>
   );
 }

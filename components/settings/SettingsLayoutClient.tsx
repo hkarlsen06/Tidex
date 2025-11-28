@@ -14,21 +14,23 @@ export function SettingsLayoutClient({ children }: { children: ReactNode }) {
   // Check if we're on the settings landing page
   const isLandingPage = normalizedPath === "/settings";
 
-  // If on landing page, render children without sidebar
+  // If on landing page, render children without sidebar (h-full to enable scrolling)
   if (isLandingPage) {
-    return <>{children}</>;
+    return <div className="h-full">{children}</div>;
   }
 
-  // On deep routes, show sidebar layout
+  // On deep routes, show sidebar layout with h-full chain for scrolling
   return (
-    <>
+    <div className="h-full flex flex-col">
       {/* Mobile/Tablet: Back button (hidden on desktop where sidebar is visible) */}
-      <div className="container mx-auto max-w-2xl pt-4 lg:hidden">
-        <SettingsBackButton />
+      <div className="bg-background py-3 lg:hidden shrink-0">
+        <div className="mx-auto max-w-md md:max-w-lg px-4">
+          <SettingsBackButton />
+        </div>
       </div>
 
       {/* Mobile/Tablet: vertical stack. Desktop: side-by-side, break out of parent container */}
-      <div className="flex w-full flex-col lg:relative lg:left-1/2 lg:right-1/2 lg:-ml-[50vw] lg:-mr-[50vw] lg:w-screen lg:flex-row lg:gap-0 lg:px-0 lg:items-start lg:pt-6">
+      <div className="flex-1 min-h-0 flex w-full flex-col lg:relative lg:left-1/2 lg:right-1/2 lg:-ml-[50vw] lg:-mr-[50vw] lg:w-screen lg:flex-row lg:gap-0 lg:px-0 lg:items-start lg:pt-6">
         {/* Navigation Sidebar - Left side, sticky on desktop */}
         <div className="hidden lg:flex lg:w-1/3 lg:shrink-0 lg:sticky lg:top-22 lg:z-40 lg:justify-end lg:pr-6">
           <div className="w-full max-w-[320px]">
@@ -37,12 +39,12 @@ export function SettingsLayoutClient({ children }: { children: ReactNode }) {
         </div>
 
         {/* Content Section - Right side, scrollable on desktop */}
-        <div className="lg:w-2/3 lg:flex lg:justify-start lg:pl-6">
-          <div className="w-full lg:max-w-[680px]">
+        <div className="h-full lg:h-auto lg:w-2/3 lg:flex lg:justify-start lg:pl-6">
+          <div className="h-full lg:h-auto w-full lg:max-w-[680px]">
             {children}
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 }

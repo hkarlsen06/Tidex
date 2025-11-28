@@ -9,6 +9,7 @@ import { useNavigationFeedback } from '@/components/app/navigation-feedback';
 import { useTranslations } from '@/lib/i18n/client';
 import type { Dictionary } from '@/lib/i18n/dictionaries/no';
 import { defaultLocale } from '@/lib/i18n/config';
+import { ScrollablePageWrapper } from '@/components/app/ScrollablePageWrapper';
 
 const getSettingsItems = (t: Dictionary) => [
   {
@@ -79,38 +80,40 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="container mx-auto py-8 max-w-2xl">
-      <h1 className="text-3xl font-bold mb-2">{t.pages.settings.title}</h1>
-      <p className="text-text-secondary mb-10">
-        {t.pages.settings.subtitle}
-      </p>
+    <ScrollablePageWrapper routeKey="settings">
+      <div className="py-8">
+        <h1 className="text-3xl font-bold mb-2">{t.pages.settings.title}</h1>
+        <p className="text-text-secondary mb-10">
+          {t.pages.settings.subtitle}
+        </p>
 
-      <div className="flex flex-col gap-6">
-        {settingsItems.map((item) => {
-          const Icon = item.icon;
-          const isNavigating = normalizedPendingPath === item.href;
-          return (
-            <Link key={item.href} href={`/${locale}${item.href}`} onClick={handleItemClick(item.href)}>
-              <Card className="p-5 hover:bg-surface-secondary/50 transition-colors cursor-pointer">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 rounded-lg bg-surface-secondary">
-                    <Icon className="h-6 w-6 text-text-primary" />
+        <div className="flex flex-col gap-6">
+          {settingsItems.map((item) => {
+            const Icon = item.icon;
+            const isNavigating = normalizedPendingPath === item.href;
+            return (
+              <Link key={item.href} href={`/${locale}${item.href}`} onClick={handleItemClick(item.href)}>
+                <Card className="p-5 hover:bg-surface-secondary/50 transition-colors cursor-pointer">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 rounded-lg bg-surface-secondary">
+                      <Icon className="h-6 w-6 text-text-primary" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-lg text-text-primary mb-0.5">{item.label}</h3>
+                      <p className="text-sm text-text-secondary">{item.description}</p>
+                    </div>
+                    {isNavigating ? (
+                      <Loader2 className="h-5 w-5 text-text-secondary shrink-0 animate-spin" />
+                    ) : (
+                      <ChevronRight className="h-5 w-5 text-text-secondary shrink-0" />
+                    )}
                   </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-lg text-text-primary mb-0.5">{item.label}</h3>
-                    <p className="text-sm text-text-secondary">{item.description}</p>
-                  </div>
-                  {isNavigating ? (
-                    <Loader2 className="h-5 w-5 text-text-secondary shrink-0 animate-spin" />
-                  ) : (
-                    <ChevronRight className="h-5 w-5 text-text-secondary shrink-0" />
-                  )}
-                </div>
-              </Card>
-            </Link>
-          );
-        })}
+                </Card>
+              </Link>
+            );
+          })}
+        </div>
       </div>
-    </div>
+    </ScrollablePageWrapper>
   );
 }

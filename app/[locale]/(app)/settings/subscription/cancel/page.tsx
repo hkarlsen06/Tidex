@@ -6,6 +6,7 @@ import { XCircle } from 'lucide-react';
 import { SubscriptionCancelButtons } from './SubscriptionCancelButtons';
 import { getAppDictionary } from '@/lib/i18n/dictionaries';
 import type { Locale } from '@/lib/i18n/config';
+import { SettingsPageWrapper } from '@/components/app/SettingsPageWrapper';
 
 type Props = {
   params: Promise<{ locale: Locale }>;
@@ -35,7 +36,7 @@ export default async function SubscriptionCancelPage({ params }: Props) {
   }
 
   return (
-    <div className="container mx-auto py-8 max-w-2xl">
+    <SettingsPageWrapper routeKey="settings-subscription-cancel">
       <Card className="p-8">
         <div className="flex flex-col items-center text-center space-y-6">
           <div className="w-16 h-16 bg-surface-secondary rounded-full flex items-center justify-center">
@@ -59,6 +60,6 @@ export default async function SubscriptionCancelPage({ params }: Props) {
           <SubscriptionCancelButtons dict={t} locale={locale} />
         </div>
       </Card>
-    </div>
+    </SettingsPageWrapper>
   );
 }

@@ -8,6 +8,7 @@ import { FreePlanInfo } from '@/components/settings/subscription/FreePlanInfo';
 import { UpgradeOptions } from '@/components/settings/subscription/UpgradeOptions';
 import { getTranslations } from '@/lib/i18n/server';
 import type { Locale } from '@/lib/i18n/config';
+import { SettingsPageWrapper } from '@/components/app/SettingsPageWrapper';
 
 export async function generateMetadata({
   params,
@@ -44,7 +45,7 @@ export default async function SubscriptionPage({
   const isGrandfatheredSubscriber = isEarlySupporter && hasActiveSubscription;
 
   return (
-    <div className="container mx-auto py-8 max-w-4xl">
+    <SettingsPageWrapper routeKey="settings-subscription">
       <div className="space-y-6">
         <div>
           <h2 className="text-2xl font-bold">{t.pages.settings.subscription.title}</h2>
@@ -78,6 +79,6 @@ export default async function SubscriptionPage({
           </>
         )}
       </div>
-    </div>
+    </SettingsPageWrapper>
   );
 }
