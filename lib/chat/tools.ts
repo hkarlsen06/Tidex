@@ -298,7 +298,7 @@ Use cases:
         weekdays: {
           type: "array",
           items: { type: "integer" },
-          description: "Filter by weekday: 0=Sunday, 1=Monday, ..., 6=Saturday",
+          description: "Filter by weekday (see weekday_reference in system prompt)",
         },
         sortBy: {
           type: "string",
@@ -389,7 +389,7 @@ Note: For quick monthly/yearly totals, prefer get_statistics which is optimized 
 Purpose: Validates the pattern and checks for conflicts with existing shifts before committing.
 
 Required parameters:
-- weekdays: Array of {day, anchorDate} objects. Each day is 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat. anchorDate (YYYY-MM-DD) MUST fall on that weekday.
+- weekdays: Array of {day, anchorDate} objects. Day uses weekday numbers (see weekday_reference). anchorDate (YYYY-MM-DD) MUST fall on that weekday and determines which week the series starts from.
 - start/end: Times in HH:mm format
 - frequency: weekly, biweekly, every_3_weeks, or every_4_weeks
 - endType: never, after_months, after_years, or on_date (with endValue)
@@ -407,11 +407,11 @@ Workflow: After this returns conflict info, ask user how to handle conflicts, th
             properties: {
               day: {
                 type: "integer",
-                description: "Day of week: 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat",
+                description: "Day of week (see weekday_reference)",
               },
               anchorDate: {
                 type: "string",
-                description: "First occurrence date (YYYY-MM-DD). Must fall on the correct weekday.",
+                description: "Start date (YYYY-MM-DD). Must fall on the correct weekday. Determines which week the series starts from.",
               },
             },
             required: ["day", "anchorDate"],
@@ -516,11 +516,11 @@ The series will be created and shifts generated according to the pattern.`,
             properties: {
               day: {
                 type: "integer",
-                description: "Day of week: 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat",
+                description: "Day of week (see weekday_reference)",
               },
               anchorDate: {
                 type: "string",
-                description: "First occurrence date (YYYY-MM-DD). Must fall on the correct weekday.",
+                description: "Start date (YYYY-MM-DD). Must fall on the correct weekday. Determines which week the series starts from.",
               },
             },
             required: ["day", "anchorDate"],
@@ -593,11 +593,12 @@ The series will be created and shifts generated according to the pattern.`,
 Actions:
 - LIST: action="list" - Returns all series with IDs, patterns, and schedules (weekdays array format)
 - UPDATE: action="update", seriesId, plus fields to change (weekdays, times, frequency, endType)
-- DELETE: action="delete", seriesId - Removes the series definition (existing generated shifts remain)
+- DELETE: action="delete", seriesId - Removes the series and ALL its virtual/ghost shifts disappear immediately
 
 Workflow: Always LIST first to get series IDs before update/delete.
 
-Note: Updating a series affects future occurrences. Past generated shifts are not modified.
+Note: Series shifts are virtual (not stored individually). Deleting a series removes all future occurrences.
+Only standalone shifts (manually created or converted) remain after deletion.
 When updating weekdays, provide the complete weekdays array (replaces all existing weekdays).`,
     input_schema: {
       type: "object",
@@ -618,11 +619,11 @@ When updating weekdays, provide the complete weekdays array (replaces all existi
             properties: {
               day: {
                 type: "integer",
-                description: "Day of week: 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat",
+                description: "Day of week (see weekday_reference)",
               },
               anchorDate: {
                 type: "string",
-                description: "First occurrence date (YYYY-MM-DD). Must fall on the correct weekday.",
+                description: "Start date (YYYY-MM-DD). Must fall on the correct weekday. Determines which week the series starts from.",
               },
             },
             required: ["day", "anchorDate"],
@@ -812,12 +813,8 @@ Actions:
 - VIEW: No parameters or action="view" - Returns all current settings
 - UPDATE: action="update", category, settings object with key-value pairs
 
-Categories and their settings:
-- display: theme ("light"/"dark"), defaultShiftsView
-- payroll: pauseDeductionEnabled, pauseDeductionMethod, pauseThresholdHours, pauseDeductionMinutes
-- tax: taxDeductionEnabled, taxPercentage (0-100), halfTaxMonth (1-12, for December half-tax)
-- goals: monthlyGoal (target earnings in kr), payrollDay (1-31)
-- preferences: directTimeInput, fullMinuteRange
+Categories: display, payroll, tax, goals, preferences
+See settings_reference in system prompt for detailed descriptions of each setting and valid values.
 
 Note: Only include settings you want to change in the settings object.`,
     input_schema: {
