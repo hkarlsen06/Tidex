@@ -383,10 +383,11 @@ export function StatsContent({ data }: StatsContentProps) {
       const deltaY = e.touches[0].clientY - touchStartY.current;
 
       // Detect horizontal swipe and prevent default scroll behavior
+      // Require more intentional horizontal gesture: deltaX must be 2x deltaY and > 25px
       if (
         !isSwiping.current &&
-        Math.abs(deltaX) > Math.abs(deltaY) &&
-        Math.abs(deltaX) > 10
+        Math.abs(deltaX) > Math.abs(deltaY) * 2 &&
+        Math.abs(deltaX) > 25
       ) {
         isSwiping.current = true;
       }
@@ -408,7 +409,8 @@ export function StatsContent({ data }: StatsContentProps) {
       // Skip month navigation if touch started inside a chart
       if (!isInsideChart(touchStartTarget.current)) {
         const deltaX = e.changedTouches[0].clientX - touchStartX.current;
-        const threshold = 50;
+        // Higher threshold (80px) to reduce accidental swipes on stats page
+        const threshold = 80;
 
         if (Math.abs(deltaX) > threshold) {
           if (deltaX > 0) {
