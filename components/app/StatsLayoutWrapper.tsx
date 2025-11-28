@@ -8,8 +8,8 @@ import type { ReactNode } from "react";
  */
 export function StatsLayoutWrapper({ children }: { children: ReactNode }) {
   return (
-    <div className="md:relative md:left-1/2 md:right-1/2 md:-ml-[50vw] md:-mr-[50vw] md:w-screen md:-mx-4">
-      <div className="md:mx-auto md:max-w-6xl md:px-6">
+    <div className="h-full md:relative md:left-1/2 md:right-1/2 md:-ml-[50vw] md:-mr-[50vw] md:w-screen md:-mx-4">
+      <div className="h-full md:mx-auto md:max-w-6xl md:px-6">
         {children}
       </div>
     </div>

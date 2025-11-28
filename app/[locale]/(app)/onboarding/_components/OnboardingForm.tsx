@@ -15,6 +15,7 @@ import { CompletionStep } from "./CompletionStep";
 import { completeOnboarding } from "../actions";
 import { PRESET_WAGE_RATES } from "@/lib/payroll/calc";
 import { SupplementsData } from "@/components/settings/SupplementsEditor";
+import { ScrollablePageWrapper } from "@/components/app/ScrollablePageWrapper";
 
 interface OnboardingFormProps {
   initialSettings?: {
@@ -176,8 +177,9 @@ export function OnboardingForm({ initialSettings }: OnboardingFormProps) {
   const totalSteps = 7;
 
   return (
-    <TooltipProvider>
-      <div className="min-h-full flex justify-center pt-8 pb-32 px-4 bg-background">
+    <ScrollablePageWrapper routeKey="onboarding" applyContainer={false}>
+      <TooltipProvider>
+        <div className="min-h-full flex justify-center pt-8 px-4 bg-background">
         <Card className="w-full max-w-2xl h-fit p-8 shadow-app-lg backdrop-blur-sm border-border bg-surface-secondary">
         {currentStep < totalSteps && (
           <StepIndicator currentStep={currentStep} totalSteps={totalSteps} />
@@ -277,7 +279,8 @@ export function OnboardingForm({ initialSettings }: OnboardingFormProps) {
           />
         )}
         </Card>
-      </div>
-    </TooltipProvider>
+        </div>
+      </TooltipProvider>
+    </ScrollablePageWrapper>
   );
 }

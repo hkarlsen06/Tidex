@@ -5,6 +5,7 @@ import { DisplayForm } from '@components/settings/display/DisplayForm';
 import { CurrencySelector } from '@components/settings/display/CurrencySelector';
 import { getTranslations } from '@/lib/i18n/server';
 import type { Locale } from '@/lib/i18n/config';
+import { SettingsPageWrapper } from '@/components/app/SettingsPageWrapper';
 
 export async function generateMetadata({
   params,
@@ -33,7 +34,7 @@ export default async function DisplayPage({
   const settings = await getUserSettings(user.id);
 
   return (
-    <div className="container mx-auto py-8 max-w-2xl">
+    <SettingsPageWrapper routeKey="settings-display">
       <div className="space-y-6">
         <div>
           <h2 className="text-2xl font-bold">{t.pages.settings.display.title}</h2>
@@ -55,6 +56,6 @@ export default async function DisplayPage({
           t={t}
         />
       </div>
-    </div>
+    </SettingsPageWrapper>
   );
 }
