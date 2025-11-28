@@ -157,6 +157,49 @@ export const manageSettingsSchema = z.object({
 
 export type ManageSettingsInput = z.infer<typeof manageSettingsSchema>;
 
+/**
+ * Hypothetical shift scenario for earnings calculation
+ */
+const hypotheticalShiftSchema = z.object({
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  start_time: z.string().regex(/^\d{2}:\d{2}$/),
+  end_time: z.string().regex(/^\d{2}:\d{2}$/),
+  label: z.string().optional(),
+});
+
+/**
+ * Calculate Earnings Tool Schema
+ * Supports three modes:
+ * - hypothetical: Calculate earnings for a shift that doesn't exist
+ * - compare: Compare multiple hypothetical scenarios side-by-side
+ * - hypothetical_change: "What if I changed this existing shift?"
+ */
+export const calculateEarningsSchema = z.object({
+  // Mode 1: Single hypothetical shift
+  hypothetical: hypotheticalShiftSchema.optional(),
+  // Mode 2: Compare multiple scenarios
+  compare: z.array(hypotheticalShiftSchema).min(2).max(5).optional(),
+  // Mode 3: What-if on existing shift
+  hypothetical_change: z.object({
+    // Accept: short hex IDs (4-8 chars), full UUIDs, or compact virtual shift IDs (virtual-{5char}-YYYY-MM-DD)
+    shift_id: z.string().regex(/^[a-f0-9]{4,8}$|^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$|^virtual-[a-f0-9]{5}-\d{4}-\d{2}-\d{2}$/i),
+    changes: z.object({
+      start_time: z.string().regex(/^\d{2}:\d{2}$/).optional(),
+      end_time: z.string().regex(/^\d{2}:\d{2}$/).optional(),
+      date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+    }),
+  }).optional(),
+}).refine(
+  (data) => {
+    // Exactly one mode must be specified
+    const modes = [data.hypothetical, data.compare, data.hypothetical_change].filter(Boolean);
+    return modes.length === 1;
+  },
+  { message: "Exactly one mode must be specified: hypothetical, compare, or hypothetical_change" }
+);
+
+export type CalculateEarningsInput = z.infer<typeof calculateEarningsSchema>;
+
 // =============================================================================
 // TOOL DEFINITIONS (Claude format with input_examples)
 // =============================================================================
@@ -859,6 +902,127 @@ Note: Only include settings you want to change in the settings object.`,
       },
     ],
   },
+
+  // ---------------------------------------------------------------------------
+  // HYPOTHETICAL EARNINGS CALCULATOR
+  // ---------------------------------------------------------------------------
+  {
+    name: "calculate_earnings",
+    description: `Calculate hypothetical earnings for shifts that don't exist yet. Perfect for "what if" questions.
+
+THREE MODES (use exactly one):
+
+1. HYPOTHETICAL: Calculate earnings for a single hypothetical shift
+   - Use when: "How much would I earn working 15-23 on Monday?"
+   - Params: hypothetical: { date, start_time, end_time }
+
+2. COMPARE: Compare 2-5 hypothetical scenarios side-by-side
+   - Use when: "Would I earn more working 12-18 or 16-22 on Friday?"
+   - Params: compare: [{ date, start_time, end_time, label? }, ...]
+   - Returns: All scenarios + which is best and by how much
+
+3. HYPOTHETICAL_CHANGE: Calculate what would happen if an existing shift was different
+   - Use when: "How much more would I earn if my Monday shift started at 15 instead of 9?"
+   - Params: hypothetical_change: { shift_id, changes: { start_time?, end_time?, date? } }
+   - Returns: Original vs modified earnings with difference
+   - Note: Query the shift first to get its ID
+   - Virtual/recurring shifts have IDs like "virtual-a1b2c-2025-12-03" (5-char recurring ID + date)
+
+Returns for each scenario:
+- gross: Total earnings before tax
+- net: Earnings after tax (if tax settings configured)
+- paid_hours: Hours after break deduction
+- breakdown: base_pay, supplement_pay, break_deducted_minutes
+
+The date matters for supplements (weekend/evening rates vary by day).`,
+    input_schema: {
+      type: "object",
+      properties: {
+        hypothetical: {
+          type: "object",
+          properties: {
+            date: { type: "string", description: "Date (YYYY-MM-DD)" },
+            start_time: { type: "string", description: "Start time (HH:mm)" },
+            end_time: { type: "string", description: "End time (HH:mm)" },
+            label: { type: "string", description: "Optional label for this scenario" },
+          },
+          required: ["date", "start_time", "end_time"],
+          description: "Single hypothetical shift to calculate",
+        },
+        compare: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              date: { type: "string", description: "Date (YYYY-MM-DD)" },
+              start_time: { type: "string", description: "Start time (HH:mm)" },
+              end_time: { type: "string", description: "End time (HH:mm)" },
+              label: { type: "string", description: "Optional label for this scenario" },
+            },
+            required: ["date", "start_time", "end_time"],
+          },
+          minItems: 2,
+          maxItems: 5,
+          description: "Multiple scenarios to compare",
+        },
+        hypothetical_change: {
+          type: "object",
+          properties: {
+            shift_id: { type: "string", description: "Shift ID from query_shifts (e.g. 'a1b2c' or 'virtual-a1b2c-2025-12-03')" },
+            changes: {
+              type: "object",
+              properties: {
+                start_time: { type: "string", description: "New start time (HH:mm)" },
+                end_time: { type: "string", description: "New end time (HH:mm)" },
+                date: { type: "string", description: "New date (YYYY-MM-DD)" },
+              },
+              description: "Changes to apply to the shift",
+            },
+          },
+          required: ["shift_id", "changes"],
+          description: "What-if modification to existing shift",
+        },
+      },
+    },
+    input_examples: [
+      // "How much would I earn working 15-23 on Monday Jan 20?"
+      {
+        hypothetical: {
+          date: "2025-01-20",
+          start_time: "15:00",
+          end_time: "23:00",
+        },
+      },
+      // "Would I earn more working 12-18 or 16-22 on Friday?"
+      {
+        compare: [
+          { date: "2025-01-24", start_time: "12:00", end_time: "18:00", label: "Day shift" },
+          { date: "2025-01-24", start_time: "16:00", end_time: "22:00", label: "Evening shift" },
+        ],
+      },
+      // "What if I worked Saturday vs Sunday same hours?"
+      {
+        compare: [
+          { date: "2025-01-25", start_time: "10:00", end_time: "18:00", label: "Saturday" },
+          { date: "2025-01-26", start_time: "10:00", end_time: "18:00", label: "Sunday" },
+        ],
+      },
+      // "How much more would I earn if my shift started at 15 instead?"
+      {
+        hypothetical_change: {
+          shift_id: "a1b2c",
+          changes: { start_time: "15:00" },
+        },
+      },
+      // "What if my recurring Monday shift ended at 22 instead of 20?"
+      {
+        hypothetical_change: {
+          shift_id: "virtual-b3c4d-2025-01-20",
+          changes: { end_time: "22:00" },
+        },
+      },
+    ],
+  },
 ];
 
 /**
@@ -873,7 +1037,8 @@ export type ToolName =
   | "manage_recurring_shift"
   | "manage_recurring_exclusion"
   | "get_statistics"
-  | "manage_settings";
+  | "manage_settings"
+  | "calculate_earnings";
 
 /**
  * Tool result type

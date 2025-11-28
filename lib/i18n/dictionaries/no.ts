@@ -476,6 +476,10 @@ export const no = {
         statsThisWeek: 'Statistikk for denne uken',
         statsMonthlyGoal: 'Månedlig målstatus',
         statsSupplementBreakdown: 'Tilleggsfordeling for denne måneden',
+        // Success messages - hypothetical earnings
+        calculatedHypothetical: 'Beregnet hypotetisk inntekt for {label}',
+        comparedScenarios: 'Sammenlignet {count} scenarioer',
+        calculatedChange: 'Beregnet inntektsendring: {difference} kr',
         // Error messages
         unknownTool: 'Ukjent verktøy: {name}',
         unknownAction: 'Ukjent handling: {action}',
@@ -489,6 +493,7 @@ export const no = {
         mustProvideField: 'Må oppgi minst ett felt å oppdatere',
         mustProvideDateStartEnd: 'Må oppgi minst ett felt å oppdatere (dato, start eller slutt)',
         mustProvideCategoryAndSettings: 'Må oppgi både \'category\' og \'settings\' for å oppdatere',
+        mustSpecifyMode: 'Må spesifisere nøyaktig én modus: hypothetical, compare eller hypothetical_change',
         shiftNotFound: 'Skift ikke funnet: {id}',
         recurringNotFound: 'Fast vakt ikke funnet: {id}',
         noShiftsWithIds: 'Ingen skift funnet med oppgitte ID-er',
@@ -497,6 +502,7 @@ export const no = {
         failedToUpdateSettings: 'Kunne ikke oppdatere innstillinger',
         failedToFetchStatistics: 'Kunne ikke hente statistikk',
         failedToExecuteSettingsOperation: 'Kunne ikke utføre innstillingsoperasjon',
+        failedToCalculateEarnings: 'Kunne ikke beregne inntekt',
         unknownDate: 'ukjent dato',
         // Date formatting
         weekdays: {

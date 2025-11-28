@@ -36,7 +36,8 @@ type MessageListProps = {
  * Returns 'tab' if tab-separated, 'space' if space-aligned, or null if not tabular.
  */
 const detectTabularFormat = (content: string): "tab" | "space" | null => {
-  const lines = content.trim().split("\n").filter((line) => line.trim());
+  // Don't trim content - leading tabs are significant for table structure
+  const lines = content.split("\n").filter((line) => line.trim());
   if (lines.length < 2) return null;
 
   // Check for tab-separated format first
@@ -78,7 +79,8 @@ const parseTabularContent = (
   content: string,
   format: "tab" | "space"
 ): string[][] => {
-  const lines = content.trim().split("\n").filter((line) => line.trim());
+  // Don't trim content - leading tabs are significant for table structure
+  const lines = content.split("\n").filter((line) => line.trim());
 
   if (format === "tab") {
     return lines.map((line) => line.split("\t").map((cell) => cell.trim()));
@@ -145,6 +147,71 @@ const renderTabularData = (
   );
 };
 
+/**
+ * Extract inline tabular data from regular text.
+ * Looks for consecutive lines with tabs that form a table.
+ * Returns array of {before, table, after} segments.
+ */
+const extractInlineTables = (
+  text: string
+): Array<{ type: "text"; content: string } | { type: "table"; content: string }> => {
+  const lines = text.split("\n");
+  const result: Array<{ type: "text"; content: string } | { type: "table"; content: string }> = [];
+
+  let currentTextLines: string[] = [];
+  let currentTableLines: string[] = [];
+  let inTable = false;
+
+  const flushText = () => {
+    if (currentTextLines.length > 0) {
+      result.push({ type: "text", content: currentTextLines.join("\n") });
+      currentTextLines = [];
+    }
+  };
+
+  const flushTable = () => {
+    if (currentTableLines.length >= 2) {
+      result.push({ type: "table", content: currentTableLines.join("\n") });
+    } else if (currentTableLines.length > 0) {
+      // Not enough lines for a table, treat as text
+      currentTextLines.push(...currentTableLines);
+    }
+    currentTableLines = [];
+  };
+
+  for (const line of lines) {
+    const hasTab = line.includes("\t");
+    const isEmptyOrWhitespace = line.trim() === "";
+
+    if (hasTab) {
+      if (!inTable) {
+        flushText();
+        inTable = true;
+      }
+      currentTableLines.push(line);
+    } else if (inTable) {
+      // End of table section
+      flushTable();
+      inTable = false;
+      if (!isEmptyOrWhitespace) {
+        currentTextLines.push(line);
+      } else {
+        currentTextLines.push(line);
+      }
+    } else {
+      currentTextLines.push(line);
+    }
+  }
+
+  // Flush remaining content
+  if (inTable) {
+    flushTable();
+  }
+  flushText();
+
+  return result;
+};
+
 const formatContent = (text: string | null | undefined) => {
   const safeText = `${text ?? ""}`;
 
@@ -156,9 +223,25 @@ const formatContent = (text: string | null | undefined) => {
   const result: ReactNode[] = [];
 
   parts.forEach((part, partIndex) => {
-    // Process regular text
+    // Process regular text - check for inline tables first
     if (part) {
-      result.push(...formatRegularText(part, `part-${partIndex}`));
+      const segments = extractInlineTables(part);
+
+      segments.forEach((segment, segIndex) => {
+        if (segment.type === "table") {
+          const tabularFormat = detectTabularFormat(segment.content);
+          if (tabularFormat) {
+            result.push(
+              renderTabularData(segment.content, `inline-table-${partIndex}-${segIndex}`, tabularFormat)
+            );
+          } else {
+            // Fallback to regular text if detection fails
+            result.push(...formatRegularText(segment.content, `part-${partIndex}-${segIndex}`));
+          }
+        } else {
+          result.push(...formatRegularText(segment.content, `part-${partIndex}-${segIndex}`));
+        }
+      });
     }
 
     // Insert code block after this part (if exists)

@@ -14,6 +14,7 @@ import { updateRecurringShift } from "@/app/[locale]/(app)/shifts/_actions/updat
 import { deleteRecurringShift } from "@/app/[locale]/(app)/shifts/_actions/deleteRecurringShift";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { EndCondition } from "@/lib/recurring/types";
+import type { BreakMethod } from "@/lib/payroll/types";
 import type {
   ToolName,
   ToolResult,
@@ -26,6 +27,7 @@ import type {
   ManageRecurringExclusionInput,
   GetStatisticsInput,
   ManageSettingsInput,
+  CalculateEarningsInput,
 } from "./tools";
 import {
   manageShiftSchema,
@@ -37,6 +39,7 @@ import {
   manageRecurringExclusionSchema,
   getStatisticsSchema,
   manageSettingsSchema,
+  calculateEarningsSchema,
 } from "./tools";
 import { getStatsDataForApi } from "@/data-access/stats";
 import { SettingsService } from "@/lib/services/settings";
@@ -97,16 +100,51 @@ function isShortId(id: string): boolean {
 /**
  * Resolve a short ID to full UUID using pre-fetched shifts.
  * Returns the full UUID if found, or null if not found/ambiguous.
+ *
+ * Handles both regular shifts (short hex IDs) and virtual shifts:
+ * - Regular: "a1b2c" -> "a1b2c3d4-e5f6-..."
+ * - Virtual: "virtual-a1b2c-2025-12-03" -> "virtual-a1b2c3d4-e5f6-...-2025-12-03"
  */
 function resolveShortIdFromShifts(
   shortOrFullId: string,
   shifts: { id: string }[]
 ): string | null {
+  // Handle virtual shift short IDs: virtual-{short_recurring_id}-{date}
+  if (shortOrFullId.startsWith("virtual-")) {
+    const parts = shortOrFullId.split("-");
+    // Format: virtual-{5char}-YYYY-MM-DD -> ["virtual", "a1b2c", "2025", "12", "03"]
+    if (parts.length === 5) {
+      const shortRecurringId = parts[1];
+      const date = `${parts[2]}-${parts[3]}-${parts[4]}`;
+
+      // Find virtual shift where recurring_id starts with shortRecurringId and date matches
+      const matches = shifts.filter((s) => {
+        if (!s.id.startsWith("virtual-")) return false;
+        // Full format: virtual-{uuid}-{date}
+        const fullParts = s.id.split("-");
+        const fullRecurringId = fullParts.slice(1, 6).join("-");
+        const fullDate = fullParts.slice(6).join("-");
+        return (
+          fullRecurringId.toLowerCase().startsWith(shortRecurringId.toLowerCase()) &&
+          fullDate === date
+        );
+      });
+
+      if (matches.length === 1) {
+        return matches[0].id;
+      }
+      return null;
+    }
+    // If it's a full virtual ID, return as-is
+    return shortOrFullId;
+  }
+
   // If it's already a full UUID, return as-is
   if (!isShortId(shortOrFullId)) {
     return shortOrFullId;
   }
 
+  // Regular shift: match by prefix
   const matches = shifts.filter((s) =>
     s.id.toLowerCase().startsWith(shortOrFullId.toLowerCase())
   );
@@ -179,6 +217,7 @@ const KNOWN_TOOL_NAMES: ToolName[] = [
   "manage_recurring_exclusion",
   "get_statistics",
   "manage_settings",
+  "calculate_earnings",
 ];
 
 function normalizeToolName(toolName: string): ToolName | null {
@@ -300,6 +339,9 @@ async function executeToolOnce(
 
     case "manage_settings":
       return await executeManageSettings(args, userId, tr);
+
+    case "calculate_earnings":
+      return await executeCalculateEarnings(args, userId, tr);
 
     default:
       return {
@@ -600,8 +642,22 @@ async function executeQueryShifts(
     // Format shifts for AI - compact format to reduce tokens
     const shiftsFormatted = limitedShifts.map((shift) => {
       const gross = Number(shift.computed.gross.toFixed(2));
+      // For virtual shifts, use compact format: virtual-{short_recurring_id}-{date}
+      // For regular shifts, use short 5-char ID for token efficiency
+      let shiftId: string;
+      if (shift.id.startsWith("virtual-")) {
+        // Extract recurring_id from virtual-{recurring_id}-{date} and truncate it
+        const parts = shift.id.split("-");
+        // parts: ["virtual", ...uuid_parts..., "YYYY", "MM", "DD"]
+        // UUID is parts[1] through parts[5], date is parts[6], parts[7], parts[8]
+        const recurringId = parts.slice(1, 6).join("-"); // Full UUID
+        const date = parts.slice(6).join("-"); // YYYY-MM-DD
+        shiftId = `virtual-${toShortId(recurringId)}-${date}`;
+      } else {
+        shiftId = toShortId(shift.id);
+      }
       const base = {
-        id: toShortId(shift.id),
+        id: shiftId,
         date: shift.shift_date,
         day: getWeekdayAbbr(shift.shift_date, tr),
         start: shift.start_time,
@@ -1605,6 +1661,266 @@ async function executeManageSettings(
     console.error("[manage_settings] Caught error:", error);
     throw new Error(
       error instanceof Error ? error.message : tr.failedToExecuteSettingsOperation
+    );
+  }
+}
+
+/**
+ * Execute calculate_earnings tool (hypothetical earnings calculator)
+ */
+async function executeCalculateEarnings(
+  args: unknown,
+  userId: string,
+  tr: ToolResultTranslations
+): Promise<ToolResult> {
+  const parsed = calculateEarningsSchema.safeParse(args);
+  if (!parsed.success) {
+    return {
+      success: false,
+      message: t(tr.invalidInput, { details: parsed.error.issues.map((i) => i.message).join(", ") }),
+    };
+  }
+
+  const input: CalculateEarningsInput = parsed.data;
+
+  try {
+    // Import payroll computation and presets
+    const { computeShift, PRESET_SUPPLEMENT_RULES } = await import("@/lib/payroll");
+    const { SnapshotsService } = await import("@/lib/services/snapshots");
+    const { AuthSnapshotsLive } = await import("@/lib/layers/app");
+
+    // Get user settings for break deduction
+    const settingsProgram = Effect.gen(function* () {
+      const settingsService = yield* SettingsService;
+      const settings = yield* settingsService.getUserSettings(userId);
+      return settings;
+    }).pipe(
+      Effect.provide(AuthSettingsLive),
+      Effect.catchAll(() => Effect.succeed(null)),
+      Effect.scoped
+    );
+
+    const userSettings = await Effect.runPromise(settingsProgram);
+
+    // Get user's currency
+    const currency = await getUserCurrency(userId);
+
+    // Check if user has tax deduction enabled
+    const hasTaxDeduction = userSettings?.tax_deduction_enabled && userSettings?.tax_percentage;
+
+    // Helper function to compute earnings for a hypothetical shift
+    const computeHypotheticalShift = async (
+      date: string,
+      startTime: string,
+      endTime: string,
+      label?: string
+    ) => {
+      // Get snapshot for the date
+      const snapshotProgram = Effect.gen(function* () {
+        const snapshots = yield* SnapshotsService;
+        const snapshot = yield* snapshots.getSnapshotForDate(userId, date);
+        return snapshot;
+      }).pipe(
+        Effect.provide(AuthSnapshotsLive),
+        Effect.catchAll(() => Effect.succeed(null)),
+        Effect.scoped
+      );
+
+      const snapshot = await Effect.runPromise(snapshotProgram);
+
+      // Build a fake shift row for computation
+      const fakeShift = {
+        id: `hypothetical-${Date.now()}`,
+        user_id: userId,
+        shift_date: date,
+        start_time: startTime,
+        end_time: endTime,
+      };
+
+      // Compute the shift
+      const computed = computeShift(
+        fakeShift,
+        {
+          pause_deduction_enabled: userSettings?.pause_deduction_enabled ?? true,
+          pause_deduction_method: (userSettings?.pause_deduction_method ?? "proportional") as BreakMethod,
+          pause_threshold_hours: userSettings?.pause_threshold_hours ?? 5.5,
+          pause_deduction_minutes: userSettings?.pause_deduction_minutes ?? 30,
+        },
+        PRESET_SUPPLEMENT_RULES,
+        snapshot
+      );
+
+      // Get weekday name
+      const weekday = getWeekdayAbbr(date, tr);
+
+      // Calculate net pay
+      const net = hasTaxDeduction
+        ? calculateNetPay(computed.gross, userSettings!, date)
+        : computed.gross;
+
+      return {
+        label: label || `${weekday} ${formatDateCompact(date, tr)}`,
+        date,
+        weekday,
+        start_time: startTime,
+        end_time: endTime,
+        duration_hours: Number(computed.durationHours.toFixed(2)),
+        paid_hours: Number(computed.paidHours.toFixed(2)),
+        gross: Number(computed.gross.toFixed(2)),
+        net: Number(net.toFixed(2)),
+        breakdown: {
+          base_pay: Number(computed.basePay.toFixed(2)),
+          supplement_pay: Number(computed.supplementPay.toFixed(2)),
+          break_deducted_minutes: Number((computed.breakAudit.deductedHours * 60).toFixed(0)),
+        },
+      };
+    };
+
+    // MODE 1: Single hypothetical shift
+    if (input.hypothetical) {
+      const result = await computeHypotheticalShift(
+        input.hypothetical.date,
+        input.hypothetical.start_time,
+        input.hypothetical.end_time,
+        input.hypothetical.label
+      );
+
+      return {
+        success: true,
+        message: t(tr.calculatedHypothetical, { label: result.label }),
+        data: {
+          scenarios: [result],
+        },
+        currency,
+      };
+    }
+
+    // MODE 2: Compare multiple scenarios
+    if (input.compare) {
+      const scenarios = await Promise.all(
+        input.compare.map((scenario) =>
+          computeHypotheticalShift(
+            scenario.date,
+            scenario.start_time,
+            scenario.end_time,
+            scenario.label
+          )
+        )
+      );
+
+      // Find best and worst
+      const sortedByGross = [...scenarios].sort((a, b) => b.gross - a.gross);
+      const best = sortedByGross[0];
+      const worst = sortedByGross[sortedByGross.length - 1];
+      const difference = Number((best.gross - worst.gross).toFixed(2));
+
+      // Generate comparison summary
+      let summary = "";
+      if (difference > 0) {
+        const supplementDiff = Number(
+          (best.breakdown.supplement_pay - worst.breakdown.supplement_pay).toFixed(2)
+        );
+        if (supplementDiff > difference * 0.5) {
+          summary = `"${best.label}" earns ${difference} ${currency} more, mostly from evening/weekend supplements`;
+        } else {
+          summary = `"${best.label}" earns ${difference} ${currency} more`;
+        }
+      } else {
+        summary = "Both scenarios earn the same amount";
+      }
+
+      return {
+        success: true,
+        message: t(tr.comparedScenarios, { count: scenarios.length }),
+        data: {
+          scenarios,
+          comparison: {
+            best_option: best.label,
+            worst_option: worst.label,
+            difference,
+            summary,
+          },
+        },
+        currency,
+      };
+    }
+
+    // MODE 3: Hypothetical change to existing shift
+    if (input.hypothetical_change) {
+      // Fetch shifts with a wide date range to include future virtual shifts
+      // Use 6 months back and 12 months forward to cover most scenarios
+      const now = new Date();
+      const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 6, 1);
+      const twelveMonthsAhead = new Date(now.getFullYear(), now.getMonth() + 13, 0);
+
+      const shiftsResult = await getComputedShiftsForApi(userId, {
+        startDate: sixMonthsAgo.toISOString().split("T")[0],
+        endDate: twelveMonthsAhead.toISOString().split("T")[0],
+        limit: 2000,
+      });
+
+      const fullShiftId = resolveShortIdFromShifts(
+        input.hypothetical_change.shift_id,
+        shiftsResult.shifts
+      );
+
+      if (!fullShiftId) {
+        return {
+          success: false,
+          message: t(tr.shiftNotFound, { id: input.hypothetical_change.shift_id }),
+        };
+      }
+
+      const originalShift = shiftsResult.shifts.find((s) => s.id === fullShiftId);
+      if (!originalShift) {
+        return {
+          success: false,
+          message: t(tr.shiftNotFound, { id: input.hypothetical_change.shift_id }),
+        };
+      }
+
+      // Calculate original earnings
+      const originalResult = await computeHypotheticalShift(
+        originalShift.shift_date,
+        originalShift.start_time,
+        originalShift.end_time,
+        "Original"
+      );
+
+      // Calculate modified earnings
+      const changes = input.hypothetical_change.changes;
+      const modifiedResult = await computeHypotheticalShift(
+        changes.date || originalShift.shift_date,
+        changes.start_time || originalShift.start_time,
+        changes.end_time || originalShift.end_time,
+        "Modified"
+      );
+
+      const difference = Number((modifiedResult.gross - originalResult.gross).toFixed(2));
+      const differenceStr =
+        difference > 0 ? `+${difference}` : difference === 0 ? "0" : `${difference}`;
+
+      return {
+        success: true,
+        message: t(tr.calculatedChange, { difference: differenceStr }),
+        data: {
+          original: originalResult,
+          modified: modifiedResult,
+          difference,
+          difference_net: Number((modifiedResult.net - originalResult.net).toFixed(2)),
+        },
+        currency,
+      };
+    }
+
+    // Should never reach here due to schema validation
+    return {
+      success: false,
+      message: tr.mustSpecifyMode,
+    };
+  } catch (error) {
+    throw new Error(
+      error instanceof Error ? error.message : tr.failedToCalculateEarnings
     );
   }
 }
