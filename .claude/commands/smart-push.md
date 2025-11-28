@@ -21,8 +21,8 @@ Analyze the git changes, create a commit, and push to the remote repository foll
 
 5. Stage all changes if nothing is staged (using `git add .`)
 6. Create the commit using the generated message
-7. Run `npm run lint` to check for linting errors
-8. Run `npm run build` to verify the build succeeds
+7. Run `pnpm run lint` to check for linting errors
+8. Run `pnpm run build` to verify the build succeeds
 9. If lint or build fails:
    - Show the errors to the user
    - Do NOT push to remote
