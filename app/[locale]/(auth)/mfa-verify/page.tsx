@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { FormEvent, useState, use, useEffect, useCallback } from "react";
 import { useTranslations } from "@/lib/i18n/client";
@@ -37,6 +36,7 @@ export default function MfaVerifyPage({ params }: { params: Promise<{ locale: st
   const [fieldError, setFieldError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
 
   const createChallenge = useCallback(async (factor: Factor) => {
     try {
@@ -164,6 +164,17 @@ export default function MfaVerifyPage({ params }: { params: Promise<{ locale: st
     return factor.friendly_name || t.pages.auth.mfaVerify.factorTypes.totp;
   };
 
+  const handleBackToLogin = async () => {
+    setIsSigningOut(true);
+    try {
+      await supabase.auth.signOut();
+      window.location.href = `/${locale}/login`;
+    } catch {
+      // Even if sign out fails, redirect to login
+      window.location.href = `/${locale}/login`;
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="relative flex min-h-screen items-center justify-center py-16">
@@ -287,16 +298,16 @@ export default function MfaVerifyPage({ params }: { params: Promise<{ locale: st
             </div>
           )}
 
-          {/* Back to login link */}
+          {/* Back to login button - signs out first */}
           <div className="mt-6 text-center">
             <Button
-              asChild
               variant="link"
               size="sm"
+              onClick={handleBackToLogin}
+              disabled={isSigningOut}
+              loading={isSigningOut}
             >
-              <Link href={`/${locale}/login`}>
-                {t.pages.auth.mfaVerify.backToLogin}
-              </Link>
+              {t.pages.auth.mfaVerify.backToLogin}
             </Button>
           </div>
         </CardContent>

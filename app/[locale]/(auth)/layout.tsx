@@ -6,6 +6,7 @@ import { I18nProvider } from "@/components/providers/I18nProvider";
 import { getDictionary } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/i18n/config";
 import { getSession } from "@dal/auth";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
   manifest: "/manifest.json",
@@ -24,10 +25,23 @@ export default async function AuthLayout({
 
   const { locale } = await params;
 
-  // Redirect authenticated users to dashboard
+  // Redirect authenticated users to dashboard (unless they need MFA verification)
   const session = await getSession();
   if (session) {
-    redirect(`/${locale}`);
+    // Check if user needs MFA verification
+    const supabase = await createSupabaseServerClient();
+    const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+
+    // If user has MFA enrolled (nextLevel is aal2) but hasn't verified (currentLevel is aal1),
+    // they need to complete MFA - redirect them to the MFA verify page
+    const needsMfaVerification = aalData?.currentLevel === "aal1" && aalData?.nextLevel === "aal2";
+
+    if (!needsMfaVerification) {
+      // User is fully authenticated (no MFA or MFA already verified) - redirect to dashboard
+      redirect(`/${locale}`);
+    }
+    // User needs MFA verification - let them through to auth pages (mfa-verify page will handle it)
+    // Note: If they're on /login, the LoginClient will redirect them to /mfa-verify
   }
 
   const dictionary = getDictionary(locale as Locale);

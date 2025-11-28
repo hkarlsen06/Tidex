@@ -21,6 +21,7 @@ import type { Locale } from "@/lib/i18n/config";
  * (the data access layer), not in proxy.ts.
  *
  * Unauthenticated users are redirected to /login.
+ * Users with pending MFA verification are redirected to /mfa-verify.
  */
 export default async function RootLayout({
   children,
@@ -38,6 +39,12 @@ export default async function RootLayout({
   // Authentication enforcement - redirect to login if no user
   if (!user) {
     redirect("/login");
+  }
+
+  // MFA enforcement - redirect to MFA verify if user has enrolled but not verified
+  const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+  if (aalData?.currentLevel === "aal1" && aalData?.nextLevel === "aal2") {
+    redirect(`/${locale}/mfa-verify`);
   }
 
   // Fetch user settings
