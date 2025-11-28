@@ -168,6 +168,8 @@ All Supabase clients MUST use consistent cookie configuration from `lib/auth/coo
 
 The project uses a two-tier component architecture: `components/ui/*` contains raw shadcn/ui components (never import directly), and `components/app/*` contains wrapped components with app-specific logic. Always import from `components/app`.
 
+**Skeleton components** for loading states are in `components/app/skeletons/`. Import all skeletons from `@/components/app/skeletons`. See [SKELETON_USAGE.md](components/app/SKELETON_USAGE.md) for the full API and usage patterns.
+
 ### Import Aliases
 
 Defined in `tsconfig.json`:

@@ -12,7 +12,7 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/app/Card";
-import { CalendarSkeleton } from "@/components/app/CalendarSkeleton";
+import { CalendarSkeleton } from "@/components/app/skeletons";
 import { Button } from "@/components/app/Button";
 import { ShiftWithComputations, UserSettings, SupplementRule, computeShift } from "@/lib/payroll";
 import ShiftDetails from "@/components/shifts/ShiftDetails";

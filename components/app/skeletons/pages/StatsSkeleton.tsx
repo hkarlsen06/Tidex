@@ -1,5 +1,9 @@
-import { Card } from "../Card";
+import { Card } from "@/components/app/Card";
 
+/**
+ * StatsSkeleton - Loading skeleton for the /stats page
+ * Matches the actual StatsContent layout
+ */
 export function StatsSkeleton() {
   return (
     <div className="flex flex-col w-full max-w-md mx-auto pb-6 pt-2 space-y-6">
@@ -29,7 +33,10 @@ export function StatsSkeleton() {
         {/* Hours/Shifts grid */}
         <div className="grid grid-cols-2 gap-3">
           {Array.from({ length: 2 }, (_, i) => (
-            <Card key={i} className="border-border bg-surface-primary overflow-hidden">
+            <Card
+              key={i}
+              className="border-border bg-surface-primary overflow-hidden"
+            >
               <div className="p-5 space-y-3">
                 <div className="h-4 w-16 bg-surface-secondary rounded animate-pulse" />
                 <div className="h-8 w-20 bg-surface-secondary rounded animate-pulse" />
@@ -87,7 +94,10 @@ export function StatsSkeleton() {
         {/* YTD stats */}
         <div className="grid grid-cols-1 gap-3">
           {Array.from({ length: 3 }, (_, i) => (
-            <Card key={i} className="border-border bg-surface-primary overflow-hidden">
+            <Card
+              key={i}
+              className="border-border bg-surface-primary overflow-hidden"
+            >
               <div className="p-5 space-y-3">
                 <div className="h-4 w-16 bg-surface-secondary rounded animate-pulse" />
                 <div className="flex items-baseline gap-1.5">
