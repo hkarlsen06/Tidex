@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabase/browser";
 import { withRefreshLock } from "@/lib/auth/refresh-lock";
 import { logSessionRefresh } from "@/lib/auth/session-telemetry";
 import { NavigationFeedbackProvider } from "./navigation-feedback";
+import { ScrollProvider } from "@/lib/contexts/ScrollContext";
 import { TopHeader } from "./TopHeader";
 import { NavBar } from "./NavBar";
 
@@ -70,11 +71,13 @@ export function AppLayoutClient({
   }, []);
 
   return (
-    <NavigationFeedbackProvider>
-      <LayoutContent userName={userName} avatarUrl={avatarUrl}>
-        {children}
-      </LayoutContent>
-    </NavigationFeedbackProvider>
+    <ScrollProvider threshold={50}>
+      <NavigationFeedbackProvider>
+        <LayoutContent userName={userName} avatarUrl={avatarUrl}>
+          {children}
+        </LayoutContent>
+      </NavigationFeedbackProvider>
+    </ScrollProvider>
   );
 }
 
@@ -84,12 +87,10 @@ function LayoutContent({
   avatarUrl,
 }: AppLayoutClientProps) {
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col h-dvh overflow-hidden">
       <TopHeader userName={userName} avatarUrl={avatarUrl} />
-      <main className="flex-1 flex items-center justify-center md:pb-8">
-        <div className="mx-auto max-w-md md:max-w-lg px-4 w-full pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0">
-          {children}
-        </div>
+      <main className="flex-1 min-h-0">
+        {children}
       </main>
       <NavBar />
     </div>

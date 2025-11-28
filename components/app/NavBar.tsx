@@ -15,7 +15,7 @@ import {
 import { useNavigationFeedback } from "./navigation-feedback";
 import { supabase } from "@/lib/supabase/browser";
 import { useTranslations } from "@/lib/i18n/client";
-import { useScrollDirection } from "@/lib/hooks/useScrollDirection";
+import { useScrollContext } from "@/lib/contexts/ScrollContext";
 
 type LucideIcon = typeof Gauge;
 type NavItem = {
@@ -61,7 +61,7 @@ export function NavBar() {
   const rawPathname = usePathname();
   const { navigate, pendingPath: rawPendingPath } = useNavigationFeedback();
   const [showAddShiftHint, setShowAddShiftHint] = useState(false);
-  const scrollDirection = useScrollDirection({ threshold: 10 });
+  const { scrollDirection } = useScrollContext();
 
   // Strip locale prefix from pathname for consistent nav item matching
   // usePathname() returns paths like "/no/settings" or "/en/shifts"
