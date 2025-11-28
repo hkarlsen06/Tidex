@@ -102,6 +102,14 @@ function isCurrentMonth(date: Date): boolean {
   );
 }
 
+function isFutureMonth(date: Date): boolean {
+  const now = new Date();
+  return (
+    date.getFullYear() > now.getFullYear() ||
+    (date.getFullYear() === now.getFullYear() && date.getMonth() > now.getMonth())
+  );
+}
+
 export function HomeContent({ shifts: initialShifts, settings }: HomeContentProps) {
   const { t, locale } = useTranslations();
   const formatCurrency = useFormatCurrency();
@@ -114,6 +122,7 @@ export function HomeContent({ shifts: initialShifts, settings }: HomeContentProp
   const [deletedShiftIds, setDeletedShiftIds] = useState<Set<string>>(new Set());
   const [shiftOverrides, setShiftOverrides] = useState<Map<string, ShiftWithComputations>>(new Map());
   const selectedMonthIsCurrent = isCurrentMonth(month);
+  const selectedMonthIsFuture = isFutureMonth(month);
 
   // Track which months have been loaded or are currently loading
   // Using refs to avoid recreating fetchMonth callback on every state change
@@ -265,6 +274,11 @@ export function HomeContent({ shifts: initialShifts, settings }: HomeContentProp
     () => calculateMonthData(shiftsByMonth, month, settings, formatCurrency),
     [shiftsByMonth, month, settings, formatCurrency]
   );
+
+  const totalCardTotal = selectedMonthIsFuture ? data.projectedTotal : data.total;
+  const totalCardSubtitle = selectedMonthIsFuture ? "---" : undefined;
+  const totalCardProjectedTotal = selectedMonthIsFuture ? undefined : data.projectedTotal;
+  const totalCardGrossBeforeTax = selectedMonthIsFuture ? undefined : data.grossBeforeTax;
 
   const payrollDay = Number(settings.payroll_day) || 1;
 
@@ -471,11 +485,13 @@ export function HomeContent({ shifts: initialShifts, settings }: HomeContentProp
             />
           )}
           <TotalCard
-            total={data.total}
+            total={totalCardTotal}
             percentageChange={data.percentageChange}
-            projectedTotal={data.projectedTotal}
-            grossBeforeTax={data.grossBeforeTax}
+            projectedTotal={totalCardProjectedTotal}
+            grossBeforeTax={totalCardGrossBeforeTax}
             animationDirection={direction}
+            subtitlePlaceholder={totalCardSubtitle}
+            useZeroPlaceholder={!selectedMonthIsFuture}
           />
           <div className="flex items-center justify-between -mt-3 -mb-3">
             <MonthPicker
