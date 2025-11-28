@@ -18,7 +18,7 @@ export type UpdateCustomSupplementsInput = {
 /**
  * Update custom supplements for a shift
  * - For regular shifts: updates user_shifts.custom_supplements
- * - For ghost shifts: updates recurring shift date_specific_supplements
+ * - For virtual shifts: updates recurring shift date_specific_supplements
  */
 export async function updateCustomSupplements(input: UpdateCustomSupplementsInput) {
   const { user } = await verifySession();
@@ -38,7 +38,7 @@ export async function updateCustomSupplements(input: UpdateCustomSupplementsInpu
     }
   }
 
-  // Handle recurring shift ghost
+  // Handle recurring virtual shift
   if (input.recurringId && input.shiftDate) {
     // Verify recurring shift ownership
     const { data: recurring, error: recurringError } = await supabase

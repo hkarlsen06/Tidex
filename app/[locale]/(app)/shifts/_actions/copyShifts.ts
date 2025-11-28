@@ -21,9 +21,9 @@ export async function copyShifts(input: CopyShiftsInput) {
   if (shiftIds.length === 0) throw new Error(ERRORS.MIN_ONE_SHIFT_REQUIRED);
   if (!isISODate(input.targetDate)) throw new Error(ERRORS.INVALID_DATE);
 
-  // Separate ghost shifts from regular shifts
-  const ghostIds = shiftIds.filter((id) => id.startsWith("ghost-"));
-  const regularIds = shiftIds.filter((id) => !id.startsWith("ghost-"));
+  // Separate virtual shifts from regular shifts
+  const virtualIds = shiftIds.filter((id) => id.startsWith("virtual-"));
+  const regularIds = shiftIds.filter((id) => !id.startsWith("virtual-"));
 
   const sourceShifts: Array<{
     start_time: string;
@@ -45,36 +45,36 @@ export async function copyShifts(input: CopyShiftsInput) {
     }
   }
 
-  // Handle ghost shifts - extract recurring shift information
-  if (ghostIds.length > 0) {
-    // Parse ghost IDs to get recurring shift IDs and their corresponding ghost IDs
-    // Format: "ghost-{recurringId}-{date}"
-    const ghostByRecurringId = new Map<string, string[]>();
-    for (const ghostId of ghostIds) {
-      const match = ghostId.match(/^ghost-([a-f0-9-]+)-(\d{4}-\d{2}-\d{2})$/);
+  // Handle virtual shifts - extract recurring shift information
+  if (virtualIds.length > 0) {
+    // Parse virtual shift IDs to get recurring shift IDs and their corresponding virtual IDs
+    // Format: "virtual-{recurringId}-{date}"
+    const virtualByRecurringId = new Map<string, string[]>();
+    for (const virtualId of virtualIds) {
+      const match = virtualId.match(/^virtual-([a-f0-9-]+)-(\d{4}-\d{2}-\d{2})$/);
       if (match) {
         const recurringId = match[1];
-        if (!ghostByRecurringId.has(recurringId)) {
-          ghostByRecurringId.set(recurringId, []);
+        if (!virtualByRecurringId.has(recurringId)) {
+          virtualByRecurringId.set(recurringId, []);
         }
-        ghostByRecurringId.get(recurringId)!.push(ghostId);
+        virtualByRecurringId.get(recurringId)!.push(virtualId);
       }
     }
 
-    if (ghostByRecurringId.size > 0) {
+    if (virtualByRecurringId.size > 0) {
       const { data: recurringShifts, error: recurringError } = await supabase
         .from("recurring_shifts")
         .select("id, start_time, end_time")
         .eq("user_id", user.id)
-        .in("id", Array.from(ghostByRecurringId.keys()));
+        .in("id", Array.from(virtualByRecurringId.keys()));
 
       if (recurringError) throw new Error(recurringError.message);
       if (recurringShifts) {
-        // For each ghost shift, add one entry with the recurring shift times
+        // For each virtual shift, add one entry with the recurring shift times
         for (const recurring of recurringShifts) {
-          const ghostsForThisRecurring = ghostByRecurringId.get(recurring.id) || [];
-          // Add one entry per ghost (each ghost represents a different date from the recurring shift)
-          for (const _ of ghostsForThisRecurring) {
+          const virtualShiftsForThisRecurring = virtualByRecurringId.get(recurring.id) || [];
+          // Add one entry per virtual shift (each represents a different date from the recurring shift)
+          for (const _ of virtualShiftsForThisRecurring) {
             sourceShifts.push({
               start_time: recurring.start_time,
               end_time: recurring.end_time,

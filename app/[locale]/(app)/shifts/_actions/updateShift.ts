@@ -12,7 +12,7 @@ export type UpdateShiftInput = {
   shift_date: string; // ISO YYYY-MM-DD
   start: string; // HH:mm
   end: string; // HH:mm
-  recurring_id?: string; // Present if this is a recurring shift ghost
+  recurring_id?: string; // Present if this is a recurring virtual shift
 };
 
 export async function updateShift(input: UpdateShiftInput) {
@@ -31,7 +31,7 @@ export async function updateShift(input: UpdateShiftInput) {
     throw new Error(ERRORS.INVALID_TIME);
   }
 
-  // If this is a recurring shift ghost, convert to standalone instead of updating
+  // If this is a recurring virtual shift, convert to standalone instead of updating
   if (input.recurring_id) {
     await convertRecurringShiftToStandalone({
       recurringId: input.recurring_id,

@@ -1,11 +1,11 @@
 /**
  * Conflict detection for recurring shifts
  *
- * Checks if projected ghost occurrences would overlap with existing shifts
+ * Checks if projected virtual shift occurrences would overlap with existing shifts
  * Handles cross-midnight shifts correctly
  */
 
-import type { RecurringGhost, RecurringDraft } from './types';
+import type { RecurringVirtualShift, RecurringDraft } from './types';
 
 /**
  * Existing shift shape (minimal data needed for conflict detection)
@@ -94,16 +94,16 @@ export function buildIntervalMap(
 }
 
 /**
- * Detect conflicts between ghosts and existing shifts
+ * Detect conflicts between virtual shifts and existing shifts
  *
- * @param ghosts - Array of projected ghost occurrences
+ * @param virtualShifts - Array of projected virtual shift occurrences
  * @param existingShifts - Array of existing shifts
- * @param startTime - Ghost start time (HH:mm)
- * @param endTime - Ghost end time (HH:mm)
- * @returns Map of ghost date to array of conflicting shifts
+ * @param startTime - Virtual shift start time (HH:mm)
+ * @param endTime - Virtual shift end time (HH:mm)
+ * @returns Map of virtual shift date to array of conflicting shifts
  */
 export function detectConflicts(
-  ghosts: RecurringGhost[],
+  virtualShifts: RecurringVirtualShift[],
   existingShifts: ExistingShift[],
   startTime: string,
   endTime: string
@@ -111,23 +111,23 @@ export function detectConflicts(
   const conflicts = new Map<string, ExistingShift[]>();
   const intervalMap = buildIntervalMap(existingShifts);
 
-  const ghostStartMin = timeToMinutes(startTime);
-  const ghostEndMin = timeToMinutes(endTime);
-  const isCrossMidnight = ghostEndMin <= ghostStartMin;
+  const virtualStartMin = timeToMinutes(startTime);
+  const virtualEndMin = timeToMinutes(endTime);
+  const isCrossMidnight = virtualEndMin <= virtualStartMin;
 
-  for (const ghost of ghosts) {
+  for (const virtualShift of virtualShifts) {
     const conflictingShifts: ExistingShift[] = [];
 
     if (!isCrossMidnight) {
-      // Normal ghost shift (same day)
-      const intervals = intervalMap.get(ghost.date);
+      // Normal virtual shift (same day)
+      const intervals = intervalMap.get(virtualShift.date);
       if (intervals) {
         for (const [start, end] of intervals) {
-          if (timeRangesOverlap(start, end, ghostStartMin, ghostEndMin)) {
+          if (timeRangesOverlap(start, end, virtualStartMin, virtualEndMin)) {
             // Find which shift this interval belongs to
             const shift = existingShifts.find(
               (s) =>
-                s.shift_date === ghost.date &&
+                s.shift_date === virtualShift.date &&
                 timeToMinutes(s.start_time) === start &&
                 (timeToMinutes(s.end_time) === end ||
                   // Handle cross-midnight case where end might be 1440
@@ -140,15 +140,15 @@ export function detectConflicts(
         }
       }
     } else {
-      // Cross-midnight ghost shift
-      // Check conflicts on ghost date (from start_time to midnight)
-      const intervals1 = intervalMap.get(ghost.date);
+      // Cross-midnight virtual shift
+      // Check conflicts on virtual shift date (from start_time to midnight)
+      const intervals1 = intervalMap.get(virtualShift.date);
       if (intervals1) {
         for (const [start, end] of intervals1) {
-          if (timeRangesOverlap(start, end, ghostStartMin, 24 * 60)) {
+          if (timeRangesOverlap(start, end, virtualStartMin, 24 * 60)) {
             const shift = existingShifts.find(
               (s) =>
-                s.shift_date === ghost.date &&
+                s.shift_date === virtualShift.date &&
                 timeToMinutes(s.start_time) === start
             );
             if (shift && !conflictingShifts.includes(shift)) {
@@ -159,15 +159,15 @@ export function detectConflicts(
       }
 
       // Check conflicts on next day (from midnight to end_time)
-      const nextDay = addDaysToISO(ghost.date, 1);
+      const nextDay = addDaysToISO(virtualShift.date, 1);
       const intervals2 = intervalMap.get(nextDay);
       if (intervals2) {
         for (const [start, end] of intervals2) {
-          if (timeRangesOverlap(start, end, 0, ghostEndMin)) {
+          if (timeRangesOverlap(start, end, 0, virtualEndMin)) {
             const shift = existingShifts.find(
               (s) =>
                 (s.shift_date === nextDay && timeToMinutes(s.start_time) === start) ||
-                (s.shift_date === ghost.date &&
+                (s.shift_date === virtualShift.date &&
                   timeToMinutes(s.end_time) < timeToMinutes(s.start_time))
             );
             if (shift && !conflictingShifts.includes(shift)) {
@@ -179,7 +179,7 @@ export function detectConflicts(
     }
 
     if (conflictingShifts.length > 0) {
-      conflicts.set(ghost.date, conflictingShifts);
+      conflicts.set(virtualShift.date, conflictingShifts);
     }
   }
 
@@ -200,7 +200,7 @@ export function buildConflictDateSet(
 
 /**
  * Detect all conflicts across the entire recurring shift duration
- * Generates ghosts for all months and checks each for conflicts
+ * Generates virtual shifts for all months and checks each for conflicts
  *
  * @param draft - Recurring draft with anchor dates and time range
  * @param existingShifts - Array of all user's existing shifts
@@ -211,7 +211,7 @@ export async function detectAllRecurringConflicts(
   existingShifts: ExistingShift[]
 ): Promise<string[]> {
   // Import needed utilities
-  const { generateGhostsForMonth, resolveEndWindow } = await import('./utils');
+  const { generateVirtualShiftsForMonth, resolveEndWindow } = await import('./utils');
 
   if (Object.keys(draft.selected_days).length === 0) return [];
 
@@ -241,17 +241,17 @@ export async function detectAllRecurringConflicts(
     endMonth = 12;
   }
 
-  // Generate ghosts for each month and detect conflicts
+  // Generate virtual shifts for each month and detect conflicts
   for (let year = startYear; year <= endYear; year++) {
     const startM = (year === startYear) ? startMonth : 1;
     const endM = (year === endYear) ? endMonth : 12;
 
     for (let month = startM; month <= endM; month++) {
-      const ghosts = generateGhostsForMonth({ year, month }, draft);
+      const virtualShifts = generateVirtualShiftsForMonth({ year, month }, draft);
 
-      if (ghosts.length > 0) {
+      if (virtualShifts.length > 0) {
         const monthConflicts = detectConflicts(
-          ghosts,
+          virtualShifts,
           existingShifts,
           draft.start_time,
           draft.end_time

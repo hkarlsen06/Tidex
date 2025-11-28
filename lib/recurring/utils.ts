@@ -3,12 +3,12 @@
  *
  * Provides functions for:
  * - Calculating date windows for navigation
- * - Generating ghost occurrences for a given month
+ * - Generating virtual shift occurrences for a given month
  * - Phase testing (week-based repetition patterns)
  * - Date formatting and weekday calculations
  */
 
-import type { SelectedDays, EndCondition, RecurringDraft, RecurringGhost, DateWindow } from './types';
+import type { SelectedDays, EndCondition, RecurringDraft, RecurringVirtualShift, DateWindow } from './types';
 import { parseDateAsUTC, getMonthStart, getMonthEnd } from '@/lib/date-utils';
 
 /**
@@ -143,20 +143,20 @@ export function resolveEndWindow(
 }
 
 /**
- * Generate ghost occurrences for a specific month
+ * Generate virtual shift occurrences for a specific month
  *
  * @param yearMonth - Target month (e.g., { year: 2025, month: 10 })
  * @param draft - Recurring draft with anchors, interval, and end condition
- * @returns Array of ghost occurrences in the target month
+ * @returns Array of virtual shift occurrences in the target month
  *
  * @example
- * generateGhostsForMonth({ year: 2025, month: 11 }, draft)
- * // Returns ghosts for November 2025 based on anchors and interval
+ * generateVirtualShiftsForMonth({ year: 2025, month: 11 }, draft)
+ * // Returns virtual shifts for November 2025 based on anchors and interval
  */
-export function generateGhostsForMonth(
+export function generateVirtualShiftsForMonth(
   yearMonth: { year: number; month: number },
   draft: RecurringDraft
-): RecurringGhost[] {
+): RecurringVirtualShift[] {
   const { selected_days, repeat_interval_weeks, end_condition, exclusions } = draft;
 
   if (Object.keys(selected_days).length === 0) return [];
@@ -168,7 +168,7 @@ export function generateGhostsForMonth(
   // For infinite recurring shifts (end_condition === null), we don't need a window check
   const window = end_condition !== null ? resolveEndWindow(selected_days, end_condition) : null;
 
-  const ghosts: RecurringGhost[] = [];
+  const virtualShifts: RecurringVirtualShift[] = [];
   const exclusionSet = new Set(exclusions);
 
   // For each selected weekday anchor
@@ -190,7 +190,7 @@ export function generateGhostsForMonth(
     while (current <= monthEnd) {
       const currentISO = toISODate(current);
 
-      // Check if this date is on or after the anchor date (ghosts should only go forwards in time)
+      // Check if this date is on or after the anchor date (virtual shifts should only go forwards in time)
       const anchorDate = new Date(anchorISO + 'T00:00:00Z');
       if (current < anchorDate) {
         current.setUTCDate(current.getUTCDate() + 7);
@@ -207,7 +207,7 @@ export function generateGhostsForMonth(
       const notExcluded = !exclusionSet.has(currentISO);
 
       if (inPhase && withinWindow && notExcluded) {
-        ghosts.push({
+        virtualShifts.push({
           date: currentISO,
           weekday,
           // Earnings will be calculated separately by the calendar component
@@ -219,7 +219,7 @@ export function generateGhostsForMonth(
     }
   }
 
-  return ghosts.sort((a, b) => a.date.localeCompare(b.date));
+  return virtualShifts.sort((a, b) => a.date.localeCompare(b.date));
 }
 
 /**

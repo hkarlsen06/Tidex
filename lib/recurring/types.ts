@@ -51,10 +51,11 @@ export type RecurringDraft = {
 };
 
 /**
- * A "ghost" is a projected occurrence of a shift in the recurring pattern
- * Displayed on the calendar to preview the recurring pattern
+ * A "virtual shift" is a projected occurrence of a shift in the recurring pattern.
+ * Virtual shifts are computed at runtime and not stored in the database.
+ * Displayed on the calendar to preview the recurring pattern.
  */
-export type RecurringGhost = {
+export type RecurringVirtualShift = {
   /** ISO date of the projected shift */
   date: string;
   /** Weekday (0-6) for quick filtering/grouping */
@@ -110,10 +111,10 @@ export type DateSpecificSupplements = {
  * Calculated from anchors and end_condition
  */
 export type DateWindow = {
-  /** Earliest month that can contain anchors/ghosts */
+  /** Earliest month that can contain anchors/virtual shifts */
   minMonth: Date;
-  /** Latest month that can contain anchors/ghosts */
+  /** Latest month that can contain anchors/virtual shifts */
   maxMonth: Date;
-  /** Actual maximum date (inclusive) for ghost generation */
+  /** Actual maximum date (inclusive) for virtual shift generation */
   maxDate: Date;
 };

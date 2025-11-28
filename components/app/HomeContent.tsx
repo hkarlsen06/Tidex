@@ -139,7 +139,7 @@ export function HomeContent({ shifts: initialShifts, settings }: HomeContentProp
     hasInitializedRef.current = true;
     // Only mark current month as loaded (SSR data explicitly loads current month only)
     // Do NOT mark other months even if they have shifts in initialShifts,
-    // as those might be incomplete data (e.g., recurring shift ghosts spanning multiple months)
+    // as those might be incomplete data (e.g., recurring virtual shifts spanning multiple months)
     const now = new Date();
     const currentKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     loadedMonthsRef.current.add(currentKey);

@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // getComputedShifts already includes recurring ghosts, so no need to generate them again
+    // getComputedShifts already includes recurring virtual shifts, so no need to generate them again
     const { shifts, settings } = await getComputedShiftsForApi(session.user.id, {
       startDate: getMonthStart(year, month),
       endDate: getMonthEnd(year, month),

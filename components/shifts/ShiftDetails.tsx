@@ -212,7 +212,7 @@ export function ShiftDetails({
     if (!shift) return;
     setConfirmingDelete(false);
 
-    // If recurring ghost, pass recurring info for exclusion handling
+    // If recurring virtual shift, pass recurring info for exclusion handling
     if (shift.recurring_id) {
       onDelete?.({ shiftId: shift.id, recurringId: shift.recurring_id, shiftDate: shift.shift_date });
     } else {
@@ -277,7 +277,7 @@ export function ShiftDetails({
     });
   };
 
-  const isRecurringGhost = Boolean(shift?.recurring_id);
+  const isVirtualShift = Boolean(shift?.recurring_id);
 
   const supplementSegments = shift ? buildSupplementSegments(shift) : [];
   const baseWageRate =
@@ -425,7 +425,7 @@ export function ShiftDetails({
 
         <DialogFooter className="mt-4">
           {shift && (
-            <div className={cn("grid w-full gap-2", readOnly ? "grid-cols-1" : isRecurringGhost && !isEditing && !confirmingDelete ? "grid-cols-2" : "grid-cols-3")}>
+            <div className={cn("grid w-full gap-2", readOnly ? "grid-cols-1" : isVirtualShift && !isEditing && !confirmingDelete ? "grid-cols-2" : "grid-cols-3")}>
               {!readOnly && (
                 <Button
                   onClick={() => {
@@ -474,7 +474,7 @@ export function ShiftDetails({
                   {t.pages.shifts.details.editButton}
                 </Button>
               ) : null}
-              {!readOnly && isRecurringGhost && !isEditing && !confirmingDelete && (
+              {!readOnly && isVirtualShift && !isEditing && !confirmingDelete && (
                 <Button
                   onClick={handleEditRecurring}
                   disabled={saving || isDeleting || isOffline}

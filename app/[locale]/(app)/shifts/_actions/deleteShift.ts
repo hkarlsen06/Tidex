@@ -8,8 +8,8 @@ import { ERRORS } from "@/lib/errors/messages";
 
 type DeleteShiftInput = {
   shiftId: string;
-  recurringId?: string; // Present if this is a recurring shift ghost
-  shiftDate?: string; // ISO date, needed if recurring shift ghost
+  recurringId?: string; // Present if this is a recurring virtual shift
+  shiftDate?: string; // ISO date, needed if recurring virtual shift
 };
 
 export async function deleteShift(input: string | DeleteShiftInput) {
@@ -23,7 +23,7 @@ export async function deleteShift(input: string | DeleteShiftInput) {
 
   if (!shiftId) throw new Error(ERRORS.INVALID_SHIFT_ID);
 
-  // Case 1: Deleting a recurring shift ghost - add to exclusions instead
+  // Case 1: Deleting a recurring virtual shift - add to exclusions instead
   if (recurringId && shiftDate) {
     const { data: recurring, error: recurringError } = await supabase
       .from("recurring_shifts")

@@ -38,7 +38,7 @@ import {
   type WageSnapshot,
 } from "../payroll";
 import { getCurrentYearMonth, getMonthStart, getMonthEnd } from "../date-utils";
-import { generateGhostsForMonth } from "../recurring/utils";
+import { generateVirtualShiftsForMonth } from "../recurring/utils";
 import type { RecurringShiftRow } from "../recurring/types";
 import { cleanTime } from "../time-utils";
 
@@ -84,7 +84,7 @@ export class ShiftsService extends Context.Tag("ShiftsService")<
   ShiftsService,
   {
     /**
-     * Get shifts with computations, recurring shift ghosts, and aggregates
+     * Get shifts with computations, recurring virtual shifts, and aggregates
      * Automatically verifies user authentication
      */
     readonly getShiftsWithComputations: (
@@ -245,8 +245,8 @@ export const ShiftsServiceLive = Layer.effect(
         // Collect all shift dates for batch snapshot lookup
         const shiftDates = (shifts ?? []).map((s: ShiftRow) => s.shift_date);
 
-        // Generate recurring ghosts and collect their dates
-        const ghostDates: string[] = [];
+        // Generate recurring virtual shifts and collect their dates
+        const virtualShiftDates: string[] = [];
         const startYear = new Date(startDate).getFullYear();
         const startMonth = new Date(startDate).getMonth() + 1;
         const endYear = new Date(endDate).getFullYear();
@@ -260,7 +260,7 @@ export const ShiftsServiceLive = Layer.effect(
             currentYear < endYear ||
             (currentYear === endYear && currentMonth <= endMonth)
           ) {
-            const ghosts = generateGhostsForMonth(
+            const virtualShifts = generateVirtualShiftsForMonth(
               { year: currentYear, month: currentMonth },
               {
                 start_time: cleanTime(recurring.start_time),
@@ -281,7 +281,7 @@ export const ShiftsServiceLive = Layer.effect(
               }
             );
 
-            ghostDates.push(...ghosts.map((g) => g.date));
+            virtualShiftDates.push(...virtualShifts.map((vs) => vs.date));
 
             // Move to next month
             currentMonth++;
@@ -292,8 +292,8 @@ export const ShiftsServiceLive = Layer.effect(
           }
         }
 
-        // Fetch snapshots for all dates (shifts + ghosts) in one batch
-        const allDates = [...shiftDates, ...ghostDates];
+        // Fetch snapshots for all dates (shifts + virtual shifts) in one batch
+        const allDates = [...shiftDates, ...virtualShiftDates];
         const snapshotMap = yield* getSnapshotsForDates(userId, allDates);
 
         // Compute regular shifts
@@ -305,8 +305,8 @@ export const ShiftsServiceLive = Layer.effect(
           };
         });
 
-        // Compute recurring ghosts
-        const recurringGhosts: ShiftWithComputations[] = [];
+        // Compute recurring virtual shifts
+        const recurringVirtualShifts: ShiftWithComputations[] = [];
         for (const recurring of (recurringShifts ?? []) as DbRecurringShift[]) {
           let currentYear = startYear;
           let currentMonth = startMonth;
@@ -315,7 +315,7 @@ export const ShiftsServiceLive = Layer.effect(
             currentYear < endYear ||
             (currentYear === endYear && currentMonth <= endMonth)
           ) {
-            const ghosts = generateGhostsForMonth(
+            const virtualShifts = generateVirtualShiftsForMonth(
               { year: currentYear, month: currentMonth },
               {
                 start_time: cleanTime(recurring.start_time),
@@ -336,42 +336,42 @@ export const ShiftsServiceLive = Layer.effect(
               }
             );
 
-            for (const ghost of ghosts) {
-              // Filter ghosts to only include those within the date range
-              if (ghost.date < startDate || ghost.date > endDate) {
+            for (const virtualShift of virtualShifts) {
+              // Filter virtual shifts to only include those within the date range
+              if (virtualShift.date < startDate || virtualShift.date > endDate) {
                 continue;
               }
 
-              const snapshot = snapshotMap.get(ghost.date) ?? null;
+              const snapshot = snapshotMap.get(virtualShift.date) ?? null;
 
-              // Check if recurring shift has date-specific custom supplements for this ghost date
-              const customSupplements = recurring.date_specific_supplements?.[ghost.date] ?? null;
+              // Check if recurring shift has date-specific custom supplements for this virtual shift date
+              const customSupplements = recurring.date_specific_supplements?.[virtualShift.date] ?? null;
 
               const computed = computeShift(
                 {
-                  id: `ghost-${recurring.id}-${ghost.date}`,
+                  id: `virtual-${recurring.id}-${virtualShift.date}`,
                   user_id: userId,
-                  shift_date: ghost.date,
+                  shift_date: virtualShift.date,
                   start_time: cleanTime(recurring.start_time),
                   end_time: cleanTime(recurring.end_time),
                   custom_supplements: customSupplements as any,
                   recurring_id: recurring.id,
-                  recurring_anchor_weekday: ghost.weekday,
+                  recurring_anchor_weekday: virtualShift.weekday,
                 },
                 userSettings,
                 PRESET_SUPPLEMENT_RULES,
                 snapshot
               );
 
-              recurringGhosts.push({
-                id: `ghost-${recurring.id}-${ghost.date}`,
+              recurringVirtualShifts.push({
+                id: `virtual-${recurring.id}-${virtualShift.date}`,
                 user_id: userId,
-                shift_date: ghost.date,
+                shift_date: virtualShift.date,
                 start_time: cleanTime(recurring.start_time),
                 end_time: cleanTime(recurring.end_time),
                 custom_supplements: customSupplements as any,
                 recurring_id: recurring.id,
-                recurring_anchor_weekday: ghost.weekday,
+                recurring_anchor_weekday: virtualShift.weekday,
                 computed,
               });
             }
@@ -385,8 +385,8 @@ export const ShiftsServiceLive = Layer.effect(
           }
         }
 
-        // Merge shifts and recurring ghosts
-        const allShifts = [...computedShifts, ...recurringGhosts];
+        // Merge shifts and recurring virtual shifts
+        const allShifts = [...computedShifts, ...recurringVirtualShifts];
 
         // Compute aggregates
         const aggregates: ShiftsAggregates = allShifts.reduce(

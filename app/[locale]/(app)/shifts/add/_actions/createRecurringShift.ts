@@ -87,7 +87,7 @@ export async function createRecurringShift(
     ).sort();
   }
   // If conflictResolution === 'keep_existing', we don't detect/exclude conflicts
-  // Recurring shift will create ghost shifts, and existing standalone shifts will remain
+  // Recurring shift will create virtual shifts, and existing standalone shifts will remain
 
   // Insert recurring shift with all exclusions (manual + conflicts)
   const { data, error } = await supabase

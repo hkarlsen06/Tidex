@@ -14,7 +14,7 @@ type ConvertInput = {
 };
 
 /**
- * Convert a recurring ghost shift to a standalone shift
+ * Convert a recurring virtual shift to a standalone shift
  * - Creates a new standalone shift with the given parameters
  * - Adds the date to the recurring shift exclusions array
  * - Revalidates the shifts page
