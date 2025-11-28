@@ -13,6 +13,7 @@ import { connection } from "next/server";
 import { verifySession } from "@/data-access/auth";
 import { getWageyAccess } from "@/data-access/wagey";
 import { getDictionary } from "@/lib/i18n/dictionaries";
+import { sanitizeDisplayName } from "@/lib/sanitize";
 import { I18nProvider } from "@/components/providers/I18nProvider";
 import { WageyInterface } from "./_components/WageyInterface";
 import { WageyTrialWrapper } from "./_components/WageyTrialWrapper";
@@ -29,6 +30,13 @@ export default async function WageyPage({ params }: WageyPageProps) {
   const { user } = await verifySession();
   const dictionary = await getDictionary(locale);
 
+  // Use user's chosen name (first_name) if set, otherwise fall back to OAuth name
+  // If neither available, pass undefined - MessageList will use localized "You"/"Deg"
+  const rawUserName =
+    (user.user_metadata?.first_name as string | undefined) ??
+    (user.user_metadata?.full_name as string | undefined);
+  const userName = rawUserName ? sanitizeDisplayName(rawUserName) : undefined;
+
   // Check Wagey access based on subscription
   const wageyAccess = await getWageyAccess();
 
@@ -39,7 +47,7 @@ export default async function WageyPage({ params }: WageyPageProps) {
         <I18nProvider locale={locale} dictionary={dictionary}>
           <WageyTrialWrapper
             userId={user.id}
-            userName={user.user_metadata?.full_name}
+            userName={userName}
             wageyAccess={wageyAccess}
           />
         </I18nProvider>
@@ -53,7 +61,7 @@ export default async function WageyPage({ params }: WageyPageProps) {
       <I18nProvider locale={locale} dictionary={dictionary}>
         <WageyInterface
           userId={user.id}
-          userName={user.user_metadata?.full_name}
+          userName={userName}
           wageyAccess={wageyAccess}
         />
       </I18nProvider>
