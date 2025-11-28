@@ -182,7 +182,7 @@ export const TotalCard: React.FC<TotalCardProps> = ({
       tabIndex={onClick ? 0 : undefined}
       onKeyDown={handleKeyDown}
     >
-      <CardContent className="px-4 py-6">
+      <CardContent className="py-6">
         {isLoading ? (
           <div className="animate-pulse space-y-4 text-center" aria-hidden="true">
             <div className="mx-auto h-6 w-24 rounded-lg bg-text-muted/20" />
