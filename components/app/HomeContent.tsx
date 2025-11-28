@@ -30,10 +30,8 @@ function calculateMonthData(
 ): {
   total: string;
   percentageChange?: number;
-  tillegg: string;
+  projectedTotal: string;
   grossBeforeTax?: string;
-  lastMonthNet?: number;
-  earnedToDate: string;
 } {
   const targetYear = month.getFullYear();
   const targetMonth = month.getMonth() + 1;
@@ -74,25 +72,25 @@ function calculateMonthData(
   });
 
   const taxEnabled = taxSettings.enabled;
-  const displayCurrent = taxEnabled ? currentTotals.net : currentTotals.gross;
-  const displayLastMonth = taxEnabled ? lastMonthTotals.net : lastMonthTotals.gross;
+  const projectedCurrent = taxEnabled ? currentTotals.net : currentTotals.gross;
+  const projectedLastMonth = taxEnabled ? lastMonthTotals.net : lastMonthTotals.gross;
 
   let percentageChange: number | undefined;
-  if (displayLastMonth > 0) {
+  if (projectedLastMonth > 0) {
     percentageChange = Math.round(
-      ((displayCurrent - displayLastMonth) / displayLastMonth) * 100
+      ((projectedCurrent - projectedLastMonth) / projectedLastMonth) * 100
     );
   }
 
+  // Earned to date (respects tax setting) - this is the primary big number
+  const earnedToDate = taxEnabled ? currentTotals.completedNet : currentTotals.completedGross;
+
   return {
-    total: formatCurrency(displayCurrent),
+    total: formatCurrency(earnedToDate),
     percentageChange,
-    tillegg: formatCurrency(currentTotals.supplement),
-    grossBeforeTax: taxEnabled ? formatCurrency(currentTotals.gross) : undefined,
-    lastMonthNet: lastMonthTotals.net,
-    earnedToDate: formatCurrency(
-      taxEnabled ? currentTotals.completedNet : currentTotals.completedGross
-    ),
+    projectedTotal: formatCurrency(projectedCurrent),
+    // Gross before tax (only relevant when tax is enabled)
+    grossBeforeTax: taxEnabled ? formatCurrency(currentTotals.completedGross) : undefined,
   };
 }
 
@@ -442,10 +440,8 @@ export function HomeContent({ shifts: initialShifts, settings }: HomeContentProp
           <TotalCard
             total={data.total}
             percentageChange={data.percentageChange}
-            tillegg={data.tillegg}
-            taxDeductionEnabled={taxDeductionEnabled}
+            projectedTotal={data.projectedTotal}
             grossBeforeTax={data.grossBeforeTax}
-            earnedToDate={selectedMonthIsCurrent ? data.earnedToDate : undefined}
             animationDirection={direction}
           />
           <div className="flex items-center justify-between -mt-3 -mb-3">

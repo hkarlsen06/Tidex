@@ -1332,6 +1332,11 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
             onCancelMoveMode={handleCancelMoveMode}
             newlyAddedDates={newlyAddedDates}
             isOffline={isOffline}
+            taxSettings={{
+              enabled: userSettings.tax_deduction_enabled ?? false,
+              percentage: Number(userSettings.tax_percentage) || 0,
+              halfTaxMonth: userSettings.half_tax_month ?? null,
+            }}
           />
         </div>
       </div>

@@ -15,6 +15,12 @@ import { getMonthlyTotals } from "@/lib/shifts/monthlyTotals";
 import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
 import { useCurrency } from "@/components/providers/CurrencyProvider";
 
+type TaxSettings = {
+  enabled: boolean;
+  percentage: number;
+  halfTaxMonth?: number | null;
+};
+
 type MonthlyEarningsCalendarProps = {
   shifts: ShiftWithComputations[];
   month: Date;
@@ -34,6 +40,7 @@ type MonthlyEarningsCalendarProps = {
   onCancelMoveMode?: () => void;
   newlyAddedDates?: Set<string>;
   isOffline?: boolean;
+  taxSettings?: TaxSettings;
 };
 
 function buildEarningsByDate(shifts: ShiftWithComputations[]): EarningsByDate {
@@ -126,6 +133,7 @@ export function MonthlyEarningsCalendar({
   onCancelMoveMode,
   newlyAddedDates,
   isOffline = false,
+  taxSettings,
 }: MonthlyEarningsCalendarProps) {
   const { t } = useTranslations();
   const formatCurrency = useFormatCurrency();
@@ -192,15 +200,21 @@ export function MonthlyEarningsCalendar({
     [monthlyShifts]
   );
 
-  const totalEarnings = useMemo(() => {
-    const { gross } = getMonthlyTotals({
+  const { totalEarnings, netEarnings } = useMemo(() => {
+    // Calculate payout month for half tax check (income earned in month is paid out next month)
+    const targetMonth = month.getMonth() + 1;
+    const payoutMonth = targetMonth === 12 ? 1 : targetMonth + 1;
+
+    const { gross, net } = getMonthlyTotals({
       shifts: monthlyShifts,
       year: month.getFullYear(),
       month: month.getMonth() + 1,
+      taxSettings,
+      now: new Date(),
     });
 
-    return gross;
-  }, [monthlyShifts, month]);
+    return { totalEarnings: gross, netEarnings: net };
+  }, [monthlyShifts, month, taxSettings]);
 
   // Swipe gesture handling
   useEffect(() => {
@@ -282,9 +296,16 @@ export function MonthlyEarningsCalendar({
           </div>
           <div
             key={`total-${month.getFullYear()}-${month.getMonth()}`}
-            className={`font-semibold text-text-primary ${getAnimationClasses(localDirection)}`}
+            className={`text-right ${getAnimationClasses(localDirection)}`}
           >
-            {totalEarnings === 0 ? '—' : formatCurrency(totalEarnings)}
+            <div className="font-semibold text-text-primary">
+              {totalEarnings === 0 ? '—' : formatCurrency(totalEarnings)}
+            </div>
+            {taxSettings?.enabled && totalEarnings > 0 && (
+              <div className="text-sm text-text-muted">
+                {formatCurrency(netEarnings)}
+              </div>
+            )}
           </div>
         </div>
         <div className="pb-6">
@@ -298,6 +319,7 @@ export function MonthlyEarningsCalendar({
             selectedDate={selectedDate}
             weekNumberPosition="top-left"
             newlyAddedDates={newlyAddedDates}
+            taxSettings={taxSettings}
           />
         </div>
       </div>

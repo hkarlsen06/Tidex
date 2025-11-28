@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState, useRef, useLayoutEffect } from 'react';
 import { ArrowDown, ArrowUp } from 'lucide-react';
 import { Card, CardContent } from '@/components/app/Card';
 import { useTranslations } from '@/lib/i18n/client';
@@ -6,17 +6,111 @@ import { useTranslations } from '@/lib/i18n/client';
 interface TotalCardProps {
   total: string;
   percentageChange?: number;
-  tillegg?: string;
   isLoading?: boolean;
   onClick?: () => void;
   className?: string;
-  taxDeductionEnabled?: boolean;
+  projectedTotal?: string;
   grossBeforeTax?: string;
-  earnedToDate?: string;
   animationDirection?: 'next' | 'previous' | null;
 }
 
-const ROTATION_INTERVAL_MS = 4500;
+// Maximum font size in pixels for the total amount
+const MAX_FONT_SIZE_PX = 72;
+// Minimum font size in pixels (fallback floor)
+const MIN_FONT_SIZE_PX = 28;
+
+// Hook to auto-scale font size to fit container width
+function useAutoScaleFont(
+  text: string,
+  maxFontSize: number = MAX_FONT_SIZE_PX,
+  minFontSize: number = MIN_FONT_SIZE_PX
+): { containerRef: React.RefObject<HTMLDivElement | null>; fontSize: number } {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [fontSize, setFontSize] = useState(maxFontSize);
+
+  useLayoutEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    // Create a hidden measurement element
+    const measureEl = document.createElement('span');
+    measureEl.style.cssText = `
+      position: absolute;
+      visibility: hidden;
+      white-space: nowrap;
+      font-weight: 700;
+      font-family: inherit;
+    `;
+    measureEl.textContent = text;
+    document.body.appendChild(measureEl);
+
+    // Binary search for optimal font size
+    const containerWidth = container.offsetWidth;
+    let low = minFontSize;
+    let high = maxFontSize;
+    let optimal = minFontSize;
+
+    while (low <= high) {
+      const mid = Math.floor((low + high) / 2);
+      measureEl.style.fontSize = `${mid}px`;
+
+      if (measureEl.offsetWidth <= containerWidth) {
+        optimal = mid;
+        low = mid + 1;
+      } else {
+        high = mid - 1;
+      }
+    }
+
+    document.body.removeChild(measureEl);
+    setFontSize(optimal);
+  }, [text, maxFontSize, minFontSize]);
+
+  // Also handle resize
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const resizeObserver = new ResizeObserver(() => {
+      // Create a hidden measurement element
+      const measureEl = document.createElement('span');
+      measureEl.style.cssText = `
+        position: absolute;
+        visibility: hidden;
+        white-space: nowrap;
+        font-weight: 700;
+        font-family: inherit;
+      `;
+      measureEl.textContent = text;
+      document.body.appendChild(measureEl);
+
+      const containerWidth = container.offsetWidth;
+      let low = minFontSize;
+      let high = maxFontSize;
+      let optimal = minFontSize;
+
+      while (low <= high) {
+        const mid = Math.floor((low + high) / 2);
+        measureEl.style.fontSize = `${mid}px`;
+
+        if (measureEl.offsetWidth <= containerWidth) {
+          optimal = mid;
+          low = mid + 1;
+        } else {
+          high = mid - 1;
+        }
+      }
+
+      document.body.removeChild(measureEl);
+      setFontSize(optimal);
+    });
+
+    resizeObserver.observe(container);
+    return () => resizeObserver.disconnect();
+  }, [text, maxFontSize, minFontSize]);
+
+  return { containerRef, fontSize };
+}
 
 // Helper to get animation classes based on direction
 function getAnimationClasses(direction: 'next' | 'previous' | null): string {
@@ -34,13 +128,11 @@ function getAnimationClasses(direction: 'next' | 'previous' | null): string {
 export const TotalCard: React.FC<TotalCardProps> = ({
   total,
   percentageChange,
-  tillegg,
   isLoading = false,
   onClick,
   className = '',
-  taxDeductionEnabled = false,
+  projectedTotal,
   grossBeforeTax,
-  earnedToDate,
   animationDirection = null,
 }) => {
   const { t } = useTranslations();
@@ -72,94 +164,15 @@ export const TotalCard: React.FC<TotalCardProps> = ({
       }
     : undefined;
 
-  const primaryContent = useMemo(() => {
-    if (taxDeductionEnabled && grossBeforeTax && grossBeforeTax !== '0 kr') {
-      return (
-        <>
-          <span className="font-semibold text-text-primary">{grossBeforeTax}</span> {t.components.totalCard.beforeTax}
-        </>
-      );
-    }
+  // Auto-scale font size for the total amount
+  const displayTotal = total === '0 kr' ? '---' : total;
+  const { containerRef: totalContainerRef, fontSize: totalFontSize } = useAutoScaleFont(displayTotal);
 
-    if (tillegg && tillegg !== '0 kr') {
-      return (
-        <>
-          {t.components.totalCard.supplements}: <span className="font-semibold text-text-primary">{tillegg}</span>
-        </>
-      );
-    }
-
-    return null;
-  }, [taxDeductionEnabled, grossBeforeTax, tillegg, t]);
-
-  const alternateContent = useMemo(() => {
-    if (!earnedToDate || earnedToDate === '0 kr') {
-      return null;
-    }
-
-    return (
-      <>
-        <span className="font-semibold text-text-primary">{earnedToDate}</span> {t.components.totalCard.earnedToDate}
-      </>
-    );
-  }, [earnedToDate, t]);
-
-  const textOptions = useMemo(() => {
-    const options: React.ReactNode[] = [];
-
-    if (alternateContent) {
-      options.push(alternateContent);
-    }
-
-    if (primaryContent) {
-      options.push(primaryContent);
-    }
-
-    return options;
-  }, [alternateContent, primaryContent]);
-
-  const [displayIndex, setDisplayIndex] = useState(0);
-  const [nextDisplayIndex, setNextDisplayIndex] = useState<number | null>(null);
-  const [isTransitioning, setIsTransitioning] = useState(false);
-
-  // Reset display state when data changes
-  useEffect(() => {
-    if (isLoading) {
-      return;
-    }
-
-    // Note: These setState calls are intentional to reset animation state when data changes
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setDisplayIndex(0);
-    setNextDisplayIndex(null);
-    setIsTransitioning(false);
-
-    if (textOptions.length < 2) {
-      return;
-    }
-
-    const intervalId = window.setInterval(() => {
-      setDisplayIndex((currentIndex) => {
-        const nextIndex = (currentIndex + 1) % textOptions.length;
-        setNextDisplayIndex(nextIndex);
-        setIsTransitioning(true);
-        return currentIndex; // Don't update displayIndex yet - wait for animation
-      });
-    }, ROTATION_INTERVAL_MS);
-
-    return () => window.clearInterval(intervalId);
-  }, [textOptions, isLoading]);
-
-  const handleExitAnimationEnd = () => {
-    if (nextDisplayIndex !== null) {
-      setDisplayIndex(nextDisplayIndex);
-      setNextDisplayIndex(null);
-    }
-  };
-
-  const handleEnterAnimationEnd = () => {
-    setIsTransitioning(false);
-  };
+  // Determine what to show in subtitle:
+  // - If projected equals earned (no future shifts), show gross before tax (if tax enabled)
+  // - Otherwise show projected total for the whole month
+  const hasFutureShifts = projectedTotal && projectedTotal !== total && projectedTotal !== '0 kr';
+  const showGrossBeforeTax = !hasFutureShifts && grossBeforeTax && grossBeforeTax !== '0 kr' && grossBeforeTax !== total;
 
   return (
     <Card
@@ -186,10 +199,10 @@ export const TotalCard: React.FC<TotalCardProps> = ({
                 {hasChange ? (
                   <>
                     <ArrowIcon
-                      className={`h-6 w-6 ${isPositive ? 'text-success' : 'text-error'}`}
+                      className={`h-6 w-6 ${isPositive ? 'text-brand-highlight' : 'text-text-secondary'}`}
                       strokeWidth={2}
                     />
-                    <span className={`text-lg font-semibold ${isPositive ? 'text-success' : 'text-error'}`}>
+                    <span className={`text-lg font-semibold ${isPositive ? 'text-brand-highlight' : 'text-text-secondary'}`}>
                       {Math.abs(percentageChange as number)}%
                     </span>
                   </>
@@ -199,43 +212,30 @@ export const TotalCard: React.FC<TotalCardProps> = ({
               </div>
             )}
             <div
+              ref={totalContainerRef}
               key={`total-${total}`}
-              className={`mt-3 text-6xl font-bold text-brand-highlight whitespace-nowrap ${getAnimationClasses(animationDirection)}`}
+              className={`mt-3 font-bold text-brand-highlight whitespace-nowrap ${getAnimationClasses(animationDirection)}`}
               style={{
-                fontSize: 'clamp(1.875rem, 12vw, 3.75rem)',
+                fontSize: `${totalFontSize}px`,
+                lineHeight: 1.1,
               }}
-            >{total === '0 kr' ? '---' : total}</div>
-            {textOptions.length > 0 ? (
+            >{displayTotal}</div>
+            {(hasFutureShifts || showGrossBeforeTax) && (
               <div
-                key={`subtitle-container-${total}`}
-                className={`relative mx-auto mt-4 overflow-hidden ${getAnimationClasses(animationDirection)}`}
-                style={{ width: '66.67%', minHeight: '1.75rem' }}
+                key={`subtitle-${total}`}
+                className={`mt-4 text-lg text-text-secondary ${getAnimationClasses(animationDirection)}`}
               >
-                {/* Current text - exits when transitioning */}
-                <div
-                  className={`absolute inset-0 text-lg text-text-secondary ${
-                    isTransitioning ? 'animate-[swipe-out-left_0.4s_ease-in-out]' : ''
-                  }`}
-                  style={{
-                    opacity: isTransitioning && nextDisplayIndex !== null ? 0 : 1,
-                    pointerEvents: isTransitioning && nextDisplayIndex !== null ? 'none' : 'auto',
-                  }}
-                  onAnimationEnd={handleExitAnimationEnd}
-                >
-                  {textOptions[displayIndex]}
-                </div>
-
-                {/* Next text - enters when transitioning */}
-                {isTransitioning && nextDisplayIndex !== null && (
-                  <div
-                    className="absolute inset-0 text-lg text-text-secondary animate-[swipe-in-right_0.4s_ease-in-out]"
-                    onAnimationEnd={handleEnterAnimationEnd}
-                  >
-                    {textOptions[nextDisplayIndex]}
-                  </div>
+                {hasFutureShifts ? (
+                  <>
+                    <span className="font-semibold text-text-primary">{projectedTotal}</span> {t.components.totalCard.wholeMonth}
+                  </>
+                ) : (
+                  <>
+                    <span className="font-semibold text-text-primary">{grossBeforeTax}</span> {t.components.totalCard.beforeTax}
+                  </>
                 )}
               </div>
-            ) : null}
+            )}
           </div>
         )}
       </CardContent>

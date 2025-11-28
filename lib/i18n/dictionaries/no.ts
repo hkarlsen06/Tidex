@@ -1256,6 +1256,8 @@ export const no = {
       beforeTax: 'før skatt',
       supplements: 'Tillegg',
       earnedToDate: 'til nå',
+      wholeMonth: 'hele måneden',
+      afterTax: 'etter skatt',
     },
     charts: {
       supplementBreakdown: {

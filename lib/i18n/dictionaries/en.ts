@@ -1257,6 +1257,8 @@ export const en: Dictionary = {
       beforeTax: 'before tax',
       supplements: 'Supplements',
       earnedToDate: 'to date',
+      wholeMonth: 'this month',
+      afterTax: 'after tax',
     },
     charts: {
       supplementBreakdown: {
