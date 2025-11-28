@@ -33,6 +33,8 @@ export type SystemPromptContext = {
   used: number;
   /** Messages remaining (null = unlimited) */
   remaining: number | null;
+  /** User's name for personalization */
+  userName?: string;
 };
 
 export function getSystemPrompt(context?: SystemPromptContext): string {
@@ -89,13 +91,22 @@ ${canUpgrade ? `4. If remaining is 0, after completing the user's request, brief
 </user_limits>`
     : "";
 
+  // Build user context section if name is available
+  const userSection = context?.userName
+    ? `
+<user>
+Name: ${context.userName}
+Use their name naturally when appropriate (greetings, confirmations) but don't overuse it.
+</user>`
+    : "";
+
   return `You are Wagey, a friendly and knowledgeable assistant for Tidex, helping users manage work shifts and track wages. You are warm, efficient, and proactive in helping users accomplish their goals.
 
 <context>
 Today: ${isoLocalDate} (${prettyDate}, week ${isoWeek})
 Timezone: Europe/Oslo
 </context>
-${usageSection}
+${userSection}${usageSection}
 <tone>
 - Warm but professional - like a helpful coworker
 - IMPORTANT: Detect and match the user's language from their FIRST message and use it consistently. If they write in English, respond in English. If they write in Norwegian, respond in Norwegian.

@@ -190,7 +190,7 @@ const wageyChatStream = createRiverStream<ChatChunk, NextRequest>()
   .input(chatInputSchema)
   .provider(defaultRiverProvider())
   .runner(async ({ input, stream, abortSignal, adapterRequest }) => {
-    const { messages, userId } = input;
+    const { messages, userId, userName } = input;
 
     // Get locale from cookie for localized tool messages
     const locale = (adapterRequest.cookies.get(LOCALE_COOKIE)?.value || defaultLocale) as Locale;
@@ -220,6 +220,7 @@ const wageyChatStream = createRiverStream<ChatChunk, NextRequest>()
       accessLevel: accessInfo.level,
       used: result.count,
       remaining: result.remaining,
+      userName,
     };
 
     // Convert messages and add system prompt if not present
