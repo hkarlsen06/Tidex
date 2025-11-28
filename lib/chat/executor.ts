@@ -605,12 +605,31 @@ async function executeQueryShifts(
       gross: Number(shift.computed.gross.toFixed(2)),
     }));
 
+    // Calculate summary statistics for the filtered shifts
+    const totalHours = limitedShifts.reduce((sum, s) => sum + s.computed.paidHours, 0);
+    const totalGross = limitedShifts.reduce((sum, s) => sum + s.computed.gross, 0);
+    const totalNet = limitedShifts.reduce((sum, s) => {
+      const net = calculateNetPay(s.computed.gross, result.settings, s.shift_date);
+      return sum + net;
+    }, 0);
+    const shiftCount = limitedShifts.length;
+
+    const summary = {
+      shiftCount,
+      totalHours: Number(totalHours.toFixed(2)),
+      totalGross: Number(totalGross.toFixed(2)),
+      totalNet: Number(totalNet.toFixed(2)),
+      avgHoursPerShift: shiftCount > 0 ? Number((totalHours / shiftCount).toFixed(2)) : 0,
+      avgGrossPerShift: shiftCount > 0 ? Number((totalGross / shiftCount).toFixed(2)) : 0,
+    };
+
     return {
       success: true,
       message: shiftsFormatted.length === 1
         ? t(tr.foundShift, { count: shiftsFormatted.length })
         : t(tr.foundShifts, { count: shiftsFormatted.length }),
       data: shiftsFormatted,
+      summary,
       currency,
     };
   } catch (error) {
