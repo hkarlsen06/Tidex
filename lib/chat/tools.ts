@@ -257,7 +257,7 @@ Edge cases:
 Default behavior: Without parameters, returns shifts for the current week.
 
 Response includes:
-- data: Array of shifts with id, date, day, start, end, hours, gross
+- data: Array of shifts with id, date, day, start, end, hours, gross, and net (net only if tax deduction is enabled)
 - summary: Aggregated statistics (shiftCount, totalHours, totalGross, totalNet, avgHoursPerShift, avgGrossPerShift)
 - currency: User's selected currency
 
