@@ -1,1 +1,1 @@
-export * from '../series/WeekdayChips';
+export * from '../recurring/WeekdayChips';

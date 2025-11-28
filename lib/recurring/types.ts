@@ -1,7 +1,7 @@
 /**
- * Series shifts types for recurring shift patterns
+ * Recurring shifts types for recurring shift patterns
  *
- * A series shift defines a pattern of recurring shifts based on:
+ * A recurring shift defines a pattern of recurring shifts based on:
  * - Selected weekday anchors (up to 7, one per weekday)
  * - Repetition interval in weeks (0 = every week, 1 = every 2 weeks, etc.)
  * - End condition (null = no end, or duration/end date)
@@ -9,7 +9,7 @@
  */
 
 /**
- * End condition for a series
+ * End condition for a recurring shift
  * - null: No end date (continues indefinitely, UI shows preview for 6 months)
  * - months: Duration in months from the earliest anchor
  * - years: Duration in years from the earliest anchor
@@ -32,10 +32,10 @@ export type EndCondition =
 export type SelectedDays = Partial<Record<'0' | '1' | '2' | '3' | '4' | '5' | '6', string>>;
 
 /**
- * Local draft state for series shift form
- * Persisted to localStorage as user builds their series
+ * Local draft state for recurring shift form
+ * Persisted to localStorage as user builds their recurring shift
  */
-export type SeriesDraft = {
+export type RecurringDraft = {
   /** Start time in HH:mm format (e.g., '08:00') - will be converted to timetz on server */
   start_time: string;
   /** End time in HH:mm format (e.g., '16:00') - will be converted to timetz on server */
@@ -44,17 +44,17 @@ export type SeriesDraft = {
   repeat_interval_weeks: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
   /** Anchor dates selected by the user, keyed by weekday (0-6) */
   selected_days: SelectedDays;
-  /** When the series should end (null = no end) */
+  /** When the recurring shift should end (null = no end) */
   end_condition: EndCondition;
-  /** Individual dates to exclude from the series (ISO date strings) */
+  /** Individual dates to exclude from the recurring shift (ISO date strings) */
   exclusions: string[];
 };
 
 /**
- * A "ghost" is a projected occurrence of a shift in the series
- * Displayed on the calendar to preview the series pattern
+ * A "ghost" is a projected occurrence of a shift in the recurring pattern
+ * Displayed on the calendar to preview the recurring pattern
  */
-export type SeriesGhost = {
+export type RecurringGhost = {
   /** ISO date of the projected shift */
   date: string;
   /** Weekday (0-6) for quick filtering/grouping */
@@ -64,10 +64,10 @@ export type SeriesGhost = {
 };
 
 /**
- * Database row shape for series_shifts table
+ * Database row shape for recurring_shifts table
  * Maps to the Supabase table schema
  */
-export type SeriesShiftRow = {
+export type RecurringShiftRow = {
   id: string;
   user_id: string;
   /** Start time with timezone (timetz) */
@@ -89,7 +89,7 @@ export type SeriesShiftRow = {
 };
 
 /**
- * Date-specific supplement overrides for series shifts
+ * Date-specific supplement overrides for recurring shifts
  * Key: ISO date string (YYYY-MM-DD)
  * Value: Custom supplement data for that specific date
  */

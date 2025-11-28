@@ -1,5 +1,5 @@
 /**
- * Series utilities for recurring shift patterns
+ * Recurring utilities for recurring shift patterns
  *
  * Provides functions for:
  * - Calculating date windows for navigation
@@ -8,7 +8,7 @@
  * - Date formatting and weekday calculations
  */
 
-import type { SelectedDays, EndCondition, SeriesDraft, SeriesGhost, DateWindow } from './types';
+import type { SelectedDays, EndCondition, RecurringDraft, RecurringGhost, DateWindow } from './types';
 import { parseDateAsUTC, getMonthStart, getMonthEnd } from '@/lib/date-utils';
 
 /**
@@ -146,7 +146,7 @@ export function resolveEndWindow(
  * Generate ghost occurrences for a specific month
  *
  * @param yearMonth - Target month (e.g., { year: 2025, month: 10 })
- * @param draft - Series draft with anchors, interval, and end condition
+ * @param draft - Recurring draft with anchors, interval, and end condition
  * @returns Array of ghost occurrences in the target month
  *
  * @example
@@ -155,8 +155,8 @@ export function resolveEndWindow(
  */
 export function generateGhostsForMonth(
   yearMonth: { year: number; month: number },
-  draft: SeriesDraft
-): SeriesGhost[] {
+  draft: RecurringDraft
+): RecurringGhost[] {
   const { selected_days, repeat_interval_weeks, end_condition, exclusions } = draft;
 
   if (Object.keys(selected_days).length === 0) return [];
@@ -164,11 +164,11 @@ export function generateGhostsForMonth(
   const monthStart = parseDateAsUTC(getMonthStart(yearMonth.year, yearMonth.month));
   const monthEnd = parseDateAsUTC(getMonthEnd(yearMonth.year, yearMonth.month));
 
-  // Get the end window to check if we're past the series end
-  // For infinite series (end_condition === null), we don't need a window check
+  // Get the end window to check if we're past the recurring shift end
+  // For infinite recurring shifts (end_condition === null), we don't need a window check
   const window = end_condition !== null ? resolveEndWindow(selected_days, end_condition) : null;
 
-  const ghosts: SeriesGhost[] = [];
+  const ghosts: RecurringGhost[] = [];
   const exclusionSet = new Set(exclusions);
 
   // For each selected weekday anchor
@@ -200,7 +200,7 @@ export function generateGhostsForMonth(
       // Check if this date is in phase with the anchor
       const inPhase = isInPhase(currentISO, anchorISO, repeat_interval_weeks);
 
-      // Check if within the series window (only enforce if there's an end condition)
+      // Check if within the recurring shift window (only enforce if there's an end condition)
       const withinWindow = window === null || (current >= window.minMonth && current <= window.maxDate);
 
       // Check if not excluded
@@ -226,13 +226,13 @@ export function generateGhostsForMonth(
  * Check if a date should be disabled in the calendar
  *
  * @param dateISO - ISO date to check
- * @param draft - Series draft
+ * @param draft - Recurring draft
  * @param window - Date window (from resolveEndWindow)
  * @returns true if date should be disabled
  */
 export function isDateDisabled(
   dateISO: string,
-  draft: SeriesDraft,
+  draft: RecurringDraft,
   window: DateWindow
 ): boolean {
   const date = parseDateAsUTC(dateISO);

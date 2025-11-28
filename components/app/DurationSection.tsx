@@ -1,1 +1,1 @@
-export * from '../series/DurationSection';
+export * from '../recurring/DurationSection';

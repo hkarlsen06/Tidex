@@ -6,21 +6,21 @@ import { TimeInput } from "@/components/app/TimeInput";
 import { Button } from "@/components/app/Button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/app/Dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/app/Select";
-import { SeriesCalendar } from "@/components/app/SeriesCalendar";
+import { RecurringCalendar } from "@/components/app/RecurringCalendar";
 import { WeekdayChips } from "@/components/app/WeekdayChips";
 import { DurationSection } from "@/components/app/DurationSection";
 import { MonthPicker } from "@/components/app/MonthPicker";
-import { createSeriesShift } from "@/app/[locale]/(app)/shifts/add/_actions/createSeriesShift";
+import { createRecurringShift } from "@/app/[locale]/(app)/shifts/add/_actions/createRecurringShift";
 import { Clock } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { useMonth } from "@/components/app/MonthContext";
 import { useTranslations, useLocale } from "@/lib/i18n/client";
-import type { SeriesDraft } from "@/lib/series/types";
-import type { ExistingShift } from "@/lib/series/conflicts";
+import type { RecurringDraft } from "@/lib/recurring/types";
+import type { ExistingShift } from "@/lib/recurring/conflicts";
 import type { UserSettings, SupplementRule } from "@/lib/payroll";
-import { saveSeriesDraft, loadSeriesDraft, clearSeriesDraft } from "@/lib/series/storage";
-import { generateGhostsForMonth, resolveEndWindow } from "@/lib/series/utils";
-import { detectConflicts, buildConflictDateSet } from "@/lib/series/conflicts";
+import { saveRecurringDraft, loadRecurringDraft, clearRecurringDraft } from "@/lib/recurring/storage";
+import { generateGhostsForMonth, resolveEndWindow } from "@/lib/recurring/utils";
+import { detectConflicts, buildConflictDateSet } from "@/lib/recurring/conflicts";
 
 type RecurringFormProps = {
   existingShifts: ExistingShift[];
@@ -36,8 +36,8 @@ export default function RecurringForm({ existingShifts, userSettings, presetRule
   const { selectedMonth: month, setSelectedMonth: _setMonth, goToPreviousMonth, goToNextMonth } = useMonth();
 
   // Initialize draft from localStorage or defaults
-  const [draft, setDraft] = useState<SeriesDraft>(() => {
-    const saved = loadSeriesDraft();
+  const [draft, setDraft] = useState<RecurringDraft>(() => {
+    const saved = loadRecurringDraft();
     if (saved) return saved;
 
     return {
@@ -61,7 +61,7 @@ export default function RecurringForm({ existingShifts, userSettings, presetRule
 
   // Save draft to sessionStorage on every change
   useEffect(() => {
-    saveSeriesDraft(draft);
+    saveRecurringDraft(draft);
   }, [draft]);
 
   // Generate all projected dates for preview
@@ -106,7 +106,7 @@ export default function RecurringForm({ existingShifts, userSettings, presetRule
   // Calculate date window for month navigation constraints (using local time to match MonthContext)
   const dateWindow = useMemo(() => {
     if (Object.keys(draft.selected_days).length === 0) return null;
-    // For infinite series, only get the minimum boundary (earliest anchor)
+    // For infinite recurring, only get the minimum boundary (earliest anchor)
     if (draft.end_condition === null) {
       const anchors = Object.values(draft.selected_days);
       const anchorDates = anchors.map((iso) => new Date(iso + 'T00:00:00Z'));
@@ -114,7 +114,7 @@ export default function RecurringForm({ existingShifts, userSettings, presetRule
       // Use local time to match MonthContext
       return {
         minMonth: new Date(minAnchor.getUTCFullYear(), minAnchor.getUTCMonth(), 1),
-        maxMonth: null, // No maximum for infinite series
+        maxMonth: null, // No maximum for infinite recurring
       };
     }
     const window = resolveEndWindow(draft.selected_days, draft.end_condition);
@@ -135,7 +135,7 @@ export default function RecurringForm({ existingShifts, userSettings, presetRule
 
   const canNavigateToNextMonth = useMemo(() => {
     if (!dateWindow) return true; // Allow navigation if no anchors selected
-    // For infinite series, always allow forward navigation
+    // For infinite recurring, always allow forward navigation
     if (dateWindow.maxMonth === null) return true;
     const nextMonth = new Date(month.getFullYear(), month.getMonth() + 1, 1);
     return nextMonth <= dateWindow.maxMonth;
@@ -159,9 +159,9 @@ export default function RecurringForm({ existingShifts, userSettings, presetRule
 
     startTransition(async () => {
       try {
-        const result = await createSeriesShift(draft);
+        const result = await createRecurringShift(draft);
         // Clear sessionStorage immediately
-        clearSeriesDraft();
+        clearRecurringDraft();
         // Reset draft state to prevent useEffect from re-saving
         setDraft({
           start_time: "",
@@ -171,8 +171,8 @@ export default function RecurringForm({ existingShifts, userSettings, presetRule
           end_condition: { type: 'months', value: 6 },
           exclusions: [],
         });
-        // Navigate with series ID to trigger celebration
-        router.push(`/${locale}/shifts?newSeries=${result.id}`);
+        // Navigate with recurring ID to trigger celebration
+        router.push(`/${locale}/shifts?newRecurring=${result.id}`);
       } catch (e: any) {
         setError(e?.message || t.pages.shifts.add.form.couldNotSaveShift);
         // Reopen modal on error to show the error message
@@ -181,22 +181,22 @@ export default function RecurringForm({ existingShifts, userSettings, presetRule
     });
   };
 
-  const seriesSummary = useMemo(() => {
+  const recurringSummary = useMemo(() => {
     const anchorCount = Object.keys(draft.selected_days).length;
     if (anchorCount === 0) {
-      return t.pages.shifts.add.series.selectUpTo7Weekdays;
+      return t.pages.shifts.add.recurring.selectUpTo7Weekdays;
     }
 
     const hasTimes = /^\d{2}:\d{2}$/.test(draft.start_time) && /^\d{2}:\d{2}$/.test(draft.end_time);
-    const timeRange = hasTimes ? `${draft.start_time}–${draft.end_time}` : t.pages.shifts.add.series.specifyTime;
+    const timeRange = hasTimes ? `${draft.start_time}–${draft.end_time}` : t.pages.shifts.add.recurring.specifyTime;
 
-    // Handle infinite series (no end condition)
+    // Handle infinite recurring (no end condition)
     if (draft.end_condition === null) {
       if (projectedDates.length === 0) {
-        return t.pages.shifts.add.series.noShiftsGenerated;
+        return t.pages.shifts.add.recurring.noShiftsGenerated;
       }
       const first = projectedDates[0];
-      return t.pages.shifts.add.series.infiniteSeries
+      return t.pages.shifts.add.recurring.infiniteRecurring
         .replace('{first}', first)
         .replace('{time}', timeRange);
     }
@@ -204,19 +204,19 @@ export default function RecurringForm({ existingShifts, userSettings, presetRule
     const projCount = projectedDates.length;
 
     if (projCount === 0) {
-      return t.pages.shifts.add.series.noShiftsGenerated;
+      return t.pages.shifts.add.recurring.noShiftsGenerated;
     }
 
     const first = projectedDates[0];
     const last = projectedDates[projectedDates.length - 1];
 
     if (projCount === 1) {
-      return t.pages.shifts.add.series.seriesWith1Shift
+      return t.pages.shifts.add.recurring.recurringWith1Shift
         .replace('{time}', timeRange)
         .replace('{date}', first);
     }
 
-    return t.pages.shifts.add.series.seriesWithShifts
+    return t.pages.shifts.add.recurring.recurringWithShifts
       .replace('{count}', projCount.toString())
       .replace('{first}', first)
       .replace('{last}', last)
@@ -295,7 +295,7 @@ export default function RecurringForm({ existingShifts, userSettings, presetRule
 
       {/* Repeat interval */}
       <div className="flex items-center justify-center gap-2 py-1">
-        <span className="text-base text-text-primary">{t.pages.shifts.add.series.repeatEvery}</span>
+        <span className="text-base text-text-primary">{t.pages.shifts.add.recurring.repeatEvery}</span>
         <Select
           value={String(draft.repeat_interval_weeks)}
           onValueChange={(value) => {
@@ -313,12 +313,12 @@ export default function RecurringForm({ existingShifts, userSettings, presetRule
                 value={String(num)}
                 className="cursor-pointer rounded-lg text-text-primary hover:bg-surface-secondary focus:bg-surface-secondary"
               >
-                {t.pages.shifts.add.series.weekOrdinals[(num + 1) as keyof typeof t.pages.shifts.add.series.weekOrdinals]}
+                {t.pages.shifts.add.recurring.weekOrdinals[(num + 1) as keyof typeof t.pages.shifts.add.recurring.weekOrdinals]}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
-        <span className="text-base text-text-primary">{t.pages.shifts.add.series.week}</span>
+        <span className="text-base text-text-primary">{t.pages.shifts.add.recurring.week}</span>
       </div>
 
       <div className="h-px bg-border-subtle" />
@@ -334,10 +334,10 @@ export default function RecurringForm({ existingShifts, userSettings, presetRule
       {/* Calendar instructions */}
       <div className="space-y-2 pt-2">
         <h3 className="text-xs font-semibold uppercase tracking-widest text-text-muted">
-          {t.pages.shifts.add.series.calendarInstructionsHeader}
+          {t.pages.shifts.add.recurring.calendarInstructionsHeader}
         </h3>
         <p className="text-sm text-text-secondary leading-relaxed">
-          {t.pages.shifts.add.series.calendarInstructionsSubheader}
+          {t.pages.shifts.add.recurring.calendarInstructionsSubheader}
         </p>
       </div>
 
@@ -361,8 +361,8 @@ export default function RecurringForm({ existingShifts, userSettings, presetRule
         onRemove={handleRemoveWeekday}
       />
 
-      {/* Series calendar */}
-      <SeriesCalendar
+      {/* Recurring calendar */}
+      <RecurringCalendar
         value={draft}
         onChange={setDraft}
         existingShifts={existingShifts}
@@ -375,7 +375,7 @@ export default function RecurringForm({ existingShifts, userSettings, presetRule
       {/* Summary - only show when dates are selected */}
       {Object.keys(draft.selected_days).length > 0 && (
         <div className="rounded-2xl border border-border-subtle bg-surface-secondary/70 px-4 py-3 text-sm text-text-secondary shadow-app-inner">
-          {seriesSummary}
+          {recurringSummary}
         </div>
       )}
 
@@ -398,8 +398,8 @@ export default function RecurringForm({ existingShifts, userSettings, presetRule
           className="rounded-2xl bg-brand-gradient-mid px-6 py-3 text-base font-semibold text-text-inverse shadow-app transition hover:bg-brand-gradient-end"
         >
           {draft.end_condition === null
-            ? t.pages.shifts.add.series.previewInfiniteSeries || 'Forhåndsvis fast vakt'
-            : t.pages.shifts.add.series.previewSeries.replace('{count}', projectedDates.length.toString())}
+            ? t.pages.shifts.add.recurring.previewInfiniteRecurring
+            : t.pages.shifts.add.recurring.previewRecurring.replace('{count}', projectedDates.length.toString())}
         </Button>
       </div>
 
@@ -407,18 +407,18 @@ export default function RecurringForm({ existingShifts, userSettings, presetRule
       <Dialog open={showPreview} onOpenChange={setShowPreview}>
         <DialogContent className="max-w-md rounded-3xl border border-border-subtle bg-surface-primary/95 shadow-app-lg">
           <DialogHeader>
-            <DialogTitle>{t.pages.shifts.add.series.confirmSeries}</DialogTitle>
+            <DialogTitle>{t.pages.shifts.add.recurring.confirmRecurring}</DialogTitle>
             <DialogDescription className="space-y-2">
               {draft.end_condition === null
-                ? t.pages.shifts.add.series.confirmingInfiniteSeriesDescription || 'Du er i ferd med å opprette en fast vakt som gjentar seg uendelig.'
-                : t.pages.shifts.add.series.confirmingSeriesDescription.replace('{count}', projectedDates.length.toString())}
+                ? t.pages.shifts.add.recurring.confirmingInfiniteRecurringDescription
+                : t.pages.shifts.add.recurring.confirmingRecurringDescription.replace('{count}', projectedDates.length.toString())}
               {previewConflicts.size > 0 && (
                 <>
                   <br />
                   <span className="text-warning">
                     {(previewConflicts.size === 1
-                      ? t.pages.shifts.add.series.conflictsWarningSingular
-                      : t.pages.shifts.add.series.conflictsWarning
+                      ? t.pages.shifts.add.recurring.conflictsWarningSingular
+                      : t.pages.shifts.add.recurring.conflictsWarning
                     ).replace('{count}', previewConflicts.size.toString())}
                   </span>
                 </>
@@ -449,7 +449,7 @@ export default function RecurringForm({ existingShifts, userSettings, presetRule
             })}
             {projectedDates.length > 20 && (
               <div className="rounded-xl bg-surface-primary/60 px-3 py-2 text-center text-sm text-text-muted shadow-app-inner">
-                {t.pages.shifts.add.series.andMore.replace('{count}', (projectedDates.length - 20).toString())}
+                {t.pages.shifts.add.recurring.andMore.replace('{count}', (projectedDates.length - 20).toString())}
               </div>
             )}
           </div>
@@ -460,7 +460,7 @@ export default function RecurringForm({ existingShifts, userSettings, presetRule
               onClick={() => setShowPreview(false)}
               className="rounded-xl px-4 py-2 text-text-secondary hover:text-text-primary"
             >
-              {t.pages.shifts.add.series.cancel}
+              {t.pages.shifts.add.recurring.cancel}
             </Button>
             <Button
               type="button"
@@ -468,7 +468,7 @@ export default function RecurringForm({ existingShifts, userSettings, presetRule
               loading={pending}
               className="rounded-xl bg-brand-gradient-mid px-5 py-2 font-semibold text-text-inverse shadow-app transition hover:bg-brand-gradient-end"
             >
-              {t.pages.shifts.add.series.confirm}
+              {t.pages.shifts.add.recurring.confirm}
             </Button>
           </DialogFooter>
         </DialogContent>

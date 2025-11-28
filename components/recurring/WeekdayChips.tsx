@@ -1,7 +1,7 @@
 "use client";
 
-import type { SelectedDays } from "@/lib/series/types";
-import { formatWeekdayShort } from "@/lib/series/utils";
+import type { SelectedDays } from "@/lib/recurring/types";
+import { formatWeekdayShort } from "@/lib/recurring/utils";
 import { cn } from "@/lib/utils";
 import { useLocale } from "@/lib/i18n/client";
 

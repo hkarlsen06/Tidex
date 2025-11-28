@@ -1,26 +1,26 @@
 'use server';
 
 import { createSupabaseServerClient } from '@/lib/supabase/server';
-import type { SeriesDraft } from '@/lib/series/types';
-import { detectAllSeriesConflicts } from '@/lib/series/conflicts';
-import type { ExistingShift } from '@/lib/series/conflicts';
+import type { RecurringDraft } from '@/lib/recurring/types';
+import { detectAllRecurringConflicts } from '@/lib/recurring/conflicts';
+import type { ExistingShift } from '@/lib/recurring/conflicts';
 import { verifySession } from '@/data-access/auth';
 import { invalidateAndRevalidate } from '@/lib/revalidation/paths';
 
 /**
- * Create a new series shift pattern
+ * Create a new recurring shift pattern
  *
- * Saves the series definition to the series_shifts table.
+ * Saves the recurring shift definition to the recurring_shifts table.
  * Does NOT materialize individual shifts - that happens separately.
  * Automatically detects and excludes conflicting dates.
  *
- * @param draft - Series shift draft with all configuration
+ * @param draft - Recurring shift draft with all configuration
  * @param options - Optional configuration
  * @param options.conflictResolution - How to handle conflicts: "exclude_conflicts" (default) or "keep_existing"
- * @returns Created series shift ID
+ * @returns Created recurring shift ID
  */
-export async function createSeriesShift(
-  draft: SeriesDraft,
+export async function createRecurringShift(
+  draft: RecurringDraft,
   options?: {
     conflictResolution?: 'exclude_conflicts' | 'keep_existing';
   }
@@ -75,8 +75,8 @@ export async function createSeriesShift(
       throw new Error(`Failed to fetch existing shifts: ${fetchError.message}`);
     }
 
-    // Detect all conflicts across the entire series
-    const conflictDates = await detectAllSeriesConflicts(
+    // Detect all conflicts across the entire recurring shift
+    const conflictDates = await detectAllRecurringConflicts(
       draft,
       (existingShifts || []) as ExistingShift[]
     );
@@ -87,11 +87,11 @@ export async function createSeriesShift(
     ).sort();
   }
   // If conflictResolution === 'keep_existing', we don't detect/exclude conflicts
-  // Series will create ghost shifts, and existing standalone shifts will remain
+  // Recurring shift will create ghost shifts, and existing standalone shifts will remain
 
-  // Insert series shift with all exclusions (manual + conflicts)
+  // Insert recurring shift with all exclusions (manual + conflicts)
   const { data, error } = await supabase
-    .from('series_shifts')
+    .from('recurring_shifts')
     .insert([
       {
         user_id: user.id,
@@ -107,15 +107,15 @@ export async function createSeriesShift(
     .single();
 
   if (error) {
-    console.error('Failed to create series shift:', error);
-    throw new Error(`Failed to create series shift: ${error.message}`);
+    console.error('Failed to create recurring shift:', error);
+    throw new Error(`Failed to create recurring shift: ${error.message}`);
   }
 
   if (!data) {
-    throw new Error('Failed to create series shift: no data returned');
+    throw new Error('Failed to create recurring shift: no data returned');
   }
 
-  // Invalidate cache and revalidate paths to show new series shifts
+  // Invalidate cache and revalidate paths to show new recurring shifts
   invalidateAndRevalidate(user.id);
 
   return { id: data.id };

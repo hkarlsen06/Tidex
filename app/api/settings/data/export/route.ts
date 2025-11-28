@@ -9,8 +9,8 @@ import {
   type WageSnapshot,
 } from "@/lib/payroll";
 import { logger } from "@/lib/logger";
-import { generateGhostsForMonth } from "@/lib/series/utils";
-import type { SeriesShiftRow } from "@/lib/series/types";
+import { generateGhostsForMonth } from "@/lib/recurring/utils";
+import type { RecurringShiftRow } from "@/lib/recurring/types";
 import { cleanTime } from "@/lib/time-utils";
 
 const CACHE_CONTROL = { headers: { "cache-control": "no-store" } };
@@ -136,16 +136,16 @@ export async function GET(request: NextRequest) {
     return response;
   }
 
-  // Fetch series shifts
-  const { data: seriesShifts, error: seriesError } = await supabase
-    .from("series_shifts")
+  // Fetch recurring shifts
+  const { data: recurringShifts, error: recurringError } = await supabase
+    .from("recurring_shifts")
     .select("*")
     .eq("user_id", user.id);
 
-  if (seriesError) {
-    logger.error("[data export] Failed to load series shifts:", seriesError);
+  if (recurringError) {
+    logger.error("[data export] Failed to load recurring shifts:", recurringError);
     const response = NextResponse.json(
-      { error: "Kunne ikke hente serieskift." },
+      { error: "Kunne ikke hente gjentakende vakter." },
       { status: 500, ...CACHE_CONTROL }
     );
     propagateCookies(baseResponse, response);
@@ -187,7 +187,7 @@ export async function GET(request: NextRequest) {
       startTime: shift.start_time,
       endTime: shift.end_time,
       type: getShiftType(shift.shift_date),
-      seriesId: null,
+      recurringId: null,
       calc: {
         hours: computed.paidHours,
         baseWage: computed.basePay,
@@ -197,10 +197,10 @@ export async function GET(request: NextRequest) {
     };
   });
 
-  // Generate and compute ghost shifts from series
+  // Generate and compute ghost shifts from recurring shifts
   const ghostShifts = [];
 
-  if (seriesShifts && seriesShifts.length > 0) {
+  if (recurringShifts && recurringShifts.length > 0) {
     // Determine date range for ghost generation
     let startDate: Date;
     let endDate: Date;
@@ -221,8 +221,8 @@ export async function GET(request: NextRequest) {
     const endYear = endDate.getUTCFullYear();
     const endMonth = endDate.getUTCMonth() + 1;
 
-    // Generate ghosts for each series
-    for (const series of seriesShifts as SeriesShiftRow[]) {
+    // Generate ghosts for each recurring shift
+    for (const recurring of recurringShifts as RecurringShiftRow[]) {
       let currentYear = startYear;
       let currentMonth = startMonth;
 
@@ -231,12 +231,12 @@ export async function GET(request: NextRequest) {
         (currentYear === endYear && currentMonth <= endMonth)
       ) {
         const ghosts = generateGhostsForMonth({ year: currentYear, month: currentMonth }, {
-          start_time: cleanTime(series.start_time),
-          end_time: cleanTime(series.end_time),
-          repeat_interval_weeks: series.repeat_interval_weeks as 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8,
-          selected_days: series.selected_days,
-          end_condition: series.end_condition,
-          exclusions: series.exclusions || []
+          start_time: cleanTime(recurring.start_time),
+          end_time: cleanTime(recurring.end_time),
+          repeat_interval_weeks: recurring.repeat_interval_weeks as 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8,
+          selected_days: recurring.selected_days,
+          end_condition: recurring.end_condition,
+          exclusions: recurring.exclusions || []
         });
 
         // Compute each ghost
@@ -244,13 +244,13 @@ export async function GET(request: NextRequest) {
           try {
             const snapshot = getSnapshotForDate(ghost.date);
             const ghostShiftRow: ShiftRow = {
-              id: `ghost-${series.id}-${ghost.date}`,
+              id: `ghost-${recurring.id}-${ghost.date}`,
               user_id: user.id,
               shift_date: ghost.date,
-              start_time: cleanTime(series.start_time),
-              end_time: cleanTime(series.end_time),
-              series_id: series.id,
-              series_anchor_weekday: ghost.weekday
+              start_time: cleanTime(recurring.start_time),
+              end_time: cleanTime(recurring.end_time),
+              recurring_id: recurring.id,
+              recurring_anchor_weekday: ghost.weekday
             };
 
             const computed = computeShift(
@@ -263,10 +263,10 @@ export async function GET(request: NextRequest) {
             ghostShifts.push({
               id: ghostShiftRow.id,
               date: ghost.date,
-              startTime: cleanTime(series.start_time),
-              endTime: cleanTime(series.end_time),
+              startTime: cleanTime(recurring.start_time),
+              endTime: cleanTime(recurring.end_time),
               type: getShiftType(ghost.date),
-              seriesId: series.id,
+              recurringId: recurring.id,
               calc: {
                 hours: computed.paidHours,
                 baseWage: computed.basePay,
@@ -275,7 +275,7 @@ export async function GET(request: NextRequest) {
               },
             });
           } catch (err) {
-            logger.error(`[data export] Failed to compute ghost for series ${series.id} on ${ghost.date}:`, err);
+            logger.error(`[data export] Failed to compute ghost for recurring shift ${recurring.id} on ${ghost.date}:`, err);
           }
         }
 

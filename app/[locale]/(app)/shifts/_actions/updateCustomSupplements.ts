@@ -11,14 +11,14 @@ import { Effect } from "effect";
 export type UpdateCustomSupplementsInput = {
   shiftId: string;
   customSupplements: CustomSupplementsData | null;
-  seriesId?: string; // If present, update series date_specific_supplements
-  shiftDate?: string; // Required if seriesId is present
+  recurringId?: string; // If present, update recurring shift date_specific_supplements
+  shiftDate?: string; // Required if recurringId is present
 };
 
 /**
  * Update custom supplements for a shift
  * - For regular shifts: updates user_shifts.custom_supplements
- * - For ghost shifts: updates series_shifts.date_specific_supplements
+ * - For ghost shifts: updates recurring shift date_specific_supplements
  */
 export async function updateCustomSupplements(input: UpdateCustomSupplementsInput) {
   const { user } = await verifySession();
@@ -38,22 +38,22 @@ export async function updateCustomSupplements(input: UpdateCustomSupplementsInpu
     }
   }
 
-  // Handle series ghost shift
-  if (input.seriesId && input.shiftDate) {
-    // Verify series ownership
-    const { data: series, error: seriesError } = await supabase
-      .from("series_shifts")
+  // Handle recurring shift ghost
+  if (input.recurringId && input.shiftDate) {
+    // Verify recurring shift ownership
+    const { data: recurring, error: recurringError } = await supabase
+      .from("recurring_shifts")
       .select("id, date_specific_supplements")
-      .eq("id", input.seriesId)
+      .eq("id", input.recurringId)
       .eq("user_id", user.id)
       .single();
 
-    if (seriesError || !series) {
+    if (recurringError || !recurring) {
       throw new Error(ERRORS.SHIFT_NOT_FOUND);
     }
 
     // Update or remove date-specific supplements
-    const updatedDateSupplements = { ...(series.date_specific_supplements || {}) };
+    const updatedDateSupplements = { ...(recurring.date_specific_supplements || {}) };
 
     if (input.customSupplements) {
       updatedDateSupplements[input.shiftDate] = input.customSupplements;
@@ -62,13 +62,13 @@ export async function updateCustomSupplements(input: UpdateCustomSupplementsInpu
     }
 
     const { error } = await supabase
-      .from("series_shifts")
+      .from("recurring_shifts")
       .update({
         date_specific_supplements: Object.keys(updatedDateSupplements).length > 0
           ? updatedDateSupplements
           : null,
       })
-      .eq("id", input.seriesId)
+      .eq("id", input.recurringId)
       .eq("user_id", user.id);
 
     if (error) {

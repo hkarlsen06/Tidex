@@ -139,8 +139,8 @@ const ShiftRowSchema = Schema.Struct({
     )
   ),
   custom_supplements: Schema.optional(Schema.NullOr(CustomSupplementsDataSchema)),
-  series_id: Schema.optional(Schema.String),
-  series_anchor_weekday: Schema.optional(Schema.Number.pipe(Schema.int(), Schema.between(0, 6))),
+  recurring_id: Schema.optional(Schema.String),
+  recurring_anchor_weekday: Schema.optional(Schema.Number.pipe(Schema.int(), Schema.between(0, 6))),
 });
 
 /**

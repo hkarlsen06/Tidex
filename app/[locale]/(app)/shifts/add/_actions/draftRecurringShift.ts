@@ -1,23 +1,23 @@
 'use server';
 
 import { createSupabaseServerClient } from '@/lib/supabase/server';
-import type { SeriesDraft } from '@/lib/series/types';
-import { detectAllSeriesConflicts } from '@/lib/series/conflicts';
-import type { ExistingShift } from '@/lib/series/conflicts';
+import type { RecurringDraft } from '@/lib/recurring/types';
+import { detectAllRecurringConflicts } from '@/lib/recurring/conflicts';
+import type { ExistingShift } from '@/lib/recurring/conflicts';
 import { verifySession } from '@/data-access/auth';
-import { generateGhostsForMonth, resolveEndWindow } from '@/lib/series/utils';
+import { generateGhostsForMonth, resolveEndWindow } from '@/lib/recurring/utils';
 
 /**
- * Draft and validate a series shift pattern (read-only, no DB writes)
+ * Draft and validate a recurring shift pattern (read-only, no DB writes)
  *
- * Validates the series definition and detects conflicts with existing shifts.
+ * Validates the recurring shift definition and detects conflicts with existing shifts.
  * Returns conflict information for user to review before confirming.
- * This is step 1 of the two-step series creation flow.
+ * This is step 1 of the two-step recurring shift creation flow.
  *
- * @param draft - Series shift draft with all configuration
+ * @param draft - Recurring shift draft with all configuration
  * @returns Conflict data and projected shift count
  */
-export async function draftSeriesShift(draft: SeriesDraft): Promise<{
+export async function draftRecurringShift(draft: RecurringDraft): Promise<{
   conflictDates: string[];
   conflictCount: number;
   projectedShiftCount: number;
@@ -61,14 +61,14 @@ export async function draftSeriesShift(draft: SeriesDraft): Promise<{
     throw new Error(`Failed to fetch existing shifts: ${fetchError.message}`);
   }
 
-  // Detect all conflicts across the entire series
-  const conflictDates = await detectAllSeriesConflicts(
+  // Detect all conflicts across the entire recurring shift
+  const conflictDates = await detectAllRecurringConflicts(
     draft,
     (existingShifts || []) as ExistingShift[]
   );
 
   // Calculate projected shift count
-  // Generate ghosts for all months in the series window
+  // Generate ghosts for all months in the recurring shift window
   const window = draft.end_condition !== null
     ? resolveEndWindow(draft.selected_days, draft.end_condition)
     : resolveEndWindow(draft.selected_days, null, 6); // 6 months default for infinite
