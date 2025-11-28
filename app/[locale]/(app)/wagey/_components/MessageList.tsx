@@ -31,6 +31,120 @@ type MessageListProps = {
   userName?: string;
 };
 
+/**
+ * Check if a code block contains tabular data (tab or space-aligned).
+ * Returns 'tab' if tab-separated, 'space' if space-aligned, or null if not tabular.
+ */
+const detectTabularFormat = (content: string): "tab" | "space" | null => {
+  const lines = content.trim().split("\n").filter((line) => line.trim());
+  if (lines.length < 2) return null;
+
+  // Check for tab-separated format first
+  const linesWithTabs = lines.filter((line) => line.includes("\t"));
+  if (linesWithTabs.length >= lines.length * 0.8) {
+    const tabCounts = linesWithTabs.map((line) => (line.match(/\t/g) || []).length);
+    const firstCount = tabCounts[0];
+    const consistentTabs = tabCounts.filter((count) => count === firstCount).length;
+    if (consistentTabs >= tabCounts.length * 0.8) {
+      return "tab";
+    }
+  }
+
+  // Check for space-aligned format (2+ spaces as delimiter)
+  // This detects columns aligned with multiple spaces
+  const linesWithMultiSpace = lines.filter((line) => /\s{2,}/.test(line));
+  if (linesWithMultiSpace.length >= lines.length * 0.8) {
+    // Check that each line has similar number of "columns" (split by 2+ spaces)
+    const columnCounts = linesWithMultiSpace.map(
+      (line) => line.split(/\s{2,}/).filter((c) => c.trim()).length
+    );
+    const firstColCount = columnCounts[0];
+    // Allow some variance (±1 column) for space-aligned data
+    const consistentCols = columnCounts.filter(
+      (count) => Math.abs(count - firstColCount) <= 1
+    ).length;
+    if (consistentCols >= columnCounts.length * 0.7 && firstColCount >= 2) {
+      return "space";
+    }
+  }
+
+  return null;
+};
+
+/**
+ * Parse tabular content into rows and cells.
+ */
+const parseTabularContent = (
+  content: string,
+  format: "tab" | "space"
+): string[][] => {
+  const lines = content.trim().split("\n").filter((line) => line.trim());
+
+  if (format === "tab") {
+    return lines.map((line) => line.split("\t").map((cell) => cell.trim()));
+  }
+
+  // Space-aligned: split by 2+ spaces
+  return lines.map((line) =>
+    line
+      .split(/\s{2,}/)
+      .map((cell) => cell.trim())
+      .filter((cell) => cell)
+  );
+};
+
+/**
+ * Render tabular content as a proper HTML table.
+ */
+const renderTabularData = (
+  content: string,
+  key: string,
+  format: "tab" | "space"
+): ReactNode => {
+  const rows = parseTabularContent(content, format);
+
+  // First row is header
+  const [headerRow, ...dataRows] = rows;
+
+  return (
+    <div key={key} className="my-2 overflow-x-auto show-scrollbar">
+      <table className="w-full text-[13px] font-mono border-collapse">
+        <thead>
+          <tr className="border-b border-border">
+            {headerRow.map((cell, cellIndex) => (
+              <th
+                key={cellIndex}
+                className="px-3 py-2 text-left font-semibold text-text-primary whitespace-nowrap"
+              >
+                {cell}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {dataRows.map((row, rowIndex) => (
+            <tr
+              key={rowIndex}
+              className="border-b border-border/50 last:border-b-0"
+            >
+              {row.map((cell, cellIndex) => (
+                <td
+                  key={cellIndex}
+                  className={`px-3 py-2 whitespace-nowrap ${
+                    cellIndex === 0 ? "text-text-primary" : "text-text-secondary"
+                  }`}
+                >
+                  {cell}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
 const formatContent = (text: string | null | undefined) => {
   const safeText = `${text ?? ""}`;
 
@@ -53,14 +167,20 @@ const formatContent = (text: string | null | undefined) => {
         .replace(/^```\w*\n?/, "") // Remove opening ``` with optional language
         .replace(/\n?```$/, "");   // Remove closing ```
 
-      result.push(
-        <pre
-          key={`code-${partIndex}`}
-          className="my-2 px-3 py-2 bg-black/10 dark:bg-white/10 rounded-lg text-[13px] font-mono overflow-x-auto whitespace-pre show-scrollbar"
-        >
-          {codeContent}
-        </pre>
-      );
+      // Check if this is tabular data (tab or space-aligned)
+      const tabularFormat = detectTabularFormat(codeContent);
+      if (tabularFormat) {
+        result.push(renderTabularData(codeContent, `table-${partIndex}`, tabularFormat));
+      } else {
+        result.push(
+          <pre
+            key={`code-${partIndex}`}
+            className="my-2 px-3 py-2 bg-black/10 dark:bg-white/10 rounded-lg text-[13px] font-mono overflow-x-auto whitespace-pre show-scrollbar"
+          >
+            {codeContent}
+          </pre>
+        );
+      }
     }
   });
 
