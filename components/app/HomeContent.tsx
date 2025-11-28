@@ -32,6 +32,7 @@ function calculateMonthData(
   percentageChange?: number;
   projectedTotal: string;
   grossBeforeTax?: string;
+  projectedGrossBeforeTax?: string;
 } {
   const targetYear = month.getFullYear();
   const targetMonth = month.getMonth() + 1;
@@ -91,6 +92,7 @@ function calculateMonthData(
     projectedTotal: formatCurrency(projectedCurrent),
     // Gross before tax (only relevant when tax is enabled)
     grossBeforeTax: taxEnabled ? formatCurrency(currentTotals.completedGross) : undefined,
+    projectedGrossBeforeTax: taxEnabled ? formatCurrency(currentTotals.gross) : undefined,
   };
 }
 
@@ -276,9 +278,11 @@ export function HomeContent({ shifts: initialShifts, settings }: HomeContentProp
   );
 
   const totalCardTotal = selectedMonthIsFuture ? data.projectedTotal : data.total;
-  const totalCardSubtitle = selectedMonthIsFuture ? "---" : undefined;
+  const totalCardSubtitle = selectedMonthIsFuture && !taxDeductionEnabled ? "---" : undefined;
   const totalCardProjectedTotal = selectedMonthIsFuture ? undefined : data.projectedTotal;
-  const totalCardGrossBeforeTax = selectedMonthIsFuture ? undefined : data.grossBeforeTax;
+  const totalCardGrossBeforeTax = selectedMonthIsFuture
+    ? data.projectedGrossBeforeTax
+    : data.grossBeforeTax;
 
   const payrollDay = Number(settings.payroll_day) || 1;
 
