@@ -134,16 +134,27 @@ export function HomeContent({ shifts: initialShifts, settings }: HomeContentProp
     loadedMonthsRef.current.add(currentKey);
   }
 
-  // Combine initial shifts with any dynamically loaded shifts, filtering out deleted ones
-  const shifts = useMemo(
-    () => [...initialShifts, ...additionalShifts]
-      .filter(shift => !deletedShiftIds.has(shift.id))
-      .map(shift => {
-        const override = shiftOverrides.get(shift.id);
-        return override ? { ...shift, ...override } : shift;
-      }),
-    [initialShifts, additionalShifts, deletedShiftIds, shiftOverrides]
-  );
+  // Combine initial shifts with any dynamically loaded shifts, letting newer data override older entries
+  const shifts = useMemo(() => {
+    const byId = new Map<string, ShiftWithComputations>();
+
+    initialShifts.forEach(shift => {
+      if (!deletedShiftIds.has(shift.id)) {
+        byId.set(shift.id, shift);
+      }
+    });
+
+    additionalShifts.forEach(shift => {
+      if (!deletedShiftIds.has(shift.id)) {
+        byId.set(shift.id, shift);
+      }
+    });
+
+    return Array.from(byId.values()).map(shift => {
+      const override = shiftOverrides.get(shift.id);
+      return override ? { ...shift, ...override } : shift;
+    });
+  }, [initialShifts, additionalShifts, deletedShiftIds, shiftOverrides]);
 
   // Reset optimistic updates when new data arrives from server (after router.refresh())
   useEffect(() => {
@@ -157,11 +168,17 @@ export function HomeContent({ shifts: initialShifts, settings }: HomeContentProp
   }, []);
 
   // Helper to fetch a month's shifts and update state
-  const fetchMonth = useCallback(async (year: number, month: number) => {
+  const fetchMonth = useCallback(async (year: number, month: number, options?: { force?: boolean }) => {
     const key = getMonthKey(year, month);
+    const force = options?.force ?? false;
 
-    // Skip if already loaded or currently loading
-    if (loadedMonthsRef.current.has(key) || loadingMonthsRef.current.has(key)) {
+    // Skip if already loaded or currently loading, unless forcing a refresh
+    if (!force && (loadedMonthsRef.current.has(key) || loadingMonthsRef.current.has(key))) {
+      return;
+    }
+
+    // Avoid double-loading the same month
+    if (loadingMonthsRef.current.has(key)) {
       return;
     }
 
@@ -174,10 +191,10 @@ export function HomeContent({ shifts: initialShifts, settings }: HomeContentProp
 
       if (data.shifts && Array.isArray(data.shifts)) {
         setAdditionalShifts(prev => {
-          // Filter out any duplicates before adding
-          const existingIds = new Set([...initialShifts, ...prev].map(s => s.id));
-          const newShifts = data.shifts.filter((s: ShiftWithComputations) => !existingIds.has(s.id));
-          return [...prev, ...newShifts];
+          // Merge refreshed data, letting the latest payload override previous additional entries
+          const byId = new Map<string, ShiftWithComputations>();
+          [...prev, ...data.shifts].forEach((s: ShiftWithComputations) => byId.set(s.id, s));
+          return Array.from(byId.values());
         });
 
         // Mark as successfully loaded
@@ -211,6 +228,22 @@ export function HomeContent({ shifts: initialShifts, settings }: HomeContentProp
       fetchMonth(prevYear, prevMonthNum),         // Previous
       fetchMonth(nextYear, nextMonthNum),         // Next
     ]);
+  }, [month, fetchMonth]);
+
+  // Refresh the currently viewed month when the page regains focus to avoid stale totals after edits elsewhere
+  useEffect(() => {
+    const handleVisibilityOrFocus = () => {
+      if (document.visibilityState === "visible") {
+        fetchMonth(month.getFullYear(), month.getMonth() + 1, { force: true });
+      }
+    };
+
+    window.addEventListener("visibilitychange", handleVisibilityOrFocus);
+    window.addEventListener("focus", handleVisibilityOrFocus);
+    return () => {
+      window.removeEventListener("visibilitychange", handleVisibilityOrFocus);
+      window.removeEventListener("focus", handleVisibilityOrFocus);
+    };
   }, [month, fetchMonth]);
 
   // Pre-index shifts by year-month for O(1) lookups instead of O(n) filtering
