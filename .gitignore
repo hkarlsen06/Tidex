@@ -11,6 +11,10 @@
 # next.js
 /.next/
 /out/
+next-env.d.ts
+
+# vercel
+.vercel
 
 # production
 /build
@@ -18,22 +22,18 @@
 # misc
 .DS_Store
 *.pem
+*.log
 
 # local env files
-.env.local
 .env
-.env.development
-.env.production
+.env.*
+!.env.local.example
 
-skole
-
+# typescript
 *.tsbuildinfo
-tsconfig.tsbuildinfo
 
-# Ignore generated service worker files
+# PWA service worker (generated)
 /public/workbox-*.js
 /public/workbox-*.js.map
 /public/sw.js
 /public/sw.js.map
-
-/river-main
