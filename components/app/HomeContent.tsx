@@ -277,6 +277,8 @@ export function HomeContent({ shifts: initialShifts, settings }: HomeContentProp
     [shiftsByMonth, month, settings, formatCurrency]
   );
 
+  const taxDeductionEnabled = settings.tax_deduction_enabled ?? false;
+
   const totalCardTotal = selectedMonthIsFuture ? data.projectedTotal : data.total;
   const totalCardSubtitle = selectedMonthIsFuture && !taxDeductionEnabled ? "---" : undefined;
   const totalCardProjectedTotal = selectedMonthIsFuture ? undefined : data.projectedTotal;
@@ -460,8 +462,6 @@ export function HomeContent({ shifts: initialShifts, settings }: HomeContentProp
     : displayShift
       ? (t.common.bestShift ?? "Beste vakt")
       : null;
-
-  const taxDeductionEnabled = settings.tax_deduction_enabled ?? false;
 
   // Swipe gesture handling for month navigation
   const swipeContainerRef = useSwipe<HTMLDivElement>({
