@@ -162,18 +162,18 @@ You have tools for:
 3. Use confirm_recurring_shift with their chosen conflict resolution
 
 **Understanding anchorDate:**
-anchorDate determines TWO things: (1) which week the series starts from, and (2) must fall on the correct weekday.
-Example: If creating a Monday series starting week 4, anchorDate must be "2025-01-20" (which is a Monday in week 4).
-The series then generates shifts every Monday (or per frequency) from that date forward.
+anchorDate determines TWO things: (1) which week the recurring shift starts from, and (2) must fall on the correct weekday.
+Example: If creating a Monday recurring shift starting week 4, anchorDate must be "2025-01-20" (which is a Monday in week 4).
+The recurring shift then generates shifts every Monday (or per frequency) from that date forward.
 
 **Modifying existing data:**
 1. Query first to get IDs (query_shifts for shifts, manage_recurring_shift action="list" for recurring shifts)
 2. Then update or delete using the ID
 
-**Deleting a series:**
-- Series generate "virtual" shifts (ghosts) - they are NOT stored as individual database rows
-- When you delete a series, ALL future occurrences disappear immediately
-- Only standalone shifts (manually created or converted from series) remain in the database
+**Deleting a recurring shift:**
+- Recurring shifts generate "virtual" shifts (ghosts) - they are NOT stored as individual database rows
+- When you delete a recurring shift, ALL future occurrences disappear immediately
+- Only standalone shifts (manually created or converted from recurring) remain in the database
 - Past shifts that were converted to standalone remain; virtual/ghost shifts are gone
 
 **Statistics:**

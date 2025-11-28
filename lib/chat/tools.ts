@@ -389,7 +389,7 @@ Note: For quick monthly/yearly totals, prefer get_statistics which is optimized 
 Purpose: Validates the pattern and checks for conflicts with existing shifts before committing.
 
 Required parameters:
-- weekdays: Array of {day, anchorDate} objects. Day uses weekday numbers (see weekday_reference). anchorDate (YYYY-MM-DD) MUST fall on that weekday and determines which week the series starts from.
+- weekdays: Array of {day, anchorDate} objects. Day uses weekday numbers (see weekday_reference). anchorDate (YYYY-MM-DD) MUST fall on that weekday and determines which week the recurring shift starts from.
 - start/end: Times in HH:mm format
 - frequency: weekly, biweekly, every_3_weeks, or every_4_weeks
 - endType: never, after_months, after_years, or on_date (with endValue)
@@ -411,7 +411,7 @@ Workflow: After this returns conflict info, ask user how to handle conflicts, th
               },
               anchorDate: {
                 type: "string",
-                description: "Start date (YYYY-MM-DD). Must fall on the correct weekday. Determines which week the series starts from.",
+                description: "Start date (YYYY-MM-DD). Must fall on the correct weekday. Determines which week the recurring shift starts from.",
               },
             },
             required: ["day", "anchorDate"],
@@ -520,7 +520,7 @@ The recurring shift will be created and shifts generated according to the patter
               },
               anchorDate: {
                 type: "string",
-                description: "Start date (YYYY-MM-DD). Must fall on the correct weekday. Determines which week the series starts from.",
+                description: "Start date (YYYY-MM-DD). Must fall on the correct weekday. Determines which week the recurring shift starts from.",
               },
             },
             required: ["day", "anchorDate"],
@@ -623,7 +623,7 @@ When updating weekdays, provide the complete weekdays array (replaces all existi
               },
               anchorDate: {
                 type: "string",
-                description: "Start date (YYYY-MM-DD). Must fall on the correct weekday. Determines which week the series starts from.",
+                description: "Start date (YYYY-MM-DD). Must fall on the correct weekday. Determines which week the recurring shift starts from.",
               },
             },
             required: ["day", "anchorDate"],
