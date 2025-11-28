@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import { Inter } from "next/font/google";
 
-import TelemetryDefer from "@/components/app/TelemetryDefer";
+import Telemetry from "@/components/app/Telemetry";
 
 import SWRegister from "./sw-register";
 import { DynamicThemeColor } from "@/components/app/DynamicThemeColor";
@@ -174,7 +174,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <DynamicThemeColor />
         {children}
         <SWRegister />
-        <TelemetryDefer />
+        <Telemetry />
       </body>
     </html>
   );
