@@ -1,4 +1,4 @@
 {
-"buildCommand": "npm ci && npm run build",
-"outputDirectory": ".next"
+  "buildCommand": "pnpm install --frozen-lockfile && pnpm build",
+  "outputDirectory": ".next"
 }
