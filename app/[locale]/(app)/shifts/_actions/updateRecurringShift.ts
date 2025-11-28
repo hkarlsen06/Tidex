@@ -2,12 +2,12 @@
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
-import type { SelectedDays, EndCondition } from "@/lib/series/types";
+import type { SelectedDays, EndCondition } from "@/lib/recurring/types";
 import { invalidateAndRevalidate } from "@/lib/revalidation/paths";
 import { verifySession } from "@/data-access/auth";
 import { ERRORS } from "@/lib/errors/messages";
 
-type UpdateSeriesInput = {
+type UpdateRecurringInput = {
   id: string;
   start_time: string; // HH:mm
   end_time: string; // HH:mm
@@ -18,11 +18,11 @@ type UpdateSeriesInput = {
 };
 
 /**
- * Update a series shift in the database
- * - Updates all parameters of the series
+ * Update a recurring shift in the database
+ * - Updates all parameters of the recurring shift
  * - Revalidates the shifts page
  */
-export async function updateSeriesShift({
+export async function updateRecurringShift({
   id,
   start_time,
   end_time,
@@ -30,13 +30,13 @@ export async function updateSeriesShift({
   selected_days,
   end_condition,
   exclusions,
-}: UpdateSeriesInput): Promise<void> {
+}: UpdateRecurringInput): Promise<void> {
   const { user } = await verifySession();
   const supabase = await createSupabaseServerClient();
 
-  // Update the series
+  // Update the recurring shift
   const { error } = await supabase
-    .from("series_shifts")
+    .from("recurring_shifts")
     .update({
       start_time,
       end_time,
@@ -49,8 +49,8 @@ export async function updateSeriesShift({
     .eq("user_id", user.id);
 
   if (error) {
-    logger.error("Failed to update series:", error);
-    throw new Error(ERRORS.FAILED_TO_UPDATE_SERIES);
+    logger.error("Failed to update recurring shift:", error);
+    throw new Error(ERRORS.FAILED_TO_UPDATE_RECURRING);
   }
 
   // Invalidate cache and revalidate paths

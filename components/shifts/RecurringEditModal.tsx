@@ -6,37 +6,37 @@ import { TimeInput } from "@/components/app/TimeInput";
 import { Button } from "@/components/app/Button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/app/Dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/app/Select";
-import { SeriesCalendar } from "@/components/app/SeriesCalendar";
+import { RecurringCalendar } from "@/components/app/RecurringCalendar";
 import { WeekdayChips } from "@/components/app/WeekdayChips";
 import { DurationSection } from "@/components/app/DurationSection";
 import { MonthPicker } from "@/components/app/MonthPicker";
-import { updateSeriesShift } from "@/app/[locale]/(app)/shifts/_actions/updateSeriesShift";
-import { deleteSeriesShift } from "@/app/[locale]/(app)/shifts/_actions/deleteSeriesShift";
+import { updateRecurringShift } from "@/app/[locale]/(app)/shifts/_actions/updateRecurringShift";
+import { deleteRecurringShift } from "@/app/[locale]/(app)/shifts/_actions/deleteRecurringShift";
 import { Clock, Trash2 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { useMonth } from "@/components/app/MonthContext";
 import { useTranslations, useLocale } from "@/lib/i18n/client";
-import type { SeriesDraft, SeriesShiftRow } from "@/lib/series/types";
-import type { ExistingShift } from "@/lib/series/conflicts";
+import type { RecurringDraft, RecurringShiftRow } from "@/lib/recurring/types";
+import type { ExistingShift } from "@/lib/recurring/conflicts";
 import type { UserSettings, SupplementRule } from "@/lib/payroll";
 
-type SeriesEditModalProps = {
+type RecurringEditModalProps = {
   isOpen: boolean;
-  seriesId: string;
+  recurringId: string;
   onClose: (reason?: 'deleted' | 'cancelled' | 'saved') => void;
   existingShifts: ExistingShift[];
   userSettings: UserSettings;
   presetRules: SupplementRule[];
 };
 
-export function SeriesEditModal({
+export function RecurringEditModal({
   isOpen,
-  seriesId,
+  recurringId,
   onClose,
   existingShifts,
   userSettings,
   presetRules,
-}: SeriesEditModalProps) {
+}: RecurringEditModalProps) {
   const { t } = useTranslations();
   const _locale = useLocale();
   const router = useRouter();
@@ -45,8 +45,8 @@ export function SeriesEditModal({
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const { selectedMonth: month, setSelectedMonth: setMonth } = useMonth();
 
-  // Load series data from database
-  const [draft, setDraft] = useState<SeriesDraft | null>(null);
+  // Load recurring shift data from database
+  const [draft, setDraft] = useState<RecurringDraft | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [_conflicts, _setConflicts] = useState<Map<string, ExistingShift[]>>(new Map());
@@ -56,21 +56,21 @@ export function SeriesEditModal({
   const startTimeId = useId();
   const endTimeId = useId();
 
-  // Load series data when modal opens
+  // Load recurring shift data when modal opens
   useEffect(() => {
-    if (!isOpen || !seriesId) {
+    if (!isOpen || !recurringId) {
       return;
     }
 
-    async function loadSeriesData() {
+    async function loadRecurringData() {
       try {
         setLoading(true);
-        const response = await fetch(`/api/series/${seriesId}`);
+        const response = await fetch(`/api/recurring/${recurringId}`);
         if (!response.ok) {
-          throw new Error("Failed to load series");
+          throw new Error("Failed to load recurring shift");
         }
 
-        const series: SeriesShiftRow = await response.json();
+        const recurring: RecurringShiftRow = await response.json();
 
         // Strip timezone and seconds from time strings
         // Input formats: "12:30:00+01:00", "12:30+01:00", "12:30:00", "12:30"
@@ -93,23 +93,23 @@ export function SeriesEditModal({
         };
 
         setDraft({
-          start_time: cleanTime(series.start_time),
-          end_time: cleanTime(series.end_time),
-          repeat_interval_weeks: series.repeat_interval_weeks as 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8,
-          selected_days: series.selected_days,
-          end_condition: series.end_condition,
-          exclusions: series.exclusions || [],
+          start_time: cleanTime(recurring.start_time),
+          end_time: cleanTime(recurring.end_time),
+          repeat_interval_weeks: recurring.repeat_interval_weeks as 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8,
+          selected_days: recurring.selected_days,
+          end_condition: recurring.end_condition,
+          exclusions: recurring.exclusions || [],
         });
       } catch (err) {
-        console.error("Failed to load series:", err);
+        console.error("Failed to load recurring shift:", err);
         setError(t.pages.shifts.details.errorUpdate);
       } finally {
         setLoading(false);
       }
     }
 
-    loadSeriesData();
-  }, [isOpen, seriesId, t]);
+    loadRecurringData();
+  }, [isOpen, recurringId, t]);
 
   // Clear error on draft change
   useEffect(() => {
@@ -133,14 +133,14 @@ export function SeriesEditModal({
     }
 
     if (Object.keys(draft.selected_days).length === 0) {
-      setError(t.pages.shifts.seriesEdit.errorMinimumOneWeekday);
+      setError(t.pages.shifts.recurringEdit.errorMinimumOneWeekday);
       return;
     }
 
     startTransition(async () => {
       try {
-        await updateSeriesShift({
-          id: seriesId,
+        await updateRecurringShift({
+          id: recurringId,
           start_time: draft.start_time,
           end_time: draft.end_time,
           repeat_interval_weeks: draft.repeat_interval_weeks,
@@ -155,7 +155,7 @@ export function SeriesEditModal({
         setError(err?.message || t.pages.shifts.details.errorUpdate);
       }
     });
-  }, [draft, seriesId, router, onClose, t]);
+  }, [draft, recurringId, router, onClose, t]);
 
   const handleDelete = useCallback(() => {
     if (!confirmingDelete) {
@@ -165,7 +165,7 @@ export function SeriesEditModal({
 
     startDeleteTransition(async () => {
       try {
-        await deleteSeriesShift(seriesId);
+        await deleteRecurringShift(recurringId);
         router.refresh();
         onClose('deleted');
       } catch (err: any) {
@@ -173,7 +173,7 @@ export function SeriesEditModal({
         setConfirmingDelete(false);
       }
     });
-  }, [confirmingDelete, seriesId, router, onClose, t]);
+  }, [confirmingDelete, recurringId, router, onClose, t]);
 
   const canSave = draft && draft.start_time && draft.end_time && Object.keys(draft.selected_days).length > 0;
 
@@ -181,7 +181,7 @@ export function SeriesEditModal({
     return (
       <Dialog open={isOpen} onOpenChange={(open) => { if (!open && !pending) onClose(); }}>
         <DialogContent className="sm:rounded-3xl max-w-[480px] max-h-[90vh] overflow-y-auto overflow-x-hidden">
-          <DialogTitle className="sr-only">{t.pages.shifts.seriesEdit.title}</DialogTitle>
+          <DialogTitle className="sr-only">{t.pages.shifts.recurringEdit.title}</DialogTitle>
           <div className="flex items-center justify-center py-8">
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-border-subtle border-t-brand-highlight" />
           </div>
@@ -196,10 +196,10 @@ export function SeriesEditModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-text-primary">
             <Clock className="h-5 w-5 text-text-muted" aria-hidden />
-            {t.pages.shifts.seriesEdit.title}
+            {t.pages.shifts.recurringEdit.title}
           </DialogTitle>
           <DialogDescription className="text-text-muted">
-            {t.pages.shifts.seriesEdit.description}
+            {t.pages.shifts.recurringEdit.description}
           </DialogDescription>
         </DialogHeader>
 
@@ -208,7 +208,7 @@ export function SeriesEditModal({
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end min-w-0">
             <div className="flex-1 min-w-0">
               <label htmlFor={startTimeId} className="mb-2 block text-sm font-medium text-text-primary">
-                {t.pages.shifts.seriesEdit.startTimeLabel}
+                {t.pages.shifts.recurringEdit.startTimeLabel}
               </label>
               <TimeInput
                 ref={startInputRef}
@@ -221,7 +221,7 @@ export function SeriesEditModal({
             </div>
             <div className="flex-1 min-w-0">
               <label htmlFor={endTimeId} className="mb-2 block text-sm font-medium text-text-primary">
-                {t.pages.shifts.seriesEdit.endTimeLabel}
+                {t.pages.shifts.recurringEdit.endTimeLabel}
               </label>
               <TimeInput
                 ref={endInputRef}
@@ -238,7 +238,7 @@ export function SeriesEditModal({
           {/* Repeat interval */}
           <div>
             <label className="mb-2 block text-sm font-medium text-text-primary">
-              {t.pages.shifts.seriesEdit.repeatIntervalLabel}
+              {t.pages.shifts.recurringEdit.repeatIntervalLabel}
             </label>
             <Select
               value={String(draft.repeat_interval_weeks)}
@@ -251,7 +251,7 @@ export function SeriesEditModal({
               <SelectContent>
                 {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((interval) => (
                   <SelectItem key={interval} value={String(interval)}>
-                    {interval === 0 ? t.pages.shifts.add.series.everyWeek : t.pages.shifts.add.series.everyNWeeks.replace('{n}', String(interval + 1))}
+                    {interval === 0 ? t.pages.shifts.add.recurring.everyWeek : t.pages.shifts.add.recurring.everyNWeeks.replace('{n}', String(interval + 1))}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -270,7 +270,7 @@ export function SeriesEditModal({
 
           {/* Calendar instructions */}
           <span className="text-xs font-semibold uppercase tracking-widest text-text-muted">
-            {t.pages.shifts.add.series.calendarInstructionsHeader}
+            {t.pages.shifts.add.recurring.calendarInstructionsHeader}
           </span>
 
           {/* Month picker */}
@@ -296,7 +296,7 @@ export function SeriesEditModal({
           />
 
           {/* Calendar */}
-          <SeriesCalendar
+          <RecurringCalendar
             value={draft}
             onChange={setDraft}
             existingShifts={existingShifts}
@@ -322,7 +322,7 @@ export function SeriesEditModal({
             )}
           >
             <Trash2 className="h-4 w-4" />
-            {confirmingDelete ? t.pages.shifts.seriesEdit.confirmDeleteSeriesButton : t.pages.shifts.seriesEdit.deleteSeriesButton}
+            {confirmingDelete ? t.pages.shifts.recurringEdit.confirmDeleteRecurringButton : t.pages.shifts.recurringEdit.deleteRecurringButton}
           </Button>
           <Button
             onClick={() => {
@@ -333,7 +333,7 @@ export function SeriesEditModal({
             variant="ghost"
             className="flex-1 h-11 rounded-full border border-border-subtle bg-white text-neutral-900 hover:bg-surface-secondary dark:text-neutral-900"
           >
-            {t.pages.shifts.seriesEdit.cancelButton}
+            {t.pages.shifts.recurringEdit.cancelButton}
           </Button>
           <Button
             onClick={handleSave}
@@ -341,7 +341,7 @@ export function SeriesEditModal({
             loading={pending}
             className="flex-1 h-11 rounded-full"
           >
-            {t.pages.shifts.seriesEdit.saveButton}
+            {t.pages.shifts.recurringEdit.saveButton}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -19,7 +19,7 @@ interface CustomSupplementsModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   shiftId: string;
-  seriesId?: string;
+  recurringId?: string;
   shiftDate: string;
   existingSupplements?: CustomSupplementsData | null;
   hasPredefinedSupplements: boolean;
@@ -56,7 +56,7 @@ export function CustomSupplementsModal({
   open,
   onOpenChange,
   shiftId,
-  seriesId,
+  recurringId,
   shiftDate,
   existingSupplements,
   hasPredefinedSupplements,
@@ -131,7 +131,7 @@ export function CustomSupplementsModal({
 
         await updateCustomSupplements({
           shiftId,
-          seriesId,
+          recurringId,
           shiftDate,
           customSupplements: dataToSave,
         });

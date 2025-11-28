@@ -130,7 +130,7 @@ type RawShift = {
   startTime: string;
   endTime: string;
   type: number;
-  seriesId: string | null;
+  recurringId: string | null;
   calc: ShiftCalculation;
 };
 

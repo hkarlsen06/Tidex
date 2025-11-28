@@ -22,8 +22,8 @@ import { useTranslations } from "@/lib/i18n/client";
 import { formatHours as formatHoursValue } from "@/lib/formatters";
 import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
 import { getDateFormatter } from "@/lib/i18n/locale";
-import { SeriesEditModal } from "./SeriesEditModal";
-import type { ExistingShift } from "@/lib/series/conflicts";
+import { RecurringEditModal } from "./RecurringEditModal";
+import type { ExistingShift } from "@/lib/recurring/conflicts";
 import { queueMutation, isOfflineQueueSupported } from "@/lib/pwa/offline-queue";
 import { useOnlineStatus } from "@/lib/hooks/useOnlineStatus";
 
@@ -146,7 +146,7 @@ export function ShiftDetails({
   const { t, locale } = useTranslations();
   const formatCurrency = useFormatCurrency();
   const router = useRouter();
-  const [seriesModalOpen, setSeriesModalOpen] = useState(false);
+  const [recurringModalOpen, setRecurringModalOpen] = useState(false);
   const [customSupplementsModalOpen, setCustomSupplementsModalOpen] = useState(false);
   const isOffline = useOnlineStatus();
 
@@ -212,17 +212,17 @@ export function ShiftDetails({
     if (!shift) return;
     setConfirmingDelete(false);
 
-    // If series ghost, pass series info for exclusion handling
-    if (shift.series_id) {
-      onDelete?.({ shiftId: shift.id, seriesId: shift.series_id, shiftDate: shift.shift_date });
+    // If recurring ghost, pass recurring info for exclusion handling
+    if (shift.recurring_id) {
+      onDelete?.({ shiftId: shift.id, recurringId: shift.recurring_id, shiftDate: shift.shift_date });
     } else {
       onDelete?.(shift.id);
     }
   };
 
-  const handleEditSeries = () => {
-    if (!shift?.series_id) return;
-    setSeriesModalOpen(true);
+  const handleEditRecurring = () => {
+    if (!shift?.recurring_id) return;
+    setRecurringModalOpen(true);
   };
 
 
@@ -244,7 +244,7 @@ export function ShiftDetails({
           shift_date: shiftDate,
           start: startTime,
           end: endTime,
-          series_id: shift.series_id, // Pass series_id if present
+          recurring_id: shift.recurring_id, // Pass recurring_id if present
         });
         setIsEditing(false);
         router.refresh();
@@ -260,7 +260,7 @@ export function ShiftDetails({
                 shift_date: shiftDate,
                 start: startTime,
                 end: endTime,
-                series_id: shift.series_id,
+                recurring_id: shift.recurring_id,
               }),
             });
 
@@ -277,7 +277,7 @@ export function ShiftDetails({
     });
   };
 
-  const isSeriesGhost = Boolean(shift?.series_id);
+  const isRecurringGhost = Boolean(shift?.recurring_id);
 
   const supplementSegments = shift ? buildSupplementSegments(shift) : [];
   const baseWageRate =
@@ -294,7 +294,7 @@ export function ShiftDetails({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
-      {!seriesModalOpen && (
+      {!recurringModalOpen && (
         <DialogContent hideCloseButton className="sm:rounded-3xl max-w-[480px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-text-primary">
@@ -425,7 +425,7 @@ export function ShiftDetails({
 
         <DialogFooter className="mt-4">
           {shift && (
-            <div className={cn("grid w-full gap-2", readOnly ? "grid-cols-1" : isSeriesGhost && !isEditing && !confirmingDelete ? "grid-cols-2" : "grid-cols-3")}>
+            <div className={cn("grid w-full gap-2", readOnly ? "grid-cols-1" : isRecurringGhost && !isEditing && !confirmingDelete ? "grid-cols-2" : "grid-cols-3")}>
               {!readOnly && (
                 <Button
                   onClick={() => {
@@ -474,11 +474,11 @@ export function ShiftDetails({
                   {t.pages.shifts.details.editButton}
                 </Button>
               ) : null}
-              {!readOnly && isSeriesGhost && !isEditing && !confirmingDelete && (
+              {!readOnly && isRecurringGhost && !isEditing && !confirmingDelete && (
                 <Button
-                  onClick={handleEditSeries}
+                  onClick={handleEditRecurring}
                   disabled={saving || isDeleting || isOffline}
-                  title={isOffline ? "Cannot edit series while offline" : undefined}
+                  title={isOffline ? "Cannot edit recurring shift while offline" : undefined}
                   className={cn(
                     "col-span-1 h-11 w-full rounded-full px-4 text-sm font-medium transition-colors gap-2",
                     isOffline
@@ -487,7 +487,7 @@ export function ShiftDetails({
                   )}
                 >
                   <RefreshCw className="h-4 w-4" />
-                  {t.pages.shifts.details.editSeriesButton}
+                  {t.pages.shifts.details.editRecurringButton}
                 </Button>
               )}
               {!readOnly && isEditing ? (
@@ -535,14 +535,14 @@ export function ShiftDetails({
         </DialogFooter>
         </DialogContent>
       )}
-      {shift?.series_id && (
-        <SeriesEditModal
-          isOpen={seriesModalOpen}
-          seriesId={shift.series_id}
+      {shift?.recurring_id && (
+        <RecurringEditModal
+          isOpen={recurringModalOpen}
+          recurringId={shift.recurring_id}
           onClose={(reason) => {
-            setSeriesModalOpen(false);
+            setRecurringModalOpen(false);
             router.refresh();
-            // If the series was deleted, also close the parent ShiftDetails modal
+            // If the recurring shift was deleted, also close the parent ShiftDetails modal
             if (reason === 'deleted') {
               onClose();
             }
@@ -557,7 +557,7 @@ export function ShiftDetails({
           open={customSupplementsModalOpen}
           onOpenChange={setCustomSupplementsModalOpen}
           shiftId={shift.id}
-          seriesId={shift.series_id}
+          recurringId={shift.recurring_id}
           shiftDate={shift.shift_date}
           existingSupplements={shift.custom_supplements ?? null}
           hasPredefinedSupplements={supplementSegments.length > 0}

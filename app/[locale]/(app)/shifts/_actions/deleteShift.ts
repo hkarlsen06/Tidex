@@ -8,14 +8,14 @@ import { ERRORS } from "@/lib/errors/messages";
 
 type DeleteShiftInput = {
   shiftId: string;
-  seriesId?: string; // Present if this is a series ghost
-  shiftDate?: string; // ISO date, needed if series ghost
+  recurringId?: string; // Present if this is a recurring shift ghost
+  shiftDate?: string; // ISO date, needed if recurring shift ghost
 };
 
 export async function deleteShift(input: string | DeleteShiftInput) {
   // Handle both legacy string input and new object input
   const shiftId = typeof input === "string" ? input : input.shiftId;
-  const seriesId = typeof input === "string" ? undefined : input.seriesId;
+  const recurringId = typeof input === "string" ? undefined : input.recurringId;
   const shiftDate = typeof input === "string" ? undefined : input.shiftDate;
 
   const { user } = await verifySession();
@@ -23,34 +23,34 @@ export async function deleteShift(input: string | DeleteShiftInput) {
 
   if (!shiftId) throw new Error(ERRORS.INVALID_SHIFT_ID);
 
-  // Case 1: Deleting a series ghost - add to exclusions instead
-  if (seriesId && shiftDate) {
-    const { data: series, error: seriesError } = await supabase
-      .from("series_shifts")
+  // Case 1: Deleting a recurring shift ghost - add to exclusions instead
+  if (recurringId && shiftDate) {
+    const { data: recurring, error: recurringError } = await supabase
+      .from("recurring_shifts")
       .select("exclusions")
-      .eq("id", seriesId)
+      .eq("id", recurringId)
       .eq("user_id", user.id)
       .single();
 
-    if (seriesError || !series) {
-      logger.error("Failed to load series for deletion:", seriesError);
-      throw new Error(ERRORS.FAILED_TO_LOAD_SERIES);
+    if (recurringError || !recurring) {
+      logger.error("Failed to load recurring shift for deletion:", recurringError);
+      throw new Error(ERRORS.FAILED_TO_LOAD_RECURRING);
     }
 
-    const currentExclusions = series.exclusions || [];
+    const currentExclusions = recurring.exclusions || [];
     const updatedExclusions = currentExclusions.includes(shiftDate)
       ? currentExclusions
       : [...currentExclusions, shiftDate];
 
     const { error: updateError } = await supabase
-      .from("series_shifts")
+      .from("recurring_shifts")
       .update({ exclusions: updatedExclusions })
-      .eq("id", seriesId)
+      .eq("id", recurringId)
       .eq("user_id", user.id);
 
     if (updateError) {
-      logger.error("Failed to update series exclusions:", updateError);
-      throw new Error(ERRORS.FAILED_TO_UPDATE_SERIES);
+      logger.error("Failed to update recurring shift exclusions:", updateError);
+      throw new Error(ERRORS.FAILED_TO_UPDATE_RECURRING);
     }
 
     // Invalidate cache and revalidate paths
@@ -83,31 +83,31 @@ export async function deleteShift(input: string | DeleteShiftInput) {
 
   if (error) throw new Error(error.message);
 
-  // Check if this date should be removed from any series exclusions
+  // Check if this date should be removed from any recurring shift exclusions
   // Get the weekday of the deleted shift
   const d = new Date(`${deletedDate}T00:00:00Z`);
   const weekday = d.getUTCDay();
 
-  // Find series that have this date in exclusions and have an anchor for this weekday
-  const { data: allSeries, error: allSeriesError } = await supabase
-    .from("series_shifts")
+  // Find recurring shifts that have this date in exclusions and have an anchor for this weekday
+  const { data: allRecurring, error: allRecurringError } = await supabase
+    .from("recurring_shifts")
     .select("*")
     .eq("user_id", user.id);
 
-  if (allSeriesError) {
-    logger.error("Failed to load series for exclusion cleanup:", allSeriesError);
+  if (allRecurringError) {
+    logger.error("Failed to load recurring shifts for exclusion cleanup:", allRecurringError);
     // Continue without cleanup
-  } else if (allSeries && allSeries.length > 0) {
-    // Find series with this date in exclusions and matching weekday anchor
-    const matchingSeries = allSeries.filter((s) => {
+  } else if (allRecurring && allRecurring.length > 0) {
+    // Find recurring shifts with this date in exclusions and matching weekday anchor
+    const matchingRecurring = allRecurring.filter((s) => {
       const hasExclusion = (s.exclusions || []).includes(deletedDate);
       const hasWeekdayAnchor = s.selected_days && s.selected_days[String(weekday) as keyof typeof s.selected_days];
       return hasExclusion && hasWeekdayAnchor;
     });
 
-    if (matchingSeries.length > 0) {
-      // Sort by earliest anchor date to pick the earliest series
-      matchingSeries.sort((a, b) => {
+    if (matchingRecurring.length > 0) {
+      // Sort by earliest anchor date to pick the earliest recurring shift
+      matchingRecurring.sort((a, b) => {
         const aAnchors = Object.values(a.selected_days || {});
         const bAnchors = Object.values(b.selected_days || {});
         const aEarliest = Math.min(...aAnchors.map((iso) => new Date(iso as string).getTime()));
@@ -115,17 +115,17 @@ export async function deleteShift(input: string | DeleteShiftInput) {
         return aEarliest - bEarliest;
       });
 
-      const earliestSeries = matchingSeries[0];
-      const updatedExclusions = (earliestSeries.exclusions || []).filter((d: string) => d !== deletedDate);
+      const earliestRecurring = matchingRecurring[0];
+      const updatedExclusions = (earliestRecurring.exclusions || []).filter((d: string) => d !== deletedDate);
 
       const { error: cleanupError } = await supabase
-        .from("series_shifts")
+        .from("recurring_shifts")
         .update({ exclusions: updatedExclusions })
-        .eq("id", earliestSeries.id)
+        .eq("id", earliestRecurring.id)
         .eq("user_id", user.id);
 
       if (cleanupError) {
-        logger.error("Failed to cleanup series exclusions:", cleanupError);
+        logger.error("Failed to cleanup recurring shift exclusions:", cleanupError);
         // Continue anyway
       }
     }

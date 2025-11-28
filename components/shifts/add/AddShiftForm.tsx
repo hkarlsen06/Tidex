@@ -433,14 +433,14 @@ export default function AddShiftForm({ existingShifts, userSettings, presetRules
                     : "text-text-secondary hover:text-text-primary"
                 )}
               >
-                {t.pages.shifts.add.modeSeries}
+                {t.pages.shifts.add.modeRecurring}
               </Button>
             </div>
           </div>
         </div>
         <div className="flex flex-wrap items-start justify-between gap-2">
           <p className="text-sm text-text-secondary">
-            {mode === "single" ? t.pages.shifts.add.description : t.pages.shifts.add.descriptionSeries}
+            {mode === "single" ? t.pages.shifts.add.description : t.pages.shifts.add.descriptionRecurring}
           </p>
         </div>
 

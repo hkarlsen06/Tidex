@@ -8,8 +8,8 @@ import { verifySession } from "@/data-access/auth";
 import { isISODate, isHHMM } from "@/lib/validation/shift-validators";
 import { ERRORS } from "@/lib/errors/messages";
 
-type MoveSeriesShiftInput = {
-  seriesId: string;
+type MoveRecurringShiftInput = {
+  recurringId: string;
   sourceDate: string; // ISO date to exclude
   targetDate: string; // ISO date for new standalone shift
   startTime: string; // HH:mm
@@ -17,18 +17,18 @@ type MoveSeriesShiftInput = {
 };
 
 /**
- * Move a series shift to a new date
- * - Adds the source date to series exclusions
+ * Move a recurring shift to a new date
+ * - Adds the source date to recurring shift exclusions
  * - Creates a new standalone shift at the target date
  * - Revalidates the shifts page
  */
-export async function moveSeriesShift({
-  seriesId,
+export async function moveRecurringShift({
+  recurringId,
   sourceDate,
   targetDate,
   startTime,
   endTime,
-}: MoveSeriesShiftInput): Promise<void> {
+}: MoveRecurringShiftInput): Promise<void> {
   const { user } = await verifySession();
   const supabase = await createSupabaseServerClient();
 
@@ -44,35 +44,35 @@ export async function moveSeriesShift({
     throw new Error(ERRORS.INVALID_TIME);
   }
 
-  // Load the series to get current exclusions
-  const { data: series, error: seriesError } = await supabase
-    .from("series_shifts")
+  // Load the recurring shift to get current exclusions
+  const { data: recurring, error: recurringError } = await supabase
+    .from("recurring_shifts")
     .select("exclusions")
-    .eq("id", seriesId)
+    .eq("id", recurringId)
     .eq("user_id", user.id)
     .single();
 
-  if (seriesError || !series) {
-    logger.error("Failed to load series for move:", seriesError);
-    throw new Error(ERRORS.SERIES_NOT_FOUND);
+  if (recurringError || !recurring) {
+    logger.error("Failed to load recurring shift for move:", recurringError);
+    throw new Error(ERRORS.RECURRING_NOT_FOUND);
   }
 
   // Add source date to exclusions
-  const currentExclusions = series.exclusions || [];
+  const currentExclusions = recurring.exclusions || [];
   const updatedExclusions = currentExclusions.includes(sourceDate)
     ? currentExclusions
     : [...currentExclusions, sourceDate];
 
-  // Update series exclusions
+  // Update recurring shift exclusions
   const { error: updateError } = await supabase
-    .from("series_shifts")
+    .from("recurring_shifts")
     .update({ exclusions: updatedExclusions })
-    .eq("id", seriesId)
+    .eq("id", recurringId)
     .eq("user_id", user.id);
 
   if (updateError) {
-    logger.error("Failed to update series exclusions:", updateError);
-    throw new Error(ERRORS.FAILED_TO_UPDATE_SERIES);
+    logger.error("Failed to update recurring shift exclusions:", updateError);
+    throw new Error(ERRORS.FAILED_TO_UPDATE_RECURRING);
   }
 
   // Create standalone shift at target date

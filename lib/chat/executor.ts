@@ -8,22 +8,22 @@ import { createShifts } from "@/app/[locale]/(app)/shifts/add/actions";
 import { updateShift } from "@/app/[locale]/(app)/shifts/_actions/updateShift";
 import { deleteShift } from "@/app/[locale]/(app)/shifts/_actions/deleteShift";
 import { getComputedShiftsForApi } from "@/data-access/shifts";
-import { draftSeriesShift } from "@/app/[locale]/(app)/shifts/add/_actions/draftSeriesShift";
-import { createSeriesShift } from "@/app/[locale]/(app)/shifts/add/_actions/createSeriesShift";
-import { updateSeriesShift } from "@/app/[locale]/(app)/shifts/_actions/updateSeriesShift";
-import { deleteSeriesShift } from "@/app/[locale]/(app)/shifts/_actions/deleteSeriesShift";
+import { draftRecurringShift } from "@/app/[locale]/(app)/shifts/add/_actions/draftRecurringShift";
+import { createRecurringShift } from "@/app/[locale]/(app)/shifts/add/_actions/createRecurringShift";
+import { updateRecurringShift } from "@/app/[locale]/(app)/shifts/_actions/updateRecurringShift";
+import { deleteRecurringShift } from "@/app/[locale]/(app)/shifts/_actions/deleteRecurringShift";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import type { EndCondition } from "@/lib/series/types";
+import type { EndCondition } from "@/lib/recurring/types";
 import type {
   ToolName,
   ToolResult,
   ManageShiftInput,
   QueryShiftsInput,
   CalculateWagesInput,
-  DraftSeriesShiftInput,
-  ConfirmSeriesShiftInput,
-  ManageSeriesShiftInput,
-  ManageSeriesExclusionInput,
+  DraftRecurringShiftInput,
+  ConfirmRecurringShiftInput,
+  ManageRecurringShiftInput,
+  ManageRecurringExclusionInput,
   GetStatisticsInput,
   ManageSettingsInput,
 } from "./tools";
@@ -31,10 +31,10 @@ import {
   manageShiftSchema,
   queryShiftsSchema,
   calculateWagesSchema,
-  draftSeriesShiftSchema,
-  confirmSeriesShiftSchema,
-  manageSeriesShiftSchema,
-  manageSeriesExclusionSchema,
+  draftRecurringShiftSchema,
+  confirmRecurringShiftSchema,
+  manageRecurringShiftSchema,
+  manageRecurringExclusionSchema,
   getStatisticsSchema,
   manageSettingsSchema,
 } from "./tools";
@@ -133,10 +133,10 @@ function resolveShortIdsFromShifts(
 }
 
 /**
- * Resolve a short series ID to full UUID by prefix matching.
+ * Resolve a short recurring shift ID to full UUID by prefix matching.
  * Returns the full UUID if found, or null if not found/ambiguous.
  */
-async function resolveSeriesId(
+async function resolveRecurringId(
   shortOrFullId: string,
   userId: string
 ): Promise<string | null> {
@@ -145,17 +145,17 @@ async function resolveSeriesId(
     return shortOrFullId;
   }
 
-  // Fetch user's series and find by prefix
+  // Fetch user's recurring shifts and find by prefix
   const supabase = await createSupabaseServerClient();
-  const { data: series } = await supabase
-    .from("series_shifts")
+  const { data: recurring } = await supabase
+    .from("recurring_shifts")
     .select("id")
     .eq("user_id", userId);
 
-  if (!series) return null;
+  if (!recurring) return null;
 
-  const matches = series.filter((s) =>
-    s.id.toLowerCase().startsWith(shortOrFullId.toLowerCase())
+  const matches = recurring.filter((r) =>
+    r.id.toLowerCase().startsWith(shortOrFullId.toLowerCase())
   );
 
   if (matches.length === 1) {
@@ -173,10 +173,10 @@ const KNOWN_TOOL_NAMES: ToolName[] = [
   "manage_shift",
   "query_shifts",
   "calculate_wages",
-  "draft_series_shift",
-  "confirm_series_shift",
-  "manage_series_shift",
-  "manage_series_exclusion",
+  "draft_recurring_shift",
+  "confirm_recurring_shift",
+  "manage_recurring_shift",
+  "manage_recurring_exclusion",
   "get_statistics",
   "manage_settings",
 ];
@@ -283,17 +283,17 @@ async function executeToolOnce(
     case "calculate_wages":
       return await executeCalculateWages(args, userId, tr);
 
-    case "draft_series_shift":
-      return await executeDraftSeriesShift(args, userId, tr);
+    case "draft_recurring_shift":
+      return await executeDraftRecurringShift(args, userId, tr);
 
-    case "confirm_series_shift":
-      return await executeConfirmSeriesShift(args, userId, tr);
+    case "confirm_recurring_shift":
+      return await executeConfirmRecurringShift(args, userId, tr);
 
-    case "manage_series_shift":
-      return await executeManageSeriesShift(args, userId, tr);
+    case "manage_recurring_shift":
+      return await executeManageRecurringShift(args, userId, tr);
 
-    case "manage_series_exclusion":
-      return await executeManageSeriesExclusion(args, userId, tr);
+    case "manage_recurring_exclusion":
+      return await executeManageRecurringExclusion(args, userId, tr);
 
     case "get_statistics":
       return await executeGetStatistics(args, userId, tr);
@@ -482,10 +482,10 @@ function formatDateCompact(isoDate: string, tr: ToolResultTranslations): string 
 }
 
 /**
- * Format series as readable description (e.g., "Mon/Wed 09:00-17:00") (localized)
+ * Format recurring shift as readable description (e.g., "Mon/Wed 09:00-17:00") (localized)
  */
-function formatSeriesDescription(
-  series: {
+function formatRecurringDescription(
+  recurring: {
     selected_days?: Record<string, string>;
     start_time: string;
     end_time: string;
@@ -493,7 +493,7 @@ function formatSeriesDescription(
   tr: ToolResultTranslations
 ): string {
   const weekdayKeys = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const;
-  const selectedDays = series.selected_days || {};
+  const selectedDays = recurring.selected_days || {};
 
   // Get sorted day numbers
   const dayNums = Object.keys(selectedDays)
@@ -509,7 +509,7 @@ function formatSeriesDescription(
     return match ? match[1] : time;
   };
 
-  return `${daysStr} ${parseTime(series.start_time)}-${parseTime(series.end_time)}`;
+  return `${daysStr} ${parseTime(recurring.start_time)}-${parseTime(recurring.end_time)}`;
 }
 
 /**
@@ -779,14 +779,14 @@ function weekdaysArrayToSelectedDays(
 }
 
 /**
- * Execute draft_series_shift tool (Step 1 of 2)
+ * Execute draft_recurring_shift tool (Step 1 of 2)
  */
-async function executeDraftSeriesShift(
+async function executeDraftRecurringShift(
   args: unknown,
   _userId: string,
   tr: ToolResultTranslations
 ): Promise<ToolResult> {
-  const parsed = draftSeriesShiftSchema.safeParse(args);
+  const parsed = draftRecurringShiftSchema.safeParse(args);
   if (!parsed.success) {
     return {
       success: false,
@@ -794,7 +794,7 @@ async function executeDraftSeriesShift(
     };
   }
 
-  const input: DraftSeriesShiftInput = parsed.data;
+  const input: DraftRecurringShiftInput = parsed.data;
 
   // Convert weekdays array to selected_days object (supports multiple weekdays)
   const selectedDays = weekdaysArrayToSelectedDays(input.weekdays);
@@ -802,7 +802,7 @@ async function executeDraftSeriesShift(
   const endCondition = convertEndCondition(input.endType, input.endValue);
 
   try {
-    const result = await draftSeriesShift({
+    const result = await draftRecurringShift({
       selected_days: selectedDays,
       start_time: input.start,
       end_time: input.end,
@@ -814,32 +814,32 @@ async function executeDraftSeriesShift(
     if (result.conflictCount === 0) {
       return {
         success: true,
-        message: t(tr.validatedSeries, { count: result.projectedShiftCount }),
+        message: t(tr.validatedRecurring, { count: result.projectedShiftCount }),
         data: result,
       };
     }
 
     return {
       success: true,
-      message: t(tr.validatedSeriesConflicts, { count: result.projectedShiftCount, conflicts: result.conflictCount }),
+      message: t(tr.validatedRecurringConflicts, { count: result.projectedShiftCount, conflicts: result.conflictCount }),
       data: result,
     };
   } catch (error) {
     throw new Error(
-      error instanceof Error ? error.message : "Failed to validate series"
+      error instanceof Error ? error.message : "Failed to validate recurring shift"
     );
   }
 }
 
 /**
- * Execute confirm_series_shift tool (Step 2 of 2)
+ * Execute confirm_recurring_shift tool (Step 2 of 2)
  */
-async function executeConfirmSeriesShift(
+async function executeConfirmRecurringShift(
   args: unknown,
   _userId: string,
   tr: ToolResultTranslations
 ): Promise<ToolResult> {
-  const parsed = confirmSeriesShiftSchema.safeParse(args);
+  const parsed = confirmRecurringShiftSchema.safeParse(args);
   if (!parsed.success) {
     return {
       success: false,
@@ -847,7 +847,7 @@ async function executeConfirmSeriesShift(
     };
   }
 
-  const input: ConfirmSeriesShiftInput = parsed.data;
+  const input: ConfirmRecurringShiftInput = parsed.data;
 
   // Convert weekdays array to selected_days object (supports multiple weekdays)
   const selectedDays = weekdaysArrayToSelectedDays(input.weekdays);
@@ -858,7 +858,7 @@ async function executeConfirmSeriesShift(
   const conflictResolution = input.conflictResolution === "skip_conflicts" ? "exclude_conflicts" : "keep_existing";
 
   try {
-    const result = await createSeriesShift(
+    const result = await createRecurringShift(
       {
         selected_days: selectedDays,
         start_time: input.start,
@@ -874,12 +874,12 @@ async function executeConfirmSeriesShift(
 
     return {
       success: true,
-      message: input.conflictResolution === "skip_conflicts" ? tr.seriesCreatedSkipped : tr.seriesCreatedKept,
+      message: input.conflictResolution === "skip_conflicts" ? tr.recurringCreatedSkipped : tr.recurringCreatedKept,
       data: result,
     };
   } catch (error) {
     throw new Error(
-      error instanceof Error ? error.message : "Failed to create series"
+      error instanceof Error ? error.message : "Failed to create recurring shift"
     );
   }
 }
@@ -917,10 +917,10 @@ function formatEndConditionForAI(endCondition: EndCondition): { endType: string;
 }
 
 /**
- * Format series data for AI consumption
+ * Format recurring shift data for AI consumption
  */
-function formatSeriesForAI(series: any): any {
-  const selectedDays = series.selected_days || {};
+function formatRecurringForAI(recurring: any): any {
+  const selectedDays = recurring.selected_days || {};
 
   // Convert selected_days object to weekdays array format
   const weekdays = Object.entries(selectedDays)
@@ -936,30 +936,30 @@ function formatSeriesForAI(series: any): any {
     return match ? match[1] : time;
   };
 
-  const { endType, endValue } = formatEndConditionForAI(series.end_condition as EndCondition);
+  const { endType, endValue } = formatEndConditionForAI(recurring.end_condition as EndCondition);
 
   return {
-    seriesId: toShortId(series.id), // Use short ID to reduce tokens
+    recurringId: toShortId(recurring.id), // Use short ID to reduce tokens
     weekdays, // Array of {day, anchorDate} objects (supports multiple weekdays)
-    start: parseTime(series.start_time),
-    end: parseTime(series.end_time),
-    frequency: intervalWeeksToFrequency(series.repeat_interval_weeks),
+    start: parseTime(recurring.start_time),
+    end: parseTime(recurring.end_time),
+    frequency: intervalWeeksToFrequency(recurring.repeat_interval_weeks),
     endType,
     endValue,
-    exclusions: series.exclusions || [],
-    createdAt: series.created_at,
+    exclusions: recurring.exclusions || [],
+    createdAt: recurring.created_at,
   };
 }
 
 /**
- * Execute manage_series_shift tool (consolidated update/delete/list)
+ * Execute manage_recurring_shift tool (consolidated update/delete/list)
  */
-async function executeManageSeriesShift(
+async function executeManageRecurringShift(
   args: unknown,
   _userId: string,
   tr: ToolResultTranslations
 ): Promise<ToolResult> {
-  const parsed = manageSeriesShiftSchema.safeParse(args);
+  const parsed = manageRecurringShiftSchema.safeParse(args);
   if (!parsed.success) {
     return {
       success: false,
@@ -967,15 +967,15 @@ async function executeManageSeriesShift(
     };
   }
 
-  const input: ManageSeriesShiftInput = parsed.data;
+  const input: ManageRecurringShiftInput = parsed.data;
 
   try {
     switch (input.action) {
       case "update": {
-        if (!input.seriesId) {
+        if (!input.recurringId) {
           return {
             success: false,
-            message: tr.missingSeriesId,
+            message: tr.missingRecurringId,
           };
         }
 
@@ -994,28 +994,28 @@ async function executeManageSeriesShift(
         }
 
         // Resolve short ID to full UUID
-        const fullSeriesId = await resolveSeriesId(input.seriesId, _userId);
-        if (!fullSeriesId) {
+        const fullRecurringId = await resolveRecurringId(input.recurringId, _userId);
+        if (!fullRecurringId) {
           return {
             success: false,
-            message: t(tr.seriesNotFound, { id: input.seriesId }),
+            message: t(tr.recurringNotFound, { id: input.recurringId }),
           };
         }
 
         const supabase = await createSupabaseServerClient();
 
-        // Fetch current series to merge with updates
-        const { data: currentSeries, error: fetchError } = await supabase
-          .from("series_shifts")
+        // Fetch current recurring shift to merge with updates
+        const { data: currentRecurring, error: fetchError } = await supabase
+          .from("recurring_shifts")
           .select("*")
-          .eq("id", fullSeriesId)
+          .eq("id", fullRecurringId)
           .eq("user_id", _userId)
           .single();
 
-        if (fetchError || !currentSeries) {
+        if (fetchError || !currentRecurring) {
           return {
             success: false,
-            message: t(tr.seriesNotFound, { id: input.seriesId }),
+            message: t(tr.recurringNotFound, { id: input.recurringId }),
           };
         }
 
@@ -1030,7 +1030,7 @@ async function executeManageSeriesShift(
         if (input.weekdays !== undefined) {
           selectedDays = weekdaysArrayToSelectedDays(input.weekdays);
         } else {
-          selectedDays = currentSeries.selected_days as Record<'0' | '1' | '2' | '3' | '4' | '5' | '6', string>;
+          selectedDays = currentRecurring.selected_days as Record<'0' | '1' | '2' | '3' | '4' | '5' | '6', string>;
         }
 
         // Build end_condition - either from new input or keep existing
@@ -1038,30 +1038,30 @@ async function executeManageSeriesShift(
         if (input.endType !== undefined) {
           endCondition = convertEndCondition(input.endType, input.endValue);
         } else {
-          endCondition = currentSeries.end_condition as EndCondition;
+          endCondition = currentRecurring.end_condition as EndCondition;
         }
 
         // Build repeat_interval_weeks
         const repeatIntervalWeeks = input.frequency !== undefined
           ? frequencyToIntervalWeeks(input.frequency)
-          : (currentSeries.repeat_interval_weeks as 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8);
+          : (currentRecurring.repeat_interval_weeks as 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8);
 
-        const updatedStartTime = input.start ?? parseTime(currentSeries.start_time);
-        const updatedEndTime = input.end ?? parseTime(currentSeries.end_time);
+        const updatedStartTime = input.start ?? parseTime(currentRecurring.start_time);
+        const updatedEndTime = input.end ?? parseTime(currentRecurring.end_time);
 
-        await updateSeriesShift({
-          id: fullSeriesId,
+        await updateRecurringShift({
+          id: fullRecurringId,
           selected_days: selectedDays,
           start_time: updatedStartTime,
           end_time: updatedEndTime,
           repeat_interval_weeks: repeatIntervalWeeks,
           end_condition: endCondition,
-          exclusions: currentSeries.exclusions || [],
+          exclusions: currentRecurring.exclusions || [],
         });
 
         return {
           success: true,
-          message: t(tr.updatedSeries, { description: formatSeriesDescription({
+          message: t(tr.updatedRecurring, { description: formatRecurringDescription({
             selected_days: selectedDays,
             start_time: updatedStartTime,
             end_time: updatedEndTime,
@@ -1070,96 +1070,96 @@ async function executeManageSeriesShift(
       }
 
       case "delete": {
-        if (!input.seriesId) {
+        if (!input.recurringId) {
           return {
             success: false,
-            message: tr.missingSeriesId,
+            message: tr.missingRecurringId,
           };
         }
 
         // Resolve short ID to full UUID
-        const fullSeriesId = await resolveSeriesId(input.seriesId, _userId);
-        if (!fullSeriesId) {
+        const fullRecurringId = await resolveRecurringId(input.recurringId, _userId);
+        if (!fullRecurringId) {
           return {
             success: false,
-            message: t(tr.seriesNotFound, { id: input.seriesId }),
+            message: t(tr.recurringNotFound, { id: input.recurringId }),
           };
         }
 
-        // Fetch series info for the message before deleting
+        // Fetch recurring shift info for the message before deleting
         const supabaseForDelete = await createSupabaseServerClient();
-        const { data: seriesToDelete } = await supabaseForDelete
-          .from("series_shifts")
+        const { data: recurringToDelete } = await supabaseForDelete
+          .from("recurring_shifts")
           .select("selected_days, start_time, end_time")
-          .eq("id", fullSeriesId)
+          .eq("id", fullRecurringId)
           .eq("user_id", _userId)
           .single();
 
-        await deleteSeriesShift(fullSeriesId);
+        await deleteRecurringShift(fullRecurringId);
 
-        const seriesDesc = seriesToDelete
-          ? formatSeriesDescription(seriesToDelete, tr)
+        const recurringDesc = recurringToDelete
+          ? formatRecurringDescription(recurringToDelete, tr)
           : "unknown";
 
         return {
           success: true,
-          message: t(tr.deletedSeries, { description: seriesDesc }),
+          message: t(tr.deletedRecurring, { description: recurringDesc }),
         };
       }
 
       case "list": {
         const supabase = await createSupabaseServerClient();
 
-        if (input.seriesId) {
+        if (input.recurringId) {
           // Resolve short ID to full UUID
-          const fullSeriesId = await resolveSeriesId(input.seriesId, _userId);
-          if (!fullSeriesId) {
+          const fullRecurringId = await resolveRecurringId(input.recurringId, _userId);
+          if (!fullRecurringId) {
             return {
               success: false,
-              message: t(tr.seriesNotFound, { id: input.seriesId }),
+              message: t(tr.recurringNotFound, { id: input.recurringId }),
             };
           }
 
-          // List specific series
+          // List specific recurring shift
           const { data, error } = await supabase
-            .from("series_shifts")
+            .from("recurring_shifts")
             .select("*")
-            .eq("id", fullSeriesId)
+            .eq("id", fullRecurringId)
             .eq("user_id", _userId)
             .single();
 
           if (error) {
-            throw new Error(`Failed to fetch series: ${error.message}`);
+            throw new Error(`Failed to fetch recurring shift: ${error.message}`);
           }
 
           if (!data) {
             return {
               success: false,
-              message: t(tr.seriesNotFound, { id: input.seriesId }),
+              message: t(tr.recurringNotFound, { id: input.recurringId }),
             };
           }
 
           return {
             success: true,
-            message: t(tr.foundSeries, { description: formatSeriesDescription(data, tr) }),
-            data: [formatSeriesForAI(data)],
+            message: t(tr.foundRecurring, { description: formatRecurringDescription(data, tr) }),
+            data: [formatRecurringForAI(data)],
           };
         } else {
-          // List all user's series shifts
+          // List all user's recurring shifts
           const { data, error } = await supabase
-            .from("series_shifts")
+            .from("recurring_shifts")
             .select("*")
             .eq("user_id", _userId)
             .order("created_at", { ascending: false });
 
           if (error) {
-            throw new Error(`Failed to fetch series: ${error.message}`);
+            throw new Error(`Failed to fetch recurring shifts: ${error.message}`);
           }
 
           return {
             success: true,
-            message: t(tr.foundSeriesCount, { count: data.length }),
-            data: data.map(formatSeriesForAI),
+            message: t(tr.foundRecurringCount, { count: data.length }),
+            data: data.map(formatRecurringForAI),
           };
         }
       }
@@ -1172,20 +1172,20 @@ async function executeManageSeriesShift(
     }
   } catch (error) {
     throw new Error(
-      error instanceof Error ? error.message : "Failed to execute series operation"
+      error instanceof Error ? error.message : "Failed to execute recurring shift operation"
     );
   }
 }
 
 /**
- * Execute manage_series_exclusion tool (consolidated add/remove)
+ * Execute manage_recurring_exclusion tool (consolidated add/remove)
  */
-async function executeManageSeriesExclusion(
+async function executeManageRecurringExclusion(
   args: unknown,
   _userId: string,
   tr: ToolResultTranslations
 ): Promise<ToolResult> {
-  const parsed = manageSeriesExclusionSchema.safeParse(args);
+  const parsed = manageRecurringExclusionSchema.safeParse(args);
   if (!parsed.success) {
     return {
       success: false,
@@ -1193,36 +1193,36 @@ async function executeManageSeriesExclusion(
     };
   }
 
-  const input: ManageSeriesExclusionInput = parsed.data;
+  const input: ManageRecurringExclusionInput = parsed.data;
 
   try {
     // Resolve short ID to full UUID
-    const fullSeriesId = await resolveSeriesId(input.seriesId, _userId);
-    if (!fullSeriesId) {
+    const fullRecurringId = await resolveRecurringId(input.recurringId, _userId);
+    if (!fullRecurringId) {
       return {
         success: false,
-        message: t(tr.seriesNotFound, { id: input.seriesId }),
+        message: t(tr.recurringNotFound, { id: input.recurringId }),
       };
     }
 
     const supabase = await createSupabaseServerClient();
 
-    // Fetch current series
-    const { data: series, error: fetchError } = await supabase
-      .from("series_shifts")
+    // Fetch current recurring shift
+    const { data: recurring, error: fetchError } = await supabase
+      .from("recurring_shifts")
       .select("exclusions, selected_days, start_time, end_time")
-      .eq("id", fullSeriesId)
+      .eq("id", fullRecurringId)
       .eq("user_id", _userId)
       .single();
 
-    if (fetchError || !series) {
+    if (fetchError || !recurring) {
       return {
         success: false,
-        message: t(tr.seriesNotFound, { id: input.seriesId }),
+        message: t(tr.recurringNotFound, { id: input.recurringId }),
       };
     }
 
-    const currentExclusions = (series.exclusions as string[]) || [];
+    const currentExclusions = (recurring.exclusions as string[]) || [];
     let newExclusions: string[];
 
     if (input.action === "add") {
@@ -1233,23 +1233,23 @@ async function executeManageSeriesExclusion(
       newExclusions = currentExclusions.filter((date) => date !== input.date);
     }
 
-    // Update series
+    // Update recurring shift
     const { error: updateError } = await supabase
-      .from("series_shifts")
+      .from("recurring_shifts")
       .update({ exclusions: newExclusions })
-      .eq("id", fullSeriesId)
+      .eq("id", fullRecurringId)
       .eq("user_id", _userId);
 
     if (updateError) {
-      throw new Error(`Failed to update series: ${updateError.message}`);
+      throw new Error(`Failed to update recurring shift: ${updateError.message}`);
     }
 
-    const seriesDesc = formatSeriesDescription(series, tr);
+    const recurringDesc = formatRecurringDescription(recurring, tr);
     const dateDesc = formatDateCompact(input.date, tr);
     // Note: These messages aren't in the translation file, keeping them simple
     const actionMessage = input.action === "add"
-      ? `Excluded ${dateDesc} from series (${seriesDesc})`
-      : `Removed ${dateDesc} from exclusions in series (${seriesDesc})`;
+      ? `Excluded ${dateDesc} from recurring shift (${recurringDesc})`
+      : `Removed ${dateDesc} from exclusions in recurring shift (${recurringDesc})`;
 
     return {
       success: true,

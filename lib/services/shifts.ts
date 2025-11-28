@@ -2,7 +2,7 @@
  * Shifts Service Layer
  *
  * Effect-based service for shift data access with:
- * - Parallel query execution for shifts and series
+ * - Parallel query execution for shifts and recurring shifts
  * - Automatic snapshot resolution
  * - Type-safe error handling
  * - Caching for performance
@@ -38,8 +38,8 @@ import {
   type WageSnapshot,
 } from "../payroll";
 import { getCurrentYearMonth, getMonthStart, getMonthEnd } from "../date-utils";
-import { generateGhostsForMonth } from "../series/utils";
-import type { SeriesShiftRow } from "../series/types";
+import { generateGhostsForMonth } from "../recurring/utils";
+import type { RecurringShiftRow } from "../recurring/types";
 import { cleanTime } from "../time-utils";
 
 /**
@@ -71,9 +71,9 @@ export type ShiftData = {
 };
 
 /**
- * Database series shift row
+ * Database recurring shift row
  */
-type DbSeriesShift = SeriesShiftRow & {
+type DbRecurringShift = RecurringShiftRow & {
   user_id: string;
 };
 
@@ -84,7 +84,7 @@ export class ShiftsService extends Context.Tag("ShiftsService")<
   ShiftsService,
   {
     /**
-     * Get shifts with computations, series ghosts, and aggregates
+     * Get shifts with computations, recurring shift ghosts, and aggregates
      * Automatically verifies user authentication
      */
     readonly getShiftsWithComputations: (
@@ -226,18 +226,18 @@ export const ShiftsServiceLive = Layer.effect(
           return await query;
         };
 
-        // Fetch series shifts
-        const seriesQuery = async (client: any) =>
+        // Fetch recurring shifts
+        const recurringQuery = async (client: any) =>
           await client
-            .from("series_shifts")
+            .from("recurring_shifts")
             .select("*")
             .eq("user_id", userId);
 
         // Execute queries in parallel
-        const [shifts, seriesShifts] = yield* Effect.all(
+        const [shifts, recurringShifts] = yield* Effect.all(
           [
             supabase.query(shiftsQuery, { retries: 2 }),
-            supabase.query(seriesQuery, { retries: 2 }),
+            supabase.query(recurringQuery, { retries: 2 }),
           ],
           { concurrency: 2 }
         );
@@ -245,14 +245,14 @@ export const ShiftsServiceLive = Layer.effect(
         // Collect all shift dates for batch snapshot lookup
         const shiftDates = (shifts ?? []).map((s: ShiftRow) => s.shift_date);
 
-        // Generate series ghosts and collect their dates
+        // Generate recurring ghosts and collect their dates
         const ghostDates: string[] = [];
         const startYear = new Date(startDate).getFullYear();
         const startMonth = new Date(startDate).getMonth() + 1;
         const endYear = new Date(endDate).getFullYear();
         const endMonth = new Date(endDate).getMonth() + 1;
 
-        for (const series of (seriesShifts ?? []) as DbSeriesShift[]) {
+        for (const recurring of (recurringShifts ?? []) as DbRecurringShift[]) {
           let currentYear = startYear;
           let currentMonth = startMonth;
 
@@ -263,9 +263,9 @@ export const ShiftsServiceLive = Layer.effect(
             const ghosts = generateGhostsForMonth(
               { year: currentYear, month: currentMonth },
               {
-                start_time: cleanTime(series.start_time),
-                end_time: cleanTime(series.end_time),
-                repeat_interval_weeks: series.repeat_interval_weeks as
+                start_time: cleanTime(recurring.start_time),
+                end_time: cleanTime(recurring.end_time),
+                repeat_interval_weeks: recurring.repeat_interval_weeks as
                   | 0
                   | 1
                   | 2
@@ -275,9 +275,9 @@ export const ShiftsServiceLive = Layer.effect(
                   | 6
                   | 7
                   | 8,
-                selected_days: series.selected_days,
-                end_condition: series.end_condition,
-                exclusions: series.exclusions || [],
+                selected_days: recurring.selected_days,
+                end_condition: recurring.end_condition,
+                exclusions: recurring.exclusions || [],
               }
             );
 
@@ -305,9 +305,9 @@ export const ShiftsServiceLive = Layer.effect(
           };
         });
 
-        // Compute series ghosts
-        const seriesGhosts: ShiftWithComputations[] = [];
-        for (const series of (seriesShifts ?? []) as DbSeriesShift[]) {
+        // Compute recurring ghosts
+        const recurringGhosts: ShiftWithComputations[] = [];
+        for (const recurring of (recurringShifts ?? []) as DbRecurringShift[]) {
           let currentYear = startYear;
           let currentMonth = startMonth;
 
@@ -318,9 +318,9 @@ export const ShiftsServiceLive = Layer.effect(
             const ghosts = generateGhostsForMonth(
               { year: currentYear, month: currentMonth },
               {
-                start_time: cleanTime(series.start_time),
-                end_time: cleanTime(series.end_time),
-                repeat_interval_weeks: series.repeat_interval_weeks as
+                start_time: cleanTime(recurring.start_time),
+                end_time: cleanTime(recurring.end_time),
+                repeat_interval_weeks: recurring.repeat_interval_weeks as
                   | 0
                   | 1
                   | 2
@@ -330,9 +330,9 @@ export const ShiftsServiceLive = Layer.effect(
                   | 6
                   | 7
                   | 8,
-                selected_days: series.selected_days,
-                end_condition: series.end_condition,
-                exclusions: series.exclusions || [],
+                selected_days: recurring.selected_days,
+                end_condition: recurring.end_condition,
+                exclusions: recurring.exclusions || [],
               }
             );
 
@@ -344,34 +344,34 @@ export const ShiftsServiceLive = Layer.effect(
 
               const snapshot = snapshotMap.get(ghost.date) ?? null;
 
-              // Check if series has date-specific custom supplements for this ghost date
-              const customSupplements = series.date_specific_supplements?.[ghost.date] ?? null;
+              // Check if recurring shift has date-specific custom supplements for this ghost date
+              const customSupplements = recurring.date_specific_supplements?.[ghost.date] ?? null;
 
               const computed = computeShift(
                 {
-                  id: `ghost-${series.id}-${ghost.date}`,
+                  id: `ghost-${recurring.id}-${ghost.date}`,
                   user_id: userId,
                   shift_date: ghost.date,
-                  start_time: cleanTime(series.start_time),
-                  end_time: cleanTime(series.end_time),
+                  start_time: cleanTime(recurring.start_time),
+                  end_time: cleanTime(recurring.end_time),
                   custom_supplements: customSupplements as any,
-                  series_id: series.id,
-                  series_anchor_weekday: ghost.weekday,
+                  recurring_id: recurring.id,
+                  recurring_anchor_weekday: ghost.weekday,
                 },
                 userSettings,
                 PRESET_SUPPLEMENT_RULES,
                 snapshot
               );
 
-              seriesGhosts.push({
-                id: `ghost-${series.id}-${ghost.date}`,
+              recurringGhosts.push({
+                id: `ghost-${recurring.id}-${ghost.date}`,
                 user_id: userId,
                 shift_date: ghost.date,
-                start_time: cleanTime(series.start_time),
-                end_time: cleanTime(series.end_time),
+                start_time: cleanTime(recurring.start_time),
+                end_time: cleanTime(recurring.end_time),
                 custom_supplements: customSupplements as any,
-                series_id: series.id,
-                series_anchor_weekday: ghost.weekday,
+                recurring_id: recurring.id,
+                recurring_anchor_weekday: ghost.weekday,
                 computed,
               });
             }
@@ -385,8 +385,8 @@ export const ShiftsServiceLive = Layer.effect(
           }
         }
 
-        // Merge shifts and series ghosts
-        const allShifts = [...computedShifts, ...seriesGhosts];
+        // Merge shifts and recurring ghosts
+        const allShifts = [...computedShifts, ...recurringGhosts];
 
         // Compute aggregates
         const aggregates: ShiftsAggregates = allShifts.reduce(

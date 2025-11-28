@@ -28,7 +28,7 @@ export async function copyShifts(input: CopyShiftsInput) {
   const sourceShifts: Array<{
     start_time: string;
     end_time: string;
-    series_id?: string;
+    recurring_id?: string;
   }> = [];
 
   // Fetch regular shifts from user_shifts table
@@ -45,40 +45,40 @@ export async function copyShifts(input: CopyShiftsInput) {
     }
   }
 
-  // Handle ghost shifts - extract series information
+  // Handle ghost shifts - extract recurring shift information
   if (ghostIds.length > 0) {
-    // Parse ghost IDs to get series IDs and their corresponding ghost IDs
-    // Format: "ghost-{seriesId}-{date}"
-    const ghostBySeriesId = new Map<string, string[]>();
+    // Parse ghost IDs to get recurring shift IDs and their corresponding ghost IDs
+    // Format: "ghost-{recurringId}-{date}"
+    const ghostByRecurringId = new Map<string, string[]>();
     for (const ghostId of ghostIds) {
       const match = ghostId.match(/^ghost-([a-f0-9-]+)-(\d{4}-\d{2}-\d{2})$/);
       if (match) {
-        const seriesId = match[1];
-        if (!ghostBySeriesId.has(seriesId)) {
-          ghostBySeriesId.set(seriesId, []);
+        const recurringId = match[1];
+        if (!ghostByRecurringId.has(recurringId)) {
+          ghostByRecurringId.set(recurringId, []);
         }
-        ghostBySeriesId.get(seriesId)!.push(ghostId);
+        ghostByRecurringId.get(recurringId)!.push(ghostId);
       }
     }
 
-    if (ghostBySeriesId.size > 0) {
-      const { data: seriesShifts, error: seriesError } = await supabase
-        .from("series_shifts")
+    if (ghostByRecurringId.size > 0) {
+      const { data: recurringShifts, error: recurringError } = await supabase
+        .from("recurring_shifts")
         .select("id, start_time, end_time")
         .eq("user_id", user.id)
-        .in("id", Array.from(ghostBySeriesId.keys()));
+        .in("id", Array.from(ghostByRecurringId.keys()));
 
-      if (seriesError) throw new Error(seriesError.message);
-      if (seriesShifts) {
-        // For each ghost shift, add one entry with the series times
-        for (const series of seriesShifts) {
-          const ghostsForThisSeries = ghostBySeriesId.get(series.id) || [];
-          // Add one entry per ghost (each ghost represents a different date from the series)
-          for (const _ of ghostsForThisSeries) {
+      if (recurringError) throw new Error(recurringError.message);
+      if (recurringShifts) {
+        // For each ghost shift, add one entry with the recurring shift times
+        for (const recurring of recurringShifts) {
+          const ghostsForThisRecurring = ghostByRecurringId.get(recurring.id) || [];
+          // Add one entry per ghost (each ghost represents a different date from the recurring shift)
+          for (const _ of ghostsForThisRecurring) {
             sourceShifts.push({
-              start_time: series.start_time,
-              end_time: series.end_time,
-              series_id: undefined, // Don't link copied shifts to the series
+              start_time: recurring.start_time,
+              end_time: recurring.end_time,
+              recurring_id: undefined, // Don't link copied shifts to the recurring shift
             });
           }
         }
@@ -107,7 +107,7 @@ export async function copyShifts(input: CopyShiftsInput) {
     shift_date: input.targetDate,
     start_time: cleanTime(shift.start_time),
     end_time: cleanTime(shift.end_time),
-    ...(shift.series_id ? { series_id: shift.series_id } : {}),
+    ...(shift.recurring_id ? { recurring_id: shift.recurring_id } : {}),
   }));
 
   const { error } = await supabase.from("user_shifts").insert(rows);
