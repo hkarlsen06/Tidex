@@ -292,14 +292,14 @@ export function MonthlyEarningsCalendar({
           </div>
           <div
             key={`total-${month.getFullYear()}-${month.getMonth()}`}
-            className={`text-right ${getAnimationClasses(localDirection)}`}
+            className={`text-right relative ${getAnimationClasses(localDirection)}`}
           >
             <div className="font-semibold text-text-primary">
-              {totalEarnings === 0 ? '—' : formatCurrency(totalEarnings)}
+              {totalEarnings === 0 ? '—' : formatCurrency(taxSettings?.enabled ? netEarnings : totalEarnings)}
             </div>
             {taxSettings?.enabled && totalEarnings > 0 && (
-              <div className="text-sm text-text-muted">
-                {formatCurrency(netEarnings)}
+              <div className="text-sm text-text-muted absolute right-0">
+                {formatCurrency(totalEarnings)}
               </div>
             )}
           </div>
