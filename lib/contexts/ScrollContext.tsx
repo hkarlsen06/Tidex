@@ -60,7 +60,6 @@ export function ScrollProvider({
 
   useEffect(() => {
     if (!scrollContainer) {
-      setScrollDirection(null);
       return;
     }
 
