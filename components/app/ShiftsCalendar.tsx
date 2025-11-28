@@ -9,6 +9,7 @@ import {
   initials,
   type ISODate,
 } from "./calendar-utils";
+import type { TaxSettings } from "@/lib/shifts/monthlyTotals";
 import type { EarningsByDate, HoursByDate } from "./calendar-types";
 import { cn } from "@/lib/cn";
 import { formatInteger } from "@/lib/formatters";
@@ -25,6 +26,7 @@ export type ShiftsCalendarProps = {
   weekNumberPosition?: "top-left" | "bottom-left";
   selectedDate?: ISODate | null;
   newlyAddedDates?: Set<string>;
+  taxSettings?: TaxSettings;
 };
 
 type DayButtonProps = {
@@ -42,6 +44,7 @@ type DayButtonProps = {
   weekNumberPosition: "top-left" | "bottom-left";
   selectedDate?: ISODate | null;
   newlyAddedDates?: Set<string>;
+  taxSettings?: TaxSettings;
   [key: string]: any;
 };
 
@@ -58,6 +61,24 @@ function getIsoWeek(date: Date) {
   return weekNumber;
 }
 
+function getNetEarningsForDate(
+  gross: number | undefined,
+  date: Date,
+  taxSettings?: TaxSettings
+): number | null {
+  if (!taxSettings?.enabled || !gross || gross <= 0) return null;
+
+  const month = date.getMonth() + 1;
+  let taxPercentage = Number(taxSettings.percentage ?? 0);
+
+  if (taxSettings.halfTaxMonth && month === taxSettings.halfTaxMonth) {
+    taxPercentage = taxPercentage / 2;
+  }
+
+  const multiplier = 1 - taxPercentage / 100;
+  return gross * multiplier;
+}
+
 const DayButton = React.memo(function DayButton({
   day,
   className,
@@ -69,6 +90,7 @@ const DayButton = React.memo(function DayButton({
   weekNumberPosition,
   selectedDate,
   newlyAddedDates,
+  taxSettings,
   ...buttonProps
 }: DayButtonProps) {
   const date: Date = day.date;
@@ -84,6 +106,7 @@ const DayButton = React.memo(function DayButton({
   const hasShift =
     earnings !== undefined || hours !== undefined || employees.length > 0;
   const week = isMonday ? getIsoWeek(date) : null;
+  const netEarnings = getNetEarningsForDate(earnings, date, taxSettings);
 
   return (
     <button
@@ -120,18 +143,27 @@ const DayButton = React.memo(function DayButton({
       >
         {date.getDate()}
       </div>
-      <div className="flex-1 flex flex-col items-center justify-center overflow-hidden">
+      <div
+        className={cn(
+          "flex-1 flex flex-col justify-center overflow-hidden",
+          mode === "money" ? "items-end" : "items-center"
+        )}
+      >
         {mode === "money" && earnings !== undefined && (
-          <div className="text-sm text-text-secondary font-semibold">
-            {formatNOKInt(earnings)}
-          </div>
+          <>
+            <div className="text-sm text-text-secondary font-semibold text-right">
+              {formatNOKInt(earnings)}
+            </div>
+            {netEarnings !== null && (
+              <div className="text-[11px] text-text-muted leading-tight text-right">
+                {formatNOKInt(netEarnings)}
+              </div>
+            )}
+          </>
         )}
         {mode === "hours" && hours && (
-          <div className="flex flex-col items-center justify-center text-xs font-semibold text-text-secondary leading-tight">
-            <div>
-              {hours.start}
-              {hours.start && "-"}
-            </div>
+          <div className="flex flex-col items-center justify-center text-sm font-semibold text-text-secondary leading-tight">
+            <div>{hours.start}</div>
             <div>
               {hours.end}
               {hours.crossesMidnight && "*"}
@@ -173,6 +205,7 @@ export function ShiftsCalendar({
   weekNumberPosition = "bottom-left",
   selectedDate = null,
   newlyAddedDates,
+  taxSettings,
 }: ShiftsCalendarProps) {
   const locale = useLocale();
   const dateFnsLocale = locale === 'en' ? enUS : nb;
@@ -201,9 +234,10 @@ export function ShiftsCalendar({
         weekNumberPosition={weekNumberPosition}
         selectedDate={selectedDate}
         newlyAddedDates={newlyAddedDates}
+        taxSettings={taxSettings}
       />
     ),
-    [mode, earningsByDate, hoursByDate, employeesByDate, weekNumberPosition, selectedDate, newlyAddedDates]
+    [mode, earningsByDate, hoursByDate, employeesByDate, weekNumberPosition, selectedDate, newlyAddedDates, taxSettings]
   );
 
   const handleDayClick = React.useCallback(
@@ -247,7 +281,7 @@ export function ShiftsCalendar({
         weekdays: "grid grid-cols-7 mb-2",
         weekday: "text-text-muted font-normal text-xs text-center py-2 uppercase",
         week: "grid grid-cols-7 gap-1 mb-1",
-        day: "aspect-square p-0",
+        day: "aspect-[1/1.25] p-0",
         day_button: "bg-surface-primary w-full h-full rounded-lg hover:bg-surface-secondary transition-colors border border-border-subtle",
         selected: "",
         outside: "",
