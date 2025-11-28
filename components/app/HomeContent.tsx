@@ -217,7 +217,7 @@ export function HomeContent({ shifts: initialShifts, settings }: HomeContentProp
       // Remove from loading set
       loadingMonthsRef.current.delete(key);
     }
-  }, [getMonthKey, initialShifts]);
+  }, [getMonthKey]);
 
   // Proactive prefetch: Load adjacent months (prev, current, next) whenever month changes
   useEffect(() => {
@@ -515,9 +515,7 @@ export function HomeContent({ shifts: initialShifts, settings }: HomeContentProp
                 }}
                 progress={countdown.isActive ? countdown.progress : undefined}
               />
-              {relativeTimeText && (
-                <p className="text-xs text-text-muted text-center">{relativeTimeText}</p>
-              )}
+              <p className="text-xs text-text-muted text-center">{relativeTimeText ?? "---"}</p>
             </div>
           )}
         </div>

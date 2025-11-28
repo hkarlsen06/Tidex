@@ -137,6 +137,10 @@
   animation: gentle-pulse 3.6s ease-in-out infinite;
 }
 
+@utility animate-progress-grow {
+  animation: progress-grow 1s linear forwards;
+}
+
 @layer utilities {
   :root {
     color-scheme: light dark;
@@ -429,6 +433,16 @@
     50% {
       transform: scale(1.03);
       opacity: 1;
+    }
+  }
+
+  /* Progress bar animation for ShiftCard - grows from 0 to target width via CSS variable */
+  @keyframes progress-grow {
+    from {
+      width: 0%;
+    }
+    to {
+      width: var(--progress-target, 0%);
     }
   }
 
