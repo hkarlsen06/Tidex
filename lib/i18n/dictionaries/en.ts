@@ -477,6 +477,10 @@ export const en: Dictionary = {
         statsThisWeek: 'This week statistics',
         statsMonthlyGoal: 'Monthly goal status',
         statsSupplementBreakdown: 'Supplement breakdown for current month',
+        // Success messages - hypothetical earnings
+        calculatedHypothetical: 'Calculated hypothetical earnings for {label}',
+        comparedScenarios: 'Compared {count} scenarios',
+        calculatedChange: 'Calculated earnings change: {difference} kr',
         // Error messages
         unknownTool: 'Unknown tool: {name}',
         unknownAction: 'Unknown action: {action}',
@@ -490,6 +494,7 @@ export const en: Dictionary = {
         mustProvideField: 'Must provide at least one field to update',
         mustProvideDateStartEnd: 'Must provide at least one field to update (date, start, or end)',
         mustProvideCategoryAndSettings: 'Must provide both \'category\' and \'settings\' to update',
+        mustSpecifyMode: 'Must specify exactly one mode: hypothetical, compare, or hypothetical_change',
         shiftNotFound: 'Shift not found: {id}',
         recurringNotFound: 'Recurring shift not found: {id}',
         noShiftsWithIds: 'No shifts found with provided IDs',
@@ -498,6 +503,7 @@ export const en: Dictionary = {
         failedToUpdateSettings: 'Failed to update settings',
         failedToFetchStatistics: 'Failed to fetch statistics',
         failedToExecuteSettingsOperation: 'Failed to execute settings operation',
+        failedToCalculateEarnings: 'Failed to calculate earnings',
         unknownDate: 'unknown date',
         // Date formatting
         weekdays: {

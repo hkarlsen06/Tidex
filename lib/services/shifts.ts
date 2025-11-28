@@ -385,8 +385,11 @@ export const ShiftsServiceLive = Layer.effect(
           }
         }
 
-        // Merge shifts and recurring virtual shifts
-        const allShifts = [...computedShifts, ...recurringVirtualShifts];
+        // Merge shifts and recurring virtual shifts, then sort by date ascending
+        // (Virtual shifts were appended unsorted, so we need to sort the merged array)
+        const allShifts = [...computedShifts, ...recurringVirtualShifts].sort(
+          (a, b) => a.shift_date.localeCompare(b.shift_date)
+        );
 
         // Compute aggregates
         const aggregates: ShiftsAggregates = allShifts.reduce(
