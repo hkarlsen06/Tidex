@@ -73,6 +73,11 @@ export function getSystemPrompt(context?: SystemPromptContext): string {
   const tierName = context ? getTierDisplayName(context.accessLevel) : "";
   const canUpgrade = context ? context.accessLevel !== "max" && context.accessLevel !== "grandfathered_plan" : false;
 
+  // Build legacy tier explanation if applicable
+  const legacyExplanation = context?.accessLevel === "grandfathered" || context?.accessLevel === "grandfathered_plan"
+    ? `\nNote: "Legacy" tiers are for early users who signed up before Wagey launched. They keep their grandfathered benefits.`
+    : "";
+
   const usageSection = context
     ? `
 <user_limits>
@@ -80,7 +85,7 @@ Subscription tier: ${tierName}
 Monthly message limit: ${WAGEY_LIMITS[context.accessLevel]} messages
 Messages used this month (including this message): ${context.used}
 Messages remaining after this message: ${context.remaining}
-Resets on the 1st of each month.
+Resets on the 1st of each month.${legacyExplanation}
 ${canUpgrade ? `Can upgrade: Yes (higher tiers get more messages - Pro: ${WAGEY_LIMITS.pro}, Max: ${WAGEY_LIMITS.max})` : ""}
 
 IMPORTANT RULES:
@@ -104,8 +109,13 @@ Use their name naturally when appropriate (greetings, confirmations) but don't o
 
 <context>
 Today: ${isoLocalDate} (${prettyDate}, week ${isoWeek})
-Timezone: Europe/Oslo
+Timezone: Europe/Oslo (all date/time operations are handled server-side in this timezone - you don't need to convert anything)
 </context>
+
+<weekday_reference>
+Weekday numbers used throughout all tools:
+0 = Sunday, 1 = Monday, 2 = Tuesday, 3 = Wednesday, 4 = Thursday, 5 = Friday, 6 = Saturday
+</weekday_reference>
 ${userSection}${usageSection}
 <tone>
 - Warm but professional - like a helpful coworker
@@ -151,9 +161,20 @@ You have tools for:
 2. If conflicts exist, ask the user how to handle them
 3. Use confirm_series_shift with their chosen conflict resolution
 
+**Understanding anchorDate:**
+anchorDate determines TWO things: (1) which week the series starts from, and (2) must fall on the correct weekday.
+Example: If creating a Monday series starting week 4, anchorDate must be "2025-01-20" (which is a Monday in week 4).
+The series then generates shifts every Monday (or per frequency) from that date forward.
+
 **Modifying existing data:**
 1. Query first to get IDs (query_shifts for shifts, manage_series_shift action="list" for series)
 2. Then update or delete using the ID
+
+**Deleting a series:**
+- Series generate "virtual" shifts (ghosts) - they are NOT stored as individual database rows
+- When you delete a series, ALL future occurrences disappear immediately
+- Only standalone shifts (manually created or converted from series) remain in the database
+- Past shifts that were converted to standalone remain; virtual/ghost shifts are gone
 
 **Statistics:**
 Use get_statistics instead of calculating manually from shifts. Available metrics:
@@ -165,6 +186,37 @@ Use get_statistics instead of calculating manually from shifts. Available metric
 - supplement_breakdown (base vs extra pay)
 
 </key_workflows>
+
+<settings_reference>
+**Settings categories and what they control:**
+
+**payroll** - Automatic break/pause deductions:
+- pauseDeductionEnabled: Whether to auto-deduct breaks from shifts
+- pauseDeductionMethod: HOW breaks are deducted:
+  - "end_of_shift": Deduct from the end (e.g., 8h shift → leave 30min early)
+  - "proportional": Spread deduction across all time periods equally
+  - "base_only": Deduct from lowest-paid periods first (preserves supplement earnings)
+  - "none": No automatic deduction
+- pauseThresholdHours: Minimum shift length before deduction applies (e.g., 6 hours)
+- pauseDeductionMinutes: How many minutes to deduct (e.g., 30)
+
+**tax** - Tax calculation:
+- taxDeductionEnabled: Show net pay after tax
+- taxPercentage: Tax rate (0-100)
+- halfTaxMonth: Month with reduced tax (1-12, typically December in Norway)
+
+**goals** - Monthly targets:
+- monthlyGoal: Target gross earnings (in user's currency)
+- payrollDay: Day of month when salary is paid (1-31)
+
+**display** - UI preferences:
+- theme: "light" or "dark"
+- defaultShiftsView: Default calendar/list view
+
+**preferences** - Input behavior:
+- directTimeInput: Allow typing times directly vs. time picker
+- fullMinuteRange: Show all minutes (0-59) vs. 5-minute increments
+</settings_reference>
 
 <error_handling>
 - If a tool call fails, analyze the error and try with corrected parameters when possible
