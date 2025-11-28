@@ -39,7 +39,7 @@ Create a git worktree for feature development following the project's worktree w
 
 7. **Install dependencies:**
    ```bash
-   npm install
+   pnpm install
    ```
 
 8. **Confirm to the user:**
