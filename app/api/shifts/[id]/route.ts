@@ -19,7 +19,7 @@ import { deleteShift } from "@/app/[locale]/(app)/shifts/_actions/deleteShift";
  *   shift_date: string, // ISO date (YYYY-MM-DD)
  *   start: string,      // Start time (HH:mm)
  *   end: string,        // End time (HH:mm)
- *   series_id?: string  // Optional series ID (for ghost shifts)
+ *   recurring_id?: string  // Optional recurring ID (for ghost shifts)
  * }
  */
 export async function PATCH(
@@ -59,7 +59,7 @@ export async function PATCH(
       shift_date: body.shift_date,
       start: body.start,
       end: body.end,
-      series_id: body.series_id,
+      recurring_id: body.recurring_id,
     };
 
     // Call the existing server action
@@ -92,8 +92,8 @@ export async function PATCH(
  * DELETE /api/shifts/[id]
  * Delete a shift
  *
- * Query params (optional for series ghosts):
- * - seriesId: string   // Series ID if deleting a ghost
+ * Query params (optional for recurring ghosts):
+ * - recurringId: string   // Recurring ID if deleting a ghost
  * - shiftDate: string  // ISO date if deleting a ghost
  */
 export async function DELETE(
@@ -109,13 +109,13 @@ export async function DELETE(
   try {
     const { id } = await params;
     const { searchParams } = new URL(request.url);
-    const seriesId = searchParams.get('seriesId') || undefined;
+    const recurringId = searchParams.get('recurringId') || undefined;
     const shiftDate = searchParams.get('shiftDate') || undefined;
 
     // Call the existing server action
     const result = await deleteShift({
       shiftId: id,
-      seriesId,
+      recurringId,
       shiftDate,
     });
 

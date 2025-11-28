@@ -9,8 +9,8 @@ export type ShiftRow = {
   hourly_wage_snapshot?: number | null; // Snapshot of hourly wage at creation time
   supplement_rules_snapshot?: { rules: SupplementRule[] } | null; // Snapshot of supplement rules at creation time
   custom_supplements?: CustomSupplementsData | null; // Shift-specific supplement overrides
-  series_id?: string;           // Links to series_shifts if this is a ghost
-  series_anchor_weekday?: number; // Which weekday anchor (0-6) generated this ghost
+  recurring_id?: string;           // Links to recurring_shifts if this is a ghost
+  recurring_anchor_weekday?: number; // Which weekday anchor (0-6) generated this ghost
 };
 
 /**

@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // getComputedShifts already includes series ghosts, so no need to generate them again
+    // getComputedShifts already includes recurring ghosts, so no need to generate them again
     const { shifts, settings } = await getComputedShiftsForApi(session.user.id, {
       startDate: getMonthStart(year, month),
       endDate: getMonthEnd(year, month),
@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
  *   dates: string[], // Array of ISO dates (YYYY-MM-DD)
  *   start: string,   // Start time (HH:mm)
  *   end: string,     // End time (HH:mm)
- *   seriesId?: string // Optional series ID
+ *   recurringId?: string // Optional recurring ID
  * }
  */
 export async function POST(request: NextRequest) {
@@ -111,7 +111,7 @@ export async function POST(request: NextRequest) {
       dates: body.dates,
       start: body.start,
       end: body.end,
-      seriesId: body.seriesId,
+      recurringId: body.recurringId,
     });
 
     return NextResponse.json(result, { status: 201 });

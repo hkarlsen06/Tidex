@@ -2,7 +2,7 @@
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { invalidateAndRevalidate } from "@/lib/revalidation/paths";
-import { convertSeriesShiftToStandalone } from "./convertSeriesShiftToStandalone";
+import { convertRecurringShiftToStandalone } from "./convertRecurringShiftToStandalone";
 import { verifySession } from "@/data-access/auth";
 import { isISODate, isHHMM } from "@/lib/validation/shift-validators";
 import { ERRORS } from "@/lib/errors/messages";
@@ -12,7 +12,7 @@ export type UpdateShiftInput = {
   shift_date: string; // ISO YYYY-MM-DD
   start: string; // HH:mm
   end: string; // HH:mm
-  series_id?: string; // Present if this is a series ghost
+  recurring_id?: string; // Present if this is a recurring shift ghost
 };
 
 export async function updateShift(input: UpdateShiftInput) {
@@ -31,10 +31,10 @@ export async function updateShift(input: UpdateShiftInput) {
     throw new Error(ERRORS.INVALID_TIME);
   }
 
-  // If this is a series ghost, convert to standalone instead of updating
-  if (input.series_id) {
-    await convertSeriesShiftToStandalone({
-      seriesId: input.series_id,
+  // If this is a recurring shift ghost, convert to standalone instead of updating
+  if (input.recurring_id) {
+    await convertRecurringShiftToStandalone({
+      recurringId: input.recurring_id,
       shiftDate: input.shift_date,
       startTime: input.start,
       endTime: input.end,

@@ -19,7 +19,7 @@ import ShiftDetails from "@/components/shifts/ShiftDetails";
 import { deleteShift } from "@/app/[locale]/(app)/shifts/_actions/deleteShift";
 import { updateShift } from "@/app/[locale]/(app)/shifts/_actions/updateShift";
 import { copyShifts } from "@/app/[locale]/(app)/shifts/_actions/copyShifts";
-import { moveSeriesShift } from "@/app/[locale]/(app)/shifts/_actions/moveSeriesShift";
+import { moveRecurringShift } from "@/app/[locale]/(app)/shifts/_actions/moveRecurringShift";
 import { useNavigationFeedback } from "@/components/app/navigation-feedback";
 import { useMonth } from "@/components/app/MonthContext";
 import { queueMutation, isOfflineQueueSupported } from "@/lib/pwa/offline-queue";
@@ -778,12 +778,12 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
   // Confetti celebration for newly added shifts
   useEffect(() => {
     const newDates = searchParams.get('new');
-    const newSeries = searchParams.get('newSeries');
+    const newRecurring = searchParams.get('newRecurring');
 
     // Always clean up URL params if they exist, regardless of confetti
-    if (newDates || newSeries) {
+    if (newDates || newRecurring) {
       // Create unique key for this celebration
-      const celebrationKey = `${newDates || ''}-${newSeries || ''}`;
+      const celebrationKey = `${newDates || ''}-${newRecurring || ''}`;
 
       // Skip confetti if we already triggered for these params
       const shouldSkipConfetti = hasTriggeredConfetti.current.has(celebrationKey);
@@ -794,14 +794,14 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
       if (newDates) {
         addedDates = newDates.split(',');
         setNewlyAddedDates(new Set(addedDates));
-      } else if (newSeries) {
-        // For series, highlight all visible shifts from that series
-        const seriesShifts = shifts.filter(s => s.series_id === newSeries);
-        addedDates = seriesShifts.map(s => s.shift_date);
+      } else if (newRecurring) {
+        // For recurring shift, highlight all visible shifts from that recurring pattern
+        const recurringShifts = shifts.filter(s => s.recurring_id === newRecurring);
+        addedDates = recurringShifts.map(s => s.shift_date);
         setNewlyAddedDates(new Set(addedDates));
 
-        // If no shifts found yet for series, wait for them to load
-        if (seriesShifts.length === 0 && !shouldSkipConfetti) {
+        // If no shifts found yet for recurring pattern, wait for them to load
+        if (recurringShifts.length === 0 && !shouldSkipConfetti) {
           return;
         }
       }
@@ -863,7 +863,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
       const cleanTimer = setTimeout(() => {
         const url = new URL(window.location.href);
         url.searchParams.delete('new');
-        url.searchParams.delete('newSeries');
+        url.searchParams.delete('newRecurring');
         window.history.replaceState({}, '', url.toString());
         setNewlyAddedDates(new Set());
         // Remove from tracking set after cleanup
@@ -1080,10 +1080,10 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
       try {
         const results = await Promise.allSettled(
           shiftsToMove.map((shift) => {
-            // If this is a series shift, use moveSeriesShift action
-            if (shift.series_id) {
-              return moveSeriesShift({
-                seriesId: shift.series_id,
+            // If this is a recurring shift, use moveRecurringShift action
+            if (shift.recurring_id) {
+              return moveRecurringShift({
+                recurringId: shift.recurring_id,
                 sourceDate: selectedDate,
                 targetDate: moveTargetDate,
                 startTime: shift.start_time,
@@ -1517,14 +1517,14 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
             // If offline and queue is supported, queue the mutation
             if (!navigator.onLine && isOfflineQueueSupported()) {
               try {
-                // Find the shift to get series_id and shift_date if needed
+                // Find the shift to get recurring_id and shift_date if needed
                 const shiftToDelete = shifts.find(s => s.id === id);
 
                 await queueMutation({
                   type: 'DELETE',
                   endpoint: `/api/shifts/${id}${
-                    shiftToDelete?.series_id
-                      ? `?seriesId=${shiftToDelete.series_id}&shiftDate=${shiftToDelete.shift_date}`
+                    shiftToDelete?.recurring_id
+                      ? `?recurringId=${shiftToDelete.recurring_id}&shiftDate=${shiftToDelete.shift_date}`
                       : ''
                   }`,
                   method: 'DELETE',

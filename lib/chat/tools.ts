@@ -60,7 +60,7 @@ export const calculateWagesSchema = z.object({
 export type CalculateWagesInput = z.infer<typeof calculateWagesSchema>;
 
 /**
- * Weekday with anchor date for series shifts
+ * Weekday with anchor date for recurring shifts
  */
 const weekdayAnchorSchema = z.object({
   day: z.number().int().min(0).max(6),
@@ -68,10 +68,10 @@ const weekdayAnchorSchema = z.object({
 });
 
 /**
- * Draft Series Shift Tool Schema (Step 1 of 2)
- * Supports multiple weekdays in a single series (e.g., Mon/Wed/Fri)
+ * Draft Recurring Shift Tool Schema (Step 1 of 2)
+ * Supports multiple weekdays in a single recurring shift (e.g., Mon/Wed/Fri)
  */
-export const draftSeriesShiftSchema = z.object({
+export const draftRecurringShiftSchema = z.object({
   weekdays: z.array(weekdayAnchorSchema).min(1).max(7),
   start: z.string().regex(/^\d{2}:\d{2}$/),
   end: z.string().regex(/^\d{2}:\d{2}$/),
@@ -80,13 +80,13 @@ export const draftSeriesShiftSchema = z.object({
   endValue: z.union([z.number().int().min(1), z.string().regex(/^\d{4}-\d{2}-\d{2}$/)]).optional(),
 });
 
-export type DraftSeriesShiftInput = z.infer<typeof draftSeriesShiftSchema>;
+export type DraftRecurringShiftInput = z.infer<typeof draftRecurringShiftSchema>;
 
 /**
- * Confirm Series Shift Tool Schema (Step 2 of 2)
- * Supports multiple weekdays in a single series (e.g., Mon/Wed/Fri)
+ * Confirm Recurring Shift Tool Schema (Step 2 of 2)
+ * Supports multiple weekdays in a single recurring shift (e.g., Mon/Wed/Fri)
  */
-export const confirmSeriesShiftSchema = z.object({
+export const confirmRecurringShiftSchema = z.object({
   weekdays: z.array(weekdayAnchorSchema).min(1).max(7),
   start: z.string().regex(/^\d{2}:\d{2}$/),
   end: z.string().regex(/^\d{2}:\d{2}$/),
@@ -96,14 +96,14 @@ export const confirmSeriesShiftSchema = z.object({
   conflictResolution: z.enum(["keep_both", "skip_conflicts"]),
 });
 
-export type ConfirmSeriesShiftInput = z.infer<typeof confirmSeriesShiftSchema>;
+export type ConfirmRecurringShiftInput = z.infer<typeof confirmRecurringShiftSchema>;
 
 /**
- * Manage Series Shift Tool Schema
+ * Manage Recurring Shift Tool Schema
  */
-export const manageSeriesShiftSchema = z.object({
+export const manageRecurringShiftSchema = z.object({
   action: z.enum(["list", "update", "delete"]),
-  seriesId: shortOrFullId.optional(),
+  recurringId: shortOrFullId.optional(),
   // Update fields - use weekdays array to replace all weekdays
   weekdays: z.array(weekdayAnchorSchema).min(1).max(7).optional(),
   start: z.string().regex(/^\d{2}:\d{2}$/).optional(),
@@ -113,18 +113,18 @@ export const manageSeriesShiftSchema = z.object({
   endValue: z.union([z.number().int().min(1), z.string().regex(/^\d{4}-\d{2}-\d{2}$/)]).optional(),
 });
 
-export type ManageSeriesShiftInput = z.infer<typeof manageSeriesShiftSchema>;
+export type ManageRecurringShiftInput = z.infer<typeof manageRecurringShiftSchema>;
 
 /**
- * Manage Series Exclusion Tool Schema
+ * Manage Recurring Exclusion Tool Schema
  */
-export const manageSeriesExclusionSchema = z.object({
-  seriesId: shortOrFullId,
+export const manageRecurringExclusionSchema = z.object({
+  recurringId: shortOrFullId,
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   action: z.enum(["add", "remove"]),
 });
 
-export type ManageSeriesExclusionInput = z.infer<typeof manageSeriesExclusionSchema>;
+export type ManageRecurringExclusionInput = z.infer<typeof manageRecurringExclusionSchema>;
 
 /**
  * Get Statistics Tool Schema
@@ -380,10 +380,10 @@ Note: For quick monthly/yearly totals, prefer get_statistics which is optimized 
   },
 
   // ---------------------------------------------------------------------------
-  // RECURRING SERIES (2-step: draft then confirm)
+  // RECURRING SHIFTS (2-step: draft then confirm)
   // ---------------------------------------------------------------------------
   {
-    name: "draft_series_shift",
+    name: "draft_recurring_shift",
     description: `Step 1 of 2: Preview a recurring shift pattern WITHOUT creating it.
 
 Purpose: Validates the pattern and checks for conflicts with existing shifts before committing.
@@ -394,9 +394,9 @@ Required parameters:
 - frequency: weekly, biweekly, every_3_weeks, or every_4_weeks
 - endType: never, after_months, after_years, or on_date (with endValue)
 
-IMPORTANT: Use weekdays array to create a SINGLE series with multiple weekdays (e.g., Mon/Wed/Fri). Do NOT create separate series for each day.
+IMPORTANT: Use weekdays array to create a SINGLE recurring shift with multiple weekdays (e.g., Mon/Wed/Fri). Do NOT create separate recurring shifts for each day.
 
-Workflow: After this returns conflict info, ask user how to handle conflicts, then call confirm_series_shift.`,
+Workflow: After this returns conflict info, ask user how to handle conflicts, then call confirm_recurring_shift.`,
     input_schema: {
       type: "object",
       properties: {
@@ -436,7 +436,7 @@ Workflow: After this returns conflict info, ask user how to handle conflicts, th
         endType: {
           type: "string",
           enum: ["never", "after_months", "after_years", "on_date"],
-          description: "When the series ends",
+          description: "When the recurring shift ends",
         },
         endValue: {
           type: ["integer", "string"],
@@ -454,7 +454,7 @@ Workflow: After this returns conflict info, ask user how to handle conflicts, th
         frequency: "weekly",
         endType: "never",
       },
-      // Mon/Wed/Fri weekly shifts (multiple weekdays in ONE series)
+      // Mon/Wed/Fri weekly shifts (multiple weekdays in ONE recurring shift)
       {
         weekdays: [
           { day: 1, anchorDate: "2025-01-20" },
@@ -497,15 +497,15 @@ Workflow: After this returns conflict info, ask user how to handle conflicts, th
   },
 
   {
-    name: "confirm_series_shift",
-    description: `Step 2 of 2: Actually create the recurring series after reviewing the draft.
+    name: "confirm_recurring_shift",
+    description: `Step 2 of 2: Actually create the recurring shift after reviewing the draft.
 
-IMPORTANT: Only call this AFTER draft_series_shift. Use identical parameters from the draft.
+IMPORTANT: Only call this AFTER draft_recurring_shift. Use identical parameters from the draft.
 
-Required: All the same parameters from draft_series_shift, PLUS:
-- conflictResolution: "keep_both" (series coexists with existing shifts) or "skip_conflicts" (series skips dates with existing shifts)
+Required: All the same parameters from draft_recurring_shift, PLUS:
+- conflictResolution: "keep_both" (recurring shift coexists with existing shifts) or "skip_conflicts" (recurring shift skips dates with existing shifts)
 
-The series will be created and shifts generated according to the pattern.`,
+The recurring shift will be created and shifts generated according to the pattern.`,
     input_schema: {
       type: "object",
       properties: {
@@ -554,7 +554,7 @@ The series will be created and shifts generated according to the pattern.`,
         conflictResolution: {
           type: "string",
           enum: ["keep_both", "skip_conflicts"],
-          description: "keep_both: series coexists with conflicts. skip_conflicts: series skips dates with existing shifts.",
+          description: "keep_both: recurring shift coexists with conflicts. skip_conflicts: recurring shift skips dates with existing shifts.",
         },
       },
       required: ["weekdays", "start", "end", "frequency", "endType", "conflictResolution"],
@@ -569,7 +569,7 @@ The series will be created and shifts generated according to the pattern.`,
         endType: "never",
         conflictResolution: "skip_conflicts",
       },
-      // Confirm Mon/Wed/Fri series, allow both shifts on conflict dates
+      // Confirm Mon/Wed/Fri recurring shift, allow both shifts on conflict dates
       {
         weekdays: [
           { day: 1, anchorDate: "2025-01-20" },
@@ -587,17 +587,17 @@ The series will be created and shifts generated according to the pattern.`,
   },
 
   {
-    name: "manage_series_shift",
-    description: `List, update, or delete existing recurring series.
+    name: "manage_recurring_shift",
+    description: `List, update, or delete existing recurring shifts.
 
 Actions:
-- LIST: action="list" - Returns all series with IDs, patterns, and schedules (weekdays array format)
-- UPDATE: action="update", seriesId, plus fields to change (weekdays, times, frequency, endType)
-- DELETE: action="delete", seriesId - Removes the series and ALL its virtual/ghost shifts disappear immediately
+- LIST: action="list" - Returns all recurring shifts with IDs, patterns, and schedules (weekdays array format)
+- UPDATE: action="update", recurringId, plus fields to change (weekdays, times, frequency, endType)
+- DELETE: action="delete", recurringId - Removes the recurring shift and ALL its virtual/ghost shifts disappear immediately
 
-Workflow: Always LIST first to get series IDs before update/delete.
+Workflow: Always LIST first to get recurring shift IDs before update/delete.
 
-Note: Series shifts are virtual (not stored individually). Deleting a series removes all future occurrences.
+Note: Recurring shifts are virtual (not stored individually). Deleting a recurring shift removes all future occurrences.
 Only standalone shifts (manually created or converted) remain after deletion.
 When updating weekdays, provide the complete weekdays array (replaces all existing weekdays).`,
     input_schema: {
@@ -608,9 +608,9 @@ When updating weekdays, provide the complete weekdays array (replaces all existi
           enum: ["list", "update", "delete"],
           description: "The operation to perform",
         },
-        seriesId: {
+        recurringId: {
           type: "string",
-          description: "Series ID (required for update/delete)",
+          description: "Recurring shift ID (required for update/delete)",
         },
         weekdays: {
           type: "array",
@@ -658,61 +658,61 @@ When updating weekdays, provide the complete weekdays array (replaces all existi
       required: ["action"],
     },
     input_examples: [
-      // List all recurring series
+      // List all recurring shifts
       {
         action: "list",
       },
-      // Update series times (use short 5-char ID from list)
+      // Update recurring shift times (use short 5-char ID from list)
       {
         action: "update",
-        seriesId: "a1b2c",
+        recurringId: "a1b2c",
         start: "10:00",
         end: "18:00",
       },
-      // Change series weekdays from Mon only to Mon/Wed/Fri
+      // Change recurring shift weekdays from Mon only to Mon/Wed/Fri
       {
         action: "update",
-        seriesId: "a1b2c",
+        recurringId: "a1b2c",
         weekdays: [
           { day: 1, anchorDate: "2025-01-20" },
           { day: 3, anchorDate: "2025-01-22" },
           { day: 5, anchorDate: "2025-01-24" },
         ],
       },
-      // Change series to end after 6 months
+      // Change recurring shift to end after 6 months
       {
         action: "update",
-        seriesId: "a1b2c",
+        recurringId: "a1b2c",
         endType: "after_months",
         endValue: 6,
       },
-      // Delete a series
+      // Delete a recurring shift
       {
         action: "delete",
-        seriesId: "a1b2c",
+        recurringId: "a1b2c",
       },
     ],
   },
 
   {
-    name: "manage_series_exclusion",
-    description: `Add or remove a date exclusion from a recurring series.
+    name: "manage_recurring_exclusion",
+    description: `Add or remove a date exclusion from a recurring shift.
 
 Use cases:
 - Skip a specific occurrence (e.g., holiday, vacation day)
 - Restore a previously skipped date
 
 Actions:
-- add: Exclude the date from the series (shift won't appear)
+- add: Exclude the date from the recurring shift (shift won't appear)
 - remove: Restore a previously excluded date
 
-Note: The date must be one that would normally occur in the series pattern.`,
+Note: The date must be one that would normally occur in the recurring shift pattern.`,
     input_schema: {
       type: "object",
       properties: {
-        seriesId: {
+        recurringId: {
           type: "string",
-          description: "The series ID",
+          description: "The recurring shift ID",
         },
         date: {
           type: "string",
@@ -724,18 +724,18 @@ Note: The date must be one that would normally occur in the series pattern.`,
           description: "add: exclude the date. remove: restore previously excluded date.",
         },
       },
-      required: ["seriesId", "date", "action"],
+      required: ["recurringId", "date", "action"],
     },
     input_examples: [
-      // Skip a series occurrence on Christmas (use short 5-char ID from list)
+      // Skip a recurring shift occurrence on Christmas (use short 5-char ID from list)
       {
-        seriesId: "a1b2c",
+        recurringId: "a1b2c",
         date: "2025-12-25",
         action: "add",
       },
       // Restore a previously excluded date
       {
-        seriesId: "a1b2c",
+        recurringId: "a1b2c",
         date: "2025-12-25",
         action: "remove",
       },
@@ -868,10 +868,10 @@ export type ToolName =
   | "manage_shift"
   | "query_shifts"
   | "calculate_wages"
-  | "draft_series_shift"
-  | "confirm_series_shift"
-  | "manage_series_shift"
-  | "manage_series_exclusion"
+  | "draft_recurring_shift"
+  | "confirm_recurring_shift"
+  | "manage_recurring_shift"
+  | "manage_recurring_exclusion"
   | "get_statistics"
   | "manage_settings";
 

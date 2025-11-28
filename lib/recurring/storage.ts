@@ -1,41 +1,41 @@
 /**
- * sessionStorage persistence for series shift drafts
+ * sessionStorage persistence for recurring shift drafts
  *
- * Allows users to resume building their series if they navigate away within the same session
+ * Allows users to resume building their recurring shift if they navigate away within the same session
  */
 
-import type { SeriesDraft } from './types';
+import type { RecurringDraft } from './types';
 
-const STORAGE_KEY = 'tidex.seriesDraft';
+const STORAGE_KEY = 'tidex.recurringDraft';
 
 /**
- * Save series draft to sessionStorage
+ * Save recurring draft to sessionStorage
  *
- * @param draft - Series draft to persist
+ * @param draft - Recurring draft to persist
  */
-export function saveSeriesDraft(draft: SeriesDraft): void {
+export function saveRecurringDraft(draft: RecurringDraft): void {
   if (typeof window === 'undefined') return;
 
   try {
     sessionStorage.setItem(STORAGE_KEY, JSON.stringify(draft));
   } catch (error) {
-    console.warn('Failed to save series draft to sessionStorage:', error);
+    console.warn('Failed to save recurring draft to sessionStorage:', error);
   }
 }
 
 /**
- * Load series draft from sessionStorage
+ * Load recurring draft from sessionStorage
  *
  * @returns Saved draft or null if not found/invalid
  */
-export function loadSeriesDraft(): SeriesDraft | null {
+export function loadRecurringDraft(): RecurringDraft | null {
   if (typeof window === 'undefined') return null;
 
   try {
     const raw = sessionStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
 
-    const parsed = JSON.parse(raw) as SeriesDraft;
+    const parsed = JSON.parse(raw) as RecurringDraft;
 
     // Basic validation
     if (
@@ -45,28 +45,28 @@ export function loadSeriesDraft(): SeriesDraft | null {
       typeof parsed.selected_days !== 'object' ||
       !Array.isArray(parsed.exclusions)
     ) {
-      console.warn('Invalid series draft in sessionStorage, clearing');
-      clearSeriesDraft();
+      console.warn('Invalid recurring draft in sessionStorage, clearing');
+      clearRecurringDraft();
       return null;
     }
 
     return parsed;
   } catch (error) {
-    console.warn('Failed to load series draft from sessionStorage:', error);
+    console.warn('Failed to load recurring draft from sessionStorage:', error);
     return null;
   }
 }
 
 /**
- * Clear series draft from sessionStorage
+ * Clear recurring draft from sessionStorage
  */
-export function clearSeriesDraft(): void {
+export function clearRecurringDraft(): void {
   if (typeof window === 'undefined') return;
 
   try {
     sessionStorage.removeItem(STORAGE_KEY);
   } catch (error) {
-    console.warn('Failed to clear series draft from sessionStorage:', error);
+    console.warn('Failed to clear recurring draft from sessionStorage:', error);
   }
 }
 

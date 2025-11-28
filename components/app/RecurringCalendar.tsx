@@ -4,14 +4,14 @@ import { useMemo, useCallback, useEffect } from "react";
 import { SelectDatesCalendar } from "./SelectDatesCalendar";
 import { toISODate } from "./calendar-utils";
 import type { ISODate } from "./calendar-utils";
-import type { SeriesDraft, SeriesGhost } from "@/lib/series/types";
-import type { ExistingShift } from "@/lib/series/conflicts";
+import type { RecurringDraft, RecurringGhost } from "@/lib/recurring/types";
+import type { ExistingShift } from "@/lib/recurring/conflicts";
 import type { UserSettings, SupplementRule } from "@/lib/payroll";
 import {
   generateGhostsForMonth,
   formatWeekdayName,
-} from "@/lib/series/utils";
-import { detectConflicts, buildConflictDateSet } from "@/lib/series/conflicts";
+} from "@/lib/recurring/utils";
+import { detectConflicts, buildConflictDateSet } from "@/lib/recurring/conflicts";
 import { computeShift } from "@/lib/payroll";
 import { useLocale, useTranslations } from "@/lib/i18n/client";
 import { useMonth } from "@/components/app/MonthContext";
@@ -24,11 +24,11 @@ function getWeekdayKey(date: Date): '0' | '1' | '2' | '3' | '4' | '5' | '6' {
   return String(date.getDay()) as '0' | '1' | '2' | '3' | '4' | '5' | '6';
 }
 
-export type SeriesCalendarProps = {
-  /** Current series draft */
-  value: SeriesDraft;
+export type RecurringCalendarProps = {
+  /** Current recurring draft */
+  value: RecurringDraft;
   /** Callback when draft changes */
-  onChange: (draft: SeriesDraft) => void;
+  onChange: (draft: RecurringDraft) => void;
   /** Existing shifts for conflict detection */
   existingShifts: ExistingShift[];
   /** User settings for earnings preview */
@@ -44,13 +44,13 @@ export type SeriesCalendarProps = {
 };
 
 /**
- * SeriesCalendar component
+ * RecurringCalendar component
  *
- * Calendar interface for building recurring shift series.
+ * Calendar interface for building recurring shift patterns.
  * Users select up to 7 anchor dates (one per weekday).
  * The calendar shows "ghosts" (projected occurrences) and detects conflicts.
  */
-export function SeriesCalendar({
+export function RecurringCalendar({
   value,
   onChange,
   existingShifts,
@@ -59,13 +59,13 @@ export function SeriesCalendar({
   onConflictsFound,
   onError,
   className,
-}: SeriesCalendarProps) {
+}: RecurringCalendarProps) {
   const locale = useLocale();
   const { t } = useTranslations();
   const { selectedMonth: month, setSelectedMonth: setMonth } = useMonth();
 
   // Generate ghosts for the current month
-  const ghosts = useMemo<SeriesGhost[]>(() => {
+  const ghosts = useMemo<RecurringGhost[]>(() => {
     if (Object.keys(value.selected_days).length === 0) return [];
 
     const yearMonth = {
@@ -199,7 +199,7 @@ export function SeriesCalendar({
         // User is trying to select a different date for the same weekday - show warning
         const weekdayName = formatWeekdayName(weekdayKey, locale);
         if (onError) {
-          onError(t.pages.shifts.add.series.errors.duplicateWeekday.replace('{weekday}', weekdayName));
+          onError(t.pages.shifts.add.recurring.errors.duplicateWeekday.replace('{weekday}', weekdayName));
         }
         return;
       }
@@ -208,7 +208,7 @@ export function SeriesCalendar({
       const selectedCount = Object.keys(value.selected_days).length;
       if (selectedCount >= 7 && !existingAnchor) {
         if (onError) {
-          onError(t.pages.shifts.add.series.errors.maxWeekdays);
+          onError(t.pages.shifts.add.recurring.errors.maxWeekdays);
         }
         return;
       }
@@ -216,7 +216,7 @@ export function SeriesCalendar({
       // Check if this date has conflicts
       if (conflictDates.has(newISO as ISODate)) {
         if (onError) {
-          onError(t.pages.shifts.add.series.errors.hasConflict);
+          onError(t.pages.shifts.add.recurring.errors.hasConflict);
         }
         return;
       }
@@ -247,7 +247,7 @@ export function SeriesCalendar({
         disabledOutsideMonth={true}
       />
       <div className="mt-4 text-center text-sm text-text-muted">
-        {t.pages.shifts.add.series.selectUpTo7Weekdays}
+        {t.pages.shifts.add.recurring.selectUpTo7Weekdays}
       </div>
     </div>
   );
