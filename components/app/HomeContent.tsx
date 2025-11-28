@@ -9,6 +9,7 @@ import { ShiftCard } from "@/components/app/ShiftCard";
 import ShiftDetails from "@/components/shifts/ShiftDetails";
 import { ShiftWithComputations, UserSettings, computeShift, PRESET_SUPPLEMENT_RULES } from "@/lib/payroll";
 import { useCountdown } from "@/lib/hooks/useCountdown";
+import { usePayrollCountdown } from "@/lib/hooks/usePayrollCountdown";
 import { useMonth } from "./MonthContext";
 import { useTranslations } from "@/lib/i18n/client";
 import { summarizeShiftTotals } from "@/lib/shifts/monthlyTotals";
@@ -233,11 +234,11 @@ export function HomeContent({ shifts: initialShifts, settings }: HomeContentProp
     const nextYear = nextDate.getFullYear();
     const nextMonthNum = nextDate.getMonth() + 1;
 
-    // Prefetch all 3 months in parallel (fetchMonth checks if already loaded)
+    // Fetch current and previous months first (previous has most awaiting info),
+    // then fetch next month after previous completes
     Promise.all([
       fetchMonth(selectedYear, selectedMonthNum), // Current
-      fetchMonth(prevYear, prevMonthNum),         // Previous
-      fetchMonth(nextYear, nextMonthNum),         // Next
+      fetchMonth(prevYear, prevMonthNum).then(() => fetchMonth(nextYear, nextMonthNum)), // Previous, then Next
     ]);
   }, [month, fetchMonth]);
 
@@ -456,6 +457,14 @@ export function HomeContent({ shifts: initialShifts, settings }: HomeContentProp
     highPrecision: true,
   });
 
+  // Live countdown to next payroll
+  const payrollCountdown = usePayrollCountdown({
+    payrollDay,
+    selectedMonth: payrollData.payrollMonthDate,
+    locale,
+    t,
+  });
+
   // For non-current months, show "Best shift" instead of countdown
   const relativeTimeText = selectedMonthIsCurrent
     ? countdown.text
@@ -475,18 +484,23 @@ export function HomeContent({ shifts: initialShifts, settings }: HomeContentProp
       <div ref={swipeContainerRef} className="flex items-center">
         <div className="flex flex-col gap-6 w-full">
           {payrollDay && (
-            <NextPayrollCard
-              payrollDay={payrollDay}
-              netAmount={payrollData.netAmount}
-              grossAmount={payrollData.grossAmount}
-              baseAmount={payrollData.baseAmount}
-              supplementAmount={payrollData.supplementAmount}
-              taxAmount={payrollData.taxAmount}
-              taxEnabled={taxDeductionEnabled}
-              selectedMonth={payrollData.payrollMonthDate}
-              hasPayout={payrollData.hasPayout}
-              showPreviousPayroll={payrollData.showPreviousPayroll}
-            />
+            <div className="flex flex-col gap-2">
+              <p className="text-xs text-text-muted text-center">{payrollCountdown.text}</p>
+              <NextPayrollCard
+                payrollDay={payrollDay}
+                netAmount={payrollData.netAmount}
+                grossAmount={payrollData.grossAmount}
+                baseAmount={payrollData.baseAmount}
+                supplementAmount={payrollData.supplementAmount}
+                taxAmount={payrollData.taxAmount}
+                taxEnabled={taxDeductionEnabled}
+                selectedMonth={payrollData.payrollMonthDate}
+                hasPayout={payrollData.hasPayout}
+                showPreviousPayroll={payrollData.showPreviousPayroll}
+                progress={payrollCountdown.isPast ? undefined : payrollCountdown.progress}
+                isPayrollToday={payrollCountdown.isToday}
+              />
+            </div>
           )}
           <TotalCard
             total={totalCardTotal}

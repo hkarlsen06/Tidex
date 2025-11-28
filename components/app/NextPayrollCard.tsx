@@ -10,6 +10,7 @@ import { useFormatCurrency } from '@/lib/hooks/useFormatCurrency';
 import { getDateFormatter } from '@/lib/i18n/locale';
 import { adjustPayrollDate } from '@/lib/payroll/adjust-payroll-date';
 import type { Locale } from '@/lib/i18n';
+import { PartyPopper } from 'lucide-react';
 
 interface NextPayrollCardProps {
   payrollDay: number;
@@ -24,6 +25,10 @@ interface NextPayrollCardProps {
   selectedMonth?: Date;
   hasPayout?: boolean;
   showPreviousPayroll?: boolean;
+  /** Progress through the month until payroll (1-100), shows a subtle progress bar when provided */
+  progress?: number;
+  /** Whether payroll is today - shows "I dag" with party popper icon */
+  isPayrollToday?: boolean;
 }
 
 function getPayrollDateForMonth(
@@ -54,6 +59,8 @@ export const NextPayrollCard: React.FC<NextPayrollCardProps> = ({
   selectedMonth,
   hasPayout = true,
   showPreviousPayroll,
+  progress,
+  isPayrollToday = false,
 }) => {
   const { navigate } = useNavigationFeedback();
   const { t, locale } = useTranslations();
@@ -115,10 +122,22 @@ export const NextPayrollCard: React.FC<NextPayrollCardProps> = ({
     }
   };
 
+  const hasProgress = typeof progress === 'number' && progress >= 1 && progress <= 100;
+
+  // Display text for the date - show "I dag" with party popper on payroll day
+  const dateDisplay = isPayrollToday ? (
+    <span className="inline-flex items-center gap-2">
+      {t.components.nextPayrollCard.today}
+      <PartyPopper className="h-5 w-5 text-brand-highlight" aria-hidden="true" />
+    </span>
+  ) : (
+    formattedDate
+  );
+
   return (
     <Card
       className={cn(
-        "bg-surface-primary rounded-3xl cursor-pointer transition-colors hover:bg-surface-secondary",
+        "bg-surface-primary rounded-3xl cursor-pointer transition-colors hover:bg-surface-secondary relative overflow-hidden",
         className
       )}
       onClick={handleClick}
@@ -126,7 +145,15 @@ export const NextPayrollCard: React.FC<NextPayrollCardProps> = ({
       tabIndex={0}
       onKeyDown={handleKeyDown}
     >
-      <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0 py-6">
+      {/* Progress bar background - uses CSS animation to animate from 0 to current progress */}
+      {hasProgress && (
+        <div
+          className="absolute inset-0 bg-brand-highlight/10 animate-progress-grow"
+          style={{ '--progress-target': `${progress}%` } as React.CSSProperties}
+          aria-hidden="true"
+        />
+      )}
+      <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0 py-6 relative z-10">
         {isLoading ? (
           <div className="animate-pulse flex-1 space-y-3" aria-hidden="true">
             <div className="h-4 w-32 rounded-lg bg-text-muted/20" />
@@ -136,7 +163,7 @@ export const NextPayrollCard: React.FC<NextPayrollCardProps> = ({
           <>
             <div className="space-y-1">
               <p className="text-lg font-medium text-text-primary">
-                {formattedDate}
+                {dateDisplay}
               </p>
               <div className="flex items-center gap-3 text-sm text-text-secondary">
                 <span className="inline-flex items-center gap-1 text-text-primary">

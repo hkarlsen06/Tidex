@@ -1251,6 +1251,13 @@ export const no = {
       previousPayroll: 'Forrige lønning',
       nextPayroll: 'Neste lønning',
       payroll: 'Lønning',
+      today: 'I dag',
+      inDays: 'Om {days} dager',
+      inDaysAndHours: 'Om {days} dager {hours} timer',
+      inDaysHoursAndMinutes: 'Om {days} dager {hours} timer {minutes} minutter',
+      inHoursAndMinutes: 'Om {hours} timer {minutes} minutter',
+      daysAgo: '{days} dager siden',
+      oneDayAgo: '1 dag siden',
     },
     totalCard: {
       beforeTax: 'før skatt',
