@@ -195,8 +195,8 @@ export function NavBar() {
     <nav className={`fixed left-0 right-0 z-40 bottom-0 transition-transform duration-300 md:hidden ${
       isHidden ? "translate-y-full" : "translate-y-0"
     }`}>
-      {/* Background that extends into safe area on mobile */}
-      <div className="absolute inset-x-0 top-0 bottom-0 bg-background/80 backdrop-blur-md" />
+      {/* Background that extends into safe area on mobile - uses -bottom to extend into safe area without creeping upward */}
+      <div className="absolute inset-x-0 top-0 -bottom-[env(safe-area-inset-bottom)] bg-background/80 backdrop-blur-md" />
 
       <div className="relative mx-auto max-w-[520px] pb-[env(safe-area-inset-bottom)]">
         <div className="flex items-center justify-around pt-4 pb-4 border-t border-border/40">

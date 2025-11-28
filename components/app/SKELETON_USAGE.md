@@ -1,116 +1,100 @@
 # Skeleton Loading States
 
-This directory contains skeleton components for improving perceived performance during data loading.
+Skeleton components for improving perceived performance during data loading. All skeletons are organized in `components/app/skeletons/` and exported from a single index.
 
-## Available Skeleton Components
+## Import Pattern
 
-### ShiftCardSkeleton
-Skeleton placeholder for individual shift cards.
+All skeletons are exported from `@/components/app/skeletons`:
 
 ```tsx
-import { ShiftCardSkeleton } from "@/components/app/ShiftCardSkeleton";
-
-<ShiftCardSkeleton />
+import {
+  // Page skeletons
+  HomeSkeleton,
+  ShiftsSkeleton,
+  StatsSkeleton,
+  // Card skeletons
+  ShiftCardSkeleton,
+  NextPayrollCardSkeleton,
+  TotalCardSkeleton,
+  // Calendar skeletons
+  CalendarSkeleton,
+  AddCalendarSkeleton,
+} from "@/components/app/skeletons";
 ```
 
-### ShiftListSkeleton
-Skeleton placeholder for the entire shifts list view (includes week headers and multiple shift cards).
+## Directory Structure
 
-```tsx
-import { ShiftListSkeleton } from "@/components/app/ShiftListSkeleton";
-
-<ShiftListSkeleton />
+```
+components/app/skeletons/
+├── index.ts                    # Re-exports all skeletons
+├── pages/
+│   ├── HomeSkeleton.tsx        # Full home page skeleton
+│   ├── ShiftsSkeleton.tsx      # Full shifts page skeleton (calendar + list)
+│   └── StatsSkeleton.tsx       # Full stats page skeleton
+├── cards/
+│   ├── ShiftCardSkeleton.tsx   # Individual shift card
+│   ├── NextPayrollCardSkeleton.tsx
+│   └── TotalCardSkeleton.tsx
+└── calendar/
+    ├── CalendarSkeleton.tsx    # Main calendar with month picker
+    └── AddCalendarSkeleton.tsx # Simplified calendar for add shift
 ```
 
-### CalendarSkeleton
-Skeleton placeholder for calendar views.
+## Usage in Next.js Route Loading
 
+Page skeletons are used in `loading.tsx` files:
+
+**Home Page** (`app/[locale]/(app)/loading.tsx`):
 ```tsx
-import { CalendarSkeleton } from "@/components/app/CalendarSkeleton";
-
-<CalendarSkeleton />
-```
-
-### TotalCardSkeleton
-Skeleton placeholder for the monthly totals card on the home page.
-
-```tsx
-import { TotalCardSkeleton } from "@/components/app/TotalCardSkeleton";
-
-<TotalCardSkeleton />
-```
-
-### NextPayrollCardSkeleton
-Skeleton placeholder for the next payroll card on the home page.
-
-```tsx
-import { NextPayrollCardSkeleton } from "@/components/app/NextPayrollCardSkeleton";
-
-<NextPayrollCardSkeleton />
-```
-
-## Usage Examples
-
-### Implemented in This Project
-
-The skeleton components are already integrated into Next.js route loading states:
-
-**Home Page** (`app/(app)/loading.tsx`):
-```tsx
-import { NextPayrollCardSkeleton } from "@/components/app/NextPayrollCardSkeleton";
-import { TotalCardSkeleton } from "@/components/app/TotalCardSkeleton";
-import { ShiftCardSkeleton } from "@/components/app/ShiftCardSkeleton";
+import { HomeSkeleton } from "@/components/app/skeletons";
 
 export default function HomeLoading() {
-  return (
-    <div className="flex items-center justify-center h-full">
-      <div className="flex flex-col gap-6 w-full max-w-md">
-        <NextPayrollCardSkeleton />
-        <TotalCardSkeleton />
-        {/* Month picker and shift card skeletons */}
-      </div>
-    </div>
-  );
+  return <HomeSkeleton />;
 }
 ```
 
-**Shifts Page** (`app/(app)/shifts/loading.tsx`):
+**Shifts Page** (`app/[locale]/(app)/shifts/loading.tsx`):
 ```tsx
-import { CalendarSkeleton } from "@/components/app/CalendarSkeleton";
-import { ShiftListSkeleton } from "@/components/app/ShiftListSkeleton";
+import { ShiftsSkeleton } from "@/components/app/skeletons";
 
 export default function ShiftsLoading() {
+  return <ShiftsSkeleton />;
+}
+```
+
+**Add Shift Page** (`app/[locale]/(app)/shifts/add/loading.tsx`):
+```tsx
+import { AddCalendarSkeleton } from "@/components/app/skeletons";
+
+export default function AddShiftLoading() {
   return (
-    <div className="flex w-full flex-col">
-      <CalendarSkeleton />
-      <ShiftListSkeleton />
+    <div className="...">
+      <AddCalendarSkeleton />
     </div>
   );
 }
 ```
 
-## Additional Usage Examples
-
-### With React Suspense
+## Usage with React Suspense
 
 ```tsx
 import { Suspense } from "react";
-import { ShiftListSkeleton } from "@/components/app/ShiftListSkeleton";
+import { ShiftCardSkeleton } from "@/components/app/skeletons";
 
 export default function ShiftsPage() {
   return (
-    <Suspense fallback={<ShiftListSkeleton />}>
-      <ShiftsList />
+    <Suspense fallback={<ShiftCardSkeleton />}>
+      <ShiftCard />
     </Suspense>
   );
 }
 ```
 
-### With Next.js Dynamic Import
+## Usage with Next.js Dynamic Import
 
 ```tsx
 import dynamic from "next/dynamic";
-import { CalendarSkeleton } from "@/components/app/CalendarSkeleton";
+import { CalendarSkeleton } from "@/components/app/skeletons";
 
 const MonthlyEarningsCalendar = dynamic(
   () => import("./MonthlyEarningsCalendar"),
@@ -118,38 +102,12 @@ const MonthlyEarningsCalendar = dynamic(
 );
 ```
 
-### With Loading States
-
-```tsx
-import { ShiftCardSkeleton } from "@/components/app/ShiftCardSkeleton";
-
-function ShiftsList({ isLoading, shifts }) {
-  if (isLoading) {
-    return (
-      <div className="space-y-4">
-        <ShiftCardSkeleton />
-        <ShiftCardSkeleton />
-        <ShiftCardSkeleton />
-      </div>
-    );
-  }
-
-  return shifts.map(shift => <ShiftCard key={shift.id} shift={shift} />);
-}
-```
-
 ## Design Principles
 
-1. **Match the actual component structure**: Skeleton components should closely match the layout and sizing of the real components they replace.
+1. **Match the actual component structure**: Skeleton components closely match the layout and sizing of the real components they replace.
 
-2. **Use semantic color tokens**: All skeleton components use `bg-surface-secondary` to ensure they adapt to theme changes.
+2. **Use semantic color tokens**: All skeletons use `bg-surface-secondary` to adapt to theme changes.
 
-3. **Subtle animation**: The `animate-pulse` utility provides a subtle pulsing effect to indicate loading.
+3. **Subtle animation**: The `animate-pulse` utility provides a subtle pulsing effect.
 
-4. **Appropriate detail level**: Skeletons show the general structure without overwhelming detail.
-
-## Performance Benefits
-
-- **Improved perceived performance**: Users see immediate feedback instead of blank screens
-- **Reduced layout shift**: Skeletons reserve space, preventing content jumps when data loads
-- **Better UX during navigation**: Route transitions feel more responsive
+4. **Page skeletons are self-contained**: `HomeSkeleton`, `ShiftsSkeleton`, etc. include all layout wrappers - just render them directly.
