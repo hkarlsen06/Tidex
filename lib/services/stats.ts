@@ -38,8 +38,6 @@ import {
   isDateInMonth,
   parseDateAsUTC,
   getYearMonth,
-  getCurrentYearStart,
-  getCurrentYearEnd,
 } from "../date-utils";
 import type { Locale } from "../i18n/config";
 import { getTranslations } from "../i18n/server";

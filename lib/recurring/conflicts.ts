@@ -1,11 +1,11 @@
 /**
- * Conflict detection for series shifts
+ * Conflict detection for recurring shifts
  *
  * Checks if projected ghost occurrences would overlap with existing shifts
  * Handles cross-midnight shifts correctly
  */
 
-import type { SeriesGhost, SeriesDraft } from './types';
+import type { RecurringGhost, RecurringDraft } from './types';
 
 /**
  * Existing shift shape (minimal data needed for conflict detection)
@@ -103,7 +103,7 @@ export function buildIntervalMap(
  * @returns Map of ghost date to array of conflicting shifts
  */
 export function detectConflicts(
-  ghosts: SeriesGhost[],
+  ghosts: RecurringGhost[],
   existingShifts: ExistingShift[],
   startTime: string,
   endTime: string
@@ -199,15 +199,15 @@ export function buildConflictDateSet(
 }
 
 /**
- * Detect all conflicts across the entire series duration
+ * Detect all conflicts across the entire recurring shift duration
  * Generates ghosts for all months and checks each for conflicts
  *
- * @param draft - Series draft with anchor dates and time range
+ * @param draft - Recurring draft with anchor dates and time range
  * @param existingShifts - Array of all user's existing shifts
  * @returns Array of ISO date strings that have conflicts
  */
-export async function detectAllSeriesConflicts(
-  draft: SeriesDraft,
+export async function detectAllRecurringConflicts(
+  draft: RecurringDraft,
   existingShifts: ExistingShift[]
 ): Promise<string[]> {
   // Import needed utilities
@@ -222,7 +222,7 @@ export async function detectAllSeriesConflicts(
 
   const allConflictDates = new Set<string>();
 
-  // If infinite series, check a reasonable window (e.g., 5 years)
+  // If infinite recurring shift, check a reasonable window (e.g., 5 years)
   const currentYear = new Date().getUTCFullYear();
   const currentMonth = new Date().getUTCMonth() + 1;
 
@@ -234,7 +234,7 @@ export async function detectAllSeriesConflicts(
     endYear = window.maxMonth.getUTCFullYear();
     endMonth = window.maxMonth.getUTCMonth() + 1;
   } else {
-    // For infinite series, check 5 years ahead
+    // For infinite recurring shifts, check 5 years ahead
     startYear = currentYear;
     startMonth = currentMonth;
     endYear = currentYear + 5;

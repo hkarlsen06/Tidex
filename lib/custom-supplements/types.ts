@@ -3,7 +3,7 @@
  *
  * Allows users to:
  * 1. Override supplements for individual shifts (user_shifts.custom_supplements)
- * 2. Override supplements for specific dates in a series (series_shifts.date_specific_supplements)
+ * 2. Override supplements for specific dates in a recurring shift (recurring_shifts.date_specific_supplements)
  */
 
 import type { SupplementRule } from '@/lib/payroll/types';
@@ -25,8 +25,8 @@ export type CustomSupplementsData = {
 };
 
 /**
- * Date-specific supplement overrides for a series
- * Stored in series_shifts.date_specific_supplements (JSONB)
+ * Date-specific supplement overrides for a recurring shift
+ * Stored in recurring_shifts.date_specific_supplements (JSONB)
  *
  * Example:
  * {

@@ -100,7 +100,7 @@ export type UUIDString = typeof UUIDStringSchema.Type;
 /**
  * Shift type enum
  */
-export const ShiftTypeSchema = Schema.Literal("single", "series");
+export const ShiftTypeSchema = Schema.Literal("single", "recurring");
 export type ShiftType = typeof ShiftTypeSchema.Type;
 
 /**

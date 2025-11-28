@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { EndCondition } from "@/lib/series/types";
+import type { EndCondition } from "@/lib/recurring/types";
 import { Input } from "@/components/app/Input";
 import { cn } from "@/lib/utils";
 import { useTranslations } from "@/lib/i18n/client";
@@ -19,7 +19,7 @@ export type DurationSectionProps = {
 /**
  * DurationSection component
  *
- * Allows users to select the end condition for a series:
+ * Allows users to select the end condition for a recurring shift:
  * - No End (null)
  * - X Months
  * - X Years
@@ -103,7 +103,7 @@ export function DurationSection({ value, onChange, className }: DurationSectionP
   return (
     <div className={cn("space-y-3", className)}>
       <span className="text-xs font-semibold uppercase tracking-widest text-text-muted">
-        {t.pages.shifts.add.series.duration}
+        {t.pages.shifts.add.recurring.duration}
       </span>
 
       {/* Top: No End */}
@@ -117,7 +117,7 @@ export function DurationSection({ value, onChange, className }: DurationSectionP
             : "border-border-subtle bg-surface-secondary/70 text-text-secondary hover:border-border hover:text-text-primary"
         )}
       >
-        <span className="text-base font-medium">{t.pages.shifts.add.series.noEnd}</span>
+        <span className="text-base font-medium">{t.pages.shifts.add.recurring.noEnd}</span>
       </button>
 
       {/* Middle: Months and Years */}
@@ -151,7 +151,7 @@ export function DurationSection({ value, onChange, className }: DurationSectionP
             }}
             className="h-9 w-16 rounded-lg border-border-subtle bg-surface-primary text-center text-base text-text-primary"
           />
-          <span className="text-base font-medium">{t.pages.shifts.add.series.months}</span>
+          <span className="text-base font-medium">{t.pages.shifts.add.recurring.months}</span>
         </button>
 
         {/* Years */}
@@ -183,7 +183,7 @@ export function DurationSection({ value, onChange, className }: DurationSectionP
             }}
             className="h-9 w-16 rounded-lg border-border-subtle bg-surface-primary text-center text-base text-text-primary"
           />
-          <span className="text-base font-medium">{t.pages.shifts.add.series.years}</span>
+          <span className="text-base font-medium">{t.pages.shifts.add.recurring.years}</span>
         </button>
       </div>
 
@@ -196,7 +196,7 @@ export function DurationSection({ value, onChange, className }: DurationSectionP
               activeType === 'end_date' ? "text-text-primary" : "text-text-secondary"
             )}
           >
-            {t.pages.shifts.add.series.endDate}
+            {t.pages.shifts.add.recurring.endDate}
           </span>
         </div>
         <Input

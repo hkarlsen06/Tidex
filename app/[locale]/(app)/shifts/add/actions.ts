@@ -11,7 +11,7 @@ type CreateShiftsInput = {
   dates: string[]; // ISO YYYY-MM-DD (local date)
   start: string; // HH:mm
   end: string; // HH:mm
-  seriesId?: string;
+  recurringId?: string;
 };
 
 export async function createShifts(input: CreateShiftsInput) {
@@ -45,14 +45,14 @@ export async function createShifts(input: CreateShiftsInput) {
     );
   }
 
-  const sid = input.seriesId && input.seriesId.trim().length > 0 ? input.seriesId : undefined;
+  const sid = input.recurringId && input.recurringId.trim().length > 0 ? input.recurringId : undefined;
 
   const rows = dates.map((shift_date) => ({
     user_id: user.id,
     shift_date,
     start_time: input.start,
     end_time: input.end,
-    ...(sid ? { series_id: sid } : {}),
+    ...(sid ? { recurring_id: sid } : {}),
   }));
 
   const { data: insertedShifts, error } = await supabase

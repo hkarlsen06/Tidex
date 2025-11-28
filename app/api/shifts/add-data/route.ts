@@ -3,8 +3,8 @@ import { getSession } from "@/data-access/auth";
 import { getUserSettings } from "@/data-access/settings";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { PRESET_RULES } from "@/data-access/shifts";
-import { generateGhostsForMonth } from "@/lib/series/utils";
-import type { SeriesShiftRow } from "@/lib/series/types";
+import { generateGhostsForMonth } from "@/lib/recurring/utils";
+import type { RecurringShiftRow } from "@/lib/recurring/types";
 import { cleanTime } from "@/lib/time-utils";
 import { logger } from "@/lib/logger";
 import { getUserWageSnapshots } from "@/data-access/wage-snapshots";
@@ -51,23 +51,23 @@ export async function GET(_request: NextRequest) {
       end_time: s.end_time as string,
     }));
 
-    // Load series shifts and generate ghosts for next 6 months
-    const { data: seriesShifts, error: seriesError } = await supabase
-      .from("series_shifts")
+    // Load recurring shifts and generate ghosts for next 6 months
+    const { data: recurringShifts, error: recurringError } = await supabase
+      .from("recurring_shifts")
       .select("*")
       .eq("user_id", userId);
 
-    if (seriesError) {
-      logger.error("Failed to load series shifts:", seriesError);
+    if (recurringError) {
+      logger.error("Failed to load recurring shifts:", recurringError);
     }
 
-    const seriesGhosts: Array<{ shift_date: string; start_time: string; end_time: string }> = [];
-    if (seriesShifts && seriesShifts.length > 0) {
+    const recurringGhosts: Array<{ shift_date: string; start_time: string; end_time: string }> = [];
+    if (recurringShifts && recurringShifts.length > 0) {
       const now = new Date();
       const currentYear = now.getFullYear();
       const currentMonth = now.getMonth() + 1;
 
-      for (const series of seriesShifts as SeriesShiftRow[]) {
+      for (const recurring of recurringShifts as RecurringShiftRow[]) {
         for (let i = 0; i < 6; i++) {
           let targetMonth = currentMonth + i;
           let targetYear = currentYear;
@@ -80,28 +80,28 @@ export async function GET(_request: NextRequest) {
           const ghosts = generateGhostsForMonth(
             { year: targetYear, month: targetMonth },
             {
-              start_time: cleanTime(series.start_time),
-              end_time: cleanTime(series.end_time),
-              repeat_interval_weeks: series.repeat_interval_weeks as 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8,
-              selected_days: series.selected_days,
-              end_condition: series.end_condition,
-              exclusions: series.exclusions || []
+              start_time: cleanTime(recurring.start_time),
+              end_time: cleanTime(recurring.end_time),
+              repeat_interval_weeks: recurring.repeat_interval_weeks as 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8,
+              selected_days: recurring.selected_days,
+              end_condition: recurring.end_condition,
+              exclusions: recurring.exclusions || []
             }
           );
 
           for (const ghost of ghosts) {
-            seriesGhosts.push({
+            recurringGhosts.push({
               shift_date: ghost.date,
-              start_time: cleanTime(series.start_time),
-              end_time: cleanTime(series.end_time)
+              start_time: cleanTime(recurring.start_time),
+              end_time: cleanTime(recurring.end_time)
             });
           }
         }
       }
     }
 
-    // Combine regular shifts and series ghosts
-    const allExistingShifts = [...existingShifts, ...seriesGhosts];
+    // Combine regular shifts and recurring ghosts
+    const allExistingShifts = [...existingShifts, ...recurringGhosts];
 
     // Load wage snapshots
     const wageSnapshots = await getUserWageSnapshots();

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 /**
- * API route for fetching a single series shift by ID
+ * API route for fetching a single recurring shift by ID
  */
 export async function GET(
   request: NextRequest,
@@ -18,30 +18,30 @@ export async function GET(
   const { id } = await params;
 
   if (!id) {
-    return NextResponse.json({ error: 'Missing series ID' }, { status: 400 });
+    return NextResponse.json({ error: 'Missing recurring shift ID' }, { status: 400 });
   }
 
   try {
-    const { data: series, error } = await supabase
-      .from("series_shifts")
+    const { data: recurring, error } = await supabase
+      .from("recurring_shifts")
       .select("*")
       .eq("id", id)
       .eq("user_id", user.id)
       .single();
 
-    if (error || !series) {
-      console.error('Failed to load series:', error);
+    if (error || !recurring) {
+      console.error('Failed to load recurring shift:', error);
       return NextResponse.json(
-        { error: 'Series not found' },
+        { error: 'Recurring shift not found' },
         { status: 404 }
       );
     }
 
-    return NextResponse.json(series);
+    return NextResponse.json(recurring);
   } catch (error) {
-    console.error('Failed to fetch series:', error);
+    console.error('Failed to fetch recurring shift:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch series' },
+      { error: 'Failed to fetch recurring shift' },
       { status: 500 }
     );
   }
