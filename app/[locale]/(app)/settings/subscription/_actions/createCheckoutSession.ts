@@ -5,7 +5,7 @@ import { logger } from '@/lib/logger';
 import { verifySession } from '@/data-access/auth';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-09-30.clover',
+  apiVersion: '2025-10-29.clover',
 });
 
 interface CheckoutSessionResult {
