@@ -8,7 +8,7 @@ import type { UserSettings } from "@/lib/payroll";
 import { getTranslations } from "@/lib/i18n/server";
 import { getAppDictionary } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/i18n/config";
-import { generateGhostsForMonth } from "@/lib/recurring/utils";
+import { generateVirtualShiftsForMonth } from "@/lib/recurring/utils";
 import type { RecurringShiftRow } from "@/lib/recurring/types";
 import { cleanTime } from "@/lib/time-utils";
 import { logger } from "@/lib/logger";
@@ -64,7 +64,7 @@ export default async function AddShiftsPage({ params }: AddShiftsPageProps) {
       end_time: s.end_time as string,
     }));
 
-    // Load recurring shifts and generate ghosts for next 6 months
+    // Load recurring shifts and generate virtual shifts for next 6 months
     const { data: recurringShifts, error: recurringError } = await supabase
       .from("recurring_shifts")
       .select("*")
@@ -74,7 +74,7 @@ export default async function AddShiftsPage({ params }: AddShiftsPageProps) {
       logger.error("Failed to load recurring shifts for add page:", recurringError);
     }
 
-    const recurringGhosts: Array<{ shift_date: string; start_time: string; end_time: string }> = [];
+    const recurringVirtualShifts: Array<{ shift_date: string; start_time: string; end_time: string }> = [];
     if (recurringShifts && recurringShifts.length > 0) {
       const now = new Date();
       const currentYear = now.getFullYear();
@@ -90,7 +90,7 @@ export default async function AddShiftsPage({ params }: AddShiftsPageProps) {
             targetYear++;
           }
 
-          const ghosts = generateGhostsForMonth(
+          const virtualShifts = generateVirtualShiftsForMonth(
             { year: targetYear, month: targetMonth },
             {
               start_time: cleanTime(recurring.start_time),
@@ -102,9 +102,9 @@ export default async function AddShiftsPage({ params }: AddShiftsPageProps) {
             }
           );
 
-          for (const ghost of ghosts) {
-            recurringGhosts.push({
-              shift_date: ghost.date,
+          for (const virtualShift of virtualShifts) {
+            recurringVirtualShifts.push({
+              shift_date: virtualShift.date,
               start_time: cleanTime(recurring.start_time),
               end_time: cleanTime(recurring.end_time)
             });
@@ -113,8 +113,8 @@ export default async function AddShiftsPage({ params }: AddShiftsPageProps) {
       }
     }
 
-    // Combine regular shifts and recurring ghosts
-    allExistingShifts = [...existingShifts, ...recurringGhosts];
+    // Combine regular shifts and recurring virtual shifts
+    allExistingShifts = [...existingShifts, ...recurringVirtualShifts];
 
     // Load wage snapshots for accurate preview calculations
     wageSnapshots = await getUserWageSnapshots();

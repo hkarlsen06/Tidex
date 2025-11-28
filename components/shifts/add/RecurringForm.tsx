@@ -19,7 +19,7 @@ import type { RecurringDraft } from "@/lib/recurring/types";
 import type { ExistingShift } from "@/lib/recurring/conflicts";
 import type { UserSettings, SupplementRule } from "@/lib/payroll";
 import { saveRecurringDraft, loadRecurringDraft, clearRecurringDraft } from "@/lib/recurring/storage";
-import { generateGhostsForMonth, resolveEndWindow } from "@/lib/recurring/utils";
+import { generateVirtualShiftsForMonth, resolveEndWindow } from "@/lib/recurring/utils";
 import { detectConflicts, buildConflictDateSet } from "@/lib/recurring/conflicts";
 
 type RecurringFormProps = {
@@ -74,8 +74,8 @@ export default function RecurringForm({ existingShifts, userSettings, presetRule
 
     for (let year = startYear; year <= endYear; year++) {
       for (let month = 1; month <= 12; month++) {
-        const ghosts = generateGhostsForMonth({ year, month }, draft);
-        ghosts.forEach((g) => dates.push(g.date));
+        const virtualShifts = generateVirtualShiftsForMonth({ year, month }, draft);
+        virtualShifts.forEach((vs) => dates.push(vs.date));
       }
     }
 
@@ -88,13 +88,13 @@ export default function RecurringForm({ existingShifts, userSettings, presetRule
       return new Set<string>();
     }
 
-    const allGhosts = projectedDates.map(date => ({
+    const allVirtualShifts = projectedDates.map(date => ({
       date,
       weekday: new Date(date + 'T00:00:00Z').getUTCDay()
     }));
 
     const conflicts = detectConflicts(
-      allGhosts,
+      allVirtualShifts,
       existingShifts,
       draft.start_time,
       draft.end_time

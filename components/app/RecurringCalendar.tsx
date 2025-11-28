@@ -4,11 +4,11 @@ import { useMemo, useCallback, useEffect } from "react";
 import { SelectDatesCalendar } from "./SelectDatesCalendar";
 import { toISODate } from "./calendar-utils";
 import type { ISODate } from "./calendar-utils";
-import type { RecurringDraft, RecurringGhost } from "@/lib/recurring/types";
+import type { RecurringDraft, RecurringVirtualShift } from "@/lib/recurring/types";
 import type { ExistingShift } from "@/lib/recurring/conflicts";
 import type { UserSettings, SupplementRule } from "@/lib/payroll";
 import {
-  generateGhostsForMonth,
+  generateVirtualShiftsForMonth,
   formatWeekdayName,
 } from "@/lib/recurring/utils";
 import { detectConflicts, buildConflictDateSet } from "@/lib/recurring/conflicts";
@@ -48,7 +48,7 @@ export type RecurringCalendarProps = {
  *
  * Calendar interface for building recurring shift patterns.
  * Users select up to 7 anchor dates (one per weekday).
- * The calendar shows "ghosts" (projected occurrences) and detects conflicts.
+ * The calendar shows virtual shifts (projected occurrences) and detects conflicts.
  */
 export function RecurringCalendar({
   value,
@@ -64,8 +64,8 @@ export function RecurringCalendar({
   const { t } = useTranslations();
   const { selectedMonth: month, setSelectedMonth: setMonth } = useMonth();
 
-  // Generate ghosts for the current month
-  const ghosts = useMemo<RecurringGhost[]>(() => {
+  // Generate virtual shifts for the current month
+  const virtualShifts = useMemo<RecurringVirtualShift[]>(() => {
     if (Object.keys(value.selected_days).length === 0) return [];
 
     const yearMonth = {
@@ -73,34 +73,34 @@ export function RecurringCalendar({
       month: month.getMonth() + 1,
     };
 
-    return generateGhostsForMonth(yearMonth, value);
+    return generateVirtualShiftsForMonth(yearMonth, value);
   }, [month, value]);
 
-  // Compute earnings for ghosts AND anchors
-  const ghostEarnings = useMemo<Partial<Record<ISODate, number>>>(() => {
+  // Compute earnings for virtual shifts AND anchors
+  const virtualShiftEarnings = useMemo<Partial<Record<ISODate, number>>>(() => {
     if (!/^\d{2}:\d{2}$/.test(value.start_time) || !/^\d{2}:\d{2}$/.test(value.end_time)) {
       return {};
     }
 
     const result: Partial<Record<ISODate, number>> = {};
 
-    // Compute for all ghosts
-    for (const ghost of ghosts) {
+    // Compute for all virtual shifts
+    for (const virtualShift of virtualShifts) {
       try {
         const computed = computeShift(
           {
-            id: `ghost-${ghost.date}`,
+            id: `virtual-${virtualShift.date}`,
             user_id: 'preview',
-            shift_date: ghost.date,
+            shift_date: virtualShift.date,
             start_time: value.start_time,
             end_time: value.end_time,
           },
           userSettings,
           presetRules
         );
-        result[ghost.date as ISODate] = computed.gross;
+        result[virtualShift.date as ISODate] = computed.gross;
       } catch (err) {
-        console.error(`Failed to compute earnings for ghost ${ghost.date}:`, err);
+        console.error(`Failed to compute earnings for virtual shift ${virtualShift.date}:`, err);
       }
     }
 
@@ -125,13 +125,13 @@ export function RecurringCalendar({
     }
 
     return result;
-  }, [ghosts, value.start_time, value.end_time, value.selected_days, userSettings, presetRules]);
+  }, [virtualShifts, value.start_time, value.end_time, value.selected_days, userSettings, presetRules]);
 
   // Detect conflicts
   const conflicts = useMemo(() => {
-    if (ghosts.length === 0) return new Map<string, ExistingShift[]>();
-    return detectConflicts(ghosts, existingShifts, value.start_time, value.end_time);
-  }, [ghosts, existingShifts, value.start_time, value.end_time]);
+    if (virtualShifts.length === 0) return new Map<string, ExistingShift[]>();
+    return detectConflicts(virtualShifts, existingShifts, value.start_time, value.end_time);
+  }, [virtualShifts, existingShifts, value.start_time, value.end_time]);
 
   const conflictDates = useMemo(() => buildConflictDateSet(conflicts) as Set<ISODate>, [conflicts]);
 
@@ -147,13 +147,13 @@ export function RecurringCalendar({
     return Object.values(value.selected_days).map((iso) => new Date(iso + 'T00:00:00Z'));
   }, [value.selected_days]);
 
-  // Has shift dates = anchors + ghosts
+  // Has shift dates = anchors + virtual shifts
   const hasShiftDates = useMemo<Set<ISODate>>(() => {
     const set = new Set<ISODate>();
     Object.values(value.selected_days).forEach((iso) => set.add(iso as ISODate));
-    ghosts.forEach((g) => set.add(g.date as ISODate));
+    virtualShifts.forEach((vs) => set.add(vs.date as ISODate));
     return set;
-  }, [value.selected_days, ghosts]);
+  }, [value.selected_days, virtualShifts]);
 
   // Handle date selection
   const handleDateSelect = useCallback(
@@ -242,7 +242,7 @@ export function RecurringCalendar({
         onSelectedChange={handleDateSelect}
         hasShiftDates={hasShiftDates}
         conflictDates={conflictDates}
-        previewEarnings={ghostEarnings}
+        previewEarnings={virtualShiftEarnings}
         _hideCaptionNav={false}
         disabledOutsideMonth={true}
       />

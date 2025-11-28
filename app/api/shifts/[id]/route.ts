@@ -19,7 +19,7 @@ import { deleteShift } from "@/app/[locale]/(app)/shifts/_actions/deleteShift";
  *   shift_date: string, // ISO date (YYYY-MM-DD)
  *   start: string,      // Start time (HH:mm)
  *   end: string,        // End time (HH:mm)
- *   recurring_id?: string  // Optional recurring ID (for ghost shifts)
+ *   recurring_id?: string  // Optional recurring ID (for virtual shifts)
  * }
  */
 export async function PATCH(
@@ -92,9 +92,9 @@ export async function PATCH(
  * DELETE /api/shifts/[id]
  * Delete a shift
  *
- * Query params (optional for recurring ghosts):
- * - recurringId: string   // Recurring ID if deleting a ghost
- * - shiftDate: string  // ISO date if deleting a ghost
+ * Query params (optional for recurring virtual shifts):
+ * - recurringId: string   // Recurring ID if deleting a virtual shift
+ * - shiftDate: string  // ISO date if deleting a virtual shift
  */
 export async function DELETE(
   request: NextRequest,

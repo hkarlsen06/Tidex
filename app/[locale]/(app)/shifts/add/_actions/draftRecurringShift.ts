@@ -5,7 +5,7 @@ import type { RecurringDraft } from '@/lib/recurring/types';
 import { detectAllRecurringConflicts } from '@/lib/recurring/conflicts';
 import type { ExistingShift } from '@/lib/recurring/conflicts';
 import { verifySession } from '@/data-access/auth';
-import { generateGhostsForMonth, resolveEndWindow } from '@/lib/recurring/utils';
+import { generateVirtualShiftsForMonth, resolveEndWindow } from '@/lib/recurring/utils';
 
 /**
  * Draft and validate a recurring shift pattern (read-only, no DB writes)
@@ -68,12 +68,12 @@ export async function draftRecurringShift(draft: RecurringDraft): Promise<{
   );
 
   // Calculate projected shift count
-  // Generate ghosts for all months in the recurring shift window
+  // Generate virtual shifts for all months in the recurring shift window
   const window = draft.end_condition !== null
     ? resolveEndWindow(draft.selected_days, draft.end_condition)
     : resolveEndWindow(draft.selected_days, null, 6); // 6 months default for infinite
 
-  let totalGhosts = 0;
+  let totalVirtualShifts = 0;
   if (window) {
     const startYear = window.minMonth.getUTCFullYear();
     const startMonth = window.minMonth.getUTCMonth() + 1;
@@ -85,8 +85,8 @@ export async function draftRecurringShift(draft: RecurringDraft): Promise<{
       const monthEnd = (year === endYear) ? endMonth : 12;
 
       for (let month = monthStart; month <= monthEnd; month++) {
-        const ghosts = generateGhostsForMonth({ year, month }, draft);
-        totalGhosts += ghosts.length;
+        const virtualShifts = generateVirtualShiftsForMonth({ year, month }, draft);
+        totalVirtualShifts += virtualShifts.length;
       }
     }
   }
@@ -94,6 +94,6 @@ export async function draftRecurringShift(draft: RecurringDraft): Promise<{
   return {
     conflictDates: conflictDates.sort(),
     conflictCount: conflictDates.length,
-    projectedShiftCount: totalGhosts,
+    projectedShiftCount: totalVirtualShifts,
   };
 }

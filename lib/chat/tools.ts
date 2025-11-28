@@ -593,7 +593,7 @@ The recurring shift will be created and shifts generated according to the patter
 Actions:
 - LIST: action="list" - Returns all recurring shifts with IDs, patterns, and schedules (weekdays array format)
 - UPDATE: action="update", recurringId, plus fields to change (weekdays, times, frequency, endType)
-- DELETE: action="delete", recurringId - Removes the recurring shift and ALL its virtual/ghost shifts disappear immediately
+- DELETE: action="delete", recurringId - Removes the recurring shift and ALL its virtual shifts disappear immediately
 
 Workflow: Always LIST first to get recurring shift IDs before update/delete.
 

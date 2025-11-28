@@ -9,7 +9,7 @@ import {
   type WageSnapshot,
 } from "@/lib/payroll";
 import { logger } from "@/lib/logger";
-import { generateGhostsForMonth } from "@/lib/recurring/utils";
+import { generateVirtualShiftsForMonth } from "@/lib/recurring/utils";
 import type { RecurringShiftRow } from "@/lib/recurring/types";
 import { cleanTime } from "@/lib/time-utils";
 
@@ -197,11 +197,11 @@ export async function GET(request: NextRequest) {
     };
   });
 
-  // Generate and compute ghost shifts from recurring shifts
-  const ghostShifts = [];
+  // Generate and compute virtual shifts from recurring shifts
+  const virtualShifts = [];
 
   if (recurringShifts && recurringShifts.length > 0) {
-    // Determine date range for ghost generation
+    // Determine date range for virtual shift generation
     let startDate: Date;
     let endDate: Date;
 
@@ -221,7 +221,7 @@ export async function GET(request: NextRequest) {
     const endYear = endDate.getUTCFullYear();
     const endMonth = endDate.getUTCMonth() + 1;
 
-    // Generate ghosts for each recurring shift
+    // Generate virtual shifts for each recurring shift
     for (const recurring of recurringShifts as RecurringShiftRow[]) {
       let currentYear = startYear;
       let currentMonth = startMonth;
@@ -230,7 +230,7 @@ export async function GET(request: NextRequest) {
         currentYear < endYear ||
         (currentYear === endYear && currentMonth <= endMonth)
       ) {
-        const ghosts = generateGhostsForMonth({ year: currentYear, month: currentMonth }, {
+        const generatedVirtualShifts = generateVirtualShiftsForMonth({ year: currentYear, month: currentMonth }, {
           start_time: cleanTime(recurring.start_time),
           end_time: cleanTime(recurring.end_time),
           repeat_interval_weeks: recurring.repeat_interval_weeks as 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8,
@@ -239,33 +239,33 @@ export async function GET(request: NextRequest) {
           exclusions: recurring.exclusions || []
         });
 
-        // Compute each ghost
-        for (const ghost of ghosts) {
+        // Compute each virtual shift
+        for (const virtualShift of generatedVirtualShifts) {
           try {
-            const snapshot = getSnapshotForDate(ghost.date);
-            const ghostShiftRow: ShiftRow = {
-              id: `ghost-${recurring.id}-${ghost.date}`,
+            const snapshot = getSnapshotForDate(virtualShift.date);
+            const virtualShiftRow: ShiftRow = {
+              id: `virtual-${recurring.id}-${virtualShift.date}`,
               user_id: user.id,
-              shift_date: ghost.date,
+              shift_date: virtualShift.date,
               start_time: cleanTime(recurring.start_time),
               end_time: cleanTime(recurring.end_time),
               recurring_id: recurring.id,
-              recurring_anchor_weekday: ghost.weekday
+              recurring_anchor_weekday: virtualShift.weekday
             };
 
             const computed = computeShift(
-              ghostShiftRow,
+              virtualShiftRow,
               settings,
               PRESET_SUPPLEMENT_RULES,
               snapshot
             );
 
-            ghostShifts.push({
-              id: ghostShiftRow.id,
-              date: ghost.date,
+            virtualShifts.push({
+              id: virtualShiftRow.id,
+              date: virtualShift.date,
               startTime: cleanTime(recurring.start_time),
               endTime: cleanTime(recurring.end_time),
-              type: getShiftType(ghost.date),
+              type: getShiftType(virtualShift.date),
               recurringId: recurring.id,
               calc: {
                 hours: computed.paidHours,
@@ -275,7 +275,7 @@ export async function GET(request: NextRequest) {
               },
             });
           } catch (err) {
-            logger.error(`[data export] Failed to compute ghost for recurring shift ${recurring.id} on ${ghost.date}:`, err);
+            logger.error(`[data export] Failed to compute virtual shift for recurring shift ${recurring.id} on ${virtualShift.date}:`, err);
           }
         }
 
@@ -289,8 +289,8 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // Merge regular shifts and ghost shifts, then sort by date and time
-  const allShifts = [...computedShifts, ...ghostShifts].sort((a, b) => {
+  // Merge regular shifts and virtual shifts, then sort by date and time
+  const allShifts = [...computedShifts, ...virtualShifts].sort((a, b) => {
     const dateCompare = a.date.localeCompare(b.date);
     if (dateCompare !== 0) return dateCompare;
     return a.startTime.localeCompare(b.startTime);
