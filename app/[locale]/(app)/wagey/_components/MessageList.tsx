@@ -67,6 +67,71 @@ const formatContent = (text: string | null | undefined) => {
   return result;
 };
 
+/**
+ * Format inline text with bold (**text**) and italic (*text*) support.
+ * Handles both formats, prioritizing bold (double asterisk) over italic (single asterisk).
+ */
+const formatInlineText = (text: string, keyPrefix: string): ReactNode[] => {
+  // Match bold (**text**) or italic (*text*) - bold takes priority
+  // Bold: ** followed by non-empty content (not starting with space) followed by **
+  // Italic: * followed by non-empty content (not starting/ending with space, not another *) followed by *
+  const inlineRegex = /(\*\*[^*]+?\*\*|\*(?!\s)([^*]+?)(?<!\s)\*)/g;
+
+  const result: ReactNode[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = inlineRegex.exec(text)) !== null) {
+    // Add text before this match
+    if (match.index > lastIndex) {
+      result.push(
+        <span key={`${keyPrefix}-text-${lastIndex}`}>
+          {text.slice(lastIndex, match.index)}
+        </span>
+      );
+    }
+
+    const matched = match[0];
+    const isBold = matched.startsWith("**") && matched.endsWith("**");
+
+    if (isBold) {
+      // Bold: remove ** from both ends
+      const content = matched.slice(2, -2);
+      result.push(
+        <strong key={`${keyPrefix}-bold-${match.index}`} className="font-semibold">
+          {content}
+        </strong>
+      );
+    } else {
+      // Italic: remove * from both ends
+      const content = matched.slice(1, -1);
+      result.push(
+        <em key={`${keyPrefix}-italic-${match.index}`} className="italic">
+          {content}
+        </em>
+      );
+    }
+
+    lastIndex = match.index + matched.length;
+  }
+
+  // Add remaining text after last match
+  if (lastIndex < text.length) {
+    result.push(
+      <span key={`${keyPrefix}-text-${lastIndex}`}>
+        {text.slice(lastIndex)}
+      </span>
+    );
+  }
+
+  // If no matches, return the original text
+  if (result.length === 0) {
+    return [<span key={`${keyPrefix}-plain`}>{text}</span>];
+  }
+
+  return result;
+};
+
 const formatRegularText = (text: string, keyPrefix: string): ReactNode[] => {
   // Split by lines to handle headings
   const lines = text.split("\n");
@@ -79,20 +144,8 @@ const formatRegularText = (text: string, keyPrefix: string): ReactNode[] => {
       const [, hashes, headingText] = headingMatch;
       const level = hashes.length;
 
-      // Format the heading text (may contain bold)
-      const formattedHeading = headingText.split(/(\*\*[^*]+?\*\*)/g).map((part, index) => {
-        const isBold = part.startsWith("**") && part.endsWith("**") && part.length > 4;
-        const content = isBold ? part.slice(2, -2) : part;
-
-        return (
-          <span
-            key={`${keyPrefix}-${lineIndex}-${index}`}
-            className={isBold ? "font-semibold text-current" : undefined}
-          >
-            {content}
-          </span>
-        );
-      });
+      // Format the heading text (may contain bold/italic)
+      const formattedHeading = formatInlineText(headingText, `${keyPrefix}-${lineIndex}-h`);
 
       // Render heading with appropriate styling
       if (level === 1) {
@@ -122,24 +175,12 @@ const formatRegularText = (text: string, keyPrefix: string): ReactNode[] => {
       }
     }
 
-    // Not a heading, handle as regular line with bold support
-    const parts = line.split(/(\*\*[^*]+?\*\*)/g).map((part, index) => {
-      const isBold = part.startsWith("**") && part.endsWith("**") && part.length > 4;
-      const content = isBold ? part.slice(2, -2) : part;
-
-      return (
-        <span
-          key={`${keyPrefix}-${lineIndex}-${index}`}
-          className={isBold ? "font-semibold text-current" : undefined}
-        >
-          {content}
-        </span>
-      );
-    });
+    // Not a heading, handle as regular line with bold/italic support
+    const formattedLine = formatInlineText(line, `${keyPrefix}-${lineIndex}`);
 
     return (
       <span key={`${keyPrefix}-${lineIndex}`}>
-        {parts}
+        {formattedLine}
         {lineIndex < lines.length - 1 && "\n"}
       </span>
     );

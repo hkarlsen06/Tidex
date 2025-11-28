@@ -463,12 +463,12 @@ async function executeManageShift(
 }
 
 /**
- * Get localized weekday abbreviation from ISO date
+ * Get English weekday abbreviation from ISO date (for AI consumption)
  */
-function getWeekdayAbbr(isoDate: string, tr: ToolResultTranslations): string {
+function getWeekdayAbbr(isoDate: string, _tr: ToolResultTranslations): string {
   const date = new Date(isoDate + "T12:00:00"); // Noon to avoid timezone issues
-  const weekdayKeys = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const;
-  return tr.weekdays[weekdayKeys[date.getDay()]];
+  const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  return weekdays[date.getDay()];
 }
 
 /**
@@ -594,16 +594,32 @@ async function executeQueryShifts(
     // Get user's currency
     const currency = await getUserCurrency(userId);
 
+    // Check if user has tax deduction enabled
+    const hasTaxDeduction = result.settings.tax_deduction_enabled && result.settings.tax_percentage;
+
     // Format shifts for AI - compact format to reduce tokens
-    const shiftsFormatted = limitedShifts.map((shift) => ({
-      id: toShortId(shift.id),
-      date: shift.shift_date,
-      day: getWeekdayAbbr(shift.shift_date, tr),
-      start: shift.start_time,
-      end: shift.end_time,
-      hours: Number(shift.computed.paidHours.toFixed(2)),
-      gross: Number(shift.computed.gross.toFixed(2)),
-    }));
+    const shiftsFormatted = limitedShifts.map((shift) => {
+      const gross = Number(shift.computed.gross.toFixed(2));
+      const base = {
+        id: toShortId(shift.id),
+        date: shift.shift_date,
+        day: getWeekdayAbbr(shift.shift_date, tr),
+        start: shift.start_time,
+        end: shift.end_time,
+        hours: Number(shift.computed.paidHours.toFixed(2)),
+        gross,
+      };
+
+      // Only include net if tax deduction is enabled
+      if (hasTaxDeduction) {
+        return {
+          ...base,
+          net: Number(calculateNetPay(shift.computed.gross, result.settings, shift.shift_date).toFixed(2)),
+        };
+      }
+
+      return base;
+    });
 
     // Calculate summary statistics for the filtered shifts
     const totalHours = limitedShifts.reduce((sum, s) => sum + s.computed.paidHours, 0);

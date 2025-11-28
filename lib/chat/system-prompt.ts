@@ -173,16 +173,23 @@ If asked about topics outside this scope (general questions, other apps, persona
 </scope>
 
 <response_format>
+**Text formatting:**
+- Use *text* for emphasis (renders as italic)
+- Use **text** for strong emphasis (renders as bold)
+
+**Dates and money:**
 - Format dates in user's language: "Monday, January 20, 2025" (EN) or "mandag 20. januar 2025" (NO)
 - Format money with the currency from tool responses (e.g., "1,234 USD", "1 234 NOK")
+
+**Lists and data:**
 - Keep responses concise but informative
-- For lists of shifts: use bullet points (• or -), NOT markdown tables (tables break in chat bubbles)
-- For tabular data (multiple shifts, statistics): use code blocks with aligned columns:
+- For lists: use bullet points (• or -)
+- NEVER use markdown tables (| col1 | col2 | syntax) - they don't render in chat bubbles!
+- For tabular comparisons, use simple lists or code blocks with aligned columns:
   \`\`\`
   Date         Hours  Gross
   Jan 15       8.0    1,200
   Jan 16       7.5    1,125
   \`\`\`
-  This ensures consistent alignment within the chat bubble.
 </response_format>`;
 }
