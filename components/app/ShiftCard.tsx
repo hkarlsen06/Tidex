@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import type React from "react";
 import { ShiftWithComputations } from "@/lib/payroll";
 import { Card, CardHeader } from "@/components/app/Card";
 import { cn } from "@/lib/cn";
@@ -64,24 +64,6 @@ export function ShiftCard({ shift, onClick, isToday = false, progress }: ShiftCa
 
   const isActive = typeof progress === 'number' && progress >= 0 && progress <= 100;
 
-  // Animated progress state: starts at 0 and animates to actual progress
-  const [animatedProgress, setAnimatedProgress] = useState(0);
-
-  useEffect(() => {
-    if (!isActive) {
-      setAnimatedProgress(0);
-      return;
-    }
-
-    // Use requestAnimationFrame to ensure we start from 0 before animating
-    // This allows the CSS transition to animate smoothly from 0 to the actual value
-    const frame = requestAnimationFrame(() => {
-      setAnimatedProgress(progress ?? 0);
-    });
-
-    return () => cancelAnimationFrame(frame);
-  }, [isActive, progress]);
-
   return (
     <Card
       className={cn(
@@ -93,11 +75,11 @@ export function ShiftCard({ shift, onClick, isToday = false, progress }: ShiftCa
       role={onClick ? "button" : undefined}
       tabIndex={onClick ? 0 : undefined}
     >
-      {/* Progress bar background for active shifts - animates from 0 to current progress */}
+      {/* Progress bar background for active shifts - uses CSS animation to animate from 0 to current progress */}
       {isActive && (
         <div
-          className="absolute inset-0 bg-brand-highlight/10 transition-[width] duration-1000 ease-linear"
-          style={{ width: `${animatedProgress}%` }}
+          className="absolute inset-0 bg-brand-highlight/10 animate-progress-grow"
+          style={{ '--progress-target': `${progress}%` } as React.CSSProperties}
           aria-hidden="true"
         />
       )}

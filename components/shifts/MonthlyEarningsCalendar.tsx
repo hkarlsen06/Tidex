@@ -201,10 +201,6 @@ export function MonthlyEarningsCalendar({
   );
 
   const { totalEarnings, netEarnings } = useMemo(() => {
-    // Calculate payout month for half tax check (income earned in month is paid out next month)
-    const targetMonth = month.getMonth() + 1;
-    const payoutMonth = targetMonth === 12 ? 1 : targetMonth + 1;
-
     const { gross, net } = getMonthlyTotals({
       shifts: monthlyShifts,
       year: month.getFullYear(),

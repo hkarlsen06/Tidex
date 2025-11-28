@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useLayoutEffect } from 'react';
+import React, { useEffect, useRef, useLayoutEffect, useCallback } from 'react';
 import { ArrowDown, ArrowUp } from 'lucide-react';
 import { Card, CardContent } from '@/components/app/Card';
 import { useTranslations } from '@/lib/i18n/client';
@@ -21,97 +21,93 @@ const MAX_FONT_SIZE_PX = 72;
 // Minimum font size in pixels (fallback floor)
 const MIN_FONT_SIZE_PX = 28;
 
-// Hook to auto-scale font size to fit container width
+/**
+ * Helper to calculate optimal font size via binary search
+ * Measures text width against container width
+ */
+function calculateOptimalFontSize(
+  container: HTMLElement,
+  text: string,
+  maxFontSize: number,
+  minFontSize: number
+): number {
+  const measureEl = document.createElement('span');
+  measureEl.style.cssText = `
+    position: absolute;
+    visibility: hidden;
+    white-space: nowrap;
+    font-weight: 700;
+    font-family: inherit;
+  `;
+  measureEl.textContent = text;
+  document.body.appendChild(measureEl);
+
+  const containerWidth = container.offsetWidth;
+  let low = minFontSize;
+  let high = maxFontSize;
+  let optimal = minFontSize;
+
+  while (low <= high) {
+    const mid = Math.floor((low + high) / 2);
+    measureEl.style.fontSize = `${mid}px`;
+
+    if (measureEl.offsetWidth <= containerWidth) {
+      optimal = mid;
+      low = mid + 1;
+    } else {
+      high = mid - 1;
+    }
+  }
+
+  document.body.removeChild(measureEl);
+  return optimal;
+}
+
+/**
+ * Hook to auto-scale font size to fit container width.
+ * Uses direct DOM manipulation to avoid React setState warnings in effects.
+ * Returns refs that must be attached to container and text elements.
+ */
 function useAutoScaleFont(
   text: string,
   maxFontSize: number = MAX_FONT_SIZE_PX,
   minFontSize: number = MIN_FONT_SIZE_PX
-): { containerRef: React.RefObject<HTMLDivElement | null>; fontSize: number } {
+): {
+  containerRef: React.RefObject<HTMLDivElement | null>;
+  textRef: React.RefObject<HTMLSpanElement | null>;
+} {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const [fontSize, setFontSize] = useState(maxFontSize);
+  const textRef = useRef<HTMLSpanElement | null>(null);
 
-  useLayoutEffect(() => {
+  // Function to update font size directly on the DOM element
+  const updateFontSize = useCallback(() => {
     const container = containerRef.current;
-    if (!container) return;
+    const textEl = textRef.current;
+    if (!container || !textEl) return;
 
-    // Create a hidden measurement element
-    const measureEl = document.createElement('span');
-    measureEl.style.cssText = `
-      position: absolute;
-      visibility: hidden;
-      white-space: nowrap;
-      font-weight: 700;
-      font-family: inherit;
-    `;
-    measureEl.textContent = text;
-    document.body.appendChild(measureEl);
-
-    // Binary search for optimal font size
-    const containerWidth = container.offsetWidth;
-    let low = minFontSize;
-    let high = maxFontSize;
-    let optimal = minFontSize;
-
-    while (low <= high) {
-      const mid = Math.floor((low + high) / 2);
-      measureEl.style.fontSize = `${mid}px`;
-
-      if (measureEl.offsetWidth <= containerWidth) {
-        optimal = mid;
-        low = mid + 1;
-      } else {
-        high = mid - 1;
-      }
-    }
-
-    document.body.removeChild(measureEl);
-    setFontSize(optimal);
+    const optimal = calculateOptimalFontSize(container, text, maxFontSize, minFontSize);
+    textEl.style.fontSize = `${optimal}px`;
   }, [text, maxFontSize, minFontSize]);
 
-  // Also handle resize
+  // Initial measurement on mount and when text changes
+  useLayoutEffect(() => {
+    updateFontSize();
+  }, [updateFontSize]);
+
+  // Handle resize via ResizeObserver
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
     const resizeObserver = new ResizeObserver(() => {
-      // Create a hidden measurement element
-      const measureEl = document.createElement('span');
-      measureEl.style.cssText = `
-        position: absolute;
-        visibility: hidden;
-        white-space: nowrap;
-        font-weight: 700;
-        font-family: inherit;
-      `;
-      measureEl.textContent = text;
-      document.body.appendChild(measureEl);
-
-      const containerWidth = container.offsetWidth;
-      let low = minFontSize;
-      let high = maxFontSize;
-      let optimal = minFontSize;
-
-      while (low <= high) {
-        const mid = Math.floor((low + high) / 2);
-        measureEl.style.fontSize = `${mid}px`;
-
-        if (measureEl.offsetWidth <= containerWidth) {
-          optimal = mid;
-          low = mid + 1;
-        } else {
-          high = mid - 1;
-        }
-      }
-
-      document.body.removeChild(measureEl);
-      setFontSize(optimal);
+      updateFontSize();
     });
 
     resizeObserver.observe(container);
     return () => resizeObserver.disconnect();
-  }, [text, maxFontSize, minFontSize]);
+  }, [updateFontSize]);
 
-  return { containerRef, fontSize };
+  return { containerRef, textRef };
 }
 
 // Helper to get animation classes based on direction
@@ -170,7 +166,7 @@ export const TotalCard: React.FC<TotalCardProps> = ({
 
   // Auto-scale font size for the total amount
   const displayTotal = useZeroPlaceholder && total === '0 kr' ? '---' : total;
-  const { containerRef: totalContainerRef, fontSize: totalFontSize } = useAutoScaleFont(displayTotal);
+  const { containerRef: totalContainerRef, textRef: totalTextRef } = useAutoScaleFont(displayTotal);
 
   // Determine what to show in subtitle:
   // - If projected equals earned (no future shifts), show gross before tax (if tax enabled)
@@ -237,12 +233,17 @@ export const TotalCard: React.FC<TotalCardProps> = ({
             <div
               ref={totalContainerRef}
               key={`total-${total}`}
-              className={`mt-3 font-bold text-brand-highlight whitespace-nowrap ${getAnimationClasses(animationDirection)}`}
-              style={{
-                fontSize: `${totalFontSize}px`,
-                lineHeight: 1.1,
-              }}
-            >{displayTotal}</div>
+              className={`mt-3 whitespace-nowrap ${getAnimationClasses(animationDirection)}`}
+              style={{ lineHeight: 1.1 }}
+            >
+              <span
+                ref={totalTextRef}
+                className="font-bold text-brand-highlight"
+                style={{ fontSize: `${MAX_FONT_SIZE_PX}px` }}
+              >
+                {displayTotal}
+              </span>
+            </div>
             {shouldShowSubtitle && (
               <div
                 key={`subtitle-${total}`}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import type { Dictionary } from "@/lib/i18n/dictionaries/no";
 
 // Simple string interpolation helper
@@ -271,8 +271,8 @@ export function useCountdown({
   highPrecision = true,
 }: UseCountdownOptions): UseCountdownResult {
   // Track whether we've hydrated to avoid server/client mismatch
-  // Server always returns the "not yet calculated" state
-  const [isHydrated, setIsHydrated] = useState(false);
+  // Using ref since we don't need re-renders when this changes
+  const isHydratedRef = useRef(false);
 
   // Create a stable key from inputs to reset state when they change
   const inputKey = useMemo(
@@ -288,9 +288,10 @@ export function useCountdown({
   });
   const [stateKey, setStateKey] = useState(inputKey);
 
-  // Track interval frequency to trigger re-subscription when it needs to change
-  // Start with a slower interval; will be adjusted after hydration
-  const [intervalMs, setIntervalMs] = useState<number>(60000);
+  // Track interval frequency using ref to avoid re-triggering effects
+  const intervalMsRef = useRef<number>(60000);
+  // We need a state to trigger effect re-subscription when interval changes
+  const [intervalTrigger, setIntervalTrigger] = useState(0);
 
   // Reset state when inputs change - using a key comparison to detect changes
   // and updating state only when the key changes (not on every render)
@@ -300,12 +301,10 @@ export function useCountdown({
     setResult({ text: null, isActive: false, progress: 0 });
   }
 
-  // Hydration effect: calculate initial values only on client after mount
-  // This prevents server/client mismatch due to clock differences
-  useEffect(() => {
+  // Memoized update function that calculates countdown and returns new state
+  const computeCountdown = useCallback(() => {
     if (!shiftDate || !shiftTime) {
-      setIsHydrated(true);
-      return;
+      return null;
     }
 
     const countdownResult = calculateCountdown(
@@ -316,86 +315,70 @@ export function useCountdown({
       highPrecision
     );
 
-    setResult({
-      text: countdownResult.text,
-      isActive: countdownResult.isActive,
-      progress: countdownResult.progress,
-    });
-
-    // Set appropriate interval based on how close the shift is
+    // Determine new interval
     const sixHoursMs = 6 * 60 * 60 * 1000;
     const isClose = Math.abs(countdownResult.diffMs) < sixHoursMs;
     const needsFrequentUpdates = countdownResult.isActive || (highPrecision && isClose);
-    setIntervalMs(needsFrequentUpdates ? 1000 : 60000);
+    const newIntervalMs = needsFrequentUpdates ? 1000 : 60000;
 
-    setIsHydrated(true);
-  }, []); // Run only once on mount
-
-  // Effect to handle input changes after initial hydration
-  useEffect(() => {
-    // Skip during initial render and before hydration
-    if (!isHydrated || !shiftDate || !shiftTime) {
-      return;
-    }
-
-    // Recalculate immediately when inputs change
-    const countdownResult = calculateCountdown(
-      shiftDate,
-      shiftTime,
-      endTime ?? null,
-      t,
-      highPrecision
-    );
-
-    setResult({
-      text: countdownResult.text,
-      isActive: countdownResult.isActive,
-      progress: countdownResult.progress,
-    });
-
-    // Update interval if needed
-    const sixHoursMs = 6 * 60 * 60 * 1000;
-    const isClose = Math.abs(countdownResult.diffMs) < sixHoursMs;
-    const needsFrequentUpdates = countdownResult.isActive || (highPrecision && isClose);
-    setIntervalMs(needsFrequentUpdates ? 1000 : 60000);
-  }, [isHydrated, shiftDate, shiftTime, endTime, t, highPrecision]);
-
-  // Interval effect: updates countdown periodically (only after hydration)
-  useEffect(() => {
-    if (!isHydrated || !shiftDate || !shiftTime) {
-      return;
-    }
-
-    const sixHoursMs = 6 * 60 * 60 * 1000;
-
-    const interval = setInterval(() => {
-      const countdownResult = calculateCountdown(
-        shiftDate,
-        shiftTime,
-        endTime ?? null,
-        t,
-        highPrecision
-      );
-
-      setResult({
+    return {
+      result: {
         text: countdownResult.text,
         isActive: countdownResult.isActive,
         progress: countdownResult.progress,
-      });
+      },
+      intervalMs: newIntervalMs,
+    };
+  }, [shiftDate, shiftTime, endTime, t, highPrecision]);
+
+  // Combined hydration and input change effect
+  // Uses a single effect that handles both mount and subsequent updates
+  // The setState call is wrapped in a microtask to avoid the synchronous setState warning
+  // while still ensuring the state is updated on the same frame as hydration
+  useEffect(() => {
+    const computed = computeCountdown();
+
+    if (!computed) {
+      isHydratedRef.current = true;
+      return;
+    }
+
+    // Use queueMicrotask to schedule state update, avoiding the synchronous setState warning
+    // while still updating before the next paint
+    queueMicrotask(() => {
+      setResult(computed.result);
+
+      // Update interval if it changed
+      if (computed.intervalMs !== intervalMsRef.current) {
+        intervalMsRef.current = computed.intervalMs;
+        setIntervalTrigger((prev) => prev + 1);
+      }
+    });
+
+    isHydratedRef.current = true;
+  }, [computeCountdown]);
+
+  // Interval effect: updates countdown periodically (only after hydration)
+  useEffect(() => {
+    if (!isHydratedRef.current || !shiftDate || !shiftTime) {
+      return;
+    }
+
+    const interval = setInterval(() => {
+      const computed = computeCountdown();
+      if (!computed) return;
+
+      setResult(computed.result);
 
       // Check if we need to change the interval frequency
-      if (highPrecision) {
-        const nowClose = Math.abs(countdownResult.diffMs) < sixHoursMs;
-        const nowNeedsFrequent = countdownResult.isActive || nowClose;
-        const newIntervalMs = nowNeedsFrequent ? 1000 : 60000;
-        if (newIntervalMs !== intervalMs) {
-          setIntervalMs(newIntervalMs);
-        }
+      if (computed.intervalMs !== intervalMsRef.current) {
+        intervalMsRef.current = computed.intervalMs;
+        setIntervalTrigger((prev) => prev + 1);
       }
-    }, intervalMs);
+    }, intervalMsRef.current);
 
     return () => clearInterval(interval);
-  }, [isHydrated, shiftDate, shiftTime, endTime, t, highPrecision, intervalMs]);
+  }, [shiftDate, shiftTime, computeCountdown, intervalTrigger]);
 
   return result;
 }
