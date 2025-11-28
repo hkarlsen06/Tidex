@@ -15,6 +15,7 @@ import { useTranslations } from "@/lib/i18n/client";
 import { useParams } from "next/navigation";
 import { formatNumber } from "@/lib/formatters";
 import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
+import { ScrollablePageWrapper } from "@/components/app/ScrollablePageWrapper";
 
 /**
  * Chart data type - subset of StatsData used for chart components
@@ -449,7 +450,7 @@ export function StatsContent({ data }: StatsContentProps) {
         : "";
 
   return (
-    <>
+    <ScrollablePageWrapper routeKey="stats" applyContainer={false}>
       {/* Loading indicator - subtle spinner next to month picker */}
       {isLoadingStats && (
         <div className="fixed top-4 right-4 z-50">
@@ -459,7 +460,7 @@ export function StatsContent({ data }: StatsContentProps) {
 
       <div
         ref={swipeContainerRef}
-        className="w-full pb-6 pt-2 flex flex-col space-y-6 md:grid md:auto-rows-max md:gap-6 md:space-y-0"
+        className="w-full pb-6 pt-2 px-4 flex flex-col space-y-6 md:grid md:auto-rows-max md:gap-6 md:space-y-0"
         style={{
           gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 400px), 1fr))'
         }}
@@ -686,6 +687,6 @@ export function StatsContent({ data }: StatsContentProps) {
         )}
       </div>
       </div>
-    </>
+    </ScrollablePageWrapper>
   );
 }

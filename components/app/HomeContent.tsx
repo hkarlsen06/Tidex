@@ -17,6 +17,7 @@ import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
 import { deleteShift } from "@/app/[locale]/(app)/shifts/_actions/deleteShift";
 import { adjustPayrollDate } from "@/lib/payroll/adjust-payroll-date";
 import { useSwipe } from "@/lib/hooks/useSwipe";
+import { CenteredPageWrapper } from "./CenteredPageWrapper";
 
 type HomeContentProps = {
   shifts: ShiftWithComputations[];
@@ -480,7 +481,7 @@ export function HomeContent({ shifts: initialShifts, settings }: HomeContentProp
   });
 
   return (
-    <>
+    <CenteredPageWrapper routeKey="home">
       <div ref={swipeContainerRef} className="flex items-center">
         <div className="flex flex-col gap-6 w-full">
           {payrollDay && (
@@ -595,6 +596,6 @@ export function HomeContent({ shifts: initialShifts, settings }: HomeContentProp
           });
         }}
       />
-    </>
+    </CenteredPageWrapper>
   );
 }

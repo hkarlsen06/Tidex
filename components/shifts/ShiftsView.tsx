@@ -42,6 +42,7 @@ import { getDateFormatter } from "@/lib/i18n/locale";
 import { useOnlineStatus } from "@/lib/hooks/useOnlineStatus";
 import { useCountdown } from "@/lib/hooks/useCountdown";
 import { TodayPlaceholderCard } from "./TodayPlaceholderCard";
+import { ScrollablePageWrapper } from "@/components/app/ScrollablePageWrapper";
 
 // Lazy load the calendar to reduce initial bundle size (~40KB savings)
 const MonthlyEarningsCalendar = dynamic(
@@ -1278,7 +1279,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
     : t.pages.shifts.list.emptyDescription;
 
   return (
-    <>
+    <ScrollablePageWrapper routeKey="shifts" applyContainer={false}>
     {/* Queued Shift Notification */}
     {queuedNotification && (
       <div className="fixed top-20 left-1/2 -translate-x-1/2 z-40 animate-in slide-in-from-top-2 fade-in">
@@ -1310,9 +1311,9 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
 
     {/* Mobile/Tablet: vertical stack. Desktop: side-by-side, break out of parent container */}
     <div className="flex w-full flex-col lg:relative lg:left-1/2 lg:right-1/2 lg:-ml-[50vw] lg:-mr-[50vw] lg:w-screen lg:flex-row lg:gap-0 lg:px-0 lg:items-start lg:pt-6">
-      {/* Calendar Section - Left half of screen, centered within */}
-      <div className="flex items-center justify-center min-h-[calc(100dvh-3.75rem-env(safe-area-inset-top))] -mx-4 pb-[calc(5rem+env(safe-area-inset-bottom))] md:min-h-[calc(100dvh-5rem)] md:pb-20 lg:min-h-0 lg:pb-0 lg:mx-0 lg:w-1/2 lg:shrink-0 lg:sticky lg:top-6 lg:justify-center">
-        <div className="w-full px-4 lg:px-0 lg:w-[480px]">
+      {/* Calendar Section - On mobile: takes full viewport height (minus header/navbar) and centers calendar */}
+      <div className="h-[calc(100dvh-3.5rem-5rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] flex flex-col justify-center px-4 shrink-0 lg:h-auto lg:w-1/2 lg:sticky lg:top-6 lg:justify-start lg:items-center lg:px-0">
+        <div className="w-full max-w-md md:max-w-lg lg:max-w-none lg:w-[480px]">
           <MonthlyEarningsCalendar
             shifts={shifts}
             month={selectedMonth}
@@ -1342,8 +1343,8 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
       </div>
 
       {/* Shifts List Section - Right half of screen, centered within */}
-      <div className="lg:w-1/2 lg:flex lg:justify-center">
-        <div ref={shiftsListRef} className="pb-10 lg:w-full lg:max-w-lg lg:overflow-y-auto lg:max-h-[calc(100vh-8rem)] lg:px-4">
+      <div className="px-4 lg:w-1/2 lg:flex lg:justify-center lg:px-0">
+        <div ref={shiftsListRef} className="pb-10 w-full max-w-md md:max-w-lg lg:max-w-lg lg:overflow-y-auto lg:max-h-[calc(100vh-8rem)] lg:px-4">
         {grouped.length === 0 ? (
           <Card className="text-center">
             <CardHeader>
@@ -1563,6 +1564,6 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
       userSettings={userSettings}
       presetRules={presetRules}
     />
-    </>
+    </ScrollablePageWrapper>
   );
 }
