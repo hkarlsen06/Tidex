@@ -256,6 +256,11 @@ Edge cases:
 
 Default behavior: Without parameters, returns shifts for the current week.
 
+Response includes:
+- data: Array of shifts with id, date, day, start, end, hours, gross
+- summary: Aggregated statistics (shiftCount, totalHours, totalGross, totalNet, avgHoursPerShift, avgGrossPerShift)
+- currency: User's selected currency
+
 Filters:
 - Date range: startDate and endDate (YYYY-MM-DD)
 - Time of day: minTime/maxTime filter by shift start time
@@ -265,7 +270,8 @@ Filters:
 Use cases:
 - Before update/delete: Query to get shift IDs
 - Finding specific shifts: Use filters to narrow down results
-- Analytics: Sort by earnings to find highest-paying shifts`,
+- Analytics: Sort by earnings to find highest-paying shifts
+- Period overview: Use summary for quick totals without separate calculate_wages call`,
     input_schema: {
       type: "object",
       properties: {
@@ -879,5 +885,13 @@ export type ToolResult = {
   success: boolean;
   message: string;
   data?: unknown;
+  summary?: {
+    shiftCount: number;
+    totalHours: number;
+    totalGross: number;
+    totalNet: number;
+    avgHoursPerShift: number;
+    avgGrossPerShift: number;
+  };
   currency?: string; // User's selected currency for earnings data
 };
