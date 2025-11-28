@@ -12,6 +12,8 @@ interface TotalCardProps {
   projectedTotal?: string;
   grossBeforeTax?: string;
   animationDirection?: 'next' | 'previous' | null;
+  subtitlePlaceholder?: string;
+  useZeroPlaceholder?: boolean;
 }
 
 // Maximum font size in pixels for the total amount
@@ -134,6 +136,8 @@ export const TotalCard: React.FC<TotalCardProps> = ({
   projectedTotal,
   grossBeforeTax,
   animationDirection = null,
+  subtitlePlaceholder,
+  useZeroPlaceholder = true,
 }) => {
   const { t } = useTranslations();
   const cardClasses = [
@@ -165,7 +169,7 @@ export const TotalCard: React.FC<TotalCardProps> = ({
     : undefined;
 
   // Auto-scale font size for the total amount
-  const displayTotal = total === '0 kr' ? '---' : total;
+  const displayTotal = useZeroPlaceholder && total === '0 kr' ? '---' : total;
   const { containerRef: totalContainerRef, fontSize: totalFontSize } = useAutoScaleFont(displayTotal);
 
   // Determine what to show in subtitle:
@@ -173,6 +177,25 @@ export const TotalCard: React.FC<TotalCardProps> = ({
   // - Otherwise show projected total for the whole month
   const hasFutureShifts = projectedTotal && projectedTotal !== total && projectedTotal !== '0 kr';
   const showGrossBeforeTax = !hasFutureShifts && grossBeforeTax && grossBeforeTax !== '0 kr' && grossBeforeTax !== total;
+
+  const subtitleContent = subtitlePlaceholder
+    ? (
+        <>{subtitlePlaceholder}</>
+      )
+    : hasFutureShifts
+      ? (
+        <>
+          <span className="font-semibold text-text-primary">{projectedTotal}</span> {t.components.totalCard.wholeMonth}
+        </>
+      )
+      : (
+        <>
+          <span className="font-semibold text-text-primary">{grossBeforeTax}</span> {t.components.totalCard.beforeTax}
+        </>
+      );
+
+  const shouldShowSubtitle =
+    Boolean(subtitlePlaceholder) || (!subtitlePlaceholder && (hasFutureShifts || showGrossBeforeTax));
 
   return (
     <Card
@@ -220,20 +243,12 @@ export const TotalCard: React.FC<TotalCardProps> = ({
                 lineHeight: 1.1,
               }}
             >{displayTotal}</div>
-            {(hasFutureShifts || showGrossBeforeTax) && (
+            {shouldShowSubtitle && (
               <div
                 key={`subtitle-${total}`}
                 className={`mt-4 text-lg text-text-secondary ${getAnimationClasses(animationDirection)}`}
               >
-                {hasFutureShifts ? (
-                  <>
-                    <span className="font-semibold text-text-primary">{projectedTotal}</span> {t.components.totalCard.wholeMonth}
-                  </>
-                ) : (
-                  <>
-                    <span className="font-semibold text-text-primary">{grossBeforeTax}</span> {t.components.totalCard.beforeTax}
-                  </>
-                )}
+                {subtitleContent}
               </div>
             )}
           </div>
