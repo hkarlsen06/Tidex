@@ -146,20 +146,20 @@ const DayButton = React.memo(function DayButton({
       <div
         className={cn(
           "flex-1 flex flex-col justify-center overflow-hidden",
-          mode === "money" ? "items-end" : "items-center"
+          "items-center"
         )}
       >
         {mode === "money" && earnings !== undefined && (
-          <>
-            <div className="text-sm text-text-secondary font-semibold text-right">
-              {formatNOKInt(earnings)}
+          <div className="flex flex-col items-end">
+            <div className="text-sm text-text-secondary font-semibold">
+              {formatNOKInt(netEarnings !== null ? netEarnings : earnings)}
             </div>
             {netEarnings !== null && (
-              <div className="text-[11px] text-text-muted leading-tight text-right">
-                {formatNOKInt(netEarnings)}
+              <div className="text-[11px] text-text-muted leading-tight">
+                {formatNOKInt(earnings)}
               </div>
             )}
-          </>
+          </div>
         )}
         {mode === "hours" && hours && (
           <div className="flex flex-col items-center justify-center text-sm font-semibold text-text-secondary leading-tight">
