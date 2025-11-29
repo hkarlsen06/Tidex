@@ -78,8 +78,8 @@ export function YearlyCumulativeChart({ data }: YearlyCumulativeChartProps) {
   const currentMonth = now.getMonth() + 1;
 
   return (
-    <ChartContainer config={chartConfig} className="h-[220px] w-full">
-      <AreaChart data={chartData} margin={{ top: 12, right: 20, bottom: 16, left: 16 }}>
+    <ChartContainer config={chartConfig} className="h-[260px] w-full">
+      <AreaChart data={chartData} margin={{ top: 12, right: 20, bottom: 0, left: 16 }}>
         <defs>
           <linearGradient id="fillActual" x1="0" y1="0" x2="0" y2="1">
             <stop offset="5%" stopColor="hsl(var(--brand-highlight))" stopOpacity={0.3} />

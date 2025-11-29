@@ -7,7 +7,7 @@ import dynamic from "next/dynamic";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/app/Card";
 import type { StatsData } from "@/data-access/stats";
 import { MonthlyGoalProgress } from "@/components/app/MonthlyGoalProgress";
-import { TrendingUp, TrendingDown, Clock, Briefcase, DollarSign } from "lucide-react";
+import { TrendingUp, TrendingDown, Clock, Briefcase } from "lucide-react";
 import { MonthPicker } from "@/components/app/MonthPicker";
 import { YearPicker } from "@/components/app/YearPicker";
 import { useMonth } from "@/components/app/MonthContext";
@@ -337,7 +337,6 @@ export function StatsContent({ data }: StatsContentProps) {
 
   const selectedHours = activeData.currentMonth.totalHours;
   const selectedShiftCount = activeData.currentMonth.shiftCount;
-  const selectedAverageRate = activeData.currentMonth.averageRate;
 
   const trend = activeData.percentageChange !== null
     ? {
@@ -460,149 +459,21 @@ export function StatsContent({ data }: StatsContentProps) {
 
       <div
         ref={swipeContainerRef}
-        className="w-full pb-6 pt-2 px-4 flex flex-col space-y-6 md:grid md:auto-rows-max md:gap-6 md:space-y-0"
-        style={{
-          gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 400px), 1fr))'
-        }}
+        className="w-full pb-6 pt-2 px-4 flex flex-col space-y-6 md:grid md:grid-cols-2 md:gap-6 md:space-y-0 md:items-start"
       >
 
-      {/* Month picker - spans full width on desktop */}
-      <div className="flex items-center justify-between mb-2 md:col-span-full">
+      {/* Month picker - left column header */}
+      <div className="flex items-center justify-between mb-2 md:mb-0 md:h-10">
         <MonthPicker
           month={selectedMonth}
           onPreviousMonth={goToPreviousMonth}
           onNextMonth={goToNextMonth}
         />
-        <span className="font-medium text-text-muted mr-3">{selectedMonth.getFullYear()}</span>
+        <span className="font-medium text-text-muted mr-3 md:hidden">{selectedMonth.getFullYear()}</span>
       </div>
 
-      {fetchError && (
-        <p className="text-sm text-error md:col-span-full">
-          {fetchError}
-        </p>
-      )}
-
-      {/* Hero section with key metrics */}
-      <div className={`space-y-5 ${animationClass}`}>
-        <Card className="border-border bg-surface-primary overflow-hidden">
-          <CardContent className="p-6">
-            <p className="text-lg font-semibold text-text-muted mb-3">
-              {t.pages.stats.cards.monthlyEarnings}
-            </p>
-            <p className="text-5xl font-bold tabular-nums text-text-primary">
-              {isEarningsZero ? '---' : formatCurrencyFull(displayedEarnings, true)}
-            </p>
-            {activeData.tax.enabled && grossEarnings > 0 && (
-              <div className="mt-3 space-y-1">
-                <p className="text-base font-medium text-text-secondary">
-                  {t.pages.stats.cards.afterTax}
-                </p>
-                <p className="text-sm text-text-muted">
-                  {t.pages.stats.cards.beforeTax}: {formatCurrencyFull(grossEarnings, true)}
-                </p>
-              </div>
-            )}
-            {trend && (
-              <div className="flex items-center gap-2 mt-4">
-                {trend.isPositive ? (
-                  <TrendingUp className="w-5 h-5 text-success" />
-                ) : (
-                  <TrendingDown className="w-5 h-5 text-error" />
-                )}
-                <p className={`text-lg font-medium ${trend.isPositive ? "text-success" : "text-error"}`}>
-                  {trend.isPositive ? "+" : ""}{trend.value}% {t.pages.stats.cards.fromPreviousMonth}
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <div className="grid grid-cols-2 gap-3">
-          <StatCard
-            label={t.pages.stats.hours}
-            value={formatHours(selectedHours)}
-            icon={<Clock className="w-5 h-5" />}
-          />
-          <StatCard
-            label={t.pages.stats.shifts}
-            value={selectedShiftCount.toString()}
-            icon={<Briefcase className="w-5 h-5" />}
-          />
-        </div>
-      </div>
-
-      {/* Monthly goal progress */}
-      <div className={animationClass}>
-        <MonthlyGoalProgress data={activeData.monthlyGoal} />
-      </div>
-
-      {/* Monthly cumulative comparison chart */}
-      <Card className={`border-border bg-surface-primary ${animationClass}`}>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-xl font-bold text-text-primary">
-            {t.pages.stats.cards.monthlyProgress}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="px-3 pb-4 pt-1">
-          {!chartData ? (
-            <ChartSkeleton />
-          ) : (
-            <MonthlyCumulativeChart data={chartData.thisMonthCumulative} />
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Supplement breakdown chart */}
-      {selectedShiftCount > 0 && (
-        <Card className={`border-border bg-surface-primary ${animationClass}`}>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-xl font-bold text-text-primary">
-              {t.pages.stats.cards.salaryComposition}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="px-3 pb-4 pt-1">
-            {!chartData ? (
-              <ChartSkeleton />
-            ) : (
-              <SupplementBreakdownChart data={chartData.currentMonthBreakdown} />
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Weekly earnings chart - only show for current month */}
-      {isCurrentMonthSelected && (
-        <Card className={`border-border bg-surface-primary ${animationClass}`}>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-xl font-bold text-text-primary">
-              {t.pages.stats.cards.thisWeek}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="px-3 pb-4 pt-1">
-            {!chartData ? (
-              <ChartSkeleton />
-            ) : (
-              <WeeklyBarChart data={chartData.thisWeek} />
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Average hourly rate */}
-      <div className={animationClass}>
-        <StatCard
-          label={t.pages.stats.cards.average}
-          value={formatCurrencyFull(selectedAverageRate, true)}
-          suffix={t.common.perHour}
-          icon={<DollarSign className="w-4 h-4" />}
-        />
-      </div>
-
-      {/* Year to date summary header with year picker - spans full width on desktop */}
-      <div className="flex items-center gap-2 md:col-span-full">
-        <span className="text-xl font-bold text-text-primary pl-3">
-          {t.pages.stats.cards.totalFor}
-        </span>
+      {/* Year picker - right column header */}
+      <div className="hidden md:flex items-center h-10">
         <YearPicker
           year={selectedYear}
           onPreviousYear={goToPreviousYear}
@@ -610,87 +481,215 @@ export function StatsContent({ data }: StatsContentProps) {
         />
       </div>
 
-      {/* Cumulative earnings chart */}
-      <Card className={`border-border bg-surface-primary ${animationClass}`}>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-xl font-bold text-text-primary">
-            {t.pages.stats.cards.cumulativeProgress}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="px-3 pb-4 pt-1">
-          {!chartData ? (
-            <ChartSkeleton />
-          ) : (
-            <YearlyCumulativeChart data={chartData.yearlyCumulative} />
-          )}
-        </CardContent>
-      </Card>
+      {fetchError && (
+        <p className="text-sm text-error md:col-span-2">
+          {fetchError}
+        </p>
+      )}
 
-      <Card className={`border-border bg-surface-primary ${animationClass}`}>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-xl font-bold text-text-primary">
-            {t.pages.stats.cards.last6Months}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="px-3 pb-4 pt-1">
-          {!chartData ? (
-            <ChartSkeleton />
-          ) : (
-            <MonthlyBarChart data={chartData.last6Months} />
-          )}
-        </CardContent>
-      </Card>
+      {/* LEFT COLUMN - Monthly stats */}
+      <div className="flex flex-col space-y-6">
+        {/* Hero section with key metrics */}
+        <div className={`space-y-5 ${animationClass}`}>
+          <Card className="border-border bg-surface-primary overflow-hidden">
+            <CardContent className="p-6">
+              <p className="text-lg font-semibold text-text-muted mb-3">
+                {t.pages.stats.cards.monthlyEarnings}
+              </p>
+              <p className="text-5xl font-bold tabular-nums text-text-primary">
+                {isEarningsZero ? '---' : formatCurrencyFull(displayedEarnings, true)}
+              </p>
+              {activeData.tax.enabled && grossEarnings > 0 && (
+                <div className="mt-3 space-y-1">
+                  <p className="text-base font-medium text-text-secondary">
+                    {t.pages.stats.cards.afterTax}
+                  </p>
+                  <p className="text-sm text-text-muted">
+                    {t.pages.stats.cards.beforeTax}: {formatCurrencyFull(grossEarnings, true)}
+                  </p>
+                </div>
+              )}
+              {trend && (
+                <div className="flex items-center gap-2 mt-4">
+                  {trend.isPositive ? (
+                    <TrendingUp className="w-5 h-5 text-success" />
+                  ) : (
+                    <TrendingDown className="w-5 h-5 text-error" />
+                  )}
+                  <p className={`text-lg font-medium ${trend.isPositive ? "text-success" : "text-error"}`}>
+                    {trend.isPositive ? "+" : ""}{trend.value}% {t.pages.stats.cards.fromPreviousMonth}
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
-      {/* Employment percentage chart */}
-      <Card className={`border-border bg-surface-primary overflow-hidden ${animationClass}`}>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-xl font-bold text-text-primary">
-            {t.components.charts.employment.title}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          {!chartData ? (
-            <ChartSkeleton />
-          ) : (
-            <EmploymentChart
-              data={chartData.employmentLast6Months}
-              yearlyAverage={chartData.employmentYearlyAverage}
-              focusYear={focusYear}
-            />
-          )}
-        </CardContent>
-      </Card>
-
-      {/* YTD stat cards - grouped together in one grid cell with internal grid */}
-      <div className={`space-y-3 ${animationClass}`}>
-        {!chartData ? (
-          <>
-            <ChartSkeleton />
-            <div className="grid grid-cols-2 gap-3">
-              <ChartSkeleton />
-              <ChartSkeleton />
-            </div>
-          </>
-        ) : (
-          <>
+          <div className="grid grid-cols-2 gap-3">
             <StatCard
-              label={t.pages.stats.cards.total}
-              value={formatCurrencyFull(chartData.yearToDate.totalEarnings)}
+              label={t.pages.stats.hours}
+              value={formatHours(selectedHours)}
+              icon={<Clock className="w-5 h-5" />}
             />
-            <div className="grid grid-cols-2 gap-3">
-              <StatCard
-                label={t.pages.stats.hours}
-                value={formatHours(chartData.yearToDate.totalHours)}
-                icon={<Clock className="w-5 h-5" />}
-              />
-              <StatCard
-                label={t.pages.stats.shifts}
-                value={chartData.yearToDate.shiftCount.toString()}
-                icon={<Briefcase className="w-5 h-5" />}
-              />
-            </div>
-          </>
+            <StatCard
+              label={t.pages.stats.shifts}
+              value={selectedShiftCount.toString()}
+              icon={<Briefcase className="w-5 h-5" />}
+            />
+          </div>
+        </div>
+
+        {/* Monthly goal progress */}
+        <div className={animationClass}>
+          <MonthlyGoalProgress data={activeData.monthlyGoal} />
+        </div>
+
+        {/* Monthly cumulative comparison chart */}
+        <Card className={`border-border bg-surface-primary ${animationClass}`}>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-xl font-bold text-text-primary">
+              {t.pages.stats.cards.monthlyProgress}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-3 pb-4 pt-1">
+            {!chartData ? (
+              <ChartSkeleton />
+            ) : (
+              <MonthlyCumulativeChart data={chartData.thisMonthCumulative} />
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Supplement breakdown chart */}
+        {selectedShiftCount > 0 && (
+          <Card className={`border-border bg-surface-primary ${animationClass}`}>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-xl font-bold text-text-primary">
+                {t.pages.stats.cards.salaryComposition}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="px-3 pb-4 pt-1">
+              {!chartData ? (
+                <ChartSkeleton />
+              ) : (
+                <SupplementBreakdownChart data={chartData.currentMonthBreakdown} />
+              )}
+            </CardContent>
+          </Card>
         )}
+
+        {/* Weekly earnings chart - only show for current month */}
+        {isCurrentMonthSelected && (
+          <Card className={`border-border bg-surface-primary ${animationClass}`}>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-xl font-bold text-text-primary">
+                {t.pages.stats.cards.thisWeek}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="px-3 pb-4 pt-1">
+              {!chartData ? (
+                <ChartSkeleton />
+              ) : (
+                <WeeklyBarChart data={chartData.thisWeek} />
+              )}
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      {/* RIGHT COLUMN - Yearly stats */}
+      <div className="flex flex-col space-y-6">
+        {/* Year picker - mobile only (shown in header on desktop) */}
+        <div className="flex items-center gap-2 md:hidden">
+          <YearPicker
+            year={selectedYear}
+            onPreviousYear={goToPreviousYear}
+            onNextYear={goToNextYear}
+          />
+        </div>
+
+        {/* YTD stat cards */}
+        <div className={`space-y-3 ${animationClass}`}>
+          {!chartData ? (
+            <>
+              <ChartSkeleton />
+              <div className="grid grid-cols-2 gap-3">
+                <ChartSkeleton />
+                <ChartSkeleton />
+              </div>
+            </>
+          ) : (
+            <>
+              <StatCard
+                label={t.pages.stats.cards.total}
+                value={formatCurrencyFull(chartData.yearToDate.totalEarnings)}
+              />
+              <div className="grid grid-cols-2 gap-3">
+                <StatCard
+                  label={t.pages.stats.hours}
+                  value={formatHours(chartData.yearToDate.totalHours)}
+                  icon={<Clock className="w-5 h-5" />}
+                />
+                <StatCard
+                  label={t.pages.stats.shifts}
+                  value={chartData.yearToDate.shiftCount.toString()}
+                  icon={<Briefcase className="w-5 h-5" />}
+                />
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Cumulative earnings chart */}
+        <Card className={`border-border bg-surface-primary ${animationClass}`}>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-xl font-bold text-text-primary">
+              {t.pages.stats.cards.cumulativeProgress}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-3 pb-4 pt-1">
+            {!chartData ? (
+              <ChartSkeleton />
+            ) : (
+              <YearlyCumulativeChart data={chartData.yearlyCumulative} />
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Last 6 months chart */}
+        <Card className={`border-border bg-surface-primary ${animationClass}`}>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-xl font-bold text-text-primary">
+              {t.pages.stats.cards.last6Months}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-3 pb-4 pt-1">
+            {!chartData ? (
+              <ChartSkeleton />
+            ) : (
+              <MonthlyBarChart data={chartData.last6Months} />
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Employment percentage chart */}
+        <Card className={`border-border bg-surface-primary overflow-hidden ${animationClass}`}>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-xl font-bold text-text-primary">
+              {t.components.charts.employment.title}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            {!chartData ? (
+              <ChartSkeleton />
+            ) : (
+              <EmploymentChart
+                data={chartData.employmentLast6Months}
+                yearlyAverage={chartData.employmentYearlyAverage}
+                focusYear={focusYear}
+              />
+            )}
+          </CardContent>
+        </Card>
       </div>
       </div>
     </ScrollablePageWrapper>

@@ -273,15 +273,22 @@ export const StatsServiceLive = Layer.effect(
     /**
      * Get date range for stats based on target year and month
      * Includes previous year months needed for "last 6 months" charts
+     * and full year data for yearly cumulative charts
      */
     const getStatsDateRange = (options: StatsOptions): { startDate: string; endDate: string } => {
       const { year: currentYear, month: currentMonth } = getCurrentYearMonth();
       const targetYear = options.year ?? currentYear;
       const targetMonth = options.month ?? currentMonth;
 
-      // Calculate the earliest month needed (5 months before target month)
-      // This is needed for the "last 6 months" charts
-      const earliestDate = new Date(Date.UTC(targetYear, targetMonth - 1 - 5, 1));
+      // Calculate the earliest month needed:
+      // - Need full year data for yearly cumulative chart (Jan 1 of target year)
+      // - Also need 5 months before target month for "last 6 months" charts
+      //   (which may extend into the previous year)
+      const sixMonthsEarliest = new Date(Date.UTC(targetYear, targetMonth - 1 - 5, 1));
+      const yearStart = new Date(Date.UTC(targetYear, 0, 1)); // Jan 1 of target year
+
+      // Use whichever is earlier
+      const earliestDate = sixMonthsEarliest < yearStart ? sixMonthsEarliest : yearStart;
       const earliestYear = earliestDate.getUTCFullYear();
       const earliestMonth = earliestDate.getUTCMonth() + 1;
 
