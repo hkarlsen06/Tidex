@@ -8,8 +8,6 @@ type MfaVerifySearchParams = {
   next?: string | string[];
 };
 
-const DEFAULT_REDIRECT = '/';
-
 function pickFirst(value?: string | string[]) {
   if (Array.isArray(value)) {
     return value[0];
@@ -18,12 +16,14 @@ function pickFirst(value?: string | string[]) {
 }
 
 function resolveNextPath(searchParams: MfaVerifySearchParams, locale: string): string {
-  const raw = pickFirst(searchParams?.next) ?? DEFAULT_REDIRECT;
+  const raw = pickFirst(searchParams?.next);
 
+  // No next param or invalid type - redirect to locale root
   if (typeof raw !== 'string') {
     return `/${locale}`;
   }
 
+  // Security: reject absolute URLs or protocol-relative URLs
   if (!raw.startsWith('/') || raw.startsWith('//')) {
     return `/${locale}`;
   }
@@ -31,9 +31,8 @@ function resolveNextPath(searchParams: MfaVerifySearchParams, locale: string): s
   return raw;
 }
 
-// Server-rendered skeleton for immediate FCP
-async function MfaVerifySkeleton({ params }: { params: Promise<{ locale: string }> }) {
-  const { locale } = await params;
+// Server-rendered skeleton for immediate FCP (must be synchronous for Suspense fallback)
+function MfaVerifySkeleton({ locale }: { locale: string }) {
   const t = getTranslations(locale as Locale, ['pages.auth']);
 
   return (
@@ -84,7 +83,7 @@ export default async function Page({
   const nextPath = resolveNextPath(resolvedSearchParams, locale);
 
   return (
-    <Suspense fallback={<MfaVerifySkeleton params={params} />}>
+    <Suspense fallback={<MfaVerifySkeleton locale={locale} />}>
       <MfaVerifyClient locale={locale} nextPath={nextPath} />
     </Suspense>
   );
