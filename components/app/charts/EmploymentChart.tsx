@@ -141,7 +141,7 @@ export function EmploymentChart({ data, yearlyAverage, focusYear }: EmploymentCh
 
       {/* Bar chart */}
       <ChartContainer config={chartConfig} className="h-[260px] w-full pt-4">
-        <BarChart data={filteredData} margin={{ top: 12, right: 16, bottom: 16, left: 16 }}>
+        <BarChart data={filteredData} margin={{ top: 12, right: 16, bottom: 0, left: 16 }}>
           <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
           <XAxis
             dataKey="month"

@@ -80,7 +80,7 @@ export function MonthlyCumulativeChart({ data }: MonthlyCumulativeChartProps) {
 
   return (
     <ChartContainer config={chartConfig} className="h-[260px] w-full">
-      <LineChart data={chartData} margin={{ top: 12, right: 20, bottom: 16, left: 16 }}>
+      <LineChart data={chartData} margin={{ top: 12, right: 20, bottom: 0, left: 16 }}>
         <CartesianGrid
           strokeDasharray="3 3"
           className="stroke-muted"

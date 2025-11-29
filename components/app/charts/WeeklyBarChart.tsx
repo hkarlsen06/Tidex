@@ -191,8 +191,8 @@ export function WeeklyBarChart({ data }: WeeklyBarChartProps) {
   const today = new Date().toISOString().split('T')[0];
 
   return (
-    <ChartContainer config={chartConfig} className="h-[220px] w-full">
-      <BarChart data={data} margin={{ top: 12, right: 16, bottom: 16, left: 16 }}>
+    <ChartContainer config={chartConfig} className="h-[260px] w-full">
+      <BarChart data={data} margin={{ top: 12, right: 16, bottom: 0, left: 16 }}>
         <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
         <XAxis
           dataKey="date"

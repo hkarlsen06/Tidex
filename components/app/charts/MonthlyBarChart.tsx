@@ -64,7 +64,7 @@ export function MonthlyBarChart({ data }: MonthlyBarChartProps) {
 
   return (
     <ChartContainer config={chartConfig} className="h-[260px] w-full">
-      <BarChart data={data} margin={{ top: 12, right: 16, bottom: 16, left: 16 }}>
+      <BarChart data={data} margin={{ top: 12, right: 16, bottom: 0, left: 16 }}>
         <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
         <XAxis
           dataKey="month"
