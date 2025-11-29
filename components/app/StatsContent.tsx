@@ -662,12 +662,14 @@ export function StatsContent({ data }: StatsContentProps) {
       </Card>
 
       {/* YTD stat cards - grouped together in one grid cell with internal grid */}
-      <div className={`grid grid-cols-1 gap-3 ${animationClass}`}>
+      <div className={`space-y-3 ${animationClass}`}>
         {!chartData ? (
           <>
             <ChartSkeleton />
-            <ChartSkeleton />
-            <ChartSkeleton />
+            <div className="grid grid-cols-2 gap-3">
+              <ChartSkeleton />
+              <ChartSkeleton />
+            </div>
           </>
         ) : (
           <>
@@ -675,14 +677,18 @@ export function StatsContent({ data }: StatsContentProps) {
               label={t.pages.stats.cards.total}
               value={formatCurrencyFull(chartData.yearToDate.totalEarnings)}
             />
-            <StatCard
-              label={t.pages.stats.hours}
-              value={formatHours(chartData.yearToDate.totalHours)}
-            />
-            <StatCard
-              label={t.pages.stats.shifts}
-              value={chartData.yearToDate.shiftCount.toString()}
-            />
+            <div className="grid grid-cols-2 gap-3">
+              <StatCard
+                label={t.pages.stats.hours}
+                value={formatHours(chartData.yearToDate.totalHours)}
+                icon={<Clock className="w-5 h-5" />}
+              />
+              <StatCard
+                label={t.pages.stats.shifts}
+                value={chartData.yearToDate.shiftCount.toString()}
+                icon={<Briefcase className="w-5 h-5" />}
+              />
+            </div>
           </>
         )}
       </div>
