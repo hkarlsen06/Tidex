@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Pencil, Trash2, Clock, Check, X, RefreshCw, Plus } from "lucide-react";
+import { Pencil, Trash2, Clock, Check, X, RefreshCw } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -310,13 +310,16 @@ export function ShiftDetails({
             <div className="flex items-center justify-between gap-4">
               <div className="text-sm text-text-secondary">{t.pages.shifts.details.date}</div>
               {isEditing ? (
-                <Input
-                  type="date"
-                  value={shiftDate}
-                  onChange={(event) => setShiftDate(event.target.value)}
-                  disabled={saving}
-                  className="w-40"
-                />
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="date"
+                    value={shiftDate}
+                    onChange={(event) => setShiftDate(event.target.value)}
+                    disabled={saving || !!shift.custom_supplements}
+                    title={shift.custom_supplements ? t.pages.shifts.details.dateDisabledCustomSupplements : undefined}
+                    className={cn("w-40", shift.custom_supplements && "opacity-60 cursor-not-allowed")}
+                  />
+                </div>
               ) : (
                 <div className="text-base font-medium text-text-primary">
                   {formatDate(shift.shift_date)}
@@ -389,14 +392,8 @@ export function ShiftDetails({
                 disabled={isOffline}
                 className="w-full justify-center gap-2 text-sm text-text-secondary hover:text-text-primary"
               >
-                {shift.custom_supplements ? (
-                  <Pencil className="h-4 w-4" />
-                ) : (
-                  <Plus className="h-4 w-4" />
-                )}
-                {shift.custom_supplements
-                  ? t.pages.shifts.details.editCustomSupplements
-                  : t.pages.shifts.details.addCustomSupplements}
+                <Pencil className="h-4 w-4" />
+                {t.pages.shifts.details.editCustomSupplements}
               </Button>
             )}
 
@@ -559,8 +556,10 @@ export function ShiftDetails({
           shiftId={shift.id}
           recurringId={shift.recurring_id}
           shiftDate={shift.shift_date}
+          startTime={shift.start_time}
+          endTime={shift.end_time}
           existingSupplements={shift.custom_supplements ?? null}
-          hasPredefinedSupplements={supplementSegments.length > 0}
+          predefinedRules={presetRules}
           onSaveSuccess={(updatedSupplements) => {
             // Exit edit mode and notify parent with updated supplements
             setIsEditing(false);

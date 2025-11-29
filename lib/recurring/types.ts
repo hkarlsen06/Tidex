@@ -8,6 +8,8 @@
  * - Exclusions (individual dates to skip)
  */
 
+import type { CustomSupplementsData } from '@/lib/payroll/types';
+
 /**
  * End condition for a recurring shift
  * - null: No end date (continues indefinitely, UI shows preview for 6 months)
@@ -93,17 +95,12 @@ export type RecurringShiftRow = {
  * Date-specific supplement overrides for recurring shifts
  * Key: ISO date string (YYYY-MM-DD)
  * Value: Custom supplement data for that specific date
+ *
+ * When present, these rules REPLACE all tariff supplements for that date.
+ * The rules array contains ALL supplements the user wants for that occurrence.
  */
 export type DateSpecificSupplements = {
-  [isoDate: string]: {
-    mode: 'replace' | 'merge';
-    rules: Array<{
-      from: string;    // HHMM format
-      to: string;      // HHMM format
-      rate?: number;
-      percent?: number;
-    }>;
-  };
+  [isoDate: string]: CustomSupplementsData;
 };
 
 /**

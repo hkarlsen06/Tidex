@@ -1,28 +1,19 @@
 /**
  * Custom supplement types for shift-specific supplement overrides
  *
+ * When a user edits supplements for a shift, ALL supplements for that shift
+ * are stored (both kept tariff supplements and custom-added ones).
+ * This replaces the old mode-based approach (merge/replace).
+ *
  * Allows users to:
  * 1. Override supplements for individual shifts (user_shifts.custom_supplements)
  * 2. Override supplements for specific dates in a recurring shift (recurring_shifts.date_specific_supplements)
  */
 
-import type { SupplementRule } from '@/lib/payroll/types';
+import type { SupplementRule, CustomSupplementRuleSaved, CustomSupplementsData } from '@/lib/payroll/types';
 
-/**
- * Mode for how custom supplements interact with pre-defined supplements
- * - "replace": Ignore all pre-defined supplements, use only custom rules
- * - "merge": Combine pre-defined + custom, taking highest rate where they overlap
- */
-export type CustomSupplementMode = 'replace' | 'merge';
-
-/**
- * Custom supplement data for a single shift
- * Stored in user_shifts.custom_supplements (JSONB)
- */
-export type CustomSupplementsData = {
-  mode: CustomSupplementMode;
-  rules: Omit<SupplementRule, 'days'>[]; // No days field since it applies to one specific day
-};
+// Re-export core types from payroll/types for convenience
+export type { CustomSupplementRuleSaved, CustomSupplementsData };
 
 /**
  * Date-specific supplement overrides for a recurring shift
@@ -30,8 +21,8 @@ export type CustomSupplementsData = {
  *
  * Example:
  * {
- *   "2025-12-24": { mode: "merge", rules: [...] },  // Christmas Eve
- *   "2025-12-31": { mode: "replace", rules: [...] } // New Year's Eve
+ *   "2025-12-24": { rules: [...] },  // Christmas Eve
+ *   "2025-12-31": { rules: [...] }   // New Year's Eve
  * }
  */
 export type DateSpecificSupplements = {
@@ -52,13 +43,13 @@ export type CustomSupplementRuleWithId = {
   to: string; // Allow empty during editing
   rate?: number;
   percent?: number;
-  mode?: 'percent' | 'rate'; // Track selected mode
+  inputMode?: 'percent' | 'rate'; // Track selected input mode for UI
+  isCustom?: boolean; // true = user-added, false/undefined = from tariff
 };
 
 /**
  * Data for the custom supplements editor component
  */
 export type CustomSupplementsEditorData = {
-  mode: CustomSupplementMode;
   rules: CustomSupplementRuleWithId[];
 };

@@ -115,9 +115,9 @@ const CustomSupplementRuleSchema = Schema.Struct({
 
 /**
  * Schema for Custom Supplements Data
+ * When present, these rules completely replace tariff supplements for the shift.
  */
 const CustomSupplementsDataSchema = Schema.Struct({
-  mode: Schema.Literal("replace", "merge"),
   rules: Schema.Array(CustomSupplementRuleSchema),
 });
 
