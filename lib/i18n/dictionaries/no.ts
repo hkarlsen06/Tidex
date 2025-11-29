@@ -323,6 +323,8 @@ export const no = {
         average: 'Gjennomsnitt',
         yearTotal: 'totalt',
         totalFor: 'Totalt for',
+        upTo: 'opp til',
+        forFullYear: 'for hele året',
         cumulativeProgress: 'Kumulativ utvikling',
         last6Months: 'Siste 6 måneder',
         total: 'Totalt',

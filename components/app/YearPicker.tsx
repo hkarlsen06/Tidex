@@ -9,6 +9,7 @@ type YearPickerProps = {
   onNextYear: () => void;
   canNavigateToPreviousYear?: boolean;
   canNavigateToNextYear?: boolean;
+  suffix?: string;
 };
 
 export function YearPicker({
@@ -17,6 +18,7 @@ export function YearPicker({
   onNextYear,
   canNavigateToPreviousYear = true,
   canNavigateToNextYear = true,
+  suffix,
 }: YearPickerProps) {
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [prevYear, setPrevYear] = useState(year);
@@ -101,6 +103,9 @@ export function YearPicker({
       >
         <ChevronRight size={18} />
       </button>
+      {suffix && (
+        <span className="text-text-muted text-sm ml-1">{suffix}</span>
+      )}
     </div>
   );
 }
