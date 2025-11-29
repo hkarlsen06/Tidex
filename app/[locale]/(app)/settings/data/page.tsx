@@ -5,6 +5,7 @@ import { DataForm } from '@components/settings/data/DataForm';
 import { getTranslations } from '@/lib/i18n/server';
 import type { Locale } from '@/lib/i18n/config';
 import { SettingsPageWrapper } from '@/components/app/SettingsPageWrapper';
+import { getUserProfile } from '@dal/settings';
 
 export async function generateMetadata({
   params,
@@ -35,10 +36,13 @@ export default async function DataPage({
     redirect('/login');
   }
 
+  const profile = await getUserProfile(user.id);
+  const userName = profile.firstName || user.email?.split('@')[0] || '';
+
   return (
     <SettingsPageWrapper routeKey="settings-data">
       <div className="mt-6">
-        <DataForm t={t} />
+        <DataForm t={t} userName={userName} />
       </div>
     </SettingsPageWrapper>
   );

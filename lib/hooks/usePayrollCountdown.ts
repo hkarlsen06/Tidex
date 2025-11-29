@@ -151,11 +151,12 @@ export function usePayrollCountdown({
   );
 
   // Initial state: safe for SSR (shows placeholder)
+  // Progress starts at 0 to prevent animation before we know we're between 1st and payroll day
   const [result, setResult] = useState<UsePayrollCountdownResult>({
     text: "---",
     isToday: false,
     isPast: false,
-    progress: 1,
+    progress: 0,
   });
   const [stateKey, setStateKey] = useState(inputKey);
 
@@ -166,7 +167,7 @@ export function usePayrollCountdown({
   // Reset state when inputs change
   if (inputKey !== stateKey) {
     setStateKey(inputKey);
-    setResult({ text: "---", isToday: false, isPast: false, progress: 1 });
+    setResult({ text: "---", isToday: false, isPast: false, progress: 0 });
   }
 
   // Memoized update function that calculates countdown

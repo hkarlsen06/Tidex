@@ -59,6 +59,7 @@ export const en: Dictionary = {
     daysShort: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
     daysFull: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
     daysExport: ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'],
+    week: 'Week',
   },
   header: {
     goToTidex: 'Go to tidex.no',
@@ -736,7 +737,7 @@ export const en: Dictionary = {
         connectionsSubtitle: 'Manage connected accounts and authentication methods',
         personalInfo: {
           title: 'Personal information',
-          nameLabel: 'Name',
+          nameLabel: 'Full name',
           emailLabel: 'Email',
           changeEmail: 'Change email address',
           uploadingImage: 'Uploading…',
