@@ -292,7 +292,10 @@ export function WageHistoryModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && !pending && handleClose()}>
-      <DialogContent className="sm:rounded-3xl sm:max-w-[520px] max-h-[90vh] overflow-y-auto overflow-x-hidden">
+      <DialogContent
+        className="sm:rounded-3xl sm:max-w-[520px] max-h-[90vh] overflow-y-auto overflow-x-hidden"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
         <DialogHeader className="pb-2 text-left">
           <DialogTitle className="flex items-center gap-2 text-left">
             <Calendar className="h-5 w-5 text-text-muted shrink-0" />
