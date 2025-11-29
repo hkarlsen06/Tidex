@@ -45,7 +45,10 @@ function resolveBaseRate(
 
 /**
  * Resolve supplement rules with custom supplements
- * Handles merge/replace logic for shift-specific custom supplements
+ *
+ * When custom supplements exist, they completely replace predefined rules.
+ * The custom supplements array already contains ALL supplements the user wants
+ * (both kept tariff supplements and custom-added ones).
  *
  * @param weekday - Weekday of the shift (1-7)
  * @param predefinedRules - Rules from snapshot or preset
@@ -61,20 +64,12 @@ function resolveSupplementRules(
     return predefinedRules;
   }
 
+  // Custom supplements completely replace predefined rules
   // Convert custom supplement rules to full SupplementRule format (add days field)
-  const customRules: SupplementRule[] = customSupplements.rules.map(rule => ({
+  return customSupplements.rules.map(rule => ({
     ...rule,
     days: [weekday], // Apply to this shift's weekday only
   }));
-
-  if (customSupplements.mode === 'replace') {
-    // Replace: ignore all pre-defined supplements, use only custom
-    return customRules;
-  } else {
-    // Merge: combine pre-defined + custom
-    // The buildWagePeriods function will automatically take the highest rate where they overlap
-    return [...predefinedRules, ...customRules];
-  }
 }
 
 // Precision constants for payroll calculations

@@ -14,11 +14,19 @@ export type ShiftRow = {
 };
 
 /**
+ * A single supplement rule with origin tracking
+ */
+export type CustomSupplementRuleSaved = Omit<SupplementRule, 'days'> & {
+  isCustom?: boolean; // true = user-added, false/undefined = from tariff
+};
+
+/**
  * Custom supplement data for a shift
+ * When present, these rules REPLACE all tariff supplements for the shift.
+ * The rules array contains ALL supplements the user wants for this shift.
  */
 export type CustomSupplementsData = {
-  mode: 'replace' | 'merge';
-  rules: Omit<SupplementRule, 'days'>[]; // No days field since it applies to one specific day
+  rules: CustomSupplementRuleSaved[];
 };
 
 export type UserSettings = {

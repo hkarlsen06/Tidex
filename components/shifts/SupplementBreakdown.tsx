@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import type { CustomSupplementsData } from "@/lib/payroll/types";
 import { useTranslations } from "@/lib/i18n/client";
 import { formatHours } from "@/lib/formatters";
 import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
@@ -42,7 +43,7 @@ export type SupplementSegmentInput = {
 type SupplementBreakdownProps = {
   baseWage: number;
   segments: SupplementSegmentInput[];
-  customSupplements?: { mode: 'replace' | 'merge'; rules: any[] } | null;
+  customSupplements?: CustomSupplementsData | null;
 };
 
 type SupplementRow = {
@@ -106,9 +107,7 @@ export function SupplementBreakdown(props: SupplementBreakdownProps) {
           <div className="text-sm text-text-secondary">{t.pages.shifts.details.totalSupplement}</div>
           {hasCustomSupplements && (
             <span className="inline-flex items-center rounded-full bg-blue-100 dark:bg-blue-900/30 px-2 py-0.5 text-xs font-medium text-blue-800 dark:text-blue-300">
-              {props.customSupplements?.mode === 'replace'
-                ? t.pages.shifts.details.customOnly
-                : t.pages.shifts.details.customMerged}
+              {t.pages.shifts.details.customized}
             </span>
           )}
         </div>
