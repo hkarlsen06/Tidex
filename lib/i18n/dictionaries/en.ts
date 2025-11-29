@@ -332,8 +332,8 @@ export const en: Dictionary = {
         title: 'Monthly goal',
         goalLabel: 'Goal',
         goalReached: 'Goal reached!',
-        overTarget: '{amount} kr over',
-        remaining: '{amount} kr remaining',
+        overTarget: '{amount} over',
+        remaining: '{amount} remaining',
       },
     },
     wagey: {

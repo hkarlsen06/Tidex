@@ -331,8 +331,8 @@ export const no = {
         title: 'Månedsmål',
         goalLabel: 'Mål',
         goalReached: 'Mål nådd!',
-        overTarget: '+{amount} kr over',
-        remaining: '{amount} kr gjenstår',
+        overTarget: '+{amount} over',
+        remaining: '{amount} gjenstår',
       },
     },
     wagey: {
