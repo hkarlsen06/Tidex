@@ -30,10 +30,14 @@ const PAGE_CONFIG = {
 } as const;
 
 const DOCUMENT_PROPERTIES = {
-  title: 'Vaktrapport',
   subject: 'Lønn og vaktdetaljer',
-  author: 'Vaktkalkulator',
-  creator: 'Vaktkalkulator',
+  author: 'Tidex',
+  creator: 'Tidex',
+} as const;
+
+const DOCUMENT_TITLE = {
+  no: 'Vakt- og lønnsrapport',
+  en: 'Shift and earnings report',
 } as const;
 
 const TABLE_HEADER = {
@@ -109,6 +113,8 @@ type JsPDFInstance = {
   setPage: (page: number) => void;
   save: (filename: string) => void;
   setLineWidth: (width: number) => void;
+  addImage: (imageData: string, format: string, x: number, y: number, width: number, height: number) => void;
+  getTextWidth: (text: string) => number;
 };
 
 type JsPDFConstructor = new (options?: {
@@ -197,8 +203,19 @@ function getPresetLabel(preset: Exclude<PeriodPreset, 'custom'>, locale: Locale)
   return capitalize(monthFormatter.format(baseMonth));
 }
 
-function formatCurrencyShort(value: number): string {
-  return formatCurrency(value, { display: 'none' });
+function formatCurrencyShort(value: number, locale: Locale): string {
+  // Format with thousands separator: . for Norwegian, , for English
+  const separator = locale === 'no' ? '.' : ',';
+  return Math.round(value).toString().replace(/\B(?=(\d{3})+(?!\d))/g, separator);
+}
+
+function formatHours(value: number, locale: Locale): string {
+  // Format hours with 2 decimal places and locale-appropriate separators
+  const decimalSeparator = locale === 'no' ? ',' : '.';
+  const thousandsSeparator = locale === 'no' ? '.' : ',';
+  const [whole, decimal] = value.toFixed(2).split('.');
+  const formattedWhole = whole.replace(/\B(?=(\d{3})+(?!\d))/g, thousandsSeparator);
+  return `${formattedWhole}${decimalSeparator}${decimal}`;
 }
 
 function weekdayAbbrev(date: Date, t: Dictionary): string {
@@ -252,6 +269,22 @@ async function ensureJsPdf(): Promise<JsPDFConstructor | null> {
 
   alert('Kunne ikke laste jsPDF. Oppdater siden og prøv igjen.');
   return null;
+}
+
+async function loadLogoAsBase64(): Promise<string | null> {
+  try {
+    // Use PNG icon (better transparency support in jsPDF than WEBP)
+    const response = await fetch('/icon-192x192.png');
+    const blob = await response.blob();
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
 }
 
 async function fetchExportData(range: DateRange): Promise<ExportPayload | null> {
@@ -343,15 +376,46 @@ function formatLongDate(date: Date | null, locale: Locale): string {
   }).format(date);
 }
 
-function buildFileName(range: DateRange | null, ext: 'pdf' | 'csv', at: Date = new Date()) {
-  if (range) {
-    return `vaktrapport_${range.from}_${range.to}.${ext}`;
+function buildFileName(range: DateRange | null, ext: 'pdf' | 'csv', locale: Locale, userName?: string) {
+  const prefix = locale === 'no' ? 'tidex-rapport' : 'tidex-report';
+
+  // Format name as "firstname-L" (first name + first letter of last name)
+  let namePart = '';
+  if (userName) {
+    const parts = userName.trim().split(/\s+/);
+    const firstName = parts[0].toLowerCase();
+    const lastInitial = parts.length > 1 ? parts[parts.length - 1][0].toLowerCase() : '';
+    namePart = lastInitial ? `_${firstName}-${lastInitial}` : `_${firstName}`;
   }
-  const stamp = at.toISOString().slice(0, 10);
-  return `vaktrapport_${stamp}.${ext}`;
+
+  if (range) {
+    // Check if range covers exactly one full month
+    const fromDate = new Date(range.from);
+    const toDate = new Date(range.to);
+
+    const isFirstOfMonth = fromDate.getDate() === 1;
+    const isSameMonth = fromDate.getFullYear() === toDate.getFullYear() &&
+                        fromDate.getMonth() === toDate.getMonth();
+
+    // Check if toDate is the last day of the month
+    const lastDayOfMonth = new Date(toDate.getFullYear(), toDate.getMonth() + 1, 0).getDate();
+    const isLastOfMonth = toDate.getDate() === lastDayOfMonth;
+
+    if (isFirstOfMonth && isSameMonth && isLastOfMonth) {
+      // Full month - use month name and year
+      const monthFormatter = getDateFormatter(locale, { month: 'long' });
+      const monthName = monthFormatter.format(fromDate).toLowerCase();
+      const year = fromDate.getFullYear();
+      return `${prefix}${namePart}_${monthName}-${year}.${ext}`;
+    }
+
+    return `${prefix}${namePart}_${range.from}_${range.to}.${ext}`;
+  }
+  const stamp = new Date().toISOString().slice(0, 10);
+  return `${prefix}${namePart}_${stamp}.${ext}`;
 }
 
-function renderSummary(doc: JsPDFInstance, yRef: { value: number }, data: PreparedExportData) {
+function renderSummary(doc: JsPDFInstance, yRef: { value: number }, data: PreparedExportData, locale: Locale) {
   const { margins } = PAGE_CONFIG;
   const ensureSpace = (required: number) => {
     if (yRef.value + required > margins.bottom) {
@@ -364,32 +428,55 @@ function renderSummary(doc: JsPDFInstance, yRef: { value: number }, data: Prepar
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(14);
-  doc.text('Sammendrag', margins.left, yRef.value);
+  doc.text(locale === 'no' ? 'Sammendrag' : 'Summary', margins.left, yRef.value);
   yRef.value += 10;
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(10);
 
-  const summaryRows: Array<{ label: string; value: string }> = [
+  const hoursLabel = locale === 'no' ? 'timer' : 'hours';
+  const currencyLabel = locale === 'no' ? 'kr' : 'NOK';
+
+  const summaryRows: Array<{ label: string; value: string }> = locale === 'no' ? [
     { label: 'Totalt antall vakter:', value: String(data.shifts.length) },
-    { label: 'Totale timer:', value: `${data.totals.totalHours.toFixed(2)} timer` },
+    { label: 'Totale timer:', value: `${formatHours(data.totals.totalHours, locale)} ${hoursLabel}` },
     {
       label: 'Total grunnlønn:',
-      value: `${formatCurrencyShort(data.totals.totalBaseWage)} kr`,
+      value: `${formatCurrencyShort(data.totals.totalBaseWage, locale)} ${currencyLabel}`,
     },
     {
       label: 'Totale tillegg:',
-      value: `${formatCurrencyShort(data.totals.totalSupplement)} kr`,
+      value: `${formatCurrencyShort(data.totals.totalSupplement, locale)} ${currencyLabel}`,
     },
     {
       label: 'Total lønn:',
-      value: `${formatCurrencyShort(data.totals.totalWages)} kr`,
+      value: `${formatCurrencyShort(data.totals.totalWages, locale)} ${currencyLabel}`,
     },
     { label: '', value: '' },
     { label: 'Vakter per type:', value: '' },
     { label: ' Ukedager:', value: String(data.countsByType.weekday) },
     { label: ' Lørdager:', value: String(data.countsByType.saturday) },
     { label: ' Søndager/helligdager:', value: String(data.countsByType.sunday) },
+  ] : [
+    { label: 'Total number of shifts:', value: String(data.shifts.length) },
+    { label: 'Total hours:', value: `${formatHours(data.totals.totalHours, locale)} ${hoursLabel}` },
+    {
+      label: 'Total base wage:',
+      value: `${formatCurrencyShort(data.totals.totalBaseWage, locale)} ${currencyLabel}`,
+    },
+    {
+      label: 'Total supplements:',
+      value: `${formatCurrencyShort(data.totals.totalSupplement, locale)} ${currencyLabel}`,
+    },
+    {
+      label: 'Total earnings:',
+      value: `${formatCurrencyShort(data.totals.totalWages, locale)} ${currencyLabel}`,
+    },
+    { label: '', value: '' },
+    { label: 'Shifts by type:', value: '' },
+    { label: ' Weekdays:', value: String(data.countsByType.weekday) },
+    { label: ' Saturdays:', value: String(data.countsByType.saturday) },
+    { label: ' Sundays/holidays:', value: String(data.countsByType.sunday) },
   ];
 
   for (const row of summaryRows) {
@@ -406,11 +493,46 @@ function renderSummary(doc: JsPDFInstance, yRef: { value: number }, data: Prepar
   yRef.value += 10;
 }
 
+/**
+ * Get the ISO week number for a date
+ */
+function getISOWeekNumber(date: Date): number {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+}
+
+/**
+ * Draw a dashed line (for week separators)
+ */
+function drawDashedLine(
+  doc: JsPDFInstance,
+  x1: number,
+  y: number,
+  x2: number,
+  dashLength = 2,
+  gapLength = 2
+) {
+  doc.setLineWidth(0.3);
+  let x = x1;
+  while (x < x2) {
+    const endX = Math.min(x + dashLength, x2);
+    doc.line(x, y, endX, y);
+    x = endX + gapLength;
+  }
+}
+
+// Columns that should be right-aligned (numeric columns)
+const RIGHT_ALIGNED_COLUMNS = new Set([4, 5, 6, 7]); // Timer, Grunnlønn, Tillegg, Totalt
+
 function renderTable(
   doc: JsPDFInstance,
   yRef: { value: number },
   data: PreparedExportData,
-  t: Dictionary
+  t: Dictionary,
+  locale: Locale
 ) {
   const { margins } = PAGE_CONFIG;
   const columnPositions: number[] = [];
@@ -420,11 +542,23 @@ function renderTable(
     cursor += width;
   }
 
+  // Calculate right edge positions for right-aligned columns
+  const columnRightEdges: number[] = [];
+  let rightCursor = margins.left;
+  for (const width of TABLE_HEADER.widths) {
+    rightCursor += width;
+    columnRightEdges.push(rightCursor);
+  }
+
   const renderHeader = () => {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8);
     for (let i = 0; i < TABLE_HEADER.columns.length; i += 1) {
-      doc.text(TABLE_HEADER.columns[i], columnPositions[i], yRef.value);
+      if (RIGHT_ALIGNED_COLUMNS.has(i)) {
+        doc.text(TABLE_HEADER.columns[i], columnRightEdges[i], yRef.value, { align: 'right' });
+      } else {
+        doc.text(TABLE_HEADER.columns[i], columnPositions[i], yRef.value);
+      }
     }
     yRef.value += 5;
 
@@ -469,25 +603,73 @@ function renderTable(
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
 
-  for (const shift of data.shifts) {
-    ensureSpace(8, true);
+  // Track previous shift's month and week for separator logic
+  let prevMonth: number | null = null;
+  let prevWeek: number | null = null;
+  let prevYear: number | null = null;
 
+  for (const shift of data.shifts) {
+    const currentMonth = shift.dateObj.getMonth();
+    const currentYear = shift.dateObj.getFullYear();
+    const currentWeek = getISOWeekNumber(shift.dateObj);
+
+    // Check if we need to draw a separator line before this shift
+    const isNewMonth = prevMonth !== null && (currentMonth !== prevMonth || currentYear !== prevYear);
+    const isNewWeek = prevWeek !== null && !isNewMonth && (currentWeek !== prevWeek || currentYear !== prevYear);
+
+    if (isNewMonth) {
+      // Solid line for month separator - symmetric spacing above and below
+      ensureSpace(13, true);
+      const lineY = yRef.value;
+      doc.setLineWidth(0.5);
+      doc.line(margins.left, lineY, margins.right, lineY);
+      yRef.value += 5;
+    } else if (isNewWeek) {
+      // Dashed line for week separator with week number label
+      ensureSpace(13, true);
+      const lineY = yRef.value;
+      // Draw week number label (localized)
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7);
+      const weekWord = t.dateTime.week ?? 'Uke';
+      const weekLabel = `${weekWord} ${currentWeek}`;
+      doc.text(weekLabel, margins.left, lineY + 0.5);
+      // Draw dashed line after the label (indented to make room for "Uke ##")
+      const lineStartX = margins.left + 10;
+      drawDashedLine(doc, lineStartX, lineY, margins.right);
+      // Reset font for row content
+      doc.setFontSize(8);
+      yRef.value += 5;
+    } else {
+      ensureSpace(8, true);
+    }
+
+    const dateLocale = locale === 'no' ? 'no-NO' : 'en-GB';
     const rowValues = [
-      shift.dateObj.toLocaleDateString('no-NO'),
+      shift.dateObj.toLocaleDateString(dateLocale),
       weekdayAbbrev(shift.dateObj, t),
       shift.startTime,
       shift.endTime,
-      shift.calc.hours.toFixed(2),
-      formatCurrencyShort(shift.calc.baseWage),
-      formatCurrencyShort(shift.calc.supplement),
-      formatCurrencyShort(shift.calc.total),
+      formatHours(shift.calc.hours, locale),
+      formatCurrencyShort(shift.calc.baseWage, locale),
+      formatCurrencyShort(shift.calc.supplement, locale),
+      formatCurrencyShort(shift.calc.total, locale),
     ];
 
     for (let i = 0; i < rowValues.length; i += 1) {
-      doc.text(rowValues[i], columnPositions[i], yRef.value);
+      if (RIGHT_ALIGNED_COLUMNS.has(i)) {
+        doc.text(rowValues[i], columnRightEdges[i], yRef.value, { align: 'right' });
+      } else {
+        doc.text(rowValues[i], columnPositions[i], yRef.value);
+      }
     }
 
     yRef.value += 5;
+
+    // Update tracking variables
+    prevMonth = currentMonth;
+    prevWeek = currentWeek;
+    prevYear = currentYear;
   }
 
   yRef.value += 5;
@@ -498,21 +680,24 @@ function renderTable(
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8);
   doc.text('Sum:', columnPositions[0], yRef.value);
-  doc.text(data.totals.totalHours.toFixed(2), columnPositions[4], yRef.value);
+  doc.text(formatHours(data.totals.totalHours, locale), columnRightEdges[4], yRef.value, { align: 'right' });
   doc.text(
-    formatCurrencyShort(data.totals.totalBaseWage),
-    columnPositions[5],
-    yRef.value
+    formatCurrencyShort(data.totals.totalBaseWage, locale),
+    columnRightEdges[5],
+    yRef.value,
+    { align: 'right' }
   );
   doc.text(
-    formatCurrencyShort(data.totals.totalSupplement),
-    columnPositions[6],
-    yRef.value
+    formatCurrencyShort(data.totals.totalSupplement, locale),
+    columnRightEdges[6],
+    yRef.value,
+    { align: 'right' }
   );
   doc.text(
-    formatCurrencyShort(data.totals.totalWages),
-    columnPositions[7],
-    yRef.value
+    formatCurrencyShort(data.totals.totalWages, locale),
+    columnRightEdges[7],
+    yRef.value,
+    { align: 'right' }
   );
 
   yRef.value += 5;
@@ -573,13 +758,13 @@ function buildCsvContent(data: PreparedExportData, t: Dictionary): string {
     .join('\n');
 }
 
-function downloadCsv(data: PreparedExportData, range: DateRange, t: Dictionary) {
+function downloadCsv(data: PreparedExportData, range: DateRange, t: Dictionary, locale: Locale, userName?: string) {
   const csvContent = buildCsvContent(data, t);
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = buildFileName(range, 'csv');
+  link.download = buildFileName(range, 'csv', locale, userName);
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
@@ -588,9 +773,10 @@ function downloadCsv(data: PreparedExportData, range: DateRange, t: Dictionary) 
 
 interface DataFormProps {
   t: Dictionary;
+  userName: string;
 }
 
-export function DataForm({ t }: DataFormProps) {
+export function DataForm({ t, userName }: DataFormProps) {
   const { locale } = useTranslations();
   const [selectedPreset, setSelectedPreset] = useState<PeriodPreset | null>(null);
   const [customRange, setCustomRange] = useState<DateRange>({ from: '', to: '' });
@@ -664,37 +850,47 @@ export function DataForm({ t }: DataFormProps) {
           format: PAGE_CONFIG.format,
         });
 
-        doc.setProperties(DOCUMENT_PROPERTIES);
+        // Get localized title
+        const documentTitle = DOCUMENT_TITLE[locale as keyof typeof DOCUMENT_TITLE] ?? DOCUMENT_TITLE.no;
+        doc.setProperties({ ...DOCUMENT_PROPERTIES, title: `Tidex · ${documentTitle}` });
 
         const yRef: { value: number } = { value: PAGE_CONFIG.margins.top };
+        const headerStartY = yRef.value;
 
+        // Add title: "Tidex" (bold) + " · Vakt- og lønnsrapport" (normal)
         doc.setFont('helvetica', 'bold');
-        doc.setFontSize(20);
-        doc.text(DOCUMENT_PROPERTIES.title, PAGE_CONFIG.margins.left, yRef.value);
-        yRef.value = 35;
+        doc.setFontSize(16);
+        doc.text('Tidex', PAGE_CONFIG.margins.left, yRef.value);
+        // Get width of "Tidex" to position the rest
+        const tidexWidth = doc.getTextWidth('Tidex');
+        doc.setFont('helvetica', 'normal');
+        doc.text(` · ${documentTitle}`, PAGE_CONFIG.margins.left + tidexWidth, yRef.value);
+        yRef.value += 6;
 
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(10);
 
         const exportDate = payload.generatedAt ? new Date(payload.generatedAt) : new Date();
+        const exportedLabel = locale === 'no' ? 'Eksportert' : 'Exported';
         doc.text(
-          `Eksportert: ${formatLongDate(exportDate, locale)}`,
+          `${exportedLabel}: ${formatLongDate(exportDate, locale)}`,
           PAGE_CONFIG.margins.left,
           yRef.value
         );
-        yRef.value = 45;
+        yRef.value += 5;
 
         const fromDate = parseIsoDate(range.from);
         const toDate = parseIsoDate(range.to);
+        const periodLabel = locale === 'no' ? 'Periode' : 'Period';
         if (fromDate && toDate) {
           doc.text(
-            `Periode: ${formatLongDate(fromDate, locale)} - ${formatLongDate(toDate, locale)}`,
+            `${periodLabel}: ${formatLongDate(fromDate, locale)} - ${formatLongDate(toDate, locale)}`,
             PAGE_CONFIG.margins.left,
             yRef.value
           );
         } else if (exportData.shifts.length > 0) {
           doc.text(
-            `Periode: ${formatLongDate(exportData.firstDate, locale)} - ${formatLongDate(
+            `${periodLabel}: ${formatLongDate(exportData.firstDate, locale)} - ${formatLongDate(
               exportData.lastDate,
               locale
             )}`,
@@ -702,14 +898,29 @@ export function DataForm({ t }: DataFormProps) {
             yRef.value
           );
         }
+        yRef.value += 5;
 
-        yRef.value = 60;
+        // Add user name
+        if (userName) {
+          const nameLabel = locale === 'no' ? 'Navn' : 'Name';
+          doc.text(`${nameLabel}: ${userName}`, PAGE_CONFIG.margins.left, yRef.value);
+        }
 
-        renderSummary(doc, yRef, exportData);
-        renderTable(doc, yRef, exportData, t);
+        // Add logo in top right corner, spanning from title to user name
+        const logoBase64 = await loadLogoAsBase64();
+        const headerEndY = yRef.value;
+        const logoSize = headerEndY - headerStartY + 5;
+        if (logoBase64) {
+          doc.addImage(logoBase64, 'PNG', PAGE_CONFIG.margins.right - logoSize, headerStartY - 5, logoSize, logoSize);
+        }
+
+        yRef.value += 10;
+
+        renderSummary(doc, yRef, exportData, locale);
+        renderTable(doc, yRef, exportData, t, locale);
         applyFooters(doc);
 
-        doc.save(buildFileName(range, 'pdf', exportDate));
+        doc.save(buildFileName(range, 'pdf', locale, userName));
       } catch (error) {
         console.error('[pdf export] Failed to generate pdf:', error);
         alert('Noe gikk galt under eksporten. Prøv igjen senere.');
@@ -728,7 +939,7 @@ export function DataForm({ t }: DataFormProps) {
       }
 
       const exportData = prepareExportData(payload);
-      downloadCsv(exportData, range, t);
+      downloadCsv(exportData, range, t, locale, userName);
     } catch (error) {
       console.error('[csv export] Failed to generate csv:', error);
       alert('Noe gikk galt under eksporten. Prøv igjen senere.');

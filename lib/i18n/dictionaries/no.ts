@@ -58,6 +58,7 @@ export const no = {
     daysShort: ['Søn', 'Man', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør'],
     daysFull: ['Søndag', 'Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag'],
     daysExport: ['søndag', 'mandag', 'tirsdag', 'onsdag', 'torsdag', 'fredag', 'lørdag'],
+    week: 'Uke',
   },
   header: {
     goToTidex: 'Gå til tidex.no',
@@ -735,7 +736,7 @@ export const no = {
         connectionsSubtitle: 'Administrer tilkoblede kontoer og autentiseringsmetoder',
         personalInfo: {
           title: 'Personlig informasjon',
-          nameLabel: 'Navn',
+          nameLabel: 'Fullt navn',
           emailLabel: 'E-post',
           changeEmail: 'Endre e-postadresse',
           uploadingImage: 'Laster opp…',
