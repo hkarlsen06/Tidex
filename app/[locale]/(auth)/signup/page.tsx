@@ -48,12 +48,11 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Pre-populate from login page if user came from there
+  // Pre-populate email from login page if user came from there
   const initialEmail = searchParams.get('email') || '';
-  const initialPassword = searchParams.get('password') || '';
 
   const [emailOrPhone, setEmailOrPhone] = useState(initialEmail);
-  const [password, setPassword] = useState(initialPassword);
+  const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [otp, setOtp] = useState("");

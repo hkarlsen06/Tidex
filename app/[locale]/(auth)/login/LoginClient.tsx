@@ -605,7 +605,7 @@ export default function LoginClient({
                 size="lg"
                 className={`w-full ${showSignupPrompt ? 'ring-2 ring-ring ring-offset-2' : ''}`}
               >
-                <Link href={`/${locale}/signup${emailOrPhone || password ? `?${new URLSearchParams({ ...(emailOrPhone && { email: emailOrPhone }), ...(password && { password }) }).toString()}` : ''}`}>
+                <Link href={`/${locale}/signup${emailOrPhone ? `?email=${encodeURIComponent(emailOrPhone)}` : ''}`}>
                   {t.pages.auth.login.createAccount}
                 </Link>
               </Button>
