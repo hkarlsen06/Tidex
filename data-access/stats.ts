@@ -170,6 +170,11 @@ async function getStatsDataInternal(userId: string, options: StatsOptions = {}):
         totalHours: 0,
         shiftCount: 0,
       },
+      fullYear: {
+        totalEarnings: 0,
+        totalHours: 0,
+        shiftCount: 0,
+      },
       last6Months: [],
       thisWeek: [],
       thisMonthCumulative: [],

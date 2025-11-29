@@ -83,10 +83,15 @@ export function MonthlyGoalProgress({ data }: MonthlyGoalProgressProps) {
           {/* Status message - always on same line */}
           <div className="flex items-center justify-between">
             <p className="text-base font-medium text-text-secondary">
-              {t.pages.stats.monthlyGoal.remaining.replace(
-                "{amount}",
-                formatCurrencyFull(data.remaining)
-              )}
+              {isGoalReached
+                ? t.pages.stats.monthlyGoal.overTarget.replace(
+                    "{amount}",
+                    formatCurrencyFull(data.progress - data.target)
+                  )
+                : t.pages.stats.monthlyGoal.remaining.replace(
+                    "{amount}",
+                    formatCurrencyFull(data.remaining)
+                  )}
             </p>
             {isGoalReached && (
               <div className="flex items-center gap-2">

@@ -170,6 +170,11 @@ export type StatsData = {
     readonly totalHours: number;
     readonly shiftCount: number;
   };
+  readonly fullYear: {
+    readonly totalEarnings: number;
+    readonly totalHours: number;
+    readonly shiftCount: number;
+  };
   readonly last6Months: MonthlyData[];
   readonly thisWeek: DailyData[];
   readonly thisMonthCumulative: DailyCumulativeData[];
@@ -499,13 +504,22 @@ export const StatsServiceLive = Layer.effect(
           percentageChange = Math.round(((displayCurrent - displayLast) / displayLast) * 100);
         }
 
-        // Year-to-date stats (only up to today)
+        // Year-to-date stats (up to selected month's cutoff date)
         const ytdShifts = allShifts.filter((shift) => {
           const shiftDate = parseDateAsUTC(shift.shift_date);
           return shiftDate.getUTCFullYear() === focusYear && shiftDate <= cutoffDate;
         });
         const ytdEarnings = ytdShifts.reduce((sum, shift) => sum + (shift.computed.gross || 0), 0);
         const ytdHours = ytdShifts.reduce((sum, shift) => sum + (shift.computed.paidHours || 0), 0);
+
+        // Full year stats (all shifts from Jan 1 to Dec 31 of focus year)
+        // Includes future scheduled shifts for the complete calendar year
+        const fullYearShifts = allShifts.filter((shift) => {
+          const shiftDate = parseDateAsUTC(shift.shift_date);
+          return shiftDate.getUTCFullYear() === focusYear;
+        });
+        const fullYearEarnings = fullYearShifts.reduce((sum, shift) => sum + (shift.computed.gross || 0), 0);
+        const fullYearHours = fullYearShifts.reduce((sum, shift) => sum + (shift.computed.paidHours || 0), 0);
 
         // Last 6 months breakdown
         const last6Months: MonthlyData[] = [];
@@ -880,6 +894,11 @@ export const StatsServiceLive = Layer.effect(
             totalEarnings: ytdEarnings,
             totalHours: ytdHours,
             shiftCount: ytdShifts.length,
+          },
+          fullYear: {
+            totalEarnings: fullYearEarnings,
+            totalHours: fullYearHours,
+            shiftCount: fullYearShifts.length,
           },
           last6Months: last6Months as readonly MonthlyData[],
           thisWeek: thisWeek as readonly DailyData[],

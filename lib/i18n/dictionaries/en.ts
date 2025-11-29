@@ -324,6 +324,8 @@ export const en: Dictionary = {
         average: 'Average',
         yearTotal: 'total',
         totalFor: 'Total for',
+        upTo: 'up to',
+        forFullYear: 'for full year',
         cumulativeProgress: 'Cumulative progress',
         last6Months: 'Last 6 months',
         total: 'Total',

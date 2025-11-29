@@ -28,6 +28,7 @@ type ChartData = Pick<
   | 'yearlyCumulative'
   | 'currentMonthBreakdown'
   | 'yearToDate'
+  | 'fullYear'
   | 'employmentLast6Months'
   | 'employmentYearlyAverage'
 >;
@@ -87,9 +88,11 @@ type StatCardProps = {
     isPositive: boolean;
   };
   icon?: ReactNode;
+  secondaryValue?: string;
+  secondaryLabel?: string;
 };
 
-function StatCard({ label, value, suffix, trend, icon }: StatCardProps) {
+function StatCard({ label, value, suffix, trend, icon, secondaryValue, secondaryLabel }: StatCardProps) {
   const isZero = value === '0' || value === '0,0';
   const displayValue = isZero ? '---' : value;
 
@@ -112,6 +115,11 @@ function StatCard({ label, value, suffix, trend, icon }: StatCardProps) {
             </p>
           )}
         </div>
+        {secondaryValue && secondaryLabel && !isZero && (
+          <p className="text-sm text-text-muted mt-2">
+            {secondaryValue} {secondaryLabel}
+          </p>
+        )}
         {trend && (
           <div className="flex items-center gap-1.5 mt-3">
             {trend.isPositive ? (
@@ -150,16 +158,18 @@ export function StatsContent({ data }: StatsContentProps) {
     direction,
   } = useMonth();
 
-  // Navigate to January of the previous year
+  // Navigate to same month in previous year
   const goToPreviousYear = useCallback(() => {
     const previousYear = selectedMonth.getFullYear() - 1;
-    setSelectedMonth(new Date(previousYear, 0, 1));
+    const currentMonth = selectedMonth.getMonth();
+    setSelectedMonth(new Date(previousYear, currentMonth, 1));
   }, [selectedMonth, setSelectedMonth]);
 
-  // Navigate to January of the next year
+  // Navigate to same month in next year
   const goToNextYear = useCallback(() => {
     const nextYear = selectedMonth.getFullYear() + 1;
-    setSelectedMonth(new Date(nextYear, 0, 1));
+    const currentMonth = selectedMonth.getMonth();
+    setSelectedMonth(new Date(nextYear, currentMonth, 1));
   }, [selectedMonth, setSelectedMonth]);
 
   const [activeData, setActiveData] = useState<StatsData>(data);
@@ -171,6 +181,7 @@ export function StatsContent({ data }: StatsContentProps) {
     yearlyCumulative: data.yearlyCumulative,
     currentMonthBreakdown: data.currentMonthBreakdown,
     yearToDate: data.yearToDate,
+    fullYear: data.fullYear,
     employmentLast6Months: data.employmentLast6Months,
     employmentYearlyAverage: data.employmentYearlyAverage,
   });
@@ -192,6 +203,10 @@ export function StatsContent({ data }: StatsContentProps) {
 
   const focusYear = activeData.focusMonth.year;
   const focusMonth = activeData.focusMonth.month;
+
+  // Get month name for the year picker suffix
+  const selectedMonthName = t.dateTime.monthsShort[selectedMonth.getMonth()];
+  const yearPickerSuffix = `${t.pages.stats.cards.upTo} ${selectedMonthName.toLowerCase()}`;
 
   // Fetch stats data for a given month
   const fetchStatsData = useCallback(
@@ -259,6 +274,7 @@ export function StatsContent({ data }: StatsContentProps) {
         yearlyCumulative: cachedData.yearlyCumulative,
         currentMonthBreakdown: cachedData.currentMonthBreakdown,
         yearToDate: cachedData.yearToDate,
+        fullYear: cachedData.fullYear,
         employmentLast6Months: cachedData.employmentLast6Months,
         employmentYearlyAverage: cachedData.employmentYearlyAverage,
       });
@@ -287,6 +303,7 @@ export function StatsContent({ data }: StatsContentProps) {
           yearlyCumulative: payload.yearlyCumulative,
           currentMonthBreakdown: payload.currentMonthBreakdown,
           yearToDate: payload.yearToDate,
+          fullYear: payload.fullYear,
           employmentLast6Months: payload.employmentLast6Months,
           employmentYearlyAverage: payload.employmentYearlyAverage,
         });
@@ -478,6 +495,7 @@ export function StatsContent({ data }: StatsContentProps) {
           year={selectedYear}
           onPreviousYear={goToPreviousYear}
           onNextYear={goToNextYear}
+          suffix={yearPickerSuffix}
         />
       </div>
 
@@ -604,6 +622,7 @@ export function StatsContent({ data }: StatsContentProps) {
             year={selectedYear}
             onPreviousYear={goToPreviousYear}
             onNextYear={goToNextYear}
+            suffix={yearPickerSuffix}
           />
         </div>
 
@@ -622,17 +641,23 @@ export function StatsContent({ data }: StatsContentProps) {
               <StatCard
                 label={t.pages.stats.cards.total}
                 value={formatCurrencyFull(chartData.yearToDate.totalEarnings)}
+                secondaryValue={formatCurrencyFull(chartData.fullYear.totalEarnings)}
+                secondaryLabel={t.pages.stats.cards.forFullYear}
               />
               <div className="grid grid-cols-2 gap-3">
                 <StatCard
                   label={t.pages.stats.hours}
                   value={formatHours(chartData.yearToDate.totalHours)}
                   icon={<Clock className="w-5 h-5" />}
+                  secondaryValue={formatHours(chartData.fullYear.totalHours)}
+                  secondaryLabel={t.pages.stats.cards.forFullYear}
                 />
                 <StatCard
                   label={t.pages.stats.shifts}
                   value={chartData.yearToDate.shiftCount.toString()}
                   icon={<Briefcase className="w-5 h-5" />}
+                  secondaryValue={chartData.fullYear.shiftCount.toString()}
+                  secondaryLabel={t.pages.stats.cards.forFullYear}
                 />
               </div>
             </>
