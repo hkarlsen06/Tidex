@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useState, use, useRef, useEffect } from "react";
 import { useTranslations } from "@/lib/i18n/client";
 
@@ -46,9 +46,14 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
   const { locale } = use(params);
   const { t } = useTranslations();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
-  const [emailOrPhone, setEmailOrPhone] = useState("");
-  const [password, setPassword] = useState("");
+  // Pre-populate from login page if user came from there
+  const initialEmail = searchParams.get('email') || '';
+  const initialPassword = searchParams.get('password') || '';
+
+  const [emailOrPhone, setEmailOrPhone] = useState(initialEmail);
+  const [password, setPassword] = useState(initialPassword);
   const [confirmPassword, setConfirmPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [otp, setOtp] = useState("");
