@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useLayoutEffect, useCallback } from 'react';
-import { ArrowDown, ArrowUp } from 'lucide-react';
+import { ArrowDown, ArrowUp, HelpCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/app/Card';
+import { ClickTooltip } from '@/components/app/Tooltip';
 import { useTranslations } from '@/lib/i18n/client';
 
 interface TotalCardProps {
@@ -14,6 +15,8 @@ interface TotalCardProps {
   animationDirection?: 'next' | 'previous' | null;
   subtitlePlaceholder?: string;
   useZeroPlaceholder?: boolean;
+  /** Shows a help icon with tooltip when total shows dashes but user has pending shifts */
+  hasPendingShifts?: boolean;
 }
 
 // Maximum font size in pixels for the total amount
@@ -134,6 +137,7 @@ export const TotalCard: React.FC<TotalCardProps> = ({
   animationDirection = null,
   subtitlePlaceholder,
   useZeroPlaceholder = true,
+  hasPendingShifts = false,
 }) => {
   const { t } = useTranslations();
   const cardClasses = [
@@ -167,6 +171,9 @@ export const TotalCard: React.FC<TotalCardProps> = ({
   // Auto-scale font size for the total amount
   const displayTotal = useZeroPlaceholder && total === '0 kr' ? '---' : total;
   const { containerRef: totalContainerRef, textRef: totalTextRef } = useAutoScaleFont(displayTotal);
+
+  // Show help tooltip when displaying placeholder but user has pending shifts
+  const showPendingShiftsHelp = displayTotal === '---' && hasPendingShifts;
 
   // Determine what to show in subtitle:
   // - If projected equals earned (no future shifts), show gross before tax (if tax enabled)
@@ -231,18 +238,39 @@ export const TotalCard: React.FC<TotalCardProps> = ({
               </div>
             )}
             <div
-              ref={totalContainerRef}
               key={`total-${total}`}
-              className={`mt-3 whitespace-nowrap ${getAnimationClasses(animationDirection)}`}
-              style={{ lineHeight: 1.1 }}
+              className={`mt-3 relative flex items-center justify-center ${getAnimationClasses(animationDirection)}`}
             >
-              <span
-                ref={totalTextRef}
-                className="font-bold text-brand-highlight"
-                style={{ fontSize: `${MAX_FONT_SIZE_PX}px` }}
+              <div
+                ref={totalContainerRef}
+                className="whitespace-nowrap"
+                style={{ lineHeight: 1.1 }}
               >
-                {displayTotal}
-              </span>
+                <span
+                  ref={totalTextRef}
+                  className="font-bold text-brand-highlight"
+                  style={{ fontSize: `${MAX_FONT_SIZE_PX}px` }}
+                >
+                  {displayTotal}
+                </span>
+              </div>
+              {showPendingShiftsHelp && (
+                <div className="absolute left-[calc(50%+3.5rem)] top-1/2 -translate-y-1/4">
+                  <ClickTooltip
+                    trigger={
+                      <HelpCircle
+                        className="h-7 w-7 text-brand-highlight"
+                        aria-hidden="true"
+                      />
+                    }
+                    side="bottom"
+                    ariaLabel={t.components.totalCard.pendingShiftsTooltip}
+                    className="max-w-[220px] bg-surface-secondary border border-border-subtle shadow-lg px-3 py-2"
+                  >
+                    <p className="text-sm text-text-primary">{t.components.totalCard.pendingShiftsTooltip}</p>
+                  </ClickTooltip>
+                </div>
+              )}
             </div>
             {shouldShowSubtitle && (
               <div
