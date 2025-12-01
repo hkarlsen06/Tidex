@@ -1280,6 +1280,7 @@ export const en: Dictionary = {
       earnedToDate: 'to date',
       wholeMonth: 'this month',
       afterTax: 'after tax',
+      pendingShiftsTooltip: "You haven't completed any shifts yet. The total increases on each completed shift.",
     },
     charts: {
       supplementBreakdown: {

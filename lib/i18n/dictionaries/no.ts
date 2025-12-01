@@ -1279,6 +1279,7 @@ export const no = {
       earnedToDate: 'til nå',
       wholeMonth: 'hele måneden',
       afterTax: 'etter skatt',
+      pendingShiftsTooltip: 'Du har ikke fullført noen vakter ennå. Totalen øker for hver fullførte vakt.',
     },
     charts: {
       supplementBreakdown: {

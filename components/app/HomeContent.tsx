@@ -13,6 +13,7 @@ import { usePayrollCountdown } from "@/lib/hooks/usePayrollCountdown";
 import { useMonth } from "./MonthContext";
 import { useTranslations } from "@/lib/i18n/client";
 import { summarizeShiftTotals } from "@/lib/shifts/monthlyTotals";
+import { hasShiftEnded } from "@/lib/shifts/hasShiftEnded";
 import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
 import { deleteShift } from "@/app/[locale]/(app)/shifts/_actions/deleteShift";
 import { adjustPayrollDate } from "@/lib/payroll/adjust-payroll-date";
@@ -281,6 +282,22 @@ export function HomeContent({ shifts: initialShifts, settings }: HomeContentProp
 
   const taxDeductionEnabled = settings.tax_deduction_enabled ?? false;
 
+  // Check if user has shifts this month but none have completed yet
+  const hasPendingShifts = useMemo(() => {
+    const targetYear = month.getFullYear();
+    const targetMonth = month.getMonth() + 1;
+    const targetKey = `${targetYear}-${String(targetMonth).padStart(2, '0')}`;
+    const monthShifts = shiftsByMonth.get(targetKey) || [];
+
+    if (monthShifts.length === 0) return false;
+
+    const now = new Date();
+    const completedShifts = monthShifts.filter(shift => hasShiftEnded(shift, now));
+
+    // Has pending shifts if there are shifts but none have completed
+    return completedShifts.length === 0;
+  }, [shiftsByMonth, month]);
+
   const totalCardTotal = selectedMonthIsFuture ? data.projectedTotal : data.total;
   const totalCardSubtitle = selectedMonthIsFuture && !taxDeductionEnabled ? "---" : undefined;
   const totalCardProjectedTotal = selectedMonthIsFuture ? undefined : data.projectedTotal;
@@ -511,6 +528,7 @@ export function HomeContent({ shifts: initialShifts, settings }: HomeContentProp
             animationDirection={direction}
             subtitlePlaceholder={totalCardSubtitle}
             useZeroPlaceholder={!selectedMonthIsFuture}
+            hasPendingShifts={hasPendingShifts}
           />
           <div className="flex items-center justify-between -mt-3 -mb-3">
             <MonthPicker
