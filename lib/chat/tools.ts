@@ -151,11 +151,19 @@ export type GetStatisticsInput = z.infer<typeof getStatisticsSchema>;
  */
 export const manageSettingsSchema = z.object({
   action: z.enum(["view", "update"]).optional().default("view"),
-  category: z.enum(["display", "payroll", "tax", "goals", "preferences", "wages"]).optional(),
+  category: z.enum(["display", "payroll", "tax", "goals", "preferences"]).optional(),
   settings: z.record(z.string(), z.any()).optional(),
 });
 
 export type ManageSettingsInput = z.infer<typeof manageSettingsSchema>;
+
+/**
+ * Get Wage Info Tool Schema
+ * Returns user's complete wage configuration with temporal context
+ */
+export const getWageInfoSchema = z.object({});
+
+export type GetWageInfoInput = z.infer<typeof getWageInfoSchema>;
 
 /**
  * Hypothetical shift scenario for earnings calculation
@@ -850,17 +858,17 @@ Optional: year and month parameters to query specific periods (defaults to curre
   // ---------------------------------------------------------------------------
   {
     name: "manage_settings",
-    description: `View or update user settings.
+    description: `View or update user settings (NOT wages - use get_wage_info for that).
 
 Actions:
-- VIEW: No parameters or action="view" - Returns all current settings including wage configuration
+- VIEW: No parameters or action="view" - Returns display, payroll, tax, goals, preferences settings
 - UPDATE: action="update", category, settings object with key-value pairs
 
-Categories: display, payroll, tax, goals, preferences, wages
-- wages category shows: usingTariff, wageLevel (-2 to 6), hourlyWage, supplements, hasWageHistory
-- See settings_reference and wage_system sections in system prompt for detailed descriptions.
+Categories: display, payroll, tax, goals, preferences
+- See settings_reference section in system prompt for detailed descriptions.
+- For wage information, use the get_wage_info tool instead.
 
-Note: Only include settings you want to change in the settings object. Wage changes must be done in the app Settings → Lønn.`,
+Note: Only include settings you want to change in the settings object.`,
     input_schema: {
       type: "object",
       properties: {
@@ -871,8 +879,8 @@ Note: Only include settings you want to change in the settings object. Wage chan
         },
         category: {
           type: "string",
-          enum: ["display", "payroll", "tax", "goals", "preferences", "wages"],
-          description: "Settings category (wages is view-only, changes must be done in the app)",
+          enum: ["display", "payroll", "tax", "goals", "preferences"],
+          description: "Settings category to update",
         },
         settings: {
           type: "object",
@@ -902,6 +910,27 @@ Note: Only include settings you want to change in the settings object. Wage chan
         settings: { taxDeductionEnabled: true, taxPercentage: 35 },
       },
     ],
+  },
+
+  // ---------------------------------------------------------------------------
+  // WAGE INFO
+  // ---------------------------------------------------------------------------
+  {
+    name: "get_wage_info",
+    description: `Get user's wage configuration including current, upcoming, and historical wage entries.
+
+Returns:
+- current: The wage that applies today (fromDate, usingTariff, wageLevel, hourlyWage, supplements)
+- upcoming: Future scheduled wage changes (if any) - compact format showing only changed fields
+- history: Past wage entries for context (if any) - compact format showing only changed fields
+
+Use this when the user asks about their wage, hourly rate, supplements, or wage history.
+For general settings (display, payroll, tax, goals), use manage_settings instead.`,
+    input_schema: {
+      type: "object",
+      properties: {},
+    },
+    input_examples: [{}],
   },
 
   // ---------------------------------------------------------------------------
@@ -1039,6 +1068,7 @@ export type ToolName =
   | "manage_recurring_exclusion"
   | "get_statistics"
   | "manage_settings"
+  | "get_wage_info"
   | "calculate_earnings";
 
 /**

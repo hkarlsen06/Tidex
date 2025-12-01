@@ -472,6 +472,10 @@ export const en: Dictionary = {
         updatedSettings: 'Updated {category} settings',
         retrievedSettings: 'Retrieved user settings',
         noSettingsFound: 'No settings found (using defaults)',
+        // Success messages - wages
+        retrievedWageInfo: 'Retrieved wage configuration',
+        noWageConfigured: 'No wage configuration found',
+        failedToGetWageInfo: 'Failed to get wage information',
         // Success messages - statistics
         statsCurrentMonth: 'Current month statistics',
         statsLastMonth: 'Last month statistics',
