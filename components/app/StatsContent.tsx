@@ -24,6 +24,7 @@ type ChartData = Pick<
   StatsData,
   | 'last6Months'
   | 'thisWeek'
+  | 'bestWeek'
   | 'thisMonthCumulative'
   | 'yearlyCumulative'
   | 'currentMonthBreakdown'
@@ -177,6 +178,7 @@ export function StatsContent({ data }: StatsContentProps) {
   const [chartData, setChartData] = useState<ChartData | null>({
     last6Months: data.last6Months,
     thisWeek: data.thisWeek,
+    bestWeek: data.bestWeek,
     thisMonthCumulative: data.thisMonthCumulative,
     yearlyCumulative: data.yearlyCumulative,
     currentMonthBreakdown: data.currentMonthBreakdown,
@@ -270,6 +272,7 @@ export function StatsContent({ data }: StatsContentProps) {
       setChartData({
         last6Months: cachedData.last6Months,
         thisWeek: cachedData.thisWeek,
+        bestWeek: cachedData.bestWeek,
         thisMonthCumulative: cachedData.thisMonthCumulative,
         yearlyCumulative: cachedData.yearlyCumulative,
         currentMonthBreakdown: cachedData.currentMonthBreakdown,
@@ -299,6 +302,7 @@ export function StatsContent({ data }: StatsContentProps) {
         setChartData({
           last6Months: payload.last6Months,
           thisWeek: payload.thisWeek,
+          bestWeek: payload.bestWeek,
           thisMonthCumulative: payload.thisMonthCumulative,
           yearlyCumulative: payload.yearlyCumulative,
           currentMonthBreakdown: payload.currentMonthBreakdown,
@@ -595,8 +599,8 @@ export function StatsContent({ data }: StatsContentProps) {
           </Card>
         )}
 
-        {/* Weekly earnings chart - only show for current month */}
-        {isCurrentMonthSelected && (
+        {/* Weekly earnings chart - "This week" for current month, "Best week" for past months */}
+        {isCurrentMonthSelected ? (
           <Card className={`border-border bg-surface-primary ${animationClass}`}>
             <CardHeader className="pb-3">
               <CardTitle className="text-xl font-bold text-text-primary">
@@ -609,6 +613,17 @@ export function StatsContent({ data }: StatsContentProps) {
               ) : (
                 <WeeklyBarChart data={chartData.thisWeek} />
               )}
+            </CardContent>
+          </Card>
+        ) : chartData?.bestWeek && (
+          <Card className={`border-border bg-surface-primary ${animationClass}`}>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-xl font-bold text-text-primary">
+                {`${t.pages.stats.cards.bestWeek} (${t.pages.stats.cards.week} ${chartData.bestWeek.weekNumber})`}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="px-3 pb-4 pt-1">
+              <WeeklyBarChart data={chartData.bestWeek.weekData} highlightBestDay showDatesInsteadOfDays />
             </CardContent>
           </Card>
         )}

@@ -25,6 +25,7 @@ import {
   type SupplementBreakdown,
   type MonthlyGoal,
   type EmploymentMonthlyData,
+  type BestWeekData,
 } from "@/lib/services/stats";
 import { StatsLive } from "@/lib/layers/app";
 import { logger } from "@/lib/logger";
@@ -44,6 +45,7 @@ export type {
   SupplementBreakdown,
   MonthlyGoal,
   EmploymentMonthlyData,
+  BestWeekData,
 };
 
 export type StatsOptions = {
@@ -134,6 +136,10 @@ async function getStatsDataInternal(userId: string, options: StatsOptions = {}):
       ...result,
       last6Months: [...result.last6Months],
       thisWeek: [...result.thisWeek],
+      bestWeek: result.bestWeek ? {
+        ...result.bestWeek,
+        weekData: [...result.bestWeek.weekData],
+      } : null,
       thisMonthCumulative: [...result.thisMonthCumulative],
       yearlyCumulative: [...result.yearlyCumulative],
       monthlySummaries: [...result.monthlySummaries],
@@ -177,6 +183,7 @@ async function getStatsDataInternal(userId: string, options: StatsOptions = {}):
       },
       last6Months: [],
       thisWeek: [],
+      bestWeek: null,
       thisMonthCumulative: [],
       yearlyCumulative: [],
       monthlySummaries: [],

@@ -140,6 +140,16 @@ export type EmploymentMonthlyData = {
 };
 
 /**
+ * Best week data for a month
+ */
+export type BestWeekData = {
+  readonly weekData: DailyData[];
+  readonly weekNumber: number; // ISO week number
+  readonly totalEarnings: number;
+  readonly totalHours: number;
+};
+
+/**
  * Complete stats data response
  */
 export type StatsData = {
@@ -177,6 +187,7 @@ export type StatsData = {
   };
   readonly last6Months: MonthlyData[];
   readonly thisWeek: DailyData[];
+  readonly bestWeek: BestWeekData | null; // Best performing week of the month (null if no shifts)
   readonly thisMonthCumulative: DailyCumulativeData[];
   readonly yearlyCumulative: YearlyCumulativeData[];
   readonly monthlySummaries: MonthlySummary[];
@@ -577,6 +588,98 @@ export const StatsServiceLive = Layer.effect(
           });
         }
 
+        // Calculate best week of the focus month
+        // Get ISO week number for a date
+        const getISOWeekNumber = (date: Date): number => {
+          const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+          d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+          const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+          return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+        };
+
+        // Get Monday of the week containing a date
+        const getMondayOfWeekForDate = (date: Date): Date => {
+          const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+          const day = d.getUTCDay();
+          const diff = day === 0 ? -6 : 1 - day;
+          d.setUTCDate(d.getUTCDate() + diff);
+          return d;
+        };
+
+        // Find all weeks that overlap with the focus month
+        const firstOfMonth = new Date(Date.UTC(focusYear, focusMonth - 1, 1));
+        const lastOfMonth = new Date(Date.UTC(focusYear, focusMonth, 0));
+
+        // Track weeks we've seen (by ISO week number) and their data
+        const weekMap = new Map<number, { monday: Date; earnings: number; hours: number; shifts: number }>();
+
+        // Process all shifts in the focus month
+        for (const shift of monthShifts) {
+          const shiftDate = parseDateAsUTC(shift.shift_date);
+          const weekNumber = getISOWeekNumber(shiftDate);
+          const monday = getMondayOfWeekForDate(shiftDate);
+
+          const existing = weekMap.get(weekNumber) ?? {
+            monday,
+            earnings: 0,
+            hours: 0,
+            shifts: 0,
+          };
+
+          weekMap.set(weekNumber, {
+            monday: existing.monday,
+            earnings: existing.earnings + (shift.computed.gross || 0),
+            hours: existing.hours + (shift.computed.paidHours || 0),
+            shifts: existing.shifts + 1,
+          });
+        }
+
+        // Find the best week
+        let bestWeek: BestWeekData | null = null;
+        let maxEarnings = 0;
+
+        for (const [weekNumber, weekStats] of weekMap) {
+          if (weekStats.earnings > maxEarnings) {
+            maxEarnings = weekStats.earnings;
+
+            // Build daily data for this week
+            const weekData: DailyData[] = [];
+            for (let i = 0; i < 7; i++) {
+              const targetDate = new Date(weekStats.monday);
+              targetDate.setUTCDate(targetDate.getUTCDate() + i);
+              const dateString = targetDate.toISOString().split("T")[0];
+
+              // Only include days that fall within the focus month
+              const isInMonth =
+                targetDate >= firstOfMonth && targetDate <= lastOfMonth;
+
+              // Find shifts for this day
+              const dayShifts = isInMonth
+                ? allShifts.filter((shift) => shift.shift_date === dateString)
+                : [];
+              const dayEarnings = dayShifts.reduce((sum, shift) => sum + (shift.computed.gross || 0), 0);
+              const dayHours = dayShifts.reduce((sum, shift) => sum + (shift.computed.paidHours || 0), 0);
+
+              const dayOfWeek = targetDate.getUTCDay();
+              weekData.push({
+                date: DAY_NAMES[dayOfWeek],
+                fullDay: FULL_DAY_NAMES[dayOfWeek],
+                earnings: isInMonth ? dayEarnings : 0,
+                hours: isInMonth ? dayHours : 0,
+                shifts: dayShifts.length,
+                fullDate: dateString,
+              });
+            }
+
+            bestWeek = {
+              weekData,
+              weekNumber,
+              totalEarnings: weekStats.earnings,
+              totalHours: weekStats.hours,
+            };
+          }
+        }
+
         // Monthly cumulative comparison (current month vs last month by day)
         const thisMonthCumulative: DailyCumulativeData[] = [];
 
@@ -902,6 +1005,7 @@ export const StatsServiceLive = Layer.effect(
           },
           last6Months: last6Months as readonly MonthlyData[],
           thisWeek: thisWeek as readonly DailyData[],
+          bestWeek,
           thisMonthCumulative: thisMonthCumulative as readonly DailyCumulativeData[],
           yearlyCumulative: yearlyCumulative as readonly YearlyCumulativeData[],
           monthlySummaries: monthlySummaries as readonly MonthlySummary[],
