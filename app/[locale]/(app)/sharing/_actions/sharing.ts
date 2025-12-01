@@ -1,0 +1,123 @@
+"use server";
+
+import { Effect } from "effect";
+import { SharingService } from "@/lib/services/sharing";
+import { SharingLive } from "@/lib/layers/app";
+import { invalidateAndRevalidate } from "@/lib/revalidation/paths";
+import { logger } from "@/lib/logger";
+import { verifySession } from "@/data-access/auth";
+
+/**
+ * Response type for sharing actions
+ */
+type ActionResult =
+  | { success: true; message?: string }
+  | { success: false; error: string };
+
+/**
+ * Add sharing error messages to match the project pattern
+ */
+const SHARING_ERRORS = {
+  SHARE_LIMIT_REACHED: "Du har nådd maksimalt antall delinger for ditt abonnement",
+  USER_NOT_FOUND: "Fant ingen bruker med denne e-posten eller telefonnummeret",
+  ALREADY_SHARED: "Du deler allerede vaktene dine med denne brukeren",
+  CANNOT_SHARE_SELF: "Du kan ikke dele med deg selv",
+  INVALID_IDENTIFIER: "Vennligst oppgi en gyldig e-post eller telefonnummer",
+  FAILED_TO_CREATE_SHARE: "Kunne ikke opprette deling",
+  FAILED_TO_REMOVE_SHARE: "Kunne ikke fjerne deling",
+  SHARE_NOT_FOUND: "Fant ikke delingen",
+} as const;
+
+/**
+ * Create a new share (add recipient by email or phone)
+ *
+ * Validates:
+ * - User is authenticated
+ * - User has not exceeded their subscription tier limit
+ * - Target user exists
+ * - Share doesn't already exist
+ *
+ * Returns generic error messages to prevent email enumeration
+ */
+export async function createShare(identifier: string): Promise<ActionResult> {
+  const { user } = await verifySession();
+
+  const trimmed = identifier?.trim();
+  if (!trimmed) {
+    return { success: false, error: SHARING_ERRORS.INVALID_IDENTIFIER };
+  }
+
+  const program = Effect.gen(function* () {
+    const sharing = yield* SharingService;
+    const result = yield* sharing.createShare(user.id, trimmed);
+    return result;
+  }).pipe(Effect.provide(SharingLive), Effect.scoped);
+
+  try {
+    await Effect.runPromise(program);
+
+    // Invalidate both users' caches (owner and recipient)
+    invalidateAndRevalidate(user.id);
+
+    return { success: true };
+  } catch (error: any) {
+    logger.error("Failed to create share:", error);
+
+    // Map tagged errors to user-friendly messages
+    if (error._tag === "ValidationError") {
+      if (error.field === "limit") {
+        return { success: false, error: SHARING_ERRORS.SHARE_LIMIT_REACHED };
+      }
+      if (error.field === "identifier") {
+        if (error.message?.includes("yourself")) {
+          return { success: false, error: SHARING_ERRORS.CANNOT_SHARE_SELF };
+        }
+        return { success: false, error: SHARING_ERRORS.INVALID_IDENTIFIER };
+      }
+    }
+
+    if (error._tag === "NotFoundError") {
+      // Generic message to prevent email enumeration
+      return { success: false, error: SHARING_ERRORS.USER_NOT_FOUND };
+    }
+
+    if (error._tag === "ConflictError") {
+      return { success: false, error: SHARING_ERRORS.ALREADY_SHARED };
+    }
+
+    return { success: false, error: SHARING_ERRORS.FAILED_TO_CREATE_SHARE };
+  }
+}
+
+/**
+ * Remove a share (revoke recipient access)
+ *
+ * Validates:
+ * - User is authenticated
+ * - Share exists and user is the owner
+ */
+export async function removeShare(recipientId: string): Promise<ActionResult> {
+  const { user } = await verifySession();
+
+  if (!recipientId) {
+    return { success: false, error: SHARING_ERRORS.SHARE_NOT_FOUND };
+  }
+
+  const program = Effect.gen(function* () {
+    const sharing = yield* SharingService;
+    yield* sharing.removeShare(user.id, recipientId);
+  }).pipe(Effect.provide(SharingLive), Effect.scoped);
+
+  try {
+    await Effect.runPromise(program);
+
+    // Invalidate both users' caches
+    invalidateAndRevalidate(user.id);
+    invalidateAndRevalidate(recipientId);
+
+    return { success: true };
+  } catch (error: any) {
+    logger.error("Failed to remove share:", error);
+    return { success: false, error: SHARING_ERRORS.FAILED_TO_REMOVE_SHARE };
+  }
+}

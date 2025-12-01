@@ -472,9 +472,13 @@ type ShiftsViewProps = {
   defaultView?: string;
   userSettings: UserSettings;
   presetRules: SupplementRule[];
+  /** When true, hides add button and disables edit/delete/copy/move actions (for shared shifts view) */
+  readOnly?: boolean;
+  /** Owner name displayed when viewing shared shifts */
+  ownerName?: string;
 };
 
-export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", userSettings, presetRules }: ShiftsViewProps) {
+export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", userSettings, presetRules, readOnly = false, ownerName }: ShiftsViewProps) {
   const { t, locale } = useTranslations();
   const formatCurrency = useFormatCurrency();
   const {
@@ -974,9 +978,14 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
         return;
       }
 
+      // In readOnly mode, don't allow adding new shifts
+      if (readOnly) {
+        return;
+      }
+
       navigate(`/${locale}/shifts/add?date=${encodeURIComponent(iso)}`);
     },
-    [calendarSelectedShiftId, clearSelection, navigate, selectedDate, shiftsByDate, copyMode, router, moveMode, locale]
+    [calendarSelectedShiftId, clearSelection, navigate, selectedDate, shiftsByDate, copyMode, router, moveMode, locale, readOnly]
   );
 
   const handleOpenDetails = useCallback(() => {
@@ -1323,14 +1332,14 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
             containerRef={calendarContainerRef}
             onClearSelection={clearSelection}
             onOpenDetails={handleOpenDetails}
-            copyMode={copyMode}
-            onInitiateCopy={handleInitiateCopy}
+            copyMode={readOnly ? false : copyMode}
+            onInitiateCopy={readOnly ? undefined : handleInitiateCopy}
             copying={copying}
-            onCancelCopy={handleCancelCopy}
-            onInitiateMove={handleInitiateMoveMode}
-            moveMode={moveMode}
+            onCancelCopy={readOnly ? undefined : handleCancelCopy}
+            onInitiateMove={readOnly ? undefined : handleInitiateMoveMode}
+            moveMode={readOnly ? false : moveMode}
             moving={moving}
-            onCancelMoveMode={handleCancelMoveMode}
+            onCancelMoveMode={readOnly ? undefined : handleCancelMoveMode}
             newlyAddedDates={newlyAddedDates}
             isOffline={isOffline}
             taxSettings={{
@@ -1338,6 +1347,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
               percentage: Number(userSettings.tax_percentage) || 0,
               halfTaxMonth: userSettings.half_tax_month ?? null,
             }}
+            readOnly={readOnly}
           />
         </div>
       </div>
@@ -1563,6 +1573,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
       existingShifts={shifts.map(s => ({ shift_date: s.shift_date, start_time: s.start_time, end_time: s.end_time }))}
       userSettings={userSettings}
       presetRules={presetRules}
+      readOnly={readOnly}
     />
     </ScrollablePageWrapper>
   );

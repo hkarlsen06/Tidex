@@ -5,7 +5,7 @@ import type { MouseEvent as ReactMouseEvent } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Settings, LogOut } from "lucide-react";
+import { Settings, LogOut, Share2 } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
 import { LocaleToggle } from "./LocaleToggle";
 import { cn } from "@/lib/utils";
@@ -119,6 +119,28 @@ export function UserMenu({
           aria-label="User menu"
           className="absolute right-0 mt-2 w-48 overflow-hidden rounded-xl border border-border/40 bg-background shadow-app-lg"
         >
+          <Link
+            href="/sharing"
+            onClick={(event) => {
+              if (isSettingsDisabled) {
+                event.preventDefault();
+                event.stopPropagation();
+                return;
+              }
+              handleNavigationClick("/sharing")(event);
+            }}
+            prefetch={true}
+            role="menuitem"
+            aria-disabled={isSettingsDisabled}
+            tabIndex={isSettingsDisabled ? -1 : undefined}
+            className={cn(
+              "flex items-center gap-2 px-4 py-2 text-sm text-text-primary hover:bg-accent",
+              isSettingsDisabled && "cursor-not-allowed opacity-50 hover:bg-background"
+            )}
+          >
+            <Share2 strokeWidth={2} className="h-4 w-4" />
+            {t.userMenu.sharing}
+          </Link>
           <Link
             href="/settings"
             onClick={(event) => {

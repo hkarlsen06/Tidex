@@ -41,6 +41,8 @@ type MonthlyEarningsCalendarProps = {
   newlyAddedDates?: Set<string>;
   isOffline?: boolean;
   taxSettings?: TaxSettings;
+  /** When true, hides copy/move action buttons (for shared shifts view) */
+  readOnly?: boolean;
 };
 
 function buildEarningsByDate(shifts: ShiftWithComputations[]): EarningsByDate {
@@ -134,6 +136,7 @@ export function MonthlyEarningsCalendar({
   newlyAddedDates,
   isOffline = false,
   taxSettings,
+  readOnly = false,
 }: MonthlyEarningsCalendarProps) {
   const { t } = useTranslations();
   const formatCurrency = useFormatCurrency();
@@ -323,24 +326,27 @@ export function MonthlyEarningsCalendar({
         <div className="inline-flex min-h-11 w-[90%] items-center gap-1 rounded-full border border-border-subtle bg-surface-secondary/80 px-1 py-1 shadow-app-sm dark:shadow-app-inner">
           {selectedDate ? (
             <div className="flex w-full items-center gap-2 rounded-full bg-surface-primary px-1 py-0.5">
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => onInitiateCopy?.()}
-                disabled={
-                  !onInitiateCopy ||
-                  copyMode ||
-                  copying ||
-                  moveMode ||
-                  isOffline
-                }
-                loading={copying}
-                title={isOffline ? "Cannot copy shifts while offline" : undefined}
-                className="flex-1 h-9 gap-2 rounded-full bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 dark:text-blue-400 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Copy strokeWidth={2} className="h-4 w-4" />
-                {t.pages.shifts.actions.copy}
-              </Button>
+              {/* Copy button - hidden in readOnly mode */}
+              {!readOnly && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => onInitiateCopy?.()}
+                  disabled={
+                    !onInitiateCopy ||
+                    copyMode ||
+                    copying ||
+                    moveMode ||
+                    isOffline
+                  }
+                  loading={copying}
+                  title={isOffline ? "Cannot copy shifts while offline" : undefined}
+                  className="flex-1 h-9 gap-2 rounded-full bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 dark:text-blue-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Copy strokeWidth={2} className="h-4 w-4" />
+                  {t.pages.shifts.actions.copy}
+                </Button>
+              )}
               <Button
                 type="button"
                 variant="default"
@@ -372,28 +378,31 @@ export function MonthlyEarningsCalendar({
                   </>
                 )}
               </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => onInitiateMove?.()}
-                disabled={
-                  !onInitiateMove ||
-                  copyMode ||
-                  moving ||
-                  moveMode ||
-                  isOffline
-                }
-                title={isOffline ? "Cannot move shifts while offline" : undefined}
-                className={cn(
-                  "flex-1 h-9 gap-2 rounded-full px-4 text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed",
-                  moveMode
-                    ? "bg-amber-500/20 text-amber-700 dark:text-amber-400"
-                    : "bg-amber-500/10 text-amber-700 hover:bg-amber-500/20 dark:text-amber-300"
-                )}
-              >
-                <ArrowRightLeft strokeWidth={2} className="h-4 w-4" />
-                {t.pages.shifts.actions.move}
-              </Button>
+              {/* Move button - hidden in readOnly mode */}
+              {!readOnly && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => onInitiateMove?.()}
+                  disabled={
+                    !onInitiateMove ||
+                    copyMode ||
+                    moving ||
+                    moveMode ||
+                    isOffline
+                  }
+                  title={isOffline ? "Cannot move shifts while offline" : undefined}
+                  className={cn(
+                    "flex-1 h-9 gap-2 rounded-full px-4 text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed",
+                    moveMode
+                      ? "bg-amber-500/20 text-amber-700 dark:text-amber-400"
+                      : "bg-amber-500/10 text-amber-700 hover:bg-amber-500/20 dark:text-amber-300"
+                  )}
+                >
+                  <ArrowRightLeft strokeWidth={2} className="h-4 w-4" />
+                  {t.pages.shifts.actions.move}
+                </Button>
+              )}
             </div>
           ) : (
             <div className="flex w-full items-center gap-2 rounded-full px-1 py-0.5">
