@@ -471,6 +471,10 @@ export const no = {
         updatedSettings: 'Oppdaterte {category}-innstillinger',
         retrievedSettings: 'Hentet brukerinnstillinger',
         noSettingsFound: 'Ingen innstillinger funnet (bruker standardverdier)',
+        // Success messages - wages
+        retrievedWageInfo: 'Hentet lønnskonfigurasjon',
+        noWageConfigured: 'Ingen lønnskonfigurasjon funnet',
+        failedToGetWageInfo: 'Kunne ikke hente lønnsinformasjon',
         // Success messages - statistics
         statsCurrentMonth: 'Statistikk for denne måneden',
         statsLastMonth: 'Statistikk for forrige måned',

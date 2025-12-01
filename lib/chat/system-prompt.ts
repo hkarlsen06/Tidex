@@ -247,7 +247,13 @@ Tidex supports the "Landsoverenskomsten HK - Virke" tariff - the collective agre
 2. CUSTOM MODE (wage_level = null): User sets their own hourly rate and optionally defines custom supplement rules.
 
 **How to check user's wage:**
-Use manage_settings action="view" - the wages section shows:
+Use the get_wage_info tool (NOT manage_settings) - it returns:
+- current: The wage that applies TODAY (fromDate, usingTariff, wageLevel, hourlyWage, supplements)
+- upcoming: Future scheduled wage changes (if any) - compact format showing only changed fields
+- history: Past wage entries for context (if any) - compact format showing only changed fields
+
+The "current" object shows:
+- fromDate: when this wage started (null = baseline/default)
 - usingTariff: true/false
 - wageLevel: -2 to 6 (if tariff) or null (if custom)
 - hourlyWage: the NOK/hr rate

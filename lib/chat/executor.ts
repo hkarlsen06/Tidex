@@ -40,6 +40,7 @@ import {
   getStatisticsSchema,
   manageSettingsSchema,
   calculateEarningsSchema,
+  getWageInfoSchema,
 } from "./tools";
 import { getStatsDataForApi } from "@/data-access/stats";
 import { SettingsService } from "@/lib/services/settings";
@@ -218,6 +219,7 @@ const KNOWN_TOOL_NAMES: ToolName[] = [
   "manage_recurring_exclusion",
   "get_statistics",
   "manage_settings",
+  "get_wage_info",
   "calculate_earnings",
 ];
 
@@ -340,6 +342,9 @@ async function executeToolOnce(
 
     case "manage_settings":
       return await executeManageSettings(args, userId, tr);
+
+    case "get_wage_info":
+      return await executeGetWageInfo(args, userId, tr);
 
     case "calculate_earnings":
       return await executeCalculateEarnings(args, userId, tr);
@@ -1567,13 +1572,6 @@ async function executeManageSettings(
           break;
         }
 
-        case "wages":
-          // Wages are view-only through the chat - users must use the app settings
-          return {
-            success: false,
-            message: tr.wagesViewOnly,
-          };
-
         default:
           return {
             success: false,
@@ -1613,27 +1611,7 @@ async function executeManageSettings(
         Effect.scoped
       );
 
-      // Fetch wage snapshots to get actual wage configuration
-      const snapshotsProgram = Effect.gen(function* () {
-        const snapshotsService = yield* SnapshotsService;
-        console.log("[manage_settings] Got SnapshotsService");
-        const snapshots = yield* snapshotsService.getUserWageSnapshots(userId);
-        console.log("[manage_settings] Got snapshots:", snapshots.length);
-        return snapshots;
-      }).pipe(
-        Effect.provide(AuthSnapshotsLive),
-        Effect.catchAll((error) => {
-          console.error("[manage_settings] Snapshots error:", error);
-          logger.error("Failed to fetch wage snapshots:", error);
-          return Effect.succeed([] as const);
-        }),
-        Effect.scoped
-      );
-
-      const [settings, wageSnapshots] = await Promise.all([
-        Effect.runPromise(settingsProgram),
-        Effect.runPromise(snapshotsProgram),
-      ]);
+      const settings = await Effect.runPromise(settingsProgram);
       console.log("[manage_settings] Effect.runPromise completed, settings:", settings ? "exists" : "null");
 
       if (!settings) {
@@ -1647,10 +1625,7 @@ async function executeManageSettings(
 
       console.log("[manage_settings] Formatting settings...");
 
-      // Get baseline snapshot (the one with from_date = null or earliest dated one)
-      const baselineSnapshot = wageSnapshots.find(s => s.from_date === null) ?? wageSnapshots[wageSnapshots.length - 1];
-
-      // Format settings for AI consumption
+      // Format settings for AI consumption (wages moved to get_wage_info tool)
       const formattedSettings = {
         display: {
           theme: settings.theme || "system",
@@ -1675,20 +1650,6 @@ async function executeManageSettings(
           directTimeInput: settings.direct_time_input ?? false,
           fullMinuteRange: settings.full_minute_range ?? false,
         },
-        // Wage data from wage_snapshots (the source of truth for wages)
-        wages: baselineSnapshot ? {
-          usingTariff: baselineSnapshot.wage_level !== null,
-          wageLevel: baselineSnapshot.wage_level, // -2 to 6 (tariff) or null (custom)
-          hourlyWage: baselineSnapshot.hourly_wage,
-          supplements: baselineSnapshot.supplements?.rules ?? [],
-          hasWageHistory: wageSnapshots.length > 1, // User has scheduled wage changes
-        } : {
-          usingTariff: true, // Default assumption
-          wageLevel: null,
-          hourlyWage: null,
-          supplements: [],
-          hasWageHistory: false,
-        },
       };
 
       console.log("[manage_settings] Returning success with formatted settings");
@@ -1703,6 +1664,162 @@ async function executeManageSettings(
     console.error("[manage_settings] Caught error:", error);
     throw new Error(
       error instanceof Error ? error.message : tr.failedToExecuteSettingsOperation
+    );
+  }
+}
+
+/**
+ * Execute get_wage_info tool
+ * Returns user's complete wage configuration with temporal context
+ */
+async function executeGetWageInfo(
+  args: unknown,
+  userId: string,
+  tr: ToolResultTranslations
+): Promise<ToolResult> {
+  const parsed = getWageInfoSchema.safeParse(args);
+  if (!parsed.success) {
+    return {
+      success: false,
+      message: t(tr.invalidInput, { details: parsed.error.issues.map((i) => i.message).join(", ") }),
+    };
+  }
+
+  try {
+    console.log("[get_wage_info] Starting execution for user:", userId);
+    const today = new Date().toISOString().split("T")[0];
+    console.log("[get_wage_info] Today:", today);
+
+    // Fetch all wage snapshots
+    console.log("[get_wage_info] Fetching wage snapshots...");
+    const snapshotsProgram = Effect.gen(function* () {
+      const service = yield* SnapshotsService;
+      console.log("[get_wage_info] Got SnapshotsService");
+      const snapshots = yield* service.getUserWageSnapshots(userId);
+      console.log("[get_wage_info] Got snapshots:", snapshots.length);
+      return snapshots;
+    }).pipe(
+      Effect.provide(AuthSnapshotsLive),
+      Effect.catchAll((error) => {
+        console.error("[get_wage_info] Effect error:", error);
+        logger.error("Failed to fetch wage snapshots:", error);
+        return Effect.succeed([] as const);
+      }),
+      Effect.scoped
+    );
+
+    const snapshots = await Effect.runPromise(snapshotsProgram);
+    console.log("[get_wage_info] Snapshots fetched:", snapshots.length);
+
+    if (snapshots.length === 0) {
+      console.log("[get_wage_info] No snapshots found, returning empty");
+      return {
+        success: true,
+        message: tr.noWageConfigured ?? "No wage configuration found",
+        data: { current: null },
+      };
+    }
+
+    // Sort by from_date ASC (baseline/null first, then chronological)
+    const sorted = [...snapshots].sort((a, b) => {
+      if (a.from_date === null) return -1;
+      if (b.from_date === null) return 1;
+      return a.from_date.localeCompare(b.from_date);
+    });
+
+    // Categorize snapshots
+    const baseline = sorted.find(s => s.from_date === null);
+    const dated = sorted.filter(s => s.from_date !== null);
+
+    // Find current: most recent where from_date <= today (or baseline)
+    const pastAndCurrent = dated.filter(s => s.from_date! <= today);
+    const currentSnapshot = pastAndCurrent.length > 0
+      ? pastAndCurrent[pastAndCurrent.length - 1]
+      : baseline;
+
+    // Future entries (from_date > today)
+    const futureSnapshots = dated.filter(s => s.from_date! > today);
+
+    // History: baseline + past entries (excluding current)
+    const historySnapshots: typeof sorted = [];
+    if (baseline && currentSnapshot !== baseline) {
+      historySnapshots.push(baseline);
+    }
+    // Add past dated entries (excluding the current one)
+    if (pastAndCurrent.length > 1) {
+      historySnapshots.push(...pastAndCurrent.slice(0, -1));
+    }
+
+    // Build compact representation - only show changed fields
+    type CompactEntry = {
+      fromDate: string | null;
+      hourlyWage: number | "unchanged";
+      wageLevel: number | null | "unchanged";
+      usingTariff: boolean | "unchanged";
+      supplements: unknown[] | "unchanged";
+    };
+
+    const buildCompact = (
+      snaps: typeof sorted,
+      referenceSnapshot: typeof sorted[0] | undefined
+    ): CompactEntry[] => {
+      let prev = referenceSnapshot;
+      return snaps.map((snap) => {
+        const entry: CompactEntry = {
+          fromDate: snap.from_date,
+          hourlyWage: snap.hourly_wage !== prev?.hourly_wage ? snap.hourly_wage : "unchanged",
+          wageLevel: snap.wage_level !== prev?.wage_level ? snap.wage_level : "unchanged",
+          usingTariff: (snap.wage_level !== null) !== (prev?.wage_level !== null)
+            ? snap.wage_level !== null : "unchanged",
+          supplements: JSON.stringify(snap.supplements) !== JSON.stringify(prev?.supplements)
+            ? (snap.supplements?.rules ?? []) : "unchanged",
+        };
+        prev = snap;
+        return entry;
+      });
+    };
+
+    // Build response
+    const data: {
+      current: {
+        fromDate: string | null;
+        usingTariff: boolean;
+        wageLevel: number | null;
+        hourlyWage: number;
+        supplements: unknown[];
+      } | null;
+      upcoming?: CompactEntry[];
+      history?: CompactEntry[];
+    } = {
+      current: currentSnapshot ? {
+        fromDate: currentSnapshot.from_date,
+        usingTariff: currentSnapshot.wage_level !== null,
+        wageLevel: currentSnapshot.wage_level,
+        hourlyWage: currentSnapshot.hourly_wage,
+        supplements: currentSnapshot.supplements?.rules ?? [],
+      } : null,
+    };
+
+    // Add upcoming (future entries) - compare against current
+    if (futureSnapshots.length > 0) {
+      data.upcoming = buildCompact(futureSnapshots, currentSnapshot);
+    }
+
+    // Add history - compare sequentially from baseline
+    if (historySnapshots.length > 0) {
+      data.history = buildCompact(historySnapshots, undefined);
+    }
+
+    console.log("[get_wage_info] Returning success with data:", JSON.stringify(data, null, 2));
+    return {
+      success: true,
+      message: tr.retrievedWageInfo ?? "Retrieved wage information",
+      data,
+    };
+  } catch (error) {
+    console.error("[get_wage_info] Caught error:", error);
+    throw new Error(
+      error instanceof Error ? error.message : (tr.failedToGetWageInfo ?? "Failed to get wage info")
     );
   }
 }
