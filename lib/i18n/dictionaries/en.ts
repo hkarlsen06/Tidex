@@ -488,6 +488,7 @@ export const en: Dictionary = {
         unknownTool: 'Unknown tool: {name}',
         unknownAction: 'Unknown action: {action}',
         unknownCategory: 'Unknown category: {category}',
+        wagesViewOnly: 'Wage settings cannot be changed via chat. Go to Settings → Wage in the app to change hourly rate, wage level, or supplements.',
         unknownMetric: 'Unknown metric: {metric}',
         invalidInput: 'Invalid input: {details}',
         missingFields: 'Missing required fields: {fields}',
