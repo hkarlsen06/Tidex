@@ -321,6 +321,8 @@ export const en: Dictionary = {
         monthlyProgress: 'Monthly progress',
         salaryComposition: 'Salary composition',
         thisWeek: 'This week',
+        bestWeek: 'Best week',
+        week: 'Week',
         average: 'Average',
         yearTotal: 'total',
         totalFor: 'Total for',

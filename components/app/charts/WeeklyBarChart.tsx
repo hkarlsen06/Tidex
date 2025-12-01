@@ -12,6 +12,10 @@ import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
 
 type WeeklyBarChartProps = {
   data: DailyData[];
+  /** When true, highlights the day with highest earnings instead of today */
+  highlightBestDay?: boolean;
+  /** When true, shows dates (e.g., "15. nov") instead of day names (e.g., "Mon") on X-axis */
+  showDatesInsteadOfDays?: boolean;
 };
 
 const chartConfig = {
@@ -146,22 +150,23 @@ const createTickFormatter = (ticks: number[]) => {
   };
 };
 
-// Custom tick component to color today's label
+// Custom tick component to color highlighted day's label
 function CustomXAxisTick({
   x,
   y,
   payload,
   data,
-  today
+  highlightDate
 }: {
   x: number;
   y: number;
   payload: any;
   data: DailyData[];
-  today: string;
+  highlightDate: string;
 }) {
   const dayData = data.find(d => d.date === payload.value);
-  const isToday = dayData?.fullDate === today;
+  // Only highlight if there's a specific date to highlight
+  const isHighlighted = highlightDate && dayData?.fullDate === highlightDate;
 
   return (
     <g transform={`translate(${x},${y})`}>
@@ -171,8 +176,8 @@ function CustomXAxisTick({
         dy={8}
         textAnchor="middle"
         fontSize={16}
-        fill={isToday ? "hsl(var(--brand-gradientMid))" : "hsl(var(--foreground))"}
-        fontWeight={isToday ? 600 : 400}
+        fill={isHighlighted ? "hsl(var(--brand-gradientMid))" : "hsl(var(--foreground))"}
+        fontWeight={isHighlighted ? 600 : 400}
       >
         {payload.value}
       </text>
@@ -180,27 +185,47 @@ function CustomXAxisTick({
   );
 }
 
-export function WeeklyBarChart({ data }: WeeklyBarChartProps) {
+// Format date as the day number with a dot (e.g., "15.")
+const formatShortDate = (dateString: string): string => {
+  const date = new Date(dateString + 'T00:00:00Z');
+  return `${date.getUTCDate()}.`;
+};
+
+export function WeeklyBarChart({ data, highlightBestDay = false, showDatesInsteadOfDays = false }: WeeklyBarChartProps) {
   const formatCurrency = useFormatCurrency();
+
+  // Transform data to show dates instead of day names if requested
+  const chartData = showDatesInsteadOfDays
+    ? data.map(d => ({
+        ...d,
+        date: formatShortDate(d.fullDate), // Replace day name with short date
+      }))
+    : data;
+
   // Calculate domain for y-axis to focus on the range where data varies
-  const earnings = data.map((d) => d.earnings);
+  const earnings = chartData.map((d) => d.earnings);
   const { domain, ticks } = calculateYAxisScale(earnings);
   const formatTick = createTickFormatter(ticks);
 
-  // Get today's date string to highlight the current day
-  const today = new Date().toISOString().split('T')[0];
+  // Determine which date to highlight
+  // - Default: today's date (for "This week" view)
+  // - highlightBestDay: no highlighting (for "Best week" view in past months)
+  const highlightDate = highlightBestDay
+    ? '' // No highlighting for past months
+    : new Date().toISOString().split('T')[0];
 
   return (
     <ChartContainer config={chartConfig} className="h-[260px] w-full">
-      <BarChart data={data} margin={{ top: 12, right: 16, bottom: 0, left: 16 }}>
+      <BarChart data={chartData} margin={{ top: 12, right: 16, bottom: 0, left: 16 }}>
         <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
         <XAxis
           dataKey="date"
           tickLine={false}
           axisLine={false}
           padding={{ left: 8, right: 8 }}
-          tick={(props) => <CustomXAxisTick {...props} data={data} today={today} />}
+          tick={(props) => <CustomXAxisTick {...props} data={chartData} highlightDate={highlightDate} />}
           tickMargin={8}
+          interval={0}
         />
         <YAxis
           tickLine={false}
@@ -243,14 +268,16 @@ export function WeeklyBarChart({ data }: WeeklyBarChartProps) {
           strokeWidth={2}
           radius={[8, 8, 0, 0]}
         >
-          {data.map((entry) => {
-            const isToday = entry.fullDate === today;
+          {chartData.map((entry) => {
+            // When no highlight date, show all bars at full color
+            // When highlight date exists, only that day is full color
+            const isHighlighted = !highlightDate || entry.fullDate === highlightDate;
 
             return (
               <Cell
                 key={entry.fullDate}
                 fill={
-                  isToday
+                  isHighlighted
                     ? "hsl(var(--brand-gradientMid))"
                     : "hsl(var(--brand-gradientMid) / 0.2)"
                 }

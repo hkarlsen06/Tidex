@@ -320,6 +320,8 @@ export const no = {
         monthlyProgress: 'Månedens utvikling',
         salaryComposition: 'Lønnssammensetning',
         thisWeek: 'Denne uken',
+        bestWeek: 'Beste uken',
+        week: 'Uke',
         average: 'Gjennomsnitt',
         yearTotal: 'totalt',
         totalFor: 'Totalt for',
