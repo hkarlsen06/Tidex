@@ -487,6 +487,7 @@ export const no = {
         unknownTool: 'Ukjent verktøy: {name}',
         unknownAction: 'Ukjent handling: {action}',
         unknownCategory: 'Ukjent kategori: {category}',
+        wagesViewOnly: 'Lønnsinnstillinger kan ikke endres via chat. Gå til Innstillinger → Lønn i appen for å endre timelønn, lønnstrinn eller tillegg.',
         unknownMetric: 'Ukjent metrikk: {metric}',
         invalidInput: 'Ugyldig inndata: {details}',
         missingFields: 'Mangler påkrevde felt: {fields}',

@@ -151,7 +151,7 @@ export type GetStatisticsInput = z.infer<typeof getStatisticsSchema>;
  */
 export const manageSettingsSchema = z.object({
   action: z.enum(["view", "update"]).optional().default("view"),
-  category: z.enum(["display", "payroll", "tax", "goals", "preferences"]).optional(),
+  category: z.enum(["display", "payroll", "tax", "goals", "preferences", "wages"]).optional(),
   settings: z.record(z.string(), z.any()).optional(),
 });
 
@@ -853,13 +853,14 @@ Optional: year and month parameters to query specific periods (defaults to curre
     description: `View or update user settings.
 
 Actions:
-- VIEW: No parameters or action="view" - Returns all current settings
+- VIEW: No parameters or action="view" - Returns all current settings including wage configuration
 - UPDATE: action="update", category, settings object with key-value pairs
 
-Categories: display, payroll, tax, goals, preferences
-See settings_reference in system prompt for detailed descriptions of each setting and valid values.
+Categories: display, payroll, tax, goals, preferences, wages
+- wages category shows: usingTariff, wageLevel (-2 to 6), hourlyWage, supplements, hasWageHistory
+- See settings_reference and wage_system sections in system prompt for detailed descriptions.
 
-Note: Only include settings you want to change in the settings object.`,
+Note: Only include settings you want to change in the settings object. Wage changes must be done in the app Settings → Lønn.`,
     input_schema: {
       type: "object",
       properties: {
@@ -870,8 +871,8 @@ Note: Only include settings you want to change in the settings object.`,
         },
         category: {
           type: "string",
-          enum: ["display", "payroll", "tax", "goals", "preferences"],
-          description: "Settings category to update",
+          enum: ["display", "payroll", "tax", "goals", "preferences", "wages"],
+          description: "Settings category (wages is view-only, changes must be done in the app)",
         },
         settings: {
           type: "object",

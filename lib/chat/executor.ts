@@ -43,7 +43,8 @@ import {
 } from "./tools";
 import { getStatsDataForApi } from "@/data-access/stats";
 import { SettingsService } from "@/lib/services/settings";
-import { AuthSettingsLive } from "@/lib/layers/app";
+import { SnapshotsService } from "@/lib/services/snapshots";
+import { AuthSettingsLive, AuthSnapshotsLive } from "@/lib/layers/app";
 import { Effect } from "effect";
 import { logger } from "@/lib/logger";
 import { getDictionary } from "@/lib/i18n/dictionaries";
@@ -1566,6 +1567,13 @@ async function executeManageSettings(
           break;
         }
 
+        case "wages":
+          // Wages are view-only through the chat - users must use the app settings
+          return {
+            success: false,
+            message: tr.wagesViewOnly,
+          };
+
         default:
           return {
             success: false,
@@ -1589,7 +1597,7 @@ async function executeManageSettings(
       console.log("[manage_settings] Calling SettingsService...");
 
       // Call SettingsService directly without caching (API route context)
-      const program = Effect.gen(function* () {
+      const settingsProgram = Effect.gen(function* () {
         const settingsService = yield* SettingsService;
         console.log("[manage_settings] Got SettingsService");
         const settings = yield* settingsService.getUserSettings(userId);
@@ -1605,7 +1613,27 @@ async function executeManageSettings(
         Effect.scoped
       );
 
-      const settings = await Effect.runPromise(program);
+      // Fetch wage snapshots to get actual wage configuration
+      const snapshotsProgram = Effect.gen(function* () {
+        const snapshotsService = yield* SnapshotsService;
+        console.log("[manage_settings] Got SnapshotsService");
+        const snapshots = yield* snapshotsService.getUserWageSnapshots(userId);
+        console.log("[manage_settings] Got snapshots:", snapshots.length);
+        return snapshots;
+      }).pipe(
+        Effect.provide(AuthSnapshotsLive),
+        Effect.catchAll((error) => {
+          console.error("[manage_settings] Snapshots error:", error);
+          logger.error("Failed to fetch wage snapshots:", error);
+          return Effect.succeed([] as const);
+        }),
+        Effect.scoped
+      );
+
+      const [settings, wageSnapshots] = await Promise.all([
+        Effect.runPromise(settingsProgram),
+        Effect.runPromise(snapshotsProgram),
+      ]);
       console.log("[manage_settings] Effect.runPromise completed, settings:", settings ? "exists" : "null");
 
       if (!settings) {
@@ -1619,6 +1647,9 @@ async function executeManageSettings(
 
       console.log("[manage_settings] Formatting settings...");
 
+      // Get baseline snapshot (the one with from_date = null or earliest dated one)
+      const baselineSnapshot = wageSnapshots.find(s => s.from_date === null) ?? wageSnapshots[wageSnapshots.length - 1];
+
       // Format settings for AI consumption
       const formattedSettings = {
         display: {
@@ -1626,9 +1657,6 @@ async function executeManageSettings(
           defaultShiftsView: settings.default_shifts_view || "calendar",
         },
         payroll: {
-          usePreset: settings.use_preset ?? true,
-          currentWageLevel: settings.current_wage_level,
-          customWage: settings.custom_wage,
           pauseDeductionEnabled: settings.pause_deduction_enabled ?? false,
           pauseDeductionMethod: settings.pause_deduction_method || "proportional",
           pauseThresholdHours: settings.pause_threshold_hours || 5.5,
@@ -1646,6 +1674,20 @@ async function executeManageSettings(
         preferences: {
           directTimeInput: settings.direct_time_input ?? false,
           fullMinuteRange: settings.full_minute_range ?? false,
+        },
+        // Wage data from wage_snapshots (the source of truth for wages)
+        wages: baselineSnapshot ? {
+          usingTariff: baselineSnapshot.wage_level !== null,
+          wageLevel: baselineSnapshot.wage_level, // -2 to 6 (tariff) or null (custom)
+          hourlyWage: baselineSnapshot.hourly_wage,
+          supplements: baselineSnapshot.supplements?.rules ?? [],
+          hasWageHistory: wageSnapshots.length > 1, // User has scheduled wage changes
+        } : {
+          usingTariff: true, // Default assumption
+          wageLevel: null,
+          hourlyWage: null,
+          supplements: [],
+          hasWageHistory: false,
         },
       };
 
