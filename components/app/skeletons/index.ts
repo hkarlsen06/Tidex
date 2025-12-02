@@ -9,7 +9,12 @@ export {
   AddShiftSkeleton,
 } from "./pages";
 
-export { SharingSkeleton } from "./SharingSkeleton";
+export {
+  SharingSkeleton,
+  SharingDefaultSkeleton,
+  SharingViewSkeleton,
+  SharingViewSkeleton as SharingPageSkeleton,
+} from "./SharingSkeleton";
 
 // Settings page skeletons
 export {

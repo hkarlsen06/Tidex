@@ -128,34 +128,77 @@ function WeekGroupSkeleton({ shiftCount }: { shiftCount: number }) {
 }
 
 /**
- * Skeleton for the sharing page header with dropdown and settings button
+ * Skeleton for the SharingDropdown component
+ * Matches: rounded-xl border, px-4 py-3, min-w-[200px], avatar (h-8 w-8) + name + chevron
  */
-function SharingHeaderSkeleton() {
+function DropdownSkeleton() {
   return (
-    <div className="flex items-center gap-2 w-full sm:justify-between sm:gap-3 px-4 py-2">
-      {/* Dropdown skeleton */}
-      <div className="h-10 w-48 bg-surface-secondary rounded-lg animate-pulse flex-1 max-w-[200px]" />
-      {/* Settings button skeleton */}
-      <div className="h-9 w-9 sm:w-32 bg-surface-secondary rounded-lg animate-pulse shrink-0" />
+    <div className="flex items-center gap-3 rounded-xl border border-border-subtle bg-surface-primary px-4 py-3 min-w-[200px]">
+      {/* Avatar circle */}
+      <div className="h-8 w-8 rounded-full bg-surface-secondary animate-pulse shrink-0" />
+      {/* Name text */}
+      <div className="h-4 w-20 bg-surface-secondary rounded animate-pulse flex-1" />
+      {/* Chevron */}
+      <div className="h-4 w-4 bg-surface-secondary rounded animate-pulse shrink-0" />
     </div>
   );
 }
 
 /**
- * SharingSkeleton - Loading skeleton for the /sharing page
- * Shows when navigating between sharing views (e.g., selecting a different sharer)
+ * Skeleton for the sharing view header with dropdown and settings button
+ * Used inside ShiftsView headerSlot
  */
-export function SharingSkeleton() {
+function SharingHeaderSkeleton() {
+  return (
+    <div className="flex items-center gap-2 w-full sm:justify-between sm:gap-3">
+      {/* Dropdown skeleton */}
+      <DropdownSkeleton />
+      {/* Settings button skeleton - icon only on mobile, icon + text on desktop */}
+      <div className="h-9 w-9 sm:w-36 bg-surface-secondary rounded-lg animate-pulse shrink-0" />
+    </div>
+  );
+}
+
+/**
+ * SharingDefaultSkeleton - Loading skeleton for /sharing (default view, no sharer selected)
+ * Matches ScrollablePageWrapper structure with centered container
+ */
+export function SharingDefaultSkeleton() {
   return (
     <div className="h-full overflow-y-auto pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-8">
-      {/* Header with dropdown and settings */}
-      <SharingHeaderSkeleton />
+      {/* Matches ScrollablePageWrapper container */}
+      <div className="mx-auto max-w-md md:max-w-lg px-4 w-full">
+        <div className="flex flex-col gap-6 pt-4">
+          {/* Header: Title "Deling" (text-2xl) + Manage button */}
+          <div className="flex items-center justify-between gap-4">
+            <div className="h-8 w-16 bg-surface-secondary rounded animate-pulse" />
+            <div className="h-9 w-40 bg-surface-secondary rounded-lg animate-pulse" />
+          </div>
 
+          {/* Dropdown - matches SharingDropdown styling */}
+          <DropdownSkeleton />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * SharingViewSkeleton - Loading skeleton for /sharing?view=<id> (viewing a sharer's shifts)
+ * Matches ShiftsView structure with headerSlot inside calendar container
+ */
+export function SharingViewSkeleton() {
+  return (
+    <div className="h-full overflow-y-auto pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-8">
       {/* Mobile/Tablet: vertical stack. Desktop: side-by-side */}
       <div className="flex w-full flex-col lg:relative lg:left-1/2 lg:right-1/2 lg:-ml-[50vw] lg:-mr-[50vw] lg:w-screen lg:flex-row lg:gap-0 lg:px-0 lg:items-start lg:pt-6">
         {/* Calendar Section */}
         <div className="h-[calc(100dvh-3.5rem-5rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] flex flex-col justify-center px-4 shrink-0 lg:h-auto lg:w-1/2 lg:sticky lg:top-6 lg:justify-start lg:items-center lg:px-0">
           <div className="w-full max-w-md md:max-w-lg lg:max-w-none lg:w-[480px]">
+            {/* Header slot - inside calendar container with pb-3 */}
+            <div className="pb-3">
+              <SharingHeaderSkeleton />
+            </div>
             <CalendarSkeleton />
           </div>
         </div>
@@ -175,3 +218,9 @@ export function SharingSkeleton() {
     </div>
   );
 }
+
+/**
+ * SharingSkeleton - Alias for backward compatibility
+ * @deprecated Use SharingDefaultSkeleton or SharingViewSkeleton instead
+ */
+export const SharingSkeleton = SharingDefaultSkeleton;

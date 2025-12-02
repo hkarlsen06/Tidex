@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useTransition, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import { Pencil, Trash2, Clock, Check, X, RefreshCw } from "lucide-react";
 import {
   Dialog,
@@ -14,8 +15,15 @@ import { Button } from "@components/app/Button";
 import { Input } from "@components/app/Input";
 import type { ShiftWithComputations, UserSettings, SupplementRule } from "@/lib/payroll";
 import SupplementBreakdown, { type SupplementSegmentInput } from "./SupplementBreakdown";
-import { CustomSupplementsModal } from "./CustomSupplementsModal";
 import { updateShift } from "@/app/[locale]/(app)/shifts/_actions/updateShift";
+
+// Dynamically import CustomSupplementsModal to avoid HMR issues with server action imports
+// This modal imports updateCustomSupplements server action which causes Turbopack HMR errors
+// when bundled in readOnly contexts (like sharing page) where it's not needed
+const CustomSupplementsModal = dynamic(
+  () => import("./CustomSupplementsModal").then((mod) => ({ default: mod.CustomSupplementsModal })),
+  { ssr: false }
+);
 import { cn } from "@/lib/cn";
 import { TimeInput } from "@/components/app/TimeInput";
 import { useTranslations } from "@/lib/i18n/client";
@@ -549,7 +557,7 @@ export function ShiftDetails({
           presetRules={presetRules}
         />
       )}
-      {shift && (
+      {shift && !readOnly && (
         <CustomSupplementsModal
           open={customSupplementsModalOpen}
           onOpenChange={setCustomSupplementsModalOpen}
