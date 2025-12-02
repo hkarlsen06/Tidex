@@ -267,10 +267,20 @@ export const SharingServiceLive = Layer.effect(
                 phone: user.phone ?? null,
               };
             } else {
-              // Phone lookup
-              const normalizedPhone = trimmed.startsWith("+47")
-                ? trimmed.replace(/\s/g, "")
-                : `+47${trimmed.replace(/\s/g, "")}`;
+              // Phone lookup - normalize to 8-digit Norwegian number
+              const inputDigits = trimmed.replace(/\D/g, "");
+              // Extract the 8-digit local number (strip country code 47 if present)
+              const getLocalNumber = (digits: string): string => {
+                if (digits.length === 10 && digits.startsWith("47")) {
+                  return digits.slice(2); // 4712345678 → 12345678
+                }
+                if (digits.length === 8) {
+                  return digits; // Already 8 digits
+                }
+                return digits; // Return as-is for other formats
+              };
+
+              const normalizedInput = getLocalNumber(inputDigits);
 
               const { data, error } = await adminClient.auth.admin.listUsers({
                 page: 1,
@@ -282,7 +292,13 @@ export const SharingServiceLive = Layer.effect(
                 return null;
               }
 
-              const user = data.users.find((u) => u.phone === normalizedPhone);
+              // Find user by comparing normalized 8-digit numbers
+              const user = data.users.find((u) => {
+                if (!u.phone) return false;
+                const storedDigits = u.phone.replace(/\D/g, "");
+                const normalizedStored = getLocalNumber(storedDigits);
+                return normalizedStored === normalizedInput;
+              });
 
               if (!user) return null;
 
