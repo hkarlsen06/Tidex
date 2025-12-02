@@ -1,5 +1,5 @@
-import { SharingSkeleton } from "@/components/app/skeletons";
+import { SharingDefaultSkeleton } from "@/components/app/skeletons";
 
 export default function SharingLoading() {
-  return <SharingSkeleton />;
+  return <SharingDefaultSkeleton />;
 }

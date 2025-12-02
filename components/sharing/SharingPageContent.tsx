@@ -2,17 +2,26 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import { Settings, Users } from "lucide-react";
 import { Button } from "@/components/app/Button";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/app/Card";
 import { ScrollablePageWrapper } from "@/components/app/ScrollablePageWrapper";
-import { ShiftsView } from "@/components/shifts/ShiftsView";
+import { SharingPageSkeleton } from "@/components/app/skeletons";
 import { ManageSharingModal } from "./ManageSharingModal";
 import { SharingDropdown } from "./SharingDropdown";
 import { useTranslations } from "@/lib/i18n/client";
 import type { SharedUser, ShareRecipient } from "@/data-access/sharing";
 import type { ShiftWithComputations, UserSettings, SupplementRule } from "@/lib/payroll";
 import type { ShiftsAggregates } from "@/lib/services/shifts";
+
+// Dynamically import ShiftsView to avoid Turbopack HMR issues with server action imports
+// ShiftsView imports server actions (deleteShift, updateShift, etc.) that cause HMR errors
+// in development when bundled in contexts where they're not used (readOnly mode)
+const ShiftsView = dynamic(
+  () => import("@/components/shifts/ShiftsView").then((mod) => ({ default: mod.ShiftsView })),
+  { ssr: false, loading: () => <SharingPageSkeleton /> }
+);
 
 type SharingPageContentProps = {
   sharers: SharedUser[];
