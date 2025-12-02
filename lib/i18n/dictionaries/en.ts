@@ -305,6 +305,13 @@ export const en: Dictionary = {
         cancel: 'Cancel',
         copyInstructions: 'Select a date to copy the shift to',
         moveInstructions: 'Select a date to move the shift',
+        delete: 'Delete',
+        clearSelection: 'Clear',
+        selectedCount: '{count} selected',
+        deleteConfirmTitle: 'Delete shifts',
+        deleteConfirmDescription: 'Are you sure you want to delete {count} shift(s)?',
+        deleteConfirmButton: 'Delete',
+        deleteCancelButton: 'Cancel',
       },
     },
     stats: {

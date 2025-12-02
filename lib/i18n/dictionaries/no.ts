@@ -304,6 +304,13 @@ export const no = {
         cancel: 'Avbryt',
         copyInstructions: 'Velg en dato for å kopiere vakten dit',
         moveInstructions: 'Velg en dato for å flytte vakten',
+        delete: 'Slett',
+        clearSelection: 'Fjern',
+        selectedCount: '{count} valgt',
+        deleteConfirmTitle: 'Slett vakter',
+        deleteConfirmDescription: 'Er du sikker på at du vil slette {count} vakt(er)?',
+        deleteConfirmButton: 'Slett',
+        deleteCancelButton: 'Avbryt',
       },
     },
     stats: {

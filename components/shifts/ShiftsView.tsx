@@ -511,6 +511,9 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
   const [openedFromCalendar, setOpenedFromCalendar] = useState(false);
   const [copyMode, setCopyMode] = useState(false);
   const [copying, startCopyTransition] = useTransition();
+  // Multi-selection state
+  const [multiSelectedDates, setMultiSelectedDates] = useState<Set<ISODate>>(new Set());
+  const [deleting, startDeleteTransition] = useTransition();
   const isOffline = useOnlineStatus();
   const [additionalShifts, setAdditionalShifts] = useState<ShiftWithComputations[]>([]);
   const shiftsListRef = useRef<HTMLDivElement>(null);
@@ -570,6 +573,12 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
     setMoveMode(false);
     setOpenedFromCalendar(false);
     setCopyMode(false);
+    setMultiSelectedDates(new Set());
+  }, []);
+
+  // Clear only multi-selection (keep other state)
+  const clearMultiSelection = useCallback(() => {
+    setMultiSelectedDates(new Set());
   }, []);
 
   // Helper to generate month key for tracking
@@ -1144,10 +1153,35 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
       const isoDate = iso as ISODate;
       const targetShifts = shiftsByDate.get(isoDate) ?? [];
 
+      // If in multi-selection mode, toggle the date
+      if (multiSelectedDates.size > 0) {
+        if (hasShifts && targetShifts.length > 0) {
+          setMultiSelectedDates(prev => {
+            const next = new Set(prev);
+            if (next.has(isoDate)) {
+              next.delete(isoDate);
+            } else {
+              next.add(isoDate);
+            }
+            return next;
+          });
+        }
+        return;
+      }
+
       if (selectedDate) {
         if (selectedDate === isoDate) {
           // Deselect when clicking the same date again
           clearSelection();
+          return;
+        }
+
+        // If clicking another date with shifts while one is selected, start multi-selection
+        if (hasShifts && targetShifts.length > 0 && !copyMode && !moveMode && !readOnly) {
+          // Start multi-selection with both dates
+          setMultiSelectedDates(new Set([selectedDate, isoDate]));
+          setSelectedDate(null);
+          setCalendarSelectedShiftId(null);
           return;
         }
 
@@ -1235,7 +1269,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
 
       navigate(`/${locale}/shifts/add?date=${encodeURIComponent(iso)}`);
     },
-    [calendarSelectedShiftId, clearSelection, navigate, selectedDate, shiftsByDate, copyMode, router, moveMode, locale, readOnly]
+    [calendarSelectedShiftId, clearSelection, navigate, selectedDate, shiftsByDate, copyMode, router, moveMode, locale, readOnly, multiSelectedDates.size]
   );
 
   const handleOpenDetails = useCallback(() => {
@@ -1280,6 +1314,43 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
   const handleCancelCopy = useCallback(() => {
     setCopyMode(false);
   }, []);
+
+  // Handle bulk deletion of shifts for all multi-selected dates
+  const handleDeleteSelected = useCallback(() => {
+    if (multiSelectedDates.size === 0 || isOffline) return;
+
+    // Collect all shift IDs from the selected dates
+    const shiftsToDelete: ShiftWithComputations[] = [];
+    multiSelectedDates.forEach(date => {
+      const dateShifts = shiftsByDate.get(date) ?? [];
+      shiftsToDelete.push(...dateShifts);
+    });
+
+    if (shiftsToDelete.length === 0) return;
+
+    // Optimistically remove shifts from UI
+    const idsToDelete = new Set(shiftsToDelete.map(s => s.id));
+    setDeletedShiftIds(prev => new Set([...prev, ...idsToDelete]));
+    clearMultiSelection();
+
+    startDeleteTransition(async () => {
+      try {
+        // Delete all shifts in parallel
+        await Promise.all(
+          shiftsToDelete.map(shift => deleteShift(shift.id))
+        );
+        router.refresh();
+      } catch (error) {
+        // Revert optimistic deletions on error
+        setDeletedShiftIds(prev => {
+          const next = new Set(prev);
+          idsToDelete.forEach(id => next.delete(id));
+          return next;
+        });
+        console.error("Failed to delete shifts", error);
+      }
+    });
+  }, [multiSelectedDates, shiftsByDate, isOffline, router, clearMultiSelection]);
 
   const selectedDateShifts = useMemo(
     () => (selectedDate ? shiftsByDate.get(selectedDate) ?? [] : []),
@@ -1608,6 +1679,10 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
             onMonthChange={handleMonthChange}
             onDayClick={handleDayClick}
             selectedDate={selectedDate}
+            selectedDates={readOnly ? undefined : multiSelectedDates}
+            onClearMultiSelection={readOnly ? undefined : clearMultiSelection}
+            onDeleteSelected={readOnly ? undefined : handleDeleteSelected}
+            deleting={deleting}
             containerRef={calendarContainerRef}
             onClearSelection={clearSelection}
             onOpenDetails={handleOpenDetails}

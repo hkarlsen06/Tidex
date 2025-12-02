@@ -1,13 +1,13 @@
 "use client";
 
 import { useMemo, useState, useEffect, useRef, type Ref } from "react";
-import { Clock, Copy, ArrowRightLeft, Info } from "lucide-react";
+import { Clock, Copy, ArrowRightLeft, Info, Trash2, X } from "lucide-react";
 import { ShiftsCalendar } from "@/components/app/ShiftsCalendar";
 import { Card } from "@/components/app/Card";
 import { Button } from "@/components/app/Button";
 import { MonthPicker } from "@/components/app/MonthPicker";
 import { useMonth } from "@/components/app/MonthContext";
-import { ShiftWithComputations } from "@/lib/payroll";
+import type { ShiftWithComputations } from "@/lib/payroll";
 import type { ISODate, EarningsByDate, HoursByDate } from "@/components/app/calendar-types";
 import { cn } from "@/lib/cn";
 import { useTranslations } from "@/lib/i18n/client";
@@ -27,6 +27,14 @@ type MonthlyEarningsCalendarProps = {
   onMonthChange: (month: Date) => void;
   onDayClick?: (iso: ISODate, hasShifts: boolean) => void;
   selectedDate?: ISODate | null;
+  /** Set of selected dates for multi-selection mode */
+  selectedDates?: Set<ISODate>;
+  /** Callback to clear multi-selection */
+  onClearMultiSelection?: () => void;
+  /** Callback to delete selected shifts */
+  onDeleteSelected?: () => void;
+  /** Whether deletion is in progress */
+  deleting?: boolean;
   containerRef?: Ref<HTMLDivElement>;
   onClearSelection?: () => void;
   onOpenDetails?: () => void;
@@ -123,6 +131,10 @@ export function MonthlyEarningsCalendar({
   onMonthChange,
   onDayClick,
   selectedDate = null,
+  selectedDates,
+  onClearMultiSelection,
+  onDeleteSelected,
+  deleting = false,
   containerRef,
   onOpenDetails,
   copyMode = false,
@@ -316,6 +328,7 @@ export function MonthlyEarningsCalendar({
             onMonthChange={onMonthChange}
             onDayClick={onDayClick}
             selectedDate={selectedDate}
+            selectedDates={selectedDates}
             weekNumberPosition="top-left"
             newlyAddedDates={newlyAddedDates}
             taxSettings={taxSettings}
@@ -324,7 +337,33 @@ export function MonthlyEarningsCalendar({
       </div>
       <div className="flex flex-col items-center gap-2 pb-6">
         <div className="inline-flex min-h-11 w-[90%] items-center gap-1 rounded-full border border-border-subtle bg-surface-secondary/80 px-1 py-1 shadow-app-sm dark:shadow-app-inner">
-          {selectedDate ? (
+          {/* Multi-selection mode: show delete and clear buttons */}
+          {selectedDates && selectedDates.size > 0 ? (
+            <div className="flex w-full items-center gap-2 rounded-full bg-surface-primary px-1 py-0.5">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => onDeleteSelected?.()}
+                disabled={deleting || isOffline}
+                loading={deleting}
+                title={isOffline ? "Cannot delete while offline" : undefined}
+                className="flex-1 h-9 gap-2 rounded-full bg-red-500/10 text-red-600 hover:bg-red-500/20 dark:text-red-400 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Trash2 strokeWidth={2} className="h-4 w-4" />
+                {t.pages.shifts.actions.delete}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => onClearMultiSelection?.()}
+                disabled={deleting}
+                className="flex-1 h-9 gap-2 rounded-full bg-surface-secondary text-text-secondary hover:bg-surface-secondary/80"
+              >
+                <X strokeWidth={2} className="h-4 w-4" />
+                {t.pages.shifts.actions.clearSelection}
+              </Button>
+            </div>
+          ) : selectedDate ? (
             <div className="flex w-full items-center gap-2 rounded-full bg-surface-primary px-1 py-0.5">
               {/* Copy button - hidden in readOnly mode */}
               {!readOnly && (
