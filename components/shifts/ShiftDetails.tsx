@@ -559,7 +559,7 @@ export function ShiftDetails({
           startTime={shift.start_time}
           endTime={shift.end_time}
           existingSupplements={shift.custom_supplements ?? null}
-          predefinedRules={presetRules}
+          predefinedRules={shift.supplement_rules_snapshot?.rules ?? []}
           onSaveSuccess={(updatedSupplements) => {
             // Exit edit mode and notify parent with updated supplements
             setIsEditing(false);

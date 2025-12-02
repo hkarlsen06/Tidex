@@ -101,12 +101,12 @@ export function computeShift(
   const baseRate = resolveBaseRate(s, snapshot);
 
   // Supplement rules resolution priority:
-  // 1. New snapshot system (if provided)
+  // 1. New snapshot system (if provided) - use rules even if empty (user explicitly has no supplements)
   // 2. Old per-shift snapshot (backward compatibility)
   // 3. Fallback to preset rules (should never happen if snapshots are properly set up)
-  const predefinedRules: SupplementRule[] = snapshot?.supplements?.rules?.length
+  const predefinedRules: SupplementRule[] = snapshot?.supplements?.rules
     ? snapshot.supplements.rules
-    : s.supplement_rules_snapshot?.rules?.length
+    : s.supplement_rules_snapshot?.rules
     ? s.supplement_rules_snapshot.rules
     : presetRules;
 
