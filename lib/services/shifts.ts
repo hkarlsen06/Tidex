@@ -328,8 +328,14 @@ export const ShiftsServiceLive = Layer.effect(
         // Compute regular shifts
         const computedShifts = ((shifts ?? []) as ShiftRow[]).map((shift) => {
           const snapshot = snapshotMap.get(shift.shift_date) ?? null;
+          // Attach supplement_rules_snapshot from wage snapshot for UI components
+          // This allows CustomSupplementsModal to show correct supplement rules
+          // Priority: existing shift snapshot > wage snapshot > null
+          const supplementRulesSnapshot = shift.supplement_rules_snapshot
+            ?? (snapshot?.supplements ? snapshot.supplements : null);
           return {
             ...shift,
+            supplement_rules_snapshot: supplementRulesSnapshot,
             computed: computeShift(shift, userSettings, PRESET_SUPPLEMENT_RULES, snapshot),
           };
         });
@@ -392,6 +398,9 @@ export const ShiftsServiceLive = Layer.effect(
                 snapshot
               );
 
+              // Attach supplement_rules_snapshot from wage snapshot for UI components
+              const supplementRulesSnapshot = snapshot?.supplements ? snapshot.supplements : null;
+
               recurringVirtualShifts.push({
                 id: `virtual-${recurring.id}-${virtualShift.date}`,
                 user_id: userId,
@@ -399,6 +408,7 @@ export const ShiftsServiceLive = Layer.effect(
                 start_time: cleanTime(recurring.start_time),
                 end_time: cleanTime(recurring.end_time),
                 custom_supplements: customSupplements as any,
+                supplement_rules_snapshot: supplementRulesSnapshot,
                 recurring_id: recurring.id,
                 recurring_anchor_weekday: virtualShift.weekday,
                 computed,
