@@ -973,7 +973,7 @@ export const no = {
         wageHistory: {
           title: 'Lønnshistorikk',
           subtitle: 'Hold styr på lønnsøkningene',
-          timelineTitle: 'Din lønnshistorikk',
+          timelineTitle: 'Din timelønn:',
           now: 'nå',
           emptyTitle: 'Ingen lønnshistorikk',
           emptyDescription: 'Lønnshistorikk opprettes automatisk når du endrer lønnsinnstillingene dine.',

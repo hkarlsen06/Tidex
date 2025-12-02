@@ -974,7 +974,7 @@ export const en: Dictionary = {
         wageHistory: {
           title: 'Wage History',
           subtitle: 'Keep track of your pay raises',
-          timelineTitle: 'Your pay rate history',
+          timelineTitle: 'Your hourly rate:',
           now: 'now',
           emptyTitle: 'No wage history',
           emptyDescription: 'Wage history is created automatically when you change your wage settings.',
