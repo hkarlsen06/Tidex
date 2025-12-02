@@ -25,6 +25,8 @@ export type ShiftsCalendarProps = {
   onMonthChange?: (month: Date) => void;
   weekNumberPosition?: "top-left" | "bottom-left";
   selectedDate?: ISODate | null;
+  /** Set of selected dates for multi-selection mode */
+  selectedDates?: Set<ISODate>;
   newlyAddedDates?: Set<string>;
   taxSettings?: TaxSettings;
 };
@@ -43,6 +45,7 @@ type DayButtonProps = {
   mode: "money" | "hours";
   weekNumberPosition: "top-left" | "bottom-left";
   selectedDate?: ISODate | null;
+  selectedDates?: Set<ISODate>;
   newlyAddedDates?: Set<string>;
   taxSettings?: TaxSettings;
   [key: string]: any;
@@ -89,6 +92,7 @@ const DayButton = React.memo(function DayButton({
   mode,
   weekNumberPosition,
   selectedDate,
+  selectedDates,
   newlyAddedDates,
   taxSettings,
   ...buttonProps
@@ -100,7 +104,8 @@ const DayButton = React.memo(function DayButton({
   const employees = employeesByDate[iso] || [];
   const isToday = Boolean(modifiers?.today);
   const isMonday = date.getDay() === 1;
-  const isSelected = selectedDate === iso;
+  // Support both single selection (selectedDate) and multi-selection (selectedDates)
+  const isSelected = selectedDate === iso || (selectedDates?.has(iso) ?? false);
   const isOutside = Boolean(modifiers?.outside);
   const _isNewlyAdded = newlyAddedDates?.has(iso) ?? false;
   const hasShift =
@@ -204,6 +209,7 @@ export function ShiftsCalendar({
   onMonthChange,
   weekNumberPosition = "bottom-left",
   selectedDate = null,
+  selectedDates,
   newlyAddedDates,
   taxSettings,
 }: ShiftsCalendarProps) {
@@ -233,11 +239,12 @@ export function ShiftsCalendar({
         mode={mode}
         weekNumberPosition={weekNumberPosition}
         selectedDate={selectedDate}
+        selectedDates={selectedDates}
         newlyAddedDates={newlyAddedDates}
         taxSettings={taxSettings}
       />
     ),
-    [mode, earningsByDate, hoursByDate, employeesByDate, weekNumberPosition, selectedDate, newlyAddedDates, taxSettings]
+    [mode, earningsByDate, hoursByDate, employeesByDate, weekNumberPosition, selectedDate, selectedDates, newlyAddedDates, taxSettings]
   );
 
   const handleDayClick = React.useCallback(
