@@ -157,6 +157,7 @@ async function getSharedUserShiftsInternal(
   }
 
   // Now fetch the shifts using the owner's ID (since RLS allows it through shift_shares)
+  // We skip auth check because we've already verified share access above
   const program = Effect.gen(function* () {
     const shifts = yield* ShiftsService;
     const data = yield* shifts.getShiftsWithComputations({
@@ -164,6 +165,7 @@ async function getSharedUserShiftsInternal(
       startDate: options.startDate,
       endDate: options.endDate,
       limit: options.limit,
+      skipAuthCheck: true, // Access already verified via hasShareAccess
     });
     return data;
   }).pipe(Effect.provide(ShiftsLive), Effect.scoped);

@@ -50,6 +50,12 @@ export type ShiftLoadOptions = {
   readonly startDate?: string; // YYYY-MM-DD
   readonly endDate?: string; // YYYY-MM-DD
   readonly limit?: number;
+  /**
+   * Skip user authentication check.
+   * ONLY use this when access has already been verified (e.g., shared shifts via RLS).
+   * @internal
+   */
+  readonly skipAuthCheck?: boolean;
 };
 
 /**
@@ -140,10 +146,13 @@ export const ShiftsServiceLive = Layer.effect(
 
     /**
      * Get wage snapshots for user (all snapshots, ordered by from_date DESC)
+     * @param skipAuthCheck - Skip authentication when true (for shared access via RLS)
      */
-    const getUserWageSnapshots = (userId: string) =>
+    const getUserWageSnapshots = (userId: string, skipAuthCheck = false) =>
       Effect.gen(function* () {
-        yield* auth.verifyUserId(userId);
+        if (!skipAuthCheck) {
+          yield* auth.verifyUserId(userId);
+        }
 
         const snapshots = yield* supabase.query(
           async (client) =>
@@ -160,10 +169,11 @@ export const ShiftsServiceLive = Layer.effect(
 
     /**
      * Get snapshots for multiple dates (batch lookup)
+     * @param skipAuthCheck - Skip authentication when true (for shared access via RLS)
      */
-    const getSnapshotsForDates = (userId: string, dates: readonly string[]) =>
+    const getSnapshotsForDates = (userId: string, dates: readonly string[], skipAuthCheck = false) =>
       Effect.gen(function* () {
-        const snapshots = yield* getUserWageSnapshots(userId);
+        const snapshots = yield* getUserWageSnapshots(userId, skipAuthCheck);
         const snapshotMap = new Map<string, WageSnapshot>();
 
         // Find baseline snapshot once for fallback
@@ -196,14 +206,33 @@ export const ShiftsServiceLive = Layer.effect(
           startDate = getDefaultStartDate(),
           endDate = getDefaultEndDate(),
           limit = 50,
+          skipAuthCheck = false,
         } = options;
 
-        // Verify authentication
-        yield* auth.verifyUserId(userId);
+        // Verify authentication (unless explicitly skipped for shared access)
+        if (!skipAuthCheck) {
+          yield* auth.verifyUserId(userId);
+        }
 
         // Fetch user settings
-        const userSettingsResult = yield* settings.getUserSettings(userId);
-        const userSettings: UserSettings = (userSettingsResult as any) ?? {};
+        // When skipAuthCheck is true (shared access), query directly to bypass SettingsService auth
+        let userSettings: UserSettings = {};
+        if (skipAuthCheck) {
+          // Direct query for shared access (RLS handles authorization)
+          const settingsResult = yield* supabase.query(
+            async (client) =>
+              await client
+                .from("user_settings")
+                .select("*")
+                .eq("user_id", userId)
+                .maybeSingle(),
+            { retries: 2 }
+          );
+          userSettings = (settingsResult as any) ?? {};
+        } else {
+          const userSettingsResult = yield* settings.getUserSettings(userId);
+          userSettings = (userSettingsResult as any) ?? {};
+        }
 
         // Build query with filters
         const shiftsQuery = async (client: any) => {
@@ -294,7 +323,7 @@ export const ShiftsServiceLive = Layer.effect(
 
         // Fetch snapshots for all dates (shifts + virtual shifts) in one batch
         const allDates = [...shiftDates, ...virtualShiftDates];
-        const snapshotMap = yield* getSnapshotsForDates(userId, allDates);
+        const snapshotMap = yield* getSnapshotsForDates(userId, allDates, skipAuthCheck);
 
         // Compute regular shifts
         const computedShifts = ((shifts ?? []) as ShiftRow[]).map((shift) => {
@@ -402,7 +431,7 @@ export const ShiftsServiceLive = Layer.effect(
 
         return {
           shifts: allShifts as readonly ShiftWithComputations[],
-          defaultView: (userSettingsResult as DbUserSettings)?.default_shifts_view || "calendar",
+          defaultView: (userSettings as DbUserSettings)?.default_shifts_view || "calendar",
           settings: userSettings,
           aggregates,
         };
