@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
 
 import { createSupabaseRouteHandlerClient } from "@/lib/supabase/server";
 import {
@@ -29,6 +30,9 @@ function getShiftType(dateISO: string): number {
 }
 
 export async function GET(request: NextRequest) {
+  // Call cookies() early to opt out of prerendering (Next.js 16 requirement)
+  await cookies();
+
   const baseResponse = new NextResponse(null, CACHE_CONTROL);
   const supabase = createSupabaseRouteHandlerClient(request, baseResponse);
   const searchParams = request.nextUrl.searchParams;
