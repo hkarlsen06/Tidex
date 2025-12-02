@@ -62,11 +62,12 @@ export async function handleAuthError(error: any): Promise<never> {
     const supabase = await createSupabaseServerClient();
 
     // Use refresh lock to prevent concurrent refresh attempts
+    // getUser() validates with the server and avoids security warnings
     const { data, error: refreshError } = await withRefreshLock(() =>
-      supabase.auth.getSession()
+      supabase.auth.getUser()
     );
 
-    if (refreshError || !data.session) {
+    if (refreshError || !data.user) {
       console.error("[AUTH ERROR] Refresh failed:", refreshError?.message);
       await signOutAndRedirect();
     }

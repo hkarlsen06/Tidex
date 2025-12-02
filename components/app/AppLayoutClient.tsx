@@ -46,10 +46,12 @@ export function AppLayoutClient({
       const attemptId = logSessionRefresh("session_refresh_attempt", "initial");
 
       try {
-        const { data, error } = await withRefreshLock(() => supabase.auth.getSession());
+        // Use getUser() instead of getSession() - it validates with the server
+        // and doesn't trigger the Supabase security warning
+        const { data, error } = await withRefreshLock(() => supabase.auth.getUser());
         const duration = performance.now() - startTime;
 
-        if (error || !data.session) {
+        if (error || !data.user) {
           console.error("[SUPABASE] Initial session check failed:", error);
           logSessionRefresh("session_refresh_failure", "initial", {
             attempt_id: attemptId,
@@ -57,7 +59,7 @@ export function AppLayoutClient({
             duration_ms: duration
           });
         } else {
-          console.log("[SUPABASE] Initial session OK:", !!data.session);
+          console.log("[SUPABASE] Initial session OK:", !!data.user);
           logSessionRefresh("session_refresh_success", "initial", { attempt_id: attemptId, duration_ms: duration });
         }
       } catch (err) {

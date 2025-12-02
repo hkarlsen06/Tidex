@@ -43,6 +43,8 @@ export type SharedUser = {
   readonly email: string | null;
   readonly firstName: string | null;
   readonly profilePictureUrl: string | null;
+  /** OAuth provider avatar (Google, etc.) - used as fallback when profilePictureUrl is null */
+  readonly oauthAvatarUrl: string | null;
   readonly sharedAt: string;
 };
 
@@ -55,6 +57,8 @@ export type ShareRecipient = {
   readonly phone: string | null;
   readonly firstName: string | null;
   readonly profilePictureUrl: string | null;
+  /** OAuth provider avatar (Google, etc.) - used as fallback when profilePictureUrl is null */
+  readonly oauthAvatarUrl: string | null;
   readonly sharedAt: string;
 };
 
@@ -337,13 +341,52 @@ export const SharingServiceLive = Layer.effect(
             settings.map((s) => [s.user_id, s.profile_picture_url])
           );
 
-          return shares.map((share) => ({
-            id: share.owner_id,
-            email: null, // Would need admin lookup
-            firstName: null, // Would need admin lookup
-            profilePictureUrl: settingsMap.get(share.owner_id) ?? null,
-            sharedAt: share.created_at,
-          })) as readonly SharedUser[];
+          // Get email/name/avatar from admin client (name and avatar are in user_metadata)
+          const adminClient = getAdminClient();
+          type AuthUserInfo = { email: string | null; firstName: string | null; oauthAvatarUrl: string | null };
+          const usersMap = new Map<string, AuthUserInfo>();
+
+          if (adminClient) {
+            type AdminUser = { id: string; email?: string; user_metadata?: Record<string, unknown> };
+            const adminResult = yield* Effect.tryPromise({
+              try: async () => {
+                const { data, error } = await adminClient.auth.admin.listUsers({
+                  page: 1,
+                  perPage: 1000,
+                });
+                if (error) {
+                  logger.error("Admin lookup for sharers failed:", error);
+                  return [] as AdminUser[];
+                }
+                return data.users as AdminUser[];
+              },
+              catch: () => [] as AdminUser[],
+            }).pipe(Effect.catchAll(() => Effect.succeed([] as AdminUser[])));
+
+            for (const user of adminResult) {
+              if (ownerIds.includes(user.id)) {
+                const metadata = user.user_metadata ?? {};
+                usersMap.set(user.id, {
+                  email: user.email ?? null,
+                  firstName: (metadata.first_name as string) ?? (metadata.full_name as string) ?? (metadata.name as string) ?? null,
+                  oauthAvatarUrl: (metadata.avatar_url as string) ?? (metadata.picture as string) ?? null,
+                });
+              }
+            }
+          }
+
+          return shares.map((share) => {
+            const profilePictureUrl = settingsMap.get(share.owner_id) ?? null;
+            const authUser = usersMap.get(share.owner_id);
+            return {
+              id: share.owner_id,
+              email: authUser?.email ?? null,
+              firstName: authUser?.firstName ?? null,
+              profilePictureUrl,
+              oauthAvatarUrl: authUser?.oauthAvatarUrl ?? null,
+              sharedAt: share.created_at,
+            };
+          }) as readonly SharedUser[];
         }).pipe(
           Effect.catchTag("DatabaseError", (error) => {
             if (error.code === "NO_DATA") {
@@ -393,14 +436,54 @@ export const SharingServiceLive = Layer.effect(
             settings.map((s) => [s.user_id, s.profile_picture_url])
           );
 
-          return shares.map((share) => ({
-            id: share.viewer_id,
-            email: null, // Would need admin lookup
-            phone: null, // Would need admin lookup
-            firstName: null, // Would need admin lookup
-            profilePictureUrl: settingsMap.get(share.viewer_id) ?? null,
-            sharedAt: share.created_at,
-          })) as readonly ShareRecipient[];
+          // Get email/phone/name/avatar from admin client (name and avatar are in user_metadata)
+          const adminClient = getAdminClient();
+          type AuthUserInfo = { email: string | null; phone: string | null; firstName: string | null; oauthAvatarUrl: string | null };
+          const usersMap = new Map<string, AuthUserInfo>();
+
+          if (adminClient) {
+            type AdminUser = { id: string; email?: string; phone?: string; user_metadata?: Record<string, unknown> };
+            const adminResult = yield* Effect.tryPromise({
+              try: async () => {
+                const { data, error } = await adminClient.auth.admin.listUsers({
+                  page: 1,
+                  perPage: 1000,
+                });
+                if (error) {
+                  logger.error("Admin lookup for recipients failed:", error);
+                  return [] as AdminUser[];
+                }
+                return data.users as AdminUser[];
+              },
+              catch: () => [] as AdminUser[],
+            }).pipe(Effect.catchAll(() => Effect.succeed([] as AdminUser[])));
+
+            for (const user of adminResult) {
+              if (viewerIds.includes(user.id)) {
+                const metadata = user.user_metadata ?? {};
+                usersMap.set(user.id, {
+                  email: user.email ?? null,
+                  phone: user.phone ?? null,
+                  firstName: (metadata.first_name as string) ?? (metadata.name as string) ?? null,
+                  oauthAvatarUrl: (metadata.avatar_url as string) ?? (metadata.picture as string) ?? null,
+                });
+              }
+            }
+          }
+
+          return shares.map((share) => {
+            const profilePictureUrl = settingsMap.get(share.viewer_id) ?? null;
+            const authUser = usersMap.get(share.viewer_id);
+            return {
+              id: share.viewer_id,
+              email: authUser?.email ?? null,
+              phone: authUser?.phone ?? null,
+              firstName: authUser?.firstName ?? null,
+              profilePictureUrl,
+              oauthAvatarUrl: authUser?.oauthAvatarUrl ?? null,
+              sharedAt: share.created_at,
+            };
+          }) as readonly ShareRecipient[];
         }).pipe(
           Effect.catchTag("DatabaseError", (error) => {
             if (error.code === "NO_DATA") {

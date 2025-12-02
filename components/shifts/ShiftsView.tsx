@@ -476,9 +476,13 @@ type ShiftsViewProps = {
   readOnly?: boolean;
   /** Owner name displayed when viewing shared shifts */
   ownerName?: string;
+  /** Optional slot for custom header content (e.g., sharing dropdown) */
+  headerSlot?: React.ReactNode;
+  /** Owner ID for fetching additional shared shifts when readOnly=true */
+  sharedOwnerId?: string;
 };
 
-export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", userSettings, presetRules, readOnly = false, ownerName }: ShiftsViewProps) {
+export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", userSettings, presetRules, readOnly = false, ownerName, headerSlot, sharedOwnerId }: ShiftsViewProps) {
   const { t, locale } = useTranslations();
   const formatCurrency = useFormatCurrency();
   const {
@@ -527,8 +531,11 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
 
   // Combine initial shifts with any dynamically loaded shifts, filtering out deleted ones
   // and applying optimistic move/copy updates
+  // In readOnly mode without sharedOwnerId, only use server-provided initialShifts
+  // When sharedOwnerId is present, include additionalShifts for shared shifts navigation
+  const includeAdditionalShifts = !readOnly || !!sharedOwnerId;
   const shifts = useMemo(
-    () => [...initialShifts, ...additionalShifts, ...copiedShifts]
+    () => [...initialShifts, ...(includeAdditionalShifts ? additionalShifts : []), ...(readOnly ? [] : copiedShifts)]
       .filter(shift => !deletedShiftIds.has(shift.id))
       .map(shift => {
         // Apply locally fetched overrides (e.g., after saving custom supplements)
@@ -546,7 +553,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
         }
         return baseShift;
       }),
-    [initialShifts, additionalShifts, deletedShiftIds, movedShifts, copiedShifts, shiftOverrides]
+    [initialShifts, additionalShifts, deletedShiftIds, movedShifts, copiedShifts, shiftOverrides, readOnly, includeAdditionalShifts]
   );
 
   const clearSelection = useCallback(() => {
@@ -567,7 +574,21 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
   }, []);
 
   // Helper to fetch a month's shifts and update state
-  const fetchMonth = useCallback(async (year: number, month: number) => {
+  // ownerId parameter is explicit to avoid any closure/ref issues
+  const fetchMonth = useCallback(async (year: number, month: number, ownerId: string | undefined) => {
+    // DEBUG: Log what we received
+    console.log('[fetchMonth] called with:', { year, month, ownerId, readOnly });
+
+    // CRITICAL: If readOnly is true, we MUST use /api/sharing
+    // If ownerId is missing in readOnly mode, something is wrong - don't fetch
+    if (readOnly) {
+      if (!ownerId) {
+        console.error('[fetchMonth] ERROR: readOnly=true but ownerId is missing! Aborting.');
+        return;
+      }
+      // Continue - will use /api/sharing
+    }
+
     const key = getMonthKey(year, month);
 
     // Skip if already loaded, currently loading (state), or in-flight (ref)
@@ -581,7 +602,16 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
     setLoadingMonths(prev => new Set(prev).add(key));
 
     try {
-      const response = await fetch(`/api/shifts?year=${year}&month=${month}&_=${cacheBuster}`);
+      // Determine endpoint based on mode
+      // readOnly mode ALWAYS uses /api/sharing (we already verified ownerId exists above)
+      // Non-readOnly mode uses /api/shifts for own shifts
+      const url = readOnly
+        ? `/api/sharing?ownerId=${ownerId}&year=${year}&month=${month}&_=${cacheBuster}`
+        : `/api/shifts?year=${year}&month=${month}&_=${cacheBuster}`;
+
+      console.log('[fetchMonth] fetching:', url);
+
+      const response = await fetch(url);
       const data = await response.json();
 
       if (data.shifts && Array.isArray(data.shifts)) {
@@ -695,7 +725,18 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
   }, [initialShifts]);
 
   // Proactive prefetch: Load adjacent months (prev, current, next) whenever selectedMonth changes
+  // sharedOwnerId is passed explicitly to fetchMonth to avoid any closure issues
   useEffect(() => {
+    // DEBUG: Log effect state
+    console.log('[prefetch effect] running with:', { readOnly, sharedOwnerId });
+
+    // In readOnly mode, only fetch if we have a sharedOwnerId (viewing shared shifts)
+    // This prevents fetching the current user's shifts when viewing shared shifts
+    if (readOnly && !sharedOwnerId) {
+      console.log('[prefetch effect] readOnly without sharedOwnerId - skipping');
+      return;
+    }
+
     const selectedYear = selectedMonth.getFullYear();
     const selectedMonthNum = selectedMonth.getMonth() + 1;
 
@@ -708,15 +749,17 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
     const nextYear = nextDate.getFullYear();
     const nextMonthNum = nextDate.getMonth() + 1;
 
+    // Pass sharedOwnerId explicitly to avoid closure issues
+    const ownerId = sharedOwnerId;
+
     // Prefetch in priority order: current first (most likely to be viewed),
     // then previous (used in calculations), then next
     (async () => {
-      await fetchMonth(selectedYear, selectedMonthNum); // Current - highest priority
-      await fetchMonth(prevYear, prevMonthNum);         // Previous - needed for calculations
-      await fetchMonth(nextYear, nextMonthNum);         // Next - lowest priority
+      await fetchMonth(selectedYear, selectedMonthNum, ownerId); // Current - highest priority
+      await fetchMonth(prevYear, prevMonthNum, ownerId);         // Previous - needed for calculations
+      await fetchMonth(nextYear, nextMonthNum, ownerId);         // Next - lowest priority
     })();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedMonth]);
+  }, [selectedMonth, fetchMonth, readOnly, sharedOwnerId]);
 
   // Auto-scroll to shifts list if defaultView is "list"
   useEffect(() => {
