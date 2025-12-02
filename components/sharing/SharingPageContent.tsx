@@ -73,7 +73,7 @@ export function SharingPageContent({
           sharedOwnerId={selectedOwnerId}
           ownerName={selectedSharer.firstName ?? selectedSharer.email ?? "Bruker"}
           headerSlot={
-            <div className="flex flex-col gap-2 w-full sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+            <div className="flex items-center gap-2 w-full sm:justify-between sm:gap-3">
               <SharingDropdown
                 sharers={sharers}
                 selectedId={selectedOwnerId}
@@ -83,10 +83,10 @@ export function SharingPageContent({
                 variant="ghost"
                 size="sm"
                 onClick={() => setManageSharingOpen(true)}
-                className="gap-2 self-start sm:self-auto"
+                className="gap-2 shrink-0"
               >
                 <Settings className="h-4 w-4" />
-                {sharing.manageSharing}
+                <span className="hidden sm:inline">{sharing.manageSharing}</span>
               </Button>
             </div>
           }
