@@ -20,6 +20,8 @@ import { deleteShift } from "@/app/[locale]/(app)/shifts/_actions/deleteShift";
 import { updateShift } from "@/app/[locale]/(app)/shifts/_actions/updateShift";
 import { copyShifts } from "@/app/[locale]/(app)/shifts/_actions/copyShifts";
 import { moveRecurringShift } from "@/app/[locale]/(app)/shifts/_actions/moveRecurringShift";
+import { createShifts } from "@/app/[locale]/(app)/shifts/add/actions";
+import { checkShiftLimit } from "@/app/[locale]/(app)/shifts/add/_checks/checkShiftLimit";
 import { useNavigationFeedback } from "@/components/app/navigation-feedback";
 import { useMonth } from "@/components/app/MonthContext";
 import { queueMutation, isOfflineQueueSupported } from "@/lib/pwa/offline-queue";
@@ -520,6 +522,8 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
   const hasTriggeredConfetti = useRef<Set<string>>(new Set());
   const [copiedShifts, setCopiedShifts] = useState<ShiftWithComputations[]>([]);
   const [shiftOverrides, setShiftOverrides] = useState<Map<string, ShiftWithComputations>>(new Map());
+  const [optimisticShifts, setOptimisticShifts] = useState<ShiftWithComputations[]>([]);
+  const [createError, setCreateError] = useState<string | null>(null);
 
   // Track which months have been loaded or are currently loading
   const [loadedMonths, setLoadedMonths] = useState<Set<string>>(new Set());
@@ -535,7 +539,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
   // When sharedOwnerId is present, include additionalShifts for shared shifts navigation
   const includeAdditionalShifts = !readOnly || !!sharedOwnerId;
   const shifts = useMemo(
-    () => [...initialShifts, ...(includeAdditionalShifts ? additionalShifts : []), ...(readOnly ? [] : copiedShifts)]
+    () => [...initialShifts, ...(includeAdditionalShifts ? additionalShifts : []), ...(readOnly ? [] : copiedShifts), ...(readOnly ? [] : optimisticShifts)]
       .filter(shift => !deletedShiftIds.has(shift.id))
       .map(shift => {
         // Apply locally fetched overrides (e.g., after saving custom supplements)
@@ -553,7 +557,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
         }
         return baseShift;
       }),
-    [initialShifts, additionalShifts, deletedShiftIds, movedShifts, copiedShifts, shiftOverrides, readOnly, includeAdditionalShifts]
+    [initialShifts, additionalShifts, deletedShiftIds, movedShifts, copiedShifts, shiftOverrides, readOnly, includeAdditionalShifts, optimisticShifts]
   );
 
   const clearSelection = useCallback(() => {
@@ -813,6 +817,218 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
       };
     }
   }, [searchParams]);
+
+  // Handle optimistic shifts from add page (instant navigation)
+  useEffect(() => {
+    const optimisticParam = searchParams.get('optimistic');
+    const errorParam = searchParams.get('createError');
+
+    if (errorParam) {
+      // Show error and clear optimistic shifts
+      setCreateError(decodeURIComponent(errorParam));
+      setOptimisticShifts([]);
+
+      // Clear URL param
+      const url = new URL(window.location.href);
+      url.searchParams.delete('createError');
+      window.history.replaceState({}, '', url.toString());
+
+      // Auto-dismiss error after 5 seconds
+      const dismissTimer = setTimeout(() => {
+        setCreateError(null);
+      }, 5000);
+
+      return () => clearTimeout(dismissTimer);
+    }
+
+    if (optimisticParam) {
+      try {
+        const data = JSON.parse(decodeURIComponent(optimisticParam)) as {
+          dates: string[];
+          start: string;
+          end: string;
+          _save?: boolean;
+          _targetMonth?: string;
+          _checkLimit?: boolean;
+        };
+
+        // Create optimistic shift objects with computed data
+        const newOptimisticShifts: ShiftWithComputations[] = data.dates.map((date, index) => {
+          // Compute the shift earnings using the same logic as the preview
+          const shiftForCompute = {
+            id: `optimistic-${Date.now()}-${index}`,
+            user_id: 'optimistic',
+            shift_date: date,
+            start_time: data.start,
+            end_time: data.end,
+          };
+
+          let computed;
+          try {
+            computed = computeShift(shiftForCompute, userSettings, presetRules);
+          } catch {
+            // Fallback computed values if computation fails
+            computed = {
+              gross: 0,
+              paidHours: 0,
+              durationHours: 0,
+              wagePeriods: [],
+              basePay: 0,
+              supplementPay: 0,
+            };
+          }
+
+          return {
+            ...shiftForCompute,
+            computed,
+            _isOptimistic: true, // Flag to identify optimistic shifts
+          } as ShiftWithComputations & { _isOptimistic?: boolean };
+        });
+
+        setOptimisticShifts(newOptimisticShifts);
+
+        // Highlight the new dates
+        setNewlyAddedDates(new Set(data.dates));
+
+        // Navigate to the month of the first shift
+        let targetMonth = selectedMonth;
+        if (data.dates.length > 0) {
+          const firstDate = new Date(data.dates[0] + 'T00:00:00');
+          const firstMonth = new Date(firstDate.getFullYear(), firstDate.getMonth(), 1);
+          if (firstMonth.getTime() !== selectedMonth.getTime()) {
+            setSelectedMonth(firstMonth);
+            targetMonth = firstMonth;
+          }
+        }
+
+        // Clear URL param (keep the state though)
+        const url = new URL(window.location.href);
+        url.searchParams.delete('optimistic');
+        window.history.replaceState({}, '', url.toString());
+
+        // Fire confetti immediately for instant feedback
+        setTimeout(async () => {
+          const confetti = (await import('canvas-confetti')).default;
+          const currentMonth = targetMonth.getMonth();
+          const currentYear = targetMonth.getFullYear();
+
+          data.dates.forEach((date, index) => {
+            const d = new Date(date + 'T00:00:00');
+            if (d.getMonth() !== currentMonth || d.getFullYear() !== currentYear) return;
+
+            const calendarCell = document.querySelector(`[data-day="${date}"]`) as HTMLElement;
+            if (calendarCell) {
+              const rect = calendarCell.getBoundingClientRect();
+              const x = (rect.left + rect.width / 2) / window.innerWidth;
+              const y = (rect.top + rect.height / 2) / window.innerHeight;
+
+              setTimeout(() => {
+                confetti({
+                  particleCount: 80,
+                  spread: 60,
+                  origin: { x, y },
+                  colors: ['#3b82f6', '#8b5cf6', '#ec4899'],
+                  startVelocity: 35,
+                  ticks: 60
+                });
+              }, index * 100);
+            }
+          });
+        }, 150); // Small delay to let the calendar render
+
+        // If _save flag is set, trigger the server action to save the shifts
+        if (data._save && !readOnly) {
+          const saveShifts = async () => {
+            try {
+              // Check limit if needed
+              if (data._checkLimit && data._targetMonth) {
+                const limitCheck = await checkShiftLimit(data._targetMonth);
+                if (!limitCheck.allowed && limitCheck.existingMonths) {
+                  // Limit hit - redirect back to add page with error
+                  setOptimisticShifts([]);
+                  router.push(`/${locale}/shifts/add?limitError=true&targetMonth=${data._targetMonth}&existingMonths=${limitCheck.existingMonths.join(',')}`);
+                  return;
+                }
+              }
+
+              // Create the shifts
+              await createShifts({ dates: data.dates, start: data.start, end: data.end });
+
+              // Refresh to replace optimistic data with real data from server
+              router.refresh();
+            } catch (e: unknown) {
+              const errorMessage = e instanceof Error ? e.message : 'Failed to save shift';
+              // If offline and queue is supported, queue the mutation
+              if (!navigator.onLine && isOfflineQueueSupported()) {
+                try {
+                  await queueMutation({
+                    type: 'CREATE',
+                    endpoint: '/api/shifts',
+                    method: 'POST',
+                    body: JSON.stringify({ dates: data.dates, start: data.start, end: data.end }),
+                  });
+                  // Shift stays visible as optimistic, will sync when online
+                } catch {
+                  // Show error and clear optimistic shifts
+                  setCreateError(errorMessage);
+                  setOptimisticShifts([]);
+                }
+              } else {
+                // Show error and clear optimistic shifts
+                setCreateError(errorMessage);
+                setOptimisticShifts([]);
+              }
+            }
+          };
+
+          // Run save in background
+          saveShifts();
+        }
+
+        // Clear highlighting after delay
+        const clearTimer = setTimeout(() => {
+          setNewlyAddedDates(new Set());
+        }, 3000);
+
+        return () => clearTimeout(clearTimer);
+      } catch (e) {
+        console.error('Failed to parse optimistic shift data:', e);
+        // Clear invalid param
+        const url = new URL(window.location.href);
+        url.searchParams.delete('optimistic');
+        window.history.replaceState({}, '', url.toString());
+      }
+    }
+  }, [searchParams, userSettings, presetRules, selectedMonth, setSelectedMonth, readOnly, router, locale]);
+
+  // Clear optimistic shifts when real data arrives from server (after router.refresh())
+  // Note: We don't fire confetti here since it was already fired when optimistic shifts appeared
+  useEffect(() => {
+    if (optimisticShifts.length === 0) return;
+
+    // Check if real shifts match the optimistic ones (by date + time)
+    // This handles the case where server data arrives and replaces optimistic data
+    const matchedOptimisticIds = new Set<string>();
+
+    for (const optimistic of optimisticShifts) {
+      const matchingReal = initialShifts.find(
+        real =>
+          real.shift_date === optimistic.shift_date &&
+          real.start_time === optimistic.start_time &&
+          real.end_time === optimistic.end_time &&
+          !real.id.startsWith('optimistic-') // Ensure it's a real shift
+      );
+
+      if (matchingReal) {
+        matchedOptimisticIds.add(optimistic.id);
+      }
+    }
+
+    if (matchedOptimisticIds.size > 0) {
+      // Real data has arrived for some/all optimistic shifts - silently replace them
+      setOptimisticShifts(prev => prev.filter(s => !matchedOptimisticIds.has(s.id)));
+    }
+  }, [initialShifts, optimisticShifts]);
 
   // Confetti celebration for newly added shifts
   useEffect(() => {
@@ -1343,6 +1559,29 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
             <button
               onClick={() => setQueuedNotification(null)}
               className="ml-2 text-blue-400 hover:text-blue-500"
+              aria-label="Dismiss"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Create Error Notification */}
+    {createError && (
+      <div className="fixed top-20 left-1/2 -translate-x-1/2 z-40 animate-in slide-in-from-top-2 fade-in">
+        <div className="rounded-lg border border-error/20 bg-error/10 px-4 py-3 shadow-lg backdrop-blur-xs">
+          <div className="flex items-center gap-2">
+            <X className="h-4 w-4 text-error" />
+            <div className="text-sm">
+              <span className="text-error font-medium">
+                {createError}
+              </span>
+            </div>
+            <button
+              onClick={() => setCreateError(null)}
+              className="ml-2 text-error/70 hover:text-error"
               aria-label="Dismiss"
             >
               <X className="h-4 w-4" />

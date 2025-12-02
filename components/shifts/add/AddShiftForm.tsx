@@ -167,6 +167,27 @@ export default function AddShiftForm({ existingShifts, userSettings, presetRules
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Handle limit error from optimistic navigation redirect
+  useEffect(() => {
+    const limitError = searchParams.get("limitError");
+    const targetMonth = searchParams.get("targetMonth");
+    const existingMonthsParam = searchParams.get("existingMonths");
+
+    if (limitError === "true" && targetMonth && existingMonthsParam) {
+      const existingMonths = existingMonthsParam.split(",").filter(Boolean);
+      setIsFreeTier(true);
+      setLimitModalData({ existingMonths, targetMonth });
+      setShowLimitModal(true);
+
+      // Clear URL params
+      const url = new URL(window.location.href);
+      url.searchParams.delete("limitError");
+      url.searchParams.delete("targetMonth");
+      url.searchParams.delete("existingMonths");
+      window.history.replaceState({}, "", url.toString());
+    }
+  }, [searchParams]);
+
   const ensureLimitStatus = useCallback(
     async (targetMonth: string) => {
       if (isFreeTier !== null || limitStatusLoadingRef.current) {
@@ -216,122 +237,79 @@ export default function AddShiftForm({ existingShifts, userSettings, presetRules
     if (!canSubmit) return;
     setError(null);
 
-    try {
-      // Extract target month from first selected date
-      const targetMonth = isoDates[0]?.substring(0, 7); // YYYY-MM
-      if (!targetMonth) {
-        setError(t.pages.shifts.add.form.couldNotDetermineMonth);
-        return;
-      }
-
-      // Check if user can add shifts to this month (before transition)
-      const limitCheck = await checkShiftLimit(targetMonth);
-      setIsFreeTier(limitCheck.isFreeTier);
-
-      if (!limitCheck.allowed && limitCheck.existingMonths) {
-        // Show modal with options to upgrade or delete
-        setLimitModalData({
-          existingMonths: limitCheck.existingMonths,
-          targetMonth,
-        });
-        setShowLimitModal(true);
-        return;
-      }
-
-      // User is allowed - proceed with shift creation in transition
-      startTransition(async () => {
-        try {
-          // Try server action first (works online and offline)
-          const result = await createShifts({ dates: isoDates, start, end });
-
-          // Clear form state on success
-          setDates([]);
-          setStart("");
-          setEnd("");
-          setError(null);
-
-          // Navigate with new shift dates to trigger celebration
-          const newDates = result.dates.join(',');
-          navigate(`/${locale}/shifts?new=${encodeURIComponent(newDates)}`);
-          router.refresh();
-        } catch (e: any) {
-          // If offline and queue is supported, queue the mutation
-          if (!navigator.onLine && isOfflineQueueSupported()) {
-            try {
-              await queueMutation({
-                type: 'CREATE',
-                endpoint: '/api/shifts',
-                method: 'POST',
-                body: JSON.stringify({ dates: isoDates, start, end }),
-              });
-
-              // Show success message for queued mutation
-              setError(null);
-
-              // Clear form state on successful queue
-              setDates([]);
-              setStart("");
-              setEnd("");
-
-              // Navigate back to shifts page (show optimistic message there)
-              navigate(`/${locale}/shifts?queued=create&count=${isoDates.length}`);
-            } catch {
-              setError(t.pages.shifts.add.form.couldNotSaveShift);
-            }
-          } else {
-            setError(e?.message || t.pages.shifts.add.form.couldNotSaveShift);
-          }
-        }
-      });
-    } catch (e: any) {
-      setError(e?.message || t.pages.shifts.add.form.couldNotSaveShift);
+    // Extract target month from first selected date
+    const targetMonth = isoDates[0]?.substring(0, 7); // YYYY-MM
+    if (!targetMonth) {
+      setError(t.pages.shifts.add.form.couldNotDetermineMonth);
+      return;
     }
+
+    // For free tier users, we need to check the limit before proceeding
+    // But we can do this check optimistically - navigate first, validate in background
+    if (isFreeTier === true) {
+      try {
+        const limitCheck = await checkShiftLimit(targetMonth);
+        setIsFreeTier(limitCheck.isFreeTier);
+
+        if (!limitCheck.allowed && limitCheck.existingMonths) {
+          // Show modal with options to upgrade or delete
+          setLimitModalData({
+            existingMonths: limitCheck.existingMonths,
+            targetMonth,
+          });
+          setShowLimitModal(true);
+          return;
+        }
+      } catch (e: any) {
+        setError(e?.message || t.pages.shifts.add.form.couldNotSaveShift);
+        return;
+      }
+    }
+
+    // OPTIMISTIC: Navigate immediately with shift data encoded in URL
+    // The shifts page will show optimistic shifts AND trigger the server action
+    const optimisticData = encodeURIComponent(JSON.stringify({
+      dates: isoDates,
+      start,
+      end,
+      // Include metadata for the shifts page to handle the save
+      _save: true,
+      _targetMonth: targetMonth,
+      _checkLimit: isFreeTier !== true, // Only check limit if we haven't already
+    }));
+
+    // Clear form state immediately for snappy feel
+    setDates([]);
+    setStart("");
+    setEnd("");
+    setError(null);
+
+    // Navigate immediately - shifts page will handle both display AND saving
+    navigate(`/${locale}/shifts?optimistic=${optimisticData}`);
   };
 
   const handleDeleteAndProceed = async () => {
     // Called after user deletes shifts in other months
     setError(null);
-    startTransition(async () => {
-      try {
-        const result = await createShifts({ dates: isoDates, start, end });
 
-        // Clear form state on success
-        setDates([]);
-        setStart("");
-        setEnd("");
-        setError(null);
+    // OPTIMISTIC: Navigate immediately with shift data encoded in URL
+    // The shifts page will handle saving (limit already passed since user deleted other months)
+    const optimisticData = encodeURIComponent(JSON.stringify({
+      dates: isoDates,
+      start,
+      end,
+      _save: true,
+      _checkLimit: false, // Already passed limit check
+    }));
 
-        // Navigate with new shift dates to trigger celebration
-        const newDates = result.dates.join(',');
-        navigate(`/${locale}/shifts?new=${encodeURIComponent(newDates)}`);
-        router.refresh();
-      } catch (e: any) {
-        // If offline and queue is supported, queue the mutation
-        if (!navigator.onLine && isOfflineQueueSupported()) {
-          try {
-            await queueMutation({
-              type: 'CREATE',
-              endpoint: '/api/shifts',
-              method: 'POST',
-              body: JSON.stringify({ dates: isoDates, start, end }),
-            });
+    // Clear form state immediately for snappy feel
+    setDates([]);
+    setStart("");
+    setEnd("");
+    setError(null);
 
-            setError(null);
-
-            // Clear form state on successful queue
-            setDates([]);
-            setStart("");
-            setEnd("");
-
-            navigate(`/${locale}/shifts?queued=create&count=${isoDates.length}`);
-          } catch {
-            setError(t.pages.shifts.add.form.couldNotSaveShift);
-          }
-        } else {
-          setError(e?.message || t.pages.shifts.add.form.couldNotSaveShift);
-        }
-      }
-    });
+    // Navigate immediately - shifts page will handle both display AND saving
+    navigate(`/${locale}/shifts?optimistic=${optimisticData}`);
   };
 
   const selectedSummary = useMemo(() => {
