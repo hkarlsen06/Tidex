@@ -41,6 +41,7 @@ import { createClient } from "@supabase/supabase-js";
 export type SharedUser = {
   readonly id: string;
   readonly email: string | null;
+  readonly phone: string | null;
   readonly firstName: string | null;
   readonly profilePictureUrl: string | null;
   /** OAuth provider avatar (Google, etc.) - used as fallback when profilePictureUrl is null */
@@ -362,13 +363,13 @@ export const SharingServiceLive = Layer.effect(
             settings.map((s) => [s.user_id, s.profile_picture_url])
           );
 
-          // Get email/name/avatar from admin client (name and avatar are in user_metadata)
+          // Get email/phone/name/avatar from admin client (name and avatar are in user_metadata)
           const adminClient = getAdminClient();
-          type AuthUserInfo = { email: string | null; firstName: string | null; oauthAvatarUrl: string | null };
+          type AuthUserInfo = { email: string | null; phone: string | null; firstName: string | null; oauthAvatarUrl: string | null };
           const usersMap = new Map<string, AuthUserInfo>();
 
           if (adminClient) {
-            type AdminUser = { id: string; email?: string; user_metadata?: Record<string, unknown> };
+            type AdminUser = { id: string; email?: string; phone?: string; user_metadata?: Record<string, unknown> };
             const adminResult = yield* Effect.tryPromise({
               try: async () => {
                 const { data, error } = await adminClient.auth.admin.listUsers({
@@ -389,6 +390,7 @@ export const SharingServiceLive = Layer.effect(
                 const metadata = user.user_metadata ?? {};
                 usersMap.set(user.id, {
                   email: user.email ?? null,
+                  phone: user.phone ?? null,
                   firstName: (metadata.first_name as string) ?? (metadata.full_name as string) ?? (metadata.name as string) ?? null,
                   oauthAvatarUrl: (metadata.avatar_url as string) ?? (metadata.picture as string) ?? null,
                 });
@@ -402,6 +404,7 @@ export const SharingServiceLive = Layer.effect(
             return {
               id: share.owner_id,
               email: authUser?.email ?? null,
+              phone: authUser?.phone ?? null,
               firstName: authUser?.firstName ?? null,
               profilePictureUrl,
               oauthAvatarUrl: authUser?.oauthAvatarUrl ?? null,

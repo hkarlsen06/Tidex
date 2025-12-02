@@ -29,6 +29,27 @@ function getDisplayName(sharer: SharedUser): string {
   return "Bruker";
 }
 
+function formatPhoneNumber(phone: string): string {
+  // Strip country code and non-digits
+  const digits = phone.replace(/\D/g, "");
+  const localNumber = digits.startsWith("47") && digits.length === 10
+    ? digits.slice(2)
+    : digits;
+
+  // Format as NNN NN NNN if 8 digits
+  if (localNumber.length === 8) {
+    return `${localNumber.slice(0, 3)} ${localNumber.slice(3, 5)} ${localNumber.slice(5)}`;
+  }
+  return localNumber;
+}
+
+function getSecondaryInfo(sharer: SharedUser): string | null {
+  // Priority: phone first, then email, then nothing
+  if (sharer.phone) return formatPhoneNumber(sharer.phone);
+  if (sharer.email) return sharer.email;
+  return null;
+}
+
 function UserAvatar({ user, size = "sm" }: { user: SharedUser; size?: "sm" | "md" }) {
   // Resolve avatar URL with fallback chain: custom profile pic > OAuth avatar > initials
   const avatarUrl = user.profilePictureUrl || user.oauthAvatarUrl || null;
@@ -93,9 +114,16 @@ export function SharingDropdown({
         {selected ? (
           <>
             <UserAvatar user={selected} />
-            <span className="flex-1 text-left text-sm font-medium text-text-primary">
-              {getDisplayName(selected)}
-            </span>
+            <div className="flex flex-1 flex-col text-left">
+              <span className="text-sm font-medium text-text-primary">
+                {getDisplayName(selected)}
+              </span>
+              {getSecondaryInfo(selected) && (
+                <span className="text-xs text-text-muted">
+                  {getSecondaryInfo(selected)}
+                </span>
+              )}
+            </div>
           </>
         ) : (
           <>
@@ -130,9 +158,16 @@ export function SharingDropdown({
               )}
             >
               <UserAvatar user={sharer} />
-              <span className="text-sm font-medium text-text-primary">
-                {getDisplayName(sharer)}
-              </span>
+              <div className="flex flex-col">
+                <span className="text-sm font-medium text-text-primary">
+                  {getDisplayName(sharer)}
+                </span>
+                {getSecondaryInfo(sharer) && (
+                  <span className="text-xs text-text-muted">
+                    {getSecondaryInfo(sharer)}
+                  </span>
+                )}
+              </div>
             </button>
           ))}
         </div>
