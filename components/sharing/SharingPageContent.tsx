@@ -36,7 +36,7 @@ export function SharingPageContent({
   sharedSettings,
   presetRules,
 }: SharingPageContentProps) {
-  const { t } = useTranslations();
+  const { t, locale } = useTranslations();
   const router = useRouter();
   const [manageSharingOpen, setManageSharingOpen] = useState(false);
 
@@ -54,9 +54,9 @@ export function SharingPageContent({
 
   const handleSharerSelect = (sharerId: string | null) => {
     if (sharerId) {
-      router.push(`/sharing?view=${sharerId}`);
+      router.push(`/${locale}/sharing?view=${sharerId}`);
     } else {
-      router.push("/sharing");
+      router.push(`/${locale}/sharing`);
     }
   };
 
@@ -73,7 +73,7 @@ export function SharingPageContent({
           sharedOwnerId={selectedOwnerId}
           ownerName={selectedSharer.firstName ?? selectedSharer.email ?? "Bruker"}
           headerSlot={
-            <div className="flex flex-col gap-3 w-full sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-2 w-full sm:flex-row sm:items-center sm:justify-between sm:gap-3">
               <SharingDropdown
                 sharers={sharers}
                 selectedId={selectedOwnerId}
@@ -83,7 +83,7 @@ export function SharingPageContent({
                 variant="ghost"
                 size="sm"
                 onClick={() => setManageSharingOpen(true)}
-                className="gap-2"
+                className="gap-2 self-start sm:self-auto"
               >
                 <Settings className="h-4 w-4" />
                 {sharing.manageSharing}
