@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { Plus, Trash2, Users, X } from "lucide-react";
+import { Plus, Trash2, Users } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -39,6 +39,32 @@ function getDisplayName(recipient: ShareRecipient): string {
   if (recipient.email) return recipient.email.split("@")[0];
   if (recipient.phone) return recipient.phone;
   return "Bruker";
+}
+
+function RecipientAvatar({ user }: { user: ShareRecipient }) {
+  // Resolve avatar URL with fallback chain: custom profile pic > OAuth avatar > initials
+  const avatarUrl = user.profilePictureUrl || user.oauthAvatarUrl || null;
+
+  if (avatarUrl) {
+    return (
+      <span className="relative inline-flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-surface-secondary text-sm font-semibold text-text-primary">
+        <Image
+          src={avatarUrl}
+          alt={getDisplayName(user)}
+          fill
+          sizes="40px"
+          className="object-cover"
+          unoptimized
+        />
+      </span>
+    );
+  }
+
+  return (
+    <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-surface-secondary text-sm font-semibold text-text-primary">
+      {getInitials(user.firstName ?? user.email)}
+    </span>
+  );
 }
 
 export function ManageSharingModal({
@@ -113,7 +139,7 @@ export function ManageSharingModal({
               <label className="text-sm font-medium text-text-secondary">
                 {sharing.addRecipient}
               </label>
-              <div className="flex gap-2">
+              <div className="space-y-2">
                 <Input
                   type="text"
                   placeholder={sharing.emailOrPhone}
@@ -129,14 +155,13 @@ export function ManageSharingModal({
                     }
                   }}
                   disabled={isAdding}
-                  className="flex-1"
                 />
                 <Button
                   type="button"
                   onClick={handleAdd}
                   disabled={!identifier.trim() || isAdding}
                   loading={isAdding}
-                  className="gap-2"
+                  className="w-full gap-2"
                 >
                   <Plus className="h-4 w-4" />
                   {sharing.add}
@@ -172,28 +197,17 @@ export function ManageSharingModal({
                 {recipients.map((recipient) => (
                   <div
                     key={recipient.id}
-                    className="flex items-center gap-3 rounded-xl border border-border-subtle bg-surface-primary px-4 py-3"
+                    className="flex items-center gap-2 rounded-xl border border-border-subtle bg-surface-primary px-3 py-2"
                   >
-                    <span className="relative inline-flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-surface-secondary text-sm font-semibold text-text-primary">
-                      {recipient.profilePictureUrl ? (
-                        <Image
-                          src={recipient.profilePictureUrl}
-                          alt={getDisplayName(recipient)}
-                          fill
-                          sizes="40px"
-                          className="object-cover"
-                          unoptimized
-                        />
-                      ) : (
-                        getInitials(recipient.firstName ?? recipient.email)
-                      )}
-                    </span>
-                    <div className="flex-1 min-w-0">
+                    <RecipientAvatar user={recipient} />
+                    <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium text-text-primary truncate">
                         {getDisplayName(recipient)}
                       </p>
                       {recipient.email && (
-                        <p className="text-xs text-text-muted truncate">{recipient.email}</p>
+                        <p className="max-w-[180px] truncate text-xs text-text-muted">
+                          {recipient.email}
+                        </p>
                       )}
                     </div>
                     <Button
@@ -203,7 +217,7 @@ export function ManageSharingModal({
                       onClick={() => handleRemove(recipient.id)}
                       disabled={isRemoving && removingId === recipient.id}
                       loading={isRemoving && removingId === recipient.id}
-                      className="text-error hover:bg-error-subtle"
+                      className="shrink-0 text-error hover:bg-error-subtle"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>

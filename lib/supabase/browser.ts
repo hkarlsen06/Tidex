@@ -22,5 +22,10 @@ if (!supabasePublishableKey) {
  * the document.cookie API with appropriate defaults.
  *
  * Only server-side clients (proxy, server) should configure cookie options.
+ *
+ * Note: We use getUser() (not getSession()) in supabase-listener.tsx and
+ * other client components for session validation. This validates the session
+ * with the Supabase Auth server and avoids the security warning about
+ * potentially unauthentic data from getSession().
  */
 export const supabase = createBrowserClient(supabaseUrl, supabasePublishableKey);

@@ -1,13 +1,13 @@
 /**
  * Serialize concurrent token refresh attempts to prevent race conditions.
  *
- * When multiple components or effects try to call getSession() simultaneously
+ * When multiple components or effects try to call getUser() simultaneously
  * during app boot or rehydration, this can trigger concurrent refresh requests
  * that race with each other, potentially causing "Refresh Token Not Found" errors.
  *
  * Usage:
  *   import { supabase } from "@/lib/supabase/browser";
- *   const { data } = await withRefreshLock(() => supabase.auth.getSession());
+ *   const { data } = await withRefreshLock(() => supabase.auth.getUser());
  */
 
 let inflight: Promise<any> | null = null;

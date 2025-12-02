@@ -64,16 +64,21 @@ export function SharingPageContent({
   if (selectedOwnerId && sharedShifts && selectedSharer) {
     return (
       <>
-        <ScrollablePageWrapper>
-          <div className="flex flex-col gap-4 px-4 pt-4">
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <SharingDropdown
-                  sharers={sharers}
-                  selectedId={selectedOwnerId}
-                  onSelect={handleSharerSelect}
-                />
-              </div>
+        <ShiftsView
+          shifts={sharedShifts}
+          defaultView="calendar"
+          userSettings={sharedSettings}
+          presetRules={presetRules}
+          readOnly={true}
+          sharedOwnerId={selectedOwnerId}
+          ownerName={selectedSharer.firstName ?? selectedSharer.email ?? "Bruker"}
+          headerSlot={
+            <div className="flex flex-col gap-3 w-full sm:flex-row sm:items-center sm:justify-between">
+              <SharingDropdown
+                sharers={sharers}
+                selectedId={selectedOwnerId}
+                onSelect={handleSharerSelect}
+              />
               <Button
                 variant="ghost"
                 size="sm"
@@ -84,16 +89,8 @@ export function SharingPageContent({
                 {sharing.manageSharing}
               </Button>
             </div>
-          </div>
-          <ShiftsView
-            shifts={sharedShifts}
-            defaultView="calendar"
-            userSettings={sharedSettings}
-            presetRules={presetRules}
-            readOnly={true}
-            ownerName={selectedSharer.firstName ?? selectedSharer.email ?? "Bruker"}
-          />
-        </ScrollablePageWrapper>
+          }
+        />
         <ManageSharingModal
           isOpen={manageSharingOpen}
           onClose={() => setManageSharingOpen(false)}

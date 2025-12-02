@@ -53,10 +53,12 @@ export function SupabaseListener({ accessToken }: SupabaseListenerProps) {
         const attemptId = logSessionRefresh("session_refresh_attempt", "visibilitychange");
 
         try {
-          const { data, error } = await withRefreshLock(() => supabase.auth.getSession());
+          // Use getUser() instead of getSession() - it validates with the server
+          // and doesn't trigger the Supabase security warning
+          const { data, error } = await withRefreshLock(() => supabase.auth.getUser());
           const duration = performance.now() - startTime;
 
-          if (error || !data.session) {
+          if (error || !data.user) {
             console.error("[SUPABASE] Failed to refresh on wake:", error);
             logSessionRefresh("session_refresh_failure", "visibilitychange", {
               attempt_id: attemptId,
@@ -95,10 +97,11 @@ export function SupabaseListener({ accessToken }: SupabaseListenerProps) {
         const attemptId = logSessionRefresh("session_refresh_attempt", "pageshow");
 
         try {
-          const { data, error } = await withRefreshLock(() => supabase.auth.getSession());
+          // Use getUser() instead of getSession() - it validates with the server
+          const { data, error } = await withRefreshLock(() => supabase.auth.getUser());
           const duration = performance.now() - startTime;
 
-          if (error || !data.session) {
+          if (error || !data.user) {
             console.error("[SUPABASE] Failed to refresh on pageshow:", error);
             logSessionRefresh("session_refresh_failure", "pageshow", {
               attempt_id: attemptId,
@@ -148,10 +151,11 @@ export function SupabaseListener({ accessToken }: SupabaseListenerProps) {
       const attemptId = logSessionRefresh("session_refresh_attempt", "focus");
 
       try {
-        const { data, error } = await withRefreshLock(() => supabase.auth.getSession());
+        // Use getUser() instead of getSession() - it validates with the server
+        const { data, error } = await withRefreshLock(() => supabase.auth.getUser());
         const duration = performance.now() - startTime;
 
-        if (error || !data.session) {
+        if (error || !data.user) {
           console.error("[SUPABASE] Failed to refresh on focus:", error);
           logSessionRefresh("session_refresh_failure", "focus", {
             attempt_id: attemptId,

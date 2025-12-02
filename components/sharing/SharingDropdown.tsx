@@ -29,6 +29,34 @@ function getDisplayName(sharer: SharedUser): string {
   return "Bruker";
 }
 
+function UserAvatar({ user, size = "sm" }: { user: SharedUser; size?: "sm" | "md" }) {
+  // Resolve avatar URL with fallback chain: custom profile pic > OAuth avatar > initials
+  const avatarUrl = user.profilePictureUrl || user.oauthAvatarUrl || null;
+  const sizeClasses = size === "sm" ? "h-8 w-8 text-xs" : "h-10 w-10 text-sm";
+  const imageSizes = size === "sm" ? "32px" : "40px";
+
+  if (avatarUrl) {
+    return (
+      <span className={cn("relative inline-flex items-center justify-center overflow-hidden rounded-full bg-surface-secondary font-semibold text-text-primary", sizeClasses)}>
+        <Image
+          src={avatarUrl}
+          alt={getDisplayName(user)}
+          fill
+          sizes={imageSizes}
+          className="object-cover"
+          unoptimized
+        />
+      </span>
+    );
+  }
+
+  return (
+    <span className={cn("inline-flex items-center justify-center rounded-full bg-surface-secondary font-semibold text-text-primary", sizeClasses)}>
+      {getInitials(user.firstName ?? user.email)}
+    </span>
+  );
+}
+
 export function SharingDropdown({
   sharers,
   selectedId,
@@ -64,20 +92,7 @@ export function SharingDropdown({
       >
         {selected ? (
           <>
-            <span className="relative inline-flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-surface-secondary text-xs font-semibold text-text-primary">
-              {selected.profilePictureUrl ? (
-                <Image
-                  src={selected.profilePictureUrl}
-                  alt={getDisplayName(selected)}
-                  fill
-                  sizes="32px"
-                  className="object-cover"
-                  unoptimized
-                />
-              ) : (
-                getInitials(selected.firstName ?? selected.email)
-              )}
-            </span>
+            <UserAvatar user={selected} />
             <span className="flex-1 text-left text-sm font-medium text-text-primary">
               {getDisplayName(selected)}
             </span>
@@ -114,20 +129,7 @@ export function SharingDropdown({
                 selectedId === sharer.id && "bg-surface-secondary"
               )}
             >
-              <span className="relative inline-flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-background text-xs font-semibold text-text-primary">
-                {sharer.profilePictureUrl ? (
-                  <Image
-                    src={sharer.profilePictureUrl}
-                    alt={getDisplayName(sharer)}
-                    fill
-                    sizes="32px"
-                    className="object-cover"
-                    unoptimized
-                  />
-                ) : (
-                  getInitials(sharer.firstName ?? sharer.email)
-                )}
-              </span>
+              <UserAvatar user={sharer} />
               <span className="text-sm font-medium text-text-primary">
                 {getDisplayName(sharer)}
               </span>
