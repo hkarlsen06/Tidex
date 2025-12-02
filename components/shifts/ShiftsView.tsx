@@ -576,9 +576,6 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
   // Helper to fetch a month's shifts and update state
   // ownerId parameter is explicit to avoid any closure/ref issues
   const fetchMonth = useCallback(async (year: number, month: number, ownerId: string | undefined) => {
-    // DEBUG: Log what we received
-    console.log('[fetchMonth] called with:', { year, month, ownerId, readOnly });
-
     // CRITICAL: If readOnly is true, we MUST use /api/sharing
     // If ownerId is missing in readOnly mode, something is wrong - don't fetch
     if (readOnly) {
@@ -609,8 +606,6 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
         ? `/api/sharing?ownerId=${ownerId}&year=${year}&month=${month}&_=${cacheBuster}`
         : `/api/shifts?year=${year}&month=${month}&_=${cacheBuster}`;
 
-      console.log('[fetchMonth] fetching:', url);
-
       const response = await fetch(url);
       const data = await response.json();
 
@@ -636,7 +631,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
         return next;
       });
     }
-  }, [getMonthKey, loadedMonths, loadingMonths, initialShifts, cacheBuster]);
+  }, [getMonthKey, loadedMonths, loadingMonths, initialShifts, cacheBuster, readOnly]);
 
   // Fetch a single shift (by month) to refresh computed data after local updates
   const refreshShiftFromServer = useCallback(async (shiftId: string, shiftDate: string) => {
@@ -727,13 +722,9 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
   // Proactive prefetch: Load adjacent months (prev, current, next) whenever selectedMonth changes
   // sharedOwnerId is passed explicitly to fetchMonth to avoid any closure issues
   useEffect(() => {
-    // DEBUG: Log effect state
-    console.log('[prefetch effect] running with:', { readOnly, sharedOwnerId });
-
     // In readOnly mode, only fetch if we have a sharedOwnerId (viewing shared shifts)
     // This prevents fetching the current user's shifts when viewing shared shifts
     if (readOnly && !sharedOwnerId) {
-      console.log('[prefetch effect] readOnly without sharedOwnerId - skipping');
       return;
     }
 
@@ -1366,6 +1357,12 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
       {/* Calendar Section - On mobile: takes full viewport height (minus header/navbar) and centers calendar */}
       <div className="h-[calc(100dvh-3.5rem-5rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] flex flex-col justify-center px-4 shrink-0 lg:h-auto lg:w-1/2 lg:sticky lg:top-6 lg:justify-start lg:items-center lg:px-0">
         <div className="w-full max-w-md md:max-w-lg lg:max-w-none lg:w-[480px]">
+          {/* Custom header slot (e.g., sharing dropdown) - constrained to calendar width */}
+          {headerSlot && (
+            <div className="pb-3">
+              {headerSlot}
+            </div>
+          )}
           <MonthlyEarningsCalendar
             shifts={shifts}
             month={selectedMonth}

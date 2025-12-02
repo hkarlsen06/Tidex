@@ -197,6 +197,11 @@ export const SharingServiceLive = Layer.effect(
 
     /**
      * Look up user by email or phone using admin client
+     *
+     * NOTE: This implementation fetches up to 1000 users and filters in memory.
+     * For apps with >1000 users, consider using Supabase database functions or
+     * a dedicated user lookup table. The current approach is suitable for small
+     * to medium user bases.
      */
     const lookupUserByIdentifier = (
       identifier: string

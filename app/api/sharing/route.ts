@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/data-access/auth";
 import { getSharedUserShifts } from "@/data-access/sharing";
 import { getMonthStart, getMonthEnd } from "@/lib/date-utils";
+import { isTaggedError } from "@/lib/errors/tagged";
 
 /**
  * API route for fetching shared user's shifts
@@ -54,19 +55,17 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error("Failed to fetch shared shifts:", error);
 
-    // Check for specific error types
-    const errorMessage =
-      error instanceof Error ? error.message : "Failed to fetch shared shifts";
-
-    // If access denied or not found, return 403/404
-    if (
-      errorMessage.includes("permission") ||
-      errorMessage.includes("access")
-    ) {
-      return NextResponse.json(
-        { error: "Access denied" },
-        { status: 403 }
-      );
+    // Check for specific tagged error types
+    if (isTaggedError(error)) {
+      switch (error._tag) {
+        case "AuthError":
+          return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        case "NotFoundError":
+          return NextResponse.json({ error: "Share not found" }, { status: 404 });
+        case "ValidationError":
+          return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+        // DatabaseError, SupabaseError, etc. fall through to 500
+      }
     }
 
     return NextResponse.json(
