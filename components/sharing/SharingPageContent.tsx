@@ -10,6 +10,7 @@ import { ScrollablePageWrapper } from "@/components/app/ScrollablePageWrapper";
 import { SharingPageSkeleton } from "@/components/app/skeletons";
 import { ManageSharingModal } from "./ManageSharingModal";
 import { SharingDropdown } from "./SharingDropdown";
+import { SharersList } from "./SharersList";
 import { useTranslations } from "@/lib/i18n/client";
 import type { SharedUser, ShareRecipient } from "@/data-access/sharing";
 import type { ShiftWithComputations, UserSettings, SupplementRule } from "@/lib/payroll";
@@ -129,14 +130,10 @@ export function SharingPageContent({
           </div>
 
           {sharers.length > 0 ? (
-            <div className="flex flex-col gap-4">
-              <SharingDropdown
-                sharers={sharers}
-                selectedId={null}
-                onSelect={handleSharerSelect}
-                placeholder={sharing.selectSharer}
-              />
-            </div>
+            <SharersList
+              sharers={sharers}
+              onSelect={(id) => handleSharerSelect(id)}
+            />
           ) : (
             <Card className="text-center py-12">
               <CardHeader>

@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { Plus, Share2 } from "lucide-react";
 import { UserMenu } from "./UserMenu";
 import { OfflineIndicator } from "./OfflineIndicator";
 import { NavigationMenu } from "./NavigationMenu";
@@ -54,6 +54,14 @@ export function TopHeader({ userName, avatarUrl }: TopHeaderProps) {
             >
               <Plus className="h-4 w-4 text-brand-gradient-mid" strokeWidth={2} />
               <span className="text-sm font-medium text-brand-gradient-mid">{t.common.add}</span>
+            </Link>
+
+            {/* Share link - plain icon */}
+            <Link
+              href={`/${locale}/sharing`}
+              className="p-1"
+            >
+              <Share2 className="h-5 w-5 text-text-secondary" strokeWidth={2} />
             </Link>
 
             <UserMenu displayName={displayName} avatarUrl={avatarUrl ?? null} />
