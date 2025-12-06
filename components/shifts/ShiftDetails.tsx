@@ -121,6 +121,9 @@ export type ShiftDetailsProps = {
   presetRules?: SupplementRule[];
   readOnly?: boolean; // Hide edit/delete buttons when true (e.g., from dashboard)
   onShiftUpdate?: (updatedSupplements: any) => void; // Called after shift is updated with new custom supplements
+  onOptimisticEdit?: (shiftId: string, updates: { shift_date: string; start_time: string; end_time: string }) => void; // Called immediately for optimistic UI update
+  onEditError?: (shiftId: string, error: string) => void; // Called when edit fails to allow parent to revert
+  onSupplementSaveError?: (error: string) => void; // Called when custom supplement save fails
 };
 
 function capitalize(input: string) {
@@ -150,6 +153,9 @@ export function ShiftDetails({
   presetRules = [],
   readOnly = false,
   onShiftUpdate,
+  onOptimisticEdit,
+  onEditError,
+  onSupplementSaveError,
 }: ShiftDetailsProps) {
   const { t, locale } = useTranslations();
   const formatCurrency = useFormatCurrency();
@@ -245,6 +251,21 @@ export function ShiftDetails({
       return;
     }
     setSaveError(null);
+
+    // Store original values for potential revert
+    const originalDate = shift.shift_date;
+    const originalStart = shift.start_time;
+    const originalEnd = shift.end_time;
+
+    // OPTIMISTIC: Close edit mode and update UI immediately
+    setIsEditing(false);
+    onOptimisticEdit?.(shift.id, {
+      shift_date: shiftDate,
+      start_time: startTime,
+      end_time: endTime,
+    });
+
+    // Run server action in background
     startTransition(async () => {
       try {
         await updateShift({
@@ -254,7 +275,6 @@ export function ShiftDetails({
           end: endTime,
           recurring_id: shift.recurring_id, // Pass recurring_id if present
         });
-        setIsEditing(false);
         router.refresh();
       } catch (error: any) {
         // If offline and queue is supported, queue the mutation
@@ -271,15 +291,24 @@ export function ShiftDetails({
                 recurring_id: shift.recurring_id,
               }),
             });
-
-            // Close editing and show success (queued)
-            setIsEditing(false);
-            setSaveError(null);
+            // Queued successfully - optimistic update stays
           } catch {
-            setSaveError(t.pages.shifts.details.errorUpdate);
+            // Queue failed - revert optimistic update
+            onOptimisticEdit?.(shift.id, {
+              shift_date: originalDate,
+              start_time: originalStart,
+              end_time: originalEnd,
+            });
+            onEditError?.(shift.id, t.pages.shifts.details.errorUpdate);
           }
         } else {
-          setSaveError(error?.message || t.pages.shifts.details.errorUpdate);
+          // Server error - revert optimistic update
+          onOptimisticEdit?.(shift.id, {
+            shift_date: originalDate,
+            start_time: originalStart,
+            end_time: originalEnd,
+          });
+          onEditError?.(shift.id, error?.message || t.pages.shifts.details.errorUpdate);
         }
       }
     });
@@ -575,6 +604,7 @@ export function ShiftDetails({
             // Trigger router refresh to get fresh computed data
             router.refresh();
           }}
+          onSaveError={onSupplementSaveError}
         />
       )}
     </Dialog>
