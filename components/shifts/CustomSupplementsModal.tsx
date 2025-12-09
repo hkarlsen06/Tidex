@@ -45,6 +45,7 @@ interface CustomSupplementsModalProps {
   existingSupplements?: CustomSupplementsData | null;
   predefinedRules?: SupplementRule[];
   onSaveSuccess?: (updatedSupplements: CustomSupplementsData | null) => void;
+  onSaveError?: (error: string) => void; // Called when save fails after optimistic close
 }
 
 // Get weekday (1-7, Mon-Sun) from ISO date
@@ -162,6 +163,7 @@ export function CustomSupplementsModal({
   existingSupplements,
   predefinedRules = [],
   onSaveSuccess,
+  onSaveError,
 }: CustomSupplementsModalProps) {
   const { t } = useTranslations();
   const prevOpenRef = useRef(open);
@@ -259,61 +261,64 @@ export function CustomSupplementsModal({
 
     setSaveError(null);
 
+    const visibleRules = fromEditorData(customSupplements);
+
+    // Check if user has any actual customizations (added custom rules or modified/removed tariff rules)
+    const hasCustomizations = visibleRules.rules.some((rule) => rule.isCustom) || hasUnsavedChanges;
+
+    // If no customizations and no existing supplements, don't save anything
+    if (!hasCustomizations && !existingSupplements) {
+      onOpenChange(false);
+      return;
+    }
+
+    // Get existing non-applicable custom rules (user-added rules outside shift time window)
+    // These need to be preserved since they're not shown in the editor
+    const existingNonApplicableCustomRules = existingSupplements?.rules
+      .filter((rule) => rule.isCustom && !ruleOverlapsShift(rule, startTime, endTime))
+      .map((rule) => ({
+        from: rule.from,
+        to: rule.to,
+        rate: rule.rate,
+        percent: rule.percent,
+        isCustom: true as const,
+      })) ?? [];
+
+    // Merge:
+    // 1. Visible rules (user-edited applicable rules)
+    // 2. Existing non-applicable custom rules (preserved, not shown in editor)
+    // 3. Fresh non-applicable tariff rules (for future shift expansion)
+    const allRules = [
+      ...visibleRules.rules,
+      ...existingNonApplicableCustomRules,
+      ...nonApplicableSupplements.map((rule) => ({
+        from: rule.from as `${number}:${number}`,
+        to: rule.to as `${number}:${number}`,
+        rate: rule.rate,
+        percent: rule.percent,
+        isCustom: false as const, // Non-applicable tariff rules
+      })),
+    ];
+
+    // Only save if there are valid rules, otherwise clear supplements
+    const finalData = allRules.length > 0 ? { rules: allRules } : null;
+
+    // OPTIMISTIC: Close modal and update parent immediately
+    onOpenChange(false);
+    onSaveSuccess?.(finalData);
+
+    // Run server action in background
     startTransition(async () => {
       try {
-        const visibleRules = fromEditorData(customSupplements);
-
-        // Check if user has any actual customizations (added custom rules or modified/removed tariff rules)
-        const hasCustomizations = visibleRules.rules.some((rule) => rule.isCustom) || hasUnsavedChanges;
-
-        // If no customizations and no existing supplements, don't save anything
-        if (!hasCustomizations && !existingSupplements) {
-          onOpenChange(false);
-          return;
-        }
-
-        // Get existing non-applicable custom rules (user-added rules outside shift time window)
-        // These need to be preserved since they're not shown in the editor
-        const existingNonApplicableCustomRules = existingSupplements?.rules
-          .filter((rule) => rule.isCustom && !ruleOverlapsShift(rule, startTime, endTime))
-          .map((rule) => ({
-            from: rule.from,
-            to: rule.to,
-            rate: rule.rate,
-            percent: rule.percent,
-            isCustom: true as const,
-          })) ?? [];
-
-        // Merge:
-        // 1. Visible rules (user-edited applicable rules)
-        // 2. Existing non-applicable custom rules (preserved, not shown in editor)
-        // 3. Fresh non-applicable tariff rules (for future shift expansion)
-        const allRules = [
-          ...visibleRules.rules,
-          ...existingNonApplicableCustomRules,
-          ...nonApplicableSupplements.map((rule) => ({
-            from: rule.from as `${number}:${number}`,
-            to: rule.to as `${number}:${number}`,
-            rate: rule.rate,
-            percent: rule.percent,
-            isCustom: false as const, // Non-applicable tariff rules
-          })),
-        ];
-
-        // Only save if there are valid rules, otherwise clear supplements
-        const finalData = allRules.length > 0 ? { rules: allRules } : null;
-
         await updateCustomSupplements({
           shiftId,
           recurringId,
           shiftDate,
           customSupplements: finalData,
         });
-
-        onOpenChange(false);
-        onSaveSuccess?.(finalData);
       } catch (error: any) {
-        setSaveError(error?.message || t.pages.shifts.details.errorUpdate);
+        // Notify parent of error so it can show notification and potentially revert
+        onSaveError?.(error?.message || t.pages.shifts.details.errorUpdate);
       }
     });
   };
@@ -329,6 +334,11 @@ export function CustomSupplementsModal({
   const handleReset = () => {
     setSaveError(null);
 
+    // OPTIMISTIC: Close modal and update parent immediately
+    onOpenChange(false);
+    onSaveSuccess?.(null);
+
+    // Run server action in background
     startTransition(async () => {
       try {
         // Clear custom supplements - the shift will use tariff supplements again
@@ -338,11 +348,9 @@ export function CustomSupplementsModal({
           shiftDate,
           customSupplements: null,
         });
-
-        onOpenChange(false);
-        onSaveSuccess?.(null);
       } catch (error: any) {
-        setSaveError(error?.message || t.pages.shifts.details.errorUpdate);
+        // Notify parent of error so it can show notification
+        onSaveError?.(error?.message || t.pages.shifts.details.errorUpdate);
       }
     });
   };

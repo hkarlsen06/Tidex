@@ -527,6 +527,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
   const [shiftOverrides, setShiftOverrides] = useState<Map<string, ShiftWithComputations>>(new Map());
   const [optimisticShifts, setOptimisticShifts] = useState<ShiftWithComputations[]>([]);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [operationError, setOperationError] = useState<string | null>(null); // For move/copy/delete/edit failures
 
   // Track which months have been loaded or are currently loading
   const [loadedMonths, setLoadedMonths] = useState<Set<string>>(new Set());
@@ -1039,6 +1040,17 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
     }
   }, [initialShifts, optimisticShifts]);
 
+  // Auto-dismiss operation error after 5 seconds
+  useEffect(() => {
+    if (!operationError) return;
+
+    const dismissTimer = setTimeout(() => {
+      setOperationError(null);
+    }, 5000);
+
+    return () => clearTimeout(dismissTimer);
+  }, [operationError]);
+
   // Confetti celebration for newly added shifts
   useEffect(() => {
     const newDates = searchParams.get('new');
@@ -1212,7 +1224,8 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
                 setCopiedShifts(prev =>
                   prev.filter(shift => !optimisticCopies.some(opt => opt.id === shift.id))
                 );
-                // TODO: Add error handling UI
+                const errorMessage = error instanceof Error ? error.message : errorComplete;
+                setOperationError(errorMessage);
                 console.error("Failed to copy shifts", error);
               }
             });
@@ -1347,10 +1360,12 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
           idsToDelete.forEach(id => next.delete(id));
           return next;
         });
+        const errorMessage = error instanceof Error ? error.message : errorComplete;
+        setOperationError(errorMessage);
         console.error("Failed to delete shifts", error);
       }
     });
-  }, [multiSelectedDates, shiftsByDate, isOffline, router, clearMultiSelection]);
+  }, [multiSelectedDates, shiftsByDate, isOffline, router, clearMultiSelection, errorComplete]);
 
   const selectedDateShifts = useMemo(
     () => (selectedDate ? shiftsByDate.get(selectedDate) ?? [] : []),
@@ -1662,6 +1677,29 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
       </div>
     )}
 
+    {/* Operation Error Notification (for move/copy/delete/edit failures) */}
+    {operationError && (
+      <div className="fixed top-20 left-1/2 -translate-x-1/2 z-40 animate-in slide-in-from-top-2 fade-in">
+        <div className="rounded-lg border border-error/20 bg-error/10 px-4 py-3 shadow-lg backdrop-blur-xs">
+          <div className="flex items-center gap-2">
+            <X className="h-4 w-4 text-error" />
+            <div className="text-sm">
+              <span className="text-error font-medium">
+                {operationError}
+              </span>
+            </div>
+            <button
+              onClick={() => setOperationError(null)}
+              className="ml-2 text-error/70 hover:text-error"
+              aria-label="Dismiss"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
     {/* Mobile/Tablet: vertical stack. Desktop: side-by-side, break out of parent container */}
     <div className="flex w-full flex-col lg:relative lg:left-1/2 lg:right-1/2 lg:-ml-[50vw] lg:-mr-[50vw] lg:w-screen lg:flex-row lg:gap-0 lg:px-0 lg:items-start lg:pt-6">
       {/* Calendar Section - On mobile: takes full viewport height (minus header/navbar) and centers calendar */}
@@ -1910,6 +1948,8 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
                   next.delete(id);
                   return next;
                 });
+                const errorMessage = queueError instanceof Error ? queueError.message : errorComplete;
+                setOperationError(errorMessage);
                 console.error("Failed to queue shift deletion", queueError);
               }
             } else {
@@ -1919,10 +1959,58 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
                 next.delete(id);
                 return next;
               });
+              const errorMessage = error instanceof Error ? error.message : errorComplete;
+              setOperationError(errorMessage);
               console.error("Failed to delete shift", error);
             }
           }
         });
+      }}
+      onOptimisticEdit={(shiftId, updates) => {
+        // Find the shift to update
+        const shiftToUpdate = shifts.find(s => s.id === shiftId);
+        if (!shiftToUpdate) return;
+
+        // Use existing computed wage periods to preserve the applied base rate locally
+        const baseRate = shiftToUpdate.hourly_wage_snapshot
+          ?? shiftToUpdate.computed?.wagePeriods?.[0]?.baseRate
+          ?? undefined;
+        const rulesForCompute = shiftToUpdate.supplement_rules_snapshot?.rules ?? presetRules;
+
+        const shiftForCompute = {
+          ...shiftToUpdate,
+          shift_date: updates.shift_date,
+          start_time: updates.start_time,
+          end_time: updates.end_time,
+          ...(typeof baseRate === "number" ? { hourly_wage_snapshot: baseRate } : {}),
+        };
+
+        // Optimistically recompute so the UI updates immediately
+        let updatedShift: ShiftWithComputations = shiftForCompute;
+        try {
+          const recomputed = computeShift(shiftForCompute, userSettings, rulesForCompute);
+          updatedShift = { ...shiftForCompute, computed: recomputed };
+        } catch (err) {
+          console.error("Failed to recompute shift after edit", err);
+        }
+
+        // Update selected shift if it's the one being edited
+        if (selectedShift?.id === shiftId) {
+          setSelectedShift(updatedShift);
+        }
+
+        // Update shiftOverrides for the list view
+        setShiftOverrides((prev) => {
+          const next = new Map(prev);
+          next.set(updatedShift.id, updatedShift);
+          return next;
+        });
+      }}
+      onEditError={(_shiftId, error) => {
+        setOperationError(error);
+      }}
+      onSupplementSaveError={(error) => {
+        setOperationError(error);
       }}
       existingShifts={shifts.map(s => ({ shift_date: s.shift_date, start_time: s.start_time, end_time: s.end_time }))}
       userSettings={userSettings}
