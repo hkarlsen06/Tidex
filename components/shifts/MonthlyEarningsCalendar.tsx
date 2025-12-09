@@ -11,7 +11,7 @@ import type { ShiftWithComputations } from "@/lib/payroll";
 import type { ISODate, EarningsByDate, HoursByDate } from "@/components/app/calendar-types";
 import { cn } from "@/lib/cn";
 import { useTranslations } from "@/lib/i18n/client";
-import { getMonthlyTotals } from "@/lib/shifts/monthlyTotals";
+import { getMonthlyTotals, summarizeShiftTotals } from "@/lib/shifts/monthlyTotals";
 import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
 import { useCurrency } from "@/components/providers/CurrencyProvider";
 
@@ -215,7 +215,23 @@ export function MonthlyEarningsCalendar({
     [monthlyShifts]
   );
 
-  const { totalEarnings, netEarnings } = useMemo(() => {
+  // Calculate totals - use selected shifts only when in multi-selection mode
+  const { totalEarnings, netEarnings, isShowingSelectedTotal } = useMemo(() => {
+    // When dates are selected, show total for selected shifts only
+    if (selectedDates && selectedDates.size > 0) {
+      const selectedShifts = monthlyShifts.filter(
+        (shift) => selectedDates.has(shift.shift_date as ISODate)
+      );
+      const { gross, net } = summarizeShiftTotals({
+        shifts: selectedShifts,
+        taxSettings,
+        now: new Date(),
+        month: month.getMonth() + 1,
+      });
+      return { totalEarnings: gross, netEarnings: net, isShowingSelectedTotal: true };
+    }
+
+    // Default: show monthly totals
     const { gross, net } = getMonthlyTotals({
       shifts: monthlyShifts,
       year: month.getFullYear(),
@@ -224,8 +240,8 @@ export function MonthlyEarningsCalendar({
       now: new Date(),
     });
 
-    return { totalEarnings: gross, netEarnings: net };
-  }, [monthlyShifts, month, taxSettings]);
+    return { totalEarnings: gross, netEarnings: net, isShowingSelectedTotal: false };
+  }, [monthlyShifts, month, taxSettings, selectedDates]);
 
   // Swipe gesture handling
   useEffect(() => {
@@ -298,16 +314,24 @@ export function MonthlyEarningsCalendar({
       <div ref={swipeContainerRef}>
         <div className="flex flex-row items-center justify-between py-3">
           <div className="flex items-center gap-1">
-            <MonthPicker
-              month={month}
-              onPreviousMonth={goToPreviousMonth}
-              onNextMonth={goToNextMonth}
-            />
-            <span className="font-medium text-text-muted ml-1">{formatYear(month)}</span>
+            {isShowingSelectedTotal ? (
+              <span className="font-semibold text-text-primary">
+                {t.pages.shifts.actions.selectedCount.replace('{count}', String(selectedDates?.size ?? 0))}
+              </span>
+            ) : (
+              <>
+                <MonthPicker
+                  month={month}
+                  onPreviousMonth={goToPreviousMonth}
+                  onNextMonth={goToNextMonth}
+                />
+                <span className="font-medium text-text-muted ml-1">{formatYear(month)}</span>
+              </>
+            )}
           </div>
           <div
-            key={`total-${month.getFullYear()}-${month.getMonth()}`}
-            className={`text-right relative ${getAnimationClasses(localDirection)}`}
+            key={isShowingSelectedTotal ? `selected-${selectedDates?.size}` : `total-${month.getFullYear()}-${month.getMonth()}`}
+            className={`text-right relative ${isShowingSelectedTotal ? '' : getAnimationClasses(localDirection)}`}
           >
             <div className="font-semibold text-text-primary">
               {totalEarnings === 0 ? '—' : formatCurrency(taxSettings?.enabled ? netEarnings : totalEarnings)}
