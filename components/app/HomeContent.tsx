@@ -543,6 +543,11 @@ export function HomeContent({ shifts: initialShifts, settings }: HomeContentProp
                   setDetailsOpen(true);
                 }}
                 progress={countdown.isActive ? countdown.progress : undefined}
+                taxSettings={{
+                  enabled: settings.tax_deduction_enabled ?? false,
+                  percentage: Number(settings.tax_percentage) || 0,
+                  halfTaxMonth: settings.half_tax_month ?? null,
+                }}
               />
               <p className="text-xs text-text-muted text-center">{relativeTimeText ?? "---"}</p>
             </div>

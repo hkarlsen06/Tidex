@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useCallback, useTransition, useRef, useEffect, Fragment } from "react";
+import React, { useMemo, useState, useCallback, useTransition, useRef, useEffect, Fragment } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 
@@ -1836,6 +1836,11 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
                                   setDetailsOpen(true);
                                 }}
                                 progress={isNextUpcomingShift && countdown.isActive ? countdown.progress : undefined}
+                                taxSettings={{
+                                  enabled: userSettings.tax_deduction_enabled ?? false,
+                                  percentage: Number(userSettings.tax_percentage) || 0,
+                                  halfTaxMonth: userSettings.half_tax_month ?? null,
+                                }}
                               />
                               {isNextUpcomingShift && countdown.text && (
                                 <p className="text-xs text-text-muted text-center">{countdown.text}</p>

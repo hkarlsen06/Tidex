@@ -100,18 +100,30 @@ export function TopHeader({ userName }: TopHeaderProps) {
               href={`/${locale}/sharing`}
               className="flex items-center"
             >
-              {/* Stacked avatars - render in reverse so priority users are closest to share icon */}
-              {visibleSharers.length > 0 && (
-                <div className="flex items-center">
+              {/*
+                Stacked avatars container - uses CSS grid for smooth width transitions.
+                When sharers load, avatars animate in without jarring layout shift.
+              */}
+              <div
+                className="grid transition-[grid-template-columns] duration-300 ease-out"
+                style={{
+                  // Each avatar is 28px (24px + 4px border), overlapping by 14px = 14px per additional
+                  // First avatar: 28px, each additional: +14px
+                  gridTemplateColumns: visibleSharers.length > 0
+                    ? `${28 + (visibleSharers.length - 1) * 14}px`
+                    : "0px",
+                }}
+              >
+                <div className="flex items-center overflow-hidden">
                   {[...visibleSharers].reverse().map((sharer, index) => {
                     const avatarSrc = sharer.profilePictureUrl || sharer.oauthAvatarUrl;
                     // Higher index = further right = higher z-index (on top)
                     return (
                       <div
                         key={sharer.id}
-                        className="relative rounded-full border-2 border-background bg-background"
+                        className="relative shrink-0 rounded-full border-2 border-background bg-background"
                         style={{
-                          marginRight: -10,
+                          marginRight: -14,
                           zIndex: index,
                         }}
                       >
@@ -132,11 +144,11 @@ export function TopHeader({ userName }: TopHeaderProps) {
                     );
                   })}
                 </div>
-              )}
-              {/* Share icon overlaps the rightmost avatar */}
+              </div>
+              {/* Share icon - always visible, avatars tuck underneath */}
               <div
-                className="relative p-1 rounded-full bg-background"
-                style={{ zIndex: visibleSharers.length }}
+                className="relative p-1.5 rounded-full bg-background"
+                style={{ zIndex: visibleSharers.length, marginLeft: visibleSharers.length > 0 ? -12 : 0 }}
               >
                 <Share2 className="h-5 w-5 text-text-secondary" strokeWidth={2} />
               </div>

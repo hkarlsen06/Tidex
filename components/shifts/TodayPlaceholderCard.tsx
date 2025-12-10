@@ -37,7 +37,6 @@ export function TodayPlaceholderCard() {
   const dateLabel = dateFormatter.format(parsed);
 
   const dayName = t.dateTime.daysShort[weekday];
-  const displayDayName = locale === 'no' ? dayName.toLowerCase() : dayName;
 
   const handleClick = () => {
     router.push(`/${locale}/shifts/add?date=${todayDateString}`);
@@ -59,11 +58,11 @@ export function TodayPlaceholderCard() {
       <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0 py-4">
         <div>
           <p className="text-lg font-medium text-text-muted">
-            {dateLabel}
-            <span className="text-text-muted"> · </span>
             <span className="text-text-muted">
-              {displayDayName}
+              {dayName}
             </span>
+            <span className="text-text-muted"> · </span>
+            {dateLabel}
           </p>
         </div>
         <div className="text-right">

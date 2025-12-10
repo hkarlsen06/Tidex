@@ -12,28 +12,37 @@ import {
 import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
 import { getDateFormatter } from "@/lib/i18n/locale";
 
+export type TaxSettings = {
+  enabled: boolean;
+  percentage: number;
+  halfTaxMonth?: number | null;
+};
+
 type ShiftCardProps = {
   shift: ShiftWithComputations;
   onClick?: () => void;
   isToday?: boolean;
   /** Progress through the shift (0-100), shows a subtle progress bar when provided */
   progress?: number;
+  /** Tax settings for displaying net earnings */
+  taxSettings?: TaxSettings;
 };
 
 export function formatDateParts(date: string, locale: string, daysShort: readonly string[]) {
   const parsed = new Date(`${date}T00:00:00Z`);
   const weekday = parsed.getUTCDay();
 
-  // Use Intl.DateTimeFormat for locale-aware date formatting (consistent with NextPayrollCard)
-  const dateFormatter = getDateFormatter(locale, {
-    day: "numeric",
-    month: "long",
-  });
-  const dateLabel = dateFormatter.format(parsed);
+  // Use Intl.DateTimeFormat for locale-aware date formatting
+  const dayFormatter = getDateFormatter(locale, { day: "numeric" });
+  const monthFormatter = getDateFormatter(locale, { month: "long" });
+
+  const dayNumber = dayFormatter.format(parsed);
+  const monthName = monthFormatter.format(parsed);
 
   return {
     dayName: daysShort[weekday],
-    dateLabel,
+    dayNumber,
+    monthName,
     isWeekend: weekday === 0 || weekday === 6,
   };
 }
@@ -50,17 +59,31 @@ export function formatPlainAmount(value: number) {
   return formatPlainAmountValue(value);
 }
 
-export function ShiftCard({ shift, onClick, isToday = false, progress }: ShiftCardProps) {
+export function ShiftCard({ shift, onClick, isToday = false, progress, taxSettings }: ShiftCardProps) {
   const { t, locale } = useTranslations();
   const formatCurrency = useFormatCurrency();
   const { computed } = shift;
-  const { dayName, dateLabel } = formatDateParts(shift.shift_date, locale, t.dateTime.daysShort);
+  const { dayName, dayNumber, monthName } = formatDateParts(shift.shift_date, locale, t.dateTime.daysShort);
   const { basePay, supplementPay, gross, paidHours } = computed;
 
-  const breakdown = `${formatPlainAmount(basePay)}${supplementPay > 0 ? ` + ${formatPlainAmount(supplementPay)}` : ""}`;
+  // Calculate tax for this shift
+  const taxEnabled = taxSettings?.enabled ?? false;
+  let taxPercentage = taxEnabled ? Number(taxSettings?.percentage ?? 0) : 0;
 
-  // Lowercase day names for Norwegian locale
-  const displayDayName = locale === 'no' ? dayName.toLowerCase() : dayName;
+  // Check for half tax month
+  const shiftMonth = parseInt(shift.shift_date.substring(5, 7), 10);
+  if (taxEnabled && taxSettings?.halfTaxMonth && shiftMonth === taxSettings.halfTaxMonth) {
+    taxPercentage = taxPercentage / 2;
+  }
+
+  const taxAmount = taxEnabled ? gross * (taxPercentage / 100) : 0;
+  const netAmount = gross - taxAmount;
+
+  // Show different breakdown based on tax settings
+  const displayAmount = taxEnabled ? netAmount : gross;
+  const breakdown = taxEnabled
+    ? `${formatPlainAmount(gross)} − ${formatPlainAmount(taxAmount)}`
+    : `${formatPlainAmount(basePay)}${supplementPay > 0 ? ` + ${formatPlainAmount(supplementPay)}` : ""}`;
 
   const isActive = typeof progress === 'number' && progress >= 0 && progress <= 100;
 
@@ -86,11 +109,8 @@ export function ShiftCard({ shift, onClick, isToday = false, progress }: ShiftCa
       <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0 py-6 relative z-10">
         <div className="space-y-1">
           <p className="text-lg font-medium text-text-primary">
-            {dateLabel}
-            <span className="text-text-muted"> · </span>
-            <span className="text-text-secondary">
-              {displayDayName}
-            </span>
+            {dayName} · {dayNumber}{" "}
+            <span className="text-text-muted">{monthName}</span>
           </p>
           <div className="flex items-center gap-3 text-sm text-text-secondary">
             <span className="inline-flex items-center gap-1 text-text-primary">
@@ -113,7 +133,7 @@ export function ShiftCard({ shift, onClick, isToday = false, progress }: ShiftCa
         </div>
         <div className="text-right">
           <p className="text-2xl font-semibold tracking-tight text-text-primary">
-            {formatCurrency(gross)}
+            {formatCurrency(displayAmount)}
           </p>
           <p className="text-xs">{breakdown}</p>
         </div>
