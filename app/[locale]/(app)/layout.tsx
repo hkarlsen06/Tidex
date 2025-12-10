@@ -1,18 +1,58 @@
 import type { ReactNode } from "react";
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-// import { getUserTheme } from "@/lib/theme/getTheme";
 import { sanitizeDisplayName, sanitizeUrl } from "@/lib/sanitize";
 
 import { SupabaseListener } from "@/app/supabase-listener";
 import { ThemeProvider } from "@/components/app/ThemeProvider";
 import { MonthProvider } from "@/components/app/MonthContext";
 import { AppLayoutClient } from "@/components/app/AppLayoutClient";
+import { SharersProvider } from "@/components/app/SharersProvider";
+import { UserAvatarProvider } from "@/components/app/UserAvatarProvider";
 import { I18nProvider } from "@/components/providers/I18nProvider";
 import { CurrencyProvider } from "@/components/providers/CurrencyProvider";
 import { getAppDictionary } from "@/lib/i18n/dictionaries";
 import { getUsersWhoSharedWithMe } from "@/data-access/sharing";
 import type { Locale } from "@/lib/i18n/config";
+
+/**
+ * Async server component that fetches sharers data and streams it to the client
+ */
+async function SharersData({ userId, children }: { userId: string; children: ReactNode }) {
+  const sharers = await getUsersWhoSharedWithMe(userId);
+  return <SharersProvider sharers={sharers}>{children}</SharersProvider>;
+}
+
+/**
+ * Async server component that fetches user settings (profile picture, currency) and streams to client
+ */
+async function UserSettingsData({
+  userId,
+  oauthAvatarUrl,
+  children,
+}: {
+  userId: string;
+  oauthAvatarUrl: string | null;
+  children: ReactNode;
+}) {
+  const supabase = await createSupabaseServerClient();
+  const { data: settings } = await supabase
+    .from("user_settings")
+    .select("profile_picture_url,currency")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  const profilePictureUrl = sanitizeUrl(settings?.profile_picture_url ?? null);
+  const resolvedAvatarUrl = profilePictureUrl ?? oauthAvatarUrl;
+  const currency = settings?.currency ?? "kr";
+
+  return (
+    <CurrencyProvider currency={currency}>
+      <UserAvatarProvider avatarUrl={resolvedAvatarUrl}>{children}</UserAvatarProvider>
+    </CurrencyProvider>
+  );
+}
 
 /**
  * Protected App Layout
@@ -48,21 +88,7 @@ export default async function RootLayout({
     redirect(`/${locale}/mfa-verify`);
   }
 
-  // Fetch user settings
-  // IMPORTANT: Do NOT call getSession() on the server side
-  // Reason: getSession() can trigger token refresh network calls, which can cause
-  // "Refresh Token Not Found" errors when racing with:
-  // 1. Proxy token refresh in proxy.ts
-  // 2. Client-side session checks in SupabaseListener and AppLayoutClient
-  // 3. Service worker background operations
-  // Server-side should ONLY use getUser() for auth validation.
-  const { data: settings } = await supabase
-    .from("user_settings")
-    .select("profile_picture_url,theme,currency")
-    .eq("user_id", user.id)
-    .maybeSingle();
-
-  // Sanitize user metadata from OAuth providers for defense-in-depth
+  // Extract user metadata from OAuth providers (available immediately, no DB call)
   const rawUserName =
     (user.user_metadata?.first_name as string | undefined) ??
     (user.user_metadata?.full_name as string | undefined) ??
@@ -72,6 +98,7 @@ export default async function RootLayout({
     "User";
   const userName = sanitizeDisplayName(rawUserName);
 
+  // Get OAuth avatar URL for fallback (available immediately from auth metadata)
   const rawMetadataAvatarUrl =
     (user.user_metadata?.avatar_url as string | undefined) ??
     (user.user_metadata?.picture as string | undefined) ??
@@ -101,34 +128,35 @@ export default async function RootLayout({
   })();
 
   const identityAvatarUrl = sanitizeUrl(rawIdentityAvatarUrl);
-
-  const avatarUrl = metadataAvatarUrl ?? identityAvatarUrl;
-  const profilePictureUrl = sanitizeUrl(settings?.profile_picture_url ?? null);
-  const resolvedAvatarUrl = profilePictureUrl ?? avatarUrl;
-
-  // Resolve user's theme preference from already-fetched settings
-  const serverTheme =
-    settings?.theme === "light" || settings?.theme === "dark" || settings?.theme === "system"
-      ? (settings.theme as "light" | "dark" | "system")
-      : null;
+  const oauthAvatarUrl = metadataAvatarUrl ?? identityAvatarUrl;
 
   // Provide a trimmed dictionary for the authenticated app shell.
   const appDictionary = getAppDictionary(locale as Locale, []);
 
-  // Fetch users who have shared their shifts with the current user
-  const sharers = await getUsersWhoSharedWithMe(user.id);
-
   return (
-    <ThemeProvider serverTheme={serverTheme}>
+    <ThemeProvider>
       <MonthProvider>
-        <CurrencyProvider currency={settings?.currency ?? "kr"}>
-          <I18nProvider locale={locale as Locale} dictionary={appDictionary} namespaces={[]}>
-            <SupabaseListener />
-            <AppLayoutClient userName={userName} avatarUrl={resolvedAvatarUrl} sharers={sharers}>
-              {children}
-            </AppLayoutClient>
-          </I18nProvider>
-        </CurrencyProvider>
+        <I18nProvider locale={locale as Locale} dictionary={appDictionary} namespaces={[]}>
+          <SupabaseListener />
+          {/* Stream user settings (profile picture, currency) and sharers data separately */}
+          <Suspense
+            fallback={
+              <CurrencyProvider currency="kr">
+                <AppLayoutClient userName={userName}>
+                  {children}
+                </AppLayoutClient>
+              </CurrencyProvider>
+            }
+          >
+            <UserSettingsData userId={user.id} oauthAvatarUrl={oauthAvatarUrl}>
+              <SharersData userId={user.id}>
+                <AppLayoutClient userName={userName}>
+                  {children}
+                </AppLayoutClient>
+              </SharersData>
+            </UserSettingsData>
+          </Suspense>
+        </I18nProvider>
       </MonthProvider>
     </ThemeProvider>
   );

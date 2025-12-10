@@ -14,34 +14,22 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({
-  serverTheme,
   children
 }: {
-  serverTheme?: Theme | null;
   children: ReactNode;
 }) {
   const [theme, setTheme] = useState<EffectiveTheme>("dark");
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Use useLayoutEffect to apply theme synchronously before browser paint
-  // This minimizes flash when serverTheme differs from localStorage
+  // localStorage is used as source of truth (synced to DB on change)
   useLayoutEffect(() => {
-    // Priority: serverTheme (DB) > localStorage > system preference
-    let effectiveTheme: EffectiveTheme;
-    let themePreference: Theme;
-
-    if (serverTheme) {
-      // User is authenticated and has a theme preference in DB
-      themePreference = serverTheme;
-      // Sync to localStorage for consistency with inline script on next load
-      localStorage.setItem("theme", themePreference);
-    } else {
-      // User is not authenticated or no DB preference - use localStorage or default to system
-      const savedTheme = localStorage.getItem("theme") as Theme | null;
-      themePreference = savedTheme || "system";
-    }
+    // Use localStorage or default to system preference
+    const savedTheme = localStorage.getItem("theme") as Theme | null;
+    const themePreference: Theme = savedTheme || "system";
 
     // Resolve "system" to actual light/dark
+    let effectiveTheme: EffectiveTheme;
     if (themePreference === "system") {
       const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
       effectiveTheme = prefersDark ? "dark" : "light";
@@ -65,7 +53,7 @@ export function ThemeProvider({
       mediaQuery.addEventListener("change", handleChange);
       return () => mediaQuery.removeEventListener("change", handleChange);
     }
-  }, [serverTheme]);
+  }, []);
 
   // Cleanup debounce timer on unmount
   useLayoutEffect(() => {
