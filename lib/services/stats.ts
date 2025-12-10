@@ -532,13 +532,10 @@ export const StatsServiceLive = Layer.effect(
         const fullYearEarnings = fullYearShifts.reduce((sum, shift) => sum + (shift.computed.gross || 0), 0);
         const fullYearHours = fullYearShifts.reduce((sum, shift) => sum + (shift.computed.paidHours || 0), 0);
 
-        // Last 6 months breakdown
+        // Full year monthly breakdown (all 12 months of the focus year)
         const last6Months: MonthlyData[] = [];
-        for (let i = 5; i >= 0; i--) {
-          const targetDate = new Date(Date.UTC(focusYear, focusMonth - 1 - i, 1));
-          const { year, month } = getYearMonth(targetDate);
-
-          const monthShifts = allShifts.filter((shift) => isDateInMonth(shift.shift_date, year, month));
+        for (let month = 1; month <= 12; month++) {
+          const monthShifts = allShifts.filter((shift) => isDateInMonth(shift.shift_date, focusYear, month));
           const earnings = monthShifts.reduce((sum, shift) => sum + (shift.computed.gross || 0), 0);
           const hours = monthShifts.reduce((sum, shift) => sum + (shift.computed.paidHours || 0), 0);
 
@@ -548,7 +545,7 @@ export const StatsServiceLive = Layer.effect(
             earnings,
             hours,
             shifts: monthShifts.length,
-            year,
+            year: focusYear,
             monthNumber: month,
           });
         }
@@ -933,13 +930,10 @@ export const StatsServiceLive = Layer.effect(
           currentMonday.setUTCDate(currentMonday.getUTCDate() + 7);
         }
 
-        // Build employment data for a wider window (6 months before + 5 months after focus month)
-        // This allows the frontend to shift the 6-month window forward if there are leading zeros
+        // Build employment data for the full focus year (all 12 months)
         const employmentLast6Months: EmploymentMonthlyData[] = [];
-        for (let i = 5; i >= -5; i--) {
-          const targetDate = new Date(Date.UTC(focusYear, focusMonth - 1 - i, 1));
-          const { year, month } = getYearMonth(targetDate);
-          const monthKey = `${year}-${String(month).padStart(2, "0")}`;
+        for (let month = 1; month <= 12; month++) {
+          const monthKey = `${focusYear}-${String(month).padStart(2, "0")}`;
           const monthData = monthlyEmployment.get(monthKey);
 
           const averagePercentage = monthData && monthData.totalWeight > 0
@@ -949,7 +943,7 @@ export const StatsServiceLive = Layer.effect(
           employmentLast6Months.push({
             month: MONTH_NAMES[month - 1],
             fullMonth: FULL_MONTH_NAMES[month - 1],
-            year,
+            year: focusYear,
             monthNumber: month,
             averagePercentage: +averagePercentage.toFixed(1),
             hasShifts: monthData?.hasShifts ?? false,

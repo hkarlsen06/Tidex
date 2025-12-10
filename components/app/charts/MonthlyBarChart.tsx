@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/chart";
 import { MonthlyData } from "@/data-access/stats";
 import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
+import { useIsMobile } from "@/lib/hooks/useIsMobile";
 
 type MonthlyBarChartProps = {
   data: MonthlyData[];
@@ -20,6 +21,15 @@ const chartConfig = {
   },
 };
 
+// Filter out leading and trailing zero months
+function trimZeroMonths(data: MonthlyData[]): MonthlyData[] {
+  const firstNonZeroIndex = data.findIndex(d => d.earnings > 0);
+  if (firstNonZeroIndex === -1) return data; // All zeros, return as-is
+
+  const lastNonZeroIndex = data.findLastIndex(d => d.earnings > 0);
+  return data.slice(firstNonZeroIndex, lastNonZeroIndex + 1);
+}
+
 // Custom tick component to color current month's label
 function CustomXAxisTick({
   x,
@@ -27,17 +37,26 @@ function CustomXAxisTick({
   payload,
   data,
   currentMonth,
-  currentYear
+  currentYear,
+  index,
+  isMobile,
 }: {
   x: number;
   y: number;
-  payload: any;
+  payload: { value: string };
   data: MonthlyData[];
   currentMonth: number;
   currentYear: number;
+  index: number;
+  isMobile: boolean;
 }) {
   const monthData = data.find(d => d.month === payload.value);
   const isCurrentMonth = monthData?.monthNumber === currentMonth && monthData?.year === currentYear;
+
+  // On mobile, show first label and then every other month
+  const shouldShow = !isMobile || index === 0 || index % 2 === 0;
+
+  if (!shouldShow) return null;
 
   return (
     <g transform={`translate(${x},${y})`}>
@@ -46,7 +65,7 @@ function CustomXAxisTick({
         y={0}
         dy={8}
         textAnchor="middle"
-        fontSize={16}
+        fontSize={12}
         fill={isCurrentMonth ? "hsl(var(--brand-gradientMid))" : "hsl(var(--foreground))"}
         fontWeight={isCurrentMonth ? 600 : 400}
       >
@@ -58,35 +77,41 @@ function CustomXAxisTick({
 
 export function MonthlyBarChart({ data }: MonthlyBarChartProps) {
   const formatCurrency = useFormatCurrency();
+  const isMobile = useIsMobile();
   const now = new Date();
   const currentMonth = now.getMonth() + 1; // Date#getMonth is 0-based
   const currentYear = now.getFullYear();
 
+  // Filter out leading/trailing zero months
+  const filteredData = trimZeroMonths(data);
+
   return (
     <ChartContainer config={chartConfig} className="h-[260px] w-full">
-      <BarChart data={data} margin={{ top: 12, right: 16, bottom: 0, left: 16 }}>
+      <BarChart data={filteredData} margin={{ top: 12, right: 8, bottom: 0, left: 8 }}>
         <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
         <XAxis
           dataKey="month"
           tickLine={false}
           axisLine={false}
-          padding={{ left: 8, right: 8 }}
+          padding={{ left: 4, right: 4 }}
           tick={(props) => (
             <CustomXAxisTick
               {...props}
-              data={data}
+              data={filteredData}
               currentMonth={currentMonth}
               currentYear={currentYear}
+              isMobile={isMobile}
             />
           )}
           tickMargin={8}
+          interval={0}
         />
         <YAxis
           tickLine={false}
           axisLine={false}
-          width={44}
-          tick={{ fontSize: 16 }}
-          tickMargin={8}
+          width={40}
+          tick={{ fontSize: 14 }}
+          tickMargin={4}
           tickFormatter={(value) => {
             if (value === 0) return '0';
             return `${(value / 1000).toFixed(0)}k`;
@@ -119,9 +144,9 @@ export function MonthlyBarChart({ data }: MonthlyBarChartProps) {
           dataKey="earnings"
           stroke="hsl(var(--brand-gradientMid))"
           strokeWidth={2}
-          radius={[8, 8, 0, 0]}
+          radius={[6, 6, 0, 0]}
         >
-          {data.map((entry) => {
+          {filteredData.map((entry) => {
             const isCurrentMonth =
               entry.monthNumber === currentMonth && entry.year === currentYear;
 
