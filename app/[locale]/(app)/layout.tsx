@@ -11,6 +11,7 @@ import { AppLayoutClient } from "@/components/app/AppLayoutClient";
 import { I18nProvider } from "@/components/providers/I18nProvider";
 import { CurrencyProvider } from "@/components/providers/CurrencyProvider";
 import { getAppDictionary } from "@/lib/i18n/dictionaries";
+import { getUsersWhoSharedWithMe } from "@/data-access/sharing";
 import type { Locale } from "@/lib/i18n/config";
 
 /**
@@ -114,13 +115,16 @@ export default async function RootLayout({
   // Provide a trimmed dictionary for the authenticated app shell.
   const appDictionary = getAppDictionary(locale as Locale, []);
 
+  // Fetch users who have shared their shifts with the current user
+  const sharers = await getUsersWhoSharedWithMe(user.id);
+
   return (
     <ThemeProvider serverTheme={serverTheme}>
       <MonthProvider>
         <CurrencyProvider currency={settings?.currency ?? "kr"}>
           <I18nProvider locale={locale as Locale} dictionary={appDictionary} namespaces={[]}>
             <SupabaseListener />
-            <AppLayoutClient userName={userName} avatarUrl={resolvedAvatarUrl}>
+            <AppLayoutClient userName={userName} avatarUrl={resolvedAvatarUrl} sharers={sharers}>
               {children}
             </AppLayoutClient>
           </I18nProvider>

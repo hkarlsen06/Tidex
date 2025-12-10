@@ -41,6 +41,27 @@ function getDisplayName(recipient: ShareRecipient): string {
   return "Bruker";
 }
 
+function formatPhoneNumber(phone: string): string {
+  // Strip country code and non-digits
+  const digits = phone.replace(/\D/g, "");
+  const localNumber = digits.startsWith("47") && digits.length === 10
+    ? digits.slice(2)
+    : digits;
+
+  // Format as NNN NN NNN if 8 digits
+  if (localNumber.length === 8) {
+    return `${localNumber.slice(0, 3)} ${localNumber.slice(3, 5)} ${localNumber.slice(5)}`;
+  }
+  return localNumber;
+}
+
+function getSecondaryInfo(recipient: ShareRecipient): string | null {
+  // Priority: phone first, then email, then nothing
+  if (recipient.phone) return formatPhoneNumber(recipient.phone);
+  if (recipient.email) return recipient.email;
+  return null;
+}
+
 function RecipientAvatar({ user }: { user: ShareRecipient }) {
   // Resolve avatar URL with fallback chain: custom profile pic > OAuth avatar > initials
   const avatarUrl = user.profilePictureUrl || user.oauthAvatarUrl || null;
@@ -123,7 +144,10 @@ export function ManageSharingModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-md sm:rounded-3xl">
+      <DialogContent
+        className="sm:max-w-md sm:rounded-3xl"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Users className="h-5 w-5 text-text-muted" />
@@ -204,9 +228,9 @@ export function ManageSharingModal({
                       <p className="text-sm font-medium text-text-primary truncate">
                         {getDisplayName(recipient)}
                       </p>
-                      {recipient.email && (
+                      {getSecondaryInfo(recipient) && (
                         <p className="max-w-[180px] truncate text-xs text-text-muted">
-                          {recipient.email}
+                          {getSecondaryInfo(recipient)}
                         </p>
                       )}
                     </div>
