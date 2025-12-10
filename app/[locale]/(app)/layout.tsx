@@ -138,22 +138,29 @@ export default async function RootLayout({
       <MonthProvider>
         <I18nProvider locale={locale as Locale} dictionary={appDictionary} namespaces={[]}>
           <SupabaseListener />
-          {/* Stream user settings (profile picture, currency) and sharers data separately */}
+          {/* Stream user settings (currency, avatar) with Suspense */}
           <Suspense
             fallback={
               <CurrencyProvider currency="kr">
-                <AppLayoutClient userName={userName}>
-                  {children}
-                </AppLayoutClient>
+                <SharersProvider sharers={[]}>
+                  <AppLayoutClient userName={userName}>{children}</AppLayoutClient>
+                </SharersProvider>
               </CurrencyProvider>
             }
           >
             <UserSettingsData userId={user.id} oauthAvatarUrl={oauthAvatarUrl}>
-              <SharersData userId={user.id}>
-                <AppLayoutClient userName={userName}>
-                  {children}
-                </AppLayoutClient>
-              </SharersData>
+              {/* Stream sharers data separately - SharersProvider in fallback prevents layout shift */}
+              <Suspense
+                fallback={
+                  <SharersProvider sharers={[]}>
+                    <AppLayoutClient userName={userName}>{children}</AppLayoutClient>
+                  </SharersProvider>
+                }
+              >
+                <SharersData userId={user.id}>
+                  <AppLayoutClient userName={userName}>{children}</AppLayoutClient>
+                </SharersData>
+              </Suspense>
             </UserSettingsData>
           </Suspense>
         </I18nProvider>

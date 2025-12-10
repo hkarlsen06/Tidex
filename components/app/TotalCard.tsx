@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useLayoutEffect, useCallback } from 'react';
+import React from 'react';
 import { ArrowDown, ArrowUp, HelpCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/app/Card';
 import { ClickTooltip } from '@/components/app/Tooltip';
@@ -17,100 +17,6 @@ interface TotalCardProps {
   useZeroPlaceholder?: boolean;
   /** Shows a help icon with tooltip when total shows dashes but user has pending shifts */
   hasPendingShifts?: boolean;
-}
-
-// Maximum font size in pixels for the total amount
-const MAX_FONT_SIZE_PX = 72;
-// Minimum font size in pixels (fallback floor)
-const MIN_FONT_SIZE_PX = 28;
-
-/**
- * Helper to calculate optimal font size via binary search
- * Measures text width against container width
- */
-function calculateOptimalFontSize(
-  container: HTMLElement,
-  text: string,
-  maxFontSize: number,
-  minFontSize: number
-): number {
-  const measureEl = document.createElement('span');
-  measureEl.style.cssText = `
-    position: absolute;
-    visibility: hidden;
-    white-space: nowrap;
-    font-weight: 700;
-    font-family: inherit;
-  `;
-  measureEl.textContent = text;
-  document.body.appendChild(measureEl);
-
-  const containerWidth = container.offsetWidth;
-  let low = minFontSize;
-  let high = maxFontSize;
-  let optimal = minFontSize;
-
-  while (low <= high) {
-    const mid = Math.floor((low + high) / 2);
-    measureEl.style.fontSize = `${mid}px`;
-
-    if (measureEl.offsetWidth <= containerWidth) {
-      optimal = mid;
-      low = mid + 1;
-    } else {
-      high = mid - 1;
-    }
-  }
-
-  document.body.removeChild(measureEl);
-  return optimal;
-}
-
-/**
- * Hook to auto-scale font size to fit container width.
- * Uses direct DOM manipulation to avoid React setState warnings in effects.
- * Returns refs that must be attached to container and text elements.
- */
-function useAutoScaleFont(
-  text: string,
-  maxFontSize: number = MAX_FONT_SIZE_PX,
-  minFontSize: number = MIN_FONT_SIZE_PX
-): {
-  containerRef: React.RefObject<HTMLDivElement | null>;
-  textRef: React.RefObject<HTMLSpanElement | null>;
-} {
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const textRef = useRef<HTMLSpanElement | null>(null);
-
-  // Function to update font size directly on the DOM element
-  const updateFontSize = useCallback(() => {
-    const container = containerRef.current;
-    const textEl = textRef.current;
-    if (!container || !textEl) return;
-
-    const optimal = calculateOptimalFontSize(container, text, maxFontSize, minFontSize);
-    textEl.style.fontSize = `${optimal}px`;
-  }, [text, maxFontSize, minFontSize]);
-
-  // Initial measurement on mount and when text changes
-  useLayoutEffect(() => {
-    updateFontSize();
-  }, [updateFontSize]);
-
-  // Handle resize via ResizeObserver
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    const resizeObserver = new ResizeObserver(() => {
-      updateFontSize();
-    });
-
-    resizeObserver.observe(container);
-    return () => resizeObserver.disconnect();
-  }, [updateFontSize]);
-
-  return { containerRef, textRef };
 }
 
 // Helper to get animation classes based on direction
@@ -168,9 +74,7 @@ export const TotalCard: React.FC<TotalCardProps> = ({
       }
     : undefined;
 
-  // Auto-scale font size for the total amount
   const displayTotal = useZeroPlaceholder && total === '0 kr' ? '---' : total;
-  const { containerRef: totalContainerRef, textRef: totalTextRef } = useAutoScaleFont(displayTotal);
 
   // Show help tooltip when displaying placeholder but user has pending shifts
   const showPendingShiftsHelp = displayTotal === '---' && hasPendingShifts;
@@ -241,15 +145,18 @@ export const TotalCard: React.FC<TotalCardProps> = ({
               key={`total-${total}`}
               className={`mt-3 relative flex items-center justify-center ${getAnimationClasses(animationDirection)}`}
             >
+              {/*
+                Container query container - font scales based on container width.
+                Uses clamp() with cqi units: min 28px, preferred 22cqi, max 72px.
+                No JavaScript measurement needed - browser handles it natively.
+              */}
               <div
-                ref={totalContainerRef}
-                className="whitespace-nowrap"
-                style={{ lineHeight: 1.1 }}
+                className="w-full whitespace-nowrap text-center"
+                style={{ containerType: 'inline-size', lineHeight: 1.1 }}
               >
                 <span
-                  ref={totalTextRef}
                   className="font-bold text-brand-highlight"
-                  style={{ fontSize: `${MAX_FONT_SIZE_PX}px` }}
+                  style={{ fontSize: 'clamp(28px, 22cqi, 72px)' }}
                 >
                   {displayTotal}
                 </span>
