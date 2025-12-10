@@ -337,7 +337,7 @@ export const en: Dictionary = {
         upTo: 'up to',
         forFullYear: 'for full year',
         cumulativeProgress: 'Cumulative progress',
-        last6Months: 'Last 6 months',
+        yearlyBreakdown: 'Earnings',
         total: 'Total',
       },
       monthlyGoal: {
@@ -490,7 +490,7 @@ export const en: Dictionary = {
         statsCurrentMonth: 'Current month statistics',
         statsLastMonth: 'Last month statistics',
         statsYearToDate: 'Year to date statistics',
-        statsLast6Months: 'Last 6 months statistics',
+        statsLast6Months: 'Monthly earnings for the year',
         statsThisWeek: 'This week statistics',
         statsMonthlyGoal: 'Monthly goal status',
         statsSupplementBreakdown: 'Supplement breakdown for current month',

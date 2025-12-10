@@ -336,7 +336,7 @@ export const no = {
         upTo: 'opp til',
         forFullYear: 'for hele året',
         cumulativeProgress: 'Kumulativ utvikling',
-        last6Months: 'Siste 6 måneder',
+        yearlyBreakdown: 'Inntjening',
         total: 'Totalt',
       },
       monthlyGoal: {
@@ -489,7 +489,7 @@ export const no = {
         statsCurrentMonth: 'Statistikk for denne måneden',
         statsLastMonth: 'Statistikk for forrige måned',
         statsYearToDate: 'Statistikk hittil i år',
-        statsLast6Months: 'Statistikk for siste 6 måneder',
+        statsLast6Months: 'Månedlig inntjening for året',
         statsThisWeek: 'Statistikk for denne uken',
         statsMonthlyGoal: 'Månedlig målstatus',
         statsSupplementBreakdown: 'Tilleggsfordeling for denne måneden',

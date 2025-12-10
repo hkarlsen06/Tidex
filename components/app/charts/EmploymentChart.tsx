@@ -10,6 +10,7 @@ import { ClickTooltip } from "@/components/app/Tooltip";
 import { Info } from "lucide-react";
 import type { EmploymentMonthlyData } from "@/data-access/stats";
 import { useTranslations } from "@/lib/i18n/client";
+import { useIsMobile } from "@/lib/hooks/useIsMobile";
 
 type EmploymentChartProps = {
   data: EmploymentMonthlyData[];
@@ -24,6 +25,15 @@ const chartConfig = {
   },
 };
 
+// Filter out leading and trailing zero months
+function trimZeroMonths(data: EmploymentMonthlyData[]): EmploymentMonthlyData[] {
+  const firstNonZeroIndex = data.findIndex(d => d.averagePercentage > 0);
+  if (firstNonZeroIndex === -1) return data; // All zeros, return as-is
+
+  const lastNonZeroIndex = data.findLastIndex(d => d.averagePercentage > 0);
+  return data.slice(firstNonZeroIndex, lastNonZeroIndex + 1);
+}
+
 // Custom tick component to color current month's label
 function CustomXAxisTick({
   x,
@@ -32,7 +42,8 @@ function CustomXAxisTick({
   data,
   currentMonth,
   currentYear,
-  focusYear,
+  index,
+  isMobile,
 }: {
   x: number;
   y: number;
@@ -40,18 +51,20 @@ function CustomXAxisTick({
   data: EmploymentMonthlyData[];
   currentMonth: number;
   currentYear: number;
-  focusYear: number;
+  index: number;
+  isMobile: boolean;
 }) {
   const monthData = data.find(d => d.month === payload.value);
   const isCurrentMonth = monthData?.monthNumber === currentMonth && monthData?.year === currentYear;
-  const isPreviousYear = monthData?.year !== focusYear;
 
-  // Grey out labels from previous years
-  const fill = isPreviousYear
-    ? "hsl(var(--muted-foreground))"
-    : isCurrentMonth
-      ? "hsl(var(--brand-gradientMid))"
-      : "hsl(var(--foreground))";
+  // On mobile, show first label and then every other month
+  const shouldShow = !isMobile || index === 0 || index % 2 === 0;
+
+  if (!shouldShow) return null;
+
+  const fill = isCurrentMonth
+    ? "hsl(var(--brand-gradientMid))"
+    : "hsl(var(--foreground))";
 
   return (
     <g transform={`translate(${x},${y})`}>
@@ -60,7 +73,7 @@ function CustomXAxisTick({
         y={0}
         dy={8}
         textAnchor="middle"
-        fontSize={16}
+        fontSize={12}
         fill={fill}
         fontWeight={isCurrentMonth ? 600 : 400}
       >
@@ -70,50 +83,15 @@ function CustomXAxisTick({
   );
 }
 
-export function EmploymentChart({ data, yearlyAverage, focusYear }: EmploymentChartProps) {
+export function EmploymentChart({ data, yearlyAverage, focusYear: _focusYear }: EmploymentChartProps) {
   const { t } = useTranslations();
+  const isMobile = useIsMobile();
   const now = new Date();
   const currentMonth = now.getMonth() + 1; // Date#getMonth is 0-based
   const currentYear = now.getFullYear();
 
-  // Select a 6-month window from the data, shifting forward to avoid leading zeros.
-  // The backend provides 11 months (6 before + 5 after focus month).
-  // We want to show 6 consecutive months, preferring to start from the first non-zero month.
-  // Only show fewer than 6 months if both ends of the possible window have zeros.
-  const filteredData = (() => {
-    const TARGET_MONTHS = 6;
-
-    // Find first non-zero index
-    const firstNonZeroIndex = data.findIndex(d => d.averagePercentage > 0);
-
-    // If all zeros, show first 6 months
-    if (firstNonZeroIndex === -1) {
-      return data.slice(0, TARGET_MONTHS);
-    }
-
-    // Calculate the ideal start index to show 6 months starting from first non-zero
-    // But we need to ensure we don't go past the end of the data
-    const idealStart = firstNonZeroIndex;
-    const maxStart = data.length - TARGET_MONTHS;
-
-    // Clamp the start index
-    const startIndex = Math.min(idealStart, Math.max(0, maxStart));
-    const endIndex = startIndex + TARGET_MONTHS;
-
-    // Extract the 6-month window
-    let window = data.slice(startIndex, endIndex);
-
-    // If the window still has leading zeros AND trailing zeros, trim to just the data range
-    const windowFirstNonZero = window.findIndex(d => d.averagePercentage > 0);
-    const windowLastNonZero = window.findLastIndex(d => d.averagePercentage > 0);
-
-    if (windowFirstNonZero > 0 && windowLastNonZero < window.length - 1) {
-      // Both ends have zeros - show only the months with data
-      window = window.slice(windowFirstNonZero, windowLastNonZero + 1);
-    }
-
-    return window;
-  })();
+  // Filter out leading/trailing zero months
+  const filteredData = trimZeroMonths(data);
 
   return (
     <div className="flex flex-col">
@@ -141,30 +119,31 @@ export function EmploymentChart({ data, yearlyAverage, focusYear }: EmploymentCh
 
       {/* Bar chart */}
       <ChartContainer config={chartConfig} className="h-[260px] w-full pt-4">
-        <BarChart data={filteredData} margin={{ top: 12, right: 16, bottom: 0, left: 16 }}>
+        <BarChart data={filteredData} margin={{ top: 12, right: 8, bottom: 0, left: 16 }}>
           <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
           <XAxis
             dataKey="month"
             tickLine={false}
             axisLine={false}
-            padding={{ left: 8, right: 8 }}
+            padding={{ left: 4, right: 4 }}
             tick={(props) => (
               <CustomXAxisTick
                 {...props}
                 data={filteredData}
                 currentMonth={currentMonth}
                 currentYear={currentYear}
-                focusYear={focusYear}
+                isMobile={isMobile}
               />
             )}
             tickMargin={8}
+            interval={0}
           />
           <YAxis
             tickLine={false}
             axisLine={false}
-            width={44}
-            tick={{ fontSize: 16 }}
-            tickMargin={8}
+            width={40}
+            tick={{ fontSize: 14 }}
+            tickMargin={4}
             tickFormatter={(value) => `${value}%`}
             domain={[0, 'auto']}
           />
@@ -193,30 +172,18 @@ export function EmploymentChart({ data, yearlyAverage, focusYear }: EmploymentCh
           />
           <Bar
             dataKey="averagePercentage"
-            radius={[8, 8, 0, 0]}
+            radius={[6, 6, 0, 0]}
             minPointSize={0}
           >
             {filteredData.map((entry) => {
               const isCurrentMonth =
                 entry.monthNumber === currentMonth && entry.year === currentYear;
-              const isPreviousYear = entry.year !== focusYear;
 
-              // Determine fill color: grey for previous year, brand color for current year
-              let fill: string;
-              let stroke: string;
-              if (isPreviousYear) {
-                // Grey for months from a different year than the focus year
-                fill = "hsl(var(--muted-foreground) / 0.3)";
-                stroke = "hsl(var(--muted-foreground) / 0.5)";
-              } else if (isCurrentMonth) {
-                // Solid brand color for the actual current month
-                fill = "hsl(var(--brand-gradientMid))";
-                stroke = "hsl(var(--brand-gradientMid))";
-              } else {
-                // Dimmed brand color for other months in the focus year
-                fill = "hsl(var(--brand-gradientMid) / 0.2)";
-                stroke = "hsl(var(--brand-gradientMid))";
-              }
+              // Determine fill color: solid brand for current month, dimmed for others
+              const fill = isCurrentMonth
+                ? "hsl(var(--brand-gradientMid))"
+                : "hsl(var(--brand-gradientMid) / 0.2)";
+              const stroke = "hsl(var(--brand-gradientMid))";
 
               return (
                 <Cell

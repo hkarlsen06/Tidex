@@ -695,11 +695,11 @@ export function StatsContent({ data }: StatsContentProps) {
           </CardContent>
         </Card>
 
-        {/* Last 6 months chart */}
+        {/* Monthly earnings chart */}
         <Card className={`border-border bg-surface-primary ${animationClass}`}>
           <CardHeader className="pb-3">
             <CardTitle className="text-xl font-bold text-text-primary">
-              {t.pages.stats.cards.last6Months}
+              {t.pages.stats.cards.yearlyBreakdown} {focusYear}
             </CardTitle>
           </CardHeader>
           <CardContent className="px-3 pb-4 pt-1">
