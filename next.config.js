@@ -14,6 +14,22 @@ const nextConfig = {
   // You can read this yourself in proxy.ts or wherever you like.
   allowedDevOrigins: ["192.168.68.50"],
 
+  // Configure allowed external image hosts
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "lh3.googleusercontent.com",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "*.supabase.co",
+        pathname: "/storage/v1/object/public/**",
+      },
+    ],
+  },
+
   outputFileTracingRoot: __dirname,
   // Tell Next "yes, I know I'm on Turbopack".
   turbopack: {},

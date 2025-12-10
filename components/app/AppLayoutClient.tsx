@@ -11,17 +11,20 @@ import { NavigationFeedbackProvider } from "./navigation-feedback";
 import { ScrollProvider } from "@/lib/contexts/ScrollContext";
 import { TopHeader } from "./TopHeader";
 import { NavBar } from "./NavBar";
+import type { SharedUser } from "@/data-access/sharing";
 
 type AppLayoutClientProps = {
   children: ReactNode;
   userName: string;
   avatarUrl?: string | null;
+  sharers?: SharedUser[];
 };
 
 export function AppLayoutClient({
   children,
   userName,
   avatarUrl,
+  sharers,
 }: AppLayoutClientProps) {
   const router = useRouter();
 
@@ -75,7 +78,7 @@ export function AppLayoutClient({
   return (
     <ScrollProvider threshold={50}>
       <NavigationFeedbackProvider>
-        <LayoutContent userName={userName} avatarUrl={avatarUrl}>
+        <LayoutContent userName={userName} avatarUrl={avatarUrl} sharers={sharers}>
           {children}
         </LayoutContent>
       </NavigationFeedbackProvider>
@@ -87,10 +90,11 @@ function LayoutContent({
   children,
   userName,
   avatarUrl,
+  sharers,
 }: AppLayoutClientProps) {
   return (
     <div className="flex flex-col h-dvh overflow-hidden">
-      <TopHeader userName={userName} avatarUrl={avatarUrl} />
+      <TopHeader userName={userName} avatarUrl={avatarUrl} sharers={sharers} />
       <main className="flex-1 min-h-0">
         {children}
       </main>

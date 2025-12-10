@@ -7,17 +7,55 @@ import { UserMenu } from "./UserMenu";
 import { OfflineIndicator } from "./OfflineIndicator";
 import { NavigationMenu } from "./NavigationMenu";
 import { useTranslations } from "@/lib/i18n/client";
+import type { SharedUser } from "@/data-access/sharing";
 
 export type TopHeaderProps = {
   userName: string;
   avatarUrl?: string | null;
+  sharers?: SharedUser[];
 };
 
-export function TopHeader({ userName, avatarUrl }: TopHeaderProps) {
+function getInitials(name: string | null | undefined, email: string | null | undefined): string {
+  if (name) {
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
+  }
+  if (email) {
+    return email[0].toUpperCase();
+  }
+  return "?";
+}
+
+export function TopHeader({ userName, avatarUrl, sharers = [] }: TopHeaderProps) {
   const { t, locale } = useTranslations();
   const cleanedName = userName.trim();
   const [firstWord] = cleanedName.split(/\s+/).filter(Boolean);
   const displayName = (firstWord ?? cleanedName) || t.common.guest;
+
+  // Sort sharers: prioritize self-picked profile pictures, then OAuth avatars, then no avatar
+  const sortedSharers = [...sharers].sort((a, b) => {
+    const aHasProfile = !!a.profilePictureUrl;
+    const bHasProfile = !!b.profilePictureUrl;
+    const aHasOAuth = !!a.oauthAvatarUrl;
+    const bHasOAuth = !!b.oauthAvatarUrl;
+
+    // Self-picked photos first
+    if (aHasProfile && !bHasProfile) return -1;
+    if (!aHasProfile && bHasProfile) return 1;
+
+    // OAuth avatars second
+    if (aHasOAuth && !bHasOAuth) return -1;
+    if (!aHasOAuth && bHasOAuth) return 1;
+
+    return 0;
+  });
+
+  // Show all sharers (with or without avatar), max 3
+  const visibleSharers = sortedSharers.slice(0, 3);
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-md pt-[env(safe-area-inset-top)] md:pt-0">
@@ -56,12 +94,51 @@ export function TopHeader({ userName, avatarUrl }: TopHeaderProps) {
               <span className="text-sm font-medium text-brand-gradient-mid">{t.common.add}</span>
             </Link>
 
-            {/* Share link - plain icon */}
+            {/* Share link with stacked sharer avatars */}
             <Link
               href={`/${locale}/sharing`}
-              className="p-1"
+              className="flex items-center"
             >
-              <Share2 className="h-5 w-5 text-text-secondary" strokeWidth={2} />
+              {/* Stacked avatars - render in reverse so priority users are closest to share icon */}
+              {visibleSharers.length > 0 && (
+                <div className="flex items-center">
+                  {[...visibleSharers].reverse().map((sharer, index) => {
+                    const avatarSrc = sharer.profilePictureUrl || sharer.oauthAvatarUrl;
+                    // Higher index = further right = higher z-index (on top)
+                    return (
+                      <div
+                        key={sharer.id}
+                        className="relative rounded-full border-2 border-background bg-background"
+                        style={{
+                          marginRight: -10,
+                          zIndex: index,
+                        }}
+                      >
+                        {avatarSrc ? (
+                          <Image
+                            src={avatarSrc}
+                            alt={sharer.firstName || "Sharer"}
+                            width={24}
+                            height={24}
+                            className="h-6 w-6 rounded-full object-cover"
+                          />
+                        ) : (
+                          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-surface-secondary text-[10px] font-semibold text-text-primary">
+                            {getInitials(sharer.firstName, sharer.email)}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              {/* Share icon overlaps the rightmost avatar */}
+              <div
+                className="relative p-1 rounded-full bg-background"
+                style={{ zIndex: visibleSharers.length }}
+              >
+                <Share2 className="h-5 w-5 text-text-secondary" strokeWidth={2} />
+              </div>
             </Link>
 
             <UserMenu displayName={displayName} avatarUrl={avatarUrl ?? null} />
