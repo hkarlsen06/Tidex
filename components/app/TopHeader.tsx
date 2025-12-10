@@ -7,12 +7,11 @@ import { UserMenu } from "./UserMenu";
 import { OfflineIndicator } from "./OfflineIndicator";
 import { NavigationMenu } from "./NavigationMenu";
 import { useTranslations } from "@/lib/i18n/client";
-import type { SharedUser } from "@/data-access/sharing";
+import { useSharers } from "./SharersProvider";
+import { useUserAvatar } from "./UserAvatarProvider";
 
 export type TopHeaderProps = {
   userName: string;
-  avatarUrl?: string | null;
-  sharers?: SharedUser[];
 };
 
 function getInitials(name: string | null | undefined, email: string | null | undefined): string {
@@ -30,8 +29,10 @@ function getInitials(name: string | null | undefined, email: string | null | und
   return "?";
 }
 
-export function TopHeader({ userName, avatarUrl, sharers = [] }: TopHeaderProps) {
+export function TopHeader({ userName }: TopHeaderProps) {
   const { t, locale } = useTranslations();
+  const sharers = useSharers();
+  const avatarUrl = useUserAvatar();
   const cleanedName = userName.trim();
   const [firstWord] = cleanedName.split(/\s+/).filter(Boolean);
   const displayName = (firstWord ?? cleanedName) || t.common.guest;
@@ -141,7 +142,7 @@ export function TopHeader({ userName, avatarUrl, sharers = [] }: TopHeaderProps)
               </div>
             </Link>
 
-            <UserMenu displayName={displayName} avatarUrl={avatarUrl ?? null} />
+            <UserMenu displayName={displayName} avatarUrl={avatarUrl} />
           </div>
         </div>
       </div>
