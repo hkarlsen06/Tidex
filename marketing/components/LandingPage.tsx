@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { Clock, Layers, Shield, Zap } from 'lucide-react';
-import { Button } from '@/components/app/Button';
+import { Button } from '@/components/ui/button';
 import {
   Accordion,
   AccordionContent,
