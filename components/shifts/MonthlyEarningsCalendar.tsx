@@ -312,10 +312,10 @@ export function MonthlyEarningsCalendar({
   return (
     <Card ref={containerRef} className="rounded-card border-0 bg-transparent">
       <div ref={swipeContainerRef}>
-        <div className="flex flex-row items-center justify-between py-3">
-          <div className="flex items-center gap-1">
+        <div className="flex h-[52px] flex-row items-center justify-between">
+          <div className="flex h-10 items-center gap-1">
             {isShowingSelectedTotal ? (
-              <span className="font-semibold text-text-primary">
+              <span className="font-semibold text-text-primary pl-1">
                 {t.pages.shifts.actions.selectedCount.replace('{count}', String(selectedDates?.size ?? 0))}
               </span>
             ) : (
@@ -360,10 +360,10 @@ export function MonthlyEarningsCalendar({
         </div>
       </div>
       <div className="flex flex-col items-center gap-2 pb-6">
-        <div className="inline-flex min-h-11 w-[90%] items-center gap-1 rounded-full border border-border-subtle bg-surface-secondary/80 px-1 py-1 shadow-app-sm dark:shadow-app-inner">
+        <div className="inline-flex h-11 w-[90%] max-w-xs items-center gap-1 rounded-full border border-border-subtle bg-surface-secondary/80 px-1 py-1 shadow-app-sm dark:shadow-app-inner">
           {/* Multi-selection mode: show delete and clear buttons */}
           {selectedDates && selectedDates.size > 0 ? (
-            <div className="flex w-full items-center gap-2 rounded-full bg-surface-primary px-1 py-0.5">
+            <div className="flex h-full w-full items-center gap-2 rounded-full bg-surface-primary px-1">
               <Button
                 type="button"
                 variant="ghost"
@@ -388,7 +388,7 @@ export function MonthlyEarningsCalendar({
               </Button>
             </div>
           ) : selectedDate ? (
-            <div className="flex w-full items-center gap-2 rounded-full bg-surface-primary px-1 py-0.5">
+            <div className="flex h-full w-full items-center gap-2 rounded-full bg-surface-primary px-1">
               {/* Copy button - hidden in readOnly mode */}
               {!readOnly && (
                 <Button
@@ -468,7 +468,7 @@ export function MonthlyEarningsCalendar({
               )}
             </div>
           ) : (
-            <div className="flex w-full items-center gap-2 rounded-full px-1 py-0.5">
+            <div className="flex h-full w-full items-center gap-2 rounded-full px-1">
               <Button
                 type="button"
                 variant="ghost"
