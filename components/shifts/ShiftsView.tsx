@@ -1168,6 +1168,21 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
       // If in multi-selection mode, toggle the date
       if (multiSelectedDates.size > 0) {
         if (hasShifts && targetShifts.length > 0) {
+          // Check if we're deselecting and would have only 1 date left
+          if (multiSelectedDates.has(isoDate) && multiSelectedDates.size === 2) {
+            // Transition back to single-selection mode with the remaining date
+            const remaining = [...multiSelectedDates].find(d => d !== isoDate);
+            if (remaining) {
+              setSelectedDate(remaining);
+              setMultiSelectedDates(new Set());
+              // Set the first shift of the remaining date as selected
+              const remainingShifts = shiftsByDate.get(remaining) ?? [];
+              if (remainingShifts.length > 0) {
+                setCalendarSelectedShiftId(remainingShifts[0].id);
+              }
+              return;
+            }
+          }
           setMultiSelectedDates(prev => {
             const next = new Set(prev);
             if (next.has(isoDate)) {
