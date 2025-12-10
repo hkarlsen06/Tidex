@@ -102,9 +102,9 @@ export function LandingPage({ locale, dictionary, path = '' }: LandingPageProps)
                     asChild
                     className="h-12 w-full rounded-full bg-linear-to-r from-brand-gradient-start via-brand-gradient-mid to-brand-gradient-end px-8 text-base font-semibold text-text-inverse shadow-app-lg sm:w-auto"
                   >
-                    <Link href="https://app.tidex.no" target="_blank" rel="noopener noreferrer">
+                    <a href="https://app.tidex.no">
                       {marketing.hero.primaryCta}
-                    </Link>
+                    </a>
                   </Button>
                   <Button
                     asChild
@@ -204,9 +204,9 @@ export function LandingPage({ locale, dictionary, path = '' }: LandingPageProps)
             asChild
             className="h-12 rounded-full bg-linear-to-r from-brand-gradient-start via-brand-gradient-mid to-brand-gradient-end px-10 text-base font-semibold text-text-inverse shadow-app-lg"
           >
-            <Link href="https://app.tidex.no" target="_blank" rel="noopener noreferrer">
+            <a href="https://app.tidex.no">
               {marketing.ctaPrimary.button}
-            </Link>
+            </a>
           </Button>
         </div>
       </section>
