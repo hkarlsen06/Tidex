@@ -100,7 +100,7 @@ export function LandingPage({ locale, dictionary, path = '' }: LandingPageProps)
                 <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-center">
                   <Button
                     asChild
-                    className="h-12 w-full rounded-full bg-linear-to-r from-brand-gradient-start via-brand-gradient-mid to-brand-gradient-end px-8 text-base font-semibold text-text-inverse shadow-app-lg sm:w-auto"
+                    className="h-12 w-full rounded-full bg-gradient-to-r from-brand-gradient-start via-brand-gradient-mid to-brand-gradient-end px-8 text-base font-semibold text-text-inverse shadow-app-lg sm:w-auto"
                   >
                     <a href="https://app.tidex.no">
                       {marketing.hero.primaryCta}
@@ -147,7 +147,7 @@ export function LandingPage({ locale, dictionary, path = '' }: LandingPageProps)
                 className="group flex h-full flex-col gap-4 rounded-4xl border border-border-subtle/60 bg-surface-primary/80 p-6 shadow-app transition-all duration-200 hover:-translate-y-1 hover:border-brand-gradient-mid/60 hover:shadow-app-lg"
               >
                 <span
-                  className="flex h-12 w-12 items-center justify-center rounded-2xl bg-linear-to-br from-brand-gradient-start/20 via-brand-gradient-mid/15 to-brand-gradient-end/20 text-brand-gradient-start shadow-inner"
+                  className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-gradient-start/20 via-brand-gradient-mid/15 to-brand-gradient-end/20 text-brand-gradient-start shadow-inner"
                   style={{ boxShadow: 'inset 0 1px 0 hsl(var(--brand-gradientEnd) / 0.2)' }}
                 >
                   <Icon className="h-5 w-5" />
@@ -202,7 +202,7 @@ export function LandingPage({ locale, dictionary, path = '' }: LandingPageProps)
           </p>
           <Button
             asChild
-            className="h-12 rounded-full bg-linear-to-r from-brand-gradient-start via-brand-gradient-mid to-brand-gradient-end px-10 text-base font-semibold text-text-inverse shadow-app-lg"
+            className="h-12 rounded-full bg-gradient-to-r from-brand-gradient-start via-brand-gradient-mid to-brand-gradient-end px-10 text-base font-semibold text-text-inverse shadow-app-lg"
           >
             <a href="https://app.tidex.no">
               {marketing.ctaPrimary.button}

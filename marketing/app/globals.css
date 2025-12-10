@@ -3,6 +3,22 @@
 @source '../app/**/*.{js,ts,jsx,tsx}';
 @source '../components/**/*.{js,ts,jsx,tsx}';
 
+@theme {
+  --color-brand-gradient-start: hsl(199 89% 48%);
+  --color-brand-gradient-mid: hsl(189 94% 43%);
+  --color-brand-gradient-end: hsl(192 91% 36%);
+  --color-brand-highlight: hsl(188 86% 53%);
+  --color-surface-primary: hsl(220 49% 8%);
+  --color-surface-secondary: hsl(221 39% 11%);
+  --color-text-primary: hsl(210 40% 98%);
+  --color-text-secondary: hsl(214 32% 91%);
+  --color-text-muted: hsl(215 20% 65%);
+  --color-text-inverse: hsl(222 47% 11%);
+  --color-border-subtle: hsl(217.2 32.6% 17.5%);
+  --color-background: hsl(222.2 84% 4.9%);
+  --color-background-secondary: hsl(222.2 84% 4.9%);
+}
+
 /*
   The default border color has changed to `currentcolor` in Tailwind CSS v4,
   so we've added these compatibility styles to make sure everything still
