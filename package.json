@@ -105,7 +105,7 @@
     "vitest": "^4.0.7"
   },
   "engines": {
-    "node": "v24.x"
+    "node": ">=22.0.0"
   },
   "type": "module",
   "pnpm": {

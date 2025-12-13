@@ -169,9 +169,10 @@ export const ClaudeServiceLive = Layer.effect(
 
         // Add beta header if using tools with input_examples
         // See: https://www.anthropic.com/engineering/advanced-tool-use
-        if (tools?.some((t) => t.input_examples?.length)) {
-          headers["anthropic-beta"] = "advanced-tool-use-2025-11-20";
-        }
+        // NOTE: Temporarily disabled - may cause 500 errors with claude-opus-4-5
+        // if (tools?.some((t) => t.input_examples?.length)) {
+        //   headers["anthropic-beta"] = "advanced-tool-use-2025-11-20";
+        // }
 
         // Build request body
         const body: Record<string, unknown> = {
@@ -187,7 +188,8 @@ export const ClaudeServiceLive = Layer.effect(
         }
 
         if (tools?.length) {
-          body.tools = tools;
+          // Strip input_examples from tools - not supported without beta header
+          body.tools = tools.map(({ input_examples, ...tool }) => tool);
         }
 
         // Make API request
