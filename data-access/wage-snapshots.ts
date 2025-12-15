@@ -4,7 +4,7 @@ import { cacheTag } from 'next/cache';
 import { verifySession } from '@/data-access/auth';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
-import type { WageSnapshot, SupplementRule } from '@/lib/payroll/types';
+import type { WageSnapshot, SupplementRule, BreakMethod } from '@/lib/payroll/types';
 
 // Re-export types for convenience
 export type { WageSnapshot, SupplementRule };
@@ -157,18 +157,33 @@ export async function checkExistingSnapshot(
 }
 
 /**
+ * Input type for creating/updating wage snapshots
+ */
+export type WageSnapshotInput = {
+  from_date: string | null;
+  hourly_wage: number;
+  wage_level: number | null;
+  supplements: { rules: SupplementRule[] };
+  // Tax settings
+  tax_enabled: boolean;
+  tax_percentage: number;
+  // Break deduction settings
+  break_enabled: boolean;
+  break_method: BreakMethod;
+  break_threshold_hours: number;
+  break_deduction_minutes: number;
+};
+
+/**
  * Create a new wage snapshot
  *
  * @param data - Wage snapshot data (without id and user_id)
  *              - from_date can be null for baseline snapshot
  * @returns { success: true, id: string } or { error: string }
  */
-export async function createWageSnapshot(data: {
-  from_date: string | null;
-  hourly_wage: number;
-  wage_level: number | null;
-  supplements: { rules: SupplementRule[] };
-}): Promise<{ success: true; id: string } | { error: string }> {
+export async function createWageSnapshot(
+  data: WageSnapshotInput
+): Promise<{ success: true; id: string } | { error: string }> {
   try {
     const { user } = await verifySession();
     const supabase = await createSupabaseServerClient();
@@ -181,6 +196,12 @@ export async function createWageSnapshot(data: {
         hourly_wage: data.hourly_wage,
         wage_level: data.wage_level,
         supplements: data.supplements,
+        tax_enabled: data.tax_enabled,
+        tax_percentage: data.tax_percentage,
+        break_enabled: data.break_enabled,
+        break_method: data.break_method,
+        break_threshold_hours: data.break_threshold_hours,
+        break_deduction_minutes: data.break_deduction_minutes,
       })
       .select('id')
       .single();
@@ -206,12 +227,7 @@ export async function createWageSnapshot(data: {
  */
 export async function updateWageSnapshot(
   id: string,
-  data: {
-    from_date: string | null;
-    hourly_wage: number;
-    wage_level: number | null;
-    supplements: { rules: SupplementRule[] };
-  }
+  data: WageSnapshotInput
 ): Promise<{ success: true } | { error: string }> {
   try {
     const { user } = await verifySession();
@@ -224,6 +240,12 @@ export async function updateWageSnapshot(
         hourly_wage: data.hourly_wage,
         wage_level: data.wage_level,
         supplements: data.supplements,
+        tax_enabled: data.tax_enabled,
+        tax_percentage: data.tax_percentage,
+        break_enabled: data.break_enabled,
+        break_method: data.break_method,
+        break_threshold_hours: data.break_threshold_hours,
+        break_deduction_minutes: data.break_deduction_minutes,
       })
       .eq('id', id)
       .eq('user_id', user.id); // Security: ensure user owns this snapshot

@@ -31,22 +31,36 @@ import {
   SupabaseError,
   ValidationError,
 } from "../errors/tagged";
-import type { WageSnapshot, SupplementRule } from "../payroll/types";
+import type { WageSnapshot, SupplementRule, BreakMethod } from "../payroll/types";
 
 /**
- * Wage snapshot creation data
+ * Wage snapshot creation/update data
+ * Includes wage, supplement, tax, and break deduction settings
  */
-export type CreateSnapshotData = {
+export type SnapshotData = {
   readonly from_date: string | null;
   readonly hourly_wage: number;
   readonly wage_level: number | null;
   readonly supplements: { rules: SupplementRule[] };
+  // Tax settings
+  readonly tax_enabled: boolean;
+  readonly tax_percentage: number;
+  // Break deduction settings
+  readonly break_enabled: boolean;
+  readonly break_method: BreakMethod;
+  readonly break_threshold_hours: number;
+  readonly break_deduction_minutes: number;
 };
 
 /**
- * Wage snapshot update data
+ * @deprecated Use SnapshotData instead
  */
-export type UpdateSnapshotData = CreateSnapshotData;
+export type CreateSnapshotData = SnapshotData;
+
+/**
+ * @deprecated Use SnapshotData instead
+ */
+export type UpdateSnapshotData = SnapshotData;
 
 /**
  * Snapshots Service Interface
@@ -319,6 +333,12 @@ export const SnapshotsServiceLive = Layer.effect(
                 hourly_wage: data.hourly_wage,
                 wage_level: data.wage_level,
                 supplements: data.supplements,
+                tax_enabled: data.tax_enabled,
+                tax_percentage: data.tax_percentage,
+                break_enabled: data.break_enabled,
+                break_method: data.break_method,
+                break_threshold_hours: data.break_threshold_hours,
+                break_deduction_minutes: data.break_deduction_minutes,
               })
               .select("id")
               .single(),
@@ -344,6 +364,12 @@ export const SnapshotsServiceLive = Layer.effect(
                 hourly_wage: data.hourly_wage,
                 wage_level: data.wage_level,
                 supplements: data.supplements,
+                tax_enabled: data.tax_enabled,
+                tax_percentage: data.tax_percentage,
+                break_enabled: data.break_enabled,
+                break_method: data.break_method,
+                break_threshold_hours: data.break_threshold_hours,
+                break_deduction_minutes: data.break_deduction_minutes,
               })
               .eq("id", id)
               .eq("user_id", userId),

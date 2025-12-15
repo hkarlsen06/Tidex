@@ -18,16 +18,51 @@ export type ShiftTotals = {
 
 export type ShiftTotalsOptions = {
   shifts: ShiftWithComputations[];
+  /**
+   * @deprecated Tax settings are now per-shift. This is kept for backward compatibility.
+   * If provided, it will be used as a fallback when shifts don't have tax_enabled/tax_percentage.
+   */
   taxSettings?: TaxSettings;
   now?: Date;
   month?: number; // 1-12, used for half tax month detection
+  /**
+   * Global half_tax_month from user settings
+   * Used when calculating tax for the payout month
+   */
+  halfTaxMonth?: number | null;
 };
+
+/**
+ * Calculate net amount for a single shift based on its tax settings
+ */
+function calculateShiftNet(
+  shift: ShiftWithComputations,
+  month: number | undefined,
+  halfTaxMonth: number | null | undefined,
+  fallbackTaxSettings?: TaxSettings
+): number {
+  const gross = shift.computed.gross || 0;
+
+  // Use per-shift tax settings if available, otherwise fall back to global settings
+  const taxEnabled = shift.tax_enabled ?? fallbackTaxSettings?.enabled ?? false;
+  let taxPercentage = taxEnabled ? (shift.tax_percentage ?? fallbackTaxSettings?.percentage ?? 0) : 0;
+
+  // Apply half tax if current month matches the configured half tax month
+  const effectiveHalfTaxMonth = halfTaxMonth ?? fallbackTaxSettings?.halfTaxMonth;
+  if (taxEnabled && effectiveHalfTaxMonth && month === effectiveHalfTaxMonth) {
+    taxPercentage = taxPercentage / 2;
+  }
+
+  const netMultiplier = taxEnabled ? 1 - taxPercentage / 100 : 1;
+  return gross * netMultiplier;
+}
 
 export function summarizeShiftTotals({
   shifts,
   taxSettings,
   now = new Date(),
   month,
+  halfTaxMonth,
 }: ShiftTotalsOptions): ShiftTotals {
   const gross = shifts.reduce((sum, shift) => sum + (shift.computed.gross || 0), 0);
   const supplement = shifts.reduce(
@@ -41,19 +76,16 @@ export function summarizeShiftTotals({
     0,
   );
 
-  const taxEnabled = taxSettings?.enabled ?? false;
-  let taxPercentage = taxEnabled ? Number(taxSettings?.percentage ?? 0) : 0;
+  // Calculate net per-shift (each shift may have different tax settings)
+  const net = shifts.reduce(
+    (sum, shift) => sum + calculateShiftNet(shift, month, halfTaxMonth, taxSettings),
+    0,
+  );
 
-  // Apply half tax if current month matches the configured half tax month
-  const halfTaxMonth = taxSettings?.halfTaxMonth;
-  if (taxEnabled && halfTaxMonth && month === halfTaxMonth) {
-    taxPercentage = taxPercentage / 2;
-  }
-
-  const netMultiplier = taxEnabled ? 1 - taxPercentage / 100 : 1;
-
-  const net = gross * netMultiplier;
-  const completedNet = completedGross * netMultiplier;
+  const completedNet = completedShifts.reduce(
+    (sum, shift) => sum + calculateShiftNet(shift, month, halfTaxMonth, taxSettings),
+    0,
+  );
 
   return {
     gross,
@@ -88,9 +120,10 @@ export function getMonthlyTotals({
   month,
   taxSettings,
   now,
+  halfTaxMonth,
 }: MonthlyTotalsOptions): MonthlyTotals {
   const monthShifts = filterShiftsForMonth(shifts, year, month);
-  const totals = summarizeShiftTotals({ shifts: monthShifts, taxSettings, now, month });
+  const totals = summarizeShiftTotals({ shifts: monthShifts, taxSettings, now, month, halfTaxMonth });
 
   return {
     ...totals,

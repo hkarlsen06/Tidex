@@ -10,17 +10,10 @@ import {
 import { invalidateAndRevalidate } from '@/lib/revalidation/paths';
 import { isISODate } from '@/lib/validation/shift-validators';
 import { ERRORS } from '@/lib/errors/messages';
-import type { SupplementRule } from '@/data-access/wage-snapshots';
+import type { SupplementRule, WageSnapshotInput } from '@/data-access/wage-snapshots';
 
-/**
- * Input type for creating/updating wage snapshots
- */
-export type WageSnapshotInput = {
-  from_date: string | null; // ISO date (YYYY-MM-DD) or NULL for baseline
-  hourly_wage: number;
-  wage_level: number | null; // NULL = custom wage, NUMBER = tariff level
-  supplements: { rules: SupplementRule[] };
-};
+// Re-export for convenience
+export type { WageSnapshotInput };
 
 /**
  * Create a new wage snapshot

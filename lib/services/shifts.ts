@@ -337,6 +337,9 @@ export const ShiftsServiceLive = Layer.effect(
             ...shift,
             supplement_rules_snapshot: supplementRulesSnapshot,
             computed: computeShift(shift, userSettings, PRESET_SUPPLEMENT_RULES, snapshot),
+            // Include tax settings from snapshot for after-tax calculations
+            tax_enabled: snapshot?.tax_enabled ?? false,
+            tax_percentage: snapshot?.tax_percentage ?? 0,
           };
         });
 
@@ -412,6 +415,9 @@ export const ShiftsServiceLive = Layer.effect(
                 recurring_id: recurring.id,
                 recurring_anchor_weekday: virtualShift.weekday,
                 computed,
+                // Include tax settings from snapshot for after-tax calculations
+                tax_enabled: snapshot?.tax_enabled ?? false,
+                tax_percentage: snapshot?.tax_percentage ?? 0,
               });
             }
 

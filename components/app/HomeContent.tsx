@@ -51,29 +51,27 @@ function calculateMonthData(
   const lastMonthKey = `${lastMonthYear}-${String(lastMonth).padStart(2, '0')}`;
   const lastMonthShifts = shiftsByMonth.get(lastMonthKey) || [];
 
-  const taxSettings = {
-    enabled: settings.tax_deduction_enabled ?? false,
-    percentage: Number(settings.tax_percentage) || 0,
-    halfTaxMonth: settings.half_tax_month ?? null,
-  };
+  // Tax settings are now per-shift, but half_tax_month is still global
+  const halfTaxMonth = settings.half_tax_month ?? null;
 
   const now = new Date();
   const currentTotals = summarizeShiftTotals({
     shifts: currentMonthShifts,
-    taxSettings,
+    halfTaxMonth,
     now,
     month: targetMonth,
   });
   const lastMonthTotals = summarizeShiftTotals({
     shifts: lastMonthShifts,
-    taxSettings,
+    halfTaxMonth,
     now,
     month: lastMonth,
   });
 
-  const taxEnabled = taxSettings.enabled;
-  const projectedCurrent = taxEnabled ? currentTotals.net : currentTotals.gross;
-  const projectedLastMonth = taxEnabled ? lastMonthTotals.net : lastMonthTotals.gross;
+  // Check if any shifts have tax enabled for display purposes
+  const anyTaxEnabled = currentMonthShifts.some(s => s.tax_enabled) || lastMonthShifts.some(s => s.tax_enabled);
+  const projectedCurrent = anyTaxEnabled ? currentTotals.net : currentTotals.gross;
+  const projectedLastMonth = anyTaxEnabled ? lastMonthTotals.net : lastMonthTotals.gross;
 
   let percentageChange: number | undefined;
   if (projectedLastMonth > 0) {
@@ -83,15 +81,15 @@ function calculateMonthData(
   }
 
   // Earned to date (respects tax setting) - this is the primary big number
-  const earnedToDate = taxEnabled ? currentTotals.completedNet : currentTotals.completedGross;
+  const earnedToDate = anyTaxEnabled ? currentTotals.completedNet : currentTotals.completedGross;
 
   return {
     total: formatCurrency(earnedToDate),
     percentageChange,
     projectedTotal: formatCurrency(projectedCurrent),
     // Gross before tax (only relevant when tax is enabled)
-    grossBeforeTax: taxEnabled ? formatCurrency(currentTotals.completedGross) : undefined,
-    projectedGrossBeforeTax: taxEnabled ? formatCurrency(currentTotals.gross) : undefined,
+    grossBeforeTax: anyTaxEnabled ? formatCurrency(currentTotals.completedGross) : undefined,
+    projectedGrossBeforeTax: anyTaxEnabled ? formatCurrency(currentTotals.gross) : undefined,
   };
 }
 
@@ -276,7 +274,10 @@ export function HomeContent({ shifts: initialShifts, settings }: HomeContentProp
     [shiftsByMonth, month, settings, formatCurrency]
   );
 
-  const taxDeductionEnabled = settings.tax_deduction_enabled ?? false;
+  // Check if any shifts have tax enabled (for UI display purposes)
+  const taxDeductionEnabled = useMemo(() => {
+    return shifts.some(shift => shift.tax_enabled);
+  }, [shifts]);
 
   // Check if user has shifts this month but none have completed yet
   const hasPendingShifts = useMemo(() => {
@@ -349,18 +350,15 @@ export function HomeContent({ shifts: initialShifts, settings }: HomeContentProp
       0
     );
 
-    const taxSettings = {
-      enabled: settings.tax_deduction_enabled ?? false,
-      percentage: Number(settings.tax_percentage) || 0,
-      halfTaxMonth: settings.half_tax_month ?? null,
-    };
+    // Tax settings are now per-shift, but half_tax_month is still global
+    const globalHalfTaxMonth = settings.half_tax_month ?? null;
 
     // Use payout month (payrollMonthDate) for half tax check, not earnings month
     const payoutMonth = payrollMonthDate.getMonth() + 1;
 
     const totals = summarizeShiftTotals({
       shifts: relevantShifts,
-      taxSettings,
+      halfTaxMonth: globalHalfTaxMonth,
       month: payoutMonth,
     });
 
@@ -544,8 +542,8 @@ export function HomeContent({ shifts: initialShifts, settings }: HomeContentProp
                 }}
                 progress={countdown.isActive ? countdown.progress : undefined}
                 taxSettings={{
-                  enabled: settings.tax_deduction_enabled ?? false,
-                  percentage: Number(settings.tax_percentage) || 0,
+                  enabled: displayShift?.tax_enabled ?? false,
+                  percentage: displayShift?.tax_percentage ?? 0,
                   halfTaxMonth: settings.half_tax_month ?? null,
                 }}
               />

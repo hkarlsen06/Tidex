@@ -10,11 +10,11 @@ export const PRESET_WAGE_RATES: Record<string, number> = {
   "3": 187.46, "4": 193.05, "5": 210.81, "6": 256.14,
 };
 
-const defaultSettings = {
-  pause_deduction_enabled: true,
-  pause_deduction_method: "proportional" as BreakMethod,
-  pause_threshold_hours: 5.5,
-  pause_deduction_minutes: 30,
+const defaultBreakSettings = {
+  break_enabled: true,
+  break_method: "proportional" as BreakMethod,
+  break_threshold_hours: 5.5,
+  break_deduction_minutes: 30,
 };
 
 /**
@@ -80,14 +80,17 @@ const CURRENCY_PRECISION = 100; // 2 decimal places (cents)
  * Compute payroll for a single shift
  *
  * @param shift - The shift data
- * @param settings - User's current settings (for break deduction settings)
+ * @param _settings - User's current settings (deprecated, kept for compatibility)
  * @param presetRules - Preset supplement rules (fallback if no snapshot)
- * @param snapshot - Wage snapshot for historical accuracy (should always be provided)
+ * @param snapshot - Wage snapshot containing wage, supplement, tax, and break settings
  * @returns Computed payroll data including gross pay, hours, and breakdown
+ *
+ * NOTE: Break deduction settings are now read from the snapshot, not UserSettings.
+ * The settings parameter is kept for backward compatibility but is no longer used.
  */
 export function computeShift(
   shift: ShiftRow,
-  settings: UserSettings,
+  _settings: UserSettings,
   presetRules: SupplementRule[],
   snapshot: WageSnapshot | null = null
 ): ShiftComputed {
@@ -122,24 +125,17 @@ export function computeShift(
   // Store original periods before break deduction (for display purposes)
   const originalWagePeriods = periods.map(p => ({ ...p }));
 
-  // Resolve break settings - support both old and new field names
-  const pauseEnabled =
-    settings.pause_deduction_enabled ??
-    defaultSettings.pause_deduction_enabled;
-  const method =
-    settings.pause_deduction_method ??
-    defaultSettings.pause_deduction_method;
-  const threshold =
-    settings.pause_threshold_hours ??
-    defaultSettings.pause_threshold_hours;
-  const pauseMinutes = pauseEnabled
-    ? settings.pause_deduction_minutes ??
-      defaultSettings.pause_deduction_minutes
+  // Resolve break settings from snapshot (with defaults for backward compatibility)
+  const breakEnabled = snapshot?.break_enabled ?? defaultBreakSettings.break_enabled;
+  const method = snapshot?.break_method ?? defaultBreakSettings.break_method;
+  const threshold = snapshot?.break_threshold_hours ?? defaultBreakSettings.break_threshold_hours;
+  const breakMinutes = breakEnabled
+    ? (snapshot?.break_deduction_minutes ?? defaultBreakSettings.break_deduction_minutes)
     : 0;
-  const pauseHours = pauseMinutes / 60;
+  const breakHours = breakMinutes / 60;
 
   // Apply automatic break deduction
-  const afterBreak = applyBreakDeduction(periods, method, threshold, pauseHours);
+  const afterBreak = applyBreakDeduction(periods, method, threshold, breakHours);
   periods = afterBreak.periods;
 
   const paidMinutes = periods.reduce((sum, p) => sum + (p.toMin - p.fromMin), 0);

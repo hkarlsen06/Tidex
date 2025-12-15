@@ -1750,8 +1750,10 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
             newlyAddedDates={newlyAddedDates}
             isOffline={isOffline}
             taxSettings={{
-              enabled: userSettings.tax_deduction_enabled ?? false,
-              percentage: Number(userSettings.tax_percentage) || 0,
+              // Tax settings are now per-shift, default to false for calendar display
+              // Individual shifts will use their own tax_enabled/tax_percentage
+              enabled: false,
+              percentage: 0,
               halfTaxMonth: userSettings.half_tax_month ?? null,
             }}
             readOnly={readOnly}
@@ -1837,8 +1839,9 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
                                 }}
                                 progress={isNextUpcomingShift && countdown.isActive ? countdown.progress : undefined}
                                 taxSettings={{
-                                  enabled: userSettings.tax_deduction_enabled ?? false,
-                                  percentage: Number(userSettings.tax_percentage) || 0,
+                                  // Use per-shift tax settings
+                                  enabled: shift.tax_enabled ?? false,
+                                  percentage: shift.tax_percentage ?? 0,
                                   halfTaxMonth: userSettings.half_tax_month ?? null,
                                 }}
                               />
