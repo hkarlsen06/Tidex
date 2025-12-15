@@ -67,10 +67,15 @@ export function WageHistoryModal({
   const [error, setError] = useState<string | null>(null);
 
   // Form state
-  const isBaseline = snapshot?.from_date === null;
-  const [fromDate, setFromDate] = useState(() =>
-    snapshot && snapshot.from_date !== null ? snapshot.from_date : new Date().toISOString().split('T')[0]
-  );
+  const isBaseline = mode === 'edit' && snapshot?.from_date === null;
+  const [fromDate, setFromDate] = useState(() => {
+    // In create mode, always use today's date (even if prefilling from previous snapshot)
+    if (mode === 'create') {
+      return new Date().toISOString().split('T')[0];
+    }
+    // In edit mode, use the snapshot's date (or today if baseline)
+    return snapshot && snapshot.from_date !== null ? snapshot.from_date : new Date().toISOString().split('T')[0];
+  });
   const [usePreset, setUsePreset] = useState(() =>
     snapshot ? snapshot.wage_level !== null : true
   );
@@ -446,19 +451,6 @@ export function WageHistoryModal({
               perHour: t.common.perHour,
             }}
           />
-
-          {/* Save Button - only show for tariff/preset mode in create mode */}
-          {usePreset && mode === 'create' && (
-            <div className="flex justify-end">
-              <Button
-                onClick={handleSave}
-                disabled={pending || isCustomWageInvalid}
-                className="w-full sm:w-auto"
-              >
-                {pending ? t.pages.settings.pay.wageHistory.modal.saving : t.pages.settings.pay.wageHistory.modal.create}
-              </Button>
-            </div>
-          )}
 
           <Separator />
 
