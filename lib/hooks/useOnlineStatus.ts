@@ -6,16 +6,18 @@ import { useState, useEffect } from "react";
  * Hook to track online/offline status
  * Returns true when offline, false when online
  *
+ * Note: Always returns false during SSR and initial hydration to prevent
+ * hydration mismatches. The actual offline status is synced after mount.
+ *
  * @returns {boolean} isOffline - true when the browser is offline
  */
 export function useOnlineStatus(): boolean {
-  // Initialize state from navigator.onLine (avoids setState in effect)
-  const [isOffline, setIsOffline] = useState(() => {
-    if (typeof navigator === 'undefined') return false;
-    return !navigator.onLine;
-  });
+  // Always start with false (online) to match server render and prevent hydration mismatch
+  const [isOffline, setIsOffline] = useState(false);
 
   useEffect(() => {
+    // Sync with actual status after mount
+    setIsOffline(!navigator.onLine);
 
     const handleOnline = () => setIsOffline(false);
     const handleOffline = () => setIsOffline(true);

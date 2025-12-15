@@ -17,6 +17,7 @@ import { Button } from "@/components/app/Button";
 import { ShiftWithComputations, UserSettings, SupplementRule, computeShift } from "@/lib/payroll";
 import ShiftDetails from "@/components/shifts/ShiftDetails";
 import { deleteShift } from "@/app/[locale]/(app)/shifts/_actions/deleteShift";
+import { deleteShifts } from "@/app/[locale]/(app)/shifts/_actions/deleteShifts";
 import { updateShift } from "@/app/[locale]/(app)/shifts/_actions/updateShift";
 import { copyShifts } from "@/app/[locale]/(app)/shifts/_actions/copyShifts";
 import { moveRecurringShift } from "@/app/[locale]/(app)/shifts/_actions/moveRecurringShift";
@@ -525,6 +526,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
   const [newlyAddedDates, setNewlyAddedDates] = useState<Set<string>>(new Set());
   const [movedShifts, setMovedShifts] = useState<Map<string, { newDate: string; newStartTime: string; newEndTime: string }>>(new Map());
   const hasTriggeredConfetti = useRef<Set<string>>(new Set());
+  const pendingSaveRef = useRef<string | null>(null); // Tracks optimistic save in progress
   const [copiedShifts, setCopiedShifts] = useState<ShiftWithComputations[]>([]);
   const [shiftOverrides, setShiftOverrides] = useState<Map<string, ShiftWithComputations>>(new Map());
   const [optimisticShifts, setOptimisticShifts] = useState<ShiftWithComputations[]>([]);
@@ -854,6 +856,14 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
     }
 
     if (optimisticParam) {
+      // Create a unique key for this optimistic save to prevent duplicates
+      const saveKey = optimisticParam;
+
+      // Skip if we're already processing this exact save request
+      if (pendingSaveRef.current === saveKey) {
+        return;
+      }
+
       try {
         const data = JSON.parse(decodeURIComponent(optimisticParam)) as {
           dates: string[];
@@ -950,6 +960,9 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
 
         // If _save flag is set, trigger the server action to save the shifts
         if (data._save && !readOnly) {
+          // Mark this save as in progress to prevent duplicate calls
+          pendingSaveRef.current = saveKey;
+
           const saveShifts = async () => {
             try {
               // Check limit if needed
@@ -958,6 +971,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
                 if (!limitCheck.allowed && limitCheck.existingMonths) {
                   // Limit hit - redirect back to add page with error
                   setOptimisticShifts([]);
+                  pendingSaveRef.current = null;
                   router.push(`/${locale}/shifts/add?limitError=true&targetMonth=${data._targetMonth}&existingMonths=${limitCheck.existingMonths.join(',')}`);
                   return;
                 }
@@ -965,6 +979,9 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
 
               // Create the shifts
               await createShifts({ dates: data.dates, start: data.start, end: data.end });
+
+              // Clear the pending save ref after successful save
+              pendingSaveRef.current = null;
 
               // Refresh to replace optimistic data with real data from server
               router.refresh();
@@ -980,15 +997,18 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
                     body: JSON.stringify({ dates: data.dates, start: data.start, end: data.end }),
                   });
                   // Shift stays visible as optimistic, will sync when online
+                  pendingSaveRef.current = null;
                 } catch {
                   // Show error and clear optimistic shifts
                   setCreateError(errorMessage);
                   setOptimisticShifts([]);
+                  pendingSaveRef.current = null;
                 }
               } else {
                 // Show error and clear optimistic shifts
                 setCreateError(errorMessage);
                 setOptimisticShifts([]);
+                pendingSaveRef.current = null;
               }
             }
           };
@@ -1349,26 +1369,29 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
   const handleDeleteSelected = useCallback(() => {
     if (multiSelectedDates.size === 0 || isOffline) return;
 
-    // Collect all shift IDs from the selected dates
-    const shiftsToDelete: ShiftWithComputations[] = [];
+    // Collect all shifts from the selected dates
+    const shiftsToDeleteList: ShiftWithComputations[] = [];
     multiSelectedDates.forEach(date => {
       const dateShifts = shiftsByDate.get(date) ?? [];
-      shiftsToDelete.push(...dateShifts);
+      shiftsToDeleteList.push(...dateShifts);
     });
 
-    if (shiftsToDelete.length === 0) return;
+    if (shiftsToDeleteList.length === 0) return;
 
     // Optimistically remove shifts from UI
-    const idsToDelete = new Set(shiftsToDelete.map(s => s.id));
+    const idsToDelete = new Set(shiftsToDeleteList.map(s => s.id));
     setDeletedShiftIds(prev => new Set([...prev, ...idsToDelete]));
     clearMultiSelection();
 
     startDeleteTransition(async () => {
       try {
-        // Delete all shifts in parallel
-        await Promise.all(
-          shiftsToDelete.map(shift => deleteShift(shift.id))
-        );
+        // Bulk delete all shifts in a single server action
+        const shiftsPayload = shiftsToDeleteList.map(shift => ({
+          shiftId: shift.id,
+          recurringId: shift.recurring_id,
+          shiftDate: shift.shift_date,
+        }));
+        await deleteShifts(shiftsPayload);
         router.refresh();
       } catch (error) {
         // Revert optimistic deletions on error
