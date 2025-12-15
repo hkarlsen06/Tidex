@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useOptimistic } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { Plus, Trash2, Users } from "lucide-react";
+import { Plus, Trash2, Users, DollarSign } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -13,7 +13,8 @@ import {
 } from "@/components/app/Dialog";
 import { Button } from "@/components/app/Button";
 import { Input } from "@/components/app/Input";
-import { createShare, removeShare } from "@/app/[locale]/(app)/sharing/_actions/sharing";
+import { Switch } from "@/components/app/Switch";
+import { createShare, removeShare, toggleShareEarnings } from "@/app/[locale]/(app)/sharing/_actions/sharing";
 import { useTranslations } from "@/lib/i18n/client";
 import type { ShareRecipient } from "@/data-access/sharing";
 
@@ -101,6 +102,15 @@ export function ManageSharingModal({
   const [isAdding, startAddTransition] = useTransition();
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [isRemoving, startRemoveTransition] = useTransition();
+  const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [isToggling, startToggleTransition] = useTransition();
+
+  // Optimistic state for earnings toggles
+  const [optimisticRecipients, setOptimisticRecipients] = useOptimistic(
+    recipients,
+    (state, { id, showEarnings }: { id: string; showEarnings: boolean }) =>
+      state.map((r) => (r.id === id ? { ...r, showEarnings } : r))
+  );
 
   // Get translation strings with fallbacks
   const sharing = t.pages?.sharing ?? {
@@ -113,6 +123,8 @@ export function ManageSharingModal({
     noRecipients: "Du har ikke delt med noen enda",
     limitReached: "Du har nådd maksimalt antall mottakere",
     close: "Lukk",
+    showEarnings: "Vis inntjening",
+    showEarningsDescription: "La mottakeren se hva du tjener",
   };
 
   const handleAdd = () => {
@@ -142,10 +154,28 @@ export function ManageSharingModal({
     });
   };
 
+  const handleToggleEarnings = (recipientId: string, currentValue: boolean) => {
+    const newValue = !currentValue;
+    setTogglingId(recipientId);
+
+    startToggleTransition(async () => {
+      // Optimistic update
+      setOptimisticRecipients({ id: recipientId, showEarnings: newValue });
+
+      const result = await toggleShareEarnings(recipientId, newValue);
+      if (!result.success) {
+        setError(result.error);
+        // Revert optimistic update on error by refreshing
+      }
+      setTogglingId(null);
+      router.refresh();
+    });
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent
-        className="sm:max-w-md sm:rounded-3xl"
+        className="max-w-[calc(100vw-2rem)] sm:max-w-md sm:rounded-3xl overflow-hidden"
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <DialogHeader>
@@ -156,7 +186,7 @@ export function ManageSharingModal({
           <DialogDescription>{sharing.manageDescription}</DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 pt-2">
+        <div className="space-y-4 pt-2 overflow-hidden">
           {/* Add recipient form */}
           {shareCapacity.canAdd ? (
             <div className="space-y-2">
@@ -212,39 +242,47 @@ export function ManageSharingModal({
               </span>
             </div>
 
-            {recipients.length === 0 ? (
+            {optimisticRecipients.length === 0 ? (
               <div className="rounded-xl border border-border-subtle bg-surface-secondary px-4 py-6 text-center">
                 <p className="text-sm text-text-muted">{sharing.noRecipients}</p>
               </div>
             ) : (
-              <div className="space-y-2">
-                {recipients.map((recipient) => (
+              <div className="divide-y divide-border-subtle rounded-xl border border-border-subtle bg-surface-primary">
+                {optimisticRecipients.map((recipient) => (
                   <div
                     key={recipient.id}
-                    className="flex items-center gap-2 rounded-xl border border-border-subtle bg-surface-primary px-3 py-2"
+                    className="flex items-center gap-2 px-2 py-2.5 sm:gap-3 sm:px-3 sm:py-3"
                   >
-                    <RecipientAvatar user={recipient} />
+                    <div className="shrink-0">
+                      <RecipientAvatar user={recipient} />
+                    </div>
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium text-text-primary truncate">
                         {getDisplayName(recipient)}
                       </p>
                       {getSecondaryInfo(recipient) && (
-                        <p className="max-w-[180px] truncate text-xs text-text-muted">
+                        <p className="truncate text-xs text-text-muted">
                           {getSecondaryInfo(recipient)}
                         </p>
                       )}
                     </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleRemove(recipient.id)}
-                      disabled={isRemoving && removingId === recipient.id}
-                      loading={isRemoving && removingId === recipient.id}
-                      className="shrink-0 text-error hover:bg-error-subtle"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <DollarSign className={`h-3.5 w-3.5 transition-colors ${recipient.showEarnings ? "text-success" : "text-text-muted"}`} />
+                      <Switch
+                        checked={recipient.showEarnings}
+                        onCheckedChange={() => handleToggleEarnings(recipient.id, recipient.showEarnings)}
+                        disabled={isToggling && togglingId === recipient.id}
+                        aria-label={sharing.showEarningsDescription}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleRemove(recipient.id)}
+                        disabled={isRemoving && removingId === recipient.id}
+                        className="ml-1 p-1.5 rounded-md text-text-muted hover:text-error hover:bg-error-subtle transition-colors disabled:opacity-50"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>

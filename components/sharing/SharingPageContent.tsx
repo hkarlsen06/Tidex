@@ -12,9 +12,8 @@ import { ManageSharingModal } from "./ManageSharingModal";
 import { SharingDropdown } from "./SharingDropdown";
 import { SharersList } from "./SharersList";
 import { useTranslations } from "@/lib/i18n/client";
-import type { SharedUser, ShareRecipient } from "@/data-access/sharing";
+import type { SharedUser, ShareRecipient, SharedShiftsAggregates } from "@/data-access/sharing";
 import type { ShiftWithComputations, UserSettings, SupplementRule } from "@/lib/payroll";
-import type { ShiftsAggregates } from "@/lib/services/shifts";
 
 // Dynamically import ShiftsView to avoid Turbopack HMR issues with server action imports
 // ShiftsView imports server actions (deleteShift, updateShift, etc.) that cause HMR errors
@@ -32,8 +31,10 @@ type SharingPageContentProps = {
   selectedSharer: SharedUser | null;
   sharedShifts: ShiftWithComputations[] | null;
   sharedSettings: UserSettings;
-  sharedAggregates: ShiftsAggregates | null;
+  sharedAggregates: SharedShiftsAggregates | null;
   presetRules: SupplementRule[];
+  /** Whether the owner allows this viewer to see earnings data */
+  showEarnings: boolean;
 };
 
 export function SharingPageContent({
@@ -45,6 +46,7 @@ export function SharingPageContent({
   sharedShifts,
   sharedSettings,
   presetRules,
+  showEarnings,
 }: SharingPageContentProps) {
   const { t, locale } = useTranslations();
   const router = useRouter();
@@ -82,6 +84,7 @@ export function SharingPageContent({
           readOnly={true}
           sharedOwnerId={selectedOwnerId}
           ownerName={selectedSharer.firstName ?? selectedSharer.email ?? "Bruker"}
+          showEarnings={showEarnings}
           headerSlot={
             <div className="flex items-center gap-2 w-full sm:justify-between sm:gap-3">
               <SharingDropdown

@@ -35,15 +35,9 @@ export async function completeOnboarding(settings: OnboardingSettings) {
     throw new Error("User not authenticated");
   }
 
-  // Upsert user_settings (without wage fields - those go to wage_snapshots)
+  // Upsert user_settings (tax/break deduction fields moved to wage_snapshots)
   const settingsData = {
     user_id: user.id,
-    pause_deduction_enabled: settings.pause_deduction_enabled,
-    pause_deduction_method: settings.pause_deduction_method,
-    pause_threshold_hours: settings.pause_threshold_hours,
-    pause_deduction_minutes: settings.pause_deduction_minutes,
-    tax_deduction_enabled: settings.tax_deduction_enabled,
-    tax_percentage: settings.tax_percentage,
     payroll_day: settings.payroll_day,
     theme: settings.theme,
     default_shifts_view: settings.default_shifts_view,
@@ -80,15 +74,26 @@ export async function completeOnboarding(settings: OnboardingSettings) {
     .is("from_date", null)
     .maybeSingle();
 
+  // Prepare snapshot data with tax/break deduction settings
+  const snapshotData = {
+    hourly_wage,
+    wage_level: settings.use_preset ? settings.current_wage_level : null,
+    supplements,
+    // Tax settings (moved from user_settings)
+    tax_enabled: settings.tax_deduction_enabled,
+    tax_percentage: settings.tax_percentage ?? 0,
+    // Break deduction settings (moved from user_settings)
+    break_enabled: settings.pause_deduction_enabled,
+    break_method: settings.pause_deduction_method ?? "proportional",
+    break_threshold_hours: settings.pause_threshold_hours ?? 5.5,
+    break_deduction_minutes: settings.pause_deduction_minutes ?? 30,
+  };
+
   if (existingBaseline) {
     // Update existing baseline snapshot
     const { error: updateError } = await supabase
       .from("wage_snapshots")
-      .update({
-        hourly_wage,
-        wage_level: settings.use_preset ? settings.current_wage_level : null,
-        supplements,
-      })
+      .update(snapshotData)
       .eq("id", existingBaseline.id);
 
     if (updateError) {
@@ -101,9 +106,7 @@ export async function completeOnboarding(settings: OnboardingSettings) {
       .insert({
         user_id: user.id,
         from_date: null, // Baseline snapshot (grunntariff)
-        hourly_wage,
-        wage_level: settings.use_preset ? settings.current_wage_level : null,
-        supplements,
+        ...snapshotData,
       });
 
     if (insertError) {

@@ -26,6 +26,7 @@ const SHARING_ERRORS = {
   FAILED_TO_CREATE_SHARE: "Kunne ikke opprette deling",
   FAILED_TO_REMOVE_SHARE: "Kunne ikke fjerne deling",
   SHARE_NOT_FOUND: "Fant ikke delingen",
+  FAILED_TO_UPDATE_SETTINGS: "Kunne ikke oppdatere innstillinger",
 } as const;
 
 /**
@@ -119,5 +120,46 @@ export async function removeShare(recipientId: string): Promise<ActionResult> {
   } catch (error: any) {
     logger.error("Failed to remove share:", error);
     return { success: false, error: SHARING_ERRORS.FAILED_TO_REMOVE_SHARE };
+  }
+}
+
+/**
+ * Toggle earnings visibility for a share recipient
+ *
+ * Validates:
+ * - User is authenticated
+ * - Share exists and user is the owner
+ *
+ * When showEarnings is false, recipients will only see hours data,
+ * not earnings/wages (enforced server-side in DAL)
+ */
+export async function toggleShareEarnings(
+  recipientId: string,
+  showEarnings: boolean
+): Promise<ActionResult> {
+  const { user } = await verifySession();
+
+  if (!recipientId) {
+    return { success: false, error: SHARING_ERRORS.SHARE_NOT_FOUND };
+  }
+
+  const program = Effect.gen(function* () {
+    const sharing = yield* SharingService;
+    yield* sharing.updateShareSettings(user.id, recipientId, { showEarnings });
+  }).pipe(Effect.provide(SharingLive), Effect.scoped);
+
+  try {
+    await Effect.runPromise(program);
+
+    // Invalidate caches for both users
+    // Owner needs their recipient list updated
+    // Recipient needs their shared shifts updated (earnings may be hidden now)
+    invalidateAndRevalidate(user.id);
+    invalidateAndRevalidate(recipientId);
+
+    return { success: true };
+  } catch (error: any) {
+    logger.error("Failed to update share settings:", error);
+    return { success: false, error: SHARING_ERRORS.FAILED_TO_UPDATE_SETTINGS };
   }
 }

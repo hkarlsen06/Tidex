@@ -1306,6 +1306,8 @@ export const no = {
       noRecipients: 'Du har ikke delt med noen enda',
       limitReached: 'Du har nådd maksimalt antall mottakere',
       close: 'Lukk',
+      showEarnings: 'Vis inntjening',
+      showEarningsDescription: 'La mottakeren se hva du tjener',
       errors: {
         limitReached: 'Du har nådd maksimalt antall delinger for ditt abonnement',
         userNotFound: 'Fant ingen bruker med denne e-posten eller telefonnummeret',
@@ -1314,6 +1316,7 @@ export const no = {
         invalidIdentifier: 'Vennligst oppgi en gyldig e-post eller telefonnummer',
         failedToCreate: 'Kunne ikke opprette deling',
         failedToRemove: 'Kunne ikke fjerne deling',
+        failedToUpdateSettings: 'Kunne ikke oppdatere innstillinger',
       },
     },
   },

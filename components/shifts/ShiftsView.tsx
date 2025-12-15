@@ -482,9 +482,11 @@ type ShiftsViewProps = {
   headerSlot?: React.ReactNode;
   /** Owner ID for fetching additional shared shifts when readOnly=true */
   sharedOwnerId?: string;
+  /** When false, hides earnings-related data in readOnly mode (default: true) */
+  showEarnings?: boolean;
 };
 
-export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", userSettings, presetRules, readOnly = false, ownerName, headerSlot, sharedOwnerId }: ShiftsViewProps) {
+export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", userSettings, presetRules, readOnly = false, ownerName, headerSlot, sharedOwnerId, showEarnings = true }: ShiftsViewProps) {
   const { t, locale } = useTranslations();
   const formatCurrency = useFormatCurrency();
   const {
