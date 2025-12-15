@@ -1306,7 +1306,7 @@ export const no = {
       noRecipients: 'Du har ikke delt med noen enda',
       limitReached: 'Du har nådd maksimalt antall mottakere',
       close: 'Lukk',
-      showEarnings: 'Vis inntjening',
+      showEarnings: 'Vis inntjening til mottaker',
       showEarningsDescription: 'La mottakeren se hva du tjener',
       errors: {
         limitReached: 'Du har nådd maksimalt antall delinger for ditt abonnement',

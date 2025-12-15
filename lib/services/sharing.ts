@@ -112,7 +112,8 @@ export class SharingService extends Context.Tag("SharingService")<
      */
     readonly createShare: (
       userId: string,
-      identifier: string
+      identifier: string,
+      options?: { showEarnings?: boolean }
     ) => Effect.Effect<
       { recipientId: string },
       | DatabaseError
@@ -552,7 +553,7 @@ export const SharingServiceLive = Layer.effect(
       /**
        * Create a new share
        */
-      createShare: (userId: string, identifier: string) =>
+      createShare: (userId: string, identifier: string, options?: { showEarnings?: boolean }) =>
         Effect.gen(function* () {
           // Verify user is authenticated
           yield* auth.verifyUserId(userId);
@@ -620,7 +621,7 @@ export const SharingServiceLive = Layer.effect(
               return client.from("shift_shares").insert({
                 owner_id: userId,
                 viewer_id: recipientUser.id,
-                show_earnings: false,
+                show_earnings: options?.showEarnings ?? false,
               });
             },
             catch: (error) =>

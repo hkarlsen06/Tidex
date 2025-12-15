@@ -40,7 +40,10 @@ const SHARING_ERRORS = {
  *
  * Returns generic error messages to prevent email enumeration
  */
-export async function createShare(identifier: string): Promise<ActionResult> {
+export async function createShare(
+  identifier: string,
+  options?: { showEarnings?: boolean }
+): Promise<ActionResult> {
   const { user } = await verifySession();
 
   const trimmed = identifier?.trim();
@@ -50,7 +53,7 @@ export async function createShare(identifier: string): Promise<ActionResult> {
 
   const program = Effect.gen(function* () {
     const sharing = yield* SharingService;
-    const result = yield* sharing.createShare(user.id, trimmed);
+    const result = yield* sharing.createShare(user.id, trimmed, options);
     return result;
   }).pipe(Effect.provide(SharingLive), Effect.scoped);
 
