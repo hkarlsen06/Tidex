@@ -120,6 +120,41 @@ export const getMyShareRecipients = cache(
 );
 
 /**
+ * Strip earnings data from a shift, keeping only hours-related fields
+ * Used when showEarnings is false for a share relationship
+ *
+ * Structure: ShiftWithComputations = ShiftRow & { computed: ShiftComputed }
+ * - computed contains: gross, basePay, supplementPay, wagePeriods
+ * We zero out monetary values while preserving hour data
+ */
+function stripEarningsFromShift(shift: ShiftWithComputations): ShiftWithComputations {
+  return {
+    ...shift,
+    // Zero out the computed earnings fields
+    computed: {
+      ...shift.computed,
+      basePay: 0,
+      supplementPay: 0,
+      gross: 0,
+      // Clear wage periods to hide supplement breakdown
+      wagePeriods: [],
+      originalWagePeriods: [],
+    },
+    // Clear tax info
+    tax_enabled: undefined,
+    tax_percentage: undefined,
+  };
+}
+
+/**
+ * Aggregates for shared shifts (earnings may be hidden)
+ */
+export type SharedShiftsAggregates = {
+  totalHours: number;
+  totalEarnings: number | null; // null when showEarnings is false
+};
+
+/**
  * Internal implementation of getSharedUserShifts
  * @internal - Do not call directly, use getSharedUserShifts()
  */
@@ -131,30 +166,34 @@ async function getSharedUserShiftsInternal(
   shifts: ShiftWithComputations[];
   defaultView: string;
   settings: UserSettings;
-  aggregates: ShiftsAggregates;
+  aggregates: SharedShiftsAggregates;
+  showEarnings: boolean;
 }> {
   "use cache: private";
   cacheTag(`user-${ownerId}`, "shared-shifts");
 
   await cookies();
 
-  // First verify the viewer has access
-  const accessProgram = Effect.gen(function* () {
+  // First verify the viewer has access and get share settings
+  const shareSettingsProgram = Effect.gen(function* () {
     const sharing = yield* SharingService;
-    return yield* sharing.hasShareAccess(viewerId, ownerId);
+    return yield* sharing.getShareSettings(viewerId, ownerId);
   }).pipe(Effect.provide(SharingLive), Effect.scoped);
 
-  const hasAccess = await Effect.runPromise(accessProgram);
+  const shareSettings = await Effect.runPromise(shareSettingsProgram);
 
-  if (!hasAccess) {
+  if (!shareSettings) {
     logger.warn(`User ${viewerId} attempted to access shifts of ${ownerId} without permission`);
     return {
       shifts: [],
       defaultView: "calendar",
       settings: {},
-      aggregates: { totalHours: 0, totalEarnings: 0 },
+      aggregates: { totalHours: 0, totalEarnings: null },
+      showEarnings: false,
     };
   }
+
+  const showEarnings = shareSettings.showEarnings;
 
   // Now fetch the shifts using the owner's ID (since RLS allows it through shift_shares)
   // We skip auth check because we've already verified share access above
@@ -165,18 +204,38 @@ async function getSharedUserShiftsInternal(
       startDate: options.startDate,
       endDate: options.endDate,
       limit: options.limit,
-      skipAuthCheck: true, // Access already verified via hasShareAccess
+      skipAuthCheck: true, // Access already verified via getShareSettings
     });
     return data;
   }).pipe(Effect.provide(ShiftsLive), Effect.scoped);
 
   try {
     const result = await Effect.runPromise(program);
+
+    // SECURITY: If showEarnings is false, strip all earnings data server-side
+    // This is the security enforcement point - data is filtered before reaching the client
+    if (!showEarnings) {
+      return {
+        shifts: result.shifts.map(stripEarningsFromShift),
+        defaultView: result.defaultView,
+        settings: {
+          ...result.settings,
+          // Optionally hide wage-related settings too
+        },
+        aggregates: {
+          totalHours: result.aggregates.totalHours,
+          totalEarnings: null, // Hide total earnings
+        },
+        showEarnings: false,
+      };
+    }
+
     return {
       shifts: [...result.shifts],
       defaultView: result.defaultView,
       settings: result.settings,
       aggregates: result.aggregates,
+      showEarnings: true,
     };
   } catch (error: any) {
     logger.error("Failed to fetch shared user shifts:", error);
@@ -184,7 +243,8 @@ async function getSharedUserShiftsInternal(
       shifts: [],
       defaultView: "calendar",
       settings: {},
-      aggregates: { totalHours: 0, totalEarnings: 0 },
+      aggregates: { totalHours: 0, totalEarnings: null },
+      showEarnings: false,
     };
   }
 }
@@ -192,6 +252,7 @@ async function getSharedUserShiftsInternal(
 /**
  * Get computed shifts for a user who has shared their shifts with the viewer
  * - Verifies viewer has share access before returning data
+ * - Filters out earnings data if showEarnings is false (security enforcement)
  * - Uses React cache() for request deduplication
  *
  * Promise wrapper around Effect-based services
@@ -204,13 +265,41 @@ export const getSharedUserShifts = cache(
     shifts: ShiftWithComputations[];
     defaultView: string;
     settings: UserSettings;
-    aggregates: ShiftsAggregates;
+    aggregates: SharedShiftsAggregates;
+    showEarnings: boolean;
   }> => {
     const { user } = await verifySession();
 
     return getSharedUserShiftsInternal(user.id, ownerId, options);
   }
 );
+
+/**
+ * Update share settings for a specific recipient
+ * - Only the owner can update settings for their shares
+ * - Used to toggle earnings visibility
+ *
+ * Promise wrapper around Effect-based SharingService
+ */
+export async function updateShareSettings(
+  recipientId: string,
+  settings: { showEarnings: boolean }
+): Promise<{ success: boolean; error?: string }> {
+  const { user } = await verifySession();
+
+  const program = Effect.gen(function* () {
+    const sharing = yield* SharingService;
+    yield* sharing.updateShareSettings(user.id, recipientId, settings);
+  }).pipe(Effect.provide(SharingLive), Effect.scoped);
+
+  try {
+    await Effect.runPromise(program);
+    return { success: true };
+  } catch (error: any) {
+    logger.error("Failed to update share settings:", error);
+    return { success: false, error: "Failed to update share settings" };
+  }
+}
 
 /**
  * Check if the current user can add more share recipients

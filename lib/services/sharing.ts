@@ -47,6 +47,8 @@ export type SharedUser = {
   /** OAuth provider avatar (Google, etc.) - used as fallback when profilePictureUrl is null */
   readonly oauthAvatarUrl: string | null;
   readonly sharedAt: string;
+  /** Whether this user allows you to see their earnings (true) or only hours (false) */
+  readonly showEarnings: boolean;
 };
 
 /**
@@ -61,6 +63,8 @@ export type ShareRecipient = {
   /** OAuth provider avatar (Google, etc.) - used as fallback when profilePictureUrl is null */
   readonly oauthAvatarUrl: string | null;
   readonly sharedAt: string;
+  /** Whether this recipient can see your earnings (true) or only hours (false) */
+  readonly showEarnings: boolean;
 };
 
 /**
@@ -151,6 +155,32 @@ export class SharingService extends Context.Tag("SharingService")<
       viewerId: string,
       ownerId: string
     ) => Effect.Effect<boolean, DatabaseError | AuthError | NotFoundError | TimeoutError | SupabaseError, never>;
+
+    /**
+     * Update share settings (e.g., toggle earnings visibility)
+     */
+    readonly updateShareSettings: (
+      userId: string,
+      recipientId: string,
+      settings: { showEarnings: boolean }
+    ) => Effect.Effect<
+      void,
+      DatabaseError | AuthError | NotFoundError | TimeoutError | SupabaseError,
+      never
+    >;
+
+    /**
+     * Get share settings for a specific viewer/owner pair
+     * Used to determine if earnings should be shown when viewing shared shifts
+     */
+    readonly getShareSettings: (
+      viewerId: string,
+      ownerId: string
+    ) => Effect.Effect<
+      { showEarnings: boolean } | null,
+      DatabaseError | AuthError | NotFoundError | TimeoutError | SupabaseError,
+      never
+    >;
   }
 >() {}
 
@@ -336,7 +366,7 @@ export const SharingServiceLive = Layer.effect(
             async (client) =>
               await client
                 .from("shift_shares")
-                .select("owner_id, created_at")
+                .select("owner_id, created_at, show_earnings")
                 .eq("viewer_id", userId)
                 .order("created_at", { ascending: false }),
             { retries: 2 }
@@ -409,6 +439,7 @@ export const SharingServiceLive = Layer.effect(
               profilePictureUrl,
               oauthAvatarUrl: authUser?.oauthAvatarUrl ?? null,
               sharedAt: share.created_at,
+              showEarnings: share.show_earnings ?? true,
             };
           }) as readonly SharedUser[];
         }).pipe(
@@ -433,7 +464,7 @@ export const SharingServiceLive = Layer.effect(
             async (client) =>
               await client
                 .from("shift_shares")
-                .select("viewer_id, created_at")
+                .select("viewer_id, created_at, show_earnings")
                 .eq("owner_id", userId)
                 .order("created_at", { ascending: false }),
             { retries: 2 }
@@ -506,6 +537,7 @@ export const SharingServiceLive = Layer.effect(
               profilePictureUrl,
               oauthAvatarUrl: authUser?.oauthAvatarUrl ?? null,
               sharedAt: share.created_at,
+              showEarnings: share.show_earnings ?? true,
             };
           }) as readonly ShareRecipient[];
         }).pipe(
@@ -750,6 +782,95 @@ export const SharingServiceLive = Layer.effect(
           }
 
           return selectResult.data !== null;
+        }),
+
+      /**
+       * Update share settings (e.g., toggle earnings visibility)
+       */
+      updateShareSettings: (
+        userId: string,
+        recipientId: string,
+        settings: { showEarnings: boolean }
+      ) =>
+        Effect.gen(function* () {
+          // Verify user is authenticated
+          yield* auth.verifyUserId(userId);
+
+          const updateResult = yield* Effect.tryPromise({
+            try: async () => {
+              const client = await Effect.runPromise(supabase.getClient());
+              return client
+                .from("shift_shares")
+                .update({ show_earnings: settings.showEarnings })
+                .eq("owner_id", userId)
+                .eq("viewer_id", recipientId);
+            },
+            catch: (error) =>
+              new DatabaseError({
+                table: "shift_shares",
+                code: "UPDATE_ERROR",
+                errorMessage: String(error),
+                cause: error,
+              }),
+          });
+
+          if (updateResult.error) {
+            return yield* Effect.fail(
+              new DatabaseError({
+                table: "shift_shares",
+                code: updateResult.error.code,
+                errorMessage: updateResult.error.message,
+                cause: updateResult.error,
+              })
+            );
+          }
+        }),
+
+      /**
+       * Get share settings for a specific viewer/owner pair
+       */
+      getShareSettings: (viewerId: string, ownerId: string) =>
+        Effect.gen(function* () {
+          // Verify viewer is authenticated
+          yield* auth.verifyUserId(viewerId);
+
+          const selectResult = yield* Effect.tryPromise({
+            try: async () => {
+              const client = await Effect.runPromise(supabase.getClient());
+              return client
+                .from("shift_shares")
+                .select("show_earnings")
+                .eq("owner_id", ownerId)
+                .eq("viewer_id", viewerId)
+                .maybeSingle();
+            },
+            catch: (error) =>
+              new DatabaseError({
+                table: "shift_shares",
+                code: "QUERY_ERROR",
+                errorMessage: String(error),
+                cause: error,
+              }),
+          });
+
+          if (selectResult.error) {
+            return yield* Effect.fail(
+              new DatabaseError({
+                table: "shift_shares",
+                code: selectResult.error.code,
+                errorMessage: selectResult.error.message,
+                cause: selectResult.error,
+              })
+            );
+          }
+
+          if (!selectResult.data) {
+            return null;
+          }
+
+          return {
+            showEarnings: selectResult.data.show_earnings ?? true,
+          };
         }),
     };
   })

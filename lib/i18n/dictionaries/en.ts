@@ -1307,6 +1307,8 @@ export const en: Dictionary = {
       noRecipients: "You haven't shared with anyone yet",
       limitReached: "You've reached the maximum number of recipients",
       close: 'Close',
+      showEarnings: 'Show earnings',
+      showEarningsDescription: 'Let the recipient see what you earn',
       errors: {
         limitReached: "You've reached the maximum number of shares for your subscription",
         userNotFound: 'No user found with this email or phone number',
@@ -1315,6 +1317,7 @@ export const en: Dictionary = {
         invalidIdentifier: 'Please enter a valid email or phone number',
         failedToCreate: 'Could not create share',
         failedToRemove: 'Could not remove share',
+        failedToUpdateSettings: 'Could not update settings',
       },
     },
   },

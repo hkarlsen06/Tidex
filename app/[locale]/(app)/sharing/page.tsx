@@ -49,6 +49,7 @@ export default async function SharingPage({ params, searchParams }: SharingPageP
   let sharedSettings = null;
   let sharedAggregates = null;
   let selectedSharer = null;
+  let showEarnings = true;
 
   if (selectedOwnerId && sharers.some(s => s.id === selectedOwnerId)) {
     selectedSharer = sharers.find(s => s.id === selectedOwnerId) ?? null;
@@ -66,6 +67,7 @@ export default async function SharingPage({ params, searchParams }: SharingPageP
     sharedShifts = sharedData.shifts;
     sharedSettings = sharedData.settings;
     sharedAggregates = sharedData.aggregates;
+    showEarnings = sharedData.showEarnings;
   }
 
   return (
@@ -80,6 +82,7 @@ export default async function SharingPage({ params, searchParams }: SharingPageP
         sharedSettings={sharedSettings ?? {}}
         sharedAggregates={sharedAggregates}
         presetRules={PRESET_RULES}
+        showEarnings={showEarnings}
       />
     </I18nProvider>
   );
