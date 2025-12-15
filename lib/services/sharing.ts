@@ -613,13 +613,14 @@ export const SharingServiceLive = Layer.effect(
             );
           }
 
-          // Create the share
+          // Create the share (earnings sharing off by default)
           const insertResult = yield* Effect.tryPromise({
             try: async () => {
               const client = await Effect.runPromise(supabase.getClient());
               return client.from("shift_shares").insert({
                 owner_id: userId,
                 viewer_id: recipientUser.id,
+                show_earnings: false,
               });
             },
             catch: (error) =>

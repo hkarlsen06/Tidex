@@ -27,6 +27,11 @@ const nextConfig = {
         hostname: "*.supabase.co",
         pathname: "/storage/v1/object/public/**",
       },
+      {
+        protocol: "https",
+        hostname: "identity.tidex.no",
+        pathname: "/storage/v1/object/public/**",
+      },
     ],
   },
 

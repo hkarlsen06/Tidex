@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useState, useEffect } from "react";
 import type { MouseEvent } from "react";
 import {
@@ -59,6 +59,7 @@ const navItems: NavItem[] = [
 export function NavBar() {
   const { t } = useTranslations();
   const rawPathname = usePathname();
+  const searchParams = useSearchParams();
   const { navigate, pendingPath: rawPendingPath } = useNavigationFeedback();
   const [showAddShiftHint, setShowAddShiftHint] = useState(false);
   const { scrollDirection } = useScrollContext();
@@ -73,7 +74,17 @@ export function NavBar() {
   // Fetch shift count client-side to determine if hint should be shown
   // This is deferred to avoid blocking the initial render
   // Re-check when pathname changes so hint disappears after adding first shift
+  // Convert searchParams to string for stable dependency (avoids size change errors with useSearchParams)
+  const searchParamsString = searchParams?.toString() ?? "";
   useEffect(() => {
+    // Immediately hide hint if optimistic shifts are being added
+    // This handles the case where the user just added shifts and the DB hasn't synced yet
+    const hasOptimisticShifts = searchParamsString.includes('optimistic') || searchParamsString.includes('new') || searchParamsString.includes('newRecurring');
+    if (hasOptimisticShifts) {
+      setShowAddShiftHint(false);
+      return;
+    }
+
     const checkShiftCount = async () => {
       try {
         const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -100,7 +111,7 @@ export function NavBar() {
     };
 
     checkShiftCount();
-  }, [pathname]);
+  }, [pathname, searchParamsString]);
 
   const isOnboardingPath = (path: string | null) => {
     if (typeof path !== "string") {

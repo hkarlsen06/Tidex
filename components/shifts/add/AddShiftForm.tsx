@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition, useEffect, useRef, useCallback, useId } from "react";
+import { useMemo, useState, useEffect, useRef, useCallback, useId } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/app/Button";
@@ -75,7 +75,7 @@ export default function AddShiftForm({ existingShifts, userSettings, presetRules
   const router = useRouter();
   const { navigate } = useNavigationFeedback();
   const searchParams = useSearchParams();
-  const [pending, startTransition] = useTransition();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [mode, setMode] = useState<"single" | "recurring">("single");
   const { selectedMonth: month, setSelectedMonth: setMonth, goToPreviousMonth, goToNextMonth } = useMonth();
   const [dates, setDates] = useState<Date[]>([]);
@@ -147,6 +147,11 @@ export default function AddShiftForm({ existingShifts, userSettings, presetRules
     });
     return result;
   }, [intervalMap, start, end]);
+
+  // Reset submitting state when component mounts (e.g., user navigates back)
+  useEffect(() => {
+    setIsSubmitting(false);
+  }, []);
 
   // Prefill a date from query param `?date=YYYY-MM-DD`
   useEffect(() => {
@@ -234,13 +239,15 @@ export default function AddShiftForm({ existingShifts, userSettings, presetRules
   );
 
   const onSubmit = async () => {
-    if (!canSubmit) return;
+    if (!canSubmit || isSubmitting) return;
+    setIsSubmitting(true);
     setError(null);
 
     // Extract target month from first selected date
     const targetMonth = isoDates[0]?.substring(0, 7); // YYYY-MM
     if (!targetMonth) {
       setError(t.pages.shifts.add.form.couldNotDetermineMonth);
+      setIsSubmitting(false);
       return;
     }
 
@@ -258,10 +265,12 @@ export default function AddShiftForm({ existingShifts, userSettings, presetRules
             targetMonth,
           });
           setShowLimitModal(true);
+          setIsSubmitting(false);
           return;
         }
       } catch (e: any) {
         setError(e?.message || t.pages.shifts.add.form.couldNotSaveShift);
+        setIsSubmitting(false);
         return;
       }
     }
@@ -289,6 +298,8 @@ export default function AddShiftForm({ existingShifts, userSettings, presetRules
   };
 
   const handleDeleteAndProceed = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     // Called after user deletes shifts in other months
     setError(null);
 
@@ -535,8 +546,8 @@ export default function AddShiftForm({ existingShifts, userSettings, presetRules
             <div className="flex justify-center">
               <Button
                 onClick={onSubmit}
-                disabled={!canSubmit}
-                loading={pending}
+                disabled={!canSubmit || isSubmitting}
+                loading={isSubmitting}
                 className="w-full max-w-md rounded-2xl bg-brand-gradient-mid px-8 py-5 text-lg font-semibold text-text-inverse shadow-app transition hover:bg-brand-gradient-end disabled:opacity-50 disabled:cursor-not-allowed"
                 title={isOffline ? "Cannot save shifts while offline" : undefined}
               >
