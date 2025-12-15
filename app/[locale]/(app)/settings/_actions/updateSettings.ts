@@ -50,15 +50,18 @@ export async function clearAllShifts() {
   return { success: true };
 }
 
+/**
+ * Update global pay settings
+ *
+ * NOTE: Tax and break deduction settings have been moved to wage_snapshots.
+ * This function now only handles global calendar preferences:
+ * - monthly_goal: Earnings target for the month
+ * - payroll_day: Day of month when payroll is received
+ * - half_tax_month: Month number for half tax deduction (11=Nov, 12=Dec)
+ */
 export async function updatePaySettings(data: {
   monthly_goal?: number | null;
   payroll_day?: number | null;
-  pause_deduction_enabled?: boolean;
-  pause_deduction_method?: string | null;
-  pause_threshold_hours?: number | null;
-  pause_deduction_minutes?: number | null;
-  tax_deduction_enabled?: boolean;
-  tax_percentage?: number | null;
   half_tax_month?: number | null;
 }) {
   const { user } = await verifySession();

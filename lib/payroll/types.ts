@@ -34,15 +34,10 @@ export type UserSettings = {
   // have been removed. Wage data is now stored in the wage_snapshots table.
   // See migration: 20251101130000_remove_wage_from_user_settings.sql
 
-  // Pause settings
-  pause_deduction_enabled?: boolean | null; // Master switch for automatic break deductions
-  pause_deduction_method?: BreakMethod | null; // How to apply deduction (proportional, base_only, end_of_shift)
-  pause_threshold_hours?: number | null; // Minimum shift duration to trigger break (e.g., 5.5)
-  pause_deduction_minutes?: number | null; // Amount to deduct (e.g., 30)
+  // NOTE: Tax and break deduction settings have been moved to wage_snapshots.
+  // See migration: 20251215000000_move_tax_break_to_snapshots.sql
 
-  // Tax settings
-  tax_deduction_enabled?: boolean | null;
-  tax_percentage?: number | null;
+  // Global calendar preferences (not per-snapshot)
   half_tax_month?: number | null; // Month number (11=November, 12=December) for half tax deduction
   payroll_day?: number | null;
   monthly_goal?: number | null;
@@ -87,11 +82,17 @@ export type ShiftComputed = {
 
 export type ShiftWithComputations = ShiftRow & {
   computed: ShiftComputed;
+  /**
+   * Tax settings from the snapshot that applies to this shift
+   * Used for calculating after-tax earnings display
+   */
+  tax_enabled?: boolean;
+  tax_percentage?: number;
 };
 
 /**
  * WageSnapshot from the wage_snapshots table
- * Represents a point-in-time capture of wage and supplement settings
+ * Represents a point-in-time capture of wage, supplement, tax, and break settings
  *
  * Note: from_date can be NULL for the baseline snapshot, which serves as
  * the fallback for all shifts that don't match any dated snapshot
@@ -104,4 +105,14 @@ export type WageSnapshot = {
   wage_level: number | null; // NULL = custom wage, NUMBER (1-9) = tariff level
   supplements: { rules: SupplementRule[] };
   created_at?: string;
+
+  // Tax settings (per-snapshot)
+  tax_enabled: boolean;
+  tax_percentage: number;
+
+  // Break deduction settings (per-snapshot)
+  break_enabled: boolean;
+  break_method: BreakMethod;
+  break_threshold_hours: number;
+  break_deduction_minutes: number;
 };

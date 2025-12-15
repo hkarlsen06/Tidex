@@ -4,7 +4,6 @@ import React, { useState, useEffect, useRef, useCallback, useTransition } from '
 import { Card } from '@/components/app/Card';
 import { Label } from '@/components/app/Label';
 import { Input } from '@/components/app/Input';
-import { Switch } from '@/components/app/Switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/app/Select';
 import { Separator } from '@/components/app/Separator';
 import { updatePaySettings } from '@/app/[locale]/(app)/settings/_actions/updateSettings';
@@ -15,38 +14,23 @@ interface PayFormProps {
   initialData: any;
 }
 
+/**
+ * PayForm - Global pay settings
+ *
+ * NOTE: Tax and break deduction settings have been moved to wage snapshots.
+ * Each wage history entry now includes its own tax and break settings.
+ * This form only handles global calendar preferences that apply across all wage periods.
+ */
 export function PayForm({ initialData }: PayFormProps) {
   const { t } = useTranslations();
   const router = useRouter();
   const [_isPending, startTransition] = useTransition();
   const isInitialMount = useRef(true);
 
-  // Break settings
-  const [pauseDeductionEnabled, setPauseDeductionEnabled] = useState(
-    initialData.pause_deduction_enabled ?? true
-  );
-  const [pauseMethod, setPauseMethod] = useState(
-    initialData.pause_deduction_method || 'proportional'
-  );
-  const [pauseThresholdHours, setPauseThresholdHours] = useState(
-    initialData.pause_threshold_hours?.toString() || '5.5'
-  );
-  const [pauseDeductionMinutes, setPauseDeductionMinutes] = useState(
-    initialData.pause_deduction_minutes?.toString() || '30'
-  );
-
-  // Tax settings
-  const [taxDeductionEnabled, setTaxDeductionEnabled] = useState(
-    initialData.tax_deduction_enabled ?? false
-  );
-  const [taxPercentage, setTaxPercentage] = useState(
-    initialData.tax_percentage?.toString() || '30'
-  );
+  // Global settings (not per-snapshot)
   const [halfTaxMonth, setHalfTaxMonth] = useState(
     initialData.half_tax_month?.toString() || 'none'
   );
-
-  // Other settings
   const [monthlyGoal, setMonthlyGoal] = useState(
     initialData.monthly_goal?.toString() || '20000'
   );
@@ -60,40 +44,23 @@ export function PayForm({ initialData }: PayFormProps) {
         await updatePaySettings({
           monthly_goal: monthlyGoal ? parseFloat(monthlyGoal) : null,
           payroll_day: payrollDay ? parseInt(payrollDay) : null,
-          pause_deduction_enabled: pauseDeductionEnabled,
-          pause_deduction_method: pauseDeductionEnabled ? pauseMethod : null,
-          pause_threshold_hours: pauseDeductionEnabled ? parseFloat(pauseThresholdHours) : null,
-          pause_deduction_minutes: pauseDeductionEnabled ? parseInt(pauseDeductionMinutes) : null,
-          tax_deduction_enabled: taxDeductionEnabled,
-          tax_percentage: taxDeductionEnabled ? parseFloat(taxPercentage) : null,
-          half_tax_month: taxDeductionEnabled && halfTaxMonth !== 'none' ? parseInt(halfTaxMonth) : null,
+          half_tax_month: halfTaxMonth !== 'none' ? parseInt(halfTaxMonth) : null,
         });
         router.refresh();
       } catch (error) {
         console.error('Failed to save pay settings:', error);
       }
     });
-  }, [
-    monthlyGoal,
-    pauseDeductionEnabled,
-    pauseDeductionMinutes,
-    pauseMethod,
-    pauseThresholdHours,
-    payrollDay,
-    router,
-    taxDeductionEnabled,
-    taxPercentage,
-    halfTaxMonth,
-  ]);
+  }, [monthlyGoal, payrollDay, halfTaxMonth, router]);
 
-  // Auto-save for immediate changes (buttons, switches, selects)
+  // Auto-save for immediate changes (selects)
   useEffect(() => {
     if (isInitialMount.current) {
       isInitialMount.current = false;
       return;
     }
     saveSettings();
-  }, [pauseDeductionEnabled, pauseMethod, saveSettings, taxDeductionEnabled, halfTaxMonth]);
+  }, [halfTaxMonth, saveSettings]);
 
   // Debounced auto-save for text inputs (1 second)
   useEffect(() => {
@@ -104,141 +71,11 @@ export function PayForm({ initialData }: PayFormProps) {
     }, 1000);
 
     return () => clearTimeout(timer);
-  }, [monthlyGoal, pauseDeductionMinutes, pauseThresholdHours, payrollDay, saveSettings, taxPercentage]);
-
+  }, [monthlyGoal, payrollDay, saveSettings]);
 
   return (
     <div className="space-y-6">
-      {/* Break Deduction */}
-      <Card className="p-6">
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-semibold">{t.pages.settings.pay.breaks.title}</h3>
-              <p className="text-sm text-text-secondary mt-1">
-                {t.pages.settings.pay.breaks.description}
-              </p>
-            </div>
-            <Switch
-              checked={pauseDeductionEnabled}
-              onCheckedChange={setPauseDeductionEnabled}
-            />
-          </div>
-
-          {pauseDeductionEnabled && (
-            <>
-              <Separator />
-
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="pauseMethod">{t.pages.settings.pay.breaks.methodLabel}</Label>
-                  <Select value={pauseMethod} onValueChange={setPauseMethod}>
-                    <SelectTrigger id="pauseMethod">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="proportional">{t.pages.settings.pay.breaks.methodProportional}</SelectItem>
-                      <SelectItem value="base_only">{t.pages.settings.pay.breaks.methodBaseOnly}</SelectItem>
-                      <SelectItem value="end_of_shift">{t.pages.settings.pay.breaks.methodEndOfShift}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-text-secondary">
-                    {pauseMethod === 'proportional' && t.pages.settings.pay.breaks.methodHelpProportional}
-                    {pauseMethod === 'base_only' && t.pages.settings.pay.breaks.methodHelpBaseOnly}
-                    {pauseMethod === 'end_of_shift' && t.pages.settings.pay.breaks.methodHelpEndOfShift}
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="threshold">{t.pages.settings.pay.breaks.thresholdLabel}</Label>
-                    <Input
-                      id="threshold"
-                      type="number"
-                      min={0}
-                      step={0.5}
-                      value={pauseThresholdHours}
-                      onChange={(e) => setPauseThresholdHours(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="duration">{t.pages.settings.pay.breaks.durationLabel}</Label>
-                    <Input
-                      id="duration"
-                      type="number"
-                      min={0}
-                      step={15}
-                      value={pauseDeductionMinutes}
-                      onChange={(e) => setPauseDeductionMinutes(e.target.value)}
-                    />
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
-        </div>
-      </Card>
-
-      {/* Tax Deduction */}
-      <Card className="p-6">
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-semibold">{t.pages.settings.pay.tax.title}</h3>
-              <p className="text-sm text-text-secondary mt-1">
-                {t.pages.settings.pay.tax.description}
-              </p>
-            </div>
-            <Switch
-              checked={taxDeductionEnabled}
-              onCheckedChange={setTaxDeductionEnabled}
-            />
-          </div>
-
-          {taxDeductionEnabled && (
-            <>
-              <Separator />
-
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="taxPercentage">{t.pages.settings.pay.tax.percentageLabel}</Label>
-                  <Input
-                    id="taxPercentage"
-                    type="number"
-                    min={0}
-                    max={100}
-                    step={0.1}
-                    value={taxPercentage}
-                    onChange={(e) => setTaxPercentage(e.target.value)}
-                  />
-                  <p className="text-xs text-text-secondary">
-                    {t.pages.settings.pay.tax.disclaimer}
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="halfTaxMonth">{t.pages.settings.pay.tax.halfTaxMonthLabel}</Label>
-                  <Select value={halfTaxMonth} onValueChange={setHalfTaxMonth}>
-                    <SelectTrigger id="halfTaxMonth">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">{t.pages.settings.pay.tax.halfTaxMonthOff}</SelectItem>
-                      <SelectItem value="11">{t.pages.settings.pay.tax.halfTaxMonthNovember}</SelectItem>
-                      <SelectItem value="12">{t.pages.settings.pay.tax.halfTaxMonthDecember}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-text-secondary">
-                    {t.pages.settings.pay.tax.halfTaxMonthDescription}
-                  </p>
-                </div>
-              </div>
-            </>
-          )}
-        </div>
-      </Card>
-
-      {/* Other Settings */}
+      {/* Global Settings */}
       <Card className="p-6">
         <div className="space-y-6">
           <div>
@@ -274,9 +111,28 @@ export function PayForm({ initialData }: PayFormProps) {
               />
             </div>
           </div>
+
+          <Separator />
+
+          {/* Half Tax Month - Global calendar preference */}
+          <div className="space-y-2">
+            <Label htmlFor="halfTaxMonth">{t.pages.settings.pay.tax.halfTaxMonthLabel}</Label>
+            <Select value={halfTaxMonth} onValueChange={setHalfTaxMonth}>
+              <SelectTrigger id="halfTaxMonth">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">{t.pages.settings.pay.tax.halfTaxMonthOff}</SelectItem>
+                <SelectItem value="11">{t.pages.settings.pay.tax.halfTaxMonthNovember}</SelectItem>
+                <SelectItem value="12">{t.pages.settings.pay.tax.halfTaxMonthDecember}</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-text-secondary">
+              {t.pages.settings.pay.tax.halfTaxMonthDescription}
+            </p>
+          </div>
         </div>
       </Card>
-
     </div>
   );
 }

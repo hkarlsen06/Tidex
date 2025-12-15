@@ -13,7 +13,11 @@ import {
 import { Button } from '@/components/app/Button';
 import { Input } from '@/components/app/Input';
 import { Label } from '@/components/app/Label';
+import { Switch } from '@/components/app/Switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/app/Select';
+import { Separator } from '@/components/app/Separator';
 import { SupplementsEditor, SupplementsData } from '@/components/settings/SupplementsEditor';
+import type { BreakMethod } from '@/lib/payroll/types';
 import { WageSourceCard } from '@/components/settings/pay/WageSourceCard';
 import { PRESET_WAGE_RATES, PRESET_SUPPLEMENT_RULES } from '@/lib/payroll';
 import { Calendar, AlertTriangle, Trash2, Check, X } from 'lucide-react';
@@ -81,6 +85,25 @@ export function WageHistoryModal({
       ? snapshot.supplements
       : null
   );
+
+  // Tax settings
+  const [taxEnabled, setTaxEnabled] = useState(() => snapshot?.tax_enabled ?? false);
+  const [taxPercentage, setTaxPercentage] = useState(() =>
+    snapshot?.tax_percentage?.toString() ?? '30'
+  );
+
+  // Break deduction settings
+  const [breakEnabled, setBreakEnabled] = useState(() => snapshot?.break_enabled ?? true);
+  const [breakMethod, setBreakMethod] = useState<BreakMethod>(() =>
+    snapshot?.break_method ?? 'proportional'
+  );
+  const [breakThresholdHours, setBreakThresholdHours] = useState(() =>
+    snapshot?.break_threshold_hours?.toString() ?? '5.5'
+  );
+  const [breakDeductionMinutes, setBreakDeductionMinutes] = useState(() =>
+    snapshot?.break_deduction_minutes?.toString() ?? '30'
+  );
+
   const [affectedShiftCount, setAffectedShiftCount] = useState<number | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -91,6 +114,12 @@ export function WageHistoryModal({
     setWageLevel('1');
     setCustomWage('200');
     setCustomSupplements(null);
+    setTaxEnabled(false);
+    setTaxPercentage('30');
+    setBreakEnabled(true);
+    setBreakMethod('proportional');
+    setBreakThresholdHours('5.5');
+    setBreakDeductionMinutes('30');
     setError(null);
     setAffectedShiftCount(null);
     onClose();
@@ -150,6 +179,14 @@ export function WageHistoryModal({
           supplements: usePreset
             ? convertSupplements(TARIFF_SUPPLEMENTS_DATA)
             : convertSupplements(customSupplements),
+          // Tax settings
+          tax_enabled: taxEnabled,
+          tax_percentage: taxEnabled ? parseFloat(taxPercentage) : 0,
+          // Break deduction settings
+          break_enabled: breakEnabled,
+          break_method: breakEnabled ? breakMethod : 'none' as BreakMethod,
+          break_threshold_hours: breakEnabled ? parseFloat(breakThresholdHours) : 0,
+          break_deduction_minutes: breakEnabled ? parseInt(breakDeductionMinutes) : 0,
         };
 
         const result =
@@ -261,6 +298,47 @@ export function WageHistoryModal({
                 onChange={() => {}}
                 readOnly={true}
               />
+            </div>
+
+            <Separator />
+
+            {/* Break Deduction - View */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold">{t.pages.settings.pay.wageHistory.modal.breakTitle}</h3>
+                <span className={`text-sm ${snapshot.break_enabled ? 'text-green-600' : 'text-text-muted'}`}>
+                  {snapshot.break_enabled ? t.common.on : t.common.off}
+                </span>
+              </div>
+              {snapshot.break_enabled && (
+                <p className="text-sm text-text-secondary">
+                  {t.pages.settings.pay.breaks.methodLabel}: {
+                    snapshot.break_method === 'proportional' ? t.pages.settings.pay.breaks.methodProportional :
+                    snapshot.break_method === 'base_only' ? t.pages.settings.pay.breaks.methodBaseOnly :
+                    snapshot.break_method === 'end_of_shift' ? t.pages.settings.pay.breaks.methodEndOfShift :
+                    t.common.off
+                  }
+                  {' • '}
+                  {snapshot.break_threshold_hours}h terskel, {snapshot.break_deduction_minutes} min trekk
+                </p>
+              )}
+            </div>
+
+            <Separator />
+
+            {/* Tax Deduction - View */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold">{t.pages.settings.pay.wageHistory.modal.taxTitle}</h3>
+                <span className={`text-sm ${snapshot.tax_enabled ? 'text-green-600' : 'text-text-muted'}`}>
+                  {snapshot.tax_enabled ? t.common.on : t.common.off}
+                </span>
+              </div>
+              {snapshot.tax_enabled && (
+                <p className="text-sm text-text-secondary">
+                  {snapshot.tax_percentage}% {t.pages.settings.pay.tax.percentageLabel.toLowerCase()}
+                </p>
+              )}
             </div>
           </div>
 
@@ -380,6 +458,117 @@ export function WageHistoryModal({
                 readOnly={usePreset}
               />
             </div>
+          </div>
+
+          <Separator />
+
+          {/* Break Deduction */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-semibold">{t.pages.settings.pay.wageHistory.modal.breakTitle}</h3>
+                <p className="text-sm text-text-secondary mt-1">
+                  {t.pages.settings.pay.wageHistory.modal.breakDescription}
+                </p>
+              </div>
+              <Switch
+                checked={breakEnabled}
+                onCheckedChange={setBreakEnabled}
+                disabled={pending}
+              />
+            </div>
+
+            {breakEnabled && (
+              <div className="space-y-4 pt-2">
+                <div className="space-y-2">
+                  <Label htmlFor="breakMethod">{t.pages.settings.pay.breaks.methodLabel}</Label>
+                  <Select
+                    value={breakMethod}
+                    onValueChange={(v) => setBreakMethod(v as BreakMethod)}
+                    disabled={pending}
+                  >
+                    <SelectTrigger id="breakMethod">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="proportional">{t.pages.settings.pay.breaks.methodProportional}</SelectItem>
+                      <SelectItem value="base_only">{t.pages.settings.pay.breaks.methodBaseOnly}</SelectItem>
+                      <SelectItem value="end_of_shift">{t.pages.settings.pay.breaks.methodEndOfShift}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-text-secondary">
+                    {breakMethod === 'proportional' && t.pages.settings.pay.breaks.methodHelpProportional}
+                    {breakMethod === 'base_only' && t.pages.settings.pay.breaks.methodHelpBaseOnly}
+                    {breakMethod === 'end_of_shift' && t.pages.settings.pay.breaks.methodHelpEndOfShift}
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="breakThreshold">{t.pages.settings.pay.breaks.thresholdLabel}</Label>
+                    <Input
+                      id="breakThreshold"
+                      type="number"
+                      min={0}
+                      step={0.5}
+                      value={breakThresholdHours}
+                      onChange={(e) => setBreakThresholdHours(e.target.value)}
+                      disabled={pending}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="breakDuration">{t.pages.settings.pay.breaks.durationLabel}</Label>
+                    <Input
+                      id="breakDuration"
+                      type="number"
+                      min={0}
+                      step={15}
+                      value={breakDeductionMinutes}
+                      onChange={(e) => setBreakDeductionMinutes(e.target.value)}
+                      disabled={pending}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <Separator />
+
+          {/* Tax Deduction */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-semibold">{t.pages.settings.pay.wageHistory.modal.taxTitle}</h3>
+                <p className="text-sm text-text-secondary mt-1">
+                  {t.pages.settings.pay.wageHistory.modal.taxDescription}
+                </p>
+              </div>
+              <Switch
+                checked={taxEnabled}
+                onCheckedChange={setTaxEnabled}
+                disabled={pending}
+              />
+            </div>
+
+            {taxEnabled && (
+              <div className="space-y-2 pt-2">
+                <Label htmlFor="taxPercentage">{t.pages.settings.pay.tax.percentageLabel}</Label>
+                <Input
+                  id="taxPercentage"
+                  type="number"
+                  min={0}
+                  max={100}
+                  step={0.1}
+                  value={taxPercentage}
+                  onChange={(e) => setTaxPercentage(e.target.value)}
+                  disabled={pending}
+                />
+                <p className="text-xs text-text-secondary">
+                  {t.pages.settings.pay.tax.disclaimer}
+                </p>
+              </div>
+            )}
           </div>
 
           {error && (

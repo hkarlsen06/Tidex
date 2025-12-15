@@ -642,8 +642,8 @@ async function executeQueryShifts(
     // Get user's currency
     const currency = await getUserCurrency(userId);
 
-    // Check if user has tax deduction enabled
-    const hasTaxDeduction = result.settings.tax_deduction_enabled && result.settings.tax_percentage;
+    // Check if any shifts have tax enabled (tax settings are now per-shift from snapshots)
+    const hasTaxDeduction = limitedShifts.some(s => s.tax_enabled && s.tax_percentage);
 
     // Format shifts for AI - compact format to reduce tokens
     const shiftsFormatted = limitedShifts.map((shift) => {
@@ -1493,45 +1493,31 @@ async function executeManageSettings(
         }
 
         case "payroll": {
-          const payrollData: {
-            pause_deduction_enabled?: boolean;
-            pause_deduction_method?: string | null;
-            pause_threshold_hours?: number | null;
-            pause_deduction_minutes?: number | null;
-          } = {};
-
-          if (input.settings.pauseDeductionEnabled !== undefined) {
-            payrollData.pause_deduction_enabled = input.settings.pauseDeductionEnabled;
-          }
-          if (input.settings.pauseDeductionMethod !== undefined) {
-            payrollData.pause_deduction_method = input.settings.pauseDeductionMethod;
-          }
-          if (input.settings.pauseThresholdHours !== undefined) {
-            payrollData.pause_threshold_hours = input.settings.pauseThresholdHours;
-          }
-          if (input.settings.pauseDeductionMinutes !== undefined) {
-            payrollData.pause_deduction_minutes = input.settings.pauseDeductionMinutes;
-          }
-
-          result = await updatePaySettings(payrollData);
-          break;
+          // Pause/break deduction settings have moved to wage snapshots.
+          // Users must update these via wage history (get_wage_info tool shows current values).
+          return {
+            success: false,
+            message: "Pause deduction settings are now part of wage history. Use get_wage_info to view current settings, and update them when creating/editing wage snapshots.",
+          };
         }
 
         case "tax": {
+          // Tax settings (except half_tax_month) have moved to wage snapshots.
+          // Only half_tax_month remains as a global setting.
           const taxData: {
-            tax_deduction_enabled?: boolean;
-            tax_percentage?: number | null;
             half_tax_month?: number | null;
           } = {};
 
-          if (input.settings.taxDeductionEnabled !== undefined) {
-            taxData.tax_deduction_enabled = input.settings.taxDeductionEnabled;
-          }
-          if (input.settings.taxPercentage !== undefined) {
-            taxData.tax_percentage = input.settings.taxPercentage;
-          }
           if (input.settings.halfTaxMonth !== undefined) {
             taxData.half_tax_month = input.settings.halfTaxMonth;
+          }
+
+          // If trying to update other tax settings, inform user
+          if (input.settings.taxDeductionEnabled !== undefined || input.settings.taxPercentage !== undefined) {
+            return {
+              success: false,
+              message: "Tax deduction settings (enabled/percentage) are now part of wage history. Use get_wage_info to view current settings. Only half_tax_month can be updated globally.",
+            };
           }
 
           result = await updatePaySettings(taxData);
@@ -1625,21 +1611,16 @@ async function executeManageSettings(
 
       console.log("[manage_settings] Formatting settings...");
 
-      // Format settings for AI consumption (wages moved to get_wage_info tool)
+      // Format settings for AI consumption
+      // Note: pause/tax settings are now per-snapshot (use get_wage_info tool)
       const formattedSettings = {
         display: {
           theme: settings.theme || "system",
           defaultShiftsView: settings.default_shifts_view || "calendar",
         },
-        payroll: {
-          pauseDeductionEnabled: settings.pause_deduction_enabled ?? false,
-          pauseDeductionMethod: settings.pause_deduction_method || "proportional",
-          pauseThresholdHours: settings.pause_threshold_hours || 5.5,
-          pauseDeductionMinutes: settings.pause_deduction_minutes || 30,
-        },
         tax: {
-          taxDeductionEnabled: settings.tax_deduction_enabled ?? false,
-          taxPercentage: settings.tax_percentage || 0,
+          // Only half_tax_month remains as a global setting
+          // Tax enabled/percentage are now per-snapshot (see get_wage_info)
           halfTaxMonth: settings.half_tax_month,
         },
         goals: {
@@ -1896,15 +1877,10 @@ async function executeCalculateEarnings(
         end_time: endTime,
       };
 
-      // Compute the shift
+      // Compute the shift (break settings are now read from the snapshot)
       const computed = computeShift(
         fakeShift,
-        {
-          pause_deduction_enabled: userSettings?.pause_deduction_enabled ?? true,
-          pause_deduction_method: (userSettings?.pause_deduction_method ?? "proportional") as BreakMethod,
-          pause_threshold_hours: userSettings?.pause_threshold_hours ?? 5.5,
-          pause_deduction_minutes: userSettings?.pause_deduction_minutes ?? 30,
-        },
+        {}, // UserSettings no longer contains break settings - they're in the snapshot
         PRESET_SUPPLEMENT_RULES,
         snapshot
       );
