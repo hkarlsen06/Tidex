@@ -1307,7 +1307,7 @@ export const en: Dictionary = {
       noRecipients: "You haven't shared with anyone yet",
       limitReached: "You've reached the maximum number of recipients",
       close: 'Close',
-      showEarnings: 'Show earnings',
+      showEarnings: 'Show earnings to recipient',
       showEarningsDescription: 'Let the recipient see what you earn',
       errors: {
         limitReached: "You've reached the maximum number of shares for your subscription",

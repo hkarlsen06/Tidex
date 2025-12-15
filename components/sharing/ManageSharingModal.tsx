@@ -14,6 +14,7 @@ import {
 import { Button } from "@/components/app/Button";
 import { Input } from "@/components/app/Input";
 import { Switch } from "@/components/app/Switch";
+import { Checkbox } from "@/components/app/Checkbox";
 import { createShare, removeShare, toggleShareEarnings } from "@/app/[locale]/(app)/sharing/_actions/sharing";
 import { useTranslations } from "@/lib/i18n/client";
 import type { ShareRecipient } from "@/data-access/sharing";
@@ -104,12 +105,21 @@ export function ManageSharingModal({
   const [isRemoving, startRemoveTransition] = useTransition();
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [isToggling, startToggleTransition] = useTransition();
+  // State for new recipient earnings toggle (default: off)
+  const [newRecipientShowEarnings, setNewRecipientShowEarnings] = useState(false);
 
-  // Optimistic state for earnings toggles
+  // Optimistic state for recipients (handles both earnings toggles and removals)
   const [optimisticRecipients, setOptimisticRecipients] = useOptimistic(
     recipients,
-    (state, { id, showEarnings }: { id: string; showEarnings: boolean }) =>
-      state.map((r) => (r.id === id ? { ...r, showEarnings } : r))
+    (state, action: { type: "toggle"; id: string; showEarnings: boolean } | { type: "remove"; id: string }) => {
+      if (action.type === "toggle") {
+        return state.map((r) => (r.id === action.id ? { ...r, showEarnings: action.showEarnings } : r));
+      }
+      if (action.type === "remove") {
+        return state.filter((r) => r.id !== action.id);
+      }
+      return state;
+    }
   );
 
   // Get translation strings with fallbacks
@@ -123,7 +133,7 @@ export function ManageSharingModal({
     noRecipients: "Du har ikke delt med noen enda",
     limitReached: "Du har nådd maksimalt antall mottakere",
     close: "Lukk",
-    showEarnings: "Vis inntjening",
+    showEarnings: "Vis inntjening til mottaker",
     showEarningsDescription: "La mottakeren se hva du tjener",
   };
 
@@ -132,9 +142,10 @@ export function ManageSharingModal({
 
     setError(null);
     startAddTransition(async () => {
-      const result = await createShare(identifier.trim());
+      const result = await createShare(identifier.trim(), { showEarnings: newRecipientShowEarnings });
       if (result.success) {
         setIdentifier("");
+        setNewRecipientShowEarnings(false); // Reset toggle for next recipient
         router.refresh();
       } else {
         setError(result.error);
@@ -145,12 +156,16 @@ export function ManageSharingModal({
   const handleRemove = (recipientId: string) => {
     setRemovingId(recipientId);
     startRemoveTransition(async () => {
+      // Optimistic update - remove from list immediately
+      setOptimisticRecipients({ type: "remove", id: recipientId });
+
       const result = await removeShare(recipientId);
       if (!result.success) {
         setError(result.error);
+        // On error, refresh to restore the correct state
+        router.refresh();
       }
       setRemovingId(null);
-      router.refresh();
     });
   };
 
@@ -160,15 +175,15 @@ export function ManageSharingModal({
 
     startToggleTransition(async () => {
       // Optimistic update
-      setOptimisticRecipients({ id: recipientId, showEarnings: newValue });
+      setOptimisticRecipients({ type: "toggle", id: recipientId, showEarnings: newValue });
 
       const result = await toggleShareEarnings(recipientId, newValue);
       if (!result.success) {
         setError(result.error);
         // Revert optimistic update on error by refreshing
+        router.refresh();
       }
       setTogglingId(null);
-      router.refresh();
     });
   };
 
@@ -210,6 +225,19 @@ export function ManageSharingModal({
                   }}
                   disabled={isAdding}
                 />
+                <label className="flex items-center justify-between cursor-pointer select-none pt-4 pb-1">
+                  <span className="flex items-center gap-2">
+                    <DollarSign className={`h-4 w-4 transition-colors ${newRecipientShowEarnings ? "text-success" : "text-text-muted"}`} />
+                    <span className="text-sm text-text-secondary">{sharing.showEarnings}</span>
+                  </span>
+                  <Checkbox
+                    checked={newRecipientShowEarnings}
+                    onCheckedChange={(checked) => setNewRecipientShowEarnings(checked === true)}
+                    disabled={isAdding}
+                    aria-label={sharing.showEarningsDescription}
+                    className="h-5 w-5"
+                  />
+                </label>
                 <Button
                   type="button"
                   onClick={handleAdd}
