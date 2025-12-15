@@ -18,6 +18,7 @@ interface TimelineEntry {
   type: 'future' | 'current' | 'past';
   dateRange: string;
   endDate: string | null;
+  changes: string[]; // What changed from previous entry
 }
 
 /**
@@ -103,9 +104,74 @@ function getEndDate(snapshots: WageSnapshot[], currentIndex: number): string | n
 }
 
 /**
+ * Detect what changed between two snapshots
+ * Returns array of change descriptions
+ */
+function detectChanges(
+  current: WageSnapshot,
+  previous: WageSnapshot | null,
+  t: Dictionary
+): string[] {
+  if (!previous) return [];
+
+  const changes: string[] = [];
+
+  // Hourly wage change
+  if (current.hourly_wage !== previous.hourly_wage) {
+    changes.push(`${t.pages.settings.pay.wageHistory.changes.wage}: ${previous.hourly_wage} → ${current.hourly_wage} kr/t`);
+  }
+
+  // Wage level change (tariff level)
+  if (current.wage_level !== previous.wage_level) {
+    if (current.wage_level === null && previous.wage_level !== null) {
+      changes.push(t.pages.settings.pay.wageHistory.changes.toCustomWage);
+    } else if (current.wage_level !== null && previous.wage_level === null) {
+      changes.push(t.pages.settings.pay.wageHistory.changes.toTariff);
+    } else if (current.wage_level !== null && previous.wage_level !== null) {
+      changes.push(`${t.pages.settings.pay.wageHistory.changes.tariffLevel}: ${previous.wage_level} → ${current.wage_level}`);
+    }
+  }
+
+  // Tax enabled change
+  if (current.tax_enabled !== previous.tax_enabled) {
+    changes.push(current.tax_enabled
+      ? t.pages.settings.pay.wageHistory.changes.taxEnabled
+      : t.pages.settings.pay.wageHistory.changes.taxDisabled);
+  } else if (current.tax_enabled && current.tax_percentage !== previous.tax_percentage) {
+    // Tax percentage change (only if tax is enabled)
+    changes.push(`${t.pages.settings.pay.wageHistory.changes.taxRate}: ${previous.tax_percentage}% → ${current.tax_percentage}%`);
+  }
+
+  // Break enabled change
+  if (current.break_enabled !== previous.break_enabled) {
+    changes.push(current.break_enabled
+      ? t.pages.settings.pay.wageHistory.changes.breakEnabled
+      : t.pages.settings.pay.wageHistory.changes.breakDisabled);
+  } else if (current.break_enabled) {
+    // Break settings changes (only if break is enabled)
+    if (current.break_method !== previous.break_method) {
+      changes.push(t.pages.settings.pay.wageHistory.changes.breakMethod);
+    }
+    if (current.break_threshold_hours !== previous.break_threshold_hours ||
+        current.break_deduction_minutes !== previous.break_deduction_minutes) {
+      changes.push(t.pages.settings.pay.wageHistory.changes.breakSettings);
+    }
+  }
+
+  // Supplements change (simple check - compare rule count)
+  const currentRules = current.supplements?.rules?.length || 0;
+  const previousRules = previous.supplements?.rules?.length || 0;
+  if (currentRules !== previousRules) {
+    changes.push(t.pages.settings.pay.wageHistory.changes.supplements);
+  }
+
+  return changes;
+}
+
+/**
  * Categorize snapshots into timeline entries
  */
-function categorizeSnapshots(snapshots: WageSnapshot[], nowText: string, locale: string): TimelineEntry[] {
+function categorizeSnapshots(snapshots: WageSnapshot[], nowText: string, locale: string, t: Dictionary): TimelineEntry[] {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -143,8 +209,8 @@ function categorizeSnapshots(snapshots: WageSnapshot[], nowText: string, locale:
   // Find the current entry (only one should exist)
   const hasFutureEntries = entriesWithTypes.some(e => e.type === 'future');
 
-  // Second pass: format date ranges
-  return entriesWithTypes.map((entry) => {
+  // Second pass: format date ranges and detect changes
+  return entriesWithTypes.map((entry, index) => {
     const { snapshot, type, fromDate, endDate } = entry;
     const isCurrent = type === 'current';
     const isPast = type === 'past';
@@ -164,11 +230,18 @@ function categorizeSnapshots(snapshots: WageSnapshot[], nowText: string, locale:
       displayEndDate = endDate;
     }
 
+    // Detect changes from previous entry (next in array since sorted newest first)
+    const previousSnapshot = index < entriesWithTypes.length - 1
+      ? entriesWithTypes[index + 1].snapshot
+      : null;
+    const changes = detectChanges(snapshot, previousSnapshot, t);
+
     return {
       snapshot,
       type,
       dateRange: formatDateRange(fromDate, displayEndDate, nowText, locale, isPast),
       endDate,
+      changes,
     };
   });
 }
@@ -184,8 +257,12 @@ export function WageHistoryTimeline({
   const locale = t.common.currency === 'kr' ? 'no-NO' : 'en-US';
   const nowText = t.pages.settings.pay.wageHistory.now;
 
+  // Find the most recent snapshot (first in array since sorted by date desc)
+  const mostRecentSnapshot = snapshots.length > 0 ? snapshots[0] : null;
+
   const handleAddNew = () => {
-    setSelectedSnapshot(null);
+    // Pre-fill with the most recent snapshot's values
+    setSelectedSnapshot(mostRecentSnapshot);
     setModalMode('create');
     setModalOpen(true);
   };
@@ -202,11 +279,34 @@ export function WageHistoryTimeline({
   };
 
   // Categorize all snapshots
-  const entries = categorizeSnapshots(snapshots, nowText, locale);
+  const entries = categorizeSnapshots(snapshots, nowText, locale, t);
 
-  // Find current entry index
-  const _currentIndex = entries.findIndex(e => e.type === 'current');
-  const _hasFutureEntries = entries.some(e => e.type === 'future');
+  // Find current entry and its wage
+  const currentEntry = entries.find(e => e.type === 'current');
+  const currentWage = currentEntry?.snapshot.hourly_wage;
+
+  // Find which past entry first introduced the current wage (if the current entry only changed settings)
+  // This is the entry that should be highlighted in blue
+  const currentEntryIndex = entries.findIndex(e => e.type === 'current');
+  const currentEntryChangedWage = currentEntry && currentEntryIndex < entries.length - 1 &&
+    currentEntry.snapshot.hourly_wage !== entries[currentEntryIndex + 1]?.snapshot.hourly_wage;
+
+  // If current entry didn't introduce the wage, find the past entry that did
+  let highlightedEntryIndex: number | null = null;
+  if (!currentEntryChangedWage && currentWage !== undefined && currentEntryIndex !== -1) {
+    // Look through past entries (after current in array) to find where this wage was introduced
+    for (let i = currentEntryIndex + 1; i < entries.length; i++) {
+      const entry = entries[i];
+      const prevEntry = i < entries.length - 1 ? entries[i + 1] : null;
+
+      // This entry introduced the current wage if it has the current wage and the previous one doesn't
+      if (entry.snapshot.hourly_wage === currentWage &&
+          (!prevEntry || prevEntry.snapshot.hourly_wage !== currentWage)) {
+        highlightedEntryIndex = i;
+        break;
+      }
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -228,16 +328,27 @@ export function WageHistoryTimeline({
           {/* Timeline entries */}
           <div className="space-y-0 relative">
             {entries.map((entry, index) => {
-              const { snapshot, type, dateRange } = entry;
+              const { snapshot, type, dateRange, changes } = entry;
               const isCurrent = type === 'current';
               const isFuture = type === 'future';
               const _isPast = type === 'past';
-              const supplementCount = snapshot.supplements?.rules?.length || 0;
               const isLast = index === entries.length - 1;
               // Check if any previous entry (index < current) is future
               const hasFutureAbove = entries.slice(0, index).some(e => e.type === 'future');
               // Only show dashed line for future entries and current entry if there's a future above
               const _shouldBeDashed = isFuture || (isCurrent && hasFutureAbove);
+
+              // Check if this entry introduced a new hourly rate (different from previous/older entry)
+              const previousEntry = index < entries.length - 1 ? entries[index + 1] : null;
+              const wageChanged = previousEntry && snapshot.hourly_wage !== previousEntry.snapshot.hourly_wage;
+
+              // Should this entry's wage be highlighted in blue?
+              // - Never highlight future entries
+              // - Highlight past entries that introduced the current wage (when current entry only changed settings)
+              const shouldHighlightWage = !isFuture && !isCurrent && index === highlightedEntryIndex;
+
+              // Filter out wage change from displayed changes (since we show wage as title when it changes)
+              const nonWageChanges = changes.filter(c => !c.includes('kr/t'));
 
               return (
                 <div
@@ -245,13 +356,15 @@ export function WageHistoryTimeline({
                   className={`relative ${isLast ? 'pb-0' : 'pb-4'}`}
                 >
                   {/* Vertical line - full height solid for non-future, non-current */}
+                  {/* For last entry, line stops at the dot (50%) instead of going to the bottom */}
                   {!isCurrent && !isFuture && (
-                    <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-border z-5" />
+                    <div className={`absolute left-0 top-0 w-0.5 bg-border z-5 ${isLast ? 'bottom-1/2' : 'bottom-0'}`} />
                   )}
 
                   {/* Future entry - fully dashed */}
+                  {/* For last entry, line stops at the dot (50%) instead of going to the bottom */}
                   {isFuture && (
-                    <div className="absolute left-0 top-0 bottom-0 w-0.5 border-l-2 border-dashed border-border z-5" />
+                    <div className={`absolute left-0 top-0 w-0.5 border-l-2 border-dashed border-border z-5 ${isLast ? 'bottom-1/2' : 'bottom-0'}`} />
                   )}
 
                   {/* Content wrapper - excludes bottom spacing */}
@@ -270,8 +383,10 @@ export function WageHistoryTimeline({
                             ? 'border-l-2 border-dashed border-border'
                             : 'bg-border'
                         }`} />
-                        {/* Line from dot to bottom of content - always solid */}
-                        <div className="absolute left-0 top-1/2 bottom-0 w-0.5 bg-border z-5" />
+                        {/* Line from dot to bottom of content - always solid, but only if not last entry */}
+                        {!isLast && (
+                          <div className="absolute left-0 top-1/2 bottom-0 w-0.5 bg-border z-5" />
+                        )}
                       </>
                     )}
 
@@ -297,30 +412,37 @@ export function WageHistoryTimeline({
                     >
                     {/* Left: Wage info */}
                     <div className="flex-1 min-w-0">
-                      {/* Wage rate + supplements */}
+                      {/* Title: wage rate OR change description */}
                       <div
-                        className={`font-semibold text-text-primary ${
-                          isCurrent ? 'text-2xl' : 'text-base'
+                        className={`font-semibold ${
+                          // Larger text for wage display, smaller for change descriptions
+                          wageChanged || shouldHighlightWage || nonWageChanges.length === 0
+                            ? (isCurrent ? 'text-2xl' : 'text-base')
+                            : (isCurrent ? 'text-lg' : 'text-sm')
                         }`}
                       >
-                        <span>
-                          {snapshot.hourly_wage.toFixed(2)} kr/t
-                          {!isCurrent && supplementCount > 0 && (
-                            <span className="text-text-secondary">
-                              {' '}•{' '}
-                              {t.pages.settings.pay.wageHistory.supplementsCountShort.replace(
-                                '{count}',
-                                String(supplementCount)
-                              )}
-                            </span>
-                          )}
-                        </span>
+                        {wageChanged || shouldHighlightWage ? (
+                          // Entry that introduced a rate - highlight in blue if it's the one that introduced the current wage
+                          <span className={shouldHighlightWage ? 'text-blue-500' : 'text-text-primary'}>
+                            {snapshot.hourly_wage.toFixed(2)} kr/t
+                          </span>
+                        ) : nonWageChanges.length > 0 ? (
+                          // Entry that only changed settings - show the changes as title
+                          <span className="text-text-primary">
+                            {nonWageChanges.map((change, i) => (
+                              <span key={i} className="block">{change}</span>
+                            ))}
+                          </span>
+                        ) : (
+                          // Fallback to wage if no changes detected (baseline or first entry)
+                          <span className="text-text-primary">
+                            {snapshot.hourly_wage.toFixed(2)} kr/t
+                          </span>
+                        )}
                       </div>
 
                       {/* Date range */}
-                      <div
-                        className="text-text-secondary mt-1 text-sm pl-[1ch]"
-                      >
+                      <div className="text-text-secondary mt-1 text-sm">
                         {dateRange}
                       </div>
                     </div>
