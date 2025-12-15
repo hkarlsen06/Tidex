@@ -26,6 +26,8 @@ type ShiftCardProps = {
   progress?: number;
   /** Tax settings for displaying net earnings */
   taxSettings?: TaxSettings;
+  /** When false, hides earnings-related data (for shared shifts with earnings hidden) */
+  showEarnings?: boolean;
 };
 
 export function formatDateParts(date: string, locale: string, daysShort: readonly string[]) {
@@ -59,7 +61,7 @@ export function formatPlainAmount(value: number) {
   return formatPlainAmountValue(value);
 }
 
-export function ShiftCard({ shift, onClick, isToday = false, progress, taxSettings }: ShiftCardProps) {
+export function ShiftCard({ shift, onClick, isToday = false, progress, taxSettings, showEarnings = true }: ShiftCardProps) {
   const { t, locale } = useTranslations();
   const formatCurrency = useFormatCurrency();
   const { computed } = shift;
@@ -131,12 +133,14 @@ export function ShiftCard({ shift, onClick, isToday = false, progress, taxSettin
             <span className="font-medium text-text-primary">{formatHours(paidHours)}</span>
           </div>
         </div>
-        <div className="text-right">
-          <p className="text-2xl font-semibold tracking-tight text-text-primary">
-            {formatCurrency(displayAmount)}
-          </p>
-          <p className="text-xs">{breakdown}</p>
-        </div>
+        {showEarnings && (
+          <div className="text-right">
+            <p className="text-2xl font-semibold tracking-tight text-text-primary">
+              {formatCurrency(displayAmount)}
+            </p>
+            <p className="text-xs">{breakdown}</p>
+          </div>
+        )}
       </CardHeader>
     </Card>
   );

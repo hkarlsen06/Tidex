@@ -1782,6 +1782,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
               halfTaxMonth: userSettings.half_tax_month ?? null,
             }}
             readOnly={readOnly}
+            showEarnings={showEarnings}
           />
         </div>
       </div>
@@ -1834,9 +1835,11 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
                         <path d="m6 9 6 6 6-6" />
                       </svg>
                     </div>
-                    <span className="font-semibold text-text-primary">
-                      {formatCurrency(group.totalGross)}
-                    </span>
+                    {showEarnings && (
+                      <span className="font-semibold text-text-primary">
+                        {formatCurrency(group.totalGross)}
+                      </span>
+                    )}
                   </div>
                   <div className="space-y-4">
                     {isTodayBeforeFirstShift && (
@@ -1869,6 +1872,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
                                   percentage: shift.tax_percentage ?? 0,
                                   halfTaxMonth: userSettings.half_tax_month ?? null,
                                 }}
+                                showEarnings={showEarnings}
                               />
                               {isNextUpcomingShift && countdown.text && (
                                 <p className="text-xs text-text-muted text-center">{countdown.text}</p>
@@ -2064,6 +2068,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
       userSettings={userSettings}
       presetRules={presetRules}
       readOnly={readOnly}
+      showEarnings={showEarnings}
     />
     </ScrollablePageWrapper>
   );

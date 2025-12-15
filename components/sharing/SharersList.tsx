@@ -101,12 +101,12 @@ export function SharersList({ sharers, onSelect }: SharersListProps) {
             )}
           >
             <UserAvatar user={sharer} size="md" />
-            <div className="flex flex-1 flex-col">
-              <span className="text-sm font-medium text-text-primary">
+            <div className="flex flex-1 flex-col min-w-0">
+              <span className="text-sm font-medium text-text-primary truncate-fade">
                 {getDisplayName(sharer)}
               </span>
               {getSecondaryInfo(sharer) && (
-                <span className="text-xs text-text-muted">
+                <span className="text-xs text-text-muted truncate-fade">
                   {getSecondaryInfo(sharer)}
                 </span>
               )}

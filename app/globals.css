@@ -141,6 +141,13 @@
   animation: progress-grow 1s linear forwards;
 }
 
+@utility truncate-fade {
+  overflow: hidden;
+  white-space: nowrap;
+  mask-image: linear-gradient(to right, black calc(100% - 24px), transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, black calc(100% - 24px), transparent 100%);
+}
+
 @layer utilities {
   :root {
     color-scheme: light dark;

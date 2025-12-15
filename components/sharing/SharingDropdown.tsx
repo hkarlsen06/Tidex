@@ -114,12 +114,12 @@ export function SharingDropdown({
         {selected ? (
           <>
             <UserAvatar user={selected} />
-            <div className="flex flex-1 flex-col text-left">
-              <span className="text-sm font-medium text-text-primary">
+            <div className="flex flex-1 flex-col text-left min-w-0">
+              <span className="text-sm font-medium text-text-primary truncate-fade">
                 {getDisplayName(selected)}
               </span>
               {getSecondaryInfo(selected) && (
-                <span className="text-xs text-text-muted">
+                <span className="text-xs text-text-muted truncate-fade">
                   {getSecondaryInfo(selected)}
                 </span>
               )}
@@ -158,12 +158,12 @@ export function SharingDropdown({
               )}
             >
               <UserAvatar user={sharer} />
-              <div className="flex flex-col">
-                <span className="text-sm font-medium text-text-primary">
+              <div className="flex flex-col min-w-0 flex-1">
+                <span className="text-sm font-medium text-text-primary truncate-fade">
                   {getDisplayName(sharer)}
                 </span>
                 {getSecondaryInfo(sharer) && (
-                  <span className="text-xs text-text-muted">
+                  <span className="text-xs text-text-muted truncate-fade">
                     {getSecondaryInfo(sharer)}
                   </span>
                 )}
