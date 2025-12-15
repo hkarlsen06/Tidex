@@ -11,6 +11,7 @@ import {
 } from "@/lib/formatters";
 import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
 import { getDateFormatter } from "@/lib/i18n/locale";
+import { useCurrency } from "@/components/providers/CurrencyProvider";
 
 export type TaxSettings = {
   enabled: boolean;
@@ -64,6 +65,7 @@ export function formatPlainAmount(value: number) {
 export function ShiftCard({ shift, onClick, isToday = false, progress, taxSettings, showEarnings = true }: ShiftCardProps) {
   const { t, locale } = useTranslations();
   const formatCurrency = useFormatCurrency();
+  const { symbol: currencySymbol, display: currencyDisplay } = useCurrency();
   const { computed } = shift;
   const { dayName, dayNumber, monthName } = formatDateParts(shift.shift_date, locale, t.dateTime.daysShort);
   const { basePay, supplementPay, gross, paidHours } = computed;
@@ -133,14 +135,23 @@ export function ShiftCard({ shift, onClick, isToday = false, progress, taxSettin
             <span className="font-medium text-text-primary">{formatHours(paidHours)}</span>
           </div>
         </div>
-        {showEarnings && (
-          <div className="text-right">
-            <p className="text-2xl font-semibold tracking-tight text-text-primary">
-              {formatCurrency(displayAmount)}
-            </p>
-            <p className="text-xs">{breakdown}</p>
-          </div>
-        )}
+        <div className="text-right">
+          {showEarnings ? (
+            <>
+              <p className="text-2xl font-semibold tracking-tight text-text-primary">
+                {formatCurrency(displayAmount)}
+              </p>
+              <p className="text-xs">{breakdown}</p>
+            </>
+          ) : (
+            <>
+              <p className="text-2xl font-semibold tracking-tight text-text-muted">
+                {currencyDisplay === "prefix" ? `${currencySymbol}——` : `—— ${currencySymbol}`}
+              </p>
+              <p className="text-xs text-text-muted">——</p>
+            </>
+          )}
+        </div>
       </CardHeader>
     </Card>
   );
