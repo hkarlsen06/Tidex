@@ -20,7 +20,7 @@ import { SupplementsEditor, SupplementsData } from '@/components/settings/Supple
 import type { BreakMethod } from '@/lib/payroll/types';
 import { WageSourceCard } from '@/components/settings/pay/WageSourceCard';
 import { PRESET_WAGE_RATES, PRESET_SUPPLEMENT_RULES } from '@/lib/payroll';
-import { Calendar, AlertTriangle, Trash2, Check, X } from 'lucide-react';
+import { Calendar, AlertTriangle, Trash2, Check, X, ChevronDown } from 'lucide-react';
 import {
   createWageSnapshotAction,
   updateWageSnapshotAction,
@@ -106,6 +106,8 @@ export function WageHistoryModal({
 
   const [affectedShiftCount, setAffectedShiftCount] = useState<number | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showSupplementsInView, setShowSupplementsInView] = useState(false);
+  const [showTariffSupplements, setShowTariffSupplements] = useState(false);
 
   const handleClose = () => {
     // Reset form state when closing
@@ -122,6 +124,8 @@ export function WageHistoryModal({
     setBreakDeductionMinutes('30');
     setError(null);
     setAffectedShiftCount(null);
+    setShowSupplementsInView(false);
+    setShowTariffSupplements(false);
     onClose();
   };
 
@@ -280,24 +284,39 @@ export function WageHistoryModal({
               }}
             />
 
-            {/* Supplements */}
-            <div className="space-y-4">
-              <div>
-                <h3 className="text-sm font-semibold">{t.pages.settings.pay.wageHistory.modal.supplementsTitle}</h3>
-                <p className="text-sm text-text-secondary mt-1">
-                  {snapshot.wage_level !== null
-                    ? t.pages.settings.pay.wageHistory.modal.supplementsTariff
-                    : t.pages.settings.pay.wageHistory.modal.supplementsCustom}
-                </p>
-              </div>
+            {/* Supplements - Collapsible */}
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={() => setShowSupplementsInView(!showSupplementsInView)}
+                className="flex items-center justify-between w-full text-left group"
+              >
+                <div>
+                  <h3 className="text-sm font-semibold">{t.pages.settings.pay.wageHistory.modal.supplementsTitle}</h3>
+                  <p className="text-sm text-text-secondary mt-1">
+                    {snapshot.wage_level !== null
+                      ? t.pages.settings.pay.wageHistory.modal.supplementsTariff
+                      : t.pages.settings.pay.wageHistory.modal.supplementsCustom}
+                  </p>
+                </div>
+                <ChevronDown
+                  className={`h-5 w-5 text-text-muted transition-transform duration-200 ${
+                    showSupplementsInView ? 'rotate-180' : ''
+                  }`}
+                />
+              </button>
 
-              <SupplementsEditor
-                value={snapshot.supplements && snapshot.supplements.rules.length > 0
-                  ? snapshot.supplements
-                  : (snapshot.wage_level !== null ? TARIFF_SUPPLEMENTS_DATA : null)}
-                onChange={() => {}}
-                readOnly={true}
-              />
+              {showSupplementsInView && (
+                <div className="pt-2">
+                  <SupplementsEditor
+                    value={snapshot.supplements && snapshot.supplements.rules.length > 0
+                      ? snapshot.supplements
+                      : (snapshot.wage_level !== null ? TARIFF_SUPPLEMENTS_DATA : null)}
+                    onChange={() => {}}
+                    readOnly={true}
+                  />
+                </div>
+              )}
             </div>
 
             <Separator />
@@ -319,7 +338,9 @@ export function WageHistoryModal({
                     t.common.off
                   }
                   {' • '}
-                  {snapshot.break_threshold_hours}h terskel, {snapshot.break_deduction_minutes} min trekk
+                  {t.onboarding.completionStep.breakSummary
+                    .replace('{duration}', String(snapshot.break_deduction_minutes))
+                    .replace('{threshold}', String(snapshot.break_threshold_hours))}
                 </p>
               )}
             </div>
@@ -426,38 +447,75 @@ export function WageHistoryModal({
             }}
           />
 
-          {/* Save Button - only show for tariff/preset mode */}
-          {usePreset && (
+          {/* Save Button - only show for tariff/preset mode in create mode */}
+          {usePreset && mode === 'create' && (
             <div className="flex justify-end">
               <Button
                 onClick={handleSave}
                 disabled={pending || isCustomWageInvalid}
                 className="w-full sm:w-auto"
               >
-                {pending ? t.pages.settings.pay.wageHistory.modal.saving : mode === 'edit' ? t.pages.settings.pay.wageHistory.modal.save : t.pages.settings.pay.wageHistory.modal.create}
+                {pending ? t.pages.settings.pay.wageHistory.modal.saving : t.pages.settings.pay.wageHistory.modal.create}
               </Button>
             </div>
           )}
 
-          {/* Supplements */}
-          <div className="space-y-4">
-            <div>
-              <h3 className="text-sm font-semibold">{t.pages.settings.pay.wageHistory.modal.supplementsTitle}</h3>
-              <p className="text-sm text-text-secondary mt-1">
-                {usePreset
-                  ? t.pages.settings.pay.wageHistory.modal.supplementsTariff
-                  : t.pages.settings.pay.wageHistory.modal.supplementsCustom}
-              </p>
-            </div>
+          <Separator />
 
-            <div className="max-w-full">
-              <SupplementsEditor
-                key={usePreset ? 'tariff' : 'custom'}
-                value={usePreset ? TARIFF_SUPPLEMENTS_DATA : customSupplements}
-                onChange={setCustomSupplements}
-                readOnly={usePreset}
-              />
-            </div>
+          {/* Supplements */}
+          <div className="space-y-2">
+            {usePreset ? (
+              <>
+                {/* Tariff supplements - collapsible */}
+                <button
+                  type="button"
+                  onClick={() => setShowTariffSupplements(!showTariffSupplements)}
+                  className="flex items-center justify-between w-full text-left group"
+                >
+                  <div>
+                    <h3 className="text-sm font-semibold">{t.pages.settings.pay.wageHistory.modal.supplementsTitle}</h3>
+                    <p className="text-sm text-text-secondary mt-1">
+                      {t.pages.settings.pay.wageHistory.modal.supplementsTariff}
+                    </p>
+                  </div>
+                  <ChevronDown
+                    className={`h-5 w-5 text-text-muted transition-transform duration-200 ${
+                      showTariffSupplements ? 'rotate-180' : ''
+                    }`}
+                  />
+                </button>
+
+                {showTariffSupplements && (
+                  <div className="pt-2 max-w-full">
+                    <SupplementsEditor
+                      key="tariff"
+                      value={TARIFF_SUPPLEMENTS_DATA}
+                      onChange={() => {}}
+                      readOnly={true}
+                    />
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                {/* Custom supplements - always visible */}
+                <div>
+                  <h3 className="text-sm font-semibold">{t.pages.settings.pay.wageHistory.modal.supplementsTitle}</h3>
+                  <p className="text-sm text-text-secondary mt-1">
+                    {t.pages.settings.pay.wageHistory.modal.supplementsCustom}
+                  </p>
+                </div>
+
+                <div className="pt-2 max-w-full">
+                  <SupplementsEditor
+                    key="custom"
+                    value={customSupplements}
+                    onChange={setCustomSupplements}
+                    readOnly={false}
+                  />
+                </div>
+              </>
+            )}
           </div>
 
           <Separator />
