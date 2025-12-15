@@ -51,6 +51,8 @@ type MonthlyEarningsCalendarProps = {
   taxSettings?: TaxSettings;
   /** When true, hides copy/move action buttons (for shared shifts view) */
   readOnly?: boolean;
+  /** When false, hides earnings-related data (for shared shifts with earnings hidden) */
+  showEarnings?: boolean;
 };
 
 function buildEarningsByDate(shifts: ShiftWithComputations[]): EarningsByDate {
@@ -149,12 +151,15 @@ export function MonthlyEarningsCalendar({
   isOffline = false,
   taxSettings,
   readOnly = false,
+  showEarnings = true,
 }: MonthlyEarningsCalendarProps) {
   const { t } = useTranslations();
   const formatCurrency = useFormatCurrency();
   const { symbol: currencySymbol } = useCurrency();
   const { goToPreviousMonth, goToNextMonth } = useMonth();
+  // When showEarnings is false, force hours view (money mode not available)
   const [viewMode, setViewMode] = useState<"money" | "hours">("hours");
+  const effectiveViewMode = showEarnings ? viewMode : "hours";
   const [localDirection, setLocalDirection] = useState<'next' | 'previous' | null>(null);
   const [prevMonth, setPrevMonth] = useState(month);
   const swipeContainerRef = useRef<HTMLDivElement>(null);
@@ -329,24 +334,26 @@ export function MonthlyEarningsCalendar({
               </>
             )}
           </div>
-          <div
-            key={isShowingSelectedTotal ? `selected-${selectedDates?.size}` : `total-${month.getFullYear()}-${month.getMonth()}`}
-            className={`text-right relative ${isShowingSelectedTotal ? '' : getAnimationClasses(localDirection)}`}
-          >
-            <div className="font-semibold text-text-primary">
-              {totalEarnings === 0 ? '—' : formatCurrency(taxSettings?.enabled ? netEarnings : totalEarnings)}
-            </div>
-            {taxSettings?.enabled && totalEarnings > 0 && (
-              <div className="text-sm text-text-muted absolute right-0">
-                {formatCurrency(totalEarnings)}
+          {showEarnings && (
+            <div
+              key={isShowingSelectedTotal ? `selected-${selectedDates?.size}` : `total-${month.getFullYear()}-${month.getMonth()}`}
+              className={`text-right relative ${isShowingSelectedTotal ? '' : getAnimationClasses(localDirection)}`}
+            >
+              <div className="font-semibold text-text-primary">
+                {totalEarnings === 0 ? '—' : formatCurrency(taxSettings?.enabled ? netEarnings : totalEarnings)}
               </div>
-            )}
-          </div>
+              {taxSettings?.enabled && totalEarnings > 0 && (
+                <div className="text-sm text-text-muted absolute right-0">
+                  {formatCurrency(totalEarnings)}
+                </div>
+              )}
+            </div>
+          )}
         </div>
         <div className="pb-6">
           <ShiftsCalendar
             month={month}
-            mode={viewMode}
+            mode={effectiveViewMode}
             earningsByDate={earningsByDate}
             hoursByDate={hoursByDate}
             onMonthChange={onMonthChange}
@@ -476,7 +483,7 @@ export function MonthlyEarningsCalendar({
                 onClick={() => setViewMode("hours")}
                 className={cn(
                   "h-9 rounded-full px-4 text-sm flex-1 whitespace-nowrap transition-none",
-                  viewMode === "hours"
+                  viewMode === "hours" || !showEarnings
                     ? "bg-white dark:bg-slate-700 text-black dark:text-white shadow-app-md font-semibold"
                     : "text-text-muted hover:text-text-primary hover:bg-surface-secondary/50"
                 )}
@@ -484,20 +491,23 @@ export function MonthlyEarningsCalendar({
                 <span>--:--</span>
                 <Clock strokeWidth={2} aria-hidden="true" />
               </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                aria-pressed={viewMode === "money"}
-                onClick={() => setViewMode("money")}
-                className={cn(
-                  "h-9 rounded-full px-4 text-sm flex-1 whitespace-nowrap transition-none",
-                  viewMode === "money"
-                    ? "bg-white dark:bg-slate-700 text-black dark:text-white shadow-app-md font-semibold"
-                    : "text-text-muted hover:text-text-primary hover:bg-surface-secondary/50"
-                )}
-              >
-                ---- {currencySymbol}
-              </Button>
+              {/* Money toggle hidden when earnings are not visible */}
+              {showEarnings && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  aria-pressed={viewMode === "money"}
+                  onClick={() => setViewMode("money")}
+                  className={cn(
+                    "h-9 rounded-full px-4 text-sm flex-1 whitespace-nowrap transition-none",
+                    viewMode === "money"
+                      ? "bg-white dark:bg-slate-700 text-black dark:text-white shadow-app-md font-semibold"
+                      : "text-text-muted hover:text-text-primary hover:bg-surface-secondary/50"
+                  )}
+                >
+                  ---- {currencySymbol}
+                </Button>
+              )}
             </div>
           )}
         </div>

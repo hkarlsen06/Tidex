@@ -257,11 +257,11 @@ export function ManageSharingModal({
                       <RecipientAvatar user={recipient} />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-text-primary truncate">
+                      <p className="text-sm font-medium text-text-primary truncate-fade">
                         {getDisplayName(recipient)}
                       </p>
                       {getSecondaryInfo(recipient) && (
-                        <p className="truncate text-xs text-text-muted">
+                        <p className="truncate-fade text-xs text-text-muted">
                           {getSecondaryInfo(recipient)}
                         </p>
                       )}

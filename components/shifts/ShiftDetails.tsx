@@ -120,6 +120,7 @@ export type ShiftDetailsProps = {
   userSettings?: UserSettings;
   presetRules?: SupplementRule[];
   readOnly?: boolean; // Hide edit/delete buttons when true (e.g., from dashboard)
+  showEarnings?: boolean; // When false, hides earnings-related data (for shared shifts with earnings hidden)
   onShiftUpdate?: (updatedSupplements: any) => void; // Called after shift is updated with new custom supplements
   onOptimisticEdit?: (shiftId: string, updates: { shift_date: string; start_time: string; end_time: string }) => void; // Called immediately for optimistic UI update
   onEditError?: (shiftId: string, error: string) => void; // Called when edit fails to allow parent to revert
@@ -152,6 +153,7 @@ export function ShiftDetails({
   userSettings = {},
   presetRules = [],
   readOnly = false,
+  showEarnings = true,
   onShiftUpdate,
   onOptimisticEdit,
   onEditError,
@@ -401,47 +403,52 @@ export function ShiftDetails({
               </div>
             </div>
 
-            <div className="h-px bg-border-subtle" />
+            {/* Earnings sections - hidden when showEarnings is false */}
+            {showEarnings && (
+              <>
+                <div className="h-px bg-border-subtle" />
 
-            <div className="flex items-center justify-between">
-              <div className="text-sm text-text-secondary">{t.pages.shifts.details.basePay}</div>
-              <div className="text-base font-medium text-text-primary">
-                {formatCurrency(shift.computed.basePay)}
-              </div>
-            </div>
+                <div className="flex items-center justify-between">
+                  <div className="text-sm text-text-secondary">{t.pages.shifts.details.basePay}</div>
+                  <div className="text-base font-medium text-text-primary">
+                    {formatCurrency(shift.computed.basePay)}
+                  </div>
+                </div>
 
-            {hasSupplementBreakdown ? <div className="h-px bg-border-subtle" /> : null}
+                {hasSupplementBreakdown ? <div className="h-px bg-border-subtle" /> : null}
 
-            {hasSupplementBreakdown ? (
-              <SupplementBreakdown
-                baseWage={baseWageRate}
-                segments={supplementSegments}
-                customSupplements={shift.custom_supplements}
-              />
-            ) : null}
+                {hasSupplementBreakdown ? (
+                  <SupplementBreakdown
+                    baseWage={baseWageRate}
+                    segments={supplementSegments}
+                    customSupplements={shift.custom_supplements}
+                  />
+                ) : null}
 
-            {/* Custom Supplements Button */}
-            {isEditing && !confirmingDelete && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setCustomSupplementsModalOpen(true)}
-                disabled={isOffline}
-                className="w-full justify-center gap-2 text-sm text-text-secondary hover:text-text-primary"
-              >
-                <Pencil className="h-4 w-4" />
-                {t.pages.shifts.details.editCustomSupplements}
-              </Button>
+                {/* Custom Supplements Button */}
+                {isEditing && !confirmingDelete && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setCustomSupplementsModalOpen(true)}
+                    disabled={isOffline}
+                    className="w-full justify-center gap-2 text-sm text-text-secondary hover:text-text-primary"
+                  >
+                    <Pencil className="h-4 w-4" />
+                    {t.pages.shifts.details.editCustomSupplements}
+                  </Button>
+                )}
+
+                {hasSupplementBreakdown ? <div className="h-px bg-border-subtle" /> : null}
+
+                <div className="flex items-center justify-between pt-2">
+                  <div className="text-sm text-text-secondary">{t.pages.shifts.details.total}</div>
+                  <div className="text-xl font-semibold text-text-primary">
+                    {formatCurrency(shift.computed.gross)}
+                  </div>
+                </div>
+              </>
             )}
-
-            {hasSupplementBreakdown ? <div className="h-px bg-border-subtle" /> : null}
-
-            <div className="flex items-center justify-between pt-2">
-              <div className="text-sm text-text-secondary">{t.pages.shifts.details.total}</div>
-              <div className="text-xl font-semibold text-text-primary">
-                {formatCurrency(shift.computed.gross)}
-              </div>
-            </div>
 
             {/* Snapshot comparison section */}
             {/* NOTE: Snapshot comparison UI removed - wage data is now in wage_snapshots table */}
