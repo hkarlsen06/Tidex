@@ -12,7 +12,7 @@ import { cache } from "react";
 import { cacheTag } from "next/cache";
 import { cookies } from "next/headers";
 import { Effect } from "effect";
-import { ShiftsService, type ShiftsAggregates } from "@/lib/services/shifts";
+import { ShiftsService, type ShiftsAggregates, type PayoutTaxSettings } from "@/lib/services/shifts";
 import { ShiftsLive } from "@/lib/layers/app";
 import { logger } from "@/lib/logger";
 import {
@@ -25,12 +25,24 @@ import { verifySession } from "@/data-access/auth";
 export const PRESET_RULES = PRESET_SUPPLEMENT_RULES;
 
 // Re-export types for backward compatibility
-export type { ShiftsAggregates };
+export type { ShiftsAggregates, PayoutTaxSettings };
 
 export type ShiftLoadOptions = {
   startDate?: string; // YYYY-MM-DD
   endDate?: string; // YYYY-MM-DD
   limit?: number;
+  /**
+   * Year of the earnings month for payout tax calculation.
+   * When both year and month are provided, the service will fetch
+   * the tax settings from the payout month's snapshot.
+   */
+  year?: number;
+  /**
+   * Month (1-12) of the earnings month for payout tax calculation.
+   * When both year and month are provided, the service will fetch
+   * the tax settings from the payout month's snapshot.
+   */
+  month?: number;
 };
 
 /**
@@ -45,6 +57,7 @@ async function getComputedShiftsInternal(
   defaultView: string;
   settings: UserSettings;
   aggregates: ShiftsAggregates;
+  payoutTaxSettings: PayoutTaxSettings;
 }> {
   "use cache: private";
   cacheTag(`user-${userId}`, "user-shifts");
@@ -59,6 +72,8 @@ async function getComputedShiftsInternal(
       startDate: options.startDate,
       endDate: options.endDate,
       limit: options.limit,
+      year: options.year,
+      month: options.month,
     });
 
     return data;
@@ -75,6 +90,7 @@ async function getComputedShiftsInternal(
       defaultView: result.defaultView,
       settings: result.settings,
       aggregates: result.aggregates,
+      payoutTaxSettings: result.payoutTaxSettings,
     };
   } catch (error: any) {
     logger.error("Failed to fetch computed shifts:", error);
@@ -84,6 +100,7 @@ async function getComputedShiftsInternal(
       defaultView: "calendar",
       settings: {},
       aggregates: { totalHours: 0, totalEarnings: 0 },
+      payoutTaxSettings: null,
     };
   }
 }
@@ -107,6 +124,7 @@ export const getComputedShifts = cache(
     defaultView: string;
     settings: UserSettings;
     aggregates: ShiftsAggregates;
+    payoutTaxSettings: PayoutTaxSettings;
   }> => {
     const { user } = await verifySession();
 
@@ -136,6 +154,7 @@ export const getComputedShiftsForApi = cache(
     defaultView: string;
     settings: UserSettings;
     aggregates: ShiftsAggregates;
+    payoutTaxSettings: PayoutTaxSettings;
   }> => {
     return getComputedShiftsInternal(userId, options);
   }

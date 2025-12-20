@@ -19,17 +19,20 @@ import { deleteShift } from "@/app/[locale]/(app)/shifts/_actions/deleteShift";
 import { adjustPayrollDate } from "@/lib/payroll/adjust-payroll-date";
 import { useSwipe } from "@/lib/hooks/useSwipe";
 import { CenteredPageWrapper } from "./CenteredPageWrapper";
+import type { PayoutTaxSettings } from "@/data-access/shifts";
 
 type HomeContentProps = {
   shifts: ShiftWithComputations[];
   settings: UserSettings;
+  payoutTaxSettings?: PayoutTaxSettings;
 };
 
 function calculateMonthData(
   shiftsByMonth: Map<string, ShiftWithComputations[]>,
   month: Date,
   settings: UserSettings,
-  formatCurrency: (value: number) => string
+  formatCurrency: (value: number) => string,
+  payoutTaxSettings?: PayoutTaxSettings
 ): {
   total: string;
   percentageChange?: number;
@@ -54,22 +57,29 @@ function calculateMonthData(
   // Tax settings are now per-shift, but half_tax_month is still global
   const halfTaxMonth = settings.half_tax_month ?? null;
 
+  // Payout month = earnings month + 1 (used for half-tax and payout tax calculations)
+  const payoutMonth = targetMonth + 1 > 12 ? 1 : targetMonth + 1;
+  const lastPayoutMonth = lastMonth + 1 > 12 ? 1 : lastMonth + 1;
+
   const now = new Date();
   const currentTotals = summarizeShiftTotals({
     shifts: currentMonthShifts,
     halfTaxMonth,
     now,
-    month: targetMonth,
+    month: payoutMonth,
+    payoutTaxOverride: payoutTaxSettings ?? undefined,
   });
   const lastMonthTotals = summarizeShiftTotals({
     shifts: lastMonthShifts,
     halfTaxMonth,
     now,
-    month: lastMonth,
+    month: lastPayoutMonth,
+    // Note: We don't have payout tax settings for last month from SSR,
+    // so we fall back to per-shift tax settings for last month comparison
   });
 
-  // Check if any shifts have tax enabled for display purposes
-  const anyTaxEnabled = currentMonthShifts.some(s => s.tax_enabled) || lastMonthShifts.some(s => s.tax_enabled);
+  // Check if payout tax is enabled (prefer payout settings, fall back to per-shift check)
+  const anyTaxEnabled = payoutTaxSettings?.enabled ?? (currentMonthShifts.some(s => s.tax_enabled) || lastMonthShifts.some(s => s.tax_enabled));
   const projectedCurrent = anyTaxEnabled ? currentTotals.net : currentTotals.gross;
   const projectedLastMonth = anyTaxEnabled ? lastMonthTotals.net : lastMonthTotals.gross;
 
@@ -109,7 +119,7 @@ function isFutureMonth(date: Date): boolean {
   );
 }
 
-export function HomeContent({ shifts: initialShifts, settings }: HomeContentProps) {
+export function HomeContent({ shifts: initialShifts, settings, payoutTaxSettings }: HomeContentProps) {
   const { t, locale } = useTranslations();
   const formatCurrency = useFormatCurrency();
   const router = useRouter();
@@ -128,6 +138,17 @@ export function HomeContent({ shifts: initialShifts, settings }: HomeContentProp
   const loadedMonthsRef = useRef<Set<string>>(new Set());
   const loadingMonthsRef = useRef<Set<string>>(new Set());
   const hasInitializedRef = useRef(false);
+  // Track payout tax settings per month (key: "YYYY-MM")
+  const [payoutTaxByMonth, setPayoutTaxByMonth] = useState<Map<string, PayoutTaxSettings>>(() => {
+    // Initialize with SSR-provided payout tax settings for the current month
+    const initial = new Map<string, PayoutTaxSettings>();
+    if (payoutTaxSettings) {
+      const now = new Date();
+      const key = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      initial.set(key, payoutTaxSettings);
+    }
+    return initial;
+  });
 
   // Initialize loaded months synchronously on first render
   // This must happen before any effects run
@@ -205,6 +226,11 @@ export function HomeContent({ shifts: initialShifts, settings }: HomeContentProp
           return Array.from(byId.values());
         });
 
+        // Store payout tax settings for this month
+        if (data.payoutTaxSettings !== undefined) {
+          setPayoutTaxByMonth(prev => new Map(prev).set(key, data.payoutTaxSettings));
+        }
+
         // Mark as successfully loaded
         loadedMonthsRef.current.add(key);
       }
@@ -269,15 +295,23 @@ export function HomeContent({ shifts: initialShifts, settings }: HomeContentProp
     return index;
   }, [shifts]);
 
+  // Get payout tax settings for the currently selected month
+  // Falls back to SSR-provided settings if not yet fetched for this month
+  const currentPayoutTaxSettings = useMemo(() => {
+    const key = `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, '0')}`;
+    return payoutTaxByMonth.get(key) ?? payoutTaxSettings ?? null;
+  }, [month, payoutTaxByMonth, payoutTaxSettings]);
+
   const data = useMemo(
-    () => calculateMonthData(shiftsByMonth, month, settings, formatCurrency),
-    [shiftsByMonth, month, settings, formatCurrency]
+    () => calculateMonthData(shiftsByMonth, month, settings, formatCurrency, currentPayoutTaxSettings),
+    [shiftsByMonth, month, settings, formatCurrency, currentPayoutTaxSettings]
   );
 
   // Check if any shifts have tax enabled (for UI display purposes)
+  // Prefer payout tax settings if available, otherwise fall back to per-shift check
   const taxDeductionEnabled = useMemo(() => {
-    return shifts.some(shift => shift.tax_enabled);
-  }, [shifts]);
+    return currentPayoutTaxSettings?.enabled ?? shifts.some(shift => shift.tax_enabled);
+  }, [shifts, currentPayoutTaxSettings]);
 
   // Check if user has shifts this month but none have completed yet
   const hasPendingShifts = useMemo(() => {

@@ -45,15 +45,17 @@ export default async function Home({ params }: HomeProps) {
   // Adjacent months are fetched on the client after hydration (see HomeContent)
   // This reduces TTFB and payload size significantly, improving FCP/LCP.
   const current = getCurrentYearMonth();
-  const { shifts, settings } = await getComputedShifts(user.id, {
+  const { shifts, settings, payoutTaxSettings } = await getComputedShifts(user.id, {
     startDate: getMonthStart(current.year, current.month),
     endDate: getMonthEnd(current.year, current.month),
-    limit: 60 // ~50 shifts is typical for a month; leave headroom
+    limit: 60, // ~50 shifts is typical for a month; leave headroom
+    year: current.year,
+    month: current.month,
   });
 
   return (
     <I18nProvider locale={_locale as Locale} dictionary={dictionary} namespaces={['pages.home', 'pages.shifts']}>
-      <HomeContent shifts={shifts} settings={settings} />
+      <HomeContent shifts={shifts} settings={settings} payoutTaxSettings={payoutTaxSettings} />
     </I18nProvider>
   );
 }

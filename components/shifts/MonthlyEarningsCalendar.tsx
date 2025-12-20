@@ -21,6 +21,15 @@ type TaxSettings = {
   halfTaxMonth?: number | null;
 };
 
+/**
+ * Payout tax settings from the payout month's snapshot.
+ * Used for calculating after-tax monthly totals.
+ */
+type PayoutTaxSettings = {
+  readonly enabled: boolean;
+  readonly percentage: number;
+} | null;
+
 type MonthlyEarningsCalendarProps = {
   shifts: ShiftWithComputations[];
   month: Date;
@@ -49,6 +58,8 @@ type MonthlyEarningsCalendarProps = {
   newlyAddedDates?: Set<string>;
   isOffline?: boolean;
   taxSettings?: TaxSettings;
+  /** Payout month tax settings for calculating after-tax monthly totals */
+  payoutTaxSettings?: PayoutTaxSettings;
   /** When true, hides copy/move action buttons (for shared shifts view) */
   readOnly?: boolean;
   /** When false, hides earnings-related data (for shared shifts with earnings hidden) */
@@ -150,6 +161,7 @@ export function MonthlyEarningsCalendar({
   newlyAddedDates,
   isOffline = false,
   taxSettings,
+  payoutTaxSettings,
   readOnly = false,
   showEarnings = true,
 }: MonthlyEarningsCalendarProps) {
@@ -221,6 +233,9 @@ export function MonthlyEarningsCalendar({
   );
 
   // Calculate totals - use selected shifts only when in multi-selection mode
+  // Payout month = earnings month + 1 (used for half-tax and payout tax calculations)
+  const payoutMonth = (month.getMonth() + 2) > 12 ? 1 : month.getMonth() + 2;
+
   const { totalEarnings, netEarnings, isShowingSelectedTotal } = useMemo(() => {
     // When dates are selected, show total for selected shifts only
     if (selectedDates && selectedDates.size > 0) {
@@ -231,7 +246,9 @@ export function MonthlyEarningsCalendar({
         shifts: selectedShifts,
         taxSettings,
         now: new Date(),
-        month: month.getMonth() + 1,
+        month: payoutMonth,
+        halfTaxMonth: taxSettings?.halfTaxMonth,
+        payoutTaxOverride: payoutTaxSettings ?? undefined,
       });
       return { totalEarnings: gross, netEarnings: net, isShowingSelectedTotal: true };
     }
@@ -243,10 +260,12 @@ export function MonthlyEarningsCalendar({
       month: month.getMonth() + 1,
       taxSettings,
       now: new Date(),
+      halfTaxMonth: taxSettings?.halfTaxMonth,
+      payoutTaxOverride: payoutTaxSettings ?? undefined,
     });
 
     return { totalEarnings: gross, netEarnings: net, isShowingSelectedTotal: false };
-  }, [monthlyShifts, month, taxSettings, selectedDates]);
+  }, [monthlyShifts, month, taxSettings, selectedDates, payoutMonth, payoutTaxSettings]);
 
   // Swipe gesture handling
   useEffect(() => {
@@ -334,21 +353,27 @@ export function MonthlyEarningsCalendar({
               </>
             )}
           </div>
-          {showEarnings && (
-            <div
-              key={isShowingSelectedTotal ? `selected-${selectedDates?.size}` : `total-${month.getFullYear()}-${month.getMonth()}`}
-              className={`text-right relative ${isShowingSelectedTotal ? '' : getAnimationClasses(localDirection)}`}
-            >
-              <div className="font-semibold text-text-primary">
-                {totalEarnings === 0 ? '—' : formatCurrency(taxSettings?.enabled ? netEarnings : totalEarnings)}
-              </div>
-              {taxSettings?.enabled && totalEarnings > 0 && (
-                <div className="text-sm text-text-muted absolute right-0">
-                  {formatCurrency(totalEarnings)}
+          {showEarnings && (() => {
+            // Use payout tax settings for determining if tax should be shown
+            // Fall back to taxSettings.enabled if no payout tax settings
+            const effectiveTaxEnabled = payoutTaxSettings?.enabled ?? taxSettings?.enabled ?? false;
+
+            return (
+              <div
+                key={isShowingSelectedTotal ? `selected-${selectedDates?.size}` : `total-${month.getFullYear()}-${month.getMonth()}`}
+                className={`text-right relative ${isShowingSelectedTotal ? '' : getAnimationClasses(localDirection)}`}
+              >
+                <div className="font-semibold text-text-primary">
+                  {totalEarnings === 0 ? '—' : formatCurrency(effectiveTaxEnabled ? netEarnings : totalEarnings)}
                 </div>
-              )}
-            </div>
-          )}
+                {effectiveTaxEnabled && totalEarnings > 0 && (
+                  <div className="text-sm text-text-muted absolute right-0">
+                    {formatCurrency(totalEarnings)}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </div>
         <div className="pb-6">
           <ShiftsCalendar

@@ -56,7 +56,28 @@ export type ShiftLoadOptions = {
    * @internal
    */
   readonly skipAuthCheck?: boolean;
+  /**
+   * Year of the earnings month for payout tax calculation.
+   * When both year and month are provided, the service will fetch
+   * the tax settings from the payout month's snapshot.
+   */
+  readonly year?: number;
+  /**
+   * Month (1-12) of the earnings month for payout tax calculation.
+   * When both year and month are provided, the service will fetch
+   * the tax settings from the payout month's snapshot.
+   */
+  readonly month?: number;
 };
+
+/**
+ * Payout tax settings from the payout month's snapshot.
+ * Used for calculating after-tax monthly totals.
+ */
+export type PayoutTaxSettings = {
+  readonly enabled: boolean;
+  readonly percentage: number;
+} | null;
 
 /**
  * Aggregated shift statistics
@@ -74,6 +95,12 @@ export type ShiftData = {
   readonly defaultView: string;
   readonly settings: UserSettings;
   readonly aggregates: ShiftsAggregates;
+  /**
+   * Tax settings from the payout month's snapshot.
+   * Used for calculating after-tax monthly totals.
+   * Only present when year and month are provided in options.
+   */
+  readonly payoutTaxSettings: PayoutTaxSettings;
 };
 
 /**
@@ -145,6 +172,31 @@ export const ShiftsServiceLive = Layer.effect(
     };
 
     /**
+     * Calculate the payout date for a given earnings month.
+     * Payout is in the month after earnings, on the user's payroll_day.
+     */
+    const calculatePayoutDate = (
+      earningsYear: number,
+      earningsMonth: number, // 1-12
+      payrollDay: number
+    ): string => {
+      // Payout month is earnings month + 1
+      let payoutYear = earningsYear;
+      let payoutMonth = earningsMonth + 1;
+
+      if (payoutMonth > 12) {
+        payoutMonth = 1;
+        payoutYear += 1;
+      }
+
+      // Handle edge case: payroll_day exceeds days in payout month
+      const daysInPayoutMonth = new Date(payoutYear, payoutMonth, 0).getDate();
+      const effectivePayrollDay = Math.min(payrollDay, daysInPayoutMonth);
+
+      return `${payoutYear}-${String(payoutMonth).padStart(2, '0')}-${String(effectivePayrollDay).padStart(2, '0')}`;
+    };
+
+    /**
      * Get wage snapshots for user (all snapshots, ordered by from_date DESC)
      * @param skipAuthCheck - Skip authentication when true (for shared access via RLS)
      */
@@ -197,6 +249,26 @@ export const ShiftsServiceLive = Layer.effect(
       });
 
     /**
+     * Get snapshot for a single date
+     * @param skipAuthCheck - Skip authentication when true (for shared access via RLS)
+     */
+    const getSnapshotForDate = (userId: string, date: string, skipAuthCheck = false) =>
+      Effect.gen(function* () {
+        const snapshots = yield* getUserWageSnapshots(userId, skipAuthCheck);
+
+        // Find baseline snapshot for fallback
+        const baselineSnapshot = snapshots.find((s) => s.from_date === null);
+
+        // Find the first dated snapshot where from_date <= date
+        const applicableSnapshot = snapshots.find(
+          (s) => s.from_date !== null && s.from_date <= date
+        );
+
+        // Use dated snapshot if found, otherwise fall back to baseline
+        return applicableSnapshot || baselineSnapshot || null;
+      });
+
+    /**
      * Get shifts with computations
      */
     const getShiftsWithComputations = (options: ShiftLoadOptions) =>
@@ -207,6 +279,8 @@ export const ShiftsServiceLive = Layer.effect(
           endDate = getDefaultEndDate(),
           limit = 50,
           skipAuthCheck = false,
+          year,
+          month,
         } = options;
 
         // Verify authentication (unless explicitly skipped for shared access)
@@ -445,11 +519,30 @@ export const ShiftsServiceLive = Layer.effect(
           { totalHours: 0, totalEarnings: 0 }
         );
 
+        // Fetch payout month tax settings if year and month are provided
+        let payoutTaxSettings: PayoutTaxSettings = null;
+
+        if (year && month) {
+          // Get payroll day from user settings (default to 1 if not set)
+          const payrollDay = (userSettings as DbUserSettings)?.payroll_day ?? 1;
+          const payoutDate = calculatePayoutDate(year, month, payrollDay);
+
+          const payoutSnapshot = yield* getSnapshotForDate(userId, payoutDate, skipAuthCheck);
+
+          if (payoutSnapshot) {
+            payoutTaxSettings = {
+              enabled: payoutSnapshot.tax_enabled ?? false,
+              percentage: payoutSnapshot.tax_percentage ?? 0,
+            };
+          }
+        }
+
         return {
           shifts: allShifts as readonly ShiftWithComputations[],
           defaultView: (userSettings as DbUserSettings)?.default_shifts_view || "calendar",
           settings: userSettings,
           aggregates,
+          payoutTaxSettings,
         };
       });
 
