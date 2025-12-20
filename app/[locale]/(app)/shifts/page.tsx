@@ -4,6 +4,7 @@ import { connection } from "next/server";
 import {
   getPreviousYearMonth,
   getNextYearMonth,
+  getCurrentYearMonth,
   getMonthStart,
   getMonthEnd
 } from "@/lib/date-utils";
@@ -38,16 +39,19 @@ export default async function ShiftsPage({ params }: ShiftsPageProps) {
   // This covers 90% of user navigation patterns without loading states
   const prevMonth = getPreviousYearMonth();
   const nextMonth = getNextYearMonth();
+  const current = getCurrentYearMonth();
 
-  const { shifts, defaultView, settings } = await getComputedShifts(user.id, {
+  const { shifts, defaultView, settings, payoutTaxSettings } = await getComputedShifts(user.id, {
     startDate: getMonthStart(prevMonth.year, prevMonth.month),
     endDate: getMonthEnd(nextMonth.year, nextMonth.month),
-    limit: 150 // Accommodate up to ~50 shifts per month across 3 months
+    limit: 150, // Accommodate up to ~50 shifts per month across 3 months
+    year: current.year,
+    month: current.month,
   });
 
   return (
     <I18nProvider locale={_locale as Locale} dictionary={dictionary} namespaces={['pages.shifts']}>
-      <ShiftsView shifts={shifts} defaultView={defaultView} userSettings={settings} presetRules={PRESET_RULES} />
+      <ShiftsView shifts={shifts} defaultView={defaultView} userSettings={settings} presetRules={PRESET_RULES} payoutTaxSettings={payoutTaxSettings} />
     </I18nProvider>
   );
 }

@@ -46,6 +46,7 @@ import { useOnlineStatus } from "@/lib/hooks/useOnlineStatus";
 import { useCountdown } from "@/lib/hooks/useCountdown";
 import { TodayPlaceholderCard } from "./TodayPlaceholderCard";
 import { ScrollablePageWrapper } from "@/components/app/ScrollablePageWrapper";
+import type { PayoutTaxSettings } from "@/data-access/shifts";
 
 // Lazy load the calendar to reduce initial bundle size (~40KB savings)
 const MonthlyEarningsCalendar = dynamic(
@@ -485,9 +486,11 @@ type ShiftsViewProps = {
   sharedOwnerId?: string;
   /** When false, hides earnings-related data in readOnly mode (default: true) */
   showEarnings?: boolean;
+  /** Payout month tax settings for calculating after-tax monthly totals */
+  payoutTaxSettings?: PayoutTaxSettings;
 };
 
-export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", userSettings, presetRules, readOnly = false, ownerName, headerSlot, sharedOwnerId, showEarnings = true }: ShiftsViewProps) {
+export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", userSettings, presetRules, readOnly = false, ownerName, headerSlot, sharedOwnerId, showEarnings = true, payoutTaxSettings }: ShiftsViewProps) {
   const { t, locale } = useTranslations();
   const formatCurrency = useFormatCurrency();
   const {
@@ -540,6 +543,17 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
   const [cacheBuster, setCacheBuster] = useState<number>(Date.now());
   // Use ref to track in-flight requests to prevent race conditions
   const inflightRequests = useRef<Set<string>>(new Set());
+  // Track payout tax settings per month (key: "YYYY-MM")
+  const [payoutTaxByMonth, setPayoutTaxByMonth] = useState<Map<string, PayoutTaxSettings>>(() => {
+    // Initialize with SSR-provided payout tax settings for the current month
+    const initial = new Map<string, PayoutTaxSettings>();
+    if (payoutTaxSettings) {
+      const now = new Date();
+      const key = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      initial.set(key, payoutTaxSettings);
+    }
+    return initial;
+  });
 
   // Combine initial shifts with any dynamically loaded shifts, filtering out deleted ones
   // and applying optimistic move/copy updates
@@ -635,6 +649,11 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
           return [...prev, ...newShifts];
         });
 
+        // Store payout tax settings for this month
+        if (data.payoutTaxSettings !== undefined) {
+          setPayoutTaxByMonth(prev => new Map(prev).set(key, data.payoutTaxSettings));
+        }
+
         // Mark as successfully loaded
         setLoadedMonths(prev => new Set(prev).add(key));
       }
@@ -699,6 +718,13 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
     });
     return map;
   }, [shifts]);
+
+  // Get payout tax settings for the currently selected month
+  // Falls back to SSR-provided settings if not yet fetched for this month
+  const currentPayoutTaxSettings = useMemo(() => {
+    const key = `${selectedMonth.getFullYear()}-${String(selectedMonth.getMonth() + 1).padStart(2, '0')}`;
+    return payoutTaxByMonth.get(key) ?? payoutTaxSettings ?? null;
+  }, [selectedMonth, payoutTaxByMonth, payoutTaxSettings]);
 
   // Reset all client-side state when new data arrives from server (after router.refresh())
   // This includes: optimistic updates, client-fetched shifts, and loaded months tracking
@@ -1781,6 +1807,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
               percentage: 0,
               halfTaxMonth: userSettings.half_tax_month ?? null,
             }}
+            payoutTaxSettings={currentPayoutTaxSettings}
             readOnly={readOnly}
             showEarnings={showEarnings}
           />

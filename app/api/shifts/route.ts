@@ -36,14 +36,16 @@ export async function GET(request: NextRequest) {
 
   try {
     // getComputedShifts already includes recurring virtual shifts, so no need to generate them again
-    const { shifts, settings } = await getComputedShiftsForApi(session.user.id, {
+    const { shifts, settings, payoutTaxSettings } = await getComputedShiftsForApi(session.user.id, {
       startDate: getMonthStart(year, month),
       endDate: getMonthEnd(year, month),
-      limit: 100
+      limit: 100,
+      year,
+      month,
     });
 
     return NextResponse.json(
-      { shifts, settings },
+      { shifts, settings, payoutTaxSettings },
       {
         headers: {
           // Cache for 5 minutes (300 seconds)
