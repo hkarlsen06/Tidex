@@ -295,7 +295,7 @@ export default function ResetPasswordPage({ params }: { params: Promise<{ locale
   };
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center py-16">
+    <div className="relative w-full">
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl">{t.pages.auth.resetPassword.title}</CardTitle>

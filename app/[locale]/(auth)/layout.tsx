@@ -49,7 +49,7 @@ export default async function AuthLayout({
     <I18nProvider locale={locale as Locale} dictionary={dictionary} namespaces={['pages.auth']}>
       <div className="min-h-screen bg-background text-foreground antialiased">
         <div className="app-container">
-          <main className="px-4 pb-24 pt-6">{children}</main>
+          <main className="flex min-h-screen flex-col items-center justify-center px-4 py-8">{children}</main>
         </div>
       </div>
     </I18nProvider>

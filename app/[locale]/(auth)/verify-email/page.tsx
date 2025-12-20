@@ -83,7 +83,7 @@ function VerifyEmailContent({ params }: { params: Promise<{ locale: string }> })
   };
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center py-16">
+    <div className="relative w-full">
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-brand-primary/10">
@@ -190,7 +190,7 @@ function VerifyEmailSkeleton({ params }: { params: Promise<{ locale: string }> }
   const { t } = useTranslations();
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center py-16">
+    <div className="relative w-full">
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-brand-primary/10">
