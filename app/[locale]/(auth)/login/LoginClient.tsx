@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import { FormEvent, useState, use, useRef, useEffect } from 'react';
 import { useTranslations } from '@/lib/i18n/client';
@@ -23,7 +24,7 @@ import {
 import { Input } from '@/components/app/Input';
 import { PasswordInput } from '@/components/app/PasswordInput';
 import { Button } from '@/components/app/Button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/app/Card';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/app/Card';
 import { TurnstileCaptcha, type TurnstileCaptchaHandle } from '@/components/app/TurnstileCaptcha';
 
 // Lazy load Google icon SVG
@@ -390,7 +391,7 @@ export default function LoginClient({
   const buttonDisabled = isSubmitting || isOAuthRedirecting || !captchaToken;
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center py-16">
+    <div className="relative w-full">
       {/* Full-screen loading overlay during OAuth redirect */}
       {isOAuthRedirecting && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-xs">
@@ -406,210 +407,32 @@ export default function LoginClient({
       )}
 
       <Card className="w-full max-w-md shadow-lg">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl">{t.pages.auth.login.title}</CardTitle>
-          {step === 'otp' && (
+        <CardHeader>
+          {/* Title and Logo inline */}
+          <div className="flex items-center justify-between mb-1">
+            <CardTitle className="text-2xl font-bold">{t.pages.auth.login.title}</CardTitle>
+            <Image
+              src="/icons/tidex-logo.webp"
+              alt="Tidex"
+              width={32}
+              height={32}
+              priority
+            />
+          </div>
+          {step === 'otp' ? (
             <CardDescription>
               {t.pages.auth.login.otpDescription.replace('{phone}', emailOrPhone)}
             </CardDescription>
+          ) : (
+            <CardDescription>{t.pages.auth.login.subtitle}</CardDescription>
           )}
         </CardHeader>
 
         <CardContent>
-
-        {/* Step 1: Email/Phone and Password Input */}
-        {step === 'input' && (
-          <form className="space-y-6" noValidate onSubmit={handleSignIn}>
-            <FieldGroup>
-              <Field data-invalid={!!fieldErrors.emailOrPhone}>
-                <FieldLabel htmlFor="emailOrPhone">{t.pages.auth.login.emailOrPhoneLabel}</FieldLabel>
-                <Input
-                  id="emailOrPhone"
-                  name="emailOrPhone"
-                  type="text"
-                  placeholder={t.pages.auth.login.emailOrPhonePlaceholder}
-                  // Microsoft Editor browser extension injects these attributes before hydration; set them eagerly to avoid mismatches.
-                  spellCheck={false}
-                  data-ms-editor="true"
-                  suppressHydrationWarning
-                  autoComplete="username"
-                  value={emailOrPhone}
-                  onChange={(event) => {
-                    resetMessage();
-                    resetFieldErrors();
-                    setEmailOrPhone(event.target.value);
-                  }}
-                  aria-invalid={!!fieldErrors.emailOrPhone}
-                />
-                <FieldError>{fieldErrors.emailOrPhone}</FieldError>
-              </Field>
-
-              <Field data-invalid={!!fieldErrors.password}>
-                <FieldLabel htmlFor="password">
-                  {t.pages.auth.login.passwordLabel}
-                </FieldLabel>
-                <PasswordInput
-                  id="password"
-                  name="password"
-                  placeholder={t.pages.auth.login.passwordPlaceholder}
-                  autoComplete="current-password"
-                  value={password}
-                  onChange={(event) => {
-                    resetMessage();
-                    resetFieldErrors();
-                    setPassword(event.target.value);
-                  }}
-                  invalid={!!fieldErrors.password}
-                />
-                <FieldError>{fieldErrors.password}</FieldError>
-              </Field>
-            </FieldGroup>
-
-            {/* Turnstile CAPTCHA Widget */}
-            <div className="flex justify-center">
-              <TurnstileCaptcha
-                ref={turnstileRef}
-                execution="render"
-                appearance="always"
-                size="flexible"
-                onSuccess={(token) => {
-                  setCaptchaToken(token);
-                  resetMessage();
-                }}
-                onError={() => {
-                  setCaptchaToken(null);
-                  setMessage({ type: 'error', text: t.pages.auth.login.errors.captchaFailed });
-                }}
-                onExpire={() => {
-                  setCaptchaToken(null);
-                  setMessage({ type: 'error', text: t.pages.auth.login.errors.captchaExpired });
-                }}
-              />
-            </div>
-
-            <Button
-              type="submit"
-              disabled={buttonDisabled}
-              loading={isSubmitting}
-              size="lg"
-              className="w-full"
-            >
-              {t.pages.auth.login.submitButton}
-            </Button>
-          </form>
-        )}
-
-        {/* NOTE: OTP Verification step preserved for future MFA implementation
-        {step === 'otp' && (
-          <form className="space-y-6" noValidate onSubmit={_handleVerifyOtp}>
-            <Field data-invalid={!!fieldErrors.otp} className="items-center">
-              <FieldLabel htmlFor="otp" className="sr-only">
-                {t.pages.auth.login.otpLabel}
-              </FieldLabel>
-              <InputOTP
-                maxLength={6}
-                value={otp}
-                onChange={(value) => {
-                  resetMessage();
-                  resetFieldErrors();
-                  _setOtp(value);
-                }}
-              >
-                <InputOTPGroup>
-                  <InputOTPSlot index={0} />
-                  <InputOTPSlot index={1} />
-                  <InputOTPSlot index={2} />
-                </InputOTPGroup>
-                <InputOTPSeparator />
-                <InputOTPGroup>
-                  <InputOTPSlot index={3} />
-                  <InputOTPSlot index={4} />
-                  <InputOTPSlot index={5} />
-                </InputOTPGroup>
-              </InputOTP>
-              {fieldErrors.otp && (
-                <FieldError className="text-center">{fieldErrors.otp}</FieldError>
-              )}
-            </Field>
-
-            <Button
-              type="submit"
-              disabled={buttonDisabled}
-              loading={isSubmitting}
-              size="lg"
-              className="w-full"
-            >
-              {t.pages.auth.login.verifyButton}
-            </Button>
-
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                _setStep('input');
-                _setOtp('');
-                resetMessage();
-                resetFieldErrors();
-              }}
-              className="w-full"
-            >
-              {t.pages.auth.login.backToLogin}
-            </Button>
-          </form>
-        )}
-        */}
-
-        {message && (
-          <div
-            className={`mt-4 rounded-full px-5 py-3 text-sm font-medium ${
-              message.type === 'error'
-                ? 'bg-error-subtle text-error-foreground'
-                : 'bg-success-subtle text-success-foreground'
-            }`}
-            role="status"
-            aria-live="polite"
-          >
-            {message.text}
-          </div>
-        )}
-
-        {/* Arrow pointing to signup button */}
-        {showSignupPrompt && step === 'input' && (
-          <div className="mt-2 flex justify-center animate-bounce">
-            <svg
-              className="h-6 w-6 text-error-foreground"
-              fill="none"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
-            </svg>
-          </div>
-        )}
-
-        {/* Only show signup and Google options on input step */}
-        {step === 'input' && (
-          <>
-            <div className={showSignupPrompt ? 'mt-2 mb-6' : 'mt-6 mb-6'}>
-              <FieldSeparator>{t.pages.auth.login.separator}</FieldSeparator>
-            </div>
-
-            <div className="space-y-3">
-              <Button
-                asChild
-                variant={showSignupPrompt ? 'default' : 'outline'}
-                size="lg"
-                className={`w-full ${showSignupPrompt ? 'ring-2 ring-ring ring-offset-2' : ''}`}
-              >
-                <Link href={`/${locale}/signup${emailOrPhone ? `?email=${encodeURIComponent(emailOrPhone)}` : ''}`}>
-                  {t.pages.auth.login.createAccount}
-                </Link>
-              </Button>
-
+          {/* Step 1: Email/Phone and Password Input */}
+          {step === 'input' && (
+            <>
+              {/* OAuth Button */}
               <Button
                 type="button"
                 variant="outline"
@@ -618,29 +441,212 @@ export default function LoginClient({
                 disabled={buttonDisabled}
                 loading={isOAuthRedirecting}
                 aria-label={t.pages.auth.login.continueWithGoogle}
-                className="w-full"
+                className="w-full mb-6"
               >
                 <span className="flex h-5 w-5 items-center justify-center">
                   <GoogleIcon />
                 </span>
-                {t.pages.auth.login.continueWithGoogle}
+                Google
               </Button>
-            </div>
 
-            <div className="mt-6 text-center">
+              <FieldSeparator>{t.pages.auth.login.separator}</FieldSeparator>
+
+              <form className="space-y-4 mt-6" noValidate onSubmit={handleSignIn}>
+                <FieldGroup>
+                  <Field data-invalid={!!fieldErrors.emailOrPhone}>
+                    <FieldLabel htmlFor="emailOrPhone">{t.pages.auth.login.usernameLabel}</FieldLabel>
+                    <Input
+                      id="emailOrPhone"
+                      name="emailOrPhone"
+                      type="text"
+                      placeholder={t.pages.auth.login.emailOrPhonePlaceholder}
+                      // Microsoft Editor browser extension injects these attributes before hydration; set them eagerly to avoid mismatches.
+                      spellCheck={false}
+                      data-ms-editor="true"
+                      suppressHydrationWarning
+                      autoComplete="username"
+                      value={emailOrPhone}
+                      onChange={(event) => {
+                        resetMessage();
+                        resetFieldErrors();
+                        setEmailOrPhone(event.target.value);
+                      }}
+                      aria-invalid={!!fieldErrors.emailOrPhone}
+                    />
+                    <FieldError>{fieldErrors.emailOrPhone}</FieldError>
+                  </Field>
+
+                  <Field data-invalid={!!fieldErrors.password}>
+                    <div className="flex items-center justify-between">
+                      <FieldLabel htmlFor="password">
+                        {t.pages.auth.login.passwordLabel}
+                      </FieldLabel>
+                      <Link
+                        href={`/${locale}/reset-password`}
+                        className="text-sm text-text-muted hover:text-text-primary transition-colors"
+                      >
+                        {t.pages.auth.login.forgotPassword}
+                      </Link>
+                    </div>
+                    <PasswordInput
+                      id="password"
+                      name="password"
+                      placeholder={t.pages.auth.login.passwordPlaceholder}
+                      autoComplete="current-password"
+                      value={password}
+                      onChange={(event) => {
+                        resetMessage();
+                        resetFieldErrors();
+                        setPassword(event.target.value);
+                      }}
+                      invalid={!!fieldErrors.password}
+                    />
+                    <FieldError>{fieldErrors.password}</FieldError>
+                  </Field>
+                </FieldGroup>
+
+                {/* Turnstile CAPTCHA Widget */}
+                <div className="flex justify-center">
+                  <TurnstileCaptcha
+                    ref={turnstileRef}
+                    execution="render"
+                    appearance="always"
+                    size="flexible"
+                    onSuccess={(token) => {
+                      setCaptchaToken(token);
+                      resetMessage();
+                    }}
+                    onError={() => {
+                      setCaptchaToken(null);
+                      setMessage({ type: 'error', text: t.pages.auth.login.errors.captchaFailed });
+                    }}
+                    onExpire={() => {
+                      setCaptchaToken(null);
+                      setMessage({ type: 'error', text: t.pages.auth.login.errors.captchaExpired });
+                    }}
+                  />
+                </div>
+
+                {message && (
+                  <div
+                    className={`rounded-lg px-4 py-3 text-sm font-medium ${
+                      message.type === 'error'
+                        ? 'bg-error-subtle text-error-foreground'
+                        : 'bg-success-subtle text-success-foreground'
+                    }`}
+                    role="status"
+                    aria-live="polite"
+                  >
+                    {message.text}
+                  </div>
+                )}
+
+                {/* Arrow pointing to signup button */}
+                {showSignupPrompt && (
+                  <div className="flex justify-center animate-bounce">
+                    <svg
+                      className="h-6 w-6 text-error-foreground"
+                      fill="none"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
+                    </svg>
+                  </div>
+                )}
+
+                <Button
+                  type="submit"
+                  disabled={buttonDisabled}
+                  loading={isSubmitting}
+                  size="lg"
+                  className="w-full"
+                >
+                  {t.pages.auth.login.submitButton}
+                </Button>
+              </form>
+            </>
+          )}
+
+          {/* NOTE: OTP Verification step preserved for future MFA implementation
+          {step === 'otp' && (
+            <form className="space-y-6" noValidate onSubmit={_handleVerifyOtp}>
+              <Field data-invalid={!!fieldErrors.otp} className="items-center">
+                <FieldLabel htmlFor="otp" className="sr-only">
+                  {t.pages.auth.login.otpLabel}
+                </FieldLabel>
+                <InputOTP
+                  maxLength={6}
+                  value={otp}
+                  onChange={(value) => {
+                    resetMessage();
+                    resetFieldErrors();
+                    _setOtp(value);
+                  }}
+                >
+                  <InputOTPGroup>
+                    <InputOTPSlot index={0} />
+                    <InputOTPSlot index={1} />
+                    <InputOTPSlot index={2} />
+                  </InputOTPGroup>
+                  <InputOTPSeparator />
+                  <InputOTPGroup>
+                    <InputOTPSlot index={3} />
+                    <InputOTPSlot index={4} />
+                    <InputOTPSlot index={5} />
+                  </InputOTPGroup>
+                </InputOTP>
+                {fieldErrors.otp && (
+                  <FieldError className="text-center">{fieldErrors.otp}</FieldError>
+                )}
+              </Field>
+
               <Button
-                asChild
-                variant="link"
-                size="sm"
+                type="submit"
+                disabled={buttonDisabled}
+                loading={isSubmitting}
+                size="lg"
+                className="w-full"
               >
-                <Link href={`/${locale}/reset-password`}>
-                  {t.pages.auth.login.resetPassword}
-                </Link>
+                {t.pages.auth.login.verifyButton}
               </Button>
-            </div>
-          </>
-        )}
+
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  _setStep('input');
+                  _setOtp('');
+                  resetMessage();
+                  resetFieldErrors();
+                }}
+                className="w-full"
+              >
+                {t.pages.auth.login.backToLogin}
+              </Button>
+            </form>
+          )}
+          */}
         </CardContent>
+
+        {/* Footer with create account link */}
+        {step === 'input' && (
+          <CardFooter className="flex-col border-t bg-surface-secondary rounded-b-3xl pt-6">
+            <p className="text-sm text-text-secondary">
+              {t.pages.auth.login.noAccount}{' '}
+              <Link
+                href={`/${locale}/signup${emailOrPhone ? `?email=${encodeURIComponent(emailOrPhone)}` : ''}`}
+                className="font-semibold text-text-primary hover:underline"
+              >
+                {t.pages.auth.login.createAccount}
+              </Link>
+            </p>
+          </CardFooter>
+        )}
       </Card>
     </div>
   );

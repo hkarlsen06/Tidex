@@ -42,7 +42,7 @@ async function LoginSkeleton({ params }: { params: Promise<{ locale: string }> }
   const t = getTranslations(locale as Locale, ['pages.auth']);
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center py-16">
+    <div className="relative w-full">
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl">{t.pages.auth.login.skeletonTitle}</CardTitle>
