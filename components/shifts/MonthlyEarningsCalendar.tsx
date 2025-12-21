@@ -91,16 +91,14 @@ function calculateShiftNet(
 
 function buildEarningsByDate(
   shifts: ShiftWithComputations[],
-  taxSettings?: TaxSettings
+  halfTaxMonth?: number | null
 ): EarningsByDate {
   const result: EarningsByDate = {};
   for (const shift of shifts) {
     const isoDate = shift.shift_date as ISODate;
-    // Use per-shift tax settings for after-tax calculations
+    // Use per-shift tax settings from snapshot (single source of truth)
     // This ensures calendar cells match shift card amounts
-    const earnings = taxSettings?.enabled
-      ? calculateShiftNet(shift, taxSettings?.halfTaxMonth)
-      : shift.computed.gross;
+    const earnings = calculateShiftNet(shift, halfTaxMonth);
     result[isoDate] = (result[isoDate] || 0) + earnings;
   }
   return result;
@@ -253,10 +251,11 @@ export function MonthlyEarningsCalendar({
   }, [shifts, month]);
 
   // Now build functions only process relevant shifts
-  // Pass taxSettings to show after-tax earnings in calendar cells
+  // Use per-shift tax settings from snapshot (single source of truth)
+  // Only pass halfTaxMonth from user settings for half-tax calculation
   const earningsByDate = useMemo(
-    () => buildEarningsByDate(monthlyShifts, taxSettings),
-    [monthlyShifts, taxSettings]
+    () => buildEarningsByDate(monthlyShifts, taxSettings?.halfTaxMonth),
+    [monthlyShifts, taxSettings?.halfTaxMonth]
   );
 
   const hoursByDate = useMemo(
