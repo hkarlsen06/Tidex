@@ -75,8 +75,11 @@ export function ShiftCard({ shift, onClick, isToday = false, progress, taxSettin
   let taxPercentage = taxEnabled ? Number(taxSettings?.percentage ?? 0) : 0;
 
   // Check for half tax month
+  // Half-tax is applied based on PAYOUT month (shift month + 1), not the shift month itself
+  // Example: November shifts are paid in December, so if halfTaxMonth=12, November shifts get half tax
   const shiftMonth = parseInt(shift.shift_date.substring(5, 7), 10);
-  if (taxEnabled && taxSettings?.halfTaxMonth && shiftMonth === taxSettings.halfTaxMonth) {
+  const payoutMonth = shiftMonth === 12 ? 1 : shiftMonth + 1;
+  if (taxEnabled && taxSettings?.halfTaxMonth && payoutMonth === taxSettings.halfTaxMonth) {
     taxPercentage = taxPercentage / 2;
   }
 
