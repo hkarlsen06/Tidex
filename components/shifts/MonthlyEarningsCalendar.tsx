@@ -66,11 +66,42 @@ type MonthlyEarningsCalendarProps = {
   showEarnings?: boolean;
 };
 
-function buildEarningsByDate(shifts: ShiftWithComputations[]): EarningsByDate {
+/**
+ * Calculate net earnings for a single shift, applying per-shift tax settings
+ * and half-tax month logic based on payout month.
+ */
+function calculateShiftNet(
+  shift: ShiftWithComputations,
+  halfTaxMonth: number | null | undefined
+): number {
+  const gross = shift.computed.gross || 0;
+  const taxEnabled = shift.tax_enabled ?? false;
+  let taxPercentage = taxEnabled ? (shift.tax_percentage ?? 0) : 0;
+
+  // Half-tax is applied based on PAYOUT month (shift month + 1), not the shift month itself
+  // Example: November shifts are paid in December, so if halfTaxMonth=12, November shifts get half tax
+  const shiftMonth = parseInt(shift.shift_date.substring(5, 7), 10);
+  const payoutMonth = shiftMonth === 12 ? 1 : shiftMonth + 1;
+  if (taxEnabled && halfTaxMonth && payoutMonth === halfTaxMonth) {
+    taxPercentage = taxPercentage / 2;
+  }
+
+  return taxEnabled ? gross * (1 - taxPercentage / 100) : gross;
+}
+
+function buildEarningsByDate(
+  shifts: ShiftWithComputations[],
+  taxSettings?: TaxSettings
+): EarningsByDate {
   const result: EarningsByDate = {};
   for (const shift of shifts) {
     const isoDate = shift.shift_date as ISODate;
-    result[isoDate] = (result[isoDate] || 0) + shift.computed.gross;
+    // Use per-shift tax settings for after-tax calculations
+    // This ensures calendar cells match shift card amounts
+    const earnings = taxSettings?.enabled
+      ? calculateShiftNet(shift, taxSettings?.halfTaxMonth)
+      : shift.computed.gross;
+    result[isoDate] = (result[isoDate] || 0) + earnings;
   }
   return result;
 }
@@ -222,9 +253,10 @@ export function MonthlyEarningsCalendar({
   }, [shifts, month]);
 
   // Now build functions only process relevant shifts
+  // Pass taxSettings to show after-tax earnings in calendar cells
   const earningsByDate = useMemo(
-    () => buildEarningsByDate(monthlyShifts),
-    [monthlyShifts]
+    () => buildEarningsByDate(monthlyShifts, taxSettings),
+    [monthlyShifts, taxSettings]
   );
 
   const hoursByDate = useMemo(
