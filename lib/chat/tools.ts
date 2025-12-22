@@ -151,7 +151,7 @@ export type GetStatisticsInput = z.infer<typeof getStatisticsSchema>;
  */
 export const manageSettingsSchema = z.object({
   action: z.enum(["view", "update"]).optional().default("view"),
-  category: z.enum(["display", "payroll", "tax", "goals", "preferences"]).optional(),
+  category: z.enum(["display", "tax", "goals", "preferences"]).optional(),
   settings: z.record(z.string(), z.any()).optional(),
 });
 
@@ -858,14 +858,15 @@ Optional: year and month parameters to query specific periods (defaults to curre
   // ---------------------------------------------------------------------------
   {
     name: "manage_settings",
-    description: `View or update user settings (NOT wages - use get_wage_info for that).
+    description: `View or update user settings (NOT wages - use get_wage_info for wage/tax/pause history).
 
 Actions:
-- VIEW: No parameters or action="view" - Returns display, payroll, tax, goals, preferences settings
+- VIEW: No parameters or action="view" - Returns display, goals, preferences, and tax (halfTaxMonth only)
 - UPDATE: action="update", category, settings object with key-value pairs
 
-Categories: display, payroll, tax, goals, preferences
+Categories: display, tax, goals, preferences
 - See settings_reference section in system prompt for detailed descriptions.
+- Payroll/tax deduction settings now live in wage snapshots (use get_wage_info).
 - For wage information, use the get_wage_info tool instead.
 
 Note: Only include settings you want to change in the settings object.`,
@@ -879,7 +880,7 @@ Note: Only include settings you want to change in the settings object.`,
         },
         category: {
           type: "string",
-          enum: ["display", "payroll", "tax", "goals", "preferences"],
+          enum: ["display", "tax", "goals", "preferences"],
           description: "Settings category to update",
         },
         settings: {
@@ -903,11 +904,11 @@ Note: Only include settings you want to change in the settings object.`,
         category: "goals",
         settings: { monthlyGoal: 50000 },
       },
-      // Enable tax deduction at 35%
+      // Set the half tax month (global setting)
       {
         action: "update",
         category: "tax",
-        settings: { taxDeductionEnabled: true, taxPercentage: 35 },
+        settings: { halfTaxMonth: 12 },
       },
     ],
   },
@@ -925,7 +926,7 @@ Returns:
 - history: Past wage entries for context (if any) - compact format showing only changed fields
 
 Use this when the user asks about their wage, hourly rate, supplements, or wage history.
-For general settings (display, payroll, tax, goals), use manage_settings instead.`,
+For general settings (display, goals, preferences, halfTaxMonth), use manage_settings instead.`,
     input_schema: {
       type: "object",
       properties: {},

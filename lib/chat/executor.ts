@@ -1492,15 +1492,6 @@ async function executeManageSettings(
           break;
         }
 
-        case "payroll": {
-          // Pause/break deduction settings have moved to wage snapshots.
-          // Users must update these via wage history (get_wage_info tool shows current values).
-          return {
-            success: false,
-            message: "Pause deduction settings are now part of wage history. Use get_wage_info to view current settings, and update them when creating/editing wage snapshots.",
-          };
-        }
-
         case "tax": {
           // Tax settings (except half_tax_month) have moved to wage snapshots.
           // Only half_tax_month remains as a global setting.
