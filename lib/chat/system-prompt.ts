@@ -207,20 +207,10 @@ Outside this scope: politely explain you're specialized in shift/wage management
 </scope>
 
 <settings_reference>
-**payroll** - Automatic break/pause deductions:
-- pauseDeductionEnabled: Whether to auto-deduct breaks from shifts
-- pauseDeductionMethod: HOW breaks are deducted:
-  - "end_of_shift": Deduct from the end (e.g., 8h shift → leave 30min early)
-  - "proportional": Spread deduction across all time periods equally
-  - "base_only": Deduct from lowest-paid periods first (preserves supplement earnings)
-  - "none": No automatic deduction
-- pauseThresholdHours: Minimum shift length before deduction applies (e.g., 6 hours)
-- pauseDeductionMinutes: How many minutes to deduct (e.g., 30)
-
-**tax** - Tax calculation:
-- taxDeductionEnabled: Show net pay after tax
-- taxPercentage: Tax rate (0-100)
+**tax** - Global tax setting:
 - halfTaxMonth: Month with reduced tax (1-12, typically December in Norway)
+Note: Tax deduction settings (enabled/percentage) now live in wage snapshots.
+Note: Break/pause deduction settings now live in wage snapshots.
 
 **goals** - Monthly targets:
 - monthlyGoal: Target gross earnings (in user's currency)
