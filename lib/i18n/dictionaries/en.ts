@@ -1333,6 +1333,12 @@ export const en: Dictionary = {
       shareBack: 'Share back',
       stopSharing: 'Stop sharing',
       user: 'User',
+      mutualShares: 'Mutual shares',
+      mutualSharesDesc: "See each other's shifts",
+      iShareWith: 'Share with',
+      iShareWithDesc: 'Can see your shifts',
+      sharesWithMe: 'Share with you',
+      sharesWithMeDesc: 'You can see their shifts',
       errors: {
         limitReached: "You've reached the maximum number of shares for your subscription",
         userNotFound: 'No user found with this email or phone number',

@@ -1,5 +1,6 @@
 "use client";
 
+import type React from "react";
 import { useMemo, useState, useEffect } from "react";
 import { cn } from "@/lib/cn";
 import { useTranslations } from "@/lib/i18n/client";
@@ -59,6 +60,26 @@ function computeShiftStatus(
 }
 
 /**
+ * Compute progress percentage through an active shift (0-100)
+ */
+function computeShiftProgress(
+  shiftDate: string,
+  startTime: string,
+  endTime: string
+): number {
+  const now = new Date();
+  const { start, end } = parseShiftTimes(shiftDate, startTime, endTime);
+
+  const totalDuration = end.getTime() - start.getTime();
+  const elapsed = now.getTime() - start.getTime();
+
+  if (totalDuration <= 0) return 0;
+
+  const progress = (elapsed / totalDuration) * 100;
+  return Math.max(0, Math.min(100, progress));
+}
+
+/**
  * Compact shift preview shown under a sharer's card in the sharing list
  * Shows the shift's date, time range, and relative time (countdown or elapsed)
  * Answers the question "when is my friend working?" at a glance
@@ -68,23 +89,31 @@ export function SharedUserShiftPreview({
 }: SharedUserShiftPreviewProps) {
   const { t, locale } = useTranslations();
 
-  // Compute status client-side to ensure it's always current
+  // Compute status and progress client-side to ensure it's always current
   // The server-computed status may be stale due to caching
-  // Initialize with computed value to avoid hydration mismatch flash
+  // Initialize with computed values to avoid hydration mismatch flash
   const [currentStatus, setCurrentStatus] = useState(() =>
     computeShiftStatus(shift.shift_date, shift.start_time, shift.end_time)
   );
+  const [progress, setProgress] = useState(() =>
+    computeShiftProgress(shift.shift_date, shift.start_time, shift.end_time)
+  );
 
   useEffect(() => {
-    // Re-compute every second to catch status transitions
+    // Re-compute every second to catch status transitions and update progress
     const interval = setInterval(() => {
       setCurrentStatus(
         computeShiftStatus(shift.shift_date, shift.start_time, shift.end_time)
+      );
+      setProgress(
+        computeShiftProgress(shift.shift_date, shift.start_time, shift.end_time)
       );
     }, 1000);
 
     return () => clearInterval(interval);
   }, [shift.shift_date, shift.start_time, shift.end_time]);
+
+  const isActive = currentStatus === "active";
 
   // Format date parts
   const { dayName, dayNumber, monthName } = useMemo(
@@ -110,30 +139,40 @@ export function SharedUserShiftPreview({
   }, [currentStatus, countdown.text, t.common.relativeTime.now]);
 
   return (
-    <div className="flex items-center gap-3 px-3 py-2 bg-surface-secondary/50 rounded-lg">
-      {/* Shift info */}
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-text-primary truncate">
-          {dayName} · {dayNumber}{" "}
-          <span className="text-text-muted">{monthName}</span>
-        </p>
-        <p className="text-xs text-text-muted">
-          {formatTimeRange(shift.start_time, shift.end_time)}
-        </p>
-      </div>
+    <div className="relative overflow-hidden rounded-lg">
+      {/* Progress bar background for active shifts */}
+      {isActive && (
+        <div
+          className="absolute inset-0 bg-brand-highlight/10 animate-progress-grow"
+          style={{ '--progress-target': `${progress}%` } as React.CSSProperties}
+          aria-hidden="true"
+        />
+      )}
+      <div className="flex items-center gap-3 px-3 py-2 bg-surface-secondary/50 relative z-10">
+        {/* Shift info */}
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-text-primary truncate">
+            {dayName} · {dayNumber}{" "}
+            <span className="text-text-muted">{monthName}</span>
+          </p>
+          <p className="text-xs text-text-muted">
+            {formatTimeRange(shift.start_time, shift.end_time)}
+          </p>
+        </div>
 
-      {/* Relative time badge */}
-      <div
-        className={cn(
-          "shrink-0 text-xs font-medium px-2 py-1 rounded-full",
-          currentStatus === "active"
-            ? "bg-green-500/10 text-green-600 dark:text-green-400"
-            : currentStatus === "upcoming"
-              ? "bg-blue-500/10 text-blue-600 dark:text-blue-400"
-              : "bg-surface-secondary text-text-muted"
-        )}
-      >
-        {statusText}
+        {/* Relative time badge */}
+        <div
+          className={cn(
+            "shrink-0 text-xs font-medium px-2 py-1 rounded-full",
+            currentStatus === "active"
+              ? "bg-green-500/10 text-green-600 dark:text-green-400"
+              : currentStatus === "upcoming"
+                ? "bg-blue-500/10 text-blue-600 dark:text-blue-400"
+                : "bg-surface-secondary text-text-muted"
+          )}
+        >
+          {statusText}
+        </div>
       </div>
     </div>
   );

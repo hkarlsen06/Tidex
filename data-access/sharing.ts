@@ -586,17 +586,12 @@ async function getAllFriendsInternal(userId: string): Promise<Friend[]> {
       });
     }
 
-    // Sort by most recent interaction (either direction)
+    // Sort alphabetically by name (firstName, then email, then phone)
+    // Use Norwegian locale to correctly sort Æ, Ø, Å after Z
     friends.sort((a, b) => {
-      const aDate = Math.max(
-        a.sharesWithMe ? new Date(a.sharesWithMe.sharedAt).getTime() : 0,
-        a.iShareWith ? new Date(a.iShareWith.sharedAt).getTime() : 0
-      );
-      const bDate = Math.max(
-        b.sharesWithMe ? new Date(b.sharesWithMe.sharedAt).getTime() : 0,
-        b.iShareWith ? new Date(b.iShareWith.sharedAt).getTime() : 0
-      );
-      return bDate - aDate; // Most recent first
+      const aName = (a.firstName || a.email || a.phone || "").toLowerCase();
+      const bName = (b.firstName || b.email || b.phone || "").toLowerCase();
+      return aName.localeCompare(bName, "nb");
     });
 
     return friends;
