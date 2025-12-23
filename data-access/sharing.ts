@@ -27,6 +27,40 @@ import type { ShiftWithComputations, UserSettings } from "@/lib/payroll";
 export type { SharedUser, ShareRecipient };
 
 /**
+ * Unified friend entry that combines both directions of sharing
+ * - sharesWithMe: They share their shifts with me (I can see their shifts)
+ * - iShareWith: I share my shifts with them (they can see my shifts)
+ */
+export type Friend = {
+  readonly id: string;
+  readonly email: string | null;
+  readonly phone: string | null;
+  readonly firstName: string | null;
+  readonly profilePictureUrl: string | null;
+  readonly oauthAvatarUrl: string | null;
+  /**
+   * If they share with me:
+   * - blocked: whether I've hidden them from my view
+   * - showEarningsToMe: whether they allow me to see their earnings
+   * - sharedWithMeAt: when they started sharing with me
+   */
+  readonly sharesWithMe: {
+    readonly blocked: boolean;
+    readonly showEarningsToMe: boolean;
+    readonly sharedAt: string;
+  } | null;
+  /**
+   * If I share with them:
+   * - showEarningsToThem: whether I allow them to see my earnings
+   * - sharedWithThemAt: when I started sharing with them
+   */
+  readonly iShareWith: {
+    readonly showEarningsToThem: boolean;
+    readonly sharedAt: string;
+  } | null;
+};
+
+/**
  * Internal implementation of getUsersWhoSharedWithMe
  * @internal - Do not call directly, use getUsersWhoSharedWithMe()
  */
@@ -477,5 +511,197 @@ export const canAddMoreRecipients = cache(
       logger.error("Failed to check share capacity:", error);
       return { canAdd: false, currentCount: 0, limit: 0 };
     }
+  }
+);
+
+/**
+ * Internal implementation of getAllFriends
+ * @internal - Do not call directly, use getAllFriends()
+ */
+async function getAllFriendsInternal(userId: string): Promise<Friend[]> {
+  "use cache: private";
+  cacheTag(`user-${userId}`, "sharing-friends");
+
+  await cookies();
+
+  // Fetch both directions in parallel
+  const [allSharersProgram, recipientsProgram] = [
+    Effect.gen(function* () {
+      const sharing = yield* SharingService;
+      return yield* sharing.getAllSharersIncludingBlocked(userId);
+    }).pipe(Effect.provide(SharingLive), Effect.scoped),
+    Effect.gen(function* () {
+      const sharing = yield* SharingService;
+      return yield* sharing.getMyShareRecipients(userId);
+    }).pipe(Effect.provide(SharingLive), Effect.scoped),
+  ];
+
+  try {
+    const [allSharers, recipients] = await Promise.all([
+      Effect.runPromise(allSharersProgram),
+      Effect.runPromise(recipientsProgram),
+    ]);
+
+    // Create maps for quick lookup
+    const sharerMap = new Map(allSharers.map((s) => [s.id, s]));
+    const recipientMap = new Map(recipients.map((r) => [r.id, r]));
+
+    // Collect all unique user IDs
+    const allUserIds = new Set([
+      ...allSharers.map((s) => s.id),
+      ...recipients.map((r) => r.id),
+    ]);
+
+    // Build unified friends list
+    const friends: Friend[] = [];
+
+    for (const id of allUserIds) {
+      const sharer = sharerMap.get(id);
+      const recipient = recipientMap.get(id);
+
+      // Use whichever has the user info (prefer sharer since it has blocked info)
+      const userInfo = sharer ?? recipient;
+      if (!userInfo) continue;
+
+      friends.push({
+        id,
+        email: userInfo.email,
+        phone: userInfo.phone,
+        firstName: userInfo.firstName,
+        profilePictureUrl: userInfo.profilePictureUrl,
+        oauthAvatarUrl: userInfo.oauthAvatarUrl,
+        sharesWithMe: sharer
+          ? {
+              blocked: sharer.blocked,
+              showEarningsToMe: sharer.showEarnings,
+              sharedAt: sharer.sharedAt,
+            }
+          : null,
+        iShareWith: recipient
+          ? {
+              showEarningsToThem: recipient.showEarnings,
+              sharedAt: recipient.sharedAt,
+            }
+          : null,
+      });
+    }
+
+    // Sort by most recent interaction (either direction)
+    friends.sort((a, b) => {
+      const aDate = Math.max(
+        a.sharesWithMe ? new Date(a.sharesWithMe.sharedAt).getTime() : 0,
+        a.iShareWith ? new Date(a.iShareWith.sharedAt).getTime() : 0
+      );
+      const bDate = Math.max(
+        b.sharesWithMe ? new Date(b.sharesWithMe.sharedAt).getTime() : 0,
+        b.iShareWith ? new Date(b.iShareWith.sharedAt).getTime() : 0
+      );
+      return bDate - aDate; // Most recent first
+    });
+
+    return friends;
+  } catch (error: any) {
+    logger.error("Failed to fetch all friends:", error);
+    return [];
+  }
+}
+
+/**
+ * Get unified friends list combining both directions of sharing
+ * - People who share their shifts with me (sharers)
+ * - People I share my shifts with (recipients)
+ * - Uses React cache() for request deduplication
+ *
+ * Promise wrapper around Effect-based SharingService
+ */
+export const getAllFriends = cache(
+  async (userId: string): Promise<Friend[]> => {
+    const { user } = await verifySession();
+
+    if (user.id !== userId) {
+      throw new Error("User ID mismatch - potential security violation");
+    }
+
+    return getAllFriendsInternal(userId);
+  }
+);
+
+/**
+ * Block a sharer (hide their shifts from viewer's list)
+ * - Only affects the viewer's view, the share relationship persists
+ *
+ * Promise wrapper around Effect-based SharingService
+ */
+export async function blockSharer(ownerId: string): Promise<void> {
+  const { user } = await verifySession();
+
+  const program = Effect.gen(function* () {
+    const sharing = yield* SharingService;
+    yield* sharing.blockSharer(user.id, ownerId);
+  }).pipe(Effect.provide(SharingLive), Effect.scoped);
+
+  await Effect.runPromise(program);
+}
+
+/**
+ * Unblock a sharer (restore their shifts to viewer's list)
+ * - Reverses a previous block action
+ *
+ * Promise wrapper around Effect-based SharingService
+ */
+export async function unblockSharer(ownerId: string): Promise<void> {
+  const { user } = await verifySession();
+
+  const program = Effect.gen(function* () {
+    const sharing = yield* SharingService;
+    yield* sharing.unblockSharer(user.id, ownerId);
+  }).pipe(Effect.provide(SharingLive), Effect.scoped);
+
+  await Effect.runPromise(program);
+}
+
+/**
+ * Internal implementation of getBlockedSharers
+ * @internal - Do not call directly, use getBlockedSharers()
+ */
+async function getBlockedSharersInternal(
+  userId: string
+): Promise<SharedUser[]> {
+  "use cache: private";
+  cacheTag(`user-${userId}`, "sharing-blocked");
+
+  await cookies();
+
+  const program = Effect.gen(function* () {
+    const sharing = yield* SharingService;
+    const data = yield* sharing.getBlockedSharers(userId);
+    return data;
+  }).pipe(Effect.provide(SharingLive), Effect.scoped);
+
+  try {
+    const result = await Effect.runPromise(program);
+    return [...result];
+  } catch (error: any) {
+    logger.error("Failed to fetch blocked sharers:", error);
+    return [];
+  }
+}
+
+/**
+ * Get blocked sharers for the current user
+ * - Uses React cache() for request deduplication
+ * - Cache is scoped by userId
+ *
+ * Promise wrapper around Effect-based SharingService
+ */
+export const getBlockedSharers = cache(
+  async (userId: string): Promise<SharedUser[]> => {
+    const { user } = await verifySession();
+
+    if (user.id !== userId) {
+      throw new Error("User ID mismatch - potential security violation");
+    }
+
+    return getBlockedSharersInternal(userId);
   }
 );

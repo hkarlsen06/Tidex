@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { connection } from "next/server";
 import { verifySession } from "@/data-access/auth";
-import { getUsersWhoSharedWithMe, getMyShareRecipients, canAddMoreRecipients, getSharedUserShifts } from "@/data-access/sharing";
+import { getUsersWhoSharedWithMe, canAddMoreRecipients, getSharedUserShifts, getAllFriends } from "@/data-access/sharing";
 import { getTranslations } from "@/lib/i18n/server";
 import { getAppDictionary } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/i18n/config";
@@ -42,9 +42,9 @@ export default async function SharingPage({ params, searchParams }: SharingPageP
   const { user } = await verifySession();
 
   // Fetch sharing data in parallel
-  const [sharers, recipients, shareCapacity] = await Promise.all([
+  const [sharers, friends, shareCapacity] = await Promise.all([
     getUsersWhoSharedWithMe(user.id),
-    getMyShareRecipients(user.id),
+    getAllFriends(user.id),
     canAddMoreRecipients(user.id),
   ]);
 
@@ -53,7 +53,7 @@ export default async function SharingPage({ params, searchParams }: SharingPageP
     return (
       <I18nProvider locale={_locale as Locale} dictionary={dictionary} namespaces={['pages.sharing', 'pages.shifts']}>
         <SharingDefaultView
-          recipients={recipients}
+          friends={friends}
           shareCapacity={shareCapacity}
           hasSharers={sharers.length > 0}
         >
@@ -75,7 +75,7 @@ export default async function SharingPage({ params, searchParams }: SharingPageP
     return (
       <I18nProvider locale={_locale as Locale} dictionary={dictionary} namespaces={['pages.sharing', 'pages.shifts']}>
         <SharingDefaultView
-          recipients={recipients}
+          friends={friends}
           shareCapacity={shareCapacity}
           hasSharers={sharers.length > 0}
         >
@@ -103,7 +103,7 @@ export default async function SharingPage({ params, searchParams }: SharingPageP
     <I18nProvider locale={_locale as Locale} dictionary={dictionary} namespaces={['pages.sharing', 'pages.shifts']}>
       <SharingPageContent
         sharers={sharers}
-        recipients={recipients}
+        friends={friends}
         shareCapacity={shareCapacity}
         selectedOwnerId={selectedOwnerId}
         selectedSharer={selectedSharer}

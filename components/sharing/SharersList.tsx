@@ -33,13 +33,11 @@ function getDisplayName(sharer: SharedUser): string {
 }
 
 function formatPhoneNumber(phone: string): string {
-  // Strip country code and non-digits
   const digits = phone.replace(/\D/g, "");
   const localNumber = digits.startsWith("47") && digits.length === 10
     ? digits.slice(2)
     : digits;
 
-  // Format as NNN NN NNN if 8 digits
   if (localNumber.length === 8) {
     return `${localNumber.slice(0, 3)} ${localNumber.slice(3, 5)} ${localNumber.slice(5)}`;
   }
@@ -47,7 +45,6 @@ function formatPhoneNumber(phone: string): string {
 }
 
 function getSecondaryInfo(sharer: SharedUser): string | null {
-  // Priority: phone first, then email, then nothing
   if (sharer.phone) return formatPhoneNumber(sharer.phone);
   if (sharer.email) return sharer.email;
   return null;
@@ -123,7 +120,7 @@ export function SharersList({ sharers, shiftPreviews = [], onSelect, basePath }:
               "w-full text-left rounded-xl border border-border-subtle bg-surface-primary overflow-hidden",
               "hover:bg-surface-secondary transition-colors",
               "focus:outline-none focus:ring-2 focus:ring-border",
-              loadingId !== null && !isLoading && "opacity-50"
+              (loadingId !== null && !isLoading) && "opacity-50"
             )}
           >
             {/* User card header */}
