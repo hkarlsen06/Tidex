@@ -4,10 +4,11 @@ import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import { ChevronDown, User } from "lucide-react";
 import { cn } from "@/lib/cn";
-import type { SharedUser } from "@/data-access/sharing";
+import type { SharedUser, SharerShiftPreview } from "@/data-access/sharing";
 
 type SharingDropdownProps = {
   sharers: SharedUser[];
+  shiftPreviews?: SharerShiftPreview[];
   selectedId: string | null;
   onSelect: (id: string | null) => void;
   placeholder?: string;
@@ -80,6 +81,7 @@ function UserAvatar({ user, size = "sm" }: { user: SharedUser; size?: "sm" | "md
 
 export function SharingDropdown({
   sharers,
+  shiftPreviews = [],
   selectedId,
   onSelect,
   placeholder = "Velg en person",
@@ -88,6 +90,17 @@ export function SharingDropdown({
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const selected = sharers.find((s) => s.id === selectedId);
+
+  // Sort sharers by shift preview order (which is pre-sorted by the server)
+  // Sharers with previews come first (in preview order), then sharers without
+  const sharerMap = new Map(sharers.map(s => [s.id, s]));
+  const previewMap = new Map(shiftPreviews.map(p => [p.sharerId, p]));
+  const sortedSharers = shiftPreviews.length > 0
+    ? [
+        ...shiftPreviews.map(p => sharerMap.get(p.sharerId)).filter(Boolean) as SharedUser[],
+        ...sharers.filter(s => !previewMap.has(s.id)),
+      ]
+    : sharers;
 
   // Close on click outside
   useEffect(() => {
@@ -101,12 +114,12 @@ export function SharingDropdown({
   }, []);
 
   return (
-    <div ref={dropdownRef} className="relative">
+    <div ref={dropdownRef} className="relative w-full">
       <button
         type="button"
         onClick={() => setOpen(!open)}
         className={cn(
-          "flex items-center gap-3 rounded-xl border border-border-subtle bg-surface-primary px-4 py-3 min-w-[200px]",
+          "flex w-full items-center gap-3 rounded-xl border border-border-subtle bg-surface-primary px-4 py-3",
           "hover:bg-surface-secondary transition-colors",
           "focus:outline-none focus:ring-2 focus:ring-border"
         )}
@@ -143,7 +156,7 @@ export function SharingDropdown({
 
       {open && (
         <div className="absolute left-0 top-full z-50 mt-2 w-full min-w-[200px] overflow-hidden rounded-xl border border-border-subtle bg-surface-primary shadow-lg">
-          {sharers.map((sharer) => (
+          {sortedSharers.map((sharer) => (
             <button
               key={sharer.id}
               type="button"
