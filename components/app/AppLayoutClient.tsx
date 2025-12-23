@@ -9,6 +9,7 @@ import { withRefreshLock } from "@/lib/auth/refresh-lock";
 import { logSessionRefresh } from "@/lib/auth/session-telemetry";
 import { NavigationFeedbackProvider } from "./navigation-feedback";
 import { ScrollProvider } from "@/lib/contexts/ScrollContext";
+import { AddShiftFormProvider } from "@/lib/contexts/AddShiftFormContext";
 import { TopHeader } from "./TopHeader";
 import { NavBar } from "./NavBar";
 
@@ -72,11 +73,13 @@ export function AppLayoutClient({
 
   return (
     <ScrollProvider threshold={50}>
-      <NavigationFeedbackProvider>
-        <LayoutContent userName={userName}>
-          {children}
-        </LayoutContent>
-      </NavigationFeedbackProvider>
+      <AddShiftFormProvider>
+        <NavigationFeedbackProvider>
+          <LayoutContent userName={userName}>
+            {children}
+          </LayoutContent>
+        </NavigationFeedbackProvider>
+      </AddShiftFormProvider>
     </ScrollProvider>
   );
 }
