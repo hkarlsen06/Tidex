@@ -490,7 +490,7 @@ type ShiftsViewProps = {
   payoutTaxSettings?: PayoutTaxSettings;
 };
 
-export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", userSettings, presetRules, readOnly = false, ownerName, headerSlot, sharedOwnerId, showEarnings = true, payoutTaxSettings }: ShiftsViewProps) {
+export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", userSettings, presetRules, readOnly = false, ownerName: _ownerName, headerSlot, sharedOwnerId, showEarnings = true, payoutTaxSettings }: ShiftsViewProps) {
   const { t, locale } = useTranslations();
   const formatCurrency = useFormatCurrency();
   const {
@@ -1345,7 +1345,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
 
       navigate(`/${locale}/shifts/add?date=${encodeURIComponent(iso)}`);
     },
-    [calendarSelectedShiftId, clearSelection, navigate, selectedDate, shiftsByDate, copyMode, router, moveMode, locale, readOnly, multiSelectedDates.size]
+    [calendarSelectedShiftId, clearSelection, navigate, selectedDate, shiftsByDate, copyMode, router, moveMode, locale, readOnly, multiSelectedDates, errorComplete]
   );
 
   const handleOpenDetails = useCallback(() => {

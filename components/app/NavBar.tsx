@@ -81,7 +81,8 @@ export function NavBar() {
     // This handles the case where the user just added shifts and the DB hasn't synced yet
     const hasOptimisticShifts = searchParamsString.includes('optimistic') || searchParamsString.includes('new') || searchParamsString.includes('newRecurring');
     if (hasOptimisticShifts) {
-      setShowAddShiftHint(false);
+      // Use callback to avoid synchronous setState warning
+      queueMicrotask(() => setShowAddShiftHint(false));
       return;
     }
 

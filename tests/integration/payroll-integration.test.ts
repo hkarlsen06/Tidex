@@ -48,6 +48,10 @@ describe('Payroll Integration Tests', () => {
         hourly_wage: PRESET_WAGE_RATES['3'], // 187.46
         wage_level: 3,
         supplements: { rules: [] }, // No supplements during day
+        break_enabled: true,
+        break_threshold_hours: 5.5,
+        break_deduction_minutes: 30,
+        break_method: 'proportional',
       };
 
       const result = computeShift(shift, settings, [], snapshot);
@@ -81,6 +85,10 @@ describe('Payroll Integration Tests', () => {
         hourly_wage: PRESET_WAGE_RATES['3'], // 187.46
         wage_level: 3,
         supplements: { rules: PRESET_SUPPLEMENT_RULES },
+        break_enabled: true,
+        break_threshold_hours: 5.5,
+        break_deduction_minutes: 30,
+        break_method: 'proportional',
       };
 
       const result = computeShift(shift, settings, PRESET_SUPPLEMENT_RULES, snapshot);
@@ -124,6 +132,10 @@ describe('Payroll Integration Tests', () => {
         hourly_wage: PRESET_WAGE_RATES['3'],
         wage_level: 3,
         supplements: { rules: PRESET_SUPPLEMENT_RULES },
+        break_enabled: true,
+        break_threshold_hours: 5.5,
+        break_deduction_minutes: 30,
+        break_method: 'proportional',
       };
 
       const result = computeShift(shift, settings, PRESET_SUPPLEMENT_RULES, snapshot);
@@ -159,6 +171,10 @@ describe('Payroll Integration Tests', () => {
         hourly_wage: PRESET_WAGE_RATES['3'],
         wage_level: 3,
         supplements: { rules: PRESET_SUPPLEMENT_RULES },
+        break_enabled: true,
+        break_threshold_hours: 5.5,
+        break_deduction_minutes: 30,
+        break_method: 'proportional',
       };
 
       const result = computeShift(shift, settings, PRESET_SUPPLEMENT_RULES, snapshot);
@@ -196,6 +212,10 @@ describe('Payroll Integration Tests', () => {
         hourly_wage: PRESET_WAGE_RATES['3'],
         wage_level: 3,
         supplements: { rules: PRESET_SUPPLEMENT_RULES },
+        break_enabled: true,
+        break_threshold_hours: 5.5,
+        break_deduction_minutes: 30,
+        break_method: 'proportional',
       };
 
       const result = computeShift(shift, settings, PRESET_SUPPLEMENT_RULES, snapshot);
@@ -231,12 +251,16 @@ describe('Payroll Integration Tests', () => {
         hourly_wage: 200,
         wage_level: null,
         supplements: { rules: [] },
+        break_enabled: true,
+        break_threshold_hours: 5.5,
+        break_deduction_minutes: 30,
+        break_method: 'proportional',
       };
 
       const result = computeShift(shift, settings, [], snapshot);
 
       expect(result.durationHours).toBe(4);
-      expect(result.paidHours).toBe(4); // No break deduction
+      expect(result.paidHours).toBe(4); // No break deduction (below threshold)
       expect(result.breakAudit.deductedHours).toBe(0);
     });
 
@@ -246,12 +270,7 @@ describe('Payroll Integration Tests', () => {
         end_time: '23:00', // 7 hours
       });
 
-      const settings = createSettings({
-        pause_deduction_enabled: true,
-        pause_deduction_method: 'end_of_shift',
-        pause_threshold_hours: 5.5,
-        pause_deduction_minutes: 30,
-      });
+      const settings = createSettings();
 
       const snapshot: WageSnapshot = {
         id: 'snap-1',
@@ -260,6 +279,10 @@ describe('Payroll Integration Tests', () => {
         hourly_wage: PRESET_WAGE_RATES['3'],
         wage_level: 3,
         supplements: { rules: PRESET_SUPPLEMENT_RULES },
+        break_enabled: true,
+        break_threshold_hours: 5.5,
+        break_deduction_minutes: 30,
+        break_method: 'end_of_shift',
       };
 
       const result = computeShift(shift, settings, PRESET_SUPPLEMENT_RULES, snapshot);
@@ -278,12 +301,7 @@ describe('Payroll Integration Tests', () => {
         end_time: '23:00',
       });
 
-      const settings = createSettings({
-        pause_deduction_enabled: true,
-        pause_deduction_method: 'base_only',
-        pause_threshold_hours: 5.5,
-        pause_deduction_minutes: 30,
-      });
+      const settings = createSettings();
 
       const snapshot: WageSnapshot = {
         id: 'snap-1',
@@ -292,6 +310,10 @@ describe('Payroll Integration Tests', () => {
         hourly_wage: PRESET_WAGE_RATES['3'],
         wage_level: 3,
         supplements: { rules: PRESET_SUPPLEMENT_RULES },
+        break_enabled: true,
+        break_threshold_hours: 5.5,
+        break_deduction_minutes: 30,
+        break_method: 'base_only',
       };
 
       const result = computeShift(shift, settings, PRESET_SUPPLEMENT_RULES, snapshot);
@@ -308,11 +330,7 @@ describe('Payroll Integration Tests', () => {
         end_time: '18:00', // 10 hours
       });
 
-      const settings = createSettings({
-        pause_deduction_enabled: true,
-        pause_threshold_hours: 8,
-        pause_deduction_minutes: 60, // 1 hour break
-      });
+      const settings = createSettings();
 
       const snapshot: WageSnapshot = {
         id: 'snap-1',
@@ -321,6 +339,10 @@ describe('Payroll Integration Tests', () => {
         hourly_wage: 200,
         wage_level: null,
         supplements: { rules: [] },
+        break_enabled: true,
+        break_threshold_hours: 8,
+        break_deduction_minutes: 60, // 1 hour break
+        break_method: 'proportional',
       };
 
       const result = computeShift(shift, settings, [], snapshot);
@@ -339,9 +361,7 @@ describe('Payroll Integration Tests', () => {
         end_time: '17:00',
       });
 
-      const settings = createSettings({
-        pause_deduction_enabled: false,
-      });
+      const settings = createSettings();
 
       const snapshot: WageSnapshot = {
         id: 'snap-1',
@@ -350,6 +370,7 @@ describe('Payroll Integration Tests', () => {
         hourly_wage: PRESET_WAGE_RATES['-1'], // 129.91
         wage_level: -1,
         supplements: { rules: [] },
+        break_enabled: false,
       };
 
       const result = computeShift(shift, settings, [], snapshot);
@@ -365,9 +386,7 @@ describe('Payroll Integration Tests', () => {
         end_time: '17:00',
       });
 
-      const settings = createSettings({
-        pause_deduction_enabled: false,
-      });
+      const settings = createSettings();
 
       const snapshot: WageSnapshot = {
         id: 'snap-1',
@@ -376,6 +395,7 @@ describe('Payroll Integration Tests', () => {
         hourly_wage: PRESET_WAGE_RATES['6'], // 256.14
         wage_level: 6,
         supplements: { rules: [] },
+        break_enabled: false,
       };
 
       const result = computeShift(shift, settings, [], snapshot);
@@ -391,9 +411,7 @@ describe('Payroll Integration Tests', () => {
         end_time: '17:00',
       });
 
-      const settings = createSettings({
-        pause_deduction_enabled: false,
-      });
+      const settings = createSettings();
 
       const snapshot: WageSnapshot = {
         id: 'snap-1',
@@ -402,6 +420,7 @@ describe('Payroll Integration Tests', () => {
         hourly_wage: 275.50, // Custom negotiated wage
         wage_level: null,
         supplements: { rules: [] },
+        break_enabled: false,
       };
 
       const result = computeShift(shift, settings, [], snapshot);
@@ -420,9 +439,7 @@ describe('Payroll Integration Tests', () => {
         hourly_wage_snapshot: 180, // Old wage
       });
 
-      const settings = createSettings({
-        pause_deduction_enabled: false,
-      });
+      const settings = createSettings();
 
       // Current snapshot shows 200, but shift has old snapshot
       const currentSnapshot: WageSnapshot = {
@@ -432,6 +449,7 @@ describe('Payroll Integration Tests', () => {
         hourly_wage: 200, // Current wage
         wage_level: null,
         supplements: { rules: [] },
+        break_enabled: false,
       };
 
       const result = computeShift(shift, settings, [], currentSnapshot);
@@ -446,13 +464,15 @@ describe('Payroll Integration Tests', () => {
         hourly_wage_snapshot: 175,
       });
 
-      const settings = createSettings({
-        pause_deduction_enabled: false,
-      });
+      const settings = createSettings();
 
+      // When no snapshot is provided, default break_enabled is true, so we need to check
+      // the actual expected behavior. The default break settings will apply.
       const result = computeShift(shift, settings, [], null);
 
-      expect(result.basePay).toBe(1400); // 8 * 175 (uses per-shift snapshot)
+      // With default break settings (break_enabled: true, threshold: 5.5h, 30min deduction)
+      // 8 hours exceeds threshold, so 0.5h is deducted: 7.5 * 175 = 1312.5
+      expect(result.basePay).toBe(1312.5); // 7.5 * 175 (uses per-shift snapshot with break)
     });
   });
 
@@ -476,6 +496,10 @@ describe('Payroll Integration Tests', () => {
         hourly_wage: PRESET_WAGE_RATES['3'],
         wage_level: 3,
         supplements: { rules: PRESET_SUPPLEMENT_RULES },
+        break_enabled: true,
+        break_threshold_hours: 5.5,
+        break_deduction_minutes: 45, // 45 min break for long shift
+        break_method: 'proportional',
       };
 
       const result = computeShift(shift, settings, PRESET_SUPPLEMENT_RULES, snapshot);
@@ -586,6 +610,7 @@ describe('Payroll Integration Tests', () => {
         hourly_wage: 200,
         wage_level: null,
         supplements: { rules: [] },
+        break_enabled: false, // Explicitly disable break deduction
       };
 
       const result = computeShift(shift, settings, [], snapshot);

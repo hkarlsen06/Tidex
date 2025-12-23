@@ -26,6 +26,7 @@ describe("Time Calculations - Property-Based Tests", () => {
     user_id: fc.uuid(),
     shift_date: fc
       .date({ min: new Date("2024-01-01"), max: new Date("2025-12-31") })
+      .filter((d) => !isNaN(d.getTime()))
       .map((d) => d.toISOString().split("T")[0]),
     start_time: timeArbitrary,
     end_time: timeArbitrary,

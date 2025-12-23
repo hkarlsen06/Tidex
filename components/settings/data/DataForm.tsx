@@ -9,7 +9,6 @@ import { cn } from '@/lib/cn';
 import type { Dictionary } from '@/lib/i18n/dictionaries/no';
 import { useTranslations } from '@/lib/i18n/client';
 import type { Locale } from '@/lib/i18n/config';
-import { formatCurrency } from '@/lib/formatters';
 import { getDateFormatter } from '@/lib/i18n/locale';
 
 const JSPDF_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';

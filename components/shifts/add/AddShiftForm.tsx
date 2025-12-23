@@ -8,7 +8,6 @@ import { TimeInput } from "@/components/app/TimeInput";
 import { SelectDatesCalendar } from "@/components/app/SelectDatesCalendar";
 import type { ISODate } from "@/components/app/calendar-utils";
 import { computeShift, type UserSettings, type SupplementRule, type WageSnapshot } from "@/lib/payroll";
-import { createShifts } from "@/app/[locale]/(app)/shifts/add/actions";
 import RecurringForm from "./RecurringForm";
 import { MonthPicker } from "@/components/app/MonthPicker";
 import { cn } from "@/lib/cn";
@@ -18,7 +17,6 @@ import { checkShiftLimit } from "@/app/[locale]/(app)/shifts/add/_checks/checkSh
 import { useNavigationFeedback } from "@/components/app/navigation-feedback";
 import { useMonth } from "@/components/app/MonthContext";
 import { useTranslations, useLocale } from "@/lib/i18n/client";
-import { queueMutation, isOfflineQueueSupported } from "@/lib/pwa/offline-queue";
 import { useOnlineStatus } from "@/lib/hooks/useOnlineStatus";
 
 type ExistingShift = {
@@ -72,7 +70,7 @@ type Props = {
 export default function AddShiftForm({ existingShifts, userSettings, presetRules, wageSnapshots }: Props) {
   const { t } = useTranslations();
   const locale = useLocale();
-  const router = useRouter();
+  const _router = useRouter();
   const { navigate } = useNavigationFeedback();
   const searchParams = useSearchParams();
   const [isSubmitting, setIsSubmitting] = useState(false);

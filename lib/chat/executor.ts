@@ -14,7 +14,6 @@ import { updateRecurringShift } from "@/app/[locale]/(app)/shifts/_actions/updat
 import { deleteRecurringShift } from "@/app/[locale]/(app)/shifts/_actions/deleteRecurringShift";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { EndCondition } from "@/lib/recurring/types";
-import type { BreakMethod } from "@/lib/payroll/types";
 import type {
   ToolName,
   ToolResult,
