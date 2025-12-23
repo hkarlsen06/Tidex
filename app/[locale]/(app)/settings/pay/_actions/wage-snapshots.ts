@@ -10,7 +10,7 @@ import {
 import { invalidateAndRevalidate } from '@/lib/revalidation/paths';
 import { isISODate } from '@/lib/validation/shift-validators';
 import { ERRORS } from '@/lib/errors/messages';
-import type { SupplementRule, WageSnapshotInput } from '@/data-access/wage-snapshots';
+import type { WageSnapshotInput } from '@/data-access/wage-snapshots';
 
 // Re-export for convenience
 export type { WageSnapshotInput };

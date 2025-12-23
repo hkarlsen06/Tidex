@@ -16,8 +16,9 @@ export function useOnlineStatus(): boolean {
   const [isOffline, setIsOffline] = useState(false);
 
   useEffect(() => {
-    // Sync with actual status after mount
-    setIsOffline(!navigator.onLine);
+    // Sync with actual status after mount using queueMicrotask to avoid
+    // synchronous setState warning from react-hooks/set-state-in-effect
+    queueMicrotask(() => setIsOffline(!navigator.onLine));
 
     const handleOnline = () => setIsOffline(false);
     const handleOffline = () => setIsOffline(true);

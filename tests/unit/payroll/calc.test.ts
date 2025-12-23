@@ -28,6 +28,10 @@ describe('payroll/calc', () => {
     hourly_wage: 200,
     wage_level: 1,
     supplements: { rules: [] },
+    break_enabled: false, // Default to no break deduction for tests
+    break_method: 'proportional',
+    break_threshold_hours: 5.5,
+    break_deduction_minutes: 30,
     ...overrides,
   });
 
@@ -86,13 +90,14 @@ describe('payroll/calc', () => {
         start_time: '09:00',
         end_time: '17:00', // 8 hours
       });
-      const settings = createSettings({
-        pause_deduction_enabled: true,
-        pause_threshold_hours: 5.5,
-        pause_deduction_minutes: 30,
-        pause_deduction_method: 'proportional',
+      const settings = createSettings();
+      const snapshot = createSnapshot({
+        hourly_wage: 200,
+        break_enabled: true,
+        break_threshold_hours: 5.5,
+        break_deduction_minutes: 30,
+        break_method: 'proportional',
       });
-      const snapshot = createSnapshot({ hourly_wage: 200 });
 
       const result = computeShift(shift, settings, [], snapshot);
 
@@ -108,12 +113,13 @@ describe('payroll/calc', () => {
         start_time: '09:00',
         end_time: '14:00', // 5 hours
       });
-      const settings = createSettings({
-        pause_deduction_enabled: true,
-        pause_threshold_hours: 5.5,
-        pause_deduction_minutes: 30,
+      const settings = createSettings();
+      const snapshot = createSnapshot({
+        hourly_wage: 200,
+        break_enabled: true,
+        break_threshold_hours: 5.5,
+        break_deduction_minutes: 30,
       });
-      const snapshot = createSnapshot({ hourly_wage: 200 });
 
       const result = computeShift(shift, settings, [], snapshot);
 
@@ -128,12 +134,11 @@ describe('payroll/calc', () => {
         start_time: '09:00',
         end_time: '17:00', // 8 hours
       });
-      const settings = createSettings({
-        pause_deduction_enabled: false,
-        pause_threshold_hours: 5.5,
-        pause_deduction_minutes: 30,
+      const settings = createSettings();
+      const snapshot = createSnapshot({
+        hourly_wage: 200,
+        break_enabled: false,
       });
-      const snapshot = createSnapshot({ hourly_wage: 200 });
 
       const result = computeShift(shift, settings, [], snapshot);
 
@@ -255,7 +260,9 @@ describe('payroll/calc', () => {
 
       const result = computeShift(shift, settings, [], null);
 
-      expect(result.basePay).toBe(1440); // 8 * 180
+      // When snapshot is null, default break settings apply (break_enabled: true)
+      // 8 hours exceeds 5.5h threshold, so 0.5h break is deducted: 7.5 * 180 = 1350
+      expect(result.basePay).toBe(1350); // 7.5 * 180
     });
 
     it('should use preset rate as last fallback', () => {
@@ -264,7 +271,9 @@ describe('payroll/calc', () => {
 
       const result = computeShift(shift, settings, [], null);
 
-      expect(result.basePay).toBe(8 * PRESET_WAGE_RATES["1"]);
+      // When snapshot is null, default break settings apply (break_enabled: true)
+      // 8 hours exceeds 5.5h threshold, so 0.5h break is deducted: 7.5 * 184.54 = 1384.05
+      expect(result.basePay).toBe(7.5 * PRESET_WAGE_RATES["1"]);
     });
   });
 
@@ -274,8 +283,11 @@ describe('payroll/calc', () => {
         start_time: '22:00',
         end_time: '06:00', // Next day
       });
-      const settings = createSettings({ pause_deduction_enabled: false });
-      const snapshot = createSnapshot({ hourly_wage: 200 });
+      const settings = createSettings();
+      const snapshot = createSnapshot({
+        hourly_wage: 200,
+        break_enabled: false,
+      });
 
       const result = computeShift(shift, settings, [], snapshot);
 
@@ -289,12 +301,13 @@ describe('payroll/calc', () => {
         start_time: '22:00',
         end_time: '06:00', // 8 hours
       });
-      const settings = createSettings({
-        pause_deduction_enabled: true,
-        pause_threshold_hours: 5.5,
-        pause_deduction_minutes: 30,
+      const settings = createSettings();
+      const snapshot = createSnapshot({
+        hourly_wage: 200,
+        break_enabled: true,
+        break_threshold_hours: 5.5,
+        break_deduction_minutes: 30,
       });
-      const snapshot = createSnapshot({ hourly_wage: 200 });
 
       const result = computeShift(shift, settings, [], snapshot);
 

@@ -189,7 +189,7 @@ export const ClaudeServiceLive = Layer.effect(
 
         if (tools?.length) {
           // Strip input_examples from tools - not supported without beta header
-          body.tools = tools.map(({ input_examples, ...tool }) => tool);
+          body.tools = tools.map(({ input_examples: _input_examples, ...tool }) => tool);
         }
 
         // Make API request

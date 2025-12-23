@@ -225,12 +225,13 @@ export function ManageSharingModal({
                   }}
                   disabled={isAdding}
                 />
-                <label className="flex items-center justify-between cursor-pointer select-none pt-4 pb-1">
+                <label htmlFor="new-recipient-show-earnings" className="flex items-center justify-between cursor-pointer select-none pt-4 pb-1">
                   <span className="flex items-center gap-2">
                     <DollarSign className={`h-4 w-4 transition-colors ${newRecipientShowEarnings ? "text-success" : "text-text-muted"}`} />
                     <span className="text-sm text-text-secondary">{sharing.showEarnings}</span>
                   </span>
                   <Checkbox
+                    id="new-recipient-show-earnings"
                     checked={newRecipientShowEarnings}
                     onCheckedChange={(checked) => setNewRecipientShowEarnings(checked === true)}
                     disabled={isAdding}

@@ -22,7 +22,6 @@ import { ShiftsService } from "@/lib/services/shifts";
 import { logger } from "@/lib/logger";
 import { verifySession } from "@/data-access/auth";
 import type { ShiftWithComputations, UserSettings } from "@/lib/payroll";
-import type { ShiftsAggregates } from "@/lib/services/shifts";
 
 // Re-export types for backward compatibility
 export type { SharedUser, ShareRecipient };
