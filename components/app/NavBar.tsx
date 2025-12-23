@@ -17,6 +17,7 @@ import { useNavigationFeedback } from "./navigation-feedback";
 import { supabase } from "@/lib/supabase/browser";
 import { useTranslations } from "@/lib/i18n/client";
 import { useScrollContext } from "@/lib/contexts/ScrollContext";
+import { useAddShiftFormSafe } from "@/lib/contexts/AddShiftFormContext";
 import { useSharers } from "./SharersProvider";
 import { getSharingUrlWithState, clearSharingViewState } from "@/lib/hooks/useSharingViewState";
 
@@ -84,6 +85,7 @@ export function NavBar() {
   const { navigate, pendingPath: rawPendingPath } = useNavigationFeedback();
   const [showAddShiftHint, setShowAddShiftHint] = useState(false);
   const { scrollDirection } = useScrollContext();
+  const addShiftForm = useAddShiftFormSafe();
   const sharers = useSharers();
 
   // Sort sharers: prioritize self-picked profile pictures, then OAuth avatars, then no avatar
@@ -258,11 +260,34 @@ export function NavBar() {
 
             if (item.isCenter) {
               const isOnAddPage = pathname === "/shifts/add" || pendingPath === "/shifts/add";
-              const targetHref = isOnAddPage ? "/shifts" : item.href;
               const shouldShowHint =
                 showAddShiftHint &&
                 !isOnAddPage &&
                 (isEligibleForHint(pathname) || isEligibleForHint(pendingPath));
+
+              // When on add page with a registered form, clicking submits the form
+              // Otherwise, navigate to the add page
+              const handleCenterClick = (event: MouseEvent<HTMLAnchorElement>) => {
+                if (
+                  event.metaKey ||
+                  event.ctrlKey ||
+                  event.shiftKey ||
+                  event.altKey ||
+                  event.button !== 0
+                ) {
+                  return;
+                }
+
+                event.preventDefault();
+
+                if (isOnAddPage && addShiftForm?.isFormRegistered) {
+                  // Trigger form submission
+                  addShiftForm.submitForm();
+                } else {
+                  // Navigate to add page
+                  navigate(item.href);
+                }
+              };
 
               return (
                 <div
@@ -282,16 +307,14 @@ export function NavBar() {
                     </div>
                   ) : null}
                   <Link
-                    href={targetHref}
-                    onClick={handleItemClick(targetHref)}
+                    href={item.href}
+                    onClick={handleCenterClick}
                     prefetch={true}
                     className="flex items-center justify-center p-2 -m-2"
                   >
                     <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-gradient-mid">
                       <Icon
-                        className={`h-6 w-6 text-text-inverse transition-transform duration-200 ${
-                          isOnAddPage ? "rotate-45" : ""
-                        }`}
+                        className="h-6 w-6 text-text-inverse"
                         strokeWidth={2}
                       />
                     </div>

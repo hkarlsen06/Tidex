@@ -49,7 +49,7 @@ export function SharingDefaultView({
           <div className="flex items-center justify-between gap-4">
             <h1 className="text-2xl font-semibold text-text-primary">{sharing.title}</h1>
             <Button
-              variant="default"
+              variant="outline"
               size="sm"
               onClick={() => setManageSharingOpen(true)}
               className="gap-2"

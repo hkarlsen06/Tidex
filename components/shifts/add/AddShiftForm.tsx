@@ -18,6 +18,7 @@ import { useNavigationFeedback } from "@/components/app/navigation-feedback";
 import { useMonth } from "@/components/app/MonthContext";
 import { useTranslations, useLocale } from "@/lib/i18n/client";
 import { useOnlineStatus } from "@/lib/hooks/useOnlineStatus";
+import { useAddShiftForm } from "@/lib/contexts/AddShiftFormContext";
 
 type ExistingShift = {
   shift_date: string; // YYYY-MM-DD
@@ -90,6 +91,7 @@ export default function AddShiftForm({ existingShifts, userSettings, presetRules
   const [showMultiMonthWarning, setShowMultiMonthWarning] = useState(false);
   const limitStatusLoadingRef = useRef(false);
   const isOffline = useOnlineStatus();
+  const { registerForm, unregisterForm } = useAddShiftForm();
 
   const canSubmit = !isOffline && dates.length > 0 && /^\d{2}:\d{2}$/.test(start) && /^\d{2}:\d{2}$/.test(end);
 
@@ -145,6 +147,9 @@ export default function AddShiftForm({ existingShifts, userSettings, presetRules
     });
     return result;
   }, [intervalMap, start, end]);
+
+  // Ref to hold the latest onSubmit function for the context
+  const onSubmitRef = useRef<() => void>(() => {});
 
   // Reset submitting state when component mounts (e.g., user navigates back)
   useEffect(() => {
@@ -294,6 +299,27 @@ export default function AddShiftForm({ existingShifts, userSettings, presetRules
     // Navigate immediately - shifts page will handle both display AND saving
     navigate(`/${locale}/shifts?optimistic=${optimisticData}`);
   };
+
+  // Keep the ref updated with the latest onSubmit function
+  onSubmitRef.current = onSubmit;
+
+  // Register form with context for NavBar to trigger submission (only for single mode)
+  useEffect(() => {
+    if (mode === "single") {
+      registerForm({
+        submit: () => onSubmitRef.current(),
+        canSubmit,
+        isSubmitting,
+      });
+    } else {
+      // Unregister when in recurring mode
+      unregisterForm();
+    }
+
+    return () => {
+      unregisterForm();
+    };
+  }, [mode, canSubmit, isSubmitting, registerForm, unregisterForm]);
 
   const handleDeleteAndProceed = async () => {
     if (isSubmitting) return;
