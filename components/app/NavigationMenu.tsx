@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useTranslations } from "@/lib/i18n/client";
-import { getSharingUrlWithState } from "@/lib/hooks/useSharingViewState";
+import { getSharingUrlWithState, clearSharingViewState } from "@/lib/hooks/useSharingViewState";
 import {
   NavigationMenu as NavigationMenuPrimitive,
   NavigationMenuItem,
@@ -61,19 +61,25 @@ export function NavigationMenu({ className }: NavigationMenuProps) {
               ? pathname === "/"
               : pathname.startsWith(item.href);
 
-          // For sharing link: if on /sharing, go to main route; otherwise restore saved view
-          const href =
-            item.labelKey === "sharing"
-              ? isOnSharingPath
-                ? `/${locale}/sharing`
-                : getSharingUrlWithState(locale)
-              : `/${locale}${item.href}`;
+          // For sharing link: if on /sharing, go to main route and clear state; otherwise restore saved view
+          const isSharingItem = item.labelKey === "sharing";
+          const href = isSharingItem
+            ? isOnSharingPath
+              ? `/${locale}/sharing`
+              : getSharingUrlWithState(locale)
+            : `/${locale}${item.href}`;
+
+          // Clear saved sharing state when clicking sharing link while on sharing path
+          const handleClick = isSharingItem && isOnSharingPath
+            ? () => clearSharingViewState()
+            : undefined;
 
           return (
             <NavigationMenuItem key={item.href}>
               <NavigationMenuLink asChild>
                 <Link
                   href={href}
+                  onClick={handleClick}
                   className={cn(
                     navigationMenuTriggerStyle(),
                     isActive && "bg-accent/50 text-accent-foreground"
