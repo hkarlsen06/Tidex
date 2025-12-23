@@ -3,7 +3,7 @@
 import { useState, useTransition, useOptimistic } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { Plus, Trash2, Users, DollarSign } from "lucide-react";
+import { Plus, Trash2, Users, DollarSign, Eye, EyeOff, Loader2, Share2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -15,14 +15,21 @@ import { Button } from "@/components/app/Button";
 import { Input } from "@/components/app/Input";
 import { Switch } from "@/components/app/Switch";
 import { Checkbox } from "@/components/app/Checkbox";
-import { createShare, removeShare, toggleShareEarnings } from "@/app/[locale]/(app)/sharing/_actions/sharing";
+import {
+  createShare,
+  removeShare,
+  toggleShareEarnings,
+  blockSharer,
+  unblockSharer,
+  shareBack,
+} from "@/app/[locale]/(app)/sharing/_actions/sharing";
 import { useTranslations } from "@/lib/i18n/client";
-import type { ShareRecipient } from "@/data-access/sharing";
+import type { Friend } from "@/data-access/sharing";
 
 type ManageSharingModalProps = {
   isOpen: boolean;
   onClose: () => void;
-  recipients: ShareRecipient[];
+  friends: Friend[];
   shareCapacity: { canAdd: boolean; currentCount: number; limit: number };
 };
 
@@ -36,44 +43,33 @@ function getInitials(name: string | null | undefined): string {
     .slice(0, 2);
 }
 
-function getDisplayName(recipient: ShareRecipient): string {
-  if (recipient.firstName) return recipient.firstName;
-  if (recipient.email) return recipient.email.split("@")[0];
-  if (recipient.phone) return recipient.phone;
-  return "Bruker";
-}
-
 function formatPhoneNumber(phone: string): string {
-  // Strip country code and non-digits
   const digits = phone.replace(/\D/g, "");
   const localNumber = digits.startsWith("47") && digits.length === 10
     ? digits.slice(2)
     : digits;
 
-  // Format as NNN NN NNN if 8 digits
   if (localNumber.length === 8) {
     return `${localNumber.slice(0, 3)} ${localNumber.slice(3, 5)} ${localNumber.slice(5)}`;
   }
   return localNumber;
 }
 
-function getSecondaryInfo(recipient: ShareRecipient): string | null {
-  // Priority: phone first, then email, then nothing
-  if (recipient.phone) return formatPhoneNumber(recipient.phone);
-  if (recipient.email) return recipient.email;
+function getSecondaryInfo(friend: Friend): string | null {
+  if (friend.phone) return formatPhoneNumber(friend.phone);
+  if (friend.email) return friend.email;
   return null;
 }
 
-function RecipientAvatar({ user }: { user: ShareRecipient }) {
-  // Resolve avatar URL with fallback chain: custom profile pic > OAuth avatar > initials
-  const avatarUrl = user.profilePictureUrl || user.oauthAvatarUrl || null;
+function FriendAvatar({ friend, displayName }: { friend: Friend; displayName: string }) {
+  const avatarUrl = friend.profilePictureUrl || friend.oauthAvatarUrl || null;
 
   if (avatarUrl) {
     return (
       <span className="relative inline-flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-surface-secondary text-sm font-semibold text-text-primary">
         <Image
           src={avatarUrl}
-          alt={getDisplayName(user)}
+          alt={displayName}
           fill
           sizes="40px"
           className="object-cover"
@@ -85,15 +81,21 @@ function RecipientAvatar({ user }: { user: ShareRecipient }) {
 
   return (
     <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-surface-secondary text-sm font-semibold text-text-primary">
-      {getInitials(user.firstName ?? user.email)}
+      {getInitials(friend.firstName ?? friend.email)}
     </span>
   );
 }
 
+type OptimisticAction =
+  | { type: "toggleVisibility"; id: string; blocked: boolean }
+  | { type: "toggleEarnings"; id: string; showEarnings: boolean }
+  | { type: "remove"; id: string }
+  | { type: "shareBack"; id: string };
+
 export function ManageSharingModal({
   isOpen,
   onClose,
-  recipients,
+  friends,
   shareCapacity,
 }: ManageSharingModalProps) {
   const { t } = useTranslations();
@@ -101,22 +103,48 @@ export function ManageSharingModal({
   const [identifier, setIdentifier] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isAdding, startAddTransition] = useTransition();
-  const [removingId, setRemovingId] = useState<string | null>(null);
-  const [isRemoving, startRemoveTransition] = useTransition();
-  const [togglingId, setTogglingId] = useState<string | null>(null);
-  const [isToggling, startToggleTransition] = useTransition();
-  // State for new recipient earnings toggle (default: off)
+  const [actionId, setActionId] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
   const [newRecipientShowEarnings, setNewRecipientShowEarnings] = useState(false);
 
-  // Optimistic state for recipients (handles both earnings toggles and removals)
-  const [optimisticRecipients, setOptimisticRecipients] = useOptimistic(
-    recipients,
-    (state, action: { type: "toggle"; id: string; showEarnings: boolean } | { type: "remove"; id: string }) => {
-      if (action.type === "toggle") {
-        return state.map((r) => (r.id === action.id ? { ...r, showEarnings: action.showEarnings } : r));
+  // Optimistic state for friends
+  const [optimisticFriends, setOptimisticFriends] = useOptimistic(
+    friends,
+    (state, action: OptimisticAction) => {
+      if (action.type === "toggleVisibility") {
+        return state.map((f) =>
+          f.id === action.id && f.sharesWithMe
+            ? { ...f, sharesWithMe: { ...f.sharesWithMe, blocked: action.blocked } }
+            : f
+        );
+      }
+      if (action.type === "toggleEarnings") {
+        return state.map((f) =>
+          f.id === action.id && f.iShareWith
+            ? { ...f, iShareWith: { ...f.iShareWith, showEarningsToThem: action.showEarnings } }
+            : f
+        );
       }
       if (action.type === "remove") {
-        return state.filter((r) => r.id !== action.id);
+        // Remove the iShareWith portion (they can still share with us)
+        return state.map((f) =>
+          f.id === action.id
+            ? { ...f, iShareWith: null }
+            : f
+        ).filter((f) => f.sharesWithMe || f.iShareWith); // Remove if neither direction exists
+      }
+      if (action.type === "shareBack") {
+        return state.map((f) =>
+          f.id === action.id
+            ? {
+                ...f,
+                iShareWith: {
+                  showEarningsToThem: false,
+                  sharedAt: new Date().toISOString(),
+                },
+              }
+            : f
+        );
       }
       return state;
     }
@@ -126,15 +154,28 @@ export function ManageSharingModal({
   const sharing = t.pages?.sharing ?? {
     manageSharing: "Administrer deling",
     manageDescription: "Del vaktene dine med andre brukere. De kan se vaktene dine, men ikke redigere dem.",
-    addRecipient: "Legg til mottaker",
+    addRecipient: "Legg til venn",
     emailOrPhone: "E-post eller telefonnummer",
     add: "Legg til",
-    recipientsCount: "mottakere",
-    noRecipients: "Du har ikke delt med noen enda",
-    limitReached: "Du har nådd maksimalt antall mottakere",
+    friends: "Venner",
+    noFriends: "Ingen venner enda",
+    limitReached: "Du har nådd maksimalt antall delinger",
     close: "Lukk",
-    showEarnings: "Vis inntjening til mottaker",
-    showEarningsDescription: "La mottakeren se hva du tjener",
+    showEarnings: "Vis inntjening",
+    showEarningsDescription: "La personen se hva du tjener",
+    showInList: "Vis i listen",
+    hideFromList: "Skjul fra listen",
+    shareBack: "Del tilbake",
+    stopSharing: "Slutt å dele",
+    user: "Bruker",
+  };
+
+  // Helper to get display name with localized fallback
+  const getLocalizedDisplayName = (friend: Friend): string => {
+    if (friend.firstName) return friend.firstName;
+    if (friend.email) return friend.email.split("@")[0];
+    if (friend.phone) return friend.phone;
+    return sharing.user ?? "Bruker";
   };
 
   const handleAdd = () => {
@@ -145,7 +186,7 @@ export function ManageSharingModal({
       const result = await createShare(identifier.trim(), { showEarnings: newRecipientShowEarnings });
       if (result.success) {
         setIdentifier("");
-        setNewRecipientShowEarnings(false); // Reset toggle for next recipient
+        setNewRecipientShowEarnings(false);
         router.refresh();
       } else {
         setError(result.error);
@@ -153,44 +194,79 @@ export function ManageSharingModal({
     });
   };
 
-  const handleRemove = (recipientId: string) => {
-    setRemovingId(recipientId);
-    startRemoveTransition(async () => {
-      // Optimistic update - remove from list immediately
-      setOptimisticRecipients({ type: "remove", id: recipientId });
+  const handleToggleVisibility = (friendId: string, currentlyBlocked: boolean) => {
+    setActionId(friendId);
 
-      const result = await removeShare(recipientId);
+    startTransition(async () => {
+      const newBlocked = !currentlyBlocked;
+      setOptimisticFriends({ type: "toggleVisibility", id: friendId, blocked: newBlocked });
+
+      const result = newBlocked
+        ? await blockSharer(friendId)
+        : await unblockSharer(friendId);
+
       if (!result.success) {
         setError(result.error);
-        // On error, refresh to restore the correct state
         router.refresh();
       }
-      setRemovingId(null);
+      setActionId(null);
     });
   };
 
-  const handleToggleEarnings = (recipientId: string, currentValue: boolean) => {
-    const newValue = !currentValue;
-    setTogglingId(recipientId);
+  const handleToggleEarnings = (friendId: string, currentValue: boolean) => {
+    setActionId(friendId);
 
-    startToggleTransition(async () => {
-      // Optimistic update
-      setOptimisticRecipients({ type: "toggle", id: recipientId, showEarnings: newValue });
+    startTransition(async () => {
+      const newValue = !currentValue;
+      setOptimisticFriends({ type: "toggleEarnings", id: friendId, showEarnings: newValue });
 
-      const result = await toggleShareEarnings(recipientId, newValue);
+      const result = await toggleShareEarnings(friendId, newValue);
       if (!result.success) {
         setError(result.error);
-        // Revert optimistic update on error by refreshing
         router.refresh();
       }
-      setTogglingId(null);
+      setActionId(null);
     });
   };
+
+  const handleRemove = (friendId: string) => {
+    setActionId(friendId);
+
+    startTransition(async () => {
+      setOptimisticFriends({ type: "remove", id: friendId });
+
+      const result = await removeShare(friendId);
+      if (!result.success) {
+        setError(result.error);
+        router.refresh();
+      }
+      setActionId(null);
+    });
+  };
+
+  const handleShareBack = (friendId: string) => {
+    setActionId(friendId);
+
+    startTransition(async () => {
+      setOptimisticFriends({ type: "shareBack", id: friendId });
+
+      const result = await shareBack(friendId);
+      if (!result.success) {
+        setError(result.error);
+        router.refresh();
+      }
+      setActionId(null);
+    });
+  };
+
+  // Filter out friends where they share with us but are blocked (they go to hidden section conceptually)
+  // But now we show all friends with visibility toggle
+  const visibleFriends = optimisticFriends;
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent
-        className="max-w-[calc(100vw-2rem)] sm:max-w-md sm:rounded-3xl overflow-hidden"
+        className="max-w-[calc(100vw-2rem)] sm:max-w-md sm:rounded-3xl overflow-x-hidden"
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <DialogHeader>
@@ -201,8 +277,8 @@ export function ManageSharingModal({
           <DialogDescription>{sharing.manageDescription}</DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 pt-2 overflow-hidden">
-          {/* Add recipient form */}
+        <div className="space-y-4 pt-2 min-w-0">
+          {/* Add friend form */}
           {shareCapacity.canAdd ? (
             <div className="space-y-2">
               <label className="text-sm font-medium text-text-secondary">
@@ -260,60 +336,116 @@ export function ManageSharingModal({
             </div>
           )}
 
-          {/* Recipients list */}
+          <hr className="border-border-subtle" />
+
+          {/* Friends list */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium text-text-secondary">
-                {sharing.recipientsCount}
+                {sharing.friends}
               </span>
               <span className="text-sm text-text-muted">
                 {shareCapacity.currentCount}/{shareCapacity.limit}
               </span>
             </div>
 
-            {optimisticRecipients.length === 0 ? (
+            {visibleFriends.length === 0 ? (
               <div className="rounded-xl border border-border-subtle bg-surface-secondary px-4 py-6 text-center">
-                <p className="text-sm text-text-muted">{sharing.noRecipients}</p>
+                <p className="text-sm text-text-muted">{sharing.noFriends}</p>
               </div>
             ) : (
               <div className="divide-y divide-border-subtle rounded-xl border border-border-subtle bg-surface-primary">
-                {optimisticRecipients.map((recipient) => (
-                  <div
-                    key={recipient.id}
-                    className="flex items-center gap-2 px-2 py-2.5 sm:gap-3 sm:px-3 sm:py-3"
-                  >
-                    <div className="shrink-0">
-                      <RecipientAvatar user={recipient} />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-text-primary truncate-fade">
-                        {getDisplayName(recipient)}
-                      </p>
-                      {getSecondaryInfo(recipient) && (
-                        <p className="truncate-fade text-xs text-text-muted">
-                          {getSecondaryInfo(recipient)}
+                {visibleFriends.map((friend) => {
+                  const sharesWithMe = friend.sharesWithMe;
+                  const iShareWith = friend.iShareWith;
+                  const isBlocked = sharesWithMe?.blocked ?? false;
+                  const isActionPending = isPending && actionId === friend.id;
+
+                  const friendDisplayName = getLocalizedDisplayName(friend);
+
+                  return (
+                    <div
+                      key={friend.id}
+                      className="flex items-center gap-2 px-2 py-2.5 sm:gap-3 sm:px-3 sm:py-3"
+                    >
+                      <div className="shrink-0">
+                        <FriendAvatar friend={friend} displayName={friendDisplayName} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-text-primary truncate-fade">
+                          {friendDisplayName}
                         </p>
-                      )}
+                        {getSecondaryInfo(friend) && (
+                          <p className="truncate-fade text-xs text-text-muted">
+                            {getSecondaryInfo(friend)}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        {/* Eye toggle - only if they share with me */}
+                        {sharesWithMe && (
+                          <button
+                            type="button"
+                            onClick={() => handleToggleVisibility(friend.id, isBlocked)}
+                            disabled={isActionPending}
+                            className="p-1.5 rounded-md text-text-muted hover:text-text-primary hover:bg-surface-secondary transition-colors disabled:opacity-50"
+                            title={isBlocked ? sharing.showInList : sharing.hideFromList}
+                          >
+                            {isBlocked ? (
+                              <EyeOff className="h-4 w-4" />
+                            ) : (
+                              <Eye className="h-4 w-4" />
+                            )}
+                          </button>
+                        )}
+
+                        {/* Money toggle - only if I share with them */}
+                        {iShareWith && (
+                          <>
+                            <DollarSign className={`h-3.5 w-3.5 transition-colors ${iShareWith.showEarningsToThem ? "text-success" : "text-text-muted"}`} />
+                            <Switch
+                              checked={iShareWith.showEarningsToThem}
+                              onCheckedChange={() => handleToggleEarnings(friend.id, iShareWith.showEarningsToThem)}
+                              disabled={isActionPending}
+                              aria-label={sharing.showEarningsDescription}
+                            />
+                          </>
+                        )}
+
+                        {/* Share back button - only if they share with me but I don't share back */}
+                        {sharesWithMe && !iShareWith && (
+                          <button
+                            type="button"
+                            onClick={() => handleShareBack(friend.id)}
+                            disabled={isActionPending || !shareCapacity.canAdd}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-brand-gradient-start text-white hover:opacity-90 transition-opacity disabled:opacity-50"
+                            title={sharing.shareBack}
+                          >
+                            {isActionPending ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <Share2 className="h-3.5 w-3.5" />
+                            )}
+                            <span>{sharing.shareBack}</span>
+                          </button>
+                        )}
+
+                        {/* Trash button - only if I share with them */}
+                        {iShareWith && (
+                          <button
+                            type="button"
+                            onClick={() => handleRemove(friend.id)}
+                            disabled={isActionPending}
+                            className="ml-1 p-1.5 rounded-md text-text-muted hover:text-error hover:bg-error-subtle transition-colors disabled:opacity-50"
+                            title={sharing.stopSharing}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1 shrink-0">
-                      <DollarSign className={`h-3.5 w-3.5 transition-colors ${recipient.showEarnings ? "text-success" : "text-text-muted"}`} />
-                      <Switch
-                        checked={recipient.showEarnings}
-                        onCheckedChange={() => handleToggleEarnings(recipient.id, recipient.showEarnings)}
-                        disabled={isToggling && togglingId === recipient.id}
-                        aria-label={sharing.showEarningsDescription}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => handleRemove(recipient.id)}
-                        disabled={isRemoving && removingId === recipient.id}
-                        className="ml-1 p-1.5 rounded-md text-text-muted hover:text-error hover:bg-error-subtle transition-colors disabled:opacity-50"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

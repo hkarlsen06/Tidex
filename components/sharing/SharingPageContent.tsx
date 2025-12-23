@@ -8,7 +8,7 @@ import { SharingPageSkeleton } from "@/components/app/skeletons";
 import { ManageSharingModal } from "./ManageSharingModal";
 import { SharingDropdown } from "./SharingDropdown";
 import { useTranslations } from "@/lib/i18n/client";
-import type { SharedUser, ShareRecipient, SharedShiftsAggregates } from "@/data-access/sharing";
+import type { SharedUser, Friend, SharedShiftsAggregates } from "@/data-access/sharing";
 import type { ShiftWithComputations, UserSettings, SupplementRule } from "@/lib/payroll";
 
 // Dynamically import ShiftsView to avoid Turbopack HMR issues with server action imports
@@ -21,7 +21,7 @@ const ShiftsView = dynamic(
 
 type SharingPageContentProps = {
   sharers: SharedUser[];
-  recipients: ShareRecipient[];
+  friends: Friend[];
   shareCapacity: { canAdd: boolean; currentCount: number; limit: number };
   selectedOwnerId: string;
   selectedSharer: SharedUser;
@@ -39,7 +39,7 @@ type SharingPageContentProps = {
  */
 export function SharingPageContent({
   sharers,
-  recipients,
+  friends,
   shareCapacity,
   selectedOwnerId,
   selectedSharer,
@@ -95,7 +95,7 @@ export function SharingPageContent({
       <ManageSharingModal
         isOpen={manageSharingOpen}
         onClose={() => setManageSharingOpen(false)}
-        recipients={recipients}
+        friends={friends}
         shareCapacity={shareCapacity}
       />
     </>

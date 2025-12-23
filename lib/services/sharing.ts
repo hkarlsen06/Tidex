@@ -127,6 +127,26 @@ export class SharingService extends Context.Tag("SharingService")<
     >;
 
     /**
+     * Create a share directly by user ID (for share-back feature)
+     * Skips identifier lookup since we already know the user ID
+     */
+    readonly createShareById: (
+      userId: string,
+      recipientId: string,
+      options?: { showEarnings?: boolean }
+    ) => Effect.Effect<
+      void,
+      | DatabaseError
+      | AuthError
+      | NotFoundError
+      | TimeoutError
+      | SupabaseError
+      | ConflictError
+      | ValidationError,
+      never
+    >;
+
+    /**
      * Remove a share (revoke recipient access)
      */
     readonly removeShare: (
@@ -179,6 +199,53 @@ export class SharingService extends Context.Tag("SharingService")<
       ownerId: string
     ) => Effect.Effect<
       { showEarnings: boolean } | null,
+      DatabaseError | AuthError | NotFoundError | TimeoutError | SupabaseError,
+      never
+    >;
+
+    /**
+     * Block a sharer (hide their shifts from viewer's list)
+     */
+    readonly blockSharer: (
+      viewerId: string,
+      ownerId: string
+    ) => Effect.Effect<
+      void,
+      DatabaseError | AuthError | NotFoundError | TimeoutError | SupabaseError,
+      never
+    >;
+
+    /**
+     * Unblock a sharer (restore their shifts to viewer's list)
+     */
+    readonly unblockSharer: (
+      viewerId: string,
+      ownerId: string
+    ) => Effect.Effect<
+      void,
+      DatabaseError | AuthError | NotFoundError | TimeoutError | SupabaseError,
+      never
+    >;
+
+    /**
+     * Get blocked sharers for a viewer
+     */
+    readonly getBlockedSharers: (
+      viewerId: string
+    ) => Effect.Effect<
+      readonly SharedUser[],
+      DatabaseError | AuthError | NotFoundError | TimeoutError | SupabaseError,
+      never
+    >;
+
+    /**
+     * Get all sharers including blocked ones (for unified friends list)
+     * Returns SharedUser with additional blocked field
+     */
+    readonly getAllSharersIncludingBlocked: (
+      viewerId: string
+    ) => Effect.Effect<
+      readonly (SharedUser & { blocked: boolean })[],
       DatabaseError | AuthError | NotFoundError | TimeoutError | SupabaseError,
       never
     >;
@@ -362,13 +429,14 @@ export const SharingServiceLive = Layer.effect(
           // Verify user is authenticated
           yield* auth.verifyUserId(userId);
 
-          // Query shift_shares where viewer_id = userId
+          // Query shift_shares where viewer_id = userId and not blocked
           const sharesResult = yield* supabase.query(
             async (client) =>
               await client
                 .from("shift_shares")
                 .select("owner_id, created_at, show_earnings")
                 .eq("viewer_id", userId)
+                .eq("blocked", false)
                 .order("created_at", { ascending: false }),
             { retries: 2 }
           );
@@ -657,6 +725,98 @@ export const SharingServiceLive = Layer.effect(
         }),
 
       /**
+       * Create a share directly by user ID (for share-back feature)
+       */
+      createShareById: (userId: string, recipientId: string, options?: { showEarnings?: boolean }) =>
+        Effect.gen(function* () {
+          // Verify user is authenticated
+          yield* auth.verifyUserId(userId);
+
+          // Can't share with yourself
+          if (recipientId === userId) {
+            return yield* Effect.fail(
+              new ValidationError({
+                field: "recipientId",
+                message: "Cannot share with yourself",
+              })
+            );
+          }
+
+          // Check subscription tier limit
+          const sub = yield* subscription.getUserSubscription(userId);
+          const tier = getTier(sub?.price_id);
+          const limit = SHARE_LIMITS[tier];
+
+          // Count current shares
+          const countResult = yield* Effect.tryPromise({
+            try: async () => {
+              const client = await Effect.runPromise(supabase.getClient());
+              return client
+                .from("shift_shares")
+                .select("*", { count: "exact", head: true })
+                .eq("owner_id", userId);
+            },
+            catch: (error) =>
+              new DatabaseError({
+                table: "shift_shares",
+                code: "QUERY_ERROR",
+                errorMessage: String(error),
+                cause: error,
+              }),
+          });
+
+          const currentCount = countResult.count ?? 0;
+
+          if (currentCount >= limit) {
+            return yield* Effect.fail(
+              new ValidationError({
+                field: "limit",
+                message: `Share limit reached (${limit} for ${tier} tier)`,
+              })
+            );
+          }
+
+          // Create the share (earnings sharing off by default)
+          const insertResult = yield* Effect.tryPromise({
+            try: async () => {
+              const client = await Effect.runPromise(supabase.getClient());
+              return client.from("shift_shares").insert({
+                owner_id: userId,
+                viewer_id: recipientId,
+                show_earnings: options?.showEarnings ?? false,
+              });
+            },
+            catch: (error) =>
+              new DatabaseError({
+                table: "shift_shares",
+                code: "INSERT_ERROR",
+                errorMessage: String(error),
+                cause: error,
+              }),
+          });
+
+          if (insertResult.error) {
+            if (insertResult.error.code === "23505") {
+              // Unique constraint violation - already shared
+              return yield* Effect.fail(
+                new ConflictError({
+                  resource: "Share",
+                  field: "viewer_id",
+                })
+              );
+            }
+            return yield* Effect.fail(
+              new DatabaseError({
+                table: "shift_shares",
+                code: insertResult.error.code,
+                errorMessage: insertResult.error.message,
+                cause: insertResult.error,
+              })
+            );
+          }
+        }),
+
+      /**
        * Remove a share
        */
       removeShare: (userId: string, recipientId: string) =>
@@ -874,6 +1034,280 @@ export const SharingServiceLive = Layer.effect(
             showEarnings: selectResult.data.show_earnings ?? true,
           };
         }),
+
+      /**
+       * Block a sharer (hide their shifts from viewer's list)
+       */
+      blockSharer: (viewerId: string, ownerId: string) =>
+        Effect.gen(function* () {
+          // Verify viewer is authenticated
+          yield* auth.verifyUserId(viewerId);
+
+          const updateResult = yield* Effect.tryPromise({
+            try: async () => {
+              const client = await Effect.runPromise(supabase.getClient());
+              return client
+                .from("shift_shares")
+                .update({ blocked: true })
+                .eq("owner_id", ownerId)
+                .eq("viewer_id", viewerId);
+            },
+            catch: (error) =>
+              new DatabaseError({
+                table: "shift_shares",
+                code: "UPDATE_ERROR",
+                errorMessage: String(error),
+                cause: error,
+              }),
+          });
+
+          if (updateResult.error) {
+            return yield* Effect.fail(
+              new DatabaseError({
+                table: "shift_shares",
+                code: updateResult.error.code,
+                errorMessage: updateResult.error.message,
+                cause: updateResult.error,
+              })
+            );
+          }
+        }),
+
+      /**
+       * Unblock a sharer (restore their shifts to viewer's list)
+       */
+      unblockSharer: (viewerId: string, ownerId: string) =>
+        Effect.gen(function* () {
+          // Verify viewer is authenticated
+          yield* auth.verifyUserId(viewerId);
+
+          const updateResult = yield* Effect.tryPromise({
+            try: async () => {
+              const client = await Effect.runPromise(supabase.getClient());
+              return client
+                .from("shift_shares")
+                .update({ blocked: false })
+                .eq("owner_id", ownerId)
+                .eq("viewer_id", viewerId);
+            },
+            catch: (error) =>
+              new DatabaseError({
+                table: "shift_shares",
+                code: "UPDATE_ERROR",
+                errorMessage: String(error),
+                cause: error,
+              }),
+          });
+
+          if (updateResult.error) {
+            return yield* Effect.fail(
+              new DatabaseError({
+                table: "shift_shares",
+                code: updateResult.error.code,
+                errorMessage: updateResult.error.message,
+                cause: updateResult.error,
+              })
+            );
+          }
+        }),
+
+      /**
+       * Get blocked sharers for a viewer
+       */
+      getBlockedSharers: (viewerId: string) =>
+        Effect.gen(function* () {
+          // Verify viewer is authenticated
+          yield* auth.verifyUserId(viewerId);
+
+          // Query shift_shares where viewer_id = userId and blocked = true
+          const sharesResult = yield* supabase.query(
+            async (client) =>
+              await client
+                .from("shift_shares")
+                .select("owner_id, created_at, show_earnings")
+                .eq("viewer_id", viewerId)
+                .eq("blocked", true)
+                .order("created_at", { ascending: false }),
+            { retries: 2 }
+          );
+
+          const shares = (sharesResult as any[]) ?? [];
+          if (shares.length === 0) {
+            return [] as readonly SharedUser[];
+          }
+
+          // Get profile pictures from user_settings separately
+          const ownerIds = shares.map((s) => s.owner_id);
+          const settingsResult = yield* supabase.query(
+            async (client) =>
+              await client
+                .from("user_settings")
+                .select("user_id, profile_picture_url")
+                .in("user_id", ownerIds),
+            { retries: 2 }
+          );
+
+          const settings = (settingsResult as any[]) ?? [];
+          const settingsMap = new Map(
+            settings.map((s) => [s.user_id, s.profile_picture_url])
+          );
+
+          // Get email/phone/name/avatar from admin client
+          const adminClient = getAdminClient();
+          type AuthUserInfo = { email: string | null; phone: string | null; firstName: string | null; oauthAvatarUrl: string | null };
+          const usersMap = new Map<string, AuthUserInfo>();
+
+          if (adminClient) {
+            type AdminUser = { id: string; email?: string; phone?: string; user_metadata?: Record<string, unknown> };
+            const adminResult = yield* Effect.tryPromise({
+              try: async () => {
+                const { data, error } = await adminClient.auth.admin.listUsers({
+                  page: 1,
+                  perPage: 1000,
+                });
+                if (error) {
+                  logger.error("Admin lookup for blocked sharers failed:", error);
+                  return [] as AdminUser[];
+                }
+                return data.users as AdminUser[];
+              },
+              catch: () => [] as AdminUser[],
+            }).pipe(Effect.catchAll(() => Effect.succeed([] as AdminUser[])));
+
+            for (const user of adminResult) {
+              if (ownerIds.includes(user.id)) {
+                const metadata = user.user_metadata ?? {};
+                usersMap.set(user.id, {
+                  email: user.email ?? null,
+                  phone: user.phone ?? null,
+                  firstName: (metadata.first_name as string) ?? (metadata.full_name as string) ?? (metadata.name as string) ?? null,
+                  oauthAvatarUrl: (metadata.avatar_url as string) ?? (metadata.picture as string) ?? null,
+                });
+              }
+            }
+          }
+
+          return shares.map((share) => {
+            const profilePictureUrl = settingsMap.get(share.owner_id) ?? null;
+            const authUser = usersMap.get(share.owner_id);
+            return {
+              id: share.owner_id,
+              email: authUser?.email ?? null,
+              phone: authUser?.phone ?? null,
+              firstName: authUser?.firstName ?? null,
+              profilePictureUrl,
+              oauthAvatarUrl: authUser?.oauthAvatarUrl ?? null,
+              sharedAt: share.created_at,
+              showEarnings: share.show_earnings ?? true,
+            };
+          }) as readonly SharedUser[];
+        }).pipe(
+          Effect.catchTag("DatabaseError", (error) => {
+            if (error.code === "NO_DATA") {
+              return Effect.succeed([] as readonly SharedUser[]);
+            }
+            return Effect.fail(error);
+          })
+        ),
+
+      /**
+       * Get all sharers including blocked ones (for unified friends list)
+       */
+      getAllSharersIncludingBlocked: (viewerId: string) =>
+        Effect.gen(function* () {
+          // Verify viewer is authenticated
+          yield* auth.verifyUserId(viewerId);
+
+          // Query ALL shift_shares where viewer_id = userId (no blocked filter)
+          const sharesResult = yield* supabase.query(
+            async (client) =>
+              await client
+                .from("shift_shares")
+                .select("owner_id, created_at, show_earnings, blocked")
+                .eq("viewer_id", viewerId)
+                .order("created_at", { ascending: false }),
+            { retries: 2 }
+          );
+
+          const shares = (sharesResult as any[]) ?? [];
+          if (shares.length === 0) {
+            return [] as readonly (SharedUser & { blocked: boolean })[];
+          }
+
+          // Get profile pictures from user_settings separately
+          const ownerIds = shares.map((s) => s.owner_id);
+          const settingsResult = yield* supabase.query(
+            async (client) =>
+              await client
+                .from("user_settings")
+                .select("user_id, profile_picture_url")
+                .in("user_id", ownerIds),
+            { retries: 2 }
+          );
+
+          const settings = (settingsResult as any[]) ?? [];
+          const settingsMap = new Map(
+            settings.map((s) => [s.user_id, s.profile_picture_url])
+          );
+
+          // Get email/phone/name/avatar from admin client
+          const adminClient = getAdminClient();
+          type AuthUserInfo = { email: string | null; phone: string | null; firstName: string | null; oauthAvatarUrl: string | null };
+          const usersMap = new Map<string, AuthUserInfo>();
+
+          if (adminClient) {
+            type AdminUser = { id: string; email?: string; phone?: string; user_metadata?: Record<string, unknown> };
+            const adminResult = yield* Effect.tryPromise({
+              try: async () => {
+                const { data, error } = await adminClient.auth.admin.listUsers({
+                  page: 1,
+                  perPage: 1000,
+                });
+                if (error) {
+                  logger.error("Admin lookup for all sharers failed:", error);
+                  return [] as AdminUser[];
+                }
+                return data.users as AdminUser[];
+              },
+              catch: () => [] as AdminUser[],
+            }).pipe(Effect.catchAll(() => Effect.succeed([] as AdminUser[])));
+
+            for (const user of adminResult) {
+              if (ownerIds.includes(user.id)) {
+                const metadata = user.user_metadata ?? {};
+                usersMap.set(user.id, {
+                  email: user.email ?? null,
+                  phone: user.phone ?? null,
+                  firstName: (metadata.first_name as string) ?? (metadata.full_name as string) ?? (metadata.name as string) ?? null,
+                  oauthAvatarUrl: (metadata.avatar_url as string) ?? (metadata.picture as string) ?? null,
+                });
+              }
+            }
+          }
+
+          return shares.map((share) => {
+            const profilePictureUrl = settingsMap.get(share.owner_id) ?? null;
+            const authUser = usersMap.get(share.owner_id);
+            return {
+              id: share.owner_id,
+              email: authUser?.email ?? null,
+              phone: authUser?.phone ?? null,
+              firstName: authUser?.firstName ?? null,
+              profilePictureUrl,
+              oauthAvatarUrl: authUser?.oauthAvatarUrl ?? null,
+              sharedAt: share.created_at,
+              showEarnings: share.show_earnings ?? true,
+              blocked: share.blocked ?? false,
+            };
+          }) as readonly (SharedUser & { blocked: boolean })[];
+        }).pipe(
+          Effect.catchTag("DatabaseError", (error) => {
+            if (error.code === "NO_DATA") {
+              return Effect.succeed([] as readonly (SharedUser & { blocked: boolean })[]);
+            }
+            return Effect.fail(error);
+          })
+        ),
     };
   })
 );

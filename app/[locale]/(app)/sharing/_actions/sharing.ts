@@ -27,6 +27,9 @@ const SHARING_ERRORS = {
   FAILED_TO_REMOVE_SHARE: "Kunne ikke fjerne deling",
   SHARE_NOT_FOUND: "Fant ikke delingen",
   FAILED_TO_UPDATE_SETTINGS: "Kunne ikke oppdatere innstillinger",
+  FAILED_TO_BLOCK_SHARER: "Kunne ikke skjule brukeren",
+  FAILED_TO_UNBLOCK_SHARER: "Kunne ikke fjerne skjuling",
+  FAILED_TO_SHARE_BACK: "Kunne ikke dele tilbake",
 } as const;
 
 /**
@@ -164,5 +167,123 @@ export async function toggleShareEarnings(
   } catch (error: any) {
     logger.error("Failed to update share settings:", error);
     return { success: false, error: SHARING_ERRORS.FAILED_TO_UPDATE_SETTINGS };
+  }
+}
+
+/**
+ * Block a sharer (hide their shifts from your list)
+ *
+ * Validates:
+ * - User is authenticated
+ * - Share relationship exists
+ *
+ * The share relationship is preserved, just hidden from view.
+ * Can be reversed with unblockSharer.
+ */
+export async function blockSharer(ownerId: string): Promise<ActionResult> {
+  const { user } = await verifySession();
+
+  if (!ownerId) {
+    return { success: false, error: SHARING_ERRORS.SHARE_NOT_FOUND };
+  }
+
+  const program = Effect.gen(function* () {
+    const sharing = yield* SharingService;
+    yield* sharing.blockSharer(user.id, ownerId);
+  }).pipe(Effect.provide(SharingLive), Effect.scoped);
+
+  try {
+    await Effect.runPromise(program);
+
+    // Only invalidate the viewer's cache (the person blocking)
+    invalidateAndRevalidate(user.id);
+
+    return { success: true };
+  } catch (error: any) {
+    logger.error("Failed to block sharer:", error);
+    return { success: false, error: SHARING_ERRORS.FAILED_TO_BLOCK_SHARER };
+  }
+}
+
+/**
+ * Unblock a sharer (restore their shifts to your list)
+ *
+ * Validates:
+ * - User is authenticated
+ * - Share relationship exists
+ *
+ * Reverses a previous block action.
+ */
+export async function unblockSharer(ownerId: string): Promise<ActionResult> {
+  const { user } = await verifySession();
+
+  if (!ownerId) {
+    return { success: false, error: SHARING_ERRORS.SHARE_NOT_FOUND };
+  }
+
+  const program = Effect.gen(function* () {
+    const sharing = yield* SharingService;
+    yield* sharing.unblockSharer(user.id, ownerId);
+  }).pipe(Effect.provide(SharingLive), Effect.scoped);
+
+  try {
+    await Effect.runPromise(program);
+
+    // Only invalidate the viewer's cache (the person unblocking)
+    invalidateAndRevalidate(user.id);
+
+    return { success: true };
+  } catch (error: any) {
+    logger.error("Failed to unblock sharer:", error);
+    return { success: false, error: SHARING_ERRORS.FAILED_TO_UNBLOCK_SHARER };
+  }
+}
+
+/**
+ * Share back with someone who has shared with you
+ *
+ * Validates:
+ * - User is authenticated
+ * - User has not exceeded their subscription tier limit
+ * - Not already sharing with this person
+ *
+ * Creates a share directly by user ID (no email/phone lookup needed)
+ * Defaults earnings visibility to OFF
+ */
+export async function shareBack(recipientId: string): Promise<ActionResult> {
+  const { user } = await verifySession();
+
+  if (!recipientId) {
+    return { success: false, error: SHARING_ERRORS.SHARE_NOT_FOUND };
+  }
+
+  const program = Effect.gen(function* () {
+    const sharing = yield* SharingService;
+    yield* sharing.createShareById(user.id, recipientId, { showEarnings: false });
+  }).pipe(Effect.provide(SharingLive), Effect.scoped);
+
+  try {
+    await Effect.runPromise(program);
+
+    // Invalidate both users' caches
+    invalidateAndRevalidate(user.id);
+    invalidateAndRevalidate(recipientId);
+
+    return { success: true };
+  } catch (error: any) {
+    logger.error("Failed to share back:", error);
+
+    // Map tagged errors to user-friendly messages
+    if (error._tag === "ValidationError") {
+      if (error.field === "limit") {
+        return { success: false, error: SHARING_ERRORS.SHARE_LIMIT_REACHED };
+      }
+    }
+
+    if (error._tag === "ConflictError") {
+      return { success: false, error: SHARING_ERRORS.ALREADY_SHARED };
+    }
+
+    return { success: false, error: SHARING_ERRORS.FAILED_TO_SHARE_BACK };
   }
 }

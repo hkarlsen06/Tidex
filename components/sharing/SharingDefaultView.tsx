@@ -7,10 +7,10 @@ import { Card, CardHeader, CardTitle, CardDescription } from "@/components/app/C
 import { ScrollablePageWrapper } from "@/components/app/ScrollablePageWrapper";
 import { ManageSharingModal } from "./ManageSharingModal";
 import { useTranslations } from "@/lib/i18n/client";
-import type { ShareRecipient } from "@/data-access/sharing";
+import type { Friend } from "@/data-access/sharing";
 
 type SharingDefaultViewProps = {
-  recipients: ShareRecipient[];
+  friends: Friend[];
   shareCapacity: { canAdd: boolean; currentCount: number; limit: number };
   hasSharers: boolean;
   /** Slot for the sharers list - allows streaming via Suspense */
@@ -22,7 +22,7 @@ type SharingDefaultViewProps = {
  * Accepts children as a slot to enable Suspense streaming for the sharers list
  */
 export function SharingDefaultView({
-  recipients,
+  friends,
   shareCapacity,
   hasSharers,
   children,
@@ -77,7 +77,7 @@ export function SharingDefaultView({
       <ManageSharingModal
         isOpen={manageSharingOpen}
         onClose={() => setManageSharingOpen(false)}
-        recipients={recipients}
+        friends={friends}
         shareCapacity={shareCapacity}
       />
     </>
