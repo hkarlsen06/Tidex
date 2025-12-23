@@ -9,7 +9,8 @@ import type { ShiftWithComputations } from "@/lib/payroll";
 
 type SharedUserShiftPreviewProps = {
   shift: ShiftWithComputations;
-  status: "active" | "upcoming" | "past";
+  /** @deprecated Server status is no longer used - status is computed client-side for accuracy */
+  status?: "active" | "upcoming" | "past";
 };
 
 /**
@@ -38,40 +39,48 @@ function parseShiftTimes(
 }
 
 /**
+ * Compute shift status based on current time
+ */
+function computeShiftStatus(
+  shiftDate: string,
+  startTime: string,
+  endTime: string
+): "active" | "upcoming" | "past" {
+  const now = new Date();
+  const { start, end } = parseShiftTimes(shiftDate, startTime, endTime);
+
+  if (now >= start && now <= end) {
+    return "active";
+  } else if (now < start) {
+    return "upcoming";
+  } else {
+    return "past";
+  }
+}
+
+/**
  * Compact shift preview shown under a sharer's card in the sharing list
  * Shows the shift's date, time range, and relative time (countdown or elapsed)
  * Answers the question "when is my friend working?" at a glance
  */
 export function SharedUserShiftPreview({
   shift,
-  status: serverStatus,
 }: SharedUserShiftPreviewProps) {
   const { t, locale } = useTranslations();
 
   // Compute status client-side to ensure it's always current
   // The server-computed status may be stale due to caching
-  const [currentStatus, setCurrentStatus] = useState(serverStatus);
+  // Initialize with computed value to avoid hydration mismatch flash
+  const [currentStatus, setCurrentStatus] = useState(() =>
+    computeShiftStatus(shift.shift_date, shift.start_time, shift.end_time)
+  );
 
   useEffect(() => {
-    const computeStatus = () => {
-      const now = new Date();
-      const { start, end } = parseShiftTimes(shift.shift_date, shift.start_time, shift.end_time);
-
-      if (now >= start && now <= end) {
-        return "active";
-      } else if (now < start) {
-        return "upcoming";
-      } else {
-        return "past";
-      }
-    };
-
-    // Compute immediately
-    setCurrentStatus(computeStatus());
-
     // Re-compute every second to catch status transitions
     const interval = setInterval(() => {
-      setCurrentStatus(computeStatus());
+      setCurrentStatus(
+        computeShiftStatus(shift.shift_date, shift.start_time, shift.end_time)
+      );
     }, 1000);
 
     return () => clearInterval(interval);
