@@ -1332,6 +1332,12 @@ export const no = {
       shareBack: 'Del tilbake',
       stopSharing: 'Slutt å dele',
       user: 'Bruker',
+      mutualShares: 'Gjensidig deling',
+      mutualSharesDesc: 'Ser hverandres vakter',
+      iShareWith: 'Deler med',
+      iShareWithDesc: 'Kan se dine vakter',
+      sharesWithMe: 'Deler med deg',
+      sharesWithMeDesc: 'Du kan se deres vakter',
       errors: {
         limitReached: 'Du har nådd maksimalt antall delinger for ditt abonnement',
         userNotFound: 'Fant ingen bruker med denne e-posten eller telefonnummeret',

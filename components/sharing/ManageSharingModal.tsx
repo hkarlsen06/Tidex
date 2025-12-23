@@ -100,6 +100,7 @@ export function ManageSharingModal({
 }: ManageSharingModalProps) {
   const { t } = useTranslations();
   const router = useRouter();
+  const [isAddFormExpanded, setIsAddFormExpanded] = useState(false);
   const [identifier, setIdentifier] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isAdding, startAddTransition] = useTransition();
@@ -168,6 +169,12 @@ export function ManageSharingModal({
     shareBack: "Del tilbake",
     stopSharing: "Slutt å dele",
     user: "Bruker",
+    mutualShares: "Gjensidig deling",
+    mutualSharesDesc: "Ser hverandres vakter",
+    iShareWith: "Deler med",
+    iShareWithDesc: "Kan se dine vakter",
+    sharesWithMe: "Deler med deg",
+    sharesWithMeDesc: "Du kan se deres vakter",
   };
 
   // Helper to get display name with localized fallback
@@ -187,6 +194,7 @@ export function ManageSharingModal({
       if (result.success) {
         setIdentifier("");
         setNewRecipientShowEarnings(false);
+        setIsAddFormExpanded(false);
         router.refresh();
       } else {
         setError(result.error);
@@ -259,9 +267,27 @@ export function ManageSharingModal({
     });
   };
 
-  // Filter out friends where they share with us but are blocked (they go to hidden section conceptually)
-  // But now we show all friends with visibility toggle
-  const visibleFriends = optimisticFriends;
+  // Helper to sort friends alphabetically using Norwegian locale
+  const sortAlphabetically = (friends: Friend[]) => {
+    return [...friends].sort((a, b) => {
+      const aName = (a.firstName || a.email || a.phone || "").toLowerCase();
+      const bName = (b.firstName || b.email || b.phone || "").toLowerCase();
+      return aName.localeCompare(bName, "nb");
+    });
+  };
+
+  // Split friends into three categories
+  const mutualFriends = sortAlphabetically(
+    optimisticFriends.filter((f) => f.sharesWithMe && f.iShareWith)
+  );
+  const onlyIShareWith = sortAlphabetically(
+    optimisticFriends.filter((f) => !f.sharesWithMe && f.iShareWith)
+  );
+  const onlySharesWithMe = sortAlphabetically(
+    optimisticFriends.filter((f) => f.sharesWithMe && !f.iShareWith)
+  );
+
+  const hasAnyFriends = optimisticFriends.length > 0;
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -278,68 +304,8 @@ export function ManageSharingModal({
         </DialogHeader>
 
         <div className="space-y-4 pt-2 min-w-0">
-          {/* Add friend form */}
-          {shareCapacity.canAdd ? (
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-text-secondary">
-                {sharing.addRecipient}
-              </label>
-              <div className="space-y-2">
-                <Input
-                  type="text"
-                  placeholder={sharing.emailOrPhone}
-                  value={identifier}
-                  onChange={(e) => {
-                    setIdentifier(e.target.value);
-                    setError(null);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      handleAdd();
-                    }
-                  }}
-                  disabled={isAdding}
-                />
-                <label htmlFor="new-recipient-show-earnings" className="flex items-center justify-between cursor-pointer select-none pt-4 pb-1">
-                  <span className="flex items-center gap-2">
-                    <DollarSign className={`h-4 w-4 transition-colors ${newRecipientShowEarnings ? "text-success" : "text-text-muted"}`} />
-                    <span className="text-sm text-text-secondary">{sharing.showEarnings}</span>
-                  </span>
-                  <Checkbox
-                    id="new-recipient-show-earnings"
-                    checked={newRecipientShowEarnings}
-                    onCheckedChange={(checked) => setNewRecipientShowEarnings(checked === true)}
-                    disabled={isAdding}
-                    aria-label={sharing.showEarningsDescription}
-                    className="h-5 w-5"
-                  />
-                </label>
-                <Button
-                  type="button"
-                  onClick={handleAdd}
-                  disabled={!identifier.trim() || isAdding}
-                  loading={isAdding}
-                  className="w-full gap-2"
-                >
-                  <Plus className="h-4 w-4" />
-                  {sharing.add}
-                </Button>
-              </div>
-              {error && <p className="text-sm text-error">{error}</p>}
-            </div>
-          ) : (
-            <div className="rounded-xl border border-border-subtle bg-surface-secondary px-4 py-3">
-              <p className="text-sm text-text-secondary">
-                {sharing.limitReached} ({shareCapacity.currentCount}/{shareCapacity.limit})
-              </p>
-            </div>
-          )}
-
-          <hr className="border-border-subtle" />
-
           {/* Friends list */}
-          <div className="space-y-2">
+          <div className="space-y-4">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium text-text-secondary">
                 {sharing.friends}
@@ -349,110 +315,297 @@ export function ManageSharingModal({
               </span>
             </div>
 
-            {visibleFriends.length === 0 ? (
+            {!hasAnyFriends ? (
               <div className="rounded-xl border border-border-subtle bg-surface-secondary px-4 py-6 text-center">
                 <p className="text-sm text-text-muted">{sharing.noFriends}</p>
               </div>
             ) : (
-              <div className="divide-y divide-border-subtle rounded-xl border border-border-subtle bg-surface-primary">
-                {visibleFriends.map((friend) => {
-                  const sharesWithMe = friend.sharesWithMe;
-                  const iShareWith = friend.iShareWith;
-                  const isBlocked = sharesWithMe?.blocked ?? false;
-                  const isActionPending = isPending && actionId === friend.id;
+              <div className="space-y-4">
+                {/* Mutual shares section */}
+                {mutualFriends.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-xs text-text-muted">{sharing.mutualSharesDesc}</p>
+                    <div className="divide-y divide-border-subtle rounded-xl border border-border-subtle bg-surface-primary">
+                      {mutualFriends.map((friend) => {
+                        const sharesWithMe = friend.sharesWithMe;
+                        const iShareWith = friend.iShareWith;
+                        const isBlocked = sharesWithMe?.blocked ?? false;
+                        const isActionPending = isPending && actionId === friend.id;
+                        const friendDisplayName = getLocalizedDisplayName(friend);
 
-                  const friendDisplayName = getLocalizedDisplayName(friend);
-
-                  return (
-                    <div
-                      key={friend.id}
-                      className="flex items-center gap-2 px-2 py-2.5 sm:gap-3 sm:px-3 sm:py-3"
-                    >
-                      <div className="shrink-0">
-                        <FriendAvatar friend={friend} displayName={friendDisplayName} />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-text-primary truncate-fade">
-                          {friendDisplayName}
-                        </p>
-                        {getSecondaryInfo(friend) && (
-                          <p className="truncate-fade text-xs text-text-muted">
-                            {getSecondaryInfo(friend)}
-                          </p>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-1 shrink-0">
-                        {/* Eye toggle - only if they share with me */}
-                        {sharesWithMe && (
-                          <button
-                            type="button"
-                            onClick={() => handleToggleVisibility(friend.id, isBlocked)}
-                            disabled={isActionPending}
-                            className="p-1.5 rounded-md text-text-muted hover:text-text-primary hover:bg-surface-secondary transition-colors disabled:opacity-50"
-                            title={isBlocked ? sharing.showInList : sharing.hideFromList}
+                        return (
+                          <div
+                            key={friend.id}
+                            className="flex items-center gap-2 px-2 py-2.5 sm:gap-3 sm:px-3 sm:py-3"
                           >
-                            {isBlocked ? (
-                              <EyeOff className="h-4 w-4" />
-                            ) : (
-                              <Eye className="h-4 w-4" />
-                            )}
-                          </button>
-                        )}
-
-                        {/* Money toggle - only if I share with them */}
-                        {iShareWith && (
-                          <>
-                            <DollarSign className={`h-3.5 w-3.5 transition-colors ${iShareWith.showEarningsToThem ? "text-success" : "text-text-muted"}`} />
-                            <Switch
-                              checked={iShareWith.showEarningsToThem}
-                              onCheckedChange={() => handleToggleEarnings(friend.id, iShareWith.showEarningsToThem)}
-                              disabled={isActionPending}
-                              aria-label={sharing.showEarningsDescription}
-                            />
-                          </>
-                        )}
-
-                        {/* Share back button - only if they share with me but I don't share back */}
-                        {sharesWithMe && !iShareWith && (
-                          <button
-                            type="button"
-                            onClick={() => handleShareBack(friend.id)}
-                            disabled={isActionPending || !shareCapacity.canAdd}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-brand-gradient-start text-white hover:opacity-90 transition-opacity disabled:opacity-50"
-                            title={sharing.shareBack}
-                          >
-                            {isActionPending ? (
-                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            ) : (
-                              <Share2 className="h-3.5 w-3.5" />
-                            )}
-                            <span>{sharing.shareBack}</span>
-                          </button>
-                        )}
-
-                        {/* Trash button - only if I share with them */}
-                        {iShareWith && (
-                          <button
-                            type="button"
-                            onClick={() => handleRemove(friend.id)}
-                            disabled={isActionPending}
-                            className="ml-1 p-1.5 rounded-md text-text-muted hover:text-error hover:bg-error-subtle transition-colors disabled:opacity-50"
-                            title={sharing.stopSharing}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        )}
-                      </div>
+                            <div className="shrink-0">
+                              <FriendAvatar friend={friend} displayName={friendDisplayName} />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium text-text-primary truncate-fade">
+                                {friendDisplayName}
+                              </p>
+                              {getSecondaryInfo(friend) && (
+                                <p className="truncate-fade text-xs text-text-muted">
+                                  {getSecondaryInfo(friend)}
+                                </p>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-1 shrink-0">
+                              {sharesWithMe && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleVisibility(friend.id, isBlocked)}
+                                  disabled={isActionPending}
+                                  className="p-1.5 rounded-md text-text-muted hover:text-text-primary hover:bg-surface-secondary transition-colors disabled:opacity-50"
+                                  title={isBlocked ? sharing.showInList : sharing.hideFromList}
+                                >
+                                  {isBlocked ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                </button>
+                              )}
+                              {iShareWith && (
+                                <>
+                                  <DollarSign className={`h-3.5 w-3.5 transition-colors ${iShareWith.showEarningsToThem ? "text-success" : "text-text-muted"}`} />
+                                  <Switch
+                                    checked={iShareWith.showEarningsToThem}
+                                    onCheckedChange={() => handleToggleEarnings(friend.id, iShareWith.showEarningsToThem)}
+                                    disabled={isActionPending}
+                                    aria-label={sharing.showEarningsDescription}
+                                  />
+                                </>
+                              )}
+                              {iShareWith && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemove(friend.id)}
+                                  disabled={isActionPending}
+                                  className="ml-1 p-1.5 rounded-md text-text-muted hover:text-error hover:bg-error-subtle transition-colors disabled:opacity-50"
+                                  title={sharing.stopSharing}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
-                  );
-                })}
+                  </div>
+                )}
+
+                {/* Only I share with them section */}
+                {onlyIShareWith.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-xs text-text-muted">{sharing.iShareWithDesc}</p>
+                    <div className="divide-y divide-border-subtle rounded-xl border border-border-subtle bg-surface-primary">
+                      {onlyIShareWith.map((friend) => {
+                        const iShareWith = friend.iShareWith;
+                        const isActionPending = isPending && actionId === friend.id;
+                        const friendDisplayName = getLocalizedDisplayName(friend);
+
+                        return (
+                          <div
+                            key={friend.id}
+                            className="flex items-center gap-2 px-2 py-2.5 sm:gap-3 sm:px-3 sm:py-3"
+                          >
+                            <div className="shrink-0">
+                              <FriendAvatar friend={friend} displayName={friendDisplayName} />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium text-text-primary truncate-fade">
+                                {friendDisplayName}
+                              </p>
+                              {getSecondaryInfo(friend) && (
+                                <p className="truncate-fade text-xs text-text-muted">
+                                  {getSecondaryInfo(friend)}
+                                </p>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-1 shrink-0">
+                              {iShareWith && (
+                                <>
+                                  <DollarSign className={`h-3.5 w-3.5 transition-colors ${iShareWith.showEarningsToThem ? "text-success" : "text-text-muted"}`} />
+                                  <Switch
+                                    checked={iShareWith.showEarningsToThem}
+                                    onCheckedChange={() => handleToggleEarnings(friend.id, iShareWith.showEarningsToThem)}
+                                    disabled={isActionPending}
+                                    aria-label={sharing.showEarningsDescription}
+                                  />
+                                </>
+                              )}
+                              {iShareWith && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemove(friend.id)}
+                                  disabled={isActionPending}
+                                  className="ml-1 p-1.5 rounded-md text-text-muted hover:text-error hover:bg-error-subtle transition-colors disabled:opacity-50"
+                                  title={sharing.stopSharing}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Only shares with me section */}
+                {onlySharesWithMe.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-xs text-text-muted">{sharing.sharesWithMeDesc}</p>
+                    <div className="divide-y divide-border-subtle rounded-xl border border-border-subtle bg-surface-primary">
+                      {onlySharesWithMe.map((friend) => {
+                        const sharesWithMe = friend.sharesWithMe;
+                        const isBlocked = sharesWithMe?.blocked ?? false;
+                        const isActionPending = isPending && actionId === friend.id;
+                        const friendDisplayName = getLocalizedDisplayName(friend);
+
+                        return (
+                          <div
+                            key={friend.id}
+                            className="flex items-center gap-2 px-2 py-2.5 sm:gap-3 sm:px-3 sm:py-3"
+                          >
+                            <div className="shrink-0">
+                              <FriendAvatar friend={friend} displayName={friendDisplayName} />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium text-text-primary truncate-fade">
+                                {friendDisplayName}
+                              </p>
+                              {getSecondaryInfo(friend) && (
+                                <p className="truncate-fade text-xs text-text-muted">
+                                  {getSecondaryInfo(friend)}
+                                </p>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-1 shrink-0">
+                              {sharesWithMe && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleVisibility(friend.id, isBlocked)}
+                                  disabled={isActionPending}
+                                  className="p-1.5 rounded-md text-text-muted hover:text-text-primary hover:bg-surface-secondary transition-colors disabled:opacity-50"
+                                  title={isBlocked ? sharing.showInList : sharing.hideFromList}
+                                >
+                                  {isBlocked ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => handleShareBack(friend.id)}
+                                disabled={isActionPending || !shareCapacity.canAdd}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-brand-gradient-start text-white hover:opacity-90 transition-opacity disabled:opacity-50"
+                                title={sharing.shareBack}
+                              >
+                                {isActionPending ? (
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                ) : (
+                                  <Share2 className="h-3.5 w-3.5" />
+                                )}
+                                <span>{sharing.shareBack}</span>
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
+
+          <hr className="border-border-subtle" />
+
+          {/* Add friend form */}
+          {shareCapacity.canAdd ? (
+            <div className="space-y-3">
+              {!isAddFormExpanded ? (
+                <Button
+                  type="button"
+                  onClick={() => setIsAddFormExpanded(true)}
+                  className="w-full gap-2"
+                >
+                  <Plus className="h-4 w-4" />
+                  {sharing.addRecipient}
+                </Button>
+              ) : (
+                <div className="space-y-3">
+                  <Input
+                    type="text"
+                    placeholder={sharing.emailOrPhone}
+                    value={identifier}
+                    onChange={(e) => {
+                      setIdentifier(e.target.value);
+                      setError(null);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleAdd();
+                      }
+                    }}
+                    disabled={isAdding}
+                    autoFocus
+                  />
+                  <label htmlFor="new-recipient-show-earnings" className="flex items-center justify-between cursor-pointer select-none">
+                    <span className="flex items-center gap-2">
+                      <DollarSign className={`h-4 w-4 transition-colors ${newRecipientShowEarnings ? "text-success" : "text-text-muted"}`} />
+                      <span className="text-sm text-text-secondary">{sharing.showEarnings}</span>
+                    </span>
+                    <Checkbox
+                      id="new-recipient-show-earnings"
+                      checked={newRecipientShowEarnings}
+                      onCheckedChange={(checked) => setNewRecipientShowEarnings(checked === true)}
+                      disabled={isAdding}
+                      aria-label={sharing.showEarningsDescription}
+                      className="h-5 w-5"
+                    />
+                  </label>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        setIsAddFormExpanded(false);
+                        setIdentifier("");
+                        setNewRecipientShowEarnings(false);
+                        setError(null);
+                      }}
+                      disabled={isAdding}
+                      className="flex-1"
+                    >
+                      {sharing.close}
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={handleAdd}
+                      disabled={!identifier.trim() || isAdding}
+                      loading={isAdding}
+                      className="flex-1 gap-2"
+                    >
+                      <Plus className="h-4 w-4" />
+                      {sharing.add}
+                    </Button>
+                  </div>
+                  {error && <p className="text-sm text-error">{error}</p>}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="rounded-xl border border-border-subtle bg-surface-secondary px-4 py-3">
+              <p className="text-sm text-text-secondary">
+                {sharing.limitReached} ({shareCapacity.currentCount}/{shareCapacity.limit})
+              </p>
+            </div>
+          )}
         </div>
 
         <div className="mt-4 flex justify-end">
-          <Button type="button" variant="ghost" onClick={onClose}>
+          <Button type="button" variant="outline" onClick={onClose}>
             {sharing.close}
           </Button>
         </div>
