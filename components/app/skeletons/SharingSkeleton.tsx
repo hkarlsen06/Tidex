@@ -129,15 +129,15 @@ function WeekGroupSkeleton({ shiftCount }: { shiftCount: number }) {
 
 /**
  * Skeleton for the SharingDropdown component
- * Matches: rounded-xl border, px-4 py-3, min-w-[200px], avatar (h-8 w-8) + name + chevron
+ * Matches: rounded-xl border, px-4 py-3, w-full, avatar (h-8 w-8) + name + chevron
  */
 function DropdownSkeleton() {
   return (
-    <div className="flex items-center gap-3 rounded-xl border border-border-subtle bg-surface-primary px-4 py-3 min-w-[200px]">
+    <div className="flex w-full items-center gap-3 rounded-xl border border-border-subtle bg-surface-primary px-4 py-3">
       {/* Avatar circle */}
       <div className="h-8 w-8 rounded-full bg-surface-secondary animate-pulse shrink-0" />
       {/* Name text */}
-      <div className="h-4 w-20 bg-surface-secondary rounded animate-pulse flex-1" />
+      <div className="h-4 w-24 bg-surface-secondary rounded animate-pulse flex-1" />
       {/* Chevron */}
       <div className="h-4 w-4 bg-surface-secondary rounded animate-pulse shrink-0" />
     </div>
@@ -145,16 +145,67 @@ function DropdownSkeleton() {
 }
 
 /**
- * Skeleton for the sharing view header with dropdown and settings button
+ * Skeleton for a shift preview inside a sharer card
+ * Matches: SharedUserShiftPreview - date, time range, and status badge
+ */
+function ShiftPreviewSkeleton() {
+  return (
+    <div className="flex items-center gap-3 px-3 py-2 bg-surface-secondary/50 rounded-lg">
+      {/* Shift info */}
+      <div className="flex-1 min-w-0 space-y-1">
+        <div className="h-4 w-28 bg-surface-secondary rounded animate-pulse" />
+        <div className="h-3 w-20 bg-surface-secondary rounded animate-pulse" />
+      </div>
+      {/* Status badge */}
+      <div className="h-6 w-16 bg-surface-secondary rounded-full animate-pulse shrink-0" />
+    </div>
+  );
+}
+
+/**
+ * Skeleton for a sharer card in the list
+ * Matches: SharersList button with avatar, name, secondary info, chevron, and optional shift preview
+ */
+export function SharerCardSkeleton({ hasShiftPreview = false }: { hasShiftPreview?: boolean }) {
+  return (
+    <div className="w-full rounded-xl border border-border-subtle bg-surface-primary overflow-hidden">
+      {/* User card header */}
+      <div className="flex w-full items-center gap-3 px-4 py-3">
+        {/* Avatar (h-10 w-10 for size="md") */}
+        <div className="h-10 w-10 rounded-full bg-surface-secondary animate-pulse shrink-0" />
+        <div className="flex flex-1 flex-col min-w-0 gap-1">
+          {/* Name */}
+          <div className="h-4 w-24 bg-surface-secondary rounded animate-pulse" />
+          {/* Secondary info (phone/email) */}
+          <div className="h-3 w-32 bg-surface-secondary rounded animate-pulse" />
+        </div>
+        {/* Chevron */}
+        <div className="h-4 w-4 bg-surface-secondary rounded animate-pulse shrink-0" />
+      </div>
+      {/* Shift preview */}
+      {hasShiftPreview && (
+        <div className="px-3 pb-3">
+          <ShiftPreviewSkeleton />
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Skeleton for the sharing view header with back button and dropdown
  * Used inside ShiftsView headerSlot
  */
 function SharingHeaderSkeleton() {
   return (
-    <div className="flex items-center gap-2 w-full sm:justify-between sm:gap-3">
-      {/* Dropdown skeleton */}
+    <div className="flex flex-col gap-3">
+      {/* Back button skeleton */}
+      <div className="inline-flex items-center gap-2 w-fit">
+        <div className="h-4 w-4 bg-surface-secondary rounded animate-pulse" />
+        <div className="h-4 w-12 bg-surface-secondary rounded animate-pulse" />
+      </div>
+      {/* Dropdown skeleton - full width */}
       <DropdownSkeleton />
-      {/* Settings button skeleton - icon only on mobile, icon + text on desktop */}
-      <div className="h-9 w-9 sm:w-36 bg-surface-secondary rounded-lg animate-pulse shrink-0" />
     </div>
   );
 }
@@ -175,8 +226,12 @@ export function SharingDefaultSkeleton() {
             <div className="h-9 w-40 bg-surface-secondary rounded-lg animate-pulse" />
           </div>
 
-          {/* Dropdown - matches SharingDropdown styling */}
-          <DropdownSkeleton />
+          {/* Sharers list - cards with shift previews */}
+          <div className="flex flex-col gap-3">
+            <SharerCardSkeleton hasShiftPreview={true} />
+            <SharerCardSkeleton hasShiftPreview={true} />
+            <SharerCardSkeleton hasShiftPreview={false} />
+          </div>
         </div>
       </div>
     </div>
@@ -215,6 +270,20 @@ export function SharingViewSkeleton() {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Skeleton for the sharers list while shift previews are loading
+ * Shows sharer cards with preview skeleton placeholders
+ */
+export function SharersListSkeleton({ count = 3 }: { count?: number }) {
+  return (
+    <div className="flex flex-col gap-3">
+      {Array.from({ length: count }, (_, i) => (
+        <SharerCardSkeleton key={i} hasShiftPreview={i < 2} />
+      ))}
     </div>
   );
 }

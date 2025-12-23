@@ -301,6 +301,158 @@ export async function updateShareSettings(
 }
 
 /**
+ * Shift preview data for a sharer - shows their next/current/previous shift
+ */
+export type SharerShiftPreview = {
+  readonly sharerId: string;
+  readonly shift: ShiftWithComputations | null;
+  readonly status: "active" | "upcoming" | "past" | null;
+  readonly showEarnings: boolean;
+};
+
+/**
+ * Get shift previews for all sharers
+ * For each sharer, finds their next/current/previous shift relative to now
+ * Used to show a mini shift card under each sharer's profile in the sharing list
+ */
+export const getSharerShiftPreviews = cache(
+  async (sharerIds: string[]): Promise<SharerShiftPreview[]> => {
+    const { user } = await verifySession();
+
+    if (sharerIds.length === 0) {
+      return [];
+    }
+
+    const now = new Date();
+
+    // Fetch shifts for all sharers in parallel
+    // We fetch a window: 30 days back to 30 days ahead
+    // This ensures we show "worked 2 weeks ago" for inactive users
+    const monthAgo = new Date(now);
+    monthAgo.setDate(monthAgo.getDate() - 30);
+    const monthFromNow = new Date(now);
+    monthFromNow.setDate(monthFromNow.getDate() + 30);
+
+    const startDate = monthAgo.toISOString().slice(0, 10);
+    const endDate = monthFromNow.toISOString().slice(0, 10);
+
+    const previews = await Promise.all(
+      sharerIds.map(async (sharerId): Promise<SharerShiftPreview> => {
+        try {
+          // Fetch shifts within our ±30 day window
+          // We need enough to find the most relevant one (active > upcoming > recent past)
+          const { shifts, showEarnings } = await getSharedUserShiftsInternal(
+            user.id,
+            sharerId,
+            { startDate, endDate, limit: 100 }
+          );
+
+          if (!shifts || shifts.length === 0) {
+            return { sharerId, shift: null, status: null, showEarnings };
+          }
+
+          // Sort shifts by date and time
+          const sortedShifts = [...shifts].sort((a, b) => {
+            const dateCompare = a.shift_date.localeCompare(b.shift_date);
+            if (dateCompare !== 0) return dateCompare;
+            return a.start_time.localeCompare(b.start_time);
+          });
+
+          // Find active, upcoming, or most recent past shift
+          for (const shift of sortedShifts) {
+            const { start, end } = parseShiftTimes(shift.shift_date, shift.start_time, shift.end_time);
+
+            // Check if currently active
+            if (now >= start && now <= end) {
+              return { sharerId, shift, status: "active", showEarnings };
+            }
+          }
+
+          // Find next upcoming shift
+          for (const shift of sortedShifts) {
+            const [hours, minutes] = shift.start_time.split(':').map(Number);
+            const shiftDateTime = new Date(shift.shift_date + 'T00:00:00');
+            shiftDateTime.setHours(hours, minutes, 0, 0);
+
+            if (shiftDateTime > now) {
+              return { sharerId, shift, status: "upcoming", showEarnings };
+            }
+          }
+
+          // No upcoming shifts, find the most recent past shift
+          const pastShifts = sortedShifts.filter(shift => {
+            const { end } = parseShiftTimes(shift.shift_date, shift.start_time, shift.end_time);
+            return end < now;
+          });
+
+          if (pastShifts.length > 0) {
+            return { sharerId, shift: pastShifts[pastShifts.length - 1], status: "past", showEarnings };
+          }
+
+          return { sharerId, shift: null, status: null, showEarnings };
+        } catch (error) {
+          logger.error(`Failed to fetch shift preview for sharer ${sharerId}:`, error);
+          return { sharerId, shift: null, status: null, showEarnings: false };
+        }
+      })
+    );
+
+    // Sort by shift proximity: active first, then upcoming (soonest), then past (most recent), then no shifts
+    return previews.sort((a, b) => {
+      // Priority: active > upcoming > past > null
+      const statusPriority = { active: 0, upcoming: 1, past: 2, null: 3 };
+      const aPriority = statusPriority[a.status ?? "null"];
+      const bPriority = statusPriority[b.status ?? "null"];
+
+      if (aPriority !== bPriority) {
+        return aPriority - bPriority;
+      }
+
+      // Within same status, sort by time
+      if (!a.shift || !b.shift) return 0;
+
+      const aStart = new Date(a.shift.shift_date + "T" + a.shift.start_time).getTime();
+      const bStart = new Date(b.shift.shift_date + "T" + b.shift.start_time).getTime();
+
+      if (a.status === "upcoming") {
+        // Upcoming: soonest first (ascending)
+        return aStart - bStart;
+      } else if (a.status === "past") {
+        // Past: most recent first (descending)
+        return bStart - aStart;
+      }
+
+      return 0;
+    });
+  }
+);
+
+/**
+ * Parse shift times into Date objects, handling cross-midnight shifts
+ */
+function parseShiftTimes(
+  shiftDate: string,
+  startTime: string,
+  endTime: string
+): { start: Date; end: Date } {
+  const [startH, startM] = startTime.split(':').map(Number);
+  const [endH, endM] = endTime.split(':').map(Number);
+
+  const start = new Date(shiftDate + 'T00:00:00');
+  start.setHours(startH, startM, 0, 0);
+
+  const end = new Date(shiftDate + 'T00:00:00');
+  end.setHours(endH, endM, 0, 0);
+
+  // Handle cross-midnight: if end <= start, end is next day
+  if (end <= start) {
+    end.setDate(end.getDate() + 1);
+  }
+
+  return { start, end };
+}
+
+/**
  * Check if the current user can add more share recipients
  * - Based on subscription tier limits
  */

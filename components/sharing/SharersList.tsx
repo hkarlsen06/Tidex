@@ -2,13 +2,18 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { ChevronRight, Loader2 } from "lucide-react";
 import { cn } from "@/lib/cn";
-import type { SharedUser } from "@/data-access/sharing";
+import { SharedUserShiftPreview } from "./SharedUserShiftPreview";
+import type { SharedUser, SharerShiftPreview } from "@/data-access/sharing";
 
 type SharersListProps = {
   sharers: SharedUser[];
-  onSelect: (id: string) => void;
+  shiftPreviews?: SharerShiftPreview[];
+  onSelect?: (id: string) => void;
+  /** Base path for navigation when onSelect is not provided */
+  basePath?: string;
 };
 
 function getInitials(name: string | null | undefined): string {
@@ -75,18 +80,39 @@ function UserAvatar({ user, size = "md" }: { user: SharedUser; size?: "sm" | "md
   );
 }
 
-export function SharersList({ sharers, onSelect }: SharersListProps) {
+export function SharersList({ sharers, shiftPreviews = [], onSelect, basePath }: SharersListProps) {
+  const router = useRouter();
   const [loadingId, setLoadingId] = useState<string | null>(null);
 
   const handleClick = (id: string) => {
     setLoadingId(id);
-    onSelect(id);
+    if (onSelect) {
+      onSelect(id);
+    } else if (basePath) {
+      router.push(`${basePath}?view=${id}`);
+    }
   };
 
+  // Create a lookup map for sharers and previews
+  const sharerMap = new Map(sharers.map(s => [s.id, s]));
+  const previewMap = new Map(shiftPreviews.map(p => [p.sharerId, p]));
+
+  // Sort sharers by shift preview order (which is pre-sorted by the server)
+  // Sharers with previews come first (in preview order), then sharers without
+  const sortedSharers = shiftPreviews.length > 0
+    ? [
+        ...shiftPreviews.map(p => sharerMap.get(p.sharerId)).filter(Boolean) as SharedUser[],
+        ...sharers.filter(s => !previewMap.has(s.id)),
+      ]
+    : sharers;
+
   return (
-    <div className="flex flex-col gap-2">
-      {sharers.map((sharer) => {
+    <div className="flex flex-col gap-3">
+      {sortedSharers.map((sharer) => {
         const isLoading = loadingId === sharer.id;
+        const preview = previewMap.get(sharer.id);
+        const hasShiftPreview = preview?.shift && preview?.status;
+
         return (
           <button
             key={sharer.id}
@@ -94,27 +120,40 @@ export function SharersList({ sharers, onSelect }: SharersListProps) {
             onClick={() => handleClick(sharer.id)}
             disabled={loadingId !== null}
             className={cn(
-              "flex w-full items-center gap-3 rounded-xl border border-border-subtle bg-surface-primary px-4 py-3 text-left",
+              "w-full text-left rounded-xl border border-border-subtle bg-surface-primary overflow-hidden",
               "hover:bg-surface-secondary transition-colors",
               "focus:outline-none focus:ring-2 focus:ring-border",
               loadingId !== null && !isLoading && "opacity-50"
             )}
           >
-            <UserAvatar user={sharer} size="md" />
-            <div className="flex flex-1 flex-col min-w-0">
-              <span className="text-sm font-medium text-text-primary truncate-fade">
-                {getDisplayName(sharer)}
-              </span>
-              {getSecondaryInfo(sharer) && (
-                <span className="text-xs text-text-muted truncate-fade">
-                  {getSecondaryInfo(sharer)}
+            {/* User card header */}
+            <div className="flex w-full items-center gap-3 px-4 py-3">
+              <UserAvatar user={sharer} size="md" />
+              <div className="flex flex-1 flex-col min-w-0">
+                <span className="text-sm font-medium text-text-primary truncate-fade">
+                  {getDisplayName(sharer)}
                 </span>
+                {getSecondaryInfo(sharer) && (
+                  <span className="text-xs text-text-muted truncate-fade">
+                    {getSecondaryInfo(sharer)}
+                  </span>
+                )}
+              </div>
+              {isLoading ? (
+                <Loader2 className="h-4 w-4 text-text-muted animate-spin" />
+              ) : (
+                <ChevronRight className="h-4 w-4 text-text-muted" />
               )}
             </div>
-            {isLoading ? (
-              <Loader2 className="h-4 w-4 text-text-muted animate-spin" />
-            ) : (
-              <ChevronRight className="h-4 w-4 text-text-muted" />
+
+            {/* Shift preview - shown under the user card */}
+            {hasShiftPreview && (
+              <div className="px-3 pb-3">
+                <SharedUserShiftPreview
+                  shift={preview.shift!}
+                  status={preview.status!}
+                />
+              </div>
             )}
           </button>
         );
