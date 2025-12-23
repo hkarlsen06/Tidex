@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useTranslations } from "@/lib/i18n/client";
+import { getSharingUrlWithState } from "@/lib/hooks/useSharingViewState";
 import {
   NavigationMenu as NavigationMenuPrimitive,
   NavigationMenuItem,
@@ -48,6 +49,9 @@ export function NavigationMenu({ className }: NavigationMenuProps) {
   // usePathname() returns paths like "/no/settings" or "/en/shifts"
   const pathname = rawPathname.replace(/^\/(no|en)(?=\/|$)/, '') || '/';
 
+  // Check if currently on sharing path to determine sharing link behavior
+  const isOnSharingPath = pathname.startsWith("/sharing");
+
   return (
     <NavigationMenuPrimitive className={className}>
       <NavigationMenuList>
@@ -57,11 +61,19 @@ export function NavigationMenu({ className }: NavigationMenuProps) {
               ? pathname === "/"
               : pathname.startsWith(item.href);
 
+          // For sharing link: if on /sharing, go to main route; otherwise restore saved view
+          const href =
+            item.labelKey === "sharing"
+              ? isOnSharingPath
+                ? `/${locale}/sharing`
+                : getSharingUrlWithState(locale)
+              : `/${locale}${item.href}`;
+
           return (
             <NavigationMenuItem key={item.href}>
               <NavigationMenuLink asChild>
                 <Link
-                  href={`/${locale}${item.href}`}
+                  href={href}
                   className={cn(
                     navigationMenuTriggerStyle(),
                     isActive && "bg-accent/50 text-accent-foreground"

@@ -18,6 +18,7 @@ import { supabase } from "@/lib/supabase/browser";
 import { useTranslations } from "@/lib/i18n/client";
 import { useScrollContext } from "@/lib/contexts/ScrollContext";
 import { useSharers } from "./SharersProvider";
+import { getSharingUrlWithState } from "@/lib/hooks/useSharingViewState";
 
 type LucideIcon = typeof Gauge;
 type NavItem = {
@@ -76,7 +77,7 @@ function getInitials(name: string | null | undefined, email: string | null | und
 }
 
 export function NavBar() {
-  const { t } = useTranslations();
+  const { t, locale } = useTranslations();
   const rawPathname = usePathname();
   const searchParams = useSearchParams();
   const { navigate, pendingPath: rawPendingPath } = useNavigationFeedback();
@@ -310,11 +311,19 @@ export function NavBar() {
                 return startAngle + idx * (360 / total);
               };
 
+              // Determine sharing href based on current location:
+              // - If on /sharing path, go to main /sharing route
+              // - If on another page, restore saved view state (if any)
+              const isOnSharingPath = normalizedPath?.startsWith("/sharing");
+              const sharingHref = isOnSharingPath
+                ? `/${locale}/sharing`
+                : getSharingUrlWithState(locale);
+
               return (
                 <Link
                   key={item.href}
-                  href={item.href}
-                  onClick={handleItemClick(item.href)}
+                  href={sharingHref}
+                  onClick={handleItemClick(sharingHref)}
                   prefetch={true}
                   className="relative flex items-center justify-center p-3 -m-3"
                 >

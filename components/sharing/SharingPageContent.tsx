@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { ArrowLeft } from "lucide-react";
@@ -8,6 +8,7 @@ import { SharingPageSkeleton } from "@/components/app/skeletons";
 import { ManageSharingModal } from "./ManageSharingModal";
 import { SharingDropdown } from "./SharingDropdown";
 import { useTranslations } from "@/lib/i18n/client";
+import { useSharingViewState } from "@/lib/hooks/useSharingViewState";
 import type { SharedUser, Friend, SharedShiftsAggregates } from "@/data-access/sharing";
 import type { ShiftWithComputations, UserSettings, SupplementRule } from "@/lib/payroll";
 
@@ -52,8 +53,16 @@ export function SharingPageContent({
   const { t, locale } = useTranslations();
   const router = useRouter();
   const [manageSharingOpen, setManageSharingOpen] = useState(false);
+  const { saveViewState } = useSharingViewState();
 
   const sharingPath = `/${locale}/sharing`;
+
+  // Save the current sharer to localStorage whenever viewing their shifts
+  useEffect(() => {
+    if (selectedOwnerId) {
+      saveViewState(selectedOwnerId);
+    }
+  }, [selectedOwnerId, saveViewState]);
 
   const handleSharerSelect = (sharerId: string | null) => {
     if (sharerId) {
@@ -61,6 +70,11 @@ export function SharingPageContent({
     } else {
       router.push(sharingPath);
     }
+  };
+
+  const handleBack = () => {
+    saveViewState(null); // Clear saved state when returning to list
+    router.push(sharingPath);
   };
 
   return (
@@ -78,7 +92,7 @@ export function SharingPageContent({
           <div className="flex flex-col gap-3">
             <button
               type="button"
-              onClick={() => router.push(sharingPath)}
+              onClick={handleBack}
               className="inline-flex items-center gap-2 text-sm text-text-secondary hover:text-text-primary transition-colors w-fit"
             >
               <ArrowLeft className="h-4 w-4" />
