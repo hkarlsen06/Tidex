@@ -104,6 +104,7 @@ export const no = {
     shifts: 'Vakter',
     stats: 'Statistikk',
     wagey: 'Wagey',
+    sharing: 'Deling',
   },
   pages: {
     home: {

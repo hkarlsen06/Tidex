@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useState, useEffect } from "react";
 import type { MouseEvent } from "react";
@@ -9,13 +10,14 @@ import {
   Calendar,
   Plus,
   ChartNoAxesCombined,
-  Sparkles,
+  Share2,
   ArrowDown,
 } from "lucide-react";
 import { useNavigationFeedback } from "./navigation-feedback";
 import { supabase } from "@/lib/supabase/browser";
 import { useTranslations } from "@/lib/i18n/client";
 import { useScrollContext } from "@/lib/contexts/ScrollContext";
+import { useSharers } from "./SharersProvider";
 
 type LucideIcon = typeof Gauge;
 type NavItem = {
@@ -26,7 +28,9 @@ type NavItem = {
   matchPrefix?: boolean;
 };
 
-const navItems: NavItem[] = [
+type NavItemType = NavItem & { isSharing?: boolean };
+
+const navItems: NavItemType[] = [
   {
     href: "/",
     label: "Home",
@@ -49,12 +53,27 @@ const navItems: NavItem[] = [
     icon: ChartNoAxesCombined,
   },
   {
-    href: "/wagey",
-    label: "Wagey",
-    icon: Sparkles,
-    matchPrefix: true,
+    href: "/sharing",
+    label: "Share",
+    icon: Share2,
+    isSharing: true,
   },
 ];
+
+function getInitials(name: string | null | undefined, email: string | null | undefined): string {
+  if (name) {
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
+  }
+  if (email) {
+    return email[0].toUpperCase();
+  }
+  return "?";
+}
 
 export function NavBar() {
   const { t } = useTranslations();
@@ -63,6 +82,25 @@ export function NavBar() {
   const { navigate, pendingPath: rawPendingPath } = useNavigationFeedback();
   const [showAddShiftHint, setShowAddShiftHint] = useState(false);
   const { scrollDirection } = useScrollContext();
+  const sharers = useSharers();
+
+  // Sort sharers: prioritize self-picked profile pictures, then OAuth avatars, then no avatar
+  const sortedSharers = [...sharers].sort((a, b) => {
+    const aHasProfile = !!a.profilePictureUrl;
+    const bHasProfile = !!b.profilePictureUrl;
+    const aHasOAuth = !!a.oauthAvatarUrl;
+    const bHasOAuth = !!b.oauthAvatarUrl;
+
+    if (aHasProfile && !bHasProfile) return -1;
+    if (!aHasProfile && bHasProfile) return 1;
+    if (aHasOAuth && !bHasOAuth) return -1;
+    if (!aHasOAuth && bHasOAuth) return 1;
+
+    return 0;
+  });
+
+  // Show max 4 sharers as small bubbles around the share icon
+  const visibleSharers = sortedSharers.slice(0, 4);
 
   // Strip locale prefix from pathname for consistent nav item matching
   // usePathname() returns paths like "/no/settings" or "/en/shifts"
@@ -199,7 +237,7 @@ export function NavBar() {
   const shouldHideOnScroll =
     normalizedPath === "/shifts" ||
     normalizedPath === "/stats" ||
-    normalizedPath === "/wagey";
+    normalizedPath === "/sharing";
 
   const isHidden = shouldHideOnScroll && scrollDirection === "down";
 
@@ -257,6 +295,76 @@ export function NavBar() {
                     </div>
                   </Link>
                 </div>
+              );
+            }
+
+            // Special handling for sharing button with avatar bubbles
+            if ('isSharing' in item && item.isSharing) {
+              // Calculate angles to distribute bubbles evenly around the full circle
+              // Each bubble is placed opposite to others for visual balance
+              const getAngleForIndex = (idx: number, total: number) => {
+                if (total === 1) return -135; // Single bubble at top-left
+                if (total === 2) return idx === 0 ? -135 : 45; // Opposite corners: top-left, bottom-right
+                // 3+ bubbles: spread evenly around the circle starting from top-left
+                const startAngle = -135;
+                return startAngle + idx * (360 / total);
+              };
+
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={handleItemClick(item.href)}
+                  prefetch={true}
+                  className="relative flex items-center justify-center p-3 -m-3"
+                >
+                  {/* Small avatar bubbles positioned behind the share icon */}
+                  {visibleSharers.length > 0 && (
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
+                      {visibleSharers.map((sharer, index) => {
+                        const avatarSrc = sharer.profilePictureUrl || sharer.oauthAvatarUrl;
+                        // Position bubbles proportionally around the icon
+                        const angle = getAngleForIndex(index, visibleSharers.length);
+                        const radius = 16; // Distance from center
+                        const radians = (angle - 90) * (Math.PI / 180);
+                        const x = Math.cos(radians) * radius;
+                        const y = Math.sin(radians) * radius;
+
+                        return (
+                          <div
+                            key={sharer.id}
+                            className="absolute rounded-full border border-background bg-background"
+                            style={{
+                              transform: `translate(${x}px, ${y}px)`,
+                            }}
+                          >
+                            {avatarSrc ? (
+                              <Image
+                                src={avatarSrc}
+                                alt={sharer.firstName || "Sharer"}
+                                width={18}
+                                height={18}
+                                className="h-[18px] w-[18px] rounded-full object-cover"
+                              />
+                            ) : (
+                              <span className="flex h-[18px] w-[18px] items-center justify-center rounded-full bg-surface-secondary text-[8px] font-semibold text-text-primary">
+                                {getInitials(sharer.firstName, sharer.email)}
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                  <Icon
+                    className={`h-6 w-6 relative z-10 ${
+                      isActive
+                        ? "text-brand-highlight"
+                        : "text-text-muted"
+                    } ${visibleSharers.length > 0 ? "[filter:drop-shadow(0_0_4px_hsl(var(--background)))_drop-shadow(0_0_6px_hsl(var(--background)))_drop-shadow(0_0_8px_hsl(var(--background)))]" : ""}`}
+                    strokeWidth={isActive ? 2.5 : 2}
+                  />
+                </Link>
               );
             }
 
