@@ -87,3 +87,15 @@ export function getSharingUrlWithState(locale: string): string {
   }
   return `/${locale}/sharing`;
 }
+
+/**
+ * Clear the saved sharing view state.
+ * Use this when navigating back to the main sharing list.
+ */
+export function clearSharingViewState(): void {
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // Ignore storage errors
+  }
+}

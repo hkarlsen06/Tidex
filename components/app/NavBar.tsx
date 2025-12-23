@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import type { MouseEvent } from "react";
 import {
@@ -18,7 +18,7 @@ import { supabase } from "@/lib/supabase/browser";
 import { useTranslations } from "@/lib/i18n/client";
 import { useScrollContext } from "@/lib/contexts/ScrollContext";
 import { useSharers } from "./SharersProvider";
-import { getSharingUrlWithState } from "@/lib/hooks/useSharingViewState";
+import { getSharingUrlWithState, clearSharingViewState } from "@/lib/hooks/useSharingViewState";
 
 type LucideIcon = typeof Gauge;
 type NavItem = {
@@ -80,6 +80,7 @@ export function NavBar() {
   const { t, locale } = useTranslations();
   const rawPathname = usePathname();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const { navigate, pendingPath: rawPendingPath } = useNavigationFeedback();
   const [showAddShiftHint, setShowAddShiftHint] = useState(false);
   const { scrollDirection } = useScrollContext();
@@ -312,18 +313,42 @@ export function NavBar() {
               };
 
               // Determine sharing href based on current location:
-              // - If on /sharing path, go to main /sharing route
+              // - If on /sharing path, go to main /sharing route and clear saved state
               // - If on another page, restore saved view state (if any)
               const isOnSharingPath = normalizedPath?.startsWith("/sharing");
               const sharingHref = isOnSharingPath
                 ? `/${locale}/sharing`
                 : getSharingUrlWithState(locale);
 
+              const handleSharingClick = (event: MouseEvent<HTMLAnchorElement>) => {
+                if (
+                  event.metaKey ||
+                  event.ctrlKey ||
+                  event.shiftKey ||
+                  event.altKey ||
+                  event.button !== 0
+                ) {
+                  return;
+                }
+
+                event.preventDefault();
+
+                // Clear saved state when navigating to main sharing list from detail view
+                if (isOnSharingPath) {
+                  clearSharingViewState();
+                  // Use router.push directly to bypass navigation feedback
+                  // which ignores same-path navigations (it strips query params)
+                  router.push(sharingHref);
+                } else {
+                  navigate(sharingHref);
+                }
+              };
+
               return (
                 <Link
                   key={item.href}
                   href={sharingHref}
-                  onClick={handleItemClick(sharingHref)}
+                  onClick={handleSharingClick}
                   prefetch={true}
                   className="relative flex items-center justify-center p-3 -m-3"
                 >
