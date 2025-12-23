@@ -105,6 +105,7 @@ export const en: Dictionary = {
     shifts: 'Shifts',
     stats: 'Stats',
     wagey: 'Wagey',
+    sharing: 'Sharing',
   },
   pages: {
     home: {

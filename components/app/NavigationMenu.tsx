@@ -14,7 +14,7 @@ import {
 
 type NavItem = {
   href: string;
-  labelKey: 'home' | 'shifts' | 'stats' | 'wagey';
+  labelKey: 'home' | 'shifts' | 'stats' | 'sharing';
 };
 
 const navItems: NavItem[] = [
@@ -31,8 +31,8 @@ const navItems: NavItem[] = [
     labelKey: "stats",
   },
   {
-    href: "/wagey",
-    labelKey: "wagey",
+    href: "/sharing",
+    labelKey: "sharing",
   },
 ];
 
