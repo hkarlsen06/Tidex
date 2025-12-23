@@ -72,6 +72,11 @@ export function SharingPageContent({
     }
   };
 
+  const handleBack = () => {
+    saveViewState(null); // Clear saved state when returning to list
+    router.push(sharingPath);
+  };
+
   return (
     <>
       <ShiftsView
@@ -87,7 +92,7 @@ export function SharingPageContent({
           <div className="flex flex-col gap-3">
             <button
               type="button"
-              onClick={() => router.push(sharingPath)}
+              onClick={handleBack}
               className="inline-flex items-center gap-2 text-sm text-text-secondary hover:text-text-primary transition-colors w-fit"
             >
               <ArrowLeft className="h-4 w-4" />
