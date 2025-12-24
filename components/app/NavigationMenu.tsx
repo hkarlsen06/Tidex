@@ -4,7 +4,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useTranslations } from "@/lib/i18n/client";
-import { getSharingUrlWithState, clearSharingViewState } from "@/lib/hooks/useSharingViewState";
+import {
+  useSharingViewState,
+  clearSharingViewState,
+} from "@/lib/hooks/useSharingViewState";
 import {
   NavigationMenu as NavigationMenuPrimitive,
   NavigationMenuItem,
@@ -15,7 +18,7 @@ import {
 
 type NavItem = {
   href: string;
-  labelKey: 'home' | 'shifts' | 'stats' | 'sharing';
+  labelKey: "home" | "shifts" | "stats" | "sharing";
 };
 
 const navItems: NavItem[] = [
@@ -44,10 +47,11 @@ type NavigationMenuProps = {
 export function NavigationMenu({ className }: NavigationMenuProps) {
   const { t, locale } = useTranslations();
   const rawPathname = usePathname();
+  const { savedSharerId, isLoaded } = useSharingViewState();
 
   // Strip locale prefix from pathname for consistent nav item matching
   // usePathname() returns paths like "/no/settings" or "/en/shifts"
-  const pathname = rawPathname.replace(/^\/(no|en)(?=\/|$)/, '') || '/';
+  const pathname = rawPathname.replace(/^\/(no|en)(?=\/|$)/, "") || "/";
 
   // Check if currently on sharing path to determine sharing link behavior
   const isOnSharingPath = pathname.startsWith("/sharing");
@@ -66,13 +70,16 @@ export function NavigationMenu({ className }: NavigationMenuProps) {
           const href = isSharingItem
             ? isOnSharingPath
               ? `/${locale}/sharing`
-              : getSharingUrlWithState(locale)
+              : savedSharerId && isLoaded
+                ? `/${locale}/sharing?view=${savedSharerId}`
+                : `/${locale}/sharing`
             : `/${locale}${item.href}`;
 
           // Clear saved sharing state when clicking sharing link while on sharing path
-          const handleClick = isSharingItem && isOnSharingPath
-            ? () => clearSharingViewState()
-            : undefined;
+          const handleClick =
+            isSharingItem && isOnSharingPath
+              ? () => clearSharingViewState()
+              : undefined;
 
           return (
             <NavigationMenuItem key={item.href}>
@@ -82,7 +89,7 @@ export function NavigationMenu({ className }: NavigationMenuProps) {
                   onClick={handleClick}
                   className={cn(
                     navigationMenuTriggerStyle(),
-                    isActive && "bg-accent/50 text-accent-foreground"
+                    isActive && "bg-accent/50 text-accent-foreground",
                   )}
                 >
                   {t.navigation[item.labelKey]}

@@ -19,7 +19,10 @@ import { useTranslations } from "@/lib/i18n/client";
 import { useScrollContext } from "@/lib/contexts/ScrollContext";
 import { useAddShiftFormSafe } from "@/lib/contexts/AddShiftFormContext";
 import { useSharers } from "./SharersProvider";
-import { getSharingUrlWithState, clearSharingViewState } from "@/lib/hooks/useSharingViewState";
+import {
+  useSharingViewState,
+  clearSharingViewState,
+} from "@/lib/hooks/useSharingViewState";
 
 type LucideIcon = typeof Gauge;
 type NavItem = {
@@ -62,7 +65,10 @@ const navItems: NavItemType[] = [
   },
 ];
 
-function getInitials(name: string | null | undefined, email: string | null | undefined): string {
+function getInitials(
+  name: string | null | undefined,
+  email: string | null | undefined,
+): string {
   if (name) {
     return name
       .split(" ")
@@ -83,6 +89,7 @@ export function NavBar() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { navigate, pendingPath: rawPendingPath } = useNavigationFeedback();
+  const { savedSharerId, isLoaded } = useSharingViewState();
   const [showAddShiftHint, setShowAddShiftHint] = useState(false);
   const { scrollDirection } = useScrollContext();
   const addShiftForm = useAddShiftFormSafe();
@@ -108,10 +115,12 @@ export function NavBar() {
 
   // Strip locale prefix from pathname for consistent nav item matching
   // usePathname() returns paths like "/no/settings" or "/en/shifts"
-  const pathname = rawPathname.replace(/^\/(no|en)(?=\/|$)/, '') || '/';
+  const pathname = rawPathname.replace(/^\/(no|en)(?=\/|$)/, "") || "/";
 
   // Also strip locale from pendingPath for consistent matching
-  const pendingPath = rawPendingPath ? rawPendingPath.replace(/^\/(no|en)(?=\/|$)/, '') || '/' : null;
+  const pendingPath = rawPendingPath
+    ? rawPendingPath.replace(/^\/(no|en)(?=\/|$)/, "") || "/"
+    : null;
 
   // Fetch shift count client-side to determine if hint should be shown
   // This is deferred to avoid blocking the initial render
@@ -121,7 +130,10 @@ export function NavBar() {
   useEffect(() => {
     // Immediately hide hint if optimistic shifts are being added
     // This handles the case where the user just added shifts and the DB hasn't synced yet
-    const hasOptimisticShifts = searchParamsString.includes('optimistic') || searchParamsString.includes('new') || searchParamsString.includes('newRecurring');
+    const hasOptimisticShifts =
+      searchParamsString.includes("optimistic") ||
+      searchParamsString.includes("new") ||
+      searchParamsString.includes("newRecurring");
     if (hasOptimisticShifts) {
       // Use callback to avoid synchronous setState warning
       queueMicrotask(() => setShowAddShiftHint(false));
@@ -130,9 +142,15 @@ export function NavBar() {
 
     const checkShiftCount = async () => {
       try {
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        const {
+          data: { user },
+          error: userError,
+        } = await supabase.auth.getUser();
         if (userError || !user) {
-          console.warn("[NavBar] Failed to get user for shift count check:", userError);
+          console.warn(
+            "[NavBar] Failed to get user for shift count check:",
+            userError,
+          );
           return;
         }
 
@@ -164,7 +182,8 @@ export function NavBar() {
     const normalizedPath = normalizePath(path);
     return Boolean(
       normalizedPath &&
-        (normalizedPath === "/onboarding" || normalizedPath.startsWith("/onboarding/"))
+      (normalizedPath === "/onboarding" ||
+        normalizedPath.startsWith("/onboarding/")),
     );
   };
 
@@ -172,20 +191,21 @@ export function NavBar() {
     return null;
   }
 
-  const handleItemClick = (href: string) => (event: MouseEvent<HTMLAnchorElement>) => {
-    if (
-      event.metaKey ||
-      event.ctrlKey ||
-      event.shiftKey ||
-      event.altKey ||
-      event.button !== 0
-    ) {
-      return;
-    }
+  const handleItemClick =
+    (href: string) => (event: MouseEvent<HTMLAnchorElement>) => {
+      if (
+        event.metaKey ||
+        event.ctrlKey ||
+        event.shiftKey ||
+        event.altKey ||
+        event.button !== 0
+      ) {
+        return;
+      }
 
-    event.preventDefault();
-    navigate(href);
-  };
+      event.preventDefault();
+      navigate(href);
+    };
 
   function normalizePath(path: string | null) {
     if (!path) {
@@ -246,9 +266,11 @@ export function NavBar() {
   const isHidden = shouldHideOnScroll && scrollDirection === "down";
 
   return (
-    <nav className={`fixed left-0 right-0 z-40 bottom-0 transition-transform duration-300 md:hidden ${
-      isHidden ? "translate-y-full" : "translate-y-0"
-    }`}>
+    <nav
+      className={`fixed left-0 right-0 z-40 bottom-0 transition-transform duration-300 md:hidden ${
+        isHidden ? "translate-y-full" : "translate-y-0"
+      }`}
+    >
       {/* Background that extends into safe area on mobile - uses -bottom to extend into safe area without creeping upward */}
       <div className="absolute inset-x-0 top-0 -bottom-[env(safe-area-inset-bottom)] bg-background/80 backdrop-blur-md" />
 
@@ -259,7 +281,8 @@ export function NavBar() {
             const Icon = item.icon;
 
             if (item.isCenter) {
-              const isOnAddPage = pathname === "/shifts/add" || pendingPath === "/shifts/add";
+              const isOnAddPage =
+                pathname === "/shifts/add" || pendingPath === "/shifts/add";
               const shouldShowHint =
                 showAddShiftHint &&
                 !isOnAddPage &&
@@ -267,7 +290,9 @@ export function NavBar() {
 
               // When on add page with a registered form, clicking submits the form
               // Otherwise, navigate to the add page
-              const handleCenterClick = (event: MouseEvent<HTMLAnchorElement>) => {
+              const handleCenterClick = (
+                event: MouseEvent<HTMLAnchorElement>,
+              ) => {
                 if (
                   event.metaKey ||
                   event.ctrlKey ||
@@ -324,7 +349,7 @@ export function NavBar() {
             }
 
             // Special handling for sharing button with avatar bubbles
-            if ('isSharing' in item && item.isSharing) {
+            if ("isSharing" in item && item.isSharing) {
               // Calculate angles to distribute bubbles evenly around the full circle
               // Each bubble is placed opposite to others for visual balance
               const getAngleForIndex = (idx: number, total: number) => {
@@ -341,9 +366,13 @@ export function NavBar() {
               const isOnSharingPath = normalizedPath?.startsWith("/sharing");
               const sharingHref = isOnSharingPath
                 ? `/${locale}/sharing`
-                : getSharingUrlWithState(locale);
+                : savedSharerId && isLoaded
+                  ? `/${locale}/sharing?view=${savedSharerId}`
+                  : `/${locale}/sharing`;
 
-              const handleSharingClick = (event: MouseEvent<HTMLAnchorElement>) => {
+              const handleSharingClick = (
+                event: MouseEvent<HTMLAnchorElement>,
+              ) => {
                 if (
                   event.metaKey ||
                   event.ctrlKey ||
@@ -379,9 +408,13 @@ export function NavBar() {
                   {visibleSharers.length > 0 && (
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
                       {visibleSharers.map((sharer, index) => {
-                        const avatarSrc = sharer.profilePictureUrl || sharer.oauthAvatarUrl;
+                        const avatarSrc =
+                          sharer.profilePictureUrl || sharer.oauthAvatarUrl;
                         // Position bubbles proportionally around the icon
-                        const angle = getAngleForIndex(index, visibleSharers.length);
+                        const angle = getAngleForIndex(
+                          index,
+                          visibleSharers.length,
+                        );
                         const radius = 16; // Distance from center
                         const radians = (angle - 90) * (Math.PI / 180);
                         const x = Math.cos(radians) * radius;
@@ -415,10 +448,8 @@ export function NavBar() {
                   )}
                   <Icon
                     className={`h-6 w-6 relative z-10 ${
-                      isActive
-                        ? "text-brand-highlight"
-                        : "text-text-muted"
-                    } ${visibleSharers.length > 0 ? "[filter:drop-shadow(0_0_4px_hsl(var(--background)))_drop-shadow(0_0_6px_hsl(var(--background)))_drop-shadow(0_0_8px_hsl(var(--background)))]" : ""}`}
+                      isActive ? "text-brand-highlight" : "text-text-muted"
+                    } ${visibleSharers.length > 0 ? "filter-[drop-shadow(0_0_4px_hsl(var(--background)))_drop-shadow(0_0_6px_hsl(var(--background)))_drop-shadow(0_0_8px_hsl(var(--background)))]" : ""}`}
                     strokeWidth={isActive ? 2.5 : 2}
                   />
                 </Link>
@@ -435,9 +466,7 @@ export function NavBar() {
               >
                 <Icon
                   className={`h-6 w-6 ${
-                    isActive
-                      ? "text-brand-highlight"
-                      : "text-text-muted"
+                    isActive ? "text-brand-highlight" : "text-text-muted"
                   }`}
                   strokeWidth={isActive ? 2.5 : 2}
                 />

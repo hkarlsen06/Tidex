@@ -3,7 +3,12 @@
 import { useState, type ReactNode } from "react";
 import { Settings, Users } from "lucide-react";
 import { Button } from "@/components/app/Button";
-import { Card, CardHeader, CardTitle, CardDescription } from "@/components/app/Card";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/app/Card";
 import { ScrollablePageWrapper } from "@/components/app/ScrollablePageWrapper";
 import { ManageSharingModal } from "./ManageSharingModal";
 import { useTranslations } from "@/lib/i18n/client";
@@ -47,7 +52,9 @@ export function SharingDefaultView({
       <ScrollablePageWrapper>
         <div className="flex flex-col gap-6 pt-4">
           <div className="flex items-center justify-between gap-4">
-            <h1 className="text-2xl font-semibold text-text-primary">{sharing.title}</h1>
+            <h1 className="text-2xl font-semibold text-text-primary">
+              {sharing.title}
+            </h1>
             <Button
               variant="outline"
               size="sm"
@@ -76,7 +83,7 @@ export function SharingDefaultView({
       </ScrollablePageWrapper>
       <ManageSharingModal
         isOpen={manageSharingOpen}
-        onClose={() => setManageSharingOpen(false)}
+        onCloseAction={() => setManageSharingOpen(false)}
         friends={friends}
         shareCapacity={shareCapacity}
       />
