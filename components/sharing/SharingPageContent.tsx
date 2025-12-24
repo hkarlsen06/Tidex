@@ -9,15 +9,26 @@ import { ManageSharingModal } from "./ManageSharingModal";
 import { SharingDropdown } from "./SharingDropdown";
 import { useTranslations } from "@/lib/i18n/client";
 import { useSharingViewState } from "@/lib/hooks/useSharingViewState";
-import type { SharedUser, Friend, SharedShiftsAggregates } from "@/data-access/sharing";
-import type { ShiftWithComputations, UserSettings, SupplementRule } from "@/lib/payroll";
+import type {
+  SharedUser,
+  Friend,
+  SharedShiftsAggregates,
+} from "@/data-access/sharing";
+import type {
+  ShiftWithComputations,
+  UserSettings,
+  SupplementRule,
+} from "@/lib/payroll";
 
 // Dynamically import ShiftsView to avoid Turbopack HMR issues with server action imports
 // ShiftsView imports server actions (deleteShift, updateShift, etc.) that cause HMR errors
 // in development when bundled in contexts where they're not used (readOnly mode)
 const ShiftsView = dynamic(
-  () => import("@/components/shifts/ShiftsView").then((mod) => ({ default: mod.ShiftsView })),
-  { ssr: false, loading: () => <SharingPageSkeleton /> }
+  () =>
+    import("@/components/shifts/ShiftsView").then((mod) => ({
+      default: mod.ShiftsView,
+    })),
+  { ssr: false, loading: () => <SharingPageSkeleton /> },
 );
 
 type SharingPageContentProps = {
@@ -108,7 +119,7 @@ export function SharingPageContent({
       />
       <ManageSharingModal
         isOpen={manageSharingOpen}
-        onClose={() => setManageSharingOpen(false)}
+        onCloseAction={() => setManageSharingOpen(false)}
         friends={friends}
         shareCapacity={shareCapacity}
       />

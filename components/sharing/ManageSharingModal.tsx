@@ -1,9 +1,24 @@
 "use client";
 
-import { useState, useTransition, useOptimistic } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  useTransition,
+  useOptimistic,
+} from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { Plus, Trash2, Users, DollarSign, Eye, EyeOff, Loader2, Share2 } from "lucide-react";
+import {
+  Plus,
+  Trash2,
+  Users,
+  DollarSign,
+  Eye,
+  EyeOff,
+  Loader2,
+  Share2,
+} from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -28,7 +43,7 @@ import type { Friend } from "@/data-access/sharing";
 
 type ManageSharingModalProps = {
   isOpen: boolean;
-  onClose: () => void;
+  onCloseAction: () => void;
   friends: Friend[];
   shareCapacity: { canAdd: boolean; currentCount: number; limit: number };
 };
@@ -45,9 +60,8 @@ function getInitials(name: string | null | undefined): string {
 
 function formatPhoneNumber(phone: string): string {
   const digits = phone.replace(/\D/g, "");
-  const localNumber = digits.startsWith("47") && digits.length === 10
-    ? digits.slice(2)
-    : digits;
+  const localNumber =
+    digits.startsWith("47") && digits.length === 10 ? digits.slice(2) : digits;
 
   if (localNumber.length === 8) {
     return `${localNumber.slice(0, 3)} ${localNumber.slice(3, 5)} ${localNumber.slice(5)}`;
@@ -61,7 +75,13 @@ function getSecondaryInfo(friend: Friend): string | null {
   return null;
 }
 
-function FriendAvatar({ friend, displayName }: { friend: Friend; displayName: string }) {
+function FriendAvatar({
+  friend,
+  displayName,
+}: {
+  friend: Friend;
+  displayName: string;
+}) {
   const avatarUrl = friend.profilePictureUrl || friend.oauthAvatarUrl || null;
 
   if (avatarUrl) {
@@ -94,19 +114,27 @@ type OptimisticAction =
 
 export function ManageSharingModal({
   isOpen,
-  onClose,
+  onCloseAction,
   friends,
   shareCapacity,
 }: ManageSharingModalProps) {
+  const addInputRef = useRef<HTMLInputElement>(null);
   const { t } = useTranslations();
   const router = useRouter();
   const [isAddFormExpanded, setIsAddFormExpanded] = useState(false);
   const [identifier, setIdentifier] = useState("");
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isAddFormExpanded) {
+      addInputRef.current?.focus();
+    }
+  }, [isAddFormExpanded]);
   const [isAdding, startAddTransition] = useTransition();
   const [actionId, setActionId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  const [newRecipientShowEarnings, setNewRecipientShowEarnings] = useState(false);
+  const [newRecipientShowEarnings, setNewRecipientShowEarnings] =
+    useState(false);
 
   // Optimistic state for friends
   const [optimisticFriends, setOptimisticFriends] = useOptimistic(
@@ -115,24 +143,31 @@ export function ManageSharingModal({
       if (action.type === "toggleVisibility") {
         return state.map((f) =>
           f.id === action.id && f.sharesWithMe
-            ? { ...f, sharesWithMe: { ...f.sharesWithMe, blocked: action.blocked } }
-            : f
+            ? {
+                ...f,
+                sharesWithMe: { ...f.sharesWithMe, blocked: action.blocked },
+              }
+            : f,
         );
       }
       if (action.type === "toggleEarnings") {
         return state.map((f) =>
           f.id === action.id && f.iShareWith
-            ? { ...f, iShareWith: { ...f.iShareWith, showEarningsToThem: action.showEarnings } }
-            : f
+            ? {
+                ...f,
+                iShareWith: {
+                  ...f.iShareWith,
+                  showEarningsToThem: action.showEarnings,
+                },
+              }
+            : f,
         );
       }
       if (action.type === "remove") {
         // Remove the iShareWith portion (they can still share with us)
-        return state.map((f) =>
-          f.id === action.id
-            ? { ...f, iShareWith: null }
-            : f
-        ).filter((f) => f.sharesWithMe || f.iShareWith); // Remove if neither direction exists
+        return state
+          .map((f) => (f.id === action.id ? { ...f, iShareWith: null } : f))
+          .filter((f) => f.sharesWithMe || f.iShareWith); // Remove if neither direction exists
       }
       if (action.type === "shareBack") {
         return state.map((f) =>
@@ -144,17 +179,18 @@ export function ManageSharingModal({
                   sharedAt: new Date().toISOString(),
                 },
               }
-            : f
+            : f,
         );
       }
       return state;
-    }
+    },
   );
 
   // Get translation strings with fallbacks
   const sharing = t.pages?.sharing ?? {
     manageSharing: "Administrer deling",
-    manageDescription: "Del vaktene dine med andre brukere. De kan se vaktene dine, men ikke redigere dem.",
+    manageDescription:
+      "Del vaktene dine med andre brukere. De kan se vaktene dine, men ikke redigere dem.",
     addRecipient: "Legg til venn",
     emailOrPhone: "E-post eller telefonnummer",
     add: "Legg til",
@@ -190,7 +226,9 @@ export function ManageSharingModal({
 
     setError(null);
     startAddTransition(async () => {
-      const result = await createShare(identifier.trim(), { showEarnings: newRecipientShowEarnings });
+      const result = await createShare(identifier.trim(), {
+        showEarnings: newRecipientShowEarnings,
+      });
       if (result.success) {
         setIdentifier("");
         setNewRecipientShowEarnings(false);
@@ -202,12 +240,19 @@ export function ManageSharingModal({
     });
   };
 
-  const handleToggleVisibility = (friendId: string, currentlyBlocked: boolean) => {
+  const handleToggleVisibility = (
+    friendId: string,
+    currentlyBlocked: boolean,
+  ) => {
     setActionId(friendId);
 
     startTransition(async () => {
       const newBlocked = !currentlyBlocked;
-      setOptimisticFriends({ type: "toggleVisibility", id: friendId, blocked: newBlocked });
+      setOptimisticFriends({
+        type: "toggleVisibility",
+        id: friendId,
+        blocked: newBlocked,
+      });
 
       const result = newBlocked
         ? await blockSharer(friendId)
@@ -226,7 +271,11 @@ export function ManageSharingModal({
 
     startTransition(async () => {
       const newValue = !currentValue;
-      setOptimisticFriends({ type: "toggleEarnings", id: friendId, showEarnings: newValue });
+      setOptimisticFriends({
+        type: "toggleEarnings",
+        id: friendId,
+        showEarnings: newValue,
+      });
 
       const result = await toggleShareEarnings(friendId, newValue);
       if (!result.success) {
@@ -278,19 +327,19 @@ export function ManageSharingModal({
 
   // Split friends into three categories
   const mutualFriends = sortAlphabetically(
-    optimisticFriends.filter((f) => f.sharesWithMe && f.iShareWith)
+    optimisticFriends.filter((f) => f.sharesWithMe && f.iShareWith),
   );
   const onlyIShareWith = sortAlphabetically(
-    optimisticFriends.filter((f) => !f.sharesWithMe && f.iShareWith)
+    optimisticFriends.filter((f) => !f.sharesWithMe && f.iShareWith),
   );
   const onlySharesWithMe = sortAlphabetically(
-    optimisticFriends.filter((f) => f.sharesWithMe && !f.iShareWith)
+    optimisticFriends.filter((f) => f.sharesWithMe && !f.iShareWith),
   );
 
   const hasAnyFriends = optimisticFriends.length > 0;
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onCloseAction()}>
       <DialogContent
         className="max-w-[calc(100vw-2rem)] sm:max-w-md sm:rounded-3xl overflow-x-hidden"
         onOpenAutoFocus={(e) => e.preventDefault()}
@@ -324,14 +373,18 @@ export function ManageSharingModal({
                 {/* Mutual shares section */}
                 {mutualFriends.length > 0 && (
                   <div className="space-y-2">
-                    <p className="text-xs text-text-muted">{sharing.mutualSharesDesc}</p>
+                    <p className="text-xs text-text-muted">
+                      {sharing.mutualSharesDesc}
+                    </p>
                     <div className="divide-y divide-border-subtle rounded-xl border border-border-subtle bg-surface-primary">
                       {mutualFriends.map((friend) => {
                         const sharesWithMe = friend.sharesWithMe;
                         const iShareWith = friend.iShareWith;
                         const isBlocked = sharesWithMe?.blocked ?? false;
-                        const isActionPending = isPending && actionId === friend.id;
-                        const friendDisplayName = getLocalizedDisplayName(friend);
+                        const isActionPending =
+                          isPending && actionId === friend.id;
+                        const friendDisplayName =
+                          getLocalizedDisplayName(friend);
 
                         return (
                           <div
@@ -339,7 +392,10 @@ export function ManageSharingModal({
                             className="flex items-center gap-2 px-2 py-2.5 sm:gap-3 sm:px-3 sm:py-3"
                           >
                             <div className="shrink-0">
-                              <FriendAvatar friend={friend} displayName={friendDisplayName} />
+                              <FriendAvatar
+                                friend={friend}
+                                displayName={friendDisplayName}
+                              />
                             </div>
                             <div className="min-w-0 flex-1">
                               <p className="text-sm font-medium text-text-primary truncate-fade">
@@ -355,20 +411,37 @@ export function ManageSharingModal({
                               {sharesWithMe && (
                                 <button
                                   type="button"
-                                  onClick={() => handleToggleVisibility(friend.id, isBlocked)}
+                                  onClick={() =>
+                                    handleToggleVisibility(friend.id, isBlocked)
+                                  }
                                   disabled={isActionPending}
                                   className="p-1.5 rounded-md text-text-muted hover:text-text-primary hover:bg-surface-secondary transition-colors disabled:opacity-50"
-                                  title={isBlocked ? sharing.showInList : sharing.hideFromList}
+                                  title={
+                                    isBlocked
+                                      ? sharing.showInList
+                                      : sharing.hideFromList
+                                  }
                                 >
-                                  {isBlocked ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                  {isBlocked ? (
+                                    <EyeOff className="h-4 w-4" />
+                                  ) : (
+                                    <Eye className="h-4 w-4" />
+                                  )}
                                 </button>
                               )}
                               {iShareWith && (
                                 <>
-                                  <DollarSign className={`h-3.5 w-3.5 transition-colors ${iShareWith.showEarningsToThem ? "text-success" : "text-text-muted"}`} />
+                                  <DollarSign
+                                    className={`h-3.5 w-3.5 transition-colors ${iShareWith.showEarningsToThem ? "text-success" : "text-text-muted"}`}
+                                  />
                                   <Switch
                                     checked={iShareWith.showEarningsToThem}
-                                    onCheckedChange={() => handleToggleEarnings(friend.id, iShareWith.showEarningsToThem)}
+                                    onCheckedChange={() =>
+                                      handleToggleEarnings(
+                                        friend.id,
+                                        iShareWith.showEarningsToThem,
+                                      )
+                                    }
                                     disabled={isActionPending}
                                     aria-label={sharing.showEarningsDescription}
                                   />
@@ -396,12 +469,16 @@ export function ManageSharingModal({
                 {/* Only I share with them section */}
                 {onlyIShareWith.length > 0 && (
                   <div className="space-y-2">
-                    <p className="text-xs text-text-muted">{sharing.iShareWithDesc}</p>
+                    <p className="text-xs text-text-muted">
+                      {sharing.iShareWithDesc}
+                    </p>
                     <div className="divide-y divide-border-subtle rounded-xl border border-border-subtle bg-surface-primary">
                       {onlyIShareWith.map((friend) => {
                         const iShareWith = friend.iShareWith;
-                        const isActionPending = isPending && actionId === friend.id;
-                        const friendDisplayName = getLocalizedDisplayName(friend);
+                        const isActionPending =
+                          isPending && actionId === friend.id;
+                        const friendDisplayName =
+                          getLocalizedDisplayName(friend);
 
                         return (
                           <div
@@ -409,7 +486,10 @@ export function ManageSharingModal({
                             className="flex items-center gap-2 px-2 py-2.5 sm:gap-3 sm:px-3 sm:py-3"
                           >
                             <div className="shrink-0">
-                              <FriendAvatar friend={friend} displayName={friendDisplayName} />
+                              <FriendAvatar
+                                friend={friend}
+                                displayName={friendDisplayName}
+                              />
                             </div>
                             <div className="min-w-0 flex-1">
                               <p className="text-sm font-medium text-text-primary truncate-fade">
@@ -424,10 +504,17 @@ export function ManageSharingModal({
                             <div className="flex items-center gap-1 shrink-0">
                               {iShareWith && (
                                 <>
-                                  <DollarSign className={`h-3.5 w-3.5 transition-colors ${iShareWith.showEarningsToThem ? "text-success" : "text-text-muted"}`} />
+                                  <DollarSign
+                                    className={`h-3.5 w-3.5 transition-colors ${iShareWith.showEarningsToThem ? "text-success" : "text-text-muted"}`}
+                                  />
                                   <Switch
                                     checked={iShareWith.showEarningsToThem}
-                                    onCheckedChange={() => handleToggleEarnings(friend.id, iShareWith.showEarningsToThem)}
+                                    onCheckedChange={() =>
+                                      handleToggleEarnings(
+                                        friend.id,
+                                        iShareWith.showEarningsToThem,
+                                      )
+                                    }
                                     disabled={isActionPending}
                                     aria-label={sharing.showEarningsDescription}
                                   />
@@ -455,13 +542,17 @@ export function ManageSharingModal({
                 {/* Only shares with me section */}
                 {onlySharesWithMe.length > 0 && (
                   <div className="space-y-2">
-                    <p className="text-xs text-text-muted">{sharing.sharesWithMeDesc}</p>
+                    <p className="text-xs text-text-muted">
+                      {sharing.sharesWithMeDesc}
+                    </p>
                     <div className="divide-y divide-border-subtle rounded-xl border border-border-subtle bg-surface-primary">
                       {onlySharesWithMe.map((friend) => {
                         const sharesWithMe = friend.sharesWithMe;
                         const isBlocked = sharesWithMe?.blocked ?? false;
-                        const isActionPending = isPending && actionId === friend.id;
-                        const friendDisplayName = getLocalizedDisplayName(friend);
+                        const isActionPending =
+                          isPending && actionId === friend.id;
+                        const friendDisplayName =
+                          getLocalizedDisplayName(friend);
 
                         return (
                           <div
@@ -469,7 +560,10 @@ export function ManageSharingModal({
                             className="flex items-center gap-2 px-2 py-2.5 sm:gap-3 sm:px-3 sm:py-3"
                           >
                             <div className="shrink-0">
-                              <FriendAvatar friend={friend} displayName={friendDisplayName} />
+                              <FriendAvatar
+                                friend={friend}
+                                displayName={friendDisplayName}
+                              />
                             </div>
                             <div className="min-w-0 flex-1">
                               <p className="text-sm font-medium text-text-primary truncate-fade">
@@ -485,18 +579,30 @@ export function ManageSharingModal({
                               {sharesWithMe && (
                                 <button
                                   type="button"
-                                  onClick={() => handleToggleVisibility(friend.id, isBlocked)}
+                                  onClick={() =>
+                                    handleToggleVisibility(friend.id, isBlocked)
+                                  }
                                   disabled={isActionPending}
                                   className="p-1.5 rounded-md text-text-muted hover:text-text-primary hover:bg-surface-secondary transition-colors disabled:opacity-50"
-                                  title={isBlocked ? sharing.showInList : sharing.hideFromList}
+                                  title={
+                                    isBlocked
+                                      ? sharing.showInList
+                                      : sharing.hideFromList
+                                  }
                                 >
-                                  {isBlocked ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                  {isBlocked ? (
+                                    <EyeOff className="h-4 w-4" />
+                                  ) : (
+                                    <Eye className="h-4 w-4" />
+                                  )}
                                 </button>
                               )}
                               <button
                                 type="button"
                                 onClick={() => handleShareBack(friend.id)}
-                                disabled={isActionPending || !shareCapacity.canAdd}
+                                disabled={
+                                  isActionPending || !shareCapacity.canAdd
+                                }
                                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-brand-gradient-start text-white hover:opacity-90 transition-opacity disabled:opacity-50"
                                 title={sharing.shareBack}
                               >
@@ -535,6 +641,7 @@ export function ManageSharingModal({
               ) : (
                 <div className="space-y-3">
                   <Input
+                    ref={addInputRef}
                     type="text"
                     placeholder={sharing.emailOrPhone}
                     value={identifier}
@@ -549,17 +656,25 @@ export function ManageSharingModal({
                       }
                     }}
                     disabled={isAdding}
-                    autoFocus
                   />
-                  <label htmlFor="new-recipient-show-earnings" className="flex items-center justify-between cursor-pointer select-none">
+                  <label
+                    htmlFor="new-recipient-show-earnings"
+                    className="flex items-center justify-between cursor-pointer select-none"
+                  >
                     <span className="flex items-center gap-2">
-                      <DollarSign className={`h-4 w-4 transition-colors ${newRecipientShowEarnings ? "text-success" : "text-text-muted"}`} />
-                      <span className="text-sm text-text-secondary">{sharing.showEarnings}</span>
+                      <DollarSign
+                        className={`h-4 w-4 transition-colors ${newRecipientShowEarnings ? "text-success" : "text-text-muted"}`}
+                      />
+                      <span className="text-sm text-text-secondary">
+                        {sharing.showEarnings}
+                      </span>
                     </span>
                     <Checkbox
                       id="new-recipient-show-earnings"
                       checked={newRecipientShowEarnings}
-                      onCheckedChange={(checked) => setNewRecipientShowEarnings(checked === true)}
+                      onCheckedChange={(checked) =>
+                        setNewRecipientShowEarnings(checked === true)
+                      }
                       disabled={isAdding}
                       aria-label={sharing.showEarningsDescription}
                       className="h-5 w-5"
@@ -598,14 +713,15 @@ export function ManageSharingModal({
           ) : (
             <div className="rounded-xl border border-border-subtle bg-surface-secondary px-4 py-3">
               <p className="text-sm text-text-secondary">
-                {sharing.limitReached} ({shareCapacity.currentCount}/{shareCapacity.limit})
+                {sharing.limitReached} ({shareCapacity.currentCount}/
+                {shareCapacity.limit})
               </p>
             </div>
           )}
         </div>
 
         <div className="mt-4 flex justify-end">
-          <Button type="button" variant="outline" onClick={onClose}>
+          <Button type="button" variant="outline" onClick={onCloseAction}>
             {sharing.close}
           </Button>
         </div>
