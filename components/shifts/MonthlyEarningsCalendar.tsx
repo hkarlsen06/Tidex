@@ -316,7 +316,8 @@ export function MonthlyEarningsCalendar({
       const deltaY = e.touches[0].clientY - touchStartY.current;
 
       // Determine if this is a horizontal swipe (more horizontal than vertical)
-      if (!isSwiping.current && Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 10) {
+      // Use a higher threshold (30px) to avoid interfering with day cell taps on touch devices
+      if (!isSwiping.current && Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 30) {
         isSwiping.current = true;
       }
 
