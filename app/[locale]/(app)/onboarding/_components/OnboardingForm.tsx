@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
 import { Card } from "@/components/app/Card";
 import { TooltipProvider } from "@/components/app/Tooltip";
 import { StepIndicator } from "./StepIndicator";
@@ -16,6 +17,20 @@ import { completeOnboarding } from "../actions";
 import { PRESET_WAGE_RATES } from "@/lib/payroll/calc";
 import { SupplementsData } from "@/components/settings/SupplementsEditor";
 import { ScrollablePageWrapper } from "@/components/app/ScrollablePageWrapper";
+
+// Animation variants for entrance animation
+const cardVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      type: "spring" as const,
+      stiffness: 300,
+      damping: 30,
+    },
+  },
+};
 
 interface OnboardingFormProps {
   initialSettings?: {
@@ -179,7 +194,12 @@ export function OnboardingForm({ initialSettings }: OnboardingFormProps) {
   return (
     <ScrollablePageWrapper routeKey="onboarding" applyContainer={false}>
       <TooltipProvider>
-        <div className="min-h-full flex justify-center pt-8 px-4 bg-background">
+        <motion.div
+          className="min-h-full flex justify-center pt-8 px-4 bg-background"
+          variants={cardVariants}
+          initial="hidden"
+          animate="visible"
+        >
         <Card className="w-full max-w-2xl h-fit p-8 shadow-app-lg backdrop-blur-sm border-border bg-surface-secondary">
         {currentStep < totalSteps && (
           <StepIndicator currentStep={currentStep} totalSteps={totalSteps} />
@@ -279,7 +299,7 @@ export function OnboardingForm({ initialSettings }: OnboardingFormProps) {
           />
         )}
         </Card>
-        </div>
+        </motion.div>
       </TooltipProvider>
     </ScrollablePageWrapper>
   );

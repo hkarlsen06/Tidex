@@ -1,9 +1,24 @@
 "use client";
 
 import { FormEvent, useState, useEffect, useCallback } from "react";
+import { motion } from "framer-motion";
 import { useTranslations } from "@/lib/i18n/client";
 
 import { supabase } from "@/lib/supabase/browser";
+
+// Animation variants for entrance animation
+const cardVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      type: "spring" as const,
+      stiffness: 300,
+      damping: 30,
+    },
+  },
+};
 import {
   InputOTP,
   InputOTPGroup,
@@ -195,7 +210,12 @@ export default function MfaVerifyClient({ locale, nextPath }: MfaVerifyClientPro
   }
 
   return (
-    <div className="relative w-full">
+    <motion.div
+      className="relative w-full"
+      variants={cardVariants}
+      initial="hidden"
+      animate="visible"
+    >
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl">{t.pages.auth.mfaVerify.title}</CardTitle>
@@ -317,6 +337,6 @@ export default function MfaVerifyClient({ locale, nextPath }: MfaVerifyClientPro
           </div>
         </CardContent>
       </Card>
-    </div>
+    </motion.div>
   );
 }

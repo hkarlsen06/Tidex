@@ -5,7 +5,22 @@ import Image from "next/image";
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useState, use, useRef, useEffect } from "react";
+import { motion } from "framer-motion";
 import { useTranslations } from "@/lib/i18n/client";
+
+// Animation variants for entrance animation
+const cardVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      type: "spring" as const,
+      stiffness: 300,
+      damping: 30,
+    },
+  },
+};
 
 import { supabase } from "@/lib/supabase/browser";
 import {
@@ -372,7 +387,12 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
   const submitButtonDisabled = isSubmitting || isOAuthRedirecting || !captchaToken || !agreedToTerms;
 
   return (
-    <div className="relative w-full">
+    <motion.div
+      className="relative w-full"
+      variants={cardVariants}
+      initial="hidden"
+      animate="visible"
+    >
       {/* Full-screen loading overlay during OAuth redirect */}
       {isOAuthRedirecting && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-xs">
@@ -685,6 +705,6 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
         onAccept={() => setAgreedToTerms(true)}
         onDecline={() => setAgreedToTerms(false)}
       />
-    </div>
+    </motion.div>
   );
 }

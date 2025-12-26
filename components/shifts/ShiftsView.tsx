@@ -90,6 +90,20 @@ const listItemVariants = {
   },
 };
 
+// Scroll-triggered animation for shift cards (slide in from left)
+const scrollCardVariants = {
+  hidden: { opacity: 0, x: -30 },
+  visible: {
+    opacity: 1,
+    x: 0,
+    transition: {
+      type: "spring" as const,
+      stiffness: 300,
+      damping: 30,
+    },
+  },
+};
+
 function getIsoWeek(date: Date) {
   const d = new Date(
     Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())
@@ -1919,7 +1933,10 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
                         <Fragment key={shift.id}>
                           <motion.div
                             ref={isCurrentMonth && isToday ? todayRef : undefined}
-                            variants={listItemVariants}
+                            variants={scrollCardVariants}
+                            initial="hidden"
+                            whileInView="visible"
+                            viewport={{ once: true, margin: "-50px" }}
                           >
                             <div className="flex flex-col gap-2">
                               <ShiftCard
