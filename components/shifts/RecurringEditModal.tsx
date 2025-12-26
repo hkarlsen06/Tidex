@@ -43,7 +43,7 @@ export function RecurringEditModal({
   const [pending, startTransition] = useTransition();
   const [deleting, startDeleteTransition] = useTransition();
   const [confirmingDelete, setConfirmingDelete] = useState(false);
-  const { selectedMonth: month, setSelectedMonth: setMonth } = useMonth();
+  const { selectedMonth: month, setSelectedMonth: setMonth, isHydrated } = useMonth();
 
   // Load recurring shift data from database
   const [draft, setDraft] = useState<RecurringDraft | null>(null);
@@ -279,6 +279,7 @@ export function RecurringEditModal({
               month={month}
               onPreviousMonth={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}
               onNextMonth={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))}
+              isHydrated={isHydrated}
             />
             <span className="rounded-full bg-surface-secondary/80 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-text-muted">
               {month.getFullYear()}

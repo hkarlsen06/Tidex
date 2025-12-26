@@ -33,7 +33,7 @@ export default function RecurringForm({ existingShifts, userSettings, presetRule
   const locale = useLocale();
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const { selectedMonth: month, setSelectedMonth: _setMonth, goToPreviousMonth, goToNextMonth } = useMonth();
+  const { selectedMonth: month, setSelectedMonth: _setMonth, goToPreviousMonth, goToNextMonth, direction, isHydrated } = useMonth();
 
   // Initialize draft from localStorage or defaults
   const [draft, setDraft] = useState<RecurringDraft>(() => {
@@ -349,6 +349,8 @@ export default function RecurringForm({ existingShifts, userSettings, presetRule
           onNextMonth={goToNextMonth}
           canNavigateToPreviousMonth={canNavigateToPreviousMonth}
           canNavigateToNextMonth={canNavigateToNextMonth}
+          direction={direction === 'next' ? 'forward' : direction === 'previous' ? 'backward' : undefined}
+          isHydrated={isHydrated}
         />
         <span className="rounded-full bg-surface-secondary/80 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-text-muted">
           {month.getFullYear()}

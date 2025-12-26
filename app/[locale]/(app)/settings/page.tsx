@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { MouseEvent } from 'react';
-import { motion } from 'framer-motion';
 import { Card } from '@/components/app/Card';
 import { ChevronRight, User, Banknote, Palette, Database, CreditCard, Shield, Loader2 } from 'lucide-react';
 import { useNavigationFeedback } from '@/components/app/navigation-feedback';
@@ -11,31 +10,6 @@ import { useTranslations } from '@/lib/i18n/client';
 import type { Dictionary } from '@/lib/i18n/dictionaries/no';
 import { defaultLocale } from '@/lib/i18n/config';
 import { ScrollablePageWrapper } from '@/components/app/ScrollablePageWrapper';
-
-// Animation variants for staggered page sections
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.1,
-      delayChildren: 0.05,
-    },
-  },
-};
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      type: "spring" as const,
-      stiffness: 300,
-      damping: 30,
-    },
-  },
-};
 
 const getSettingsItems = (t: Dictionary) => [
   {
@@ -107,25 +81,20 @@ export default function SettingsPage() {
 
   return (
     <ScrollablePageWrapper routeKey="settings">
-      <motion.div
-        className="py-8"
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-      >
-        <motion.div variants={itemVariants}>
+      <div className="py-8">
+        <div>
           <h1 className="text-3xl font-bold mb-2">{t.pages.settings.title}</h1>
           <p className="text-text-secondary mb-10">
             {t.pages.settings.subtitle}
           </p>
-        </motion.div>
+        </div>
 
         <div className="flex flex-col gap-6">
           {settingsItems.map((item) => {
             const Icon = item.icon;
             const isNavigating = normalizedPendingPath === item.href;
             return (
-              <motion.div key={item.href} variants={itemVariants}>
+              <div key={item.href}>
                 <Link href={`/${locale}${item.href}`} onClick={handleItemClick(item.href)}>
                   <Card className="p-5 hover:bg-surface-secondary/50 transition-colors cursor-pointer">
                     <div className="flex items-center gap-4">
@@ -144,11 +113,11 @@ export default function SettingsPage() {
                     </div>
                   </Card>
                 </Link>
-              </motion.div>
+              </div>
             );
           })}
         </div>
-      </motion.div>
+      </div>
     </ScrollablePageWrapper>
   );
 }

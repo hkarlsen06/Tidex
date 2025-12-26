@@ -36,8 +36,20 @@ You are performing a bug analysis. Follow these steps:
    - Performance issues (unnecessary re-renders, inefficient loops)
    - Security issues (XSS, injection, exposed secrets)
 
-4. Perform fixes for findings
-5. **Summary:**
+4. **Run the linter:**
+   - Run `pnpm lint` to check for linting issues
+   - Fix any linting errors that are related to the changed files
+   - Report any issues that couldn't be auto-fixed
+
+5. **Run the tests:**
+   - Run `pnpm test` to execute the test suite
+   - If tests fail, analyze whether the failures are related to the changes
+   - Fix any test failures caused by the changes
+   - Report test results summary
+
+6. Perform fixes for any findings from steps 3-5
+
+7. **Summary:**
 
    - If no bugs found, state "No obvious bugs detected in the analyzed changes"
    - If bugs found, provide a count and summary by severity
