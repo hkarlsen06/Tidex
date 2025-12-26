@@ -3,6 +3,7 @@
 import React, { useMemo, useState, useCallback, useTransition, useRef, useEffect, Fragment } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
+import { motion } from "framer-motion";
 
 import ShiftCard from "@/components/app/ShiftCard";
 import ShiftMoveCard from "./ShiftMoveCard";
@@ -62,6 +63,31 @@ export type WeekGroup = {
   label: string;
   totalGross: number;
   shifts: ShiftWithComputations[];
+};
+
+// Animation variants for staggered shift list
+const listContainerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.05,
+      delayChildren: 0.1,
+    },
+  },
+};
+
+const listItemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      type: "spring" as const,
+      stiffness: 300,
+      damping: 30,
+    },
+  },
 };
 
 function getIsoWeek(date: Date) {
@@ -1847,8 +1873,17 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
                 && (!nextGroupFirstDate || todayDate < nextGroupFirstDate);
 
               return (
-                <section key={group.id} className="space-y-4">
-                  <div className="flex flex-row items-center justify-between bg-transparent">
+                <motion.section
+                  key={group.id}
+                  className="space-y-4"
+                  variants={listContainerVariants}
+                  initial="hidden"
+                  animate="visible"
+                >
+                  <motion.div
+                    className="flex flex-row items-center justify-between bg-transparent"
+                    variants={listItemVariants}
+                  >
                     <div className="flex items-center gap-2 font-medium text-text-primary">
                       <span>{t.pages.shifts.list.weekLabel} {group.label}</span>
                       <svg
@@ -1867,12 +1902,12 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
                         {formatCurrency(group.totalGross)}
                       </span>
                     )}
-                  </div>
+                  </motion.div>
                   <div className="space-y-4">
                     {isTodayBeforeFirstShift && (
-                      <div ref={todayRef}>
+                      <motion.div ref={todayRef} variants={listItemVariants}>
                         <TodayPlaceholderCard />
-                      </div>
+                      </motion.div>
                     )}
                     {group.shifts.map((shift, shiftIndex) => {
                       const isToday = shift.shift_date === todayDate;
@@ -1882,7 +1917,10 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
 
                       return (
                         <Fragment key={shift.id}>
-                          <div ref={isCurrentMonth && isToday ? todayRef : undefined}>
+                          <motion.div
+                            ref={isCurrentMonth && isToday ? todayRef : undefined}
+                            variants={listItemVariants}
+                          >
                             <div className="flex flex-col gap-2">
                               <ShiftCard
                                 shift={shift}
@@ -1905,22 +1943,22 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
                                 <p className="text-xs text-text-muted text-center">{countdown.text}</p>
                               )}
                             </div>
-                          </div>
+                          </motion.div>
                           {showPlaceholderAfter && (
-                            <div ref={todayRef}>
+                            <motion.div ref={todayRef} variants={listItemVariants}>
                               <TodayPlaceholderCard />
-                            </div>
+                            </motion.div>
                           )}
                         </Fragment>
                       );
                     })}
                     {isTodayAfterLastShift && (
-                      <div ref={todayRef}>
+                      <motion.div ref={todayRef} variants={listItemVariants}>
                         <TodayPlaceholderCard />
-                      </div>
+                      </motion.div>
                     )}
                   </div>
-                </section>
+                </motion.section>
               );
             })}
           </div>
