@@ -76,7 +76,7 @@ export default function AddShiftForm({ existingShifts, userSettings, presetRules
   const searchParams = useSearchParams();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [mode, setMode] = useState<"single" | "recurring">("single");
-  const { selectedMonth: month, setSelectedMonth: setMonth, goToPreviousMonth, goToNextMonth } = useMonth();
+  const { selectedMonth: month, setSelectedMonth: setMonth, goToPreviousMonth, goToNextMonth, direction, isHydrated } = useMonth();
   const [dates, setDates] = useState<Date[]>([]);
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
@@ -474,6 +474,8 @@ export default function AddShiftForm({ existingShifts, userSettings, presetRules
                 month={month}
                 onPreviousMonth={goToPreviousMonth}
                 onNextMonth={goToNextMonth}
+                direction={direction === 'next' ? 'forward' : direction === 'previous' ? 'backward' : undefined}
+                isHydrated={isHydrated}
               />
               <span className="rounded-full bg-surface-secondary/80 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-text-muted">
                 {month.getFullYear()}
@@ -481,15 +483,15 @@ export default function AddShiftForm({ existingShifts, userSettings, presetRules
             </div>
 
             <SelectDatesCalendar
-              month={month}
-              onMonthChange={setMonth}
-              selected={dates}
-              onSelectedChange={handleSelectedChange}
-              hasShiftDates={hasShiftDates}
-              conflictDates={conflictDates}
-              _hideCaptionNav
-              previewEarnings={previewEarnings}
-            />
+                month={month}
+                onMonthChange={setMonth}
+                selected={dates}
+                onSelectedChange={handleSelectedChange}
+                hasShiftDates={hasShiftDates}
+                conflictDates={conflictDates}
+                _hideCaptionNav
+                previewEarnings={previewEarnings}
+              />
 
             {showMultiMonthWarning && (
               <div className="rounded-2xl border border-warning/40 bg-warning-subtle px-4 py-3 text-sm text-warning">

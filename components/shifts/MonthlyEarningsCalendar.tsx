@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState, useEffect, useRef, useCallback, type Ref } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { useMemo, useState, useEffect, useRef, type Ref } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { Clock, Copy, ArrowRightLeft, Info, Trash2, X } from "lucide-react";
 import { ShiftsCalendar } from "@/components/app/ShiftsCalendar";
 import { Card } from "@/components/app/Card";
@@ -15,20 +15,6 @@ import { useTranslations } from "@/lib/i18n/client";
 import { getMonthlyTotals, summarizeShiftTotals } from "@/lib/shifts/monthlyTotals";
 import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
 import { useCurrency } from "@/components/providers/CurrencyProvider";
-
-// Animation variants for initial entrance
-const entranceVariants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      type: "spring" as const,
-      stiffness: 300,
-      damping: 30,
-    },
-  },
-};
 
 type TaxSettings = {
   enabled: boolean;
@@ -169,6 +155,27 @@ function formatYear(date: Date): string {
   return date.getFullYear().toString();
 }
 
+/**
+ * Static weekday header component - renders outside AnimatePresence
+ * to stay fixed during month transitions
+ */
+function WeekdayHeader() {
+  const { locale } = useTranslations();
+  const shortNamesEn = ['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU'];
+  const shortNamesNb = ['MA', 'TI', 'ON', 'TO', 'FR', 'LØ', 'SØ'];
+  const names = locale === 'no' ? shortNamesNb : shortNamesEn;
+
+  return (
+    <div className="grid grid-cols-7 mb-2 relative z-10 bg-transparent">
+      {names.map((name) => (
+        <div key={name} className="text-text-muted font-normal text-xs text-center py-2 uppercase bg-background">
+          {name}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // Framer Motion variants for vertical month scrolling
 const calendarVariants = {
   enter: (direction: 'next' | 'previous') => ({
@@ -215,27 +222,16 @@ export function MonthlyEarningsCalendar({
   const { t } = useTranslations();
   const formatCurrency = useFormatCurrency();
   const { symbol: currencySymbol } = useCurrency();
-  const { goToPreviousMonth, goToNextMonth } = useMonth();
+  const { goToPreviousMonth, goToNextMonth, direction, isHydrated } = useMonth();
   // When showEarnings is false, force hours view (money mode not available)
   const [viewMode, setViewMode] = useState<"money" | "hours">("hours");
   const effectiveViewMode = showEarnings ? viewMode : "hours";
-  // Track animation direction - set before triggering month change for correct animation
-  const [localDirection, setLocalDirection] = useState<'next' | 'previous'>('next');
+  // Use direction from context - defaults to 'next' when null (for programmatic changes)
+  const animationDirection = direction ?? 'next';
   const swipeContainerRef = useRef<HTMLDivElement>(null);
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
   const isSwiping = useRef<boolean>(false);
-
-  // Wrapped navigation functions that set direction BEFORE triggering month change
-  const navigatePrevious = useCallback(() => {
-    setLocalDirection('previous');
-    goToPreviousMonth();
-  }, [goToPreviousMonth]);
-
-  const navigateNext = useCallback(() => {
-    setLocalDirection('next');
-    goToNextMonth();
-  }, [goToNextMonth]);
 
   // Filter shifts once per month change
   // Include shifts from previous and next month to show on "outside days"
@@ -359,10 +355,10 @@ export function MonthlyEarningsCalendar({
       if (Math.abs(deltaX) > threshold) {
         if (deltaX > 0) {
           // Swipe right - go to previous month
-          navigatePrevious();
+          goToPreviousMonth();
         } else {
           // Swipe left - go to next month
-          navigateNext();
+          goToNextMonth();
         }
       }
 
@@ -381,17 +377,10 @@ export function MonthlyEarningsCalendar({
       container.removeEventListener('touchmove', handleTouchMove);
       container.removeEventListener('touchend', handleTouchEnd);
     };
-  }, [navigatePrevious, navigateNext]);
-
-  // Respect reduced motion preferences
-  const shouldReduceMotion = useReducedMotion();
+  }, [goToPreviousMonth, goToNextMonth]);
 
   return (
-    <motion.div
-      variants={entranceVariants}
-      initial={shouldReduceMotion ? "visible" : "hidden"}
-      animate="visible"
-    >
+    <div>
       <Card ref={containerRef} className="rounded-card border-0 bg-transparent">
         <div ref={swipeContainerRef}>
         <div className="flex h-[52px] flex-row items-center justify-between">
@@ -404,9 +393,10 @@ export function MonthlyEarningsCalendar({
               <>
                 <MonthPicker
                   month={month}
-                  onPreviousMonth={navigatePrevious}
-                  onNextMonth={navigateNext}
-                  direction={localDirection === 'next' ? 'forward' : 'backward'}
+                  onPreviousMonth={goToPreviousMonth}
+                  onNextMonth={goToNextMonth}
+                  direction={animationDirection === 'next' ? 'forward' : 'backward'}
+                  isHydrated={isHydrated}
                 />
                 <span className="font-medium text-text-muted ml-1">{formatYear(month)}</span>
               </>
@@ -432,12 +422,15 @@ export function MonthlyEarningsCalendar({
           })()}
         </div>
         <div className="pb-6 overflow-hidden relative [&>*:not(:last-child)]:pointer-events-none">
-          <AnimatePresence mode="popLayout" custom={localDirection} initial={false}>
+          {/* Static weekday header - stays in place during month transitions */}
+          <WeekdayHeader />
+          <AnimatePresence mode="popLayout" custom={animationDirection} initial={false}>
             <motion.div
               key={`${month.getFullYear()}-${month.getMonth()}`}
-              custom={localDirection}
+              custom={animationDirection}
               variants={calendarVariants}
-              initial="enter"
+              // Skip animation if not hydrated yet (prevents flicker during sessionStorage restoration)
+              initial={isHydrated ? "enter" : false}
               animate="center"
               exit="exit"
               transition={{
@@ -463,22 +456,25 @@ export function MonthlyEarningsCalendar({
         </div>
       </div>
       <div className="flex flex-col items-center gap-2 pb-6">
-        <div className="inline-flex h-11 w-[90%] max-w-xs items-center gap-1 rounded-full border border-border-subtle bg-surface-secondary/80 px-1 py-1 shadow-app-sm dark:shadow-app-inner">
-          {/* Multi-selection mode: show delete and clear buttons */}
+        <div className="inline-flex h-11 w-[90%] max-w-xs items-center gap-1 rounded-full border border-border-subtle bg-surface-secondary/80 p-1 shadow-app-sm dark:shadow-app-inner">
+          {/* Multi-selection mode: show delete (if allowed) and clear buttons */}
           {selectedDates && selectedDates.size > 0 ? (
             <div className="flex h-full w-full items-center gap-2 rounded-full bg-surface-primary px-1">
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => onDeleteSelected?.()}
-                disabled={deleting || isOffline}
-                loading={deleting}
-                title={isOffline ? "Cannot delete while offline" : undefined}
-                className="flex-1 h-9 gap-2 rounded-full bg-red-500/10 text-red-600 hover:bg-red-500/20 dark:text-red-400 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Trash2 strokeWidth={2} className="h-4 w-4" />
-                {t.pages.shifts.actions.delete}
-              </Button>
+              {/* Delete button - only shown when onDeleteSelected is provided (not in readOnly mode) */}
+              {onDeleteSelected && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => onDeleteSelected()}
+                  disabled={deleting || isOffline}
+                  loading={deleting}
+                  title={isOffline ? "Cannot delete while offline" : undefined}
+                  className="flex-1 h-9 gap-2 rounded-full bg-red-500/10 text-red-600 hover:bg-red-500/20 dark:text-red-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Trash2 strokeWidth={2} className="h-4 w-4" />
+                  {t.pages.shifts.actions.delete}
+                </Button>
+              )}
               <Button
                 type="button"
                 variant="ghost"
@@ -571,14 +567,14 @@ export function MonthlyEarningsCalendar({
               )}
             </div>
           ) : (
-            <div className="flex h-full w-full items-center gap-2 rounded-full px-1">
+            <div className="flex h-full w-full items-center gap-1">
               <Button
                 type="button"
                 variant="ghost"
                 aria-pressed={viewMode === "hours"}
                 onClick={() => setViewMode("hours")}
                 className={cn(
-                  "h-9 rounded-full px-4 text-sm flex-1 whitespace-nowrap transition-none",
+                  "h-full rounded-full px-4 text-sm flex-1 whitespace-nowrap transition-none",
                   viewMode === "hours" || !showEarnings
                     ? "bg-white dark:bg-slate-700 text-black dark:text-white shadow-app-md font-semibold"
                     : "text-text-muted hover:text-text-primary hover:bg-surface-secondary/50"
@@ -595,7 +591,7 @@ export function MonthlyEarningsCalendar({
                   aria-pressed={viewMode === "money"}
                   onClick={() => setViewMode("money")}
                   className={cn(
-                    "h-9 rounded-full px-4 text-sm flex-1 whitespace-nowrap transition-none",
+                    "h-full rounded-full px-4 text-sm flex-1 whitespace-nowrap transition-none",
                     viewMode === "money"
                       ? "bg-white dark:bg-slate-700 text-black dark:text-white shadow-app-md font-semibold"
                       : "text-text-muted hover:text-text-primary hover:bg-surface-secondary/50"
@@ -616,6 +612,6 @@ export function MonthlyEarningsCalendar({
         )}
       </div>
     </Card>
-    </motion.div>
+    </div>
   );
 }

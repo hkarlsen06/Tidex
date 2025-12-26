@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState, useRef, useCallback } from "react";
+import React, { useEffect, useMemo, useState, useRef, useCallback } from "react";
 import type { ReactNode } from "react";
 import dynamic from "next/dynamic";
-import { motion } from "framer-motion";
+import { motion, useInView } from "framer-motion";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/app/Card";
 import type { StatsData } from "@/data-access/stats";
@@ -18,23 +18,12 @@ import { formatNumber } from "@/lib/formatters";
 import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
 import { ScrollablePageWrapper } from "@/components/app/ScrollablePageWrapper";
 
-// Animation variants for staggered page sections
-const containerVariants = {
-  hidden: { opacity: 0 },
+// Scroll-triggered animation variants (slide in from left, out when leaving)
+const scrollCardVariants = {
+  hidden: { opacity: 0, x: -30 },
   visible: {
     opacity: 1,
-    transition: {
-      staggerChildren: 0.1,
-      delayChildren: 0.05,
-    },
-  },
-};
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: {
-    opacity: 1,
-    y: 0,
+    x: 0,
     transition: {
       type: "spring" as const,
       stiffness: 300,
@@ -42,6 +31,52 @@ const itemVariants = {
     },
   },
 };
+
+// Wrapper component that animates in AND out based on viewport visibility (mobile only)
+const ScrollAnimatedCard = React.forwardRef<HTMLDivElement, { children: React.ReactNode; className?: string }>(
+  function ScrollAnimatedCard({ children, className }, forwardedRef) {
+    const internalRef = useRef<HTMLDivElement>(null);
+    // Use larger top margin to account for navbar (~96px header + buffer)
+    // Bottom margin for bottom navbar (~80px + buffer)
+    const isInView = useInView(internalRef, { amount: 0.2, margin: "-120px 0px -100px 0px" });
+    const [isDesktop, setIsDesktop] = useState(false);
+
+    useEffect(() => {
+      const checkDesktop = () => setIsDesktop(window.innerWidth >= 1024);
+      checkDesktop();
+      window.addEventListener('resize', checkDesktop);
+      return () => window.removeEventListener('resize', checkDesktop);
+    }, []);
+
+    // Combine refs using a callback that avoids modifying the forwardedRef directly
+    const setRefs = useCallback(
+      (node: HTMLDivElement | null) => {
+        // Set internal ref for useInView
+        (internalRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
+        // Forward to external ref using React's imperative handle pattern
+        if (typeof forwardedRef === 'function') {
+          forwardedRef(node);
+        } else if (forwardedRef) {
+          // For RefObject, we need to use Object.assign to avoid direct mutation lint error
+          Object.assign(forwardedRef, { current: node });
+        }
+      },
+      [forwardedRef]
+    );
+
+    return (
+      <motion.div
+        ref={setRefs}
+        className={className}
+        variants={scrollCardVariants}
+        initial={isDesktop ? "visible" : "hidden"}
+        animate={isDesktop ? "visible" : (isInView ? "visible" : "hidden")}
+      >
+        {children}
+      </motion.div>
+    );
+  }
+);
 
 /**
  * Chart data type - subset of StatsData used for chart components
@@ -183,6 +218,7 @@ export function StatsContent({ data }: StatsContentProps) {
     goToPreviousMonth,
     goToNextMonth,
     direction,
+    isHydrated,
   } = useMonth();
 
   // Navigate to same month in previous year
@@ -504,33 +540,32 @@ export function StatsContent({ data }: StatsContentProps) {
         </div>
       )}
 
-      <motion.div
+      <div
         ref={swipeContainerRef}
         className="w-full pb-6 pt-2 px-4 flex flex-col space-y-6 md:grid md:grid-cols-2 md:gap-6 md:space-y-0 md:items-start"
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
       >
 
       {/* Month picker - left column header */}
-      <motion.div className="flex items-center justify-between mb-2 md:mb-0 md:h-10" variants={itemVariants}>
+      <div className="flex items-center justify-between mb-2 md:mb-0 md:h-10">
         <MonthPicker
           month={selectedMonth}
           onPreviousMonth={goToPreviousMonth}
           onNextMonth={goToNextMonth}
+          direction={direction === 'next' ? 'forward' : direction === 'previous' ? 'backward' : undefined}
+          isHydrated={isHydrated}
         />
         <span className="font-medium text-text-muted mr-3 md:hidden">{selectedMonth.getFullYear()}</span>
-      </motion.div>
+      </div>
 
       {/* Year picker - right column header */}
-      <motion.div className="hidden md:flex items-center h-10" variants={itemVariants}>
+      <div className="hidden md:flex items-center h-10">
         <YearPicker
           year={selectedYear}
           onPreviousYear={goToPreviousYear}
           onNextYear={goToNextYear}
           suffix={yearPickerSuffix}
         />
-      </motion.div>
+      </div>
 
       {fetchError && (
         <p className="text-sm text-error md:col-span-2">
@@ -539,9 +574,9 @@ export function StatsContent({ data }: StatsContentProps) {
       )}
 
       {/* LEFT COLUMN - Monthly stats */}
-      <motion.div className="flex flex-col space-y-6" variants={itemVariants}>
+      <div className="flex flex-col space-y-6">
         {/* Hero section with key metrics */}
-        <div className={`space-y-5 ${animationClass}`}>
+        <ScrollAnimatedCard className={`space-y-5 ${animationClass}`}>
           <Card className="border-border bg-surface-primary overflow-hidden">
             <CardContent className="p-6">
               <p className="text-lg font-semibold text-text-muted mb-3">
@@ -587,91 +622,99 @@ export function StatsContent({ data }: StatsContentProps) {
               icon={<Briefcase className="w-5 h-5" />}
             />
           </div>
-        </div>
+        </ScrollAnimatedCard>
 
         {/* Monthly goal progress */}
-        <div className={animationClass}>
+        <ScrollAnimatedCard className={animationClass}>
           <MonthlyGoalProgress data={activeData.monthlyGoal} />
-        </div>
+        </ScrollAnimatedCard>
 
         {/* Monthly cumulative comparison chart */}
-        <Card className={`border-border bg-surface-primary ${animationClass}`}>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-xl font-bold text-text-primary">
-              {t.pages.stats.cards.monthlyProgress}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="px-3 pb-4 pt-1">
-            {!chartData ? (
-              <ChartSkeleton />
-            ) : (
-              <MonthlyCumulativeChart data={chartData.thisMonthCumulative} />
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Supplement breakdown chart */}
-        {selectedShiftCount > 0 && (
+        <ScrollAnimatedCard>
           <Card className={`border-border bg-surface-primary ${animationClass}`}>
             <CardHeader className="pb-3">
               <CardTitle className="text-xl font-bold text-text-primary">
-                {t.pages.stats.cards.salaryComposition}
+                {t.pages.stats.cards.monthlyProgress}
               </CardTitle>
             </CardHeader>
             <CardContent className="px-3 pb-4 pt-1">
               {!chartData ? (
                 <ChartSkeleton />
               ) : (
-                <SupplementBreakdownChart data={chartData.currentMonthBreakdown} />
+                <MonthlyCumulativeChart data={chartData.thisMonthCumulative} />
               )}
             </CardContent>
           </Card>
+        </ScrollAnimatedCard>
+
+        {/* Supplement breakdown chart */}
+        {selectedShiftCount > 0 && (
+          <ScrollAnimatedCard>
+            <Card className={`border-border bg-surface-primary ${animationClass}`}>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-xl font-bold text-text-primary">
+                  {t.pages.stats.cards.salaryComposition}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="px-3 pb-4 pt-1">
+                {!chartData ? (
+                  <ChartSkeleton />
+                ) : (
+                  <SupplementBreakdownChart data={chartData.currentMonthBreakdown} />
+                )}
+              </CardContent>
+            </Card>
+          </ScrollAnimatedCard>
         )}
 
         {/* Weekly earnings chart - "This week" for current month, "Best week" for past months */}
         {isCurrentMonthSelected ? (
-          <Card className={`border-border bg-surface-primary ${animationClass}`}>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-xl font-bold text-text-primary">
-                {t.pages.stats.cards.thisWeek}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="px-3 pb-4 pt-1">
-              {!chartData ? (
-                <ChartSkeleton />
-              ) : (
-                <WeeklyBarChart data={chartData.thisWeek} />
-              )}
-            </CardContent>
-          </Card>
+          <ScrollAnimatedCard>
+            <Card className={`border-border bg-surface-primary ${animationClass}`}>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-xl font-bold text-text-primary">
+                  {t.pages.stats.cards.thisWeek}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="px-3 pb-4 pt-1">
+                {!chartData ? (
+                  <ChartSkeleton />
+                ) : (
+                  <WeeklyBarChart data={chartData.thisWeek} />
+                )}
+              </CardContent>
+            </Card>
+          </ScrollAnimatedCard>
         ) : chartData?.bestWeek && (
-          <Card className={`border-border bg-surface-primary ${animationClass}`}>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-xl font-bold text-text-primary">
-                {`${t.pages.stats.cards.bestWeek} (${t.pages.stats.cards.week} ${chartData.bestWeek.weekNumber})`}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="px-3 pb-4 pt-1">
-              <WeeklyBarChart data={chartData.bestWeek.weekData} highlightBestDay showDatesInsteadOfDays />
-            </CardContent>
-          </Card>
+          <ScrollAnimatedCard>
+            <Card className={`border-border bg-surface-primary ${animationClass}`}>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-xl font-bold text-text-primary">
+                  {`${t.pages.stats.cards.bestWeek} (${t.pages.stats.cards.week} ${chartData.bestWeek.weekNumber})`}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="px-3 pb-4 pt-1">
+                <WeeklyBarChart data={chartData.bestWeek.weekData} highlightBestDay showDatesInsteadOfDays />
+              </CardContent>
+            </Card>
+          </ScrollAnimatedCard>
         )}
-      </motion.div>
+      </div>
 
       {/* RIGHT COLUMN - Yearly stats */}
-      <motion.div className="flex flex-col space-y-6" variants={itemVariants}>
+      <div className="flex flex-col space-y-6">
         {/* Year picker - mobile only (shown in header on desktop) */}
-        <div className="flex items-center gap-2 md:hidden">
+        <ScrollAnimatedCard className="flex items-center gap-2 md:hidden">
           <YearPicker
             year={selectedYear}
             onPreviousYear={goToPreviousYear}
             onNextYear={goToNextYear}
             suffix={yearPickerSuffix}
           />
-        </div>
+        </ScrollAnimatedCard>
 
         {/* YTD stat cards */}
-        <div className={`space-y-3 ${animationClass}`}>
+        <ScrollAnimatedCard className={`space-y-3 ${animationClass}`}>
           {!chartData ? (
             <>
               <ChartSkeleton />
@@ -706,61 +749,67 @@ export function StatsContent({ data }: StatsContentProps) {
               </div>
             </>
           )}
-        </div>
+        </ScrollAnimatedCard>
 
         {/* Cumulative earnings chart */}
-        <Card className={`border-border bg-surface-primary ${animationClass}`}>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-xl font-bold text-text-primary">
-              {t.pages.stats.cards.cumulativeProgress}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="px-3 pb-4 pt-1">
-            {!chartData ? (
-              <ChartSkeleton />
-            ) : (
-              <YearlyCumulativeChart data={chartData.yearlyCumulative} />
-            )}
-          </CardContent>
-        </Card>
+        <ScrollAnimatedCard>
+          <Card className={`border-border bg-surface-primary ${animationClass}`}>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-xl font-bold text-text-primary">
+                {t.pages.stats.cards.cumulativeProgress}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="px-3 pb-4 pt-1">
+              {!chartData ? (
+                <ChartSkeleton />
+              ) : (
+                <YearlyCumulativeChart data={chartData.yearlyCumulative} />
+              )}
+            </CardContent>
+          </Card>
+        </ScrollAnimatedCard>
 
         {/* Monthly earnings chart */}
-        <Card className={`border-border bg-surface-primary ${animationClass}`}>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-xl font-bold text-text-primary">
-              {t.pages.stats.cards.yearlyBreakdown} {focusYear}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="px-3 pb-4 pt-1">
-            {!chartData ? (
-              <ChartSkeleton />
-            ) : (
-              <MonthlyBarChart data={chartData.last6Months} />
-            )}
-          </CardContent>
-        </Card>
+        <ScrollAnimatedCard>
+          <Card className={`border-border bg-surface-primary ${animationClass}`}>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-xl font-bold text-text-primary">
+                {t.pages.stats.cards.yearlyBreakdown} {focusYear}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="px-3 pb-4 pt-1">
+              {!chartData ? (
+                <ChartSkeleton />
+              ) : (
+                <MonthlyBarChart data={chartData.last6Months} />
+              )}
+            </CardContent>
+          </Card>
+        </ScrollAnimatedCard>
 
         {/* Employment percentage chart */}
-        <Card className={`border-border bg-surface-primary overflow-hidden ${animationClass}`}>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-xl font-bold text-text-primary">
-              {t.components.charts.employment.title}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            {!chartData ? (
-              <ChartSkeleton />
-            ) : (
-              <EmploymentChart
-                data={chartData.employmentLast6Months}
-                yearlyAverage={chartData.employmentYearlyAverage}
-                focusYear={focusYear}
-              />
-            )}
-          </CardContent>
-        </Card>
-      </motion.div>
-      </motion.div>
+        <ScrollAnimatedCard>
+          <Card className={`border-border bg-surface-primary overflow-hidden ${animationClass}`}>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-xl font-bold text-text-primary">
+                {t.components.charts.employment.title}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              {!chartData ? (
+                <ChartSkeleton />
+              ) : (
+                <EmploymentChart
+                  data={chartData.employmentLast6Months}
+                  yearlyAverage={chartData.employmentYearlyAverage}
+                  focusYear={focusYear}
+                />
+              )}
+            </CardContent>
+          </Card>
+        </ScrollAnimatedCard>
+      </div>
+      </div>
     </ScrollablePageWrapper>
   );
 }

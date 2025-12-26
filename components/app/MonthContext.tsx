@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useCallback, useEffect, useMemo, ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, useEffect, useMemo, useRef, ReactNode } from "react";
 
 function startOfMonth(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), 1);
@@ -21,6 +21,8 @@ interface MonthContextType {
   goToPreviousMonth: () => void;
   goToNextMonth: () => void;
   direction: 'next' | 'previous' | null;
+  /** Whether initial hydration from sessionStorage is complete */
+  isHydrated: boolean;
 }
 
 const MonthContext = createContext<MonthContextType | undefined>(undefined);
@@ -30,6 +32,10 @@ export function MonthProvider({ children }: { children: ReactNode }) {
   const initialMonth = useMemo(() => startOfMonth(new Date()), []);
   const [selectedMonth, setSelectedMonthState] = useState<Date>(initialMonth);
   const [direction, setDirection] = useState<'next' | 'previous' | null>(null);
+  // Track whether sessionStorage restoration is complete to prevent animation flicker
+  const [isHydrated, setIsHydrated] = useState(false);
+  // Track the previous month to determine direction for programmatic changes
+  const prevMonthRef = useRef<Date>(initialMonth);
 
   // Restore from sessionStorage after mount (client-side only)
   useEffect(() => {
@@ -42,11 +48,15 @@ export function MonthProvider({ children }: { children: ReactNode }) {
           // Note: This setState in effect is intentional - we restore persisted state
           // after SSR hydration to sync with sessionStorage. This only runs once on mount.
           setSelectedMonthState(restoredMonth);
+          // Update ref to match restored month (no direction animation needed for restoration)
+          prevMonthRef.current = restoredMonth;
         }
       } catch (err) {
         console.warn("Failed to restore selectedMonth from sessionStorage:", err);
       }
     }
+    // Mark hydration complete after restoration attempt
+    setIsHydrated(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Only run once on mount - initialMonth is stable from useMemo
 
@@ -57,28 +67,35 @@ export function MonthProvider({ children }: { children: ReactNode }) {
 
   const setSelectedMonth = useCallback((month: Date) => {
     const normalized = startOfMonth(month);
+    // Determine direction based on comparison with previous month
+    const prevTime = prevMonthRef.current.getTime();
+    const newTime = normalized.getTime();
+    if (newTime > prevTime) {
+      setDirection('next');
+    } else if (newTime < prevTime) {
+      setDirection('previous');
+    }
+    // If same month, keep current direction (or null)
+    prevMonthRef.current = normalized;
     setSelectedMonthState(normalized);
-    setDirection(null); // Reset direction for manual selection
   }, []);
 
   const goToPreviousMonth = useCallback(() => {
     setDirection('previous');
     setSelectedMonthState((prev) => {
       const newMonth = new Date(prev.getFullYear(), prev.getMonth() - 1, 1);
+      prevMonthRef.current = newMonth;
       return newMonth;
     });
-    // Reset direction after animation duration to prevent stale state
-    setTimeout(() => setDirection(null), 300);
   }, []);
 
   const goToNextMonth = useCallback(() => {
     setDirection('next');
     setSelectedMonthState((prev) => {
       const newMonth = new Date(prev.getFullYear(), prev.getMonth() + 1, 1);
+      prevMonthRef.current = newMonth;
       return newMonth;
     });
-    // Reset direction after animation duration to prevent stale state
-    setTimeout(() => setDirection(null), 300);
   }, []);
 
   return (
@@ -89,6 +106,7 @@ export function MonthProvider({ children }: { children: ReactNode }) {
         goToPreviousMonth,
         goToNextMonth,
         direction,
+        isHydrated,
       }}
     >
       {children}

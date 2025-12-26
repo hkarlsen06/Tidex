@@ -25,9 +25,81 @@ This creates a snappy, responsive feel without being jarring.
 
 ## Animation Patterns
 
-### 1. Page Section Staggering
+### 1. Skeleton-First Page Loading (Recommended)
 
-When a page loads, sections animate in with a staggered cascade effect.
+**The preferred pattern for page entrance animations.** Staggered animations should be applied to loading skeletons, not the final content. When the real content loads, it simply replaces the skeleton without additional animation.
+
+**Why this approach:**
+- Skeleton animates in immediately (no waiting for data)
+- Creates perception of faster loading
+- Avoids double-animation (skeleton + content)
+- Smoother transition from loading to loaded state
+
+**Implementation:** Used in `AddShiftSkeleton.tsx`
+
+```tsx
+// In the skeleton component (e.g., components/app/skeletons/pages/AddShiftSkeleton.tsx)
+"use client";
+
+import { motion } from "framer-motion";
+
+const containerVariants = {
+  hidden: { opacity: 1 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+      delayChildren: 0.05,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      type: "spring" as const,
+      stiffness: 300,
+      damping: 30,
+    },
+  },
+};
+
+export function PageSkeleton() {
+  return (
+    <motion.div variants={containerVariants} initial="hidden" animate="visible">
+      <motion.div variants={itemVariants}>
+        {/* Skeleton placeholder */}
+        <div className="h-8 w-32 bg-surface-secondary rounded animate-pulse" />
+      </motion.div>
+      <motion.div variants={itemVariants}>
+        {/* More skeleton placeholders */}
+      </motion.div>
+    </motion.div>
+  );
+}
+
+// The actual page content component uses regular divs - NO animation
+export function PageContent() {
+  return (
+    <div>
+      <div>Section 1</div>
+      <div>Section 2</div>
+    </div>
+  );
+}
+```
+
+**Key points:**
+- Skeleton is a `"use client"` component with Framer Motion
+- Real content uses plain `<div>` elements (no motion)
+- Page wrapper should NOT add entrance animations around the content
+
+### 2. Page Section Staggering (Legacy)
+
+For pages without skeletons, sections can animate in with a staggered cascade effect.
 
 **Implementation:** Used in `HomeContent.tsx`
 
@@ -66,7 +138,7 @@ const itemVariants = {
 </motion.div>
 ```
 
-### 2. List Item Staggering
+### 3. List Item Staggering
 
 Shift cards and list items cascade in with shorter delays for snappier lists.
 
@@ -98,7 +170,7 @@ const listItemVariants = {
 };
 ```
 
-### 3. Button Press Feedback
+### 4. Button Press Feedback
 
 Buttons provide tactile feedback on hover and press.
 
@@ -115,7 +187,7 @@ const hoverScale = { scale: 1.02 };  // Slightly grow on hover
 >
 ```
 
-### 4. Dialog Animations
+### 5. Dialog Animations
 
 Dialogs use CSS animations for smooth enter/exit with Radix primitives.
 
@@ -141,7 +213,7 @@ Dialogs use CSS animations for smooth enter/exit with Radix primitives.
 />
 ```
 
-### 5. Tab Content Transitions
+### 6. Tab Content Transitions
 
 Tab content fades and slides when switching tabs.
 
@@ -167,7 +239,7 @@ const tabContentVariants = {
 };
 ```
 
-### 6. Month Navigation
+### 7. Month Navigation
 
 Month picker uses vertical slide animations matching navigation direction.
 
@@ -283,10 +355,11 @@ For CSS animations, use:
 
 The following components have been enhanced with animations:
 
+- `components/app/skeletons/pages/AddShiftSkeleton.tsx` - Skeleton-first staggered loading
 - `components/app/Button.tsx` - Press/hover feedback
 - `components/app/Dialog.tsx` - Enter/exit animations
 - `components/app/Tabs.tsx` - Content transitions
-- `components/app/HomeContent.tsx` - Section staggering
+- `components/app/HomeContent.tsx` - Section staggering (legacy pattern)
 - `components/shifts/ShiftsView.tsx` - List staggering
 - `components/app/AnimatedShiftList.tsx` - Reusable list animation
 - `components/app/AnimatedCard.tsx` - Reusable card wrapper

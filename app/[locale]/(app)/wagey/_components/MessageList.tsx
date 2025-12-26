@@ -3,13 +3,41 @@
 /**
  * Message List Component
  *
- * Displays chat messages with markdown support
+ * Displays chat messages with markdown support and Framer Motion animations
  */
 
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useRef, useEffect, useState, useSyncExternalStore, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Card } from "@/components/app/Card";
 import { useTranslations } from "@/lib/i18n/client";
+
+// Animation variants for message bubbles with scroll-triggered animations
+const messageVariants = {
+  hidden: (isUser: boolean) => ({
+    opacity: 0,
+    x: isUser ? 30 : -30,
+    scale: 0.95,
+  }),
+  visible: {
+    opacity: 1,
+    x: 0,
+    scale: 1,
+    transition: {
+      type: "spring" as const,
+      stiffness: 400,
+      damping: 30,
+    },
+  },
+  exit: (isUser: boolean) => ({
+    opacity: 0,
+    x: isUser ? 30 : -30,
+    scale: 0.95,
+    transition: {
+      duration: 0.2,
+    },
+  }),
+};
 
 type Message = {
   id: string;
@@ -390,6 +418,54 @@ const formatRegularText = (text: string, keyPrefix: string): ReactNode[] => {
   });
 };
 
+// Module-level store for streamed message IDs to work with useSyncExternalStore
+// This is outside the component to persist across re-renders and satisfy ESLint
+const streamedMessageStore = {
+  ids: new Set<string>(),
+  listeners: new Set<() => void>(),
+
+  subscribe(listener: () => void) {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
+  },
+
+  getSnapshot() {
+    return this.ids;
+  },
+
+  addId(id: string) {
+    if (!this.ids.has(id)) {
+      this.ids = new Set(this.ids).add(id);
+      this.listeners.forEach(listener => listener());
+    }
+  }
+};
+
+// Custom hook to track which messages were streamed in
+function useStreamedMessageTracker(isStreaming: boolean, messages: Message[]) {
+  const wasStreamingRef = useRef(false);
+
+  // Subscribe to the external store
+  const streamedIds = useSyncExternalStore(
+    useCallback((onStoreChange) => streamedMessageStore.subscribe(onStoreChange), []),
+    () => streamedMessageStore.getSnapshot(),
+    () => streamedMessageStore.getSnapshot()
+  );
+
+  // Update the store in an effect when streaming ends
+  useEffect(() => {
+    if (wasStreamingRef.current && !isStreaming && messages.length > 0) {
+      const lastMessage = messages[messages.length - 1];
+      if (lastMessage.role === "assistant") {
+        streamedMessageStore.addId(lastMessage.id);
+      }
+    }
+    wasStreamingRef.current = isStreaming;
+  }, [isStreaming, messages]);
+
+  return streamedIds;
+}
+
 export function MessageList({
   messages,
   currentChunk,
@@ -398,37 +474,53 @@ export function MessageList({
 }: MessageListProps) {
   const { t } = useTranslations();
 
+  // Track IDs of messages that were streamed in - these skip entrance animation
+  const streamedMessageIds = useStreamedMessageTracker(isStreaming, messages);
+
   if (messages.length === 0 && !currentChunk) {
     return (
-      <div className="text-center text-text-muted pt-2">
+      <motion.div
+        className="text-center text-text-muted pt-2"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+      >
         <p className="text-lg">👋 {t.pages.wagey.greeting}</p>
         <p className="text-sm mt-2">{t.pages.wagey.greetingSubtitle}</p>
-      </div>
+      </motion.div>
     );
   }
 
   return (
     <div className="space-y-4">
-      {messages.map((message) => (
-        <MessageBubble key={message.id} message={message} userName={userName} />
-      ))}
+      <AnimatePresence mode="popLayout">
+        {messages.map((message) => (
+          <MessageBubble
+            key={message.id}
+            message={message}
+            userName={userName}
+            skipAnimation={streamedMessageIds.has(message.id)}
+          />
+        ))}
 
-      {/* Thinking indicator - show when streaming but no content yet */}
-      {isStreaming && !currentChunk && (
-        <ThinkingBubble />
-      )}
+        {/* Thinking indicator - show when streaming but no content yet */}
+        {isStreaming && !currentChunk && (
+          <ThinkingBubble key="thinking" />
+        )}
 
-      {/* Current streaming message */}
-      {isStreaming && currentChunk && (
-        <MessageBubble
-          message={{
-            id: "streaming",
-            role: "assistant",
-            content: currentChunk,
-          }}
-          isStreaming
-        />
-      )}
+        {/* Current streaming message */}
+        {isStreaming && currentChunk && (
+          <MessageBubble
+            key="streaming"
+            message={{
+              id: "streaming",
+              role: "assistant",
+              content: currentChunk,
+            }}
+            isStreaming
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -437,10 +529,13 @@ function MessageBubble({
   message,
   isStreaming,
   userName,
+  skipAnimation,
 }: {
   message: Message;
   isStreaming?: boolean;
   userName?: string;
+  /** Skip entrance animation (for messages that just finished streaming) */
+  skipAnimation?: boolean;
 }) {
   const { t } = useTranslations();
   const isUser = message.role === "user";
@@ -511,8 +606,113 @@ function MessageBubble({
     }
   };
 
+  // Skip animations for streaming messages to avoid jank during content updates
+  if (isStreaming) {
+    return (
+      <div className="flex flex-col gap-2">
+        <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
+          <Card
+            className={`max-w-[94%] md:max-w-[75%] rounded-3xl shadow-app-sm ${
+              isUser
+                ? "bg-linear-to-br from-brand-gradient-start via-brand-gradient-mid to-brand-gradient-end text-white shadow-app"
+                : isToolCall
+                  ? "bg-surface-secondary/90 text-text-muted cursor-pointer hover:bg-surface-primary transition-colors border border-border/60"
+                  : "bg-surface-secondary/90 text-text-primary border border-border/60"
+            } backdrop-blur`}
+            onClick={isToolCall ? handleToolCallClick : undefined}
+          >
+            <div className="p-3 md:p-4 flex flex-col gap-1">
+              <div className={`text-[11px] font-semibold ${labelClass} whitespace-nowrap`}>
+                {isUser ? userLabel : isToolCall ? (toolCallSucceeded ? `Wagey • ${t.pages.wagey.worked}` : `Wagey • ${t.pages.wagey.working}`) : "Wagey"}
+              </div>
+              <div className="whitespace-pre-wrap wrap-break-words text-sm md:text-base leading-relaxed">
+                {formatContent(message.content)}
+                <span className="animate-pulse ml-0.5">▋</span>
+              </div>
+            </div>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  // For messages that just finished streaming, skip animation entirely
+  // They're already visible from the streaming phase
+  if (skipAnimation) {
+    return (
+      <div className="flex flex-col gap-2">
+        <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
+          <Card
+            className={`max-w-[94%] md:max-w-[75%] rounded-3xl shadow-app-sm ${
+              isUser
+                ? "bg-linear-to-br from-brand-gradient-start via-brand-gradient-mid to-brand-gradient-end text-white shadow-app"
+                : isToolCall
+                  ? "bg-surface-secondary/90 text-text-muted cursor-pointer hover:bg-surface-primary transition-colors border border-border/60"
+                  : "bg-surface-secondary/90 text-text-primary border border-border/60"
+            } backdrop-blur`}
+            onClick={isToolCall ? handleToolCallClick : undefined}
+          >
+            <div className="p-3 md:p-4 flex flex-col gap-1">
+              <div className={`text-[11px] font-semibold ${labelClass} whitespace-nowrap`}>
+                {isUser ? userLabel : isToolCall ? (toolCallSucceeded ? `Wagey • ${t.pages.wagey.worked}` : `Wagey • ${t.pages.wagey.working}`) : "Wagey"}
+              </div>
+              <div className="whitespace-pre-wrap wrap-break-words text-sm md:text-base leading-relaxed">
+                {formatContent(message.content)}
+              </div>
+            </div>
+          </Card>
+        </div>
+
+        {/* Tool call details - inline in chat flow */}
+        <AnimatePresence>
+          {showTooltip && isToolCall && (
+            <motion.div
+              className="flex justify-start"
+              initial={{ opacity: 0, height: 0, y: -10 }}
+              animate={{ opacity: 1, height: "auto", y: 0 }}
+              exit={{ opacity: 0, height: 0, y: -10 }}
+              transition={{ type: "spring", stiffness: 400, damping: 30 }}
+            >
+              <Card className="max-w-[94%] md:max-w-[85%] bg-surface-primary border border-border shadow-app-sm rounded-2xl">
+                <div className="p-3 max-h-80 overflow-y-auto">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-semibold text-text-primary">
+                      Tool Call Details
+                    </span>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowTooltip(false);
+                      }}
+                      className="text-text-secondary hover:text-text-primary transition-colors px-2 py-1 rounded hover:bg-surface-secondary text-sm"
+                      aria-label="Close"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  <pre className="text-xs text-text-primary whitespace-pre font-mono bg-background p-2 rounded border border-border overflow-x-auto show-scrollbar">
+                    {getToolResultDisplay()}
+                  </pre>
+                </div>
+              </Card>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-col gap-2">
+    <motion.div
+      className="flex flex-col gap-2"
+      variants={messageVariants}
+      initial="hidden"
+      whileInView="visible"
+      exit="exit"
+      custom={isUser}
+      viewport={{ once: false, amount: 0.3 }}
+      layout
+    >
       <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
         <Card
           className={`max-w-[94%] md:max-w-[75%] rounded-3xl shadow-app-sm ${
@@ -530,40 +730,47 @@ function MessageBubble({
             </div>
             <div className="whitespace-pre-wrap wrap-break-words text-sm md:text-base leading-relaxed">
               {formatContent(message.content)}
-              {isStreaming && <span className="animate-pulse ml-0.5">▋</span>}
             </div>
           </div>
         </Card>
       </div>
 
       {/* Tool call details - inline in chat flow */}
-      {showTooltip && isToolCall && (
-        <div className="flex justify-start">
-          <Card className="max-w-[94%] md:max-w-[85%] bg-surface-primary border border-border shadow-app-sm rounded-2xl">
-            <div className="p-3 max-h-80 overflow-y-auto">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-semibold text-text-primary">
-                  Tool Call Details
-                </span>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowTooltip(false);
-                  }}
-                  className="text-text-secondary hover:text-text-primary transition-colors px-2 py-1 rounded hover:bg-surface-secondary text-sm"
-                  aria-label="Close"
-                >
-                  ✕
-                </button>
+      <AnimatePresence>
+        {showTooltip && isToolCall && (
+          <motion.div
+            className="flex justify-start"
+            initial={{ opacity: 0, height: 0, y: -10 }}
+            animate={{ opacity: 1, height: "auto", y: 0 }}
+            exit={{ opacity: 0, height: 0, y: -10 }}
+            transition={{ type: "spring", stiffness: 400, damping: 30 }}
+          >
+            <Card className="max-w-[94%] md:max-w-[85%] bg-surface-primary border border-border shadow-app-sm rounded-2xl">
+              <div className="p-3 max-h-80 overflow-y-auto">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-semibold text-text-primary">
+                    Tool Call Details
+                  </span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowTooltip(false);
+                    }}
+                    className="text-text-secondary hover:text-text-primary transition-colors px-2 py-1 rounded hover:bg-surface-secondary text-sm"
+                    aria-label="Close"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <pre className="text-xs text-text-primary whitespace-pre font-mono bg-background p-2 rounded border border-border overflow-x-auto show-scrollbar">
+                  {getToolResultDisplay()}
+                </pre>
               </div>
-              <pre className="text-xs text-text-primary whitespace-pre font-mono bg-background p-2 rounded border border-border overflow-x-auto show-scrollbar">
-                {getToolResultDisplay()}
-              </pre>
-            </div>
-          </Card>
-        </div>
-      )}
-    </div>
+            </Card>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 }
 
@@ -573,7 +780,16 @@ function MessageBubble({
  */
 function ThinkingBubble() {
   return (
-    <div className="flex justify-start">
+    <motion.div
+      className="flex justify-start"
+      variants={messageVariants}
+      initial="hidden"
+      whileInView="visible"
+      exit="exit"
+      custom={false}
+      viewport={{ once: false, amount: 0.3 }}
+      layout
+    >
       <div className="rounded-3xl bg-surface-secondary/90 text-text-muted border border-border/60 backdrop-blur shadow-app-sm">
         <div className="px-4 py-3 md:px-5 md:py-4">
           <span className="inline-flex gap-1">
@@ -583,6 +799,6 @@ function ThinkingBubble() {
           </span>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }

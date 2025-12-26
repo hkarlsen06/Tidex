@@ -13,6 +13,8 @@ type MonthPickerProps = {
   canNavigateToNextMonth?: boolean;
   /** Animation direction - set by parent when month changes */
   direction?: "forward" | "backward";
+  /** Whether initial hydration from sessionStorage is complete - skips animation if false */
+  isHydrated?: boolean;
 };
 
 function formatMonth(date: Date, monthsFull: readonly string[]): string {
@@ -45,6 +47,7 @@ export function MonthPicker({
   canNavigateToPreviousMonth = true,
   canNavigateToNextMonth = true,
   direction: externalDirection,
+  isHydrated = true,
 }: MonthPickerProps) {
   const { t } = useTranslations();
   // Track direction locally when external direction is not provided
@@ -73,13 +76,14 @@ export function MonthPicker({
       >
         <ChevronLeft size={18} />
       </button>
-      <div className="relative w-24 overflow-hidden [&>*:not(:last-child)]:pointer-events-none" style={{ minHeight: '1.5rem' }}>
+      <div className="relative w-24 overflow-hidden" style={{ minHeight: '1.5rem' }}>
         <AnimatePresence mode="popLayout" custom={direction} initial={false}>
           <motion.div
             key={`${month.getFullYear()}-${month.getMonth()}`}
             custom={direction}
             variants={monthVariants}
-            initial="enter"
+            // Skip animation if not hydrated yet (prevents flicker during sessionStorage restoration)
+            initial={isHydrated ? "enter" : false}
             animate="center"
             exit="exit"
             transition={{

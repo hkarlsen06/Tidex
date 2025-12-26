@@ -3,7 +3,7 @@
 import React, { useMemo, useState, useCallback, useTransition, useRef, useEffect, Fragment } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
-import { motion } from "framer-motion";
+import { motion, useInView } from "framer-motion";
 
 import ShiftCard from "@/components/app/ShiftCard";
 import ShiftMoveCard from "./ShiftMoveCard";
@@ -90,7 +90,7 @@ const listItemVariants = {
   },
 };
 
-// Scroll-triggered animation for shift cards (slide in from left)
+// Scroll-triggered animation for shift cards (slide in from left, out when leaving)
 const scrollCardVariants = {
   hidden: { opacity: 0, x: -30 },
   visible: {
@@ -103,6 +103,51 @@ const scrollCardVariants = {
     },
   },
 };
+
+// Wrapper component that animates in AND out based on viewport visibility (mobile only)
+const ScrollAnimatedCard = React.forwardRef<HTMLDivElement, { children: React.ReactNode }>(
+  function ScrollAnimatedCard({ children }, forwardedRef) {
+    const internalRef = useRef<HTMLDivElement>(null);
+    // Use larger top margin to account for navbar (~96px header + buffer)
+    // Bottom margin for bottom navbar (~80px + buffer)
+    const isInView = useInView(internalRef, { amount: 0.2, margin: "-120px 0px -100px 0px" });
+    const [isDesktop, setIsDesktop] = useState(false);
+
+    useEffect(() => {
+      const checkDesktop = () => setIsDesktop(window.innerWidth >= 1024);
+      checkDesktop();
+      window.addEventListener('resize', checkDesktop);
+      return () => window.removeEventListener('resize', checkDesktop);
+    }, []);
+
+    // Combine refs using a callback that avoids modifying the forwardedRef directly
+    const setRefs = useCallback(
+      (node: HTMLDivElement | null) => {
+        // Set internal ref for useInView
+        (internalRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
+        // Forward to external ref using React's imperative handle pattern
+        if (typeof forwardedRef === 'function') {
+          forwardedRef(node);
+        } else if (forwardedRef) {
+          // For RefObject, we need to use Object.assign to avoid direct mutation lint error
+          Object.assign(forwardedRef, { current: node });
+        }
+      },
+      [forwardedRef]
+    );
+
+    return (
+      <motion.div
+        ref={setRefs}
+        variants={scrollCardVariants}
+        initial={isDesktop ? "visible" : "hidden"}
+        animate={isDesktop ? "visible" : (isInView ? "visible" : "hidden")}
+      >
+        {children}
+      </motion.div>
+    );
+  }
+);
 
 function getIsoWeek(date: Date) {
   const d = new Date(
@@ -1292,7 +1337,9 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
         }
 
         // If clicking another date with shifts while one is selected, start multi-selection
-        if (hasShifts && targetShifts.length > 0 && !copyMode && !moveMode && !readOnly) {
+        // Allow multi-selection in readOnly mode only when showEarnings is true (for viewing aggregate earnings)
+        const allowMultiSelect = !copyMode && !moveMode && (!readOnly || showEarnings);
+        if (hasShifts && targetShifts.length > 0 && allowMultiSelect) {
           // Start multi-selection with both dates
           setMultiSelectedDates(new Set([selectedDate, isoDate]));
           setSelectedDate(null);
@@ -1385,7 +1432,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
 
       navigate(`/${locale}/shifts/add?date=${encodeURIComponent(iso)}`);
     },
-    [calendarSelectedShiftId, clearSelection, navigate, selectedDate, shiftsByDate, copyMode, router, moveMode, locale, readOnly, multiSelectedDates, errorComplete]
+    [calendarSelectedShiftId, clearSelection, navigate, selectedDate, shiftsByDate, copyMode, router, moveMode, locale, readOnly, multiSelectedDates, errorComplete, showEarnings]
   );
 
   const handleOpenDetails = useCallback(() => {
@@ -1823,8 +1870,8 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
             onMonthChange={handleMonthChange}
             onDayClick={handleDayClick}
             selectedDate={selectedDate}
-            selectedDates={readOnly ? undefined : multiSelectedDates}
-            onClearMultiSelection={readOnly ? undefined : clearMultiSelection}
+            selectedDates={readOnly && !showEarnings ? undefined : multiSelectedDates}
+            onClearMultiSelection={readOnly && !showEarnings ? undefined : clearMultiSelection}
             onDeleteSelected={readOnly ? undefined : handleDeleteSelected}
             deleting={deleting}
             containerRef={calendarContainerRef}
@@ -1894,29 +1941,28 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
                   initial="hidden"
                   animate="visible"
                 >
-                  <motion.div
-                    className="flex flex-row items-center justify-between bg-transparent"
-                    variants={listItemVariants}
-                  >
-                    <div className="flex items-center gap-2 font-medium text-text-primary">
-                      <span>{t.pages.shifts.list.weekLabel} {group.label}</span>
-                      <svg
-                        aria-hidden="true"
-                        className="h-4 w-4 text-text-muted"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="1.5"
-                      >
-                        <path d="m6 9 6 6 6-6" />
-                      </svg>
+                  <ScrollAnimatedCard>
+                    <div className="flex flex-row items-center justify-between bg-transparent">
+                      <div className="flex items-center gap-2 font-medium text-text-primary">
+                        <span>{t.pages.shifts.list.weekLabel} {group.label}</span>
+                        <svg
+                          aria-hidden="true"
+                          className="h-4 w-4 text-text-muted"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                        >
+                          <path d="m6 9 6 6 6-6" />
+                        </svg>
+                      </div>
+                      {showEarnings && (
+                        <span className="font-semibold text-text-primary">
+                          {formatCurrency(group.totalGross)}
+                        </span>
+                      )}
                     </div>
-                    {showEarnings && (
-                      <span className="font-semibold text-text-primary">
-                        {formatCurrency(group.totalGross)}
-                      </span>
-                    )}
-                  </motion.div>
+                  </ScrollAnimatedCard>
                   <div className="space-y-4">
                     {isTodayBeforeFirstShift && (
                       <motion.div ref={todayRef} variants={listItemVariants}>
@@ -1931,12 +1977,8 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
 
                       return (
                         <Fragment key={shift.id}>
-                          <motion.div
+                          <ScrollAnimatedCard
                             ref={isCurrentMonth && isToday ? todayRef : undefined}
-                            variants={scrollCardVariants}
-                            initial="hidden"
-                            whileInView="visible"
-                            viewport={{ once: true, margin: "-50px" }}
                           >
                             <div className="flex flex-col gap-2">
                               <ShiftCard
@@ -1960,7 +2002,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
                                 <p className="text-xs text-text-muted text-center">{countdown.text}</p>
                               )}
                             </div>
-                          </motion.div>
+                          </ScrollAnimatedCard>
                           {showPlaceholderAfter && (
                             <motion.div ref={todayRef} variants={listItemVariants}>
                               <TodayPlaceholderCard />

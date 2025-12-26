@@ -1,4 +1,32 @@
+"use client";
+
+import { motion } from "framer-motion";
 import { Card, CardHeader } from "@/components/app/Card";
+
+// Animation variants for staggered skeleton sections
+const containerVariants = {
+  hidden: { opacity: 1 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+      delayChildren: 0.05,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      type: "spring" as const,
+      stiffness: 300,
+      damping: 30,
+    },
+  },
+};
 
 /**
  * Skeleton for the calendar component (reused from ShiftsSkeleton)
@@ -213,26 +241,38 @@ function SharingHeaderSkeleton() {
 /**
  * SharingDefaultSkeleton - Loading skeleton for /sharing (default view, no sharer selected)
  * Matches ScrollablePageWrapper structure with centered container
+ *
+ * Uses Framer Motion staggered animations for a polished loading experience.
+ * When the real content loads, it simply replaces the skeleton without additional animation.
  */
 export function SharingDefaultSkeleton() {
   return (
     <div className="h-full overflow-y-auto pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-8">
       {/* Matches ScrollablePageWrapper container */}
       <div className="mx-auto max-w-md md:max-w-lg px-4 w-full">
-        <div className="flex flex-col gap-6 pt-4">
+        <motion.div
+          className="flex flex-col gap-6 pt-4"
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+        >
           {/* Header: Title "Deling" (text-2xl) + Manage button */}
-          <div className="flex items-center justify-between gap-4">
+          <motion.div className="flex items-center justify-between gap-4" variants={itemVariants}>
             <div className="h-8 w-16 bg-surface-secondary rounded animate-pulse" />
             <div className="h-9 w-40 bg-surface-secondary rounded-lg animate-pulse" />
-          </div>
+          </motion.div>
 
           {/* Sharers list - cards with shift previews */}
-          <div className="flex flex-col gap-3">
+          <motion.div className="flex flex-col gap-3" variants={itemVariants}>
             <SharerCardSkeleton hasShiftPreview={true} />
+          </motion.div>
+          <motion.div className="flex flex-col gap-3" variants={itemVariants}>
             <SharerCardSkeleton hasShiftPreview={true} />
+          </motion.div>
+          <motion.div className="flex flex-col gap-3" variants={itemVariants}>
             <SharerCardSkeleton hasShiftPreview={false} />
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       </div>
     </div>
   );
@@ -241,14 +281,25 @@ export function SharingDefaultSkeleton() {
 /**
  * SharingViewSkeleton - Loading skeleton for /sharing?view=<id> (viewing a sharer's shifts)
  * Matches ShiftsView structure with headerSlot inside calendar container
+ *
+ * Uses Framer Motion staggered animations for a polished loading experience.
+ * When the real content loads, it simply replaces the skeleton without additional animation.
  */
 export function SharingViewSkeleton() {
   return (
     <div className="h-full overflow-y-auto pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-8">
       {/* Mobile/Tablet: vertical stack. Desktop: side-by-side */}
-      <div className="flex w-full flex-col lg:relative lg:left-1/2 lg:right-1/2 lg:-ml-[50vw] lg:-mr-[50vw] lg:w-screen lg:flex-row lg:gap-0 lg:px-0 lg:items-start lg:pt-6">
+      <motion.div
+        className="flex w-full flex-col lg:relative lg:left-1/2 lg:right-1/2 lg:-ml-[50vw] lg:-mr-[50vw] lg:w-screen lg:flex-row lg:gap-0 lg:px-0 lg:items-start lg:pt-6"
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+      >
         {/* Calendar Section */}
-        <div className="h-[calc(100dvh-3.5rem-5rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] flex flex-col justify-center px-4 shrink-0 lg:h-auto lg:w-1/2 lg:sticky lg:top-6 lg:justify-start lg:items-center lg:px-0">
+        <motion.div
+          className="h-[calc(100dvh-3.5rem-5rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] flex flex-col justify-center px-4 shrink-0 lg:h-auto lg:w-1/2 lg:sticky lg:top-6 lg:justify-start lg:items-center lg:px-0"
+          variants={itemVariants}
+        >
           <div className="w-full max-w-md md:max-w-lg lg:max-w-none lg:w-[480px]">
             {/* Header slot - inside calendar container with pb-3 */}
             <div className="pb-3">
@@ -256,10 +307,13 @@ export function SharingViewSkeleton() {
             </div>
             <CalendarSkeleton />
           </div>
-        </div>
+        </motion.div>
 
         {/* Shifts List Section */}
-        <div className="px-4 lg:w-1/2 lg:flex lg:justify-center lg:px-0">
+        <motion.div
+          className="px-4 lg:w-1/2 lg:flex lg:justify-center lg:px-0"
+          variants={itemVariants}
+        >
           <div className="pb-10 w-full max-w-md md:max-w-lg lg:max-w-lg lg:overflow-y-auto lg:max-h-[calc(100vh-8rem)] lg:px-4">
             <div className="flex flex-col gap-12">
               {/* Week groups with varying shift counts */}
@@ -268,8 +322,8 @@ export function SharingViewSkeleton() {
               <WeekGroupSkeleton shiftCount={1} />
             </div>
           </div>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
     </div>
   );
 }
