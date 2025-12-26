@@ -1,7 +1,8 @@
 "use client";
 
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { useTranslations } from "@/lib/i18n/client";
 
 type MonthPickerProps = {
@@ -10,6 +11,8 @@ type MonthPickerProps = {
   onNextMonth: () => void;
   canNavigateToPreviousMonth?: boolean;
   canNavigateToNextMonth?: boolean;
+  /** Animation direction - set by parent when month changes */
+  direction?: "forward" | "backward";
 };
 
 function formatMonth(date: Date, monthsFull: readonly string[]): string {
@@ -19,91 +22,78 @@ function formatMonth(date: Date, monthsFull: readonly string[]): string {
   return monthName.charAt(0).toUpperCase() + monthName.slice(1);
 }
 
+// Framer Motion variants for vertical month name scrolling
+const monthVariants = {
+  enter: (direction: "forward" | "backward") => ({
+    y: direction === "forward" ? 20 : -20,
+    opacity: 0,
+  }),
+  center: {
+    y: 0,
+    opacity: 1,
+  },
+  exit: (direction: "forward" | "backward") => ({
+    y: direction === "forward" ? -20 : 20,
+    opacity: 0,
+  }),
+};
+
 export function MonthPicker({
   month,
   onPreviousMonth,
   onNextMonth,
   canNavigateToPreviousMonth = true,
   canNavigateToNextMonth = true,
+  direction: externalDirection,
 }: MonthPickerProps) {
   const { t } = useTranslations();
-  const [isTransitioning, setIsTransitioning] = useState(false);
-  const [prevMonth, setPrevMonth] = useState(month);
-  const [direction, setDirection] = useState<"forward" | "backward">("forward");
+  // Track direction locally when external direction is not provided
+  const [internalDirection, setInternalDirection] = useState<"forward" | "backward">("forward");
 
-  // Track month changes for animation transitions
-  useEffect(() => {
-    if (month.getTime() !== prevMonth.getTime()) {
-      // Determine direction based on month comparison
-      const isForward = month > prevMonth;
-      // Note: These setState calls are intentional to trigger animation state changes when month prop changes
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setDirection(isForward ? "forward" : "backward");
-      setIsTransitioning(true);
-    }
-  }, [month, prevMonth]);
+  // Use external direction if provided, otherwise use internal tracking
+  const direction = externalDirection ?? internalDirection;
 
-  const handleExitAnimationEnd = () => {
-    setPrevMonth(month);
-  };
-
-  const handleEnterAnimationEnd = () => {
-    setIsTransitioning(false);
-  };
-
-  const handlePreviousMonth = () => {
+  const handlePrevious = () => {
+    setInternalDirection("backward");
     onPreviousMonth();
   };
 
-  const handleNextMonth = () => {
+  const handleNext = () => {
+    setInternalDirection("forward");
     onNextMonth();
   };
-
-  const exitAnimation = direction === "forward"
-    ? "animate-[swipe-out-left_0.4s_ease-in-out]"
-    : "animate-[swipe-out-right_0.4s_ease-in-out]";
-
-  const enterAnimation = direction === "forward"
-    ? "animate-[swipe-in-right_0.4s_ease-in-out]"
-    : "animate-[swipe-in-left_0.4s_ease-in-out]";
 
   return (
     <div className="flex items-center gap-1">
       <button
-        onClick={handlePreviousMonth}
+        onClick={handlePrevious}
         disabled={!canNavigateToPreviousMonth}
         className="flex h-10 w-10 items-center justify-center rounded-md text-text-primary transition-colors hover:bg-surface-secondary focus:outline-none focus-visible:outline-none disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
         aria-label="Forrige måned"
       >
         <ChevronLeft size={18} />
       </button>
-      <div className="relative w-24 overflow-hidden" style={{ minHeight: '1.5rem' }}>
-        {/* Current/Previous month - exits when transitioning */}
-        <div
-          className={`absolute inset-0 text-center font-medium text-text-primary ${
-            isTransitioning ? exitAnimation : ''
-          }`}
-          style={{
-            opacity: isTransitioning ? 0 : 1,
-            pointerEvents: isTransitioning ? 'none' : 'auto',
-          }}
-          onAnimationEnd={handleExitAnimationEnd}
-        >
-          {formatMonth(prevMonth, t.dateTime.monthsFull)}
-        </div>
-
-        {/* Next month - enters when transitioning */}
-        {isTransitioning && (
-          <div
-            className={`absolute inset-0 text-center font-medium text-text-primary ${enterAnimation}`}
-            onAnimationEnd={handleEnterAnimationEnd}
+      <div className="relative w-24 overflow-hidden [&>*:not(:last-child)]:pointer-events-none" style={{ minHeight: '1.5rem' }}>
+        <AnimatePresence mode="popLayout" custom={direction} initial={false}>
+          <motion.div
+            key={`${month.getFullYear()}-${month.getMonth()}`}
+            custom={direction}
+            variants={monthVariants}
+            initial="enter"
+            animate="center"
+            exit="exit"
+            transition={{
+              y: { type: "spring", stiffness: 300, damping: 30 },
+              opacity: { duration: 0.15 },
+            }}
+            className="absolute inset-0 text-center font-medium text-text-primary"
           >
             {formatMonth(month, t.dateTime.monthsFull)}
-          </div>
-        )}
+          </motion.div>
+        </AnimatePresence>
       </div>
       <button
-        onClick={handleNextMonth}
+        onClick={handleNext}
         disabled={!canNavigateToNextMonth}
         className="flex h-10 w-10 items-center justify-center rounded-md text-text-primary transition-colors hover:bg-surface-secondary focus:outline-none focus-visible:outline-none disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
         aria-label="Neste måned"

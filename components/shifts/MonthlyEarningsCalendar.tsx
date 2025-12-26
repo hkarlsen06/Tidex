@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState, useEffect, useRef, type Ref } from "react";
+import { useMemo, useState, useEffect, useRef, useCallback, type Ref } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { Clock, Copy, ArrowRightLeft, Info, Trash2, X } from "lucide-react";
 import { ShiftsCalendar } from "@/components/app/ShiftsCalendar";
 import { Card } from "@/components/app/Card";
@@ -154,18 +155,21 @@ function formatYear(date: Date): string {
   return date.getFullYear().toString();
 }
 
-// Helper to get animation classes based on direction
-function getAnimationClasses(direction: 'next' | 'previous' | null): string {
-  if (!direction) return '';
-
-  if (direction === 'next') {
-    // Going forward: swipe in from right with fade
-    return 'animate-[swipe-in-right_0.4s_ease-in-out]';
-  } else {
-    // Going backward: swipe in from left with fade
-    return 'animate-[swipe-in-left_0.4s_ease-in-out]';
-  }
-}
+// Framer Motion variants for vertical month scrolling
+const calendarVariants = {
+  enter: (direction: 'next' | 'previous') => ({
+    y: direction === 'next' ? 300 : -300,
+    opacity: 0,
+  }),
+  center: {
+    y: 0,
+    opacity: 1,
+  },
+  exit: (direction: 'next' | 'previous') => ({
+    y: direction === 'next' ? -300 : 300,
+    opacity: 0,
+  }),
+};
 
 export function MonthlyEarningsCalendar({
   shifts,
@@ -201,23 +205,23 @@ export function MonthlyEarningsCalendar({
   // When showEarnings is false, force hours view (money mode not available)
   const [viewMode, setViewMode] = useState<"money" | "hours">("hours");
   const effectiveViewMode = showEarnings ? viewMode : "hours";
-  const [localDirection, setLocalDirection] = useState<'next' | 'previous' | null>(null);
-  const [prevMonth, setPrevMonth] = useState(month);
+  // Track animation direction - set before triggering month change for correct animation
+  const [localDirection, setLocalDirection] = useState<'next' | 'previous'>('next');
   const swipeContainerRef = useRef<HTMLDivElement>(null);
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
   const isSwiping = useRef<boolean>(false);
 
-  // Track month changes and determine direction locally
-  useEffect(() => {
-    if (month.getTime() !== prevMonth.getTime()) {
-      const isForward = month > prevMonth;
-      // Note: These setState calls are intentional to trigger animation state changes when month prop changes
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setLocalDirection(isForward ? 'next' : 'previous');
-      setPrevMonth(month);
-    }
-  }, [month, prevMonth]);
+  // Wrapped navigation functions that set direction BEFORE triggering month change
+  const navigatePrevious = useCallback(() => {
+    setLocalDirection('previous');
+    goToPreviousMonth();
+  }, [goToPreviousMonth]);
+
+  const navigateNext = useCallback(() => {
+    setLocalDirection('next');
+    goToNextMonth();
+  }, [goToNextMonth]);
 
   // Filter shifts once per month change
   // Include shifts from previous and next month to show on "outside days"
@@ -341,10 +345,10 @@ export function MonthlyEarningsCalendar({
       if (Math.abs(deltaX) > threshold) {
         if (deltaX > 0) {
           // Swipe right - go to previous month
-          goToPreviousMonth();
+          navigatePrevious();
         } else {
           // Swipe left - go to next month
-          goToNextMonth();
+          navigateNext();
         }
       }
 
@@ -363,7 +367,7 @@ export function MonthlyEarningsCalendar({
       container.removeEventListener('touchmove', handleTouchMove);
       container.removeEventListener('touchend', handleTouchEnd);
     };
-  }, [goToPreviousMonth, goToNextMonth]);
+  }, [navigatePrevious, navigateNext]);
 
   return (
     <Card ref={containerRef} className="rounded-card border-0 bg-transparent">
@@ -378,8 +382,9 @@ export function MonthlyEarningsCalendar({
               <>
                 <MonthPicker
                   month={month}
-                  onPreviousMonth={goToPreviousMonth}
-                  onNextMonth={goToNextMonth}
+                  onPreviousMonth={navigatePrevious}
+                  onNextMonth={navigateNext}
+                  direction={localDirection === 'next' ? 'forward' : 'backward'}
                 />
                 <span className="font-medium text-text-muted ml-1">{formatYear(month)}</span>
               </>
@@ -391,15 +396,12 @@ export function MonthlyEarningsCalendar({
             const effectiveTaxEnabled = payoutTaxSettings?.enabled ?? taxSettings?.enabled ?? false;
 
             return (
-              <div
-                key={isShowingSelectedTotal ? `selected-${selectedDates?.size}` : `total-${month.getFullYear()}-${month.getMonth()}`}
-                className={`text-right relative ${isShowingSelectedTotal ? '' : getAnimationClasses(localDirection)}`}
-              >
+              <div className="text-right">
                 <div className="font-semibold text-text-primary">
                   {totalEarnings === 0 ? '—' : formatCurrency(effectiveTaxEnabled ? netEarnings : totalEarnings)}
                 </div>
                 {effectiveTaxEnabled && totalEarnings > 0 && (
-                  <div className="text-sm text-text-muted absolute right-0">
+                  <div className="text-sm text-text-muted">
                     {formatCurrency(totalEarnings)}
                   </div>
                 )}
@@ -407,20 +409,35 @@ export function MonthlyEarningsCalendar({
             );
           })()}
         </div>
-        <div className="pb-6">
-          <ShiftsCalendar
-            month={month}
-            mode={effectiveViewMode}
-            earningsByDate={earningsByDate}
-            hoursByDate={hoursByDate}
-            onMonthChange={onMonthChange}
-            onDayClick={onDayClick}
-            selectedDate={selectedDate}
-            selectedDates={selectedDates}
-            weekNumberPosition="top-left"
-            newlyAddedDates={newlyAddedDates}
-            taxSettings={taxSettings}
-          />
+        <div className="pb-6 overflow-hidden relative [&>*:not(:last-child)]:pointer-events-none">
+          <AnimatePresence mode="popLayout" custom={localDirection} initial={false}>
+            <motion.div
+              key={`${month.getFullYear()}-${month.getMonth()}`}
+              custom={localDirection}
+              variants={calendarVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={{
+                y: { type: "spring", stiffness: 300, damping: 30 },
+                opacity: { duration: 0.2 },
+              }}
+            >
+              <ShiftsCalendar
+                month={month}
+                mode={effectiveViewMode}
+                earningsByDate={earningsByDate}
+                hoursByDate={hoursByDate}
+                onMonthChange={onMonthChange}
+                onDayClick={onDayClick}
+                selectedDate={selectedDate}
+                selectedDates={selectedDates}
+                weekNumberPosition="top-left"
+                newlyAddedDates={newlyAddedDates}
+                taxSettings={taxSettings}
+              />
+            </motion.div>
+          </AnimatePresence>
         </div>
       </div>
       <div className="flex flex-col items-center gap-2 pb-6">
