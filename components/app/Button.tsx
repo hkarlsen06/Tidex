@@ -30,10 +30,10 @@ export function Button({
   variant,
   size,
   asChild,
-  // Extract the props that might conflict with motion
-  _onDrag,
-  _onDragEnd,
-  _onDragStart,
+  // Extract the props that might conflict with motion (renamed to satisfy linter)
+  onDrag: _onDrag,
+  onDragEnd: _onDragEnd,
+  onDragStart: _onDragStart,
   ...rest
 }: Props) {
   const isDisabled = loading || disabled;
