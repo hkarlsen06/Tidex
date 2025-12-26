@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect, useCallback, useTransition, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
 import { TotalCard } from "@/components/app/TotalCard";
 import { NextPayrollCard } from "@/components/app/NextPayrollCard";
 import { MonthPicker } from "./MonthPicker";
@@ -20,6 +21,31 @@ import { adjustPayrollDate } from "@/lib/payroll/adjust-payroll-date";
 import { useSwipe } from "@/lib/hooks/useSwipe";
 import { CenteredPageWrapper } from "./CenteredPageWrapper";
 import type { PayoutTaxSettings } from "@/data-access/shifts";
+
+// Animation variants for staggered page sections
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+      delayChildren: 0.05,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      type: "spring" as const,
+      stiffness: 300,
+      damping: 30,
+    },
+  },
+};
 
 type HomeContentProps = {
   shifts: ShiftWithComputations[];
@@ -528,9 +554,14 @@ export function HomeContent({ shifts: initialShifts, settings, payoutTaxSettings
   return (
     <CenteredPageWrapper routeKey="home">
       <div ref={swipeContainerRef} className="flex items-center">
-        <div className="flex flex-col gap-6 w-full">
+        <motion.div
+          className="flex flex-col gap-6 w-full"
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+        >
           {payrollDay && (
-            <div className="flex flex-col gap-2">
+            <motion.div className="flex flex-col gap-2" variants={itemVariants}>
               <p className="text-xs text-text-muted text-center">{payrollCountdown.text}</p>
               <NextPayrollCard
                 payrollDay={payrollDay}
@@ -546,28 +577,30 @@ export function HomeContent({ shifts: initialShifts, settings, payoutTaxSettings
                 progress={payrollCountdown.isPast ? undefined : payrollCountdown.progress}
                 isPayrollToday={payrollCountdown.isToday}
               />
-            </div>
+            </motion.div>
           )}
-          <TotalCard
-            total={totalCardTotal}
-            percentageChange={data.percentageChange}
-            projectedTotal={totalCardProjectedTotal}
-            grossBeforeTax={totalCardGrossBeforeTax}
-            animationDirection={direction}
-            subtitlePlaceholder={totalCardSubtitle}
-            useZeroPlaceholder={!selectedMonthIsFuture}
-            hasPendingShifts={hasPendingShifts}
-          />
-          <div className="flex items-center justify-between -mt-3 -mb-3">
+          <motion.div variants={itemVariants}>
+            <TotalCard
+              total={totalCardTotal}
+              percentageChange={data.percentageChange}
+              projectedTotal={totalCardProjectedTotal}
+              grossBeforeTax={totalCardGrossBeforeTax}
+              animationDirection={direction}
+              subtitlePlaceholder={totalCardSubtitle}
+              useZeroPlaceholder={!selectedMonthIsFuture}
+              hasPendingShifts={hasPendingShifts}
+            />
+          </motion.div>
+          <motion.div className="flex items-center justify-between -mt-3 -mb-3" variants={itemVariants}>
             <MonthPicker
               month={month}
               onPreviousMonth={goToPreviousMonth}
               onNextMonth={goToNextMonth}
             />
             <span className="font-medium text-text-muted mr-3">{month.getFullYear()}</span>
-          </div>
+          </motion.div>
           {displayShift && (
-            <div className="flex flex-col gap-2">
+            <motion.div className="flex flex-col gap-2" variants={itemVariants}>
               <ShiftCard
                 shift={displayShift}
                 onClick={() => {
@@ -582,9 +615,9 @@ export function HomeContent({ shifts: initialShifts, settings, payoutTaxSettings
                 }}
               />
               <p className="text-xs text-text-muted text-center">{relativeTimeText ?? "---"}</p>
-            </div>
+            </motion.div>
           )}
-        </div>
+        </motion.div>
       </div>
       <ShiftDetails
         isOpen={detailsOpen}
