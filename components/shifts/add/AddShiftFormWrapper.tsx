@@ -1,9 +1,24 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
 import AddShiftForm from './AddShiftForm';
 import type { UserSettings, SupplementRule, WageSnapshot } from '@/lib/payroll';
 import { ScrollablePageWrapper } from '@/components/app/ScrollablePageWrapper';
+
+// Animation variants for entrance animation
+const cardVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      type: "spring" as const,
+      stiffness: 300,
+      damping: 30,
+    },
+  },
+};
 
 type ExistingShift = {
   shift_date: string;
@@ -102,12 +117,18 @@ export function AddShiftFormWrapper({ initialData }: Props) {
 
   return (
     <ScrollablePageWrapper routeKey="add-shift">
-      <AddShiftForm
-        existingShifts={data.existingShifts}
-        userSettings={data.userSettings}
-        presetRules={data.presetRules}
-        wageSnapshots={data.wageSnapshots}
-      />
+      <motion.div
+        variants={cardVariants}
+        initial="hidden"
+        animate="visible"
+      >
+        <AddShiftForm
+          existingShifts={data.existingShifts}
+          userSettings={data.userSettings}
+          presetRules={data.presetRules}
+          wageSnapshots={data.wageSnapshots}
+        />
+      </motion.div>
     </ScrollablePageWrapper>
   );
 }

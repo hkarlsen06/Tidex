@@ -4,7 +4,22 @@ import Link from 'next/link';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import { FormEvent, useState, use, useRef, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { useTranslations } from '@/lib/i18n/client';
+
+// Animation variants for entrance animation
+const cardVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      type: "spring" as const,
+      stiffness: 300,
+      damping: 30,
+    },
+  },
+};
 
 import { supabase } from '@/lib/supabase/browser';
 import { translateError } from '@/lib/errors/translate';
@@ -135,9 +150,6 @@ export default function LoginClient({
     if (error) {
       setIsOAuthRedirecting(false);
       setMessage({ type: 'error', text: translateError(error.message) });
-      // Reset captcha token so user can retry with fresh token
-      setCaptchaToken(null);
-      turnstileRef.current?.reset();
       return;
     }
 
@@ -376,22 +388,19 @@ export default function LoginClient({
 
   const handleGoogleSignIn = async () => {
     setMessage(null);
-
-    // Require captcha token before OAuth
-    if (!captchaToken) {
-      setMessage({ type: 'error', text: t.pages.auth.login.errors.completeCaptcha });
-      return;
-    }
-
-    // Consume the captcha token (verification happened, now proceed with OAuth)
-    setCaptchaToken(null);
     await performGoogleSignIn();
   };
 
-  const buttonDisabled = isSubmitting || isOAuthRedirecting || !captchaToken;
+  const oauthButtonDisabled = isSubmitting || isOAuthRedirecting;
+  const formButtonDisabled = isSubmitting || isOAuthRedirecting || !captchaToken;
 
   return (
-    <div className="relative w-full">
+    <motion.div
+      className="relative w-full"
+      variants={cardVariants}
+      initial="hidden"
+      animate="visible"
+    >
       {/* Full-screen loading overlay during OAuth redirect */}
       {isOAuthRedirecting && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-xs">
@@ -438,7 +447,7 @@ export default function LoginClient({
                 variant="outline"
                 size="lg"
                 onClick={handleGoogleSignIn}
-                disabled={buttonDisabled}
+                disabled={oauthButtonDisabled}
                 loading={isOAuthRedirecting}
                 aria-label={t.pages.auth.login.continueWithGoogle}
                 className="w-full mb-6"
@@ -560,7 +569,7 @@ export default function LoginClient({
 
                 <Button
                   type="submit"
-                  disabled={buttonDisabled}
+                  disabled={formButtonDisabled}
                   loading={isSubmitting}
                   size="lg"
                   className="w-full"
@@ -648,6 +657,6 @@ export default function LoginClient({
           </CardFooter>
         )}
       </Card>
-    </div>
+    </motion.div>
   );
 }

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, useRef, useCallback } from "react";
 import type { ReactNode } from "react";
 import dynamic from "next/dynamic";
+import { motion } from "framer-motion";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/app/Card";
 import type { StatsData } from "@/data-access/stats";
@@ -16,6 +17,31 @@ import { useParams } from "next/navigation";
 import { formatNumber } from "@/lib/formatters";
 import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
 import { ScrollablePageWrapper } from "@/components/app/ScrollablePageWrapper";
+
+// Animation variants for staggered page sections
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+      delayChildren: 0.05,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      type: "spring" as const,
+      stiffness: 300,
+      damping: 30,
+    },
+  },
+};
 
 /**
  * Chart data type - subset of StatsData used for chart components
@@ -478,30 +504,33 @@ export function StatsContent({ data }: StatsContentProps) {
         </div>
       )}
 
-      <div
+      <motion.div
         ref={swipeContainerRef}
         className="w-full pb-6 pt-2 px-4 flex flex-col space-y-6 md:grid md:grid-cols-2 md:gap-6 md:space-y-0 md:items-start"
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
       >
 
       {/* Month picker - left column header */}
-      <div className="flex items-center justify-between mb-2 md:mb-0 md:h-10">
+      <motion.div className="flex items-center justify-between mb-2 md:mb-0 md:h-10" variants={itemVariants}>
         <MonthPicker
           month={selectedMonth}
           onPreviousMonth={goToPreviousMonth}
           onNextMonth={goToNextMonth}
         />
         <span className="font-medium text-text-muted mr-3 md:hidden">{selectedMonth.getFullYear()}</span>
-      </div>
+      </motion.div>
 
       {/* Year picker - right column header */}
-      <div className="hidden md:flex items-center h-10">
+      <motion.div className="hidden md:flex items-center h-10" variants={itemVariants}>
         <YearPicker
           year={selectedYear}
           onPreviousYear={goToPreviousYear}
           onNextYear={goToNextYear}
           suffix={yearPickerSuffix}
         />
-      </div>
+      </motion.div>
 
       {fetchError && (
         <p className="text-sm text-error md:col-span-2">
@@ -510,7 +539,7 @@ export function StatsContent({ data }: StatsContentProps) {
       )}
 
       {/* LEFT COLUMN - Monthly stats */}
-      <div className="flex flex-col space-y-6">
+      <motion.div className="flex flex-col space-y-6" variants={itemVariants}>
         {/* Hero section with key metrics */}
         <div className={`space-y-5 ${animationClass}`}>
           <Card className="border-border bg-surface-primary overflow-hidden">
@@ -627,10 +656,10 @@ export function StatsContent({ data }: StatsContentProps) {
             </CardContent>
           </Card>
         )}
-      </div>
+      </motion.div>
 
       {/* RIGHT COLUMN - Yearly stats */}
-      <div className="flex flex-col space-y-6">
+      <motion.div className="flex flex-col space-y-6" variants={itemVariants}>
         {/* Year picker - mobile only (shown in header on desktop) */}
         <div className="flex items-center gap-2 md:hidden">
           <YearPicker
@@ -730,8 +759,8 @@ export function StatsContent({ data }: StatsContentProps) {
             )}
           </CardContent>
         </Card>
-      </div>
-      </div>
+      </motion.div>
+      </motion.div>
     </ScrollablePageWrapper>
   );
 }

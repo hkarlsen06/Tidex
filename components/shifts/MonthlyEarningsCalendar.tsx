@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useEffect, useRef, useCallback, type Ref } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Clock, Copy, ArrowRightLeft, Info, Trash2, X } from "lucide-react";
 import { ShiftsCalendar } from "@/components/app/ShiftsCalendar";
 import { Card } from "@/components/app/Card";
@@ -15,6 +15,20 @@ import { useTranslations } from "@/lib/i18n/client";
 import { getMonthlyTotals, summarizeShiftTotals } from "@/lib/shifts/monthlyTotals";
 import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
 import { useCurrency } from "@/components/providers/CurrencyProvider";
+
+// Animation variants for initial entrance
+const entranceVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      type: "spring" as const,
+      stiffness: 300,
+      damping: 30,
+    },
+  },
+};
 
 type TaxSettings = {
   enabled: boolean;
@@ -369,9 +383,17 @@ export function MonthlyEarningsCalendar({
     };
   }, [navigatePrevious, navigateNext]);
 
+  // Respect reduced motion preferences
+  const shouldReduceMotion = useReducedMotion();
+
   return (
-    <Card ref={containerRef} className="rounded-card border-0 bg-transparent">
-      <div ref={swipeContainerRef}>
+    <motion.div
+      variants={entranceVariants}
+      initial={shouldReduceMotion ? "visible" : "hidden"}
+      animate="visible"
+    >
+      <Card ref={containerRef} className="rounded-card border-0 bg-transparent">
+        <div ref={swipeContainerRef}>
         <div className="flex h-[52px] flex-row items-center justify-between">
           <div className="flex h-10 items-center gap-1">
             {isShowingSelectedTotal ? (
@@ -594,5 +616,6 @@ export function MonthlyEarningsCalendar({
         )}
       </div>
     </Card>
+    </motion.div>
   );
 }

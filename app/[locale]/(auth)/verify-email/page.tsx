@@ -3,9 +3,24 @@
 import { useSearchParams } from "next/navigation";
 import { useState, Suspense, use, useRef, useEffect } from "react";
 import Link from "next/link";
+import { motion } from "framer-motion";
 import { useTranslations } from "@/lib/i18n/client";
 
 import { supabase } from "@/lib/supabase/browser";
+
+// Animation variants for entrance animation
+const cardVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      type: "spring" as const,
+      stiffness: 300,
+      damping: 30,
+    },
+  },
+};
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/app/Card";
 import { Button } from "@/components/app/Button";
 import { TurnstileCaptcha, type TurnstileCaptchaHandle } from "@/components/app/TurnstileCaptcha";
@@ -83,7 +98,12 @@ function VerifyEmailContent({ params }: { params: Promise<{ locale: string }> })
   };
 
   return (
-    <div className="relative w-full">
+    <motion.div
+      className="relative w-full"
+      variants={cardVariants}
+      initial="hidden"
+      animate="visible"
+    >
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-brand-primary/10">
@@ -171,7 +191,7 @@ function VerifyEmailContent({ params }: { params: Promise<{ locale: string }> })
           </div>
         </CardContent>
       </Card>
-    </div>
+    </motion.div>
   );
 }
 

@@ -2,23 +2,20 @@
 "use client";
 
 import * as React from "react";
-import { motion, HTMLMotionProps } from "framer-motion";
+import { motion, type HTMLMotionProps } from "framer-motion";
 import { Button as BaseButton, buttonVariants } from "@ui/button";
 import { cn } from "@/lib/cn";
 import type { VariantProps } from "class-variance-authority";
 
-type Props = VariantProps<typeof buttonVariants> & {
-  loading?: boolean;
-  /** Disable the press animation (useful for disabled states) */
-  disableAnimation?: boolean;
-  asChild?: boolean;
-  children?: React.ReactNode;
-  className?: string;
-  disabled?: boolean;
-  onClick?: React.MouseEventHandler<HTMLButtonElement>;
-  type?: "button" | "submit" | "reset";
-  title?: string;
-};
+// Use React's button attributes as the base, which includes all standard props
+// like aria-label, form, name, etc.
+type Props = Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "ref"> &
+  VariantProps<typeof buttonVariants> & {
+    loading?: boolean;
+    /** Disable the press animation (useful for disabled states) */
+    disableAnimation?: boolean;
+    asChild?: boolean;
+  };
 
 // Subtle scale animation on press
 const tapScale = { scale: 0.98 };
@@ -33,9 +30,11 @@ export function Button({
   variant,
   size,
   asChild,
-  onClick,
-  type,
-  title,
+  // Extract the props that might conflict with motion
+  _onDrag,
+  _onDragEnd,
+  _onDragStart,
+  ...rest
 }: Props) {
   const isDisabled = loading || disabled;
 
@@ -56,10 +55,9 @@ export function Button({
 
   return (
     <motion.button
-      type={type}
-      title={title}
+      // Spread compatible button attributes (type, title, aria-*, etc.)
+      {...(rest as HTMLMotionProps<"button">)}
       disabled={isDisabled}
-      onClick={onClick}
       whileTap={!isDisabled && !disableAnimation ? tapScale : undefined}
       whileHover={!isDisabled && !disableAnimation ? hoverScale : undefined}
       transition={{ type: "spring", stiffness: 400, damping: 25 }}

@@ -3,7 +3,22 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState, use, useRef, useEffect } from "react";
+import { motion } from "framer-motion";
 import { useTranslations } from "@/lib/i18n/client";
+
+// Animation variants for entrance animation
+const cardVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      type: "spring" as const,
+      stiffness: 300,
+      damping: 30,
+    },
+  },
+};
 
 import {
   InputOTP,
@@ -295,7 +310,12 @@ export default function ResetPasswordPage({ params }: { params: Promise<{ locale
   };
 
   return (
-    <div className="relative w-full">
+    <motion.div
+      className="relative w-full"
+      variants={cardVariants}
+      initial="hidden"
+      animate="visible"
+    >
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl">{t.pages.auth.resetPassword.title}</CardTitle>
@@ -504,6 +524,6 @@ export default function ResetPasswordPage({ params }: { params: Promise<{ locale
           </div>
         </CardContent>
       </Card>
-    </div>
+    </motion.div>
   );
 }

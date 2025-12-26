@@ -3,10 +3,36 @@
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
 import { ChevronRight, Loader2 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { SharedUserShiftPreview } from "./SharedUserShiftPreview";
 import type { SharedUser, SharerShiftPreview } from "@/data-access/sharing";
+
+// Animation variants for staggered list items
+const listContainerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.05,
+      delayChildren: 0.1,
+    },
+  },
+};
+
+const listItemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      type: "spring" as const,
+      stiffness: 300,
+      damping: 30,
+    },
+  },
+};
 
 type SharersListProps = {
   sharers: SharedUser[];
@@ -177,15 +203,21 @@ export function SharersList({
       : sharers;
 
   return (
-    <div className="flex flex-col gap-3">
+    <motion.div
+      className="flex flex-col gap-3"
+      variants={listContainerVariants}
+      initial="hidden"
+      animate="visible"
+    >
       {sortedSharers.map((sharer) => {
         const isLoading = loadingId === sharer.id;
         const preview = previewMap.get(sharer.id);
         const hasShiftPreview = preview?.shift && preview?.status;
 
         return (
-          <button
+          <motion.button
             key={sharer.id}
+            variants={listItemVariants}
             type="button"
             onClick={() => handleClick(sharer.id)}
             disabled={loadingId !== null}
@@ -225,9 +257,9 @@ export function SharersList({
                 />
               </div>
             )}
-          </button>
+          </motion.button>
         );
       })}
-    </div>
+    </motion.div>
   );
 }
