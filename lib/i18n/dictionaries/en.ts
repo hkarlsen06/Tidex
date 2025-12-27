@@ -570,6 +570,7 @@ export const en: Dictionary = {
         verifyButton: 'Verify code',
         backToLogin: '← Back to login',
         separator: 'or',
+        emailOrPhoneReveal: 'Email or phone',
         noAccount: "Don't have an account?",
         createAccount: 'Create account',
         continueWithGoogle: 'Continue with Google',
