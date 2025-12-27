@@ -65,6 +65,8 @@ type MonthlyEarningsCalendarProps = {
   readOnly?: boolean;
   /** When false, hides earnings-related data (for shared shifts with earnings hidden) */
   showEarnings?: boolean;
+  /** Unique identifier for this calendar instance - prevents AnimatePresence key collisions between routes */
+  calendarId?: string;
 };
 
 /**
@@ -218,6 +220,7 @@ export function MonthlyEarningsCalendar({
   payoutTaxSettings,
   readOnly = false,
   showEarnings = true,
+  calendarId = "own-shifts",
 }: MonthlyEarningsCalendarProps) {
   const { t } = useTranslations();
   const formatCurrency = useFormatCurrency();
@@ -397,6 +400,7 @@ export function MonthlyEarningsCalendar({
                   onNextMonth={goToNextMonth}
                   direction={animationDirection === 'next' ? 'forward' : 'backward'}
                   isHydrated={isHydrated}
+                  calendarId={calendarId}
                 />
                 <span className="font-medium text-text-muted ml-1">{formatYear(month)}</span>
               </>
@@ -426,7 +430,7 @@ export function MonthlyEarningsCalendar({
           <WeekdayHeader />
           <AnimatePresence mode="popLayout" custom={animationDirection} initial={false}>
             <motion.div
-              key={`${month.getFullYear()}-${month.getMonth()}`}
+              key={`${calendarId}-${month.getFullYear()}-${month.getMonth()}`}
               custom={animationDirection}
               variants={calendarVariants}
               // Skip animation if not hydrated yet (prevents flicker during sessionStorage restoration)

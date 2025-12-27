@@ -15,6 +15,8 @@ type MonthPickerProps = {
   direction?: "forward" | "backward";
   /** Whether initial hydration from sessionStorage is complete - skips animation if false */
   isHydrated?: boolean;
+  /** Unique identifier for this calendar instance - prevents AnimatePresence key collisions between routes */
+  calendarId?: string;
 };
 
 function formatMonth(date: Date, monthsFull: readonly string[]): string {
@@ -48,6 +50,7 @@ export function MonthPicker({
   canNavigateToNextMonth = true,
   direction: externalDirection,
   isHydrated = true,
+  calendarId = "default",
 }: MonthPickerProps) {
   const { t } = useTranslations();
   // Track direction locally when external direction is not provided
@@ -79,7 +82,7 @@ export function MonthPicker({
       <div className="relative w-24 overflow-hidden" style={{ minHeight: '1.5rem' }}>
         <AnimatePresence mode="popLayout" custom={direction} initial={false}>
           <motion.div
-            key={`${month.getFullYear()}-${month.getMonth()}`}
+            key={`${calendarId}-${month.getFullYear()}-${month.getMonth()}`}
             custom={direction}
             variants={monthVariants}
             // Skip animation if not hydrated yet (prevents flicker during sessionStorage restoration)
