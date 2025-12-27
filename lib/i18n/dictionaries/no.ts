@@ -286,6 +286,7 @@ export const no = {
         currentSupplements: 'Nåværende tillegg',
         useCurrentRates: 'Bruk nåværende satser',
         useCurrentRatesTooltip: 'Dette vil oppdatere vakten til å bruke dine nåværende lønns- og tilleggsinnstillinger i stedet for de lagrede satsene.',
+        overlapWarningTitle: 'Overlapper med andre vakter',
       },
       recurringEdit: {
         title: 'Rediger fast vakt',

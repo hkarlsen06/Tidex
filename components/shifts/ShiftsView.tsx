@@ -16,7 +16,7 @@ import {
 import { CalendarSkeleton } from "@/components/app/skeletons";
 import { Button } from "@/components/app/Button";
 import { ShiftWithComputations, UserSettings, SupplementRule, computeShift } from "@/lib/payroll";
-import ShiftDetails from "@/components/shifts/ShiftDetails";
+import ShiftDetails, { type OverlappingShiftInfo } from "@/components/shifts/ShiftDetails";
 import { deleteShift } from "@/app/[locale]/(app)/shifts/_actions/deleteShift";
 import { deleteShifts } from "@/app/[locale]/(app)/shifts/_actions/deleteShifts";
 import { updateShift } from "@/app/[locale]/(app)/shifts/_actions/updateShift";
@@ -218,6 +218,46 @@ function filterAndGroupByWeek(
   });
 
   return groups;
+}
+
+/**
+ * Find shifts on the same date that overlap with the given shift's time range.
+ * Returns an array of OverlappingShiftInfo for display in ShiftDetails modal.
+ */
+function findOverlappingShifts(
+  shift: ShiftWithComputations,
+  allShiftsOnDate: ShiftWithComputations[]
+): OverlappingShiftInfo[] {
+  const result: OverlappingShiftInfo[] = [];
+
+  const timeToMinutes = (time: string): number => {
+    const parts = time.split(':');
+    return parseInt(parts[0]) * 60 + parseInt(parts[1]);
+  };
+
+  let startA = timeToMinutes(shift.start_time);
+  let endA = timeToMinutes(shift.end_time);
+  // Handle cross-midnight: if end <= start, treat end as next day
+  if (endA <= startA) endA += 24 * 60;
+
+  for (const other of allShiftsOnDate) {
+    if (other.id === shift.id) continue; // Skip the shift itself
+
+    let startB = timeToMinutes(other.start_time);
+    let endB = timeToMinutes(other.end_time);
+    if (endB <= startB) endB += 24 * 60;
+
+    // Two ranges overlap if: startA < endB && startB < endA
+    if (startA < endB && startB < endA) {
+      result.push({
+        id: other.id,
+        start_time: other.start_time.substring(0, 5),
+        end_time: other.end_time.substring(0, 5),
+      });
+    }
+  }
+
+  return result;
 }
 
 function startOfMonth(date: Date) {
@@ -556,6 +596,19 @@ function MoveShiftModal({
   );
 }
 
+/**
+ * Month context that can be provided externally to isolate state.
+ * Used by sharing page to prevent AnimatePresence conflicts with /shifts route.
+ */
+type MonthContextOverride = {
+  selectedMonth: Date;
+  setSelectedMonth: (month: Date) => void;
+  goToPreviousMonth: () => void;
+  goToNextMonth: () => void;
+  direction: 'next' | 'previous' | null;
+  isHydrated: boolean;
+};
+
 type ShiftsViewProps = {
   shifts: ShiftWithComputations[];
   defaultView?: string;
@@ -573,9 +626,11 @@ type ShiftsViewProps = {
   showEarnings?: boolean;
   /** Payout month tax settings for calculating after-tax monthly totals */
   payoutTaxSettings?: PayoutTaxSettings;
+  /** Optional external month context to isolate state from global MonthProvider */
+  monthContext?: MonthContextOverride;
 };
 
-export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", userSettings, presetRules, readOnly = false, ownerName: _ownerName, headerSlot, sharedOwnerId, showEarnings = true, payoutTaxSettings }: ShiftsViewProps) {
+export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", userSettings, presetRules, readOnly = false, ownerName: _ownerName, headerSlot, sharedOwnerId, showEarnings = true, payoutTaxSettings, monthContext }: ShiftsViewProps) {
   const { t, locale } = useTranslations();
   const formatCurrency = useFormatCurrency();
   const {
@@ -589,7 +644,10 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
   const { navigate } = useNavigationFeedback();
   const [pending, startTransition] = useTransition();
   const [moving, startMoveTransition] = useTransition();
-  const { selectedMonth, setSelectedMonth } = useMonth();
+  // Use external month context if provided (for isolated sharing page state),
+  // otherwise fall back to global MonthProvider
+  const globalMonthContext = useMonth();
+  const { selectedMonth, setSelectedMonth } = monthContext ?? globalMonthContext;
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [selectedShift, setSelectedShift] = useState<ShiftWithComputations | null>(null);
   const [selectedDate, setSelectedDate] = useState<ISODate | null>(null);
@@ -1525,6 +1583,13 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
     [selectedDate, shiftsByDate]
   );
 
+  // Compute overlapping shifts for the currently selected shift
+  const overlappingShiftsForDetails = useMemo(() => {
+    if (!selectedShift) return [];
+    const shiftsOnDate = shiftsByDate.get(selectedShift.shift_date as ISODate) ?? [];
+    return findOverlappingShifts(selectedShift, shiftsOnDate);
+  }, [selectedShift, shiftsByDate]);
+
   const handleToggleMoveShift = useCallback((shiftId: string) => {
     setMoveSelection((prev) => {
       const isSelected = prev.includes(shiftId);
@@ -1898,6 +1963,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
             readOnly={readOnly}
             showEarnings={showEarnings}
             calendarId={sharedOwnerId ? `shared-${sharedOwnerId}` : "own-shifts"}
+            monthContext={monthContext}
           />
         </div>
       </div>
@@ -2194,6 +2260,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
       presetRules={presetRules}
       readOnly={readOnly}
       showEarnings={showEarnings}
+      overlappingShifts={overlappingShiftsForDetails}
     />
     </ScrollablePageWrapper>
   );
