@@ -3,7 +3,7 @@
 import { useEffect, useState, useTransition, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
-import { Pencil, Trash2, Clock, Check, X, RefreshCw } from "lucide-react";
+import { Pencil, Trash2, Clock, Check, X, RefreshCw, AlertTriangle } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -110,6 +110,13 @@ function buildSupplementSegments(shift: ShiftWithComputations): SupplementSegmen
 const TIME_PATTERN = /^\d{2}:\d{2}$/;
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
+/** Info about a shift that overlaps with the currently viewed shift */
+export type OverlappingShiftInfo = {
+  id: string;
+  start_time: string;
+  end_time: string;
+};
+
 export type ShiftDetailsProps = {
   isOpen: boolean;
   shift: ShiftWithComputations | null;
@@ -125,6 +132,8 @@ export type ShiftDetailsProps = {
   onOptimisticEdit?: (shiftId: string, updates: { shift_date: string; start_time: string; end_time: string }) => void; // Called immediately for optimistic UI update
   onEditError?: (shiftId: string, error: string) => void; // Called when edit fails to allow parent to revert
   onSupplementSaveError?: (error: string) => void; // Called when custom supplement save fails
+  /** Other shifts on the same date that overlap with this shift's time range */
+  overlappingShifts?: OverlappingShiftInfo[];
 };
 
 function capitalize(input: string) {
@@ -158,6 +167,7 @@ export function ShiftDetails({
   onOptimisticEdit,
   onEditError,
   onSupplementSaveError,
+  overlappingShifts = [],
 }: ShiftDetailsProps) {
   const { t, locale } = useTranslations();
   const formatCurrency = useFormatCurrency();
@@ -392,6 +402,23 @@ export function ShiftDetails({
                 </div>
               )}
             </div>
+
+            {/* Overlap warning banner */}
+            {overlappingShifts.length > 0 && (
+              <div className="rounded-xl border border-orange-400/40 bg-orange-500/10 px-3 py-2 dark:border-orange-500/40 dark:bg-orange-500/15">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="h-4 w-4 text-orange-500 dark:text-orange-400 mt-0.5 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-orange-600 dark:text-orange-400">
+                      {t.pages.shifts.details.overlapWarningTitle}
+                    </p>
+                    <p className="text-xs text-orange-600/80 dark:text-orange-400/80 mt-0.5">
+                      {overlappingShifts.map((os) => `${os.start_time}–${os.end_time}`).join(", ")}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {saveError ? (
               <div className="text-sm text-error">{saveError}</div>

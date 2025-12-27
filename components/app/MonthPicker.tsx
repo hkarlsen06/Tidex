@@ -80,7 +80,7 @@ export function MonthPicker({
         <ChevronLeft size={18} />
       </button>
       <div className="relative w-24 overflow-hidden" style={{ minHeight: '1.5rem' }}>
-        <AnimatePresence mode="popLayout" custom={direction} initial={false}>
+        <AnimatePresence mode="wait" custom={direction} initial={false}>
           <motion.div
             key={`${calendarId}-${month.getFullYear()}-${month.getMonth()}`}
             custom={direction}
@@ -90,7 +90,8 @@ export function MonthPicker({
             animate="center"
             exit="exit"
             transition={{
-              y: { type: "spring", stiffness: 300, damping: 30 },
+              // Use tween with fixed duration instead of spring to ensure exit completes
+              y: { type: "tween", duration: 0.2, ease: "easeOut" },
               opacity: { duration: 0.15 },
             }}
             className="absolute inset-0 text-center font-medium text-text-primary"

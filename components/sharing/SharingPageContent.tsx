@@ -7,6 +7,7 @@ import { ArrowLeft } from "lucide-react";
 import { SharingPageSkeleton } from "@/components/app/skeletons";
 import { ManageSharingModal } from "./ManageSharingModal";
 import { SharingDropdown } from "./SharingDropdown";
+import { SharingMonthProvider, useSharingMonth } from "./SharingMonthContext";
 import { useTranslations } from "@/lib/i18n/client";
 import { useSharingViewState } from "@/lib/hooks/useSharingViewState";
 import type {
@@ -46,10 +47,10 @@ type SharingPageContentProps = {
 };
 
 /**
- * Detail view for viewing a specific sharer's shifts
- * Used when a sharer is selected via the ?view= search param
+ * Inner component that uses the isolated SharingMonthContext.
+ * Must be rendered inside SharingMonthProvider.
  */
-export function SharingPageContent({
+function SharingPageContentInner({
   sharers,
   friends,
   shareCapacity,
@@ -57,7 +58,6 @@ export function SharingPageContent({
   selectedSharer,
   sharedShifts,
   sharedSettings,
-  // sharedAggregates - reserved for future use (e.g., showing summary stats)
   presetRules,
   showEarnings,
 }: SharingPageContentProps) {
@@ -65,6 +65,9 @@ export function SharingPageContent({
   const router = useRouter();
   const [manageSharingOpen, setManageSharingOpen] = useState(false);
   const { saveViewState } = useSharingViewState();
+
+  // Use isolated month context for sharing page
+  const sharingMonthContext = useSharingMonth();
 
   const sharingPath = `/${locale}/sharing`;
 
@@ -99,6 +102,7 @@ export function SharingPageContent({
         sharedOwnerId={selectedOwnerId}
         ownerName={selectedSharer.firstName ?? selectedSharer.email ?? "Bruker"}
         showEarnings={showEarnings}
+        monthContext={sharingMonthContext}
         headerSlot={
           <div className="flex flex-col gap-3">
             <button
@@ -124,5 +128,18 @@ export function SharingPageContent({
         shareCapacity={shareCapacity}
       />
     </>
+  );
+}
+
+/**
+ * Detail view for viewing a specific sharer's shifts.
+ * Wrapped in SharingMonthProvider to isolate month state from the global MonthProvider,
+ * preventing AnimatePresence conflicts when navigating between /shifts and /sharing.
+ */
+export function SharingPageContent(props: SharingPageContentProps) {
+  return (
+    <SharingMonthProvider>
+      <SharingPageContentInner {...props} />
+    </SharingMonthProvider>
   );
 }

@@ -21,6 +21,8 @@ export type ShiftsCalendarProps = {
   earningsByDate: EarningsByDate;
   hoursByDate?: HoursByDate;
   employeesByDate?: Record<ISODate, { name: string; color?: string }[]>;
+  /** Dates that have multiple shifts with overlapping hours */
+  overlappingDates?: Set<ISODate>;
   onDayClick?: (isoDate: ISODate, hasShifts: boolean) => void;
   onMonthChange?: (month: Date) => void;
   weekNumberPosition?: "top-left" | "bottom-left";
@@ -42,6 +44,7 @@ type DayButtonProps = {
   earningsByDate: EarningsByDate;
   hoursByDate: HoursByDate;
   employeesByDate: Record<ISODate, { name: string; color?: string }[]>;
+  overlappingDates: Set<ISODate>;
   mode: "money" | "hours";
   weekNumberPosition: "top-left" | "bottom-left";
   selectedDate?: ISODate | null;
@@ -89,6 +92,7 @@ const DayButton = React.memo(function DayButton({
   earningsByDate,
   hoursByDate,
   employeesByDate,
+  overlappingDates,
   mode,
   weekNumberPosition,
   selectedDate,
@@ -110,6 +114,7 @@ const DayButton = React.memo(function DayButton({
   const _isNewlyAdded = newlyAddedDates?.has(iso) ?? false;
   const hasShift =
     earnings !== undefined || hours !== undefined || employees.length > 0;
+  const hasOverlap = overlappingDates.has(iso);
   const week = isMonday ? getIsoWeek(date) : null;
   const netEarnings = getNetEarningsForDate(earnings, date, taxSettings);
 
@@ -122,6 +127,8 @@ const DayButton = React.memo(function DayButton({
         className,
         isSelected &&
           "border-brand-gradient-mid bg-brand-gradient-mid/10 text-brand-highlight shadow-app-sm",
+        hasOverlap && !isSelected &&
+          "border-orange-400/60 bg-orange-500/10 dark:border-orange-500/50 dark:bg-orange-500/15",
         isToday && "ring-1 ring-brand-highlight",
         isToday && !isSelected && "border-brand-highlight",
         isOutside && "opacity-40"
@@ -140,9 +147,11 @@ const DayButton = React.memo(function DayButton({
           "w-full text-xs font-semibold text-right pr-1 mb-1",
           isSelected
             ? "text-brand-highlight"
-            : hasShift
-              ? "text-brand-highlight"
-              : "text-text-primary"
+            : hasOverlap
+              ? "text-orange-500 dark:text-orange-400"
+              : hasShift
+                ? "text-brand-highlight"
+                : "text-text-primary"
         )}
         style={{ lineHeight: '12px', height: '12px' }}
       >
@@ -205,6 +214,7 @@ export function ShiftsCalendar({
   earningsByDate,
   hoursByDate = {},
   employeesByDate = {},
+  overlappingDates = new Set(),
   onDayClick,
   onMonthChange,
   weekNumberPosition = "bottom-left",
@@ -236,6 +246,7 @@ export function ShiftsCalendar({
         earningsByDate={earningsByDate}
         hoursByDate={hoursByDate}
         employeesByDate={employeesByDate}
+        overlappingDates={overlappingDates}
         mode={mode}
         weekNumberPosition={weekNumberPosition}
         selectedDate={selectedDate}
@@ -244,7 +255,7 @@ export function ShiftsCalendar({
         taxSettings={taxSettings}
       />
     ),
-    [mode, earningsByDate, hoursByDate, employeesByDate, weekNumberPosition, selectedDate, selectedDates, newlyAddedDates, taxSettings]
+    [mode, earningsByDate, hoursByDate, employeesByDate, overlappingDates, weekNumberPosition, selectedDate, selectedDates, newlyAddedDates, taxSettings]
   );
 
   const handleDayClick = React.useCallback(

@@ -287,6 +287,7 @@ export const en: Dictionary = {
         currentSupplements: 'Current supplements',
         useCurrentRates: 'Use current rates',
         useCurrentRatesTooltip: 'This will update the shift to use your current wage and supplement settings instead of the saved rates.',
+        overlapWarningTitle: 'Overlaps with other shifts',
       },
       recurringEdit: {
         title: 'Edit Recurring Shift',

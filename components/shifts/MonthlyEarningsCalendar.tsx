@@ -67,6 +67,13 @@ type MonthlyEarningsCalendarProps = {
   showEarnings?: boolean;
   /** Unique identifier for this calendar instance - prevents AnimatePresence key collisions between routes */
   calendarId?: string;
+  /** Optional external month context to isolate navigation from global MonthProvider */
+  monthContext?: {
+    goToPreviousMonth: () => void;
+    goToNextMonth: () => void;
+    direction: 'next' | 'previous' | null;
+    isHydrated: boolean;
+  };
 };
 
 /**
@@ -153,6 +160,62 @@ function buildHoursByDate(shifts: ShiftWithComputations[]): HoursByDate {
   return result;
 }
 
+/**
+ * Detect dates with overlapping shifts.
+ * Two shifts overlap if their time ranges intersect.
+ * Handles cross-midnight shifts by treating end time as next day.
+ */
+function buildOverlappingDates(shifts: ShiftWithComputations[]): Set<ISODate> {
+  const result = new Set<ISODate>();
+  const shiftsByDate = new Map<ISODate, ShiftWithComputations[]>();
+
+  // Group shifts by date
+  for (const shift of shifts) {
+    const isoDate = shift.shift_date as ISODate;
+    const existing = shiftsByDate.get(isoDate) || [];
+    existing.push(shift);
+    shiftsByDate.set(isoDate, existing);
+  }
+
+  // Helper to convert time to minutes since midnight
+  const timeToMinutes = (time: string): number => {
+    const parts = time.split(':');
+    return parseInt(parts[0]) * 60 + parseInt(parts[1]);
+  };
+
+  // Check each date for overlapping shifts
+  shiftsByDate.forEach((shiftsOnDate, isoDate) => {
+    if (shiftsOnDate.length < 2) return; // Need at least 2 shifts to overlap
+
+    // Check all pairs of shifts for overlap
+    for (let i = 0; i < shiftsOnDate.length; i++) {
+      for (let j = i + 1; j < shiftsOnDate.length; j++) {
+        const shiftA = shiftsOnDate[i];
+        const shiftB = shiftsOnDate[j];
+
+        let startA = timeToMinutes(shiftA.start_time);
+        let endA = timeToMinutes(shiftA.end_time);
+        let startB = timeToMinutes(shiftB.start_time);
+        let endB = timeToMinutes(shiftB.end_time);
+
+        // Handle cross-midnight shifts: if end <= start, treat end as next day
+        if (endA <= startA) endA += 24 * 60;
+        if (endB <= startB) endB += 24 * 60;
+
+        // Two ranges [startA, endA] and [startB, endB] overlap if:
+        // startA < endB && startB < endA
+        if (startA < endB && startB < endA) {
+          result.add(isoDate);
+          break; // No need to check more pairs for this date
+        }
+      }
+      if (result.has(isoDate)) break;
+    }
+  });
+
+  return result;
+}
+
 function formatYear(date: Date): string {
   return date.getFullYear().toString();
 }
@@ -221,11 +284,15 @@ export function MonthlyEarningsCalendar({
   readOnly = false,
   showEarnings = true,
   calendarId = "own-shifts",
+  monthContext,
 }: MonthlyEarningsCalendarProps) {
   const { t } = useTranslations();
   const formatCurrency = useFormatCurrency();
   const { symbol: currencySymbol } = useCurrency();
-  const { goToPreviousMonth, goToNextMonth, direction, isHydrated } = useMonth();
+  // Use external month context if provided (for isolated sharing page state),
+  // otherwise fall back to global MonthProvider
+  const globalMonthContext = useMonth();
+  const { goToPreviousMonth, goToNextMonth, direction, isHydrated } = monthContext ?? globalMonthContext;
   // When showEarnings is false, force hours view (money mode not available)
   const [viewMode, setViewMode] = useState<"money" | "hours">("hours");
   const effectiveViewMode = showEarnings ? viewMode : "hours";
@@ -277,6 +344,12 @@ export function MonthlyEarningsCalendar({
 
   const hoursByDate = useMemo(
     () => buildHoursByDate(monthlyShifts),
+    [monthlyShifts]
+  );
+
+  // Detect dates with overlapping shifts for visual highlighting
+  const overlappingDates = useMemo(
+    () => buildOverlappingDates(monthlyShifts),
     [monthlyShifts]
   );
 
@@ -438,7 +511,8 @@ export function MonthlyEarningsCalendar({
               animate="center"
               exit="exit"
               transition={{
-                y: { type: "spring", stiffness: 300, damping: 30 },
+                // Use tween with fixed duration instead of spring to ensure exit completes
+                y: { type: "tween", duration: 0.25, ease: "easeOut" },
                 opacity: { duration: 0.2 },
               }}
             >
@@ -447,6 +521,7 @@ export function MonthlyEarningsCalendar({
                 mode={effectiveViewMode}
                 earningsByDate={earningsByDate}
                 hoursByDate={hoursByDate}
+                overlappingDates={overlappingDates}
                 onMonthChange={onMonthChange}
                 onDayClick={onDayClick}
                 selectedDate={selectedDate}
