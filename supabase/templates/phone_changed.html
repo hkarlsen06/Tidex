@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="no">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <title>Telefonnummeret ditt er endret</title>
+
+    <style>
+      html, body { margin:0; padding:0; width:100%; background:#0d1117; }
+      img { border:0; outline:none; text-decoration:none; }
+      table { border-collapse:collapse !important; }
+      a { text-decoration:none; }
+
+      @media (prefers-color-scheme: dark) {
+        body { background:#0d1117 !important; }
+        .card { background:#161b22 !important; }
+        .text-main { color:#f0f6fc !important; }
+        .text-sub { color:#8b949e !important; }
+      }
+
+      @media screen and (max-width:600px) {
+        .container { width:100% !important; }
+      }
+    </style>
+  </head>
+
+  <body style="background:#0d1117; margin:0; padding:24px; font-family:'Inter',-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Arial,sans-serif;">
+    <div style="display:none;max-height:0;overflow:hidden;">Telefonnummeret til Tidex-kontoen din ble nettopp endret.</div>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td align="center">
+          <table class="container card" role="presentation" width="600" cellpadding="0" cellspacing="0" style="background:#161b22; border-radius:16px; overflow:hidden; box-shadow:0 6px 24px rgba(0,0,0,0.4);">
+            <tr>
+              <td style="padding:48px 40px;">
+                <img src="https://app.tidex.no/favicon.ico" alt="Tidex" width="48" height="48" style="border-radius:12px; display:block; margin-bottom:20px;">
+
+                <h1 class="text-main" style="font-size:24px; font-weight:700; color:#f0f6fc; margin:0 0 12px 0;">
+                  Telefonnummeret ditt er endret
+                </h1>
+
+                <p class="text-sub" style="font-size:16px; line-height:1.6; color:#c9d1d9; margin:0 0 24px 0;">
+                  Vi bekrefter at telefonnummeret til Tidex-kontoen din ble endret.
+                </p>
+
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#21262d; border-radius:8px; margin-bottom:24px;">
+                  <tr>
+                    <td style="padding:16px 20px;">
+                      <p style="font-size:14px; color:#c9d1d9; margin:0 0 4px 0;"><strong>Nytt telefonnummer:</strong> {{ .NewPhone }}</p>
+                      <p style="font-size:14px; color:#c9d1d9; margin:0;"><strong>Tidspunkt:</strong> {{ .Timestamp }}</p>
+                    </td>
+                  </tr>
+                </table>
+
+                <p class="text-sub" style="font-size:14px; color:#8b949e; line-height:1.6; margin:0 0 24px 0;">
+                  Hvis du gjorde denne endringen, trenger du ikke foreta deg noe.
+                </p>
+
+                <p class="text-sub" style="font-size:14px; color:#f85149; line-height:1.6; margin:0 0 8px 0;">
+                  <strong>Var ikke dette deg?</strong>
+                </p>
+                <p class="text-sub" style="font-size:14px; color:#8b949e; line-height:1.6; margin:0;">
+                  Hvis du ikke endret telefonnummeret ditt, kan kontoen din være kompromittert. Kontakt oss umiddelbart på <a href="mailto:support@tidex.no" style="color:#58a6ff;">support@tidex.no</a>.
+                </p>
+
+                <hr style="border:none; border-top:1px solid #30363d; margin:40px 0;">
+
+                <p style="font-size:13px; color:#8b949e; line-height:1.6; text-align:center;">
+                  Dette er en sikkerhetsmelding fra Tidex.<br><br>
+                  &copy; 2025 Tidex — <a href="https://tidex.no" style="color:#58a6ff;">Tidex.no</a><br>
+                  Denne meldingen ble sendt automatisk og kan ikke besvares.
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
