@@ -1,6 +1,7 @@
 "use client";
 
 import type React from "react";
+import Image from "next/image";
 import { ShiftWithComputations } from "@/lib/payroll";
 import { Card, CardHeader } from "@/components/app/Card";
 import { cn } from "@/lib/cn";
@@ -12,6 +13,7 @@ import {
 import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
 import { getDateFormatter } from "@/lib/i18n/locale";
 import { useCurrency } from "@/components/providers/CurrencyProvider";
+import TriangleWarningIcon from "@/public/icons/triangle-warning.svg";
 
 export type TaxSettings = {
   enabled: boolean;
@@ -102,7 +104,7 @@ export function ShiftCard({ shift, onClick, isToday = false, progress, taxSettin
         "bg-surface-primary rounded-3xl relative overflow-hidden",
         onClick && "cursor-pointer transition-colors hover:bg-surface-secondary",
         isToday && "ring-2 ring-brand-highlight",
-        hasConflict && "border-orange-400/60 bg-orange-500/10 dark:border-orange-500/50 dark:bg-orange-500/15"
+        hasConflict && "border-orange-400/60 dark:border-orange-500/50"
       )}
       onClick={onClick}
       role={onClick ? "button" : undefined}
@@ -123,18 +125,30 @@ export function ShiftCard({ shift, onClick, isToday = false, progress, taxSettin
             <span className="text-text-muted">{monthName}</span>
           </p>
           <div className="flex items-center gap-3 text-sm text-text-secondary">
-            <span className="inline-flex items-center gap-1 text-text-primary">
-              <svg
-                aria-hidden="true"
-                className="h-4 w-4 text-text-muted"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.5"
-              >
-                <circle cx="12" cy="12" r="9" />
-                <path d="M12 7v5l3 2" />
-              </svg>
+            <span className={cn(
+              "inline-flex items-center gap-1",
+              hasConflict ? "text-orange-500 dark:text-orange-400" : "text-text-primary"
+            )}>
+              {hasConflict ? (
+                <Image
+                  src={TriangleWarningIcon}
+                  alt=""
+                  aria-hidden="true"
+                  className="h-4 w-4"
+                />
+              ) : (
+                <svg
+                  aria-hidden="true"
+                  className="h-4 w-4 text-text-muted"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                >
+                  <circle cx="12" cy="12" r="9" />
+                  <path d="M12 7v5l3 2" />
+                </svg>
+              )}
               {formatTimeRange(shift.start_time, shift.end_time)}
             </span>
             <span className="text-text-muted">→</span>
