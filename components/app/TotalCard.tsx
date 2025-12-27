@@ -1,5 +1,8 @@
-import React from 'react';
+'use client';
+
+import React, { useEffect, useState, useRef } from 'react';
 import { ArrowDown, ArrowUp, HelpCircle } from 'lucide-react';
+import { useMotionValue, animate } from 'framer-motion';
 import { Card, CardContent } from '@/components/app/Card';
 import { ClickTooltip } from '@/components/app/Tooltip';
 import { useTranslations } from '@/lib/i18n/client';
@@ -30,6 +33,65 @@ function getAnimationClasses(direction: 'next' | 'previous' | null): string {
     // Going to previous month: slide out left, slide in from left
     return 'animate-[slide-in-from-left_0.4s_ease-out]';
   }
+}
+
+// Extract numeric value from formatted string like "16 851 kr"
+function extractNumber(value: string): number {
+  const numericString = value.replace(/[^\d]/g, '');
+  return parseInt(numericString, 10) || 0;
+}
+
+// Format number with spaces as thousand separators (Norwegian style)
+function formatNumber(num: number, template: string): string {
+  const suffix = template.replace(/[\d\s]/g, '').trim();
+  const formatted = Math.round(num)
+    .toString()
+    .replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  return suffix ? `${formatted} ${suffix}` : formatted;
+}
+
+// Animated counter that starts with "---" then counts up to target value
+interface AnimatedCounterProps {
+  value: string;
+  className?: string;
+  style?: React.CSSProperties;
+}
+
+function AnimatedCounter({ value, className, style }: AnimatedCounterProps) {
+  const targetNumber = extractNumber(value);
+  const count = useMotionValue(0);
+  const [displayValue, setDisplayValue] = useState('---');
+  const prevValueRef = useRef(value);
+
+  useEffect(() => {
+    // Reset when value changes
+    if (value !== prevValueRef.current) {
+      count.set(0);
+      setDisplayValue('---');
+      prevValueRef.current = value;
+    }
+
+    // Small delay before starting the count animation
+    const startDelay = setTimeout(() => {
+      const controls = animate(count, targetNumber, {
+        duration: 1.2,
+        ease: [0.25, 0.1, 0.25, 1],
+        onUpdate: (latest) => {
+          setDisplayValue(formatNumber(latest, value));
+        },
+      });
+
+      return () => controls.stop();
+    }, 150);
+
+    return () => clearTimeout(startDelay);
+  }, [value, targetNumber, count]);
+
+  return (
+    <span className={className} style={style}>
+      {displayValue}
+    </span>
+  );
 }
 
 export const TotalCard: React.FC<TotalCardProps> = ({
@@ -154,12 +216,20 @@ export const TotalCard: React.FC<TotalCardProps> = ({
                 className="w-full whitespace-nowrap text-center"
                 style={{ containerType: 'inline-size', lineHeight: 1.1 }}
               >
-                <span
-                  className="font-bold text-brand-highlight"
-                  style={{ fontSize: 'clamp(28px, 22cqi, 72px)' }}
-                >
-                  {displayTotal}
-                </span>
+                {displayTotal === '---' ? (
+                  <span
+                    className="font-bold text-brand-highlight"
+                    style={{ fontSize: 'clamp(28px, 22cqi, 72px)' }}
+                  >
+                    {displayTotal}
+                  </span>
+                ) : (
+                  <AnimatedCounter
+                    value={displayTotal}
+                    className="font-bold text-brand-highlight"
+                    style={{ fontSize: 'clamp(28px, 22cqi, 72px)' }}
+                  />
+                )}
               </div>
               {showPendingShiftsHelp && (
                 <div className="absolute left-[calc(50%+3.5rem)] top-1/2 -translate-y-1/4">
