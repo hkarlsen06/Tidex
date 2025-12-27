@@ -62,12 +62,12 @@ function AnimatedCounter({ value, className, style }: AnimatedCounterProps) {
   const count = useMotionValue(0);
   const [displayValue, setDisplayValue] = useState('---');
   const prevValueRef = useRef(value);
+  const isFirstRender = useRef(true);
 
   useEffect(() => {
-    // Reset when value changes
+    // Reset motion value when the target value changes (not on first render)
     if (value !== prevValueRef.current) {
       count.set(0);
-      setDisplayValue('---');
       prevValueRef.current = value;
     }
 
@@ -76,6 +76,13 @@ function AnimatedCounter({ value, className, style }: AnimatedCounterProps) {
       ease: [0.25, 0.1, 0.25, 1],
       onUpdate: (latest) => {
         setDisplayValue(formatNumber(latest, value));
+      },
+      onPlay: () => {
+        // Reset display to placeholder when animation starts (after first render)
+        if (!isFirstRender.current) {
+          setDisplayValue('---');
+        }
+        isFirstRender.current = false;
       },
     });
 
