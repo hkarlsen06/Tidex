@@ -392,21 +392,24 @@ export const StatsServiceLive = Layer.effect(
         const DAY_NAMES = t.dateTime.daysShort;
         const FULL_DAY_NAMES = t.dateTime.daysFull;
 
+        // Determine focus month (defaults to current UTC month)
+        const { year: currentYearDefault, month: currentMonthDefault } = getCurrentYearMonth();
+        const focusYear = options.year ?? currentYearDefault;
+        const focusMonth = options.month ?? currentMonthDefault;
+
         // Load full year of shifts for comprehensive stats calculations
+        // Pass year and month to get payout tax settings from the correct snapshot
         const dateRange = getStatsDateRange(options);
         const shiftData = yield* shifts.getShiftsWithComputations({
           userId,
           ...dateRange,
           limit: 1000, // Reasonable limit for 1 year of data
+          year: focusYear,
+          month: focusMonth,
         });
 
         const allShifts = shiftData.shifts;
         const userSettings = shiftData.settings;
-
-        // Determine focus month (defaults to current UTC month)
-        const { year: currentYearDefault, month: currentMonthDefault } = getCurrentYearMonth();
-        const focusYear = options.year ?? currentYearDefault;
-        const focusMonth = options.month ?? currentMonthDefault;
 
         const previousMonthDate = new Date(Date.UTC(focusYear, focusMonth - 2, 1));
         const { year: lastMonthYear, month: lastMonth } = getYearMonth(previousMonthDate);
@@ -417,8 +420,10 @@ export const StatsServiceLive = Layer.effect(
         const monthEndDate = new Date(Date.UTC(focusYear, focusMonth, 0));
         const cutoffDate = isCurrentSelection ? realNow : monthEndDate;
 
-        const taxEnabled = (userSettings as DbUserSettings).tax_deduction_enabled ?? false;
-        const taxPercentage = taxEnabled ? Number((userSettings as DbUserSettings).tax_percentage ?? 0) : 0;
+        // Get tax settings from the payout month's snapshot
+        // This ensures tax display matches what will be applied when earnings are paid out
+        const taxEnabled = shiftData.payoutTaxSettings?.enabled ?? false;
+        const taxPercentage = taxEnabled ? (shiftData.payoutTaxSettings?.percentage ?? 0) : 0;
         const netMultiplier = taxEnabled ? 1 - taxPercentage / 100 : 1;
         const applyNet = (gross: number) => (taxEnabled ? +(gross * netMultiplier).toFixed(2) : gross);
 
