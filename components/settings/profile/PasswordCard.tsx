@@ -246,32 +246,34 @@ export function PasswordCard({ hasPassword, isPhoneOnly }: PasswordCardProps) {
 
   return (
     <Card className="p-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
-        <div className="flex items-center gap-4 flex-1 min-w-0">
-          <div className="p-3 rounded-lg bg-surface-secondary shrink-0">
-            <Lock className="h-6 w-6 text-text-primary" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-text-primary">{t.pages.settings.profile.password.titleCard}</h3>
-            <p className="text-sm text-text-secondary mt-0.5">
-              {hasPassword
-                ? t.pages.settings.profile.password.hasPassword
-                : t.pages.settings.profile.password.noPassword}
-            </p>
-            {error && <p className="text-sm text-destructive mt-2">{error}</p>}
-            {success && (
-              <p className="text-sm text-success-foreground mt-2">{success}</p>
-            )}
+      <div className="flex items-start gap-4">
+        <div className="p-3 rounded-lg bg-surface-secondary shrink-0">
+          <Lock className="h-6 w-6 text-text-primary" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+            <div className="min-w-0">
+              <h3 className="font-semibold text-text-primary">{t.pages.settings.profile.password.titleCard}</h3>
+              <p className="text-sm text-text-secondary mt-0.5">
+                {hasPassword
+                  ? t.pages.settings.profile.password.hasPassword
+                  : t.pages.settings.profile.password.noPassword}
+              </p>
+              {error && <p className="text-sm text-destructive mt-2">{error}</p>}
+              {success && (
+                <p className="text-sm text-success-foreground mt-2">{success}</p>
+              )}
+            </div>
+            <Button
+              variant={hasPassword ? 'outline' : 'default'}
+              onClick={() => setShowPasswordForm(true)}
+              disabled={isLoading}
+              className="w-full sm:w-auto shrink-0"
+            >
+              {hasPassword ? t.pages.settings.profile.password.change : t.pages.settings.profile.password.set}
+            </Button>
           </div>
         </div>
-        <Button
-          variant={hasPassword ? 'outline' : 'default'}
-          onClick={() => setShowPasswordForm(true)}
-          disabled={isLoading}
-          className="w-full sm:w-auto sm:shrink-0"
-        >
-          {hasPassword ? t.pages.settings.profile.password.change : t.pages.settings.profile.password.set}
-        </Button>
       </div>
     </Card>
   );

@@ -238,46 +238,41 @@ export function PhoneConnectionCard({
 
   return (
     <Card className="p-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
-        <div className="flex items-center gap-4 flex-1 min-w-0">
-          <div className="p-3 rounded-lg bg-surface-secondary shrink-0">
-            <Phone className="h-6 w-6 text-text-primary" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-text-primary">{t.pages.settings.profile.phone.titleConnected}</h3>
-            <p className="text-sm text-text-secondary mt-0.5">
-              {hasPhoneConnected
-                ? t.pages.settings.profile.phone.connectedAs.replace('{phone}', formatPhoneForDisplay(phoneNumber || ''))
-                : t.pages.settings.profile.phone.notConnected}
-            </p>
-            {error && <p className="text-sm text-destructive mt-2">{error}</p>}
-          </div>
+      <div className="flex items-start gap-4">
+        <div className="p-3 rounded-lg bg-surface-secondary shrink-0">
+          <Phone className="h-6 w-6 text-text-primary" />
         </div>
-        <div className="w-full sm:w-auto sm:shrink-0 flex flex-col gap-2 sm:items-end">
-          <Button
-            variant={hasPhoneConnected ? 'outline' : 'default'}
-            onClick={
-              hasPhoneConnected ? handleUnlink : () => setShowLinkForm(true)
-            }
-            disabled={isLoading || (hasPhoneConnected && !canUnlinkPhone)}
-            title={
-              hasPhoneConnected && !canUnlinkPhone
-                ? t.pages.settings.profile.phone.addOtherMethod
-                : undefined
-            }
-            className="w-full sm:w-auto"
-          >
-            {isLoading
-              ? t.pages.settings.profile.phone.processing
-              : hasPhoneConnected
-                ? t.pages.settings.profile.phone.disconnect
-                : t.pages.settings.profile.phone.connect}
-          </Button>
-          {hasPhoneConnected && !canUnlinkPhone && (
-            <p className="text-xs text-text-secondary text-left sm:text-right">
-              {t.pages.settings.profile.phone.addOtherMethod}
-            </p>
-          )}
+        <div className="flex-1 min-w-0">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+            <div className="min-w-0">
+              <h3 className="font-semibold text-text-primary">{t.pages.settings.profile.phone.titleConnected}</h3>
+              <p className="text-sm text-text-secondary mt-0.5">
+                {hasPhoneConnected
+                  ? t.pages.settings.profile.phone.connectedAs.replace('{phone}', formatPhoneForDisplay(phoneNumber || ''))
+                  : t.pages.settings.profile.phone.notConnected}
+              </p>
+              {hasPhoneConnected && !canUnlinkPhone && (
+                <p className="text-xs text-text-muted mt-1">
+                  {t.pages.settings.profile.phone.addOtherMethod}
+                </p>
+              )}
+              {error && <p className="text-sm text-destructive mt-2">{error}</p>}
+            </div>
+            <Button
+              variant={hasPhoneConnected ? 'outline' : 'default'}
+              onClick={
+                hasPhoneConnected ? handleUnlink : () => setShowLinkForm(true)
+              }
+              disabled={isLoading || (hasPhoneConnected && !canUnlinkPhone)}
+              className="w-full sm:w-auto shrink-0"
+            >
+              {isLoading
+                ? t.pages.settings.profile.phone.processing
+                : hasPhoneConnected
+                  ? t.pages.settings.profile.phone.disconnect
+                  : t.pages.settings.profile.phone.connect}
+            </Button>
+          </div>
         </div>
       </div>
     </Card>

@@ -59,48 +59,43 @@ export function GoogleConnectionCard({ hasGoogleConnected, canDisconnectGoogle }
 
   return (
     <Card className="p-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
-        <div className="flex items-center gap-4 flex-1 min-w-0">
-          <div className="p-3 rounded-lg bg-surface-secondary shrink-0">
-            <Image src="/icons/google.svg" alt="Google" width={24} height={24} />
-          </div>
-          <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-text-primary">{t.pages.settings.profile.google.title}</h3>
-            <p className="text-sm text-text-secondary mt-0.5">
-              {hasGoogleConnected
-                ? t.pages.settings.profile.google.connected
-                : t.pages.settings.profile.google.notConnected}
-            </p>
-            {error && (
-              <p className="text-sm text-destructive mt-2">
-                {error}
-              </p>
-            )}
-          </div>
+      <div className="flex items-start gap-4">
+        <div className="p-3 rounded-lg bg-surface-secondary shrink-0">
+          <Image src="/icons/google.svg" alt="Google" width={24} height={24} />
         </div>
-        <div className="w-full sm:w-auto sm:shrink-0 flex flex-col gap-2 sm:items-end">
-          <Button
-            variant={hasGoogleConnected ? 'outline' : 'default'}
-            onClick={hasGoogleConnected ? handleDisconnect : handleConnect}
-            disabled={isLoading || (hasGoogleConnected && !canDisconnectGoogle)}
-            title={
-              hasGoogleConnected && !canDisconnectGoogle
-                ? t.pages.settings.profile.google.addOtherMethod
-                : undefined
-            }
-            className="w-full sm:w-auto"
-          >
-            {isLoading
-              ? t.pages.settings.profile.google.processing
-              : hasGoogleConnected
-              ? t.pages.settings.profile.google.disconnect
-              : t.pages.settings.profile.google.connect}
-          </Button>
-          {hasGoogleConnected && !canDisconnectGoogle && (
-            <p className="text-xs text-text-secondary text-left sm:text-right">
-              {t.pages.settings.profile.google.addOtherMethod}
-            </p>
-          )}
+        <div className="flex-1 min-w-0">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+            <div className="min-w-0">
+              <h3 className="font-semibold text-text-primary">{t.pages.settings.profile.google.title}</h3>
+              <p className="text-sm text-text-secondary mt-0.5">
+                {hasGoogleConnected
+                  ? t.pages.settings.profile.google.connected
+                  : t.pages.settings.profile.google.notConnected}
+              </p>
+              {hasGoogleConnected && !canDisconnectGoogle && (
+                <p className="text-xs text-text-muted mt-1">
+                  {t.pages.settings.profile.google.addOtherMethod}
+                </p>
+              )}
+              {error && (
+                <p className="text-sm text-destructive mt-2">
+                  {error}
+                </p>
+              )}
+            </div>
+            <Button
+              variant={hasGoogleConnected ? 'outline' : 'default'}
+              onClick={hasGoogleConnected ? handleDisconnect : handleConnect}
+              disabled={isLoading || (hasGoogleConnected && !canDisconnectGoogle)}
+              className="w-full sm:w-auto shrink-0"
+            >
+              {isLoading
+                ? t.pages.settings.profile.google.processing
+                : hasGoogleConnected
+                ? t.pages.settings.profile.google.disconnect
+                : t.pages.settings.profile.google.connect}
+            </Button>
+          </div>
         </div>
       </div>
     </Card>
