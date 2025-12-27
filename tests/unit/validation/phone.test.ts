@@ -97,39 +97,41 @@ describe('validation/phone', () => {
   });
 
   describe('formatPhoneForDisplay', () => {
-    it('should format 8-digit phone as XX XXX XXX', () => {
-      expect(formatPhoneForDisplay('12345678')).toBe('12 345 678');
-      expect(formatPhoneForDisplay('98765432')).toBe('98 765 432');
-      expect(formatPhoneForDisplay('40000000')).toBe('40 000 000');
+    it('should format 8-digit phone as XXX XX XXX', () => {
+      expect(formatPhoneForDisplay('12345678')).toBe('123 45 678');
+      expect(formatPhoneForDisplay('98765432')).toBe('987 65 432');
+      expect(formatPhoneForDisplay('40000000')).toBe('400 00 000');
     });
 
     it('should handle E.164 format and strip country code', () => {
-      expect(formatPhoneForDisplay('+4712345678')).toBe('12 345 678');
-      expect(formatPhoneForDisplay('+4798765432')).toBe('98 765 432');
+      expect(formatPhoneForDisplay('+4712345678')).toBe('123 45 678');
+      expect(formatPhoneForDisplay('+4798765432')).toBe('987 65 432');
+    });
+
+    it('should handle phone with 47 prefix (without +)', () => {
+      expect(formatPhoneForDisplay('4712345678')).toBe('123 45 678');
+      expect(formatPhoneForDisplay('4798765432')).toBe('987 65 432');
     });
 
     it('should handle phone with spaces (normalize first)', () => {
-      expect(formatPhoneForDisplay('12 345 678')).toBe('12 345 678');
-      expect(formatPhoneForDisplay('123 456 78')).toBe('12 345 678');
+      expect(formatPhoneForDisplay('123 45 678')).toBe('123 45 678');
+      expect(formatPhoneForDisplay('12 345 678')).toBe('123 45 678');
     });
 
     it('should trim whitespace', () => {
-      expect(formatPhoneForDisplay('  12345678  ')).toBe('12 345 678');
-      expect(formatPhoneForDisplay('  +4712345678  ')).toBe('12 345 678');
+      expect(formatPhoneForDisplay('  12345678  ')).toBe('123 45 678');
+      expect(formatPhoneForDisplay('  +4712345678  ')).toBe('123 45 678');
     });
 
     it('should return input as-is for invalid lengths', () => {
       expect(formatPhoneForDisplay('1234567')).toBe('1234567'); // Too short
       expect(formatPhoneForDisplay('123456789')).toBe('123456789'); // Too long
-      // Note: formatPhoneForDisplay strips spaces before checking length,
-      // so 'abcd1234' (8 chars after space removal) gets formatted
-      expect(formatPhoneForDisplay('abcd1234').length).toBeGreaterThan(0); // Gets formatted despite being invalid
       expect(formatPhoneForDisplay('')).toBe('');
     });
 
     it('should handle already formatted input', () => {
       const formatted = formatPhoneForDisplay('12345678');
-      expect(formatPhoneForDisplay(formatted)).toBe('12 345 678');
+      expect(formatPhoneForDisplay(formatted)).toBe('123 45 678');
     });
   });
 
@@ -213,7 +215,7 @@ describe('validation/phone', () => {
 
       // Format for display
       const display = formatPhoneForDisplay(e164);
-      expect(display).toBe('12 345 678');
+      expect(display).toBe('123 45 678');
     });
 
     it('should handle email workflow: detect -> validate', () => {
