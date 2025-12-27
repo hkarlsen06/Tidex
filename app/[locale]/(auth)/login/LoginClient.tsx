@@ -4,7 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import { FormEvent, useState, use, useRef, useEffect } from 'react';
-import { motion, useReducedMotion } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { useTranslations } from '@/lib/i18n/client';
 
 // Animation variants for entrance animation
@@ -89,6 +89,7 @@ export default function LoginClient({
   const [oauthProvider, setOauthProvider] = useState<'google' | 'apple' | null>(null);
   const [showSignupPrompt, setShowSignupPrompt] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [showEmailLogin, setShowEmailLogin] = useState(false);
 
   const turnstileRef = useRef<TurnstileCaptchaHandle>(null);
 
@@ -542,123 +543,155 @@ export default function LoginClient({
 
               <FieldSeparator>{t.pages.auth.login.separator}</FieldSeparator>
 
-              <form className="space-y-4 mt-6" noValidate onSubmit={handleSignIn}>
-                <FieldGroup>
-                  <Field data-invalid={!!fieldErrors.emailOrPhone}>
-                    <FieldLabel htmlFor="emailOrPhone">{t.pages.auth.login.usernameLabel}</FieldLabel>
-                    <Input
-                      id="emailOrPhone"
-                      name="emailOrPhone"
-                      type="text"
-                      placeholder={t.pages.auth.login.emailOrPhonePlaceholder}
-                      // Microsoft Editor browser extension injects these attributes before hydration; set them eagerly to avoid mismatches.
-                      spellCheck={false}
-                      data-ms-editor="true"
-                      suppressHydrationWarning
-                      autoComplete="username"
-                      value={emailOrPhone}
-                      onChange={(event) => {
-                        resetMessage();
-                        resetFieldErrors();
-                        setEmailOrPhone(event.target.value);
-                      }}
-                      aria-invalid={!!fieldErrors.emailOrPhone}
-                    />
-                    <FieldError>{fieldErrors.emailOrPhone}</FieldError>
-                  </Field>
-
-                  <Field data-invalid={!!fieldErrors.password}>
-                    <div className="flex items-center justify-between">
-                      <FieldLabel htmlFor="password">
-                        {t.pages.auth.login.passwordLabel}
-                      </FieldLabel>
-                      <Link
-                        href={`/${locale}/reset-password`}
-                        className="text-sm text-text-muted hover:text-text-primary transition-colors"
-                      >
-                        {t.pages.auth.login.forgotPassword}
-                      </Link>
-                    </div>
-                    <PasswordInput
-                      id="password"
-                      name="password"
-                      placeholder={t.pages.auth.login.passwordPlaceholder}
-                      autoComplete="current-password"
-                      value={password}
-                      onChange={(event) => {
-                        resetMessage();
-                        resetFieldErrors();
-                        setPassword(event.target.value);
-                      }}
-                      invalid={!!fieldErrors.password}
-                    />
-                    <FieldError>{fieldErrors.password}</FieldError>
-                  </Field>
-                </FieldGroup>
-
-                {/* Turnstile CAPTCHA Widget */}
-                <div className="flex justify-center">
-                  <TurnstileCaptcha
-                    ref={turnstileRef}
-                    execution="render"
-                    appearance="always"
-                    size="flexible"
-                    onSuccess={(token) => {
-                      setCaptchaToken(token);
-                      resetMessage();
-                    }}
-                    onError={() => {
-                      setCaptchaToken(null);
-                      setMessage({ type: 'error', text: t.pages.auth.login.errors.captchaFailed });
-                    }}
-                    onExpire={() => {
-                      setCaptchaToken(null);
-                      setMessage({ type: 'error', text: t.pages.auth.login.errors.captchaExpired });
-                    }}
-                  />
-                </div>
-
-                {message && (
-                  <div
-                    className={`rounded-lg px-4 py-3 text-sm font-medium ${
-                      message.type === 'error'
-                        ? 'bg-error-subtle text-error-foreground'
-                        : 'bg-success-subtle text-success-foreground'
-                    }`}
-                    role="status"
-                    aria-live="polite"
+              <AnimatePresence mode="wait">
+                {!showEmailLogin ? (
+                  <motion.div
+                    key="reveal-button"
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.2 }}
+                    className="mt-6"
                   >
-                    {message.text}
-                  </div>
-                )}
-
-                {/* Arrow pointing to signup button */}
-                {showSignupPrompt && (
-                  <div className="flex justify-center animate-bounce">
-                    <svg
-                      className="h-6 w-6 text-error-foreground"
-                      fill="none"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="lg"
+                      onClick={() => setShowEmailLogin(true)}
+                      className="w-full"
                     >
-                      <path d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
-                    </svg>
-                  </div>
-                )}
+                      {t.pages.auth.login.emailOrPhoneReveal}
+                    </Button>
+                  </motion.div>
+                ) : (
+                  <motion.form
+                    key="login-form"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    transition={{ duration: 0.2 }}
+                    className="space-y-4 mt-6"
+                    noValidate
+                    onSubmit={handleSignIn}
+                  >
+                    <FieldGroup>
+                      <Field data-invalid={!!fieldErrors.emailOrPhone}>
+                        <FieldLabel htmlFor="emailOrPhone">{t.pages.auth.login.usernameLabel}</FieldLabel>
+                        <Input
+                          id="emailOrPhone"
+                          name="emailOrPhone"
+                          type="text"
+                          placeholder={t.pages.auth.login.emailOrPhonePlaceholder}
+                          // Microsoft Editor browser extension injects these attributes before hydration; set them eagerly to avoid mismatches.
+                          spellCheck={false}
+                          data-ms-editor="true"
+                          suppressHydrationWarning
+                          autoComplete="username"
+                          value={emailOrPhone}
+                          onChange={(event) => {
+                            resetMessage();
+                            resetFieldErrors();
+                            setEmailOrPhone(event.target.value);
+                          }}
+                          aria-invalid={!!fieldErrors.emailOrPhone}
+                        />
+                        <FieldError>{fieldErrors.emailOrPhone}</FieldError>
+                      </Field>
 
-                <Button
-                  type="submit"
-                  disabled={formButtonDisabled}
-                  loading={isSubmitting}
-                  size="lg"
-                  className="w-full"
-                >
-                  {t.pages.auth.login.submitButton}
-                </Button>
-              </form>
+                      <Field data-invalid={!!fieldErrors.password}>
+                        <div className="flex items-center justify-between">
+                          <FieldLabel htmlFor="password">
+                            {t.pages.auth.login.passwordLabel}
+                          </FieldLabel>
+                          <Link
+                            href={`/${locale}/reset-password`}
+                            className="text-sm text-text-muted hover:text-text-primary transition-colors"
+                          >
+                            {t.pages.auth.login.forgotPassword}
+                          </Link>
+                        </div>
+                        <PasswordInput
+                          id="password"
+                          name="password"
+                          placeholder={t.pages.auth.login.passwordPlaceholder}
+                          autoComplete="current-password"
+                          value={password}
+                          onChange={(event) => {
+                            resetMessage();
+                            resetFieldErrors();
+                            setPassword(event.target.value);
+                          }}
+                          invalid={!!fieldErrors.password}
+                        />
+                        <FieldError>{fieldErrors.password}</FieldError>
+                      </Field>
+                    </FieldGroup>
+
+                    {/* Turnstile CAPTCHA Widget */}
+                    <div className="flex justify-center">
+                      <TurnstileCaptcha
+                        ref={turnstileRef}
+                        execution="render"
+                        appearance="always"
+                        size="flexible"
+                        onSuccess={(token) => {
+                          setCaptchaToken(token);
+                          resetMessage();
+                        }}
+                        onError={() => {
+                          setCaptchaToken(null);
+                          setMessage({ type: 'error', text: t.pages.auth.login.errors.captchaFailed });
+                        }}
+                        onExpire={() => {
+                          setCaptchaToken(null);
+                          setMessage({ type: 'error', text: t.pages.auth.login.errors.captchaExpired });
+                        }}
+                      />
+                    </div>
+
+                    {message && (
+                      <div
+                        className={`rounded-lg px-4 py-3 text-sm font-medium ${
+                          message.type === 'error'
+                            ? 'bg-error-subtle text-error-foreground'
+                            : 'bg-success-subtle text-success-foreground'
+                        }`}
+                        role="status"
+                        aria-live="polite"
+                      >
+                        {message.text}
+                      </div>
+                    )}
+
+                    {/* Arrow pointing to signup button */}
+                    {showSignupPrompt && (
+                      <div className="flex justify-center animate-bounce">
+                        <svg
+                          className="h-6 w-6 text-error-foreground"
+                          fill="none"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
+                        </svg>
+                      </div>
+                    )}
+
+                    <Button
+                      type="submit"
+                      disabled={formButtonDisabled}
+                      loading={isSubmitting}
+                      size="lg"
+                      className="w-full"
+                    >
+                      {t.pages.auth.login.submitButton}
+                    </Button>
+                  </motion.form>
+                )}
+              </AnimatePresence>
             </>
           )}
 

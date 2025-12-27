@@ -569,6 +569,7 @@ export const no = {
         verifyButton: 'Verifiser kode',
         backToLogin: '← Tilbake til innlogging',
         separator: 'eller',
+        emailOrPhoneReveal: 'E-post eller tlf',
         noAccount: 'Har du ikke en konto?',
         createAccount: 'Opprett konto',
         continueWithGoogle: 'Fortsett med Google',
