@@ -3,7 +3,7 @@
 import { useSearchParams } from "next/navigation";
 import { useState, Suspense, use, useRef, useEffect } from "react";
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { useTranslations } from "@/lib/i18n/client";
 
 import { supabase } from "@/lib/supabase/browser";
@@ -21,6 +21,12 @@ const cardVariants = {
     },
   },
 };
+
+// Reduced motion variant (no y-transform)
+const reducedMotionVariants = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1 },
+};
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/app/Card";
 import { Button } from "@/components/app/Button";
 import { TurnstileCaptcha, type TurnstileCaptchaHandle } from "@/components/app/TurnstileCaptcha";
@@ -32,6 +38,7 @@ function VerifyEmailContent({ params }: { params: Promise<{ locale: string }> })
   const { t } = useTranslations();
   const searchParams = useSearchParams();
   const email = searchParams.get("email");
+  const shouldReduceMotion = useReducedMotion();
 
   const [message, setMessage] = useState<MessageState>(null);
   const [isResending, setIsResending] = useState(false);
@@ -100,7 +107,7 @@ function VerifyEmailContent({ params }: { params: Promise<{ locale: string }> })
   return (
     <motion.div
       className="relative w-full"
-      variants={cardVariants}
+      variants={shouldReduceMotion ? reducedMotionVariants : cardVariants}
       initial="hidden"
       animate="visible"
     >

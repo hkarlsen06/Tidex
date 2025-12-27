@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState, use, useRef, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { useTranslations } from "@/lib/i18n/client";
 
 // Animation variants for entrance animation
@@ -18,6 +18,12 @@ const cardVariants = {
       damping: 30,
     },
   },
+};
+
+// Reduced motion variant (no y-transform)
+const reducedMotionVariants = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1 },
 };
 
 import {
@@ -58,6 +64,7 @@ export default function ResetPasswordPage({ params }: { params: Promise<{ locale
   const { locale } = use(params);
   const { t } = useTranslations();
   const router = useRouter();
+  const shouldReduceMotion = useReducedMotion();
 
   const [step, setStep] = useState<Step>("input");
   const [emailOrPhone, setEmailOrPhone] = useState("");
@@ -312,7 +319,7 @@ export default function ResetPasswordPage({ params }: { params: Promise<{ locale
   return (
     <motion.div
       className="relative w-full"
-      variants={cardVariants}
+      variants={shouldReduceMotion ? reducedMotionVariants : cardVariants}
       initial="hidden"
       animate="visible"
     >

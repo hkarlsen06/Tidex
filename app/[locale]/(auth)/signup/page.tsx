@@ -5,7 +5,7 @@ import Image from "next/image";
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useState, use, useRef, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { useTranslations } from "@/lib/i18n/client";
 
 // Animation variants for entrance animation
@@ -20,6 +20,12 @@ const cardVariants = {
       damping: 30,
     },
   },
+};
+
+// Reduced motion variant (no y-transform)
+const reducedMotionVariants = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1 },
 };
 
 import { supabase } from "@/lib/supabase/browser";
@@ -72,6 +78,7 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
   const { t } = useTranslations();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const shouldReduceMotion = useReducedMotion();
 
   // Pre-populate email from login page if user came from there
   const initialEmail = searchParams.get('email') || '';
@@ -439,7 +446,7 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
   return (
     <motion.div
       className="relative w-full"
-      variants={cardVariants}
+      variants={shouldReduceMotion ? reducedMotionVariants : cardVariants}
       initial="hidden"
       animate="visible"
     >
