@@ -48,13 +48,13 @@ export function TopHeader({ userName }: TopHeaderProps) {
 
           {/* Right section */}
           <div className="flex items-center gap-3 justify-end">
-            {/* Add button - desktop only, matches UserMenu style with CTA color */}
+            {/* Add button - desktop only, icon-only on md, full button on lg+ */}
             <Link
               href={`/${locale}/shifts/add`}
-              className="hidden md:flex items-center gap-2 rounded-2xl bg-brand-gradient-mid/10 px-4 h-12 border border-brand-gradient-mid/30 hover:bg-brand-gradient-mid/20 transition-colors"
+              className="hidden md:flex items-center justify-center rounded-2xl bg-brand-gradient-mid/10 border border-brand-gradient-mid/30 hover:bg-brand-gradient-mid/20 transition-colors h-12 w-12 lg:w-auto lg:gap-2 lg:px-4"
             >
               <Plus className="h-4 w-4 text-brand-gradient-mid" strokeWidth={2} />
-              <span className="text-sm font-medium text-brand-gradient-mid">{t.common.add}</span>
+              <span className="hidden lg:inline text-sm font-medium text-brand-gradient-mid">{t.common.add}</span>
             </Link>
 
             {/* Wagey link */}
