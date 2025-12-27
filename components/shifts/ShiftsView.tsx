@@ -260,6 +260,58 @@ function findOverlappingShifts(
   return result;
 }
 
+/**
+ * Build a set of shift IDs that have overlapping conflicts.
+ * A shift has a conflict if it overlaps with any other shift on the same date.
+ */
+function buildConflictingShiftIds(shifts: ShiftWithComputations[]): Set<string> {
+  const result = new Set<string>();
+  const shiftsByDate = new Map<ISODate, ShiftWithComputations[]>();
+
+  // Group shifts by date
+  for (const shift of shifts) {
+    const isoDate = shift.shift_date as ISODate;
+    const existing = shiftsByDate.get(isoDate) || [];
+    existing.push(shift);
+    shiftsByDate.set(isoDate, existing);
+  }
+
+  const timeToMinutes = (time: string): number => {
+    const parts = time.split(':');
+    return parseInt(parts[0]) * 60 + parseInt(parts[1]);
+  };
+
+  // Check each date for overlapping shifts
+  shiftsByDate.forEach((shiftsOnDate) => {
+    if (shiftsOnDate.length < 2) return;
+
+    // Check all pairs of shifts for overlap
+    for (let i = 0; i < shiftsOnDate.length; i++) {
+      for (let j = i + 1; j < shiftsOnDate.length; j++) {
+        const shiftA = shiftsOnDate[i];
+        const shiftB = shiftsOnDate[j];
+
+        let startA = timeToMinutes(shiftA.start_time);
+        let endA = timeToMinutes(shiftA.end_time);
+        let startB = timeToMinutes(shiftB.start_time);
+        let endB = timeToMinutes(shiftB.end_time);
+
+        // Handle cross-midnight shifts
+        if (endA <= startA) endA += 24 * 60;
+        if (endB <= startB) endB += 24 * 60;
+
+        // Two ranges overlap if: startA < endB && startB < endA
+        if (startA < endB && startB < endA) {
+          result.add(shiftA.id);
+          result.add(shiftB.id);
+        }
+      }
+    }
+  });
+
+  return result;
+}
+
 function startOfMonth(date: Date) {
   return new Date(date.getFullYear(), date.getMonth(), 1);
 }
@@ -861,6 +913,12 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
     });
     return map;
   }, [shifts]);
+
+  // Build set of shift IDs that have overlapping conflicts
+  const conflictingShiftIds = useMemo(
+    () => buildConflictingShiftIds(shifts),
+    [shifts]
+  );
 
   // Get payout tax settings for the currently selected month
   // Falls back to SSR-provided settings if not yet fetched for this month
@@ -2064,6 +2122,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
                                   halfTaxMonth: userSettings.half_tax_month ?? null,
                                 }}
                                 showEarnings={showEarnings}
+                                hasConflict={conflictingShiftIds.has(shift.id)}
                               />
                               {isNextUpcomingShift && countdown.text && (
                                 <p className="text-xs text-text-muted text-center">{countdown.text}</p>
