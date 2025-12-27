@@ -73,6 +73,7 @@ export async function getUserProfile(userId: string) {
         canDisconnectGoogle: false,
         canDisconnectApple: false,
         isPhoneOnly: false,
+        isOAuthOnly: false,
       });
     }),
     Effect.scoped

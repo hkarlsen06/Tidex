@@ -6,6 +6,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A Next.js 16 application for tracking work shifts and calculating wages with Supabase authentication. Supports internationalization (i18n) with Norwegian and English locales. Uses Tailwind CSS for styling with a custom design system and supports both light and dark modes.
 
+## Developer Info
+
+- **Primary developer user ID**: `032d8c2a-9af6-4777-99f0-24e2c4058bf3` (Hjalmar's account for testing/debugging)
+
 ## CRITICAL: Cache Invalidation in Route Handlers vs Server Actions (Next.js 16)
 
 **NEVER use `updateTag()` - ALWAYS use `revalidateTag()` with second argument**

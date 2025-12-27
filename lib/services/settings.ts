@@ -70,6 +70,7 @@ export type UserProfile = {
   readonly canDisconnectGoogle: boolean;
   readonly canDisconnectApple: boolean;
   readonly isPhoneOnly: boolean;
+  readonly isOAuthOnly: boolean;
 };
 
 /**
@@ -201,6 +202,11 @@ export const SettingsServiceLive = Layer.effect(
           const canDisconnectGoogle = hasGoogleConnected && loginMethodCount > 1;
           const canDisconnectApple = hasAppleConnected && loginMethodCount > 1;
           const isPhoneOnly = hasPhoneConnected && !session.user.email;
+          // User is OAuth-only if they have OAuth but no password and no phone
+          const isOAuthOnly =
+            (hasGoogleConnected || hasAppleConnected) &&
+            !hasPassword &&
+            !hasPhoneConnected;
 
           const profile: UserProfile = {
             firstName: session.user.firstName ?? "",
@@ -217,6 +223,7 @@ export const SettingsServiceLive = Layer.effect(
             canDisconnectGoogle,
             canDisconnectApple,
             isPhoneOnly,
+            isOAuthOnly,
           };
 
           return profile;
