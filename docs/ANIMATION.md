@@ -1,6 +1,8 @@
 # Animation Specification
 
-This document outlines the animation patterns and guidelines for Tidex. Consistent animations create a polished, professional feel and improve perceived performance.
+This document outlines the animation patterns and guidelines for Tidex.
+Consistent animations create a polished, professional feel and improve perceived
+performance.
 
 ## Core Principles
 
@@ -27,9 +29,12 @@ This creates a snappy, responsive feel without being jarring.
 
 ### 1. Skeleton-First Page Loading (Recommended)
 
-**The preferred pattern for page entrance animations.** Staggered animations should be applied to loading skeletons, not the final content. When the real content loads, it simply replaces the skeleton without additional animation.
+**The preferred pattern for page entrance animations.** Staggered animations
+should be applied to loading skeletons, not the final content. When the real
+content loads, it simply replaces the skeleton without additional animation.
 
 **Why this approach:**
+
 - Skeleton animates in immediately (no waiting for data)
 - Creates perception of faster loading
 - Avoids double-animation (skeleton + content)
@@ -93,13 +98,15 @@ export function PageContent() {
 ```
 
 **Key points:**
+
 - Skeleton is a `"use client"` component with Framer Motion
 - Real content uses plain `<div>` elements (no motion)
 - Page wrapper should NOT add entrance animations around the content
 
 ### 2. Page Section Staggering (Legacy)
 
-For pages without skeletons, sections can animate in with a staggered cascade effect.
+For pages without skeletons, sections can animate in with a staggered cascade
+effect.
 
 **Implementation:** Used in `HomeContent.tsx`
 
@@ -109,8 +116,8 @@ const containerVariants = {
   visible: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.1,    // 100ms between each child
-      delayChildren: 0.05,     // 50ms initial delay
+      staggerChildren: 0.1, // 100ms between each child
+      delayChildren: 0.05, // 50ms initial delay
     },
   },
 };
@@ -130,12 +137,13 @@ const itemVariants = {
 ```
 
 **Usage:**
+
 ```tsx
 <motion.div variants={containerVariants} initial="hidden" animate="visible">
   <motion.div variants={itemVariants}>Section 1</motion.div>
   <motion.div variants={itemVariants}>Section 2</motion.div>
   <motion.div variants={itemVariants}>Section 3</motion.div>
-</motion.div>
+</motion.div>;
 ```
 
 ### 3. List Item Staggering
@@ -150,7 +158,7 @@ const listContainerVariants = {
   visible: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.05,   // 50ms for faster cascade
+      staggerChildren: 0.05, // 50ms for faster cascade
       delayChildren: 0.1,
     },
   },
@@ -210,7 +218,7 @@ Dialogs use CSS animations for smooth enter/exit with Radix primitives.
     "data-[state=closed]:slide-out-to-top-[48%]",
     "duration-200",
   )}
-/>
+/>;
 ```
 
 ### 6. Tab Content Transitions
@@ -259,6 +267,19 @@ const monthVariants = {
 };
 ```
 
+**Exception:** MonthPicker uses tween animations instead of spring physics:
+
+```typescript
+transition={{
+  y: { type: "tween", duration: 0.2, ease: "easeOut" },
+  opacity: { duration: 0.15 },
+}}
+```
+
+This is intentional because spring animations with `AnimatePresence` can leave elements
+partially visible during exit. Tween with fixed duration ensures the exit animation
+completes reliably before the element unmounts.
+
 ## Reusable Components
 
 ### AnimatedShiftList / AnimatedShiftItem
@@ -266,15 +287,18 @@ const monthVariants = {
 Wrapper for staggered list animations:
 
 ```tsx
-import { AnimatedShiftList, AnimatedShiftItem } from "@/components/app/AnimatedShiftList";
+import {
+  AnimatedShiftItem,
+  AnimatedShiftList,
+} from "@/components/app/AnimatedShiftList";
 
 <AnimatedShiftList>
-  {shifts.map(shift => (
+  {shifts.map((shift) => (
     <AnimatedShiftItem key={shift.id}>
       <ShiftCard shift={shift} />
     </AnimatedShiftItem>
   ))}
-</AnimatedShiftList>
+</AnimatedShiftList>;
 ```
 
 ### AnimatedCard
@@ -291,7 +315,7 @@ import { AnimatedCard } from "@/components/app/AnimatedCard";
   entranceDelay={0.1}
 >
   Card content
-</AnimatedCard>
+</AnimatedCard>;
 ```
 
 ### StaggeredContainer / AnimatedStaggerItem
@@ -299,23 +323,26 @@ import { AnimatedCard } from "@/components/app/AnimatedCard";
 For general staggered layouts:
 
 ```tsx
-import { StaggeredContainer, AnimatedStaggerItem } from "@/components/app/AnimatedCard";
+import {
+  AnimatedStaggerItem,
+  StaggeredContainer,
+} from "@/components/app/AnimatedCard";
 
 <StaggeredContainer staggerDelay={0.1}>
   <AnimatedStaggerItem>Item 1</AnimatedStaggerItem>
   <AnimatedStaggerItem>Item 2</AnimatedStaggerItem>
-</StaggeredContainer>
+</StaggeredContainer>;
 ```
 
 ## Animation Timing Reference
 
-| Context | Stagger Delay | Entrance Duration |
-|---------|---------------|-------------------|
-| Page sections | 100ms | Spring (300/30) |
-| List items | 50ms | Spring (300/30) |
-| Dialogs | N/A | 200ms CSS |
-| Tabs | N/A | Spring (300/30) |
-| Buttons | N/A | Spring (400/25) |
+| Context       | Stagger Delay | Entrance Duration |
+| ------------- | ------------- | ----------------- |
+| Page sections | 100ms         | Spring (300/30)   |
+| List items    | 50ms          | Spring (300/30)   |
+| Dialogs       | N/A           | 200ms CSS         |
+| Tabs          | N/A           | Spring (300/30)   |
+| Buttons       | N/A           | Spring (400/25)   |
 
 ## Accessibility
 
@@ -329,7 +356,7 @@ const shouldReduceMotion = useReducedMotion();
 
 <motion.div
   animate={{ opacity: 1, y: shouldReduceMotion ? 0 : 20 }}
-/>
+/>;
 ```
 
 For CSS animations, use:
@@ -345,21 +372,11 @@ For CSS animations, use:
 
 ## Best Practices
 
-1. **Don't animate on every render** - Use `initial={false}` for components that shouldn't animate on mount
+1. **Don't animate on every render** - Use `initial={false}` for components that
+   shouldn't animate on mount
 2. **Keep durations short** - Most animations should complete in under 300ms
-3. **Use layout animations sparingly** - They can cause performance issues with large lists
+3. **Use layout animations sparingly** - They can cause performance issues with
+   large lists
 4. **Test on low-end devices** - Ensure animations stay smooth on older phones
-5. **Exit animations** - Always include exit animations for elements that unmount
-
-## Files Modified
-
-The following components have been enhanced with animations:
-
-- `components/app/skeletons/pages/AddShiftSkeleton.tsx` - Skeleton-first staggered loading
-- `components/app/Button.tsx` - Press/hover feedback
-- `components/app/Dialog.tsx` - Enter/exit animations
-- `components/app/Tabs.tsx` - Content transitions
-- `components/app/HomeContent.tsx` - Section staggering (legacy pattern)
-- `components/shifts/ShiftsView.tsx` - List staggering
-- `components/app/AnimatedShiftList.tsx` - Reusable list animation
-- `components/app/AnimatedCard.tsx` - Reusable card wrapper
+5. **Exit animations** - Always include exit animations for elements that
+   unmount

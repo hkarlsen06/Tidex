@@ -13,6 +13,7 @@ import { Card } from "@/components/app/Card";
 import { useTranslations } from "@/lib/i18n/client";
 
 // Animation variants for message bubbles with scroll-triggered animations
+// Uses standard spring physics (stiffness: 300, damping: 30) per ANIMATION.md
 const messageVariants = {
   hidden: (isUser: boolean) => ({
     opacity: 0,
@@ -25,7 +26,7 @@ const messageVariants = {
     scale: 1,
     transition: {
       type: "spring" as const,
-      stiffness: 400,
+      stiffness: 300,
       damping: 30,
     },
   },
@@ -671,7 +672,7 @@ function MessageBubble({
               initial={{ opacity: 0, height: 0, y: -10 }}
               animate={{ opacity: 1, height: "auto", y: 0 }}
               exit={{ opacity: 0, height: 0, y: -10 }}
-              transition={{ type: "spring", stiffness: 400, damping: 30 }}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
             >
               <Card className="max-w-[94%] md:max-w-[85%] bg-surface-primary border border-border shadow-app-sm rounded-2xl">
                 <div className="p-3 max-h-80 overflow-y-auto">
@@ -743,7 +744,7 @@ function MessageBubble({
             initial={{ opacity: 0, height: 0, y: -10 }}
             animate={{ opacity: 1, height: "auto", y: 0 }}
             exit={{ opacity: 0, height: 0, y: -10 }}
-            transition={{ type: "spring", stiffness: 400, damping: 30 }}
+            transition={{ type: "spring", stiffness: 300, damping: 30 }}
           >
             <Card className="max-w-[94%] md:max-w-[85%] bg-surface-primary border border-border shadow-app-sm rounded-2xl">
               <div className="p-3 max-h-80 overflow-y-auto">

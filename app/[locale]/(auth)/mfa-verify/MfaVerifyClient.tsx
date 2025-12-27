@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useState, useEffect, useCallback } from "react";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { useTranslations } from "@/lib/i18n/client";
 
 import { supabase } from "@/lib/supabase/browser";
@@ -18,6 +18,12 @@ const cardVariants = {
       damping: 30,
     },
   },
+};
+
+// Reduced motion variant (no y-transform)
+const reducedMotionVariants = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1 },
 };
 import {
   InputOTP,
@@ -43,6 +49,7 @@ interface MfaVerifyClientProps {
 
 export default function MfaVerifyClient({ locale, nextPath }: MfaVerifyClientProps) {
   const { t } = useTranslations();
+  const shouldReduceMotion = useReducedMotion();
 
   const [factors, setFactors] = useState<Factor[]>([]);
   const [selectedFactor, setSelectedFactor] = useState<Factor | null>(null);
@@ -212,7 +219,7 @@ export default function MfaVerifyClient({ locale, nextPath }: MfaVerifyClientPro
   return (
     <motion.div
       className="relative w-full"
-      variants={cardVariants}
+      variants={shouldReduceMotion ? reducedMotionVariants : cardVariants}
       initial="hidden"
       animate="visible"
     >
