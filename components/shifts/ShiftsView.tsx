@@ -261,6 +261,42 @@ function findOverlappingShifts(
 }
 
 /**
+ * Build a set of shift IDs that need a visual connector to the next shift.
+ * A connector is shown between two consecutive shifts in a week group when:
+ * 1. Both shifts are on the same date
+ * 2. Both shifts have conflicts
+ *
+ * @param weekGroups - The grouped shifts by week (used for rendering order)
+ * @param conflictingIds - Set of shift IDs that have conflicts
+ * @returns Set of shift IDs that should show a connector after them
+ */
+function buildConflictConnectorSet(
+  weekGroups: WeekGroup[],
+  conflictingIds: Set<string>
+): Set<string> {
+  const result = new Set<string>();
+
+  for (const group of weekGroups) {
+    const shifts = group.shifts;
+    for (let i = 0; i < shifts.length - 1; i++) {
+      const current = shifts[i];
+      const next = shifts[i + 1];
+
+      // Only add connector if both shifts are on the same date and both have conflicts
+      if (
+        current.shift_date === next.shift_date &&
+        conflictingIds.has(current.id) &&
+        conflictingIds.has(next.id)
+      ) {
+        result.add(current.id);
+      }
+    }
+  }
+
+  return result;
+}
+
+/**
  * Build a set of shift IDs that have overlapping conflicts.
  * A shift has a conflict if it overlaps with any other shift on the same date.
  */
@@ -1785,6 +1821,12 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
     return filterAndGroupByWeek(shifts, selectedMonth);
   }, [shifts, selectedMonth]);
 
+  // Build set of shift IDs that need a visual connector to the next shift
+  const conflictConnectorSet = useMemo(
+    () => buildConflictConnectorSet(grouped, conflictingShiftIds),
+    [grouped, conflictingShiftIds]
+  );
+
   // Check if we're viewing the current month and get today's date
   // Use local date (not UTC) since shift dates represent local dates
   // Recalculated on every render to ensure it stays current (lightweight operation)
@@ -2129,6 +2171,15 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
                               )}
                             </div>
                           </ScrollAnimatedCard>
+                          {/* Connector line between consecutive conflicting shifts */}
+                          {conflictConnectorSet.has(shift.id) && (
+                            <div
+                              className="flex justify-start -my-[7px] relative z-0"
+                              aria-hidden="true"
+                            >
+                              <div className="w-px h-[14px] bg-orange-400/60 dark:bg-orange-500/50 ml-6" />
+                            </div>
+                          )}
                           {showPlaceholderAfter && (
                             <motion.div ref={todayRef} variants={listItemVariants}>
                               <TodayPlaceholderCard />
