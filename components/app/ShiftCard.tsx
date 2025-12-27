@@ -29,6 +29,8 @@ type ShiftCardProps = {
   taxSettings?: TaxSettings;
   /** When false, hides earnings-related data (for shared shifts with earnings hidden) */
   showEarnings?: boolean;
+  /** When true, indicates this shift overlaps with another shift on the same date */
+  hasConflict?: boolean;
 };
 
 export function formatDateParts(date: string, locale: string, daysShort: readonly string[]) {
@@ -62,7 +64,7 @@ export function formatPlainAmount(value: number) {
   return formatPlainAmountValue(value);
 }
 
-export function ShiftCard({ shift, onClick, isToday = false, progress, taxSettings, showEarnings = true }: ShiftCardProps) {
+export function ShiftCard({ shift, onClick, isToday = false, progress, taxSettings, showEarnings = true, hasConflict = false }: ShiftCardProps) {
   const { t, locale } = useTranslations();
   const formatCurrency = useFormatCurrency();
   const { symbol: currencySymbol, display: currencyDisplay } = useCurrency();
@@ -99,7 +101,8 @@ export function ShiftCard({ shift, onClick, isToday = false, progress, taxSettin
       className={cn(
         "bg-surface-primary rounded-3xl relative overflow-hidden",
         onClick && "cursor-pointer transition-colors hover:bg-surface-secondary",
-        isToday && "ring-2 ring-brand-highlight"
+        isToday && "ring-2 ring-brand-highlight",
+        hasConflict && "border-orange-400/60 bg-orange-500/10 dark:border-orange-500/50 dark:bg-orange-500/15"
       )}
       onClick={onClick}
       role={onClick ? "button" : undefined}
