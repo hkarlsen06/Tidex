@@ -71,20 +71,15 @@ function AnimatedCounter({ value, className, style }: AnimatedCounterProps) {
       prevValueRef.current = value;
     }
 
-    // Small delay before starting the count animation
-    const startDelay = setTimeout(() => {
-      const controls = animate(count, targetNumber, {
-        duration: 1.2,
-        ease: [0.25, 0.1, 0.25, 1],
-        onUpdate: (latest) => {
-          setDisplayValue(formatNumber(latest, value));
-        },
-      });
+    const controls = animate(count, targetNumber, {
+      duration: 1.2,
+      ease: [0.25, 0.1, 0.25, 1],
+      onUpdate: (latest) => {
+        setDisplayValue(formatNumber(latest, value));
+      },
+    });
 
-      return () => controls.stop();
-    }, 150);
-
-    return () => clearTimeout(startDelay);
+    return () => controls.stop();
   }, [value, targetNumber, count]);
 
   return (
