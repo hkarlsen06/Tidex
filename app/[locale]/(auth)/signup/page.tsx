@@ -155,6 +155,12 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
 
   const handleGoogleSignIn = async () => {
     setMessage(null);
+
+    if (!agreedToTerms) {
+      setMessage({ type: 'error', text: t.pages.auth.signup.errors.acceptTerms });
+      return;
+    }
+
     await performGoogleSignIn();
   };
 
@@ -204,6 +210,12 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
 
   const handleAppleSignIn = async () => {
     setMessage(null);
+
+    if (!agreedToTerms) {
+      setMessage({ type: 'error', text: t.pages.auth.signup.errors.acceptTerms });
+      return;
+    }
+
     await performAppleSignIn();
   };
 
