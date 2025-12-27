@@ -51,8 +51,13 @@ import { Checkbox } from "@/components/app/Checkbox";
 import { LegalModal } from "@/components/legal";
 import { translateError } from "@/lib/errors/translate";
 
-// Lazy load Google icon SVG
+// Lazy load OAuth icon SVGs
 const GoogleIcon = dynamic(() => import("../login/GoogleIcon"), {
+  ssr: false,
+  loading: () => <div className="h-4 w-4" />
+});
+
+const AppleIcon = dynamic(() => import("../login/AppleIcon"), {
   ssr: false,
   loading: () => <div className="h-4 w-4" />
 });
@@ -85,7 +90,7 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
   const [message, setMessage] = useState<MessageState>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isOAuthRedirecting, setIsOAuthRedirecting] = useState(false);
+  const [oauthProvider, setOauthProvider] = useState<'google' | 'apple' | null>(null);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [legalModalOpen, setLegalModalOpen] = useState(false);
@@ -107,7 +112,7 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
   }, []);
 
   const performGoogleSignIn = async () => {
-    setIsOAuthRedirecting(true);
+    setOauthProvider('google');
 
     const configuredBaseUrl = process.env.NEXT_PUBLIC_SITE_URL;
     const fallbackOrigin =
@@ -118,7 +123,7 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
         : fallbackOrigin;
 
     if (!baseUrl) {
-      setIsOAuthRedirecting(false);
+      setOauthProvider(null);
       setMessage({
         type: 'error',
         text: t.pages.auth.login.errors.googleSignInFailed,
@@ -140,7 +145,7 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
     });
 
     if (error) {
-      setIsOAuthRedirecting(false);
+      setOauthProvider(null);
       setMessage({ type: 'error', text: translateError(error.message) });
       setCaptchaToken(null);
       turnstileRef.current?.reset();
@@ -168,6 +173,67 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
 
     setCaptchaToken(null);
     await performGoogleSignIn();
+  };
+
+  const performAppleSignIn = async () => {
+    setOauthProvider('apple');
+
+    const configuredBaseUrl = process.env.NEXT_PUBLIC_SITE_URL;
+    const fallbackOrigin =
+      typeof window !== 'undefined' ? window.location.origin : undefined;
+    const baseUrl =
+      configuredBaseUrl && configuredBaseUrl.startsWith('http')
+        ? configuredBaseUrl
+        : fallbackOrigin;
+
+    if (!baseUrl) {
+      setOauthProvider(null);
+      setMessage({
+        type: 'error',
+        text: t.pages.auth.login.errors.appleSignInFailed,
+      });
+      return;
+    }
+
+    const redirectUrl = new URL('/auth/callback', baseUrl);
+    redirectUrl.searchParams.set('next', '/onboarding');
+
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'apple',
+      options: {
+        redirectTo: redirectUrl.toString(),
+      },
+    });
+
+    if (error) {
+      setOauthProvider(null);
+      setMessage({ type: 'error', text: translateError(error.message) });
+      setCaptchaToken(null);
+      turnstileRef.current?.reset();
+      return;
+    }
+
+    setMessage({
+      type: 'success',
+      text: t.pages.auth.login.waitingForApple,
+    });
+  };
+
+  const handleAppleSignIn = async () => {
+    setMessage(null);
+
+    if (!captchaToken) {
+      setMessage({ type: 'error', text: t.pages.auth.signup.errors.completeCaptcha });
+      return;
+    }
+
+    if (!agreedToTerms) {
+      setMessage({ type: 'error', text: t.pages.auth.signup.errors.acceptTerms });
+      return;
+    }
+
+    setCaptchaToken(null);
+    await performAppleSignIn();
   };
 
   const handleSignUp = async (event: FormEvent<HTMLFormElement>) => {
@@ -383,6 +449,7 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
     }
   };
 
+  const isOAuthRedirecting = oauthProvider !== null;
   const oauthButtonDisabled = isSubmitting || isOAuthRedirecting || !captchaToken;
   const submitButtonDisabled = isSubmitting || isOAuthRedirecting || !captchaToken || !agreedToTerms;
 
@@ -400,7 +467,11 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
             <CardContent className="pt-6">
               <div className="flex flex-col items-center gap-4">
                 <div className="h-12 w-12 animate-spin rounded-full border-4 border-border border-t-primary"></div>
-                <p className="text-lg font-semibold">{t.pages.auth.login.waitingForGoogle}</p>
+                <p className="text-lg font-semibold">
+                  {oauthProvider === 'apple'
+                    ? t.pages.auth.login.waitingForApple
+                    : t.pages.auth.login.waitingForGoogle}
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -431,22 +502,40 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
           {/* Step 1: Input Form */}
           {step === "input" && (
             <>
-              {/* OAuth Button */}
-              <Button
-                type="button"
-                variant="outline"
-                size="lg"
-                onClick={handleGoogleSignIn}
-                disabled={oauthButtonDisabled}
-                loading={isOAuthRedirecting}
-                aria-label={t.pages.auth.login.continueWithGoogle}
-                className="w-full mb-6"
-              >
-                <span className="flex h-5 w-5 items-center justify-center">
-                  <GoogleIcon />
-                </span>
-                Google
-              </Button>
+              {/* OAuth Buttons */}
+              <div className="flex flex-col gap-3 mb-6">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="lg"
+                  onClick={handleGoogleSignIn}
+                  disabled={oauthButtonDisabled}
+                  loading={isOAuthRedirecting}
+                  aria-label={t.pages.auth.login.continueWithGoogle}
+                  className="w-full"
+                >
+                  <span className="flex h-5 w-5 items-center justify-center">
+                    <GoogleIcon />
+                  </span>
+                  Google
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="lg"
+                  onClick={handleAppleSignIn}
+                  disabled={oauthButtonDisabled}
+                  loading={isOAuthRedirecting}
+                  aria-label={t.pages.auth.login.continueWithApple}
+                  className="w-full"
+                >
+                  <span className="flex h-5 w-5 items-center justify-center">
+                    <AppleIcon />
+                  </span>
+                  Apple
+                </Button>
+              </div>
 
               <FieldSeparator>{t.pages.auth.login.separator}</FieldSeparator>
 

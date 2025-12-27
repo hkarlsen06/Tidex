@@ -46,22 +46,24 @@ export function normalizePhoneToE164(input: string): string {
 }
 
 /**
- * Format phone number for display (XX XXX XXX)
- * Input can be either 8 digits or E.164 format (+47XXXXXXXX)
+ * Format phone number for display (XXX XX XXX)
+ * Input can be either 8 digits, E.164 format (+47XXXXXXXX), or with 47 prefix (4794444483)
  */
 export function formatPhoneForDisplay(input: string): string {
-  // Remove +47 prefix if present
-  let digitsOnly = input.trim().replace(/\s/g, '');
-  if (digitsOnly.startsWith('+47')) {
-    digitsOnly = digitsOnly.substring(3);
+  // Remove all non-digit characters and whitespace
+  let digitsOnly = input.trim().replace(/\D/g, '');
+
+  // Remove 47 prefix if present (handles both +47 and 47 formats)
+  if (digitsOnly.startsWith('47') && digitsOnly.length === 10) {
+    digitsOnly = digitsOnly.substring(2);
   }
 
   if (digitsOnly.length !== 8) {
     return input; // Return as-is if not valid
   }
 
-  // Format as XX XXX XXX
-  return `${digitsOnly.substring(0, 2)} ${digitsOnly.substring(2, 5)} ${digitsOnly.substring(5, 8)}`;
+  // Format as XXX XX XXX (e.g., "944 44 483")
+  return `${digitsOnly.substring(0, 3)} ${digitsOnly.substring(3, 5)} ${digitsOnly.substring(5, 8)}`;
 }
 
 /**

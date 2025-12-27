@@ -62,11 +62,13 @@ export type UserProfile = {
   readonly email: string;
   readonly profilePictureUrl: string | null;
   readonly hasGoogleConnected: boolean;
+  readonly hasAppleConnected: boolean;
   readonly hasPhoneConnected: boolean;
   readonly phoneNumber: string | null;
   readonly hasPassword: boolean;
   readonly canUnlinkPhone: boolean;
   readonly canDisconnectGoogle: boolean;
+  readonly canDisconnectApple: boolean;
   readonly isPhoneOnly: boolean;
 };
 
@@ -181,6 +183,7 @@ export const SettingsServiceLive = Layer.effect(
           const identityProviders = session.user.identityProviders;
 
           const hasGoogleConnected = identityProviders.has("google");
+          const hasAppleConnected = identityProviders.has("apple");
           const hasPhoneConnected = identityProviders.has("phone");
           const hasPassword = identityProviders.has("email");
 
@@ -196,6 +199,7 @@ export const SettingsServiceLive = Layer.effect(
           const loginMethodCount = identityProviders.size;
           const canUnlinkPhone = hasPhoneConnected && loginMethodCount > 1;
           const canDisconnectGoogle = hasGoogleConnected && loginMethodCount > 1;
+          const canDisconnectApple = hasAppleConnected && loginMethodCount > 1;
           const isPhoneOnly = hasPhoneConnected && !session.user.email;
 
           const profile: UserProfile = {
@@ -205,11 +209,13 @@ export const SettingsServiceLive = Layer.effect(
               (settingsResult as { profile_picture_url: string | null })
                 ?.profile_picture_url ?? null,
             hasGoogleConnected,
+            hasAppleConnected,
             hasPhoneConnected,
             phoneNumber,
             hasPassword,
             canUnlinkPhone,
             canDisconnectGoogle,
+            canDisconnectApple,
             isPhoneOnly,
           };
 

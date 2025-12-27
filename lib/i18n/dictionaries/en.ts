@@ -573,9 +573,11 @@ export const en: Dictionary = {
         noAccount: "Don't have an account?",
         createAccount: 'Create account',
         continueWithGoogle: 'Continue with Google',
+        continueWithApple: 'Continue with Apple',
         continueWithMicrosoft: 'Continue with Microsoft',
         resetPassword: 'Reset password',
         waitingForGoogle: 'Waiting for Google...',
+        waitingForApple: 'Waiting for Apple...',
         waitingForMicrosoft: 'Waiting for Microsoft...',
         loggingIn: 'Logging in...',
         errors: {
@@ -591,6 +593,7 @@ export const en: Dictionary = {
           captchaFailed: 'Captcha verification failed. Try again.',
           captchaExpired: 'Security check expired. Please try again.',
           googleSignInFailed: 'Could not start Google sign-in. Please try again later.',
+          appleSignInFailed: 'Could not start Apple sign-in. Please try again later.',
           microsoftSignInFailed: 'Could not start Microsoft sign-in. Please try again later.',
         },
         success: {
@@ -853,6 +856,18 @@ export const en: Dictionary = {
           disconnect: 'Disconnect',
           connect: 'Connect',
           addOtherMethod: 'Add another login method before disconnecting your Google account.',
+          errors: {
+            genericError: 'An error occurred',
+          },
+        },
+        apple: {
+          title: 'Apple account',
+          connected: 'You have connected an Apple account for faster login',
+          notConnected: 'Connect your Apple account for easier login',
+          processing: 'Processing...',
+          disconnect: 'Disconnect',
+          connect: 'Connect',
+          addOtherMethod: 'Add another login method before disconnecting your Apple account.',
           errors: {
             genericError: 'An error occurred',
           },
