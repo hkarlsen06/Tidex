@@ -57,11 +57,6 @@ const GoogleIcon = dynamic(() => import("../login/GoogleIcon"), {
   loading: () => <div className="h-4 w-4" />
 });
 
-const AppleIcon = dynamic(() => import("../login/AppleIcon"), {
-  ssr: false,
-  loading: () => <div className="h-4 w-4" />
-});
-
 type MessageState = { type: "error" | "success"; text: string } | null;
 type SignupStep = "input" | "otp";
 type FieldErrors = {
@@ -160,18 +155,6 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
 
   const handleGoogleSignIn = async () => {
     setMessage(null);
-
-    if (!captchaToken) {
-      setMessage({ type: 'error', text: t.pages.auth.signup.errors.completeCaptcha });
-      return;
-    }
-
-    if (!agreedToTerms) {
-      setMessage({ type: 'error', text: t.pages.auth.signup.errors.acceptTerms });
-      return;
-    }
-
-    setCaptchaToken(null);
     await performGoogleSignIn();
   };
 
@@ -221,18 +204,6 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
 
   const handleAppleSignIn = async () => {
     setMessage(null);
-
-    if (!captchaToken) {
-      setMessage({ type: 'error', text: t.pages.auth.signup.errors.completeCaptcha });
-      return;
-    }
-
-    if (!agreedToTerms) {
-      setMessage({ type: 'error', text: t.pages.auth.signup.errors.acceptTerms });
-      return;
-    }
-
-    setCaptchaToken(null);
     await performAppleSignIn();
   };
 
@@ -450,7 +421,7 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
   };
 
   const isOAuthRedirecting = oauthProvider !== null;
-  const oauthButtonDisabled = isSubmitting || isOAuthRedirecting || !captchaToken;
+  const oauthButtonDisabled = isSubmitting || isOAuthRedirecting;
   const submitButtonDisabled = isSubmitting || isOAuthRedirecting || !captchaToken || !agreedToTerms;
 
   return (
@@ -530,9 +501,13 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
                   aria-label={t.pages.auth.login.continueWithApple}
                   className="w-full"
                 >
-                  <span className="flex h-5 w-5 items-center justify-center">
-                    <AppleIcon />
-                  </span>
+                  <Image
+                    src="/icons/apple.svg"
+                    alt=""
+                    width={20}
+                    height={20}
+                    className="dark:invert"
+                  />
                   Apple
                 </Button>
               </div>

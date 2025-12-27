@@ -48,11 +48,6 @@ const GoogleIcon = dynamic(() => import('./GoogleIcon'), {
   loading: () => <div className="h-4 w-4" />
 });
 
-const AppleIcon = dynamic(() => import('./AppleIcon'), {
-  ssr: false,
-  loading: () => <div className="h-4 w-4" />
-});
-
 type MessageState = { type: 'error' | 'success'; text: string } | null;
 // NOTE: 'otp' step preserved for future MFA implementation
 type LoginStep = 'input' | 'otp';
@@ -527,9 +522,13 @@ export default function LoginClient({
                   aria-label={t.pages.auth.login.continueWithApple}
                   className="w-full"
                 >
-                  <span className="flex h-5 w-5 items-center justify-center">
-                    <AppleIcon />
-                  </span>
+                  <Image
+                    src="/icons/apple.svg"
+                    alt=""
+                    width={20}
+                    height={20}
+                    className="dark:invert"
+                  />
                   Apple
                 </Button>
               </div>
