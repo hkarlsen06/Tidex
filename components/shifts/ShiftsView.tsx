@@ -149,6 +149,246 @@ const ScrollAnimatedCard = React.forwardRef<HTMLDivElement, { children: React.Re
   }
 );
 
+// Animated connector line between conflicting shifts
+// Receives visibility state as props instead of refs (proper React pattern)
+function ConflictConnector({ topInView, bottomInView }: {
+  topInView: boolean;
+  bottomInView: boolean;
+}) {
+  const [isDesktop, setIsDesktop] = useState(false);
+  // Track the origin to use - updated when only one card is visible
+  const [activeOrigin, setActiveOrigin] = useState<"top" | "bottom">("top");
+  // Track previous visibility state to detect transitions
+  const [prevState, setPrevState] = useState({ topInView: false, bottomInView: false });
+
+  useEffect(() => {
+    const checkDesktop = () => setIsDesktop(window.innerWidth >= 1024);
+    checkDesktop();
+    window.addEventListener('resize', checkDesktop);
+    return () => window.removeEventListener('resize', checkDesktop);
+  }, []);
+
+  // On desktop: always fully visible
+  // On mobile: scale and origin depend on which cards are visible
+  const bothVisible = topInView && bottomInView;
+  const onlyTopVisible = topInView && !bottomInView;
+  const onlyBottomVisible = !topInView && bottomInView;
+
+  // Compute new origin based on current and previous state
+  let newOrigin = activeOrigin;
+  if (onlyTopVisible) {
+    newOrigin = "top";
+  } else if (onlyBottomVisible) {
+    newOrigin = "bottom";
+  } else if (bothVisible) {
+    // When both become visible, check what the previous state was
+    // If we were in onlyBottomVisible before, keep "bottom" origin (scrolling up)
+    // If we were in onlyTopVisible before, keep "top" origin (scrolling down)
+    if (prevState.bottomInView && !prevState.topInView) {
+      newOrigin = "bottom";
+    } else if (prevState.topInView && !prevState.bottomInView) {
+      newOrigin = "top";
+    }
+    // Otherwise keep current activeOrigin
+  }
+
+  // Update state if changed (this pattern is React-approved for derived state)
+  if (newOrigin !== activeOrigin) {
+    setActiveOrigin(newOrigin);
+  }
+  if (topInView !== prevState.topInView || bottomInView !== prevState.bottomInView) {
+    setPrevState({ topInView, bottomInView });
+  }
+
+  const scaleY = (isDesktop || bothVisible) ? 1 : 0;
+
+  return (
+    <motion.div
+      className="absolute left-1/2 top-1/2 w-px -translate-x-1/2 bg-orange-400/60 dark:bg-orange-500/50 -z-10"
+      style={{ height: 'calc(100% + 1rem)', transformOrigin: activeOrigin }}
+      initial={{ scaleY: isDesktop ? 1 : 0 }}
+      animate={{ scaleY }}
+      transition={{ duration: 0.3, ease: "easeOut" }}
+      aria-hidden="true"
+    />
+  );
+}
+
+// Individual shift item - each item owns its own ref and reports visibility
+function ShiftItemWithConnector({
+  shift,
+  shiftIndex,
+  shifts,
+  conflictConnectorSet,
+  conflictingShiftIds,
+  isCurrentMonth,
+  todayDate,
+  todayIndex,
+  todayRef,
+  nextUpcomingShift,
+  countdown,
+  userSettings,
+  showEarnings,
+  clearSelection,
+  setSelectedShift,
+  setDetailsOpen,
+  onVisibilityChange,
+  nextShiftInView,
+}: {
+  shift: ShiftWithComputations;
+  shiftIndex: number;
+  shifts: ShiftWithComputations[];
+  conflictConnectorSet: Set<string>;
+  conflictingShiftIds: Set<string>;
+  isCurrentMonth: boolean;
+  todayDate: string;
+  todayIndex: number;
+  todayRef: React.RefObject<HTMLDivElement | null>;
+  nextUpcomingShift: ShiftWithComputations | null;
+  countdown: { isActive: boolean; progress?: number; text: string | null };
+  userSettings: UserSettings;
+  showEarnings: boolean;
+  clearSelection: () => void;
+  setSelectedShift: (shift: ShiftWithComputations) => void;
+  setDetailsOpen: (open: boolean) => void;
+  onVisibilityChange: (shiftId: string, inView: boolean) => void;
+  nextShiftInView: boolean;
+}) {
+  const cardRef = useRef<HTMLDivElement>(null);
+  const viewportMargin = "-120px 0px -100px 0px";
+  const inView = useInView(cardRef, { amount: 0.2, margin: viewportMargin });
+
+  const isToday = shift.shift_date === todayDate;
+  const showPlaceholderAfter = todayIndex === -1 && shiftIndex < shifts.length - 1
+    && shift.shift_date < todayDate && shifts[shiftIndex + 1].shift_date > todayDate;
+  const isNextUpcomingShift = nextUpcomingShift?.id === shift.id;
+  const hasConnector = conflictConnectorSet.has(shift.id);
+
+  // Report visibility changes to parent
+  useEffect(() => {
+    onVisibilityChange(shift.id, inView);
+  }, [shift.id, inView, onVisibilityChange]);
+
+  return (
+    <Fragment>
+      <div className="relative" ref={cardRef}>
+        <ScrollAnimatedCard
+          ref={isCurrentMonth && isToday ? todayRef : undefined}
+        >
+          <div className="flex flex-col gap-2">
+            <ShiftCard
+              shift={shift}
+              isToday={isCurrentMonth && isToday}
+              onClick={() => {
+                clearSelection();
+                setSelectedShift(shift);
+                setDetailsOpen(true);
+              }}
+              progress={isNextUpcomingShift && countdown.isActive ? countdown.progress : undefined}
+              taxSettings={{
+                enabled: shift.tax_enabled ?? false,
+                percentage: shift.tax_percentage ?? 0,
+                halfTaxMonth: userSettings.half_tax_month ?? null,
+              }}
+              showEarnings={showEarnings}
+              hasConflict={conflictingShiftIds.has(shift.id)}
+            />
+            {isNextUpcomingShift && countdown.text && (
+              <p className="text-xs text-text-muted text-center">{countdown.text}</p>
+            )}
+          </div>
+        </ScrollAnimatedCard>
+        {/* Connector line between consecutive conflicting shifts */}
+        {hasConnector && (
+          <ConflictConnector topInView={inView} bottomInView={nextShiftInView} />
+        )}
+      </div>
+      {showPlaceholderAfter && (
+        <motion.div ref={todayRef} variants={listItemVariants}>
+          <TodayPlaceholderCard />
+        </motion.div>
+      )}
+    </Fragment>
+  );
+}
+
+// Component that renders a group of shifts with connectors between conflicting ones
+function ShiftGroupContent({
+  shifts,
+  conflictConnectorSet,
+  conflictingShiftIds,
+  isCurrentMonth,
+  todayDate,
+  todayIndex,
+  todayRef,
+  nextUpcomingShift,
+  countdown,
+  userSettings,
+  showEarnings,
+  clearSelection,
+  setSelectedShift,
+  setDetailsOpen,
+}: {
+  shifts: ShiftWithComputations[];
+  conflictConnectorSet: Set<string>;
+  conflictingShiftIds: Set<string>;
+  isCurrentMonth: boolean;
+  todayDate: string;
+  todayIndex: number;
+  todayRef: React.RefObject<HTMLDivElement | null>;
+  nextUpcomingShift: ShiftWithComputations | null;
+  countdown: { isActive: boolean; progress?: number; text: string | null };
+  userSettings: UserSettings;
+  showEarnings: boolean;
+  clearSelection: () => void;
+  setSelectedShift: (shift: ShiftWithComputations) => void;
+  setDetailsOpen: (open: boolean) => void;
+}) {
+  // Track visibility state for each shift - lifted to parent so siblings can access
+  const [visibilityMap, setVisibilityMap] = useState<Map<string, boolean>>(() => new Map());
+
+  const handleVisibilityChange = useCallback((shiftId: string, inView: boolean) => {
+    setVisibilityMap(prev => {
+      const next = new Map(prev);
+      next.set(shiftId, inView);
+      return next;
+    });
+  }, []);
+
+  return (
+    <>
+      {shifts.map((shift, shiftIndex) => {
+        const nextShift = shifts[shiftIndex + 1];
+        const nextShiftInView = nextShift ? (visibilityMap.get(nextShift.id) ?? false) : false;
+
+        return (
+          <ShiftItemWithConnector
+            key={shift.id}
+            shift={shift}
+            shiftIndex={shiftIndex}
+            shifts={shifts}
+            conflictConnectorSet={conflictConnectorSet}
+            conflictingShiftIds={conflictingShiftIds}
+            isCurrentMonth={isCurrentMonth}
+            todayDate={todayDate}
+            todayIndex={todayIndex}
+            todayRef={todayRef}
+            nextUpcomingShift={nextUpcomingShift}
+            countdown={countdown}
+            userSettings={userSettings}
+            showEarnings={showEarnings}
+            clearSelection={clearSelection}
+            setSelectedShift={setSelectedShift}
+            setDetailsOpen={setDetailsOpen}
+            onVisibilityChange={handleVisibilityChange}
+            nextShiftInView={nextShiftInView}
+          />
+        );
+      })}
+    </>
+  );
+}
+
 function getIsoWeek(date: Date) {
   const d = new Date(
     Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())
@@ -2136,58 +2376,22 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
                         <TodayPlaceholderCard />
                       </motion.div>
                     )}
-                    {group.shifts.map((shift, shiftIndex) => {
-                      const isToday = shift.shift_date === todayDate;
-                      const showPlaceholderAfter = todayIndex === -1 && shiftIndex < group.shifts.length - 1
-                        && shift.shift_date < todayDate && group.shifts[shiftIndex + 1].shift_date > todayDate;
-                      const isNextUpcomingShift = nextUpcomingShift?.id === shift.id;
-
-                      return (
-                        <Fragment key={shift.id}>
-                          <ScrollAnimatedCard
-                            ref={isCurrentMonth && isToday ? todayRef : undefined}
-                          >
-                            <div className="flex flex-col gap-2">
-                              <ShiftCard
-                                shift={shift}
-                                isToday={isCurrentMonth && isToday}
-                                onClick={() => {
-                                  clearSelection();
-                                  setSelectedShift(shift);
-                                  setDetailsOpen(true);
-                                }}
-                                progress={isNextUpcomingShift && countdown.isActive ? countdown.progress : undefined}
-                                taxSettings={{
-                                  // Use per-shift tax settings
-                                  enabled: shift.tax_enabled ?? false,
-                                  percentage: shift.tax_percentage ?? 0,
-                                  halfTaxMonth: userSettings.half_tax_month ?? null,
-                                }}
-                                showEarnings={showEarnings}
-                                hasConflict={conflictingShiftIds.has(shift.id)}
-                              />
-                              {isNextUpcomingShift && countdown.text && (
-                                <p className="text-xs text-text-muted text-center">{countdown.text}</p>
-                              )}
-                            </div>
-                          </ScrollAnimatedCard>
-                          {/* Connector line between consecutive conflicting shifts */}
-                          {conflictConnectorSet.has(shift.id) && (
-                            <div
-                              className="flex justify-start -my-[7px] relative z-0"
-                              aria-hidden="true"
-                            >
-                              <div className="w-px h-[14px] bg-orange-400/60 dark:bg-orange-500/50 ml-6" />
-                            </div>
-                          )}
-                          {showPlaceholderAfter && (
-                            <motion.div ref={todayRef} variants={listItemVariants}>
-                              <TodayPlaceholderCard />
-                            </motion.div>
-                          )}
-                        </Fragment>
-                      );
-                    })}
+                    <ShiftGroupContent
+                      shifts={group.shifts}
+                      conflictConnectorSet={conflictConnectorSet}
+                      conflictingShiftIds={conflictingShiftIds}
+                      isCurrentMonth={isCurrentMonth}
+                      todayDate={todayDate}
+                      todayIndex={todayIndex}
+                      todayRef={todayRef}
+                      nextUpcomingShift={nextUpcomingShift}
+                      countdown={countdown}
+                      userSettings={userSettings}
+                      showEarnings={showEarnings}
+                      clearSelection={clearSelection}
+                      setSelectedShift={setSelectedShift}
+                      setDetailsOpen={setDetailsOpen}
+                    />
                     {isTodayAfterLastShift && (
                       <motion.div ref={todayRef} variants={listItemVariants}>
                         <TodayPlaceholderCard />
