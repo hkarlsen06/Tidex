@@ -4,6 +4,7 @@ import { getUserProfile } from '@/data-access/settings';
 import { PasswordCard } from '@components/settings/profile/PasswordCard';
 import { PhoneConnectionCard } from '@components/settings/profile/PhoneConnectionCard';
 import { GoogleConnectionCard } from '@components/settings/profile/GoogleConnectionCard';
+import { AppleConnectionCard } from '@components/settings/profile/AppleConnectionCard';
 import { getTranslations } from '@/lib/i18n/server';
 import type { Locale } from '@/lib/i18n/config';
 import { MfaSection } from './MfaSection';
@@ -67,6 +68,11 @@ export default async function SecurityPage({
           <GoogleConnectionCard
             hasGoogleConnected={profile.hasGoogleConnected}
             canDisconnectGoogle={profile.canDisconnectGoogle}
+          />
+
+          <AppleConnectionCard
+            hasAppleConnected={profile.hasAppleConnected}
+            canDisconnectApple={profile.canDisconnectApple}
           />
         </div>
 

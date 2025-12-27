@@ -181,6 +181,58 @@ export async function disconnectGoogleAccount() {
   return { success: true };
 }
 
+export async function connectAppleAccount(redirectUrl: string) {
+  await verifySession();
+  const supabase = await createSupabaseServerClient();
+
+  // linkIdentity returns a URL that the client needs to navigate to
+  const { data, error } = await supabase.auth.linkIdentity({
+    provider: 'apple',
+    options: {
+      redirectTo: redirectUrl,
+    },
+  });
+
+  if (error) {
+    logger.error('Failed to link Apple identity:', error);
+    throw error;
+  }
+
+  // Return the OAuth URL for the client to navigate to
+  return { url: data.url };
+}
+
+export async function disconnectAppleAccount() {
+  const { user } = await verifySession();
+  const supabase = await createSupabaseServerClient();
+
+  // Find Apple identity
+  const appleIdentity = user.identities?.find(
+    (identity: { provider: string }) => identity.provider === 'apple'
+  );
+
+  if (!appleIdentity) {
+    throw new Error('Ingen Apple-konto funnet');
+  }
+
+  logger.info('Unlinking Apple identity:', {
+    identityId: appleIdentity.identity_id,
+    provider: appleIdentity.provider,
+    userId: user.id,
+  });
+
+  // Unlink the identity - pass the whole identity object
+  const { error } = await supabase.auth.unlinkIdentity(appleIdentity);
+
+  if (error) {
+    logger.error('Failed to unlink Apple identity:', error);
+    throw error;
+  }
+
+  invalidateAndRevalidate(user.id);
+  return { success: true };
+}
+
 export async function linkPhoneNumber(phone: string) {
   const { user } = await verifySession();
   const supabase = await createSupabaseServerClient();

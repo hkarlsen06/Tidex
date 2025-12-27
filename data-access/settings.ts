@@ -65,11 +65,13 @@ export async function getUserProfile(userId: string) {
         email: '',
         profilePictureUrl: null,
         hasGoogleConnected: false,
+        hasAppleConnected: false,
         hasPhoneConnected: false,
         phoneNumber: null,
         hasPassword: false,
         canUnlinkPhone: false,
         canDisconnectGoogle: false,
+        canDisconnectApple: false,
         isPhoneOnly: false,
       });
     }),

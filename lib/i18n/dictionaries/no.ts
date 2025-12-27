@@ -572,9 +572,11 @@ export const no = {
         noAccount: 'Har du ikke en konto?',
         createAccount: 'Opprett konto',
         continueWithGoogle: 'Fortsett med Google',
+        continueWithApple: 'Fortsett med Apple',
         continueWithMicrosoft: 'Fortsett med Microsoft',
         resetPassword: 'Tilbakestill passord',
         waitingForGoogle: 'Venter på Google...',
+        waitingForApple: 'Venter på Apple...',
         waitingForMicrosoft: 'Venter på Microsoft...',
         loggingIn: 'Logger inn...',
         errors: {
@@ -590,6 +592,7 @@ export const no = {
           captchaFailed: 'Captcha-verifisering feilet. Prøv igjen.',
           captchaExpired: 'Sikkerhetssjekk utløpt. Vennligst prøv igjen.',
           googleSignInFailed: 'Kunne ikke starte Google-innlogging. Prøv igjen senere.',
+          appleSignInFailed: 'Kunne ikke starte Apple-innlogging. Prøv igjen senere.',
           microsoftSignInFailed: 'Kunne ikke starte Microsoft-innlogging. Prøv igjen senere.',
         },
         success: {
@@ -852,6 +855,18 @@ export const no = {
           disconnect: 'Koble fra',
           connect: 'Koble til',
           addOtherMethod: 'Legg til en annen påloggingsmetode før du kobler fra Google-kontoen.',
+          errors: {
+            genericError: 'En feil oppstod',
+          },
+        },
+        apple: {
+          title: 'Apple-konto',
+          connected: 'Du har koblet til en Apple-konto for raskere pålogging',
+          notConnected: 'Koble til Apple-kontoen din for enklere pålogging',
+          processing: 'Behandler...',
+          disconnect: 'Koble fra',
+          connect: 'Koble til',
+          addOtherMethod: 'Legg til en annen påloggingsmetode før du kobler fra Apple-kontoen.',
           errors: {
             genericError: 'En feil oppstod',
           },

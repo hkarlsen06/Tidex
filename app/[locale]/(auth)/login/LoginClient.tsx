@@ -42,8 +42,13 @@ import { Button } from '@/components/app/Button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/app/Card';
 import { TurnstileCaptcha, type TurnstileCaptchaHandle } from '@/components/app/TurnstileCaptcha';
 
-// Lazy load Google icon SVG
+// Lazy load OAuth icon SVGs
 const GoogleIcon = dynamic(() => import('./GoogleIcon'), {
+  ssr: false,
+  loading: () => <div className="h-4 w-4" />
+});
+
+const AppleIcon = dynamic(() => import('./AppleIcon'), {
   ssr: false,
   loading: () => <div className="h-4 w-4" />
 });
@@ -79,7 +84,7 @@ export default function LoginClient({
   const [message, setMessage] = useState<MessageState>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isOAuthRedirecting, setIsOAuthRedirecting] = useState(false);
+  const [oauthProvider, setOauthProvider] = useState<'google' | 'apple' | null>(null);
   const [showSignupPrompt, setShowSignupPrompt] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
 
@@ -114,7 +119,7 @@ export default function LoginClient({
   };
 
   const performGoogleSignIn = async () => {
-    setIsOAuthRedirecting(true);
+    setOauthProvider('google');
 
     const redirectPath = getRedirectPath();
     const configuredBaseUrl = process.env.NEXT_PUBLIC_SITE_URL;
@@ -126,7 +131,7 @@ export default function LoginClient({
         : fallbackOrigin;
 
     if (!baseUrl) {
-      setIsOAuthRedirecting(false);
+      setOauthProvider(null);
       setMessage({
         type: 'error',
         text: t.pages.auth.login.errors.googleSignInFailed,
@@ -148,7 +153,7 @@ export default function LoginClient({
     });
 
     if (error) {
-      setIsOAuthRedirecting(false);
+      setOauthProvider(null);
       setMessage({ type: 'error', text: translateError(error.message) });
       return;
     }
@@ -391,6 +396,55 @@ export default function LoginClient({
     await performGoogleSignIn();
   };
 
+  const performAppleSignIn = async () => {
+    setOauthProvider('apple');
+
+    const redirectPath = getRedirectPath();
+    const configuredBaseUrl = process.env.NEXT_PUBLIC_SITE_URL;
+    const fallbackOrigin =
+      typeof window !== 'undefined' ? window.location.origin : undefined;
+    const baseUrl =
+      configuredBaseUrl && configuredBaseUrl.startsWith('http')
+        ? configuredBaseUrl
+        : fallbackOrigin;
+
+    if (!baseUrl) {
+      setOauthProvider(null);
+      setMessage({
+        type: 'error',
+        text: t.pages.auth.login.errors.appleSignInFailed,
+      });
+      return;
+    }
+
+    const redirectUrl = new URL('/auth/callback', baseUrl);
+    redirectUrl.searchParams.set('next', redirectPath);
+
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'apple',
+      options: {
+        redirectTo: redirectUrl.toString(),
+      },
+    });
+
+    if (error) {
+      setOauthProvider(null);
+      setMessage({ type: 'error', text: translateError(error.message) });
+      return;
+    }
+
+    setMessage({
+      type: 'success',
+      text: t.pages.auth.login.waitingForApple,
+    });
+  };
+
+  const handleAppleSignIn = async () => {
+    setMessage(null);
+    await performAppleSignIn();
+  };
+
+  const isOAuthRedirecting = oauthProvider !== null;
   const oauthButtonDisabled = isSubmitting || isOAuthRedirecting;
   const formButtonDisabled = isSubmitting || isOAuthRedirecting || !captchaToken;
 
@@ -408,7 +462,11 @@ export default function LoginClient({
             <CardContent className="pt-6">
               <div className="flex flex-col items-center gap-4">
                 <div className="h-12 w-12 animate-spin rounded-full border-4 border-border border-t-primary"></div>
-                <p className="text-lg font-semibold">{t.pages.auth.login.waitingForGoogle}</p>
+                <p className="text-lg font-semibold">
+                  {oauthProvider === 'apple'
+                    ? t.pages.auth.login.waitingForApple
+                    : t.pages.auth.login.waitingForGoogle}
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -441,22 +499,40 @@ export default function LoginClient({
           {/* Step 1: Email/Phone and Password Input */}
           {step === 'input' && (
             <>
-              {/* OAuth Button */}
-              <Button
-                type="button"
-                variant="outline"
-                size="lg"
-                onClick={handleGoogleSignIn}
-                disabled={oauthButtonDisabled}
-                loading={isOAuthRedirecting}
-                aria-label={t.pages.auth.login.continueWithGoogle}
-                className="w-full mb-6"
-              >
-                <span className="flex h-5 w-5 items-center justify-center">
-                  <GoogleIcon />
-                </span>
-                Google
-              </Button>
+              {/* OAuth Buttons */}
+              <div className="flex flex-col gap-3 mb-6">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="lg"
+                  onClick={handleGoogleSignIn}
+                  disabled={oauthButtonDisabled}
+                  loading={isOAuthRedirecting}
+                  aria-label={t.pages.auth.login.continueWithGoogle}
+                  className="w-full"
+                >
+                  <span className="flex h-5 w-5 items-center justify-center">
+                    <GoogleIcon />
+                  </span>
+                  Google
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="lg"
+                  onClick={handleAppleSignIn}
+                  disabled={oauthButtonDisabled}
+                  loading={isOAuthRedirecting}
+                  aria-label={t.pages.auth.login.continueWithApple}
+                  className="w-full"
+                >
+                  <span className="flex h-5 w-5 items-center justify-center">
+                    <AppleIcon />
+                  </span>
+                  Apple
+                </Button>
+              </div>
 
               <FieldSeparator>{t.pages.auth.login.separator}</FieldSeparator>
 
