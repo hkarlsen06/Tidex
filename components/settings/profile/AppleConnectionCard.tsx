@@ -59,48 +59,43 @@ export function AppleConnectionCard({ hasAppleConnected, canDisconnectApple }: A
 
   return (
     <Card className="p-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
-        <div className="flex items-center gap-4 flex-1 min-w-0">
-          <div className="p-3 rounded-lg bg-surface-secondary shrink-0">
-            <Image src="/icons/apple.svg" alt="Apple" width={24} height={24} className="dark:invert" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-text-primary">{t.pages.settings.profile.apple.title}</h3>
-            <p className="text-sm text-text-secondary mt-0.5">
-              {hasAppleConnected
-                ? t.pages.settings.profile.apple.connected
-                : t.pages.settings.profile.apple.notConnected}
-            </p>
-            {error && (
-              <p className="text-sm text-destructive mt-2">
-                {error}
-              </p>
-            )}
-          </div>
+      <div className="flex items-start gap-4">
+        <div className="p-3 rounded-lg bg-surface-secondary shrink-0">
+          <Image src="/icons/apple.svg" alt="Apple" width={24} height={24} className="dark:invert" />
         </div>
-        <div className="w-full sm:w-auto sm:shrink-0 flex flex-col gap-2 sm:items-end">
-          <Button
-            variant={hasAppleConnected ? 'outline' : 'default'}
-            onClick={hasAppleConnected ? handleDisconnect : handleConnect}
-            disabled={isLoading || (hasAppleConnected && !canDisconnectApple)}
-            title={
-              hasAppleConnected && !canDisconnectApple
-                ? t.pages.settings.profile.apple.addOtherMethod
-                : undefined
-            }
-            className="w-full sm:w-auto"
-          >
-            {isLoading
-              ? t.pages.settings.profile.apple.processing
-              : hasAppleConnected
-              ? t.pages.settings.profile.apple.disconnect
-              : t.pages.settings.profile.apple.connect}
-          </Button>
-          {hasAppleConnected && !canDisconnectApple && (
-            <p className="text-xs text-text-secondary text-left sm:text-right">
-              {t.pages.settings.profile.apple.addOtherMethod}
-            </p>
-          )}
+        <div className="flex-1 min-w-0">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+            <div className="min-w-0">
+              <h3 className="font-semibold text-text-primary">{t.pages.settings.profile.apple.title}</h3>
+              <p className="text-sm text-text-secondary mt-0.5">
+                {hasAppleConnected
+                  ? t.pages.settings.profile.apple.connected
+                  : t.pages.settings.profile.apple.notConnected}
+              </p>
+              {hasAppleConnected && !canDisconnectApple && (
+                <p className="text-xs text-text-muted mt-1">
+                  {t.pages.settings.profile.apple.addOtherMethod}
+                </p>
+              )}
+              {error && (
+                <p className="text-sm text-destructive mt-2">
+                  {error}
+                </p>
+              )}
+            </div>
+            <Button
+              variant={hasAppleConnected ? 'outline' : 'default'}
+              onClick={hasAppleConnected ? handleDisconnect : handleConnect}
+              disabled={isLoading || (hasAppleConnected && !canDisconnectApple)}
+              className="w-full sm:w-auto shrink-0"
+            >
+              {isLoading
+                ? t.pages.settings.profile.apple.processing
+                : hasAppleConnected
+                ? t.pages.settings.profile.apple.disconnect
+                : t.pages.settings.profile.apple.connect}
+            </Button>
+          </div>
         </div>
       </div>
     </Card>

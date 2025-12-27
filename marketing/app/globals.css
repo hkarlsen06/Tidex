@@ -39,14 +39,14 @@
 
 @utility shadow-app {
   box-shadow:
-    0 24px 48px -24px hsl(var(--shadow-color)),
-    0 12px 24px -12px hsl(var(--shadow-color-strong));
+    0 1px 2px 0 hsl(var(--shadow-color)),
+    0 4px 12px -4px hsl(var(--shadow-color-strong));
 }
 
 @utility shadow-app-lg {
   box-shadow:
-    0 40px 80px -40px hsl(var(--shadow-color)),
-    0 20px 40px -20px hsl(var(--shadow-color-strong));
+    0 2px 4px 0 hsl(var(--shadow-color)),
+    0 8px 24px -8px hsl(var(--shadow-color-strong));
 }
 
 @layer utilities {
@@ -95,10 +95,10 @@
     --info: 217 91% 60%;
     --info-foreground: 210 40% 98%;
     --info-subtle: 217 91% 60% / 0.15;
-    --shadow-color: 222 47% 4% / 0.4;
-    --shadow-color-strong: 222 47% 4% / 0.6;
+    --shadow-color: 222 47% 4% / 0.3;
+    --shadow-color-strong: 222 47% 4% / 0.5;
     --hero-initial-dvh: 100dvh;
-    --radius: 24px;
+    --radius: 12px;
   }
 }
 

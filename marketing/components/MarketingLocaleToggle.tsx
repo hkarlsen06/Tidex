@@ -9,7 +9,7 @@ interface MarketingLocaleToggleProps {
 
 export function MarketingLocaleToggle({ currentLocale, path = '' }: MarketingLocaleToggleProps) {
   return (
-    <div className="inline-flex items-center gap-2 rounded-full bg-surface-primary/70 p-1 text-sm font-medium text-text-secondary shadow-app">
+    <div className="inline-flex items-center gap-1 rounded-lg border border-border-subtle bg-surface-primary p-1 text-sm font-medium">
       {locales.map((locale) => {
         const isActive = locale === currentLocale;
         const href = buildLocalizedMarketingPath(locale, path);
@@ -19,10 +19,10 @@ export function MarketingLocaleToggle({ currentLocale, path = '' }: MarketingLoc
             key={locale}
             href={href}
             aria-current={isActive ? 'page' : undefined}
-            className={`rounded-full px-3 py-1 transition-colors ${
+            className={`rounded-md px-3 py-1.5 transition-colors ${
               isActive
-                ? 'bg-brand-gradient-mid/90 text-text-inverse'
-                : 'text-text-secondary hover:text-text-primary'
+                ? 'bg-brand-gradient-start text-text-inverse'
+                : 'text-text-muted hover:text-text-primary hover:bg-surface-secondary'
             }`}
           >
             {localeNames[locale]}

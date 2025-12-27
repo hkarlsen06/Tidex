@@ -3,7 +3,6 @@
 import { useEffect } from 'react';
 import { Button } from '../../../components/ui/button';
 import { Separator } from '../../../components/ui/separator';
-import { Badge } from '../../../components/ui/badge';
 import { PayrollDocsRenderer } from '@root/components/payroll-docs/PayrollDocsRenderer';
 
 interface PayrollDocsType {
@@ -69,24 +68,16 @@ export function PayrollDocsPage({ docs }: PayrollDocsPageProps) {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="relative border-b border-border-subtle bg-surface-primary">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,hsla(var(--brand-gradientStart)/0.12),transparent_70%)]" />
-        <div
-          className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-brand-gradient-start/20 via-transparent to-transparent"
-          aria-hidden
-        />
-        <div className="container relative mx-auto px-6 py-12 sm:px-8 sm:py-14 lg:py-16">
+      <header className="border-b border-border-subtle bg-surface-primary">
+        <div className="container mx-auto px-6 py-10 sm:px-8 sm:py-12 lg:py-14">
           <div className="max-w-4xl space-y-4">
-            <Badge
-              variant="outline"
-              className="border-border-subtle/60 bg-surface-primary/70 text-text-secondary uppercase tracking-[0.2em] text-xs"
-            >
+            <span className="text-xs font-semibold uppercase tracking-widest text-brand-gradient-start">
               {docs.badge}
-            </Badge>
-            <h1 className="text-3xl font-bold leading-tight text-text-primary sm:text-4xl lg:text-5xl">
+            </span>
+            <h1 className="text-2xl font-bold leading-tight text-text-primary sm:text-3xl lg:text-4xl">
               {docs.title}
             </h1>
-            <p className="max-w-2xl text-base leading-relaxed text-text-secondary sm:text-lg">
+            <p className="max-w-2xl text-base leading-relaxed text-text-secondary">
               {docs.subtitle}
             </p>
           </div>
@@ -149,23 +140,20 @@ export function PayrollDocsPage({ docs }: PayrollDocsPageProps) {
           ))}
         </div>
 
-        <Separator className="my-20 sm:my-24" />
+        <Separator className="my-16 sm:my-20" />
 
         {/* Bug Report CTA */}
-        <section className="relative overflow-hidden rounded-2xl border border-border-subtle/40 bg-gradient-to-br from-surface-secondary via-surface-primary to-surface-primary/90 p-12 text-center shadow-app sm:rounded-3xl sm:p-14 lg:p-16">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_right,hsla(var(--brand-gradientEnd)/0.1),transparent_55%)]" />
-          <div className="absolute inset-0 opacity-40 mix-blend-screen bg-[radial-gradient(60%_60%_at_50%_50%,hsla(var(--brand-gradientMid)/0.35),transparent)]" />
-          <div className="relative mx-auto max-w-xl space-y-6 sm:space-y-8">
-            <h2 className="text-2xl font-bold leading-tight text-text-primary sm:text-3xl">
+        <section className="rounded-xl border border-border-subtle bg-surface-secondary p-10 text-center sm:p-12">
+          <div className="mx-auto max-w-xl space-y-5">
+            <h2 className="text-xl font-semibold leading-tight text-text-primary sm:text-2xl">
               {docs.bugReportCta.heading}
             </h2>
-            <p className="text-base leading-relaxed text-text-secondary sm:text-lg">
+            <p className="text-base leading-relaxed text-text-secondary">
               {docs.bugReportCta.description}
             </p>
             <Button
               onClick={handleBugReport}
-              size="lg"
-              className="h-12 rounded-xl bg-gradient-to-r from-brand-gradient-start via-brand-gradient-mid to-brand-gradient-end px-8 text-base font-semibold shadow-app-lg transition-all hover:brightness-110 sm:h-14 sm:px-10 sm:text-lg"
+              className="h-11 rounded-lg bg-brand-gradient-start px-8 text-base font-semibold text-text-inverse hover:bg-brand-gradient-mid transition-colors"
             >
               {docs.bugReportCta.buttonText}
             </Button>
@@ -174,9 +162,9 @@ export function PayrollDocsPage({ docs }: PayrollDocsPageProps) {
       </main>
 
       {/* Footer */}
-      <footer className="mt-20 border-t border-border-subtle bg-surface-primary/60 py-12 backdrop-blur-xs sm:mt-24 sm:py-14">
+      <footer className="border-t border-border-subtle py-8">
         <div className="container mx-auto px-6 text-center sm:px-8">
-          <p className="text-sm text-text-muted sm:text-base">
+          <p className="text-sm text-text-muted">
             © 2025 Tidex — Complete transparency in payroll calculations
           </p>
         </div>
