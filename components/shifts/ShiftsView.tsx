@@ -1897,6 +1897,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
             payoutTaxSettings={currentPayoutTaxSettings}
             readOnly={readOnly}
             showEarnings={showEarnings}
+            calendarId={sharedOwnerId ? `shared-${sharedOwnerId}` : "own-shifts"}
           />
         </div>
       </div>
