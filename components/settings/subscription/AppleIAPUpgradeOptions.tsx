@@ -133,6 +133,9 @@ export function AppleIAPUpgradeOptions({
   // Initialize IAP and fetch products
   useEffect(() => {
     async function init() {
+      console.log('[AppleIAPUpgradeOptions] Starting init...');
+      console.log('[AppleIAPUpgradeOptions] isIAPAvailable:', isIAPAvailable());
+
       if (!isIAPAvailable()) {
         setError('In-App Purchases are not available on this device');
         return;
@@ -140,32 +143,40 @@ export function AppleIAPUpgradeOptions({
 
       try {
         // Get app account token
+        console.log('[AppleIAPUpgradeOptions] Getting app account token...');
         const tokenResult = await getAppAccountToken();
         if ('error' in tokenResult) {
-          setError(tokenResult.error);
+          console.error('[AppleIAPUpgradeOptions] Token error:', tokenResult.error);
+          setError(`Token error: ${tokenResult.error}`);
           return;
         }
+        console.log('[AppleIAPUpgradeOptions] Got token:', tokenResult.token.substring(0, 8) + '...');
         setAppAccountToken(tokenResult.token);
 
         // Initialize IAP
+        console.log('[AppleIAPUpgradeOptions] Initializing IAP...');
         const initialized = await initializeIAP();
+        console.log('[AppleIAPUpgradeOptions] IAP initialized:', initialized);
         if (!initialized) {
-          setError('Failed to initialize In-App Purchases');
+          setError('Failed to initialize In-App Purchases. Check console for details.');
           return;
         }
 
         // Fetch products
+        console.log('[AppleIAPUpgradeOptions] Fetching products...');
         const fetchedProducts = await getProducts();
+        console.log('[AppleIAPUpgradeOptions] Products fetched:', fetchedProducts.length, fetchedProducts);
         if (fetchedProducts.length === 0) {
-          setError('No products available');
+          setError('No products available. Products may not be configured in App Store Connect yet.');
           return;
         }
 
         setProducts(fetchedProducts);
         setIsInitialized(true);
+        console.log('[AppleIAPUpgradeOptions] Init complete!');
       } catch (e: any) {
         console.error('[AppleIAPUpgradeOptions] Init error:', e);
-        setError(e.message || 'Failed to load products');
+        setError(`Init failed: ${e.message || 'Unknown error'}`);
       }
     }
 
