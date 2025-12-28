@@ -261,11 +261,10 @@ export function AppleIAPUpgradeOptions({
       ? APPLE_PRODUCT_IDS.PRO_MONTHLY
       : APPLE_PRODUCT_IDS.PRO_YEARLY;
 
-  // For now, only show Pro plan (Max can be added later)
-  // const getMaxProductId = () =>
-  //   billingPeriod === 'monthly'
-  //     ? APPLE_PRODUCT_IDS.STORAGE_PLUS_MONTHLY
-  //     : APPLE_PRODUCT_IDS.STORAGE_PLUS_YEARLY;
+  const getMaxProductId = () =>
+    billingPeriod === 'monthly'
+      ? APPLE_PRODUCT_IDS.MAX_MONTHLY
+      : APPLE_PRODUCT_IDS.MAX_YEARLY;
 
   if (!isIAPAvailable()) {
     return (
@@ -326,6 +325,23 @@ export function AppleIAPUpgradeOptions({
           showSavingsBadge={true}
           onUpgrade={() => handleUpgrade('Pro', getProProductId())}
           isLoading={loadingPlan === 'Pro'}
+          disabled={!isInitialized}
+          t={t}
+        />
+
+        <PlanCard
+          name={t.pages.settings.subscription.upgradePlans.maxName}
+          price={
+            isInitialized
+              ? getProductPrice(getMaxProductId())
+              : t.pages.settings.subscription.upgradePlans.maxPrice
+          }
+          description={t.pages.settings.subscription.upgradePlans.maxDescription}
+          features={t.pages.settings.subscription.upgradePlans.maxFeatures}
+          billingPeriod={billingPeriod}
+          showSavingsBadge={true}
+          onUpgrade={() => handleUpgrade('Max', getMaxProductId())}
+          isLoading={loadingPlan === 'Max'}
           disabled={!isInitialized}
           t={t}
         />

@@ -43,11 +43,12 @@ export interface IAPEntitlement {
 
 // ---------- Apple Product IDs ----------
 // These must match the products configured in App Store Connect
+// Matches existing tiers: Pro and Max, each with monthly/yearly
 export const APPLE_PRODUCT_IDS = {
-  STORAGE_PLUS_MONTHLY: "no.tidex.storage.monthly",
-  STORAGE_PLUS_YEARLY: "no.tidex.storage.yearly",
   PRO_MONTHLY: "no.tidex.pro.monthly",
   PRO_YEARLY: "no.tidex.pro.yearly",
+  MAX_MONTHLY: "no.tidex.max.monthly",
+  MAX_YEARLY: "no.tidex.max.yearly",
 } as const;
 
 export const ALL_APPLE_PRODUCT_IDS = Object.values(APPLE_PRODUCT_IDS);

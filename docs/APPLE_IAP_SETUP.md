@@ -19,19 +19,19 @@ This document provides step-by-step instructions for configuring Apple In-App Pu
 
 ### Create a Subscription Group
 1. Click **+ Create** to create a new subscription group
-2. Name: `Tidex Pro`
-3. Reference Name: `tidex_pro_group`
+2. Name: `Tidex Subscriptions`
+3. Reference Name: `tidex_subscriptions_group`
 
 ### Create Subscription Products
 
-Create the following subscription products within the group:
+Create the following subscription products within the group (matching existing Stripe tiers):
 
-| Reference Name | Product ID | Duration | Price Tier |
-|---------------|-----------|----------|------------|
-| Pro Monthly | `no.tidex.pro.monthly` | 1 Month | Choose appropriate tier |
-| Pro Yearly | `no.tidex.pro.yearly` | 1 Year | Choose appropriate tier |
-| Storage Monthly | `no.tidex.storage.monthly` | 1 Month | Choose appropriate tier |
-| Storage Yearly | `no.tidex.storage.yearly` | 1 Year | Choose appropriate tier |
+| Reference Name | Product ID | Duration | Tier |
+|---------------|-----------|----------|------|
+| Pro Monthly | `no.tidex.pro.monthly` | 1 Month | Pro |
+| Pro Yearly | `no.tidex.pro.yearly` | 1 Year | Pro |
+| Max Monthly | `no.tidex.max.monthly` | 1 Month | Max |
+| Max Yearly | `no.tidex.max.yearly` | 1 Year | Max |
 
 For each product:
 1. Set the **Subscription Duration**
@@ -242,5 +242,5 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<your-supabase-key>
 |------------|------------------|-------------|
 | `pro_monthly` | `no.tidex.pro.monthly` | Pro plan - Monthly |
 | `pro_yearly` | `no.tidex.pro.yearly` | Pro plan - Yearly |
-| `storage_plus_monthly` | `no.tidex.storage.monthly` | Storage plan - Monthly |
-| `storage_plus_yearly` | `no.tidex.storage.yearly` | Storage plan - Yearly |
+| `max_monthly` | `no.tidex.max.monthly` | Max plan - Monthly |
+| `max_yearly` | `no.tidex.max.yearly` | Max plan - Yearly |

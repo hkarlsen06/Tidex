@@ -26,11 +26,12 @@ const APPLE_SANDBOX_URL = "https://api.storekit-sandbox.itunes.apple.com";
 
 // ---------- Apple Product ID Mapping ----------
 // Maps Apple product IDs to internal product IDs
+// Matches existing tiers: Pro and Max, each with monthly/yearly
 const APPLE_PRODUCT_TO_INTERNAL: Record<string, string> = {
-  "no.tidex.storage.monthly": "storage_plus_monthly",
-  "no.tidex.storage.yearly": "storage_plus_yearly",
   "no.tidex.pro.monthly": "pro_monthly",
   "no.tidex.pro.yearly": "pro_yearly",
+  "no.tidex.max.monthly": "max_monthly",
+  "no.tidex.max.yearly": "max_yearly",
 };
 
 // Allowed Apple product IDs (for validation)
