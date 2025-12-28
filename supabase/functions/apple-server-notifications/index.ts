@@ -17,11 +17,12 @@ const APPLE_APP_BUNDLE_ID = Deno.env.get("APPLE_APP_BUNDLE_ID") ?? "no.tidex.app
 const APPLE_ROOT_CA_G3_URL = "https://www.apple.com/certificateauthority/AppleRootCA-G3.cer";
 
 // ---------- Apple Product ID Mapping ----------
+// Matches existing tiers: Pro and Max, each with monthly/yearly
 const APPLE_PRODUCT_TO_INTERNAL: Record<string, string> = {
-  "no.tidex.storage.monthly": "storage_plus_monthly",
-  "no.tidex.storage.yearly": "storage_plus_yearly",
   "no.tidex.pro.monthly": "pro_monthly",
   "no.tidex.pro.yearly": "pro_yearly",
+  "no.tidex.max.monthly": "max_monthly",
+  "no.tidex.max.yearly": "max_yearly",
 };
 
 function mapAppleProductToInternal(appleProductId: string): string {

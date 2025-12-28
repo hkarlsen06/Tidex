@@ -7,25 +7,24 @@
 
 // ---------- Internal Product IDs ----------
 // These are the canonical product identifiers used in the database
+// Matches the existing Stripe tiers: Pro and Max, each with monthly/yearly
 export const INTERNAL_PRODUCTS = {
   PRO_MONTHLY: 'pro_monthly',
   PRO_YEARLY: 'pro_yearly',
   MAX_MONTHLY: 'max_monthly',
   MAX_YEARLY: 'max_yearly',
-  // Legacy storage-only tier (if needed)
-  STORAGE_PLUS_MONTHLY: 'storage_plus_monthly',
-  STORAGE_PLUS_YEARLY: 'storage_plus_yearly',
 } as const;
 
 export type InternalProductId = (typeof INTERNAL_PRODUCTS)[keyof typeof INTERNAL_PRODUCTS];
 
 // ---------- Apple Product IDs ----------
 // These must match the products configured in App Store Connect
+// Naming convention: no.tidex.<tier>.<period>
 export const APPLE_PRODUCT_IDS = {
   PRO_MONTHLY: 'no.tidex.pro.monthly',
   PRO_YEARLY: 'no.tidex.pro.yearly',
-  STORAGE_PLUS_MONTHLY: 'no.tidex.storage.monthly',
-  STORAGE_PLUS_YEARLY: 'no.tidex.storage.yearly',
+  MAX_MONTHLY: 'no.tidex.max.monthly',
+  MAX_YEARLY: 'no.tidex.max.yearly',
 } as const;
 
 export type AppleProductId = (typeof APPLE_PRODUCT_IDS)[keyof typeof APPLE_PRODUCT_IDS];
@@ -59,8 +58,8 @@ export function mapAppleToInternal(appleProductId: string): InternalProductId | 
   const mapping: Record<string, InternalProductId> = {
     [APPLE_PRODUCT_IDS.PRO_MONTHLY]: INTERNAL_PRODUCTS.PRO_MONTHLY,
     [APPLE_PRODUCT_IDS.PRO_YEARLY]: INTERNAL_PRODUCTS.PRO_YEARLY,
-    [APPLE_PRODUCT_IDS.STORAGE_PLUS_MONTHLY]: INTERNAL_PRODUCTS.STORAGE_PLUS_MONTHLY,
-    [APPLE_PRODUCT_IDS.STORAGE_PLUS_YEARLY]: INTERNAL_PRODUCTS.STORAGE_PLUS_YEARLY,
+    [APPLE_PRODUCT_IDS.MAX_MONTHLY]: INTERNAL_PRODUCTS.MAX_MONTHLY,
+    [APPLE_PRODUCT_IDS.MAX_YEARLY]: INTERNAL_PRODUCTS.MAX_YEARLY,
   };
 
   return mapping[appleProductId] ?? null;
@@ -114,9 +113,7 @@ export function getTierFromProductId(productId: string | null): SubscriptionTier
 
   if (
     productId === INTERNAL_PRODUCTS.PRO_MONTHLY ||
-    productId === INTERNAL_PRODUCTS.PRO_YEARLY ||
-    productId === INTERNAL_PRODUCTS.STORAGE_PLUS_MONTHLY ||
-    productId === INTERNAL_PRODUCTS.STORAGE_PLUS_YEARLY
+    productId === INTERNAL_PRODUCTS.PRO_YEARLY
   ) {
     return 'pro';
   }
