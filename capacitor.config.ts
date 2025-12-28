@@ -6,7 +6,8 @@ const config: CapacitorConfig = {
   webDir: 'dist',
   server: {
     url: 'https://app.tidex.no',
-    cleartext: false
+    cleartext: false,
+    errorPath: 'offline.html'
   }
 };
 

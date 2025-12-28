@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Tidex - Offline</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      height: 100%;
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      color: #f8fafc;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      padding-top: env(safe-area-inset-top, 24px);
+      padding-bottom: env(safe-area-inset-bottom, 24px);
+      padding-left: env(safe-area-inset-left, 24px);
+      padding-right: env(safe-area-inset-right, 24px);
+      text-align: center;
+    }
+
+    .container {
+      max-width: 320px;
+      width: 100%;
+    }
+
+    .icon {
+      width: 64px;
+      height: 64px;
+      margin-bottom: 24px;
+      opacity: 0.8;
+    }
+
+    h1 {
+      font-size: 24px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: #f8fafc;
+    }
+
+    p {
+      font-size: 16px;
+      line-height: 1.5;
+      color: #94a3b8;
+      margin-bottom: 32px;
+    }
+
+    button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      padding: 14px 24px;
+      font-size: 16px;
+      font-weight: 500;
+      color: #0f172a;
+      background: linear-gradient(135deg, #38bdf8 0%, #818cf8 100%);
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: transform 0.15s ease, opacity 0.15s ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    button:active {
+      transform: scale(0.98);
+      opacity: 0.9;
+    }
+
+    .logo {
+      margin-top: 48px;
+      font-size: 14px;
+      font-weight: 600;
+      color: #475569;
+      letter-spacing: 0.5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M1 1l22 22M16.72 11.06A10.94 10.94 0 0119 12.55M5 12.55a10.94 10.94 0 015.17-2.39M10.71 5.05A16 16 0 0122.58 9M1.42 9a15.91 15.91 0 014.7-2.88M8.53 16.11a6 6 0 016.95 0M12 20h.01"/>
+    </svg>
+    <h1>Du er ikke koblet til internett</h1>
+    <p>Koble til, og trykk "Prøv igjen"</p>
+    <button onclick="window.location.href='https://app.tidex.no'">
+      Prøv igjen
+    </button>
+    <div class="logo">TIDEX</div>
+  </div>
+</body>
+</html>
