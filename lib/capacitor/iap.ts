@@ -360,9 +360,12 @@ async function verifyPurchaseWithServer(
  * Open the iOS subscription management page
  */
 export async function openSubscriptionManagement(): Promise<void> {
+  // iOS deep link to subscription management
+  const iosDeepLink = "https://apps.apple.com/account/subscriptions";
+
   if (!isIAPAvailable()) {
-    // On web, could redirect to Stripe portal
-    window.open("https://apps.apple.com/account/subscriptions", "_blank");
+    // On web, open in new tab
+    window.open(iosDeepLink, "_blank");
     return;
   }
 
@@ -370,7 +373,16 @@ export async function openSubscriptionManagement(): Promise<void> {
     const plugin = await getNativePurchases();
     await plugin.openManagement();
   } catch (e) {
-    // Fallback to URL
-    window.open("https://apps.apple.com/account/subscriptions", "_blank");
+    console.log("[iap] openManagement failed, trying Browser plugin:", e);
+
+    // Fallback: use Capacitor Browser plugin which properly handles external URLs
+    try {
+      const { Browser } = await import("@capacitor/browser");
+      await Browser.open({ url: iosDeepLink });
+    } catch (browserError) {
+      console.log("[iap] Browser plugin failed, using location.href:", browserError);
+      // Last resort fallback
+      window.location.href = iosDeepLink;
+    }
   }
 }
