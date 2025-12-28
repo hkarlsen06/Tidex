@@ -44,10 +44,13 @@ export const STRIPE_PRICE_IDS = {
 } as const;
 
 // Legacy Stripe price IDs (for backward compatibility)
-export const LEGACY_STRIPE_PRICE_IDS = {
+export const LEGACY_STRIPE_PRICE_IDS: {
+  PRO_MONTHLY: readonly string[];
+  MAX_MONTHLY: readonly string[];
+} = {
   PRO_MONTHLY: ['price_1RzQ85Qiotkj8G58AO6st4fh'],
   MAX_MONTHLY: ['price_1RzQC1Qiotkj8G58tYo4U5oO'],
-} as const;
+};
 
 // ---------- Mapping Functions ----------
 

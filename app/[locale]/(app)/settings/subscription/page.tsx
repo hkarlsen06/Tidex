@@ -55,13 +55,13 @@ export default async function SubscriptionPage({
           </p>
         </div>
 
-        {isGrandfatheredSubscriber ? (
+        {isGrandfatheredSubscriber && subscription ? (
           <>
             <GrandfatheredSubscriberBanner t={t} />
-            <SubscriptionStatus subscription={subscription!} isGrandfathered={true} />
+            <SubscriptionStatus subscription={subscription} isGrandfathered={true} />
           </>
-        ) : hasActiveSubscription ? (
-          <SubscriptionStatus subscription={subscription!} isGrandfathered={false} />
+        ) : hasActiveSubscription && subscription ? (
+          <SubscriptionStatus subscription={subscription} isGrandfathered={false} />
         ) : subscription ? (
           <>
             {/* Show canceled/expired subscription status */}
