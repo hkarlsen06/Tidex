@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardHeader } from '@/components/app/Card';
 import { cn } from '@/lib/cn';
 import { useNavigationFeedback } from './navigation-feedback';
@@ -185,10 +186,32 @@ export const NextPayrollCard: React.FC<NextPayrollCardProps> = ({
               </div>
             </div>
             <div className="text-right">
-              <p className="text-2xl font-semibold tracking-tight text-text-primary">
-                {showNoPayoutPlaceholder ? '---' : formatCurrency(netAmount)}
-              </p>
-              <p className="text-xs">{breakdown}</p>
+              <AnimatePresence mode="wait">
+                {showNoPayoutPlaceholder ? (
+                  <motion.div
+                    key="payout-placeholder"
+                    initial={{ opacity: 1 }}
+                    exit={{ opacity: 0, x: 10 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <p className="text-2xl font-semibold tracking-tight text-text-primary">---</p>
+                    <p className="text-xs">---</p>
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="payout-value"
+                    initial={{ opacity: 0, x: 10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -10 }}
+                    transition={{ duration: 0.4, ease: [0.25, 0.1, 0.25, 1] }}
+                  >
+                    <p className="text-2xl font-semibold tracking-tight text-text-primary">
+                      {formatCurrency(netAmount)}
+                    </p>
+                    <p className="text-xs">{breakdown}</p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </>
         )}
