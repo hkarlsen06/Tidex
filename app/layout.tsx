@@ -5,6 +5,7 @@ import { Inter } from "next/font/google";
 import Telemetry from "@/components/app/Telemetry";
 
 import SWRegister from "./sw-register";
+import { CapacitorUrlListener } from "./capacitor-url-listener";
 import { DynamicThemeColor } from "@/components/app/DynamicThemeColor";
 import "./globals.css";
 
@@ -172,6 +173,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       </head>
       <body className={`${inter.className} text-foreground antialiased`}>
         <DynamicThemeColor />
+        <CapacitorUrlListener />
         {children}
         <SWRegister />
         <Telemetry />
