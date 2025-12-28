@@ -189,7 +189,7 @@ export function SupabaseListener({ accessToken }: SupabaseListenerProps) {
   }, []);
 
   // Capacitor iOS: Handle custom scheme URL opens (tidex://auth/callback)
-  // When OAuth returns via custom scheme, redirect to the HTTPS callback route
+  // When OAuth returns via custom scheme, close the browser and redirect to HTTPS callback
   useEffect(() => {
     // Only run on native platforms
     if (!isNativePlatform()) return;
@@ -200,12 +200,23 @@ export function SupabaseListener({ accessToken }: SupabaseListenerProps) {
       try {
         // Dynamic import to avoid loading Capacitor on web
         const { App } = await import("@capacitor/app");
+        const { Browser } = await import("@capacitor/browser");
 
-        const listenerHandle = await App.addListener("appUrlOpen", ({ url }) => {
+        const listenerHandle = await App.addListener("appUrlOpen", async ({ url }) => {
+          // TODO: Remove this log after verifying the handler fires correctly
           console.log("[CAPACITOR] appUrlOpen received:", url);
 
           // Check if this is our OAuth callback scheme
           if (url.startsWith("tidex://auth/callback")) {
+            // Close the in-app browser overlay immediately
+            try {
+              await Browser.close();
+              console.log("[CAPACITOR] Browser closed");
+            } catch (e) {
+              // Browser may already be closed, ignore
+              console.log("[CAPACITOR] Browser.close() failed (may already be closed):", e);
+            }
+
             // Parse the custom scheme URL
             const customUrl = new URL(url);
 
@@ -217,8 +228,10 @@ export function SupabaseListener({ accessToken }: SupabaseListenerProps) {
 
             console.log("[CAPACITOR] Redirecting to HTTPS callback:", httpsCallbackUrl.toString());
 
-            // Navigate to the HTTPS callback route which will exchange the code for session
-            window.location.href = httpsCallbackUrl.toString();
+            // Small delay to ensure browser is fully closed before navigation
+            setTimeout(() => {
+              window.location.href = httpsCallbackUrl.toString();
+            }, 100);
           }
         });
 
