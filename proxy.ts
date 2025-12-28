@@ -73,6 +73,7 @@ function shouldSkipLocaleRouting(pathname: string): boolean {
     pathname.startsWith('/_next/') ||
     pathname.startsWith('/auth/callback') ||
     pathname.startsWith('/monitoring') ||
+    pathname.startsWith('/.well-known/') ||
     pathname === '/favicon.ico' ||
     pathname === '/manifest.json' ||
     /\.(svg|png|jpg|jpeg|gif|webp|ico)$/.test(pathname)
