@@ -5,10 +5,11 @@ import { SubscriptionStatus } from '@/components/settings/subscription/Subscript
 import { EarlySupporterStatus } from '@/components/settings/subscription/EarlySupporterStatus';
 import { GrandfatheredSubscriberBanner } from '@/components/settings/subscription/GrandfatheredSubscriberBanner';
 import { FreePlanInfo } from '@/components/settings/subscription/FreePlanInfo';
-import { UpgradeOptions } from '@/components/settings/subscription/UpgradeOptions';
+import { PlatformAwareUpgradeOptions } from '@/components/settings/subscription/PlatformAwareUpgradeOptions';
 import { getTranslations } from '@/lib/i18n/server';
 import type { Locale } from '@/lib/i18n/config';
 import { SettingsPageWrapper } from '@/components/app/SettingsPageWrapper';
+import { hasProAccess } from '@/lib/subscription/hasProAccess';
 
 export async function generateMetadata({
   params,
@@ -38,8 +39,8 @@ export default async function SubscriptionPage({
   // Check if user is an early supporter (before paywall)
   const isEarlySupporter = profile?.before_paywall === true;
 
-  // Check if user has an active subscription (status must be 'active')
-  const hasActiveSubscription = subscription?.status === 'active';
+  // Check if user has an active subscription (using unified entitlement check)
+  const hasActiveSubscription = hasProAccess(subscription, profile);
 
   // Grandfathered subscriber: early supporter with an active subscription
   const isGrandfatheredSubscriber = isEarlySupporter && hasActiveSubscription;
@@ -65,17 +66,17 @@ export default async function SubscriptionPage({
           <>
             {/* Show canceled/expired subscription status */}
             <SubscriptionStatus subscription={subscription} isGrandfathered={false} />
-            <UpgradeOptions t={t} />
+            <PlatformAwareUpgradeOptions t={t} />
           </>
         ) : isEarlySupporter ? (
           <>
             <EarlySupporterStatus t={t} />
-            <UpgradeOptions t={t} />
+            <PlatformAwareUpgradeOptions t={t} />
           </>
         ) : (
           <>
             <FreePlanInfo t={t} />
-            <UpgradeOptions t={t} />
+            <PlatformAwareUpgradeOptions t={t} />
           </>
         )}
       </div>

@@ -2,10 +2,20 @@
 import type { Subscription, UserProfile } from '@/data-access/subscription';
 
 /**
+ * Entitled subscription statuses
+ * - active: Normal active subscription
+ * - trialing: In trial period
+ * - grace: In grace period (payment failed but still entitled)
+ */
+const ENTITLED_STATUSES = ['active', 'trialing', 'grace'];
+
+/**
  * Determines if a user has Pro-level access.
  * Returns true if:
  * - User is grandfathered (before_paywall: true), OR
- * - User has an active subscription
+ * - User has an entitled subscription (active, trialing, or grace)
+ *
+ * Works with both Stripe and Apple IAP subscriptions via unified model.
  */
 export function hasProAccess(
   subscription: Subscription | null,
@@ -16,12 +26,31 @@ export function hasProAccess(
     return true;
   }
 
-  // Active subscribers get Pro access
-  if (subscription && subscription.status === 'active') {
+  // Check for entitled subscription status
+  if (subscription && ENTITLED_STATUSES.includes(subscription.status)) {
+    // Additionally verify current_period_end is in the future (if set)
+    if (subscription.current_period_end) {
+      const periodEnd = new Date(subscription.current_period_end);
+      if (periodEnd <= new Date()) {
+        // Subscription has expired
+        return false;
+      }
+    }
     return true;
   }
 
   return false;
+}
+
+/**
+ * Get the subscription provider if user has an active subscription
+ */
+export function getActiveProvider(
+  subscription: Subscription | null
+): 'stripe' | 'apple' | null {
+  if (!subscription) return null;
+  if (!ENTITLED_STATUSES.includes(subscription.status)) return null;
+  return subscription.provider ?? 'stripe';
 }
 
 /**

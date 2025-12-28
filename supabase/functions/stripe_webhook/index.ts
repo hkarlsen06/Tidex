@@ -9,6 +9,7 @@
 // - Upserts a single row per user in `subscriptions`
 // - Captures cancellation fields: cancel_at_period_end, canceled_at, cancel_at
 // - Stores cancellation details: reason, feedback, comment
+// - Provider-agnostic model: writes provider='stripe' and maps price_id to product_id
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import Stripe from "npm:stripe@16.6.0";
 import { createClient } from "npm:@supabase/supabase-js@2.45.4";
@@ -19,6 +20,25 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 // Auto-detect live/test from the key prefix
 const STRIPE_LIVE = STRIPE_SECRET_KEY.startsWith("sk_live_");
+
+// ---------- Product ID Mapping ----------
+// Maps Stripe price IDs to internal product IDs for the unified subscription model
+const STRIPE_PRICE_TO_PRODUCT: Record<string, string> = {
+  // Pro Monthly
+  "price_1RzQ85Qiotkj8G58AO6st4fh": "pro_monthly",
+  // Pro Yearly (if exists)
+  // "price_xxx": "pro_yearly",
+  // Max Monthly
+  "price_1RzQC1Qiotkj8G58tYo4U5oO": "max_monthly",
+  // Max Yearly (if exists)
+  // "price_xxx": "max_yearly",
+};
+
+function mapStripePriceToProductId(priceId: string | null): string | null {
+  if (!priceId) return null;
+  return STRIPE_PRICE_TO_PRODUCT[priceId] ?? priceId; // Fallback to price_id if not mapped
+}
+
 // ---------- Clients ----------
 const stripe = STRIPE_SECRET_KEY ? new Stripe(STRIPE_SECRET_KEY, {
   apiVersion: "2024-06-20"
@@ -269,13 +289,18 @@ async function upsertCustomerMapping(userId, customerId) {
 }
 async function upsertSubscription(userId, customerId, sub) {
   const status = sub.status; // 'active' | 'trialing' | 'past_due' | 'canceled' | 'incomplete' | 'paused' | etc.
-  
-  // Finn riktig period end:
-  // 1) Top-nivå current_period_end hvis satt
-  // 2) Fallback: første subscription_item.current_period_end
+
+  // Finn riktig period start/end:
+  // 1) Top-nivå current_period_start/end hvis satt
+  // 2) Fallback: første subscription_item.current_period_start/end
+  const periodStartUnix = sub.current_period_start ?? sub.items?.data?.[0]?.current_period_start ?? null;
+  const periodStartISO = periodStartUnix ? new Date(periodStartUnix * 1000).toISOString() : null;
   const periodEndUnix = sub.current_period_end ?? sub.items?.data?.[0]?.current_period_end ?? null;
   const periodEndISO = periodEndUnix ? new Date(periodEndUnix * 1000).toISOString() : null;
   const priceId = sub.items?.data?.[0]?.price?.id ?? null;
+
+  // Map Stripe price_id to internal product_id
+  const productId = mapStripePriceToProductId(priceId);
 
   // Cancellation fields
   const cancelAtPeriodEnd = sub.cancel_at_period_end ?? false;
@@ -290,22 +315,29 @@ async function upsertSubscription(userId, customerId, sub) {
   const cancellationFeedback = cancellationDetails?.feedback ?? null;
   const cancellationComment = cancellationDetails?.comment ?? null;
 
-  // Typed-løst for enkelhet og kompatibilitet med supabase-js
+  // Provider-agnostic payload with new unified fields
   const payload = {
     user_id: userId,
+    // Provider identification
+    provider: 'stripe',
+    provider_subscription_id: sub.id,
+    // Legacy Stripe fields (keep for backward compatibility)
     stripe_customer_id: customerId ?? null,
     stripe_subscription_id: sub.id,
+    // Unified fields
     status,
+    product_id: productId,
+    current_period_start: periodStartISO,
     current_period_end: periodEndISO,
+    // Cancellation fields
     cancel_at_period_end: cancelAtPeriodEnd,
     canceled_at: canceledAtISO,
     cancel_at: cancelAtISO,
     cancellation_reason: cancellationReason,
     cancellation_feedback: cancellationFeedback,
     cancellation_comment: cancellationComment,
-    ...priceId ? {
-      price_id: priceId
-    } : {}
+    // Keep price_id for legacy compatibility
+    ...priceId ? { price_id: priceId } : {}
   };
   const upsertStatuses = [
     "active",
@@ -327,6 +359,8 @@ async function upsertSubscription(userId, customerId, sub) {
   } else if (endStatuses.includes(status)) {
     const { error } = await supabase.from("subscriptions").update({
       status,
+      product_id: productId,
+      current_period_start: periodStartISO,
       current_period_end: periodEndISO,
       price_id: priceId ?? null,
       cancel_at_period_end: cancelAtPeriodEnd,

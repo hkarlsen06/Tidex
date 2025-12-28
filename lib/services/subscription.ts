@@ -19,23 +19,37 @@ import { logger } from "../logger";
 
 /**
  * Subscription record from database
+ * Supports both Stripe and Apple IAP providers via unified model
  */
 export type Subscription = {
   readonly id: string;
   readonly user_id: string;
+  // Provider identification
+  readonly provider: 'stripe' | 'apple';
+  readonly provider_subscription_id: string | null;
+  // Legacy Stripe fields (kept for backward compatibility)
   readonly stripe_customer_id: string | null;
   readonly stripe_subscription_id: string | null;
+  // Unified subscription fields
   readonly status: string;
+  readonly product_id: string | null;
+  readonly current_period_start: string | null;
   readonly current_period_end: string | null;
   readonly created_at: string;
   readonly updated_at: string;
   readonly price_id: string | null;
+  // Cancellation fields
   readonly cancel_at_period_end: boolean;
   readonly canceled_at: string | null;
   readonly cancel_at: string | null;
   readonly cancellation_reason: string | null;
   readonly cancellation_feedback: string | null;
   readonly cancellation_comment: string | null;
+  // Apple IAP specific fields
+  readonly apple_original_transaction_id: string | null;
+  readonly apple_last_transaction_id: string | null;
+  readonly apple_environment: 'Production' | 'Sandbox' | null;
+  readonly app_account_token: string | null;
 };
 
 /**
