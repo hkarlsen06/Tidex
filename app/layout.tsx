@@ -6,6 +6,7 @@ import Telemetry from "@/components/app/Telemetry";
 
 import SWRegister from "./sw-register";
 import { CapacitorUrlListener } from "./capacitor-url-listener";
+import { ChunkErrorRecovery } from "./chunk-error-recovery";
 import { DynamicThemeColor } from "@/components/app/DynamicThemeColor";
 import "./globals.css";
 
@@ -172,6 +173,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         />
       </head>
       <body className={`${inter.className} text-foreground antialiased`}>
+        <ChunkErrorRecovery />
         <DynamicThemeColor />
         <CapacitorUrlListener />
         {children}
