@@ -3,11 +3,11 @@
  * Minimal implementation focused on PWA requirements
  *
  * @fileoverview
- * This service worker provides only basic static asset caching.
+ * This service worker provides static asset caching and offline fallback.
  *
  * Features:
  * - Cache-first for static assets (icons, fonts, Next.js static files)
- * - No offline page or HTML routing
+ * - Offline page fallback for failed navigation requests
  * - No background sync or mutation queues
  * - No caching of API/data requests
  *
@@ -20,19 +20,30 @@
 // ============================================================================
 
 /** @type {string} Cache version - increment on each deploy to invalidate old caches */
-const CACHE_VERSION = 'v13';
+const CACHE_VERSION = 'v14';
 
 /** @type {string} Cache for immutable static assets (JS, CSS, fonts, images) */
 const STATIC_CACHE = `tidex-static-${CACHE_VERSION}`;
+
+/** @type {string} Cache for offline fallback page */
+const OFFLINE_CACHE = `tidex-offline-${CACHE_VERSION}`;
+
+/** @type {string} Offline fallback page path */
+const OFFLINE_PAGE = '/offline.html';
 
 // ============================================================================
 // INSTALL EVENT
 // ============================================================================
 
-self.addEventListener('install', () => {
+self.addEventListener('install', (event) => {
   console.log('[SW] Install event - version:', CACHE_VERSION);
-  // No precache: everything is cached lazily on first request
-  self.skipWaiting();
+
+  // Precache the offline page for app wrapper compatibility
+  event.waitUntil(
+    caches.open(OFFLINE_CACHE)
+      .then((cache) => cache.add(OFFLINE_PAGE))
+      .then(() => self.skipWaiting())
+  );
 });
 
 // ============================================================================
@@ -80,11 +91,11 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Navigation requests: Let the browser handle them directly.
-  // This avoids Safari/iOS quirks where SW-controlled navigations
-  // can cause very long blank loads and URL bar flicker.
-  // We still keep SW for static asset caching.
+  // Navigation requests: Network-first with offline fallback.
+  // If the network fails (offline), serve the cached offline page.
+  // This is essential for app store wrappers that require offline support.
   if (mode === 'navigate') {
+    event.respondWith(handleNavigation(request));
     return;
   }
 
@@ -96,6 +107,27 @@ self.addEventListener('fetch', (event) => {
 
   // Everything else: Network-only (no caching for API/data)
 });
+
+/**
+ * Handle navigation requests with network-first strategy.
+ * Falls back to offline page if network is unavailable.
+ */
+async function handleNavigation(request) {
+  try {
+    // Try network first
+    const response = await fetch(request);
+    return response;
+  } catch (error) {
+    // Network failed - serve offline page
+    console.log('[SW] Navigation failed, serving offline page');
+    const offlineResponse = await caches.match(OFFLINE_PAGE);
+    if (offlineResponse) {
+      return offlineResponse;
+    }
+    // If offline page not cached (shouldn't happen), throw original error
+    throw error;
+  }
+}
 
 async function handleStaticAsset(request) {
   const cachedResponse = await caches.match(request);
