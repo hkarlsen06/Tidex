@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import { ArrowDown, ArrowUp, HelpCircle } from 'lucide-react';
-import { useMotionValue, animate } from 'framer-motion';
+import { useMotionValue, animate, motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent } from '@/components/app/Card';
 import { ClickTooltip } from '@/components/app/Tooltip';
 import { useTranslations } from '@/lib/i18n/client';
@@ -187,22 +187,38 @@ export const TotalCard: React.FC<TotalCardProps> = ({
           <div className="text-center">
             {(hasChange || !isPercentageReady || isZeroChange) && (
               <div
-                key={`percentage-${isPercentageReady ? percentageChange : 'placeholder'}`}
                 className={`flex items-center justify-center gap-2 ${getAnimationClasses(animationDirection)}`}
               >
-                {hasChange ? (
-                  <>
-                    <ArrowIcon
-                      className={`h-6 w-6 ${isPositive ? 'text-brand-highlight' : 'text-text-secondary'}`}
-                      strokeWidth={2}
-                    />
-                    <span className={`text-lg font-semibold ${isPositive ? 'text-brand-highlight' : 'text-text-secondary'}`}>
-                      {Math.abs(percentageChange as number)}%
-                    </span>
-                  </>
-                ) : (
-                  <span className="text-lg font-semibold text-text-muted">— — —</span>
-                )}
+                <AnimatePresence mode="wait">
+                  {hasChange ? (
+                    <motion.div
+                      key="percentage-value"
+                      initial={{ opacity: 0, y: -8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 8 }}
+                      transition={{ duration: 0.4, ease: [0.25, 0.1, 0.25, 1] }}
+                      className="flex items-center gap-2"
+                    >
+                      <ArrowIcon
+                        className={`h-6 w-6 ${isPositive ? 'text-brand-highlight' : 'text-text-secondary'}`}
+                        strokeWidth={2}
+                      />
+                      <span className={`text-lg font-semibold ${isPositive ? 'text-brand-highlight' : 'text-text-secondary'}`}>
+                        {Math.abs(percentageChange as number)}%
+                      </span>
+                    </motion.div>
+                  ) : (
+                    <motion.span
+                      key="percentage-placeholder"
+                      initial={{ opacity: 1 }}
+                      exit={{ opacity: 0, y: -8 }}
+                      transition={{ duration: 0.2 }}
+                      className="text-lg font-semibold text-text-muted"
+                    >
+                      — — —
+                    </motion.span>
+                  )}
+                </AnimatePresence>
               </div>
             )}
             <div
