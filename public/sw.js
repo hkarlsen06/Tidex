@@ -20,7 +20,7 @@
 // ============================================================================
 
 /** @type {string} Cache version - increment on each deploy to invalidate old caches */
-const CACHE_VERSION = 'v14';
+const CACHE_VERSION = 'v15';
 
 /** @type {string} Cache for immutable static assets (JS, CSS, fonts, images) */
 const STATIC_CACHE = `tidex-static-${CACHE_VERSION}`;
@@ -99,7 +99,15 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Static assets: Cache-first for performance
+  // JS/CSS chunks: Network-first to prevent stale chunk errors after deploys.
+  // ChunkLoadError occurs when cached chunks don't match new deployment.
+  // Using network-first ensures fresh chunks are fetched, with cache fallback for offline.
+  if (isChunkAsset(url)) {
+    event.respondWith(handleChunkAsset(request));
+    return;
+  }
+
+  // Static assets (images, fonts, etc.): Cache-first for performance
   if (isStaticAsset(url)) {
     event.respondWith(handleStaticAsset(request));
     return;
@@ -125,6 +133,34 @@ async function handleNavigation(request) {
       return offlineResponse;
     }
     // If offline page not cached (shouldn't happen), throw original error
+    throw error;
+  }
+}
+
+/**
+ * Handle JS/CSS chunk assets with network-first strategy.
+ * Prevents ChunkLoadError after deployments by always fetching fresh chunks.
+ * Falls back to cache only when offline.
+ */
+async function handleChunkAsset(request) {
+  try {
+    // Always try network first for chunks
+    const response = await fetch(request);
+    if (response && response.ok) {
+      // Cache the fresh chunk for offline fallback
+      const responseToCache = response.clone();
+      caches.open(STATIC_CACHE).then((cache) => {
+        cache.put(request, responseToCache);
+      });
+    }
+    return response;
+  } catch (error) {
+    // Network failed - try cache as fallback (offline mode)
+    const cachedResponse = await caches.match(request);
+    if (cachedResponse) {
+      return cachedResponse;
+    }
+    // No cache available, let the request fail
     throw error;
   }
 }
@@ -155,9 +191,32 @@ async function handleStaticAsset(request) {
 // UTILITY FUNCTIONS
 // ============================================================================
 
-function isStaticAsset(url) {
+/**
+ * Check if URL is a JS/CSS chunk that should use network-first strategy.
+ * These files change on each deployment and stale versions cause ChunkLoadError.
+ */
+function isChunkAsset(url) {
+  // Match /_next/static/chunks/*.js and /_next/static/css/*.css
   return (
-    url.includes('/_next/static/') ||
+    url.includes('/_next/static/chunks/') ||
+    url.includes('/_next/static/css/')
+  );
+}
+
+/**
+ * Check if URL is a static asset that can use cache-first strategy.
+ * Excludes JS/CSS chunks which need network-first.
+ */
+function isStaticAsset(url) {
+  // Exclude chunks (handled separately with network-first)
+  if (isChunkAsset(url)) {
+    return false;
+  }
+
+  return (
+    // Other Next.js static assets (media, fonts bundled by Next)
+    url.includes('/_next/static/media/') ||
+    // Image and font file extensions
     url.match(/\.(png|jpg|jpeg|gif|svg|webp|ico|avif|woff|woff2|ttf|otf|eot)$/i)
   );
 }

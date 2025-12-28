@@ -1,7 +1,10 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Capacitor } from "@capacitor/core";
+
+// Module-level flag to prevent double-registration across HMR and re-renders
+let listenerRegistered = false;
 
 /**
  * Global Capacitor URL listener for handling deep links.
@@ -14,33 +17,41 @@ import { Capacitor } from "@capacitor/core";
  * 1. Receives the deep link via Capacitor's appUrlOpen event
  * 2. Closes the in-app browser overlay
  * 3. Forwards query params to the HTTPS callback URL
+ *
+ * ChunkLoadError resilience:
+ * - If dynamic imports fail due to stale chunks after a deploy, retries once after 1s
+ * - Uses module-level flag to prevent double-registration
  */
 export function CapacitorUrlListener() {
+  const hasRetried = useRef(false);
+
   useEffect(() => {
     // Only run on native platforms (iOS/Android)
     if (!Capacitor.isNativePlatform()) return;
 
-    let cleanup: (() => void) | undefined;
+    // Prevent double-registration
+    if (listenerRegistered) return;
 
-    const setupListener = async () => {
+    let cleanup: (() => void) | undefined;
+    let retryTimeout: ReturnType<typeof setTimeout> | undefined;
+
+    const setupListener = async (isRetry = false) => {
       try {
         // Dynamic import to avoid loading Capacitor plugins on web
         const { App } = await import("@capacitor/app");
         const { Browser } = await import("@capacitor/browser");
 
-        const listenerHandle = await App.addListener("appUrlOpen", async ({ url }) => {
-          // TODO: Remove this log after verifying the handler fires correctly
-          console.log("[CAPACITOR] appUrlOpen received:", url);
+        // Mark as registered before adding listener
+        listenerRegistered = true;
 
+        const listenerHandle = await App.addListener("appUrlOpen", async ({ url }) => {
           // Check if this is our OAuth callback scheme
           if (url.startsWith("tidex://auth/callback")) {
             // Close the in-app browser overlay immediately
             try {
               await Browser.close();
-              console.log("[CAPACITOR] Browser closed");
-            } catch (e) {
-              // Browser may already be closed, ignore
-              console.log("[CAPACITOR] Browser.close() failed (may already be closed):", e);
+            } catch {
+              // Browser may already be closed, silently ignore
             }
 
             // Parse the custom scheme URL
@@ -52,8 +63,6 @@ export function CapacitorUrlListener() {
               httpsCallbackUrl.searchParams.set(key, value);
             });
 
-            console.log("[CAPACITOR] Redirecting to HTTPS callback:", httpsCallbackUrl.toString());
-
             // Small delay to ensure browser is fully closed before navigation
             setTimeout(() => {
               window.location.href = httpsCallbackUrl.toString();
@@ -63,15 +72,34 @@ export function CapacitorUrlListener() {
 
         cleanup = () => {
           listenerHandle.remove();
+          listenerRegistered = false;
         };
       } catch (error) {
-        console.warn("[CAPACITOR] Failed to setup appUrlOpen listener:", error);
+        const isChunkError =
+          error instanceof Error &&
+          (error.name === "ChunkLoadError" ||
+            error.message.includes("Loading chunk") ||
+            error.message.includes("ChunkLoadError"));
+
+        if (isChunkError && !isRetry && !hasRetried.current) {
+          // ChunkLoadError: retry once after 1 second
+          console.warn("[CAPACITOR] ChunkLoadError on setup, retrying in 1s");
+          hasRetried.current = true;
+          retryTimeout = setTimeout(() => setupListener(true), 1000);
+        } else if (isChunkError) {
+          // Already retried, give up silently
+          console.warn("[CAPACITOR] ChunkLoadError persists after retry");
+        } else {
+          // Non-chunk error, log once
+          console.warn("[CAPACITOR] Failed to setup URL listener");
+        }
       }
     };
 
     setupListener();
 
     return () => {
+      if (retryTimeout) clearTimeout(retryTimeout);
       cleanup?.();
     };
   }, []);
