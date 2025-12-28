@@ -76,6 +76,7 @@ function shouldSkipLocaleRouting(pathname: string): boolean {
     pathname.startsWith('/.well-known/') ||
     pathname === '/favicon.ico' ||
     pathname === '/manifest.json' ||
+    pathname === '/support' ||
     /\.(svg|png|jpg|jpeg|gif|webp|ico)$/.test(pathname)
   );
 }
