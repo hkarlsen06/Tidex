@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/browser";
 import { withRefreshLock } from "@/lib/auth/refresh-lock";
 import { logSessionRefresh, shouldAttemptWakeRefresh } from "@/lib/auth/session-telemetry";
+import { isNativePlatform } from "@/lib/capacitor/platform";
 
 type SupabaseListenerProps = {
   accessToken?: string;
@@ -184,6 +185,55 @@ export function SupabaseListener({ accessToken }: SupabaseListenerProps) {
       window.removeEventListener("focus", handleFocus);
       timers.forEach((timer) => clearTimeout(timer));
       timers.clear();
+    };
+  }, []);
+
+  // Capacitor iOS: Handle custom scheme URL opens (tidex://auth/callback)
+  // When OAuth returns via custom scheme, redirect to the HTTPS callback route
+  useEffect(() => {
+    // Only run on native platforms
+    if (!isNativePlatform()) return;
+
+    let cleanup: (() => void) | undefined;
+
+    const setupListener = async () => {
+      try {
+        // Dynamic import to avoid loading Capacitor on web
+        const { App } = await import("@capacitor/app");
+
+        const listenerHandle = await App.addListener("appUrlOpen", ({ url }) => {
+          console.log("[CAPACITOR] appUrlOpen received:", url);
+
+          // Check if this is our OAuth callback scheme
+          if (url.startsWith("tidex://auth/callback")) {
+            // Parse the custom scheme URL
+            const customUrl = new URL(url);
+
+            // Build the HTTPS callback URL preserving all query params
+            const httpsCallbackUrl = new URL("https://app.tidex.no/auth/callback");
+            customUrl.searchParams.forEach((value, key) => {
+              httpsCallbackUrl.searchParams.set(key, value);
+            });
+
+            console.log("[CAPACITOR] Redirecting to HTTPS callback:", httpsCallbackUrl.toString());
+
+            // Navigate to the HTTPS callback route which will exchange the code for session
+            window.location.href = httpsCallbackUrl.toString();
+          }
+        });
+
+        cleanup = () => {
+          listenerHandle.remove();
+        };
+      } catch (error) {
+        console.warn("[CAPACITOR] Failed to setup appUrlOpen listener:", error);
+      }
+    };
+
+    setupListener();
+
+    return () => {
+      cleanup?.();
     };
   }, []);
 

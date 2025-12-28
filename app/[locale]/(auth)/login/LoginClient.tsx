@@ -29,6 +29,7 @@ const reducedMotionVariants = {
 
 import { supabase } from '@/lib/supabase/browser';
 import { translateError } from '@/lib/errors/translate';
+import { performOAuthSignIn } from '@/lib/capacitor/oauth';
 import {
   detectInputType,
   normalizePhoneToE164,
@@ -125,39 +126,20 @@ export default function LoginClient({
     setOauthProvider('google');
 
     const redirectPath = getRedirectPath();
-    const configuredBaseUrl = process.env.NEXT_PUBLIC_SITE_URL;
-    const fallbackOrigin =
-      typeof window !== 'undefined' ? window.location.origin : undefined;
-    const baseUrl =
-      configuredBaseUrl && configuredBaseUrl.startsWith('http')
-        ? configuredBaseUrl
-        : fallbackOrigin;
 
-    if (!baseUrl) {
+    const result = await performOAuthSignIn(supabase, 'google', {
+      redirectPath,
+      queryParams: { access_type: 'offline' },
+    });
+
+    if (!result.success) {
       setOauthProvider(null);
       setMessage({
         type: 'error',
-        text: t.pages.auth.login.errors.googleSignInFailed,
+        text: result.error
+          ? translateError(result.error.message)
+          : t.pages.auth.login.errors.googleSignInFailed,
       });
-      return;
-    }
-
-    const redirectUrl = new URL('/auth/callback', baseUrl);
-    redirectUrl.searchParams.set('next', redirectPath);
-
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: redirectUrl.toString(),
-        queryParams: {
-          access_type: 'offline',
-        },
-      },
-    });
-
-    if (error) {
-      setOauthProvider(null);
-      setMessage({ type: 'error', text: translateError(error.message) });
       return;
     }
 
@@ -403,36 +385,19 @@ export default function LoginClient({
     setOauthProvider('apple');
 
     const redirectPath = getRedirectPath();
-    const configuredBaseUrl = process.env.NEXT_PUBLIC_SITE_URL;
-    const fallbackOrigin =
-      typeof window !== 'undefined' ? window.location.origin : undefined;
-    const baseUrl =
-      configuredBaseUrl && configuredBaseUrl.startsWith('http')
-        ? configuredBaseUrl
-        : fallbackOrigin;
 
-    if (!baseUrl) {
+    const result = await performOAuthSignIn(supabase, 'apple', {
+      redirectPath,
+    });
+
+    if (!result.success) {
       setOauthProvider(null);
       setMessage({
         type: 'error',
-        text: t.pages.auth.login.errors.appleSignInFailed,
+        text: result.error
+          ? translateError(result.error.message)
+          : t.pages.auth.login.errors.appleSignInFailed,
       });
-      return;
-    }
-
-    const redirectUrl = new URL('/auth/callback', baseUrl);
-    redirectUrl.searchParams.set('next', redirectPath);
-
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'apple',
-      options: {
-        redirectTo: redirectUrl.toString(),
-      },
-    });
-
-    if (error) {
-      setOauthProvider(null);
-      setMessage({ type: 'error', text: translateError(error.message) });
       return;
     }
 
