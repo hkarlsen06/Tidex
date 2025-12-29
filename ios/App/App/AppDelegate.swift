@@ -7,7 +7,19 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Override point for customization after application launch.
+        // Create window programmatically since Main.storyboard was removed
+        window = UIWindow(frame: UIScreen.main.bounds)
+
+        // Set window background to match splash screen and dark theme
+        // This prevents white flash between splash screen and WebView load
+        let darkBackground = UIColor(red: 0.008, green: 0.032, blue: 0.090, alpha: 1.0)
+        window?.backgroundColor = darkBackground
+
+        let vc = CAPBridgeViewController()
+        vc.view.backgroundColor = darkBackground
+
+        window?.rootViewController = vc
+        window?.makeKeyAndVisible()
         return true
     }
 
