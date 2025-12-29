@@ -14,6 +14,7 @@ import {
   purchaseProduct,
   restorePurchases,
   openSubscriptionManagement,
+  checkPluginAvailability,
   APPLE_PRODUCT_IDS,
   type IAPProduct,
 } from '@/lib/capacitor/iap';
@@ -118,6 +119,17 @@ interface AppleIAPUpgradeOptionsProps {
   supabaseAccessToken: string;
 }
 
+// Timeout constant for IAP initialization (5 seconds)
+const IAP_INIT_TIMEOUT_MS = 5000;
+
+// Error keys for matching against translated errors
+const IAP_ERROR_KEYS = {
+  TIMEOUT: 'timeout',
+  NO_PRODUCTS: 'noProducts',
+  PLUGIN_NOT_AVAILABLE: 'pluginNotAvailable',
+  INIT_FAILED: 'initFailed',
+} as const;
+
 export function AppleIAPUpgradeOptions({
   t,
   supabaseAccessToken,
@@ -126,73 +138,169 @@ export function AppleIAPUpgradeOptions({
   const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>('monthly');
   const [products, setProducts] = useState<IAPProduct[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isRestoring, setIsRestoring] = useState(false);
   const [appAccountToken, setAppAccountToken] = useState<string | null>(null);
+  const [initStep, setInitStep] = useState<string>('idle');
+  const [errorKey, setErrorKey] = useState<string | null>(null);
 
-  // Initialize IAP and fetch products
+  // Access IAP translations
+  const iap = t.pages.settings.subscription.upgradePlans.iap;
+
+  // Initialize IAP and fetch products with timeout
   useEffect(() => {
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    let isCancelled = false;
+    let currentStep = 'idle';
+
     async function init() {
-      console.log('[AppleIAPUpgradeOptions] Starting init...');
+      console.log('[AppleIAPUpgradeOptions] ========== INIT START ==========');
       console.log('[AppleIAPUpgradeOptions] isIAPAvailable:', isIAPAvailable());
 
+      // Check plugin availability first
+      const pluginCheck = checkPluginAvailability();
+      console.log('[AppleIAPUpgradeOptions] Plugin availability check:', pluginCheck);
+
       if (!isIAPAvailable()) {
-        setError('In-App Purchases are not available on this device');
+        console.log('[AppleIAPUpgradeOptions] IAP not available on this platform');
+        setError(iap.notAvailable);
         return;
       }
 
+      setIsInitializing(true);
+      currentStep = 'starting';
+      setInitStep('starting');
+
+      // Set up timeout - uses local currentStep variable to track progress
+      timeoutId = setTimeout(() => {
+        if (!isCancelled) {
+          console.error('[AppleIAPUpgradeOptions] Initialization timed out after', IAP_INIT_TIMEOUT_MS, 'ms');
+          console.error('[AppleIAPUpgradeOptions] Last init step:', currentStep);
+          setError(iap.errors.timeout);
+          setErrorKey(IAP_ERROR_KEYS.TIMEOUT);
+          setIsInitializing(false);
+        }
+      }, IAP_INIT_TIMEOUT_MS);
+
       try {
-        // Get app account token
-        console.log('[AppleIAPUpgradeOptions] Getting app account token...');
+        // Step 1: Get app account token
+        currentStep = 'getting_token';
+        setInitStep('getting_token');
+        console.log('[AppleIAPUpgradeOptions] Step 1: Getting app account token...');
         const tokenResult = await getAppAccountToken();
+
+        if (isCancelled) return;
+
         if ('error' in tokenResult) {
           console.error('[AppleIAPUpgradeOptions] Token error:', tokenResult.error);
           setError(`Token error: ${tokenResult.error}`);
+          setIsInitializing(false);
           return;
         }
-        console.log('[AppleIAPUpgradeOptions] Got token:', tokenResult.token.substring(0, 8) + '...');
+        console.log('[AppleIAPUpgradeOptions] Step 1 complete: Got token:', tokenResult.token.substring(0, 8) + '...');
         setAppAccountToken(tokenResult.token);
 
-        // Initialize IAP
-        console.log('[AppleIAPUpgradeOptions] Initializing IAP...');
-        const initialized = await initializeIAP();
-        console.log('[AppleIAPUpgradeOptions] IAP initialized:', initialized);
-        if (!initialized) {
-          setError('Failed to initialize In-App Purchases. Check console for details.');
+        // Step 2: Initialize IAP
+        currentStep = 'initializing_iap';
+        setInitStep('initializing_iap');
+        console.log('[AppleIAPUpgradeOptions] Step 2: Initializing IAP plugin...');
+        const initResult = await initializeIAP();
+
+        if (isCancelled) return;
+
+        console.log('[AppleIAPUpgradeOptions] Step 2 result:', initResult);
+
+        if (!initResult.success) {
+          console.error('[AppleIAPUpgradeOptions] IAP init failed:', initResult.error);
+          setError(initResult.error || iap.errors.initFailed);
+          setErrorKey(IAP_ERROR_KEYS.INIT_FAILED);
+          setIsInitializing(false);
           return;
         }
+        console.log('[AppleIAPUpgradeOptions] Step 2 complete: IAP initialized');
 
-        // Fetch products
-        console.log('[AppleIAPUpgradeOptions] Fetching products...');
-        const fetchedProducts = await getProducts();
-        console.log('[AppleIAPUpgradeOptions] Products fetched:', fetchedProducts.length, fetchedProducts);
-        if (fetchedProducts.length === 0) {
-          setError('No products available. Products may not be configured in App Store Connect yet.');
-          return;
+        // Step 3: Fetch products
+        currentStep = 'fetching_products';
+        setInitStep('fetching_products');
+        console.log('[AppleIAPUpgradeOptions] Step 3: Fetching products...');
+        const productsResult = await getProducts();
+
+        if (isCancelled) return;
+
+        console.log('[AppleIAPUpgradeOptions] Step 3 result:', {
+          count: productsResult.products.length,
+          error: productsResult.error,
+          products: productsResult.products.map((p) => p.id),
+        });
+
+        if (productsResult.products.length === 0) {
+          console.warn('[AppleIAPUpgradeOptions] No products returned');
+          // Use specific error message for empty products
+          setError(productsResult.error || iap.errors.noProducts);
+          setErrorKey(IAP_ERROR_KEYS.NO_PRODUCTS);
+          setIsInitializing(false);
+          // Don't return - allow UI to show but with error state
+          // This way user can still see the restore button
+        } else {
+          setProducts(productsResult.products);
+          console.log('[AppleIAPUpgradeOptions] Step 3 complete: Got', productsResult.products.length, 'products');
         }
 
-        setProducts(fetchedProducts);
+        // Step 4: Complete
+        currentStep = 'complete';
+        setInitStep('complete');
         setIsInitialized(true);
-        console.log('[AppleIAPUpgradeOptions] Init complete!');
+        setIsInitializing(false);
+
+        // Clear timeout since we completed successfully
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+          timeoutId = null;
+        }
+
+        console.log('[AppleIAPUpgradeOptions] ========== INIT COMPLETE ==========');
+        console.log('[AppleIAPUpgradeOptions] Final state:', {
+          isInitialized: true,
+          productsCount: productsResult.products.length,
+          hasError: productsResult.products.length === 0,
+        });
       } catch (e: any) {
-        console.error('[AppleIAPUpgradeOptions] Init error:', e);
-        setError(`Init failed: ${e.message || 'Unknown error'}`);
+        if (isCancelled) return;
+
+        console.error('[AppleIAPUpgradeOptions] Init error:', {
+          message: e.message,
+          stack: e.stack,
+          step: currentStep,
+        });
+        setError(`Init failed at step "${currentStep}": ${e.message || 'Unknown error'}`);
+        setIsInitializing(false);
       }
     }
 
     init();
+
+    // Cleanup function
+    return () => {
+      isCancelled = true;
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
   }, []);
 
   const handleUpgrade = useCallback(
     async (planName: string, productId: string) => {
       if (!appAccountToken) {
-        setError('Unable to link purchase to your account');
+        setError(iap.unableToLinkPurchase);
+        setErrorKey(null);
         return;
       }
 
       try {
         setLoadingPlan(planName);
         setError(null);
+        setErrorKey(null);
 
         const result = await purchaseProduct(
           productId,
@@ -201,8 +309,9 @@ export function AppleIAPUpgradeOptions({
         );
 
         if (!result.success) {
-          if (result.error !== 'Purchase cancelled') {
-            setError(result.error || 'Purchase failed');
+          // Check for cancel - the native error message is 'Purchase cancelled'
+          if (result.error !== 'Purchase cancelled' && result.error !== iap.purchaseCancelled) {
+            setError(result.error || iap.purchaseFailed);
           }
           setLoadingPlan(null);
           return;
@@ -219,22 +328,24 @@ export function AppleIAPUpgradeOptions({
         setLoadingPlan(null);
       } catch (e: any) {
         console.error('[AppleIAPUpgradeOptions] Purchase error:', e);
-        setError(e.message || 'Purchase failed');
+        setError(e.message || iap.purchaseFailed);
         setLoadingPlan(null);
       }
     },
-    [appAccountToken, supabaseAccessToken]
+    [appAccountToken, supabaseAccessToken, iap]
   );
 
   const handleRestore = useCallback(async () => {
     if (!appAccountToken) {
-      setError('Unable to link purchases to your account');
+      setError(iap.unableToLinkPurchases);
+      setErrorKey(null);
       return;
     }
 
     try {
       setIsRestoring(true);
       setError(null);
+      setErrorKey(null);
 
       const result = await restorePurchases(
         appAccountToken,
@@ -242,7 +353,7 @@ export function AppleIAPUpgradeOptions({
       );
 
       if (!result.success) {
-        setError(result.error || 'Restore failed');
+        setError(result.error || iap.restoreFailed);
         setIsRestoring(false);
         return;
       }
@@ -251,16 +362,16 @@ export function AppleIAPUpgradeOptions({
         // Found active subscription, refresh page
         window.location.reload();
       } else {
-        setError('No active subscriptions found to restore');
+        setError(iap.noActiveSubscriptions);
       }
 
       setIsRestoring(false);
     } catch (e: any) {
       console.error('[AppleIAPUpgradeOptions] Restore error:', e);
-      setError(e.message || 'Restore failed');
+      setError(e.message || iap.restoreFailed);
       setIsRestoring(false);
     }
-  }, [appAccountToken, supabaseAccessToken]);
+  }, [appAccountToken, supabaseAccessToken, iap]);
 
   const getProductPrice = (productId: string): string => {
     const product = products.find((p) => p.id === productId);
@@ -277,12 +388,32 @@ export function AppleIAPUpgradeOptions({
       ? APPLE_PRODUCT_IDS.MAX_MONTHLY
       : APPLE_PRODUCT_IDS.MAX_YEARLY;
 
+  // Determine if buttons should be disabled and log the reason
+  const shouldDisableButtons = !isInitialized || products.length === 0;
+
+  // Log button state on each render for debugging
+  useEffect(() => {
+    console.log('[AppleIAPUpgradeOptions] Button state check:', {
+      isInitialized,
+      isInitializing,
+      productsCount: products.length,
+      hasError: !!error,
+      hasAppAccountToken: !!appAccountToken,
+      shouldDisableButtons,
+      disableReason: !isInitialized
+        ? 'Not initialized yet'
+        : products.length === 0
+          ? 'No products available'
+          : 'Buttons enabled',
+    });
+  }, [isInitialized, isInitializing, products.length, error, appAccountToken, shouldDisableButtons]);
+
   if (!isIAPAvailable()) {
     return (
       <div className="text-center py-8 text-text-secondary">
-        <p>In-App Purchases are not available on this device.</p>
+        <p>{iap.notAvailable}</p>
         <p className="mt-2 text-sm">
-          Please use the web version at app.tidex.no to manage your subscription.
+          {iap.useWebVersion}
         </p>
       </div>
     );
@@ -299,9 +430,35 @@ export function AppleIAPUpgradeOptions({
         </p>
       </div>
 
+      {/* Initialization status while loading */}
+      {isInitializing && (
+        <div className="p-4 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-lg text-sm">
+          <div className="flex items-center gap-2">
+            <RefreshCw className="h-4 w-4 animate-spin" />
+            <span>
+              {initStep === 'getting_token' && iap.initSteps.gettingToken}
+              {initStep === 'initializing_iap' && iap.initSteps.initializingIAP}
+              {initStep === 'fetching_products' && iap.initSteps.fetchingProducts}
+              {initStep === 'starting' && iap.initSteps.starting}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Error display with specific styling for "no products" */}
       {error && (
-        <div className="p-4 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-lg text-sm">
+        <div className={cn(
+          "p-4 rounded-lg text-sm",
+          errorKey === IAP_ERROR_KEYS.NO_PRODUCTS
+            ? "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400"
+            : "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400"
+        )}>
           {error}
+          {errorKey === IAP_ERROR_KEYS.NO_PRODUCTS && (
+            <p className="mt-2 text-xs opacity-75">
+              {iap.errors.noProductsHint}
+            </p>
+          )}
         </div>
       )}
 
@@ -325,7 +482,7 @@ export function AppleIAPUpgradeOptions({
         <PlanCard
           name={t.pages.settings.subscription.upgradePlans.proName}
           price={
-            isInitialized
+            isInitialized && products.length > 0
               ? getProductPrice(getProProductId())
               : t.pages.settings.subscription.upgradePlans.proPrice
           }
@@ -336,14 +493,14 @@ export function AppleIAPUpgradeOptions({
           showSavingsBadge={true}
           onUpgrade={() => handleUpgrade('Pro', getProProductId())}
           isLoading={loadingPlan === 'Pro'}
-          disabled={!isInitialized}
+          disabled={shouldDisableButtons}
           t={t}
         />
 
         <PlanCard
           name={t.pages.settings.subscription.upgradePlans.maxName}
           price={
-            isInitialized
+            isInitialized && products.length > 0
               ? getProductPrice(getMaxProductId())
               : t.pages.settings.subscription.upgradePlans.maxPrice
           }
@@ -353,24 +510,29 @@ export function AppleIAPUpgradeOptions({
           showSavingsBadge={true}
           onUpgrade={() => handleUpgrade('Max', getMaxProductId())}
           isLoading={loadingPlan === 'Max'}
-          disabled={!isInitialized}
+          disabled={shouldDisableButtons}
           t={t}
         />
       </div>
 
-      {/* Restore Purchases */}
+      {/* Restore Purchases - allow even if products aren't loaded */}
       <div className="pt-4 border-t border-border">
         <Button
           variant="ghost"
           className="w-full justify-center gap-2"
           onClick={handleRestore}
-          disabled={isRestoring || !isInitialized}
+          disabled={isRestoring || !isInitialized || !appAccountToken}
         >
           <RefreshCw
             className={cn('h-4 w-4', isRestoring && 'animate-spin')}
           />
-          {isRestoring ? 'Gjenoppretter...' : 'Gjenopprett kjøp'}
+          {isRestoring ? iap.restoring : iap.restorePurchases}
         </Button>
+        {isInitialized && !appAccountToken && (
+          <p className="text-xs text-text-muted text-center mt-2">
+            {t.pages.settings.subscription.upgradePlans.sessionVerifyFailed}
+          </p>
+        )}
       </div>
 
       {/* Manage Subscription */}
@@ -380,20 +542,15 @@ export function AppleIAPUpgradeOptions({
           className="text-sm gap-1"
           onClick={() => openSubscriptionManagement()}
         >
-          Administrer abonnement
+          {iap.manageSubscription}
           <ExternalLink className="h-3 w-3" />
         </Button>
       </div>
 
       {/* Legal text for App Store */}
       <div className="text-xs text-text-muted text-center space-y-2">
-        <p>
-          Abonnementet fornyes automatisk med mindre det sies opp minst 24 timer
-          før utløpet av inneværende periode.
-        </p>
-        <p>
-          Betaling belastes din Apple ID-konto ved bekreftelse av kjøp.
-        </p>
+        <p>{iap.legalAutoRenew}</p>
+        <p>{iap.legalPayment}</p>
       </div>
     </div>
   );

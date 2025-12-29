@@ -72,7 +72,7 @@ export function PlatformAwareUpgradeOptions({ t }: PlatformAwareUpgradeOptionsPr
     if (!accessToken) {
       return (
         <div className="text-center py-8 text-text-secondary">
-          <p>Unable to verify your session. Please try logging in again.</p>
+          <p>{t.pages.settings.subscription.upgradePlans.sessionVerifyFailed}</p>
         </div>
       );
     }
