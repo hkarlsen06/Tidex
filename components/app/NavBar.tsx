@@ -142,22 +142,22 @@ export function NavBar() {
 
     const checkShiftCount = async () => {
       try {
-        const {
-          data: { user },
-          error: userError,
-        } = await supabase.auth.getUser();
-        if (userError || !user) {
+        // Use getClaims() for performance - parses JWT locally without network request
+        const { data: authData, error: authError } = await supabase.auth.getClaims();
+        if (authError || !authData?.claims) {
           console.warn(
             "[NavBar] Failed to get user for shift count check:",
-            userError,
+            authError,
           );
           return;
         }
 
+        const userId = authData.claims.sub;
+
         const { count, error } = await supabase
           .from("user_shifts")
           .select("id", { count: "exact", head: true })
-          .eq("user_id", user.id);
+          .eq("user_id", userId);
 
         if (error) {
           console.warn("[NavBar] Failed to check shift count:", error);

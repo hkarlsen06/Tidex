@@ -25,19 +25,18 @@ interface OnboardingSettings {
 export async function completeOnboarding(settings: OnboardingSettings) {
   const supabase = await createSupabaseServerClient();
 
-  // Get current user
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
+  // Use getClaims() for performance - parses JWT locally without network request
+  const { data: authData, error: authError } = await supabase.auth.getClaims();
 
-  if (userError || !user) {
+  if (authError || !authData?.claims) {
     throw new Error("User not authenticated");
   }
 
+  const userId = authData.claims.sub;
+
   // Upsert user_settings (tax/break deduction fields moved to wage_snapshots)
   const settingsData = {
-    user_id: user.id,
+    user_id: userId,
     payroll_day: settings.payroll_day,
     theme: settings.theme,
     default_shifts_view: settings.default_shifts_view,
@@ -70,7 +69,7 @@ export async function completeOnboarding(settings: OnboardingSettings) {
   const { data: existingBaseline } = await supabase
     .from("wage_snapshots")
     .select("id")
-    .eq("user_id", user.id)
+    .eq("user_id", userId)
     .is("from_date", null)
     .maybeSingle();
 
@@ -104,7 +103,7 @@ export async function completeOnboarding(settings: OnboardingSettings) {
     const { error: insertError } = await supabase
       .from("wage_snapshots")
       .insert({
-        user_id: user.id,
+        user_id: userId,
         from_date: null, // Baseline snapshot (grunntariff)
         ...snapshotData,
       });
@@ -126,7 +125,7 @@ export async function completeOnboarding(settings: OnboardingSettings) {
   }
 
   // Invalidate cache since settings and wage snapshot were created/updated
-  invalidateAndRevalidate(user.id);
+  invalidateAndRevalidate(userId);
 
   return { success: true };
 }

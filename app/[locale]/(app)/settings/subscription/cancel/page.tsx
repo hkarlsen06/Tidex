@@ -28,10 +28,12 @@ export default async function SubscriptionCancelPage({ params }: Props) {
 
   // Layout guarantees user is authenticated
   const supabase = await createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+
+  // Use getClaims() for performance - parses JWT locally without network request
+  const { data, error } = await supabase.auth.getClaims();
 
   // This should never happen (layout redirects), but TypeScript needs the guard
-  if (!user) {
+  if (error || !data?.claims) {
     redirect('/login');
   }
 

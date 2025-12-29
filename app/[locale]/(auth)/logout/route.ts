@@ -11,8 +11,9 @@ export async function GET(request: NextRequest) {
 
   try {
     // Get user ID before signing out so we can clear their cache
-    const { data: { user } } = await supabase.auth.getUser();
-    const userId = user?.id;
+    // Use getClaims() for performance - parses JWT locally without network request
+    const { data } = await supabase.auth.getClaims();
+    const userId = data?.claims?.sub;
 
     const { error } = await supabase.auth.signOut();
 

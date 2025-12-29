@@ -29,15 +29,18 @@ export default async function DataPage({
 
   // Layout guarantees user is authenticated
   const supabase = await createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
+
+  // Use getClaims() for performance - parses JWT locally without network request
+  const { data, error } = await supabase.auth.getClaims();
 
   // This should never happen (layout redirects), but TypeScript needs the guard
-  if (!user) {
+  if (error || !data?.claims) {
     redirect('/login');
   }
 
-  const profile = await getUserProfile(user.id);
-  const userName = profile.firstName || user.email?.split('@')[0] || '';
+  const claims = data.claims;
+  const profile = await getUserProfile(claims.sub);
+  const userName = profile.firstName || claims.email?.split('@')[0] || '';
 
   return (
     <SettingsPageWrapper routeKey="settings-data">

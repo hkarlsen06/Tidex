@@ -17,8 +17,17 @@ import { resolveSecureFlag } from "@/lib/auth/cookie-config";
  * This follows Next.js 16 best practices:
  * - Proxy handles token refresh and locale routing (cookie management)
  * - Authentication logic lives in the data access layer (Server Components)
- * - No network I/O beyond what Supabase SSR needs for token refresh
+ * - Uses getClaims() for token refresh (triggers refresh when token is about to expire)
  * - IMPORTANT: Uses Supabase's cookie options directly without overriding
+ *
+ * Token Refresh Strategy:
+ * - getClaims() refreshes the session first if the access token is about to expire,
+ *   then validates the JWT (often without network call using asymmetric keys + JWKS cache)
+ * - getUser() is heavier as it always makes a network request to fetch user details
+ * - Use getUser() only when you need server-verified session state (e.g., checking if
+ *   user has been logged out/revoked server-side)
+ *
+ * See: https://supabase.com/docs/reference/javascript/auth-getclaims
  */
 
 /**
@@ -111,7 +120,9 @@ export async function proxy(request: NextRequest) {
     });
 
     // Trigger Supabase token refresh for API routes
-    // Must call getUser() to actually trigger the refresh mechanism
+    // getClaims() refreshes the session first if the access token is about to expire,
+    // then validates the JWT. With asymmetric keys + warm JWKS cache, this is often
+    // faster than getUser() which always makes a network request.
     const supabase = createServerClient(supabaseUrl, supabaseKey, {
       cookies: {
         getAll() {
@@ -125,8 +136,8 @@ export async function proxy(request: NextRequest) {
       },
     });
 
-    // getUser() triggers token refresh if needed and updates cookies via setAll
-    await supabase.auth.getUser();
+    // getClaims() triggers token refresh if needed and updates cookies via setAll
+    await supabase.auth.getClaims();
 
     return response;
   }
@@ -154,7 +165,9 @@ export async function proxy(request: NextRequest) {
     }
 
     // Trigger Supabase token refresh
-    // Must call getUser() to actually trigger the refresh mechanism
+    // getClaims() refreshes the session first if the access token is about to expire,
+    // then validates the JWT. With asymmetric keys + warm JWKS cache, this is often
+    // faster than getUser() which always makes a network request.
     const supabase = createServerClient(supabaseUrl, supabaseKey, {
       cookies: {
         getAll() {
@@ -168,8 +181,8 @@ export async function proxy(request: NextRequest) {
       },
     });
 
-    // getUser() triggers token refresh if needed and updates cookies via setAll
-    await supabase.auth.getUser();
+    // getClaims() triggers token refresh if needed and updates cookies via setAll
+    await supabase.auth.getClaims();
 
     return response;
   }

@@ -61,6 +61,9 @@ async function UserSettingsData({
  * Following Next.js 16 best practices, authentication happens in Server Components
  * (the data access layer), not in proxy.ts.
  *
+ * Uses getClaims() for performance - parses JWT locally without network request.
+ * See: https://supabase.com/docs/reference/javascript/auth-getclaims
+ *
  * Unauthenticated users are redirected to /login.
  * Users with pending MFA verification are redirected to /mfa-verify.
  */
@@ -73,62 +76,43 @@ export default async function RootLayout({
 }) {
   const { locale } = await params;
   const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
 
-  // Authentication enforcement - redirect to login if no user
-  if (!user) {
+  // Use getClaims() for performance - parses JWT locally without network request
+  const { data, error } = await supabase.auth.getClaims();
+
+  // Authentication enforcement - redirect to login if no valid session
+  if (error || !data?.claims) {
     redirect("/login");
   }
 
+  const claims = data.claims;
+
   // MFA enforcement - redirect to MFA verify if user has enrolled but not verified
+  // Note: MFA AAL info is available in claims.aal
   const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
   if (aalData?.currentLevel === "aal1" && aalData?.nextLevel === "aal2") {
     redirect(`/${locale}/mfa-verify`);
   }
 
-  // Extract user metadata from OAuth providers (available immediately, no DB call)
+  // Extract user metadata from JWT claims (available in user_metadata)
+  const userMetadata = claims.user_metadata ?? {};
   const rawUserName =
-    (user.user_metadata?.first_name as string | undefined) ??
-    (user.user_metadata?.full_name as string | undefined) ??
-    (user.user_metadata?.name as string | undefined) ??
-    (user.user_metadata?.display_name as string | undefined) ??
-    user.email ??
+    (userMetadata.first_name as string | undefined) ??
+    (userMetadata.full_name as string | undefined) ??
+    (userMetadata.name as string | undefined) ??
+    (userMetadata.display_name as string | undefined) ??
+    claims.email ??
     "User";
   const userName = sanitizeDisplayName(rawUserName);
 
-  // Get OAuth avatar URL for fallback (available immediately from auth metadata)
+  // Get OAuth avatar URL from user_metadata (available in JWT claims)
+  // Note: identities array is not available in claims, only in full User object
+  // user_metadata typically contains avatar_url from OAuth providers
   const rawMetadataAvatarUrl =
-    (user.user_metadata?.avatar_url as string | undefined) ??
-    (user.user_metadata?.picture as string | undefined) ??
+    (userMetadata.avatar_url as string | undefined) ??
+    (userMetadata.picture as string | undefined) ??
     null;
-  const metadataAvatarUrl = sanitizeUrl(rawMetadataAvatarUrl);
-
-  const rawIdentityAvatarUrl = (() => {
-    if (!user.identities || user.identities.length === 0) {
-      return null;
-    }
-
-    for (const identity of user.identities) {
-      const data = identity.identity_data as Record<string, unknown> | null | undefined;
-      if (!data) continue;
-
-      const candidate =
-        (typeof data.avatar_url === "string" && data.avatar_url) ||
-        (typeof data.picture === "string" && data.picture) ||
-        null;
-
-      if (candidate) {
-        return candidate;
-      }
-    }
-
-    return null;
-  })();
-
-  const identityAvatarUrl = sanitizeUrl(rawIdentityAvatarUrl);
-  const oauthAvatarUrl = metadataAvatarUrl ?? identityAvatarUrl;
+  const oauthAvatarUrl = sanitizeUrl(rawMetadataAvatarUrl);
 
   // Provide a trimmed dictionary for the authenticated app shell.
   const appDictionary = getAppDictionary(locale as Locale, []);
@@ -148,7 +132,7 @@ export default async function RootLayout({
               </CurrencyProvider>
             }
           >
-            <UserSettingsData userId={user.id} oauthAvatarUrl={oauthAvatarUrl}>
+            <UserSettingsData userId={claims.sub} oauthAvatarUrl={oauthAvatarUrl}>
               {/* Stream sharers data separately - SharersProvider in fallback prevents layout shift */}
               <Suspense
                 fallback={
@@ -157,7 +141,7 @@ export default async function RootLayout({
                   </SharersProvider>
                 }
               >
-                <SharersData userId={user.id}>
+                <SharersData userId={claims.sub}>
                   <AppLayoutClient userName={userName}>{children}</AppLayoutClient>
                 </SharersData>
               </Suspense>
