@@ -84,11 +84,11 @@ export default function MfaVerifyClient({ locale, nextPath }: MfaVerifyClientPro
   useEffect(() => {
     const loadFactors = async () => {
       try {
-        // First check if user has a valid session using getUser() (validates with server)
-        const { data: userData, error: userError } = await supabase.auth.getUser();
+        // Use getClaims() for performance - parses JWT locally without network request
+        const { data: authData, error: authError } = await supabase.auth.getClaims();
 
-        if (userError || !userData.user) {
-          console.error("[MFA Verify] No session found:", userError);
+        if (authError || !authData?.claims) {
+          console.error("[MFA Verify] No session found:", authError);
           setMessage({ type: "error", text: t.pages.auth.mfaVerify.errors.noSession });
           setIsLoading(false);
           return;

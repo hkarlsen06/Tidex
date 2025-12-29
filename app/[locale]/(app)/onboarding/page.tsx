@@ -22,18 +22,18 @@ export default async function OnboardingPage({
   // Layout guarantees user is authenticated
   const supabase = await createSupabaseServerClient();
 
-  // Get current user
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // Use getClaims() for performance - parses JWT locally without network request
+  const { data, error } = await supabase.auth.getClaims();
 
   // This should never happen (layout redirects), but TypeScript needs the guard
-  if (!user) {
+  if (error || !data?.claims) {
     redirect("/login");
   }
 
-  // Check if user has already completed onboarding
-  const finishedOnboarding = user.user_metadata?.finishedOnboarding;
+  const claims = data.claims;
+
+  // Check if user has already completed onboarding (from user_metadata in JWT)
+  const finishedOnboarding = claims.user_metadata?.finishedOnboarding;
   if (finishedOnboarding) {
     redirect("/");
   }
@@ -42,7 +42,7 @@ export default async function OnboardingPage({
   const { data: settings } = await supabase
     .from("user_settings")
     .select("*")
-    .eq("user_id", user.id)
+    .eq("user_id", claims.sub)
     .single();
 
   // Load current wage snapshot if it exists (for users restarting onboarding)

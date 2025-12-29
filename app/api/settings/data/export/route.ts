@@ -71,22 +71,11 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
+  // Use getClaims() for performance - parses JWT locally without network request
+  const { data: authData, error: authError } = await supabase.auth.getClaims();
 
-  if (userError) {
-    logger.error("[data export] Failed to fetch user:", userError);
-    const response = NextResponse.json(
-      { error: "Kunne ikke bekrefte innlogging." },
-      { status: 401, ...CACHE_CONTROL }
-    );
-    propagateCookies(baseResponse, response);
-    return response;
-  }
-
-  if (!user) {
+  if (authError || !authData?.claims) {
+    logger.error("[data export] Failed to verify session:", authError);
     const response = NextResponse.json(
       { error: "Ikke autentisert." },
       { status: 401, ...CACHE_CONTROL }
@@ -95,10 +84,12 @@ export async function GET(request: NextRequest) {
     return response;
   }
 
+  const userId = authData.claims.sub;
+
   const { data: settingsRow, error: settingsError } = await supabase
     .from("user_settings")
     .select("*")
-    .eq("user_id", user.id)
+    .eq("user_id", userId)
     .single();
 
   if (settingsError && settingsError.code !== "PGRST116") {
@@ -116,7 +107,7 @@ export async function GET(request: NextRequest) {
   let query = supabase
     .from("user_shifts")
     .select("*")
-    .eq("user_id", user.id)
+    .eq("user_id", userId)
     .order("shift_date", { ascending: true })
     .order("start_time", { ascending: true });
 
@@ -144,7 +135,7 @@ export async function GET(request: NextRequest) {
   const { data: recurringShifts, error: recurringError } = await supabase
     .from("recurring_shifts")
     .select("*")
-    .eq("user_id", user.id);
+    .eq("user_id", userId);
 
   if (recurringError) {
     logger.error("[data export] Failed to load recurring shifts:", recurringError);
@@ -160,7 +151,7 @@ export async function GET(request: NextRequest) {
   const { data: allSnapshots, error: snapshotsError } = await supabase
     .from('wage_snapshots')
     .select('*')
-    .eq('user_id', user.id)
+    .eq('user_id', userId)
     .order('from_date', { ascending: false, nullsFirst: false });
 
   if (snapshotsError) {
@@ -249,7 +240,7 @@ export async function GET(request: NextRequest) {
             const snapshot = getSnapshotForDate(virtualShift.date);
             const virtualShiftRow: ShiftRow = {
               id: `virtual-${recurring.id}-${virtualShift.date}`,
-              user_id: user.id,
+              user_id: userId,
               shift_date: virtualShift.date,
               start_time: cleanTime(recurring.start_time),
               end_time: cleanTime(recurring.end_time),

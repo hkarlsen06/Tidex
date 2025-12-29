@@ -89,27 +89,11 @@ export class AuthService extends Context.Tag("AuthService")<
 >() {}
 
 /**
- * Transform Supabase User to UserIdentity
- */
-const transformUser = (user: User): UserIdentity => {
-  const identityProviders = new Set(
-    user.identities?.map((identity) => identity.provider) ?? []
-  );
-
-  return {
-    id: user.id,
-    email: user.email ?? null,
-    phone: user.phone ?? null,
-    firstName: (user.user_metadata?.first_name as string | null) ?? null,
-    metadata: user.user_metadata ?? {},
-    identityProviders,
-  };
-};
-
-/**
  * Live implementation of AuthService
  *
- * Uses Effect Cache for session caching to avoid repeated auth checks
+ * Uses Effect Cache for session caching to avoid repeated auth checks.
+ * Uses getClaims() for performance - parses JWT locally instead of network request.
+ * See: https://supabase.com/docs/reference/javascript/auth-getclaims
  */
 export const AuthServiceLive = Layer.effect(
   AuthService,
@@ -124,8 +108,10 @@ export const AuthServiceLive = Layer.effect(
         Effect.gen(function* () {
           const client = yield* supabase.getClient();
 
-          const authResult = yield* Effect.tryPromise({
-            try: () => client.auth.getUser(),
+          // Use getClaims() for performance - parses JWT locally without network request
+          // This is faster than getUser() which always makes a server request
+          const claimsResult = yield* Effect.tryPromise({
+            try: () => client.auth.getClaims(),
             catch: (error) =>
               new AuthError({
                 reason: "invalid_session",
@@ -134,7 +120,21 @@ export const AuthServiceLive = Layer.effect(
           });
 
           // Cast to known type from Supabase
-          const result = authResult as { data: { user: User | null }, error: any };
+          const result = claimsResult as {
+            data: {
+              claims: {
+                sub: string;
+                email?: string;
+                phone?: string;
+                user_metadata?: Record<string, unknown>;
+                app_metadata?: {
+                  provider?: string;
+                  providers?: string[];
+                };
+              } | null;
+            } | null;
+            error: any;
+          };
 
           if (result.error) {
             return yield* Effect.fail(
@@ -145,7 +145,7 @@ export const AuthServiceLive = Layer.effect(
             );
           }
 
-          if (!result.data.user) {
+          if (!result.data?.claims) {
             return yield* Effect.fail(
               new NotFoundError({
                 resource: "User session",
@@ -153,11 +153,36 @@ export const AuthServiceLive = Layer.effect(
             );
           }
 
-          const userIdentity = transformUser(result.data.user);
+          const claims = result.data.claims;
+
+          // Extract identity providers from app_metadata
+          const providers = claims.app_metadata?.providers ?? [];
+          const identityProviders = new Set(providers);
+
+          const userIdentity: UserIdentity = {
+            id: claims.sub,
+            email: claims.email ?? null,
+            phone: claims.phone ?? null,
+            firstName: (claims.user_metadata?.first_name as string | null) ?? null,
+            metadata: claims.user_metadata ?? {},
+            identityProviders,
+          };
+
+          // Create a minimal User object for backward compatibility
+          // Note: This doesn't have full User data, but has what's needed for most operations
+          const rawUser: User = {
+            id: claims.sub,
+            email: claims.email,
+            phone: claims.phone,
+            user_metadata: claims.user_metadata ?? {},
+            app_metadata: claims.app_metadata ?? {},
+            aud: "authenticated",
+            created_at: "",
+          } as User;
 
           return {
             user: userIdentity,
-            rawUser: result.data.user,
+            rawUser,
           };
         }),
     });

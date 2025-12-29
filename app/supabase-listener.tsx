@@ -53,8 +53,9 @@ export function SupabaseListener({ accessToken }: SupabaseListenerProps) {
         const attemptId = logSessionRefresh("session_refresh_attempt", "visibilitychange");
 
         try {
-          // Use getUser() instead of getSession() - it validates with the server
-          // and doesn't trigger the Supabase security warning
+          // Use getUser() here to verify server-side session state after wake
+          // This checks if the session has been revoked/logged out server-side
+          // (which getClaims() cannot detect as it only validates the JWT locally)
           const { data, error } = await withRefreshLock(() => supabase.auth.getUser());
           const duration = performance.now() - startTime;
 
@@ -97,7 +98,9 @@ export function SupabaseListener({ accessToken }: SupabaseListenerProps) {
         const attemptId = logSessionRefresh("session_refresh_attempt", "pageshow");
 
         try {
-          // Use getUser() instead of getSession() - it validates with the server
+          // Use getUser() here to verify server-side session state after restore
+          // This checks if the session has been revoked/logged out server-side
+          // (which getClaims() cannot detect as it only validates the JWT locally)
           const { data, error } = await withRefreshLock(() => supabase.auth.getUser());
           const duration = performance.now() - startTime;
 
@@ -151,7 +154,9 @@ export function SupabaseListener({ accessToken }: SupabaseListenerProps) {
       const attemptId = logSessionRefresh("session_refresh_attempt", "focus");
 
       try {
-        // Use getUser() instead of getSession() - it validates with the server
+        // Use getUser() here to verify server-side session state after focus
+        // This checks if the session has been revoked/logged out server-side
+        // (which getClaims() cannot detect as it only validates the JWT locally)
         const { data, error } = await withRefreshLock(() => supabase.auth.getUser());
         const duration = performance.now() - startTime;
 

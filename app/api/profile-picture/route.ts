@@ -91,22 +91,12 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = createSupabaseRouteHandlerClient(request, baseResponse);
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
 
-    if (userError) {
-      console.error("[PROFILE PICTURE] Failed to fetch user:", userError);
-      const errorResponse = NextResponse.json(
-        { error: "Kunne ikke bekrefte innlogging." },
-        { status: 401, headers: { "cache-control": "no-store" } }
-      );
-      propagateCookies(baseResponse, errorResponse);
-      return errorResponse;
-    }
+    // Use getClaims() for performance - parses JWT locally without network request
+    const { data: authData, error: authError } = await supabase.auth.getClaims();
 
-    if (!user) {
+    if (authError || !authData?.claims) {
+      console.error("[PROFILE PICTURE] Failed to verify session:", authError);
       const errorResponse = NextResponse.json(
         { error: "Ikke autentisert." },
         { status: 401, headers: { "cache-control": "no-store" } }
@@ -115,6 +105,7 @@ export async function POST(request: NextRequest) {
       return errorResponse;
     }
 
+    const userId = authData.claims.sub;
     const mimeType = file.type || undefined;
     const filenameExt = extFromFilename(file.name);
     const mimeExt = extFromMime(file.type);
@@ -149,7 +140,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const storagePath = `${user.id}/${crypto.randomUUID()}.${fileExt}`;
+    const storagePath = `${userId}/${crypto.randomUUID()}.${fileExt}`;
 
     const { error: uploadError } = await supabase.storage
       .from(BUCKET)
@@ -173,7 +164,7 @@ export async function POST(request: NextRequest) {
       const previousPath = parseStoragePath(previousUrl);
       if (previousPath) {
         // Verify the path belongs to this user (security check)
-        if (!previousPath.startsWith(`${user.id}/`)) {
+        if (!previousPath.startsWith(`${userId}/`)) {
           console.error("[PROFILE PICTURE] Security: User attempted to delete file not owned by them");
           // Don't fail the upload, but log the security issue
         } else {
@@ -218,22 +209,12 @@ export async function DELETE(request: NextRequest) {
 
   try {
     const supabase = createSupabaseRouteHandlerClient(request, baseResponse);
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
 
-    if (userError) {
-      console.error("[PROFILE PICTURE] Failed to fetch user:", userError);
-      const errorResponse = NextResponse.json(
-        { error: "Kunne ikke bekrefte innlogging." },
-        { status: 401, headers: { "cache-control": "no-store" } }
-      );
-      propagateCookies(baseResponse, errorResponse);
-      return errorResponse;
-    }
+    // Use getClaims() for performance - parses JWT locally without network request
+    const { data: authData, error: authError } = await supabase.auth.getClaims();
 
-    if (!user) {
+    if (authError || !authData?.claims) {
+      console.error("[PROFILE PICTURE] Failed to verify session:", authError);
       const errorResponse = NextResponse.json(
         { error: "Ikke autentisert." },
         { status: 401, headers: { "cache-control": "no-store" } }
@@ -242,6 +223,7 @@ export async function DELETE(request: NextRequest) {
       return errorResponse;
     }
 
+    const userId = authData.claims.sub;
     const { searchParams } = new URL(request.url);
     const url = searchParams.get("url");
 
@@ -266,9 +248,9 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Security check: Verify the path belongs to the authenticated user
-    if (!path.startsWith(`${user.id}/`)) {
+    if (!path.startsWith(`${userId}/`)) {
       console.error("[PROFILE PICTURE] Security: User attempted to delete file not owned by them", {
-        userId: user.id,
+        userId,
         attemptedPath: path
       });
       const errorResponse = NextResponse.json(
