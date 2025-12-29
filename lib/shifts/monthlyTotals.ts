@@ -39,6 +39,11 @@ export type ShiftTotalsOptions = {
     enabled: boolean;
     percentage: number;
   };
+  /**
+   * Set of shift IDs to exclude from totals (e.g., higher-earning conflicting shifts).
+   * When shifts overlap, only the one with lowest earnings should count.
+   */
+  excludedShiftIds?: Set<string>;
 };
 
 /**
@@ -83,21 +88,27 @@ export function summarizeShiftTotals({
   month,
   halfTaxMonth,
   payoutTaxOverride,
+  excludedShiftIds,
 }: ShiftTotalsOptions): ShiftTotals {
-  const gross = shifts.reduce((sum, shift) => sum + (shift.computed.gross || 0), 0);
-  const supplement = shifts.reduce(
+  // Filter out excluded shifts for totals calculation
+  const includedShifts = excludedShiftIds
+    ? shifts.filter(shift => !excludedShiftIds.has(shift.id))
+    : shifts;
+
+  const gross = includedShifts.reduce((sum, shift) => sum + (shift.computed.gross || 0), 0);
+  const supplement = includedShifts.reduce(
     (sum, shift) => sum + (shift.computed.supplementPay || 0),
     0,
   );
 
-  const completedShifts = shifts.filter((shift) => hasShiftEnded(shift, now));
+  const completedShifts = includedShifts.filter((shift) => hasShiftEnded(shift, now));
   const completedGross = completedShifts.reduce(
     (sum, shift) => sum + (shift.computed.gross || 0),
     0,
   );
 
   // Calculate net per-shift using payout tax override if provided
-  const net = shifts.reduce(
+  const net = includedShifts.reduce(
     (sum, shift) => sum + calculateShiftNet(shift, month, halfTaxMonth, taxSettings, payoutTaxOverride),
     0,
   );
@@ -142,6 +153,7 @@ export function getMonthlyTotals({
   now,
   halfTaxMonth,
   payoutTaxOverride,
+  excludedShiftIds,
 }: MonthlyTotalsOptions): MonthlyTotals {
   const monthShifts = filterShiftsForMonth(shifts, year, month);
   // Payout month = earnings month + 1 (used for half-tax detection)
@@ -153,6 +165,7 @@ export function getMonthlyTotals({
     month: payoutMonth,
     halfTaxMonth,
     payoutTaxOverride,
+    excludedShiftIds,
   });
 
   return {

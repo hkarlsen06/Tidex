@@ -33,6 +33,8 @@ type ShiftCardProps = {
   showEarnings?: boolean;
   /** When true, indicates this shift overlaps with another shift on the same date */
   hasConflict?: boolean;
+  /** When true, this shift's earnings are excluded from totals (crossed out visually) */
+  excludedFromTotal?: boolean;
 };
 
 export function formatDateParts(date: string, locale: string, daysShort: readonly string[]) {
@@ -66,7 +68,7 @@ export function formatPlainAmount(value: number) {
   return formatPlainAmountValue(value);
 }
 
-export function ShiftCard({ shift, onClick, isToday = false, progress, taxSettings, showEarnings = true, hasConflict = false }: ShiftCardProps) {
+export function ShiftCard({ shift, onClick, isToday = false, progress, taxSettings, showEarnings = true, hasConflict = false, excludedFromTotal = false }: ShiftCardProps) {
   const { t, locale } = useTranslations();
   const formatCurrency = useFormatCurrency();
   const { symbol: currencySymbol, display: currencyDisplay } = useCurrency();
@@ -158,10 +160,18 @@ export function ShiftCard({ shift, onClick, isToday = false, progress, taxSettin
         <div className="text-right">
           {showEarnings ? (
             <>
-              <p className="text-2xl font-semibold tracking-tight text-text-primary">
+              <p className={cn(
+                "text-2xl font-semibold tracking-tight",
+                excludedFromTotal
+                  ? "text-text-muted line-through decoration-2"
+                  : "text-text-primary"
+              )}>
                 {formatCurrency(displayAmount)}
               </p>
-              <p className="text-xs">{breakdown}</p>
+              <p className={cn(
+                "text-xs",
+                excludedFromTotal && "text-text-muted line-through"
+              )}>{breakdown}</p>
             </>
           ) : (
             <>

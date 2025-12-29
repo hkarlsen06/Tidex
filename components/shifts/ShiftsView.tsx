@@ -48,6 +48,7 @@ import { useCountdown } from "@/lib/hooks/useCountdown";
 import { TodayPlaceholderCard } from "./TodayPlaceholderCard";
 import { ScrollablePageWrapper } from "@/components/app/ScrollablePageWrapper";
 import type { PayoutTaxSettings } from "@/data-access/shifts";
+import { buildExcludedShiftIds } from "@/lib/shifts/conflictExclusion";
 
 // Lazy load the calendar to reduce initial bundle size (~40KB savings)
 const MonthlyEarningsCalendar = dynamic(
@@ -221,6 +222,7 @@ function ShiftItemWithConnector({
   shifts,
   conflictConnectorSet,
   conflictingShiftIds,
+  excludedFromTotalIds,
   isCurrentMonth,
   todayDate,
   todayIndex,
@@ -240,6 +242,7 @@ function ShiftItemWithConnector({
   shifts: ShiftWithComputations[];
   conflictConnectorSet: Set<string>;
   conflictingShiftIds: Set<string>;
+  excludedFromTotalIds: Set<string>;
   isCurrentMonth: boolean;
   todayDate: string;
   todayIndex: number;
@@ -292,6 +295,7 @@ function ShiftItemWithConnector({
               }}
               showEarnings={showEarnings}
               hasConflict={conflictingShiftIds.has(shift.id)}
+              excludedFromTotal={excludedFromTotalIds.has(shift.id)}
             />
             {isNextUpcomingShift && countdown.text && (
               <p className="text-xs text-text-muted text-center">{countdown.text}</p>
@@ -317,6 +321,7 @@ function ShiftGroupContent({
   shifts,
   conflictConnectorSet,
   conflictingShiftIds,
+  excludedFromTotalIds,
   isCurrentMonth,
   todayDate,
   todayIndex,
@@ -332,6 +337,7 @@ function ShiftGroupContent({
   shifts: ShiftWithComputations[];
   conflictConnectorSet: Set<string>;
   conflictingShiftIds: Set<string>;
+  excludedFromTotalIds: Set<string>;
   isCurrentMonth: boolean;
   todayDate: string;
   todayIndex: number;
@@ -369,6 +375,7 @@ function ShiftGroupContent({
             shifts={shifts}
             conflictConnectorSet={conflictConnectorSet}
             conflictingShiftIds={conflictingShiftIds}
+            excludedFromTotalIds={excludedFromTotalIds}
             isCurrentMonth={isCurrentMonth}
             todayDate={todayDate}
             todayIndex={todayIndex}
@@ -405,7 +412,8 @@ function getIsoWeek(date: Date) {
 // Combined filter and group operation for better performance
 function filterAndGroupByWeek(
   shifts: ShiftWithComputations[],
-  month: Date
+  month: Date,
+  excludedFromTotal?: Set<string>
 ): WeekGroup[] {
   const groups: WeekGroup[] = [];
   const map = new Map<string, WeekGroup>();
@@ -438,7 +446,10 @@ function filterAndGroupByWeek(
     }
 
     group.shifts.push(shift);
-    group.totalGross += shift.computed.gross;
+    // Only add to totalGross if the shift is not excluded (conflicting with higher earnings)
+    if (!excludedFromTotal?.has(shift.id)) {
+      group.totalGross += shift.computed.gross;
+    }
   }
 
   // Sort shifts within each week by date
@@ -1193,6 +1204,12 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
   // Build set of shift IDs that have overlapping conflicts
   const conflictingShiftIds = useMemo(
     () => buildConflictingShiftIds(shifts),
+    [shifts]
+  );
+
+  // Build set of shift IDs that should be excluded from totals (higher-earning conflicting shifts)
+  const excludedFromTotalIds = useMemo(
+    () => buildExcludedShiftIds(shifts),
     [shifts]
   );
 
@@ -2058,8 +2075,8 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
   ]);
 
   const grouped = useMemo(() => {
-    return filterAndGroupByWeek(shifts, selectedMonth);
-  }, [shifts, selectedMonth]);
+    return filterAndGroupByWeek(shifts, selectedMonth, excludedFromTotalIds);
+  }, [shifts, selectedMonth, excludedFromTotalIds]);
 
   // Build set of shift IDs that need a visual connector to the next shift
   const conflictConnectorSet = useMemo(
@@ -2380,6 +2397,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
                       shifts={group.shifts}
                       conflictConnectorSet={conflictConnectorSet}
                       conflictingShiftIds={conflictingShiftIds}
+                      excludedFromTotalIds={excludedFromTotalIds}
                       isCurrentMonth={isCurrentMonth}
                       todayDate={todayDate}
                       todayIndex={todayIndex}
