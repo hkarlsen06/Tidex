@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { Pie, PieChart, Cell } from "recharts";
 import {
   ChartContainer,
@@ -32,7 +33,7 @@ export function SupplementBreakdownChart({ data }: SupplementBreakdownChartProps
   // Handle case where there are no earnings
   if (data.basePay === 0 && data.supplementPay === 0) {
     return (
-      <div className="flex items-center justify-center h-[280px] text-text-muted">
+      <div className="flex items-center justify-center h-70 text-text-muted">
         <p className="text-center">
           {t.components.charts.supplementBreakdown.noData}
         </p>
@@ -43,7 +44,7 @@ export function SupplementBreakdownChart({ data }: SupplementBreakdownChartProps
   // Handle case where there are no supplements
   if (data.supplementPay === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-[280px] gap-4">
+      <div className="flex flex-col items-center justify-center h-70 gap-4">
         <div className="text-center">
           <p className="text-2xl font-bold text-text-primary mb-2">
             {formatCurrency(data.basePay)}
@@ -52,7 +53,7 @@ export function SupplementBreakdownChart({ data }: SupplementBreakdownChartProps
             {t.components.charts.supplementBreakdown.percentBasePay}
           </p>
         </div>
-        <p className="text-sm text-text-secondary max-w-[280px] text-center">
+        <p className="text-sm text-text-secondary max-w-70 text-center">
           {t.components.charts.supplementBreakdown.noSupplements}
         </p>
       </div>
@@ -77,7 +78,7 @@ export function SupplementBreakdownChart({ data }: SupplementBreakdownChartProps
   const totalEarnings = data.basePay + data.supplementPay;
 
   return (
-    <div className="flex items-center gap-4 sm:gap-6 w-full h-[180px] sm:h-[200px]">
+    <div className="flex items-center gap-4 sm:gap-6 w-full h-45 sm:h-50">
       {/* Left cell: Total and legend - centered, takes remaining space */}
       <div className="flex-1 flex items-center justify-center">
         <div className="flex flex-col gap-2.5 sm:gap-3">
@@ -117,12 +118,13 @@ export function SupplementBreakdownChart({ data }: SupplementBreakdownChartProps
           <ChartTooltip
             content={
               <ChartTooltipContent
-                className="min-w-[200px] p-4"
+                className="min-w-50 p-4"
                 hideLabel
-                formatter={(value, _name, item) => {
+                formatter={(value, _name, item): React.ReactNode => {
                   const amount = formatCurrency(value as number);
-                  const percentage = (item.payload.percentage as number).toFixed(1);
-                  const label = item.payload.label as string;
+                  const itemTyped = item as { payload: { percentage: number; label: string } };
+                  const percentage = itemTyped.payload.percentage.toFixed(1);
+                  const label = itemTyped.payload.label;
                   return (
                     <div className="flex flex-col gap-1">
                       <span className="text-lg font-semibold">{label}</span>

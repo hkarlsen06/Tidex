@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Cell } from "recharts";
 import {
   ChartContainer,
@@ -110,7 +111,7 @@ export function EmploymentChart({ data, yearlyAverage, focusYear: _focusYear }: 
             trigger={<Info className="h-4 w-4" />}
             triggerClassName="p-1 rounded-full text-text-muted hover:text-text-secondary hover:bg-surface-primary transition-colors"
             ariaLabel={t.components.charts.employment.averageInfoLabel}
-            className="max-w-[200px]"
+            className="max-w-50"
           >
             <p>{t.components.charts.employment.averageInfo}</p>
           </ClickTooltip>
@@ -118,7 +119,7 @@ export function EmploymentChart({ data, yearlyAverage, focusYear: _focusYear }: 
       </div>
 
       {/* Bar chart */}
-      <ChartContainer config={chartConfig} className="h-[260px] w-full pt-4">
+      <ChartContainer config={chartConfig} className="h-65 w-full pt-4">
         <BarChart data={filteredData} margin={{ top: 12, right: 8, bottom: 0, left: 16 }}>
           <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
           <XAxis
@@ -150,13 +151,13 @@ export function EmploymentChart({ data, yearlyAverage, focusYear: _focusYear }: 
           <ChartTooltip
             content={
               <ChartTooltipContent
-                className="min-w-[200px] p-4"
-                labelFormatter={(label, payload) => {
+                className="min-w-50 p-4"
+                labelFormatter={(label, payload): React.ReactNode => {
                   if (payload && payload.length > 0) {
-                    const chartData = payload[0].payload as EmploymentMonthlyData;
+                    const chartData = (payload[0] as { payload: EmploymentMonthlyData }).payload;
                     return <span className="text-lg font-semibold">{chartData.fullMonth}</span>;
                   }
-                  return label;
+                  return label as React.ReactNode;
                 }}
                 formatter={(value) => {
                   const percentage = value as number;

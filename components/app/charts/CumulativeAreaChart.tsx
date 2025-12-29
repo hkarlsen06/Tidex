@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import React, { useMemo } from "react";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import {
   ChartContainer,
@@ -35,7 +35,7 @@ export function CumulativeAreaChart({ data }: CumulativeAreaChartProps) {
   }, [data]);
 
   return (
-    <ChartContainer config={chartConfig} className="h-[260px] w-full">
+    <ChartContainer config={chartConfig} className="h-65 w-full">
       <AreaChart data={cumulativeData} margin={{ top: 12, right: 20, bottom: 0, left: 16 }}>
         <defs>
           <linearGradient id="fillCumulative" x1="0" y1="0" x2="0" y2="1">
@@ -63,13 +63,13 @@ export function CumulativeAreaChart({ data }: CumulativeAreaChartProps) {
         <ChartTooltip
           content={
             <ChartTooltipContent
-              className="min-w-[200px] p-4"
-              labelFormatter={(label, payload) => {
+              className="min-w-50 p-4"
+              labelFormatter={(label, payload): React.ReactNode => {
                 if (payload && payload.length > 0) {
-                  const data = payload[0].payload as MonthlyData;
+                  const data = (payload[0] as { payload: MonthlyData }).payload;
                   return <span className="text-lg font-semibold">{data.fullMonth}</span>;
                 }
-                return label;
+                return label as React.ReactNode;
               }}
               formatter={(value, _name) => {
                 const amount = formatCurrency(value as number);

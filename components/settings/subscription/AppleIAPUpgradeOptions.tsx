@@ -287,7 +287,7 @@ export function AppleIAPUpgradeOptions({
         clearTimeout(timeoutId);
       }
     };
-  }, []);
+  }, [iap]);
 
   const handleUpgrade = useCallback(
     async (planName: string, productId: string) => {

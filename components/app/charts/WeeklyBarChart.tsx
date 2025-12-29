@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Cell } from "recharts";
 import {
   ChartContainer,
@@ -215,7 +216,7 @@ export function WeeklyBarChart({ data, highlightBestDay = false, showDatesInstea
     : new Date().toISOString().split('T')[0];
 
   return (
-    <ChartContainer config={chartConfig} className="h-[260px] w-full">
+    <ChartContainer config={chartConfig} className="h-65 w-full">
       <BarChart data={chartData} margin={{ top: 12, right: 16, bottom: 0, left: 16 }}>
         <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
         <XAxis
@@ -242,13 +243,13 @@ export function WeeklyBarChart({ data, highlightBestDay = false, showDatesInstea
         <ChartTooltip
           content={
             <ChartTooltipContent
-              className="min-w-[200px] p-4"
-              labelFormatter={(label, payload) => {
+              className="min-w-50 p-4"
+              labelFormatter={(label, payload): React.ReactNode => {
                 if (payload && payload.length > 0) {
-                  const data = payload[0].payload as DailyData;
+                  const data = (payload[0] as { payload: DailyData }).payload;
                   return <span className="text-lg font-semibold">{data.fullDay}</span>;
                 }
-                return label;
+                return label as React.ReactNode;
               }}
               formatter={(value, _name) => {
                 const amount = formatCurrency(value as number);
