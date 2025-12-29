@@ -421,26 +421,31 @@ function getIsoWeek(date: Date) {
 }
 
 // Combined filter and group operation for better performance
+// Note: Automatically computes excluded shifts for week totals
 function filterAndGroupByWeek(
   shifts: ShiftWithComputations[],
-  month: Date,
-  excludedFromTotal?: Set<string>
+  month: Date
 ): WeekGroup[] {
   const groups: WeekGroup[] = [];
   const map = new Map<string, WeekGroup>();
   const targetMonth = month.getMonth();
   const targetYear = month.getFullYear();
 
-  // Single pass: filter AND group simultaneously
+  // Filter shifts for this month first
+  const monthShifts: ShiftWithComputations[] = [];
   for (const shift of shifts) {
     const date = parseISODate(shift.shift_date);
-
-    // Filter inline
-    if (date.getUTCMonth() !== targetMonth || date.getUTCFullYear() !== targetYear) {
-      continue;
+    if (date.getUTCMonth() === targetMonth && date.getUTCFullYear() === targetYear) {
+      monthShifts.push(shift);
     }
+  }
 
-    // Group inline
+  // Compute excluded shifts for this month's shifts only
+  const excludedFromTotal = buildExcludedShiftIds(monthShifts);
+
+  // Group filtered shifts by week
+  for (const shift of monthShifts) {
+    const date = parseISODate(shift.shift_date);
     const { weekNumber, year } = getIsoWeek(date);
     const id = `${year}-${weekNumber}`;
 
@@ -458,7 +463,7 @@ function filterAndGroupByWeek(
 
     group.shifts.push(shift);
     // Only add to totalGross if the shift is not excluded (conflicting with higher earnings)
-    if (!excludedFromTotal?.has(shift.id)) {
+    if (!excludedFromTotal.has(shift.id)) {
       group.totalGross += shift.computed.gross;
     }
   }
@@ -2086,8 +2091,8 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
   ]);
 
   const grouped = useMemo(() => {
-    return filterAndGroupByWeek(shifts, selectedMonth, excludedFromTotalIds);
-  }, [shifts, selectedMonth, excludedFromTotalIds]);
+    return filterAndGroupByWeek(shifts, selectedMonth);
+  }, [shifts, selectedMonth]);
 
   // Build set of shift IDs that need a visual connector to the next shift
   const conflictConnectorSet = useMemo(
