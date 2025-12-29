@@ -1,6 +1,7 @@
 import { ShiftWithComputations } from "@/lib/payroll";
 import { isDateInMonth } from "@/lib/date-utils";
 import { hasShiftEnded } from "@/lib/shifts/hasShiftEnded";
+import { buildExcludedShiftIds } from "./conflictExclusion";
 
 export type TaxSettings = {
   enabled: boolean;
@@ -40,8 +41,10 @@ export type ShiftTotalsOptions = {
     percentage: number;
   };
   /**
-   * Set of shift IDs to exclude from totals (e.g., higher-earning conflicting shifts).
-   * When shifts overlap, only the one with lowest earnings should count.
+   * Additional shift IDs to exclude from totals.
+   * @deprecated Conflicting shift exclusion is now computed automatically.
+   * This parameter is only kept for backward compatibility and will be merged
+   * with the auto-computed exclusions.
    */
   excludedShiftIds?: Set<string>;
 };
@@ -90,9 +93,17 @@ export function summarizeShiftTotals({
   payoutTaxOverride,
   excludedShiftIds,
 }: ShiftTotalsOptions): ShiftTotals {
+  // Automatically compute excluded shifts (higher-earning conflicting shifts)
+  const autoExcludedIds = buildExcludedShiftIds(shifts);
+
+  // Merge with any explicitly passed excludedShiftIds for backward compatibility
+  const allExcludedIds = excludedShiftIds
+    ? new Set([...autoExcludedIds, ...excludedShiftIds])
+    : autoExcludedIds;
+
   // Filter out excluded shifts for totals calculation
-  const includedShifts = excludedShiftIds
-    ? shifts.filter(shift => !excludedShiftIds.has(shift.id))
+  const includedShifts = allExcludedIds.size > 0
+    ? shifts.filter(shift => !allExcludedIds.has(shift.id))
     : shifts;
 
   const gross = includedShifts.reduce((sum, shift) => sum + (shift.computed.gross || 0), 0);

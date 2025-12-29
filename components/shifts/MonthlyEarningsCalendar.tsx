@@ -13,7 +13,6 @@ import type { ISODate, EarningsByDate, HoursByDate } from "@/components/app/cale
 import { cn } from "@/lib/cn";
 import { useTranslations } from "@/lib/i18n/client";
 import { getMonthlyTotals, summarizeShiftTotals } from "@/lib/shifts/monthlyTotals";
-import { buildExcludedShiftIds } from "@/lib/shifts/conflictExclusion";
 import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
 import { useCurrency } from "@/components/providers/CurrencyProvider";
 
@@ -354,13 +353,8 @@ export function MonthlyEarningsCalendar({
     [monthlyShifts]
   );
 
-  // Build set of shift IDs excluded from totals (higher-earning conflicting shifts)
-  const excludedShiftIds = useMemo(
-    () => buildExcludedShiftIds(monthlyShifts),
-    [monthlyShifts]
-  );
-
   // Calculate totals - use selected shifts only when in multi-selection mode
+  // Note: summarizeShiftTotals/getMonthlyTotals now automatically exclude conflicting shifts
   // Payout month = earnings month + 1 (used for half-tax and payout tax calculations)
   const payoutMonth = (month.getMonth() + 2) > 12 ? 1 : month.getMonth() + 2;
 
@@ -377,7 +371,6 @@ export function MonthlyEarningsCalendar({
         month: payoutMonth,
         halfTaxMonth: taxSettings?.halfTaxMonth,
         payoutTaxOverride: payoutTaxSettings ?? undefined,
-        excludedShiftIds,
       });
       return { totalEarnings: gross, netEarnings: net, isShowingSelectedTotal: true };
     }
@@ -391,11 +384,10 @@ export function MonthlyEarningsCalendar({
       now: new Date(),
       halfTaxMonth: taxSettings?.halfTaxMonth,
       payoutTaxOverride: payoutTaxSettings ?? undefined,
-      excludedShiftIds,
     });
 
     return { totalEarnings: gross, netEarnings: net, isShowingSelectedTotal: false };
-  }, [monthlyShifts, month, taxSettings, selectedDates, payoutMonth, payoutTaxSettings, excludedShiftIds]);
+  }, [monthlyShifts, month, taxSettings, selectedDates, payoutMonth, payoutTaxSettings]);
 
   // Swipe gesture handling
   useEffect(() => {
