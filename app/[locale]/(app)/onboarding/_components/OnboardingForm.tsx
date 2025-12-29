@@ -15,6 +15,7 @@ import { SecurityStep } from "./SecurityStep";
 import { CompletionStep } from "./CompletionStep";
 import { completeOnboarding } from "../actions";
 import { PRESET_WAGE_RATES } from "@/lib/payroll/calc";
+import { supabase } from "@/lib/supabase/browser";
 import { SupplementsData } from "@/components/settings/SupplementsEditor";
 import { ScrollablePageWrapper } from "@/components/app/ScrollablePageWrapper";
 
@@ -173,8 +174,10 @@ export function OnboardingForm({ initialSettings }: OnboardingFormProps) {
       };
 
       await completeOnboarding(settings);
+      // Refresh client-side session to get new JWT with updated finishedOnboarding flag.
+      // This ensures the next page load has the correct session state.
+      await supabase.auth.refreshSession();
       router.push("/shifts/add");
-      router.refresh();
     } catch (error) {
       console.error("Failed to complete onboarding:", error);
       setIsSubmitting(false);
