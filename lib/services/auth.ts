@@ -20,7 +20,7 @@
  */
 
 import "server-only";
-import { Context, Effect, Layer, Cache, Duration } from "effect";
+import { Context, Effect, Layer } from "effect";
 import type { User } from "@supabase/supabase-js";
 import { AuthError, NotFoundError } from "../errors/tagged";
 import { SupabaseService } from "./supabase";
@@ -91,7 +91,10 @@ export class AuthService extends Context.Tag("AuthService")<
 /**
  * Live implementation of AuthService
  *
- * Uses Effect Cache for session caching to avoid repeated auth checks.
+ * SECURITY: Does NOT use persistent caching to prevent session data leaking
+ * between users. Request-level deduplication is handled by React's cache()
+ * in data-access/auth.ts.
+ *
  * Uses getClaims() for performance - parses JWT locally instead of network request.
  * See: https://supabase.com/docs/reference/javascript/auth-getclaims
  */
@@ -100,114 +103,118 @@ export const AuthServiceLive = Layer.effect(
   Effect.gen(function* () {
     const supabase = yield* SupabaseService;
 
-    // Create cache for session data (5 minute TTL)
-    const sessionCache = yield* Cache.make({
-      capacity: 100,
-      timeToLive: Duration.minutes(5),
-      lookup: (_key: "current-session") =>
-        Effect.gen(function* () {
-          const client = yield* supabase.getClient();
+    /**
+     * Fetch session data from JWT claims
+     * This is called fresh for each request to prevent cross-user session leaks.
+     * getClaims() is fast (local JWT parsing, no network request).
+     */
+    const fetchSession = (): Effect.Effect<
+      SessionData,
+      AuthError | NotFoundError,
+      never
+    > =>
+      Effect.gen(function* () {
+        const client = yield* supabase.getClient();
 
-          // Use getClaims() for performance - parses JWT locally without network request
-          // This is faster than getUser() which always makes a server request
-          const claimsResult = yield* Effect.tryPromise({
-            try: () => client.auth.getClaims(),
-            catch: (error) =>
-              new AuthError({
-                reason: "invalid_session",
-                cause: error,
-              }),
-          });
+        // Use getClaims() for performance - parses JWT locally without network request
+        // This is faster than getUser() which always makes a server request
+        const claimsResult = yield* Effect.tryPromise({
+          try: () => client.auth.getClaims(),
+          catch: (error) =>
+            new AuthError({
+              reason: "invalid_session",
+              cause: error,
+            }),
+        });
 
-          // Cast to known type from Supabase
-          const result = claimsResult as {
-            data: {
-              claims: {
-                sub: string;
-                email?: string;
-                phone?: string;
-                user_metadata?: Record<string, unknown>;
-                app_metadata?: {
-                  provider?: string;
-                  providers?: string[];
-                };
-              } | null;
+        // Cast to known type from Supabase
+        const result = claimsResult as {
+          data: {
+            claims: {
+              sub: string;
+              email?: string;
+              phone?: string;
+              user_metadata?: Record<string, unknown>;
+              app_metadata?: {
+                provider?: string;
+                providers?: string[];
+              };
             } | null;
-            error: any;
-          };
+          } | null;
+          error: any;
+        };
 
-          if (result.error) {
-            return yield* Effect.fail(
-              new AuthError({
-                reason: "invalid_session",
-                cause: result.error,
-              })
-            );
-          }
+        if (result.error) {
+          return yield* Effect.fail(
+            new AuthError({
+              reason: "invalid_session",
+              cause: result.error,
+            })
+          );
+        }
 
-          if (!result.data?.claims) {
-            return yield* Effect.fail(
-              new NotFoundError({
-                resource: "User session",
-              })
-            );
-          }
+        if (!result.data?.claims) {
+          return yield* Effect.fail(
+            new NotFoundError({
+              resource: "User session",
+            })
+          );
+        }
 
-          const claims = result.data.claims;
+        const claims = result.data.claims;
 
-          // Extract identity providers from app_metadata
-          const providers = claims.app_metadata?.providers ?? [];
-          const identityProviders = new Set(providers);
+        // Extract identity providers from app_metadata
+        const providers = claims.app_metadata?.providers ?? [];
+        const identityProviders = new Set(providers);
 
-          const userIdentity: UserIdentity = {
-            id: claims.sub,
-            email: claims.email ?? null,
-            phone: claims.phone ?? null,
-            firstName: (claims.user_metadata?.first_name as string | null) ?? null,
-            metadata: claims.user_metadata ?? {},
-            identityProviders,
-          };
+        const userIdentity: UserIdentity = {
+          id: claims.sub,
+          email: claims.email ?? null,
+          phone: claims.phone ?? null,
+          firstName: (claims.user_metadata?.first_name as string | null) ?? null,
+          metadata: claims.user_metadata ?? {},
+          identityProviders,
+        };
 
-          // Create a minimal User object for backward compatibility
-          // Note: This doesn't have full User data, but has what's needed for most operations
-          const rawUser: User = {
-            id: claims.sub,
-            email: claims.email,
-            phone: claims.phone,
-            user_metadata: claims.user_metadata ?? {},
-            app_metadata: claims.app_metadata ?? {},
-            aud: "authenticated",
-            created_at: "",
-          } as User;
+        // Create a minimal User object for backward compatibility
+        // Note: This doesn't have full User data, but has what's needed for most operations
+        const rawUser: User = {
+          id: claims.sub,
+          email: claims.email,
+          phone: claims.phone,
+          user_metadata: claims.user_metadata ?? {},
+          app_metadata: claims.app_metadata ?? {},
+          aud: "authenticated",
+          created_at: "",
+        } as User;
 
-          return {
-            user: userIdentity,
-            rawUser,
-          };
-        }),
-    });
+        return {
+          user: userIdentity,
+          rawUser,
+        };
+      });
 
     return {
       /**
-       * Get current user with caching
+       * Get current user (fresh fetch, no persistent cache)
        */
       getCurrentUser: () =>
         Effect.gen(function* () {
-          const session = yield* sessionCache.get("current-session");
+          const session = yield* fetchSession();
           return session.user;
         }),
 
       /**
-       * Get full session data
+       * Get full session data (fresh fetch, no persistent cache)
        */
-      getSession: () => sessionCache.get("current-session"),
+      getSession: () => fetchSession(),
 
       /**
        * Verify user ID matches authenticated user
        */
       verifyUserId: (userId: string) =>
         Effect.gen(function* () {
-          const session = yield* sessionCache.get("current-session");
+          const session = yield* fetchSession();
 
           if (session.user.id !== userId) {
             return yield* Effect.fail(
@@ -228,7 +235,7 @@ export const AuthServiceLive = Layer.effect(
        */
       hasAuthMethod: (provider: string) =>
         Effect.gen(function* () {
-          const session = yield* sessionCache.get("current-session");
+          const session = yield* fetchSession();
           return session.user.identityProviders.has(provider);
         }),
     };
