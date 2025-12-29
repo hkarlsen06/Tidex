@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import {
   ChartContainer,
@@ -78,7 +79,7 @@ export function YearlyCumulativeChart({ data }: YearlyCumulativeChartProps) {
   const currentMonth = now.getMonth() + 1;
 
   return (
-    <ChartContainer config={chartConfig} className="h-[260px] w-full">
+    <ChartContainer config={chartConfig} className="h-65 w-full">
       <AreaChart data={chartData} margin={{ top: 12, right: 20, bottom: 0, left: 16 }}>
         <defs>
           <linearGradient id="fillActual" x1="0" y1="0" x2="0" y2="1">
@@ -111,10 +112,10 @@ export function YearlyCumulativeChart({ data }: YearlyCumulativeChartProps) {
         <ChartTooltip
           content={
             <ChartTooltipContent
-              className="min-w-[200px] p-4"
-              labelFormatter={(label, payload) => {
+              className="min-w-50 p-4"
+              labelFormatter={(label, payload): React.ReactNode => {
                 if (payload && payload.length > 0) {
-                  const data = payload[0].payload as YearlyCumulativeData;
+                  const data = (payload[0] as { payload: YearlyCumulativeData }).payload;
                   return (
                     <div className="flex items-center gap-2">
                       <span className="text-lg font-semibold">{data.fullMonth}</span>
@@ -124,7 +125,7 @@ export function YearlyCumulativeChart({ data }: YearlyCumulativeChartProps) {
                     </div>
                   );
                 }
-                return label;
+                return label as React.ReactNode;
               }}
               formatter={(value, name) => {
                 const amount = formatCurrency(value as number);

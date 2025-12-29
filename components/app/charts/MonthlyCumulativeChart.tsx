@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { Line, LineChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import {
   ChartContainer,
@@ -79,7 +80,7 @@ export function MonthlyCumulativeChart({ data }: MonthlyCumulativeChartProps) {
     .map((d) => d.day);
 
   return (
-    <ChartContainer config={chartConfig} className="h-[260px] w-full">
+    <ChartContainer config={chartConfig} className="h-65 w-full">
       <LineChart data={chartData} margin={{ top: 12, right: 20, bottom: 0, left: 16 }}>
         <CartesianGrid
           strokeDasharray="3 3"
@@ -92,9 +93,21 @@ export function MonthlyCumulativeChart({ data }: MonthlyCumulativeChartProps) {
             const allowedTicks = new Set(xAxisTicks);
 
             return xAxis.ticks
-              .filter((tick: { value: string | number }) => allowedTicks.has(String(tick.value)))
-              .map((tick: { coordinate?: number }) => tick.coordinate)
-              .filter((coord: unknown): coord is number => typeof coord === "number");
+              .filter((tick) => {
+                // In recharts 3.x, ticks can be primitives or objects with a value property
+                const value = typeof tick === "object" && tick !== null && "value" in tick
+                  ? (tick as { value: string | number }).value
+                  : tick;
+                return allowedTicks.has(String(value));
+              })
+              .map((tick) => {
+                // Extract coordinate from tick object
+                if (typeof tick === "object" && tick !== null && "coordinate" in tick) {
+                  return (tick as { coordinate?: number }).coordinate;
+                }
+                return undefined;
+              })
+              .filter((coord): coord is number => typeof coord === "number");
           }}
         />
         <XAxis
@@ -117,15 +130,16 @@ export function MonthlyCumulativeChart({ data }: MonthlyCumulativeChartProps) {
         <ChartTooltip
           content={
             <ChartTooltipContent
-              className="min-w-[200px] p-4"
-              labelFormatter={(label) => {
-                return <span className="text-lg font-semibold">{t.components.charts.monthlyCumulative.day} {label}</span>;
+              className="min-w-50 p-4"
+              labelFormatter={(label): React.ReactNode => {
+                return <span className="text-lg font-semibold">{t.components.charts.monthlyCumulative.day} {String(label)}</span>;
               }}
-              formatter={(value, name, props) => {
-                const data = props.payload as DailyCumulativeData & {
+              formatter={(value, name, props): React.ReactNode => {
+                const propsTyped = props as { payload: DailyCumulativeData & {
                   currentMonthActual: number | null;
                   currentMonthProjected: number | null;
-                };
+                }};
+                const data = propsTyped.payload;
 
                 // Only show once - prefer actual over projected to avoid duplicates at today's date
                 if (name === "currentMonthProjected" && data.currentMonthActual !== null) {

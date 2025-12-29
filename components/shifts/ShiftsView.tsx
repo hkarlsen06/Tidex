@@ -66,32 +66,8 @@ export type WeekGroup = {
   shifts: ShiftWithComputations[];
 };
 
-// Animation variants for staggered shift list
-const listContainerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.05,
-      delayChildren: 0.1,
-    },
-  },
-};
 
-const listItemVariants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      type: "spring" as const,
-      stiffness: 300,
-      damping: 30,
-    },
-  },
-};
-
-// Scroll-triggered animation for shift cards (slide in from left, out when leaving)
+// Scroll-triggered animation for shift cards on mobile (slide in from left)
 const scrollCardVariants = {
   hidden: { opacity: 0, x: -30 },
   visible: {
@@ -105,14 +81,34 @@ const scrollCardVariants = {
   },
 };
 
-// Wrapper component that animates in AND out based on viewport visibility (mobile only)
-const ScrollAnimatedCard = React.forwardRef<HTMLDivElement, { children: React.ReactNode }>(
-  function ScrollAnimatedCard({ children }, forwardedRef) {
+// Desktop entry animation (slide in from top with stagger)
+const getDesktopCardVariants = (index: number) => ({
+  hidden: { opacity: 0, y: -20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      type: "spring" as const,
+      stiffness: 300,
+      damping: 30,
+      delay: index * 0.03,
+    },
+  },
+});
+
+// Wrapper component that animates cards based on device
+// Mobile: scroll-triggered slide in from left
+// Desktop: staggered entry animation from top
+const ScrollAnimatedCard = React.forwardRef<HTMLDivElement, { children: React.ReactNode; index?: number }>(
+  function ScrollAnimatedCard({ children, index = 0 }, forwardedRef) {
     const internalRef = useRef<HTMLDivElement>(null);
     // Use larger top margin to account for navbar (~96px header + buffer)
     // Bottom margin for bottom navbar (~80px + buffer)
     const isInView = useInView(internalRef, { amount: 0.2, margin: "-120px 0px -100px 0px" });
-    const [isDesktop, setIsDesktop] = useState(false);
+    // Initialize with SSR-safe check, default to true to avoid mobile animation flash on desktop
+    const [isDesktop, setIsDesktop] = useState(() =>
+      typeof window !== 'undefined' ? window.innerWidth >= 1024 : true
+    );
 
     useEffect(() => {
       const checkDesktop = () => setIsDesktop(window.innerWidth >= 1024);
@@ -137,12 +133,26 @@ const ScrollAnimatedCard = React.forwardRef<HTMLDivElement, { children: React.Re
       [forwardedRef]
     );
 
+    // On desktop, use staggered top-down entry animation
+    if (isDesktop) {
+      return (
+        <motion.div
+          ref={setRefs}
+          variants={getDesktopCardVariants(index)}
+          initial="hidden"
+          animate="visible"
+        >
+          {children}
+        </motion.div>
+      );
+    }
+
     return (
       <motion.div
         ref={setRefs}
         variants={scrollCardVariants}
-        initial={isDesktop ? "visible" : "hidden"}
-        animate={isDesktop ? "visible" : (isInView ? "visible" : "hidden")}
+        initial="hidden"
+        animate={isInView ? "visible" : "hidden"}
       >
         {children}
       </motion.div>
@@ -277,6 +287,7 @@ function ShiftItemWithConnector({
       <div className="relative" ref={cardRef}>
         <ScrollAnimatedCard
           ref={isCurrentMonth && isToday ? todayRef : undefined}
+          index={shiftIndex}
         >
           <div className="flex flex-col gap-2">
             <ShiftCard
@@ -308,9 +319,9 @@ function ShiftItemWithConnector({
         )}
       </div>
       {showPlaceholderAfter && (
-        <motion.div ref={todayRef} variants={listItemVariants}>
+        <div ref={todayRef}>
           <TodayPlaceholderCard />
-        </motion.div>
+        </div>
       )}
     </Fragment>
   );
@@ -877,7 +888,7 @@ function MoveShiftModal({
               )}
               <div className={cn(
                 "flex flex-col gap-2",
-                multipleShifts && "max-h-[156px] overflow-y-auto pr-1 -mr-1"
+                multipleShifts && "max-h-39 overflow-y-auto pr-1 -mr-1"
               )}>
                 {shifts.map((shift) => (
                   <ShiftMoveCard
@@ -2279,7 +2290,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
     <div className="flex w-full flex-col lg:relative lg:left-1/2 lg:right-1/2 lg:-ml-[50vw] lg:-mr-[50vw] lg:w-screen lg:flex-row lg:gap-0 lg:px-0 lg:items-start lg:pt-6">
       {/* Calendar Section - On mobile: takes full viewport height (minus header/navbar) and centers calendar */}
       <div className="h-[calc(100dvh-3.5rem-5rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] flex flex-col justify-center px-4 shrink-0 lg:h-auto lg:w-1/2 lg:sticky lg:top-6 lg:justify-start lg:items-center lg:px-0">
-        <div className="w-full max-w-md md:max-w-lg lg:max-w-none lg:w-[480px]">
+        <div className="w-full max-w-md md:max-w-lg lg:max-w-none lg:w-120">
           {/* Custom header slot (e.g., sharing dropdown) - constrained to calendar width */}
           {headerSlot && (
             <div className="pb-3">
@@ -2358,14 +2369,11 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
                 && (!nextGroupFirstDate || todayDate < nextGroupFirstDate);
 
               return (
-                <motion.section
+                <section
                   key={group.id}
                   className="space-y-4"
-                  variants={listContainerVariants}
-                  initial="hidden"
-                  animate="visible"
                 >
-                  <ScrollAnimatedCard>
+                  <ScrollAnimatedCard index={groupIndex}>
                     <div className="flex flex-row items-center justify-between bg-transparent">
                       <div className="flex items-center gap-2 font-medium text-text-primary">
                         <span>{t.pages.shifts.list.weekLabel} {group.label}</span>
@@ -2389,9 +2397,9 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
                   </ScrollAnimatedCard>
                   <div className="space-y-4">
                     {isTodayBeforeFirstShift && (
-                      <motion.div ref={todayRef} variants={listItemVariants}>
+                      <div ref={todayRef}>
                         <TodayPlaceholderCard />
-                      </motion.div>
+                      </div>
                     )}
                     <ShiftGroupContent
                       shifts={group.shifts}
@@ -2411,12 +2419,12 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
                       setDetailsOpen={setDetailsOpen}
                     />
                     {isTodayAfterLastShift && (
-                      <motion.div ref={todayRef} variants={listItemVariants}>
+                      <div ref={todayRef}>
                         <TodayPlaceholderCard />
-                      </motion.div>
+                      </div>
                     )}
                   </div>
-                </motion.section>
+                </section>
               );
             })}
           </div>
