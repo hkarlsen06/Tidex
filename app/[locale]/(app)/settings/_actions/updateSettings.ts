@@ -22,6 +22,11 @@ export async function updateProfileSettings(data: {
     },
   });
 
+  // Note: We don't call refreshSession() here because server-side cookie updates
+  // race with router.refresh(). Instead, the client calls refreshSession() after
+  // this action returns, which updates cookies client-side and triggers
+  // SupabaseListener to call router.refresh() with the new JWT.
+
   // Update profile picture if changed
   if (data.profilePictureUrl !== undefined) {
     await supabase

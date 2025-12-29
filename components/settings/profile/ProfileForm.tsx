@@ -11,6 +11,7 @@ import { ArrowRightLeft, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { EmailChangeCard } from './EmailChangeCard';
 import { useTranslations } from '@/lib/i18n/client';
+import { supabase } from '@/lib/supabase/browser';
 
 interface ProfileFormProps {
   initialData: {
@@ -55,7 +56,10 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
         setIsSaving(true);
         try {
           await updateProfileSettings({ firstName });
-          router.refresh();
+          // Refresh client-side session to get new JWT with updated user_metadata.
+          // This triggers SupabaseListener's onAuthStateChange which calls router.refresh()
+          // with the new cookies already set, ensuring the layout reads the updated name.
+          await supabase.auth.refreshSession();
         } catch (error) {
           console.error('Failed to save profile:', error);
         } finally {
@@ -69,7 +73,7 @@ export function ProfileForm({ initialData }: ProfileFormProps) {
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [firstName, initialData.firstName, router]);
+  }, [firstName, initialData.firstName]);
 
   const getInitials = (name: string) => {
     return name

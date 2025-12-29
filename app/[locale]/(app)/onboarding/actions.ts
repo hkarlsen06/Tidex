@@ -124,6 +124,10 @@ export async function completeOnboarding(settings: OnboardingSettings) {
     throw new Error(`Failed to update user metadata: ${updateError.message}`);
   }
 
+  // Note: We don't call refreshSession() here because server-side cookie updates
+  // race with subsequent navigation. Instead, the client calls refreshSession()
+  // after this action returns, which updates cookies client-side before navigating.
+
   // Invalidate cache since settings and wage snapshot were created/updated
   invalidateAndRevalidate(userId);
 
