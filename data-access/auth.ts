@@ -77,3 +77,18 @@ export const getSession = cache(async () => {
     return null;
   }
 });
+
+/**
+ * Verify admin status and redirect to settings if not admin
+ * Use this in Server Components and Server Actions for admin-only pages
+ *
+ * Server-side is the source of truth - client-side isAdmin checks are cosmetic only
+ */
+export const verifyAdmin = cache(async () => {
+  const session = await verifySession();
+  const isAdmin = (session.user.app_metadata?.role as string) === 'admin';
+  if (!isAdmin) {
+    redirect('/settings');
+  }
+  return session;
+});

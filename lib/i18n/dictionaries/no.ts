@@ -773,6 +773,10 @@ export const no = {
           label: 'Varslinger',
           description: 'Push-varslinger og preferanser',
         },
+        admin: {
+          label: 'Admin',
+          description: 'Administrasjonspanel',
+        },
       },
       profile: {
         title: 'Profil',

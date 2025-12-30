@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useSyncExternalStore, type MouseEvent } from "react";
+import { useSyncExternalStore, useState, useEffect, type MouseEvent } from "react";
 import { Card } from "@/components/app/Card";
 import { Separator } from "@/components/app/Separator";
 import {
@@ -15,6 +15,7 @@ import {
   Bell,
   ChevronRight,
   Loader2,
+  ShieldAlert,
 } from "lucide-react";
 import { useNavigationFeedback } from "@/components/app/navigation-feedback";
 import { useTranslations } from "@/lib/i18n/client";
@@ -22,9 +23,18 @@ import type { Dictionary } from "@/lib/i18n/dictionaries/no";
 import { cn } from "@/lib/cn";
 import { defaultLocale } from "@/lib/i18n/config";
 import { isNativePlatform } from "@/lib/capacitor/platform";
+import { supabase } from "@/lib/supabase/browser";
 
-const getSettingsItems = (t: Dictionary, showNotifications: boolean) => {
-  const items = [
+interface SettingsItem {
+  href: string;
+  label: string;
+  description: string;
+  icon: typeof User;
+  adminOnly?: boolean;
+}
+
+const getSettingsItems = (t: Dictionary, showNotifications: boolean, showAdmin: boolean): SettingsItem[] => {
+  const items: SettingsItem[] = [
     {
       href: "/settings/profile",
       label: t.pages.settings.menu.profile.label,
@@ -73,6 +83,17 @@ const getSettingsItems = (t: Dictionary, showNotifications: boolean) => {
     });
   }
 
+  // Only show admin for admin users (cosmetic - server enforces)
+  if (showAdmin) {
+    items.push({
+      href: "/settings/admin",
+      label: t.pages.settings.menu.admin?.label || "Admin",
+      description: t.pages.settings.menu.admin?.description || "Administration panel",
+      icon: ShieldAlert,
+      adminOnly: true,
+    });
+  }
+
   return items;
 };
 
@@ -80,6 +101,7 @@ export function SettingsNav() {
   const pathname = usePathname();
   const { navigate, pendingPath } = useNavigationFeedback();
   const { t } = useTranslations();
+  const [isAdmin, setIsAdmin] = useState(false);
 
   // Check if we're on a native platform (iOS/Android) for showing notifications menu
   // useSyncExternalStore ensures proper SSR hydration without setState-in-effect
@@ -92,7 +114,14 @@ export function SettingsNav() {
     () => false
   );
 
-  const settingsItems = getSettingsItems(t, showNotifications);
+  // Check admin status from JWT (cosmetic only - server enforces)
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      setIsAdmin(data.user?.app_metadata?.role === "admin");
+    });
+  }, []);
+
+  const settingsItems = getSettingsItems(t, showNotifications, isAdmin);
 
   // Extract locale from current pathname
   const localeMatch = pathname.match(/^\/(en|no)/);

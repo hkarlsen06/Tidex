@@ -774,6 +774,10 @@ export const en: Dictionary = {
           label: 'Notifications',
           description: 'Push notifications and preferences',
         },
+        admin: {
+          label: 'Admin',
+          description: 'Administration panel',
+        },
       },
       profile: {
         title: 'Profile',
