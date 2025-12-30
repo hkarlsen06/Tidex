@@ -1226,7 +1226,11 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
       }
     }
     map.forEach((items) => {
-      items.sort((a, b) => a.start_time.localeCompare(b.start_time));
+      items.sort((a, b) => {
+        const startCompare = a.start_time.localeCompare(b.start_time);
+        if (startCompare !== 0) return startCompare;
+        return a.end_time.localeCompare(b.end_time);
+      });
     });
     return map;
   }, [shifts]);
@@ -2158,7 +2162,9 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
     const sortedShifts = [...shifts].sort((a, b) => {
       const dateCompare = a.shift_date.localeCompare(b.shift_date);
       if (dateCompare !== 0) return dateCompare;
-      return a.start_time.localeCompare(b.start_time);
+      const startCompare = a.start_time.localeCompare(b.start_time);
+      if (startCompare !== 0) return startCompare;
+      return a.end_time.localeCompare(b.end_time);
     });
 
     // Helper to parse shift times, handling cross-midnight
