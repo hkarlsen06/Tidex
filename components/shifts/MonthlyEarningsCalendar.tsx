@@ -76,6 +76,8 @@ type MonthlyEarningsCalendarProps = {
   };
   /** Deep link: shift ID to highlight (from push notification) */
   highlightShiftId?: string | null;
+  /** Deep link: date to highlight as fallback if shift ID not found */
+  highlightDateProp?: string | null;
 };
 
 /**
@@ -288,6 +290,7 @@ export function MonthlyEarningsCalendar({
   calendarId = "own-shifts",
   monthContext,
   highlightShiftId,
+  highlightDateProp,
 }: MonthlyEarningsCalendarProps) {
   const { t } = useTranslations();
   const formatCurrency = useFormatCurrency();
@@ -307,11 +310,15 @@ export function MonthlyEarningsCalendar({
   const isSwiping = useRef<boolean>(false);
 
   // Derive highlight date from shift ID (for push notification deep links)
+  // Falls back to highlightDateProp if shift ID not found in current shifts
   const highlightDate = useMemo(() => {
-    if (!highlightShiftId) return null;
-    const shift = shifts.find(s => s.id === highlightShiftId);
-    return shift?.shift_date ?? null;
-  }, [highlightShiftId, shifts]);
+    if (highlightShiftId) {
+      const shift = shifts.find(s => s.id === highlightShiftId);
+      if (shift) return shift.shift_date;
+    }
+    // Fallback to direct date prop if shift not found
+    return highlightDateProp ?? null;
+  }, [highlightShiftId, shifts, highlightDateProp]);
 
   // Filter shifts once per month change
   // Include shifts from previous and next month to show on "outside days"
