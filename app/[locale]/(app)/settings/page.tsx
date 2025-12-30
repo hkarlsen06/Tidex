@@ -1,17 +1,27 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { MouseEvent } from 'react';
 import { Card } from '@/components/app/Card';
-import { ChevronRight, User, Banknote, Palette, Database, CreditCard, Shield, Loader2 } from 'lucide-react';
+import { ChevronRight, User, Banknote, Palette, Database, CreditCard, Shield, Bell, Loader2 } from 'lucide-react';
 import { useNavigationFeedback } from '@/components/app/navigation-feedback';
 import { useTranslations } from '@/lib/i18n/client';
 import type { Dictionary } from '@/lib/i18n/dictionaries/no';
 import { defaultLocale } from '@/lib/i18n/config';
 import { ScrollablePageWrapper } from '@/components/app/ScrollablePageWrapper';
+import { isNativePlatform } from '@/lib/capacitor/platform';
 
-const getSettingsItems = (t: Dictionary) => [
+interface SettingsItem {
+  href: string;
+  label: string;
+  description: string;
+  icon: typeof User;
+  nativeOnly?: boolean;
+}
+
+const getSettingsItems = (t: Dictionary): SettingsItem[] => [
   {
     href: '/settings/profile',
     label: t.pages.settings.menu.profile.label,
@@ -37,6 +47,13 @@ const getSettingsItems = (t: Dictionary) => [
     icon: CreditCard,
   },
   {
+    href: '/settings/notifications',
+    label: t.pages.settings.menu.notifications.label,
+    description: t.pages.settings.menu.notifications.description,
+    icon: Bell,
+    nativeOnly: true,
+  },
+  {
     href: '/settings/display',
     label: t.pages.settings.menu.display.label,
     description: t.pages.settings.menu.display.description,
@@ -54,7 +71,14 @@ export default function SettingsPage() {
   const pathname = usePathname();
   const { navigate, pendingPath } = useNavigationFeedback();
   const { t } = useTranslations();
-  const settingsItems = getSettingsItems(t);
+  const [isNative, setIsNative] = useState(false);
+
+  useEffect(() => {
+    setIsNative(isNativePlatform());
+  }, []);
+
+  const allItems = getSettingsItems(t);
+  const settingsItems = allItems.filter(item => !item.nativeOnly || isNative);
 
   // Extract locale from current pathname
   const localeMatch = pathname.match(/^\/(en|no|de)/);
