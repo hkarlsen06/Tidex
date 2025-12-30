@@ -20,7 +20,12 @@ import {
 
 interface SharingPageProps {
   params: Promise<{ locale: string }>;
-  searchParams: Promise<{ view?: string }>;
+  searchParams: Promise<{
+    view?: string;
+    user?: string;      // Deep link: owner ID from push notification
+    highlight?: string; // Deep link: shift ID to highlight
+    date?: string;      // Deep link: shift date to scroll to
+  }>;
 }
 
 export async function generateMetadata({ params }: SharingPageProps) {
@@ -35,7 +40,13 @@ export async function generateMetadata({ params }: SharingPageProps) {
 export default async function SharingPage({ params, searchParams }: SharingPageProps) {
   await connection(); // Opt out of prerendering for dynamic authenticated pages
   const { locale: _locale } = await params;
-  const { view: selectedOwnerId } = await searchParams;
+  const { view, user: userParam, highlight, date } = await searchParams;
+
+  // Support both 'view' (existing) and 'user' (deep link from push notification) params
+  const selectedOwnerId = view ?? userParam;
+  const highlightShiftId = highlight ?? null;
+  const highlightDate = date ?? null;
+
   const dictionary = getAppDictionary(_locale as Locale, ['pages.sharing', 'pages.shifts']);
 
   // Verify authentication and get user
@@ -112,6 +123,8 @@ export default async function SharingPage({ params, searchParams }: SharingPageP
         sharedAggregates={sharedData.aggregates}
         presetRules={PRESET_RULES}
         showEarnings={sharedData.showEarnings}
+        highlightShiftId={highlightShiftId}
+        highlightDate={highlightDate}
       />
     </I18nProvider>
   );
