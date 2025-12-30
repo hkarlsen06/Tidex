@@ -1,17 +1,18 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { MouseEvent } from 'react';
 import { Card } from '@/components/app/Card';
-import { ChevronRight, User, Banknote, Palette, Database, CreditCard, Shield, Bell, Loader2 } from 'lucide-react';
+import { ChevronRight, User, Banknote, Palette, Database, CreditCard, Shield, Bell, Loader2, ShieldAlert } from 'lucide-react';
 import { useNavigationFeedback } from '@/components/app/navigation-feedback';
 import { useTranslations } from '@/lib/i18n/client';
 import type { Dictionary } from '@/lib/i18n/dictionaries/no';
 import { defaultLocale } from '@/lib/i18n/config';
 import { ScrollablePageWrapper } from '@/components/app/ScrollablePageWrapper';
 import { isNativePlatform } from '@/lib/capacitor/platform';
+import { supabase } from '@/lib/supabase/browser';
 
 interface SettingsItem {
   href: string;
@@ -19,6 +20,7 @@ interface SettingsItem {
   description: string;
   icon: typeof User;
   nativeOnly?: boolean;
+  adminOnly?: boolean;
 }
 
 const getSettingsItems = (t: Dictionary): SettingsItem[] => [
@@ -65,20 +67,43 @@ const getSettingsItems = (t: Dictionary): SettingsItem[] => [
     description: t.pages.settings.menu.data.description,
     icon: Database,
   },
+  {
+    href: '/settings/admin',
+    label: t.pages.settings.menu.admin?.label || 'Admin',
+    description: t.pages.settings.menu.admin?.description || 'Administration panel',
+    icon: ShieldAlert,
+    adminOnly: true,
+  },
 ];
 
 export default function SettingsPage() {
   const pathname = usePathname();
   const { navigate, pendingPath } = useNavigationFeedback();
   const { t } = useTranslations();
-  const [isNative, setIsNative] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
+  // Check if we're on a native platform (iOS/Android) for showing notifications menu
+  // useSyncExternalStore ensures proper SSR hydration without setState-in-effect
+  const isNative = useSyncExternalStore(
+    // Subscribe is a no-op since platform doesn't change at runtime
+    () => () => {},
+    // Client snapshot: check platform
+    () => isNativePlatform(),
+    // Server snapshot: always false (no notifications menu in SSR)
+    () => false
+  );
+
+  // Check admin status from JWT (cosmetic only - server enforces)
   useEffect(() => {
-    setIsNative(isNativePlatform());
+    supabase.auth.getUser().then(({ data }) => {
+      setIsAdmin(data.user?.app_metadata?.role === 'admin');
+    });
   }, []);
 
   const allItems = getSettingsItems(t);
-  const settingsItems = allItems.filter(item => !item.nativeOnly || isNative);
+  const settingsItems = allItems.filter(item =>
+    (!item.nativeOnly || isNative) && (!item.adminOnly || isAdmin)
+  );
 
   // Extract locale from current pathname
   const localeMatch = pathname.match(/^\/(en|no|de)/);

@@ -35,7 +35,13 @@ interface RecurringNotificationPayload {
   owner_name: string;
 }
 
-type NotificationPayload = ShiftNotificationPayload | RecurringNotificationPayload;
+interface AdminBroadcastPayload {
+  title: string;
+  body: string;
+  deeplink?: string | null;
+}
+
+type NotificationPayload = ShiftNotificationPayload | RecurringNotificationPayload | AdminBroadcastPayload;
 
 interface QueuedNotification {
   id: string;
@@ -44,6 +50,7 @@ interface QueuedNotification {
   sender_id: string;
   payload: NotificationPayload;
   created_at: string;
+  broadcast_id?: string; // For admin broadcasts
 }
 
 interface PushDevice {
@@ -57,11 +64,13 @@ interface ConsolidatedNotification {
   recipient_id: string;
   sender_id: string;
   owner_name: string;
-  type: "single_shift" | "multiple_shifts" | "recurring";
+  type: "single_shift" | "multiple_shifts" | "recurring" | "admin_broadcast";
   // For single shift
   shift?: { date: string; start_time: string; end_time: string };
   // For multiple shifts
   shift_count?: number;
+  // For admin broadcasts
+  broadcast?: AdminBroadcastPayload;
 }
 
 // ---------- Helpers ----------
@@ -195,6 +204,10 @@ function buildNotificationMessage(consolidated: ConsolidatedNotification): {
   const { owner_name, type } = consolidated;
 
   switch (type) {
+    case "admin_broadcast": {
+      const broadcast = consolidated.broadcast!;
+      return { title: broadcast.title, body: broadcast.body };
+    }
     case "single_shift": {
       const shift = consolidated.shift!;
       const title = `${owner_name} la til en vakt`;
@@ -224,7 +237,25 @@ async function sendConsolidatedToFcm(
 
   // Use first notification's data for deep linking
   const firstNotification = consolidated.notifications[0];
-  const payload = firstNotification.payload as ShiftNotificationPayload;
+
+  // Build data payload based on notification type
+  let dataPayload: Record<string, string> = {
+    type: firstNotification.type,
+  };
+
+  if (firstNotification.type === "admin_broadcast") {
+    // Admin broadcast - include deeplink if present
+    const adminPayload = firstNotification.payload as AdminBroadcastPayload;
+    if (adminPayload.deeplink) {
+      dataPayload.deeplink = adminPayload.deeplink;
+    }
+  } else {
+    // Shift notifications - include owner_id and shift info
+    const shiftPayload = firstNotification.payload as ShiftNotificationPayload;
+    dataPayload.owner_id = consolidated.sender_id;
+    if (shiftPayload.shift_id) dataPayload.shift_id = shiftPayload.shift_id;
+    if (shiftPayload.shift_date) dataPayload.shift_date = shiftPayload.shift_date;
+  }
 
   // FCM HTTP v1 message format
   const message = {
@@ -234,13 +265,7 @@ async function sendConsolidatedToFcm(
         title,
         body,
       },
-      data: {
-        type: firstNotification.type,
-        owner_id: consolidated.sender_id,
-        // Include shift info for deep linking (if available)
-        ...(payload.shift_id && { shift_id: payload.shift_id }),
-        ...(payload.shift_date && { shift_date: payload.shift_date }),
-      },
+      data: dataPayload,
       apns: {
         payload: {
           aps: {
@@ -292,16 +317,32 @@ async function sendConsolidatedToFcm(
 
 /**
  * Consolidate notifications from the same sender to the same recipient
- * Groups by (sender_id, recipient_id) and creates appropriate message
+ * Groups by (type, sender_id, recipient_id, broadcast_id) and creates appropriate message
+ *
+ * Admin broadcasts use broadcast_id to ensure each broadcast is a separate message
  */
 function consolidateNotifications(
   notifications: QueuedNotification[]
 ): ConsolidatedNotification[] {
-  // Group by sender_id + recipient_id
+  // Group by type + sender_id + recipient_id (+ broadcast_id for admin_broadcast)
   const groups = new Map<string, QueuedNotification[]>();
 
   for (const notification of notifications) {
-    const key = `${notification.sender_id}:${notification.recipient_id}`;
+    let key: string;
+
+    if (notification.type === "admin_broadcast") {
+      // Validate broadcast_id is set (should always be due to DB constraint)
+      if (!notification.broadcast_id) {
+        console.error(`admin_broadcast ${notification.id} missing broadcast_id, skipping`);
+        continue;
+      }
+      // Each broadcast_id is treated as a separate message (no consolidation across broadcasts)
+      key = `${notification.type}:${notification.sender_id}:${notification.recipient_id}:${notification.broadcast_id}`;
+    } else {
+      // Existing behavior for shift notifications
+      key = `${notification.type}:${notification.sender_id}:${notification.recipient_id}`;
+    }
+
     if (!groups.has(key)) {
       groups.set(key, []);
     }
@@ -313,7 +354,22 @@ function consolidateNotifications(
   for (const [, group] of groups) {
     const first = group[0];
     const payload = first.payload;
-    const owner_name = payload.owner_name || "Noen";
+
+    // Handle admin broadcast
+    if (first.type === "admin_broadcast") {
+      const adminPayload = payload as AdminBroadcastPayload;
+      consolidated.push({
+        notifications: group,
+        recipient_id: first.recipient_id,
+        sender_id: first.sender_id,
+        owner_name: "Admin", // Not shown in message
+        type: "admin_broadcast",
+        broadcast: adminPayload,
+      });
+      continue;
+    }
+
+    const owner_name = (payload as ShiftNotificationPayload).owner_name || "Noen";
 
     // Check if this is a recurring shift notification
     if (first.type === "recurring_shift_created") {
@@ -476,6 +532,34 @@ serve(async (req) => {
     if (invalidTokens.length > 0) {
       await supabase.from("push_devices").delete().in("id", invalidTokens);
       console.log(`Deleted ${invalidTokens.length} invalid tokens`);
+    }
+
+    // Update broadcast status to 'complete' for finished admin broadcasts
+    // Collect unique broadcast_ids from this batch
+    const processedBroadcastIds = new Set<string>();
+    for (const notification of notifications as QueuedNotification[]) {
+      if (notification.broadcast_id) {
+        processedBroadcastIds.add(notification.broadcast_id);
+      }
+    }
+
+    // For each broadcast, check if all notifications are processed
+    for (const broadcastId of processedBroadcastIds) {
+      // Count remaining pending notifications for this broadcast
+      const { count: pendingCount } = await supabase
+        .from("notification_queue")
+        .select("*", { count: "exact", head: true })
+        .eq("broadcast_id", broadcastId)
+        .in("status", ["pending", "processing"]);
+
+      // If no pending notifications remain, mark broadcast as complete
+      if (pendingCount === 0) {
+        await supabase
+          .from("admin_broadcasts")
+          .update({ status: "complete" })
+          .eq("id", broadcastId)
+          .eq("status", "queued"); // Only update if currently queued (not partial_failure)
+      }
     }
 
     return json({

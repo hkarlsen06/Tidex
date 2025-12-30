@@ -7,9 +7,11 @@ export interface PushNotificationPayload {
     | "shared_shift_updated"
     | "shared_shift_deleted"
     | "shift_reminder"
+    | "admin_broadcast"
   shift_id?: string
   owner_id?: string
   shift_date?: string
+  deeplink?: string // For admin broadcasts
 }
 
 class PushNotificationService {
@@ -137,7 +139,16 @@ class PushNotificationService {
     const locale = this.getLocale()
     let url: string
 
-    if (payload.type === "shift_reminder") {
+    if (payload.type === "admin_broadcast") {
+      // Admin broadcast - use deeplink if provided, otherwise go home
+      if (payload.deeplink) {
+        // Deeplink is already validated server-side to start with /
+        const path = payload.deeplink.startsWith('/') ? payload.deeplink : `/${payload.deeplink}`
+        url = `/${locale}${path}`
+      } else {
+        url = `/${locale}/`
+      }
+    } else if (payload.type === "shift_reminder") {
       // Navigate to shifts page, optionally with date
       if (payload.shift_date) {
         url = `/${locale}/shifts?date=${payload.shift_date}`
