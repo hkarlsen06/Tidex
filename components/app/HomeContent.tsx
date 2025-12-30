@@ -25,6 +25,8 @@ type HomeContentProps = {
   shifts: ShiftWithComputations[];
   settings: UserSettings;
   payoutTaxSettings?: PayoutTaxSettings;
+  /** User-specific cache key to ensure browser HTTP cache is per-user */
+  cacheKey: string;
 };
 
 function calculateMonthData(
@@ -119,7 +121,7 @@ function isFutureMonth(date: Date): boolean {
   );
 }
 
-export function HomeContent({ shifts: initialShifts, settings, payoutTaxSettings }: HomeContentProps) {
+export function HomeContent({ shifts: initialShifts, settings, payoutTaxSettings, cacheKey }: HomeContentProps) {
   const { t, locale } = useTranslations();
   const formatCurrency = useFormatCurrency();
   const router = useRouter();
@@ -215,7 +217,8 @@ export function HomeContent({ shifts: initialShifts, settings, payoutTaxSettings
     loadingMonthsRef.current.add(key);
 
     try {
-      const response = await fetch(`/api/shifts?year=${year}&month=${month}`);
+      // Include cacheKey to ensure browser HTTP cache is per-user
+      const response = await fetch(`/api/shifts?year=${year}&month=${month}&_ck=${cacheKey}`);
       const data = await response.json();
 
       if (data.shifts && Array.isArray(data.shifts)) {
@@ -240,7 +243,7 @@ export function HomeContent({ shifts: initialShifts, settings, payoutTaxSettings
       // Remove from loading set
       loadingMonthsRef.current.delete(key);
     }
-  }, [getMonthKey]);
+  }, [getMonthKey, cacheKey]);
 
   // Proactive prefetch: Load adjacent months (prev, current, next) whenever month changes
   useEffect(() => {

@@ -115,7 +115,9 @@ export async function GET(_request: NextRequest) {
       },
       {
         headers: {
-          // Cache for 5 minutes
+          // Cache for 5 minutes (300 seconds) with stale-while-revalidate
+          // 'private' prevents CDN caching; browser caching is made safe via _ck (user cache key)
+          // query param passed from client, ensuring different users have different cache entries
           'Cache-Control': 'private, max-age=300, stale-while-revalidate=60',
         },
       }

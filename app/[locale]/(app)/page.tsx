@@ -55,7 +55,7 @@ export default async function Home({ params }: HomeProps) {
 
   return (
     <I18nProvider locale={_locale as Locale} dictionary={dictionary} namespaces={['pages.home', 'pages.shifts']}>
-      <HomeContent shifts={shifts} settings={settings} payoutTaxSettings={payoutTaxSettings} />
+      <HomeContent shifts={shifts} settings={settings} payoutTaxSettings={payoutTaxSettings} cacheKey={user.id.slice(0, 8)} />
     </I18nProvider>
   );
 }
