@@ -12,6 +12,7 @@ import { SharersProvider } from "@/components/app/SharersProvider";
 import { UserAvatarProvider } from "@/components/app/UserAvatarProvider";
 import { I18nProvider } from "@/components/providers/I18nProvider";
 import { CurrencyProvider } from "@/components/providers/CurrencyProvider";
+import { PushNotificationProvider } from "@/components/providers/PushNotificationProvider";
 import { getAppDictionary } from "@/lib/i18n/dictionaries";
 import { getUsersWhoSharedWithMe } from "@/data-access/sharing";
 import type { Locale } from "@/lib/i18n/config";
@@ -122,6 +123,7 @@ export default async function RootLayout({
       <MonthProvider>
         <I18nProvider locale={locale as Locale} dictionary={appDictionary} namespaces={[]}>
           <SupabaseListener />
+          <PushNotificationProvider>
           {/* Stream user settings (currency, avatar) with Suspense */}
           <Suspense
             fallback={
@@ -147,6 +149,7 @@ export default async function RootLayout({
               </Suspense>
             </UserSettingsData>
           </Suspense>
+          </PushNotificationProvider>
         </I18nProvider>
       </MonthProvider>
     </ThemeProvider>

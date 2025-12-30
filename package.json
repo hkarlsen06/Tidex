@@ -24,10 +24,12 @@
     "dev-site:start": "pnpm --filter dev-site start"
   },
   "dependencies": {
+    "@capacitor-firebase/messaging": "^8.0.1",
     "@capacitor/app": "^8.0.0",
     "@capacitor/browser": "^8.0.0",
     "@capacitor/cli": "^8.0.0",
     "@capacitor/core": "^8.0.0",
+    "@capacitor/device": "^8.0.0",
     "@capacitor/ios": "^8.0.0",
     "@capgo/native-purchases": "^8.0.9",
     "@marsidev/react-turnstile": "^1.4.1",
@@ -58,6 +60,7 @@
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "effect": "^3.19.13",
+    "firebase": "^12.7.0",
     "framer-motion": "^12.23.26",
     "input-otp": "^1.4.2",
     "lucide-react": "^0.562.0",

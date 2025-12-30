@@ -35,6 +35,8 @@ type ShiftCardProps = {
   hasConflict?: boolean;
   /** When true, this shift's earnings are excluded from totals (crossed out visually) */
   excludedFromTotal?: boolean;
+  /** When true, highlights this shift (e.g., from push notification deep link) */
+  highlighted?: boolean;
 };
 
 export function formatDateParts(date: string, locale: string, daysShort: readonly string[]) {
@@ -68,7 +70,7 @@ export function formatPlainAmount(value: number) {
   return formatPlainAmountValue(value);
 }
 
-export function ShiftCard({ shift, onClick, isToday = false, progress, taxSettings, showEarnings = true, hasConflict = false, excludedFromTotal = false }: ShiftCardProps) {
+export function ShiftCard({ shift, onClick, isToday = false, progress, taxSettings, showEarnings = true, hasConflict = false, excludedFromTotal = false, highlighted = false }: ShiftCardProps) {
   const { t, locale } = useTranslations();
   const formatCurrency = useFormatCurrency();
   const { symbol: currencySymbol, display: currencyDisplay } = useCurrency();
@@ -106,7 +108,8 @@ export function ShiftCard({ shift, onClick, isToday = false, progress, taxSettin
         "bg-surface-primary rounded-3xl relative overflow-hidden",
         onClick && "cursor-pointer transition-colors hover:bg-surface-secondary",
         isToday && "ring-2 ring-brand-highlight",
-        hasConflict && "border-orange-400/60 dark:border-orange-500/50"
+        hasConflict && "border-orange-400/60 dark:border-orange-500/50",
+        highlighted && "ring-2 ring-emerald-500 dark:ring-emerald-400 animate-pulse-subtle"
       )}
       onClick={onClick}
       role={onClick ? "button" : undefined}
