@@ -769,6 +769,10 @@ export const no = {
           label: 'Data',
           description: 'Eksporter dine data som PDF',
         },
+        notifications: {
+          label: 'Varslinger',
+          description: 'Push-varslinger og preferanser',
+        },
       },
       profile: {
         title: 'Profil',
@@ -1350,6 +1354,16 @@ export const no = {
             fetchFailed: 'Kunne ikke hente data for eksport.',
             fetchFailedRetry: 'Kunne ikke hente data for eksport. Sjekk tilkoblingen og prøv igjen.',
           },
+        },
+      },
+      notifications: {
+        title: 'Varslinger',
+        subtitle: 'Administrer varslingsinnstillingene dine',
+        permissionDenied: 'Varslinger er deaktivert. Gå til Innstillinger → Tidex for å aktivere.',
+        enableButton: 'Aktiver varslinger',
+        sharedShifts: {
+          label: 'Delte vakter',
+          description: 'Få varsel når noen deler en ny vakt med deg',
         },
       },
     },
