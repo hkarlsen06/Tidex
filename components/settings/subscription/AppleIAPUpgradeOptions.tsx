@@ -118,8 +118,9 @@ interface AppleIAPUpgradeOptionsProps {
   supabaseAccessToken: string;
 }
 
-// Timeout constant for IAP initialization (5 seconds)
-const IAP_INIT_TIMEOUT_MS = 5000;
+// Timeout constant for IAP initialization (15 seconds)
+// iOS StoreKit initialization + product fetch can take 5-10s on cold starts
+const IAP_INIT_TIMEOUT_MS = 15000;
 
 // Error keys for matching against translated errors
 const IAP_ERROR_KEYS = {
