@@ -40,37 +40,29 @@ export function isOfflineQueueSupported(): boolean {
  */
 export async function queueMutation(mutation: Omit<QueuedMutation, 'id' | 'timestamp'>): Promise<void> {
   if (!isOfflineQueueSupported()) {
-    console.warn('[Offline Queue] Not supported in this browser');
     throw new Error('Offline queue not supported');
   }
 
-  try {
-    // Add ID and timestamp
-    const queueItem: QueuedMutation = {
-      ...mutation,
-      id: crypto.randomUUID(),
-      timestamp: Date.now(),
-    };
+  // Add ID and timestamp
+  const queueItem: QueuedMutation = {
+    ...mutation,
+    id: crypto.randomUUID(),
+    timestamp: Date.now(),
+  };
 
-    // Send to service worker
-    const registration = await navigator.serviceWorker.ready;
+  // Send to service worker
+  const registration = await navigator.serviceWorker.ready;
 
-    if (registration.active) {
-      registration.active.postMessage({
-        type: 'QUEUE_MUTATION',
-        mutation: queueItem,
-      });
+  if (registration.active) {
+    registration.active.postMessage({
+      type: 'QUEUE_MUTATION',
+      mutation: queueItem,
+    });
 
-      console.log('[Offline Queue] Mutation queued:', queueItem.type, queueItem.endpoint);
-
-      // Trigger background sync registration
-      // This will be retried when online
-      // TypeScript doesn't have types for Background Sync API yet
-      await (registration as any).sync.register('sync-mutations');
-    }
-  } catch (error) {
-    console.error('[Offline Queue] Failed to queue mutation:', error);
-    throw error;
+    // Trigger background sync registration
+    // This will be retried when online
+    // TypeScript doesn't have types for Background Sync API yet
+    await (registration as any).sync.register('sync-mutations');
   }
 }
 
@@ -103,8 +95,7 @@ export async function getPendingMutationsCount(): Promise<number> {
       // Timeout after 1 second
       setTimeout(() => resolve(0), 1000);
     });
-  } catch (error) {
-    console.error('[Offline Queue] Failed to get queue count:', error);
+  } catch {
     return 0;
   }
 }
@@ -172,14 +163,12 @@ export function useOfflineQueue() {
 
     // Listen for sync events
     const cleanup = onSyncEvent(
-      (endpoint) => {
-        console.log('[Offline Queue] Sync success:', endpoint);
+      () => {
         setIsSyncing(false);
         // Refresh queue count
         updateQueueCount();
       },
-      (endpoint, error) => {
-        console.error('[Offline Queue] Sync error:', endpoint, error);
+      () => {
         setIsSyncing(false);
         // Queue count might not have changed, but refresh anyway
         updateQueueCount();

@@ -242,9 +242,6 @@ export async function executeTool(
   userId: string,
   locale: Locale = defaultLocale
 ): Promise<ToolResult> {
-  console.log("[executeTool] Called with tool:", toolName, "userId:", userId, "locale:", locale);
-  console.log("[executeTool] Arguments JSON:", argumentsJson);
-
   // Load translations once at start
   const dict = getDictionary(locale);
   const tr = dict.pages.wagey.toolResults;
@@ -253,19 +250,15 @@ export async function executeTool(
     const normalizedToolName = normalizeToolName(toolName);
 
     if (!normalizedToolName) {
-      console.error("[executeTool] Unknown tool:", toolName);
       return {
         success: false,
         message: t(tr.unknownTool, { name: toolName }),
       };
     }
 
-    console.log("[executeTool] Normalized tool name:", normalizedToolName);
-
     // Parse arguments - handle empty string as empty object
     const trimmedArgs = argumentsJson.trim();
     const args = trimmedArgs === "" ? {} : JSON.parse(trimmedArgs);
-    console.log("[executeTool] Parsed arguments:", args);
 
     // Execute tool with retry (once)
     let attempt = 0;
@@ -273,17 +266,13 @@ export async function executeTool(
 
     while (attempt < 2) {
       try {
-        console.log("[executeTool] Attempting execution, attempt:", attempt + 1);
         const result = await executeToolOnce(normalizedToolName, args, userId, tr);
-        console.log("[executeTool] Execution successful:", result.success);
         return result;
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error));
-        console.error("[executeTool] Execution failed, attempt:", attempt + 1, "error:", lastError.message);
         attempt++;
 
         if (attempt < 2) {
-          console.log("[executeTool] Retrying in 500ms...");
           // Wait 500ms before retry
           await new Promise((resolve) => setTimeout(resolve, 500));
         }
@@ -291,16 +280,14 @@ export async function executeTool(
     }
 
     // All attempts failed
-    console.error("[executeTool] All attempts failed");
     return {
       success: false,
       message: t(tr.failedAfterAttempts, { count: attempt, error: lastError?.message || "Unknown error" }),
     };
-  } catch (error) {
-    console.error("[executeTool] Error parsing arguments:", error);
+  } catch {
     return {
       success: false,
-      message: t(tr.failedToParseArgs, { error: error instanceof Error ? error.message : "Unknown error" }),
+      message: t(tr.failedToParseArgs, { error: "Invalid JSON" }),
     };
   }
 }
@@ -1447,12 +1434,8 @@ async function executeManageSettings(
   userId: string,
   tr: ToolResultTranslations
 ): Promise<ToolResult> {
-  console.log("[manage_settings] Starting execution for userId:", userId);
-  console.log("[manage_settings] Args:", args);
-
   const parsed = manageSettingsSchema.safeParse(args);
   if (!parsed.success) {
-    console.error("[manage_settings] Validation failed:", parsed.error);
     return {
       success: false,
       message: t(tr.invalidInput, { details: parsed.error.issues.map((i: any) => i.message).join(", ") }),
@@ -1460,7 +1443,6 @@ async function executeManageSettings(
   }
 
   const input: ManageSettingsInput = parsed.data;
-  console.log("[manage_settings] Validation passed, action:", input.action);
 
   try {
     if (input.action === "update") {
@@ -1471,8 +1453,6 @@ async function executeManageSettings(
           message: tr.mustProvideCategoryAndSettings,
         };
       }
-
-      console.log("[manage_settings] Updating settings, category:", input.category);
 
       // Import the update actions
       const { updateDisplaySettings, updatePaySettings, updatePreferencesSettings } = await import(
@@ -1568,38 +1548,28 @@ async function executeManageSettings(
       };
     } else {
       // View settings (default action)
-      console.log("[manage_settings] Calling SettingsService...");
-
       // Call SettingsService directly without caching (API route context)
       const settingsProgram = Effect.gen(function* () {
         const settingsService = yield* SettingsService;
-        console.log("[manage_settings] Got SettingsService");
         const settings = yield* settingsService.getUserSettings(userId);
-        console.log("[manage_settings] Got settings:", settings ? "exists" : "null");
         return settings;
       }).pipe(
         Effect.provide(AuthSettingsLive),
-        Effect.catchAll((error) => {
-          console.error("[manage_settings] Effect error:", error);
-          logger.error("Failed to fetch user settings:", error);
+        Effect.catchAll(() => {
           return Effect.succeed(null);
         }),
         Effect.scoped
       );
 
       const settings = await Effect.runPromise(settingsProgram);
-      console.log("[manage_settings] Effect.runPromise completed, settings:", settings ? "exists" : "null");
 
       if (!settings) {
-        console.log("[manage_settings] No settings found, returning defaults");
         return {
           success: true,
           message: tr.noSettingsFound,
           data: {},
         };
       }
-
-      console.log("[manage_settings] Formatting settings...");
 
       // Format settings for AI consumption
       // Note: pause/tax settings are now per-snapshot (use get_wage_info tool)
@@ -1623,8 +1593,6 @@ async function executeManageSettings(
         },
       };
 
-      console.log("[manage_settings] Returning success with formatted settings");
-
       return {
         success: true,
         message: tr.retrievedSettings,
@@ -1632,7 +1600,6 @@ async function executeManageSettings(
       };
     }
   } catch (error) {
-    console.error("[manage_settings] Caught error:", error);
     throw new Error(
       error instanceof Error ? error.message : tr.failedToExecuteSettingsOperation
     );
@@ -1657,33 +1624,24 @@ async function executeGetWageInfo(
   }
 
   try {
-    console.log("[get_wage_info] Starting execution for user:", userId);
     const today = new Date().toISOString().split("T")[0];
-    console.log("[get_wage_info] Today:", today);
 
     // Fetch all wage snapshots
-    console.log("[get_wage_info] Fetching wage snapshots...");
     const snapshotsProgram = Effect.gen(function* () {
       const service = yield* SnapshotsService;
-      console.log("[get_wage_info] Got SnapshotsService");
       const snapshots = yield* service.getUserWageSnapshots(userId);
-      console.log("[get_wage_info] Got snapshots:", snapshots.length);
       return snapshots;
     }).pipe(
       Effect.provide(AuthSnapshotsLive),
-      Effect.catchAll((error) => {
-        console.error("[get_wage_info] Effect error:", error);
-        logger.error("Failed to fetch wage snapshots:", error);
+      Effect.catchAll(() => {
         return Effect.succeed([] as const);
       }),
       Effect.scoped
     );
 
     const snapshots = await Effect.runPromise(snapshotsProgram);
-    console.log("[get_wage_info] Snapshots fetched:", snapshots.length);
 
     if (snapshots.length === 0) {
-      console.log("[get_wage_info] No snapshots found, returning empty");
       return {
         success: true,
         message: tr.noWageConfigured ?? "No wage configuration found",
@@ -1781,14 +1739,12 @@ async function executeGetWageInfo(
       data.history = buildCompact(historySnapshots, undefined);
     }
 
-    console.log("[get_wage_info] Returning success with data:", JSON.stringify(data, null, 2));
     return {
       success: true,
       message: tr.retrievedWageInfo ?? "Retrieved wage information",
       data,
     };
   } catch (error) {
-    console.error("[get_wage_info] Caught error:", error);
     throw new Error(
       error instanceof Error ? error.message : (tr.failedToGetWageInfo ?? "Failed to get wage info")
     );

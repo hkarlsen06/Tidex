@@ -35,13 +35,6 @@ export function PlatformAwareUpgradeOptions({ t }: PlatformAwareUpgradeOptionsPr
       const currentPlatform = getPlatform();
       const native = isNativePlatform();
 
-      console.log('[PlatformAwareUpgradeOptions] Platform detection:', {
-        platform: currentPlatform,
-        isNative: native,
-        hasCapacitor: !!(window as any).Capacitor,
-        userAgent: navigator.userAgent,
-      });
-
       setPlatform(currentPlatform);
       setIsNative(native);
 

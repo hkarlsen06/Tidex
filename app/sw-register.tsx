@@ -35,8 +35,6 @@ export default function SWRegister() {
           scope: '/',
         });
 
-        console.log('[SW Registration] Success:', registration.scope);
-
         // Check for updates immediately
         registration.update();
 
@@ -51,17 +49,12 @@ export default function SWRegister() {
             return;
           }
 
-          console.log('[SW Registration] Update found, new worker installing');
-
           /**
            * Monitor new service worker state changes
            */
           newWorker.addEventListener('statechange', () => {
-            console.log('[SW Registration] New worker state:', newWorker.state);
-
             // When new worker is installed and waiting to activate
             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              console.log('[SW Registration] New version available, activating...');
 
               // Tell the new service worker to skip waiting and activate immediately
               newWorker.postMessage({ type: 'SKIP_WAITING' });
@@ -73,8 +66,6 @@ export default function SWRegister() {
 
             // When new worker has activated
             if (newWorker.state === 'activated') {
-              console.log('[SW Registration] New version activated');
-
               // First time install - no reload needed
               if (!navigator.serviceWorker.controller) {
                 return;
@@ -82,8 +73,6 @@ export default function SWRegister() {
 
               // Dispatch event instead of auto-reloading
               // This allows the app to decide when/how to reload
-              // For example, could show a "New version available" banner
-              console.log('[SW Registration] New version available');
               window.dispatchEvent(new CustomEvent('swUpdateActivated'));
 
               // Note: Removed automatic reload to prevent interrupting user work
@@ -99,9 +88,7 @@ export default function SWRegister() {
          * Listen for service worker controller change
          * This fires when a new service worker takes control
          */
-        controllerChangeHandler = () => {
-          console.log('[SW Registration] Controller changed, new SW is active');
-        };
+        controllerChangeHandler = () => {};
         navigator.serviceWorker.addEventListener('controllerchange', controllerChangeHandler);
 
         /**
@@ -110,7 +97,6 @@ export default function SWRegister() {
          */
         updateInterval = setInterval(
           () => {
-            console.log('[SW Registration] Checking for updates...');
             registration.update();
           },
           60 * 60 * 1000
@@ -120,15 +106,7 @@ export default function SWRegister() {
         return () => {
           registration.removeEventListener('updatefound', updateFoundHandler);
         };
-      } catch (error) {
-        console.error('[SW Registration] Failed:', error);
-
-        // Log specific error types for debugging
-        if (error instanceof TypeError) {
-          console.error('[SW Registration] Network error - check sw.js exists');
-        } else if (error instanceof Error) {
-          console.error('[SW Registration] Error message:', error.message);
-        }
+      } catch {
         return () => {}; // Return empty cleanup function on error
       }
     }
