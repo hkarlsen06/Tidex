@@ -74,10 +74,8 @@ type MonthlyEarningsCalendarProps = {
     direction: 'next' | 'previous' | null;
     isHydrated: boolean;
   };
-  /** Deep link: shift ID to highlight (from push notification) */
-  highlightShiftId?: string | null;
-  /** Deep link: date to highlight as fallback if shift ID not found */
-  highlightDateProp?: string | null;
+  /** Deep link: dates to highlight in calendar (from push notification) */
+  highlightDates?: Set<string> | null;
 };
 
 /**
@@ -289,8 +287,7 @@ export function MonthlyEarningsCalendar({
   showEarnings = true,
   calendarId = "own-shifts",
   monthContext,
-  highlightShiftId,
-  highlightDateProp,
+  highlightDates,
 }: MonthlyEarningsCalendarProps) {
   const { t } = useTranslations();
   const formatCurrency = useFormatCurrency();
@@ -309,16 +306,6 @@ export function MonthlyEarningsCalendar({
   const touchStartY = useRef<number | null>(null);
   const isSwiping = useRef<boolean>(false);
 
-  // Derive highlight date from shift ID (for push notification deep links)
-  // Falls back to highlightDateProp if shift ID not found in current shifts
-  const highlightDate = useMemo(() => {
-    if (highlightShiftId) {
-      const shift = shifts.find(s => s.id === highlightShiftId);
-      if (shift) return shift.shift_date;
-    }
-    // Fallback to direct date prop if shift not found
-    return highlightDateProp ?? null;
-  }, [highlightShiftId, shifts, highlightDateProp]);
 
   // Filter shifts once per month change
   // Include shifts from previous and next month to show on "outside days"
@@ -547,7 +534,7 @@ export function MonthlyEarningsCalendar({
                 weekNumberPosition="top-left"
                 newlyAddedDates={newlyAddedDates}
                 taxSettings={taxSettings}
-                highlightDate={highlightDate}
+                highlightDates={highlightDates}
               />
             </motion.div>
           </AnimatePresence>

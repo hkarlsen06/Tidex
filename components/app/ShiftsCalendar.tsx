@@ -31,8 +31,8 @@ export type ShiftsCalendarProps = {
   selectedDates?: Set<ISODate>;
   newlyAddedDates?: Set<string>;
   taxSettings?: TaxSettings;
-  /** Deep link: date to highlight (from push notification) */
-  highlightDate?: string | null;
+  /** Deep link: dates to highlight in calendar (from push notification) */
+  highlightDates?: Set<string> | null;
 };
 
 type DayButtonProps = {
@@ -53,7 +53,7 @@ type DayButtonProps = {
   selectedDates?: Set<ISODate>;
   newlyAddedDates?: Set<string>;
   taxSettings?: TaxSettings;
-  highlightDate?: string | null;
+  highlightDates?: Set<string> | null;
   [key: string]: any;
 };
 
@@ -102,7 +102,7 @@ const DayButton = React.memo(function DayButton({
   selectedDates,
   newlyAddedDates,
   taxSettings,
-  highlightDate,
+  highlightDates,
   ...buttonProps
 }: DayButtonProps) {
   const date: Date = day.date;
@@ -121,7 +121,7 @@ const DayButton = React.memo(function DayButton({
   const hasOverlap = overlappingDates.has(iso);
   const week = isMonday ? getIsoWeek(date) : null;
   const netEarnings = getNetEarningsForDate(earnings, date, taxSettings);
-  const isHighlighted = highlightDate === iso;
+  const isHighlighted = highlightDates?.has(iso) ?? false;
 
   return (
     <button
@@ -229,7 +229,7 @@ export function ShiftsCalendar({
   selectedDates,
   newlyAddedDates,
   taxSettings,
-  highlightDate,
+  highlightDates,
 }: ShiftsCalendarProps) {
   const locale = useLocale();
   const dateFnsLocale = locale === 'en' ? enUS : nb;
@@ -261,10 +261,10 @@ export function ShiftsCalendar({
         selectedDates={selectedDates}
         newlyAddedDates={newlyAddedDates}
         taxSettings={taxSettings}
-        highlightDate={highlightDate}
+        highlightDates={highlightDates}
       />
     ),
-    [mode, earningsByDate, hoursByDate, employeesByDate, overlappingDates, weekNumberPosition, selectedDate, selectedDates, newlyAddedDates, taxSettings, highlightDate]
+    [mode, earningsByDate, hoursByDate, employeesByDate, overlappingDates, weekNumberPosition, selectedDate, selectedDates, newlyAddedDates, taxSettings, highlightDates]
   );
 
   const handleDayClick = React.useCallback(

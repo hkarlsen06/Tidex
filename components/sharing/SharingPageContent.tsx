@@ -44,10 +44,8 @@ type SharingPageContentProps = {
   presetRules: SupplementRule[];
   /** Whether the owner allows this viewer to see earnings data */
   showEarnings: boolean;
-  /** Deep link: shift ID to highlight (from push notification) */
-  highlightShiftId?: string | null;
-  /** Deep link: shift date to scroll to (from push notification) */
-  highlightDate?: string | null;
+  /** Deep link: dates to highlight in calendar (from push notification) */
+  highlightDates?: Set<string> | null;
 };
 
 /**
@@ -64,8 +62,7 @@ function SharingPageContentInner({
   sharedSettings,
   presetRules,
   showEarnings,
-  highlightShiftId,
-  highlightDate,
+  highlightDates,
 }: SharingPageContentProps) {
   const { t, locale } = useTranslations();
   const router = useRouter();
@@ -109,8 +106,7 @@ function SharingPageContentInner({
         ownerName={selectedSharer.firstName ?? selectedSharer.email ?? "Bruker"}
         showEarnings={showEarnings}
         monthContext={sharingMonthContext}
-        highlightShiftId={highlightShiftId}
-        highlightDate={highlightDate}
+        highlightDates={highlightDates}
         headerSlot={
           <div className="flex flex-col gap-3">
             <button
