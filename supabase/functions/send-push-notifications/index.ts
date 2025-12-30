@@ -69,6 +69,7 @@ interface ConsolidatedNotification {
   shift?: { date: string; start_time: string; end_time: string };
   // For multiple shifts
   shift_count?: number;
+  shift_dates?: string[]; // All dates for multiple shifts (for deep link highlighting)
   // For admin broadcasts
   broadcast?: AdminBroadcastPayload;
 }
@@ -253,8 +254,14 @@ async function sendConsolidatedToFcm(
     // Shift notifications - include owner_id and shift info
     const shiftPayload = firstNotification.payload as ShiftNotificationPayload;
     dataPayload.owner_id = consolidated.sender_id;
-    if (shiftPayload.shift_id) dataPayload.shift_id = shiftPayload.shift_id;
-    if (shiftPayload.shift_date) dataPayload.shift_date = shiftPayload.shift_date;
+
+    // For multiple shifts, send comma-separated dates for highlighting
+    // For single shifts, send the single date
+    if (consolidated.shift_dates && consolidated.shift_dates.length > 0) {
+      dataPayload.shift_dates = consolidated.shift_dates.join(",");
+    } else if (shiftPayload.shift_date) {
+      dataPayload.shift_dates = shiftPayload.shift_date;
+    }
   }
 
   // FCM HTTP v1 message format
@@ -401,6 +408,11 @@ function consolidateNotifications(
       });
     } else {
       // Multiple shifts - consolidate into one message
+      // Collect all unique shift dates for deep link highlighting
+      const shiftDates = [...new Set(
+        group.map(n => (n.payload as ShiftNotificationPayload).shift_date)
+      )].sort();
+
       consolidated.push({
         notifications: group,
         recipient_id: first.recipient_id,
@@ -408,6 +420,7 @@ function consolidateNotifications(
         owner_name,
         type: "multiple_shifts",
         shift_count: group.length,
+        shift_dates: shiftDates,
       });
     }
   }

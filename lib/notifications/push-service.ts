@@ -8,9 +8,8 @@ export interface PushNotificationPayload {
     | "shared_shift_deleted"
     | "shift_reminder"
     | "admin_broadcast"
-  shift_id?: string
   owner_id?: string
-  shift_date?: string
+  shift_dates?: string // Comma-separated dates for calendar highlighting
   deeplink?: string // For admin broadcasts
 }
 
@@ -150,14 +149,22 @@ class PushNotificationService {
       }
     } else if (payload.type === "shift_reminder") {
       // Navigate to shifts page, optionally with date
-      if (payload.shift_date) {
-        url = `/${locale}/shifts?date=${payload.shift_date}`
+      // shift_dates contains comma-separated dates, use first one for navigation
+      const firstDate = payload.shift_dates?.split(",")[0]
+      if (firstDate) {
+        url = `/${locale}/shifts?date=${firstDate}`
       } else {
         url = `/${locale}/shifts`
       }
     } else {
-      // Shared shift notification - navigate to shared calendar with highlight
-      url = `/${locale}/sharing?user=${payload.owner_id}&highlight=${payload.shift_id}&date=${payload.shift_date}`
+      // Shared shift notification - navigate to shared calendar with date highlighting
+      // shift_dates is comma-separated list of dates to highlight in the calendar
+      const params = new URLSearchParams()
+      params.set("user", payload.owner_id || "")
+      if (payload.shift_dates) {
+        params.set("dates", payload.shift_dates) // Pass all dates for highlighting
+      }
+      url = `/${locale}/sharing?${params.toString()}`
     }
 
     // Navigate

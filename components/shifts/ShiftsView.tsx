@@ -246,7 +246,6 @@ function ShiftItemWithConnector({
   setDetailsOpen,
   onVisibilityChange,
   nextShiftInView,
-  highlighted,
 }: {
   shift: ShiftWithComputations;
   shiftIndex: number;
@@ -267,7 +266,6 @@ function ShiftItemWithConnector({
   setDetailsOpen: (open: boolean) => void;
   onVisibilityChange: (shiftId: string, inView: boolean) => void;
   nextShiftInView: boolean;
-  highlighted?: boolean;
 }) {
   const cardRef = useRef<HTMLDivElement>(null);
   const viewportMargin = "-120px 0px -100px 0px";
@@ -309,7 +307,6 @@ function ShiftItemWithConnector({
               showEarnings={showEarnings}
               hasConflict={conflictingShiftIds.has(shift.id)}
               excludedFromTotal={excludedFromTotalIds.has(shift.id)}
-              highlighted={highlighted}
             />
             {isNextUpcomingShift && countdown.text && (
               <p className="text-xs text-text-muted text-center">{countdown.text}</p>
@@ -347,7 +344,6 @@ function ShiftGroupContent({
   clearSelection,
   setSelectedShift,
   setDetailsOpen,
-  highlightShiftId,
 }: {
   shifts: ShiftWithComputations[];
   conflictConnectorSet: Set<string>;
@@ -364,7 +360,6 @@ function ShiftGroupContent({
   clearSelection: () => void;
   setSelectedShift: (shift: ShiftWithComputations) => void;
   setDetailsOpen: (open: boolean) => void;
-  highlightShiftId?: string | null;
 }) {
   // Track visibility state for each shift - lifted to parent so siblings can access
   const [visibilityMap, setVisibilityMap] = useState<Map<string, boolean>>(() => new Map());
@@ -405,7 +400,6 @@ function ShiftGroupContent({
             setDetailsOpen={setDetailsOpen}
             onVisibilityChange={handleVisibilityChange}
             nextShiftInView={nextShiftInView}
-            highlighted={highlightShiftId === shift.id}
           />
         );
       })}
@@ -997,13 +991,11 @@ type ShiftsViewProps = {
   monthContext?: MonthContextOverride;
   /** User-specific cache key to ensure browser HTTP cache is per-user */
   cacheKey?: string;
-  /** Deep link: shift ID to highlight (from push notification) */
-  highlightShiftId?: string | null;
-  /** Deep link: shift date to scroll to (from push notification) */
-  highlightDate?: string | null;
+  /** Deep link: dates to highlight in calendar (from push notification) */
+  highlightDates?: Set<string> | null;
 };
 
-export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", userSettings, presetRules, readOnly = false, ownerName: _ownerName, headerSlot, sharedOwnerId, showEarnings = true, payoutTaxSettings, monthContext, cacheKey, highlightShiftId, highlightDate }: ShiftsViewProps) {
+export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", userSettings, presetRules, readOnly = false, ownerName: _ownerName, headerSlot, sharedOwnerId, showEarnings = true, payoutTaxSettings, monthContext, cacheKey, highlightDates }: ShiftsViewProps) {
   const { t, locale } = useTranslations();
   const formatCurrency = useFormatCurrency();
   const {
@@ -1344,16 +1336,17 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
     }
   }, [defaultView]);
 
-  // Handle deep link: navigate to highlighted shift's month
-  // This runs once when highlightDate is provided (from push notification)
+  // Handle deep link: navigate to highlighted dates' month
+  // This runs once when highlightDates is provided (from push notification)
   const highlightHandledRef = useRef(false);
   useEffect(() => {
     // Only run once per mount
     if (highlightHandledRef.current) return;
-    if (!highlightDate) return;
+    if (!highlightDates || highlightDates.size === 0) return;
 
-    // Parse the highlight date and navigate to that month
-    const dateParts = highlightDate.split('-');
+    // Use the first date to navigate to that month
+    const firstDate = [...highlightDates][0];
+    const dateParts = firstDate.split('-');
     if (dateParts.length >= 2) {
       const year = parseInt(dateParts[0], 10);
       const month = parseInt(dateParts[1], 10);
@@ -1363,7 +1356,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
         highlightHandledRef.current = true;
       }
     }
-  }, [highlightDate, setSelectedMonth]);
+  }, [highlightDates, setSelectedMonth]);
 
   useEffect(() => {
     if (!selectedDate || detailsOpen || moveModalOpen) {
@@ -2384,8 +2377,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
             showEarnings={showEarnings}
             calendarId={sharedOwnerId ? `shared-${sharedOwnerId}` : "own-shifts"}
             monthContext={monthContext}
-            highlightShiftId={highlightShiftId}
-            highlightDateProp={highlightDate}
+            highlightDates={highlightDates}
           />
         </div>
       </div>
@@ -2471,7 +2463,6 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
                       clearSelection={clearSelection}
                       setSelectedShift={setSelectedShift}
                       setDetailsOpen={setDetailsOpen}
-                      highlightShiftId={highlightShiftId}
                     />
                     {isTodayAfterLastShift && (
                       <div ref={todayRef}>
