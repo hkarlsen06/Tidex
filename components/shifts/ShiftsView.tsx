@@ -2373,6 +2373,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
             calendarId={sharedOwnerId ? `shared-${sharedOwnerId}` : "own-shifts"}
             monthContext={monthContext}
             highlightShiftId={highlightShiftId}
+            highlightDateProp={highlightDate}
           />
         </div>
       </div>
