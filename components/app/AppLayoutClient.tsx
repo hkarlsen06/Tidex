@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 
 import { supabase } from "@/lib/supabase/browser";
 import { withRefreshLock } from "@/lib/auth/refresh-lock";
-import { logSessionRefresh } from "@/lib/auth/session-telemetry";
 import { NavigationFeedbackProvider } from "./navigation-feedback";
 import { ScrollProvider } from "@/lib/contexts/ScrollContext";
 import { AddShiftFormProvider } from "@/lib/contexts/AddShiftFormContext";
@@ -36,36 +35,14 @@ export function AppLayoutClient({
     }
   }, [router]);
 
-  // Løsning 4: Initial session check on app mount
+  // Initial session check on app mount
   // Ensures session is fresh on cold start (e.g., after device restart)
-  // Prevents flashing of stale state before first API call
   useEffect(() => {
     const checkInitialSession = async () => {
-      const startTime = performance.now();
-      const attemptId = logSessionRefresh("session_refresh_attempt", "initial");
-
       try {
-        // Use getClaims() for initial session check - it refreshes the session first
-        // if the access token is about to expire, then validates the JWT.
-        // This is faster than getUser() which always makes a network request.
-        const { data, error } = await withRefreshLock(() => supabase.auth.getClaims());
-        const duration = performance.now() - startTime;
-
-        if (error || !data?.claims) {
-          console.error("[SUPABASE] Initial session check failed:", error);
-          logSessionRefresh("session_refresh_failure", "initial", {
-            attempt_id: attemptId,
-            error: error || new Error("no_session"),
-            duration_ms: duration
-          });
-        } else {
-          console.log("[SUPABASE] Initial session OK:", !!data.claims);
-          logSessionRefresh("session_refresh_success", "initial", { attempt_id: attemptId, duration_ms: duration });
-        }
-      } catch (err) {
-        const duration = performance.now() - startTime;
-        console.error("[SUPABASE] Session check threw:", err);
-        logSessionRefresh("session_refresh_failure", "initial", { attempt_id: attemptId, error: err, duration_ms: duration });
+        await withRefreshLock(() => supabase.auth.getClaims());
+      } catch {
+        // Silently handle session check errors
       }
     };
 

@@ -45,11 +45,8 @@ export async function handleAuthError(error: any): Promise<never> {
     throw error;
   }
 
-  console.warn("[AUTH ERROR] 401 detected:", error.message);
-
   // If we already attempted refresh, give up and sign out
   if (refreshAttempted) {
-    console.error("[AUTH ERROR] Refresh failed, signing out");
     refreshAttempted = false; // Reset for next session
     await signOutAndRedirect();
   }
@@ -58,7 +55,6 @@ export async function handleAuthError(error: any): Promise<never> {
   refreshAttempted = true;
 
   try {
-    console.log("[AUTH ERROR] Attempting session refresh");
     const supabase = await createSupabaseServerClient();
 
     // Use refresh lock to prevent concurrent refresh attempts
@@ -70,18 +66,15 @@ export async function handleAuthError(error: any): Promise<never> {
     );
 
     if (refreshError || !data?.claims) {
-      console.error("[AUTH ERROR] Refresh failed:", refreshError?.message);
       await signOutAndRedirect();
     }
 
-    console.log("[AUTH ERROR] Refresh succeeded, resetting flag");
     refreshAttempted = false; // Reset flag on success
 
     // Refresh succeeded but the original operation still failed
     // Redirect to trigger re-render with fresh session
     redirect(await getCurrentPath());
-  } catch (refreshError) {
-    console.error("[AUTH ERROR] Refresh threw exception:", refreshError);
+  } catch {
     await signOutAndRedirect();
   }
 

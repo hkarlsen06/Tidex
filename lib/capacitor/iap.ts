@@ -75,46 +75,25 @@ export function checkPluginAvailability(): { available: boolean; details: string
 }
 
 async function getNativePurchases() {
-  console.log("[iap] getNativePurchases called");
-
   if (NativePurchases) {
-    console.log("[iap] Returning cached NativePurchases");
     return NativePurchases;
   }
 
   if (!isNativePlatform() || getPlatform() !== "ios") {
-    const error = new Error("Native purchases only available on iOS");
-    console.error("[iap] Platform check failed:", {
-      isNative: isNativePlatform(),
-      platform: getPlatform()
-    });
-    throw error;
+    throw new Error("Native purchases only available on iOS");
   }
 
   try {
-    console.log("[iap] Attempting to import @capgo/native-purchases...");
     // Dynamic import to avoid loading on web
     pluginModule = await import("@capgo/native-purchases");
-    console.log("[iap] Module imported successfully, keys:", Object.keys(pluginModule));
-
     NativePurchases = pluginModule.NativePurchases;
 
     if (!NativePurchases) {
-      console.error("[iap] NativePurchases is undefined in module. Available exports:", Object.keys(pluginModule));
       throw new Error("NativePurchases not found in module exports");
     }
 
-    console.log("[iap] NativePurchases object obtained, methods:",
-      typeof NativePurchases === 'object' ? Object.keys(NativePurchases) : typeof NativePurchases
-    );
-
     return NativePurchases;
   } catch (e: any) {
-    console.error("[iap] Failed to import native-purchases:", {
-      message: e.message,
-      stack: e.stack,
-      name: e.name
-    });
     throw new Error(`Native purchases plugin not available: ${e.message}`);
   }
 }
@@ -133,34 +112,20 @@ export function isIAPAvailable(): boolean {
  * Should be called once at app startup on iOS
  */
 export async function initializeIAP(): Promise<{ success: boolean; error?: string }> {
-  console.log("[iap] initializeIAP called");
-
   if (!isIAPAvailable()) {
-    console.log("[iap] Not available on this platform");
     return { success: false, error: "IAP not available on this platform" };
   }
 
   try {
-    console.log("[iap] Getting plugin reference...");
     const plugin = await getNativePurchases();
-    console.log("[iap] Plugin reference obtained, calling initialize()...");
 
     if (!plugin.initialize) {
-      console.error("[iap] plugin.initialize is not a function. Plugin object:", plugin);
       return { success: false, error: "Plugin initialize method not found" };
     }
 
-    const initResult = await plugin.initialize();
-    console.log("[iap] plugin.initialize() completed with result:", initResult);
-    console.log("[iap] Initialized successfully");
+    await plugin.initialize();
     return { success: true };
   } catch (e: any) {
-    console.error("[iap] Initialization failed:", {
-      message: e.message,
-      stack: e.stack,
-      name: e.name,
-      code: e.code
-    });
     return { success: false, error: e.message || "Unknown initialization error" };
   }
 }
@@ -171,49 +136,26 @@ export async function initializeIAP(): Promise<{ success: boolean; error?: strin
 export async function getProducts(
   productIds: string[] = ALL_APPLE_PRODUCT_IDS
 ): Promise<{ products: IAPProduct[]; error?: string }> {
-  console.log("[iap] getProducts called with product IDs:", productIds);
-
   if (!isIAPAvailable()) {
-    console.log("[iap] getProducts: IAP not available");
     return { products: [], error: "IAP not available on this platform" };
   }
 
   try {
-    console.log("[iap] Getting plugin reference for getProducts...");
     const plugin = await getNativePurchases();
 
     if (!plugin.getProducts) {
-      console.error("[iap] plugin.getProducts is not a function");
       return { products: [], error: "Plugin getProducts method not found" };
     }
 
-    console.log("[iap] Calling plugin.getProducts with IDs:", productIds);
     const result = await plugin.getProducts({ productIds });
-    console.log("[iap] plugin.getProducts raw result:", JSON.stringify(result, null, 2));
-
     const rawProducts = result.products || [];
-    console.log("[iap] Products count:", rawProducts.length);
 
     if (rawProducts.length === 0) {
-      console.warn("[iap] No products returned from App Store. This could mean:");
-      console.warn("[iap] - Products are not configured in App Store Connect");
-      console.warn("[iap] - Product IDs do not match App Store Connect configuration");
-      console.warn("[iap] - App is not in TestFlight or products not yet approved");
-      console.warn("[iap] - Sandbox/production environment mismatch");
       return {
         products: [],
         error: "No products available. The app may not be fully configured in App Store Connect yet."
       };
     }
-
-    rawProducts.forEach((p: any, i: number) => {
-      console.log(`[iap] Product ${i + 1}:`, {
-        id: p.id,
-        title: p.title || p.displayName,
-        price: p.priceString || p.displayPrice || p.price,
-        type: p.type
-      });
-    });
 
     const mappedProducts = rawProducts.map((p: any) => ({
       id: p.id,
@@ -225,15 +167,8 @@ export async function getProducts(
       type: p.type === 0 || p.type === "autoRenewable" ? "subscription" : "non_consumable",
     }));
 
-    console.log("[iap] getProducts completed successfully with", mappedProducts.length, "products");
     return { products: mappedProducts };
   } catch (e: any) {
-    console.error("[iap] Failed to get products:", {
-      message: e.message,
-      stack: e.stack,
-      name: e.name,
-      code: e.code
-    });
     return { products: [], error: e.message || "Failed to fetch products" };
   }
 }
@@ -304,8 +239,6 @@ export async function purchaseProduct(
       entitled: verifyResult.entitled,
     };
   } catch (e: any) {
-    console.error("[iap] Purchase failed:", e);
-
     // Handle specific StoreKit errors
     if (e.code === "E_USER_CANCELLED" || e.message?.includes("cancelled")) {
       return { success: false, error: "Purchase cancelled" };
@@ -368,7 +301,6 @@ export async function restorePurchases(
       entitled: lastEntitled,
     };
   } catch (e: any) {
-    console.error("[iap] Restore failed:", e);
     return { success: false, error: e.message || "Restore failed" };
   }
 }
@@ -397,7 +329,6 @@ export async function getEntitlementStatus(
     );
 
     if (!response.ok) {
-      console.error("[iap] Entitlement check failed:", response.status);
       return { isEntitled: false };
     }
 
@@ -408,8 +339,7 @@ export async function getEntitlementStatus(
       expiresAt: data?.subscription_ends_at,
       provider: data?.active_provider,
     };
-  } catch (e) {
-    console.error("[iap] Failed to check entitlement:", e);
+  } catch {
     return { isEntitled: false };
   }
 }
@@ -455,7 +385,6 @@ async function verifyPurchaseWithServer(
       entitled: data.entitled ?? false,
     };
   } catch (e: any) {
-    console.error("[iap] Server verification failed:", e);
     return { success: false, error: e.message || "Network error" };
   }
 }
@@ -476,15 +405,12 @@ export async function openSubscriptionManagement(): Promise<void> {
   try {
     const plugin = await getNativePurchases();
     await plugin.openManagement();
-  } catch (e) {
-    console.log("[iap] openManagement failed, trying Browser plugin:", e);
-
+  } catch {
     // Fallback: use Capacitor Browser plugin which properly handles external URLs
     try {
       const { Browser } = await import("@capacitor/browser");
       await Browser.open({ url: iosDeepLink });
-    } catch (browserError) {
-      console.log("[iap] Browser plugin failed, using location.href:", browserError);
+    } catch {
       // Last resort fallback
       window.location.href = iosDeepLink;
     }

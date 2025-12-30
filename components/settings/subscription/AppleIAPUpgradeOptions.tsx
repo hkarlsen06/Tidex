@@ -14,7 +14,6 @@ import {
   purchaseProduct,
   restorePurchases,
   openSubscriptionManagement,
-  checkPluginAvailability,
   APPLE_PRODUCT_IDS,
   type IAPProduct,
 } from '@/lib/capacitor/iap';
@@ -155,15 +154,7 @@ export function AppleIAPUpgradeOptions({
     let currentStep = 'idle';
 
     async function init() {
-      console.log('[AppleIAPUpgradeOptions] ========== INIT START ==========');
-      console.log('[AppleIAPUpgradeOptions] isIAPAvailable:', isIAPAvailable());
-
-      // Check plugin availability first
-      const pluginCheck = checkPluginAvailability();
-      console.log('[AppleIAPUpgradeOptions] Plugin availability check:', pluginCheck);
-
       if (!isIAPAvailable()) {
-        console.log('[AppleIAPUpgradeOptions] IAP not available on this platform');
         setError(iap.notAvailable);
         return;
       }
@@ -175,8 +166,6 @@ export function AppleIAPUpgradeOptions({
       // Set up timeout - uses local currentStep variable to track progress
       timeoutId = setTimeout(() => {
         if (!isCancelled) {
-          console.error('[AppleIAPUpgradeOptions] Initialization timed out after', IAP_INIT_TIMEOUT_MS, 'ms');
-          console.error('[AppleIAPUpgradeOptions] Last init step:', currentStep);
           setError(iap.errors.timeout);
           setErrorKey(IAP_ERROR_KEYS.TIMEOUT);
           setIsInitializing(false);
@@ -187,55 +176,39 @@ export function AppleIAPUpgradeOptions({
         // Step 1: Get app account token
         currentStep = 'getting_token';
         setInitStep('getting_token');
-        console.log('[AppleIAPUpgradeOptions] Step 1: Getting app account token...');
         const tokenResult = await getAppAccountToken();
 
         if (isCancelled) return;
 
         if ('error' in tokenResult) {
-          console.error('[AppleIAPUpgradeOptions] Token error:', tokenResult.error);
           setError(`Token error: ${tokenResult.error}`);
           setIsInitializing(false);
           return;
         }
-        console.log('[AppleIAPUpgradeOptions] Step 1 complete: Got token:', tokenResult.token.substring(0, 8) + '...');
         setAppAccountToken(tokenResult.token);
 
         // Step 2: Initialize IAP
         currentStep = 'initializing_iap';
         setInitStep('initializing_iap');
-        console.log('[AppleIAPUpgradeOptions] Step 2: Initializing IAP plugin...');
         const initResult = await initializeIAP();
 
         if (isCancelled) return;
 
-        console.log('[AppleIAPUpgradeOptions] Step 2 result:', initResult);
-
         if (!initResult.success) {
-          console.error('[AppleIAPUpgradeOptions] IAP init failed:', initResult.error);
           setError(initResult.error || iap.errors.initFailed);
           setErrorKey(IAP_ERROR_KEYS.INIT_FAILED);
           setIsInitializing(false);
           return;
         }
-        console.log('[AppleIAPUpgradeOptions] Step 2 complete: IAP initialized');
 
         // Step 3: Fetch products
         currentStep = 'fetching_products';
         setInitStep('fetching_products');
-        console.log('[AppleIAPUpgradeOptions] Step 3: Fetching products...');
         const productsResult = await getProducts();
 
         if (isCancelled) return;
 
-        console.log('[AppleIAPUpgradeOptions] Step 3 result:', {
-          count: productsResult.products.length,
-          error: productsResult.error,
-          products: productsResult.products.map((p) => p.id),
-        });
-
         if (productsResult.products.length === 0) {
-          console.warn('[AppleIAPUpgradeOptions] No products returned');
           // Use specific error message for empty products
           setError(productsResult.error || iap.errors.noProducts);
           setErrorKey(IAP_ERROR_KEYS.NO_PRODUCTS);
@@ -244,7 +217,6 @@ export function AppleIAPUpgradeOptions({
           // This way user can still see the restore button
         } else {
           setProducts(productsResult.products);
-          console.log('[AppleIAPUpgradeOptions] Step 3 complete: Got', productsResult.products.length, 'products');
         }
 
         // Step 4: Complete
@@ -258,21 +230,9 @@ export function AppleIAPUpgradeOptions({
           clearTimeout(timeoutId);
           timeoutId = null;
         }
-
-        console.log('[AppleIAPUpgradeOptions] ========== INIT COMPLETE ==========');
-        console.log('[AppleIAPUpgradeOptions] Final state:', {
-          isInitialized: true,
-          productsCount: productsResult.products.length,
-          hasError: productsResult.products.length === 0,
-        });
       } catch (e: any) {
         if (isCancelled) return;
 
-        console.error('[AppleIAPUpgradeOptions] Init error:', {
-          message: e.message,
-          stack: e.stack,
-          step: currentStep,
-        });
         setError(`Init failed at step "${currentStep}": ${e.message || 'Unknown error'}`);
         setIsInitializing(false);
       }
@@ -327,7 +287,6 @@ export function AppleIAPUpgradeOptions({
 
         setLoadingPlan(null);
       } catch (e: any) {
-        console.error('[AppleIAPUpgradeOptions] Purchase error:', e);
         setError(e.message || iap.purchaseFailed);
         setLoadingPlan(null);
       }
@@ -367,7 +326,6 @@ export function AppleIAPUpgradeOptions({
 
       setIsRestoring(false);
     } catch (e: any) {
-      console.error('[AppleIAPUpgradeOptions] Restore error:', e);
       setError(e.message || iap.restoreFailed);
       setIsRestoring(false);
     }
@@ -388,25 +346,8 @@ export function AppleIAPUpgradeOptions({
       ? APPLE_PRODUCT_IDS.MAX_MONTHLY
       : APPLE_PRODUCT_IDS.MAX_YEARLY;
 
-  // Determine if buttons should be disabled and log the reason
+  // Determine if buttons should be disabled
   const shouldDisableButtons = !isInitialized || products.length === 0;
-
-  // Log button state on each render for debugging
-  useEffect(() => {
-    console.log('[AppleIAPUpgradeOptions] Button state check:', {
-      isInitialized,
-      isInitializing,
-      productsCount: products.length,
-      hasError: !!error,
-      hasAppAccountToken: !!appAccountToken,
-      shouldDisableButtons,
-      disableReason: !isInitialized
-        ? 'Not initialized yet'
-        : products.length === 0
-          ? 'No products available'
-          : 'Buttons enabled',
-    });
-  }, [isInitialized, isInitializing, products.length, error, appAccountToken, shouldDisableButtons]);
 
   if (!isIAPAvailable()) {
     return (

@@ -18,10 +18,6 @@ export async function GET(request: NextRequest) {
     const { error } = await supabase.auth.signOut();
 
     if (error) {
-      console.warn(
-        "[AUTH LOGOUT] Supabase signOut returned error; clearing cookies manually",
-        error
-      );
       clearSupabaseAuthCookies(request, response);
     }
 
@@ -29,13 +25,11 @@ export async function GET(request: NextRequest) {
     if (userId) {
       try {
         revalidateTag(`user-${userId}`, 'max');
-        console.log(`[AUTH LOGOUT] Cleared cache for user ${userId}`);
-      } catch (cacheError) {
-        console.warn("[AUTH LOGOUT] Failed to clear user cache:", cacheError);
+      } catch {
+        // Ignore cache invalidation errors
       }
     }
-  } catch (error) {
-    console.error("[AUTH LOGOUT] Unexpected signOut error; clearing cookies manually", error);
+  } catch {
     clearSupabaseAuthCookies(request, response);
   }
 
