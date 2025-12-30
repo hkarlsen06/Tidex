@@ -115,8 +115,10 @@ export async function GET(_request: NextRequest) {
       },
       {
         headers: {
-          // Cache for 5 minutes
-          'Cache-Control': 'private, max-age=300, stale-while-revalidate=60',
+          // SECURITY: Disable browser HTTP caching for user-specific data
+          // Browser cache doesn't differentiate by user on same device, causing data
+          // leaks when users logout/login. Server-side caching via cacheTag() is sufficient.
+          'Cache-Control': 'no-store',
         },
       }
     );
