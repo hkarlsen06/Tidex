@@ -983,9 +983,11 @@ type ShiftsViewProps = {
   payoutTaxSettings?: PayoutTaxSettings;
   /** Optional external month context to isolate state from global MonthProvider */
   monthContext?: MonthContextOverride;
+  /** User-specific cache key to ensure browser HTTP cache is per-user */
+  cacheKey?: string;
 };
 
-export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", userSettings, presetRules, readOnly = false, ownerName: _ownerName, headerSlot, sharedOwnerId, showEarnings = true, payoutTaxSettings, monthContext }: ShiftsViewProps) {
+export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", userSettings, presetRules, readOnly = false, ownerName: _ownerName, headerSlot, sharedOwnerId, showEarnings = true, payoutTaxSettings, monthContext, cacheKey }: ShiftsViewProps) {
   const { t, locale } = useTranslations();
   const formatCurrency = useFormatCurrency();
   const {
@@ -1132,9 +1134,10 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
       // Determine endpoint based on mode
       // readOnly mode ALWAYS uses /api/sharing (we already verified ownerId exists above)
       // Non-readOnly mode uses /api/shifts for own shifts
+      // Include cacheKey to ensure browser HTTP cache is per-user
       const url = readOnly
-        ? `/api/sharing?ownerId=${ownerId}&year=${year}&month=${month}&_=${cacheBuster}`
-        : `/api/shifts?year=${year}&month=${month}&_=${cacheBuster}`;
+        ? `/api/sharing?ownerId=${ownerId}&year=${year}&month=${month}&_ck=${cacheKey || ''}&_=${cacheBuster}`
+        : `/api/shifts?year=${year}&month=${month}&_ck=${cacheKey || ''}&_=${cacheBuster}`;
 
       const response = await fetch(url);
       const data = await response.json();
@@ -1166,7 +1169,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
         return next;
       });
     }
-  }, [getMonthKey, loadedMonths, loadingMonths, initialShifts, cacheBuster, readOnly]);
+  }, [getMonthKey, loadedMonths, loadingMonths, initialShifts, cacheBuster, readOnly, cacheKey]);
 
   // Fetch a single shift (by month) to refresh computed data after local updates
   const refreshShiftFromServer = useCallback(async (shiftId: string, shiftDate: string) => {
@@ -1179,7 +1182,8 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
     }
 
     try {
-      const response = await fetch(`/api/shifts?year=${year}&month=${month}&_=${cacheBuster}`);
+      // Include cacheKey to ensure browser HTTP cache is per-user
+      const response = await fetch(`/api/shifts?year=${year}&month=${month}&_ck=${cacheKey || ''}&_=${cacheBuster}`);
       if (!response.ok) return;
 
       const data = await response.json();
@@ -1198,7 +1202,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
     } catch (err) {
       console.error("Failed to refresh shift after custom supplements save", err);
     }
-  }, [cacheBuster]);
+  }, [cacheBuster, cacheKey]);
 
   const shiftsByDate = useMemo(() => {
     const map = new Map<ISODate, ShiftWithComputations[]>();

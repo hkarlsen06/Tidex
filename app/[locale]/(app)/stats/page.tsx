@@ -34,7 +34,7 @@ export default async function StatsPage({ params }: StatsPageProps) {
   return (
     <I18nProvider locale={locale as Locale} dictionary={dictionary} namespaces={['pages.stats']}>
       <StatsLayoutWrapper>
-        <StatsContent data={data} />
+        <StatsContent data={data} cacheKey={user.id.slice(0, 8)} />
       </StatsLayoutWrapper>
     </I18nProvider>
   );
