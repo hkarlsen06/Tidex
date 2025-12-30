@@ -26,6 +26,8 @@ const config = [
       "dev-site/tailwind.config.js",
       "dev-site/out/**",
       "next-env.d.ts",
+      "ios/**",
+      "android/**",
     ],
   },
   js.configs.recommended,

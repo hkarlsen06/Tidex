@@ -5,7 +5,17 @@ import { Card } from '@/components/app/Card';
 import { Label } from '@/components/app/Label';
 import { Switch } from '@/components/app/Switch';
 import { Button } from '@/components/app/Button';
-import { updateNotificationSettings } from '@/app/[locale]/(app)/settings/_actions/updateSettings';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/app/Select';
+import {
+  updateNotificationSettings,
+  updateShiftReminderSettings,
+} from '@/app/[locale]/(app)/settings/_actions/updateSettings';
 import { pushNotificationService } from '@/lib/notifications/push-service';
 import { isNativePlatform } from '@/lib/capacitor/platform';
 import { useRouter } from 'next/navigation';
@@ -16,6 +26,8 @@ type PermissionStatus = 'granted' | 'denied' | 'prompt' | 'unknown';
 interface NotificationSettingsFormProps {
   initialData: {
     sharedShiftsEnabled: boolean;
+    shiftRemindersEnabled: boolean;
+    shiftReminderMinutes: number;
   };
   t: Dictionary;
 }
@@ -23,7 +35,10 @@ interface NotificationSettingsFormProps {
 export function NotificationSettingsForm({ initialData, t }: NotificationSettingsFormProps) {
   const router = useRouter();
   const isInitialMount = useRef(true);
+  const isReminderInitialMount = useRef(true);
   const [sharedShiftsEnabled, setSharedShiftsEnabled] = useState(initialData.sharedShiftsEnabled);
+  const [shiftRemindersEnabled, setShiftRemindersEnabled] = useState(initialData.shiftRemindersEnabled);
+  const [shiftReminderMinutes, setShiftReminderMinutes] = useState(initialData.shiftReminderMinutes);
   const [isSaving, setIsSaving] = useState(false);
   const [permissionStatus, setPermissionStatus] = useState<PermissionStatus>('unknown');
   const [isNative, setIsNative] = useState(false);
@@ -75,6 +90,31 @@ export function NotificationSettingsForm({ initialData, t }: NotificationSetting
 
     savePreferences();
   }, [sharedShiftsEnabled, router]);
+
+  // Auto-save when shift reminder preferences change
+  useEffect(() => {
+    if (isReminderInitialMount.current) {
+      isReminderInitialMount.current = false;
+      return;
+    }
+
+    const saveReminderPreferences = async () => {
+      setIsSaving(true);
+      try {
+        await updateShiftReminderSettings({
+          shift_reminders_enabled: shiftRemindersEnabled,
+          shift_reminder_minutes: shiftReminderMinutes,
+        });
+        router.refresh();
+      } catch (error) {
+        console.error('Failed to save shift reminder settings:', error);
+      } finally {
+        setIsSaving(false);
+      }
+    };
+
+    saveReminderPreferences();
+  }, [shiftRemindersEnabled, shiftReminderMinutes, router]);
 
   const handleRequestPermission = useCallback(async () => {
     if (!isNative) return;
@@ -135,6 +175,54 @@ export function NotificationSettingsForm({ initialData, t }: NotificationSetting
               disabled={isSaving || (isNative && permissionStatus === 'denied')}
             />
           </div>
+
+          {/* Divider */}
+          <div className="border-t border-border" />
+
+          {/* Shift reminders toggle */}
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5 flex-1">
+              <Label htmlFor="shiftReminders" className="text-base font-medium cursor-pointer">
+                {notifications.shiftReminders.label}
+              </Label>
+              <p className="text-sm text-text-secondary">
+                {notifications.shiftReminders.description}
+              </p>
+            </div>
+            <Switch
+              id="shiftReminders"
+              checked={shiftRemindersEnabled}
+              onCheckedChange={setShiftRemindersEnabled}
+              disabled={isSaving || (isNative && permissionStatus === 'denied')}
+            />
+          </div>
+
+          {/* Reminder timing select - only show when reminders enabled */}
+          {shiftRemindersEnabled && (
+            <div className="ml-0 space-y-2">
+              <Label htmlFor="reminderTiming" className="text-sm font-medium">
+                {notifications.shiftReminders.timingLabel}
+              </Label>
+              <Select
+                value={String(shiftReminderMinutes)}
+                onValueChange={(value) => setShiftReminderMinutes(Number(value))}
+                disabled={isSaving || (isNative && permissionStatus === 'denied')}
+              >
+                <SelectTrigger id="reminderTiming" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="60">{notifications.shiftReminders.options.hour1}</SelectItem>
+                  <SelectItem value="120">{notifications.shiftReminders.options.hour2}</SelectItem>
+                  <SelectItem value="300">{notifications.shiftReminders.options.hour5}</SelectItem>
+                  <SelectItem value="1440">{notifications.shiftReminders.options.hour24}</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-text-muted">
+                {notifications.shiftReminders.timingHelp}
+              </p>
+            </div>
+          )}
         </div>
       </Card>
     </div>
