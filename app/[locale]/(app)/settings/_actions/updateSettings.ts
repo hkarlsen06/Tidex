@@ -475,21 +475,35 @@ export async function updateNotificationSettings(data: {
 /**
  * Update shift reminder settings
  * Uses upsert since the row may not exist yet for the user
+ * Supports multiple reminders (up to 3) via shift_reminder_minutes_array
  */
 export async function updateShiftReminderSettings(data: {
   shift_reminders_enabled: boolean;
-  shift_reminder_minutes?: number;
+  shift_reminder_minutes_array?: number[];
 }) {
   const { user } = await verifySession();
   const supabase = await createSupabaseServerClient();
 
   // Validate reminder_minutes if provided
-  const validMinutes = [60, 120, 300, 1440];
-  if (
-    data.shift_reminder_minutes !== undefined &&
-    !validMinutes.includes(data.shift_reminder_minutes)
-  ) {
-    throw new Error('Ugyldig påminnelsestid');
+  const validMinutes = [15, 30, 60, 120, 300, 1440];
+
+  if (data.shift_reminder_minutes_array !== undefined) {
+    // Validate array length (max 3)
+    if (data.shift_reminder_minutes_array.length > 3) {
+      throw new Error('Maksimalt 3 påminnelser er tillatt');
+    }
+
+    // Validate each value
+    for (const minutes of data.shift_reminder_minutes_array) {
+      if (!validMinutes.includes(minutes)) {
+        throw new Error('Ugyldig påminnelsestid');
+      }
+    }
+
+    // Remove duplicates and sort descending (longest first)
+    data.shift_reminder_minutes_array = [
+      ...new Set(data.shift_reminder_minutes_array),
+    ].sort((a, b) => b - a);
   }
 
   const { error } = await supabase
@@ -498,8 +512,8 @@ export async function updateShiftReminderSettings(data: {
       {
         user_id: user.id,
         shift_reminders_enabled: data.shift_reminders_enabled,
-        ...(data.shift_reminder_minutes !== undefined && {
-          shift_reminder_minutes: data.shift_reminder_minutes,
+        ...(data.shift_reminder_minutes_array !== undefined && {
+          shift_reminder_minutes_array: data.shift_reminder_minutes_array,
         }),
       },
       { onConflict: 'user_id' }

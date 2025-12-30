@@ -649,6 +649,44 @@ it("should never have paid hours exceed duration hours", () => {
 See `EFFECT_MIGRATION.md` for detailed migration plan.
 See `docs/error-handling-audit.md` for comprehensive error handling audit.
 
+## Supabase Edge Functions
+
+Edge functions are deployed via the Supabase MCP tool `mcp__supabase__deploy_edge_function`.
+
+**CRITICAL: Always set `verify_jwt: false` when deploying edge functions**
+
+Edge functions in this project are typically invoked by:
+- **pg_cron jobs** - Pass `service_role_key` in Authorization header, NOT a JWT
+- **Internal services** - Use service role authentication
+
+When `verify_jwt: true` (the default), the function expects a valid Supabase JWT token. Cron jobs and internal services pass the `service_role_key` instead, which causes 401 Unauthorized errors.
+
+```typescript
+// ✅ CORRECT - Always use verify_jwt: false for cron/internal functions
+mcp__supabase__deploy_edge_function({
+  name: "process-shift-reminders",
+  verify_jwt: false,  // REQUIRED for cron jobs
+  files: [...]
+})
+
+// ❌ WRONG - Will cause 401 errors when called by pg_cron
+mcp__supabase__deploy_edge_function({
+  name: "process-shift-reminders",
+  // verify_jwt defaults to true - cron jobs will fail!
+  files: [...]
+})
+```
+
+**When to use `verify_jwt: true`:**
+- Only for functions called directly by authenticated users from the client
+- When the function needs to verify the user's identity from their JWT
+
+**When to use `verify_jwt: false`:**
+- Functions invoked by pg_cron jobs
+- Functions called by other edge functions
+- Functions using service_role authentication
+- Webhook endpoints (implement custom auth validation in the function)
+
 ## Key Principles
 
 1. **Never import from `components/ui` directly** - always wrap and import from `components/app`
