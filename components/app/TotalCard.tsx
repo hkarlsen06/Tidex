@@ -50,7 +50,7 @@ function formatNumber(num: number, template: string): string {
   return suffix ? `${formatted} ${suffix}` : formatted;
 }
 
-// Animated counter that counts up from 0 to target value
+// Animated counter that starts with "---" then counts up to target value
 interface AnimatedCounterProps {
   value: string;
   className?: string;
@@ -60,33 +60,33 @@ interface AnimatedCounterProps {
 function AnimatedCounter({ value, className, style }: AnimatedCounterProps) {
   const targetNumber = extractNumber(value);
   const count = useMotionValue(0);
-  // Start at 0 (formatted) - animation begins immediately from 0 to target
-  const [displayValue, setDisplayValue] = useState(() => formatNumber(0, value));
+  const [displayValue, setDisplayValue] = useState('---');
   const prevValueRef = useRef(value);
-  const controlsRef = useRef<ReturnType<typeof animate> | null>(null);
+  const isFirstRender = useRef(true);
 
   useEffect(() => {
-    // Reset motion value when the target value changes
+    // Reset motion value when the target value changes (not on first render)
     if (value !== prevValueRef.current) {
       count.set(0);
       prevValueRef.current = value;
     }
 
-    // Start animation immediately - requestAnimationFrame ensures DOM is ready
-    const frameId = requestAnimationFrame(() => {
-      controlsRef.current = animate(count, targetNumber, {
-        duration: 1.2,
-        ease: [0.25, 0.1, 0.25, 1],
-        onUpdate: (latest) => {
-          setDisplayValue(formatNumber(latest, value));
-        },
-      });
+    const controls = animate(count, targetNumber, {
+      duration: 1.2,
+      ease: [0.25, 0.1, 0.25, 1],
+      onUpdate: (latest) => {
+        setDisplayValue(formatNumber(latest, value));
+      },
+      onPlay: () => {
+        // Reset display to placeholder when animation starts (after first render)
+        if (!isFirstRender.current) {
+          setDisplayValue('---');
+        }
+        isFirstRender.current = false;
+      },
     });
 
-    return () => {
-      cancelAnimationFrame(frameId);
-      controlsRef.current?.stop();
-    };
+    return () => controls.stop();
   }, [value, targetNumber, count]);
 
   return (
@@ -260,42 +260,21 @@ export const TotalCard: React.FC<TotalCardProps> = ({
                     }
                     side="bottom"
                     ariaLabel={t.components.totalCard.pendingShiftsTooltip}
-                    className="max-w-55 bg-surface-secondary border border-border-subtle shadow-lg px-3 py-2"
+                    className="max-w-[220px] bg-surface-secondary border border-border-subtle shadow-lg px-3 py-2"
                   >
                     <p className="text-sm text-text-primary">{t.components.totalCard.pendingShiftsTooltip}</p>
                   </ClickTooltip>
                 </div>
               )}
             </div>
-            {/* Always render subtitle row to prevent layout shift */}
-            <div
-              key={`subtitle-${total}`}
-              className={`mt-4 text-lg text-text-secondary min-h-7 ${getAnimationClasses(animationDirection)}`}
-            >
-              <AnimatePresence mode="wait">
-                {shouldShowSubtitle ? (
-                  <motion.span
-                    key="subtitle-value"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    {subtitleContent}
-                  </motion.span>
-                ) : (
-                  <motion.span
-                    key="subtitle-placeholder"
-                    initial={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.2 }}
-                    className="text-text-muted"
-                  >
-                    — — —
-                  </motion.span>
-                )}
-              </AnimatePresence>
-            </div>
+            {shouldShowSubtitle && (
+              <div
+                key={`subtitle-${total}`}
+                className={`mt-4 text-lg text-text-secondary ${getAnimationClasses(animationDirection)}`}
+              >
+                {subtitleContent}
+              </div>
+            )}
           </div>
         )}
       </CardContent>
