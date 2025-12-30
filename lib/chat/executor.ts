@@ -46,7 +46,7 @@ import { SettingsService } from "@/lib/services/settings";
 import { SnapshotsService } from "@/lib/services/snapshots";
 import { AuthSettingsLive, AuthSnapshotsLive } from "@/lib/layers/app";
 import { Effect } from "effect";
-import { logger } from "@/lib/logger";
+import { logger as _logger } from "@/lib/logger";
 import { getDictionary } from "@/lib/i18n/dictionaries";
 import { defaultLocale, type Locale } from "@/lib/i18n/config";
 

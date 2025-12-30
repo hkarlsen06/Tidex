@@ -472,3 +472,45 @@ export async function updateNotificationSettings(data: {
   return { success: true };
 }
 
+/**
+ * Update shift reminder settings
+ * Uses upsert since the row may not exist yet for the user
+ */
+export async function updateShiftReminderSettings(data: {
+  shift_reminders_enabled: boolean;
+  shift_reminder_minutes?: number;
+}) {
+  const { user } = await verifySession();
+  const supabase = await createSupabaseServerClient();
+
+  // Validate reminder_minutes if provided
+  const validMinutes = [60, 120, 300, 1440];
+  if (
+    data.shift_reminder_minutes !== undefined &&
+    !validMinutes.includes(data.shift_reminder_minutes)
+  ) {
+    throw new Error('Ugyldig påminnelsestid');
+  }
+
+  const { error } = await supabase
+    .from('notification_preferences')
+    .upsert(
+      {
+        user_id: user.id,
+        shift_reminders_enabled: data.shift_reminders_enabled,
+        ...(data.shift_reminder_minutes !== undefined && {
+          shift_reminder_minutes: data.shift_reminder_minutes,
+        }),
+      },
+      { onConflict: 'user_id' }
+    );
+
+  if (error) {
+    logger.error('Failed to update shift reminder settings:', error);
+    throw error;
+  }
+
+  invalidateAndRevalidate(user.id);
+  return { success: true };
+}
+

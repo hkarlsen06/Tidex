@@ -6,9 +6,10 @@ export interface PushNotificationPayload {
     | "shared_shift_created"
     | "shared_shift_updated"
     | "shared_shift_deleted"
-  shift_id: string
-  owner_id: string
-  shift_date: string
+    | "shift_reminder"
+  shift_id?: string
+  owner_id?: string
+  shift_date?: string
 }
 
 class PushNotificationService {
@@ -133,9 +134,20 @@ class PushNotificationService {
   }
 
   private handleNotificationTap(payload: PushNotificationPayload): void {
-    // Build URL to shared calendar with highlight
     const locale = this.getLocale()
-    const url = `/${locale}/sharing?user=${payload.owner_id}&highlight=${payload.shift_id}&date=${payload.shift_date}`
+    let url: string
+
+    if (payload.type === "shift_reminder") {
+      // Navigate to shifts page, optionally with date
+      if (payload.shift_date) {
+        url = `/${locale}/shifts?date=${payload.shift_date}`
+      } else {
+        url = `/${locale}/shifts`
+      }
+    } else {
+      // Shared shift notification - navigate to shared calendar with highlight
+      url = `/${locale}/sharing?user=${payload.owner_id}&highlight=${payload.shift_id}&date=${payload.shift_date}`
+    }
 
     // Navigate
     if (typeof window !== "undefined") {

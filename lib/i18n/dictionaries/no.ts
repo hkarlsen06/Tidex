@@ -1365,6 +1365,18 @@ export const no = {
           label: 'Delte vakter',
           description: 'Få varsel når noen deler en ny vakt med deg',
         },
+        shiftReminders: {
+          label: 'Vaktpåminnelser',
+          description: 'Få varsel før vaktene dine starter',
+          timingLabel: 'Påminnelsestid',
+          timingHelp: 'Varselet sendes omtrent på valgt tid (±10 min)',
+          options: {
+            hour1: 'Ca. 1 time før',
+            hour2: 'Ca. 2 timer før',
+            hour5: 'Ca. 5 timer før',
+            hour24: 'Ca. 24 timer før',
+          },
+        },
       },
     },
     sharing: {

@@ -1366,6 +1366,18 @@ export const en: Dictionary = {
           label: 'Shared shifts',
           description: 'Get notified when someone shares a new shift with you',
         },
+        shiftReminders: {
+          label: 'Shift reminders',
+          description: 'Get notified before your shifts start',
+          timingLabel: 'Reminder time',
+          timingHelp: 'Notification sent approximately at chosen time (±10 min)',
+          options: {
+            hour1: 'About 1 hour before',
+            hour2: 'About 2 hours before',
+            hour5: 'About 5 hours before',
+            hour24: 'About 24 hours before',
+          },
+        },
       },
     },
     sharing: {
