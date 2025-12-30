@@ -184,7 +184,7 @@ export function NotificationSettingsForm({ initialData, t }: NotificationSetting
     return options[option.labelKey] || `${minutes} min`;
   };
 
-  const getAvailableOptions = (currentValue: number): typeof REMINDER_OPTIONS => {
+  const getAvailableOptions = (currentValue: number) => {
     // Return all options, but the current one is always available
     return REMINDER_OPTIONS.filter(
       (opt) => opt.value === currentValue || !shiftReminderMinutesArray.includes(opt.value)
