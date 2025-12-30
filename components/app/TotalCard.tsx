@@ -131,11 +131,11 @@ export const TotalCard: React.FC<TotalCardProps> = ({
 
   const handleKeyDown = onClick
     ? (event: React.KeyboardEvent<HTMLDivElement>) => {
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault();
-          onClick();
-        }
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        onClick();
       }
+    }
     : undefined;
 
   const displayTotal = useZeroPlaceholder && total === '0 kr' ? '---' : total;
@@ -151,8 +151,8 @@ export const TotalCard: React.FC<TotalCardProps> = ({
 
   const subtitleContent = subtitlePlaceholder
     ? (
-        <>{subtitlePlaceholder}</>
-      )
+      <>{subtitlePlaceholder}</>
+    )
     : hasFutureShifts
       ? (
         <>
@@ -260,21 +260,42 @@ export const TotalCard: React.FC<TotalCardProps> = ({
                     }
                     side="bottom"
                     ariaLabel={t.components.totalCard.pendingShiftsTooltip}
-                    className="max-w-[220px] bg-surface-secondary border border-border-subtle shadow-lg px-3 py-2"
+                    className="max-w-55 bg-surface-secondary border border-border-subtle shadow-lg px-3 py-2"
                   >
                     <p className="text-sm text-text-primary">{t.components.totalCard.pendingShiftsTooltip}</p>
                   </ClickTooltip>
                 </div>
               )}
             </div>
-            {shouldShowSubtitle && (
-              <div
-                key={`subtitle-${total}`}
-                className={`mt-4 text-lg text-text-secondary ${getAnimationClasses(animationDirection)}`}
-              >
-                {subtitleContent}
-              </div>
-            )}
+            {/* Always render subtitle row to prevent layout shift */}
+            <div
+              key={`subtitle-${total}`}
+              className={`mt-4 text-lg text-text-secondary min-h-7 ${getAnimationClasses(animationDirection)}`}
+            >
+              <AnimatePresence mode="wait">
+                {shouldShowSubtitle ? (
+                  <motion.span
+                    key="subtitle-value"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    {subtitleContent}
+                  </motion.span>
+                ) : (
+                  <motion.span
+                    key="subtitle-placeholder"
+                    initial={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="text-text-muted"
+                  >
+                    — — —
+                  </motion.span>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
         )}
       </CardContent>
