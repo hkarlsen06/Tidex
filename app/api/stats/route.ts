@@ -39,9 +39,10 @@ export async function GET(request: NextRequest) {
     const data = await getStatsDataForApi(session.user.id, { year, month, locale: localeParam as Locale });
     return NextResponse.json(data, {
       headers: {
-        // Cache for 5 minutes (300 seconds)
-        // 'private' ensures cache is user-specific, not shared across users
-        'Cache-Control': 'private, max-age=300, stale-while-revalidate=60',
+        // SECURITY: Disable browser HTTP caching for user-specific data
+        // Browser cache doesn't differentiate by user on same device, causing data
+        // leaks when users logout/login. Server-side caching via cacheTag() is sufficient.
+        'Cache-Control': 'no-store',
       },
     });
   } catch (error) {
