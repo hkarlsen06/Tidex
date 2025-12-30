@@ -46,10 +46,10 @@ export async function GET(request: NextRequest) {
       { shifts, settings },
       {
         headers: {
-          // SECURITY: Disable browser HTTP caching for user-specific data
-          // Browser cache doesn't differentiate by user on same device, causing data
-          // leaks when users logout/login. Server-side caching via cacheTag() is sufficient.
-          "Cache-Control": "no-store",
+          // Cache for 5 minutes (300 seconds) with stale-while-revalidate
+          // 'private' prevents CDN caching; browser caching is made safe via _ck (user cache key)
+          // query param passed from client, ensuring different users have different cache entries
+          "Cache-Control": "private, max-age=300, stale-while-revalidate=60",
         },
       }
     );
