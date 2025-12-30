@@ -6,6 +6,7 @@ import { TotalCard } from "@/components/app/TotalCard";
 import { NextPayrollCard } from "@/components/app/NextPayrollCard";
 import { MonthPicker } from "./MonthPicker";
 import { ShiftCard } from "@/components/app/ShiftCard";
+import { ShiftCardSkeleton } from "@/components/app/skeletons";
 import ShiftDetails from "@/components/shifts/ShiftDetails";
 import { ShiftWithComputations, UserSettings, computeShift, PRESET_SUPPLEMENT_RULES } from "@/lib/payroll";
 import { useCountdown } from "@/lib/hooks/useCountdown";
@@ -573,8 +574,8 @@ export function HomeContent({ shifts: initialShifts, settings, payoutTaxSettings
             />
             <span className="font-medium text-text-muted mr-3">{month.getFullYear()}</span>
           </div>
-          {displayShift && (
-            <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-2">
+            {displayShift ? (
               <ShiftCard
                 shift={displayShift}
                 onClick={() => {
@@ -588,9 +589,11 @@ export function HomeContent({ shifts: initialShifts, settings, payoutTaxSettings
                   halfTaxMonth: settings.half_tax_month ?? null,
                 }}
               />
-              <p className="text-xs text-text-muted text-center">{relativeTimeText ?? "---"}</p>
-            </div>
-          )}
+            ) : (
+              <ShiftCardSkeleton />
+            )}
+            <p className="text-xs text-text-muted text-center">{relativeTimeText ?? "---"}</p>
+          </div>
         </div>
       </div>
       <ShiftDetails
