@@ -443,3 +443,32 @@ export async function initiateEmailChange(newEmail: string) {
   return { success: true };
 }
 
+/**
+ * Update notification preferences
+ * Uses upsert since the row may not exist yet for the user
+ */
+export async function updateNotificationSettings(data: {
+  shared_shifts_enabled?: boolean;
+}) {
+  const { user } = await verifySession();
+  const supabase = await createSupabaseServerClient();
+
+  const { error } = await supabase
+    .from('notification_preferences')
+    .upsert(
+      {
+        user_id: user.id,
+        ...data,
+      },
+      { onConflict: 'user_id' }
+    );
+
+  if (error) {
+    logger.error('Failed to update notification settings:', error);
+    throw error;
+  }
+
+  invalidateAndRevalidate(user.id);
+  return { success: true };
+}
+

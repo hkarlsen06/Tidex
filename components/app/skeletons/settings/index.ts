@@ -5,3 +5,4 @@ export { DisplaySkeleton } from "./DisplaySkeleton";
 export { DataSkeleton } from "./DataSkeleton";
 export { SubscriptionSkeleton } from "./SubscriptionSkeleton";
 export { PreferencesSkeleton } from "./PreferencesSkeleton";
+export { NotificationsSkeleton } from "./NotificationsSkeleton";

@@ -31,6 +31,8 @@ export type ShiftsCalendarProps = {
   selectedDates?: Set<ISODate>;
   newlyAddedDates?: Set<string>;
   taxSettings?: TaxSettings;
+  /** Deep link: date to highlight (from push notification) */
+  highlightDate?: string | null;
 };
 
 type DayButtonProps = {
@@ -51,6 +53,7 @@ type DayButtonProps = {
   selectedDates?: Set<ISODate>;
   newlyAddedDates?: Set<string>;
   taxSettings?: TaxSettings;
+  highlightDate?: string | null;
   [key: string]: any;
 };
 
@@ -99,6 +102,7 @@ const DayButton = React.memo(function DayButton({
   selectedDates,
   newlyAddedDates,
   taxSettings,
+  highlightDate,
   ...buttonProps
 }: DayButtonProps) {
   const date: Date = day.date;
@@ -117,6 +121,7 @@ const DayButton = React.memo(function DayButton({
   const hasOverlap = overlappingDates.has(iso);
   const week = isMonday ? getIsoWeek(date) : null;
   const netEarnings = getNetEarningsForDate(earnings, date, taxSettings);
+  const isHighlighted = highlightDate === iso;
 
   return (
     <button
@@ -131,7 +136,9 @@ const DayButton = React.memo(function DayButton({
           "border-orange-400/60 bg-orange-500/10 dark:border-orange-500/50 dark:bg-orange-500/15",
         isToday && "ring-1 ring-brand-highlight",
         isToday && !isSelected && "border-brand-highlight",
-        isOutside && "opacity-40"
+        isOutside && "opacity-40",
+        // Highlight from push notification deep link (consistent with ShiftCard highlighting)
+        isHighlighted && "ring-2 ring-emerald-500 dark:ring-emerald-400 animate-pulse-subtle"
       )}
     >
       <div className="relative flex flex-col w-full h-full p-1">
@@ -222,6 +229,7 @@ export function ShiftsCalendar({
   selectedDates,
   newlyAddedDates,
   taxSettings,
+  highlightDate,
 }: ShiftsCalendarProps) {
   const locale = useLocale();
   const dateFnsLocale = locale === 'en' ? enUS : nb;
@@ -253,9 +261,10 @@ export function ShiftsCalendar({
         selectedDates={selectedDates}
         newlyAddedDates={newlyAddedDates}
         taxSettings={taxSettings}
+        highlightDate={highlightDate}
       />
     ),
-    [mode, earningsByDate, hoursByDate, employeesByDate, overlappingDates, weekNumberPosition, selectedDate, selectedDates, newlyAddedDates, taxSettings]
+    [mode, earningsByDate, hoursByDate, employeesByDate, overlappingDates, weekNumberPosition, selectedDate, selectedDates, newlyAddedDates, taxSettings, highlightDate]
   );
 
   const handleDayClick = React.useCallback(

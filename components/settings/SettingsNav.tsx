@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { MouseEvent } from "react";
+import { useSyncExternalStore, type MouseEvent } from "react";
 import { Card } from "@/components/app/Card";
 import { Separator } from "@/components/app/Separator";
 import {
@@ -12,6 +12,7 @@ import {
   Database,
   CreditCard,
   Shield,
+  Bell,
   ChevronRight,
   Loader2,
 } from "lucide-react";
@@ -20,51 +21,78 @@ import { useTranslations } from "@/lib/i18n/client";
 import type { Dictionary } from "@/lib/i18n/dictionaries/no";
 import { cn } from "@/lib/cn";
 import { defaultLocale } from "@/lib/i18n/config";
+import { isNativePlatform } from "@/lib/capacitor/platform";
 
-const getSettingsItems = (t: Dictionary) => [
-  {
-    href: "/settings/profile",
-    label: t.pages.settings.menu.profile.label,
-    description: t.pages.settings.menu.profile.description,
-    icon: User,
-  },
-  {
-    href: "/settings/pay",
-    label: t.pages.settings.menu.pay.label,
-    description: t.pages.settings.menu.pay.description,
-    icon: Banknote,
-  },
-  {
-    href: "/settings/security",
-    label: t.pages.settings.menu.security.label,
-    description: t.pages.settings.menu.security.description,
-    icon: Shield,
-  },
-  {
-    href: "/settings/subscription",
-    label: t.pages.settings.menu.subscription.label,
-    description: t.pages.settings.menu.subscription.description,
-    icon: CreditCard,
-  },
-  {
-    href: "/settings/display",
-    label: t.pages.settings.menu.display.label,
-    description: t.pages.settings.menu.display.description,
-    icon: Palette,
-  },
-  {
-    href: "/settings/data",
-    label: t.pages.settings.menu.data.label,
-    description: t.pages.settings.menu.data.description,
-    icon: Database,
-  },
-];
+const getSettingsItems = (t: Dictionary, showNotifications: boolean) => {
+  const items = [
+    {
+      href: "/settings/profile",
+      label: t.pages.settings.menu.profile.label,
+      description: t.pages.settings.menu.profile.description,
+      icon: User,
+    },
+    {
+      href: "/settings/pay",
+      label: t.pages.settings.menu.pay.label,
+      description: t.pages.settings.menu.pay.description,
+      icon: Banknote,
+    },
+    {
+      href: "/settings/security",
+      label: t.pages.settings.menu.security.label,
+      description: t.pages.settings.menu.security.description,
+      icon: Shield,
+    },
+    {
+      href: "/settings/subscription",
+      label: t.pages.settings.menu.subscription.label,
+      description: t.pages.settings.menu.subscription.description,
+      icon: CreditCard,
+    },
+    {
+      href: "/settings/display",
+      label: t.pages.settings.menu.display.label,
+      description: t.pages.settings.menu.display.description,
+      icon: Palette,
+    },
+    {
+      href: "/settings/data",
+      label: t.pages.settings.menu.data.label,
+      description: t.pages.settings.menu.data.description,
+      icon: Database,
+    },
+  ];
+
+  // Only show notifications on native platforms (iOS/Android)
+  if (showNotifications) {
+    items.push({
+      href: "/settings/notifications",
+      label: t.pages.settings.menu.notifications.label,
+      description: t.pages.settings.menu.notifications.description,
+      icon: Bell,
+    });
+  }
+
+  return items;
+};
 
 export function SettingsNav() {
   const pathname = usePathname();
   const { navigate, pendingPath } = useNavigationFeedback();
   const { t } = useTranslations();
-  const settingsItems = getSettingsItems(t);
+
+  // Check if we're on a native platform (iOS/Android) for showing notifications menu
+  // useSyncExternalStore ensures proper SSR hydration without setState-in-effect
+  const showNotifications = useSyncExternalStore(
+    // Subscribe is a no-op since platform doesn't change at runtime
+    () => () => {},
+    // Client snapshot: check platform
+    () => isNativePlatform(),
+    // Server snapshot: always false (no notifications menu in SSR)
+    () => false
+  );
+
+  const settingsItems = getSettingsItems(t, showNotifications);
 
   // Extract locale from current pathname
   const localeMatch = pathname.match(/^\/(en|no)/);

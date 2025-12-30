@@ -770,6 +770,10 @@ export const en: Dictionary = {
           label: 'Data',
           description: 'Export your data as PDF',
         },
+        notifications: {
+          label: 'Notifications',
+          description: 'Push notifications and preferences',
+        },
       },
       profile: {
         title: 'Profile',
@@ -1351,6 +1355,16 @@ export const en: Dictionary = {
             fetchFailed: 'Could not fetch data for export.',
             fetchFailedRetry: 'Could not fetch data for export. Check your connection and try again.',
           },
+        },
+      },
+      notifications: {
+        title: 'Notifications',
+        subtitle: 'Manage your notification settings',
+        permissionDenied: 'Notifications are disabled. Go to Settings → Tidex to enable.',
+        enableButton: 'Enable notifications',
+        sharedShifts: {
+          label: 'Shared shifts',
+          description: 'Get notified when someone shares a new shift with you',
         },
       },
     },

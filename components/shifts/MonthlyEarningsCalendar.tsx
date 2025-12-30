@@ -74,6 +74,8 @@ type MonthlyEarningsCalendarProps = {
     direction: 'next' | 'previous' | null;
     isHydrated: boolean;
   };
+  /** Deep link: shift ID to highlight (from push notification) */
+  highlightShiftId?: string | null;
 };
 
 /**
@@ -285,6 +287,7 @@ export function MonthlyEarningsCalendar({
   showEarnings = true,
   calendarId = "own-shifts",
   monthContext,
+  highlightShiftId,
 }: MonthlyEarningsCalendarProps) {
   const { t } = useTranslations();
   const formatCurrency = useFormatCurrency();
@@ -302,6 +305,13 @@ export function MonthlyEarningsCalendar({
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
   const isSwiping = useRef<boolean>(false);
+
+  // Derive highlight date from shift ID (for push notification deep links)
+  const highlightDate = useMemo(() => {
+    if (!highlightShiftId) return null;
+    const shift = shifts.find(s => s.id === highlightShiftId);
+    return shift?.shift_date ?? null;
+  }, [highlightShiftId, shifts]);
 
   // Filter shifts once per month change
   // Include shifts from previous and next month to show on "outside days"
@@ -460,7 +470,7 @@ export function MonthlyEarningsCalendar({
     <div>
       <Card ref={containerRef} className="rounded-card border-0 bg-transparent">
         <div ref={swipeContainerRef}>
-        <div className="flex h-[52px] flex-row items-center justify-between">
+        <div className="flex h-13 flex-row items-center justify-between">
           <div className="flex h-10 items-center gap-1">
             {isShowingSelectedTotal ? (
               <span className="font-semibold text-text-primary pl-1">
@@ -530,6 +540,7 @@ export function MonthlyEarningsCalendar({
                 weekNumberPosition="top-left"
                 newlyAddedDates={newlyAddedDates}
                 taxSettings={taxSettings}
+                highlightDate={highlightDate}
               />
             </motion.div>
           </AnimatePresence>

@@ -3,6 +3,7 @@
 // - Uses FCM HTTP v1 API with OAuth2 for iOS/Android push
 // - Atomic queue claiming with FOR UPDATE SKIP LOCKED
 // - Automatic invalid token cleanup
+// - Consolidates bulk notifications from same sender
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.45.4";
 
@@ -19,12 +20,22 @@ const FCM_PRIVATE_KEY = (Deno.env.get("FCM_PRIVATE_KEY") ?? "").replace(/\\n/g, 
 let cachedAccessToken: { token: string; expiresAt: number } | null = null;
 
 // ---------- Types ----------
-interface NotificationPayload {
+interface ShiftNotificationPayload {
   shift_id: string;
   shift_date: string;
+  start_time?: string;
+  end_time?: string;
   owner_id: string;
   owner_name: string;
 }
+
+interface RecurringNotificationPayload {
+  recurring_id: string;
+  owner_id: string;
+  owner_name: string;
+}
+
+type NotificationPayload = ShiftNotificationPayload | RecurringNotificationPayload;
 
 interface QueuedNotification {
   id: string;
@@ -32,11 +43,25 @@ interface QueuedNotification {
   recipient_id: string;
   sender_id: string;
   payload: NotificationPayload;
+  created_at: string;
 }
 
 interface PushDevice {
   id: string;
   fcm_token: string;
+}
+
+/** Consolidated notification for bulk sends */
+interface ConsolidatedNotification {
+  notifications: QueuedNotification[];
+  recipient_id: string;
+  sender_id: string;
+  owner_name: string;
+  type: "single_shift" | "multiple_shifts" | "recurring";
+  // For single shift
+  shift?: { date: string; start_time: string; end_time: string };
+  // For multiple shifts
+  shift_count?: number;
 }
 
 // ---------- Helpers ----------
@@ -51,13 +76,24 @@ function json(data: unknown, status = 200) {
   });
 }
 
+function capitalizeFirst(str: string): string {
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
 function formatDate(dateStr: string): string {
   const date = new Date(dateStr);
-  return date.toLocaleDateString("nb-NO", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-  });
+  return capitalizeFirst(
+    date.toLocaleDateString("nb-NO", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+    })
+  );
+}
+
+function formatTime(timeStr: string): string {
+  // Handle both "HH:mm" and "HH:mm:ss+TZ" formats
+  return timeStr.slice(0, 5);
 }
 
 function base64UrlEncode(input: string | ArrayBuffer): string {
@@ -149,16 +185,46 @@ async function getFcmAccessToken(): Promise<string> {
   return data.access_token;
 }
 
-async function sendToFcm(
+/**
+ * Build notification message based on consolidated notification type
+ */
+function buildNotificationMessage(consolidated: ConsolidatedNotification): {
+  title: string;
+  body: string;
+} {
+  const { owner_name, type } = consolidated;
+
+  switch (type) {
+    case "single_shift": {
+      const shift = consolidated.shift!;
+      const title = `${owner_name} la til en vakt`;
+      const body = `${formatDate(shift.date)} kl. ${formatTime(shift.start_time)}-${formatTime(shift.end_time)}`;
+      return { title, body };
+    }
+    case "multiple_shifts": {
+      const count = consolidated.shift_count!;
+      const title = `${owner_name} la til ${count} vakter`;
+      const body = "Trykk for å se vaktene";
+      return { title, body };
+    }
+    case "recurring": {
+      const title = `${owner_name} la til en gjentakende vakt`;
+      const body = "Trykk for å se vaktene";
+      return { title, body };
+    }
+  }
+}
+
+async function sendConsolidatedToFcm(
   accessToken: string,
   fcmToken: string,
-  notification: QueuedNotification
+  consolidated: ConsolidatedNotification
 ): Promise<{ success: boolean; invalidToken?: boolean }> {
-  const { payload } = notification;
+  const { title, body } = buildNotificationMessage(consolidated);
 
-  // Localized message (Norwegian)
-  const title = "Ny vakt delt med deg";
-  const body = `${payload.owner_name} la til en vakt ${formatDate(payload.shift_date)}`;
+  // Use first notification's data for deep linking
+  const firstNotification = consolidated.notifications[0];
+  const payload = firstNotification.payload as ShiftNotificationPayload;
 
   // FCM HTTP v1 message format
   const message = {
@@ -169,17 +235,17 @@ async function sendToFcm(
         body,
       },
       data: {
-        type: notification.type,
-        shift_id: payload.shift_id,
-        owner_id: payload.owner_id,
-        shift_date: payload.shift_date,
+        type: firstNotification.type,
+        owner_id: consolidated.sender_id,
+        // Include shift info for deep linking (if available)
+        ...(payload.shift_id && { shift_id: payload.shift_id }),
+        ...(payload.shift_date && { shift_date: payload.shift_date }),
       },
       apns: {
         payload: {
           aps: {
             alert: { title, body },
             sound: "default",
-            // Omit badge - we don't have unread count yet
             "mutable-content": 1,
           },
         },
@@ -224,6 +290,75 @@ async function sendToFcm(
   return { success: false };
 }
 
+/**
+ * Consolidate notifications from the same sender to the same recipient
+ * Groups by (sender_id, recipient_id) and creates appropriate message
+ */
+function consolidateNotifications(
+  notifications: QueuedNotification[]
+): ConsolidatedNotification[] {
+  // Group by sender_id + recipient_id
+  const groups = new Map<string, QueuedNotification[]>();
+
+  for (const notification of notifications) {
+    const key = `${notification.sender_id}:${notification.recipient_id}`;
+    if (!groups.has(key)) {
+      groups.set(key, []);
+    }
+    groups.get(key)!.push(notification);
+  }
+
+  const consolidated: ConsolidatedNotification[] = [];
+
+  for (const [, group] of groups) {
+    const first = group[0];
+    const payload = first.payload;
+    const owner_name = payload.owner_name || "Noen";
+
+    // Check if this is a recurring shift notification
+    if (first.type === "recurring_shift_created") {
+      consolidated.push({
+        notifications: group,
+        recipient_id: first.recipient_id,
+        sender_id: first.sender_id,
+        owner_name,
+        type: "recurring",
+      });
+      continue;
+    }
+
+    // Regular shift notifications
+    if (group.length === 1) {
+      // Single shift - show full details
+      const shiftPayload = payload as ShiftNotificationPayload;
+      consolidated.push({
+        notifications: group,
+        recipient_id: first.recipient_id,
+        sender_id: first.sender_id,
+        owner_name,
+        type: "single_shift",
+        shift: {
+          date: shiftPayload.shift_date,
+          start_time: shiftPayload.start_time || "00:00",
+          end_time: shiftPayload.end_time || "00:00",
+        },
+      });
+    } else {
+      // Multiple shifts - consolidate into one message
+      consolidated.push({
+        notifications: group,
+        recipient_id: first.recipient_id,
+        sender_id: first.sender_id,
+        owner_name,
+        type: "multiple_shifts",
+        shift_count: group.length,
+      });
+    }
+  }
+
+  return consolidated;
+}
+
 // ---------- Server ----------
 serve(async (req) => {
   try {
@@ -263,34 +398,39 @@ serve(async (req) => {
     // Get FCM access token
     const accessToken = await getFcmAccessToken();
 
+    // Consolidate notifications from same sender to same recipient
+    const consolidated = consolidateNotifications(notifications as QueuedNotification[]);
+
     let processed = 0;
     let failed = 0;
     const invalidTokens: string[] = [];
 
-    for (const notification of notifications as QueuedNotification[]) {
+    for (const group of consolidated) {
       try {
         // Get recipient's FCM tokens
         const { data: devices } = await supabase
           .from("push_devices")
           .select("id, fcm_token")
-          .eq("user_id", notification.recipient_id);
+          .eq("user_id", group.recipient_id);
 
         if (!devices?.length) {
-          // No devices registered, mark as skipped
-          await supabase
-            .from("notification_queue")
-            .update({
-              status: "skipped",
-              processed_at: new Date().toISOString(),
-            })
-            .eq("id", notification.id);
+          // No devices registered, mark all as skipped
+          for (const notification of group.notifications) {
+            await supabase
+              .from("notification_queue")
+              .update({
+                status: "skipped",
+                processed_at: new Date().toISOString(),
+              })
+              .eq("id", notification.id);
+          }
           continue;
         }
 
         // Send to each device
         let anySuccess = false;
         for (const device of devices as PushDevice[]) {
-          const result = await sendToFcm(accessToken, device.fcm_token, notification);
+          const result = await sendConsolidatedToFcm(accessToken, device.fcm_token, group);
 
           if (result.success) {
             anySuccess = true;
@@ -300,31 +440,35 @@ serve(async (req) => {
           }
         }
 
-        // Mark notification status
-        await supabase
-          .from("notification_queue")
-          .update({
-            status: anySuccess ? "sent" : "failed",
-            error_message: anySuccess ? null : "All devices failed",
-            processed_at: new Date().toISOString(),
-          })
-          .eq("id", notification.id);
+        // Mark all notifications in group
+        for (const notification of group.notifications) {
+          await supabase
+            .from("notification_queue")
+            .update({
+              status: anySuccess ? "sent" : "failed",
+              error_message: anySuccess ? null : "All devices failed",
+              processed_at: new Date().toISOString(),
+            })
+            .eq("id", notification.id);
+        }
 
-        if (anySuccess) processed++;
-        else failed++;
+        if (anySuccess) processed += group.notifications.length;
+        else failed += group.notifications.length;
       } catch (error) {
-        console.error(`Error processing notification ${notification.id}:`, error);
+        console.error(`Error processing consolidated notification:`, error);
 
-        await supabase
-          .from("notification_queue")
-          .update({
-            status: "failed",
-            error_message: error instanceof Error ? error.message : "Unknown error",
-            processed_at: new Date().toISOString(),
-          })
-          .eq("id", notification.id);
+        for (const notification of group.notifications) {
+          await supabase
+            .from("notification_queue")
+            .update({
+              status: "failed",
+              error_message: error instanceof Error ? error.message : "Unknown error",
+              processed_at: new Date().toISOString(),
+            })
+            .eq("id", notification.id);
+        }
 
-        failed++;
+        failed += group.notifications.length;
       }
     }
 
@@ -338,6 +482,7 @@ serve(async (req) => {
       processed,
       failed,
       total: notifications.length,
+      consolidated: consolidated.length,
       invalidTokensRemoved: invalidTokens.length,
     });
   } catch (error) {

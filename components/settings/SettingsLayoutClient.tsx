@@ -40,7 +40,7 @@ export function SettingsLayoutClient({ children }: { children: ReactNode }) {
 
         {/* Content Section - Right side, scrollable on desktop */}
         <div className="h-full lg:w-2/3 lg:flex lg:justify-start lg:pl-6">
-          <div className="h-full w-full lg:max-w-[680px]">
+          <div className="h-full w-full lg:max-w-170">
             {children}
           </div>
         </div>
