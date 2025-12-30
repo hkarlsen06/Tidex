@@ -51,7 +51,7 @@ export default async function ShiftsPage({ params }: ShiftsPageProps) {
 
   return (
     <I18nProvider locale={_locale as Locale} dictionary={dictionary} namespaces={['pages.shifts']}>
-      <ShiftsView shifts={shifts} defaultView={defaultView} userSettings={settings} presetRules={PRESET_RULES} payoutTaxSettings={payoutTaxSettings} />
+      <ShiftsView shifts={shifts} defaultView={defaultView} userSettings={settings} presetRules={PRESET_RULES} payoutTaxSettings={payoutTaxSettings} cacheKey={user.id.slice(0, 8)} />
     </I18nProvider>
   );
 }

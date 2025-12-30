@@ -132,6 +132,8 @@ const EmploymentChart = dynamic(
 
 type StatsContentProps = {
   data: StatsData;
+  /** User-specific cache key to ensure browser HTTP cache is per-user */
+  cacheKey: string;
 };
 
 function formatHours(value: number): string {
@@ -199,7 +201,7 @@ function StatCard({ label, value, suffix, trend, icon, secondaryValue, secondary
   );
 }
 
-export function StatsContent({ data }: StatsContentProps) {
+export function StatsContent({ data, cacheKey }: StatsContentProps) {
   const { t } = useTranslations();
   const params = useParams();
   const locale = (params?.locale as string) || 'no';
@@ -287,6 +289,8 @@ export function StatsContent({ data }: StatsContentProps) {
           year: year.toString(),
           month: month.toString(),
           locale: locale,
+          // Include cacheKey to ensure browser HTTP cache is per-user
+          _ck: cacheKey,
         });
 
         const response = await fetch(`/api/stats?${query.toString()}`, {
@@ -315,7 +319,7 @@ export function StatsContent({ data }: StatsContentProps) {
         return null;
       }
     },
-    [locale]
+    [locale, cacheKey]
   );
 
   // Handle month changes - load full stats data
