@@ -20,6 +20,7 @@ import { pushNotificationService } from '@/lib/notifications/push-service';
 import { isNativePlatform } from '@/lib/capacitor/platform';
 import { useRouter } from 'next/navigation';
 import type { Dictionary } from '@/lib/i18n/dictionaries/no';
+import { Plus, X } from 'lucide-react';
 
 type PermissionStatus = 'granted' | 'denied' | 'prompt' | 'unknown';
 
@@ -27,10 +28,22 @@ interface NotificationSettingsFormProps {
   initialData: {
     sharedShiftsEnabled: boolean;
     shiftRemindersEnabled: boolean;
-    shiftReminderMinutes: number;
+    shiftReminderMinutesArray: number[];
   };
   t: Dictionary;
 }
+
+// Available reminder options in minutes
+const REMINDER_OPTIONS = [
+  { value: 15, labelKey: 'min15' },
+  { value: 30, labelKey: 'min30' },
+  { value: 60, labelKey: 'hour1' },
+  { value: 120, labelKey: 'hour2' },
+  { value: 300, labelKey: 'hour5' },
+  { value: 1440, labelKey: 'hour24' },
+] as const;
+
+const MAX_REMINDERS = 3;
 
 export function NotificationSettingsForm({ initialData, t }: NotificationSettingsFormProps) {
   const router = useRouter();
@@ -38,7 +51,9 @@ export function NotificationSettingsForm({ initialData, t }: NotificationSetting
   const isReminderInitialMount = useRef(true);
   const [sharedShiftsEnabled, setSharedShiftsEnabled] = useState(initialData.sharedShiftsEnabled);
   const [shiftRemindersEnabled, setShiftRemindersEnabled] = useState(initialData.shiftRemindersEnabled);
-  const [shiftReminderMinutes, setShiftReminderMinutes] = useState(initialData.shiftReminderMinutes);
+  const [shiftReminderMinutesArray, setShiftReminderMinutesArray] = useState<number[]>(
+    initialData.shiftReminderMinutesArray
+  );
   const [isSaving, setIsSaving] = useState(false);
   const [permissionStatus, setPermissionStatus] = useState<PermissionStatus>('unknown');
   const [isNative, setIsNative] = useState(false);
@@ -103,7 +118,7 @@ export function NotificationSettingsForm({ initialData, t }: NotificationSetting
       try {
         await updateShiftReminderSettings({
           shift_reminders_enabled: shiftRemindersEnabled,
-          shift_reminder_minutes: shiftReminderMinutes,
+          shift_reminder_minutes_array: shiftReminderMinutesArray,
         });
         router.refresh();
       } catch (error) {
@@ -114,7 +129,7 @@ export function NotificationSettingsForm({ initialData, t }: NotificationSetting
     };
 
     saveReminderPreferences();
-  }, [shiftRemindersEnabled, shiftReminderMinutes, router]);
+  }, [shiftRemindersEnabled, shiftReminderMinutesArray, router]);
 
   const handleRequestPermission = useCallback(async () => {
     if (!isNative) return;
@@ -132,6 +147,49 @@ export function NotificationSettingsForm({ initialData, t }: NotificationSetting
       console.error('Failed to request permission:', error);
     }
   }, [isNative]);
+
+  const handleAddReminder = useCallback(() => {
+    if (shiftReminderMinutesArray.length >= MAX_REMINDERS) return;
+
+    // Find the first available option that's not already selected
+    const availableOption = REMINDER_OPTIONS.find(
+      (opt) => !shiftReminderMinutesArray.includes(opt.value)
+    );
+
+    if (availableOption) {
+      const newArray = [...shiftReminderMinutesArray, availableOption.value].sort((a, b) => b - a);
+      setShiftReminderMinutesArray(newArray);
+    }
+  }, [shiftReminderMinutesArray]);
+
+  const handleRemoveReminder = useCallback((index: number) => {
+    if (shiftReminderMinutesArray.length <= 1) return;
+    const newArray = shiftReminderMinutesArray.filter((_, i) => i !== index);
+    setShiftReminderMinutesArray(newArray);
+  }, [shiftReminderMinutesArray]);
+
+  const handleChangeReminder = useCallback((index: number, value: number) => {
+    const newArray = [...shiftReminderMinutesArray];
+    newArray[index] = value;
+    // Remove duplicates and sort descending
+    const uniqueSorted = [...new Set(newArray)].sort((a, b) => b - a);
+    setShiftReminderMinutesArray(uniqueSorted);
+  }, [shiftReminderMinutesArray]);
+
+  const getReminderLabel = (minutes: number): string => {
+    const option = REMINDER_OPTIONS.find((opt) => opt.value === minutes);
+    if (!option) return `${minutes} min`;
+
+    const options = notifications.shiftReminders.options as Record<string, string>;
+    return options[option.labelKey] || `${minutes} min`;
+  };
+
+  const getAvailableOptions = (currentValue: number): typeof REMINDER_OPTIONS => {
+    // Return all options, but the current one is always available
+    return REMINDER_OPTIONS.filter(
+      (opt) => opt.value === currentValue || !shiftReminderMinutesArray.includes(opt.value)
+    );
+  };
 
   const notifications = t.pages.settings.notifications;
 
@@ -197,27 +255,64 @@ export function NotificationSettingsForm({ initialData, t }: NotificationSetting
             />
           </div>
 
-          {/* Reminder timing select - only show when reminders enabled */}
+          {/* Multiple reminder selects - only show when reminders enabled */}
           {shiftRemindersEnabled && (
-            <div className="ml-0 space-y-2">
-              <Label htmlFor="reminderTiming" className="text-sm font-medium">
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">
                 {notifications.shiftReminders.timingLabel}
               </Label>
-              <Select
-                value={String(shiftReminderMinutes)}
-                onValueChange={(value) => setShiftReminderMinutes(Number(value))}
-                disabled={isSaving || (isNative && permissionStatus === 'denied')}
-              >
-                <SelectTrigger id="reminderTiming" className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="60">{notifications.shiftReminders.options.hour1}</SelectItem>
-                  <SelectItem value="120">{notifications.shiftReminders.options.hour2}</SelectItem>
-                  <SelectItem value="300">{notifications.shiftReminders.options.hour5}</SelectItem>
-                  <SelectItem value="1440">{notifications.shiftReminders.options.hour24}</SelectItem>
-                </SelectContent>
-              </Select>
+
+              {/* Reminder list */}
+              <div className="space-y-2">
+                {shiftReminderMinutesArray.map((minutes, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <Select
+                      value={String(minutes)}
+                      onValueChange={(value) => handleChangeReminder(index, Number(value))}
+                      disabled={isSaving || (isNative && permissionStatus === 'denied')}
+                    >
+                      <SelectTrigger className="flex-1">
+                        <SelectValue>{getReminderLabel(minutes)}</SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {getAvailableOptions(minutes).map((opt) => (
+                          <SelectItem key={opt.value} value={String(opt.value)}>
+                            {getReminderLabel(opt.value)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    {/* Remove button - only show if more than 1 reminder */}
+                    {shiftReminderMinutesArray.length > 1 && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleRemoveReminder(index)}
+                        disabled={isSaving || (isNative && permissionStatus === 'denied')}
+                        className="h-10 w-10 shrink-0 text-text-muted hover:text-text-primary"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Add reminder button - only show if less than max */}
+              {shiftReminderMinutesArray.length < MAX_REMINDERS && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleAddReminder}
+                  disabled={isSaving || (isNative && permissionStatus === 'denied')}
+                  className="w-full"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  {notifications.shiftReminders.addReminder}
+                </Button>
+              )}
+
               <p className="text-xs text-text-muted">
                 {notifications.shiftReminders.timingHelp}
               </p>

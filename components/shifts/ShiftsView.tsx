@@ -474,9 +474,15 @@ function filterAndGroupByWeek(
     }
   }
 
-  // Sort shifts within each week by date
+  // Sort shifts within each week by date, then by start time, then by end time
   for (const group of groups) {
-    group.shifts.sort((a, b) => a.shift_date.localeCompare(b.shift_date));
+    group.shifts.sort((a, b) => {
+      const dateCompare = a.shift_date.localeCompare(b.shift_date);
+      if (dateCompare !== 0) return dateCompare;
+      const startCompare = a.start_time.localeCompare(b.start_time);
+      if (startCompare !== 0) return startCompare;
+      return a.end_time.localeCompare(b.end_time);
+    });
   }
 
   // Sort week groups chronologically by year and week number
