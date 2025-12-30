@@ -115,6 +115,10 @@ const createSupabaseClient = Effect.gen(function* () {
     }
   );
 
+  // Suppress getSession warning - we use getClaims() for auth validation
+  // @ts-expect-error: suppressGetSessionWarning is not in types but works
+  client.auth.suppressGetSessionWarning = true;
+
   return client;
 });
 

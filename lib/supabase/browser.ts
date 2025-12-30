@@ -23,9 +23,14 @@ if (!supabasePublishableKey) {
  *
  * Only server-side clients (proxy, server) should configure cookie options.
  *
- * Note: We use getUser() (not getSession()) in supabase-listener.tsx and
- * other client components for session validation. This validates the session
- * with the Supabase Auth server and avoids the security warning about
- * potentially unauthentic data from getSession().
+ * Note: We use getClaims() for JWT validation (local, fast) and only use
+ * getSession() when we need the raw access_token string. Auth is verified
+ * server-side via getClaims() in the DAL.
  */
-export const supabase = createBrowserClient(supabaseUrl, supabasePublishableKey);
+const client = createBrowserClient(supabaseUrl, supabasePublishableKey);
+
+// Suppress getSession warning - we use getClaims() for auth validation
+// @ts-expect-error: suppressGetSessionWarning is not in types but works
+client.auth.suppressGetSessionWarning = true;
+
+export const supabase = client;

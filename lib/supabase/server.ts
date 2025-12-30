@@ -21,7 +21,7 @@ const isReadonlyCookiesError = (err: unknown) =>
 export async function createSupabaseServerClient() {
   const store = await cookies();
 
-  return createServerClient(ENV.URL!, ENV.PUBLISHABLE!, {
+  const client = createServerClient(ENV.URL!, ENV.PUBLISHABLE!, {
     cookies: {
       getAll() {
         // Read everything the browser sent
@@ -41,6 +41,12 @@ export async function createSupabaseServerClient() {
       },
     },
   });
+
+  // Suppress getSession warning - we use getClaims() for auth validation in DAL
+  // @ts-expect-error: suppressGetSessionWarning is not in types but works
+  client.auth.suppressGetSessionWarning = true;
+
+  return client;
 }
 
 /**
@@ -52,7 +58,7 @@ export function createSupabaseRouteHandlerClient(
   request: NextRequest,
   response: NextResponse
 ) {
-  return createServerClient(ENV.URL!, ENV.PUBLISHABLE!, {
+  const client = createServerClient(ENV.URL!, ENV.PUBLISHABLE!, {
     cookies: {
       getAll() {
         return request.cookies.getAll().map(({ name, value }) => ({ name, value }));
@@ -64,4 +70,10 @@ export function createSupabaseRouteHandlerClient(
       },
     },
   });
+
+  // Suppress getSession warning - we use getClaims() for auth validation in DAL
+  // @ts-expect-error: suppressGetSessionWarning is not in types but works
+  client.auth.suppressGetSessionWarning = true;
+
+  return client;
 }
