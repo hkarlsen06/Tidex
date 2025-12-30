@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
     const { data } = await supabase.auth.getClaims();
     const userId = data?.claims?.sub;
 
-    const { error } = await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut({ scope: "local" });
 
     if (error) {
       clearSupabaseAuthCookies(request, response);
