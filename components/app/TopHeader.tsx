@@ -51,9 +51,9 @@ export function TopHeader({ userName }: TopHeaderProps) {
             {/* Add button - desktop only, icon-only on md, full button on lg+ */}
             <Link
               href={`/${locale}/shifts/add`}
-              className="hidden md:flex items-center justify-center rounded-2xl bg-brand-gradient-mid/10 border border-brand-gradient-mid/30 hover:bg-brand-gradient-mid/20 transition-colors h-12 w-12 lg:w-auto lg:gap-2 lg:px-4"
+              className="hidden md:flex items-center justify-center rounded-2xl bg-brand-gradient-mid/10 border border-brand-gradient-mid/30 hover:bg-brand-gradient-mid/20 transition-colors h-12 w-12 lg:w-auto lg:gap-2 lg:px-4 whitespace-nowrap shrink-0"
             >
-              <Plus className="h-4 w-4 text-brand-gradient-mid" strokeWidth={2} />
+              <Plus className="h-4 w-4 text-brand-gradient-mid shrink-0" strokeWidth={2} />
               <span className="hidden lg:inline text-sm font-medium text-brand-gradient-mid">{t.common.add}</span>
             </Link>
 

@@ -18,6 +18,11 @@ import { execSync } from 'child_process';
 // Suppress util._extend deprecation warning from third-party dependencies
 process.noDeprecation = true;
 
+// Allow self-signed certificates for local Supabase in development
+if (process.env.NODE_ENV !== 'production') {
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+}
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 

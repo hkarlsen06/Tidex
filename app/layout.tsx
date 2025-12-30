@@ -152,8 +152,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <head>
         <meta name="mobile-web-app-capable" content="yes" />
         {/* Critical resource hints for faster loading */}
-        <link rel="preconnect" href="https://id.tidex.no" crossOrigin="anonymous" />
-        <link rel="dns-prefetch" href="https://id.tidex.no" />
+        <link rel="preconnect" href="https://identity.tidex.no" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://identity.tidex.no" />
         {/* Defer non-critical third-party connections */}
         <link rel="preconnect" href="https://vercel.live" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://vercel.live" />

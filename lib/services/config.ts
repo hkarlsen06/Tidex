@@ -23,9 +23,9 @@ import { ConfigError } from "../errors/tagged";
 const SupabaseConfigSchema = Schema.Struct({
   url: Schema.String.pipe(
     Schema.nonEmptyString(),
-    Schema.pattern(/^https:\/\/.+/),
+    Schema.pattern(/^https?:\/\/.+/),
     Schema.annotations({
-      message: () => "Must be a valid HTTPS URL",
+      message: () => "Must be a valid HTTP or HTTPS URL",
     })
   ),
   publishableKey: Schema.String.pipe(
