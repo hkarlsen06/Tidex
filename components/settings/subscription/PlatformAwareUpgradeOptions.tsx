@@ -40,8 +40,13 @@ export function PlatformAwareUpgradeOptions({ t }: PlatformAwareUpgradeOptionsPr
 
       // Get Supabase access token for iOS IAP verification
       if (currentPlatform === 'ios' && native) {
-        const { data } = await supabase.auth.getSession();
-        setAccessToken(data.session?.access_token ?? null);
+        // Use getClaims() to validate JWT locally (faster than getUser())
+        const { data, error } = await supabase.auth.getClaims();
+        if (!error && data) {
+          // JWT is valid, get access token from session
+          const { data: { session } } = await supabase.auth.getSession();
+          setAccessToken(session?.access_token ?? null);
+        }
       }
 
       setIsLoading(false);
