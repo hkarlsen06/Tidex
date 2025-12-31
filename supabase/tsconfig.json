@@ -1,0 +1,10 @@
+{
+  "compilerOptions": {
+    "noEmit": true,
+    "skipLibCheck": true,
+    "allowJs": true,
+    "checkJs": false
+  },
+  "files": ["empty.d.ts"],
+  "exclude": ["functions", "**/*.ts"]
+}

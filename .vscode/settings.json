@@ -1,10 +1,7 @@
 {
   "deno.enablePaths": ["supabase/functions"],
-  "typescript.tsserver.watchOptions": {
-    "excludeDirectories": ["supabase"]
-  },
-  "files.exclude": {
-    "supabase/**/*.ts": true
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
   },
   "deno.lint": true,
   "deno.unstable": [
