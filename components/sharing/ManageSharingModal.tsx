@@ -46,6 +46,8 @@ type ManageSharingModalProps = {
   onCloseAction: () => void;
   friends: Friend[];
   shareCapacity: { canAdd: boolean; currentCount: number; limit: number };
+  /** Deep link: user ID to highlight (from share_started notification) */
+  highlightUserId?: string | null;
 };
 
 function getInitials(name: string | null | undefined): string {
@@ -117,19 +119,46 @@ export function ManageSharingModal({
   onCloseAction,
   friends,
   shareCapacity,
+  highlightUserId = null,
 }: ManageSharingModalProps) {
   const addInputRef = useRef<HTMLInputElement>(null);
+  const highlightedUserRef = useRef<HTMLDivElement>(null);
   const { t } = useTranslations();
   const router = useRouter();
   const [isAddFormExpanded, setIsAddFormExpanded] = useState(false);
   const [identifier, setIdentifier] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [highlightedId, setHighlightedId] = useState<string | null>(highlightUserId);
 
   useEffect(() => {
     if (isAddFormExpanded) {
       addInputRef.current?.focus();
     }
   }, [isAddFormExpanded]);
+
+  // Scroll to highlighted user when modal opens
+  useEffect(() => {
+    if (isOpen && highlightUserId && highlightedUserRef.current) {
+      // Small delay to ensure modal is rendered
+      const timer = setTimeout(() => {
+        highlightedUserRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen, highlightUserId]);
+
+  // Clear highlight after a few seconds
+  useEffect(() => {
+    if (highlightedId) {
+      const timer = setTimeout(() => {
+        setHighlightedId(null);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [highlightedId]);
   const [isAdding, startAddTransition] = useTransition();
   const [actionId, setActionId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -553,11 +582,17 @@ export function ManageSharingModal({
                           isPending && actionId === friend.id;
                         const friendDisplayName =
                           getLocalizedDisplayName(friend);
+                        const isHighlighted = friend.id === highlightedId;
 
                         return (
                           <div
                             key={friend.id}
-                            className="flex items-center gap-2 px-2 py-2.5 sm:gap-3 sm:px-3 sm:py-3"
+                            ref={isHighlighted ? highlightedUserRef : undefined}
+                            className={`flex items-center gap-2 px-2 py-2.5 sm:gap-3 sm:px-3 sm:py-3 transition-colors duration-500 ${
+                              isHighlighted
+                                ? "bg-brand-gradient-start/10 ring-2 ring-brand-gradient-start ring-inset rounded-lg"
+                                : ""
+                            }`}
                           >
                             <div className="shrink-0">
                               <FriendAvatar
@@ -603,7 +638,9 @@ export function ManageSharingModal({
                                 disabled={
                                   isActionPending || !shareCapacity.canAdd
                                 }
-                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-brand-gradient-start text-white hover:opacity-90 transition-opacity disabled:opacity-50"
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-brand-gradient-start text-white hover:opacity-90 transition-opacity disabled:opacity-50 ${
+                                  isHighlighted ? "animate-pulse" : ""
+                                }`}
                                 title={sharing.shareBack}
                               >
                                 {isActionPending ? (

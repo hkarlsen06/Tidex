@@ -24,6 +24,8 @@ interface SharingPageProps {
     view?: string;
     user?: string;      // Deep link: owner ID from push notification
     dates?: string;     // Deep link: comma-separated dates to highlight in calendar
+    manage?: string;    // Deep link: open manage sharing modal (from share_started notification)
+    highlight?: string; // Deep link: highlight this user in manage modal (user ID to prompt share back)
   }>;
 }
 
@@ -39,12 +41,15 @@ export async function generateMetadata({ params }: SharingPageProps) {
 export default async function SharingPage({ params, searchParams }: SharingPageProps) {
   await connection(); // Opt out of prerendering for dynamic authenticated pages
   const { locale: _locale } = await params;
-  const { view, user: userParam, dates } = await searchParams;
+  const { view, user: userParam, dates, manage, highlight } = await searchParams;
 
   // Support both 'view' (existing) and 'user' (deep link from push notification) params
   const selectedOwnerId = view ?? userParam;
   // Parse comma-separated dates into a Set for efficient lookup
   const highlightDates = dates ? new Set(dates.split(",")) : null;
+  // Deep link: open manage modal and highlight a specific person (from share_started notification)
+  const openManageModal = manage === "true";
+  const highlightUserId = highlight || null;
 
   const dictionary = getAppDictionary(_locale as Locale, ['pages.sharing', 'pages.shifts']);
 
@@ -66,6 +71,8 @@ export default async function SharingPage({ params, searchParams }: SharingPageP
           friends={friends}
           shareCapacity={shareCapacity}
           hasSharers={sharers.length > 0}
+          openManageModal={openManageModal}
+          highlightUserId={highlightUserId}
         >
           {sharers.length > 0 ? (
             <Suspense fallback={<SharersListSkeleton count={sharers.length} />}>
@@ -88,6 +95,8 @@ export default async function SharingPage({ params, searchParams }: SharingPageP
           friends={friends}
           shareCapacity={shareCapacity}
           hasSharers={sharers.length > 0}
+          openManageModal={openManageModal}
+          highlightUserId={highlightUserId}
         >
           {sharers.length > 0 ? (
             <Suspense fallback={<SharersListSkeleton count={sharers.length} />}>

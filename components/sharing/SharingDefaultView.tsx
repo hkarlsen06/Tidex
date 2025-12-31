@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useState, useEffect, type ReactNode } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import { Settings, Users } from "lucide-react";
 import { Button } from "@/components/app/Button";
 import {
@@ -20,6 +21,10 @@ type SharingDefaultViewProps = {
   hasSharers: boolean;
   /** Slot for the sharers list - allows streaming via Suspense */
   children: ReactNode;
+  /** Deep link: auto-open manage sharing modal (from share_started notification) */
+  openManageModal?: boolean;
+  /** Deep link: highlight this user ID in manage modal to prompt share back */
+  highlightUserId?: string | null;
 };
 
 /**
@@ -31,9 +36,23 @@ export function SharingDefaultView({
   shareCapacity,
   hasSharers,
   children,
+  openManageModal = false,
+  highlightUserId = null,
 }: SharingDefaultViewProps) {
-  const { t } = useTranslations();
+  const { t, locale } = useTranslations();
+  const router = useRouter();
+  const pathname = usePathname();
   const [manageSharingOpen, setManageSharingOpen] = useState(false);
+
+  // Auto-open manage modal when deep linked from share_started notification
+  useEffect(() => {
+    if (openManageModal) {
+      setManageSharingOpen(true);
+      // Clean up URL params after opening modal (remove manage and highlight from URL)
+      // This prevents re-opening the modal on page refresh
+      router.replace(pathname, { scroll: false });
+    }
+  }, [openManageModal, router, pathname]);
 
   // Get translation strings with fallbacks
   const sharing = t.pages?.sharing ?? {
@@ -88,6 +107,7 @@ export function SharingDefaultView({
         onCloseAction={() => setManageSharingOpen(false)}
         friends={friends}
         shareCapacity={shareCapacity}
+        highlightUserId={highlightUserId}
       />
     </>
   );

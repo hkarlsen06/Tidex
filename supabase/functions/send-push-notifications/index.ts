@@ -41,6 +41,12 @@ interface AdminBroadcastPayload {
   deeplink?: string | null;
 }
 
+/** Payload for share_started notifications (when someone starts sharing with you) */
+interface ShareStartedPayload {
+  owner_id: string;
+  owner_name: string;
+}
+
 /** Payload for batched shift changes (from cron processor) */
 interface ShiftChangesPayload {
   updated_shifts: Array<{
@@ -61,7 +67,7 @@ interface ShiftChangesPayload {
   owner_name: string;
 }
 
-type NotificationPayload = ShiftNotificationPayload | RecurringNotificationPayload | AdminBroadcastPayload | ShiftChangesPayload;
+type NotificationPayload = ShiftNotificationPayload | RecurringNotificationPayload | AdminBroadcastPayload | ShiftChangesPayload | ShareStartedPayload;
 
 interface QueuedNotification {
   id: string;
@@ -84,8 +90,8 @@ interface ConsolidatedNotification {
   recipient_id: string;
   sender_id: string;
   owner_name: string;
-  type: "single_shift" | "multiple_shifts" | "recurring" | "admin_broadcast" | "shift_changes";
-  notificationType: string; // Original notification type (shared_shift_created, shared_shift_updated, shared_shift_deleted, shared_shift_changes)
+  type: "single_shift" | "multiple_shifts" | "recurring" | "admin_broadcast" | "shift_changes" | "share_started";
+  notificationType: string; // Original notification type (shared_shift_created, shared_shift_updated, shared_shift_deleted, shared_shift_changes, share_started)
   // For single shift
   shift?: { date: string; start_time: string; end_time: string };
   // For multiple shifts
@@ -316,6 +322,13 @@ function buildNotificationMessage(consolidated: ConsolidatedNotification): {
 
       return { title, body };
     }
+    case "share_started": {
+      // Someone started sharing their shifts with the recipient
+      // Prompt them to share back
+      const title = `${owner_name} deler vaktene sine med deg`;
+      const body = "Trykk for å dele tilbake";
+      return { title, body };
+    }
   }
 }
 
@@ -340,6 +353,12 @@ async function sendConsolidatedToFcm(
     if (adminPayload.deeplink) {
       dataPayload.deeplink = adminPayload.deeplink;
     }
+  } else if (firstNotification.type === "share_started") {
+    // Share started - include owner_id and deep link to manage modal with highlight
+    const sharePayload = firstNotification.payload as ShareStartedPayload;
+    dataPayload.owner_id = sharePayload.owner_id;
+    // Deep link to /sharing?manage=true&highlight={owner_id} to open manage modal and highlight this person
+    dataPayload.deeplink = `/sharing?manage=true&highlight=${sharePayload.owner_id}`;
   } else if (firstNotification.type === "shared_shift_changes") {
     // Batched shift changes - collect all dates from updated + deleted shifts
     const changesPayload = firstNotification.payload as ShiftChangesPayload;
@@ -493,6 +512,20 @@ function consolidateNotifications(
         sender_id: first.sender_id,
         owner_name,
         type: "recurring",
+        notificationType: first.type,
+      });
+      continue;
+    }
+
+    // Handle share_started notification (someone started sharing with recipient)
+    if (first.type === "share_started") {
+      const sharePayload = payload as ShareStartedPayload;
+      consolidated.push({
+        notifications: group,
+        recipient_id: first.recipient_id,
+        sender_id: first.sender_id,
+        owner_name: sharePayload.owner_name,
+        type: "share_started",
         notificationType: first.type,
       });
       continue;
