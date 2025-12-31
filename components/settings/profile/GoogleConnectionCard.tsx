@@ -25,7 +25,13 @@ export function GoogleConnectionCard({ hasGoogleConnected, canDisconnectGoogle }
 
     try {
       // Build redirect URL dynamically based on current origin
-      const redirectUrl = `${window.location.origin}/auth/callback`;
+      // Include current path as 'next' param so user returns here after OAuth
+      // Add 'linking=true' to indicate this is identity linking, not a fresh login
+      // (user is already authenticated, so we skip MFA re-verification in callback)
+      const callbackUrl = new URL('/auth/callback', window.location.origin);
+      callbackUrl.searchParams.set('next', window.location.pathname);
+      callbackUrl.searchParams.set('linking', 'true');
+      const redirectUrl = callbackUrl.toString();
 
       // Use server action to get the OAuth URL
       const { url } = await connectGoogleAccount(redirectUrl);
