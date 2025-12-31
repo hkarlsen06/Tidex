@@ -60,7 +60,7 @@ export function FeedbackCard({ refreshTrigger }: Props) {
   }, [offset, selectedItem]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+     
     fetchFeedback();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [offset, refreshTrigger]);

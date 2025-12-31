@@ -80,7 +80,21 @@ interface ShiftSummaryPayload {
   shift_dates: string[];
 }
 
-type NotificationPayload = ShiftNotificationPayload | RecurringNotificationPayload | AdminBroadcastPayload | ShiftChangesPayload | ShareStartedPayload | ShiftSummaryPayload;
+/** Payload for feedback_submitted notifications (notify admins) */
+interface FeedbackSubmittedPayload {
+  feedback_id: string;
+  user_name: string;
+  user_email: string;
+  message_preview: string;
+}
+
+/** Payload for feedback_responded notifications (notify user) */
+interface FeedbackRespondedPayload {
+  feedback_id: string;
+  response_preview: string;
+}
+
+type NotificationPayload = ShiftNotificationPayload | RecurringNotificationPayload | AdminBroadcastPayload | ShiftChangesPayload | ShareStartedPayload | ShiftSummaryPayload | FeedbackSubmittedPayload | FeedbackRespondedPayload;
 
 interface QueuedNotification {
   id: string;
@@ -103,7 +117,7 @@ interface ConsolidatedNotification {
   recipient_id: string;
   sender_id: string;
   owner_name: string;
-  type: "single_shift" | "multiple_shifts" | "recurring" | "admin_broadcast" | "shift_changes" | "share_started" | "shift_summary";
+  type: "single_shift" | "multiple_shifts" | "recurring" | "admin_broadcast" | "shift_changes" | "share_started" | "shift_summary" | "feedback_submitted" | "feedback_responded";
   notificationType: string; // Original notification type (shared_shift_created, shared_shift_updated, shared_shift_deleted, shared_shift_changes, share_started, shared_shift_summary)
   // For single shift
   shift?: { date: string; start_time: string; end_time: string };
@@ -389,6 +403,22 @@ function buildNotificationMessage(consolidated: ConsolidatedNotification): {
 
       return { title, body };
     }
+    case "feedback_submitted": {
+      const payload = consolidated.notifications[0].payload as FeedbackSubmittedPayload;
+      const preview = payload.message_preview;
+      return {
+        title: "Ny tilbakemelding mottatt",
+        body: `${payload.user_name}: ${preview}${preview.length >= 100 ? '...' : ''}`,
+      };
+    }
+    case "feedback_responded": {
+      const payload = consolidated.notifications[0].payload as FeedbackRespondedPayload;
+      const preview = payload.response_preview;
+      return {
+        title: "Tidex har sett på tilbakemeldingen din",
+        body: preview + (preview.length >= 150 ? '...' : ''),
+      };
+    }
   }
 }
 
@@ -447,6 +477,16 @@ async function sendConsolidatedToFcm(
     if (summaryPayload.shift_dates && summaryPayload.shift_dates.length > 0) {
       dataPayload.shift_dates = summaryPayload.shift_dates.join(",");
     }
+  } else if (firstNotification.type === "feedback_submitted") {
+    // Feedback submitted - deep link to admin feedback tab
+    const feedbackPayload = firstNotification.payload as FeedbackSubmittedPayload;
+    dataPayload.feedback_id = feedbackPayload.feedback_id;
+    dataPayload.deeplink = `/settings/admin?tab=feedback`;
+  } else if (firstNotification.type === "feedback_responded") {
+    // Feedback responded - deep link to user's feedback page
+    const feedbackPayload = firstNotification.payload as FeedbackRespondedPayload;
+    dataPayload.feedback_id = feedbackPayload.feedback_id;
+    dataPayload.deeplink = `/settings/feedback`;
   } else {
     // Regular shift notifications - include owner_id and shift info
     const shiftPayload = firstNotification.payload as ShiftNotificationPayload;
@@ -544,6 +584,10 @@ function consolidateNotifications(
       }
       // Each broadcast_id is treated as a separate message (no consolidation across broadcasts)
       key = `${notification.type}:${notification.sender_id}:${notification.recipient_id}:${notification.broadcast_id}`;
+    } else if (notification.type === "feedback_submitted" || notification.type === "feedback_responded") {
+      // Feedback notifications - include feedback_id to prevent merging separate feedback items
+      const feedbackPayload = notification.payload as FeedbackSubmittedPayload | FeedbackRespondedPayload;
+      key = `${notification.type}:${notification.sender_id}:${notification.recipient_id}:${feedbackPayload.feedback_id}`;
     } else {
       // Shift notifications - include type to prevent mixing created/updated/deleted
       key = `${notification.type}:${notification.sender_id}:${notification.recipient_id}`;
@@ -631,6 +675,33 @@ function consolidateNotifications(
         type: "shift_summary",
         notificationType: first.type,
         shift_summary: summaryPayload,
+      });
+      continue;
+    }
+
+    // Handle feedback_submitted notification (notify admins when user submits feedback)
+    if (first.type === "feedback_submitted") {
+      const feedbackPayload = payload as FeedbackSubmittedPayload;
+      consolidated.push({
+        notifications: group,
+        recipient_id: first.recipient_id,
+        sender_id: first.sender_id,
+        owner_name: feedbackPayload.user_name,
+        type: "feedback_submitted",
+        notificationType: first.type,
+      });
+      continue;
+    }
+
+    // Handle feedback_responded notification (notify user when admin responds)
+    if (first.type === "feedback_responded") {
+      consolidated.push({
+        notifications: group,
+        recipient_id: first.recipient_id,
+        sender_id: first.sender_id,
+        owner_name: "Tidex",
+        type: "feedback_responded",
+        notificationType: first.type,
       });
       continue;
     }
