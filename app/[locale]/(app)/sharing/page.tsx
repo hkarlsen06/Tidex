@@ -85,10 +85,32 @@ export default async function SharingPage({ params, searchParams }: SharingPageP
   }
 
   // Detail view: viewing a specific sharer's shifts
-  const selectedSharer = sharers.find(s => s.id === selectedOwnerId) ?? null;
+  // First try to find in non-blocked sharers (normal list)
+  let selectedSharer = sharers.find(s => s.id === selectedOwnerId) ?? null;
+
+  // If not found, check if this is a blocked user we still have share access to
+  // (e.g., accessing via notification deep link for a user we've hidden from our list)
+  // The 'blocked' flag only hides from the list - it doesn't revoke access to their shifts
+  if (!selectedSharer) {
+    const friendEntry = friends.find(f => f.id === selectedOwnerId);
+    // If they share with me (even if blocked), create a SharedUser-like object for display
+    if (friendEntry?.sharesWithMe) {
+      selectedSharer = {
+        id: friendEntry.id,
+        email: friendEntry.email,
+        phone: friendEntry.phone,
+        firstName: friendEntry.firstName,
+        profilePictureUrl: friendEntry.profilePictureUrl,
+        oauthAvatarUrl: friendEntry.oauthAvatarUrl,
+        sharedAt: friendEntry.sharesWithMe.sharedAt,
+        showEarnings: friendEntry.sharesWithMe.showEarningsToMe,
+        notificationFrequency: friendEntry.sharesWithMe.notificationFrequency,
+      };
+    }
+  }
 
   if (!selectedSharer) {
-    // Invalid sharer ID, redirect to default view
+    // Truly invalid sharer ID - no share relationship exists
     return (
       <I18nProvider locale={_locale as Locale} dictionary={dictionary} namespaces={['pages.sharing', 'pages.shifts']}>
         <SharingDefaultView
