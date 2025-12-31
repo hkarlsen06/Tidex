@@ -34,7 +34,17 @@ export async function GET(request: NextRequest) {
   const oauthError = url.searchParams.get("error");
   const oauthErrorDesc = url.searchParams.get("error_description");
   const isLinking = url.searchParams.get("linking") === "true";
+  const nextParam = url.searchParams.get("next");
   const redirectUrl = resolveRedirectUrl(url);
+
+  // Log all incoming params to debug the issue
+  console.log("[AUTH CALLBACK] Incoming request:", {
+    fullUrl: url.toString(),
+    code: code ? "present" : "missing",
+    isLinking,
+    nextParam,
+    redirectTo: redirectUrl.pathname,
+  });
 
   if (oauthError) {
     const login = new URL("/login", url.origin);
@@ -51,21 +61,40 @@ export async function GET(request: NextRequest) {
   const supabase = createSupabaseRouteHandlerClient(request, response);
 
   try {
-    // For identity linking, check if user already has a valid AAL2 session BEFORE
+    // For identity linking, check if user already has a valid session BEFORE
     // exchanging the code. This prevents MFA bypass via forged linking=true param.
+    // We check for AAL2 (MFA verified) OR AAL1 with nextLevel=AAL1 (no MFA enrolled).
     let wasAlreadyAuthenticated = false;
     if (isLinking) {
       const { data: preAuthAAL } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-      wasAlreadyAuthenticated = preAuthAAL?.currentLevel === 'aal2';
+      // User is "already authenticated" if:
+      // - AAL2: has MFA and verified it
+      // - AAL1 with nextLevel AAL1: doesn't have MFA enrolled (fully authenticated)
+      wasAlreadyAuthenticated = preAuthAAL?.currentLevel === 'aal2' ||
+        (preAuthAAL?.currentLevel === 'aal1' && preAuthAAL?.nextLevel === 'aal1');
+
+      console.log("[AUTH CALLBACK] Pre-exchange AAL check for linking:", {
+        isLinking,
+        currentLevel: preAuthAAL?.currentLevel,
+        nextLevel: preAuthAAL?.nextLevel,
+        wasAlreadyAuthenticated,
+      });
     }
 
     await supabase.auth.exchangeCodeForSession(code);
 
-    // Only skip MFA check if user was already authenticated at AAL2 before the OAuth flow
+    // Only skip MFA check if user was already fully authenticated before the OAuth flow
     // This prevents attackers from bypassing MFA by adding linking=true to login URLs
     if (!(isLinking && wasAlreadyAuthenticated)) {
       // Check if user needs MFA verification
       const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+
+      console.log("[AUTH CALLBACK] Post-exchange AAL check:", {
+        isLinking,
+        wasAlreadyAuthenticated,
+        currentLevel: aalData?.currentLevel,
+        nextLevel: aalData?.nextLevel,
+      });
 
       if (aalData && aalData.currentLevel === 'aal1' && aalData.nextLevel === 'aal2') {
         // User has MFA enrolled but hasn't verified - redirect to MFA verify
