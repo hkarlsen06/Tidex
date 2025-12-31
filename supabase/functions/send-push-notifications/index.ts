@@ -41,7 +41,27 @@ interface AdminBroadcastPayload {
   deeplink?: string | null;
 }
 
-type NotificationPayload = ShiftNotificationPayload | RecurringNotificationPayload | AdminBroadcastPayload;
+/** Payload for batched shift changes (from cron processor) */
+interface ShiftChangesPayload {
+  updated_shifts: Array<{
+    shift_id: string;
+    shift_date: string;
+    start_time: string;
+    end_time: string;
+  }>;
+  deleted_shifts: Array<{
+    shift_id: string;
+    shift_date: string;
+    start_time: string;
+    end_time: string;
+  }>;
+  updated_count: number;
+  deleted_count: number;
+  owner_id: string;
+  owner_name: string;
+}
+
+type NotificationPayload = ShiftNotificationPayload | RecurringNotificationPayload | AdminBroadcastPayload | ShiftChangesPayload;
 
 interface QueuedNotification {
   id: string;
@@ -64,8 +84,8 @@ interface ConsolidatedNotification {
   recipient_id: string;
   sender_id: string;
   owner_name: string;
-  type: "single_shift" | "multiple_shifts" | "recurring" | "admin_broadcast";
-  notificationType: string; // Original notification type (shared_shift_created, shared_shift_updated, shared_shift_deleted)
+  type: "single_shift" | "multiple_shifts" | "recurring" | "admin_broadcast" | "shift_changes";
+  notificationType: string; // Original notification type (shared_shift_created, shared_shift_updated, shared_shift_deleted, shared_shift_changes)
   // For single shift
   shift?: { date: string; start_time: string; end_time: string };
   // For multiple shifts
@@ -73,6 +93,8 @@ interface ConsolidatedNotification {
   shift_dates?: string[]; // All dates for multiple shifts (for deep link highlighting)
   // For admin broadcasts
   broadcast?: AdminBroadcastPayload;
+  // For batched shift changes (from cron processor)
+  shift_changes?: ShiftChangesPayload;
 }
 
 // ---------- Helpers ----------
@@ -262,6 +284,38 @@ function buildNotificationMessage(consolidated: ConsolidatedNotification): {
       const body = "Trykk for å se vaktene";
       return { title, body };
     }
+    case "shift_changes": {
+      // New batched notification type from cron processor
+      const changes = consolidated.shift_changes!;
+      const { updated_count, deleted_count, updated_shifts, deleted_shifts } = changes;
+
+      // Build message parts
+      const parts: string[] = [];
+
+      if (updated_count > 0) {
+        parts.push(`endret ${updated_count} ${updated_count === 1 ? "vakt" : "vakter"}`);
+      }
+
+      if (deleted_count > 0) {
+        parts.push(`slettet ${deleted_count} ${deleted_count === 1 ? "vakt" : "vakter"}`);
+      }
+
+      const title = `${owner_name} ${parts.join(" og ")}`;
+
+      // Body: show details for single shift, generic for multiple
+      let body: string;
+      const totalCount = updated_count + deleted_count;
+
+      if (totalCount === 1) {
+        // Single shift - show details
+        const shift = updated_count === 1 ? updated_shifts[0] : deleted_shifts[0];
+        body = `${formatDate(shift.shift_date)} kl. ${formatTime(shift.start_time)}-${formatTime(shift.end_time)}`;
+      } else {
+        body = "Trykk for å se endringene";
+      }
+
+      return { title, body };
+    }
   }
 }
 
@@ -276,7 +330,7 @@ async function sendConsolidatedToFcm(
   const firstNotification = consolidated.notifications[0];
 
   // Build data payload based on notification type
-  let dataPayload: Record<string, string> = {
+  const dataPayload: Record<string, string> = {
     type: firstNotification.type,
   };
 
@@ -286,8 +340,22 @@ async function sendConsolidatedToFcm(
     if (adminPayload.deeplink) {
       dataPayload.deeplink = adminPayload.deeplink;
     }
+  } else if (firstNotification.type === "shared_shift_changes") {
+    // Batched shift changes - collect all dates from updated + deleted shifts
+    const changesPayload = firstNotification.payload as ShiftChangesPayload;
+    dataPayload.owner_id = changesPayload.owner_id;
+
+    // Collect all dates (updated + deleted) for deep link highlighting
+    const allDates = [
+      ...changesPayload.updated_shifts.map((s) => s.shift_date),
+      ...changesPayload.deleted_shifts.map((s) => s.shift_date),
+    ];
+    const uniqueDates = [...new Set(allDates)].sort();
+    if (uniqueDates.length > 0) {
+      dataPayload.shift_dates = uniqueDates.join(",");
+    }
   } else {
-    // Shift notifications - include owner_id and shift info
+    // Regular shift notifications - include owner_id and shift info
     const shiftPayload = firstNotification.payload as ShiftNotificationPayload;
     dataPayload.owner_id = consolidated.sender_id;
 
@@ -430,6 +498,21 @@ function consolidateNotifications(
       continue;
     }
 
+    // Handle batched shift changes (from cron processor - already consolidated)
+    if (first.type === "shared_shift_changes") {
+      const changesPayload = payload as ShiftChangesPayload;
+      consolidated.push({
+        notifications: group,
+        recipient_id: first.recipient_id,
+        sender_id: first.sender_id,
+        owner_name: changesPayload.owner_name,
+        type: "shift_changes",
+        notificationType: first.type,
+        shift_changes: changesPayload,
+      });
+      continue;
+    }
+
     // Regular shift notifications (created, updated, deleted)
     if (group.length === 1) {
       // Single shift - show full details
@@ -471,7 +554,7 @@ function consolidateNotifications(
 }
 
 // ---------- Server ----------
-serve(async (req) => {
+serve(async (req: Request) => {
   try {
     // Only allow POST requests (or GET for cron health checks)
     if (req.method !== "POST" && req.method !== "GET") {
