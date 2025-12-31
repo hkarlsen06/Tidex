@@ -170,7 +170,7 @@ export const SettingsServiceLive = Layer.effect(
           const { data: freshUserData, error: freshUserError } = yield* Effect.tryPromise({
             try: () => client.auth.getUser(),
             catch: (error) =>
-              new DatabaseError({
+              new SupabaseError({
                 operation: "getUser",
                 cause: error,
               }),
