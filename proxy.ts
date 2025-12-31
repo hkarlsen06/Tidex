@@ -147,9 +147,13 @@ export async function proxy(request: NextRequest) {
 
   if (localeFromPath) {
     // Path has locale - update cookie and continue
+    // Add x-current-path header so server components can access the current path
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set('x-current-path', pathname);
+
     const response = NextResponse.next({
       request: {
-        headers: request.headers,
+        headers: requestHeaders,
       },
     });
 

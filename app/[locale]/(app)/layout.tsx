@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { sanitizeDisplayName, sanitizeUrl } from "@/lib/sanitize";
 
@@ -92,7 +93,11 @@ export default async function RootLayout({
   // Note: MFA AAL info is available in claims.aal
   const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
   if (aalData?.currentLevel === "aal1" && aalData?.nextLevel === "aal2") {
-    redirect(`/${locale}/mfa-verify`);
+    // Get the current path from proxy header to redirect back after MFA verification
+    const headersList = await headers();
+    const currentPath = headersList.get("x-current-path") || `/${locale}`;
+    const mfaUrl = `/${locale}/mfa-verify?next=${encodeURIComponent(currentPath)}`;
+    redirect(mfaUrl);
   }
 
   // Extract user metadata from JWT claims (available in user_metadata)
