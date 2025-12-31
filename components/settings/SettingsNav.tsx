@@ -16,6 +16,7 @@ import {
   ChevronRight,
   Loader2,
   ShieldAlert,
+  MessageSquare,
 } from "lucide-react";
 import { useNavigationFeedback } from "@/components/app/navigation-feedback";
 import { useTranslations } from "@/lib/i18n/client";
@@ -70,6 +71,12 @@ const getSettingsItems = (t: Dictionary, showNotifications: boolean, showAdmin: 
       label: t.pages.settings.menu.data.label,
       description: t.pages.settings.menu.data.description,
       icon: Database,
+    },
+    {
+      href: "/settings/feedback",
+      label: t.pages.settings.menu.feedback?.label || "Feedback",
+      description: t.pages.settings.menu.feedback?.description || "Send us your feedback",
+      icon: MessageSquare,
     },
   ];
 
