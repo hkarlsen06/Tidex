@@ -1,5 +1,11 @@
 {
   "deno.enablePaths": ["supabase/functions"],
+  "typescript.tsserver.watchOptions": {
+    "excludeDirectories": ["supabase"]
+  },
+  "files.exclude": {
+    "supabase/**/*.ts": true
+  },
   "deno.lint": true,
   "deno.unstable": [
     "bare-node-builtins",
