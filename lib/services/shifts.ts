@@ -221,6 +221,7 @@ export const ShiftsServiceLive = Layer.effect(
 
     /**
      * Get snapshots for multiple dates (batch lookup)
+     * Uses binary search for O(log n) lookup per date instead of O(n)
      * @param skipAuthCheck - Skip authentication when true (for shared access via RLS)
      */
     const getSnapshotsForDates = (userId: string, dates: readonly string[], skipAuthCheck = false) =>
@@ -231,11 +232,40 @@ export const ShiftsServiceLive = Layer.effect(
         // Find baseline snapshot once for fallback
         const baselineSnapshot = snapshots.find((s) => s.from_date === null);
 
+        // Filter to only dated snapshots and sort ascending by from_date for binary search
+        // (DB returns DESC, so we reverse for ascending order)
+        const datedSnapshots = snapshots
+          .filter((s): s is WageSnapshot & { from_date: string } => s.from_date !== null)
+          .reverse(); // Now sorted ascending by from_date
+
+        // Binary search: find the latest snapshot where from_date <= targetDate
+        const findSnapshotForDate = (targetDate: string): WageSnapshot | null => {
+          if (datedSnapshots.length === 0) return null;
+
+          let left = 0;
+          let right = datedSnapshots.length - 1;
+          let result: WageSnapshot | null = null;
+
+          while (left <= right) {
+            const mid = Math.floor((left + right) / 2);
+            const midDate = datedSnapshots[mid].from_date;
+
+            if (midDate <= targetDate) {
+              // This snapshot is valid, but there might be a later one that's still valid
+              result = datedSnapshots[mid];
+              left = mid + 1;
+            } else {
+              // This snapshot starts after our target date, look earlier
+              right = mid - 1;
+            }
+          }
+
+          return result;
+        };
+
         for (const shiftDate of dates) {
-          // Find the first dated snapshot where from_date <= shiftDate
-          const applicableSnapshot = snapshots.find(
-            (s) => s.from_date !== null && s.from_date <= shiftDate
-          );
+          // Use binary search for O(log n) lookup
+          const applicableSnapshot = findSnapshotForDate(shiftDate);
 
           // Use dated snapshot if found, otherwise fall back to baseline
           const snapshotToUse = applicableSnapshot || baselineSnapshot;
@@ -348,14 +378,19 @@ export const ShiftsServiceLive = Layer.effect(
         // Collect all shift dates for batch snapshot lookup
         const shiftDates = (shifts ?? []).map((s: ShiftRow) => s.shift_date);
 
-        // Generate recurring virtual shifts and collect their dates
-        const virtualShiftDates: string[] = [];
+        // Generate recurring virtual shifts ONCE and cache the results
+        // Previously this was done twice: once for dates, once for computation
         const startYear = new Date(startDate).getFullYear();
         const startMonth = new Date(startDate).getMonth() + 1;
         const endYear = new Date(endDate).getFullYear();
         const endMonth = new Date(endDate).getMonth() + 1;
 
+        // Structure: Map<recurringId, virtualShifts[]>
+        const virtualShiftsByRecurring = new Map<string, Array<{ date: string; weekday: number }>>();
+        const virtualShiftDates: string[] = [];
+
         for (const recurring of (recurringShifts ?? []) as DbRecurringShift[]) {
+          const recurringVirtuals: Array<{ date: string; weekday: number }> = [];
           let currentYear = startYear;
           let currentMonth = startMonth;
 
@@ -384,7 +419,13 @@ export const ShiftsServiceLive = Layer.effect(
               }
             );
 
-            virtualShiftDates.push(...virtualShifts.map((vs) => vs.date));
+            // Filter to date range and collect
+            for (const vs of virtualShifts) {
+              if (vs.date >= startDate && vs.date <= endDate) {
+                recurringVirtuals.push(vs);
+                virtualShiftDates.push(vs.date);
+              }
+            }
 
             // Move to next month
             currentMonth++;
@@ -393,6 +434,8 @@ export const ShiftsServiceLive = Layer.effect(
               currentYear++;
             }
           }
+
+          virtualShiftsByRecurring.set(recurring.id, recurringVirtuals);
         }
 
         // Fetch snapshots for all dates (shifts + virtual shifts) in one batch
@@ -417,90 +460,51 @@ export const ShiftsServiceLive = Layer.effect(
           };
         });
 
-        // Compute recurring virtual shifts
+        // Compute recurring virtual shifts using cached generation results
         const recurringVirtualShifts: ShiftWithComputations[] = [];
         for (const recurring of (recurringShifts ?? []) as DbRecurringShift[]) {
-          let currentYear = startYear;
-          let currentMonth = startMonth;
+          const cachedVirtuals = virtualShiftsByRecurring.get(recurring.id) ?? [];
 
-          while (
-            currentYear < endYear ||
-            (currentYear === endYear && currentMonth <= endMonth)
-          ) {
-            const virtualShifts = generateVirtualShiftsForMonth(
-              { year: currentYear, month: currentMonth },
+          for (const virtualShift of cachedVirtuals) {
+            const snapshot = snapshotMap.get(virtualShift.date) ?? null;
+
+            // Check if recurring shift has date-specific custom supplements for this virtual shift date
+            const customSupplements = recurring.date_specific_supplements?.[virtualShift.date] ?? null;
+
+            const computed = computeShift(
               {
-                start_time: cleanTime(recurring.start_time),
-                end_time: cleanTime(recurring.end_time),
-                repeat_interval_weeks: recurring.repeat_interval_weeks as
-                  | 0
-                  | 1
-                  | 2
-                  | 3
-                  | 4
-                  | 5
-                  | 6
-                  | 7
-                  | 8,
-                selected_days: recurring.selected_days,
-                end_condition: recurring.end_condition,
-                exclusions: recurring.exclusions || [],
-              }
-            );
-
-            for (const virtualShift of virtualShifts) {
-              // Filter virtual shifts to only include those within the date range
-              if (virtualShift.date < startDate || virtualShift.date > endDate) {
-                continue;
-              }
-
-              const snapshot = snapshotMap.get(virtualShift.date) ?? null;
-
-              // Check if recurring shift has date-specific custom supplements for this virtual shift date
-              const customSupplements = recurring.date_specific_supplements?.[virtualShift.date] ?? null;
-
-              const computed = computeShift(
-                {
-                  id: `virtual-${recurring.id}-${virtualShift.date}`,
-                  user_id: userId,
-                  shift_date: virtualShift.date,
-                  start_time: cleanTime(recurring.start_time),
-                  end_time: cleanTime(recurring.end_time),
-                  custom_supplements: customSupplements as any,
-                  recurring_id: recurring.id,
-                  recurring_anchor_weekday: virtualShift.weekday,
-                },
-                userSettings,
-                PRESET_SUPPLEMENT_RULES,
-                snapshot
-              );
-
-              // Attach supplement_rules_snapshot from wage snapshot for UI components
-              const supplementRulesSnapshot = snapshot?.supplements ? snapshot.supplements : null;
-
-              recurringVirtualShifts.push({
                 id: `virtual-${recurring.id}-${virtualShift.date}`,
                 user_id: userId,
                 shift_date: virtualShift.date,
                 start_time: cleanTime(recurring.start_time),
                 end_time: cleanTime(recurring.end_time),
                 custom_supplements: customSupplements as any,
-                supplement_rules_snapshot: supplementRulesSnapshot,
                 recurring_id: recurring.id,
                 recurring_anchor_weekday: virtualShift.weekday,
-                computed,
-                // Include tax settings from snapshot for after-tax calculations
-                tax_enabled: snapshot?.tax_enabled ?? false,
-                tax_percentage: snapshot?.tax_percentage ?? 0,
-              });
-            }
+              },
+              userSettings,
+              PRESET_SUPPLEMENT_RULES,
+              snapshot
+            );
 
-            // Move to next month
-            currentMonth++;
-            if (currentMonth > 12) {
-              currentMonth = 1;
-              currentYear++;
-            }
+            // Attach supplement_rules_snapshot from wage snapshot for UI components
+            const supplementRulesSnapshot = snapshot?.supplements ? snapshot.supplements : null;
+
+            recurringVirtualShifts.push({
+              id: `virtual-${recurring.id}-${virtualShift.date}`,
+              user_id: userId,
+              shift_date: virtualShift.date,
+              start_time: cleanTime(recurring.start_time),
+              end_time: cleanTime(recurring.end_time),
+              custom_supplements: customSupplements as any,
+              supplement_rules_snapshot: supplementRulesSnapshot,
+              recurring_id: recurring.id,
+              recurring_anchor_weekday: virtualShift.weekday,
+              computed,
+              // Include tax settings from snapshot for after-tax calculations
+              tax_enabled: snapshot?.tax_enabled ?? false,
+              tax_percentage: snapshot?.tax_percentage ?? 0,
+            });
           }
         }
 

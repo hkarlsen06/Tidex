@@ -246,7 +246,8 @@ export function HomeContent({ shifts: initialShifts, settings, payoutTaxSettings
     }
   }, [getMonthKey, cacheKey]);
 
-  // Proactive prefetch: Load adjacent months (prev, current, next) whenever month changes
+  // Proactive prefetch: Load adjacent months (prev, next) whenever month changes
+  // Current month is already loaded from SSR, so we skip it to avoid redundant fetches
   useEffect(() => {
     const selectedYear = month.getFullYear();
     const selectedMonthNum = month.getMonth() + 1;
@@ -260,11 +261,11 @@ export function HomeContent({ shifts: initialShifts, settings, payoutTaxSettings
     const nextYear = nextDate.getFullYear();
     const nextMonthNum = nextDate.getMonth() + 1;
 
-    // Fetch current and previous months first (previous has most awaiting info),
-    // then fetch next month after previous completes
+    // Fetch adjacent months in parallel (current month already loaded from SSR)
+    // fetchMonth internally skips already-loaded months via loadedMonthsRef
     Promise.all([
-      fetchMonth(selectedYear, selectedMonthNum), // Current
-      fetchMonth(prevYear, prevMonthNum).then(() => fetchMonth(nextYear, nextMonthNum)), // Previous, then Next
+      fetchMonth(prevYear, prevMonthNum),
+      fetchMonth(nextYear, nextMonthNum),
     ]);
   }, [month, fetchMonth]);
 

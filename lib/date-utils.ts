@@ -26,8 +26,8 @@ export function parseDateAsUTC(dateString: string): Date {
 }
 
 /**
- * Gets the current year and month in UTC
- * This should be used when filtering shifts by "current month"
+ * Gets the current year and month in Europe/Oslo timezone
+ * This ensures SSR loads the correct month for Norwegian users
  *
  * @returns Object with year and month (1-12)
  *
@@ -35,15 +35,15 @@ export function parseDateAsUTC(dateString: string): Date {
  * getCurrentYearMonth() // { year: 2024, month: 3 } for March 2024
  */
 export function getCurrentYearMonth(): { year: number; month: number } {
-  const now = new Date();
-  return {
-    year: now.getUTCFullYear(),
-    month: now.getUTCMonth() + 1, // Convert to 1-based month
-  };
+  // Use Europe/Oslo timezone (UTC+1/+2 with DST) to match Norwegian users
+  // This prevents SSR/client mismatch during the hour around midnight
+  const osloDateStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Oslo' });
+  const [year, month] = osloDateStr.split('-').map(Number);
+  return { year, month };
 }
 
 /**
- * Gets the previous month's year and month
+ * Gets the previous month's year and month (relative to Europe/Oslo timezone)
  *
  * @returns Object with year and month (1-12)
  *
@@ -52,19 +52,16 @@ export function getCurrentYearMonth(): { year: number; month: number } {
  * getPreviousYearMonth() // { year: 2023, month: 12 } when current month is January 2024
  */
 export function getPreviousYearMonth(): { year: number; month: number } {
-  const now = new Date();
-  const lastMonthDate = new Date(
-    Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1)
-  );
-
-  return {
-    year: lastMonthDate.getUTCFullYear(),
-    month: lastMonthDate.getUTCMonth() + 1,
-  };
+  const { year, month } = getCurrentYearMonth();
+  // Handle year rollover (January -> December of previous year)
+  if (month === 1) {
+    return { year: year - 1, month: 12 };
+  }
+  return { year, month: month - 1 };
 }
 
 /**
- * Gets the next month's year and month
+ * Gets the next month's year and month (relative to Europe/Oslo timezone)
  *
  * @returns Object with year and month (1-12)
  *
@@ -73,15 +70,12 @@ export function getPreviousYearMonth(): { year: number; month: number } {
  * getNextYearMonth() // { year: 2025, month: 1 } when current month is December 2024
  */
 export function getNextYearMonth(): { year: number; month: number } {
-  const now = new Date();
-  const nextMonthDate = new Date(
-    Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1)
-  );
-
-  return {
-    year: nextMonthDate.getUTCFullYear(),
-    month: nextMonthDate.getUTCMonth() + 1,
-  };
+  const { year, month } = getCurrentYearMonth();
+  // Handle year rollover (December -> January of next year)
+  if (month === 12) {
+    return { year: year + 1, month: 1 };
+  }
+  return { year, month: month + 1 };
 }
 
 /**
