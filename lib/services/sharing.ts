@@ -79,9 +79,11 @@ export type ShareRecipient = {
 
 /**
  * Share limits by subscription tier
+ * Grandfathered users (before_paywall) get the same limit as pro tier
  */
 const SHARE_LIMITS = {
   free: 1,
+  grandfathered: 10,
   pro: 10,
   max: 20,
 } as const;
@@ -287,18 +289,22 @@ export const SharingServiceLive = Layer.effect(
     const subscription = yield* SubscriptionService;
 
     /**
-     * Helper to get subscription tier from price_id
+     * Helper to get subscription tier from price_id and grandfathered status
+     * Paid tiers (pro/max) take priority, then grandfathered, then free
      */
-    const getTier = (priceId: string | null | undefined): SubscriptionTier => {
-      if (!priceId) return "free";
-
+    const getTier = (priceId: string | null | undefined, beforePaywall?: boolean): SubscriptionTier => {
       const proPriceId = process.env.NEXT_PUBLIC_PRO_PRICE_ID;
       const maxPriceId = process.env.NEXT_PUBLIC_MAX_PRICE_ID;
       const proYearlyId = process.env.NEXT_PUBLIC_PRO_YEARLY_ID;
       const maxYearlyId = process.env.NEXT_PUBLIC_MAX_YEARLY_ID;
 
+      // Paid subscriptions take priority
       if (priceId === maxPriceId || priceId === maxYearlyId) return "max";
       if (priceId === proPriceId || priceId === proYearlyId) return "pro";
+
+      // Grandfathered users (before_paywall) get 10 friends
+      if (beforePaywall) return "grandfathered";
+
       return "free";
     };
 
@@ -651,9 +657,9 @@ export const SharingServiceLive = Layer.effect(
           // Verify user is authenticated
           yield* auth.verifyUserId(userId);
 
-          // Check subscription tier limit
-          const sub = yield* subscription.getUserSubscription(userId);
-          const tier = getTier(sub?.price_id);
+          // Check subscription tier limit (including grandfathered status)
+          const { subscription: sub, profile } = yield* subscription.getUserSubscriptionData(userId);
+          const tier = getTier(sub?.price_id, profile?.before_paywall);
           const limit = SHARE_LIMITS[tier];
 
           // Count current shares using query method
@@ -767,9 +773,9 @@ export const SharingServiceLive = Layer.effect(
             );
           }
 
-          // Check subscription tier limit
-          const sub = yield* subscription.getUserSubscription(userId);
-          const tier = getTier(sub?.price_id);
+          // Check subscription tier limit (including grandfathered status)
+          const { subscription: sub, profile } = yield* subscription.getUserSubscriptionData(userId);
+          const tier = getTier(sub?.price_id, profile?.before_paywall);
           const limit = SHARE_LIMITS[tier];
 
           // Count current shares
@@ -887,9 +893,9 @@ export const SharingServiceLive = Layer.effect(
           // Verify user is authenticated
           yield* auth.verifyUserId(userId);
 
-          // Get subscription tier
-          const sub = yield* subscription.getUserSubscription(userId);
-          const tier = getTier(sub?.price_id);
+          // Get subscription tier (including grandfathered status)
+          const { subscription: sub, profile } = yield* subscription.getUserSubscriptionData(userId);
+          const tier = getTier(sub?.price_id, profile?.before_paywall);
           const limit = SHARE_LIMITS[tier];
 
           // Count current shares
