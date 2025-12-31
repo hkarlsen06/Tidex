@@ -36,6 +36,14 @@ import { logger } from "../logger";
 import { createClient } from "@supabase/supabase-js";
 
 /**
+ * Notification frequency options for a share relationship
+ * - instant: Notifications sent immediately (within 1-2 minutes)
+ * - summary: Daily digest at user-defined time (default 18:00)
+ * - muted: No notifications from this sender
+ */
+export type NotificationFrequency = "instant" | "summary" | "muted";
+
+/**
  * User who has shared their shifts with the current user
  */
 export type SharedUser = {
@@ -49,6 +57,8 @@ export type SharedUser = {
   readonly sharedAt: string;
   /** Whether this user allows you to see their earnings (true) or only hours (false) */
   readonly showEarnings: boolean;
+  /** Notification frequency for this sharer's notifications (instant/summary/muted) */
+  readonly notificationFrequency: NotificationFrequency;
 };
 
 /**
@@ -249,6 +259,20 @@ export class SharingService extends Context.Tag("SharingService")<
       DatabaseError | AuthError | NotFoundError | TimeoutError | SupabaseError,
       never
     >;
+
+    /**
+     * Update notification frequency for a specific sharer
+     * Controls how often the viewer receives notifications about this sharer's shifts
+     */
+    readonly updateNotificationFrequency: (
+      viewerId: string,
+      ownerId: string,
+      frequency: NotificationFrequency
+    ) => Effect.Effect<
+      void,
+      DatabaseError | AuthError | NotFoundError | TimeoutError | SupabaseError,
+      never
+    >;
   }
 >() {}
 
@@ -434,7 +458,7 @@ export const SharingServiceLive = Layer.effect(
             async (client) =>
               await client
                 .from("shift_shares")
-                .select("owner_id, created_at, show_earnings")
+                .select("owner_id, created_at, show_earnings, notification_frequency")
                 .eq("viewer_id", userId)
                 .eq("blocked", false)
                 .order("created_at", { ascending: false }),
@@ -509,6 +533,7 @@ export const SharingServiceLive = Layer.effect(
               oauthAvatarUrl: authUser?.oauthAvatarUrl ?? null,
               sharedAt: share.created_at,
               showEarnings: share.show_earnings ?? true,
+              notificationFrequency: (share.notification_frequency ?? "instant") as NotificationFrequency,
             };
           }) as readonly SharedUser[];
         }).pipe(
@@ -1124,7 +1149,7 @@ export const SharingServiceLive = Layer.effect(
             async (client) =>
               await client
                 .from("shift_shares")
-                .select("owner_id, created_at, show_earnings")
+                .select("owner_id, created_at, show_earnings, notification_frequency")
                 .eq("viewer_id", viewerId)
                 .eq("blocked", true)
                 .order("created_at", { ascending: false }),
@@ -1199,6 +1224,7 @@ export const SharingServiceLive = Layer.effect(
               oauthAvatarUrl: authUser?.oauthAvatarUrl ?? null,
               sharedAt: share.created_at,
               showEarnings: share.show_earnings ?? true,
+              notificationFrequency: (share.notification_frequency ?? "instant") as NotificationFrequency,
             };
           }) as readonly SharedUser[];
         }).pipe(
@@ -1223,7 +1249,7 @@ export const SharingServiceLive = Layer.effect(
             async (client) =>
               await client
                 .from("shift_shares")
-                .select("owner_id, created_at, show_earnings, blocked")
+                .select("owner_id, created_at, show_earnings, blocked, notification_frequency")
                 .eq("viewer_id", viewerId)
                 .order("created_at", { ascending: false }),
             { retries: 2 }
@@ -1297,6 +1323,7 @@ export const SharingServiceLive = Layer.effect(
               oauthAvatarUrl: authUser?.oauthAvatarUrl ?? null,
               sharedAt: share.created_at,
               showEarnings: share.show_earnings ?? true,
+              notificationFrequency: (share.notification_frequency ?? "instant") as NotificationFrequency,
               blocked: share.blocked ?? false,
             };
           }) as readonly (SharedUser & { blocked: boolean })[];
@@ -1305,6 +1332,56 @@ export const SharingServiceLive = Layer.effect(
             if (error.code === "NO_DATA") {
               return Effect.succeed([] as readonly (SharedUser & { blocked: boolean })[]);
             }
+            return Effect.fail(error);
+          })
+        ),
+
+      /**
+       * Update notification frequency for a specific sharer
+       */
+      updateNotificationFrequency: (
+        viewerId: string,
+        ownerId: string,
+        frequency: NotificationFrequency
+      ) =>
+        Effect.gen(function* () {
+          // Verify viewer is authenticated
+          yield* auth.verifyUserId(viewerId);
+
+          // Update the share's notification_frequency
+          const updateResult = yield* Effect.tryPromise({
+            try: async () => {
+              const client = await Effect.runPromise(supabase.getClient());
+              return client
+                .from("shift_shares")
+                .update({ notification_frequency: frequency })
+                .eq("viewer_id", viewerId)
+                .eq("owner_id", ownerId);
+            },
+            catch: (error) =>
+              new DatabaseError({
+                table: "shift_shares",
+                code: "UPDATE_ERROR",
+                errorMessage: String(error),
+                cause: error,
+              }),
+          });
+
+          if (updateResult.error) {
+            yield* Effect.fail(
+              new DatabaseError({
+                table: "shift_shares",
+                code: updateResult.error.code,
+                errorMessage: updateResult.error.message,
+                cause: updateResult.error,
+              })
+            );
+          }
+
+          logger.info(`Updated notification frequency for viewer=${viewerId} owner=${ownerId} to ${frequency}`);
+        }).pipe(
+          Effect.catchTag("DatabaseError", (error) => {
+            logger.error("Failed to update notification frequency:", error);
             return Effect.fail(error);
           })
         ),

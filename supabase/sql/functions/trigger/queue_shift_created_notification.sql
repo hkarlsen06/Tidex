@@ -1,6 +1,11 @@
 -- Function: queue_shift_created_notification
 -- Description: Trigger function that queues notifications when shifts are created
 -- Used by: AFTER INSERT trigger on user_shifts
+--
+-- Notification routing based on notification_frequency:
+-- - 'instant': Queue to notification_queue for immediate delivery
+-- - 'summary': Queue to pending_summary_notifications for daily digest
+-- - 'muted': Skip notification entirely
 
 CREATE OR REPLACE FUNCTION public.queue_shift_created_notification()
  RETURNS trigger
@@ -55,8 +60,7 @@ BEGIN
     owner_name := 'Noen';
   END IF;
 
-  -- Queue notification with appropriate type
-  -- If this is a recurring conversion, use "updated" type instead of "created"
+  -- Route to instant notification queue (for 'instant' frequency)
   INSERT INTO notification_queue (
     type,
     recipient_id,
@@ -85,7 +89,32 @@ BEGIN
   WHERE ss.owner_id = NEW.user_id
     AND ss.blocked = false
     AND COALESCE(np.shared_shifts_enabled, true) = true
+    AND COALESCE(ss.notification_frequency, 'instant') = 'instant'
   ON CONFLICT (idempotency_key) DO NOTHING;
+
+  -- Route to summary queue (for 'summary' frequency)
+  INSERT INTO pending_summary_notifications (
+    viewer_id,
+    owner_id,
+    shift_id,
+    shift_date,
+    event_type
+  )
+  SELECT
+    ss.viewer_id,
+    NEW.user_id,
+    NEW.id,
+    NEW.shift_date,
+    CASE WHEN is_recurring_conversion THEN 'updated' ELSE 'created' END
+  FROM shift_shares ss
+  LEFT JOIN notification_preferences np ON np.user_id = ss.viewer_id
+  WHERE ss.owner_id = NEW.user_id
+    AND ss.blocked = false
+    AND COALESCE(np.shared_shifts_enabled, true) = true
+    AND ss.notification_frequency = 'summary'
+  ON CONFLICT (viewer_id, owner_id, shift_id, shift_date) DO NOTHING;
+
+  -- Note: 'muted' frequency is handled by the WHERE clause exclusion
 
   RETURN NEW;
 END;

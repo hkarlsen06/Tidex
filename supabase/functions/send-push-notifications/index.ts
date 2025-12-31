@@ -68,7 +68,19 @@ interface ShiftChangesPayload {
   owner_name: string;
 }
 
-type NotificationPayload = ShiftNotificationPayload | RecurringNotificationPayload | AdminBroadcastPayload | ShiftChangesPayload | ShareStartedPayload;
+/** Payload for daily summary notifications (batched by sharer preference) */
+interface ShiftSummaryPayload {
+  owner_id: string;
+  owner_name: string;
+  created_count: number;
+  updated_count: number;
+  deleted_count: number;
+  total_count: number;
+  // All affected dates for deep link
+  shift_dates: string[];
+}
+
+type NotificationPayload = ShiftNotificationPayload | RecurringNotificationPayload | AdminBroadcastPayload | ShiftChangesPayload | ShareStartedPayload | ShiftSummaryPayload;
 
 interface QueuedNotification {
   id: string;
@@ -91,8 +103,8 @@ interface ConsolidatedNotification {
   recipient_id: string;
   sender_id: string;
   owner_name: string;
-  type: "single_shift" | "multiple_shifts" | "recurring" | "admin_broadcast" | "shift_changes" | "share_started";
-  notificationType: string; // Original notification type (shared_shift_created, shared_shift_updated, shared_shift_deleted, shared_shift_changes, share_started)
+  type: "single_shift" | "multiple_shifts" | "recurring" | "admin_broadcast" | "shift_changes" | "share_started" | "shift_summary";
+  notificationType: string; // Original notification type (shared_shift_created, shared_shift_updated, shared_shift_deleted, shared_shift_changes, share_started, shared_shift_summary)
   // For single shift
   shift?: { date: string; start_time: string; end_time: string };
   // For multiple shifts
@@ -102,6 +114,8 @@ interface ConsolidatedNotification {
   broadcast?: AdminBroadcastPayload;
   // For batched shift changes (from cron processor)
   shift_changes?: ShiftChangesPayload;
+  // For daily summary notifications
+  shift_summary?: ShiftSummaryPayload;
 }
 
 // ---------- Helpers ----------
@@ -340,6 +354,41 @@ function buildNotificationMessage(consolidated: ConsolidatedNotification): {
         body: "Trykk for å dele tilbake",
       };
     }
+    case "shift_summary": {
+      // Daily summary notification (batched from summary preference)
+      const summary = consolidated.shift_summary!;
+      const { created_count, updated_count, deleted_count, total_count } = summary;
+
+      // Build message parts based on what changed
+      const parts: string[] = [];
+
+      if (created_count > 0) {
+        parts.push(`la til ${created_count} ${created_count === 1 ? "vakt" : "vakter"}`);
+      }
+
+      if (updated_count > 0) {
+        parts.push(`endret ${updated_count} ${updated_count === 1 ? "vakt" : "vakter"}`);
+      }
+
+      if (deleted_count > 0) {
+        parts.push(`slettet ${deleted_count} ${deleted_count === 1 ? "vakt" : "vakter"}`);
+      }
+
+      // Combine parts with "og" for the last item
+      let actionText: string;
+      if (parts.length === 1) {
+        actionText = parts[0];
+      } else if (parts.length === 2) {
+        actionText = parts.join(" og ");
+      } else {
+        actionText = parts.slice(0, -1).join(", ") + " og " + parts[parts.length - 1];
+      }
+
+      const title = `${owner_name} ${actionText}`;
+      const body = total_count === 1 ? "Trykk for å se vakten" : "Trykk for å se vaktene";
+
+      return { title, body };
+    }
   }
 }
 
@@ -388,6 +437,15 @@ async function sendConsolidatedToFcm(
     const uniqueDates = [...new Set(allDates)].sort();
     if (uniqueDates.length > 0) {
       dataPayload.shift_dates = uniqueDates.join(",");
+    }
+  } else if (firstNotification.type === "shared_shift_summary") {
+    // Daily summary notification - include owner_id and all affected dates
+    const summaryPayload = firstNotification.payload as ShiftSummaryPayload;
+    dataPayload.owner_id = summaryPayload.owner_id;
+
+    // Include all affected dates for deep link highlighting
+    if (summaryPayload.shift_dates && summaryPayload.shift_dates.length > 0) {
+      dataPayload.shift_dates = summaryPayload.shift_dates.join(",");
     }
   } else {
     // Regular shift notifications - include owner_id and shift info
@@ -558,6 +616,21 @@ function consolidateNotifications(
         type: "shift_changes",
         notificationType: first.type,
         shift_changes: changesPayload,
+      });
+      continue;
+    }
+
+    // Handle daily summary notifications (from process_summary_notifications)
+    if (first.type === "shared_shift_summary") {
+      const summaryPayload = payload as ShiftSummaryPayload;
+      consolidated.push({
+        notifications: group,
+        recipient_id: first.recipient_id,
+        sender_id: first.sender_id,
+        owner_name: summaryPayload.owner_name,
+        type: "shift_summary",
+        notificationType: first.type,
+        shift_summary: summaryPayload,
       });
       continue;
     }

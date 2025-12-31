@@ -1,6 +1,9 @@
 -- Function: queue_recurring_shift_created_notification
 -- Description: Trigger function that queues notifications when recurring shifts are created
 -- Used by: AFTER INSERT trigger on recurring_shifts
+--
+-- Note: Recurring shift notifications always go to instant queue (never summary)
+-- because they represent multiple future shifts. Muted users are still skipped.
 
 CREATE OR REPLACE FUNCTION public.queue_recurring_shift_created_notification()
  RETURNS trigger
@@ -26,6 +29,8 @@ BEGIN
     owner_name := 'Noen';
   END IF;
 
+  -- Recurring shifts always go to instant queue (not summary)
+  -- Skip muted users
   INSERT INTO notification_queue (
     type,
     recipient_id,
@@ -48,6 +53,7 @@ BEGIN
   WHERE ss.owner_id = NEW.user_id
     AND ss.blocked = false
     AND COALESCE(np.shared_shifts_enabled, true) = true
+    AND COALESCE(ss.notification_frequency, 'instant') != 'muted'
   ON CONFLICT (idempotency_key) DO NOTHING;
 
   RETURN NEW;

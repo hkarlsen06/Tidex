@@ -1,6 +1,11 @@
 -- Function: run_shift_notification_workers
 -- Description: Main orchestrator that runs both shift notification processors and triggers push
 -- Used by: process-shift-notifications cron job (every minute)
+--
+-- Processors run:
+-- 1. process_pending_shift_deletes - handles deleted shift notifications
+-- 2. process_shift_update_events - handles updated shift notifications
+-- 3. process_summary_notifications - aggregates and sends daily summary notifications
 
 CREATE OR REPLACE FUNCTION public.run_shift_notification_workers()
  RETURNS jsonb
@@ -11,11 +16,13 @@ AS $function$
 DECLARE
   v_delete_result RECORD;
   v_update_result RECORD;
+  v_summary_result RECORD;
   v_has_pending BOOLEAN;
 BEGIN
-  -- Run both processors
+  -- Run all three processors
   SELECT * INTO v_delete_result FROM process_pending_shift_deletes();
   SELECT * INTO v_update_result FROM process_shift_update_events();
+  SELECT * INTO v_summary_result FROM process_summary_notifications();
 
   -- Check if there are any pending notifications to send
   SELECT EXISTS (
@@ -44,6 +51,9 @@ BEGIN
     'direct_updates', jsonb_build_object(
       'owners_processed', COALESCE(v_update_result.owners_processed, 0),
       'updated', COALESCE(v_update_result.total_updated, 0)
+    ),
+    'summary_notifications', jsonb_build_object(
+      'processed', COALESCE(v_summary_result.processed_count, 0)
     ),
     'triggered_send', v_has_pending
   );

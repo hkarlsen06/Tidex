@@ -91,24 +91,28 @@ export function SharedUserShiftPreview({
 
   // Compute status and progress client-side to ensure it's always current
   // The server-computed status may be stale due to caching
-  // Initialize with computed values to avoid hydration mismatch flash
-  const [currentStatus, setCurrentStatus] = useState(() =>
-    computeShiftStatus(shift.shift_date, shift.start_time, shift.end_time)
-  );
-  const [progress, setProgress] = useState(() =>
-    computeShiftProgress(shift.shift_date, shift.start_time, shift.end_time)
-  );
+  // Initialize with "upcoming" and 0 to avoid hydration mismatch (Date.now() differs server/client)
+  const [currentStatus, setCurrentStatus] = useState<"active" | "upcoming" | "past">("upcoming");
+  const [progress, setProgress] = useState(0);
+  const [hasMounted, setHasMounted] = useState(false);
 
   useEffect(() => {
-    // Re-compute every second to catch status transitions and update progress
-    const interval = setInterval(() => {
+    // Compute immediately on mount, then update every second
+    const updateValues = () => {
       setCurrentStatus(
         computeShiftStatus(shift.shift_date, shift.start_time, shift.end_time)
       );
       setProgress(
         computeShiftProgress(shift.shift_date, shift.start_time, shift.end_time)
       );
-    }, 1000);
+    };
+
+    // Initial computation
+    updateValues();
+    setHasMounted(true);
+
+    // Re-compute every second to catch status transitions and update progress
+    const interval = setInterval(updateValues, 1000);
 
     return () => clearInterval(interval);
   }, [shift.shift_date, shift.start_time, shift.end_time]);
@@ -140,8 +144,8 @@ export function SharedUserShiftPreview({
 
   return (
     <div className="relative overflow-hidden rounded-lg">
-      {/* Progress bar background for active shifts */}
-      {isActive && (
+      {/* Progress bar background for active shifts - only show after mount to avoid hydration mismatch */}
+      {hasMounted && isActive && (
         <div
           className="absolute inset-0 bg-brand-highlight/10 animate-progress-grow"
           style={{ '--progress-target': `${progress}%` } as React.CSSProperties}

@@ -1384,6 +1384,11 @@ export const no = {
             hour24: '24 timer før',
           },
         },
+        summaryTime: {
+          label: 'Oppsummeringstidspunkt',
+          description: 'Når du mottar daglig oppsummering av delte vakter',
+          help: 'Gjelder kun for kontakter du har satt til daglig oppsummering',
+        },
       },
     },
     sharing: {
@@ -1418,6 +1423,14 @@ export const no = {
       iShareWithDesc: 'Kan se dine vakter',
       sharesWithMe: 'Deler med deg',
       sharesWithMeDesc: 'Du kan se deres vakter',
+      notificationFrequency: {
+        instant: 'Umiddelbart',
+        summary: 'Daglig oppsummering',
+        muted: 'Dempet',
+        instantDesc: 'Få varsel med en gang',
+        summaryDesc: 'Samlet oppsummering hver dag',
+        mutedDesc: 'Ingen varsler',
+      },
       errors: {
         limitReached: 'Du har nådd maksimalt antall delinger for ditt abonnement',
         userNotFound: 'Fant ingen bruker med denne e-posten eller telefonnummeret',
@@ -1430,6 +1443,7 @@ export const no = {
         failedToBlock: 'Kunne ikke skjule brukeren',
         failedToUnblock: 'Kunne ikke fjerne skjuling',
         failedToShareBack: 'Kunne ikke dele tilbake',
+        failedToUpdateFrequency: 'Kunne ikke oppdatere varslingsfrekvens',
       },
     },
   },

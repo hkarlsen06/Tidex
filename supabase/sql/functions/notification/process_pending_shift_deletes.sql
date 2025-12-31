@@ -1,6 +1,11 @@
 -- Function: process_pending_shift_deletes
 -- Description: Processes pending shift deletes, detecting delete-then-recreate patterns
 -- Used by: run_shift_notification_workers (cron job)
+--
+-- Notification routing based on notification_frequency:
+-- - 'instant': Queue to notification_queue for immediate delivery
+-- - 'summary': Queue to pending_summary_notifications for daily digest (splits by same-day exception)
+-- - 'muted': Skip notification entirely
 
 CREATE OR REPLACE FUNCTION public.process_pending_shift_deletes()
  RETURNS TABLE(owners_processed integer, total_updated integer, total_deleted integer)
@@ -16,6 +21,7 @@ DECLARE
   v_owners_processed INT := 0;
   v_total_updated INT := 0;
   v_total_deleted INT := 0;
+  v_today DATE;
 
   -- Aggregated data per owner
   updated_shifts JSONB;
@@ -24,6 +30,8 @@ DECLARE
   updated_count INT;
   deleted_count INT;
 BEGIN
+  v_today := CURRENT_DATE;
+
   -- Claim pending deletes that are ready to process
   UPDATE pending_shift_deletes
   SET status = 'processing',
@@ -129,7 +137,7 @@ BEGIN
       -- Generate hash for idempotency (based on all processed delete IDs)
       changes_hash := md5(owner_rec.owner_id::text || now()::text || random()::text);
 
-      -- Queue ONE notification for this owner with ALL changes
+      -- Route instant notifications
       INSERT INTO notification_queue (
         type,
         recipient_id,
@@ -156,7 +164,85 @@ BEGIN
       WHERE ss.owner_id = owner_rec.owner_id
         AND ss.blocked = false
         AND COALESCE(np.shared_shifts_enabled, true) = true
+        AND COALESCE(ss.notification_frequency, 'instant') = 'instant'
       ON CONFLICT (idempotency_key) DO NOTHING;
+
+      -- Route summary notifications (with same-day exception)
+      -- Same-day shifts go to instant queue even for summary users
+      INSERT INTO notification_queue (
+        type,
+        recipient_id,
+        sender_id,
+        payload,
+        idempotency_key
+      )
+      SELECT
+        'shared_shift_changes',
+        ss.viewer_id,
+        owner_rec.owner_id,
+        jsonb_build_object(
+          'owner_id', owner_rec.owner_id,
+          'owner_name', owner_name,
+          'updated_count', (SELECT count(*) FROM jsonb_array_elements(updated_shifts) s WHERE (s->>'shift_date')::date = v_today),
+          'deleted_count', (SELECT count(*) FROM jsonb_array_elements(deleted_shifts) s WHERE (s->>'shift_date')::date = v_today),
+          'shift_dates', (
+            SELECT string_agg(s->>'shift_date', ',')
+            FROM (
+              SELECT s FROM jsonb_array_elements(updated_shifts) s WHERE (s->>'shift_date')::date = v_today
+              UNION ALL
+              SELECT s FROM jsonb_array_elements(deleted_shifts) s WHERE (s->>'shift_date')::date = v_today
+            ) sq
+          ),
+          'updated_shifts', (SELECT COALESCE(jsonb_agg(s), '[]'::jsonb) FROM jsonb_array_elements(updated_shifts) s WHERE (s->>'shift_date')::date = v_today),
+          'deleted_shifts', (SELECT COALESCE(jsonb_agg(s), '[]'::jsonb) FROM jsonb_array_elements(deleted_shifts) s WHERE (s->>'shift_date')::date = v_today)
+        ),
+        'shift_changes_sameday:' || owner_rec.owner_id || ':' || ss.viewer_id || ':' || changes_hash
+      FROM shift_shares ss
+      LEFT JOIN notification_preferences np ON np.user_id = ss.viewer_id
+      WHERE ss.owner_id = owner_rec.owner_id
+        AND ss.blocked = false
+        AND COALESCE(np.shared_shifts_enabled, true) = true
+        AND ss.notification_frequency = 'summary'
+        AND (
+          EXISTS (SELECT 1 FROM jsonb_array_elements(updated_shifts) s WHERE (s->>'shift_date')::date = v_today)
+          OR EXISTS (SELECT 1 FROM jsonb_array_elements(deleted_shifts) s WHERE (s->>'shift_date')::date = v_today)
+        )
+      ON CONFLICT (idempotency_key) DO NOTHING;
+
+      -- Non-same-day shifts go to summary queue
+      INSERT INTO pending_summary_notifications (viewer_id, owner_id, shift_id, shift_date, event_type)
+      SELECT
+        ss.viewer_id,
+        owner_rec.owner_id,
+        (s->>'shift_id')::uuid,
+        (s->>'shift_date')::date,
+        'updated'
+      FROM shift_shares ss
+      LEFT JOIN notification_preferences np ON np.user_id = ss.viewer_id
+      CROSS JOIN jsonb_array_elements(updated_shifts) s
+      WHERE ss.owner_id = owner_rec.owner_id
+        AND ss.blocked = false
+        AND COALESCE(np.shared_shifts_enabled, true) = true
+        AND ss.notification_frequency = 'summary'
+        AND (s->>'shift_date')::date != v_today
+      ON CONFLICT (viewer_id, owner_id, shift_id, shift_date) DO NOTHING;
+
+      INSERT INTO pending_summary_notifications (viewer_id, owner_id, shift_id, shift_date, event_type)
+      SELECT
+        ss.viewer_id,
+        owner_rec.owner_id,
+        (s->>'shift_id')::uuid,
+        (s->>'shift_date')::date,
+        'deleted'
+      FROM shift_shares ss
+      LEFT JOIN notification_preferences np ON np.user_id = ss.viewer_id
+      CROSS JOIN jsonb_array_elements(deleted_shifts) s
+      WHERE ss.owner_id = owner_rec.owner_id
+        AND ss.blocked = false
+        AND COALESCE(np.shared_shifts_enabled, true) = true
+        AND ss.notification_frequency = 'summary'
+        AND (s->>'shift_date')::date != v_today
+      ON CONFLICT (viewer_id, owner_id, shift_id, shift_date) DO NOTHING;
     END IF;
   END LOOP;
 
