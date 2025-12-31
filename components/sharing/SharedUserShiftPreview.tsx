@@ -1,7 +1,7 @@
 "use client";
 
 import type React from "react";
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { cn } from "@/lib/cn";
 import { useTranslations } from "@/lib/i18n/client";
 import { useCountdown } from "@/lib/hooks/useCountdown";
@@ -94,9 +94,14 @@ export function SharedUserShiftPreview({
   // Initialize with "upcoming" and 0 to avoid hydration mismatch (Date.now() differs server/client)
   const [currentStatus, setCurrentStatus] = useState<"active" | "upcoming" | "past">("upcoming");
   const [progress, setProgress] = useState(0);
+  // Use ref to track mount state - doesn't need to trigger re-render since updateValues already does
+  const hasMountedRef = useRef(false);
   const [hasMounted, setHasMounted] = useState(false);
 
   useEffect(() => {
+    // Mark as mounted using ref (synchronous, no lint warning)
+    hasMountedRef.current = true;
+
     // Compute immediately on mount, then update every second
     const updateValues = () => {
       setCurrentStatus(
@@ -105,17 +110,20 @@ export function SharedUserShiftPreview({
       setProgress(
         computeShiftProgress(shift.shift_date, shift.start_time, shift.end_time)
       );
+      // Update hasMounted state after first computation to show progress bar
+      if (hasMountedRef.current && !hasMounted) {
+        setHasMounted(true);
+      }
     };
 
     // Initial computation
     updateValues();
-    setHasMounted(true);
 
     // Re-compute every second to catch status transitions and update progress
     const interval = setInterval(updateValues, 1000);
 
     return () => clearInterval(interval);
-  }, [shift.shift_date, shift.start_time, shift.end_time]);
+  }, [shift.shift_date, shift.start_time, shift.end_time, hasMounted]);
 
   const isActive = currentStatus === "active";
 
