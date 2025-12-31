@@ -39,7 +39,9 @@ import {
   shareBack,
 } from "@/app/[locale]/(app)/sharing/_actions/sharing";
 import { useTranslations } from "@/lib/i18n/client";
-import type { Friend } from "@/data-access/sharing";
+import type { Friend, NotificationFrequency } from "@/data-access/sharing";
+import { NotificationFrequencyToggle } from "./NotificationFrequencyToggle";
+import { isNativePlatform } from "@/lib/capacitor/platform";
 
 type ManageSharingModalProps = {
   isOpen: boolean;
@@ -112,7 +114,8 @@ type OptimisticAction =
   | { type: "toggleVisibility"; id: string; blocked: boolean }
   | { type: "toggleEarnings"; id: string; showEarnings: boolean }
   | { type: "remove"; id: string }
-  | { type: "shareBack"; id: string };
+  | { type: "shareBack"; id: string }
+  | { type: "updateFrequency"; id: string; frequency: NotificationFrequency };
 
 export function ManageSharingModal({
   isOpen,
@@ -164,6 +167,12 @@ export function ManageSharingModal({
   const [isPending, startTransition] = useTransition();
   const [newRecipientShowEarnings, setNewRecipientShowEarnings] =
     useState(false);
+  const [isNative, setIsNative] = useState(false);
+
+  // Check if we're on a native platform (for showing notification frequency toggle)
+  useEffect(() => {
+    setIsNative(isNativePlatform());
+  }, []);
 
   // Optimistic state for friends
   const [optimisticFriends, setOptimisticFriends] = useOptimistic(
@@ -211,6 +220,19 @@ export function ManageSharingModal({
             : f,
         );
       }
+      if (action.type === "updateFrequency") {
+        return state.map((f) =>
+          f.id === action.id && f.sharesWithMe
+            ? {
+                ...f,
+                sharesWithMe: {
+                  ...f.sharesWithMe,
+                  notificationFrequency: action.frequency,
+                },
+              }
+            : f,
+        );
+      }
       return state;
     },
   );
@@ -240,6 +262,14 @@ export function ManageSharingModal({
     iShareWithDesc: "Kan se dine vakter",
     sharesWithMe: "Deler med deg",
     sharesWithMeDesc: "Du kan se deres vakter",
+    notificationFrequency: {
+      instant: "Umiddelbar",
+      summary: "Daglig oppsummering",
+      muted: "Dempet",
+      instantDesc: "Varsles med en gang",
+      summaryDesc: "Samlet varsel én gang om dagen",
+      mutedDesc: "Ingen varsler fra denne personen",
+    },
   };
 
   // Helper to get display name with localized fallback
@@ -438,25 +468,36 @@ export function ManageSharingModal({
                             </div>
                             <div className="flex items-center gap-1 shrink-0">
                               {sharesWithMe && (
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    handleToggleVisibility(friend.id, isBlocked)
-                                  }
-                                  disabled={isActionPending}
-                                  className="p-1.5 rounded-md text-text-muted hover:text-text-primary hover:bg-surface-secondary transition-colors disabled:opacity-50"
-                                  title={
-                                    isBlocked
-                                      ? sharing.showInList
-                                      : sharing.hideFromList
-                                  }
-                                >
-                                  {isBlocked ? (
-                                    <EyeOff className="h-4 w-4" />
-                                  ) : (
-                                    <Eye className="h-4 w-4" />
+                                <>
+                                  {isNative && (
+                                    <NotificationFrequencyToggle
+                                      sharerId={friend.id}
+                                      currentFrequency={sharesWithMe.notificationFrequency}
+                                      disabled={isActionPending}
+                                      translations={sharing.notificationFrequency as any}
+                                      onError={(err) => setError(err)}
+                                    />
                                   )}
-                                </button>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      handleToggleVisibility(friend.id, isBlocked)
+                                    }
+                                    disabled={isActionPending}
+                                    className="p-1.5 rounded-md text-text-muted hover:text-text-primary hover:bg-surface-secondary transition-colors disabled:opacity-50"
+                                    title={
+                                      isBlocked
+                                        ? sharing.showInList
+                                        : sharing.hideFromList
+                                    }
+                                  >
+                                    {isBlocked ? (
+                                      <EyeOff className="h-4 w-4" />
+                                    ) : (
+                                      <Eye className="h-4 w-4" />
+                                    )}
+                                  </button>
+                                </>
                               )}
                               {iShareWith && (
                                 <>
@@ -612,25 +653,36 @@ export function ManageSharingModal({
                             </div>
                             <div className="flex items-center gap-1 shrink-0">
                               {sharesWithMe && (
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    handleToggleVisibility(friend.id, isBlocked)
-                                  }
-                                  disabled={isActionPending}
-                                  className="p-1.5 rounded-md text-text-muted hover:text-text-primary hover:bg-surface-secondary transition-colors disabled:opacity-50"
-                                  title={
-                                    isBlocked
-                                      ? sharing.showInList
-                                      : sharing.hideFromList
-                                  }
-                                >
-                                  {isBlocked ? (
-                                    <EyeOff className="h-4 w-4" />
-                                  ) : (
-                                    <Eye className="h-4 w-4" />
+                                <>
+                                  {isNative && (
+                                    <NotificationFrequencyToggle
+                                      sharerId={friend.id}
+                                      currentFrequency={sharesWithMe.notificationFrequency}
+                                      disabled={isActionPending}
+                                      translations={sharing.notificationFrequency as any}
+                                      onError={(err) => setError(err)}
+                                    />
                                   )}
-                                </button>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      handleToggleVisibility(friend.id, isBlocked)
+                                    }
+                                    disabled={isActionPending}
+                                    className="p-1.5 rounded-md text-text-muted hover:text-text-primary hover:bg-surface-secondary transition-colors disabled:opacity-50"
+                                    title={
+                                      isBlocked
+                                        ? sharing.showInList
+                                        : sharing.hideFromList
+                                    }
+                                  >
+                                    {isBlocked ? (
+                                      <EyeOff className="h-4 w-4" />
+                                    ) : (
+                                      <Eye className="h-4 w-4" />
+                                    )}
+                                  </button>
+                                </>
                               )}
                               <button
                                 type="button"

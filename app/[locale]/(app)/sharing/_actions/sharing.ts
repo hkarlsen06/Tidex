@@ -1,7 +1,7 @@
 "use server";
 
 import { Effect } from "effect";
-import { SharingService } from "@/lib/services/sharing";
+import { SharingService, type NotificationFrequency } from "@/lib/services/sharing";
 import { SharingLive } from "@/lib/layers/app";
 import { invalidateAndRevalidate } from "@/lib/revalidation/paths";
 import { logger } from "@/lib/logger";
@@ -30,6 +30,7 @@ const SHARING_ERRORS = {
   FAILED_TO_BLOCK_SHARER: "Kunne ikke skjule brukeren",
   FAILED_TO_UNBLOCK_SHARER: "Kunne ikke fjerne skjuling",
   FAILED_TO_SHARE_BACK: "Kunne ikke dele tilbake",
+  FAILED_TO_UPDATE_FREQUENCY: "Kunne ikke oppdatere varslingsfrekvens",
 } as const;
 
 /**
@@ -285,5 +286,46 @@ export async function shareBack(recipientId: string): Promise<ActionResult> {
     }
 
     return { success: false, error: SHARING_ERRORS.FAILED_TO_SHARE_BACK };
+  }
+}
+
+/**
+ * Update notification frequency for a specific sharer
+ *
+ * Controls how often you receive notifications about this sharer's shifts:
+ * - instant: Notifications sent immediately (within 1-2 minutes)
+ * - summary: Daily digest at your configured time (default 18:00)
+ * - muted: No notifications from this sender
+ */
+export async function updateNotificationFrequency(
+  ownerId: string,
+  frequency: NotificationFrequency
+): Promise<ActionResult> {
+  const { user } = await verifySession();
+
+  if (!ownerId) {
+    return { success: false, error: SHARING_ERRORS.SHARE_NOT_FOUND };
+  }
+
+  // Validate frequency value
+  if (!["instant", "summary", "muted"].includes(frequency)) {
+    return { success: false, error: SHARING_ERRORS.FAILED_TO_UPDATE_FREQUENCY };
+  }
+
+  const program = Effect.gen(function* () {
+    const sharing = yield* SharingService;
+    yield* sharing.updateNotificationFrequency(user.id, ownerId, frequency);
+  }).pipe(Effect.provide(SharingLive), Effect.scoped);
+
+  try {
+    await Effect.runPromise(program);
+
+    // Invalidate the viewer's cache to update their friends list
+    invalidateAndRevalidate(user.id);
+
+    return { success: true };
+  } catch (error: any) {
+    logger.error("Failed to update notification frequency:", error);
+    return { success: false, error: SHARING_ERRORS.FAILED_TO_UPDATE_FREQUENCY };
   }
 }

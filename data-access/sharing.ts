@@ -16,7 +16,11 @@ import {
   SharingService,
   type SharedUser,
   type ShareRecipient,
+  type NotificationFrequency,
 } from "@/lib/services/sharing";
+
+// Re-export NotificationFrequency type
+export type { NotificationFrequency };
 import { SharingLive, ShiftsLive } from "@/lib/layers/app";
 import { ShiftsService } from "@/lib/services/shifts";
 import { logger } from "@/lib/logger";
@@ -43,11 +47,13 @@ export type Friend = {
    * - blocked: whether I've hidden them from my view
    * - showEarningsToMe: whether they allow me to see their earnings
    * - sharedWithMeAt: when they started sharing with me
+   * - notificationFrequency: how often I want notifications from this sharer
    */
   readonly sharesWithMe: {
     readonly blocked: boolean;
     readonly showEarningsToMe: boolean;
     readonly sharedAt: string;
+    readonly notificationFrequency: NotificationFrequency;
   } | null;
   /**
    * If I share with them:
@@ -575,6 +581,7 @@ async function getAllFriendsInternal(userId: string): Promise<Friend[]> {
               blocked: sharer.blocked,
               showEarningsToMe: sharer.showEarnings,
               sharedAt: sharer.sharedAt,
+              notificationFrequency: sharer.notificationFrequency,
             }
           : null,
         iShareWith: recipient
@@ -700,3 +707,30 @@ export const getBlockedSharers = cache(
     return getBlockedSharersInternal(userId);
   }
 );
+
+/**
+ * Update notification frequency for a specific sharer
+ * - Controls how often you receive notifications about this sharer's shifts
+ * - Options: instant, summary (daily digest), or muted (no notifications)
+ *
+ * Promise wrapper around Effect-based SharingService
+ */
+export async function updateNotificationFrequency(
+  ownerId: string,
+  frequency: NotificationFrequency
+): Promise<{ success: boolean; error?: string }> {
+  const { user } = await verifySession();
+
+  const program = Effect.gen(function* () {
+    const sharing = yield* SharingService;
+    yield* sharing.updateNotificationFrequency(user.id, ownerId, frequency);
+  }).pipe(Effect.provide(SharingLive), Effect.scoped);
+
+  try {
+    await Effect.runPromise(program);
+    return { success: true };
+  } catch (error: any) {
+    logger.error("Failed to update notification frequency:", error);
+    return { success: false, error: "Failed to update notification frequency" };
+  }
+}

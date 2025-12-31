@@ -1385,6 +1385,11 @@ export const en: Dictionary = {
             hour24: '24 hours before',
           },
         },
+        summaryTime: {
+          label: 'Summary time',
+          description: 'When you receive daily summaries of shared shifts',
+          help: 'Only applies to contacts you have set to daily summary',
+        },
       },
     },
     sharing: {
@@ -1419,6 +1424,14 @@ export const en: Dictionary = {
       iShareWithDesc: 'Can see your shifts',
       sharesWithMe: 'Share with you',
       sharesWithMeDesc: 'You can see their shifts',
+      notificationFrequency: {
+        instant: 'Instant',
+        summary: 'Daily summary',
+        muted: 'Muted',
+        instantDesc: 'Get notified immediately',
+        summaryDesc: 'Combined summary once a day',
+        mutedDesc: 'No notifications',
+      },
       errors: {
         limitReached: "You've reached the maximum number of shares for your subscription",
         userNotFound: 'No user found with this email or phone number',
@@ -1431,6 +1444,7 @@ export const en: Dictionary = {
         failedToBlock: 'Could not hide user',
         failedToUnblock: 'Could not unhide user',
         failedToShareBack: 'Could not share back',
+        failedToUpdateFrequency: 'Could not update notification frequency',
       },
     },
   },
