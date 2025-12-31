@@ -20,13 +20,15 @@ type AddShiftData = {
 
 type Props = {
   initialData: AddShiftData;
+  /** User-specific cache key for browser HTTP cache isolation */
+  cacheKey?: string;
 };
 
 /**
  * Wrapper for AddShiftForm that handles offline scenarios
  * Falls back to API route when server-side rendering fails (offline)
  */
-export function AddShiftFormWrapper({ initialData }: Props) {
+export function AddShiftFormWrapper({ initialData, cacheKey }: Props) {
   // Check if we need to fetch data (server-side loading failed)
   // userSettings is empty object {} when server-side loading fails offline
   const needsFetch = !initialData.userSettings ||
@@ -39,7 +41,10 @@ export function AddShiftFormWrapper({ initialData }: Props) {
   // If initial data is empty/missing (offline SSR failed), fetch from API
   useEffect(() => {
     if (needsFetch) {
-      fetch('/api/shifts/add-data', {
+      const url = cacheKey
+        ? `/api/shifts/add-data?_ck=${cacheKey}`
+        : '/api/shifts/add-data';
+      fetch(url, {
         credentials: 'same-origin',
         headers: { 'Accept': 'application/json' }
       })
@@ -61,7 +66,7 @@ export function AddShiftFormWrapper({ initialData }: Props) {
           setIsLoading(false);
         });
     }
-  }, [needsFetch]);
+  }, [needsFetch, cacheKey]);
 
   if (isLoading) {
     return (

@@ -1,7 +1,7 @@
 "use client";
 
 import type { FormEvent } from "react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card } from "@/components/app/Card";
 import { Button } from "@/components/app/Button";
 import { Input } from "@/components/app/Input";
@@ -15,6 +15,10 @@ import {
 import { Checkbox } from "@/components/app/Checkbox";
 import { sendBroadcastNotification } from "@/app/[locale]/(app)/settings/admin/_actions/sendBroadcastNotification";
 import { previewTargetCount } from "@/app/[locale]/(app)/settings/admin/_actions/previewTargetCount";
+import {
+  getUsersWithPushTokens,
+  type UserWithPushToken,
+} from "@/app/[locale]/(app)/settings/admin/_actions/getUsersWithPushTokens";
 import { cn } from "@/lib/cn";
 import type { Dictionary } from "@/lib/i18n/dictionaries/no";
 
@@ -38,6 +42,25 @@ export function SendNotificationCard({ onSuccess }: Props) {
     message: string;
   } | null>(null);
   const [targetCount, setTargetCount] = useState<number | null>(null);
+  const [users, setUsers] = useState<UserWithPushToken[]>([]);
+  const [usersLoading, setUsersLoading] = useState(false);
+
+  // Fetch users with push tokens when target is specific
+  const fetchUsers = useCallback(async () => {
+    setUsersLoading(true);
+    const result = await getUsersWithPushTokens();
+    if (result.success) {
+      setUsers(result.users);
+    }
+    setUsersLoading(false);
+  }, []);
+
+  useEffect(() => {
+    if (target === "specific" && users.length === 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      fetchUsers();
+    }
+  }, [target, users.length, fetchUsers]);
 
   // Preview target count when target or includeSelf changes
   useEffect(() => {
@@ -146,15 +169,37 @@ export function SendNotificationCard({ onSuccess }: Props) {
         </div>
 
         {target === "specific" ? (
-          <div>
-            <label htmlFor="specific-user-id" className="block text-sm font-medium mb-1">User ID</label>
-            <Input
-              id="specific-user-id"
+          <div className="space-y-2">
+            <label htmlFor="specific-user-select" className="block text-sm font-medium">
+              Select User
+            </label>
+            <Select
               value={specificUserId}
-              onChange={(e) => setSpecificUserId(e.target.value)}
-              placeholder="UUID"
-              required
-            />
+              onValueChange={(v) => setSpecificUserId(v)}
+            >
+              <SelectTrigger id="specific-user-select">
+                <SelectValue placeholder={usersLoading ? "Laster brukere..." : "Velg bruker"} />
+              </SelectTrigger>
+              <SelectContent>
+                {users.map((user) => (
+                  <SelectItem key={user.id} value={user.id}>
+                    {user.name || user.email || user.phone || user.id.slice(0, 8)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <div>
+              <label htmlFor="specific-user-id" className="block text-sm font-medium mb-1">
+                User ID
+              </label>
+              <Input
+                id="specific-user-id"
+                value={specificUserId}
+                onChange={(e) => setSpecificUserId(e.target.value)}
+                placeholder="UUID"
+                required
+              />
+            </div>
           </div>
         ) : (
           <div className="flex items-center gap-2">

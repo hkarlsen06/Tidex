@@ -2647,6 +2647,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
       readOnly={readOnly}
       showEarnings={showEarnings}
       overlappingShifts={overlappingShiftsForDetails}
+      cacheKey={cacheKey}
     />
     </ScrollablePageWrapper>
   );
