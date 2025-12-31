@@ -27,7 +27,7 @@ export async function deleteShift(input: string | DeleteShiftInput) {
   if (recurringId && shiftDate) {
     const { data: recurring, error: recurringError } = await supabase
       .from("recurring_shifts")
-      .select("exclusions")
+      .select("exclusions, start_time, end_time")
       .eq("id", recurringId)
       .eq("user_id", user.id)
       .single();
@@ -51,6 +51,25 @@ export async function deleteShift(input: string | DeleteShiftInput) {
     if (updateError) {
       logger.error("Failed to update recurring shift exclusions:", updateError);
       throw new Error(ERRORS.FAILED_TO_UPDATE_RECURRING);
+    }
+
+    // Queue a pending delete for notification batching
+    // This ensures recurring shift deletions are included in batched notifications
+    // Use the recurringId as deleted_shift_id (it's a UUID) - the date makes it unique in the payload
+    const { error: pendingDeleteError } = await supabase
+      .from("pending_shift_deletes")
+      .insert({
+        deleted_shift_id: recurringId, // Use recurring shift's UUID
+        owner_id: user.id,
+        shift_date: shiftDate,
+        start_time: recurring.start_time,
+        end_time: recurring.end_time,
+        has_supplements: false,
+      });
+
+    if (pendingDeleteError) {
+      // Log but don't fail - notification is nice-to-have
+      logger.error("Failed to queue pending delete for recurring shift:", pendingDeleteError);
     }
 
     // Invalidate cache and revalidate paths
