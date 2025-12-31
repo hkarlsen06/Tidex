@@ -151,7 +151,7 @@ export const SettingsServiceLive = Layer.effect(
       timeToLive: Duration.minutes(5),
       lookup: (userId: string) =>
         Effect.gen(function* () {
-          // Verify user ID and get session
+          // Verify user is authenticated first
           const session = yield* auth.getSession();
 
           if (session.user.id !== userId) {
@@ -159,6 +159,23 @@ export const SettingsServiceLive = Layer.effect(
               new AuthError({
                 reason: "unauthorized",
                 cause: new Error("User ID mismatch - potential security violation"),
+              })
+            );
+          }
+
+          // IMPORTANT: Fetch fresh user data from Supabase to get accurate identity info.
+          // The JWT claims (app_metadata.providers) can be stale after linking/unlinking.
+          // The identities array from getUser() is the source of truth.
+          const freshUserResult = yield* supabase.query(
+            async (client) => await client.auth.getUser(),
+            { retries: 2 }
+          );
+
+          const freshUser = (freshUserResult as { user: any }).user;
+          if (!freshUser) {
+            return yield* Effect.fail(
+              new NotFoundError({
+                resource: "User",
               })
             );
           }
@@ -180,8 +197,11 @@ export const SettingsServiceLive = Layer.effect(
               )
             );
 
-          // Extract identity providers
-          const identityProviders = session.user.identityProviders;
+          // Extract identity providers from fresh user data (source of truth)
+          const identities = freshUser.identities ?? [];
+          const identityProviders = new Set(
+            identities.map((i: { provider: string }) => i.provider)
+          );
 
           const hasGoogleConnected = identityProviders.has("google");
           const hasAppleConnected = identityProviders.has("apple");
@@ -190,10 +210,10 @@ export const SettingsServiceLive = Layer.effect(
 
           // Format phone number (strip +47 prefix for display)
           let phoneNumber: string | null = null;
-          if (session.user.phone) {
-            phoneNumber = session.user.phone.startsWith("+47")
-              ? session.user.phone.substring(3)
-              : session.user.phone;
+          if (freshUser.phone) {
+            phoneNumber = freshUser.phone.startsWith("+47")
+              ? freshUser.phone.substring(3)
+              : freshUser.phone;
           }
 
           // Calculate connection capabilities
@@ -201,7 +221,7 @@ export const SettingsServiceLive = Layer.effect(
           const canUnlinkPhone = hasPhoneConnected && loginMethodCount > 1;
           const canDisconnectGoogle = hasGoogleConnected && loginMethodCount > 1;
           const canDisconnectApple = hasAppleConnected && loginMethodCount > 1;
-          const isPhoneOnly = hasPhoneConnected && !session.user.email;
+          const isPhoneOnly = hasPhoneConnected && !freshUser.email;
           // User is OAuth-only if they have OAuth but no password and no phone
           const isOAuthOnly =
             (hasGoogleConnected || hasAppleConnected) &&
@@ -209,8 +229,8 @@ export const SettingsServiceLive = Layer.effect(
             !hasPhoneConnected;
 
           const profile: UserProfile = {
-            firstName: session.user.firstName ?? "",
-            email: session.user.email ?? "",
+            firstName: (freshUser.user_metadata?.full_name as string) ?? "",
+            email: freshUser.email ?? "",
             profilePictureUrl:
               (settingsResult as { profile_picture_url: string | null })
                 ?.profile_picture_url ?? null,
