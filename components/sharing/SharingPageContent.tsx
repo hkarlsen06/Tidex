@@ -46,6 +46,8 @@ type SharingPageContentProps = {
   showEarnings: boolean;
   /** Deep link: dates to highlight in calendar (from push notification) */
   highlightDates?: Set<string> | null;
+  /** User-specific cache key for browser HTTP cache isolation */
+  cacheKey: string;
 };
 
 /**
@@ -63,6 +65,7 @@ function SharingPageContentInner({
   presetRules,
   showEarnings,
   highlightDates,
+  cacheKey,
 }: SharingPageContentProps) {
   const { t, locale } = useTranslations();
   const router = useRouter();
@@ -107,6 +110,7 @@ function SharingPageContentInner({
         showEarnings={showEarnings}
         monthContext={sharingMonthContext}
         highlightDates={highlightDates}
+        cacheKey={cacheKey}
         headerSlot={
           <div className="flex flex-col gap-3">
             <button

@@ -45,7 +45,7 @@ export default async function DataPage({
   return (
     <SettingsPageWrapper routeKey="settings-data">
       <div className="mt-6">
-        <DataForm t={t} userName={userName} />
+        <DataForm t={t} userName={userName} cacheKey={claims.sub.slice(0, 8)} />
       </div>
     </SettingsPageWrapper>
   );
