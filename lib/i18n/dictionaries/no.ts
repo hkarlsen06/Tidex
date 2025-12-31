@@ -1367,7 +1367,7 @@ export const no = {
         enableButton: 'Aktiver varslinger',
         sharedShifts: {
           label: 'Delte vakter',
-          description: 'Få varsel når noen deler en ny vakt med deg',
+          description: 'Få varsel når noen legger til, endrer eller sletter en delt vakt',
         },
         shiftReminders: {
           label: 'Vaktpåminnelser',

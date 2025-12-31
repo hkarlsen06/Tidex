@@ -1368,7 +1368,7 @@ export const en: Dictionary = {
         enableButton: 'Enable notifications',
         sharedShifts: {
           label: 'Shared shifts',
-          description: 'Get notified when someone shares a new shift with you',
+          description: 'Get notified when someone adds, updates, or deletes a shared shift',
         },
         shiftReminders: {
           label: 'Shift reminders',
