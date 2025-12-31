@@ -81,7 +81,7 @@ export default function LoginClient({
   const [password, setPassword] = useState('');
   const [otp, setOtp] = useState('');
   const [step, setStep] = useState<LoginStep>('input');
-  const [loginType, setLoginType] = useState<'email' | 'phone' | null>(null);
+  const [_loginType, setLoginType] = useState<'email' | 'phone' | null>(null);
   const [message, setMessage] = useState<MessageState>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);

@@ -47,7 +47,7 @@ export function hasProAccess(
  */
 export function getActiveProvider(
   subscription: Subscription | null
-): 'stripe' | 'apple' | null {
+): 'stripe' | 'apple' | 'admin_trial' | null {
   if (!subscription) return null;
   if (!ENTITLED_STATUSES.includes(subscription.status)) return null;
   return subscription.provider ?? 'stripe';

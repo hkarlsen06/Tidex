@@ -19,13 +19,13 @@ import { logger } from "../logger";
 
 /**
  * Subscription record from database
- * Supports both Stripe and Apple IAP providers via unified model
+ * Supports Stripe, Apple IAP, and admin trial providers via unified model
  */
 export type Subscription = {
   readonly id: string;
   readonly user_id: string;
   // Provider identification
-  readonly provider: 'stripe' | 'apple';
+  readonly provider: 'stripe' | 'apple' | 'admin_trial';
   readonly provider_subscription_id: string | null;
   // Legacy Stripe fields (kept for backward compatibility)
   readonly stripe_customer_id: string | null;
