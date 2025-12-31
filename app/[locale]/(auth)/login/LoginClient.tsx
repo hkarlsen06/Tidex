@@ -48,6 +48,7 @@ import { PasswordInput } from '@/components/app/PasswordInput';
 import { Button } from '@/components/app/Button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/app/Card';
 import { TurnstileCaptcha, type TurnstileCaptchaHandle } from '@/components/app/TurnstileCaptcha';
+import { InputOTP, InputOTPGroup, InputOTPSlot, InputOTPSeparator } from '@/components/app/InputOTP';
 
 // Lazy load OAuth icon SVGs
 const GoogleIcon = dynamic(() => import('./GoogleIcon'), {
@@ -78,12 +79,9 @@ export default function LoginClient({
 
   const [emailOrPhone, setEmailOrPhone] = useState('');
   const [password, setPassword] = useState('');
-  const [otp, _setOtp] = useState('');
-  // NOTE: step state preserved for future MFA implementation
-  const [step, _setStep] = useState<LoginStep>('input');
-  const [, _setLoginType] = useState<'email' | 'phone' | null>(null);
-  // NOTE: phoneLoginMethod preserved for future MFA implementation
-  const [, _setPhoneLoginMethod] = useState<'otp' | 'password'>('password');
+  const [otp, setOtp] = useState('');
+  const [step, setStep] = useState<LoginStep>('input');
+  const [loginType, setLoginType] = useState<'email' | 'phone' | null>(null);
   const [message, setMessage] = useState<MessageState>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -178,9 +176,7 @@ export default function LoginClient({
       if (!isValidNorwegianPhone(emailOrPhone)) {
         errors.emailOrPhone = t.pages.auth.login.errors.invalidPhone;
       }
-      if (!password) {
-        errors.password = t.pages.auth.login.errors.fillPassword;
-      }
+      // Password is optional for phone - will use OTP if not provided
     }
 
     // If there are validation errors, show them
@@ -226,106 +222,110 @@ export default function LoginClient({
       await checkMfaAndRedirect(destination);
       setIsSubmitting(false);
     } else {
-      // Phone login with password
-      _setPhoneLoginMethod('password');
+      // Phone login - use password if provided, otherwise OTP
+      if (password) {
+        // Phone login with password
+        setIsSubmitting(true);
+        setMessage(null);
 
-      setIsSubmitting(true);
-      setMessage(null);
+        try {
+          const phoneE164 = normalizePhoneToE164(emailOrPhone);
+          const { error } = await supabase.auth.signInWithPassword({
+            phone: phoneE164,
+            password,
+            options: {
+              captchaToken: usedCaptchaToken,
+            },
+          });
 
-      try {
-        const phoneE164 = normalizePhoneToE164(emailOrPhone);
-        const { error } = await supabase.auth.signInWithPassword({
-          phone: phoneE164,
-          password,
-          options: {
-            captchaToken: usedCaptchaToken,
-          },
-        });
+          if (error) {
+            setIsSubmitting(false);
+            setMessage({ type: 'error', text: translateError(error.message) });
+            // Reset captcha token so user can retry with fresh token
+            setCaptchaToken(null);
+            turnstileRef.current?.reset();
+            return;
+          }
 
-        if (error) {
+          const destination = getRedirectPath();
+          // Check MFA and redirect appropriately
+          await checkMfaAndRedirect(destination);
           setIsSubmitting(false);
-          setMessage({ type: 'error', text: translateError(error.message) });
+        } catch (err) {
+          setIsSubmitting(false);
+          setMessage({
+            type: 'error',
+            text: err instanceof Error ? err.message : t.pages.auth.login.errors.genericError,
+          });
           // Reset captcha token so user can retry with fresh token
           setCaptchaToken(null);
           turnstileRef.current?.reset();
-          return;
         }
+      } else {
+        // Phone login with OTP
+        setIsSubmitting(true);
+        setMessage(null);
 
-        const destination = getRedirectPath();
-        // Check MFA and redirect appropriately
-        await checkMfaAndRedirect(destination);
-        setIsSubmitting(false);
-      } catch (err) {
-        setIsSubmitting(false);
-        setMessage({
-          type: 'error',
-          text: err instanceof Error ? err.message : t.pages.auth.login.errors.genericError,
-        });
-        // Reset captcha token so user can retry with fresh token
-        setCaptchaToken(null);
-        turnstileRef.current?.reset();
-      }
+        try {
+          const phoneE164 = normalizePhoneToE164(emailOrPhone);
 
-      /* NOTE: OTP login path preserved for future MFA implementation
-      // Phone login with OTP
-      setIsSubmitting(true);
-      setMessage(null);
+          // Send OTP with shouldCreateUser: false (don't create user if doesn't exist)
+          const { error } = await supabase.auth.signInWithOtp({
+            phone: phoneE164,
+            options: {
+              shouldCreateUser: false,
+              captchaToken: usedCaptchaToken,
+            },
+          });
 
-      try {
-        const phoneE164 = normalizePhoneToE164(emailOrPhone);
+          setIsSubmitting(false);
 
-        // First, check if the phone number exists in the system
-        // We do this by attempting to send OTP with shouldCreateUser: false
-        const { error } = await supabase.auth.signInWithOtp({
-          phone: phoneE164,
-          options: {
-            shouldCreateUser: false, // Don't create user if doesn't exist
-            captchaToken: usedCaptchaToken,
-          },
-        });
-
-        setIsSubmitting(false);
-
-        if (error) {
-          // Check if error is because user doesn't exist
-          if (
-            error.message.includes('User not found') ||
-            error.message.includes('not found') ||
-            error.message.includes('No user') ||
-            error.message.includes('Signups not allowed')
-          ) {
-            setMessage({
-              type: 'error',
-              text: t.pages.auth.login.mustRegister,
-            });
-            setShowSignupPrompt(true);
-          } else {
-            setMessage({
-              type: 'error',
-              text: translateError(error.message),
-            });
+          if (error) {
+            // Check if error is because user doesn't exist
+            if (
+              error.message.includes('User not found') ||
+              error.message.includes('not found') ||
+              error.message.includes('No user') ||
+              error.message.includes('Signups not allowed')
+            ) {
+              setMessage({
+                type: 'error',
+                text: t.pages.auth.login.mustRegister,
+              });
+              setShowSignupPrompt(true);
+            } else {
+              setMessage({
+                type: 'error',
+                text: translateError(error.message),
+              });
+            }
+            // Reset captcha token so user can retry with fresh token
+            setCaptchaToken(null);
+            turnstileRef.current?.reset();
+            return;
           }
-          return;
-        }
 
-        _setLoginType('phone');
-        _setStep('otp');
-        setMessage({
-          type: 'success',
-          text: t.pages.auth.login.success.smsSent,
-        });
-      } catch (err) {
-        setIsSubmitting(false);
-        setMessage({
-          type: 'error',
-          text: err instanceof Error ? err.message : t.pages.auth.login.errors.genericError,
-        });
+          setLoginType('phone');
+          setStep('otp');
+          setMessage({
+            type: 'success',
+            text: t.pages.auth.login.success.smsSent,
+          });
+        } catch (err) {
+          setIsSubmitting(false);
+          setMessage({
+            type: 'error',
+            text: err instanceof Error ? err.message : t.pages.auth.login.errors.genericError,
+          });
+          // Reset captcha token so user can retry with fresh token
+          setCaptchaToken(null);
+          turnstileRef.current?.reset();
+        }
       }
-      */
     }
   };
 
-  const _handleVerifyOtp = async (event: FormEvent<HTMLFormElement>) => {
+  const handleVerifyOtp = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     resetMessage();
     resetFieldErrors();
@@ -365,8 +365,8 @@ export default function LoginClient({
 
       setMessage({ type: 'success', text: t.pages.auth.login.loggingIn });
       const destination = getRedirectPath();
-      // Use full page navigation to ensure cookies are properly set
-      window.location.href = destination;
+      // Check MFA and redirect appropriately
+      await checkMfaAndRedirect(destination);
     } catch (err) {
       setIsSubmitting(false);
       setMessage({
@@ -660,9 +660,9 @@ export default function LoginClient({
             </>
           )}
 
-          {/* NOTE: OTP Verification step preserved for future MFA implementation
+          {/* OTP Verification step for phone login */}
           {step === 'otp' && (
-            <form className="space-y-6" noValidate onSubmit={_handleVerifyOtp}>
+            <form className="space-y-6" noValidate onSubmit={handleVerifyOtp}>
               <Field data-invalid={!!fieldErrors.otp} className="items-center">
                 <FieldLabel htmlFor="otp" className="sr-only">
                   {t.pages.auth.login.otpLabel}
@@ -673,7 +673,7 @@ export default function LoginClient({
                   onChange={(value) => {
                     resetMessage();
                     resetFieldErrors();
-                    _setOtp(value);
+                    setOtp(value);
                   }}
                 >
                   <InputOTPGroup>
@@ -693,9 +693,23 @@ export default function LoginClient({
                 )}
               </Field>
 
+              {message && (
+                <div
+                  className={`rounded-lg px-4 py-3 text-sm font-medium ${
+                    message.type === 'error'
+                      ? 'bg-error-subtle text-error-foreground'
+                      : 'bg-success-subtle text-success-foreground'
+                  }`}
+                  role="status"
+                  aria-live="polite"
+                >
+                  {message.text}
+                </div>
+              )}
+
               <Button
                 type="submit"
-                disabled={buttonDisabled}
+                disabled={isSubmitting || isOAuthRedirecting}
                 loading={isSubmitting}
                 size="lg"
                 className="w-full"
@@ -708,8 +722,8 @@ export default function LoginClient({
                 variant="ghost"
                 size="sm"
                 onClick={() => {
-                  _setStep('input');
-                  _setOtp('');
+                  setStep('input');
+                  setOtp('');
                   resetMessage();
                   resetFieldErrors();
                 }}
@@ -719,7 +733,6 @@ export default function LoginClient({
               </Button>
             </form>
           )}
-          */}
         </CardContent>
 
         {/* Footer with create account link */}
