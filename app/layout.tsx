@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import { Inter } from "next/font/google";
 
-import Telemetry from "@/components/app/Telemetry";
+import { Analytics } from "@vercel/analytics/next";
 
 import SWRegister from "./sw-register";
 import { CapacitorUrlListener } from "./capacitor-url-listener";
@@ -178,7 +178,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <CapacitorUrlListener />
         {children}
         <SWRegister />
-        <Telemetry />
+        <Analytics />
       </body>
     </html>
   );
