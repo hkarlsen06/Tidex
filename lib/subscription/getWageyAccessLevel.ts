@@ -45,6 +45,11 @@ export function getWageyAccessLevel(
     return "free";
   }
 
+  // Admin trial subscriptions get Pro access
+  if (subscription.provider === "admin_trial") {
+    return "pro";
+  }
+
   const priceId = subscription.price_id;
 
   // Max tier check (monthly + yearly + legacy)

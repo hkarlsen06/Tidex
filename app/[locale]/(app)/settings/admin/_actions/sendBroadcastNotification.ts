@@ -2,8 +2,37 @@
 
 import { verifyAdmin } from "@/data-access/auth";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { revalidateTag } from "next/cache";
+import type { AdminAction } from "@/lib/admin/action-labels";
 
 type TargetAudience = "all" | "pro" | "active" | "specific";
+
+/**
+ * Log an admin action to the audit log
+ */
+async function logAdminAction(params: {
+  adminId: string;
+  adminEmail: string;
+  action: AdminAction;
+  targetId?: string;
+  targetEmail?: string;
+  metadata?: Record<string, unknown>;
+}) {
+  const supabase = createSupabaseServiceClient();
+
+  const { error } = await supabase.rpc("admin_log_action", {
+    p_admin_id: params.adminId,
+    p_admin_email: params.adminEmail,
+    p_action: params.action,
+    p_target_id: params.targetId ?? null,
+    p_target_email: params.targetEmail ?? null,
+    p_metadata: params.metadata ?? {},
+  });
+
+  if (error) {
+    console.error("Failed to log admin action:", error);
+  }
+}
 
 interface BroadcastInput {
   title: string;
@@ -195,6 +224,23 @@ export async function sendBroadcastNotification(input: BroadcastInput) {
       e
     );
   }
+
+  // Log successful broadcast action
+  await logAdminAction({
+    adminId: user.id,
+    adminEmail: user.email ?? "unknown",
+    action: "broadcast_sent",
+    metadata: {
+      broadcast_id: broadcastId,
+      title: input.title.trim(),
+      target: input.target,
+      target_count: targetUserIds.length,
+      deeplink: validatedDeeplink,
+    },
+  });
+
+  // Invalidate audit log cache
+  revalidateTag("admin-auditlog", "max");
 
   return {
     success: true,

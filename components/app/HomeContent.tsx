@@ -656,6 +656,7 @@ export function HomeContent({ shifts: initialShifts, settings, payoutTaxSettings
             }
           });
         }}
+        cacheKey={cacheKey}
       />
     </CenteredPageWrapper>
   );

@@ -286,12 +286,15 @@ async function loadLogoAsBase64(): Promise<string | null> {
   }
 }
 
-async function fetchExportData(range: DateRange): Promise<ExportPayload | null> {
+async function fetchExportData(range: DateRange, cacheKey?: string): Promise<ExportPayload | null> {
   try {
     const searchParams = new URLSearchParams({
       from: range.from,
       to: range.to,
     });
+    if (cacheKey) {
+      searchParams.set('_ck', cacheKey);
+    }
     const response = await fetch(`/api/settings/data/export?${searchParams.toString()}`, {
       method: 'GET',
       cache: 'no-store',
@@ -773,9 +776,11 @@ function downloadCsv(data: PreparedExportData, range: DateRange, t: Dictionary, 
 interface DataFormProps {
   t: Dictionary;
   userName: string;
+  /** User-specific cache key for browser HTTP cache isolation */
+  cacheKey?: string;
 }
 
-export function DataForm({ t, userName }: DataFormProps) {
+export function DataForm({ t, userName, cacheKey }: DataFormProps) {
   const { locale } = useTranslations();
   const [selectedPreset, setSelectedPreset] = useState<PeriodPreset | null>(null);
   const [customRange, setCustomRange] = useState<DateRange>({ from: '', to: '' });
@@ -837,7 +842,7 @@ export function DataForm({ t, userName }: DataFormProps) {
           return;
         }
 
-        const payload = await fetchExportData(range);
+        const payload = await fetchExportData(range, cacheKey);
         if (!payload) {
           return;
         }
@@ -932,7 +937,7 @@ export function DataForm({ t, userName }: DataFormProps) {
 
     setIsExportingCsv(true);
     try {
-      const payload = await fetchExportData(range);
+      const payload = await fetchExportData(range, cacheKey);
       if (!payload) {
         return;
       }

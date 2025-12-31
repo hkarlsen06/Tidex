@@ -133,6 +133,7 @@ export default async function AddShiftsPage({ params }: AddShiftsPageProps) {
           presetRules: PRESET_RULES,
           wageSnapshots,
         }}
+        cacheKey={user.id.slice(0, 8)}
       />
     </I18nProvider>
   );

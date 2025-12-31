@@ -27,6 +27,8 @@ type RecurringEditModalProps = {
   existingShifts: ExistingShift[];
   userSettings: UserSettings;
   presetRules: SupplementRule[];
+  /** User-specific cache key for browser HTTP cache isolation */
+  cacheKey?: string;
 };
 
 export function RecurringEditModal({
@@ -36,6 +38,7 @@ export function RecurringEditModal({
   existingShifts,
   userSettings,
   presetRules,
+  cacheKey,
 }: RecurringEditModalProps) {
   const { t } = useTranslations();
   const _locale = useLocale();
@@ -65,7 +68,10 @@ export function RecurringEditModal({
     async function loadRecurringData() {
       try {
         setLoading(true);
-        const response = await fetch(`/api/recurring/${recurringId}`);
+        const url = cacheKey
+          ? `/api/recurring/${recurringId}?_ck=${cacheKey}`
+          : `/api/recurring/${recurringId}`;
+        const response = await fetch(url);
         if (!response.ok) {
           throw new Error("Failed to load recurring shift");
         }
@@ -109,7 +115,7 @@ export function RecurringEditModal({
     }
 
     loadRecurringData();
-  }, [isOpen, recurringId, t]);
+  }, [isOpen, recurringId, t, cacheKey]);
 
   // Clear error on draft change
   useEffect(() => {
@@ -180,7 +186,7 @@ export function RecurringEditModal({
   if (!draft || loading) {
     return (
       <Dialog open={isOpen} onOpenChange={(open) => { if (!open && !pending) onClose(); }}>
-        <DialogContent className="sm:rounded-3xl max-w-[480px] max-h-[90vh] overflow-y-auto overflow-x-hidden">
+        <DialogContent className="sm:rounded-3xl max-w-120 max-h-[90vh] overflow-y-auto overflow-x-hidden">
           <DialogTitle className="sr-only">{t.pages.shifts.recurringEdit.title}</DialogTitle>
           <div className="flex items-center justify-center py-8">
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-border-subtle border-t-brand-highlight" />
@@ -192,7 +198,7 @@ export function RecurringEditModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open && !pending) onClose(); }}>
-      <DialogContent className="sm:rounded-3xl max-w-[480px] max-h-[90vh] overflow-y-auto overflow-x-hidden">
+      <DialogContent className="sm:rounded-3xl max-w-120 max-h-[90vh] overflow-y-auto overflow-x-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-text-primary">
             <Clock className="h-5 w-5 text-text-muted" aria-hidden />

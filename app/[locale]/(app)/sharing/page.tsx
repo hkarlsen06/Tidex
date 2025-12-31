@@ -154,6 +154,7 @@ export default async function SharingPage({ params, searchParams }: SharingPageP
         presetRules={PRESET_RULES}
         showEarnings={sharedData.showEarnings}
         highlightDates={highlightDates}
+        cacheKey={user.id.slice(0, 8)}
       />
     </I18nProvider>
   );
