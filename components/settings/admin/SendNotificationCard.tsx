@@ -178,7 +178,7 @@ export function SendNotificationCard({ onSuccess }: Props) {
               onValueChange={(v) => setSpecificUserId(v)}
             >
               <SelectTrigger id="specific-user-select">
-                <SelectValue placeholder={usersLoading ? "Laster brukere..." : "Velg bruker"} />
+                <SelectValue placeholder={usersLoading ? "Loading users..." : "Select user"} />
               </SelectTrigger>
               <SelectContent>
                 {users.map((user) => (

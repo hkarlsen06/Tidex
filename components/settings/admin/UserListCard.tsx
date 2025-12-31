@@ -48,8 +48,8 @@ const PLAN_LABELS: Record<string, string> = {
   admin: "Admin",
   pro: "Pro",
   max: "Max",
-  trial: "Prøve",
-  free: "Gratis",
+  trial: "Trial",
+  free: "Free",
 };
 
 const PLAN_VARIANTS: Record<
@@ -252,7 +252,7 @@ export function UserListCard({ refreshTrigger }: Props) {
   const formatDate = (dateString: string | null) => {
     if (!dateString) return "-";
     const date = new Date(dateString);
-    return date.toLocaleDateString("nb-NO", {
+    return date.toLocaleDateString("en-US", {
       year: "numeric",
       month: "short",
       day: "numeric",
@@ -262,17 +262,17 @@ export function UserListCard({ refreshTrigger }: Props) {
   const getActionTitle = (type: ActionType): string => {
     switch (type) {
       case "ban":
-        return "Utesteng bruker?";
+        return "Ban user?";
       case "unban":
-        return "Fjern utestengelse?";
+        return "Remove ban?";
       case "grant_grandfathered":
-        return "Gi livstidstilgang?";
+        return "Grant lifetime access?";
       case "revoke_grandfathered":
-        return "Fjern livstidstilgang?";
+        return "Revoke lifetime access?";
       case "create_trial":
-        return "Opprett prøveperiode?";
+        return "Create trial?";
       case "revoke_trial":
-        return "Avslutt prøveperiode?";
+        return "End trial?";
     }
   };
 
@@ -280,17 +280,17 @@ export function UserListCard({ refreshTrigger }: Props) {
     const contact = user.email ?? user.phone ?? user.id.slice(0, 8);
     switch (type) {
       case "ban":
-        return `Brukeren ${contact} vil bli utestengt fra tjenesten.`;
+        return `User ${contact} will be banned from the service.`;
       case "unban":
-        return `Brukeren ${contact} vil få tilgang til tjenesten igjen.`;
+        return `User ${contact} will regain access to the service.`;
       case "grant_grandfathered":
-        return `Brukeren ${contact} vil få livstidstilgang til Pro-funksjoner.`;
+        return `User ${contact} will be granted lifetime access to Pro features.`;
       case "revoke_grandfathered":
-        return `Brukeren ${contact} vil miste livstidstilgang til Pro-funksjoner.`;
+        return `User ${contact} will lose lifetime access to Pro features.`;
       case "create_trial":
-        return `Brukeren ${contact} vil få 30 dagers prøveperiode med Pro-tilgang.`;
+        return `User ${contact} will receive a 30-day trial with Pro access.`;
       case "revoke_trial":
-        return `Prøveperioden til ${contact} vil avsluttes umiddelbart.`;
+        return `The trial for ${contact} will end immediately.`;
     }
   };
 
@@ -301,7 +301,7 @@ export function UserListCard({ refreshTrigger }: Props) {
   return (
     <Card className="p-6">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold">Brukere</h3>
+        <h3 className="text-lg font-semibold">Users</h3>
         <Button
           variant="ghost"
           size="icon"
@@ -314,7 +314,7 @@ export function UserListCard({ refreshTrigger }: Props) {
 
       <div className="flex gap-2 mb-4">
         <Input
-          placeholder="Søk etter e-post, tlf eller navn..."
+          placeholder="Search by email, phone, or name..."
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSearch()}
@@ -328,15 +328,15 @@ export function UserListCard({ refreshTrigger }: Props) {
       {error && <p className="text-red-600 mb-4">{error}</p>}
       {resultsArePartial && (
         <p className="text-yellow-600 text-sm mb-4">
-          Søkeresultatene kan være ufullstendige. Prøv et mer spesifikt søk.
+          Search results may be incomplete. Try a more specific search.
         </p>
       )}
 
       {loading ? (
-        <div className="text-center py-8 text-text-muted">Laster...</div>
+        <div className="text-center py-8 text-text-muted">Loading...</div>
       ) : users.length === 0 ? (
         <div className="text-center py-8 text-text-muted">
-          Ingen brukere funnet
+          No users found
         </div>
       ) : (
         <>
@@ -344,14 +344,14 @@ export function UserListCard({ refreshTrigger }: Props) {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border">
-                  <th className="text-left py-2 px-2 font-medium">Navn</th>
+                  <th className="text-left py-2 px-2 font-medium">Name</th>
                   <th className="text-left py-2 px-2 font-medium">ID</th>
-                  <th className="text-left py-2 px-2 font-medium">E-post/tlf</th>
+                  <th className="text-left py-2 px-2 font-medium">Email/Phone</th>
                   <th className="text-left py-2 px-2 font-medium">
-                    Sist aktiv
+                    Last Active
                   </th>
-                  <th className="text-left py-2 px-2 font-medium">Abo.</th>
-                  <th className="text-left py-2 px-2 font-medium">Før PW</th>
+                  <th className="text-left py-2 px-2 font-medium">Plan</th>
+                  <th className="text-left py-2 px-2 font-medium">Status</th>
                   <th className="text-right py-2 px-2 font-medium">
                     ...
                   </th>
@@ -372,7 +372,7 @@ export function UserListCard({ refreshTrigger }: Props) {
                         <button
                           onClick={() => copyToClipboard(user.id, user.id)}
                           className="p-1 hover:bg-surface-secondary rounded"
-                          title="Kopier ID"
+                          title="Copy ID"
                         >
                           {copiedId === user.id ? (
                             <Check className="h-3 w-3 text-green-600" />
@@ -394,7 +394,7 @@ export function UserListCard({ refreshTrigger }: Props) {
                                 copyToClipboard(contact, `contact-${user.id}`)
                               }
                               className="p-1 hover:bg-surface-secondary rounded shrink-0"
-                              title={user.email ? "Kopier e-post" : "Kopier tlf"}
+                              title={user.email ? "Copy email" : "Copy phone"}
                             >
                               {copiedId === `contact-${user.id}` ? (
                                 <Check className="h-3 w-3 text-green-600" />
@@ -417,10 +417,10 @@ export function UserListCard({ refreshTrigger }: Props) {
                     <td className="py-2 px-2">
                       <div className="flex gap-1 flex-wrap">
                         {user.isGrandfathered && (
-                          <Badge variant="default">Livstid</Badge>
+                          <Badge variant="default">Lifetime</Badge>
                         )}
                         {user.isBanned && (
-                          <Badge variant="destructive">Utestengt</Badge>
+                          <Badge variant="destructive">Banned</Badge>
                         )}
                         {!user.isGrandfathered && !user.isBanned && (
                           <span className="text-text-muted">-</span>
@@ -453,7 +453,7 @@ export function UserListCard({ refreshTrigger }: Props) {
                                   }
                                 >
                                   <UserCheck className="h-4 w-4 mr-2" />
-                                  Fjern utestengelse
+                                  Remove ban
                                 </DropdownMenuItem>
                               ) : (
                                 <DropdownMenuItem
@@ -467,7 +467,7 @@ export function UserListCard({ refreshTrigger }: Props) {
                                   className="text-destructive focus:text-destructive"
                                 >
                                   <Ban className="h-4 w-4 mr-2" />
-                                  Utesteng bruker
+                                  Ban user
                                 </DropdownMenuItem>
                               )}
                               <DropdownMenuSeparator />
@@ -487,7 +487,7 @@ export function UserListCard({ refreshTrigger }: Props) {
                               className="text-destructive focus:text-destructive"
                             >
                               <X className="h-4 w-4 mr-2" />
-                              Fjern livstidstilgang
+                              Revoke lifetime access
                             </DropdownMenuItem>
                           ) : (
                             <DropdownMenuItem
@@ -500,7 +500,7 @@ export function UserListCard({ refreshTrigger }: Props) {
                               }
                             >
                               <Gift className="h-4 w-4 mr-2" />
-                              Gi livstidstilgang
+                              Grant lifetime access
                             </DropdownMenuItem>
                           )}
 
@@ -517,7 +517,7 @@ export function UserListCard({ refreshTrigger }: Props) {
                               className="text-destructive focus:text-destructive"
                             >
                               <X className="h-4 w-4 mr-2" />
-                              Avslutt prøveperiode
+                              End trial
                             </DropdownMenuItem>
                           ) : user.plan === "free" ? (
                             <DropdownMenuItem
@@ -530,7 +530,7 @@ export function UserListCard({ refreshTrigger }: Props) {
                               }
                             >
                               <Play className="h-4 w-4 mr-2" />
-                              Gi prøveperiode
+                              Grant trial
                             </DropdownMenuItem>
                           ) : null}
                         </DropdownMenuContent>
@@ -547,12 +547,12 @@ export function UserListCard({ refreshTrigger }: Props) {
             {loadingMore && (
               <div className="flex items-center justify-center gap-2 text-text-muted">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                <span>Laster flere...</span>
+                <span>Loading more...</span>
               </div>
             )}
             {!hasMore && users.length > 0 && (
               <p className="text-sm text-text-muted">
-                Alle brukere er lastet ({users.length} totalt)
+                All users loaded ({users.length} total)
               </p>
             )}
           </div>
@@ -579,7 +579,7 @@ export function UserListCard({ refreshTrigger }: Props) {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Avbryt</AlertDialogCancel>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
                 if (confirmDialog.user) {
@@ -592,7 +592,7 @@ export function UserListCard({ refreshTrigger }: Props) {
                   : undefined
               }
             >
-              Bekreft
+              Confirm
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -7,7 +7,7 @@ import {
   type BroadcastRecord,
 } from "@/app/[locale]/(app)/settings/admin/_actions/getBroadcastHistory";
 import { formatDistanceToNow } from "date-fns";
-import { nb } from "date-fns/locale";
+import { enUS } from "date-fns/locale";
 
 const TARGET_LABELS: Record<string, string> = {
   all: "All users",
@@ -64,7 +64,7 @@ export function NotificationHistoryCard({
                   <p className="text-sm text-text-muted">
                     {formatDistanceToNow(new Date(record.created_at), {
                       addSuffix: true,
-                      locale: nb,
+                      locale: enUS,
                     })}
                     {" · "}
                     {TARGET_LABELS[record.target] || record.target}

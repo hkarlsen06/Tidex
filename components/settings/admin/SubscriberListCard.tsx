@@ -41,8 +41,8 @@ type FilterType = "all" | "pro" | "max" | "grandfathered" | "trial";
 const PLAN_LABELS: Record<string, string> = {
   pro: "Pro",
   max: "Max",
-  trial: "Prøve",
-  free: "Gratis",
+  trial: "Trial",
+  free: "Free",
 };
 
 const PLAN_VARIANTS: Record<
@@ -141,7 +141,7 @@ export function SubscriberListCard({ refreshTrigger }: Props) {
   const formatDate = (dateString: string | null) => {
     if (!dateString) return "-";
     const date = new Date(dateString);
-    return date.toLocaleDateString("nb-NO", {
+    return date.toLocaleDateString("en-US", {
       year: "numeric",
       month: "short",
       day: "numeric",
@@ -155,7 +155,7 @@ export function SubscriberListCard({ refreshTrigger }: Props) {
   return (
     <Card className="p-6">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold">Abonnenter</h3>
+        <h3 className="text-lg font-semibold">Subscribers</h3>
         <div className="flex items-center gap-2">
           <Button
             variant="ghost"
@@ -173,11 +173,11 @@ export function SubscriberListCard({ refreshTrigger }: Props) {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Alle</SelectItem>
+              <SelectItem value="all">All</SelectItem>
               <SelectItem value="pro">Pro</SelectItem>
               <SelectItem value="max">Max</SelectItem>
-              <SelectItem value="grandfathered">Livstid</SelectItem>
-              <SelectItem value="trial">Prøveperiode</SelectItem>
+              <SelectItem value="grandfathered">Lifetime</SelectItem>
+              <SelectItem value="trial">Trial</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -186,22 +186,22 @@ export function SubscriberListCard({ refreshTrigger }: Props) {
       {error && <p className="text-red-600 mb-4">{error}</p>}
 
       {loading ? (
-        <div className="text-center py-8 text-text-muted">Laster...</div>
+        <div className="text-center py-8 text-text-muted">Loading...</div>
       ) : subscribers.length === 0 ? (
         <div className="text-center py-8 text-text-muted">
-          Ingen abonnenter funnet
+          No subscribers found
         </div>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border">
-                <th className="text-left py-2 px-2 font-medium">Navn</th>
+                <th className="text-left py-2 px-2 font-medium">Name</th>
                 <th className="text-left py-2 px-2 font-medium">ID</th>
-                <th className="text-left py-2 px-2 font-medium">E-post/tlf</th>
+                <th className="text-left py-2 px-2 font-medium">Email/Phone</th>
                 <th className="text-left py-2 px-2 font-medium">Plan</th>
-                <th className="text-left py-2 px-2 font-medium">Livstid</th>
-                <th className="text-left py-2 px-2 font-medium">Utløper</th>
+                <th className="text-left py-2 px-2 font-medium">Lifetime</th>
+                <th className="text-left py-2 px-2 font-medium">Expires</th>
                 <th className="text-right py-2 px-2 font-medium">...</th>
               </tr>
             </thead>
@@ -224,7 +224,7 @@ export function SubscriberListCard({ refreshTrigger }: Props) {
                           copyToClipboard(subscriber.userId, subscriber.userId)
                         }
                         className="p-1 hover:bg-surface-secondary rounded"
-                        title="Kopier ID"
+                        title="Copy ID"
                       >
                         {copiedId === subscriber.userId ? (
                           <Check className="h-3 w-3 text-green-600" />
@@ -246,7 +246,7 @@ export function SubscriberListCard({ refreshTrigger }: Props) {
                               copyToClipboard(contact, `contact-${subscriber.userId}`)
                             }
                             className="p-1 hover:bg-surface-secondary rounded shrink-0"
-                            title={subscriber.email ? "Kopier e-post" : "Kopier tlf"}
+                            title={subscriber.email ? "Copy email" : "Copy phone"}
                           >
                             {copiedId === `contact-${subscriber.userId}` ? (
                               <Check className="h-3 w-3 text-green-600" />
@@ -265,7 +265,7 @@ export function SubscriberListCard({ refreshTrigger }: Props) {
                   </td>
                   <td className="py-2 px-2">
                     {subscriber.isGrandfathered ? (
-                      <Badge variant="default">Ja</Badge>
+                      <Badge variant="default">Yes</Badge>
                     ) : (
                       <span className="text-text-muted">-</span>
                     )}
@@ -297,7 +297,7 @@ export function SubscriberListCard({ refreshTrigger }: Props) {
                             className="text-destructive focus:text-destructive"
                           >
                             <X className="h-4 w-4 mr-2" />
-                            Fjern livstidstilgang
+                            Revoke lifetime access
                           </DropdownMenuItem>
                         )}
                         {subscriber.plan === "trial" ? (
@@ -312,7 +312,7 @@ export function SubscriberListCard({ refreshTrigger }: Props) {
                             className="text-destructive focus:text-destructive"
                           >
                             <X className="h-4 w-4 mr-2" />
-                            Avslutt prøveperiode
+                            End trial
                           </DropdownMenuItem>
                         ) : subscriber.plan === "free" ? (
                           <DropdownMenuItem
@@ -325,7 +325,7 @@ export function SubscriberListCard({ refreshTrigger }: Props) {
                             }
                           >
                             <Play className="h-4 w-4 mr-2" />
-                            Gi prøveperiode
+                            Grant trial
                           </DropdownMenuItem>
                         ) : null}
                       </DropdownMenuContent>
@@ -349,21 +349,21 @@ export function SubscriberListCard({ refreshTrigger }: Props) {
           <AlertDialogHeader>
             <AlertDialogTitle>
               {confirmDialog.type === "revoke_grandfathered"
-                ? "Fjern livstidstilgang?"
+                ? "Revoke lifetime access?"
                 : confirmDialog.type === "revoke_trial"
-                  ? "Avslutt prøveperiode?"
-                  : "Opprett prøveperiode?"}
+                  ? "End trial?"
+                  : "Create trial?"}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {confirmDialog.type === "revoke_grandfathered"
-                ? `Er du sikker på at du vil fjerne livstidstilgang for ${confirmDialog.subscriber ? getContact(confirmDialog.subscriber) : ""}? Brukeren vil miste tilgang til Pro-funksjoner.`
+                ? `Are you sure you want to revoke lifetime access for ${confirmDialog.subscriber ? getContact(confirmDialog.subscriber) : ""}? The user will lose access to Pro features.`
                 : confirmDialog.type === "revoke_trial"
-                  ? `Er du sikker på at du vil avslutte prøveperioden for ${confirmDialog.subscriber ? getContact(confirmDialog.subscriber) : ""}? Brukeren vil miste tilgang til Pro-funksjoner umiddelbart.`
-                  : `Brukeren ${confirmDialog.subscriber ? getContact(confirmDialog.subscriber) : ""} vil få 30 dagers prøveperiode med Pro-tilgang.`}
+                  ? `Are you sure you want to end the trial for ${confirmDialog.subscriber ? getContact(confirmDialog.subscriber) : ""}? The user will lose access to Pro features immediately.`
+                  : `User ${confirmDialog.subscriber ? getContact(confirmDialog.subscriber) : ""} will receive a 30-day trial with Pro access.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Avbryt</AlertDialogCancel>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
                 if (confirmDialog.subscriber) {
@@ -382,7 +382,7 @@ export function SubscriberListCard({ refreshTrigger }: Props) {
                   : "bg-destructive text-destructive-foreground hover:bg-destructive/90"
               }
             >
-              Bekreft
+              Confirm
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
