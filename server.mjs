@@ -19,7 +19,15 @@ import { execSync } from 'child_process';
 process.noDeprecation = true;
 
 // Allow self-signed certificates for local Supabase in development
+// Suppress the NODE_TLS_REJECT_UNAUTHORIZED warning since this is intentional for local dev
 if (process.env.NODE_ENV !== 'production') {
+  const originalEmitWarning = process.emitWarning;
+  process.emitWarning = (warning, ...args) => {
+    if (typeof warning === 'string' && warning.includes('NODE_TLS_REJECT_UNAUTHORIZED')) {
+      return;
+    }
+    originalEmitWarning.call(process, warning, ...args);
+  };
   process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 }
 
