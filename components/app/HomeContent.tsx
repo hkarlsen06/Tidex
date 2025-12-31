@@ -28,6 +28,8 @@ type HomeContentProps = {
   payoutTaxSettings?: PayoutTaxSettings;
   /** User-specific cache key to ensure browser HTTP cache is per-user */
   cacheKey: string;
+  /** Months that were preloaded in SSR (format: "YYYY-MM") */
+  preloadedMonths?: string[];
 };
 
 function calculateMonthData(
@@ -122,7 +124,7 @@ function isFutureMonth(date: Date): boolean {
   );
 }
 
-export function HomeContent({ shifts: initialShifts, settings, payoutTaxSettings, cacheKey }: HomeContentProps) {
+export function HomeContent({ shifts: initialShifts, settings, payoutTaxSettings, cacheKey, preloadedMonths }: HomeContentProps) {
   const { t, locale } = useTranslations();
   const formatCurrency = useFormatCurrency();
   const router = useRouter();
@@ -158,12 +160,15 @@ export function HomeContent({ shifts: initialShifts, settings, payoutTaxSettings
   // Use a separate flag to prevent re-initialization in React Strict Mode
   if (!hasInitializedRef.current) {
     hasInitializedRef.current = true;
-    // Only mark current month as loaded (SSR data explicitly loads current month only)
-    // Do NOT mark other months even if they have shifts in initialShifts,
-    // as those might be incomplete data (e.g., recurring virtual shifts spanning multiple months)
-    const now = new Date();
-    const currentKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-    loadedMonthsRef.current.add(currentKey);
+    // Mark all preloaded months as loaded (SSR now loads 3 months: prev, current, next)
+    if (preloadedMonths && preloadedMonths.length > 0) {
+      preloadedMonths.forEach(key => loadedMonthsRef.current.add(key));
+    } else {
+      // Fallback: only mark current month if preloadedMonths not provided
+      const now = new Date();
+      const currentKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      loadedMonthsRef.current.add(currentKey);
+    }
   }
 
   // Combine initial shifts with any dynamically loaded shifts, letting newer data override older entries
@@ -246,13 +251,14 @@ export function HomeContent({ shifts: initialShifts, settings, payoutTaxSettings
     }
   }, [getMonthKey, cacheKey]);
 
-  // Proactive prefetch: Load adjacent months (prev, next) whenever month changes
-  // Current month is already loaded from SSR, so we skip it to avoid redundant fetches
+  // Proactive prefetch: Load adjacent months when navigating outside the preloaded window
+  // SSR preloads 3 months (prev, current, next), so this only triggers when user
+  // navigates beyond that window. fetchMonth skips already-loaded months.
   useEffect(() => {
     const selectedYear = month.getFullYear();
     const selectedMonthNum = month.getMonth() + 1;
 
-    // Calculate prev and next months
+    // Calculate prev and next months relative to selected month
     const prevDate = new Date(selectedYear, selectedMonthNum - 2, 1);
     const nextDate = new Date(selectedYear, selectedMonthNum, 1);
 
@@ -261,8 +267,7 @@ export function HomeContent({ shifts: initialShifts, settings, payoutTaxSettings
     const nextYear = nextDate.getFullYear();
     const nextMonthNum = nextDate.getMonth() + 1;
 
-    // Fetch adjacent months in parallel (current month already loaded from SSR)
-    // fetchMonth internally skips already-loaded months via loadedMonthsRef
+    // Fetch adjacent months in parallel (skips if already loaded from SSR or previous fetches)
     Promise.all([
       fetchMonth(prevYear, prevMonthNum),
       fetchMonth(nextYear, nextMonthNum),

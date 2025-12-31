@@ -5,6 +5,8 @@ import { verifySession } from "@/data-access/auth";
 import { getComputedShifts } from "@/data-access/shifts";
 import {
   getCurrentYearMonth,
+  getPreviousYearMonth,
+  getNextYearMonth,
   getMonthStart,
   getMonthEnd
 } from "@/lib/date-utils";
@@ -41,21 +43,36 @@ export default async function Home({ params }: HomeProps) {
     redirect("/onboarding");
   }
 
-  // Performance: Load only the current month on the initial request
-  // Adjacent months are fetched on the client after hydration (see HomeContent)
-  // This reduces TTFB and payload size significantly, improving FCP/LCP.
+  // Load current month + adjacent months (prev, next) in a single SSR request
+  // This eliminates client-side API calls for the common 3-month navigation window
   const current = getCurrentYearMonth();
+  const previous = getPreviousYearMonth();
+  const next = getNextYearMonth();
+
   const { shifts, settings, payoutTaxSettings } = await getComputedShifts(user.id, {
-    startDate: getMonthStart(current.year, current.month),
-    endDate: getMonthEnd(current.year, current.month),
-    limit: 60, // ~50 shifts is typical for a month; leave headroom
+    startDate: getMonthStart(previous.year, previous.month),
+    endDate: getMonthEnd(next.year, next.month),
+    limit: 200, // ~50 shifts per month × 3 months + headroom
     year: current.year,
     month: current.month,
   });
 
+  // Pass which months were preloaded so HomeContent knows not to fetch them
+  const preloadedMonths = [
+    `${previous.year}-${String(previous.month).padStart(2, '0')}`,
+    `${current.year}-${String(current.month).padStart(2, '0')}`,
+    `${next.year}-${String(next.month).padStart(2, '0')}`,
+  ];
+
   return (
     <I18nProvider locale={_locale as Locale} dictionary={dictionary} namespaces={['pages.home', 'pages.shifts']}>
-      <HomeContent shifts={shifts} settings={settings} payoutTaxSettings={payoutTaxSettings} cacheKey={user.id.slice(0, 8)} />
+      <HomeContent
+        shifts={shifts}
+        settings={settings}
+        payoutTaxSettings={payoutTaxSettings}
+        cacheKey={user.id.slice(0, 8)}
+        preloadedMonths={preloadedMonths}
+      />
     </I18nProvider>
   );
 }
