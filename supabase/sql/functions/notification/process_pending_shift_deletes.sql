@@ -138,8 +138,9 @@ BEGIN
       changes_hash := md5(owner_rec.owner_id::text || now()::text || random()::text);
 
       -- Route instant notifications
-      -- Note: ss.blocked controls visibility, NOT notifications
+      -- Note: ss.blocked controls visibility ONLY (hides from /sharing list), NOT notifications
       -- notification_frequency controls whether user gets notified (instant/summary/muted)
+      -- Blocked users still receive notifications - they just don't see the sharer in their list
       INSERT INTO notification_queue (
         type,
         recipient_id,
