@@ -657,7 +657,7 @@ Edge functions are stored locally in `supabase/functions/` and deployed via Supa
 
 - **Location**: `supabase/functions/<function-name>/index.ts`
 - **Shared code**: `supabase/functions/_shared/` (e.g., `cors.ts`)
-- **Deployment**: Use Supabase CLI (`supabase functions deploy <name>`) or dashboard, NOT the MCP `deploy_edge_function` tool
+- **Deployment**: Use Supabase CLI (`supabase functions deploy <name> --no-verify-jwt`) - ALWAYS use CLI, never the MCP `deploy_edge_function` tool
 - **Reading deployed code**: Use `mcp__supabase__get_edge_function` to fetch the latest deployed version if needed
 
 **CRITICAL: Always set `verify_jwt: false` for most edge functions**
@@ -688,6 +688,79 @@ When `verify_jwt: true`, the function expects a valid Supabase JWT token. Cron j
 - Functions called by other edge functions
 - Functions using service_role authentication
 - Webhook endpoints (implement custom auth validation in the function)
+
+## Supabase SQL Functions & Cron Jobs
+
+**Local tracking files for database functions and scheduled jobs.**
+
+### Location
+
+- **SQL Functions**: `supabase/sql/functions/<category>/*.sql`
+- **Cron Jobs**: `supabase/sql/cron/*.md`
+
+### SQL Function Categories
+
+| Folder | Description | Examples |
+|--------|-------------|----------|
+| `admin/` | Admin broadcast and targeting functions | `admin_count_target_users_*`, `admin_get_*` |
+| `auth/` | Authentication, MFA, and entitlement checks | `is_admin`, `check_mfa_aal`, `has_shift_storage_entitlement` |
+| `notification/` | Shift notification processing | `process_pending_shift_deletes`, `run_shift_notification_workers` |
+| `trigger/` | Database trigger functions | `queue_shift_created_notification`, `set_updated_at` |
+| `utility/` | General utility functions | `try_parse_time`, `jsonb_has_content`, `get_tariff_rate` |
+
+### Maintenance Rules
+
+**CRITICAL: Keep local files in sync with remote database**
+
+When modifying SQL functions or cron jobs in the remote Supabase database:
+
+1. **Always update the corresponding local file** after applying changes to the remote database
+2. **For new functions**: Create a new `.sql` file in the appropriate category folder under `supabase/sql/functions/`
+3. **For new cron jobs**: Create a new `.md` file in `supabase/sql/cron/` documenting the job
+4. **For modifications**: Update the existing local file to match the remote changes
+5. **For deletions**: Delete the corresponding local file
+
+### SQL Function File Format
+
+Each function file should include:
+- Comment header with function name and description
+- The complete `CREATE OR REPLACE FUNCTION` statement
+- Comments explaining what the function does and where it's used
+
+### Cron Job Documentation Format
+
+Each cron job file should include:
+- Job name and overview
+- Schedule (cron expression with human-readable translation)
+- SQL command being executed
+- Tables affected
+- Dependencies (vault secrets, extensions)
+- Related functions and edge functions
+- Monitoring queries
+
+### Current Cron Jobs
+
+| Job Name | Schedule | Description |
+|----------|----------|-------------|
+| `process-shift-notifications` | `* * * * *` | Processes shift changes and triggers notifications |
+| `process-shift-reminders` | `* * * * *` | Triggers shift reminder edge function |
+| `cleanup-shift-reminders-sent` | `0 3 * * *` | Cleans up old reminder records (7 days) |
+| `cleanup-shift-notification-events` | `0 4 * * *` | Cleans up resolved notification events (7 days) |
+
+### Querying Current State
+
+To list all cron jobs in the database:
+```sql
+SELECT jobname, schedule, command, active FROM cron.job ORDER BY jobname;
+```
+
+To list all public schema functions:
+```sql
+SELECT proname FROM pg_proc p
+JOIN pg_namespace n ON p.pronamespace = n.oid
+WHERE n.nspname = 'public'
+ORDER BY proname;
+```
 
 ## Key Principles
 
