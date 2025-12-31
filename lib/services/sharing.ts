@@ -490,7 +490,7 @@ export const SharingServiceLive = Layer.effect(
                 usersMap.set(user.id, {
                   email: user.email ?? null,
                   phone: user.phone ?? null,
-                  firstName: (metadata.first_name as string) ?? (metadata.full_name as string) ?? (metadata.name as string) ?? null,
+                  firstName: (metadata.full_name as string) ?? (metadata.name as string) ?? null,
                   oauthAvatarUrl: (metadata.avatar_url as string) ?? (metadata.picture as string) ?? null,
                 });
               }
@@ -588,7 +588,7 @@ export const SharingServiceLive = Layer.effect(
                 usersMap.set(user.id, {
                   email: user.email ?? null,
                   phone: user.phone ?? null,
-                  firstName: (metadata.first_name as string) ?? (metadata.name as string) ?? null,
+                  firstName: (metadata.full_name as string) ?? (metadata.name as string) ?? null,
                   oauthAvatarUrl: (metadata.avatar_url as string) ?? (metadata.picture as string) ?? null,
                 });
               }
@@ -1180,7 +1180,7 @@ export const SharingServiceLive = Layer.effect(
                 usersMap.set(user.id, {
                   email: user.email ?? null,
                   phone: user.phone ?? null,
-                  firstName: (metadata.first_name as string) ?? (metadata.full_name as string) ?? (metadata.name as string) ?? null,
+                  firstName: (metadata.full_name as string) ?? (metadata.name as string) ?? null,
                   oauthAvatarUrl: (metadata.avatar_url as string) ?? (metadata.picture as string) ?? null,
                 });
               }
@@ -1278,7 +1278,7 @@ export const SharingServiceLive = Layer.effect(
                 usersMap.set(user.id, {
                   email: user.email ?? null,
                   phone: user.phone ?? null,
-                  firstName: (metadata.first_name as string) ?? (metadata.full_name as string) ?? (metadata.name as string) ?? null,
+                  firstName: (metadata.full_name as string) ?? (metadata.name as string) ?? null,
                   oauthAvatarUrl: (metadata.avatar_url as string) ?? (metadata.picture as string) ?? null,
                 });
               }

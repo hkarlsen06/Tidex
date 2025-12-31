@@ -98,7 +98,6 @@ export default async function RootLayout({
   // Extract user metadata from JWT claims (available in user_metadata)
   const userMetadata = claims.user_metadata ?? {};
   const rawUserName =
-    (userMetadata.first_name as string | undefined) ??
     (userMetadata.full_name as string | undefined) ??
     (userMetadata.name as string | undefined) ??
     (userMetadata.display_name as string | undefined) ??
