@@ -40,17 +40,17 @@ export function AdminDashboard({ dictionary }: { dictionary: Dictionary }) {
       <div>
         <h2 className="text-2xl font-bold">Admin Dashboard</h2>
         <p className="text-text-secondary mt-1">
-          Administrer brukere, abonnementer og varsler
+          Manage users, subscriptions, and notifications
         </p>
       </div>
 
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
         <div className="overflow-x-auto mb-6">
           <TabsList className="inline-flex w-auto min-w-full">
-            <TabsTrigger value="notifications" className="shrink-0">Varsler</TabsTrigger>
-            <TabsTrigger value="users" className="shrink-0">Brukere</TabsTrigger>
-            <TabsTrigger value="subscribers" className="shrink-0">Abonnenter</TabsTrigger>
-            <TabsTrigger value="auditlog" className="shrink-0">Aktivitetslogg</TabsTrigger>
+            <TabsTrigger value="notifications" className="shrink-0">Notifications</TabsTrigger>
+            <TabsTrigger value="users" className="shrink-0">Users</TabsTrigger>
+            <TabsTrigger value="subscribers" className="shrink-0">Subscribers</TabsTrigger>
+            <TabsTrigger value="auditlog" className="shrink-0">Audit Log</TabsTrigger>
           </TabsList>
         </div>
 

@@ -55,7 +55,7 @@ export function AuditLogCard({ refreshTrigger }: Props) {
 
   const formatTimestamp = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleString("nb-NO", {
+    return date.toLocaleString("en-US", {
       year: "numeric",
       month: "2-digit",
       day: "2-digit",
@@ -87,7 +87,7 @@ export function AuditLogCard({ refreshTrigger }: Props) {
   return (
     <Card className="p-6">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold">Aktivitetslogg</h3>
+        <h3 className="text-lg font-semibold">Audit Log</h3>
         <div className="flex items-center gap-2">
           <Button
             variant="ghost"
@@ -105,7 +105,7 @@ export function AuditLogCard({ refreshTrigger }: Props) {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Alle handlinger</SelectItem>
+              <SelectItem value="all">All actions</SelectItem>
               {ADMIN_ACTIONS.map((action) => (
                 <SelectItem key={action} value={action}>
                   {ADMIN_ACTION_CONFIG[action].label}
@@ -119,10 +119,10 @@ export function AuditLogCard({ refreshTrigger }: Props) {
       {error && <p className="text-red-600 mb-4">{error}</p>}
 
       {loading ? (
-        <div className="text-center py-8 text-text-muted">Laster...</div>
+        <div className="text-center py-8 text-text-muted">Loading...</div>
       ) : entries.length === 0 ? (
         <div className="text-center py-8 text-text-muted">
-          Ingen aktivitet funnet
+          No activity found
         </div>
       ) : (
         <div className="space-y-2">
@@ -178,7 +178,7 @@ export function AuditLogCard({ refreshTrigger }: Props) {
                       </div>
                       {entry.targetUserId && (
                         <div>
-                          <span className="text-text-muted">Mål ID:</span>
+                          <span className="text-text-muted">Target ID:</span>
                           <code className="ml-2 text-xs">
                             {entry.targetUserId.slice(0, 8)}...
                           </code>

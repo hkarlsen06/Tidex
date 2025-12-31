@@ -26,25 +26,25 @@ export interface ActionConfig {
 }
 
 export const ADMIN_ACTION_CONFIG: Record<AdminAction, ActionConfig> = {
-  user_ban: { label: "Utestengt bruker", severity: "destructive" },
-  user_unban: { label: "Fjernet utestengelse", severity: "info" },
-  grant_grandfathered: { label: "Ga livstidstilgang", severity: "info" },
+  user_ban: { label: "Banned user", severity: "destructive" },
+  user_unban: { label: "Removed ban", severity: "info" },
+  grant_grandfathered: { label: "Granted lifetime access", severity: "info" },
   revoke_grandfathered: {
-    label: "Fjernet livstidstilgang",
+    label: "Revoked lifetime access",
     severity: "warning",
   },
   create_trial_subscription: {
-    label: "Opprettet prøveperiode",
+    label: "Created trial",
     severity: "info",
   },
   revoke_trial_subscription: {
-    label: "Avsluttet prøveperiode",
+    label: "Ended trial",
     severity: "warning",
   },
-  broadcast_sent: { label: "Sendte varsel", severity: "info" },
-  user_list_viewed: { label: "Viste brukerliste", severity: "info" },
-  user_lookup: { label: "Søkte opp bruker", severity: "info" },
-  admin_action_failed: { label: "Handling feilet", severity: "destructive" },
+  broadcast_sent: { label: "Sent notification", severity: "info" },
+  user_list_viewed: { label: "Viewed user list", severity: "info" },
+  user_lookup: { label: "Looked up user", severity: "info" },
+  admin_action_failed: { label: "Action failed", severity: "destructive" },
 } as const;
 
 /**
