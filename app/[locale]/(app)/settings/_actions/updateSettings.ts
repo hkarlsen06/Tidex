@@ -156,22 +156,35 @@ export async function connectGoogleAccount(redirectUrl: string) {
 }
 
 export async function disconnectGoogleAccount() {
-  const { user } = await verifySession();
+  // verifySession() uses getClaims() which parses the JWT locally.
+  // The JWT does NOT contain the identities array, so we must fetch fresh user data.
+  await verifySession(); // Still verify user is authenticated
   const supabase = await createSupabaseServerClient();
 
+  // Fetch fresh user data to get the identities array
+  const { data: { user: freshUser }, error: userError } = await supabase.auth.getUser();
+
+  if (userError || !freshUser) {
+    throw new Error('Failed to get user data');
+  }
+
   // Find Google identity
-  const googleIdentity = user.identities?.find(
+  const googleIdentity = freshUser.identities?.find(
     (identity: { provider: string }) => identity.provider === 'google'
   );
 
   if (!googleIdentity) {
+    logger.error('No Google identity found:', {
+      userId: freshUser.id,
+      identities: freshUser.identities?.map(i => i.provider) ?? [],
+    });
     throw new Error('Ingen Google-konto funnet');
   }
 
   logger.info('Unlinking Google identity:', {
     identityId: googleIdentity.identity_id,
     provider: googleIdentity.provider,
-    userId: user.id,
+    userId: freshUser.id,
   });
 
   // Unlink the identity - pass the whole identity object
@@ -182,7 +195,7 @@ export async function disconnectGoogleAccount() {
     throw error;
   }
 
-  invalidateAndRevalidate(user.id);
+  invalidateAndRevalidate(freshUser.id);
   return { success: true };
 }
 
@@ -208,22 +221,35 @@ export async function connectAppleAccount(redirectUrl: string) {
 }
 
 export async function disconnectAppleAccount() {
-  const { user } = await verifySession();
+  // verifySession() uses getClaims() which parses the JWT locally.
+  // The JWT does NOT contain the identities array, so we must fetch fresh user data.
+  await verifySession(); // Still verify user is authenticated
   const supabase = await createSupabaseServerClient();
 
+  // Fetch fresh user data to get the identities array
+  const { data: { user: freshUser }, error: userError } = await supabase.auth.getUser();
+
+  if (userError || !freshUser) {
+    throw new Error('Failed to get user data');
+  }
+
   // Find Apple identity
-  const appleIdentity = user.identities?.find(
+  const appleIdentity = freshUser.identities?.find(
     (identity: { provider: string }) => identity.provider === 'apple'
   );
 
   if (!appleIdentity) {
+    logger.error('No Apple identity found:', {
+      userId: freshUser.id,
+      identities: freshUser.identities?.map(i => i.provider) ?? [],
+    });
     throw new Error('Ingen Apple-konto funnet');
   }
 
   logger.info('Unlinking Apple identity:', {
     identityId: appleIdentity.identity_id,
     provider: appleIdentity.provider,
-    userId: user.id,
+    userId: freshUser.id,
   });
 
   // Unlink the identity - pass the whole identity object
@@ -234,7 +260,7 @@ export async function disconnectAppleAccount() {
     throw error;
   }
 
-  invalidateAndRevalidate(user.id);
+  invalidateAndRevalidate(freshUser.id);
   return { success: true };
 }
 
@@ -333,22 +359,35 @@ export async function verifyAndLinkPhone(phone: string, otp: string) {
 }
 
 export async function unlinkPhoneNumber() {
-  const { user } = await verifySession();
+  // verifySession() uses getClaims() which parses the JWT locally.
+  // The JWT does NOT contain the identities array, so we must fetch fresh user data.
+  await verifySession(); // Still verify user is authenticated
   const supabase = await createSupabaseServerClient();
 
+  // Fetch fresh user data to get the identities array
+  const { data: { user: freshUser }, error: userError } = await supabase.auth.getUser();
+
+  if (userError || !freshUser) {
+    throw new Error('Failed to get user data');
+  }
+
   // Find phone identity
-  const phoneIdentity = user.identities?.find(
+  const phoneIdentity = freshUser.identities?.find(
     (identity: { provider: string }) => identity.provider === 'phone'
   );
 
   if (!phoneIdentity) {
+    logger.error('No phone identity found:', {
+      userId: freshUser.id,
+      identities: freshUser.identities?.map(i => i.provider) ?? [],
+    });
     throw new Error('Ingen telefonnummer funnet');
   }
 
   logger.info('Unlinking phone identity:', {
     identityId: phoneIdentity.identity_id,
     provider: phoneIdentity.provider,
-    userId: user.id,
+    userId: freshUser.id,
   });
 
   // Unlink the identity
@@ -359,7 +398,7 @@ export async function unlinkPhoneNumber() {
     throw error;
   }
 
-  invalidateAndRevalidate(user.id);
+  invalidateAndRevalidate(freshUser.id);
   return { success: true };
 }
 
