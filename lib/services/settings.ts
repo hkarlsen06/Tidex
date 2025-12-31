@@ -166,19 +166,25 @@ export const SettingsServiceLive = Layer.effect(
           // IMPORTANT: Fetch fresh user data from Supabase to get accurate identity info.
           // The JWT claims (app_metadata.providers) can be stale after linking/unlinking.
           // The identities array from getUser() is the source of truth.
-          const freshUserResult = yield* supabase.query(
-            async (client) => await client.auth.getUser(),
-            { retries: 2 }
-          );
+          const client = yield* supabase.getClient();
+          const { data: freshUserData, error: freshUserError } = yield* Effect.tryPromise({
+            try: () => client.auth.getUser(),
+            catch: (error) =>
+              new DatabaseError({
+                operation: "getUser",
+                cause: error,
+              }),
+          });
 
-          const freshUser = (freshUserResult as { user: any }).user;
-          if (!freshUser) {
+          if (freshUserError || !freshUserData.user) {
             return yield* Effect.fail(
               new NotFoundError({
                 resource: "User",
               })
             );
           }
+
+          const freshUser = freshUserData.user;
 
           // Get profile picture from settings
           const settingsResult = yield* supabase
