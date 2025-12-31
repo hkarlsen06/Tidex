@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { Card } from '@/components/app/Card';
 import { Button } from '@/components/app/Button';
 import { submitFeedback } from '@/app/[locale]/(app)/settings/feedback/_actions/submitFeedback';
@@ -21,7 +21,7 @@ export function FeedbackForm({ t, onSuccess }: FeedbackFormProps) {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
 

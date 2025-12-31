@@ -9,9 +9,12 @@ export interface PushNotificationPayload {
     | "shift_reminder"
     | "admin_broadcast"
     | "share_started"
+    | "feedback_submitted"
+    | "feedback_responded"
   owner_id?: string
   shift_dates?: string // Comma-separated dates for calendar highlighting
-  deeplink?: string // For admin broadcasts and share_started (opens manage modal)
+  deeplink?: string // For admin broadcasts, share_started, and feedback notifications
+  feedback_id?: string // For feedback notifications
 }
 
 class PushNotificationService {
@@ -139,16 +142,11 @@ class PushNotificationService {
     const locale = this.getLocale()
     let url: string
 
-    if (payload.type === "admin_broadcast" || payload.type === "share_started") {
-      // Admin broadcast or share_started - use deeplink if provided, otherwise go home
-      // share_started deeplink goes to /sharing?manage=true&highlight={owner_id}
-      if (payload.deeplink) {
-        // Deeplink is already validated server-side to start with /
-        const path = payload.deeplink.startsWith('/') ? payload.deeplink : `/${payload.deeplink}`
-        url = `/${locale}${path}`
-      } else {
-        url = `/${locale}/`
-      }
+    // Check for generic deeplink first (used by admin_broadcast, share_started, feedback notifications)
+    if (payload.deeplink) {
+      // Deeplink is already validated server-side to start with /
+      const path = payload.deeplink.startsWith('/') ? payload.deeplink : `/${payload.deeplink}`
+      url = `/${locale}${path}`
     } else if (payload.type === "shift_reminder") {
       // Navigate to shifts page, optionally with date
       // shift_dates contains comma-separated dates, use first one for navigation
