@@ -167,12 +167,9 @@ export function ManageSharingModal({
   const [isPending, startTransition] = useTransition();
   const [newRecipientShowEarnings, setNewRecipientShowEarnings] =
     useState(false);
-  const [isNative, setIsNative] = useState(false);
-
-  // Check if we're on a native platform (for showing notification frequency toggle)
-  useEffect(() => {
-    setIsNative(isNativePlatform());
-  }, []);
+  // Initialize isNative directly - isNativePlatform() is synchronous and returns false on server
+  // This is safe because the function checks window/navigator which return false during SSR
+  const [isNative] = useState(() => isNativePlatform());
 
   // Optimistic state for friends
   const [optimisticFriends, setOptimisticFriends] = useOptimistic(
