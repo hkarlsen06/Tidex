@@ -45,6 +45,7 @@ interface AdminBroadcastPayload {
 interface ShareStartedPayload {
   owner_id: string;
   owner_name: string;
+  is_mutual?: boolean; // true if recipient already shares with the sender
 }
 
 /** Payload for batched shift changes (from cron processor) */
@@ -324,10 +325,20 @@ function buildNotificationMessage(consolidated: ConsolidatedNotification): {
     }
     case "share_started": {
       // Someone started sharing their shifts with the recipient
-      // Prompt them to share back
-      const title = `${owner_name} deler vaktene sine med deg`;
-      const body = "Trykk for å dele tilbake";
-      return { title, body };
+      // Check if this is now mutual sharing
+      const firstPayload = consolidated.notifications[0].payload as ShareStartedPayload;
+      if (firstPayload.is_mutual) {
+        // Already sharing with each other - celebrate mutual sharing
+        return {
+          title: "Dere kan nå se hverandres vakter!",
+          body: `Du og ${owner_name} deler nå vakter med hverandre`,
+        };
+      }
+      // Not mutual yet - prompt to share back
+      return {
+        title: `${owner_name} deler vaktene sine med deg`,
+        body: "Trykk for å dele tilbake",
+      };
     }
   }
 }
@@ -354,11 +365,16 @@ async function sendConsolidatedToFcm(
       dataPayload.deeplink = adminPayload.deeplink;
     }
   } else if (firstNotification.type === "share_started") {
-    // Share started - include owner_id and deep link to manage modal with highlight
+    // Share started - include owner_id and appropriate deep link
     const sharePayload = firstNotification.payload as ShareStartedPayload;
     dataPayload.owner_id = sharePayload.owner_id;
-    // Deep link to /sharing?manage=true&highlight={owner_id} to open manage modal and highlight this person
-    dataPayload.deeplink = `/sharing?manage=true&highlight=${sharePayload.owner_id}`;
+    if (sharePayload.is_mutual) {
+      // Mutual sharing - just go to sharing page to see their shifts
+      dataPayload.deeplink = `/sharing?user=${sharePayload.owner_id}`;
+    } else {
+      // Not mutual - open manage modal with highlight to prompt share back
+      dataPayload.deeplink = `/sharing?manage=true&highlight=${sharePayload.owner_id}`;
+    }
   } else if (firstNotification.type === "shared_shift_changes") {
     // Batched shift changes - collect all dates from updated + deleted shifts
     const changesPayload = firstNotification.payload as ShiftChangesPayload;
