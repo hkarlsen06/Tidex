@@ -61,6 +61,8 @@ BEGIN
   END IF;
 
   -- Route to instant notification queue (for 'instant' frequency)
+  -- Note: ss.blocked controls visibility, NOT notifications
+  -- notification_frequency controls whether user gets notified (instant/summary/muted)
   INSERT INTO notification_queue (
     type,
     recipient_id,
@@ -87,18 +89,17 @@ BEGIN
   FROM shift_shares ss
   LEFT JOIN notification_preferences np ON np.user_id = ss.viewer_id
   WHERE ss.owner_id = NEW.user_id
-    AND ss.blocked = false
     AND COALESCE(np.shared_shifts_enabled, true) = true
     AND COALESCE(ss.notification_frequency, 'instant') = 'instant'
   ON CONFLICT (idempotency_key) DO NOTHING;
 
   -- Route to summary queue (for 'summary' frequency)
   INSERT INTO pending_summary_notifications (
-    viewer_id,
-    owner_id,
+    recipient_id,
+    sender_id,
     shift_id,
     shift_date,
-    event_type
+    notification_type
   )
   SELECT
     ss.viewer_id,
@@ -109,10 +110,9 @@ BEGIN
   FROM shift_shares ss
   LEFT JOIN notification_preferences np ON np.user_id = ss.viewer_id
   WHERE ss.owner_id = NEW.user_id
-    AND ss.blocked = false
     AND COALESCE(np.shared_shifts_enabled, true) = true
     AND ss.notification_frequency = 'summary'
-  ON CONFLICT (viewer_id, owner_id, shift_id, shift_date) DO NOTHING;
+  ON CONFLICT (recipient_id, sender_id, shift_id) DO NOTHING;
 
   -- Note: 'muted' frequency is handled by the WHERE clause exclusion
 

@@ -93,6 +93,8 @@ BEGIN
     END IF;
 
     -- Route instant notifications
+    -- Note: ss.blocked controls visibility, NOT notifications
+    -- notification_frequency controls whether user gets notified (instant/summary/muted)
     INSERT INTO notification_queue (type, recipient_id, sender_id, payload, idempotency_key)
     SELECT
       'shared_shift_changes',
@@ -110,7 +112,6 @@ BEGIN
     FROM shift_shares ss
     LEFT JOIN notification_preferences np ON np.user_id = ss.viewer_id
     WHERE ss.owner_id = v_owner_id
-      AND ss.blocked = false
       AND COALESCE(np.shared_shifts_enabled, true) = true
       AND COALESCE(ss.notification_frequency, 'instant') = 'instant'
     ON CONFLICT (idempotency_key) DO NOTHING;
@@ -134,14 +135,13 @@ BEGIN
     FROM shift_shares ss
     LEFT JOIN notification_preferences np ON np.user_id = ss.viewer_id
     WHERE ss.owner_id = v_owner_id
-      AND ss.blocked = false
       AND COALESCE(np.shared_shifts_enabled, true) = true
       AND ss.notification_frequency = 'summary'
       AND EXISTS (SELECT 1 FROM jsonb_array_elements(v_updated_shifts) s WHERE (s->>'shift_date')::date = v_today)
     ON CONFLICT (idempotency_key) DO NOTHING;
 
     -- Non-same-day shifts to summary
-    INSERT INTO pending_summary_notifications (viewer_id, owner_id, shift_id, shift_date, event_type)
+    INSERT INTO pending_summary_notifications (recipient_id, sender_id, shift_id, shift_date, notification_type)
     SELECT
       ss.viewer_id,
       v_owner_id,
@@ -152,11 +152,10 @@ BEGIN
     LEFT JOIN notification_preferences np ON np.user_id = ss.viewer_id
     CROSS JOIN jsonb_array_elements(v_updated_shifts) s
     WHERE ss.owner_id = v_owner_id
-      AND ss.blocked = false
       AND COALESCE(np.shared_shifts_enabled, true) = true
       AND ss.notification_frequency = 'summary'
       AND (s->>'shift_date')::date != v_today
-    ON CONFLICT (viewer_id, owner_id, shift_id, shift_date) DO NOTHING;
+    ON CONFLICT (recipient_id, sender_id, shift_id) DO NOTHING;
 
     v_total_updated := v_total_updated + v_updated_count;
     v_owners_processed := v_owners_processed + 1;

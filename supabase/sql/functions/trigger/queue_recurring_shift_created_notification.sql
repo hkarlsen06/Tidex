@@ -31,6 +31,8 @@ BEGIN
 
   -- Recurring shifts always go to instant queue (not summary)
   -- Skip muted users
+  -- Note: ss.blocked controls visibility, NOT notifications
+  -- notification_frequency controls whether user gets notified (instant/summary/muted)
   INSERT INTO notification_queue (
     type,
     recipient_id,
@@ -51,7 +53,6 @@ BEGIN
   FROM shift_shares ss
   LEFT JOIN notification_preferences np ON np.user_id = ss.viewer_id
   WHERE ss.owner_id = NEW.user_id
-    AND ss.blocked = false
     AND COALESCE(np.shared_shifts_enabled, true) = true
     AND COALESCE(ss.notification_frequency, 'instant') != 'muted'
   ON CONFLICT (idempotency_key) DO NOTHING;
