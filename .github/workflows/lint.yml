@@ -26,9 +26,18 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
+        id: lint
 
-      - name: notify vercel
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      - name: notify vercel success
+        if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.lint.outcome == 'success'
         uses: vercel/repository-dispatch/actions/status@v1
         with:
           name: "Vercel - tidex: ci"
+          state: success
+
+      - name: notify vercel failure
+        if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.lint.outcome == 'failure'
+        uses: vercel/repository-dispatch/actions/status@v1
+        with:
+          name: "Vercel - tidex: ci"
+          state: failure
