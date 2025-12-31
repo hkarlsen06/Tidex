@@ -242,28 +242,18 @@ export async function linkPhoneNumber(phone: string) {
   const { user } = await verifySession();
   const supabase = await createSupabaseServerClient();
 
-  // Store the pending phone number in user metadata and send OTP
-  // We don't use updateUser({ phone }) directly because it might not require confirmation
-  // depending on Supabase project settings
+  // Store the pending phone number in user metadata AND initiate phone change in a single call.
+  // IMPORTANT: Using a single updateUser call ensures both the metadata and phone change
+  // are applied atomically. Two separate calls can cause the second call to not preserve
+  // the metadata from the first call (race condition or Supabase behavior).
   const existingMetadata = user.user_metadata ?? {};
 
-  // First, store the pending phone in metadata (not the actual phone field yet)
-  const { error: metadataError } = await supabase.auth.updateUser({
+  const { error } = await supabase.auth.updateUser({
+    phone,
     data: {
       ...existingMetadata,
       pendingPhone: phone,
     },
-  });
-
-  if (metadataError) {
-    logger.error('Failed to store pending phone:', metadataError);
-    throw metadataError;
-  }
-
-  // Now send the OTP using signInWithOtp in a way that doesn't create a new session
-  // We use the phone provider but with the current user's session
-  const { error } = await supabase.auth.updateUser({
-    phone,
   });
 
   if (error) {
@@ -271,7 +261,7 @@ export async function linkPhoneNumber(phone: string) {
     throw error;
   }
 
-  logger.info('OTP sent for phone linking:', { phone });
+  logger.info('OTP sent for phone linking:', { phone, userId: user.id });
   return { success: true };
 }
 
@@ -292,6 +282,13 @@ export async function verifyAndLinkPhone(phone: string, otp: string) {
   // Verify that this phone matches the pending phone
   const pendingPhone = freshUser.user_metadata?.pendingPhone;
   if (pendingPhone !== phone) {
+    logger.error('Phone number mismatch:', {
+      expected: phone,
+      actual: pendingPhone,
+      userId: freshUser.id,
+      hasMetadata: !!freshUser.user_metadata,
+      metadataKeys: freshUser.user_metadata ? Object.keys(freshUser.user_metadata) : [],
+    });
     throw new Error('Phone number mismatch');
   }
 
