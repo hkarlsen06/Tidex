@@ -276,11 +276,21 @@ export async function linkPhoneNumber(phone: string) {
 }
 
 export async function verifyAndLinkPhone(phone: string, otp: string) {
-  const { user: currentUser } = await verifySession();
+  // verifySession() uses getClaims() which parses the JWT locally.
+  // After linkPhoneNumber() updates user_metadata, the JWT cookie may not be refreshed yet.
+  // So we must fetch fresh user data from Supabase to get the updated pendingPhone.
+  await verifySession(); // Still verify user is authenticated
   const supabase = await createSupabaseServerClient();
 
+  // Fetch fresh user data to get the updated pendingPhone metadata
+  const { data: { user: freshUser }, error: userError } = await supabase.auth.getUser();
+
+  if (userError || !freshUser) {
+    throw new Error('Failed to get user data');
+  }
+
   // Verify that this phone matches the pending phone
-  const pendingPhone = currentUser.user_metadata?.pendingPhone;
+  const pendingPhone = freshUser.user_metadata?.pendingPhone;
   if (pendingPhone !== phone) {
     throw new Error('Phone number mismatch');
   }
