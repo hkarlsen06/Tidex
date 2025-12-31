@@ -33,6 +33,7 @@ export async function GET(request: NextRequest) {
   const code = url.searchParams.get("code");
   const oauthError = url.searchParams.get("error");
   const oauthErrorDesc = url.searchParams.get("error_description");
+  const isLinking = url.searchParams.get("linking") === "true";
   const redirectUrl = resolveRedirectUrl(url);
 
   if (oauthError) {
@@ -50,25 +51,37 @@ export async function GET(request: NextRequest) {
   const supabase = createSupabaseRouteHandlerClient(request, response);
 
   try {
+    // For identity linking, check if user already has a valid AAL2 session BEFORE
+    // exchanging the code. This prevents MFA bypass via forged linking=true param.
+    let wasAlreadyAuthenticated = false;
+    if (isLinking) {
+      const { data: preAuthAAL } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+      wasAlreadyAuthenticated = preAuthAAL?.currentLevel === 'aal2';
+    }
+
     await supabase.auth.exchangeCodeForSession(code);
 
-    // Check if user needs MFA verification
-    const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+    // Only skip MFA check if user was already authenticated at AAL2 before the OAuth flow
+    // This prevents attackers from bypassing MFA by adding linking=true to login URLs
+    if (!(isLinking && wasAlreadyAuthenticated)) {
+      // Check if user needs MFA verification
+      const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
 
-    if (aalData && aalData.currentLevel === 'aal1' && aalData.nextLevel === 'aal2') {
-      // User has MFA enrolled but hasn't verified - redirect to MFA verify
-      const locale = request.cookies.get(LOCALE_COOKIE)?.value || defaultLocale;
-      const mfaUrl = new URL(`/${locale}/mfa-verify`, url.origin);
-      mfaUrl.searchParams.set("next", redirectUrl.pathname + redirectUrl.search);
+      if (aalData && aalData.currentLevel === 'aal1' && aalData.nextLevel === 'aal2') {
+        // User has MFA enrolled but hasn't verified - redirect to MFA verify
+        const locale = request.cookies.get(LOCALE_COOKIE)?.value || defaultLocale;
+        const mfaUrl = new URL(`/${locale}/mfa-verify`, url.origin);
+        mfaUrl.searchParams.set("next", redirectUrl.pathname + redirectUrl.search);
 
-      // Create new redirect but copy cookies from original response
-      const mfaResponse = NextResponse.redirect(mfaUrl);
-      response.cookies.getAll().forEach((cookie) => {
-        mfaResponse.cookies.set(cookie.name, cookie.value, {
-          ...cookie,
+        // Create new redirect but copy cookies from original response
+        const mfaResponse = NextResponse.redirect(mfaUrl);
+        response.cookies.getAll().forEach((cookie) => {
+          mfaResponse.cookies.set(cookie.name, cookie.value, {
+            ...cookie,
+          });
         });
-      });
-      return mfaResponse;
+        return mfaResponse;
+      }
     }
   } catch (error) {
     console.error("[AUTH CALLBACK] Failed to exchange code for session", error);
