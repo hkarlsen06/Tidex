@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { MouseEvent } from 'react';
 import { Card } from '@/components/app/Card';
-import { ChevronRight, User, Banknote, Palette, Database, CreditCard, Shield, Bell, Loader2, ShieldAlert } from 'lucide-react';
+import { ChevronRight, User, Banknote, Palette, Database, CreditCard, Shield, Bell, Loader2, ShieldAlert, MessageSquare } from 'lucide-react';
 import { useNavigationFeedback } from '@/components/app/navigation-feedback';
 import { useTranslations } from '@/lib/i18n/client';
 import type { Dictionary } from '@/lib/i18n/dictionaries/no';
@@ -66,6 +66,12 @@ const getSettingsItems = (t: Dictionary): SettingsItem[] => [
     label: t.pages.settings.menu.data.label,
     description: t.pages.settings.menu.data.description,
     icon: Database,
+  },
+  {
+    href: '/settings/feedback',
+    label: t.pages.settings.menu.feedback?.label || 'Feedback',
+    description: t.pages.settings.menu.feedback?.description || 'Send us your feedback',
+    icon: MessageSquare,
   },
   {
     href: '/settings/admin',

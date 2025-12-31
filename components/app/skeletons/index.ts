@@ -28,6 +28,7 @@ export {
   SubscriptionSkeleton,
   PreferencesSkeleton,
   NotificationsSkeleton,
+  FeedbackSkeleton,
 } from "./settings";
 
 // Card skeletons
