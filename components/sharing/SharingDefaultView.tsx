@@ -39,20 +39,19 @@ export function SharingDefaultView({
   openManageModal = false,
   highlightUserId = null,
 }: SharingDefaultViewProps) {
-  const { t, locale } = useTranslations();
+  const { t } = useTranslations();
   const router = useRouter();
   const pathname = usePathname();
-  const [manageSharingOpen, setManageSharingOpen] = useState(false);
+  // Initialize modal state from prop - if openManageModal is true, start with modal open
+  const [manageSharingOpen, setManageSharingOpen] = useState(openManageModal);
 
-  // Auto-open manage modal when deep linked from share_started notification
+  // Clean up URL params after modal opens from deep link
   useEffect(() => {
-    if (openManageModal) {
-      setManageSharingOpen(true);
-      // Clean up URL params after opening modal (remove manage and highlight from URL)
-      // This prevents re-opening the modal on page refresh
+    if (openManageModal && manageSharingOpen) {
+      // Remove manage and highlight params from URL to prevent re-opening on refresh
       router.replace(pathname, { scroll: false });
     }
-  }, [openManageModal, router, pathname]);
+  }, [openManageModal, manageSharingOpen, router, pathname]);
 
   // Get translation strings with fallbacks
   const sharing = t.pages?.sharing ?? {
