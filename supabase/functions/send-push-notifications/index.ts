@@ -65,6 +65,7 @@ interface ConsolidatedNotification {
   sender_id: string;
   owner_name: string;
   type: "single_shift" | "multiple_shifts" | "recurring" | "admin_broadcast";
+  notificationType: string; // Original notification type (shared_shift_created, shared_shift_updated, shared_shift_deleted)
   // For single shift
   shift?: { date: string; start_time: string; end_time: string };
   // For multiple shifts
@@ -202,7 +203,7 @@ function buildNotificationMessage(consolidated: ConsolidatedNotification): {
   title: string;
   body: string;
 } {
-  const { owner_name, type } = consolidated;
+  const { owner_name, type, notificationType } = consolidated;
 
   switch (type) {
     case "admin_broadcast": {
@@ -211,12 +212,47 @@ function buildNotificationMessage(consolidated: ConsolidatedNotification): {
     }
     case "single_shift": {
       const shift = consolidated.shift!;
+      const timeRange = `${formatDate(shift.date)} kl. ${formatTime(shift.start_time)}-${formatTime(shift.end_time)}`;
+
+      // Handle updated and deleted notifications
+      if (notificationType === "shared_shift_updated") {
+        return {
+          title: `${owner_name} endret en vakt`,
+          body: timeRange,
+        };
+      }
+
+      if (notificationType === "shared_shift_deleted") {
+        return {
+          title: `${owner_name} slettet en vakt`,
+          body: timeRange,
+        };
+      }
+
+      // Default: shared_shift_created
       const title = `${owner_name} la til en vakt`;
-      const body = `${formatDate(shift.date)} kl. ${formatTime(shift.start_time)}-${formatTime(shift.end_time)}`;
+      const body = timeRange;
       return { title, body };
     }
     case "multiple_shifts": {
       const count = consolidated.shift_count!;
+
+      // Handle updated and deleted notifications for multiple shifts
+      if (notificationType === "shared_shift_updated") {
+        return {
+          title: `${owner_name} endret ${count} vakter`,
+          body: "Trykk for å se vaktene",
+        };
+      }
+
+      if (notificationType === "shared_shift_deleted") {
+        return {
+          title: `${owner_name} slettet ${count} vakter`,
+          body: "Trykk for å se vaktene",
+        };
+      }
+
+      // Default: shared_shift_created
       const title = `${owner_name} la til ${count} vakter`;
       const body = "Trykk for å se vaktene";
       return { title, body };
@@ -327,11 +363,13 @@ async function sendConsolidatedToFcm(
  * Groups by (type, sender_id, recipient_id, broadcast_id) and creates appropriate message
  *
  * Admin broadcasts use broadcast_id to ensure each broadcast is a separate message
+ * Shift notifications group by type to prevent mixing created/updated/deleted
  */
 function consolidateNotifications(
   notifications: QueuedNotification[]
 ): ConsolidatedNotification[] {
   // Group by type + sender_id + recipient_id (+ broadcast_id for admin_broadcast)
+  // IMPORTANT: type is included to prevent mixing created/updated/deleted notifications
   const groups = new Map<string, QueuedNotification[]>();
 
   for (const notification of notifications) {
@@ -346,7 +384,7 @@ function consolidateNotifications(
       // Each broadcast_id is treated as a separate message (no consolidation across broadcasts)
       key = `${notification.type}:${notification.sender_id}:${notification.recipient_id}:${notification.broadcast_id}`;
     } else {
-      // Existing behavior for shift notifications
+      // Shift notifications - include type to prevent mixing created/updated/deleted
       key = `${notification.type}:${notification.sender_id}:${notification.recipient_id}`;
     }
 
@@ -371,6 +409,7 @@ function consolidateNotifications(
         sender_id: first.sender_id,
         owner_name: "Admin", // Not shown in message
         type: "admin_broadcast",
+        notificationType: first.type,
         broadcast: adminPayload,
       });
       continue;
@@ -386,11 +425,12 @@ function consolidateNotifications(
         sender_id: first.sender_id,
         owner_name,
         type: "recurring",
+        notificationType: first.type,
       });
       continue;
     }
 
-    // Regular shift notifications
+    // Regular shift notifications (created, updated, deleted)
     if (group.length === 1) {
       // Single shift - show full details
       const shiftPayload = payload as ShiftNotificationPayload;
@@ -400,6 +440,7 @@ function consolidateNotifications(
         sender_id: first.sender_id,
         owner_name,
         type: "single_shift",
+        notificationType: first.type, // Preserve original type for message building
         shift: {
           date: shiftPayload.shift_date,
           start_time: shiftPayload.start_time || "00:00",
@@ -419,6 +460,7 @@ function consolidateNotifications(
         sender_id: first.sender_id,
         owner_name,
         type: "multiple_shifts",
+        notificationType: first.type, // Preserve original type for message building
         shift_count: group.length,
         shift_dates: shiftDates,
       });

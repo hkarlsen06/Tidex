@@ -18,7 +18,7 @@ export async function updateProfileSettings(data: {
   await supabase.auth.updateUser({
     data: {
       ...existingMetadata,
-      first_name: data.firstName,
+      full_name: data.firstName,
     },
   });
 

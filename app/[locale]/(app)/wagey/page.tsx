@@ -30,10 +30,9 @@ export default async function WageyPage({ params }: WageyPageProps) {
   const { user } = await verifySession();
   const dictionary = await getDictionary(locale);
 
-  // Use user's chosen name (first_name) if set, otherwise fall back to OAuth name
+  // Use user's chosen name (full_name) if set, otherwise fall back to OAuth name
   // If neither available, pass undefined - MessageList will use localized "You"/"Deg"
   const rawUserName =
-    (user.user_metadata?.first_name as string | undefined) ??
     (user.user_metadata?.full_name as string | undefined);
   const userName = rawUserName ? sanitizeDisplayName(rawUserName) : undefined;
 

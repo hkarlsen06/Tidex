@@ -171,7 +171,7 @@ export const AuthServiceLive = Layer.effect(
           id: claims.sub,
           email: claims.email ?? null,
           phone: claims.phone ?? null,
-          firstName: (claims.user_metadata?.first_name as string | null) ?? null,
+          firstName: (claims.user_metadata?.full_name as string | null) ?? null,
           metadata: claims.user_metadata ?? {},
           identityProviders,
         };

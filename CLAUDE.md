@@ -651,31 +651,33 @@ See `docs/error-handling-audit.md` for comprehensive error handling audit.
 
 ## Supabase Edge Functions
 
-Edge functions are deployed via the Supabase MCP tool `mcp__supabase__deploy_edge_function`.
+Edge functions are stored locally in `supabase/functions/` and deployed via Supabase CLI.
 
-**CRITICAL: Always set `verify_jwt: false` when deploying edge functions**
+**CRITICAL: Edit edge functions locally, NOT via MCP deploy tool**
 
-Edge functions in this project are typically invoked by:
+- **Location**: `supabase/functions/<function-name>/index.ts`
+- **Shared code**: `supabase/functions/_shared/` (e.g., `cors.ts`)
+- **Deployment**: Use Supabase CLI (`supabase functions deploy <name>`) or dashboard, NOT the MCP `deploy_edge_function` tool
+- **Reading deployed code**: Use `mcp__supabase__get_edge_function` to fetch the latest deployed version if needed
+
+**CRITICAL: Always set `verify_jwt: false` for most edge functions**
+
+Most edge functions in this project are invoked by:
 - **pg_cron jobs** - Pass `service_role_key` in Authorization header, NOT a JWT
 - **Internal services** - Use service role authentication
+- **Webhooks** (Stripe, Apple) - External services with their own authentication
 
-When `verify_jwt: true` (the default), the function expects a valid Supabase JWT token. Cron jobs and internal services pass the `service_role_key` instead, which causes 401 Unauthorized errors.
+When `verify_jwt: true`, the function expects a valid Supabase JWT token. Cron jobs and webhooks don't send JWTs, which causes 401 Unauthorized errors.
 
-```typescript
-// ✅ CORRECT - Always use verify_jwt: false for cron/internal functions
-mcp__supabase__deploy_edge_function({
-  name: "process-shift-reminders",
-  verify_jwt: false,  // REQUIRED for cron jobs
-  files: [...]
-})
+**Current edge functions and their `verify_jwt` settings:**
 
-// ❌ WRONG - Will cause 401 errors when called by pg_cron
-mcp__supabase__deploy_edge_function({
-  name: "process-shift-reminders",
-  // verify_jwt defaults to true - cron jobs will fail!
-  files: [...]
-})
-```
+| Function | `verify_jwt` | Reason |
+|----------|-------------|--------|
+| `stripe_webhook` | `false` | Stripe webhook (uses signature verification) |
+| `apple-server-notifications` | `false` | Apple webhook (uses JWS verification) |
+| `apple-verify-purchase` | `true` | Called by authenticated app users |
+| `send-push-notifications` | `false` | Called by pg_cron |
+| `process-shift-reminders` | `false` | Called by pg_cron |
 
 **When to use `verify_jwt: true`:**
 - Only for functions called directly by authenticated users from the client
