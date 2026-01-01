@@ -347,8 +347,8 @@ export function UserListCard({ refreshTrigger }: Props) {
                   <th className="text-left py-2 px-2 font-medium">Name</th>
                   <th className="text-left py-2 px-2 font-medium">ID</th>
                   <th className="text-left py-2 px-2 font-medium">Email/Phone</th>
-                  <th className="text-left py-2 px-2 font-medium">
-                    Last Active
+                  <th className="text-left py-2 px-2 font-medium whitespace-nowrap">
+                    Last Sign In
                   </th>
                   <th className="text-left py-2 px-2 font-medium">Plan</th>
                   <th className="text-left py-2 px-2 font-medium">Status</th>
@@ -406,8 +406,8 @@ export function UserListCard({ refreshTrigger }: Props) {
                         );
                       })()}
                     </td>
-                    <td className="py-2 px-2 text-text-secondary">
-                      {formatDate(user.lastActive)}
+                    <td className="py-2 px-2 text-text-secondary whitespace-nowrap">
+                      {formatDate(user.lastSignInAt)}
                     </td>
                     <td className="py-2 px-2">
                       <Badge variant={PLAN_VARIANTS[user.plan]}>
