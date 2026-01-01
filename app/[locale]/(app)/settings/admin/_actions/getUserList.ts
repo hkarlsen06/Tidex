@@ -12,6 +12,7 @@ type AdminUser = {
   email?: string;
   phone?: string;
   created_at?: string;
+  last_sign_in_at?: string | null;
   app_metadata?: Record<string, unknown>;
   user_metadata?: Record<string, unknown>;
   banned_until?: string | null;
@@ -22,7 +23,7 @@ export interface UserListItem {
   email: string | null;
   phone: string | null;
   name: string | null;
-  lastActive: string | null;
+  lastSignInAt: string | null;
   createdAt: string;
   isBanned: boolean;
   bannedUntil: string | null;
@@ -75,10 +76,6 @@ export async function getUserList(
     .from("profiles")
     .select("id, before_paywall");
 
-  const { data: settingsData } = await supabase
-    .from("user_settings")
-    .select("user_id, last_active");
-
   // Build lookup maps
   const subscriptionMap = new Map<
     string,
@@ -105,11 +102,6 @@ export async function getUserList(
     if (profile.before_paywall) {
       grandfatheredSet.add(profile.id);
     }
-  }
-
-  const lastActiveMap = new Map<string, string | null>();
-  for (const setting of settingsData ?? []) {
-    lastActiveMap.set(setting.user_id, setting.last_active);
   }
 
   // Determine plan for a user (separate from grandfathered status)
@@ -158,7 +150,7 @@ export async function getUserList(
       email,
       phone,
       name: (authUser.user_metadata?.full_name as string) ?? null,
-      lastActive: lastActiveMap.get(authUser.id) ?? null,
+      lastSignInAt: authUser.last_sign_in_at ?? null,
       createdAt: authUser.created_at ?? new Date().toISOString(),
       isBanned: !!bannedUntil,
       bannedUntil,
