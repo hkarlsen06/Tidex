@@ -37,6 +37,7 @@ import {
   blockSharer,
   unblockSharer,
   shareBack,
+  removeSharer,
 } from "@/app/[locale]/(app)/sharing/_actions/sharing";
 import { useTranslations } from "@/lib/i18n/client";
 import type { Friend, NotificationFrequency } from "@/data-access/sharing";
@@ -50,6 +51,8 @@ type ManageSharingModalProps = {
   shareCapacity: { canAdd: boolean; currentCount: number; limit: number };
   /** Deep link: user ID to highlight (from share_started notification) */
   highlightUserId?: string | null;
+  /** Callback when visibility changes (block/unblock) to trigger list refresh */
+  onVisibilityChange?: () => void;
 };
 
 function getInitials(name: string | null | undefined): string {
@@ -114,6 +117,7 @@ type OptimisticAction =
   | { type: "toggleVisibility"; id: string; blocked: boolean }
   | { type: "toggleEarnings"; id: string; showEarnings: boolean }
   | { type: "remove"; id: string }
+  | { type: "removeSharer"; id: string }
   | { type: "shareBack"; id: string }
   | { type: "updateFrequency"; id: string; frequency: NotificationFrequency };
 
@@ -123,6 +127,7 @@ export function ManageSharingModal({
   friends,
   shareCapacity,
   highlightUserId = null,
+  onVisibilityChange,
 }: ManageSharingModalProps) {
   const addInputRef = useRef<HTMLInputElement>(null);
   const highlightedUserRef = useRef<HTMLDivElement>(null);
@@ -204,6 +209,12 @@ export function ManageSharingModal({
           .map((f) => (f.id === action.id ? { ...f, iShareWith: null } : f))
           .filter((f) => f.sharesWithMe || f.iShareWith); // Remove if neither direction exists
       }
+      if (action.type === "removeSharer") {
+        // Remove the sharesWithMe portion (viewer is removing this person from their friends list)
+        return state
+          .map((f) => (f.id === action.id ? { ...f, sharesWithMe: null } : f))
+          .filter((f) => f.sharesWithMe || f.iShareWith); // Remove if neither direction exists
+      }
       if (action.type === "shareBack") {
         return state.map((f) =>
           f.id === action.id
@@ -259,6 +270,7 @@ export function ManageSharingModal({
     iShareWithDesc: "Kan se dine vakter",
     sharesWithMe: "Deler med deg",
     sharesWithMeDesc: "Du kan se deres vakter",
+    removeFriend: "Fjern",
     notificationFrequency: {
       instant: "Umiddelbar",
       summary: "Daglig oppsummering",
@@ -316,8 +328,11 @@ export function ManageSharingModal({
 
       if (!result.success) {
         setError(result.error);
-        router.refresh();
       }
+      // Always refresh to update the sharers list in the background
+      router.refresh();
+      // Notify parent to force remount of list (fixes Framer Motion animation issues)
+      onVisibilityChange?.();
       setActionId(null);
     });
   };
@@ -368,6 +383,23 @@ export function ManageSharingModal({
         setError(result.error);
         router.refresh();
       }
+      setActionId(null);
+    });
+  };
+
+  const handleRemoveSharer = (friendId: string) => {
+    setActionId(friendId);
+
+    startTransition(async () => {
+      setOptimisticFriends({ type: "removeSharer", id: friendId });
+
+      const result = await removeSharer(friendId);
+      if (!result.success) {
+        setError(result.error);
+        router.refresh();
+      }
+      // Notify parent to refresh the list
+      onVisibilityChange?.();
       setActionId(null);
     });
   };
@@ -592,7 +624,7 @@ export function ManageSharingModal({
                                   type="button"
                                   onClick={() => handleRemove(friend.id)}
                                   disabled={isActionPending}
-                                  className="ml-1 p-1.5 rounded-md text-text-muted hover:text-error hover:bg-error-subtle transition-colors disabled:opacity-50"
+                                  className="ml-1 p-1.5 rounded-md text-error hover:bg-error-subtle transition-colors disabled:opacity-50"
                                   title={sharing.stopSharing}
                                 >
                                   <Trash2 className="h-4 w-4" />
@@ -698,6 +730,15 @@ export function ManageSharingModal({
                                   <Share2 className="h-3.5 w-3.5" />
                                 )}
                                 <span>{sharing.shareBack}</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveSharer(friend.id)}
+                                disabled={isActionPending}
+                                className="ml-1 p-1.5 rounded-md text-error hover:bg-error-subtle transition-colors disabled:opacity-50"
+                                title={sharing.removeFriend}
+                              >
+                                <Trash2 className="h-4 w-4" />
                               </button>
                             </div>
                           </div>

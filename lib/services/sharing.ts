@@ -275,6 +275,20 @@ export class SharingService extends Context.Tag("SharingService")<
       DatabaseError | AuthError | NotFoundError | TimeoutError | SupabaseError,
       never
     >;
+
+    /**
+     * Remove a sharer as a viewer (delete the share row where you are the viewer)
+     * Used when a user wants to remove someone who only shares with them (not mutual)
+     * from their friends list entirely
+     */
+    readonly removeSharerAsViewer: (
+      viewerId: string,
+      ownerId: string
+    ) => Effect.Effect<
+      void,
+      DatabaseError | AuthError | NotFoundError | TimeoutError | SupabaseError,
+      never
+    >;
   }
 >() {}
 
@@ -1391,6 +1405,46 @@ export const SharingServiceLive = Layer.effect(
             return Effect.fail(error);
           })
         ),
+
+      /**
+       * Remove a sharer as a viewer (delete the share row where you are the viewer)
+       */
+      removeSharerAsViewer: (viewerId: string, ownerId: string) =>
+        Effect.gen(function* () {
+          // Verify viewer is authenticated
+          yield* auth.verifyUserId(viewerId);
+
+          const deleteResult = yield* Effect.tryPromise({
+            try: async () => {
+              const client = await Effect.runPromise(supabase.getClient());
+              return client
+                .from("shift_shares")
+                .delete()
+                .eq("owner_id", ownerId)
+                .eq("viewer_id", viewerId);
+            },
+            catch: (error) =>
+              new DatabaseError({
+                table: "shift_shares",
+                code: "DELETE_ERROR",
+                errorMessage: String(error),
+                cause: error,
+              }),
+          });
+
+          if (deleteResult.error) {
+            return yield* Effect.fail(
+              new DatabaseError({
+                table: "shift_shares",
+                code: deleteResult.error.code,
+                errorMessage: deleteResult.error.message,
+                cause: deleteResult.error,
+              })
+            );
+          }
+
+          logger.info(`Viewer ${viewerId} removed sharer ${ownerId} from their friends list`);
+        }),
     };
   })
 );

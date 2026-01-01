@@ -6,6 +6,8 @@ import { createSupabaseRouteHandlerClient } from "@/lib/supabase/server";
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const BUCKET = "profile-pictures";
 const HEIC_EXTENSIONS = new Set(["heic", "heif", "heics", "heifs"]);
+// Avatar images are displayed at max 96x96 (h-24 w-24), so 192px gives 2x for retina
+const AVATAR_SIZE = 192;
 
 function propagateCookies(from: NextResponse, to: NextResponse) {
   for (const cookie of from.cookies.getAll()) {
@@ -33,13 +35,6 @@ function extFromFilename(name: string | undefined | null) {
   return name.slice(lastDot + 1).toLowerCase();
 }
 
-function extFromMime(type: string | undefined | null) {
-  if (!type) return null;
-  const parts = type.split("/");
-  if (parts.length !== 2) return null;
-  return parts[1];
-}
-
 function isHeicLike(ext: string | null, mime: string | undefined | null) {
   if (ext && HEIC_EXTENSIONS.has(ext)) {
     return true;
@@ -60,6 +55,25 @@ async function convertHeicToJpeg(file: File) {
   const buffer = Buffer.from(arrayBuffer);
   const converted = await sharp(buffer).rotate().jpeg({ quality: 90 }).toBuffer();
   return converted;
+}
+
+/**
+ * Resize and compress image to optimal avatar size (192x192 for 2x retina)
+ * Outputs WebP for best compression/quality ratio
+ */
+async function optimizeAvatar(input: File | Buffer): Promise<Buffer> {
+  const buffer = input instanceof File
+    ? Buffer.from(await input.arrayBuffer())
+    : input;
+
+  return sharp(buffer)
+    .rotate() // Auto-rotate based on EXIF
+    .resize(AVATAR_SIZE, AVATAR_SIZE, {
+      fit: "cover",
+      position: "centre",
+    })
+    .webp({ quality: 80 })
+    .toBuffer();
 }
 
 export async function POST(request: NextRequest) {
@@ -108,27 +122,12 @@ export async function POST(request: NextRequest) {
     const userId = authData.claims.sub;
     const mimeType = file.type || undefined;
     const filenameExt = extFromFilename(file.name);
-    const mimeExt = extFromMime(file.type);
-    let fileExt = filenameExt ?? mimeExt ?? "bin";
-    let uploadData: File | Buffer = file;
-    let contentType = mimeType;
 
+    // Convert HEIC to JPEG first (sharp handles it better as a two-step process)
+    let imageData: File | Buffer = file;
     if (isHeicLike(filenameExt, mimeType)) {
       try {
-        const converted = await convertHeicToJpeg(file);
-
-        if (converted.byteLength > MAX_FILE_SIZE) {
-          const errorResponse = NextResponse.json(
-            { error: "Konvertert bilde er for stort. Velg et mindre bilde." },
-            { status: 413, headers: { "cache-control": "no-store" } }
-          );
-          propagateCookies(baseResponse, errorResponse);
-          return errorResponse;
-        }
-
-        uploadData = converted;
-        contentType = "image/jpeg";
-        fileExt = "jpg";
+        imageData = await convertHeicToJpeg(file);
       } catch (conversionError) {
         console.error("[PROFILE PICTURE] Failed to convert HEIC image:", conversionError);
         const errorResponse = NextResponse.json(
@@ -140,7 +139,23 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const storagePath = `${userId}/${crypto.randomUUID()}.${fileExt}`;
+    // Optimize all images: resize to 192x192 and convert to WebP
+    let uploadData: Buffer;
+    try {
+      uploadData = await optimizeAvatar(imageData);
+    } catch (optimizeError) {
+      console.error("[PROFILE PICTURE] Failed to optimize image:", optimizeError);
+      const errorResponse = NextResponse.json(
+        { error: "Kunne ikke behandle bildet. Prøv et annet bilde." },
+        { status: 415, headers: { "cache-control": "no-store" } }
+      );
+      propagateCookies(baseResponse, errorResponse);
+      return errorResponse;
+    }
+
+    // All optimized images are WebP
+    const storagePath = `${userId}/${crypto.randomUUID()}.webp`;
+    const contentType = "image/webp";
 
     const { error: uploadError } = await supabase.storage
       .from(BUCKET)

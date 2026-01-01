@@ -31,6 +31,7 @@ const SHARING_ERRORS = {
   FAILED_TO_UNBLOCK_SHARER: "Kunne ikke fjerne skjuling",
   FAILED_TO_SHARE_BACK: "Kunne ikke dele tilbake",
   FAILED_TO_UPDATE_FREQUENCY: "Kunne ikke oppdatere varslingsfrekvens",
+  FAILED_TO_REMOVE_SHARER: "Kunne ikke fjerne personen fra vennelisten",
 } as const;
 
 /**
@@ -290,6 +291,25 @@ export async function shareBack(recipientId: string): Promise<ActionResult> {
 }
 
 /**
+ * Refresh the sharing page data
+ *
+ * Invalidates all cached sharing data for the current user and triggers
+ * a revalidation. Use this when manual refresh is needed to see updates
+ * (e.g., blocked/unblocked sharers, new shares).
+ */
+export async function refreshSharingData(): Promise<ActionResult> {
+  const { user } = await verifySession();
+
+  try {
+    invalidateAndRevalidate(user.id);
+    return { success: true };
+  } catch (error: any) {
+    logger.error("Failed to refresh sharing data:", error);
+    return { success: false, error: "Kunne ikke oppdatere data" };
+  }
+}
+
+/**
  * Update notification frequency for a specific sharer
  *
  * Controls how often you receive notifications about this sharer's shifts:
@@ -327,5 +347,44 @@ export async function updateNotificationFrequency(
   } catch (error: any) {
     logger.error("Failed to update notification frequency:", error);
     return { success: false, error: SHARING_ERRORS.FAILED_TO_UPDATE_FREQUENCY };
+  }
+}
+
+/**
+ * Remove a sharer from your friends list (as the viewer)
+ *
+ * Use this when someone shares with you but you don't want them in your friends list.
+ * This deletes the share row entirely, meaning you will no longer see their shifts.
+ *
+ * Note: This is different from blocking - blocking just hides them from view but
+ * preserves the relationship. This removes the relationship entirely.
+ *
+ * Validates:
+ * - User is authenticated
+ * - Share relationship exists where user is the viewer
+ */
+export async function removeSharer(ownerId: string): Promise<ActionResult> {
+  const { user } = await verifySession();
+
+  if (!ownerId) {
+    return { success: false, error: SHARING_ERRORS.SHARE_NOT_FOUND };
+  }
+
+  const program = Effect.gen(function* () {
+    const sharing = yield* SharingService;
+    yield* sharing.removeSharerAsViewer(user.id, ownerId);
+  }).pipe(Effect.provide(SharingLive), Effect.scoped);
+
+  try {
+    await Effect.runPromise(program);
+
+    // Invalidate both users' caches
+    invalidateAndRevalidate(user.id);
+    invalidateAndRevalidate(ownerId);
+
+    return { success: true };
+  } catch (error: any) {
+    logger.error("Failed to remove sharer:", error);
+    return { success: false, error: SHARING_ERRORS.FAILED_TO_REMOVE_SHARER };
   }
 }

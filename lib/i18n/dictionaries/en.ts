@@ -1450,6 +1450,7 @@ export const en: Dictionary = {
       iShareWithDesc: 'Can see your shifts',
       sharesWithMe: 'Share with you',
       sharesWithMeDesc: 'You can see their shifts',
+      removeFriend: 'Remove',
       notificationFrequency: {
         instant: 'Instant',
         summary: 'Daily summary',

@@ -213,6 +213,20 @@ export class AIError extends Data.TaggedError("AIError")<{
 }
 
 /**
+ * Computation errors
+ * Indicates failures during calculations (e.g., payroll computations)
+ */
+export class ComputationError extends Data.TaggedError("ComputationError")<{
+  readonly operation: string;
+  readonly reason: string;
+  readonly cause?: unknown;
+}> {
+  get message(): string {
+    return `Computation error in '${this.operation}': ${this.reason}`;
+  }
+}
+
+/**
  * Type guard to check if an error is an Effect-based tagged error
  */
 export function isTaggedError(error: unknown): error is { _tag: string } {

@@ -104,25 +104,32 @@ export function SharedUserShiftPreview({
 
     // Compute immediately on mount, then update every second
     const updateValues = () => {
-      setCurrentStatus(
-        computeShiftStatus(shift.shift_date, shift.start_time, shift.end_time)
-      );
-      setProgress(
-        computeShiftProgress(shift.shift_date, shift.start_time, shift.end_time)
-      );
+      const newStatus = computeShiftStatus(shift.shift_date, shift.start_time, shift.end_time);
+      const newProgress = computeShiftProgress(shift.shift_date, shift.start_time, shift.end_time);
+
+      // Only update state if values actually changed to prevent unnecessary re-renders
+      setCurrentStatus((prev) => (prev === newStatus ? prev : newStatus));
+      setProgress((prev) => (prev === newProgress ? prev : newProgress));
+
       // Update hasMounted state after first computation to show progress bar
       if (hasMountedRef.current && !hasMounted) {
         setHasMounted(true);
       }
     };
 
-    // Initial computation
-    updateValues();
+    // Defer initial computation to avoid blocking entrance animations
+    // requestAnimationFrame ensures we run after the current paint
+    const rafId = requestAnimationFrame(() => {
+      updateValues();
+    });
 
     // Re-compute every second to catch status transitions and update progress
     const interval = setInterval(updateValues, 1000);
 
-    return () => clearInterval(interval);
+    return () => {
+      cancelAnimationFrame(rafId);
+      clearInterval(interval);
+    };
   }, [shift.shift_date, shift.start_time, shift.end_time, hasMounted]);
 
   const isActive = currentStatus === "active";

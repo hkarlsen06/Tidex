@@ -355,7 +355,18 @@ export function useCountdown({
       const computed = computeCountdown();
       if (!computed) return;
 
-      setResult(computed.result);
+      // Only update state if the result has actually changed
+      // This prevents unnecessary re-renders during animations
+      setResult((prev) => {
+        if (
+          prev.text === computed.result.text &&
+          prev.isActive === computed.result.isActive &&
+          prev.progress === computed.result.progress
+        ) {
+          return prev; // Return same reference to skip re-render
+        }
+        return computed.result;
+      });
 
       // Check if we need to change the interval frequency
       if (computed.intervalMs !== intervalMsRef.current) {

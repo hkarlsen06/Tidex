@@ -24,6 +24,7 @@ import { Context, Effect, Layer, Cache, Duration } from "effect";
 import { AuthService } from "./auth";
 import { SupabaseService } from "./supabase";
 import { DatabaseError, AuthError, NotFoundError, TimeoutError, SupabaseError } from "../errors/tagged";
+import type { SupplementRule } from "../payroll/types";
 
 /**
  * Database user_settings row type
@@ -39,7 +40,7 @@ export type DbUserSettings = {
   use_preset?: boolean | null;
   current_wage_level?: number | null;
   custom_wage?: number | null;
-  custom_supplements?: { rules: any[] } | null;
+  custom_supplements?: { rules: SupplementRule[] } | null;
   pause_deduction_enabled?: boolean | null;
   pause_deduction_method?: string | null;
   pause_threshold_hours?: number | null;

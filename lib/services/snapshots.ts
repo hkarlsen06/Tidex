@@ -21,6 +21,7 @@
 
 import "server-only";
 import { Context, Effect, Layer, Cache, Duration } from "effect";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { AuthService } from "./auth";
 import { SupabaseService } from "./supabase";
 import {
@@ -278,7 +279,7 @@ export const SnapshotsServiceLive = Layer.effect(
       Effect.gen(function* () {
         yield* auth.verifyUserId(userId);
 
-        const queryEffect = async (client: any) => {
+        const queryEffect = async (client: SupabaseClient) => {
           let query = client
             .from("wage_snapshots")
             .select("id")
@@ -416,12 +417,13 @@ export const SnapshotsServiceLive = Layer.effect(
         const nextSnapshot = snapshots[currentIndex + 1] ?? null;
 
         // Count shifts between this snapshot and the next
-        const countQuery = async (client: any) => {
+        const snapshotFromDate = (snapshot as { from_date: string | null }).from_date;
+        const countQuery = async (client: SupabaseClient) => {
           let query = client
             .from("user_shifts")
             .select("id", { count: "exact", head: true })
             .eq("user_id", userId)
-            .gte("shift_date", (snapshot as { from_date: string | null }).from_date);
+            .gte("shift_date", snapshotFromDate);
 
           if (nextSnapshot) {
             query = query.lt("shift_date", nextSnapshot.from_date);
@@ -432,8 +434,12 @@ export const SnapshotsServiceLive = Layer.effect(
 
         const countResult = yield* supabase.query(countQuery, { retries: 2 });
 
-        // Extract count from result (Supabase returns { count: number } or null)
-        return (countResult as any)?.count ?? 0;
+        // Extract count from result (Supabase returns { count: number } for head: true queries)
+        // The result is typed as unknown from the generic query, so we need to extract the count
+        if (typeof countResult === "object" && countResult !== null && "count" in countResult) {
+          return (countResult as { count: number }).count;
+        }
+        return 0;
       });
 
     /**

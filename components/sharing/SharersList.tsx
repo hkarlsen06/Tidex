@@ -3,36 +3,11 @@
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { ChevronRight, Loader2 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { SharedUserShiftPreview } from "./SharedUserShiftPreview";
 import type { SharedUser, SharerShiftPreview } from "@/data-access/sharing";
-
-// Animation variants for staggered list items
-const listContainerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.05,
-      delayChildren: 0.1,
-    },
-  },
-};
-
-const listItemVariants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      type: "spring" as const,
-      stiffness: 300,
-      damping: 30,
-    },
-  },
-};
 
 type SharersListProps = {
   sharers: SharedUser[];
@@ -203,63 +178,68 @@ export function SharersList({
       : sharers;
 
   return (
-    <motion.div
-      className="flex flex-col gap-3"
-      variants={listContainerVariants}
-      initial="hidden"
-      animate="visible"
-    >
-      {sortedSharers.map((sharer) => {
-        const isLoading = loadingId === sharer.id;
-        const preview = previewMap.get(sharer.id);
-        const hasShiftPreview = preview?.shift && preview?.status;
+    <div className="flex flex-col gap-3">
+      <AnimatePresence mode="popLayout" initial={false}>
+        {sortedSharers.map((sharer) => {
+          const isLoading = loadingId === sharer.id;
+          const preview = previewMap.get(sharer.id);
+          const hasShiftPreview = preview?.shift && preview?.status;
 
-        return (
-          <motion.button
-            key={sharer.id}
-            variants={listItemVariants}
-            type="button"
-            onClick={() => handleClick(sharer.id)}
-            disabled={loadingId !== null}
-            className={cn(
-              "w-full text-left rounded-xl border border-border-subtle bg-surface-primary overflow-hidden",
-              "hover:bg-surface-secondary transition-colors",
-              "focus:outline-none focus:ring-2 focus:ring-border",
-              loadingId !== null && !isLoading && "opacity-50",
-            )}
-          >
-            {/* User card header */}
-            <div className="flex w-full items-center gap-3 px-4 py-3">
-              <UserAvatar user={sharer} size="md" />
-              <div className="flex flex-1 flex-col min-w-0">
-                <span className="text-sm font-medium text-text-primary truncate-fade">
-                  {getDisplayName(sharer)}
-                </span>
-                {getSecondaryInfo(sharer) && (
-                  <span className="text-xs text-text-muted truncate-fade">
-                    {getSecondaryInfo(sharer)}
+          return (
+            <motion.button
+              key={sharer.id}
+              layout
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10, transition: { duration: 0.15 } }}
+              transition={{
+                type: "spring",
+                stiffness: 300,
+                damping: 30,
+              }}
+              type="button"
+              onClick={() => handleClick(sharer.id)}
+              disabled={loadingId !== null}
+              className={cn(
+                "w-full text-left rounded-xl border border-border-subtle bg-surface-primary overflow-hidden",
+                "hover:bg-surface-secondary transition-colors",
+                "focus:outline-none focus:ring-2 focus:ring-border",
+                loadingId !== null && !isLoading && "opacity-50",
+              )}
+            >
+              {/* User card header */}
+              <div className="flex w-full items-center gap-3 px-4 py-3">
+                <UserAvatar user={sharer} size="md" />
+                <div className="flex flex-1 flex-col min-w-0">
+                  <span className="text-sm font-medium text-text-primary truncate-fade">
+                    {getDisplayName(sharer)}
                   </span>
+                  {getSecondaryInfo(sharer) && (
+                    <span className="text-xs text-text-muted truncate-fade">
+                      {getSecondaryInfo(sharer)}
+                    </span>
+                  )}
+                </div>
+                {isLoading ? (
+                  <Loader2 className="h-4 w-4 text-text-muted animate-spin" />
+                ) : (
+                  <ChevronRight className="h-4 w-4 text-text-muted" />
                 )}
               </div>
-              {isLoading ? (
-                <Loader2 className="h-4 w-4 text-text-muted animate-spin" />
-              ) : (
-                <ChevronRight className="h-4 w-4 text-text-muted" />
-              )}
-            </div>
 
-            {/* Shift preview - shown under the user card */}
-            {hasShiftPreview && (
-              <div className="px-3 pb-3">
-                <SharedUserShiftPreview
-                  shift={preview.shift!}
-                  status={preview.status!}
-                />
-              </div>
-            )}
-          </motion.button>
-        );
-      })}
-    </motion.div>
+              {/* Shift preview - shown under the user card */}
+              {hasShiftPreview && (
+                <div className="px-3 pb-3">
+                  <SharedUserShiftPreview
+                    shift={preview.shift!}
+                    status={preview.status!}
+                  />
+                </div>
+              )}
+            </motion.button>
+          );
+        })}
+      </AnimatePresence>
+    </div>
   );
 }
