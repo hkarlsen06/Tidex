@@ -7,6 +7,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useState, use, useRef, useEffect } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { useTranslations } from "@/lib/i18n/client";
+import { isNativePlatform } from "@/lib/capacitor/platform";
 
 // Animation variants for entrance animation
 const cardVariants = {
@@ -112,6 +113,30 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
   // Reset Turnstile widget on mount to prevent stale token issues
   useEffect(() => {
     turnstileRef.current?.reset();
+  }, []);
+
+  // Listen for Capacitor Browser close events to reset OAuth state
+  // This handles when user cancels Apple/Google sign-in (e.g., fails Face ID)
+  useEffect(() => {
+    if (!isNativePlatform()) return;
+
+    let cleanup: (() => void) | undefined;
+
+    const setupListener = async () => {
+      const { Browser } = await import("@capacitor/browser");
+      const handle = await Browser.addListener("browserFinished", () => {
+        // Browser was closed - reset OAuth state so user can try again
+        setOauthProvider(null);
+        setMessage(null);
+      });
+      cleanup = () => handle.remove();
+    };
+
+    setupListener();
+
+    return () => {
+      cleanup?.();
+    };
   }, []);
 
   const performGoogleSignIn = async () => {
@@ -415,8 +440,14 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
     >
       {/* Full-screen loading overlay during OAuth redirect */}
       {isOAuthRedirecting && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-xs">
-          <Card className="max-w-sm shadow-lg">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-xs"
+          onClick={() => {
+            setOauthProvider(null);
+            setMessage(null);
+          }}
+        >
+          <Card className="max-w-sm shadow-lg" onClick={(e) => e.stopPropagation()}>
             <CardContent className="pt-6">
               <div className="flex flex-col items-center gap-4">
                 <div className="h-12 w-12 animate-spin rounded-full border-4 border-border border-t-primary"></div>
@@ -425,6 +456,16 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
                     ? t.pages.auth.login.waitingForApple
                     : t.pages.auth.login.waitingForGoogle}
                 </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOauthProvider(null);
+                    setMessage(null);
+                  }}
+                  className="text-sm text-text-muted hover:text-text-primary transition-colors"
+                >
+                  {t.common.cancel}
+                </button>
               </div>
             </CardContent>
           </Card>

@@ -5,7 +5,7 @@ import type { MouseEvent as ReactMouseEvent } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Settings, LogOut } from "lucide-react";
+import { Settings, LogOut, Loader2 } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
 import { LocaleToggle } from "./LocaleToggle";
 import { cn } from "@/lib/utils";
@@ -24,7 +24,8 @@ export function UserMenu({
   const btnRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
-  const { navigate } = useNavigationFeedback();
+  const { navigate, pendingPath } = useNavigationFeedback();
+  const isLoggingOut = pendingPath === "/logout";
 
   // Close menu on navigation
   // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -145,12 +146,27 @@ export function UserMenu({
           <LocaleToggle />
           <Link
             href="/logout"
-            onClick={handleNavigationClick("/logout")}
+            onClick={(event) => {
+              if (isLoggingOut) {
+                event.preventDefault();
+                return;
+              }
+              handleNavigationClick("/logout")(event);
+            }}
             prefetch={false}
             role="menuitem"
-            className="flex items-center gap-2 px-4 py-2 text-sm text-error hover:bg-error-subtle"
+            aria-disabled={isLoggingOut}
+            tabIndex={isLoggingOut ? -1 : undefined}
+            className={cn(
+              "flex items-center gap-2 px-4 py-2 text-sm text-error hover:bg-error-subtle",
+              isLoggingOut && "cursor-not-allowed opacity-70 hover:bg-transparent"
+            )}
           >
-            <LogOut strokeWidth={2} className="h-4 w-4" />
+            {isLoggingOut ? (
+              <Loader2 strokeWidth={2} className="h-4 w-4 animate-spin" />
+            ) : (
+              <LogOut strokeWidth={2} className="h-4 w-4" />
+            )}
             {t.userMenu.logout}
           </Link>
         </div>
