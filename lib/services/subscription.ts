@@ -140,7 +140,11 @@ export const SubscriptionServiceLive = Layer.effect(
       }).pipe(
         Effect.catchTag("DatabaseError", (error: DatabaseError) => {
           // Return null for missing subscriptions (PGRST116 - no data found)
-          if (error.code === "NO_DATA" || (error.cause as any)?.code === "PGRST116") {
+          // Check both the error code and the cause's code for PGRST116 (Supabase "no rows" error)
+          const causeCode = error.cause && typeof error.cause === "object" && "code" in error.cause
+            ? (error.cause as { code?: string }).code
+            : undefined;
+          if (error.code === "NO_DATA" || causeCode === "PGRST116") {
             return Effect.succeed(null);
           }
           logger.error("Failed to fetch user subscription:", error);
@@ -171,7 +175,11 @@ export const SubscriptionServiceLive = Layer.effect(
           .pipe(
             Effect.map((result) => result as unknown as Subscription),
             Effect.catchTag("DatabaseError", (error: DatabaseError) => {
-              if (error.code === "NO_DATA" || (error.cause as any)?.code === "PGRST116") {
+              // Check both the error code and the cause's code for PGRST116 (Supabase "no rows" error)
+              const causeCode = error.cause && typeof error.cause === "object" && "code" in error.cause
+                ? (error.cause as { code?: string }).code
+                : undefined;
+              if (error.code === "NO_DATA" || causeCode === "PGRST116") {
                 return Effect.succeed(null);
               }
               logger.error("Failed to fetch user subscription:", error);

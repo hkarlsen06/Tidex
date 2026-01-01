@@ -1449,6 +1449,7 @@ export const no = {
       iShareWithDesc: 'Kan se dine vakter',
       sharesWithMe: 'Deler med deg',
       sharesWithMeDesc: 'Du kan se deres vakter',
+      removeFriend: 'Fjern',
       notificationFrequency: {
         instant: 'Umiddelbart',
         summary: 'Daglig oppsummering',

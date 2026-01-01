@@ -25,6 +25,7 @@
 
 import "server-only";
 import { Context, Effect, Layer } from "effect";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { AuthService } from "./auth";
 import { SupabaseService } from "./supabase";
 import { SettingsService, type DbUserSettings } from "./settings";
@@ -34,6 +35,7 @@ import {
   type ShiftRow,
   type ShiftWithComputations,
   type UserSettings,
+  type CustomSupplementsData,
   PRESET_SUPPLEMENT_RULES,
   type WageSnapshot,
 } from "../payroll";
@@ -320,7 +322,7 @@ export const ShiftsServiceLive = Layer.effect(
 
         // Fetch user settings
         // When skipAuthCheck is true (shared access), query directly to bypass SettingsService auth
-        let userSettings: UserSettings = {};
+        let userSettings: DbUserSettings | null = null;
         if (skipAuthCheck) {
           // Direct query for shared access (RLS handles authorization)
           const settingsResult = yield* supabase.query(
@@ -331,15 +333,22 @@ export const ShiftsServiceLive = Layer.effect(
                 .eq("user_id", userId)
                 .maybeSingle(),
             { retries: 2 }
+          ).pipe(
+            Effect.catchTag("DatabaseError", (error) => {
+              // NO_DATA is expected for users without settings
+              if (error.code === "NO_DATA") {
+                return Effect.succeed(null);
+              }
+              return Effect.fail(error);
+            })
           );
-          userSettings = (settingsResult as any) ?? {};
+          userSettings = settingsResult as DbUserSettings | null;
         } else {
-          const userSettingsResult = yield* settings.getUserSettings(userId);
-          userSettings = (userSettingsResult as any) ?? {};
+          userSettings = yield* settings.getUserSettings(userId);
         }
 
         // Build query with filters
-        const shiftsQuery = async (client: any) => {
+        const shiftsQuery = async (client: SupabaseClient) => {
           let query = client
             .from("user_shifts")
             .select("*")
@@ -360,7 +369,7 @@ export const ShiftsServiceLive = Layer.effect(
         };
 
         // Fetch recurring shifts
-        const recurringQuery = async (client: any) =>
+        const recurringQuery = async (client: SupabaseClient) =>
           await client
             .from("recurring_shifts")
             .select("*")
@@ -453,7 +462,7 @@ export const ShiftsServiceLive = Layer.effect(
           return {
             ...shift,
             supplement_rules_snapshot: supplementRulesSnapshot,
-            computed: computeShift(shift, userSettings, PRESET_SUPPLEMENT_RULES, snapshot),
+            computed: computeShift(shift, userSettings ?? {}, PRESET_SUPPLEMENT_RULES, snapshot),
             // Include tax settings from snapshot for after-tax calculations
             tax_enabled: snapshot?.tax_enabled ?? false,
             tax_percentage: snapshot?.tax_percentage ?? 0,
@@ -469,7 +478,7 @@ export const ShiftsServiceLive = Layer.effect(
             const snapshot = snapshotMap.get(virtualShift.date) ?? null;
 
             // Check if recurring shift has date-specific custom supplements for this virtual shift date
-            const customSupplements = recurring.date_specific_supplements?.[virtualShift.date] ?? null;
+            const customSupplements: CustomSupplementsData | null = recurring.date_specific_supplements?.[virtualShift.date] ?? null;
 
             const computed = computeShift(
               {
@@ -478,11 +487,11 @@ export const ShiftsServiceLive = Layer.effect(
                 shift_date: virtualShift.date,
                 start_time: cleanTime(recurring.start_time),
                 end_time: cleanTime(recurring.end_time),
-                custom_supplements: customSupplements as any,
+                custom_supplements: customSupplements,
                 recurring_id: recurring.id,
                 recurring_anchor_weekday: virtualShift.weekday,
               },
-              userSettings,
+              userSettings ?? {},
               PRESET_SUPPLEMENT_RULES,
               snapshot
             );
@@ -496,7 +505,7 @@ export const ShiftsServiceLive = Layer.effect(
               shift_date: virtualShift.date,
               start_time: cleanTime(recurring.start_time),
               end_time: cleanTime(recurring.end_time),
-              custom_supplements: customSupplements as any,
+              custom_supplements: customSupplements,
               supplement_rules_snapshot: supplementRulesSnapshot,
               recurring_id: recurring.id,
               recurring_anchor_weekday: virtualShift.weekday,
@@ -528,7 +537,7 @@ export const ShiftsServiceLive = Layer.effect(
 
         if (year && month) {
           // Get payroll day from user settings (default to 1 if not set)
-          const payrollDay = (userSettings as DbUserSettings)?.payroll_day ?? 1;
+          const payrollDay = userSettings?.payroll_day ?? 1;
           const payoutDate = calculatePayoutDate(year, month, payrollDay);
 
           const payoutSnapshot = yield* getSnapshotForDate(userId, payoutDate, skipAuthCheck);
@@ -543,8 +552,8 @@ export const ShiftsServiceLive = Layer.effect(
 
         return {
           shifts: allShifts as readonly ShiftWithComputations[],
-          defaultView: (userSettings as DbUserSettings)?.default_shifts_view || "calendar",
-          settings: userSettings,
+          defaultView: userSettings?.default_shifts_view ?? "calendar",
+          settings: userSettings ?? {},
           aggregates,
           payoutTaxSettings,
         };
