@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState, useRef, useCallback } from "react";
+import { useIsDesktop } from "@/lib/hooks/useIsMobile";
 import type { ReactNode } from "react";
 import dynamic from "next/dynamic";
 import { motion, useInView } from "framer-motion";
@@ -39,14 +40,8 @@ const ScrollAnimatedCard = React.forwardRef<HTMLDivElement, { children: React.Re
     // Use larger top margin to account for navbar (~96px header + buffer)
     // Bottom margin for bottom navbar (~80px + buffer)
     const isInView = useInView(internalRef, { amount: 0.2, margin: "-120px 0px -100px 0px" });
-    const [isDesktop, setIsDesktop] = useState(false);
-
-    useEffect(() => {
-      const checkDesktop = () => setIsDesktop(window.innerWidth >= 1024);
-      checkDesktop();
-      window.addEventListener('resize', checkDesktop);
-      return () => window.removeEventListener('resize', checkDesktop);
-    }, []);
+    // useIsDesktop returns undefined during SSR/hydration, then true/false after mount
+    const isDesktop = useIsDesktop();
 
     // Combine refs using a callback that avoids modifying the forwardedRef directly
     const setRefs = useCallback(
@@ -63,6 +58,16 @@ const ScrollAnimatedCard = React.forwardRef<HTMLDivElement, { children: React.Re
       },
       [forwardedRef]
     );
+
+    // During SSR/hydration (isDesktop === undefined), render without animation
+    // to prevent layout shift when viewport is detected
+    if (isDesktop === undefined) {
+      return (
+        <div ref={setRefs} className={className}>
+          {children}
+        </div>
+      );
+    }
 
     return (
       <motion.div
