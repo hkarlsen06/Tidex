@@ -148,7 +148,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="no" suppressHydrationWarning>
+    <html lang="no" className="safe-area-loading" suppressHydrationWarning>
       <head>
         <meta name="mobile-web-app-capable" content="yes" />
         {/* Critical resource hints for faster loading */}
@@ -157,7 +157,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         {/* Defer non-critical third-party connections */}
         <link rel="preconnect" href="https://vercel.live" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://vercel.live" />
-        {/* Inline critical theme script for instant paint */}
+        {/* Inline critical scripts for instant paint without layout shift */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -167,7 +167,53 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                 const savedTheme = localStorage.getItem('theme');
                 const theme = savedTheme || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
                 document.documentElement.classList.toggle('dark', theme === 'dark');
-              } catch (e) {}
+
+                // Wait for safe-area-insets to be available before showing content
+                // On iOS PWA/Capacitor, env() values are not immediately available
+                // This prevents the layout shift when the header/navbar snap into position
+                (function waitForSafeArea() {
+                  // Create a test element to measure safe-area-inset-top
+                  var test = document.createElement('div');
+                  test.style.cssText = 'position:fixed;top:env(safe-area-inset-top,0px);left:0;width:1px;height:1px;pointer-events:none;visibility:hidden';
+                  document.documentElement.appendChild(test);
+
+                  function check() {
+                    var rect = test.getBoundingClientRect();
+                    // If top > 0, safe-area-insets are resolved (notched device)
+                    // If top === 0, either no notch or values not yet available
+                    // We use a short timeout to ensure the CSS has been applied
+                    if (rect.top > 0) {
+                      // Safe area is available and non-zero
+                      document.documentElement.classList.remove('safe-area-loading');
+                      test.remove();
+                    } else {
+                      // Check if we're on a device that should have safe-area
+                      // Use CSS.supports to check if env() is understood by the browser
+                      var supportsEnv = CSS.supports && CSS.supports('top', 'env(safe-area-inset-top)');
+                      if (!supportsEnv) {
+                        // Browser doesn't support env(), no need to wait
+                        document.documentElement.classList.remove('safe-area-loading');
+                        test.remove();
+                      } else {
+                        // Wait a frame and check again (max ~100ms total)
+                        requestAnimationFrame(function() {
+                          setTimeout(function() {
+                            // After waiting, remove regardless (fallback)
+                            document.documentElement.classList.remove('safe-area-loading');
+                            test.remove();
+                          }, 50);
+                        });
+                      }
+                    }
+                  }
+
+                  // Use rAF to ensure layout is computed
+                  requestAnimationFrame(check);
+                })();
+              } catch (e) {
+                // If anything fails, make sure we show the content
+                document.documentElement.classList.remove('safe-area-loading');
+              }
             `,
           }}
         />
