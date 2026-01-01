@@ -8,6 +8,7 @@ import { UserListCard } from "./UserListCard";
 import { SubscriberListCard } from "./SubscriberListCard";
 import { AuditLogCard } from "./AuditLogCard";
 import { FeedbackCard } from "./FeedbackCard";
+import { SqlRunnerCard } from "./SqlRunnerCard";
 import {
   Tabs,
   TabsList,
@@ -16,7 +17,7 @@ import {
 } from "@/components/app/Tabs";
 import type { Dictionary } from "@/lib/i18n/dictionaries/no";
 
-const VALID_TABS = ["notifications", "users", "subscribers", "feedback", "auditlog"] as const;
+const VALID_TABS = ["notifications", "users", "subscribers", "feedback", "auditlog", "sql"] as const;
 type TabValue = (typeof VALID_TABS)[number];
 
 export function AdminDashboard({ dictionary }: { dictionary: Dictionary }) {
@@ -53,6 +54,7 @@ export function AdminDashboard({ dictionary }: { dictionary: Dictionary }) {
             <TabsTrigger value="subscribers" className="shrink-0">Subscribers</TabsTrigger>
             <TabsTrigger value="feedback" className="shrink-0">Feedback</TabsTrigger>
             <TabsTrigger value="auditlog" className="shrink-0">Audit Log</TabsTrigger>
+            <TabsTrigger value="sql" className="shrink-0">SQL</TabsTrigger>
           </TabsList>
         </div>
 
@@ -80,6 +82,10 @@ export function AdminDashboard({ dictionary }: { dictionary: Dictionary }) {
 
         <TabsContent value="auditlog" disableAnimation>
           <AuditLogCard refreshTrigger={refreshTrigger} />
+        </TabsContent>
+
+        <TabsContent value="sql" disableAnimation>
+          <SqlRunnerCard />
         </TabsContent>
       </Tabs>
     </div>

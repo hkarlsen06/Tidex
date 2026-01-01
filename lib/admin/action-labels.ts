@@ -14,6 +14,7 @@ export const ADMIN_ACTIONS = [
   "broadcast_sent",
   "user_list_viewed",
   "admin_action_failed",
+  "sql_executed",
 ] as const;
 
 export type AdminAction = (typeof ADMIN_ACTIONS)[number];
@@ -45,6 +46,7 @@ export const ADMIN_ACTION_CONFIG: Record<AdminAction, ActionConfig> = {
   user_list_viewed: { label: "Viewed user list", severity: "info" },
   user_lookup: { label: "Looked up user", severity: "info" },
   admin_action_failed: { label: "Action failed", severity: "destructive" },
+  sql_executed: { label: "Executed SQL", severity: "warning" },
 } as const;
 
 /**
