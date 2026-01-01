@@ -115,15 +115,21 @@
     "supabase": "^2.70.5",
     "vitest": "^4.0.16"
   },
-  "engines": {
-    "node": ">=22.0.0"
-  },
   "type": "module",
   "pnpm": {
     "overrides": {
       "@types/react": "19.2.2",
       "@types/react-dom": "19.2.2",
       "glob": "^11.0.4"
-    }
+    },
+    "onlyBuiltDependencies": [
+      "@firebase/util",
+      "@vercel/speed-insights",
+      "esbuild",
+      "protobufjs",
+      "sharp",
+      "supabase",
+      "unrs-resolver"
+    ]
   }
 }
