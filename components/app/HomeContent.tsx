@@ -548,7 +548,7 @@ export function HomeContent({ shifts: initialShifts, settings, payoutTaxSettings
         <div className="flex flex-col gap-6 w-full">
           {payrollDay && (
             <div className="flex flex-col gap-2">
-              <p className="text-xs text-text-muted text-center">{payrollCountdown.text}</p>
+              <p className="text-sm text-text-secondary text-center">{payrollCountdown.text}</p>
               <NextPayrollCard
                 payrollDay={payrollDay}
                 netAmount={payrollData.netAmount}
@@ -606,7 +606,7 @@ export function HomeContent({ shifts: initialShifts, settings, payoutTaxSettings
             ) : (
               <ShiftCardSkeleton />
             )}
-            <p className="text-xs text-text-muted text-center">{relativeTimeText ?? "---"}</p>
+            <p className="text-sm text-text-secondary text-center">{relativeTimeText ?? "---"}</p>
           </div>
         </div>
       </div>

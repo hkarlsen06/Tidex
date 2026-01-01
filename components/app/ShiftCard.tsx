@@ -37,19 +37,19 @@ type ShiftCardProps = {
   excludedFromTotal?: boolean;
 };
 
-export function formatDateParts(date: string, locale: string, daysShort: readonly string[]) {
+export function formatDateParts(date: string, locale: string, daysFull: readonly string[], monthsShort: readonly string[]) {
   const parsed = new Date(`${date}T00:00:00Z`);
   const weekday = parsed.getUTCDay();
+  const monthIndex = parsed.getUTCMonth();
 
   // Use Intl.DateTimeFormat for locale-aware date formatting
   const dayFormatter = getDateFormatter(locale, { day: "numeric" });
-  const monthFormatter = getDateFormatter(locale, { month: "long" });
 
   const dayNumber = dayFormatter.format(parsed);
-  const monthName = monthFormatter.format(parsed);
+  const monthName = monthsShort[monthIndex];
 
   return {
-    dayName: daysShort[weekday],
+    dayName: daysFull[weekday],
     dayNumber,
     monthName,
     isWeekend: weekday === 0 || weekday === 6,
@@ -73,7 +73,7 @@ export function ShiftCard({ shift, onClick, isToday = false, progress, taxSettin
   const formatCurrency = useFormatCurrency();
   const { symbol: currencySymbol, display: currencyDisplay } = useCurrency();
   const { computed } = shift;
-  const { dayName, dayNumber, monthName } = formatDateParts(shift.shift_date, locale, t.dateTime.daysShort);
+  const { dayName, dayNumber, monthName } = formatDateParts(shift.shift_date, locale, t.dateTime.daysFull, t.dateTime.monthsShort);
   const { basePay, supplementPay, gross, paidHours } = computed;
 
   // Calculate tax for this shift
@@ -132,8 +132,7 @@ export function ShiftCard({ shift, onClick, isToday = false, progress, taxSettin
       )}>
         <div className="space-y-1">
           <p className="text-lg font-medium text-text-primary">
-            {dayName} · {dayNumber}{" "}
-            <span className="text-text-muted">{monthName}</span>
+            {dayName} <span className="text-text-muted">· {dayNumber} {monthName}</span>
           </p>
           <div className="flex items-center gap-3 text-sm text-text-secondary">
             <span className={cn(
@@ -163,7 +162,7 @@ export function ShiftCard({ shift, onClick, isToday = false, progress, taxSettin
               {formatTimeRange(shift.start_time, shift.end_time)}
             </span>
             <span className="text-text-muted">→</span>
-            <span className="font-medium text-text-primary">{formatHours(paidHours)}</span>
+            <span className="font-medium text-text-muted">{formatHours(paidHours)}</span>
           </div>
         </div>
         <div className="text-right">
@@ -179,8 +178,8 @@ export function ShiftCard({ shift, onClick, isToday = false, progress, taxSettin
               </p>
               {showBreakdown && (
                 <p className={cn(
-                  "text-xs",
-                  excludedFromTotal && "text-text-muted line-through"
+                  "text-sm text-text-muted",
+                  excludedFromTotal && "line-through"
                 )}>{breakdown}</p>
               )}
             </>
@@ -189,7 +188,7 @@ export function ShiftCard({ shift, onClick, isToday = false, progress, taxSettin
               <p className="text-2xl font-semibold tracking-tight text-text-muted">
                 {currencyDisplay === "prefix" ? `${currencySymbol}——` : `—— ${currencySymbol}`}
               </p>
-              <p className="text-xs text-text-muted">——</p>
+              <p className="text-sm text-text-muted">——</p>
             </>
           )}
         </div>

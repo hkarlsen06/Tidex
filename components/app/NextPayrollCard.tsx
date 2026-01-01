@@ -99,17 +99,19 @@ export const NextPayrollCard: React.FC<NextPayrollCardProps> = ({
     : t.components.nextPayrollCard.payroll;
 
   // Calculate breakdown based on tax settings
+  // Determine if breakdown adds meaningful information
+  const hasSupplements = (supplementAmount ?? 0) > 0;
+  const showBreakdown = taxEnabled || hasSupplements;
+
   let breakdown: string;
   if (showNoPayoutPlaceholder) {
     breakdown = '---';
   } else if (taxEnabled && grossAmount !== undefined && taxAmount !== undefined) {
     breakdown = `${formatPlainAmount(grossAmount)} - ${formatPlainAmount(taxAmount)}`;
-  } else if (baseAmount !== undefined && supplementAmount !== undefined) {
-    breakdown = supplementAmount > 0
-      ? `${formatPlainAmount(baseAmount)} + ${formatPlainAmount(supplementAmount)}`
-      : formatPlainAmount(baseAmount);
+  } else if (baseAmount !== undefined && supplementAmount !== undefined && hasSupplements) {
+    breakdown = `${formatPlainAmount(baseAmount)} + ${formatPlainAmount(supplementAmount)}`;
   } else {
-    breakdown = formatPlainAmount(netAmount);
+    breakdown = '';
   }
 
   const handleClick = () => {
@@ -154,7 +156,10 @@ export const NextPayrollCard: React.FC<NextPayrollCardProps> = ({
           aria-hidden="true"
         />
       )}
-      <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0 py-6 relative z-10">
+      <CardHeader className={cn(
+        "flex flex-row justify-between gap-4 space-y-0 py-6 relative z-10",
+        !showNoPayoutPlaceholder && !showBreakdown ? "items-center" : "items-start"
+      )}>
         {isLoading ? (
           <div className="animate-pulse flex-1 space-y-3" aria-hidden="true">
             <div className="h-4 w-32 rounded-lg bg-text-muted/20" />
@@ -195,7 +200,7 @@ export const NextPayrollCard: React.FC<NextPayrollCardProps> = ({
                     transition={{ duration: 0.2 }}
                   >
                     <p className="text-2xl font-semibold tracking-tight text-text-primary">---</p>
-                    <p className="text-xs">---</p>
+                    <p className="text-sm">---</p>
                   </motion.div>
                 ) : (
                   <motion.div
@@ -208,7 +213,7 @@ export const NextPayrollCard: React.FC<NextPayrollCardProps> = ({
                     <p className="text-2xl font-semibold tracking-tight text-text-primary">
                       {formatCurrency(netAmount)}
                     </p>
-                    <p className="text-xs">{breakdown}</p>
+                    {showBreakdown && <p className="text-sm text-text-muted">{breakdown}</p>}
                   </motion.div>
                 )}
               </AnimatePresence>
