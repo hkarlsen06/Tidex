@@ -2,6 +2,22 @@
 
 @import 'tailwindcss';
 
+/*
+ * Safe-area-inset loading state
+ * On iOS PWA/Capacitor, env(safe-area-inset-*) values are not immediately available.
+ * This causes a layout shift when they resolve (e.g., header jumps down by ~47px).
+ * Solution: Hide the body until safe-area-insets are resolved, then reveal with fade.
+ * The script in layout.tsx removes the 'safe-area-loading' class once insets are ready.
+ */
+html.safe-area-loading body {
+  opacity: 0;
+}
+
+html:not(.safe-area-loading) body {
+  opacity: 1;
+  transition: opacity 50ms ease-out;
+}
+
 /* Define content sources for scanning */
 @source '../app/**/*.{js,ts,jsx,tsx}';
 @source '../components/**/*.{js,ts,jsx,tsx}';
