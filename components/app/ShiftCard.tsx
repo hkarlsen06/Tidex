@@ -94,9 +94,15 @@ export function ShiftCard({ shift, onClick, isToday = false, progress, taxSettin
 
   // Show different breakdown based on tax settings
   const displayAmount = taxEnabled ? netAmount : gross;
+
+  // Determine if breakdown adds meaningful information
+  // Hide breakdown when: no tax AND no supplements (breakdown would just repeat the main amount)
+  const hasSupplements = supplementPay > 0;
+  const showBreakdown = taxEnabled || hasSupplements;
+
   const breakdown = taxEnabled
     ? `${formatPlainAmount(gross)} − ${formatPlainAmount(taxAmount)}`
-    : `${formatPlainAmount(basePay)}${supplementPay > 0 ? ` + ${formatPlainAmount(supplementPay)}` : ""}`;
+    : `${formatPlainAmount(basePay)}${hasSupplements ? ` + ${formatPlainAmount(supplementPay)}` : ""}`;
 
   const isActive = typeof progress === 'number' && progress >= 0 && progress <= 100;
 
@@ -120,7 +126,10 @@ export function ShiftCard({ shift, onClick, isToday = false, progress, taxSettin
           aria-hidden="true"
         />
       )}
-      <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0 py-6 relative z-10">
+      <CardHeader className={cn(
+        "flex flex-row justify-between gap-4 space-y-0 py-6 relative z-10",
+        showEarnings && !showBreakdown ? "items-center" : "items-start"
+      )}>
         <div className="space-y-1">
           <p className="text-lg font-medium text-text-primary">
             {dayName} · {dayNumber}{" "}
@@ -168,10 +177,12 @@ export function ShiftCard({ shift, onClick, isToday = false, progress, taxSettin
               )}>
                 {formatCurrency(displayAmount)}
               </p>
-              <p className={cn(
-                "text-xs",
-                excludedFromTotal && "text-text-muted line-through"
-              )}>{breakdown}</p>
+              {showBreakdown && (
+                <p className={cn(
+                  "text-xs",
+                  excludedFromTotal && "text-text-muted line-through"
+                )}>{breakdown}</p>
+              )}
             </>
           ) : (
             <>
