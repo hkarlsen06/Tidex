@@ -25,7 +25,9 @@ BEGIN
     'user_lookup', 'user_ban', 'user_unban',
     'grant_grandfathered', 'revoke_grandfathered',
     'create_trial_subscription', 'revoke_trial_subscription',
-    'broadcast_sent', 'user_list_viewed', 'admin_action_failed'
+    'broadcast_sent', 'user_list_viewed', 'admin_action_failed',
+    'sql_executed',
+    'shift_share_created', 'shift_share_updated', 'shift_share_deleted'
   ) THEN
     RAISE EXCEPTION 'Invalid action type: %', p_action;
   END IF;
