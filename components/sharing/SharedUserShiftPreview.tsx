@@ -129,8 +129,8 @@ export function SharedUserShiftPreview({
 
   // Format date parts
   const { dayName, dayNumber, monthName } = useMemo(
-    () => formatDateParts(shift.shift_date, locale, t.dateTime.daysShort),
-    [shift.shift_date, locale, t.dateTime.daysShort]
+    () => formatDateParts(shift.shift_date, locale, t.dateTime.daysFull, t.dateTime.monthsShort),
+    [shift.shift_date, locale, t.dateTime.daysFull, t.dateTime.monthsShort]
   );
 
   // Countdown for upcoming shifts, or elapsed time for past shifts

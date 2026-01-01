@@ -442,9 +442,17 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
       {isOAuthRedirecting && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-xs"
+          role="button"
+          tabIndex={0}
           onClick={() => {
             setOauthProvider(null);
             setMessage(null);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape' || e.key === 'Enter' || e.key === ' ') {
+              setOauthProvider(null);
+              setMessage(null);
+            }
           }}
         >
           <Card className="max-w-sm shadow-lg" onClick={(e) => e.stopPropagation()}>
