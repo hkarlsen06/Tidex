@@ -53,7 +53,7 @@ function CustomXAxisTick({
   currentMonth: number;
   currentYear: number;
   index: number;
-  isMobile: boolean;
+  isMobile: boolean | undefined;
 }) {
   const monthData = data.find(d => d.month === payload.value);
   const isCurrentMonth = monthData?.monthNumber === currentMonth && monthData?.year === currentYear;

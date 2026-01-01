@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo, useState, useCallback, useTransition, useRef, useEffect, Fragment } from "react";
+import { useIsDesktop } from "@/lib/hooks/useIsMobile";
 import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { motion, useInView } from "framer-motion";
@@ -105,17 +106,8 @@ const ScrollAnimatedCard = React.forwardRef<HTMLDivElement, { children: React.Re
     // Use larger top margin to account for navbar (~96px header + buffer)
     // Bottom margin for bottom navbar (~80px + buffer)
     const isInView = useInView(internalRef, { amount: 0.2, margin: "-120px 0px -100px 0px" });
-    // Initialize with SSR-safe check, default to true to avoid mobile animation flash on desktop
-    const [isDesktop, setIsDesktop] = useState(() =>
-      typeof window !== 'undefined' ? window.innerWidth >= 1024 : true
-    );
-
-    useEffect(() => {
-      const checkDesktop = () => setIsDesktop(window.innerWidth >= 1024);
-      checkDesktop();
-      window.addEventListener('resize', checkDesktop);
-      return () => window.removeEventListener('resize', checkDesktop);
-    }, []);
+    // useIsDesktop returns undefined during SSR/hydration, then true/false after mount
+    const isDesktop = useIsDesktop();
 
     // Combine refs using a callback that avoids modifying the forwardedRef directly
     const setRefs = useCallback(
@@ -132,6 +124,16 @@ const ScrollAnimatedCard = React.forwardRef<HTMLDivElement, { children: React.Re
       },
       [forwardedRef]
     );
+
+    // During SSR/hydration (isDesktop === undefined), render without animation
+    // to prevent layout shift when viewport is detected
+    if (isDesktop === undefined) {
+      return (
+        <div ref={setRefs}>
+          {children}
+        </div>
+      );
+    }
 
     // On desktop, use staggered top-down entry animation
     if (isDesktop) {
@@ -166,18 +168,12 @@ function ConflictConnector({ topInView, bottomInView }: {
   topInView: boolean;
   bottomInView: boolean;
 }) {
-  const [isDesktop, setIsDesktop] = useState(false);
+  // useIsDesktop returns undefined during SSR/hydration, then true/false after mount
+  const isDesktop = useIsDesktop();
   // Track the origin to use - updated when only one card is visible
   const [activeOrigin, setActiveOrigin] = useState<"top" | "bottom">("top");
   // Track previous visibility state to detect transitions
   const [prevState, setPrevState] = useState({ topInView: false, bottomInView: false });
-
-  useEffect(() => {
-    const checkDesktop = () => setIsDesktop(window.innerWidth >= 1024);
-    checkDesktop();
-    window.addEventListener('resize', checkDesktop);
-    return () => window.removeEventListener('resize', checkDesktop);
-  }, []);
 
   // On desktop: always fully visible
   // On mobile: scale and origin depend on which cards are visible
@@ -211,13 +207,15 @@ function ConflictConnector({ topInView, bottomInView }: {
     setPrevState({ topInView, bottomInView });
   }
 
-  const scaleY = (isDesktop || bothVisible) ? 1 : 0;
+  // Treat undefined (SSR/hydration) as desktop to show connector immediately
+  const isDesktopOrHydrating = isDesktop !== false;
+  const scaleY = (isDesktopOrHydrating || bothVisible) ? 1 : 0;
 
   return (
     <motion.div
       className="absolute left-1/2 top-1/2 w-px -translate-x-1/2 bg-orange-400/60 dark:bg-orange-500/50 -z-10"
       style={{ height: 'calc(100% + 1rem)', transformOrigin: activeOrigin }}
-      initial={{ scaleY: isDesktop ? 1 : 0 }}
+      initial={{ scaleY: isDesktopOrHydrating ? 1 : 0 }}
       animate={{ scaleY }}
       transition={{ duration: 0.3, ease: "easeOut" }}
       aria-hidden="true"
