@@ -324,23 +324,30 @@ export function HomeContent({ shifts: initialShifts, settings, payoutTaxSettings
   }, [shifts, currentPayoutTaxSettings]);
 
   // Check if user has shifts this month but none have completed yet
-  const hasPendingShifts = useMemo(() => {
+  // Also count how many future/planned shifts there are
+  const { hasPendingShifts, plannedShiftsCount } = useMemo(() => {
     const targetYear = month.getFullYear();
     const targetMonth = month.getMonth() + 1;
     const targetKey = `${targetYear}-${String(targetMonth).padStart(2, '0')}`;
     const monthShifts = shiftsByMonth.get(targetKey) || [];
 
-    if (monthShifts.length === 0) return false;
+    if (monthShifts.length === 0) return { hasPendingShifts: false, plannedShiftsCount: 0 };
 
     const now = new Date();
     const completedShifts = monthShifts.filter(shift => hasShiftEnded(shift, now));
+    const futureShifts = monthShifts.filter(shift => !hasShiftEnded(shift, now));
 
     // Has pending shifts if there are shifts but none have completed
-    return completedShifts.length === 0;
+    return {
+      hasPendingShifts: completedShifts.length === 0,
+      plannedShiftsCount: futureShifts.length,
+    };
   }, [shiftsByMonth, month]);
 
   const totalCardTotal = selectedMonthIsFuture ? data.projectedTotal : data.total;
-  const totalCardSubtitle = selectedMonthIsFuture && !taxDeductionEnabled ? "---" : undefined;
+  // Only show dashes placeholder for future months without tax AND no planned shifts
+  // (when there are planned shifts, TotalCard will show "X vakter planlagt" instead)
+  const totalCardSubtitle = selectedMonthIsFuture && !taxDeductionEnabled && plannedShiftsCount === 0 ? "---" : undefined;
   const totalCardProjectedTotal = selectedMonthIsFuture ? undefined : data.projectedTotal;
   const totalCardGrossBeforeTax = selectedMonthIsFuture
     ? data.projectedGrossBeforeTax
@@ -568,6 +575,7 @@ export function HomeContent({ shifts: initialShifts, settings, payoutTaxSettings
               subtitlePlaceholder={totalCardSubtitle}
               useZeroPlaceholder={!selectedMonthIsFuture}
               hasPendingShifts={hasPendingShifts}
+              plannedShiftsCount={plannedShiftsCount}
             />
           </div>
           <div className="flex items-center justify-between -mt-3 -mb-3">

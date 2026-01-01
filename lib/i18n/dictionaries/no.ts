@@ -1493,6 +1493,8 @@ export const no = {
       wholeMonth: 'hele måneden',
       afterTax: 'etter skatt',
       pendingShiftsTooltip: 'Du har ikke fullført noen vakter ennå. Totalen øker for hver fullførte vakt.',
+      shiftPlanned: 'vakt planlagt',
+      shiftsPlanned: 'vakter planlagt',
     },
     charts: {
       supplementBreakdown: {

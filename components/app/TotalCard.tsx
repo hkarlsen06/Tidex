@@ -20,6 +20,8 @@ interface TotalCardProps {
   useZeroPlaceholder?: boolean;
   /** Shows a help icon with tooltip when total shows dashes but user has pending shifts */
   hasPendingShifts?: boolean;
+  /** Number of future/planned shifts for the projection */
+  plannedShiftsCount?: number;
 }
 
 // Helper to get animation classes based on direction
@@ -108,6 +110,7 @@ export const TotalCard: React.FC<TotalCardProps> = ({
   subtitlePlaceholder,
   useZeroPlaceholder = true,
   hasPendingShifts = false,
+  plannedShiftsCount,
 }) => {
   const { t } = useTranslations();
   const cardClasses = [
@@ -138,35 +141,44 @@ export const TotalCard: React.FC<TotalCardProps> = ({
     }
     : undefined;
 
-  const displayTotal = useZeroPlaceholder && total === '0 kr' ? '---' : total;
+  const displayTotal = useZeroPlaceholder && total === '0 kr' ? '— — —' : total;
 
-  // Show help tooltip when displaying placeholder but user has pending shifts
-  const showPendingShiftsHelp = displayTotal === '---' && hasPendingShifts;
-
-  // Determine what to show in subtitle:
-  // - If projected equals earned (no future shifts), show gross before tax (if tax enabled)
-  // - Otherwise show projected total for the whole month
+  // Determine what to show:
+  // - Main display (big blue number): projected total for the whole month
+  // - Subtitle: earnings up to today (when there are future shifts) OR gross before tax (when no future shifts)
   const hasFutureShifts = projectedTotal && projectedTotal !== total && projectedTotal !== '0 kr';
   const showGrossBeforeTax = !hasFutureShifts && grossBeforeTax && grossBeforeTax !== '0 kr' && grossBeforeTax !== total;
 
-  const subtitleContent = subtitlePlaceholder
-    ? (
-      <>{subtitlePlaceholder}</>
-    )
-    : hasFutureShifts
-      ? (
-        <>
-          <span className="font-semibold text-text-primary">{projectedTotal}</span> {t.components.totalCard.wholeMonth}
-        </>
-      )
-      : (
-        <>
-          <span className="font-semibold text-text-primary">{grossBeforeTax}</span> {t.components.totalCard.beforeTax}
-        </>
-      );
+  // Main display: use projected total if available, otherwise use total
+  const mainDisplayValue = hasFutureShifts ? projectedTotal! : total;
+  const displayMain = useZeroPlaceholder && mainDisplayValue === '0 kr' ? '— — —' : mainDisplayValue;
+
+  // Show help tooltip when displaying placeholder but user has pending shifts
+  const showPendingShiftsHelp = displayMain === '— — —' && hasPendingShifts;
+
+  // Subtitle content: earned to date (when future shifts) or gross before tax (when no future shifts)
+  // When no earned value but has planned shifts, show "X shifts planned"
+  const hasRealEarnedValue = hasFutureShifts && displayTotal !== '— — —';
+  const showPlannedShifts = hasFutureShifts && !hasRealEarnedValue && plannedShiftsCount && plannedShiftsCount > 0;
+
+  const subtitleValue = hasRealEarnedValue
+    ? displayTotal
+    : showGrossBeforeTax
+      ? grossBeforeTax
+      : showPlannedShifts
+        ? String(plannedShiftsCount)
+        : null;
+
+  const subtitleLabel = hasRealEarnedValue
+    ? t.components.totalCard.earnedToDate
+    : showGrossBeforeTax
+      ? t.components.totalCard.beforeTax
+      : showPlannedShifts
+        ? (plannedShiftsCount === 1 ? t.components.totalCard.shiftPlanned : t.components.totalCard.shiftsPlanned)
+        : null;
 
   const shouldShowSubtitle =
-    Boolean(subtitlePlaceholder) || (!subtitlePlaceholder && (hasFutureShifts || showGrossBeforeTax));
+    Boolean(subtitlePlaceholder) || (!subtitlePlaceholder && (hasRealEarnedValue || showGrossBeforeTax || showPlannedShifts));
 
   return (
     <Card
@@ -191,22 +203,21 @@ export const TotalCard: React.FC<TotalCardProps> = ({
               >
                 <AnimatePresence mode="wait">
                   {hasChange ? (
-                    <motion.div
+                    <motion.span
                       key="percentage-value"
                       initial={{ opacity: 0, y: -8 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: 8 }}
                       transition={{ duration: 0.4, ease: [0.25, 0.1, 0.25, 1] }}
-                      className="flex items-center gap-2"
+                      className={`relative text-lg font-semibold ${isPositive ? 'text-brand-highlight' : 'text-text-secondary'}`}
                     >
                       <ArrowIcon
-                        className={`h-6 w-6 ${isPositive ? 'text-brand-highlight' : 'text-text-secondary'}`}
+                        className="absolute right-full mr-1 h-6 w-6 top-1/2 -translate-y-1/2"
                         strokeWidth={2}
                       />
-                      <span className={`text-lg font-semibold ${isPositive ? 'text-brand-highlight' : 'text-text-secondary'}`}>
-                        {Math.abs(percentageChange as number)}%
-                      </span>
-                    </motion.div>
+                      {Math.abs(percentageChange as number)}
+                      <span className="absolute left-full ml-0.5">%</span>
+                    </motion.span>
                   ) : (
                     <motion.span
                       key="percentage-placeholder"
@@ -234,16 +245,16 @@ export const TotalCard: React.FC<TotalCardProps> = ({
                 className="w-full whitespace-nowrap text-center"
                 style={{ containerType: 'inline-size', lineHeight: 1.1 }}
               >
-                {displayTotal === '---' ? (
+                {displayMain === '— — —' ? (
                   <span
                     className="font-bold text-brand-highlight"
                     style={{ fontSize: 'clamp(28px, 22cqi, 72px)' }}
                   >
-                    {displayTotal}
+                    {displayMain}
                   </span>
                 ) : (
                   <AnimatedCounter
-                    value={displayTotal}
+                    value={displayMain}
                     className="font-bold text-brand-highlight"
                     style={{ fontSize: 'clamp(28px, 22cqi, 72px)' }}
                   />
@@ -270,10 +281,20 @@ export const TotalCard: React.FC<TotalCardProps> = ({
             {/* Always render subtitle row to prevent layout shift */}
             <div
               key={`subtitle-${total}`}
-              className={`mt-4 text-lg text-text-secondary min-h-7 ${getAnimationClasses(animationDirection)}`}
+              className={`mt-4 text-lg text-text-secondary min-h-7 relative flex items-baseline justify-center ${getAnimationClasses(animationDirection)}`}
             >
               <AnimatePresence mode="wait">
-                {shouldShowSubtitle ? (
+                {subtitlePlaceholder ? (
+                  <motion.span
+                    key="subtitle-placeholder-custom"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    {subtitlePlaceholder}
+                  </motion.span>
+                ) : shouldShowSubtitle ? (
                   <motion.span
                     key="subtitle-value"
                     initial={{ opacity: 0 }}
@@ -281,19 +302,9 @@ export const TotalCard: React.FC<TotalCardProps> = ({
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.3 }}
                   >
-                    {subtitleContent}
+                    <span className="font-semibold text-text-primary">{subtitleValue}</span> {subtitleLabel}
                   </motion.span>
-                ) : (
-                  <motion.span
-                    key="subtitle-placeholder"
-                    initial={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.2 }}
-                    className="text-text-muted"
-                  >
-                    — — —
-                  </motion.span>
-                )}
+                ) : null}
               </AnimatePresence>
             </div>
           </div>

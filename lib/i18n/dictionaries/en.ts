@@ -1494,6 +1494,8 @@ export const en: Dictionary = {
       wholeMonth: 'this month',
       afterTax: 'after tax',
       pendingShiftsTooltip: "You haven't completed any shifts yet. The total increases on each completed shift.",
+      shiftPlanned: 'shift planned',
+      shiftsPlanned: 'shifts planned',
     },
     charts: {
       supplementBreakdown: {
