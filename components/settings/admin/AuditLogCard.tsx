@@ -20,7 +20,36 @@ import {
   ADMIN_ACTION_CONFIG,
   type AdminAction,
 } from "@/lib/admin/action-labels";
-import { RefreshCw, ChevronDown, ChevronUp } from "lucide-react";
+import { RefreshCw, ChevronDown, ChevronUp, Copy, Check } from "lucide-react";
+
+function CopyableId({ label, value }: { label: string; value: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(value);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+
+  return (
+    <div className="flex items-center gap-1 group">
+      <span className="text-text-muted">{label}:</span>
+      <code className="ml-1 text-xs">{value.slice(0, 4)}...</code>
+      <button
+        type="button"
+        onClick={handleCopy}
+        className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:bg-background rounded shrink-0"
+        title={`Copy full ID: ${value}`}
+      >
+        {copied ? (
+          <Check className="h-3 w-3 text-green-500" />
+        ) : (
+          <Copy className="h-3 w-3 text-text-muted" />
+        )}
+      </button>
+    </div>
+  );
+}
 
 interface Props {
   refreshTrigger?: number;
@@ -170,19 +199,9 @@ export function AuditLogCard({ refreshTrigger }: Props) {
                 <div className="px-3 pb-3 pt-0">
                   <div className="bg-surface-secondary rounded p-3 text-sm space-y-2">
                     <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <span className="text-text-muted">Admin ID:</span>
-                        <code className="ml-2 text-xs">
-                          {entry.adminId.slice(0, 8)}...
-                        </code>
-                      </div>
+                      <CopyableId label="Admin ID" value={entry.adminId} />
                       {entry.targetUserId && (
-                        <div>
-                          <span className="text-text-muted">Target ID:</span>
-                          <code className="ml-2 text-xs">
-                            {entry.targetUserId.slice(0, 8)}...
-                          </code>
-                        </div>
+                        <CopyableId label="Target ID" value={entry.targetUserId} />
                       )}
                     </div>
                     {Object.keys(entry.metadata).length > 0 && (
