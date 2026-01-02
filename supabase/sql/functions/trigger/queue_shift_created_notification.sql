@@ -100,6 +100,9 @@ BEGIN
     sender_id,
     shift_id,
     shift_date,
+    start_time,
+    end_time,
+    owner_name,
     notification_type
   )
   SELECT
@@ -107,6 +110,9 @@ BEGIN
     NEW.user_id,
     NEW.id,
     NEW.shift_date,
+    NEW.start_time::time,
+    NEW.end_time::time,
+    owner_name,
     CASE WHEN is_recurring_conversion THEN 'updated' ELSE 'created' END
   FROM shift_shares ss
   LEFT JOIN notification_preferences np ON np.user_id = ss.viewer_id

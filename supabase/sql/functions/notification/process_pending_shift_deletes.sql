@@ -211,12 +211,15 @@ BEGIN
       ON CONFLICT (idempotency_key) DO NOTHING;
 
       -- Non-same-day shifts go to summary queue
-      INSERT INTO pending_summary_notifications (recipient_id, sender_id, shift_id, shift_date, notification_type)
+      INSERT INTO pending_summary_notifications (recipient_id, sender_id, shift_id, shift_date, start_time, end_time, owner_name, notification_type)
       SELECT
         ss.viewer_id,
         owner_rec.owner_id,
         (s->>'shift_id')::uuid,
         (s->>'shift_date')::date,
+        (s->>'start_time')::time,
+        (s->>'end_time')::time,
+        owner_name,
         'updated'
       FROM shift_shares ss
       LEFT JOIN notification_preferences np ON np.user_id = ss.viewer_id
@@ -227,12 +230,15 @@ BEGIN
         AND (s->>'shift_date')::date != v_today
       ON CONFLICT (recipient_id, sender_id, shift_id) DO NOTHING;
 
-      INSERT INTO pending_summary_notifications (recipient_id, sender_id, shift_id, shift_date, notification_type)
+      INSERT INTO pending_summary_notifications (recipient_id, sender_id, shift_id, shift_date, start_time, end_time, owner_name, notification_type)
       SELECT
         ss.viewer_id,
         owner_rec.owner_id,
         (s->>'shift_id')::uuid,
         (s->>'shift_date')::date,
+        (s->>'start_time')::time,
+        (s->>'end_time')::time,
+        owner_name,
         'deleted'
       FROM shift_shares ss
       LEFT JOIN notification_preferences np ON np.user_id = ss.viewer_id

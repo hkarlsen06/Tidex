@@ -2341,6 +2341,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
             </div>
           )}
           <MonthlyEarningsCalendar
+            key={`calendar-${selectedMonth.getFullYear()}-${selectedMonth.getMonth()}`}
             shifts={shifts}
             month={selectedMonth}
             onMonthChange={handleMonthChange}

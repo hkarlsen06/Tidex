@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState, useEffect, useRef, type Ref } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+// AnimatePresence temporarily removed while debugging cacheComponents issue
+// import { AnimatePresence, motion } from "framer-motion";
 import { Clock, Copy, ArrowRightLeft, Info, Trash2, X } from "lucide-react";
 import { ShiftsCalendar } from "@/components/app/ShiftsCalendar";
 import { Card } from "@/components/app/Card";
@@ -243,21 +244,8 @@ function WeekdayHeader() {
   );
 }
 
-// Framer Motion variants for vertical month scrolling
-const calendarVariants = {
-  enter: (direction: 'next' | 'previous') => ({
-    y: direction === 'next' ? 300 : -300,
-    opacity: 0,
-  }),
-  center: {
-    y: 0,
-    opacity: 1,
-  },
-  exit: (direction: 'next' | 'previous') => ({
-    y: direction === 'next' ? -300 : 300,
-    opacity: 0,
-  }),
-};
+// Calendar animation variants temporarily removed while debugging cacheComponents issue
+// const calendarVariants = { ... }
 
 export function MonthlyEarningsCalendar({
   shifts,
@@ -306,47 +294,38 @@ export function MonthlyEarningsCalendar({
   const touchStartY = useRef<number | null>(null);
   const isSwiping = useRef<boolean>(false);
 
-  // Track whether animations are enabled and handle Next.js cacheComponents behavior.
-  // With cacheComponents, navigating away doesn't unmount - it hides via React Activity.
-  // When returning, the old DOM is restored but month context may have changed.
-  // We track the "renderedMonth" to detect this and skip animations when returning
-  // to a different month than when we left (prevents duplicate calendar flash).
-  const [animationState, setAnimationState] = useState(() => ({
-    enabled: false,
-    // The month that's currently rendered in the DOM (may be stale if hidden)
-    renderedMonth: `${month.getFullYear()}-${month.getMonth()}`,
-  }));
-
+  // Track the last rendered month key using a ref (not state) to detect changes
+  // when component is revealed after being hidden by cacheComponents.
+  // Using ref instead of state avoids the stale closure issues with useState.
+  const lastRenderedMonthRef = useRef<string | null>(null);
   const currentMonthKey = `${month.getFullYear()}-${month.getMonth()}`;
 
-  // Detect if month changed while component was hidden (cacheComponents behavior)
-  const monthChangedWhileHidden = animationState.enabled && animationState.renderedMonth !== currentMonthKey;
+  // Detect if this is the first render after being hidden with a different month
+  // On first render, lastRenderedMonthRef.current is null, so monthChangedWhileHidden is false
+  // On subsequent renders while visible, ref matches currentMonthKey
+  // When returning from hidden with different month, ref has old value
+  const monthChangedWhileHidden = lastRenderedMonthRef.current !== null &&
+                                   lastRenderedMonthRef.current !== currentMonthKey;
 
-  // Enable animations after initial mount (skip animation on first render)
+  // Track whether animations should be enabled (skip on initial mount)
+  const [animationsEnabled, setAnimationsEnabled] = useState(false);
+
+  // Enable animations after initial mount
   useEffect(() => {
     const timer = setTimeout(() => {
-      setAnimationState({
-        enabled: true,
-        renderedMonth: currentMonthKey,
-      });
+      setAnimationsEnabled(true);
     }, 50);
     return () => clearTimeout(timer);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
-  // Sync renderedMonth when month changes - this happens either from user interaction
-  // (swipe/click) or when returning from hidden state with a different month
+  // Update the ref after every render to track the current month
+  // This runs synchronously during render, so it's always up to date
   useEffect(() => {
-    if (animationState.enabled && animationState.renderedMonth !== currentMonthKey) {
-      // Immediately update renderedMonth to sync state with what's being rendered
-      setAnimationState(prev => ({
-        ...prev,
-        renderedMonth: currentMonthKey,
-      }));
-    }
-  }, [currentMonthKey, animationState.enabled, animationState.renderedMonth]);
+    lastRenderedMonthRef.current = currentMonthKey;
+  });
 
   // Only animate if: hydrated AND animations enabled AND month didn't change while hidden
-  const shouldAnimate = isHydrated && animationState.enabled && !monthChangedWhileHidden;
+  const shouldAnimate = isHydrated && animationsEnabled && !monthChangedWhileHidden;
 
 
   // Filter shifts once per month change
@@ -546,45 +525,27 @@ export function MonthlyEarningsCalendar({
             );
           })()}
         </div>
-        <div className="pb-6 overflow-hidden relative [&>*:not(:last-child)]:pointer-events-none">
-          {/* Static weekday header - stays in place during month transitions */}
+        <div className="pb-6 overflow-hidden relative">
+          {/* Static weekday header */}
           <WeekdayHeader />
-          {/* Key AnimatePresence by renderedMonth to handle Next.js cacheComponents.
-              With cacheComponents, navigating away hides (not unmounts) via React Activity.
-              When returning after changing month elsewhere, we need AnimatePresence to
-              reset so it doesn't try to animate from the stale cached state.
-              By keying on renderedMonth, we force a fresh AnimatePresence when the
-              month has changed while the component was hidden. */}
-          <AnimatePresence mode="popLayout" custom={animationDirection} initial={false} key={animationState.renderedMonth}>
-            <motion.div
-              key={`${calendarId}-${month.getFullYear()}-${month.getMonth()}`}
-              custom={animationDirection}
-              variants={calendarVariants}
-              initial={shouldAnimate ? "enter" : false}
-              animate="center"
-              exit="exit"
-              transition={{
-                y: { type: "tween", duration: 0.25, ease: "easeOut" },
-                opacity: { duration: 0.2 },
-              }}
-            >
-              <ShiftsCalendar
-                month={month}
-                mode={effectiveViewMode}
-                earningsByDate={earningsByDate}
-                hoursByDate={hoursByDate}
-                overlappingDates={overlappingDates}
-                onMonthChange={onMonthChange}
-                onDayClick={onDayClick}
-                selectedDate={selectedDate}
-                selectedDates={selectedDates}
-                weekNumberPosition="top-left"
-                newlyAddedDates={newlyAddedDates}
-                taxSettings={taxSettings}
-                highlightDates={highlightDates}
-              />
-            </motion.div>
-          </AnimatePresence>
+          {/* Calendar without animation - debugging cacheComponents issue */}
+          <div key={currentMonthKey}>
+            <ShiftsCalendar
+              month={month}
+              mode={effectiveViewMode}
+              earningsByDate={earningsByDate}
+              hoursByDate={hoursByDate}
+              overlappingDates={overlappingDates}
+              onMonthChange={onMonthChange}
+              onDayClick={onDayClick}
+              selectedDate={selectedDate}
+              selectedDates={selectedDates}
+              weekNumberPosition="top-left"
+              newlyAddedDates={newlyAddedDates}
+              taxSettings={taxSettings}
+              highlightDates={highlightDates}
+            />
+          </div>
         </div>
       </div>
       <div className="flex flex-col items-center gap-2 pb-6">
