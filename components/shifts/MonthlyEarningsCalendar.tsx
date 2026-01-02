@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect, useRef, type Ref } from "react";
+import { useMemo, useState, useEffect, useRef, useLayoutEffect, type Ref } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Clock, Copy, ArrowRightLeft, Info, Trash2, X } from "lucide-react";
 import { ShiftsCalendar } from "@/components/app/ShiftsCalendar";
@@ -306,6 +306,30 @@ export function MonthlyEarningsCalendar({
   const touchStartY = useRef<number | null>(null);
   const isSwiping = useRef<boolean>(false);
 
+  // Track the month at initial mount to detect if month changed while unmounted.
+  // This prevents AnimatePresence from showing duplicate calendars when navigating
+  // back to this route after changing month on a different route.
+  const initialMountMonthRef = useRef<string | null>(null);
+  const [hasAnimatedSinceMount, setHasAnimatedSinceMount] = useState(false);
+  const currentMonthKey = `${month.getFullYear()}-${month.getMonth()}`;
+
+  // On mount, capture the current month. Use useLayoutEffect to run before paint.
+  useLayoutEffect(() => {
+    if (initialMountMonthRef.current === null) {
+      initialMountMonthRef.current = currentMonthKey;
+    }
+  }, [currentMonthKey]);
+
+  // When month changes after mount, allow animations
+  useEffect(() => {
+    if (initialMountMonthRef.current !== null && initialMountMonthRef.current !== currentMonthKey) {
+      setHasAnimatedSinceMount(true);
+    }
+  }, [currentMonthKey]);
+
+  // Only animate if: hydrated AND (this is the initial mount month OR user has changed month since mount)
+  const shouldAnimate = isHydrated && (initialMountMonthRef.current === currentMonthKey || hasAnimatedSinceMount);
+
 
   // Filter shifts once per month change
   // Include shifts from previous and next month to show on "outside days"
@@ -511,8 +535,11 @@ export function MonthlyEarningsCalendar({
               key={`${calendarId}-${month.getFullYear()}-${month.getMonth()}`}
               custom={animationDirection}
               variants={calendarVariants}
-              // Skip animation if not hydrated yet (prevents flicker during sessionStorage restoration)
-              initial={isHydrated ? "enter" : false}
+              // Skip animation if:
+              // 1. Not hydrated yet (prevents flicker during sessionStorage restoration)
+              // 2. Month was changed while this component was unmounted (prevents duplicate calendars
+              //    when navigating back to this route after changing month elsewhere)
+              initial={shouldAnimate ? "enter" : false}
               animate="center"
               exit="exit"
               transition={{
