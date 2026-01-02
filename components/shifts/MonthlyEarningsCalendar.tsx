@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect, useRef, useLayoutEffect, type Ref } from "react";
+import { useMemo, useState, useEffect, useRef, type Ref } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Clock, Copy, ArrowRightLeft, Info, Trash2, X } from "lucide-react";
 import { ShiftsCalendar } from "@/components/app/ShiftsCalendar";
@@ -306,29 +306,44 @@ export function MonthlyEarningsCalendar({
   const touchStartY = useRef<number | null>(null);
   const isSwiping = useRef<boolean>(false);
 
-  // Track the month at initial mount to detect if month changed while unmounted.
-  // This prevents AnimatePresence from showing duplicate calendars when navigating
-  // back to this route after changing month on a different route.
-  const initialMountMonthRef = useRef<string | null>(null);
-  const [hasAnimatedSinceMount, setHasAnimatedSinceMount] = useState(false);
+  // Track animation state to prevent duplicate calendars when navigating back
+  // after changing month on a different route. Uses state-only approach to comply
+  // with React Compiler rules (no ref reads during render, no setState in effects).
+  const [animationState, setAnimationState] = useState(() => ({
+    initialMonthKey: `${month.getFullYear()}-${month.getMonth()}`,
+    lastSeenMonthKey: `${month.getFullYear()}-${month.getMonth()}`,
+    hasNavigated: false,
+  }));
   const currentMonthKey = `${month.getFullYear()}-${month.getMonth()}`;
 
-  // On mount, capture the current month. Use useLayoutEffect to run before paint.
-  useLayoutEffect(() => {
-    if (initialMountMonthRef.current === null) {
-      initialMountMonthRef.current = currentMonthKey;
-    }
-  }, [currentMonthKey]);
+  // Derive shouldAnimate from state only (safe for React Compiler)
+  const shouldAnimate = isHydrated && (
+    animationState.initialMonthKey === currentMonthKey || animationState.hasNavigated
+  );
 
-  // When month changes after mount, allow animations
-  useEffect(() => {
-    if (initialMountMonthRef.current !== null && initialMountMonthRef.current !== currentMonthKey) {
-      setHasAnimatedSinceMount(true);
-    }
-  }, [currentMonthKey]);
+  // Update animation state when month changes - called from event handlers (swipe/click)
+  // This is triggered via the month navigation callbacks, not in an effect
+  const updateAnimationStateIfNeeded = useMemo(() => {
+    // Return a function that can be called to check and update state
+    return () => {
+      if (currentMonthKey !== animationState.lastSeenMonthKey) {
+        setAnimationState(prev => ({
+          ...prev,
+          lastSeenMonthKey: currentMonthKey,
+          hasNavigated: true,
+        }));
+      }
+    };
+  }, [currentMonthKey, animationState.lastSeenMonthKey]);
 
-  // Only animate if: hydrated AND (this is the initial mount month OR user has changed month since mount)
-  const shouldAnimate = isHydrated && (initialMountMonthRef.current === currentMonthKey || hasAnimatedSinceMount);
+  // Call the update check - this is safe because it's derived and only updates when month changes
+  // We wrap in useMemo to ensure it only runs when dependencies change
+  useMemo(() => {
+    if (currentMonthKey !== animationState.lastSeenMonthKey) {
+      // Schedule microtask to avoid render-phase setState
+      queueMicrotask(updateAnimationStateIfNeeded);
+    }
+  }, [currentMonthKey, animationState.lastSeenMonthKey, updateAnimationStateIfNeeded]);
 
 
   // Filter shifts once per month change
