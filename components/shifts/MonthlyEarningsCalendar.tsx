@@ -549,13 +549,13 @@ export function MonthlyEarningsCalendar({
         <div className="pb-6 overflow-hidden relative [&>*:not(:last-child)]:pointer-events-none">
           {/* Static weekday header - stays in place during month transitions */}
           <WeekdayHeader />
-          {/* Key AnimatePresence by lastEnabledMonth to handle Next.js cacheComponents.
+          {/* Key AnimatePresence by renderedMonth to handle Next.js cacheComponents.
               With cacheComponents, navigating away hides (not unmounts) via React Activity.
               When returning after changing month elsewhere, we need AnimatePresence to
               reset so it doesn't try to animate from the stale cached state.
-              By keying on lastEnabledMonth, we force a fresh AnimatePresence when the
+              By keying on renderedMonth, we force a fresh AnimatePresence when the
               month has changed while the component was hidden. */}
-          <AnimatePresence mode="popLayout" custom={animationDirection} initial={false} key={animationState.lastEnabledMonth}>
+          <AnimatePresence mode="popLayout" custom={animationDirection} initial={false} key={animationState.renderedMonth}>
             <motion.div
               key={`${calendarId}-${month.getFullYear()}-${month.getMonth()}`}
               custom={animationDirection}
