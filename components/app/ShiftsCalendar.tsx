@@ -278,9 +278,16 @@ export function ShiftsCalendar({
     [onDayClick, earningsByDate, hoursByDate]
   );
 
+  // Create a stable key from month to force remount when month changes
+  // This is needed because with Next.js cacheComponents, the component may be
+  // hidden and revealed with a new month prop, but DayPicker's internal state
+  // might be stale from the previous render.
+  const monthKey = `${month.getFullYear()}-${month.getMonth()}`;
+
   return (
     <div className="w-full">
       <DayPicker
+      key={monthKey}
       locale={dateFnsLocale}
       month={month}
       mode="single"
