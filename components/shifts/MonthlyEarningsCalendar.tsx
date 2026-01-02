@@ -294,19 +294,6 @@ export function MonthlyEarningsCalendar({
   const touchStartY = useRef<number | null>(null);
   const isSwiping = useRef<boolean>(false);
 
-  // Track the last rendered month key using a ref (not state) to detect changes
-  // when component is revealed after being hidden by cacheComponents.
-  // Using ref instead of state avoids the stale closure issues with useState.
-  const lastRenderedMonthRef = useRef<string | null>(null);
-  const currentMonthKey = `${month.getFullYear()}-${month.getMonth()}`;
-
-  // Detect if this is the first render after being hidden with a different month
-  // On first render, lastRenderedMonthRef.current is null, so monthChangedWhileHidden is false
-  // On subsequent renders while visible, ref matches currentMonthKey
-  // When returning from hidden with different month, ref has old value
-  const monthChangedWhileHidden = lastRenderedMonthRef.current !== null &&
-                                   lastRenderedMonthRef.current !== currentMonthKey;
-
   // Track whether animations should be enabled (skip on initial mount)
   const [animationsEnabled, setAnimationsEnabled] = useState(false);
 
@@ -318,14 +305,8 @@ export function MonthlyEarningsCalendar({
     return () => clearTimeout(timer);
   }, []);
 
-  // Update the ref after every render to track the current month
-  // This runs synchronously during render, so it's always up to date
-  useEffect(() => {
-    lastRenderedMonthRef.current = currentMonthKey;
-  });
-
-  // Only animate if: hydrated AND animations enabled AND month didn't change while hidden
-  const shouldAnimate = isHydrated && animationsEnabled && !monthChangedWhileHidden;
+  // Animation enabled when hydrated and after initial mount delay
+  const shouldAnimate = isHydrated && animationsEnabled;
 
 
   // Filter shifts once per month change
@@ -529,7 +510,7 @@ export function MonthlyEarningsCalendar({
           {/* Static weekday header */}
           <WeekdayHeader />
           {/* Calendar without animation - debugging cacheComponents issue */}
-          <div key={currentMonthKey}>
+          <div>
             <ShiftsCalendar
               month={month}
               mode={effectiveViewMode}
