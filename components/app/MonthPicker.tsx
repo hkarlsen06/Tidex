@@ -15,6 +15,8 @@ type MonthPickerProps = {
   direction?: "forward" | "backward";
   /** Whether initial hydration from sessionStorage is complete - skips animation if false */
   isHydrated?: boolean;
+  /** Whether animations are enabled - skips animation if false (used for mount transition) */
+  isAnimationEnabled?: boolean;
   /** Unique identifier for this calendar instance - prevents AnimatePresence key collisions between routes */
   calendarId?: string;
 };
@@ -50,6 +52,7 @@ export function MonthPicker({
   canNavigateToNextMonth = true,
   direction: externalDirection,
   isHydrated = true,
+  isAnimationEnabled = true,
   calendarId = "default",
 }: MonthPickerProps) {
   const { t } = useTranslations();
@@ -85,8 +88,8 @@ export function MonthPicker({
             key={`${calendarId}-${month.getFullYear()}-${month.getMonth()}`}
             custom={direction}
             variants={monthVariants}
-            // Skip animation if not hydrated yet (prevents flicker during sessionStorage restoration)
-            initial={isHydrated ? "enter" : false}
+            // Skip animation if not hydrated or animations disabled (prevents flicker on mount/navigation)
+            initial={isHydrated && isAnimationEnabled ? "enter" : false}
             animate="center"
             exit="exit"
             transition={{
