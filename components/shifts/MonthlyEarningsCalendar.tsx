@@ -493,6 +493,7 @@ export function MonthlyEarningsCalendar({
                   onNextMonth={goToNextMonth}
                   direction={animationDirection === 'next' ? 'forward' : 'backward'}
                   isHydrated={isHydrated}
+                  isAnimationEnabled={isAnimationEnabled}
                   calendarId={calendarId}
                 />
                 <span className="font-medium text-text-muted ml-1">{formatYear(month)}</span>
@@ -521,41 +522,59 @@ export function MonthlyEarningsCalendar({
         <div className="pb-6 overflow-hidden relative [&>*:not(:last-child)]:pointer-events-none">
           {/* Static weekday header - stays in place during month transitions */}
           <WeekdayHeader />
-          <AnimatePresence mode="popLayout" custom={animationDirection} initial={false}>
-            <motion.div
-              key={`${calendarId}-${month.getFullYear()}-${month.getMonth()}`}
-              custom={animationDirection}
-              variants={calendarVariants}
-              // Skip animation if:
-              // 1. Not hydrated yet (prevents flicker during sessionStorage restoration)
-              // 2. Month was changed while this component was unmounted (prevents duplicate calendars
-              //    when navigating back to this route after changing month elsewhere)
-              initial={shouldAnimate ? "enter" : false}
-              animate="center"
-              exit="exit"
-              transition={{
-                // Use tween with fixed duration instead of spring to ensure exit completes
-                y: { type: "tween", duration: 0.25, ease: "easeOut" },
-                opacity: { duration: 0.2 },
-              }}
-            >
-              <ShiftsCalendar
-                month={month}
-                mode={effectiveViewMode}
-                earningsByDate={earningsByDate}
-                hoursByDate={hoursByDate}
-                overlappingDates={overlappingDates}
-                onMonthChange={onMonthChange}
-                onDayClick={onDayClick}
-                selectedDate={selectedDate}
-                selectedDates={selectedDates}
-                weekNumberPosition="top-left"
-                newlyAddedDates={newlyAddedDates}
-                taxSettings={taxSettings}
-                highlightDates={highlightDates}
-              />
-            </motion.div>
-          </AnimatePresence>
+          {/* Conditionally render AnimatePresence only after animations are enabled.
+              This prevents the duplicate calendar bug when navigating back after changing
+              month on another route - AnimatePresence can't animate a "ghost" exit if
+              it wasn't rendered on the initial mount. */}
+          {shouldAnimate ? (
+            <AnimatePresence mode="popLayout" custom={animationDirection} initial={false}>
+              <motion.div
+                key={`${calendarId}-${month.getFullYear()}-${month.getMonth()}`}
+                custom={animationDirection}
+                variants={calendarVariants}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                transition={{
+                  y: { type: "tween", duration: 0.25, ease: "easeOut" },
+                  opacity: { duration: 0.2 },
+                }}
+              >
+                <ShiftsCalendar
+                  month={month}
+                  mode={effectiveViewMode}
+                  earningsByDate={earningsByDate}
+                  hoursByDate={hoursByDate}
+                  overlappingDates={overlappingDates}
+                  onMonthChange={onMonthChange}
+                  onDayClick={onDayClick}
+                  selectedDate={selectedDate}
+                  selectedDates={selectedDates}
+                  weekNumberPosition="top-left"
+                  newlyAddedDates={newlyAddedDates}
+                  taxSettings={taxSettings}
+                  highlightDates={highlightDates}
+                />
+              </motion.div>
+            </AnimatePresence>
+          ) : (
+            /* Render without animation wrapper on initial mount */
+            <ShiftsCalendar
+              month={month}
+              mode={effectiveViewMode}
+              earningsByDate={earningsByDate}
+              hoursByDate={hoursByDate}
+              overlappingDates={overlappingDates}
+              onMonthChange={onMonthChange}
+              onDayClick={onDayClick}
+              selectedDate={selectedDate}
+              selectedDates={selectedDates}
+              weekNumberPosition="top-left"
+              newlyAddedDates={newlyAddedDates}
+              taxSettings={taxSettings}
+              highlightDates={highlightDates}
+            />
+          )}
         </div>
       </div>
       <div className="flex flex-col items-center gap-2 pb-6">
