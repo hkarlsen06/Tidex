@@ -306,44 +306,20 @@ export function MonthlyEarningsCalendar({
   const touchStartY = useRef<number | null>(null);
   const isSwiping = useRef<boolean>(false);
 
-  // Track animation state to prevent duplicate calendars when navigating back
-  // after changing month on a different route. Uses state-only approach to comply
-  // with React Compiler rules (no ref reads during render, no setState in effects).
-  const [animationState, setAnimationState] = useState(() => ({
-    initialMonthKey: `${month.getFullYear()}-${month.getMonth()}`,
-    lastSeenMonthKey: `${month.getFullYear()}-${month.getMonth()}`,
-    hasNavigated: false,
-  }));
-  const currentMonthKey = `${month.getFullYear()}-${month.getMonth()}`;
+  // Track whether animations are enabled. We disable animations on mount to prevent
+  // duplicate calendars when navigating back after changing month on a different route.
+  // The animation is enabled after the component has mounted and rendered once.
+  const [isAnimationEnabled, setIsAnimationEnabled] = useState(false);
 
-  // Derive shouldAnimate from state only (safe for React Compiler)
-  const shouldAnimate = isHydrated && (
-    animationState.initialMonthKey === currentMonthKey || animationState.hasNavigated
-  );
+  // Enable animations after mount - this ensures the first render has no animation
+  useEffect(() => {
+    // Small delay to ensure the initial render completes without animation
+    const timer = setTimeout(() => setIsAnimationEnabled(true), 50);
+    return () => clearTimeout(timer);
+  }, []);
 
-  // Update animation state when month changes - called from event handlers (swipe/click)
-  // This is triggered via the month navigation callbacks, not in an effect
-  const updateAnimationStateIfNeeded = useMemo(() => {
-    // Return a function that can be called to check and update state
-    return () => {
-      if (currentMonthKey !== animationState.lastSeenMonthKey) {
-        setAnimationState(prev => ({
-          ...prev,
-          lastSeenMonthKey: currentMonthKey,
-          hasNavigated: true,
-        }));
-      }
-    };
-  }, [currentMonthKey, animationState.lastSeenMonthKey]);
-
-  // Call the update check - this is safe because it's derived and only updates when month changes
-  // We wrap in useMemo to ensure it only runs when dependencies change
-  useMemo(() => {
-    if (currentMonthKey !== animationState.lastSeenMonthKey) {
-      // Schedule microtask to avoid render-phase setState
-      queueMicrotask(updateAnimationStateIfNeeded);
-    }
-  }, [currentMonthKey, animationState.lastSeenMonthKey, updateAnimationStateIfNeeded]);
+  // Only animate if: hydrated AND animation has been enabled (after first render)
+  const shouldAnimate = isHydrated && isAnimationEnabled;
 
 
   // Filter shifts once per month change
