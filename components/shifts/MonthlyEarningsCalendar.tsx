@@ -306,20 +306,47 @@ export function MonthlyEarningsCalendar({
   const touchStartY = useRef<number | null>(null);
   const isSwiping = useRef<boolean>(false);
 
-  // Track whether animations are enabled. We disable animations on mount to prevent
-  // duplicate calendars when navigating back after changing month on a different route.
-  // The animation is enabled after the component has mounted and rendered once.
-  const [isAnimationEnabled, setIsAnimationEnabled] = useState(false);
+  // Track whether animations are enabled and handle Next.js cacheComponents behavior.
+  // With cacheComponents, navigating away doesn't unmount - it hides via React Activity.
+  // When returning, the old DOM is restored but month context may have changed.
+  // We track the "renderedMonth" to detect this and skip animations when returning
+  // to a different month than when we left (prevents duplicate calendar flash).
+  const [animationState, setAnimationState] = useState(() => ({
+    enabled: false,
+    // The month that's currently rendered in the DOM (may be stale if hidden)
+    renderedMonth: `${month.getFullYear()}-${month.getMonth()}`,
+  }));
 
-  // Enable animations after mount - this ensures the first render has no animation
+  const currentMonthKey = `${month.getFullYear()}-${month.getMonth()}`;
+
+  // Detect if month changed while component was hidden (cacheComponents behavior)
+  const monthChangedWhileHidden = animationState.enabled && animationState.renderedMonth !== currentMonthKey;
+
+  // Enable animations after initial mount (skip animation on first render)
   useEffect(() => {
-    // Small delay to ensure the initial render completes without animation
-    const timer = setTimeout(() => setIsAnimationEnabled(true), 50);
+    const timer = setTimeout(() => {
+      setAnimationState({
+        enabled: true,
+        renderedMonth: currentMonthKey,
+      });
+    }, 50);
     return () => clearTimeout(timer);
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Only animate if: hydrated AND animation has been enabled (after first render)
-  const shouldAnimate = isHydrated && isAnimationEnabled;
+  // Sync renderedMonth when month changes - this happens either from user interaction
+  // (swipe/click) or when returning from hidden state with a different month
+  useEffect(() => {
+    if (animationState.enabled && animationState.renderedMonth !== currentMonthKey) {
+      // Immediately update renderedMonth to sync state with what's being rendered
+      setAnimationState(prev => ({
+        ...prev,
+        renderedMonth: currentMonthKey,
+      }));
+    }
+  }, [currentMonthKey, animationState.enabled, animationState.renderedMonth]);
+
+  // Only animate if: hydrated AND animations enabled AND month didn't change while hidden
+  const shouldAnimate = isHydrated && animationState.enabled && !monthChangedWhileHidden;
 
 
   // Filter shifts once per month change
@@ -493,7 +520,7 @@ export function MonthlyEarningsCalendar({
                   onNextMonth={goToNextMonth}
                   direction={animationDirection === 'next' ? 'forward' : 'backward'}
                   isHydrated={isHydrated}
-                  isAnimationEnabled={isAnimationEnabled}
+                  isAnimationEnabled={shouldAnimate}
                   calendarId={calendarId}
                 />
                 <span className="font-medium text-text-muted ml-1">{formatYear(month)}</span>
@@ -522,59 +549,42 @@ export function MonthlyEarningsCalendar({
         <div className="pb-6 overflow-hidden relative [&>*:not(:last-child)]:pointer-events-none">
           {/* Static weekday header - stays in place during month transitions */}
           <WeekdayHeader />
-          {/* Conditionally render AnimatePresence only after animations are enabled.
-              This prevents the duplicate calendar bug when navigating back after changing
-              month on another route - AnimatePresence can't animate a "ghost" exit if
-              it wasn't rendered on the initial mount. */}
-          {shouldAnimate ? (
-            <AnimatePresence mode="popLayout" custom={animationDirection} initial={false}>
-              <motion.div
-                key={`${calendarId}-${month.getFullYear()}-${month.getMonth()}`}
-                custom={animationDirection}
-                variants={calendarVariants}
-                initial="enter"
-                animate="center"
-                exit="exit"
-                transition={{
-                  y: { type: "tween", duration: 0.25, ease: "easeOut" },
-                  opacity: { duration: 0.2 },
-                }}
-              >
-                <ShiftsCalendar
-                  month={month}
-                  mode={effectiveViewMode}
-                  earningsByDate={earningsByDate}
-                  hoursByDate={hoursByDate}
-                  overlappingDates={overlappingDates}
-                  onMonthChange={onMonthChange}
-                  onDayClick={onDayClick}
-                  selectedDate={selectedDate}
-                  selectedDates={selectedDates}
-                  weekNumberPosition="top-left"
-                  newlyAddedDates={newlyAddedDates}
-                  taxSettings={taxSettings}
-                  highlightDates={highlightDates}
-                />
-              </motion.div>
-            </AnimatePresence>
-          ) : (
-            /* Render without animation wrapper on initial mount */
-            <ShiftsCalendar
-              month={month}
-              mode={effectiveViewMode}
-              earningsByDate={earningsByDate}
-              hoursByDate={hoursByDate}
-              overlappingDates={overlappingDates}
-              onMonthChange={onMonthChange}
-              onDayClick={onDayClick}
-              selectedDate={selectedDate}
-              selectedDates={selectedDates}
-              weekNumberPosition="top-left"
-              newlyAddedDates={newlyAddedDates}
-              taxSettings={taxSettings}
-              highlightDates={highlightDates}
-            />
-          )}
+          {/* Key AnimatePresence by lastEnabledMonth to handle Next.js cacheComponents.
+              With cacheComponents, navigating away hides (not unmounts) via React Activity.
+              When returning after changing month elsewhere, we need AnimatePresence to
+              reset so it doesn't try to animate from the stale cached state.
+              By keying on lastEnabledMonth, we force a fresh AnimatePresence when the
+              month has changed while the component was hidden. */}
+          <AnimatePresence mode="popLayout" custom={animationDirection} initial={false} key={animationState.lastEnabledMonth}>
+            <motion.div
+              key={`${calendarId}-${month.getFullYear()}-${month.getMonth()}`}
+              custom={animationDirection}
+              variants={calendarVariants}
+              initial={shouldAnimate ? "enter" : false}
+              animate="center"
+              exit="exit"
+              transition={{
+                y: { type: "tween", duration: 0.25, ease: "easeOut" },
+                opacity: { duration: 0.2 },
+              }}
+            >
+              <ShiftsCalendar
+                month={month}
+                mode={effectiveViewMode}
+                earningsByDate={earningsByDate}
+                hoursByDate={hoursByDate}
+                overlappingDates={overlappingDates}
+                onMonthChange={onMonthChange}
+                onDayClick={onDayClick}
+                selectedDate={selectedDate}
+                selectedDates={selectedDates}
+                weekNumberPosition="top-left"
+                newlyAddedDates={newlyAddedDates}
+                taxSettings={taxSettings}
+                highlightDates={highlightDates}
+              />
+            </motion.div>
+          </AnimatePresence>
         </div>
       </div>
       <div className="flex flex-col items-center gap-2 pb-6">
