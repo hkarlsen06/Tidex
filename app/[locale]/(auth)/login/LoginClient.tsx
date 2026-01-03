@@ -168,27 +168,28 @@ export default function LoginClient({
     // Determine which locale to use in the redirect URL
     const targetLocale = userLocale || locale;
 
+    // Build the final destination with proper locale prefix
+    const localePattern = new RegExp(`^/(${locales.join('|')})(/|$)`);
+    const hasLocalePrefix = localePattern.test(destination);
+    let finalDestination: string;
+
+    if (hasLocalePrefix) {
+      // Replace existing locale prefix with user's preferred locale
+      finalDestination = destination.replace(
+        new RegExp(`^/(${locales.join('|')})`),
+        `/${targetLocale}`
+      );
+    } else {
+      // No locale prefix - prepend user's preferred locale
+      finalDestination = `/${targetLocale}${destination}`;
+    }
+
     if (aalData && aalData.currentLevel === 'aal1' && aalData.nextLevel === 'aal2') {
       // User has MFA enrolled but hasn't verified - redirect to MFA verify
-      const mfaUrl = `/${targetLocale}/mfa-verify?next=${encodeURIComponent(destination)}`;
+      const mfaUrl = `/${targetLocale}/mfa-verify?next=${encodeURIComponent(finalDestination)}`;
       window.location.href = mfaUrl;
     } else {
       // No MFA required or already verified
-      // Update destination to use user's preferred locale
-      let finalDestination = destination;
-      const localePattern = new RegExp(`^/(${locales.join('|')})(/|$)`);
-      const hasLocalePrefix = localePattern.test(destination);
-
-      if (hasLocalePrefix) {
-        // Replace existing locale prefix with user's preferred locale
-        finalDestination = destination.replace(
-          new RegExp(`^/(${locales.join('|')})`),
-          `/${targetLocale}`
-        );
-      } else {
-        // No locale prefix - prepend user's preferred locale
-        finalDestination = `/${targetLocale}${destination}`;
-      }
       window.location.href = finalDestination;
     }
   };
