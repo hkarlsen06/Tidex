@@ -7,7 +7,6 @@ import { ArrowLeft } from "lucide-react";
 import { SharingPageSkeleton } from "@/components/app/skeletons";
 import { ManageSharingModal } from "./ManageSharingModal";
 import { SharingDropdown } from "./SharingDropdown";
-import { SharingMonthProvider, useSharingMonth } from "./SharingMonthContext";
 import { useTranslations } from "@/lib/i18n/client";
 import { useSharingViewState } from "@/lib/hooks/useSharingViewState";
 import type {
@@ -51,10 +50,18 @@ type SharingPageContentProps = {
 };
 
 /**
- * Inner component that uses the isolated SharingMonthContext.
- * Must be rendered inside SharingMonthProvider.
+ * Detail view for viewing a specific sharer's shifts.
+ *
+ * Now uses the global MonthContext (same as /shifts and dashboard) so month
+ * navigation stays in sync across all routes. The cacheComponents stale state
+ * issues are handled by:
+ * - ShiftsView using useRef for loaded months tracking
+ * - Reference equality checks to detect actual SSR changes vs reveals
+ * - Keys on controlled components (MonthPicker, DayPicker)
+ *
+ * See docs/cacheComponents-stale-state-bug.md for details.
  */
-function SharingPageContentInner({
+export function SharingPageContent({
   sharers,
   friends,
   shareCapacity,
@@ -71,9 +78,6 @@ function SharingPageContentInner({
   const router = useRouter();
   const [manageSharingOpen, setManageSharingOpen] = useState(false);
   const { saveViewState } = useSharingViewState();
-
-  // Use isolated month context for sharing page
-  const sharingMonthContext = useSharingMonth();
 
   const sharingPath = `/${locale}/sharing`;
 
@@ -108,7 +112,6 @@ function SharingPageContentInner({
         sharedOwnerId={selectedOwnerId}
         ownerName={selectedSharer.firstName ?? selectedSharer.email ?? "Bruker"}
         showEarnings={showEarnings}
-        monthContext={sharingMonthContext}
         highlightDates={highlightDates}
         cacheKey={cacheKey}
         headerSlot={
@@ -136,18 +139,5 @@ function SharingPageContentInner({
         shareCapacity={shareCapacity}
       />
     </>
-  );
-}
-
-/**
- * Detail view for viewing a specific sharer's shifts.
- * Wrapped in SharingMonthProvider to isolate month state from the global MonthProvider,
- * preventing AnimatePresence conflicts when navigating between /shifts and /sharing.
- */
-export function SharingPageContent(props: SharingPageContentProps) {
-  return (
-    <SharingMonthProvider>
-      <SharingPageContentInner {...props} />
-    </SharingMonthProvider>
   );
 }
