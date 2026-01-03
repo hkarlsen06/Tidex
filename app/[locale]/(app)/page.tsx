@@ -10,7 +10,7 @@ import {
   getMonthStart,
   getMonthEnd
 } from "@/lib/date-utils";
-import { HomeContent } from "@/components/app/HomeContent";
+import { HomeContentWrapper } from "@/components/app/HomeContentWrapper";
 import { getTranslations } from "@/lib/i18n/server";
 import { getAppDictionary } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/i18n/config";
@@ -66,7 +66,7 @@ export default async function Home({ params }: HomeProps) {
 
   return (
     <I18nProvider locale={_locale as Locale} dictionary={dictionary} namespaces={['pages.home', 'pages.shifts']}>
-      <HomeContent
+      <HomeContentWrapper
         shifts={shifts}
         settings={settings}
         payoutTaxSettings={payoutTaxSettings}

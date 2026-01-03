@@ -62,29 +62,37 @@ interface AnimatedCounterProps {
 function AnimatedCounter({ value, className, style }: AnimatedCounterProps) {
   const targetNumber = extractNumber(value);
   const count = useMotionValue(0);
-  const [displayValue, setDisplayValue] = useState('---');
+  // Start with 0 so animation begins from the start - avoids flash of final value
+  const [displayValue, setDisplayValue] = useState(() => formatNumber(0, value));
   const prevValueRef = useRef(value);
-  const isFirstRender = useRef(true);
+  const hasAnimatedRef = useRef(false);
 
   useEffect(() => {
-    // Reset motion value when the target value changes (not on first render)
-    if (value !== prevValueRef.current) {
+    const isValueChange = value !== prevValueRef.current;
+
+    if (isValueChange) {
+      // Value changed - reset for new animation
       count.set(0);
       prevValueRef.current = value;
+      hasAnimatedRef.current = false;
+    }
+
+    // Only animate from 0 if:
+    // 1. First render and we haven't animated yet, OR
+    // 2. Value changed (month navigation)
+    const shouldAnimateFromZero = !hasAnimatedRef.current || isValueChange;
+
+    if (shouldAnimateFromZero) {
+      // Reset to 0 to animate up (this happens synchronously before RAF)
+      count.set(0);
     }
 
     const controls = animate(count, targetNumber, {
       duration: 1.2,
       ease: [0.25, 0.1, 0.25, 1],
       onUpdate: (latest) => {
+        hasAnimatedRef.current = true;
         setDisplayValue(formatNumber(latest, value));
-      },
-      onPlay: () => {
-        // Reset display to placeholder when animation starts (after first render)
-        if (!isFirstRender.current) {
-          setDisplayValue('---');
-        }
-        isFirstRender.current = false;
       },
     });
 

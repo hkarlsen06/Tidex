@@ -557,6 +557,7 @@ export function StatsContent({ data, cacheKey }: StatsContentProps) {
       {/* Month picker - left column header */}
       <div className="flex items-center justify-between mb-2 md:mb-0 md:h-10">
         <MonthPicker
+          key={`month-picker-${selectedMonth.getFullYear()}-${selectedMonth.getMonth()}`}
           month={selectedMonth}
           onPreviousMonth={goToPreviousMonth}
           onNextMonth={goToNextMonth}

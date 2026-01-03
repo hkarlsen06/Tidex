@@ -1,8 +1,6 @@
 "use client";
 
 import { useMemo, useState, useEffect, useRef, type Ref } from "react";
-// AnimatePresence temporarily removed while debugging cacheComponents issue
-// import { AnimatePresence, motion } from "framer-motion";
 import { Clock, Copy, ArrowRightLeft, Info, Trash2, X } from "lucide-react";
 import { ShiftsCalendar } from "@/components/app/ShiftsCalendar";
 import { Card } from "@/components/app/Card";
@@ -244,8 +242,14 @@ function WeekdayHeader() {
   );
 }
 
-// Calendar animation variants temporarily removed while debugging cacheComponents issue
-// const calendarVariants = { ... }
+// CSS animation classes for horizontal month scrolling
+// These avoid AnimatePresence state issues with cacheComponents
+function getCalendarAnimationClass(direction: 'next' | 'previous' | null, shouldAnimate: boolean): string {
+  if (!shouldAnimate || !direction) return '';
+  return direction === 'next'
+    ? 'animate-[slide-in-from-right_0.25s_ease-out]'
+    : 'animate-[slide-in-from-left_0.25s_ease-out]';
+}
 
 export function MonthlyEarningsCalendar({
   shifts,
@@ -475,6 +479,7 @@ export function MonthlyEarningsCalendar({
             ) : (
               <>
                 <MonthPicker
+                  key={`month-picker-${month.getFullYear()}-${month.getMonth()}`}
                   month={month}
                   onPreviousMonth={goToPreviousMonth}
                   onNextMonth={goToNextMonth}
@@ -507,10 +512,13 @@ export function MonthlyEarningsCalendar({
           })()}
         </div>
         <div className="pb-6 overflow-hidden relative">
-          {/* Static weekday header */}
+          {/* Static weekday header - stays in place during month transitions */}
           <WeekdayHeader />
-          {/* Calendar without animation - debugging cacheComponents issue */}
-          <div>
+          {/* CSS animation instead of AnimatePresence to avoid cacheComponents state issues */}
+          <div
+            key={`${calendarId}-${month.getFullYear()}-${month.getMonth()}`}
+            className={getCalendarAnimationClass(animationDirection, shouldAnimate)}
+          >
             <ShiftsCalendar
               month={month}
               mode={effectiveViewMode}
