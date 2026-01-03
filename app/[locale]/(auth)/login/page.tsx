@@ -53,7 +53,7 @@ async function LoginSkeleton({ params }: { params: Promise<{ locale: string }> }
               <div className="h-10 rounded-md bg-surface-primary/50 animate-pulse"></div>
               <div className="h-10 rounded-md bg-surface-primary/50 animate-pulse"></div>
             </div>
-            <div className="h-[65px] rounded-lg bg-surface-primary/50 animate-pulse"></div>
+            <div className="h-16.25 rounded-lg bg-surface-primary/50 animate-pulse"></div>
             <div className="h-10 rounded-md bg-surface-primary/50 animate-pulse"></div>
           </div>
         </CardContent>
