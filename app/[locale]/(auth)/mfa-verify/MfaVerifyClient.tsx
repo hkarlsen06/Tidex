@@ -256,10 +256,11 @@ export default function MfaVerifyClient({ locale, nextPath }: MfaVerifyClientPro
           {selectedFactor && challengeId && (
             <form className="space-y-6" noValidate onSubmit={handleVerify}>
               <Field data-invalid={!!fieldError} className="items-center">
-                <FieldLabel htmlFor="code" className="sr-only">
+                <FieldLabel htmlFor="otp-input" className="sr-only">
                   {t.pages.auth.mfaVerify.codeLabel}
                 </FieldLabel>
                 <InputOTP
+                  id="otp-input"
                   maxLength={6}
                   value={code}
                   onChange={(value) => {
