@@ -6,7 +6,6 @@ import dynamic from "next/dynamic";
 import { ArrowLeft } from "lucide-react";
 import { SharingPageSkeleton } from "@/components/app/skeletons";
 import { ManageSharingModal } from "./ManageSharingModal";
-import { SharingDropdown } from "./SharingDropdown";
 import { useTranslations } from "@/lib/i18n/client";
 import { useSharingViewState } from "@/lib/hooks/useSharingViewState";
 import type {
@@ -32,7 +31,6 @@ const ShiftsView = dynamic(
 );
 
 type SharingPageContentProps = {
-  sharers: SharedUser[];
   friends: Friend[];
   shareCapacity: { canAdd: boolean; currentCount: number; limit: number };
   selectedOwnerId: string;
@@ -62,7 +60,6 @@ type SharingPageContentProps = {
  * See docs/cacheComponents-stale-state-bug.md for details.
  */
 export function SharingPageContent({
-  sharers,
   friends,
   shareCapacity,
   selectedOwnerId,
@@ -88,14 +85,6 @@ export function SharingPageContent({
     }
   }, [selectedOwnerId, saveViewState]);
 
-  const handleSharerSelect = (sharerId: string | null) => {
-    if (sharerId) {
-      router.push(`/${locale}/sharing?view=${sharerId}`);
-    } else {
-      router.push(sharingPath);
-    }
-  };
-
   const handleBack = () => {
     saveViewState(null); // Clear saved state when returning to list
     router.push(sharingPath);
@@ -115,20 +104,18 @@ export function SharingPageContent({
         highlightDates={highlightDates}
         cacheKey={cacheKey}
         headerSlot={
-          <div className="flex flex-col gap-3">
+          <div className="flex items-center justify-between">
             <button
               type="button"
               onClick={handleBack}
-              className="inline-flex items-center gap-2 text-sm text-text-secondary hover:text-text-primary transition-colors w-fit"
+              className="inline-flex items-center gap-2 text-sm text-text-secondary hover:text-text-primary transition-colors"
             >
               <ArrowLeft className="h-4 w-4" />
               <span>{t.common.back}</span>
             </button>
-            <SharingDropdown
-              sharers={sharers}
-              selectedId={selectedOwnerId}
-              onSelect={handleSharerSelect}
-            />
+            <span className="text-sm font-medium text-text-primary">
+              {selectedSharer.firstName ?? selectedSharer.email?.split("@")[0] ?? "Bruker"}
+            </span>
           </div>
         }
       />
