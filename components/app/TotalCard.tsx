@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import { ArrowDown, ArrowUp, HelpCircle } from 'lucide-react';
-import { useMotionValue, animate, motion, AnimatePresence } from 'framer-motion';
+import { useMotionValue, animate, motion, AnimatePresence } from 'motion/react';
 import { Card, CardContent } from '@/components/app/Card';
 import { ClickTooltip } from '@/components/app/Tooltip';
 import { useTranslations } from '@/lib/i18n/client';

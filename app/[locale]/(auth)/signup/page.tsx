@@ -5,9 +5,10 @@ import Image from "next/image";
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useState, use, useRef, useEffect } from "react";
-import { motion, useReducedMotion } from "framer-motion";
+import { motion, useReducedMotion } from "motion/react";
 import { useTranslations } from "@/lib/i18n/client";
 import { isNativePlatform } from "@/lib/capacitor/platform";
+import { turnstileLanguages, type Locale } from "@/lib/i18n/config";
 
 // Animation variants for entrance animation
 const cardVariants = {
@@ -58,6 +59,7 @@ import { TurnstileCaptcha, type TurnstileCaptchaHandle } from "@/components/app/
 import { Checkbox } from "@/components/app/Checkbox";
 import { LegalModal } from "@/components/legal";
 import { translateError } from "@/lib/errors/translate";
+import { LocaleSwitcher } from "@/components/app/LocaleSwitcher";
 
 // Lazy load OAuth icon SVGs
 const GoogleIcon = dynamic(() => import("../login/GoogleIcon"), {
@@ -660,6 +662,7 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
                     execution="render"
                     appearance="always"
                     size="flexible"
+                    language={turnstileLanguages[locale as Locale]}
                     onSuccess={(token) => {
                       setCaptchaToken(token);
                       resetMessage();
@@ -792,6 +795,10 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
           </CardFooter>
         )}
       </Card>
+
+      <div className="mt-6 flex justify-center">
+        <LocaleSwitcher />
+      </div>
 
       <LegalModal
         open={legalModalOpen}

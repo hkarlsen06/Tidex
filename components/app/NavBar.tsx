@@ -267,14 +267,13 @@ export function NavBar() {
 
   return (
     <nav
-      className={`fixed left-0 right-0 z-40 bottom-0 transition-transform duration-300 md:hidden ${
-        isHidden ? "translate-y-full" : "translate-y-0"
-      }`}
+      className={`fixed left-0 right-0 z-40 bottom-0 transition-transform duration-300 md:hidden ${isHidden ? "translate-y-full" : "translate-y-0"
+        }`}
     >
       {/* Background that extends into safe area on mobile - uses -bottom to extend into safe area without creeping upward */}
       <div className="absolute inset-x-0 top-0 -bottom-[env(safe-area-inset-bottom)] bg-background/80 backdrop-blur-md" />
 
-      <div className="relative mx-auto max-w-[520px] pb-[env(safe-area-inset-bottom)]">
+      <div className="relative mx-auto max-w-130 pb-[env(safe-area-inset-bottom)]">
         <div className="flex items-center justify-around pt-4 pb-4 border-t border-border/40">
           {navItems.map((item) => {
             const isActive = isPathActive(item);
@@ -434,10 +433,10 @@ export function NavBar() {
                                 alt={sharer.firstName || "Sharer"}
                                 width={18}
                                 height={18}
-                                className="h-[18px] w-[18px] rounded-full object-cover"
+                                className="h-4.5 w-4.5 rounded-full object-cover"
                               />
                             ) : (
-                              <span className="flex h-[18px] w-[18px] items-center justify-center rounded-full bg-surface-secondary text-[8px] font-semibold text-text-primary">
+                              <span className="flex h-4.5 w-4.5 items-center justify-center rounded-full bg-surface-secondary text-[8px] font-semibold text-text-primary">
                                 {getInitials(sharer.firstName, sharer.email)}
                               </span>
                             )}
@@ -447,9 +446,8 @@ export function NavBar() {
                     </div>
                   )}
                   <Icon
-                    className={`h-6 w-6 relative z-10 ${
-                      isActive ? "text-brand-highlight" : "text-text-muted"
-                    } ${visibleSharers.length > 0 ? "filter-[drop-shadow(0_0_4px_hsl(var(--background)))_drop-shadow(0_0_6px_hsl(var(--background)))_drop-shadow(0_0_8px_hsl(var(--background)))]" : ""}`}
+                    className={`h-6 w-6 relative z-10 ${isActive ? "text-brand-highlight" : "text-text-muted"
+                      } ${visibleSharers.length > 0 ? "filter-[drop-shadow(0_0_4px_hsl(var(--background)))_drop-shadow(0_0_6px_hsl(var(--background)))_drop-shadow(0_0_8px_hsl(var(--background)))]" : ""}`}
                     strokeWidth={isActive ? 2.5 : 2}
                   />
                 </Link>
@@ -465,9 +463,8 @@ export function NavBar() {
                 className="flex items-center justify-center p-3 -m-3"
               >
                 <Icon
-                  className={`h-6 w-6 ${
-                    isActive ? "text-brand-highlight" : "text-text-muted"
-                  }`}
+                  className={`h-6 w-6 ${isActive ? "text-brand-highlight" : "text-text-muted"
+                    }`}
                   strokeWidth={isActive ? 2.5 : 2}
                 />
               </Link>

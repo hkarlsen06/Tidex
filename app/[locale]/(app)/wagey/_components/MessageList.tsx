@@ -8,7 +8,7 @@
 
 import type { ReactNode } from "react";
 import { useRef, useEffect, useState, useSyncExternalStore, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence } from "motion/react";
 import { Card } from "@/components/app/Card";
 import { useTranslations } from "@/lib/i18n/client";
 

@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useState, useRef, useCallback } from "react"
 import { useIsDesktop } from "@/lib/hooks/useIsMobile";
 import type { ReactNode } from "react";
 import dynamic from "next/dynamic";
-import { motion, useInView } from "framer-motion";
+import { motion, useInView } from "motion/react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/app/Card";
 import type { StatsData } from "@/data-access/stats";
