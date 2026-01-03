@@ -143,7 +143,6 @@ export default async function SharingPage({ params, searchParams }: SharingPageP
   return (
     <I18nProvider locale={_locale as Locale} dictionary={dictionary} namespaces={['pages.sharing', 'pages.shifts']}>
       <SharingPageContent
-        sharers={sharers}
         friends={friends}
         shareCapacity={shareCapacity}
         selectedOwnerId={selectedOwnerId}
