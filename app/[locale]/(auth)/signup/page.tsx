@@ -294,6 +294,7 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
         options: {
           data: {
             full_name: fullName,
+            locale: locale,
           },
           emailRedirectTo: `${window.location.origin}/auth/callback?next=/onboarding`,
           captchaToken,
@@ -332,6 +333,7 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
           options: {
             data: {
               full_name: fullName,
+              locale: locale,
             },
             captchaToken,
           },

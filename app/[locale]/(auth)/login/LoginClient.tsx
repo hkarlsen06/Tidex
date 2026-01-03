@@ -7,7 +7,7 @@ import { FormEvent, useState, use, useRef, useEffect } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { useTranslations } from '@/lib/i18n/client';
 import { isNativePlatform } from '@/lib/capacitor/platform';
-import { turnstileLanguages, type Locale } from '@/lib/i18n/config';
+import { turnstileLanguages, locales, LOCALE_COOKIE, type Locale } from '@/lib/i18n/config';
 
 // Animation variants for entrance animation
 const cardVariants = {
@@ -133,17 +133,56 @@ export default function LoginClient({
     };
   }, []);
 
+  // Apply user's locale preference from metadata by setting the locale cookie
+  // If user doesn't have a locale preference saved, save the current locale to their metadata
+  const applyUserLocalePreference = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    const userLocale = user?.user_metadata?.locale;
+
+    if (userLocale && locales.includes(userLocale as Locale)) {
+      // User has a saved locale preference - apply it
+      document.cookie = `${LOCALE_COOKIE}=${userLocale}; path=/; max-age=${60 * 60 * 24 * 365}; samesite=lax`;
+      return userLocale as Locale;
+    }
+
+    // User doesn't have a locale preference - save the current locale to their metadata
+    // This handles existing users who signed up before locale tracking was added
+    if (user) {
+      supabase.auth.updateUser({
+        data: { locale }
+      }).catch((error) => {
+        console.error('Failed to save user locale metadata:', error);
+      });
+    }
+
+    return null;
+  };
+
   // Check if user needs MFA verification and redirect accordingly
   const checkMfaAndRedirect = async (destination: string) => {
+    // Apply user's locale preference before redirecting
+    const userLocale = await applyUserLocalePreference();
+
     const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+
+    // Determine which locale to use in the redirect URL
+    const targetLocale = userLocale || locale;
 
     if (aalData && aalData.currentLevel === 'aal1' && aalData.nextLevel === 'aal2') {
       // User has MFA enrolled but hasn't verified - redirect to MFA verify
-      const mfaUrl = `/${locale}/mfa-verify?next=${encodeURIComponent(destination)}`;
+      const mfaUrl = `/${targetLocale}/mfa-verify?next=${encodeURIComponent(destination)}`;
       window.location.href = mfaUrl;
     } else {
       // No MFA required or already verified
-      window.location.href = destination;
+      // Update destination to use user's preferred locale if different
+      let finalDestination = destination;
+      if (userLocale && userLocale !== locale) {
+        // Replace locale prefix in destination
+        // Match any locale from the locales array, not just hardcoded no|en
+        const localePattern = new RegExp(`^/(${locales.join('|')})`);
+        finalDestination = destination.replace(localePattern, `/${userLocale}`);
+      }
+      window.location.href = finalDestination;
     }
   };
 
