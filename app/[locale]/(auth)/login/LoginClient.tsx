@@ -174,13 +174,20 @@ export default function LoginClient({
       window.location.href = mfaUrl;
     } else {
       // No MFA required or already verified
-      // Update destination to use user's preferred locale if different
+      // Update destination to use user's preferred locale
       let finalDestination = destination;
-      if (userLocale && userLocale !== locale) {
-        // Replace locale prefix in destination
-        // Match any locale from the locales array, not just hardcoded no|en
-        const localePattern = new RegExp(`^/(${locales.join('|')})`);
-        finalDestination = destination.replace(localePattern, `/${userLocale}`);
+      const localePattern = new RegExp(`^/(${locales.join('|')})(/|$)`);
+      const hasLocalePrefix = localePattern.test(destination);
+
+      if (hasLocalePrefix) {
+        // Replace existing locale prefix with user's preferred locale
+        finalDestination = destination.replace(
+          new RegExp(`^/(${locales.join('|')})`),
+          `/${targetLocale}`
+        );
+      } else {
+        // No locale prefix - prepend user's preferred locale
+        finalDestination = `/${targetLocale}${destination}`;
       }
       window.location.href = finalDestination;
     }
