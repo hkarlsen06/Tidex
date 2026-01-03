@@ -15,4 +15,14 @@ export const localeNames: Record<Locale, string> = {
   en: 'English',
 };
 
+/**
+ * Map app locales to Cloudflare Turnstile language codes.
+ * Norwegian uses 'nb' (Bokmål) in Turnstile.
+ * @see https://developers.cloudflare.com/turnstile/reference/supported-languages/
+ */
+export const turnstileLanguages: Record<Locale, string> = {
+  no: 'nb', // Norwegian Bokmål
+  en: 'en',
+};
+
 export const LOCALE_COOKIE = 'tidex-locale';

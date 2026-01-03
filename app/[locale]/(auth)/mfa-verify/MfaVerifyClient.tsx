@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useState, useEffect, useCallback } from "react";
-import { motion, useReducedMotion } from "framer-motion";
+import { motion, useReducedMotion } from "motion/react";
 import { useTranslations } from "@/lib/i18n/client";
 
 import { supabase } from "@/lib/supabase/browser";
@@ -38,6 +38,7 @@ import {
 } from "@/components/app/Field";
 import { Button } from "@/components/app/Button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/app/Card";
+import { LocaleSwitcher } from "@/components/app/LocaleSwitcher";
 import type { Factor } from "@supabase/supabase-js";
 
 type MessageState = { type: "error" | "success"; text: string } | null;
@@ -344,6 +345,10 @@ export default function MfaVerifyClient({ locale, nextPath }: MfaVerifyClientPro
           </div>
         </CardContent>
       </Card>
+
+      <div className="mt-6 flex justify-center">
+        <LocaleSwitcher />
+      </div>
     </motion.div>
   );
 }

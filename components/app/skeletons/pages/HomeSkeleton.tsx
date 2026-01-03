@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 import { NextPayrollCardSkeleton } from "../cards/NextPayrollCardSkeleton";
 import { TotalCardSkeleton } from "../cards/TotalCardSkeleton";
 import { ShiftCardSkeleton } from "../cards/ShiftCardSkeleton";

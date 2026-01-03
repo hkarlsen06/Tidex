@@ -3,8 +3,9 @@
 import { useSearchParams } from "next/navigation";
 import { useState, Suspense, use, useRef, useEffect } from "react";
 import Link from "next/link";
-import { motion, useReducedMotion } from "framer-motion";
+import { motion, useReducedMotion } from "motion/react";
 import { useTranslations } from "@/lib/i18n/client";
+import { turnstileLanguages, type Locale } from "@/lib/i18n/config";
 
 import { supabase } from "@/lib/supabase/browser";
 
@@ -30,6 +31,7 @@ const reducedMotionVariants = {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/app/Card";
 import { Button } from "@/components/app/Button";
 import { TurnstileCaptcha, type TurnstileCaptchaHandle } from "@/components/app/TurnstileCaptcha";
+import { LocaleSwitcher } from "@/components/app/LocaleSwitcher";
 
 type MessageState = { type: "error" | "success"; text: string } | null;
 
@@ -165,6 +167,7 @@ function VerifyEmailContent({ params }: { params: Promise<{ locale: string }> })
                 setMessage({ type: "error", text: t.pages.auth.verifyEmail.errors.captchaFailed });
               }}
               execution="execute"
+              language={turnstileLanguages[locale as Locale]}
               className="hidden"
             />
 
@@ -198,6 +201,10 @@ function VerifyEmailContent({ params }: { params: Promise<{ locale: string }> })
           </div>
         </CardContent>
       </Card>
+
+      <div className="mt-6 flex justify-center">
+        <LocaleSwitcher />
+      </div>
     </motion.div>
   );
 }

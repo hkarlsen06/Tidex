@@ -29,6 +29,13 @@ interface TurnstileCaptchaProps {
    * - 'compact': 150px × 140px
    */
   size?: 'normal' | 'flexible' | 'compact';
+  /**
+   * Language for the widget UI
+   * - 'auto' (default): Auto-detect from browser
+   * - Or any supported language code: 'en', 'no', 'de', 'fr', etc.
+   * @see https://developers.cloudflare.com/turnstile/reference/supported-languages/
+   */
+  language?: string;
 }
 
 export interface TurnstileCaptchaHandle {
@@ -59,7 +66,8 @@ export const TurnstileCaptcha = forwardRef<TurnstileCaptchaHandle, TurnstileCapt
     className,
     execution = 'render',
     appearance = 'always',
-    size = 'flexible'
+    size = 'flexible',
+    language = 'auto'
   }, ref) => {
     const turnstileRef = useRef<TurnstileInstance>(null);
 
@@ -85,6 +93,7 @@ export const TurnstileCaptcha = forwardRef<TurnstileCaptchaHandle, TurnstileCapt
           execution,
           appearance,
           retry: "auto", // Auto-retry on failure
+          language,
         }}
         className={className}
       />

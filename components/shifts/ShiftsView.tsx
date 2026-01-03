@@ -4,7 +4,7 @@ import React, { useMemo, useState, useCallback, useTransition, useRef, useEffect
 import { useIsDesktop } from "@/lib/hooks/useIsMobile";
 import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
-import { motion, useInView } from "framer-motion";
+import { motion, useInView } from "motion/react";
 
 import ShiftCard from "@/components/app/ShiftCard";
 import ShiftMoveCard from "./ShiftMoveCard";

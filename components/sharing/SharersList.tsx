@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence } from "motion/react";
 import { ChevronRight, Loader2 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { SharedUserShiftPreview } from "./SharedUserShiftPreview";

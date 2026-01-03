@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 import { CalendarSkeleton } from "../calendar/CalendarSkeleton";
 import { ShiftCardSkeleton } from "../cards/ShiftCardSkeleton";
 
@@ -75,7 +75,7 @@ export function ShiftsSkeleton() {
           className="h-[calc(100dvh-3.5rem-5rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] flex flex-col justify-center px-4 shrink-0 lg:h-auto lg:w-1/2 lg:sticky lg:top-6 lg:justify-start lg:items-center lg:px-0"
           variants={itemVariants}
         >
-          <div className="w-full max-w-md md:max-w-lg lg:max-w-none lg:w-[480px]">
+          <div className="w-full max-w-md md:max-w-lg lg:max-w-none lg:w-120">
             <CalendarSkeleton />
           </div>
         </motion.div>

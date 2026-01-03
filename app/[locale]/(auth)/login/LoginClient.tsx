@@ -4,9 +4,10 @@ import Link from 'next/link';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import { FormEvent, useState, use, useRef, useEffect } from 'react';
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { useTranslations } from '@/lib/i18n/client';
 import { isNativePlatform } from '@/lib/capacitor/platform';
+import { turnstileLanguages, type Locale } from '@/lib/i18n/config';
 
 // Animation variants for entrance animation
 const cardVariants = {
@@ -50,6 +51,7 @@ import { Button } from '@/components/app/Button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/app/Card';
 import { TurnstileCaptcha, type TurnstileCaptchaHandle } from '@/components/app/TurnstileCaptcha';
 import { InputOTP, InputOTPGroup, InputOTPSlot, InputOTPSeparator } from '@/components/app/InputOTP';
+import { LocaleSwitcher } from '@/components/app/LocaleSwitcher';
 
 // Lazy load OAuth icon SVGs
 const GoogleIcon = dynamic(() => import('./GoogleIcon'), {
@@ -648,6 +650,7 @@ export default function LoginClient({
                         execution="render"
                         appearance="always"
                         size="flexible"
+                        language={turnstileLanguages[locale as Locale]}
                         onSuccess={(token) => {
                           setCaptchaToken(token);
                           resetMessage();
@@ -799,6 +802,10 @@ export default function LoginClient({
           </CardFooter>
         )}
       </Card>
+
+      <div className="mt-6 flex justify-center">
+        <LocaleSwitcher />
+      </div>
     </motion.div>
   );
 }

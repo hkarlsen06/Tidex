@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState, use, useRef, useEffect } from "react";
-import { motion, useReducedMotion } from "framer-motion";
+import { motion, useReducedMotion } from "motion/react";
 import { useTranslations } from "@/lib/i18n/client";
+import { turnstileLanguages, type Locale } from "@/lib/i18n/config";
 
 // Animation variants for entrance animation
 const cardVariants = {
@@ -50,6 +51,7 @@ import { Input } from "@/components/app/Input";
 import { Button } from "@/components/app/Button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/app/Card";
 import { TurnstileCaptcha, type TurnstileCaptchaHandle } from "@/components/app/TurnstileCaptcha";
+import { LocaleSwitcher } from "@/components/app/LocaleSwitcher";
 
 type MessageState = { type: "error" | "success"; text: string } | null;
 type Step = "input" | "otp" | "password";
@@ -362,6 +364,7 @@ export default function ResetPasswordPage({ params }: { params: Promise<{ locale
                   execution="render"
                   appearance="always"
                   size="flexible"
+                  language={turnstileLanguages[locale as Locale]}
                   onSuccess={(token) => {
                     setCaptchaToken(token);
                     resetMessage();
@@ -531,6 +534,10 @@ export default function ResetPasswordPage({ params }: { params: Promise<{ locale
           </div>
         </CardContent>
       </Card>
+
+      <div className="mt-6 flex justify-center">
+        <LocaleSwitcher />
+      </div>
     </motion.div>
   );
 }
