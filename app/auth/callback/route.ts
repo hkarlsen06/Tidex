@@ -108,9 +108,27 @@ export async function GET(request: NextRequest) {
 
       if (aalData && aalData.currentLevel === 'aal1' && aalData.nextLevel === 'aal2') {
         // User has MFA enrolled but hasn't verified - redirect to MFA verify
-        const locale = request.cookies.get(LOCALE_COOKIE)?.value || defaultLocale;
+        // Use user's saved locale preference from metadata, fall back to cookie or default
+        const locale = (userLocale && locales.includes(userLocale as Locale) ? userLocale : null)
+          || request.cookies.get(LOCALE_COOKIE)?.value
+          || defaultLocale;
         const mfaUrl = new URL(`/${locale}/mfa-verify`, url.origin);
-        mfaUrl.searchParams.set("next", redirectUrl.pathname + redirectUrl.search);
+
+        // Build the next URL with proper locale prefix
+        const localePattern = new RegExp(`^/(${locales.join('|')})(/|$)`);
+        const hasLocalePrefix = localePattern.test(redirectUrl.pathname);
+        let nextPath: string;
+        if (hasLocalePrefix) {
+          // Replace existing locale prefix
+          nextPath = redirectUrl.pathname.replace(
+            new RegExp(`^/(${locales.join('|')})`),
+            `/${locale}`
+          );
+        } else {
+          // Prepend locale
+          nextPath = `/${locale}${redirectUrl.pathname}`;
+        }
+        mfaUrl.searchParams.set("next", nextPath + redirectUrl.search);
 
         // Create new redirect but copy cookies from original response
         const mfaResponse = NextResponse.redirect(mfaUrl);
