@@ -9,11 +9,11 @@ import {
 import { cn } from "@/lib/utils";
 import { ComponentPropsWithoutRef, ElementRef, forwardRef } from "react";
 
-// Wrapped InputOTP with app-specific styling
+// Wrapped InputOTP with app-specific styling and OTP autofill support
 const InputOTP = forwardRef<
   ElementRef<typeof BaseInputOTP>,
   ComponentPropsWithoutRef<typeof BaseInputOTP>
->(({ className, containerClassName, ...props }, ref) => (
+>(({ className, containerClassName, autoComplete = "one-time-code", inputMode = "numeric", ...props }, ref) => (
   <BaseInputOTP
     ref={ref}
     className={cn("text-base sm:text-lg", className)}
@@ -21,6 +21,8 @@ const InputOTP = forwardRef<
       "w-full justify-center gap-3 sm:gap-4 px-4 sm:px-0",
       containerClassName
     )}
+    autoComplete={autoComplete}
+    inputMode={inputMode}
     {...props}
   />
 ));
