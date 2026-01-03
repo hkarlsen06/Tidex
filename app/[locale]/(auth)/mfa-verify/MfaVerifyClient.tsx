@@ -172,6 +172,14 @@ export default function MfaVerifyClient({ locale, nextPath }: MfaVerifyClientPro
         return;
       }
 
+      // After successful MFA verification, sync the current locale to user metadata
+      // This persists any locale change made on the MFA page
+      supabase.auth.updateUser({
+        data: { locale }
+      }).catch((err) => {
+        console.error("[MFA Verify] Failed to update user locale metadata:", err);
+      });
+
       setMessage({ type: "success", text: t.pages.auth.mfaVerify.success.verified });
 
       // Redirect to intended destination
