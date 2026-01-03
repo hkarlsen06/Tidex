@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { createSupabaseRouteHandlerClient } from "@/lib/supabase/server";
-import { LOCALE_COOKIE, defaultLocale } from "@/lib/i18n/config";
+import { LOCALE_COOKIE, defaultLocale, locales, type Locale } from "@/lib/i18n/config";
 
 function resolveRedirectUrl(requestUrl: URL): URL {
   const nextParam = requestUrl.searchParams.get("next");
@@ -81,7 +81,17 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    await supabase.auth.exchangeCodeForSession(code);
+    const { data: sessionData } = await supabase.auth.exchangeCodeForSession(code);
+
+    // Set locale cookie from user metadata if available
+    const userLocale = sessionData?.user?.user_metadata?.locale;
+    if (userLocale && locales.includes(userLocale as Locale)) {
+      response.cookies.set(LOCALE_COOKIE, userLocale, {
+        path: '/',
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 24 * 365, // 1 year
+      });
+    }
 
     // Only skip MFA check if user was already fully authenticated before the OAuth flow
     // This prevents attackers from bypassing MFA by adding linking=true to login URLs

@@ -1,13 +1,15 @@
 /**
  * Locale API Route
  *
- * Handles locale switching from client components
+ * Handles locale switching from client components.
+ * Also updates user metadata if the user is authenticated.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { locales, LOCALE_COOKIE, type Locale } from '@/lib/i18n/config';
 import { APP_NAMESPACES, getAppDictionary, type AppNamespace } from '@/lib/i18n/dictionaries';
+import { createSupabaseServerClient } from '@/lib/supabase/server';
 
 export async function POST(request: NextRequest) {
   try {
@@ -28,6 +30,19 @@ export async function POST(request: NextRequest) {
       sameSite: 'lax',
       maxAge: 60 * 60 * 24 * 365, // 1 year
     });
+
+    // Update user metadata if authenticated (fire and forget, don't block response)
+    const supabase = await createSupabaseServerClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (user) {
+      // Update user metadata with new locale preference
+      supabase.auth.updateUser({
+        data: { locale }
+      }).catch((error) => {
+        console.error('Failed to update user locale metadata:', error);
+      });
+    }
 
     const requestedNamespaces: AppNamespace[] = Array.isArray(namespaces)
       ? namespaces.filter((ns): ns is AppNamespace => typeof ns === 'string' && APP_NAMESPACES.includes(ns as AppNamespace))
