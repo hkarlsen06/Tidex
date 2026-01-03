@@ -139,6 +139,12 @@ export default function LoginClient({
     const { data: { user } } = await supabase.auth.getUser();
     const userLocale = user?.user_metadata?.locale;
 
+    console.log('[LOCALE] applyUserLocalePreference:', {
+      userMetadata: user?.user_metadata,
+      userLocale,
+      currentPageLocale: locale,
+    });
+
     if (userLocale && locales.includes(userLocale as Locale)) {
       // User has a saved locale preference - apply it
       document.cookie = `${LOCALE_COOKIE}=${userLocale}; path=/; max-age=${60 * 60 * 24 * 365}; samesite=lax`;
