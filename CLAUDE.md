@@ -786,3 +786,9 @@ ORDER BY proname;
 - **Focus on code changes only** - communicate findings verbally in chat, not in files
 - When asked to investigate or analyze, report findings in chat responses, not new files
 
+**IMPORTANT: NEVER push to git automatically:**
+
+- **NEVER run `git push`** unless the user explicitly asks you to push
+- Commit changes when requested, but wait for user approval before pushing
+- The user will push manually when ready
+

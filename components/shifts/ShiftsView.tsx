@@ -1043,12 +1043,28 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
   const [operationError, setOperationError] = useState<string | null>(null); // For move/copy/delete/edit failures
 
   // Track which months have been loaded or are currently loading
-  const [loadedMonths, setLoadedMonths] = useState<Set<string>>(new Set());
-  const [loadingMonths, setLoadingMonths] = useState<Set<string>>(new Set());
+  // Using refs to avoid race conditions with effects and cacheComponents
+  const loadedMonthsRef = useRef<Set<string>>(new Set());
+  const loadingMonthsRef = useRef<Set<string>>(new Set());
+  const hasInitializedRef = useRef(false);
+  // Track the previous initialShifts reference to detect actual SSR data changes
+  const prevInitialShiftsRef = useRef<ShiftWithComputations[]>(initialShifts);
   // Cache buster timestamp to force fresh fetches after server mutations
   const [cacheBuster, setCacheBuster] = useState<number>(Date.now());
   // Use ref to track in-flight requests to prevent race conditions
   const inflightRequests = useRef<Set<string>>(new Set());
+
+  // Initialize loaded months synchronously on first render
+  // This must happen before any effects run
+  if (!hasInitializedRef.current) {
+    hasInitializedRef.current = true;
+    // Mark SSR-loaded months from initialShifts
+    for (const shift of initialShifts) {
+      const [year, month] = shift.shift_date.split('-');
+      const key = `${year}-${month}`;
+      loadedMonthsRef.current.add(key);
+    }
+  }
   // Track payout tax settings per month (key: "YYYY-MM")
   const [payoutTaxByMonth, setPayoutTaxByMonth] = useState<Map<string, PayoutTaxSettings>>(() => {
     // Initialize with SSR-provided payout tax settings for the current month
@@ -1126,15 +1142,14 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
 
     const key = getMonthKey(year, month);
 
-    // Skip if already loaded, currently loading (state), or in-flight (ref)
-    if (loadedMonths.has(key) || loadingMonths.has(key) || inflightRequests.current.has(key)) {
+    // Skip if already loaded, currently loading, or in-flight
+    if (loadedMonthsRef.current.has(key) || loadingMonthsRef.current.has(key) || inflightRequests.current.has(key)) {
       return;
     }
 
-    // Mark as in-flight immediately (synchronous, prevents race conditions)
+    // Mark as in-flight and loading immediately (synchronous, prevents race conditions)
     inflightRequests.current.add(key);
-    // Mark as loading in state (for UI feedback)
-    setLoadingMonths(prev => new Set(prev).add(key));
+    loadingMonthsRef.current.add(key);
 
     try {
       // Determine endpoint based on mode
@@ -1162,20 +1177,19 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
         }
 
         // Mark as successfully loaded
-        setLoadedMonths(prev => new Set(prev).add(key));
+        loadedMonthsRef.current.add(key);
       }
     } catch (err) {
       console.error(`Failed to fetch month ${key}:`, err);
     } finally {
-      // Remove from both tracking mechanisms
+      // Remove from tracking mechanisms
       inflightRequests.current.delete(key);
-      setLoadingMonths(prev => {
-        const next = new Set(prev);
-        next.delete(key);
-        return next;
-      });
+      loadingMonthsRef.current.delete(key);
     }
-  }, [getMonthKey, loadedMonths, loadingMonths, initialShifts, cacheBuster, readOnly, cacheKey]);
+  // Note: We intentionally exclude initialShifts from deps - it's only used for deduplication
+  // and we don't want to recreate this callback on every SSR data change
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [getMonthKey, cacheBuster, readOnly, cacheKey]);
 
   // Fetch a single shift (by month) to refresh computed data after local updates
   const refreshShiftFromServer = useCallback(async (shiftId: string, shiftDate: string) => {
@@ -1252,7 +1266,14 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
 
   // Reset all client-side state when new data arrives from server (after router.refresh())
   // This includes: optimistic updates, client-fetched shifts, and loaded months tracking
+  // IMPORTANT: Only runs when initialShifts reference actually changes, not on cacheComponents reveal
   useEffect(() => {
+    // Skip if this is the same reference (cacheComponents reveal, not actual data change)
+    if (prevInitialShiftsRef.current === initialShifts) {
+      return;
+    }
+    prevInitialShiftsRef.current = initialShifts;
+
     // Clear optimistic updates
     setDeletedShiftIds(new Set());
     setMovedShifts(new Map());
@@ -1263,28 +1284,17 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
     setAdditionalShifts([]);
 
     // Recalculate loaded months from fresh SSR data
-    const loaded = new Set<string>();
+    loadedMonthsRef.current.clear();
+    loadingMonthsRef.current.clear();
+    inflightRequests.current.clear();
     for (const shift of initialShifts) {
       const [year, month] = shift.shift_date.split('-');
       const key = `${year}-${month}`;
-      loaded.add(key);
+      loadedMonthsRef.current.add(key);
     }
-    setLoadedMonths(loaded);
-
-    // Also mark SSR-loaded months as complete in the ref (prevents race conditions)
-    // The ref is synchronous, so prefetch effect will immediately see these months
-    inflightRequests.current.clear();
-    loaded.forEach(key => inflightRequests.current.add(key));
-
-    // Clear inflight refs after a short delay (allows prefetch to see them first)
-    const timer = setTimeout(() => {
-      inflightRequests.current.clear();
-    }, 0);
 
     // Update cache buster to force fresh API fetches (bypasses HTTP cache)
     setCacheBuster(Date.now());
-
-    return () => clearTimeout(timer);
   }, [initialShifts]);
 
   // Proactive prefetch: Load adjacent months (prev, current, next) whenever selectedMonth changes
@@ -2341,7 +2351,6 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
             </div>
           )}
           <MonthlyEarningsCalendar
-            key={`calendar-${selectedMonth.getFullYear()}-${selectedMonth.getMonth()}`}
             shifts={shifts}
             month={selectedMonth}
             onMonthChange={handleMonthChange}

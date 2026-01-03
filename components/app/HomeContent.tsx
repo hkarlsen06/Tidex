@@ -143,6 +143,11 @@ export function HomeContent({ shifts: initialShifts, settings, payoutTaxSettings
   const loadedMonthsRef = useRef<Set<string>>(new Set());
   const loadingMonthsRef = useRef<Set<string>>(new Set());
   const hasInitializedRef = useRef(false);
+  // Track the previous initialShifts reference to detect actual SSR data changes
+  // vs cacheComponents reveals (where the reference stays the same)
+  const prevInitialShiftsRef = useRef<ShiftWithComputations[]>(initialShifts);
+  // Track if the currently selected month is loading (for UI feedback)
+  const [isCurrentMonthLoading, setIsCurrentMonthLoading] = useState(false);
   // Track payout tax settings per month (key: "YYYY-MM")
   const [payoutTaxByMonth, setPayoutTaxByMonth] = useState<Map<string, PayoutTaxSettings>>(() => {
     // Initialize with SSR-provided payout tax settings for the current month
@@ -194,10 +199,31 @@ export function HomeContent({ shifts: initialShifts, settings, payoutTaxSettings
   }, [initialShifts, additionalShifts, deletedShiftIds, shiftOverrides]);
 
   // Reset optimistic updates when new data arrives from server (after router.refresh())
+  // Skip if same reference (cacheComponents reveal, not actual data change)
   useEffect(() => {
+    if (prevInitialShiftsRef.current === initialShifts) {
+      return;
+    }
+    prevInitialShiftsRef.current = initialShifts;
+
+    // Clear optimistic updates since we have fresh SSR data
     setDeletedShiftIds(new Set());
     setShiftOverrides(new Map());
-  }, [initialShifts]);
+
+    // Re-initialize loaded months from the new SSR data
+    // This handles the case where the server returns different preloaded months
+    loadedMonthsRef.current.clear();
+    if (preloadedMonths && preloadedMonths.length > 0) {
+      preloadedMonths.forEach(key => loadedMonthsRef.current.add(key));
+    } else {
+      const now = new Date();
+      const currentKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      loadedMonthsRef.current.add(currentKey);
+    }
+
+    // Clear additional shifts since SSR data is fresh
+    setAdditionalShifts([]);
+  }, [initialShifts, preloadedMonths]);
 
   // Helper to generate month key for tracking
   const getMonthKey = useCallback((year: number, month: number): string => {
@@ -251,12 +277,25 @@ export function HomeContent({ shifts: initialShifts, settings, payoutTaxSettings
     }
   }, [getMonthKey, cacheKey]);
 
-  // Proactive prefetch: Load adjacent months when navigating outside the preloaded window
+  // Proactive prefetch: Load current and adjacent months when navigating outside the preloaded window
   // SSR preloads 3 months (prev, current, next), so this only triggers when user
   // navigates beyond that window. fetchMonth skips already-loaded months.
   useEffect(() => {
     const selectedYear = month.getFullYear();
     const selectedMonthNum = month.getMonth() + 1;
+    const currentKey = getMonthKey(selectedYear, selectedMonthNum);
+
+    // Check if current month needs to be loaded
+    const needsLoading = !loadedMonthsRef.current.has(currentKey);
+
+    // Show loading state immediately if needed, with minimum 250ms display time
+    let loadingStartTime: number | null = null;
+    let minLoadingTimeout: ReturnType<typeof setTimeout> | null = null;
+
+    if (needsLoading) {
+      setIsCurrentMonthLoading(true);
+      loadingStartTime = Date.now();
+    }
 
     // Calculate prev and next months relative to selected month
     const prevDate = new Date(selectedYear, selectedMonthNum - 2, 1);
@@ -267,12 +306,34 @@ export function HomeContent({ shifts: initialShifts, settings, payoutTaxSettings
     const nextYear = nextDate.getFullYear();
     const nextMonthNum = nextDate.getMonth() + 1;
 
-    // Fetch adjacent months in parallel (skips if already loaded from SSR or previous fetches)
+    // Fetch current month and adjacent months in parallel (skips if already loaded from SSR or previous fetches)
+    // Current month must be fetched too in case user navigated far away in another route
     Promise.all([
+      fetchMonth(selectedYear, selectedMonthNum),
       fetchMonth(prevYear, prevMonthNum),
       fetchMonth(nextYear, nextMonthNum),
-    ]);
-  }, [month, fetchMonth]);
+    ]).finally(() => {
+      if (needsLoading && loadingStartTime) {
+        // Ensure loading state is shown for at least 250ms to avoid flash
+        const elapsed = Date.now() - loadingStartTime;
+        const remaining = Math.max(0, 250 - elapsed);
+
+        if (remaining > 0) {
+          minLoadingTimeout = setTimeout(() => {
+            setIsCurrentMonthLoading(false);
+          }, remaining);
+        } else {
+          setIsCurrentMonthLoading(false);
+        }
+      }
+    });
+
+    return () => {
+      if (minLoadingTimeout) {
+        clearTimeout(minLoadingTimeout);
+      }
+    };
+  }, [month, fetchMonth, getMonthKey]);
 
   // Refresh the currently viewed month when the page regains focus to avoid stale totals after edits elsewhere
   useEffect(() => {
@@ -347,7 +408,7 @@ export function HomeContent({ shifts: initialShifts, settings, payoutTaxSettings
   const totalCardTotal = selectedMonthIsFuture ? data.projectedTotal : data.total;
   // Only show dashes placeholder for future months without tax AND no planned shifts
   // (when there are planned shifts, TotalCard will show "X vakter planlagt" instead)
-  const totalCardSubtitle = selectedMonthIsFuture && !taxDeductionEnabled && plannedShiftsCount === 0 ? "---" : undefined;
+  const totalCardSubtitle = selectedMonthIsFuture && !taxDeductionEnabled && plannedShiftsCount === 0 ? "— — —" : undefined;
   const totalCardProjectedTotal = selectedMonthIsFuture ? undefined : data.projectedTotal;
   const totalCardGrossBeforeTax = selectedMonthIsFuture
     ? data.projectedGrossBeforeTax
@@ -576,10 +637,12 @@ export function HomeContent({ shifts: initialShifts, settings, payoutTaxSettings
               useZeroPlaceholder={!selectedMonthIsFuture}
               hasPendingShifts={hasPendingShifts}
               plannedShiftsCount={plannedShiftsCount}
+              isLoading={isCurrentMonthLoading}
             />
           </div>
           <div className="flex items-center justify-between -mt-3 -mb-3">
             <MonthPicker
+              key={`month-picker-${month.getFullYear()}-${month.getMonth()}`}
               month={month}
               onPreviousMonth={goToPreviousMonth}
               onNextMonth={goToNextMonth}
