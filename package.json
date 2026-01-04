@@ -4,8 +4,8 @@
   "private": true,
   "packageManager": "pnpm@10.27.0",
   "scripts": {
-    "dev": "next dev",
-    "secure": "node server.mjs",
+    "dev": "node server.mjs",
+    "local": "next dev",
     "dev:turbo": "next dev --turbo",
     "build": "next build",
     "build:analyze": "ANALYZE=true next build --webpack",
@@ -21,7 +21,11 @@
     "marketing:start": "pnpm --filter marketing start",
     "dev-site:dev": "pnpm --filter dev-site dev",
     "dev-site:build": "pnpm --filter dev-site build",
-    "dev-site:start": "pnpm --filter dev-site start"
+    "dev-site:start": "pnpm --filter dev-site start",
+    "ios:local": "cp ios/App/App/capacitor.config.local.json ios/App/App/capacitor.config.json && echo 'Switched to local dev server (https://local.tidex.no:3000)'",
+    "ios:prod": "pnpm sync-ios && echo 'Switched to production server (https://app.tidex.no)'",
+    "sync-ios": "pnpm exec cap sync ios",
+    "ios-open": "pnpm exec cap open ios"
   },
   "dependencies": {
     "@capacitor-firebase/messaging": "^8.0.1",

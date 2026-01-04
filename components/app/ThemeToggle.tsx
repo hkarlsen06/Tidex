@@ -1,11 +1,26 @@
 "use client";
 
+import { useSyncExternalStore } from "react";
 import { useTheme } from "./ThemeProvider";
 import { useTranslations } from "@/lib/i18n/client";
+import { isNativePlatform } from "@/lib/capacitor/platform";
+
+// Subscribe is a no-op since platform detection doesn't change
+const subscribe = () => () => {};
+
+// Server always returns false; client checks platform
+const getSnapshot = () => isNativePlatform();
+const getServerSnapshot = () => false;
 
 export function ThemeToggle() {
   const { theme, toggleTheme } = useTheme();
   const { t } = useTranslations();
+  const isNative = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+
+  // Hide theme toggle on native platforms - theme follows device settings
+  if (isNative) {
+    return null;
+  }
 
   return (
     <button
