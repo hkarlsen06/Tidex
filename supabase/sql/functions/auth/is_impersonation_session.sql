@@ -6,11 +6,11 @@ RETURNS boolean
 LANGUAGE sql
 SECURITY DEFINER
 STABLE
-SET search_path TO ''
+SET search_path TO 'public', 'internal'
 AS $$
   SELECT EXISTS (
     SELECT 1
-    FROM public.impersonation_sessions
+    FROM internal.impersonation_sessions
     WHERE target_user_id = auth.uid()
       AND ended_at IS NULL
       AND expires_at > now()
