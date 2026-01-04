@@ -1,6 +1,7 @@
 import { verifySession } from '@/data-access/auth';
 import { getUserSubscriptionData } from '@/data-access/subscription';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { createSupabaseServiceClient } from '@/lib/supabase/service';
 import { hasProAccess, getActiveProvider } from '@/lib/subscription/hasProAccess';
 import { Card } from '@/components/app/Card';
 import { redirect } from 'next/navigation';
@@ -24,23 +25,24 @@ export default async function SubscriptionDebugPage({
 
   const { subscription, profile } = await getUserSubscriptionData(user.id);
   const supabase = await createSupabaseServerClient();
+  const serviceClient = createSupabaseServiceClient();
 
   // Get entitlement status from DB function
   const { data: entitlementStatus } = await supabase.rpc('get_user_entitlement_status', {
     p_user_id: user.id,
   });
 
-  // Get app account token
-  const { data: appAccountToken } = await supabase
-    .from('app_account_tokens')
+  // Get app account token (requires service role for internal schema)
+  const { data: appAccountToken } = await serviceClient
+    .schema('internal').from('app_account_tokens')
     .select('token, created_at')
     .eq('user_id', user.id)
     .maybeSingle();
 
-  // Get recent Apple notifications for this user (via subscription)
+  // Get recent Apple notifications for this user (requires service role for internal schema)
   const { data: recentNotifications } = subscription?.apple_original_transaction_id
-    ? await supabase
-        .from('apple_notifications')
+    ? await serviceClient
+        .schema('internal').from('apple_notifications')
         .select('*')
         .eq('original_transaction_id', subscription.apple_original_transaction_id)
         .order('received_at', { ascending: false })

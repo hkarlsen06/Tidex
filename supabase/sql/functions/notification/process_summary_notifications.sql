@@ -10,7 +10,7 @@ CREATE OR REPLACE FUNCTION public.process_summary_notifications()
  RETURNS TABLE(processed_count integer)
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'public', 'pg_temp'
+ SET search_path TO 'public', 'internal', 'pg_temp'
 AS $function$
 DECLARE
   v_viewer_id UUID;
@@ -93,7 +93,7 @@ BEGIN
       END IF;
 
       -- Queue the summary notification
-      INSERT INTO notification_queue (type, recipient_id, sender_id, payload, idempotency_key)
+      INSERT INTO internal.notification_queue (type, recipient_id, sender_id, payload, idempotency_key)
       VALUES (
         'shared_shift_summary',
         v_viewer_id,

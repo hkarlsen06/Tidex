@@ -110,7 +110,7 @@ serve(async (req)=>{
 // ---------- Idempotency helpers ----------
 async function markEventSeen(id, type) {
   try {
-    const { error } = await supabase.from("stripe_events").insert({
+    const { error } = await supabase.schema("internal").from("stripe_events").insert({
       id,
       type
     });
@@ -132,7 +132,7 @@ async function markEventSeen(id, type) {
 }
 async function markEventDone(id) {
   try {
-    await supabase.from("stripe_events").update({
+    await supabase.schema("internal").from("stripe_events").update({
       processed_at: new Date().toISOString(),
       last_error: null
     }).eq("id", id);
@@ -143,9 +143,9 @@ async function markEventDone(id) {
 async function markEventError(id, msg) {
   try {
     // Read attempts, then increment (simple; can be replaced by RPC for atomicity)
-    const { data, error } = await supabase.from("stripe_events").select("attempts").eq("id", id).single();
+    const { data, error } = await supabase.schema("internal").from("stripe_events").select("attempts").eq("id", id).single();
     const attempts = typeof data?.attempts === "number" ? data.attempts + 1 : 1;
-    const { error: updErr } = await supabase.from("stripe_events").update({
+    const { error: updErr } = await supabase.schema("internal").from("stripe_events").update({
       last_error: msg,
       attempts
     }).eq("id", id);

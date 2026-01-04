@@ -6,14 +6,14 @@ CREATE OR REPLACE FUNCTION public.trigger_send_push_notifications()
  RETURNS void
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'public', 'net', 'pg_temp'
+ SET search_path TO 'public', 'internal', 'net', 'pg_temp'
 AS $function$
 DECLARE
   supabase_url TEXT;
   service_key TEXT;
   pending_count INT;
 BEGIN
-  SELECT COUNT(*) INTO pending_count FROM notification_queue WHERE status = 'pending';
+  SELECT COUNT(*) INTO pending_count FROM internal.notification_queue WHERE status = 'pending';
 
   IF pending_count > 0 THEN
     SELECT decrypted_secret INTO supabase_url FROM vault.decrypted_secrets WHERE name = 'supabase_url';

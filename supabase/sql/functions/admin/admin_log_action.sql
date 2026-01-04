@@ -15,7 +15,7 @@ CREATE OR REPLACE FUNCTION admin_log_action(
 RETURNS UUID
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path TO 'public', 'internal'
 AS $$
 DECLARE
   v_log_id UUID;
@@ -33,7 +33,7 @@ BEGIN
     RAISE EXCEPTION 'Invalid action type: %', p_action;
   END IF;
 
-  INSERT INTO admin_audit_log (
+  INSERT INTO internal.admin_audit_log (
     admin_id,
     admin_email,
     action,

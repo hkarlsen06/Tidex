@@ -149,7 +149,7 @@ export async function sendBroadcastNotification(input: BroadcastInput) {
 
   // Create broadcast record (DB generates UUID, status defaults to 'pending')
   const { data: broadcast, error: broadcastError } = await supabase
-    .from("admin_broadcasts")
+    .schema("internal").from("admin_broadcasts")
     .insert({
       admin_id: user.id,
       title: input.title.trim(),
@@ -190,13 +190,13 @@ export async function sendBroadcastNotification(input: BroadcastInput) {
   for (let i = 0; i < allNotifications.length; i += BATCH_SIZE) {
     const batch = allNotifications.slice(i, i + BATCH_SIZE);
     const { error: insertError } = await supabase
-      .from("notification_queue")
+      .schema("internal").from("notification_queue")
       .insert(batch);
 
     if (insertError) {
       // Partial failure - update broadcast status
       await supabase
-        .from("admin_broadcasts")
+        .schema("internal").from("admin_broadcasts")
         .update({ status: "partial_failure" })
         .eq("id", broadcastId);
 
@@ -210,7 +210,7 @@ export async function sendBroadcastNotification(input: BroadcastInput) {
 
   // All batches inserted successfully - update status to 'queued'
   await supabase
-    .from("admin_broadcasts")
+    .schema("internal").from("admin_broadcasts")
     .update({ status: "queued" })
     .eq("id", broadcastId);
 

@@ -796,7 +796,7 @@ serve(async (req: Request) => {
       try {
         // Get recipient's FCM tokens
         const { data: devices } = await supabase
-          .from("push_devices")
+          .schema("internal").from("push_devices")
           .select("id, fcm_token")
           .eq("user_id", group.recipient_id);
 
@@ -804,7 +804,7 @@ serve(async (req: Request) => {
           // No devices registered, mark all as skipped
           for (const notification of group.notifications) {
             await supabase
-              .from("notification_queue")
+              .schema("internal").from("notification_queue")
               .update({
                 status: "skipped",
                 processed_at: new Date().toISOString(),
@@ -830,7 +830,7 @@ serve(async (req: Request) => {
         // Mark all notifications in group
         for (const notification of group.notifications) {
           await supabase
-            .from("notification_queue")
+            .schema("internal").from("notification_queue")
             .update({
               status: anySuccess ? "sent" : "failed",
               error_message: anySuccess ? null : "All devices failed",
@@ -846,7 +846,7 @@ serve(async (req: Request) => {
 
         for (const notification of group.notifications) {
           await supabase
-            .from("notification_queue")
+            .schema("internal").from("notification_queue")
             .update({
               status: "failed",
               error_message: error instanceof Error ? error.message : "Unknown error",
@@ -861,7 +861,7 @@ serve(async (req: Request) => {
 
     // Clean up invalid tokens
     if (invalidTokens.length > 0) {
-      await supabase.from("push_devices").delete().in("id", invalidTokens);
+      await supabase.schema("internal").from("push_devices").delete().in("id", invalidTokens);
       console.log(`Deleted ${invalidTokens.length} invalid tokens`);
     }
 
@@ -878,7 +878,7 @@ serve(async (req: Request) => {
     for (const broadcastId of processedBroadcastIds) {
       // Count remaining pending notifications for this broadcast
       const { count: pendingCount } = await supabase
-        .from("notification_queue")
+        .schema("internal").from("notification_queue")
         .select("*", { count: "exact", head: true })
         .eq("broadcast_id", broadcastId)
         .in("status", ["pending", "processing"]);
@@ -886,7 +886,7 @@ serve(async (req: Request) => {
       // If no pending notifications remain, mark broadcast as complete
       if (pendingCount === 0) {
         await supabase
-          .from("admin_broadcasts")
+          .schema("internal").from("admin_broadcasts")
           .update({ status: "complete" })
           .eq("id", broadcastId)
           .eq("status", "queued"); // Only update if currently queued (not partial_failure)

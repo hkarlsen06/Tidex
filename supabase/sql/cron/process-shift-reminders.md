@@ -36,7 +36,7 @@ SELECT
 ## Tables Affected (via edge function)
 
 - `user_shifts` - Read to find upcoming shifts
-- `push_devices` - Read to get device tokens
+- `internal.push_devices` - Read to get device tokens
 - `notification_preferences` - Read to check reminder settings
 - `shift_reminders_sent` - Insert to track sent reminders
 

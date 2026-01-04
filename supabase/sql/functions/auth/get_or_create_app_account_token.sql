@@ -6,19 +6,19 @@ CREATE OR REPLACE FUNCTION public.get_or_create_app_account_token(p_user_id uuid
  RETURNS uuid
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO ''
+ SET search_path TO 'public', 'internal'
 AS $function$
 DECLARE
   v_token uuid;
 BEGIN
   -- First try to get existing token
   SELECT token INTO v_token
-  FROM public.app_account_tokens
+  FROM internal.app_account_tokens
   WHERE user_id = p_user_id;
 
   -- If not found, create one
   IF v_token IS NULL THEN
-    INSERT INTO public.app_account_tokens (user_id)
+    INSERT INTO internal.app_account_tokens (user_id)
     VALUES (p_user_id)
     ON CONFLICT (user_id) DO UPDATE SET updated_at = now()
     RETURNING token INTO v_token;

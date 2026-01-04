@@ -11,7 +11,7 @@ CREATE OR REPLACE FUNCTION public.process_shift_update_events()
  RETURNS TABLE(owners_processed integer, total_updated integer)
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'public', 'pg_temp'
+ SET search_path TO 'public', 'internal', 'pg_temp'
 AS $function$
 DECLARE
   v_owner_id UUID;
@@ -96,7 +96,7 @@ BEGIN
     -- Note: ss.blocked controls visibility ONLY (hides from /sharing list), NOT notifications
     -- notification_frequency controls whether user gets notified (instant/summary/muted)
     -- Blocked users still receive notifications - they just don't see the sharer in their list
-    INSERT INTO notification_queue (type, recipient_id, sender_id, payload, idempotency_key)
+    INSERT INTO internal.notification_queue (type, recipient_id, sender_id, payload, idempotency_key)
     SELECT
       'shared_shift_changes',
       ss.viewer_id,
@@ -119,7 +119,7 @@ BEGIN
 
     -- Route summary notifications (with same-day exception: today's shifts go instant)
     -- Same-day shifts to instant
-    INSERT INTO notification_queue (type, recipient_id, sender_id, payload, idempotency_key)
+    INSERT INTO internal.notification_queue (type, recipient_id, sender_id, payload, idempotency_key)
     SELECT
       'shared_shift_changes',
       ss.viewer_id,
