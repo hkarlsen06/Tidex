@@ -43,6 +43,7 @@ import type { Locale } from "../i18n/config";
 import { getTranslations } from "../i18n/server";
 import { formatCurrency } from "../formatters";
 import { getMonthlyTotals } from "../shifts/monthlyTotals";
+import { buildExcludedShiftIds } from "../shifts/conflictExclusion";
 
 /**
  * Monthly data aggregation
@@ -408,8 +409,16 @@ export const StatsServiceLive = Layer.effect(
           month: focusMonth,
         });
 
-        const allShifts = shiftData.shifts;
+        const rawShifts = shiftData.shifts;
         const userSettings = shiftData.settings;
+
+        // Filter out conflicting/overlapping shifts
+        // When multiple shifts overlap on the same date, only the lowest-earning one
+        // should be included in totals (consistent with calendar and TotalCard behavior)
+        const excludedShiftIds = buildExcludedShiftIds([...rawShifts]);
+        const allShifts = excludedShiftIds.size > 0
+          ? rawShifts.filter(shift => !excludedShiftIds.has(shift.id))
+          : rawShifts;
 
         const previousMonthDate = new Date(Date.UTC(focusYear, focusMonth - 2, 1));
         const { year: lastMonthYear, month: lastMonth } = getYearMonth(previousMonthDate);
@@ -955,10 +964,14 @@ export const StatsServiceLive = Layer.effect(
           });
         }
 
-        // Calculate yearly average (only months with shifts)
+        // Calculate yearly average (only months with shifts in the focus year)
         let yearlySum = 0;
         let monthsWithShifts = 0;
-        for (const [, monthData] of monthlyEmployment) {
+        for (const [monthKey, monthData] of monthlyEmployment) {
+          // Only include months from the focus year in the yearly average
+          const [monthYear] = monthKey.split("-").map(Number);
+          if (monthYear !== focusYear) continue;
+
           if (monthData.hasShifts && monthData.totalWeight > 0) {
             const monthAvg = monthData.totalWeightedPercentage / monthData.totalWeight;
             yearlySum += monthAvg;
