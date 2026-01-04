@@ -3,6 +3,7 @@
 import Stripe from 'stripe';
 import { logger } from '@/lib/logger';
 import { verifySession } from '@/data-access/auth';
+import { enforceNotImpersonating } from '@/lib/auth/impersonation';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-10-29.clover',
@@ -16,6 +17,9 @@ interface CheckoutSessionResult {
 
 export async function createCheckoutSession(priceId: string): Promise<CheckoutSessionResult> {
   try {
+    // Block subscription changes while impersonating
+    await enforceNotImpersonating('update_subscription');
+
     const { user } = await verifySession();
 
     // Get user email

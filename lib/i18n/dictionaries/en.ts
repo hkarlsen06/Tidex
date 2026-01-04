@@ -1497,6 +1497,8 @@ export const en: Dictionary = {
       pendingShiftsTooltip: "You haven't completed any shifts yet. The total increases on each completed shift.",
       shiftPlanned: 'shift planned',
       shiftsPlanned: 'shifts planned',
+      shift: 'shift',
+      shifts: 'shifts',
     },
     charts: {
       supplementBreakdown: {

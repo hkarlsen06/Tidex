@@ -325,6 +325,7 @@ export const ShiftsServiceLive = Layer.effect(
         let userSettings: DbUserSettings | null = null;
         if (skipAuthCheck) {
           // Direct query for shared access (RLS handles authorization)
+          // Note: .maybeSingle() returns null when no rows found, which is valid
           const settingsResult = yield* supabase.query(
             async (client) =>
               await client

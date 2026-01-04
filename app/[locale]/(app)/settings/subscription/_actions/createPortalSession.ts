@@ -4,6 +4,7 @@ import Stripe from 'stripe';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
 import { verifySession } from '@/data-access/auth';
+import { enforceNotImpersonating } from '@/lib/auth/impersonation';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-10-29.clover',
@@ -17,6 +18,9 @@ interface PortalSessionResult {
 
 export async function createPortalSession(): Promise<PortalSessionResult> {
   try {
+    // Block billing management while impersonating
+    await enforceNotImpersonating('manage_billing');
+
     const { user } = await verifySession();
     const supabase = await createSupabaseServerClient();
 

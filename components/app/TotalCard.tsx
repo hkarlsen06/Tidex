@@ -22,6 +22,8 @@ interface TotalCardProps {
   hasPendingShifts?: boolean;
   /** Number of future/planned shifts for the projection */
   plannedShiftsCount?: number;
+  /** Total number of shifts in the month (for fallback display) */
+  totalShiftsCount?: number;
 }
 
 // Helper to get animation classes based on direction
@@ -119,6 +121,7 @@ export const TotalCard: React.FC<TotalCardProps> = ({
   useZeroPlaceholder = true,
   hasPendingShifts = false,
   plannedShiftsCount,
+  totalShiftsCount,
 }) => {
   const { t } = useTranslations();
   const cardClasses = [
@@ -164,29 +167,43 @@ export const TotalCard: React.FC<TotalCardProps> = ({
   // Show help tooltip when displaying placeholder but user has pending shifts
   const showPendingShiftsHelp = displayMain === '— — —' && hasPendingShifts;
 
-  // Subtitle content: earned to date (when future shifts) or gross before tax (when no future shifts)
-  // When no earned value but has planned shifts, show "X shifts planned"
+  // Subtitle content priority:
+  // 1. Three dashes (when main display shows dashes - no data yet)
+  // 2. Earned to date (when future shifts exist and we have real earnings)
+  // 3. Gross before tax (when no future shifts but tax applies)
+  // 4. X shifts planned (when future shifts exist but no earnings yet)
+  // 5. X shifts (fallback - show total shift count when nothing else applies)
+  const showDashesSubtitle = displayMain === '— — —';
   const hasRealEarnedValue = hasFutureShifts && displayTotal !== '— — —';
-  const showPlannedShifts = hasFutureShifts && !hasRealEarnedValue && plannedShiftsCount && plannedShiftsCount > 0;
+  const showPlannedShifts = !showDashesSubtitle && hasFutureShifts && !hasRealEarnedValue && plannedShiftsCount !== undefined && plannedShiftsCount > 0;
+  const showShiftCount = !showDashesSubtitle && !hasRealEarnedValue && !showGrossBeforeTax && !showPlannedShifts && totalShiftsCount !== undefined;
 
-  const subtitleValue = hasRealEarnedValue
-    ? displayTotal
-    : showGrossBeforeTax
-      ? grossBeforeTax
-      : showPlannedShifts
-        ? String(plannedShiftsCount)
-        : null;
+  const subtitleValue = showDashesSubtitle
+    ? '— — —'
+    : hasRealEarnedValue
+      ? displayTotal
+      : showGrossBeforeTax
+        ? grossBeforeTax
+        : showPlannedShifts
+          ? String(plannedShiftsCount)
+          : showShiftCount
+            ? String(totalShiftsCount)
+            : null;
 
-  const subtitleLabel = hasRealEarnedValue
-    ? t.components.totalCard.earnedToDate
-    : showGrossBeforeTax
-      ? t.components.totalCard.beforeTax
-      : showPlannedShifts
-        ? (plannedShiftsCount === 1 ? t.components.totalCard.shiftPlanned : t.components.totalCard.shiftsPlanned)
-        : null;
+  const subtitleLabel = showDashesSubtitle
+    ? null
+    : hasRealEarnedValue
+      ? t.components.totalCard.earnedToDate
+      : showGrossBeforeTax
+        ? t.components.totalCard.beforeTax
+        : showPlannedShifts
+          ? (plannedShiftsCount === 1 ? t.components.totalCard.shiftPlanned : t.components.totalCard.shiftsPlanned)
+          : showShiftCount
+            ? (totalShiftsCount === 1 ? t.components.totalCard.shift : t.components.totalCard.shifts)
+            : null;
 
   const shouldShowSubtitle =
-    Boolean(subtitlePlaceholder) || (!subtitlePlaceholder && (hasRealEarnedValue || showGrossBeforeTax || showPlannedShifts));
+    Boolean(subtitlePlaceholder) || (!subtitlePlaceholder && (showDashesSubtitle || hasRealEarnedValue || showGrossBeforeTax || showPlannedShifts || showShiftCount));
 
   return (
     <Card

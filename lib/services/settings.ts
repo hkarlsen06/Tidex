@@ -122,28 +122,19 @@ export const SettingsServiceLive = Layer.effect(
           // Verify user ID matches authenticated user (security check)
           yield* auth.verifyUserId(userId);
 
-          // Query user settings
+          // Query user settings - use maybeSingle() to return null if no rows
           const result = yield* supabase.query(
             async (client) =>
               await client
                 .from("user_settings")
                 .select("*")
                 .eq("user_id", userId)
-                .single(),
+                .maybeSingle(),
             { retries: 2 }
           );
 
-          return result as unknown as DbUserSettings;
-        }).pipe(
-          Effect.catchTag("DatabaseError", (error) => {
-            // If NO_DATA error, return null (user has no settings yet)
-            if (error.code === "NO_DATA") {
-              return Effect.succeed(null);
-            }
-            // Otherwise, rethrow the error
-            return Effect.fail(error);
-          })
-        ),
+          return result as DbUserSettings | null;
+        }),
     });
 
     // Create cache for user profile (5 minute TTL)

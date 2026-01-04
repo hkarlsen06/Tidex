@@ -1496,6 +1496,8 @@ export const no = {
       pendingShiftsTooltip: 'Du har ikke fullført noen vakter ennå. Totalen øker for hver fullførte vakt.',
       shiftPlanned: 'vakt planlagt',
       shiftsPlanned: 'vakter planlagt',
+      shift: 'vakt',
+      shifts: 'vakter',
     },
     charts: {
       supplementBreakdown: {
