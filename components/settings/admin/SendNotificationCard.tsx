@@ -174,18 +174,28 @@ export function SendNotificationCard({ onSuccess }: Props) {
               Select User
             </label>
             <Select
-              value={specificUserId}
+              value={specificUserId || undefined}
               onValueChange={(v) => setSpecificUserId(v)}
             >
               <SelectTrigger id="specific-user-select">
                 <SelectValue placeholder={usersLoading ? "Loading users..." : "Select user"} />
               </SelectTrigger>
               <SelectContent>
-                {users.map((user) => (
-                  <SelectItem key={user.id} value={user.id}>
-                    {user.name || user.email || user.phone || user.id.slice(0, 8)}
+                {usersLoading ? (
+                  <SelectItem value="__loading__" disabled>
+                    Loading users...
                   </SelectItem>
-                ))}
+                ) : users.length === 0 ? (
+                  <SelectItem value="__empty__" disabled>
+                    No users with push tokens
+                  </SelectItem>
+                ) : (
+                  users.map((user) => (
+                    <SelectItem key={user.id} value={user.id}>
+                      {user.name || user.email || user.phone || user.id.slice(0, 8)}
+                    </SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
             <div>
