@@ -18,6 +18,12 @@ type AdminUser = {
   banned_until?: string | null;
 };
 
+/**
+ * Superadmin user ID - only this user can grant/revoke admin privileges
+ * This is Hjalmar's account (primary developer)
+ */
+const SUPERADMIN_USER_ID = "032d8c2a-9af6-4777-99f0-24e2c4058bf3";
+
 export interface UserListItem {
   id: string;
   email: string | null;
@@ -28,9 +34,10 @@ export interface UserListItem {
   isBanned: boolean;
   bannedUntil: string | null;
   isAdmin: boolean;
+  isSuperAdmin: boolean;
   isGrandfathered: boolean;
-  // Subscription plan (separate from grandfathered status)
-  plan: "admin" | "pro" | "max" | "trial" | "free";
+  // Subscription plan (separate from admin status)
+  plan: "pro" | "max" | "trial" | "free";
 }
 
 interface GetUserListInput {
@@ -104,10 +111,8 @@ export async function getUserList(
     }
   }
 
-  // Determine plan for a user (separate from grandfathered status)
-  const determinePlan = (userId: string, isAdmin: boolean): UserListItem["plan"] => {
-    if (isAdmin) return "admin";
-
+  // Determine plan for a user (separate from admin status)
+  const determinePlan = (userId: string): UserListItem["plan"] => {
     const sub = subscriptionMap.get(userId);
     if (!sub) return "free";
 
@@ -136,8 +141,9 @@ export async function getUserList(
 
   // Transform auth user to UserListItem
   const transformUser = (authUser: AdminUser): UserListItem => {
-    const isAdmin =
-      (authUser.app_metadata?.role as string | undefined) === "admin";
+    const role = authUser.app_metadata?.role as string | undefined;
+    const isAdmin = role === "admin";
+    const isSuperAdmin = authUser.id === SUPERADMIN_USER_ID;
     const bannedUntil = authUser.banned_until ?? null;
     // Phone can be in authUser.phone (phone auth) or user_metadata.phone (manual entry)
     // Use || instead of ?? to handle empty strings
@@ -155,8 +161,9 @@ export async function getUserList(
       isBanned: !!bannedUntil,
       bannedUntil,
       isAdmin,
+      isSuperAdmin,
       isGrandfathered: grandfatheredSet.has(authUser.id),
-      plan: determinePlan(authUser.id, isAdmin),
+      plan: determinePlan(authUser.id),
     };
   };
 

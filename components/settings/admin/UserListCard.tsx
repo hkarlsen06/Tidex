@@ -12,6 +12,7 @@ import {
 } from "@/app/[locale]/(app)/settings/admin/_actions/getUserList";
 import { toggleUserBan } from "@/app/[locale]/(app)/settings/admin/_actions/toggleUserBan";
 import { toggleGrandfathered } from "@/app/[locale]/(app)/settings/admin/_actions/toggleGrandfathered";
+import { toggleAdmin, checkIsSuperAdmin } from "@/app/[locale]/(app)/settings/admin/_actions/toggleAdmin";
 import { createTrialSubscription } from "@/app/[locale]/(app)/settings/admin/_actions/createTrialSubscription";
 import { revokeTrialSubscription } from "@/app/[locale]/(app)/settings/admin/_actions/revokeTrialSubscription";
 import {
@@ -27,6 +28,8 @@ import {
   Play,
   Loader2,
   UserCog,
+  Shield,
+  ShieldOff,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Label } from "@/components/app/Label";
@@ -50,7 +53,6 @@ import {
 } from "@/components/app/AlertDialog";
 
 const PLAN_LABELS: Record<string, string> = {
-  admin: "Admin",
   pro: "Pro",
   max: "Max",
   trial: "Trial",
@@ -61,7 +63,6 @@ const PLAN_VARIANTS: Record<
   string,
   "default" | "secondary" | "outline" | "destructive"
 > = {
-  admin: "destructive",
   max: "default",
   pro: "secondary",
   trial: "outline",
@@ -71,6 +72,8 @@ const PLAN_VARIANTS: Record<
 type ActionType =
   | "ban"
   | "unban"
+  | "grant_admin"
+  | "revoke_admin"
   | "grant_grandfathered"
   | "revoke_grandfathered"
   | "create_trial"
@@ -94,6 +97,7 @@ export function UserListCard({ refreshTrigger }: Props) {
   const [resultsArePartial, setResultsArePartial] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [actionPending, setActionPending] = useState<string | null>(null);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean;
     type: ActionType;
@@ -143,6 +147,11 @@ export function UserListCard({ refreshTrigger }: Props) {
     },
     [search]
   );
+
+  // Check if current user is superadmin
+  useEffect(() => {
+    checkIsSuperAdmin().then(setIsSuperAdmin);
+  }, []);
 
   // Initial load and refresh trigger
   useEffect(() => {
@@ -223,6 +232,20 @@ export function UserListCard({ refreshTrigger }: Props) {
           targetUserId: user.id,
           targetEmail,
           ban: false,
+        });
+        break;
+      case "grant_admin":
+        result = await toggleAdmin({
+          targetUserId: user.id,
+          targetEmail,
+          grant: true,
+        });
+        break;
+      case "revoke_admin":
+        result = await toggleAdmin({
+          targetUserId: user.id,
+          targetEmail,
+          grant: false,
         });
         break;
       case "grant_grandfathered":
@@ -330,6 +353,10 @@ export function UserListCard({ refreshTrigger }: Props) {
         return "Ban user?";
       case "unban":
         return "Remove ban?";
+      case "grant_admin":
+        return "Grant admin access?";
+      case "revoke_admin":
+        return "Revoke admin access?";
       case "grant_grandfathered":
         return "Grant lifetime access?";
       case "revoke_grandfathered":
@@ -350,6 +377,10 @@ export function UserListCard({ refreshTrigger }: Props) {
         return `User ${contact} will be banned from the service.`;
       case "unban":
         return `User ${contact} will regain access to the service.`;
+      case "grant_admin":
+        return `User ${contact} will be granted admin access and can manage users.`;
+      case "revoke_admin":
+        return `User ${contact} will lose admin access and management capabilities.`;
       case "grant_grandfathered":
         return `User ${contact} will be granted lifetime access to Pro features.`;
       case "revoke_grandfathered":
@@ -364,7 +395,7 @@ export function UserListCard({ refreshTrigger }: Props) {
   };
 
   const isDestructiveAction = (type: ActionType): boolean => {
-    return ["ban", "revoke_grandfathered", "revoke_trial"].includes(type);
+    return ["ban", "revoke_admin", "revoke_grandfathered", "revoke_trial"].includes(type);
   };
 
   return (
@@ -485,13 +516,19 @@ export function UserListCard({ refreshTrigger }: Props) {
                     </td>
                     <td className="py-2 px-2">
                       <div className="flex gap-1 flex-wrap">
+                        {user.isSuperAdmin && (
+                          <Badge variant="destructive">Superadmin</Badge>
+                        )}
+                        {user.isAdmin && !user.isSuperAdmin && (
+                          <Badge variant="destructive">Admin</Badge>
+                        )}
                         {user.isGrandfathered && (
                           <Badge variant="default">Lifetime</Badge>
                         )}
                         {user.isBanned && (
                           <Badge variant="destructive">Banned</Badge>
                         )}
-                        {!user.isGrandfathered && !user.isBanned && (
+                        {!user.isSuperAdmin && !user.isAdmin && !user.isGrandfathered && !user.isBanned && (
                           <span className="text-text-muted">-</span>
                         )}
                       </div>
@@ -508,121 +545,159 @@ export function UserListCard({ refreshTrigger }: Props) {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          {/* Ban/Unban - not available for admins or self */}
-                          {!user.isAdmin && (
-                            <>
-                              {user.isBanned ? (
-                                <DropdownMenuItem
-                                  onClick={() =>
-                                    setConfirmDialog({
-                                      open: true,
-                                      type: "unban",
-                                      user,
-                                    })
-                                  }
-                                >
-                                  <UserCheck className="h-4 w-4 mr-2" />
-                                  Remove ban
-                                </DropdownMenuItem>
-                              ) : (
-                                <DropdownMenuItem
-                                  onClick={() =>
-                                    setConfirmDialog({
-                                      open: true,
-                                      type: "ban",
-                                      user,
-                                    })
-                                  }
-                                  className="text-destructive focus:text-destructive"
-                                >
-                                  <Ban className="h-4 w-4 mr-2" />
-                                  Ban user
-                                </DropdownMenuItem>
-                              )}
-                              <DropdownMenuSeparator />
-                            </>
-                          )}
+                          {/* Impersonate - disabled for admin users */}
+                          <DropdownMenuItem
+                            onClick={() =>
+                              !user.isAdmin &&
+                              setImpersonateDialog({
+                                open: true,
+                                user,
+                                reason: "",
+                                loading: false,
+                                error: null,
+                              })
+                            }
+                            disabled={user.isAdmin}
+                          >
+                            <UserCog className="h-4 w-4 mr-2" />
+                            Impersonate
+                          </DropdownMenuItem>
 
-                          {/* Grandfathered toggle */}
-                          {user.isGrandfathered ? (
-                            <DropdownMenuItem
-                              onClick={() =>
-                                setConfirmDialog({
-                                  open: true,
-                                  type: "revoke_grandfathered",
-                                  user,
-                                })
-                              }
-                              className="text-destructive focus:text-destructive"
-                            >
-                              <X className="h-4 w-4 mr-2" />
-                              Revoke lifetime access
-                            </DropdownMenuItem>
-                          ) : (
-                            <DropdownMenuItem
-                              onClick={() =>
-                                setConfirmDialog({
-                                  open: true,
-                                  type: "grant_grandfathered",
-                                  user,
-                                })
-                              }
-                            >
-                              <Gift className="h-4 w-4 mr-2" />
-                              Grant lifetime access
-                            </DropdownMenuItem>
-                          )}
+                          <DropdownMenuSeparator />
 
-                          {/* Trial actions */}
-                          {user.plan === "trial" ? (
-                            <DropdownMenuItem
-                              onClick={() =>
-                                setConfirmDialog({
-                                  open: true,
-                                  type: "revoke_trial",
-                                  user,
-                                })
-                              }
-                              className="text-destructive focus:text-destructive"
-                            >
-                              <X className="h-4 w-4 mr-2" />
-                              End trial
-                            </DropdownMenuItem>
-                          ) : user.plan === "free" ? (
-                            <DropdownMenuItem
-                              onClick={() =>
-                                setConfirmDialog({
-                                  open: true,
-                                  type: "create_trial",
-                                  user,
-                                })
-                              }
-                            >
-                              <Play className="h-4 w-4 mr-2" />
-                              Grant trial
-                            </DropdownMenuItem>
-                          ) : null}
+                          {/* Admin section - Make admin first, then Revoke admin (destructive) */}
+                          <DropdownMenuItem
+                            onClick={() =>
+                              isSuperAdmin &&
+                              !user.isSuperAdmin &&
+                              !user.isAdmin &&
+                              setConfirmDialog({
+                                open: true,
+                                type: "grant_admin",
+                                user,
+                              })
+                            }
+                            disabled={!isSuperAdmin || user.isSuperAdmin || user.isAdmin}
+                          >
+                            <Shield className="h-4 w-4 mr-2" />
+                            Make admin
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() =>
+                              isSuperAdmin &&
+                              !user.isSuperAdmin &&
+                              user.isAdmin &&
+                              setConfirmDialog({
+                                open: true,
+                                type: "revoke_admin",
+                                user,
+                              })
+                            }
+                            disabled={!isSuperAdmin || user.isSuperAdmin || !user.isAdmin}
+                            className={isSuperAdmin && !user.isSuperAdmin && user.isAdmin ? "text-destructive focus:text-destructive" : ""}
+                          >
+                            <ShieldOff className="h-4 w-4 mr-2" />
+                            Revoke admin
+                          </DropdownMenuItem>
 
-                          {/* Impersonate - only for non-admin users */}
-                          {!user.isAdmin && (
-                            <>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                onClick={() =>
-                                  setImpersonateDialog({
-                                    open: true,
-                                    user,
-                                    reason: "",
-                                    loading: false,
-                                    error: null,
-                                  })
-                                }
-                              >
-                                <UserCog className="h-4 w-4 mr-2" />
-                                Impersonate
-                              </DropdownMenuItem>
-                            </>
-                          )}
+                          <DropdownMenuSeparator />
+
+                          {/* Lifetime access section - Grant first, then Revoke (destructive) */}
+                          <DropdownMenuItem
+                            onClick={() =>
+                              !user.isGrandfathered &&
+                              setConfirmDialog({
+                                open: true,
+                                type: "grant_grandfathered",
+                                user,
+                              })
+                            }
+                            disabled={user.isGrandfathered}
+                          >
+                            <Gift className="h-4 w-4 mr-2" />
+                            Grant lifetime access
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() =>
+                              user.isGrandfathered &&
+                              setConfirmDialog({
+                                open: true,
+                                type: "revoke_grandfathered",
+                                user,
+                              })
+                            }
+                            disabled={!user.isGrandfathered}
+                            className={user.isGrandfathered ? "text-destructive focus:text-destructive" : ""}
+                          >
+                            <X className="h-4 w-4 mr-2" />
+                            Revoke lifetime access
+                          </DropdownMenuItem>
+
+                          {/* Trial section - Grant first, then End (destructive) */}
+                          <DropdownMenuItem
+                            onClick={() =>
+                              user.plan === "free" &&
+                              setConfirmDialog({
+                                open: true,
+                                type: "create_trial",
+                                user,
+                              })
+                            }
+                            disabled={user.plan !== "free"}
+                          >
+                            <Play className="h-4 w-4 mr-2" />
+                            Grant trial
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() =>
+                              user.plan === "trial" &&
+                              setConfirmDialog({
+                                open: true,
+                                type: "revoke_trial",
+                                user,
+                              })
+                            }
+                            disabled={user.plan !== "trial"}
+                            className={user.plan === "trial" ? "text-destructive focus:text-destructive" : ""}
+                          >
+                            <X className="h-4 w-4 mr-2" />
+                            End trial
+                          </DropdownMenuItem>
+
+                          <DropdownMenuSeparator />
+
+                          {/* Ban section - Remove ban first, then Ban (destructive) */}
+                          <DropdownMenuItem
+                            onClick={() =>
+                              !user.isAdmin &&
+                              user.isBanned &&
+                              setConfirmDialog({
+                                open: true,
+                                type: "unban",
+                                user,
+                              })
+                            }
+                            disabled={user.isAdmin || !user.isBanned}
+                          >
+                            <UserCheck className="h-4 w-4 mr-2" />
+                            Remove ban
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() =>
+                              !user.isAdmin &&
+                              !user.isBanned &&
+                              setConfirmDialog({
+                                open: true,
+                                type: "ban",
+                                user,
+                              })
+                            }
+                            disabled={user.isAdmin || user.isBanned}
+                            className={!user.isAdmin && !user.isBanned ? "text-destructive focus:text-destructive" : ""}
+                          >
+                            <Ban className="h-4 w-4 mr-2" />
+                            Ban user
+                          </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </td>
