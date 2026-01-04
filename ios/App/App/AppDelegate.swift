@@ -21,20 +21,13 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // Create window programmatically since Main.storyboard was removed
         window = UIWindow(frame: UIScreen.main.bounds)
 
-        // Set window background to match theme - adapts to light/dark mode
-        // This prevents flash between splash screen and WebView load
-        // Light: #f5f7fa (hsl 220 40% 98%), Dark: #020817 (hsl 222.2 84% 4.9%)
-        let adaptiveBackground = UIColor { traitCollection in
-            if traitCollection.userInterfaceStyle == .dark {
-                return UIColor(red: 0.008, green: 0.032, blue: 0.090, alpha: 1.0) // #020817
-            } else {
-                return UIColor(red: 248.0/255.0, green: 249.0/255.0, blue: 252.0/255.0, alpha: 1.0) // #f8f9fc (hsl 220 40% 98%)
-            }
-        }
-        window?.backgroundColor = adaptiveBackground
+        // Set window background to match splash screen and dark theme
+        // This prevents white flash between splash screen and WebView load
+        let darkBackground = UIColor(red: 0.008, green: 0.032, blue: 0.090, alpha: 1.0)
+        window?.backgroundColor = darkBackground
 
         let vc = CAPBridgeViewController()
-        vc.view.backgroundColor = adaptiveBackground
+        vc.view.backgroundColor = darkBackground
 
         window?.rootViewController = vc
         window?.makeKeyAndVisible()
