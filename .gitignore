@@ -28,6 +28,9 @@ next-env.d.ts
 # local env files
 .env
 .env.*
+
+# npm config with tokens
+.npmrc
 !.env.local.example
 
 # typescript
