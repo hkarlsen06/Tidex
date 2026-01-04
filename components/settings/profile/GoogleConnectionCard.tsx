@@ -5,8 +5,11 @@ import Image from 'next/image';
 import { Card } from '@/components/app/Card';
 import { Button } from '@/components/app/Button';
 import { useRouter } from 'next/navigation';
-import { connectGoogleAccount, disconnectGoogleAccount } from '@/app/[locale]/(app)/settings/_actions/updateSettings';
+import { disconnectGoogleAccount } from '@/app/[locale]/(app)/settings/_actions/updateSettings';
 import { useTranslations } from '@/lib/i18n/client';
+import { performIdentityLink } from '@/lib/capacitor/oauth';
+import { supabase } from '@/lib/supabase/browser';
+import { isNativePlatform } from '@/lib/capacitor/platform';
 
 interface GoogleConnectionCardProps {
   hasGoogleConnected: boolean;
@@ -24,20 +27,25 @@ export function GoogleConnectionCard({ hasGoogleConnected, canDisconnectGoogle }
     setError(null);
 
     try {
-      // Build redirect URL dynamically based on current origin
-      // Include current path as 'next' param so user returns here after OAuth
-      // Add 'linking=true' to indicate this is identity linking, not a fresh login
-      // (user is already authenticated, so we skip MFA re-verification in callback)
-      const callbackUrl = new URL('/auth/callback', window.location.origin);
-      callbackUrl.searchParams.set('next', window.location.pathname);
-      callbackUrl.searchParams.set('linking', 'true');
-      const redirectUrl = callbackUrl.toString();
+      // Use performIdentityLink which handles both native (Capacitor Browser overlay)
+      // and web (standard redirect) platforms correctly
+      const result = await performIdentityLink(supabase, 'google', {
+        redirectPath: window.location.pathname,
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'consent',
+        },
+      });
 
-      // Use server action to get the OAuth URL
-      const { url } = await connectGoogleAccount(redirectUrl);
+      if (!result.success) {
+        throw result.error || new Error('Failed to initiate Google linking');
+      }
 
-      // Navigate to Google OAuth
-      window.location.href = url;
+      // On web (non-native), we need to navigate to the OAuth URL
+      // On native, performIdentityLink already opened the Capacitor Browser
+      if (!isNativePlatform() && result.authUrl) {
+        window.location.href = result.authUrl;
+      }
     } catch (err) {
       console.error('Failed to connect Google:', err);
       setError(err instanceof Error ? err.message : t.pages.settings.profile.google.errors.genericError);
