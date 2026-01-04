@@ -42,7 +42,7 @@ export async function getUsersWithPushTokens(): Promise<
 
   // Get distinct user_ids from push_devices table
   const { data: pushDevices, error: pushError } = await supabase
-    .from("push_devices")
+    .schema("internal").from("push_devices")
     .select("user_id")
     .order("last_seen_at", { ascending: false });
 

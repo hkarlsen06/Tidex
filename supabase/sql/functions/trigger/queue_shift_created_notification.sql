@@ -11,6 +11,7 @@ CREATE OR REPLACE FUNCTION public.queue_shift_created_notification()
  RETURNS trigger
  LANGUAGE plpgsql
  SECURITY DEFINER
+ SET search_path TO 'public', 'internal', 'pg_temp'
 AS $function$
 DECLARE
   owner_name TEXT;
@@ -64,7 +65,7 @@ BEGIN
   -- Note: ss.blocked controls visibility ONLY (hides from /sharing list), NOT notifications
   -- notification_frequency controls whether user gets notified (instant/summary/muted)
   -- Blocked users still receive notifications - they just don't see the sharer in their list
-  INSERT INTO notification_queue (
+  INSERT INTO internal.notification_queue (
     type,
     recipient_id,
     sender_id,

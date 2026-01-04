@@ -11,7 +11,7 @@ CREATE OR REPLACE FUNCTION public.run_shift_notification_workers()
  RETURNS jsonb
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'public', 'pg_temp'
+ SET search_path TO 'public', 'internal', 'pg_temp'
 AS $function$
 DECLARE
   v_delete_result RECORD;
@@ -26,7 +26,7 @@ BEGIN
 
   -- Check if there are any pending notifications to send
   SELECT EXISTS (
-    SELECT 1 FROM notification_queue WHERE status = 'pending'
+    SELECT 1 FROM internal.notification_queue WHERE status = 'pending'
   ) INTO v_has_pending;
 
   -- If there are pending notifications, trigger the edge function

@@ -39,7 +39,7 @@ Calls `run_shift_notification_workers()` which:
 
 - `pending_shift_deletes` - Read and update status
 - `shift_update_events` - Read and update status
-- `notification_queue` - Insert new notifications
+- `internal.notification_queue` - Insert new notifications
 - `shift_shares` - Read to find viewers
 - `notification_preferences` - Read to check viewer preferences
 
@@ -66,5 +66,5 @@ Check for processing backlogs:
 SELECT
   (SELECT COUNT(*) FROM pending_shift_deletes WHERE status = 'pending') AS pending_deletes,
   (SELECT COUNT(*) FROM shift_update_events WHERE status = 'pending') AS pending_updates,
-  (SELECT COUNT(*) FROM notification_queue WHERE status = 'pending') AS pending_notifications;
+  (SELECT COUNT(*) FROM internal.notification_queue WHERE status = 'pending') AS pending_notifications;
 ```

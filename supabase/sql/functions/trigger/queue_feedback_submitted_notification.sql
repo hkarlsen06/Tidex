@@ -6,7 +6,7 @@ CREATE OR REPLACE FUNCTION public.queue_feedback_submitted_notification()
 RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = 'public', 'auth'
+SET search_path TO 'public', 'internal', 'auth', 'pg_temp'
 AS $$
 DECLARE
   v_user_name text;
@@ -18,7 +18,7 @@ BEGIN
   WHERE id = NEW.user_id;
 
   -- Set-based insert for all admins (no loop)
-  INSERT INTO notification_queue (
+  INSERT INTO internal.notification_queue (
     type,
     recipient_id,
     sender_id,

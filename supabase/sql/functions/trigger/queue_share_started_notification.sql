@@ -6,7 +6,7 @@ CREATE OR REPLACE FUNCTION public.queue_share_started_notification()
  RETURNS trigger
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'public'
+ SET search_path TO 'public', 'internal', 'pg_temp'
 AS $function$
 DECLARE
   sharer_name TEXT;
@@ -30,7 +30,7 @@ BEGIN
   END IF;
 
   -- Insert notification for the viewer
-  INSERT INTO notification_queue (
+  INSERT INTO internal.notification_queue (
     type,
     recipient_id,
     sender_id,

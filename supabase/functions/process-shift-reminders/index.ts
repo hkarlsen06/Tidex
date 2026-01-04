@@ -304,7 +304,7 @@ async function processReminder(
 
   // Step 2: Claim succeeded, get user's devices and send notification
   const { data: devices } = await supabase
-    .from("push_devices")
+    .schema("internal").from("push_devices")
     .select("id, fcm_token")
     .eq("user_id", reminder.user_id);
 
@@ -403,7 +403,7 @@ serve(async (req) => {
 
     // Clean up invalid tokens
     if (allInvalidTokens.length > 0) {
-      await supabase.from("push_devices").delete().in("id", allInvalidTokens);
+      await supabase.schema("internal").from("push_devices").delete().in("id", allInvalidTokens);
       console.log(`Deleted ${allInvalidTokens.length} invalid tokens`);
     }
 
