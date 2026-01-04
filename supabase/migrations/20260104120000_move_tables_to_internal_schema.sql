@@ -3,6 +3,163 @@
 -- Date: 2026-01-04
 
 -- ==============================================================================
+-- PHASE 0: Create missing tables (for branch DBs that don't have them)
+-- ==============================================================================
+-- These tables were created manually in prod but not in migrations.
+-- Using IF NOT EXISTS so this is safe for prod (no-op) and branch (creates them).
+
+-- admin_broadcasts
+CREATE TABLE IF NOT EXISTS public.admin_broadcasts (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  admin_id uuid NOT NULL REFERENCES auth.users(id),
+  title text NOT NULL,
+  body text NOT NULL,
+  deeplink text,
+  target text NOT NULL,
+  target_count integer NOT NULL,
+  status text NOT NULL DEFAULT 'pending',
+  created_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT admin_broadcasts_title_check CHECK (char_length(title) <= 100),
+  CONSTRAINT admin_broadcasts_body_check CHECK (char_length(body) <= 500),
+  CONSTRAINT admin_broadcasts_deeplink_check CHECK (
+    deeplink IS NULL OR (
+      char_length(deeplink) <= 200
+      AND deeplink ~ '^/[a-zA-Z0-9/_?=&-]*$'
+      AND deeplink NOT LIKE '%//%'
+      AND deeplink NOT LIKE '%..%'
+    )
+  ),
+  CONSTRAINT admin_broadcasts_target_check CHECK (target = ANY (ARRAY['all', 'pro', 'active', 'specific'])),
+  CONSTRAINT admin_broadcasts_status_check CHECK (status = ANY (ARRAY['pending', 'queued', 'partial_failure', 'complete']))
+);
+CREATE INDEX IF NOT EXISTS idx_admin_broadcasts_admin_id ON public.admin_broadcasts(admin_id);
+CREATE INDEX IF NOT EXISTS idx_admin_broadcasts_created_at ON public.admin_broadcasts(created_at DESC);
+
+-- admin_audit_log
+CREATE TABLE IF NOT EXISTS public.admin_audit_log (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  admin_id uuid NOT NULL REFERENCES auth.users(id),
+  admin_email text NOT NULL,
+  action text NOT NULL,
+  target_user_id uuid REFERENCES auth.users(id),
+  target_email text,
+  metadata jsonb DEFAULT '{}'::jsonb,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT admin_audit_log_action_check CHECK (action = ANY (ARRAY[
+    'user_lookup', 'user_ban', 'user_unban', 'grant_admin', 'revoke_admin',
+    'grant_grandfathered', 'revoke_grandfathered', 'create_trial_subscription',
+    'revoke_trial_subscription', 'broadcast_sent', 'user_list_viewed',
+    'admin_action_failed', 'sql_executed', 'shift_share_created',
+    'shift_share_updated', 'shift_share_deleted'
+  ]))
+);
+CREATE INDEX IF NOT EXISTS idx_admin_audit_log_admin ON public.admin_audit_log(admin_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_admin_audit_log_target_user ON public.admin_audit_log(target_user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_admin_audit_log_action ON public.admin_audit_log(action, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_admin_audit_log_created_at ON public.admin_audit_log(created_at DESC);
+
+-- impersonation_sessions
+CREATE TABLE IF NOT EXISTS public.impersonation_sessions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  admin_user_id uuid NOT NULL REFERENCES auth.users(id),
+  target_user_id uuid NOT NULL REFERENCES auth.users(id),
+  reason text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  expires_at timestamptz NOT NULL,
+  ended_at timestamptz,
+  ended_by_admin_user_id uuid REFERENCES auth.users(id),
+  admin_ip text,
+  admin_user_agent text,
+  admin_refresh_token_enc text NOT NULL,
+  enc_kid text NOT NULL DEFAULT 'v1',
+  enc_alg text NOT NULL DEFAULT 'aes-256-gcm',
+  enc_format_ver integer NOT NULL DEFAULT 1,
+  CONSTRAINT impersonation_sessions_reason_check CHECK (length(reason) >= 5),
+  CONSTRAINT expires_after_created CHECK (expires_at > created_at),
+  CONSTRAINT ended_after_created CHECK (ended_at IS NULL OR ended_at >= created_at)
+);
+CREATE INDEX IF NOT EXISTS idx_impersonation_sessions_admin_user_id_created ON public.impersonation_sessions(admin_user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_impersonation_sessions_target_user_id_created ON public.impersonation_sessions(target_user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_impersonation_sessions_expires_at ON public.impersonation_sessions(expires_at);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_impersonation_sessions_one_active_per_admin ON public.impersonation_sessions(admin_user_id) WHERE ended_at IS NULL;
+
+-- impersonation_rate_limits
+CREATE TABLE IF NOT EXISTS public.impersonation_rate_limits (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  admin_user_id uuid NOT NULL REFERENCES auth.users(id),
+  attempted_at timestamptz NOT NULL DEFAULT now(),
+  success boolean NOT NULL DEFAULT false
+);
+CREATE INDEX IF NOT EXISTS idx_impersonation_rate_limits_admin_user_id_attempted ON public.impersonation_rate_limits(admin_user_id, attempted_at DESC);
+
+-- push_devices
+CREATE TABLE IF NOT EXISTS public.push_devices (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES auth.users(id),
+  fcm_token text NOT NULL UNIQUE,
+  platform text NOT NULL,
+  device_id text,
+  device_model text,
+  app_version text,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  last_seen_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT push_devices_platform_check CHECK (platform = ANY (ARRAY['ios', 'android', 'web']))
+);
+CREATE INDEX IF NOT EXISTS idx_push_devices_user_id ON public.push_devices(user_id);
+CREATE INDEX IF NOT EXISTS idx_push_devices_device_id ON public.push_devices(device_id) WHERE device_id IS NOT NULL;
+
+-- Create trigger function for push_devices updated_at (if not exists)
+CREATE OR REPLACE FUNCTION public.update_push_devices_updated_at()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $function$
+BEGIN
+  NEW.updated_at = now();
+  RETURN NEW;
+END;
+$function$;
+
+-- Create trigger (drop first to be safe, then create)
+DROP TRIGGER IF EXISTS push_devices_updated_at ON public.push_devices;
+CREATE TRIGGER push_devices_updated_at
+  BEFORE UPDATE ON public.push_devices
+  FOR EACH ROW
+  EXECUTE FUNCTION update_push_devices_updated_at();
+
+-- notification_queue (must be created after admin_broadcasts for FK)
+CREATE TABLE IF NOT EXISTS public.notification_queue (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  type text NOT NULL,
+  recipient_id uuid NOT NULL REFERENCES auth.users(id),
+  sender_id uuid NOT NULL REFERENCES auth.users(id),
+  payload jsonb NOT NULL DEFAULT '{}'::jsonb,
+  status text NOT NULL DEFAULT 'pending',
+  created_at timestamptz NOT NULL DEFAULT now(),
+  processed_at timestamptz,
+  claimed_at timestamptz,
+  error_message text,
+  idempotency_key text UNIQUE,
+  broadcast_id uuid REFERENCES public.admin_broadcasts(id),
+  CONSTRAINT notification_queue_type_check CHECK (type = ANY (ARRAY[
+    'shared_shift_created', 'shared_shift_updated', 'shared_shift_deleted',
+    'shared_shift_changes', 'shared_shift_summary', 'recurring_shift_created',
+    'admin_broadcast', 'share_started', 'feedback_submitted', 'feedback_responded'
+  ])),
+  CONSTRAINT notification_queue_status_check CHECK (status = ANY (ARRAY['pending', 'processing', 'sent', 'failed', 'skipped'])),
+  CONSTRAINT notification_queue_broadcast_id_required CHECK (type <> 'admin_broadcast' OR broadcast_id IS NOT NULL)
+);
+CREATE INDEX IF NOT EXISTS idx_notification_queue_recipient ON public.notification_queue(recipient_id);
+CREATE INDEX IF NOT EXISTS idx_notification_queue_sender_id ON public.notification_queue(sender_id);
+CREATE INDEX IF NOT EXISTS idx_notification_queue_status ON public.notification_queue(status) WHERE status = 'pending';
+CREATE INDEX IF NOT EXISTS idx_notification_queue_pending ON public.notification_queue(created_at) WHERE status = 'pending';
+CREATE INDEX IF NOT EXISTS idx_notification_queue_processed ON public.notification_queue(processed_at) WHERE status = ANY (ARRAY['sent', 'failed', 'skipped']);
+CREATE INDEX IF NOT EXISTS idx_notification_queue_broadcast_id ON public.notification_queue(broadcast_id) WHERE broadcast_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_notification_queue_broadcast_status ON public.notification_queue(broadcast_id, status) WHERE broadcast_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS notification_queue_broadcast_id_idx ON public.notification_queue(broadcast_id);
+CREATE INDEX IF NOT EXISTS notification_queue_created_at_idx ON public.notification_queue(created_at);
+
+-- ==============================================================================
 -- PHASE 1: Create internal schema with restricted access
 -- ==============================================================================
 
