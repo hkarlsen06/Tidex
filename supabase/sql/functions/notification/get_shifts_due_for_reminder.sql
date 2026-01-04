@@ -5,6 +5,8 @@
 CREATE OR REPLACE FUNCTION public.get_shifts_due_for_reminder()
  RETURNS TABLE(user_id uuid, shift_instance_key text, shift_date date, start_time time without time zone, end_time time without time zone, reminder_minutes integer, minutes_until_shift integer)
  LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public', 'internal'
 AS $function$
 DECLARE
   cron_interval_minutes CONSTANT INTEGER := 1;  -- Cron runs every 1 minute
@@ -17,8 +19,8 @@ BEGIN
       COALESCE(np.shift_reminders_enabled, true) AS enabled,
       -- Use the array column with default fallback
       COALESCE(np.shift_reminder_minutes_array, ARRAY[300]) AS reminder_mins_array
-    FROM push_devices pd
-    LEFT JOIN notification_preferences np ON np.user_id = pd.user_id
+    FROM internal.push_devices pd
+    LEFT JOIN public.notification_preferences np ON np.user_id = pd.user_id
     WHERE COALESCE(np.shift_reminders_enabled, true) = true
   ),
   -- Unnest reminder arrays to get one row per (user, reminder_minutes)

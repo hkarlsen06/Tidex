@@ -11,6 +11,7 @@ CREATE OR REPLACE FUNCTION public.process_pending_shift_deletes()
  RETURNS TABLE(owners_processed integer, total_updated integer, total_deleted integer)
  LANGUAGE plpgsql
  SECURITY DEFINER
+ SET search_path TO 'public', 'internal', 'pg_temp'
 AS $function$
 DECLARE
   owner_rec RECORD;
@@ -141,7 +142,7 @@ BEGIN
       -- Note: ss.blocked controls visibility ONLY (hides from /sharing list), NOT notifications
       -- notification_frequency controls whether user gets notified (instant/summary/muted)
       -- Blocked users still receive notifications - they just don't see the sharer in their list
-      INSERT INTO notification_queue (
+      INSERT INTO internal.notification_queue (
         type,
         recipient_id,
         sender_id,
@@ -171,7 +172,7 @@ BEGIN
 
       -- Route summary notifications (with same-day exception)
       -- Same-day shifts go to instant queue even for summary users
-      INSERT INTO notification_queue (
+      INSERT INTO internal.notification_queue (
         type,
         recipient_id,
         sender_id,

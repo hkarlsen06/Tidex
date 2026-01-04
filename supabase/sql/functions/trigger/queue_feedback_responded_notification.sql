@@ -7,12 +7,12 @@ CREATE OR REPLACE FUNCTION public.queue_feedback_responded_notification()
 RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = 'public', 'auth'
+SET search_path TO 'public', 'internal', 'auth', 'pg_temp'
 AS $$
 BEGIN
   -- Only trigger when response is FIRST added (not on edits)
   IF OLD.response IS NULL AND NEW.response IS NOT NULL THEN
-    INSERT INTO notification_queue (
+    INSERT INTO internal.notification_queue (
       type,
       recipient_id,
       sender_id,

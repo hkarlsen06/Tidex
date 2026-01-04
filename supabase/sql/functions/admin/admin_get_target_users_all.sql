@@ -6,9 +6,9 @@ CREATE OR REPLACE FUNCTION public.admin_get_target_users_all(exclude_user_id uui
  RETURNS TABLE(user_id uuid)
  LANGUAGE sql
  STABLE SECURITY DEFINER
- SET search_path TO 'public'
+ SET search_path TO 'public', 'internal'
 AS $function$
   SELECT DISTINCT pd.user_id
-  FROM push_devices pd
+  FROM internal.push_devices pd
   WHERE (exclude_user_id IS NULL OR pd.user_id != exclude_user_id);
 $function$;

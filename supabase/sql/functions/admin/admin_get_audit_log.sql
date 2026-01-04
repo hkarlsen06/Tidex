@@ -1,6 +1,6 @@
 -- admin_get_audit_log
 -- Returns recent audit log entries with optional action and target filters
--- Uses SECURITY INVOKER with RLS - only accessible by admins
+-- Uses SECURITY DEFINER to access internal schema
 
 CREATE OR REPLACE FUNCTION admin_get_audit_log(
   p_limit INTEGER DEFAULT 50,
@@ -18,11 +18,10 @@ RETURNS TABLE (
   created_at TIMESTAMPTZ
 )
 LANGUAGE plpgsql
-SECURITY INVOKER
-SET search_path = public
+SECURITY DEFINER
+SET search_path TO 'public', 'internal'
 AS $$
 BEGIN
-  -- RLS already enforces admin-only access
   RETURN QUERY
   SELECT
     a.id,
@@ -33,7 +32,7 @@ BEGIN
     a.target_email,
     a.metadata,
     a.created_at
-  FROM admin_audit_log a
+  FROM internal.admin_audit_log a
   WHERE
     (p_action_filter IS NULL OR a.action = p_action_filter)
     AND (p_target_filter IS NULL OR a.target_user_id = p_target_filter)
@@ -42,4 +41,4 @@ BEGIN
 END;
 $$;
 
-COMMENT ON FUNCTION admin_get_audit_log IS 'Returns recent audit log entries with optional action and target filters. Uses SECURITY INVOKER with RLS.';
+COMMENT ON FUNCTION admin_get_audit_log IS 'Returns recent audit log entries with optional action and target filters. Uses SECURITY DEFINER to access internal schema.';

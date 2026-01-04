@@ -1,5 +1,9 @@
 import { Capacitor } from "@capacitor/core"
-import { supabase } from "@/lib/supabase/browser"
+import {
+  registerPushDevice,
+  unregisterPushDevice,
+  updatePushDeviceLastSeen,
+} from "@/app/actions/push-device"
 
 export interface PushNotificationPayload {
   type:
@@ -103,36 +107,17 @@ class PushNotificationService {
       appVersion?: string
     }
   ): Promise<void> {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-    if (!user) {
-      console.log("[Push] No user logged in, skipping token save")
-      return
-    }
+    // Use server action to register push device (accesses internal.push_devices)
+    const result = await registerPushDevice({
+      fcmToken,
+      platform: Capacitor.getPlatform() as "ios" | "android" | "web",
+      deviceId: metadata.deviceId,
+      deviceModel: metadata.deviceModel,
+      appVersion: metadata.appVersion,
+    })
 
-    // Upsert with ON CONFLICT on fcm_token
-    // This handles:
-    // 1. New device registration
-    // 2. Same device, same user (updates metadata)
-    // 3. Same device, different user (updates user_id - account switch)
-    const { error } = await supabase.from("push_devices").upsert(
-      {
-        user_id: user.id,
-        fcm_token: fcmToken,
-        platform: Capacitor.getPlatform() as "ios" | "android",
-        device_id: metadata.deviceId,
-        device_model: metadata.deviceModel,
-        app_version: metadata.appVersion,
-        last_seen_at: new Date().toISOString(),
-      },
-      {
-        onConflict: "fcm_token",
-      }
-    )
-
-    if (error) {
-      console.error("[Push] Failed to save token:", error)
+    if (!result.success) {
+      console.error("[Push] Failed to save token:", result.error)
     } else {
       console.log("[Push] Token saved successfully")
     }
@@ -185,11 +170,8 @@ class PushNotificationService {
   async removeTokenOnLogout(): Promise<void> {
     if (!this.currentToken) return
 
-    // Remove this specific token
-    await supabase
-      .from("push_devices")
-      .delete()
-      .eq("fcm_token", this.currentToken)
+    // Use server action to remove token (accesses internal.push_devices)
+    await unregisterPushDevice(this.currentToken)
 
     this.currentToken = null
   }
@@ -197,10 +179,8 @@ class PushNotificationService {
   async updateLastSeen(): Promise<void> {
     if (!this.currentToken) return
 
-    await supabase
-      .from("push_devices")
-      .update({ last_seen_at: new Date().toISOString() })
-      .eq("fcm_token", this.currentToken)
+    // Use server action to update last seen (accesses internal.push_devices)
+    await updatePushDeviceLastSeen(this.currentToken)
   }
 }
 

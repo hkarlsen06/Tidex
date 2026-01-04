@@ -253,7 +253,7 @@ async function markNotificationSeen(
   }
 
   try {
-    const { error } = await supabaseAdmin.from("apple_notifications").insert({
+    const { error } = await supabaseAdmin.schema("internal").from("apple_notifications").insert({
       id: notificationUUID,
       notification_type: notificationType,
       subtype,
@@ -282,7 +282,7 @@ async function markNotificationProcessed(notificationUUID: string): Promise<void
   if (!supabaseAdmin) return;
 
   await supabaseAdmin
-    .from("apple_notifications")
+    .schema("internal").from("apple_notifications")
     .update({ processed_at: new Date().toISOString() })
     .eq("id", notificationUUID);
 }
@@ -291,13 +291,13 @@ async function markNotificationError(notificationUUID: string, error: string): P
   if (!supabaseAdmin) return;
 
   const { data } = await supabaseAdmin
-    .from("apple_notifications")
+    .schema("internal").from("apple_notifications")
     .select("attempts")
     .eq("id", notificationUUID)
     .single();
 
   await supabaseAdmin
-    .from("apple_notifications")
+    .schema("internal").from("apple_notifications")
     .update({
       last_error: error,
       attempts: (data?.attempts ?? 0) + 1,
@@ -338,7 +338,7 @@ async function upsertSubscriptionFromNotification(
   // If no existing subscription, try to find user by app_account_token
   if (!userId && appAccountToken) {
     const { data: tokenData } = await supabaseAdmin
-      .from("app_account_tokens")
+      .schema("internal").from("app_account_tokens")
       .select("user_id")
       .eq("token", appAccountToken)
       .maybeSingle();
@@ -438,7 +438,7 @@ async function storeOrphanNotification(
   if (!supabaseAdmin) return;
 
   try {
-    await supabaseAdmin.from("apple_orphan_notifications").insert({
+    await supabaseAdmin.schema("internal").from("apple_orphan_notifications").insert({
       id: `${transactionInfo.transactionId}_${Date.now()}`,
       notification_type: notificationType,
       subtype,
