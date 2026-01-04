@@ -162,10 +162,22 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           dangerouslySetInnerHTML={{
             __html: `
               try {
+                // Detect if running in iOS native app (Capacitor WebView)
+                // iOS WKWebView doesn't have Safari in user agent when embedded
+                var ua = navigator.userAgent || '';
+                var isIOSNative = /iPhone|iPad|iPod/.test(ua) && !/Safari/.test(ua);
+
                 // Initialize theme from localStorage or system preference
                 // ThemeProvider will sync with DB preference on authenticated pages
-                const savedTheme = localStorage.getItem('theme');
-                const theme = savedTheme || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+                // On native iOS, always start dark to match the launch screen
+                var savedTheme = localStorage.getItem('theme');
+                var theme;
+                if (isIOSNative) {
+                  // Native iOS: force dark to match launch screen, then system will take over
+                  theme = 'dark';
+                } else {
+                  theme = savedTheme || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+                }
                 document.documentElement.classList.toggle('dark', theme === 'dark');
 
                 // Wait for safe-area-insets to be available before showing content

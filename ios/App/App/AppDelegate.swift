@@ -27,9 +27,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         window?.backgroundColor = darkBackground
 
         let vc = CAPBridgeViewController()
-        vc.view.backgroundColor = darkBackground
-
         window?.rootViewController = vc
+
+        // Set view background after adding to window to avoid main thread I/O warning
+        vc.view.backgroundColor = darkBackground
         window?.makeKeyAndVisible()
         return true
     }

@@ -13,6 +13,16 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
+/**
+ * Detect if running in iOS native app (Capacitor WebView)
+ * iOS WKWebView doesn't have Safari in user agent when embedded
+ */
+function isIOSNative(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent || "";
+  return /iPhone|iPad|iPod/.test(ua) && !/Safari/.test(ua);
+}
+
 export function ThemeProvider({
   children
 }: {
@@ -20,30 +30,51 @@ export function ThemeProvider({
 }) {
   const [theme, setTheme] = useState<EffectiveTheme>("dark");
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isNativeRef = useRef<boolean>(false);
 
   // Use useLayoutEffect to apply theme synchronously before browser paint
   // localStorage is used as source of truth (synced to DB on change)
+  // On native iOS, always follow system preference (user can't toggle theme)
   useLayoutEffect(() => {
-    // Use localStorage or default to system preference
-    const savedTheme = localStorage.getItem("theme") as Theme | null;
+    const isNative = isIOSNative();
+    isNativeRef.current = isNative;
+
+    // On native iOS, always use system preference
+    // On web, use localStorage or default to system preference
+    const savedTheme = isNative ? null : (localStorage.getItem("theme") as Theme | null);
     const themePreference: Theme = savedTheme || "system";
 
     // Resolve "system" to actual light/dark
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
     let effectiveTheme: EffectiveTheme;
     if (themePreference === "system") {
-      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
       effectiveTheme = prefersDark ? "dark" : "light";
     } else {
       effectiveTheme = themePreference;
     }
 
-    // Sync theme state with DOM and system preference
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setTheme(effectiveTheme);
-    document.documentElement.classList.toggle("dark", effectiveTheme === "dark");
+    // On native iOS, the launch screen is always dark
+    // If system is in light mode, we need to transition smoothly
+    // The inline script already set dark mode, so only update if different
+    const currentIsDark = document.documentElement.classList.contains("dark");
+    const needsTransition = isNative && currentIsDark && effectiveTheme === "light";
 
-    // Listen for system theme changes if using system preference
-    if (themePreference === "system") {
+    if (needsTransition) {
+      // Delay the theme switch slightly to allow content to render first
+      // This makes the dark-to-light transition less jarring
+      requestAnimationFrame(() => {
+        setTheme(effectiveTheme);
+        document.documentElement.classList.toggle("dark", effectiveTheme === "dark");
+      });
+    } else {
+      // Sync theme state with DOM immediately
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setTheme(effectiveTheme);
+      document.documentElement.classList.toggle("dark", effectiveTheme === "dark");
+    }
+
+    // Listen for system theme changes if using system preference (including all native)
+    if (themePreference === "system" || isNative) {
       const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
       const handleChange = (e: MediaQueryListEvent) => {
         const newTheme: EffectiveTheme = e.matches ? "dark" : "light";
