@@ -23,6 +23,7 @@ BEGIN
   -- Validate action is in allowed list
   IF p_action NOT IN (
     'user_lookup', 'user_ban', 'user_unban',
+    'grant_admin', 'revoke_admin',
     'grant_grandfathered', 'revoke_grandfathered',
     'create_trial_subscription', 'revoke_trial_subscription',
     'broadcast_sent', 'user_list_viewed', 'admin_action_failed',

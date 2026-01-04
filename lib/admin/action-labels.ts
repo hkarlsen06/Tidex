@@ -7,6 +7,8 @@ export const ADMIN_ACTIONS = [
   "user_lookup",
   "user_ban",
   "user_unban",
+  "grant_admin",
+  "revoke_admin",
   "grant_grandfathered",
   "revoke_grandfathered",
   "create_trial_subscription",
@@ -32,6 +34,8 @@ export interface ActionConfig {
 export const ADMIN_ACTION_CONFIG: Record<AdminAction, ActionConfig> = {
   user_ban: { label: "Banned user", severity: "destructive" },
   user_unban: { label: "Removed ban", severity: "info" },
+  grant_admin: { label: "Granted admin", severity: "warning" },
+  revoke_admin: { label: "Revoked admin", severity: "destructive" },
   grant_grandfathered: { label: "Granted lifetime access", severity: "info" },
   revoke_grandfathered: {
     label: "Revoked lifetime access",
