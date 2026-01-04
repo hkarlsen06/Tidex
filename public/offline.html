@@ -119,28 +119,212 @@
     <div class="offline-container">
       <div class="logo">T</div>
       <div class="icon">📡</div>
-      <h1>Du er offline</h1>
-      <p>
+      <h1 id="title">Du er offline</h1>
+      <p id="description">
         Det ser ut til at du ikke har internettilkobling. Vennligst sjekk tilkoblingen din og prøv igjen.
       </p>
-      <button class="retry-button" onclick="window.location.reload()">
+      <button class="retry-button" id="retry-button">
         Prøv igjen
       </button>
     </div>
 
     <script>
-      // Auto-retry when connection is restored
-      window.addEventListener('online', () => {
-        console.log('Connection restored, reloading...');
-        setTimeout(() => {
-          window.location.reload();
-        }, 1000);
-      });
+      (function () {
+        // Translations
+        var translations = {
+          no: {
+            title: 'Du er offline',
+            description: 'Det ser ut til at du ikke har internettilkobling. Vennligst sjekk tilkoblingen din og prøv igjen.',
+            retryButton: 'Prøv igjen',
+            connecting: 'Kobler til...',
+            tryingToConnect: function(count, max) { return 'Prøver å koble til... (forsøk ' + count + '/' + max + ')'; },
+            connectionRestored: 'Tilkobling gjenopprettet! Laster inn...',
+            connectionDetected: 'Tilkobling oppdaget! Laster inn...',
+            noConnection: function(seconds) { return 'Ingen tilkobling. Prøver igjen om ' + seconds + ' sekunder...'; },
+            couldNotConnect: 'Kunne ikke koble til. Trykk "Prøv igjen" for å prøve manuelt.'
+          },
+          en: {
+            title: 'You are offline',
+            description: 'It looks like you don\'t have an internet connection. Please check your connection and try again.',
+            retryButton: 'Try again',
+            connecting: 'Connecting...',
+            tryingToConnect: function(count, max) { return 'Trying to connect... (attempt ' + count + '/' + max + ')'; },
+            connectionRestored: 'Connection restored! Loading...',
+            connectionDetected: 'Connection detected! Loading...',
+            noConnection: function(seconds) { return 'No connection. Retrying in ' + seconds + ' seconds...'; },
+            couldNotConnect: 'Could not connect. Tap "Try again" to retry manually.'
+          }
+        };
 
-      // Visual feedback for connection status
-      window.addEventListener('offline', () => {
-        console.log('Connection lost');
-      });
+        // Detect locale from multiple sources (supports both web and Capacitor)
+        function detectLocale() {
+          // 1. Check URL path first (e.g., /en/shifts, /no/login)
+          var path = window.location.pathname;
+          if (path.startsWith('/en/') || path === '/en') {
+            return 'en';
+          }
+          if (path.startsWith('/no/') || path === '/no') {
+            return 'no';
+          }
+
+          // 2. Check referrer URL (useful when Capacitor serves offline.html via errorPath)
+          try {
+            if (document.referrer) {
+              var referrerPath = new URL(document.referrer).pathname;
+              if (referrerPath.startsWith('/en/') || referrerPath === '/en') {
+                return 'en';
+              }
+              if (referrerPath.startsWith('/no/') || referrerPath === '/no') {
+                return 'no';
+              }
+            }
+          } catch (e) {
+            // Ignore referrer parsing errors
+          }
+
+          // 3. Check stored locale preference (NEXT_LOCALE cookie)
+          try {
+            var cookies = document.cookie.split(';');
+            for (var i = 0; i < cookies.length; i++) {
+              var cookie = cookies[i].trim();
+              if (cookie.startsWith('NEXT_LOCALE=')) {
+                var storedLocale = cookie.substring('NEXT_LOCALE='.length);
+                if (storedLocale === 'en' || storedLocale === 'no') {
+                  return storedLocale;
+                }
+              }
+            }
+          } catch (e) {
+            // Ignore cookie parsing errors
+          }
+
+          // 4. Check localStorage (may have user preference)
+          try {
+            var savedLocale = localStorage.getItem('locale');
+            if (savedLocale === 'en' || savedLocale === 'no') {
+              return savedLocale;
+            }
+          } catch (e) {
+            // Ignore localStorage errors (may be blocked)
+          }
+
+          // 5. Fall back to browser language
+          var browserLang = navigator.language || navigator.userLanguage || 'no';
+          if (browserLang.startsWith('en')) {
+            return 'en';
+          }
+
+          // Default to Norwegian
+          return 'no';
+        }
+
+        var locale = detectLocale();
+        var t = translations[locale];
+
+        // Update static content
+        var titleEl = document.getElementById('title');
+        var descEl = document.getElementById('description');
+        var button = document.getElementById('retry-button');
+
+        titleEl.textContent = t.title;
+        descEl.textContent = t.description;
+        button.textContent = t.retryButton;
+        document.documentElement.lang = locale;
+
+        var retryCount = 0;
+        var maxRetries = 10;
+        // Progressive backoff: 2s, 3s, 5s, 5s, 5s, 10s, 10s, 10s, 15s, 15s
+        var retryIntervals = [2000, 3000, 5000, 5000, 5000, 10000, 10000, 10000, 15000, 15000];
+        var retryTimeoutId = null;
+
+        function updateStatus(message) {
+          descEl.textContent = message;
+        }
+
+        async function tryReconnect() {
+          if (retryCount >= maxRetries) {
+            updateStatus(t.couldNotConnect);
+            button.disabled = false;
+            button.textContent = t.retryButton;
+            return;
+          }
+
+          retryCount++;
+          updateStatus(t.tryingToConnect(retryCount, maxRetries));
+          button.disabled = true;
+          button.textContent = t.connecting;
+
+          try {
+            // Use GET request with cache bypass to test connectivity
+            // GET is more reliable than HEAD across proxies and middleboxes
+            var response = await fetch('/', {
+              method: 'GET',
+              cache: 'no-store',
+              headers: { 'Cache-Control': 'no-cache', Pragma: 'no-cache' },
+            });
+
+            // Any HTTP response (even 4xx/5xx) proves network connectivity
+            // Only fetch rejection means truly offline
+            updateStatus(t.connectionRestored);
+            setTimeout(function () {
+              window.location.reload();
+            }, 300);
+            return;
+          } catch (error) {
+            console.log('[Offline] Retry ' + retryCount + ' failed:', error.message);
+          }
+
+          // Schedule next retry with progressive backoff
+          button.disabled = false;
+          button.textContent = t.retryButton;
+          var nextInterval = retryIntervals[Math.min(retryCount, retryIntervals.length - 1)];
+          var seconds = Math.round(nextInterval / 1000);
+          updateStatus(t.noConnection(seconds));
+          retryTimeoutId = setTimeout(tryReconnect, nextInterval);
+        }
+
+        // Manual retry button
+        button.addEventListener('click', function (e) {
+          e.preventDefault();
+          if (retryTimeoutId) {
+            clearTimeout(retryTimeoutId);
+            retryTimeoutId = null;
+          }
+          retryCount = 0;
+          tryReconnect();
+        });
+
+        // Instant reload when browser detects online status
+        window.addEventListener('online', function () {
+          console.log('[Offline] Browser reports online');
+          if (retryTimeoutId) {
+            clearTimeout(retryTimeoutId);
+            retryTimeoutId = null;
+          }
+          updateStatus(t.connectionDetected);
+          setTimeout(function () {
+            window.location.reload();
+          }, 300);
+        });
+
+        // Safe wrapper for async function calls to prevent unhandled rejections
+        function safeCall(fn) {
+          try {
+            var result = fn();
+            if (result && typeof result.catch === 'function') {
+              result.catch(function(e) {
+                console.error('[Offline] Unhandled error:', e);
+              });
+            }
+          } catch (e) {
+            console.error('[Offline] Sync error:', e);
+          }
+        }
+
+        // Start auto-retry after short delay
+        // Helps recover from transient failures during initial load
+        setTimeout(function() { safeCall(tryReconnect); }, 2000);
+      })();
     </script>
   </body>
 </html>

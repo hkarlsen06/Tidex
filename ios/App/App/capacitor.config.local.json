@@ -1,0 +1,21 @@
+{
+	"appId": "no.tidex.app",
+	"appName": "Tidex",
+	"webDir": "dist",
+	"backgroundColor": "#020817",
+	"server": {
+		"url": "https://local.tidex.no:3000",
+		"cleartext": false,
+		"errorPath": "offline.html"
+	},
+	"ios": {
+		"backgroundColor": "#020817"
+	},
+	"packageClassList": [
+		"FirebaseMessagingPlugin",
+		"AppPlugin",
+		"CAPBrowserPlugin",
+		"DevicePlugin",
+		"NativePurchasesPlugin"
+	]
+}
