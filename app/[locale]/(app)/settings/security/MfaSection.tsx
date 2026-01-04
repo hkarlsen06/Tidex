@@ -24,7 +24,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/app/Dialog";
-import { Smartphone, Trash2, Plus, Loader2 } from "lucide-react";
+import { Smartphone, Trash2, Plus, Loader2, AlertTriangle } from "lucide-react";
+import { useImpersonation } from "@/components/providers/ImpersonationProvider";
 import type { Factor } from "@supabase/supabase-js";
 
 type MessageState = { type: "error" | "success"; text: string } | null;
@@ -39,6 +40,7 @@ type EnrollmentState = {
 
 export function MfaSection() {
   const { t } = useTranslations();
+  const { isImpersonating } = useImpersonation();
 
   const [factors, setFactors] = useState<Factor[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -91,6 +93,12 @@ export function MfaSection() {
   }, []);
 
   const handleStartEnrollment = async () => {
+    // Block MFA enrollment while impersonating
+    if (isImpersonating) {
+      setMessage({ type: "error", text: "MFA changes are not allowed while impersonating another user" });
+      return;
+    }
+
     setIsEnrolling(true);
     setMessage(null);
     setFieldError(null);
@@ -197,6 +205,13 @@ export function MfaSection() {
   const handleUnenroll = async () => {
     if (!unenrollDialog.factor) return;
 
+    // Block MFA unenrollment while impersonating
+    if (isImpersonating) {
+      setMessage({ type: "error", text: "MFA changes are not allowed while impersonating another user" });
+      setUnenrollDialog({ open: false, factor: null });
+      return;
+    }
+
     setIsUnenrolling(true);
 
     try {
@@ -283,6 +298,8 @@ export function MfaSection() {
                     variant="ghost"
                     size="sm"
                     onClick={() => setUnenrollDialog({ open: true, factor })}
+                    disabled={isImpersonating}
+                    title={isImpersonating ? "MFA changes not allowed while impersonating" : undefined}
                   >
                     <Trash2 className="h-4 w-4 text-error-foreground" />
                   </Button>
@@ -295,14 +312,23 @@ export function MfaSection() {
           {enrollment.step === "idle" && (
             <Button
               onClick={handleStartEnrollment}
-              disabled={isEnrolling}
+              disabled={isEnrolling || isImpersonating}
               loading={isEnrolling}
               className="mt-4 w-full"
               variant="outline"
+              title={isImpersonating ? "MFA changes not allowed while impersonating" : undefined}
             >
               <Plus className="h-4 w-4 mr-2" />
               {t.pages.settings.security.addFactor}
             </Button>
+          )}
+
+          {/* Warning when impersonating */}
+          {isImpersonating && (
+            <div className="mt-4 flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400">
+              <AlertTriangle className="h-4 w-4" />
+              <span>MFA changes are disabled while impersonating</span>
+            </div>
           )}
         </CardContent>
       </Card>

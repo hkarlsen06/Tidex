@@ -160,6 +160,7 @@ export const SupabaseServiceLive = Layer.effect(
             }),
         }).pipe(
           // Check for Supabase-level errors
+          // Note: null data without error is valid (e.g., .maybeSingle() with no rows)
           Effect.flatMap((result) => {
             if (result.error) {
               return Effect.fail(
@@ -171,16 +172,8 @@ export const SupabaseServiceLive = Layer.effect(
                 })
               );
             }
-            if (result.data === null) {
-              return Effect.fail(
-                new DatabaseError({
-                  query: "supabase query",
-                  code: "NO_DATA",
-                  errorMessage: "Query returned null data",
-                })
-              );
-            }
-            return Effect.succeed(result.data);
+            // Return data as-is (may be null for .maybeSingle() with no rows)
+            return Effect.succeed(result.data as T);
           }),
           // Add retry logic (only for network/timeout errors, not for validation errors)
           Effect.retry(

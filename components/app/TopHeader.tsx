@@ -6,8 +6,10 @@ import { Plus, Sparkles } from "lucide-react";
 import { UserMenu } from "./UserMenu";
 import { OfflineIndicator } from "./OfflineIndicator";
 import { NavigationMenu } from "./NavigationMenu";
+import { ImpersonationIndicator } from "./ImpersonationIndicator";
 import { useTranslations } from "@/lib/i18n/client";
 import { useUserAvatar } from "./UserAvatarProvider";
+import { useImpersonation } from "@/components/providers/ImpersonationProvider";
 
 export type TopHeaderProps = {
   userName: string;
@@ -16,6 +18,7 @@ export type TopHeaderProps = {
 export function TopHeader({ userName }: TopHeaderProps) {
   const { t, locale } = useTranslations();
   const avatarUrl = useUserAvatar();
+  const { isImpersonating } = useImpersonation();
   const cleanedName = userName.trim();
   const [firstWord] = cleanedName.split(/\s+/).filter(Boolean);
   const displayName = (firstWord ?? cleanedName) || t.common.guest;
@@ -26,20 +29,24 @@ export function TopHeader({ userName }: TopHeaderProps) {
         <div className="flex md:grid md:grid-cols-[1fr_auto_1fr] items-center justify-between h-16 gap-4">
           {/* Left section */}
           <div className="flex items-center gap-3">
-            <Link
-              href={`/${locale}`}
-              className="inline-flex items-center justify-center"
-              aria-label={t.header.goToTidex}
-            >
-              <Image
-                src="/icons/tidex-wordmark.webp"
-                alt="Tidex"
-                width={100}
-                height={28}
-                className="h-7 w-auto"
-                priority
-              />
-            </Link>
+            {isImpersonating ? (
+              <ImpersonationIndicator />
+            ) : (
+              <Link
+                href={`/${locale}`}
+                className="inline-flex items-center justify-center"
+                aria-label={t.header.goToTidex}
+              >
+                <Image
+                  src="/icons/tidex-wordmark.webp"
+                  alt="Tidex"
+                  width={100}
+                  height={28}
+                  className="h-7 w-auto"
+                  priority
+                />
+              </Link>
+            )}
             <OfflineIndicator />
           </div>
 

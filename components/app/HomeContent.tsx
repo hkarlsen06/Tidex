@@ -385,14 +385,14 @@ export function HomeContent({ shifts: initialShifts, settings, payoutTaxSettings
   }, [shifts, currentPayoutTaxSettings]);
 
   // Check if user has shifts this month but none have completed yet
-  // Also count how many future/planned shifts there are
-  const { hasPendingShifts, plannedShiftsCount } = useMemo(() => {
+  // Also count how many future/planned shifts there are and total shifts
+  const { hasPendingShifts, plannedShiftsCount, totalShiftsCount } = useMemo(() => {
     const targetYear = month.getFullYear();
     const targetMonth = month.getMonth() + 1;
     const targetKey = `${targetYear}-${String(targetMonth).padStart(2, '0')}`;
     const monthShifts = shiftsByMonth.get(targetKey) || [];
 
-    if (monthShifts.length === 0) return { hasPendingShifts: false, plannedShiftsCount: 0 };
+    if (monthShifts.length === 0) return { hasPendingShifts: false, plannedShiftsCount: 0, totalShiftsCount: 0 };
 
     const now = new Date();
     const completedShifts = monthShifts.filter(shift => hasShiftEnded(shift, now));
@@ -402,6 +402,7 @@ export function HomeContent({ shifts: initialShifts, settings, payoutTaxSettings
     return {
       hasPendingShifts: completedShifts.length === 0,
       plannedShiftsCount: futureShifts.length,
+      totalShiftsCount: monthShifts.length,
     };
   }, [shiftsByMonth, month]);
 
@@ -637,6 +638,7 @@ export function HomeContent({ shifts: initialShifts, settings, payoutTaxSettings
               useZeroPlaceholder={!selectedMonthIsFuture}
               hasPendingShifts={hasPendingShifts}
               plannedShiftsCount={plannedShiftsCount}
+              totalShiftsCount={totalShiftsCount}
               isLoading={isCurrentMonthLoading}
             />
           </div>

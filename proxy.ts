@@ -3,6 +3,48 @@ import type { NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { locales, defaultLocale, LOCALE_COOKIE, type Locale } from "@/lib/i18n/config";
 import { resolveSecureFlag } from "@/lib/auth/cookie-config";
+import {
+  IMPERSONATION_COOKIE_NAME,
+  readImpersonationContextFromRequest,
+} from "@/lib/auth/impersonation";
+
+/**
+ * Check if impersonation cookie should be cleared.
+ * Returns true if cookie exists but is invalid/expired.
+ */
+function shouldClearImpersonationCookie(request: NextRequest): boolean {
+  const cookieValue = request.cookies.get(IMPERSONATION_COOKIE_NAME)?.value;
+
+  // No cookie present - nothing to clear
+  if (!cookieValue) {
+    return false;
+  }
+
+  // Cookie exists - check if it's valid
+  const context = readImpersonationContextFromRequest(request);
+
+  // If context is null, the cookie is invalid (bad signature, expired, malformed)
+  return context === null;
+}
+
+/**
+ * Clear the impersonation cookie from a response.
+ */
+function clearImpersonationCookieFromResponse(
+  response: NextResponse,
+  request: NextRequest
+): void {
+  const url = new URL(request.url);
+  const secure = resolveSecureFlag(url.protocol, url.hostname);
+
+  response.cookies.set(IMPERSONATION_COOKIE_NAME, "", {
+    httpOnly: true,
+    secure,
+    sameSite: "lax",
+    path: "/",
+    maxAge: 0,
+  });
+}
 
 /**
  * Next.js 16 Proxy for Supabase Token Refresh and Locale Routing
@@ -139,6 +181,11 @@ export async function proxy(request: NextRequest) {
     // getClaims() triggers token refresh if needed and updates cookies via setAll
     await supabase.auth.getClaims();
 
+    // Clean up invalid/expired impersonation cookie if present
+    if (shouldClearImpersonationCookie(request)) {
+      clearImpersonationCookieFromResponse(response, request);
+    }
+
     return response;
   }
 
@@ -188,6 +235,11 @@ export async function proxy(request: NextRequest) {
     // getClaims() triggers token refresh if needed and updates cookies via setAll
     await supabase.auth.getClaims();
 
+    // Clean up invalid/expired impersonation cookie if present
+    if (shouldClearImpersonationCookie(request)) {
+      clearImpersonationCookieFromResponse(response, request);
+    }
+
     return response;
   }
 
@@ -214,6 +266,11 @@ export async function proxy(request: NextRequest) {
     maxAge: 60 * 60 * 24 * 365, // 1 year
     secure: resolveSecureFlag(request.nextUrl.protocol, request.nextUrl.hostname),
   });
+
+  // Clean up invalid/expired impersonation cookie if present
+  if (shouldClearImpersonationCookie(request)) {
+    clearImpersonationCookieFromResponse(response, request);
+  }
 
   return response;
 }

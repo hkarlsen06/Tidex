@@ -4,6 +4,7 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
 import { verifySession } from '@/data-access/auth';
 import { invalidateAndRevalidate } from '@/lib/revalidation/paths';
+import { enforceNotImpersonating } from '@/lib/auth/impersonation';
 
 export async function updateProfileSettings(data: {
   firstName: string;
@@ -425,6 +426,9 @@ export async function requestReauthentication() {
  * For phone-only users, nonce (OTP) is required after calling requestReauthentication()
  */
 export async function setPassword(password: string, nonce?: string) {
+  // Block password changes while impersonating
+  await enforceNotImpersonating('change_password');
+
   const { user } = await verifySession();
   const supabase = await createSupabaseServerClient();
 
@@ -453,6 +457,9 @@ export async function setPassword(password: string, nonce?: string) {
 }
 
 export async function initiateEmailChange(newEmail: string) {
+  // Block email changes while impersonating
+  await enforceNotImpersonating('change_email');
+
   const { user } = await verifySession();
   const supabase = await createSupabaseServerClient();
 

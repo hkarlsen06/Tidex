@@ -1,5 +1,6 @@
 "use client";
 
+import type { ChangeEvent } from "react";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Card } from "@/components/app/Card";
 import { Button } from "@/components/app/Button";
@@ -25,7 +26,11 @@ import {
   X,
   Play,
   Loader2,
+  UserCog,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Label } from "@/components/app/Label";
+import { Textarea } from "@/components/app/Textarea";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -69,13 +74,15 @@ type ActionType =
   | "grant_grandfathered"
   | "revoke_grandfathered"
   | "create_trial"
-  | "revoke_trial";
+  | "revoke_trial"
+  | "impersonate";
 
 interface Props {
   refreshTrigger?: number;
 }
 
 export function UserListCard({ refreshTrigger }: Props) {
+  const router = useRouter();
   const [users, setUsers] = useState<UserListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -92,6 +99,13 @@ export function UserListCard({ refreshTrigger }: Props) {
     type: ActionType;
     user: UserListItem | null;
   }>({ open: false, type: "ban", user: null });
+  const [impersonateDialog, setImpersonateDialog] = useState<{
+    open: boolean;
+    user: UserListItem | null;
+    reason: string;
+    loading: boolean;
+    error: string | null;
+  }>({ open: false, user: null, reason: "", loading: false, error: null });
 
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
@@ -237,6 +251,8 @@ export function UserListCard({ refreshTrigger }: Props) {
           targetEmail,
         });
         break;
+      default:
+        result = { success: false, message: "Unknown action type" };
     }
 
     if (result.success) {
@@ -247,6 +263,55 @@ export function UserListCard({ refreshTrigger }: Props) {
     }
     setActionPending(null);
     setConfirmDialog({ open: false, type: "ban", user: null });
+  };
+
+  const handleImpersonate = async () => {
+    if (!impersonateDialog.user || impersonateDialog.reason.trim().length < 5) {
+      return;
+    }
+
+    setImpersonateDialog((prev) => ({ ...prev, loading: true, error: null }));
+
+    try {
+      const response = await fetch("/api/admin/impersonation/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          targetUserId: impersonateDialog.user.id,
+          reason: impersonateDialog.reason.trim(),
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.ok) {
+        setImpersonateDialog((prev) => ({
+          ...prev,
+          loading: false,
+          error: data.error || "Failed to start impersonation",
+        }));
+        return;
+      }
+
+      // Success - close dialog and navigate to home
+      setImpersonateDialog({
+        open: false,
+        user: null,
+        reason: "",
+        loading: false,
+        error: null,
+      });
+
+      // Navigate to home as the impersonated user
+      router.push("/");
+      router.refresh();
+    } catch {
+      setImpersonateDialog((prev) => ({
+        ...prev,
+        loading: false,
+        error: "Network error. Please try again.",
+      }));
+    }
   };
 
   const formatDate = (dateString: string | null) => {
@@ -273,6 +338,8 @@ export function UserListCard({ refreshTrigger }: Props) {
         return "Create trial?";
       case "revoke_trial":
         return "End trial?";
+      case "impersonate":
+        return "Impersonate user?";
     }
   };
 
@@ -291,6 +358,8 @@ export function UserListCard({ refreshTrigger }: Props) {
         return `User ${contact} will receive a 30-day trial with Pro access.`;
       case "revoke_trial":
         return `The trial for ${contact} will end immediately.`;
+      case "impersonate":
+        return `You will be logged in as ${contact}. A banner will show you are impersonating.`;
     }
   };
 
@@ -533,6 +602,27 @@ export function UserListCard({ refreshTrigger }: Props) {
                               Grant trial
                             </DropdownMenuItem>
                           ) : null}
+
+                          {/* Impersonate - only for non-admin users */}
+                          {!user.isAdmin && (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  setImpersonateDialog({
+                                    open: true,
+                                    user,
+                                    reason: "",
+                                    loading: false,
+                                    error: null,
+                                  })
+                                }
+                              >
+                                <UserCog className="h-4 w-4 mr-2" />
+                                Impersonate
+                              </DropdownMenuItem>
+                            </>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </td>
@@ -594,6 +684,93 @@ export function UserListCard({ refreshTrigger }: Props) {
             >
               Confirm
             </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Impersonate Dialog */}
+      <AlertDialog
+        open={impersonateDialog.open}
+        onOpenChange={(open: boolean) => {
+          if (!open && !impersonateDialog.loading) {
+            setImpersonateDialog({
+              open: false,
+              user: null,
+              reason: "",
+              loading: false,
+              error: null,
+            });
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Impersonate User</AlertDialogTitle>
+            <AlertDialogDescription>
+              You will be logged in as{" "}
+              <strong>
+                {impersonateDialog.user?.name ??
+                  impersonateDialog.user?.email ??
+                  impersonateDialog.user?.phone ??
+                  impersonateDialog.user?.id.slice(0, 8)}
+              </strong>
+              . A banner will indicate you are impersonating. Some actions will be
+              restricted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <div className="py-4">
+            <Label htmlFor="impersonate-reason">
+              Reason for impersonation (required)
+            </Label>
+            <Textarea
+              id="impersonate-reason"
+              placeholder="e.g., Investigating user-reported bug #123"
+              value={impersonateDialog.reason}
+              onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
+                setImpersonateDialog((prev) => ({
+                  ...prev,
+                  reason: e.target.value,
+                  error: null,
+                }))
+              }
+              disabled={impersonateDialog.loading}
+              className="mt-2"
+              rows={3}
+            />
+            {impersonateDialog.reason.length > 0 &&
+              impersonateDialog.reason.trim().length < 5 && (
+                <p className="text-sm text-destructive mt-1">
+                  Please provide at least 5 characters
+                </p>
+              )}
+            {impersonateDialog.error && (
+              <p className="text-sm text-destructive mt-2">
+                {impersonateDialog.error}
+              </p>
+            )}
+          </div>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={impersonateDialog.loading}>
+              Cancel
+            </AlertDialogCancel>
+            <Button
+              onClick={handleImpersonate}
+              disabled={
+                impersonateDialog.loading ||
+                impersonateDialog.reason.trim().length < 5
+              }
+            >
+              {impersonateDialog.loading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Starting...
+                </>
+              ) : (
+                "Start Impersonation"
+              )}
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
