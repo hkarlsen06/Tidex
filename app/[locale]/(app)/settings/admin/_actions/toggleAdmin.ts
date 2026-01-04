@@ -142,11 +142,12 @@ export async function toggleAdmin(input: ToggleAdminInput) {
   }
 
   // Update the user's app_metadata
+  // Note: Supabase merges app_metadata, so we must set role to null to remove it
   const newAppMetadata = { ...targetUser.app_metadata };
   if (input.grant) {
     newAppMetadata.role = "admin";
   } else {
-    delete newAppMetadata.role;
+    newAppMetadata.role = null;
   }
 
   const { error: updateError } = await supabase.auth.admin.updateUserById(
