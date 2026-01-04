@@ -6,7 +6,7 @@ CREATE OR REPLACE FUNCTION public.trigger_push_notifications_after_insert()
  RETURNS trigger
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'public', 'pg_temp'
+ SET search_path TO 'public', 'internal', 'pg_temp'
 AS $function$
 DECLARE
   supabase_url TEXT;
@@ -15,7 +15,7 @@ DECLARE
 BEGIN
   -- Check if there are any pending notifications to process
   SELECT COUNT(*) INTO pending_count
-  FROM notification_queue
+  FROM internal.notification_queue
   WHERE status = 'pending';
 
   -- Only trigger if there are pending notifications

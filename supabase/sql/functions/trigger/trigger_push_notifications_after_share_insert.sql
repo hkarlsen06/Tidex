@@ -6,7 +6,7 @@ CREATE OR REPLACE FUNCTION public.trigger_push_notifications_after_share_insert(
  RETURNS trigger
  LANGUAGE plpgsql
  SECURITY DEFINER
- SET search_path TO 'public'
+ SET search_path TO 'public', 'internal', 'pg_temp'
 AS $function$
 DECLARE
   has_pending BOOLEAN;
@@ -15,7 +15,7 @@ DECLARE
 BEGIN
   -- Check if there are any pending share_started notifications
   SELECT EXISTS (
-    SELECT 1 FROM notification_queue
+    SELECT 1 FROM internal.notification_queue
     WHERE type = 'share_started' AND status = 'pending'
   ) INTO has_pending;
 

@@ -215,7 +215,7 @@ export async function createImpersonationSession(
   const encryptedToken = encryptAndSerialize(params.adminRefreshToken);
 
   const { data, error } = await supabase
-    .from("impersonation_sessions")
+    .schema("internal").from("impersonation_sessions")
     .insert({
       admin_user_id: params.adminUserId,
       target_user_id: params.targetUserId,
@@ -248,7 +248,7 @@ export async function getImpersonationSession(
   const supabase = createSupabaseServiceClient();
 
   const { data, error } = await supabase
-    .from("impersonation_sessions")
+    .schema("internal").from("impersonation_sessions")
     .select("*")
     .eq("id", sessionId)
     .single();
@@ -273,7 +273,7 @@ export async function endImpersonationSession(
   const supabase = createSupabaseServiceClient();
 
   const { error } = await supabase
-    .from("impersonation_sessions")
+    .schema("internal").from("impersonation_sessions")
     .update({
       ended_at: new Date().toISOString(),
       ended_by_admin_user_id: endedByAdminUserId,
@@ -295,7 +295,7 @@ export async function getActiveSessionForAdmin(
   const supabase = createSupabaseServiceClient();
 
   const { data, error } = await supabase
-    .from("impersonation_sessions")
+    .schema("internal").from("impersonation_sessions")
     .select("*")
     .eq("admin_user_id", adminUserId)
     .is("ended_at", null)
