@@ -126,13 +126,8 @@ export function resolveEndWindow(
       minAnchor.getUTCDate()
     ));
   } else {
-    // Specific end date
-    const endDate = parseDateAsUTC(endCondition.date);
-    maxDate = new Date(Date.UTC(
-      endDate.getUTCFullYear(),
-      endDate.getUTCMonth() + 1,
-      0 // Last day of end month
-    ));
+    // Specific end date - use the exact date, not end of month
+    maxDate = parseDateAsUTC(endCondition.date);
   }
 
   return {
