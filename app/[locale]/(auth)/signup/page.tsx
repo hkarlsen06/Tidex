@@ -490,7 +490,7 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
           <div className="flex items-center justify-between mb-1">
             <CardTitle className="text-2xl font-bold">{t.pages.auth.signup.title}</CardTitle>
             <Image
-              src="/icons/tidex-logo.webp"
+              src="/icons/short-logo-gradient.svg"
               alt="Tidex"
               width={32}
               height={32}

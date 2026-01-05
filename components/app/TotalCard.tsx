@@ -170,12 +170,12 @@ export const TotalCard: React.FC<TotalCardProps> = ({
         ) : (
           <div className="text-center">
             {/* Percentage change indicator */}
-            <div className="flex items-center justify-center gap-2">
-              <span className={`relative text-lg font-semibold ${hasChange ? (isPositive ? 'text-brand-highlight' : 'text-text-secondary') : 'text-text-muted'}`}>
+            <div className="flex items-center justify-center">
+              <span className={`inline-flex items-center gap-1 text-lg font-semibold ${hasChange ? (isPositive ? 'text-brand-highlight' : 'text-text-secondary') : 'text-text-muted'}`}>
                 {hasChange && (
                   <ArrowIcon
-                    className="absolute right-full mr-1 h-6 w-6 top-1/2 -translate-y-1/2"
-                    strokeWidth={2}
+                    className="h-5 w-5 shrink-0"
+                    strokeWidth={2.5}
                   />
                 )}
                 <SafeAnimateNumber
