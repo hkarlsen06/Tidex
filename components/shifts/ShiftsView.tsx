@@ -2384,6 +2384,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
             readOnly={readOnly}
             showEarnings={showEarnings}
             calendarId={sharedOwnerId ? `shared-${sharedOwnerId}` : "own-shifts"}
+            routePattern={sharedOwnerId ? "/sharing" : "/shifts"}
             monthContext={monthContext}
             highlightDates={highlightDates}
           />

@@ -3,7 +3,7 @@
 import { useMemo, useState, useEffect, useRef, type Ref } from "react";
 import { Clock, Copy, ArrowRightLeft, Info, Trash2, X } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import { AnimateNumber } from "motion-plus/react";
+import { SafeAnimateNumber } from "@/components/app/SafeAnimateNumber";
 import { useIsRouteActive } from "@/components/app/RouteVisibilityContext";
 import { ShiftsCalendar } from "@/components/app/ShiftsCalendar";
 import { Card } from "@/components/app/Card";
@@ -68,6 +68,8 @@ type MonthlyEarningsCalendarProps = {
   showEarnings?: boolean;
   /** Unique identifier for this calendar instance - prevents AnimatePresence key collisions between routes */
   calendarId?: string;
+  /** Route pattern to check for visibility (e.g., '/shifts', '/sharing'). Defaults to '/shifts'. */
+  routePattern?: string;
   /** Optional external month context to isolate navigation from global MonthProvider */
   monthContext?: {
     goToPreviousMonth: () => void;
@@ -352,6 +354,7 @@ export function MonthlyEarningsCalendar({
   readOnly = false,
   showEarnings = true,
   calendarId = "own-shifts",
+  routePattern = "/shifts",
   monthContext,
   highlightDates,
 }: MonthlyEarningsCalendarProps) {
@@ -373,7 +376,7 @@ export function MonthlyEarningsCalendar({
 
   // Route visibility - when route is hidden by cacheComponents, we skip AnimatePresence
   // to prevent it from accumulating stale keyed children
-  const isShiftsRouteActive = useIsRouteActive('/shifts');
+  const isRouteActive = useIsRouteActive(routePattern);
 
   // Filter shifts once per month change
   // Include shifts from previous and next month to show on "outside days"
@@ -578,7 +581,7 @@ export function MonthlyEarningsCalendar({
                 <div className="text-right">
                   <div className="font-semibold text-text-primary">
                     {totalEarnings === 0 ? '—' : (
-                      <AnimateNumber
+                      <SafeAnimateNumber
                         layout={false}
                         format={{ maximumFractionDigits: 0 }}
                         locales="nb-NO"
@@ -589,14 +592,15 @@ export function MonthlyEarningsCalendar({
                           type: 'spring',
                           bounce: 0.1,
                         }}
+                        routePattern={routePattern}
                       >
                         {displayValue}
-                      </AnimateNumber>
+                      </SafeAnimateNumber>
                     )}
                   </div>
                   {effectiveTaxEnabled && totalEarnings > 0 && (
                     <div className="text-sm text-text-muted">
-                      <AnimateNumber
+                      <SafeAnimateNumber
                         layout={false}
                         format={{ maximumFractionDigits: 0 }}
                         locales="nb-NO"
@@ -607,9 +611,10 @@ export function MonthlyEarningsCalendar({
                           type: 'spring',
                           bounce: 0.1,
                         }}
+                        routePattern={routePattern}
                       >
                         {totalEarnings}
-                      </AnimateNumber>
+                      </SafeAnimateNumber>
                     </div>
                   )}
                 </div>
@@ -625,7 +630,7 @@ export function MonthlyEarningsCalendar({
             This prevents AnimatePresence from accumulating stale keyed children while hidden
           */}
             <div className="relative">
-              {isShiftsRouteActive ? (
+              {isRouteActive ? (
                 <AnimatePresence initial={false} mode="popLayout" custom={animationDirection}>
                   <motion.div
                     key={currentMonthKey}

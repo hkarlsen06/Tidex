@@ -2,7 +2,8 @@
 
 import React from 'react';
 import { ArrowDown, ArrowUp, HelpCircle } from 'lucide-react';
-import { AnimateNumber, Typewriter } from 'motion-plus/react';
+import { Typewriter } from 'motion-plus/react';
+import { SafeAnimateNumber } from '@/components/app/SafeAnimateNumber';
 import { Card, CardContent } from '@/components/app/Card';
 import { ClickTooltip } from '@/components/app/Tooltip';
 import { useTranslations } from '@/lib/i18n/client';
@@ -45,7 +46,7 @@ function AnimatedCurrency({ value, className, style }: AnimatedCurrencyProps) {
   const useCompact = numericValue > 99999;
 
   return (
-    <AnimateNumber
+    <SafeAnimateNumber
       layout={false}
       format={{
         style: 'currency',
@@ -64,9 +65,10 @@ function AnimatedCurrency({ value, className, style }: AnimatedCurrencyProps) {
         type: 'spring',
         bounce: 0.1,
       }}
+      routePattern="/"
     >
       {numericValue}
-    </AnimateNumber>
+    </SafeAnimateNumber>
   );
 }
 
@@ -176,7 +178,7 @@ export const TotalCard: React.FC<TotalCardProps> = ({
                     strokeWidth={2}
                   />
                 )}
-                <AnimateNumber
+                <SafeAnimateNumber
                   layout={false}
                   suffix="%"
                   transition={{
@@ -184,9 +186,10 @@ export const TotalCard: React.FC<TotalCardProps> = ({
                     type: 'spring',
                     bounce: 0.1,
                   }}
+                  routePattern="/"
                 >
                   {isPercentageReady ? Math.abs(percentageChange as number) : 0}
-                </AnimateNumber>
+                </SafeAnimateNumber>
               </span>
             </div>
             {/* Main total display */}
@@ -239,7 +242,7 @@ export const TotalCard: React.FC<TotalCardProps> = ({
                 <Typewriter
                   speed="normal"
                   variance={0.5}
-                  cursorBlinkDuration={4}
+                  cursorStyle={{ display: 'none' }}
                 >
                   {subtitlePlaceholder}
                 </Typewriter>
@@ -247,7 +250,7 @@ export const TotalCard: React.FC<TotalCardProps> = ({
                 <Typewriter
                   speed="normal"
                   variance={0.5}
-                  cursorBlinkDuration={4}
+                  cursorStyle={{ display: 'none' }}
                 >
                   {subtitleText}
                 </Typewriter>

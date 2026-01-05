@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import { AnimateNumber } from 'motion-plus/react';
+import { SafeAnimateNumber } from '@/components/app/SafeAnimateNumber';
 import { Card, CardHeader } from '@/components/app/Card';
 import { cn } from '@/lib/cn';
 import { useNavigationFeedback } from './navigation-feedback';
@@ -171,20 +171,18 @@ export const NextPayrollCard: React.FC<NextPayrollCardProps> = ({
 
   // Display text for the date - show "I dag" with party popper on payroll day
   // Norwegian format: "15. januar", English format: "January 15"
+  // Note: Date is rendered statically (no AnimateNumber) because:
+  // 1. The date changes discretely, not numerically (no smooth animation needed)
+  // 2. AnimateNumber's internal state can get corrupted with cacheComponents
   const dateDisplay = isPayrollToday ? (
     <span className="inline-flex items-center gap-2">
       {t.components.nextPayrollCard.today}
       <PartyPopper className="h-5 w-5 text-brand-highlight" aria-hidden="true" />
     </span>
   ) : (
-    <AnimateNumber
-      layout={false}
-      suffix={locale === 'no' ? `. ${monthName}` : undefined}
-      prefix={locale !== 'no' ? `${monthName} ` : undefined}
-      transition={{ visualDuration: 0.6, type: 'spring', bounce: 0.15 }}
-    >
-      {dayNumber}
-    </AnimateNumber>
+    <span>
+      {locale === 'no' ? `${dayNumber}. ${monthName}` : `${monthName} ${dayNumber}`}
+    </span>
   );
 
   return (
@@ -245,7 +243,7 @@ export const NextPayrollCard: React.FC<NextPayrollCardProps> = ({
           ) : (
             <div>
               <span className="block text-2xl font-semibold tracking-tight text-text-primary">
-                <AnimateNumber
+                <SafeAnimateNumber
                   layout={false}
                   format={{
                     style: 'currency',
@@ -258,29 +256,32 @@ export const NextPayrollCard: React.FC<NextPayrollCardProps> = ({
                     type: 'spring',
                     bounce: 0.1,
                   }}
+                  routePattern="/"
                 >
                   {displayValues.netAmount}
-                </AnimateNumber>
+                </SafeAnimateNumber>
               </span>
               {showBreakdown && breakdownType !== 'none' && (
                 <span className="block text-sm text-text-muted">
-                  <AnimateNumber
+                  <SafeAnimateNumber
                     layout={false}
                     format={{ maximumFractionDigits: 0 }}
                     locales="nb-NO"
                     transition={{ visualDuration: 0.6, type: 'spring', bounce: 0.1 }}
+                    routePattern="/"
                   >
                     {breakdownValues.first}
-                  </AnimateNumber>
+                  </SafeAnimateNumber>
                   {' '}{breakdownValues.operator}{' '}
-                  <AnimateNumber
+                  <SafeAnimateNumber
                     layout={false}
                     format={{ maximumFractionDigits: 0 }}
                     locales="nb-NO"
                     transition={{ visualDuration: 0.6, type: 'spring', bounce: 0.1 }}
+                    routePattern="/"
                   >
                     {breakdownValues.second}
-                  </AnimateNumber>
+                  </SafeAnimateNumber>
                 </span>
               )}
             </div>
