@@ -241,6 +241,12 @@ type CalendarSnapshot = {
  * original data. The "stale data when returning to route" issue is handled by the parent
  * passing fresh currentSnapshot which gets frozen on the NEW component mount.
  *
+ * EXCEPTION: If the initial snapshot was empty (no shifts), we allow ONE update when
+ * shifts arrive. This handles the case where the user navigates to a month outside the
+ * ISR window and refreshes - the initial render has no shifts, but they arrive shortly
+ * after via client-side fetch. Without this, the calendar would show empty cells until
+ * the user swipes away and back.
+ *
  * Uses state initialization (lazy initializer) to freeze the snapshot on first render.
  * State is used instead of refs to comply with React 19 compiler rules that prohibit
  * reading refs during render.
@@ -268,7 +274,20 @@ function FrozenCalendarSlide({
 }) {
   // Freeze snapshot on mount using lazy state initialization
   // This only runs once when the component mounts, ignoring subsequent prop updates
-  const [frozenSnapshot] = useState(() => snapshot);
+  const [frozenSnapshot, setFrozenSnapshot] = useState(() => snapshot);
+  // Track if initial snapshot was empty - if so, allow one update when data arrives
+  // Check both earningsByDate and hoursByDate since either could be the source of truth
+  const [wasInitiallyEmpty] = useState(
+    () => Object.keys(snapshot.earningsByDate).length === 0 && Object.keys(snapshot.hoursByDate).length === 0
+  );
+
+  // Allow updating the frozen snapshot ONCE if we started empty and now have data
+  useEffect(() => {
+    const hasData = Object.keys(snapshot.earningsByDate).length > 0 || Object.keys(snapshot.hoursByDate).length > 0;
+    if (wasInitiallyEmpty && hasData) {
+      setFrozenSnapshot(snapshot);
+    }
+  }, [wasInitiallyEmpty, snapshot]);
 
   return (
     <ShiftsCalendar
@@ -360,10 +379,6 @@ export function MonthlyEarningsCalendar({
   // to prevent it from accumulating stale keyed children
   const isShiftsRouteActive = useIsRouteActive('/shifts');
 
-  // Compute the current month key - when route is active, always use the current month
-  // When route is hidden, we render without AnimatePresence anyway, so the key doesn't matter
-  const currentMonthKey = `${calendarId}-${month.getFullYear()}-${month.getMonth()}`;
-
   // Filter shifts once per month change
   // Include shifts from previous and next month to show on "outside days"
   const monthlyShifts = useMemo(() => {
@@ -413,6 +428,10 @@ export function MonthlyEarningsCalendar({
     () => buildOverlappingDates(monthlyShifts),
     [monthlyShifts]
   );
+
+  // Compute the current month key - when route is active, always use the current month
+  // When route is hidden, we render without AnimatePresence anyway, so the key doesn't matter
+  const currentMonthKey = `${calendarId}-${month.getFullYear()}-${month.getMonth()}`;
 
   // Current snapshot for the active month (always up-to-date with latest props)
   const currentSnapshot: CalendarSnapshot = {
