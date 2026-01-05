@@ -1,7 +1,9 @@
 "use client";
 
-import { useMemo, useState, useEffect, useRef, type Ref } from "react";
+import { useMemo, useState, useEffect, useLayoutEffect, useRef, memo, type Ref } from "react";
 import { Clock, Copy, ArrowRightLeft, Info, Trash2, X } from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
+import { useIsRouteActive } from "@/components/app/RouteVisibilityContext";
 import { ShiftsCalendar } from "@/components/app/ShiftsCalendar";
 import { Card } from "@/components/app/Card";
 import { Button } from "@/components/app/Button";
@@ -145,9 +147,9 @@ function buildHoursByDate(shifts: ShiftWithComputations[]): HoursByDate {
     // Check if ANY shift crosses midnight
     const hasMidnightCrossing = shiftsOnDate.some(shift => {
       const startMinutes = parseInt(shift.start_time.split(':')[0]) * 60 +
-                          parseInt(shift.start_time.split(':')[1]);
+        parseInt(shift.start_time.split(':')[1]);
       const endMinutes = parseInt(shift.end_time.split(':')[0]) * 60 +
-                        parseInt(shift.end_time.split(':')[1]);
+        parseInt(shift.end_time.split(':')[1]);
       return endMinutes <= startMinutes;
     });
 
@@ -221,6 +223,95 @@ function formatYear(date: Date): string {
   return date.getFullYear().toString();
 }
 
+/** Data snapshot for a calendar month, used to preserve state during exit animations */
+type CalendarSnapshot = {
+  key: string;
+  month: Date;
+  earningsByDate: EarningsByDate;
+  hoursByDate: HoursByDate;
+  overlappingDates: Set<ISODate>;
+};
+
+/**
+ * Wrapper that freezes calendar data on mount.
+ * This ensures the exiting calendar shows its original month during exit animation.
+ *
+ * IMPORTANT: AnimatePresence passes the same (new) props to both entering and exiting
+ * children. We must freeze on mount and NEVER update, so exiting calendars keep their
+ * original data. The "stale data when returning to route" issue is handled by the parent
+ * passing fresh currentSnapshot which gets frozen on the NEW component mount.
+ *
+ * However, when returning from another route after navigating many months, the frozen
+ * data may be stale. We detect this by checking if the snapshot has data but our frozen
+ * ref is empty, and sync if needed after animation completes.
+ */
+function FrozenCalendarSlide({
+  snapshot,
+  mode,
+  onMonthChange,
+  onDayClick,
+  selectedDate,
+  selectedDates,
+  newlyAddedDates,
+  taxSettings,
+  highlightDates,
+  isAnimating,
+}: {
+  snapshot: CalendarSnapshot;
+  mode: "money" | "hours";
+  onMonthChange: (month: Date) => void;
+  onDayClick?: (iso: ISODate, hasShifts: boolean) => void;
+  selectedDate?: ISODate | null;
+  selectedDates?: Set<ISODate>;
+  newlyAddedDates?: Set<string>;
+  taxSettings?: TaxSettings;
+  highlightDates?: Set<string> | null;
+  isAnimating: boolean;
+}) {
+  // Freeze snapshot on mount - never update after initial render
+  // This is critical: AnimatePresence passes new props to exiting components,
+  // but we want exiting calendars to keep showing their original month
+  const frozenRef = useRef(snapshot);
+  const [animateCellValues, setAnimateCellValues] = useState(false);
+
+  // After animation completes, check if frozen data is stale and sync if needed
+  // This handles the case where user navigates many months on another route
+  // and returns to find stale/empty calendar data
+  useEffect(() => {
+    if (!isAnimating) {
+      const frozenHasData = Object.keys(frozenRef.current.earningsByDate).length > 0 ||
+        Object.keys(frozenRef.current.hoursByDate).length > 0;
+      const snapshotHasData = Object.keys(snapshot.earningsByDate).length > 0 ||
+        Object.keys(snapshot.hoursByDate).length > 0;
+
+      // If snapshot has data but frozen doesn't, sync and trigger pop-in animation
+      if (snapshotHasData && !frozenHasData && snapshot.key === frozenRef.current.key) {
+        frozenRef.current = snapshot;
+        setAnimateCellValues(true);
+      }
+    }
+  }, [isAnimating, snapshot]);
+
+  return (
+    <ShiftsCalendar
+      month={frozenRef.current.month}
+      mode={mode}
+      earningsByDate={frozenRef.current.earningsByDate}
+      hoursByDate={frozenRef.current.hoursByDate}
+      overlappingDates={frozenRef.current.overlappingDates}
+      onMonthChange={onMonthChange}
+      onDayClick={onDayClick}
+      selectedDate={selectedDate}
+      selectedDates={selectedDates}
+      weekNumberPosition="top-left"
+      newlyAddedDates={newlyAddedDates}
+      taxSettings={taxSettings}
+      highlightDates={highlightDates}
+      animateCellValues={animateCellValues}
+    />
+  );
+}
+
 /**
  * Static weekday header component - renders outside AnimatePresence
  * to stay fixed during month transitions
@@ -240,15 +331,6 @@ function WeekdayHeader() {
       ))}
     </div>
   );
-}
-
-// CSS animation classes for horizontal month scrolling
-// These avoid AnimatePresence state issues with cacheComponents
-function getCalendarAnimationClass(direction: 'next' | 'previous' | null, shouldAnimate: boolean): string {
-  if (!shouldAnimate || !direction) return '';
-  return direction === 'next'
-    ? 'animate-[slide-in-from-right_0.25s_ease-out]'
-    : 'animate-[slide-in-from-left_0.25s_ease-out]';
 }
 
 export function MonthlyEarningsCalendar({
@@ -296,22 +378,31 @@ export function MonthlyEarningsCalendar({
   const swipeContainerRef = useRef<HTMLDivElement>(null);
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
+  // Track if calendar is currently animating (for stale data sync)
+  const [isAnimating, setIsAnimating] = useState(false);
   const isSwiping = useRef<boolean>(false);
 
-  // Track whether animations should be enabled (skip on initial mount)
-  const [animationsEnabled, setAnimationsEnabled] = useState(false);
+  // Route visibility - when route is hidden by cacheComponents, we skip AnimatePresence
+  // to prevent it from accumulating stale keyed children
+  const isShiftsRouteActive = useIsRouteActive('/shifts');
 
-  // Enable animations after initial mount
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setAnimationsEnabled(true);
-    }, 50);
-    return () => clearTimeout(timer);
-  }, []);
+  // Freeze the month key used by AnimatePresence while the route is inactive.
+  // This ensures AnimatePresence always starts from a clean baseline when the route
+  // becomes active again, preventing any stale key accumulation.
+  const [frozenMonthKey, setFrozenMonthKey] = useState(
+    () => `${calendarId}-${month.getFullYear()}-${month.getMonth()}`
+  );
 
-  // Animation enabled when hydrated and after initial mount delay
-  const shouldAnimate = isHydrated && animationsEnabled;
+  // Only update the frozen key when the route is active
+  // useLayoutEffect ensures the key syncs before paint, avoiding any flash of stale content
+  useLayoutEffect(() => {
+    if (isShiftsRouteActive) {
+      setFrozenMonthKey(`${calendarId}-${month.getFullYear()}-${month.getMonth()}`);
+    }
+  }, [isShiftsRouteActive, calendarId, month]);
 
+  // Use frozen key for AnimatePresence to prevent stale state
+  const currentMonthKey = frozenMonthKey;
 
   // Filter shifts once per month change
   // Include shifts from previous and next month to show on "outside days"
@@ -362,6 +453,15 @@ export function MonthlyEarningsCalendar({
     () => buildOverlappingDates(monthlyShifts),
     [monthlyShifts]
   );
+
+  // Current snapshot for the active month (always up-to-date with latest props)
+  const currentSnapshot: CalendarSnapshot = {
+    key: currentMonthKey,
+    month,
+    earningsByDate,
+    hoursByDate,
+    overlappingDates,
+  };
 
   // Calculate totals - use selected shifts only when in multi-selection mode
   // Note: summarizeShiftTotals/getMonthlyTotals now automatically exclude conflicting shifts
@@ -470,230 +570,288 @@ export function MonthlyEarningsCalendar({
     <div>
       <Card ref={containerRef} className="rounded-card border-0 bg-transparent">
         <div ref={swipeContainerRef}>
-        <div className="flex h-13 flex-row items-center justify-between">
-          <div className="flex h-10 items-center gap-1">
-            {isShowingSelectedTotal ? (
-              <span className="font-semibold text-text-primary pl-1">
-                {t.pages.shifts.actions.selectedCount.replace('{count}', String(selectedDates?.size ?? 0))}
-              </span>
-            ) : (
-              <>
-                <MonthPicker
-                  key={`month-picker-${month.getFullYear()}-${month.getMonth()}`}
-                  month={month}
-                  onPreviousMonth={goToPreviousMonth}
-                  onNextMonth={goToNextMonth}
-                  direction={animationDirection === 'next' ? 'forward' : 'backward'}
-                  isHydrated={isHydrated}
-                  isAnimationEnabled={shouldAnimate}
-                  calendarId={calendarId}
-                />
-                <span className="font-medium text-text-muted ml-1">{formatYear(month)}</span>
-              </>
-            )}
-          </div>
-          {showEarnings && (() => {
-            // Use payout tax settings for determining if tax should be shown
-            // Fall back to taxSettings.enabled if no payout tax settings
-            const effectiveTaxEnabled = payoutTaxSettings?.enabled ?? taxSettings?.enabled ?? false;
-
-            return (
-              <div className="text-right">
-                <div className="font-semibold text-text-primary">
-                  {totalEarnings === 0 ? '—' : formatCurrency(effectiveTaxEnabled ? netEarnings : totalEarnings)}
-                </div>
-                {effectiveTaxEnabled && totalEarnings > 0 && (
-                  <div className="text-sm text-text-muted">
-                    {formatCurrency(totalEarnings)}
-                  </div>
-                )}
-              </div>
-            );
-          })()}
-        </div>
-        <div className="pb-6 overflow-hidden relative">
-          {/* Static weekday header - stays in place during month transitions */}
-          <WeekdayHeader />
-          {/* CSS animation instead of AnimatePresence to avoid cacheComponents state issues */}
-          <div
-            key={`${calendarId}-${month.getFullYear()}-${month.getMonth()}`}
-            className={getCalendarAnimationClass(animationDirection, shouldAnimate)}
-          >
-            <ShiftsCalendar
-              month={month}
-              mode={effectiveViewMode}
-              earningsByDate={earningsByDate}
-              hoursByDate={hoursByDate}
-              overlappingDates={overlappingDates}
-              onMonthChange={onMonthChange}
-              onDayClick={onDayClick}
-              selectedDate={selectedDate}
-              selectedDates={selectedDates}
-              weekNumberPosition="top-left"
-              newlyAddedDates={newlyAddedDates}
-              taxSettings={taxSettings}
-              highlightDates={highlightDates}
-            />
-          </div>
-        </div>
-      </div>
-      <div className="flex flex-col items-center gap-2 pb-6">
-        <div className="inline-flex h-11 w-[90%] max-w-xs items-center gap-1 rounded-full border border-border-subtle bg-surface-secondary/80 p-1 shadow-app-sm dark:shadow-app-inner">
-          {/* Multi-selection mode: show delete (if allowed) and clear buttons */}
-          {selectedDates && selectedDates.size > 0 ? (
-            <div className="flex h-full w-full items-center gap-2 rounded-full bg-surface-primary px-1">
-              {/* Delete button - only shown when onDeleteSelected is provided (not in readOnly mode) */}
-              {onDeleteSelected && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => onDeleteSelected()}
-                  disabled={deleting || isOffline}
-                  loading={deleting}
-                  title={isOffline ? "Cannot delete while offline" : undefined}
-                  className="flex-1 h-9 gap-2 rounded-full bg-red-500/10 text-red-600 hover:bg-red-500/20 dark:text-red-400 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Trash2 strokeWidth={2} className="h-4 w-4" />
-                  {t.pages.shifts.actions.delete}
-                </Button>
+          <div className="flex h-13 flex-row items-center justify-between">
+            <div className="flex h-10 items-center gap-1">
+              {isShowingSelectedTotal ? (
+                <span className="font-semibold text-text-primary pl-1">
+                  {t.pages.shifts.actions.selectedCount.replace('{count}', String(selectedDates?.size ?? 0))}
+                </span>
+              ) : (
+                <>
+                  <MonthPicker
+                    key={`month-picker-${month.getFullYear()}-${month.getMonth()}`}
+                    month={month}
+                    onPreviousMonth={goToPreviousMonth}
+                    onNextMonth={goToNextMonth}
+                    direction={animationDirection === 'next' ? 'forward' : 'backward'}
+                    isHydrated={isHydrated}
+                    isAnimationEnabled={isHydrated}
+                    calendarId={calendarId}
+                  />
+                  <span className="font-medium text-text-muted ml-1">{formatYear(month)}</span>
+                </>
               )}
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => onClearMultiSelection?.()}
-                disabled={deleting}
-                className="flex-1 h-9 gap-2 rounded-full bg-surface-secondary text-text-secondary hover:bg-surface-secondary/80"
-              >
-                <X strokeWidth={2} className="h-4 w-4" />
-                {t.pages.shifts.actions.clearSelection}
-              </Button>
             </div>
-          ) : selectedDate ? (
-            <div className="flex h-full w-full items-center gap-2 rounded-full bg-surface-primary px-1">
-              {/* Copy button - hidden in readOnly mode */}
-              {!readOnly && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => onInitiateCopy?.()}
-                  disabled={
-                    !onInitiateCopy ||
-                    copyMode ||
-                    copying ||
-                    moveMode ||
-                    isOffline
-                  }
-                  loading={copying}
-                  title={isOffline ? "Cannot copy shifts while offline" : undefined}
-                  className="flex-1 h-9 gap-2 rounded-full bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 dark:text-blue-400 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Copy strokeWidth={2} className="h-4 w-4" />
-                  {t.pages.shifts.actions.copy}
-                </Button>
+            {showEarnings && (() => {
+              // Use payout tax settings for determining if tax should be shown
+              // Fall back to taxSettings.enabled if no payout tax settings
+              const effectiveTaxEnabled = payoutTaxSettings?.enabled ?? taxSettings?.enabled ?? false;
+
+              return (
+                <div className="text-right">
+                  <div className="font-semibold text-text-primary">
+                    {totalEarnings === 0 ? '—' : formatCurrency(effectiveTaxEnabled ? netEarnings : totalEarnings)}
+                  </div>
+                  {effectiveTaxEnabled && totalEarnings > 0 && (
+                    <div className="text-sm text-text-muted">
+                      {formatCurrency(totalEarnings)}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+          </div>
+          <div className="pb-6 overflow-hidden relative">
+            {/* Static weekday header - stays in place during month transitions */}
+            <WeekdayHeader />
+            {/*
+            When route is active: use AnimatePresence for smooth month transitions
+            When route is hidden (cacheComponents): render calendar directly without AnimatePresence
+            This prevents AnimatePresence from accumulating stale keyed children while hidden
+          */}
+            <div className="relative">
+              {isShiftsRouteActive ? (
+                <AnimatePresence initial={false} mode="popLayout" custom={animationDirection}>
+                  <motion.div
+                    key={currentMonthKey}
+                    custom={animationDirection}
+                    variants={{
+                      initial: (dir: 'next' | 'previous') => ({
+                        x: dir === 'next' ? 'calc(100% + 24px)' : 'calc(-100% - 24px)',
+                      }),
+                      animate: {
+                        x: 0,
+                        transition: {
+                          type: "tween",
+                          duration: 0.3,
+                          ease: "easeOut",
+                        },
+                      },
+                      exit: (dir: 'next' | 'previous') => ({
+                        x: dir === 'next' ? 'calc(-100% - 24px)' : 'calc(100% + 24px)',
+                        opacity: 0,
+                        transition: {
+                          x: {
+                            type: "tween",
+                            duration: 0.3,
+                            ease: "easeOut",
+                          },
+                          opacity: {
+                            type: "tween",
+                            duration: 0.25,
+                            ease: "easeIn",
+                          },
+                        },
+                      }),
+                    }}
+                    initial="initial"
+                    animate="animate"
+                    exit="exit"
+                    onAnimationStart={() => setIsAnimating(true)}
+                    onAnimationComplete={() => setIsAnimating(false)}
+                  >
+                    <FrozenCalendarSlide
+                      snapshot={currentSnapshot}
+                      mode={effectiveViewMode}
+                      onMonthChange={onMonthChange}
+                      onDayClick={onDayClick}
+                      selectedDate={selectedDate}
+                      selectedDates={selectedDates}
+                      newlyAddedDates={newlyAddedDates}
+                      taxSettings={taxSettings}
+                      highlightDates={highlightDates}
+                      isAnimating={isAnimating}
+                    />
+                  </motion.div>
+                </AnimatePresence>
+              ) : (
+                // When route is hidden, render without AnimatePresence to avoid stale state
+                <ShiftsCalendar
+                  month={month}
+                  mode={effectiveViewMode}
+                  earningsByDate={earningsByDate}
+                  hoursByDate={hoursByDate}
+                  overlappingDates={overlappingDates}
+                  onMonthChange={onMonthChange}
+                  onDayClick={onDayClick}
+                  selectedDate={selectedDate}
+                  selectedDates={selectedDates}
+                  weekNumberPosition="top-left"
+                  newlyAddedDates={newlyAddedDates}
+                  taxSettings={taxSettings}
+                  highlightDates={highlightDates}
+                />
               )}
-              <Button
-                type="button"
-                variant="default"
-                onClick={() => {
-                  if (copyMode) {
-                    onCancelCopy?.();
-                  } else if (moveMode) {
-                    onCancelMoveMode?.();
-                  } else {
-                    onOpenDetails?.();
-                  }
-                }}
-                disabled={
-                  copying ||
-                  moving ||
-                  (copyMode ? !onCancelCopy : moveMode ? !onCancelMoveMode : !onOpenDetails)
-                }
-                className={cn(
-                  "flex-1 h-9 rounded-full",
-                  !(copyMode || moveMode) && "gap-2"
+            </div>
+          </div>
+        </div>
+        <div className="flex flex-col items-center gap-2 pb-6">
+          <div className="inline-flex h-11 w-[90%] max-w-xs items-center gap-1 rounded-full border border-border-subtle bg-surface-secondary/80 p-1 shadow-app-sm dark:shadow-app-inner">
+            {/* Multi-selection mode: show delete (if allowed) and clear buttons */}
+            {selectedDates && selectedDates.size > 0 ? (
+              <div className="flex h-full w-full items-center gap-2 rounded-full bg-surface-primary px-1">
+                {/* Delete button - only shown when onDeleteSelected is provided (not in readOnly mode) */}
+                {onDeleteSelected && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => onDeleteSelected()}
+                    disabled={deleting || isOffline}
+                    loading={deleting}
+                    title={isOffline ? "Cannot delete while offline" : undefined}
+                    className="flex-1 h-9 gap-2 rounded-full bg-red-500/10 text-red-600 hover:bg-red-500/20 dark:text-red-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Trash2 strokeWidth={2} className="h-4 w-4" />
+                    {t.pages.shifts.actions.delete}
+                  </Button>
                 )}
-              >
-                {copyMode || moveMode ? (
-                  t.pages.shifts.actions.cancel
-                ) : (
-                  <>
-                    <Info strokeWidth={2} className="h-4 w-4" />
-                    {t.pages.shifts.actions.details}
-                  </>
-                )}
-              </Button>
-              {/* Move button - hidden in readOnly mode */}
-              {!readOnly && (
                 <Button
                   type="button"
                   variant="ghost"
-                  onClick={() => onInitiateMove?.()}
+                  onClick={() => onClearMultiSelection?.()}
+                  disabled={deleting}
+                  className="flex-1 h-9 gap-2 rounded-full bg-surface-secondary text-text-secondary hover:bg-surface-secondary/80"
+                >
+                  <X strokeWidth={2} className="h-4 w-4" />
+                  {t.pages.shifts.actions.clearSelection}
+                </Button>
+              </div>
+            ) : selectedDate ? (
+              <div className="flex h-full w-full items-center gap-2 rounded-full bg-surface-primary px-1">
+                {/* Copy button - hidden in readOnly mode */}
+                {!readOnly && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => onInitiateCopy?.()}
+                    disabled={
+                      !onInitiateCopy ||
+                      copyMode ||
+                      copying ||
+                      moveMode ||
+                      isOffline
+                    }
+                    loading={copying}
+                    title={isOffline ? "Cannot copy shifts while offline" : undefined}
+                    className="flex-1 h-9 gap-2 rounded-full bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 dark:text-blue-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Copy strokeWidth={2} className="h-4 w-4" />
+                    {t.pages.shifts.actions.copy}
+                  </Button>
+                )}
+                <Button
+                  type="button"
+                  variant="default"
+                  onClick={() => {
+                    if (copyMode) {
+                      onCancelCopy?.();
+                    } else if (moveMode) {
+                      onCancelMoveMode?.();
+                    } else {
+                      onOpenDetails?.();
+                    }
+                  }}
                   disabled={
-                    !onInitiateMove ||
-                    copyMode ||
+                    copying ||
                     moving ||
-                    moveMode ||
-                    isOffline
+                    (copyMode ? !onCancelCopy : moveMode ? !onCancelMoveMode : !onOpenDetails)
                   }
-                  title={isOffline ? "Cannot move shifts while offline" : undefined}
                   className={cn(
-                    "flex-1 h-9 gap-2 rounded-full px-4 text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed",
-                    moveMode
-                      ? "bg-amber-500/20 text-amber-700 dark:text-amber-400"
-                      : "bg-amber-500/10 text-amber-700 hover:bg-amber-500/20 dark:text-amber-300"
+                    "flex-1 h-9 rounded-full",
+                    !(copyMode || moveMode) && "gap-2"
                   )}
                 >
-                  <ArrowRightLeft strokeWidth={2} className="h-4 w-4" />
-                  {t.pages.shifts.actions.move}
+                  {copyMode || moveMode ? (
+                    t.pages.shifts.actions.cancel
+                  ) : (
+                    <>
+                      <Info strokeWidth={2} className="h-4 w-4" />
+                      {t.pages.shifts.actions.details}
+                    </>
+                  )}
                 </Button>
-              )}
-            </div>
-          ) : (
-            <div className="flex h-full w-full items-center gap-1">
-              <Button
-                type="button"
-                variant="ghost"
-                aria-pressed={viewMode === "hours"}
-                onClick={() => setViewMode("hours")}
-                className={cn(
-                  "h-full rounded-full px-4 text-sm flex-1 whitespace-nowrap transition-none",
-                  viewMode === "hours" || !showEarnings
-                    ? "bg-white dark:bg-slate-700 text-black dark:text-white shadow-app-md font-semibold"
-                    : "text-text-muted hover:text-text-primary hover:bg-surface-secondary/50"
+                {/* Move button - hidden in readOnly mode */}
+                {!readOnly && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => onInitiateMove?.()}
+                    disabled={
+                      !onInitiateMove ||
+                      copyMode ||
+                      moving ||
+                      moveMode ||
+                      isOffline
+                    }
+                    title={isOffline ? "Cannot move shifts while offline" : undefined}
+                    className={cn(
+                      "flex-1 h-9 gap-2 rounded-full px-4 text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed",
+                      moveMode
+                        ? "bg-amber-500/20 text-amber-700 dark:text-amber-400"
+                        : "bg-amber-500/10 text-amber-700 hover:bg-amber-500/20 dark:text-amber-300"
+                    )}
+                  >
+                    <ArrowRightLeft strokeWidth={2} className="h-4 w-4" />
+                    {t.pages.shifts.actions.move}
+                  </Button>
                 )}
-              >
-                <span>--:--</span>
-                <Clock strokeWidth={2} aria-hidden="true" />
-              </Button>
-              {/* Money toggle hidden when earnings are not visible */}
-              {showEarnings && (
+              </div>
+            ) : (
+              <div className="flex h-full w-full items-center gap-1">
                 <Button
                   type="button"
                   variant="ghost"
-                  aria-pressed={viewMode === "money"}
-                  onClick={() => setViewMode("money")}
+                  aria-pressed={viewMode === "hours"}
+                  onClick={() => setViewMode("hours")}
                   className={cn(
                     "h-full rounded-full px-4 text-sm flex-1 whitespace-nowrap transition-none",
-                    viewMode === "money"
+                    viewMode === "hours" || !showEarnings
                       ? "bg-white dark:bg-slate-700 text-black dark:text-white shadow-app-md font-semibold"
                       : "text-text-muted hover:text-text-primary hover:bg-surface-secondary/50"
                   )}
                 >
-                  ---- {currencySymbol}
+                  <span>--:--</span>
+                  <Clock strokeWidth={2} aria-hidden="true" />
                 </Button>
-              )}
+                {/* Money toggle hidden when earnings are not visible */}
+                {showEarnings && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    aria-pressed={viewMode === "money"}
+                    onClick={() => setViewMode("money")}
+                    className={cn(
+                      "h-full rounded-full px-4 text-sm flex-1 whitespace-nowrap transition-none",
+                      viewMode === "money"
+                        ? "bg-white dark:bg-slate-700 text-black dark:text-white shadow-app-md font-semibold"
+                        : "text-text-muted hover:text-text-primary hover:bg-surface-secondary/50"
+                    )}
+                  >
+                    ---- {currencySymbol}
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
+          {selectedDate && (copyMode || moveMode) && (
+            <div className="text-xs font-medium leading-tight text-text-muted text-center">
+              {copyMode
+                ? t.pages.shifts.actions.copyInstructions
+                : t.pages.shifts.actions.moveInstructions}
             </div>
           )}
         </div>
-        {selectedDate && (copyMode || moveMode) && (
-          <div className="text-xs font-medium leading-tight text-text-muted text-center">
-            {copyMode
-              ? t.pages.shifts.actions.copyInstructions
-              : t.pages.shifts.actions.moveInstructions}
-          </div>
-        )}
-      </div>
-    </Card>
+      </Card>
     </div>
   );
 }
