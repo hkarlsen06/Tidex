@@ -3,6 +3,7 @@
 import * as React from "react";
 import { DayPicker } from "react-day-picker";
 import { nb, enUS } from "date-fns/locale";
+import { motion, AnimatePresence } from "motion/react";
 import {
   toISODate,
   formatNOKInt,
@@ -33,6 +34,8 @@ export type ShiftsCalendarProps = {
   taxSettings?: TaxSettings;
   /** Deep link: dates to highlight in calendar (from push notification) */
   highlightDates?: Set<string> | null;
+  /** When true, cell values animate in with a pop effect (used for stale data sync) */
+  animateCellValues?: boolean;
 };
 
 type DayButtonProps = {
@@ -54,6 +57,7 @@ type DayButtonProps = {
   newlyAddedDates?: Set<string>;
   taxSettings?: TaxSettings;
   highlightDates?: Set<string> | null;
+  animateCellValues?: boolean;
   [key: string]: any;
 };
 
@@ -103,6 +107,7 @@ const DayButton = React.memo(function DayButton({
   newlyAddedDates,
   taxSettings,
   highlightDates,
+  animateCellValues,
   ...buttonProps
 }: DayButtonProps) {
   const date: Date = day.date;
@@ -170,26 +175,66 @@ const DayButton = React.memo(function DayButton({
           "items-center"
         )}
       >
-        {mode === "money" && earnings !== undefined && (
-          <div className="flex flex-col items-end">
-            <div className="text-sm text-text-secondary font-semibold">
-              {formatNOKInt(netEarnings !== null ? netEarnings : earnings)}
-            </div>
-            {netEarnings !== null && (
-              <div className="text-[11px] text-text-muted leading-tight">
-                {formatNOKInt(earnings)}
+        {animateCellValues ? (
+          <AnimatePresence mode="wait">
+            {mode === "money" && earnings !== undefined && (
+              <motion.div
+                key={`money-${iso}`}
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ type: "spring", bounce: 0.3, duration: 0.4 }}
+                className="flex flex-col items-end"
+              >
+                <div className="text-sm text-text-secondary font-semibold">
+                  {formatNOKInt(netEarnings !== null ? netEarnings : earnings)}
+                </div>
+                {netEarnings !== null && (
+                  <div className="text-[11px] text-text-muted leading-tight">
+                    {formatNOKInt(earnings)}
+                  </div>
+                )}
+              </motion.div>
+            )}
+            {mode === "hours" && hours && (
+              <motion.div
+                key={`hours-${iso}`}
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ type: "spring", bounce: 0.3, duration: 0.4 }}
+                className="flex flex-col items-center justify-center text-sm font-semibold text-text-secondary leading-tight"
+              >
+                <div>{hours.start}</div>
+                <div>
+                  {hours.end}
+                  {hours.crossesMidnight && "*"}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        ) : (
+          <>
+            {mode === "money" && earnings !== undefined && (
+              <div className="flex flex-col items-end">
+                <div className="text-sm text-text-secondary font-semibold">
+                  {formatNOKInt(netEarnings !== null ? netEarnings : earnings)}
+                </div>
+                {netEarnings !== null && (
+                  <div className="text-[11px] text-text-muted leading-tight">
+                    {formatNOKInt(earnings)}
+                  </div>
+                )}
               </div>
             )}
-          </div>
-        )}
-        {mode === "hours" && hours && (
-          <div className="flex flex-col items-center justify-center text-sm font-semibold text-text-secondary leading-tight">
-            <div>{hours.start}</div>
-            <div>
-              {hours.end}
-              {hours.crossesMidnight && "*"}
-            </div>
-          </div>
+            {mode === "hours" && hours && (
+              <div className="flex flex-col items-center justify-center text-sm font-semibold text-text-secondary leading-tight">
+                <div>{hours.start}</div>
+                <div>
+                  {hours.end}
+                  {hours.crossesMidnight && "*"}
+                </div>
+              </div>
+            )}
+          </>
         )}
         {employees.length > 0 && (
           <div className="flex gap-0.5 flex-wrap justify-center">
@@ -230,6 +275,7 @@ export function ShiftsCalendar({
   newlyAddedDates,
   taxSettings,
   highlightDates,
+  animateCellValues = false,
 }: ShiftsCalendarProps) {
   const locale = useLocale();
   const dateFnsLocale = locale === 'en' ? enUS : nb;
@@ -262,9 +308,10 @@ export function ShiftsCalendar({
         newlyAddedDates={newlyAddedDates}
         taxSettings={taxSettings}
         highlightDates={highlightDates}
+        animateCellValues={animateCellValues}
       />
     ),
-    [mode, earningsByDate, hoursByDate, employeesByDate, overlappingDates, weekNumberPosition, selectedDate, selectedDates, newlyAddedDates, taxSettings, highlightDates]
+    [mode, earningsByDate, hoursByDate, employeesByDate, overlappingDates, weekNumberPosition, selectedDate, selectedDates, newlyAddedDates, taxSettings, highlightDates, animateCellValues]
   );
 
   const handleDayClick = React.useCallback(
