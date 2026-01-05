@@ -88,6 +88,16 @@ export function AppFooter() {
                   {footer.legal.terms}
                 </a>
               </li>
+              <li>
+                <a
+                  href={`https://tidex.no/${locale}/security`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-text-secondary hover:text-text-primary transition-colors"
+                >
+                  {footer.legal.security}
+                </a>
+              </li>
             </ul>
           </div>
 

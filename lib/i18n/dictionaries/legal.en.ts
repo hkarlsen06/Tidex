@@ -218,4 +218,104 @@ export const legalEn = {
       },
     ],
   },
+  security: {
+    meta: {
+      title: 'Security Disclosure Policy — Tidex',
+      description: 'How to report security vulnerabilities to Tidex responsibly.',
+    },
+    title: 'Security Disclosure Policy',
+    lastUpdatedLabel: 'Last updated',
+    dateLocale: 'en-US',
+    sections: [
+      {
+        heading: '1. Overview',
+        paragraphs: [
+          'We take the security of Tidex and our users seriously. If you discover a security vulnerability, we encourage you to report it responsibly.',
+          'This policy explains how to report vulnerabilities and what you can expect from us.',
+        ],
+      },
+      {
+        heading: '2. How to report',
+        paragraphs: [
+          'Send your report to contact@tidex.no with the subject line "Security Report".',
+          'Please include:',
+        ],
+        list: [
+          { text: 'A clear description of the vulnerability.' },
+          { text: 'Steps to reproduce the issue.' },
+          { text: 'The potential impact if exploited.' },
+          { text: 'Any proof-of-concept code or screenshots, if available.' },
+        ],
+      },
+      {
+        heading: '3. Response timeline',
+        paragraphs: ['When you report a vulnerability:'],
+        list: [
+          { text: 'We aim to acknowledge receipt within 72 hours.' },
+          { text: 'We aim to provide an initial assessment within 10 business days.' },
+          { text: 'Resolution timelines depend on severity and complexity.' },
+        ],
+        closingParagraph: 'We will keep you informed of our progress throughout the process.',
+      },
+      {
+        heading: '4. Safe harbor',
+        paragraphs: [
+          'We consider security research conducted in accordance with this policy to be authorised and will not pursue legal action against researchers who:',
+        ],
+        list: [
+          { text: 'Act in good faith and follow this policy.' },
+          { text: 'Avoid accessing or modifying data belonging to other users.' },
+          { text: 'Do not disrupt or degrade the service.' },
+          { text: 'Report vulnerabilities promptly and do not exploit them beyond what is necessary to demonstrate the issue.' },
+        ],
+      },
+      {
+        heading: '5. In scope',
+        paragraphs: ['We are interested in vulnerabilities affecting:'],
+        list: [
+          { text: 'Authentication and authorisation flaws.' },
+          { text: 'Payment processing security.' },
+          { text: 'API security issues.' },
+          { text: 'Data exposure or leakage.' },
+          { text: 'Cross-site scripting (XSS) and injection vulnerabilities.' },
+          { text: 'Session management weaknesses.' },
+        ],
+      },
+      {
+        heading: '6. Out of scope',
+        paragraphs: ['The following are not considered valid security reports:'],
+        list: [
+          { text: 'Denial of service (DoS) attacks.' },
+          { text: 'Social engineering or phishing attempts.' },
+          { text: 'Physical attacks against our infrastructure.' },
+          { text: 'Vulnerabilities in third-party services we do not control.' },
+          { text: 'Issues requiring physical access to a user\'s device.' },
+          { text: 'Outdated browsers or plugins.' },
+        ],
+      },
+      {
+        heading: '7. Handling user data',
+        paragraphs: [
+          'If you discover a vulnerability that exposes user data:',
+        ],
+        list: [
+          { text: 'Do not access, copy, or store user data beyond what is necessary to demonstrate the vulnerability.' },
+          { text: 'Delete any user data you may have accessed as soon as the report is submitted.' },
+          { text: 'Do not share user data with third parties.' },
+        ],
+      },
+      {
+        heading: '8. Coordinated disclosure',
+        paragraphs: [
+          'We ask that you give us reasonable time to address the vulnerability before any public disclosure.',
+          'We aim to resolve critical issues as quickly as possible and will coordinate with you on disclosure timing.',
+          'If you wish to publish your findings, please contact us first so we can ensure users are protected.',
+        ],
+      },
+      {
+        heading: '9. Contact',
+        paragraphs: ['Security reports and questions should be sent to contact@tidex.no.'],
+      },
+    ],
+  },
 } as const;

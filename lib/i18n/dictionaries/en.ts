@@ -81,6 +81,7 @@ export const en: Dictionary = {
       title: 'Legal',
       privacy: 'Privacy Policy',
       terms: 'Terms of Use',
+      security: 'Security',
     },
     company: {
       title: 'Company',
