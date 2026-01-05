@@ -321,9 +321,47 @@
           }
         }
 
-        // Start auto-retry after short delay
-        // Helps recover from transient failures during initial load
-        setTimeout(function() { safeCall(tryReconnect); }, 2000);
+        // CRITICAL: Check connectivity IMMEDIATELY on page load
+        // This page may have been shown incorrectly due to a transient network hiccup
+        // or slow initial connection - we need to verify before showing the UI
+        async function immediateConnectivityCheck() {
+          // If browser reports offline, skip immediate check
+          if (!navigator.onLine) {
+            // Start normal retry flow after short delay
+            setTimeout(function() { safeCall(tryReconnect); }, 2000);
+            return;
+          }
+
+          // Browser thinks we're online - this is likely a false positive
+          // Try to fetch immediately to verify
+          try {
+            var controller = new AbortController();
+            var timeoutId = setTimeout(function() { controller.abort(); }, 3000);
+
+            var response = await fetch('/', {
+              method: 'HEAD',
+              cache: 'no-store',
+              signal: controller.signal
+            });
+
+            clearTimeout(timeoutId);
+
+            // Server is reachable! Reload immediately
+            updateStatus(t.connectionRestored);
+            setTimeout(function() {
+              window.location.reload();
+            }, 100);
+            return;
+          } catch (e) {
+            console.log('[Offline] Immediate connectivity check failed:', e.message);
+          }
+
+          // Failed - start normal retry flow faster
+          setTimeout(function() { safeCall(tryReconnect); }, 1000);
+        }
+
+        // Run immediate connectivity check
+        safeCall(immediateConnectivityCheck);
       })();
     </script>
   </body>
