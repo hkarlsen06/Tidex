@@ -2,6 +2,7 @@
 
 import type React from "react";
 import Image from "next/image";
+import { AnimateNumber } from "motion-plus/react";
 import { ShiftWithComputations } from "@/lib/payroll";
 import { Card, CardHeader } from "@/components/app/Card";
 import { cn } from "@/lib/cn";
@@ -10,7 +11,6 @@ import {
   formatPlainAmount as formatPlainAmountValue,
   formatHours as formatHoursValue,
 } from "@/lib/formatters";
-import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
 import { getDateFormatter } from "@/lib/i18n/locale";
 import { useCurrency } from "@/components/providers/CurrencyProvider";
 import TriangleWarningIcon from "@/public/icons/triangle-warning.svg";
@@ -70,7 +70,6 @@ export function formatPlainAmount(value: number) {
 
 export function ShiftCard({ shift, onClick, isToday = false, progress, taxSettings, showEarnings = true, hasConflict = false, excludedFromTotal = false }: ShiftCardProps) {
   const { t, locale } = useTranslations();
-  const formatCurrency = useFormatCurrency();
   const { symbol: currencySymbol, display: currencyDisplay } = useCurrency();
   const { computed } = shift;
   const { dayName, dayNumber, monthName } = formatDateParts(shift.shift_date, locale, t.dateTime.daysFull, t.dateTime.monthsShort);
@@ -100,9 +99,15 @@ export function ShiftCard({ shift, onClick, isToday = false, progress, taxSettin
   const hasSupplements = supplementPay > 0;
   const showBreakdown = taxEnabled || hasSupplements;
 
-  const breakdown = taxEnabled
-    ? `${formatPlainAmount(gross)} − ${formatPlainAmount(taxAmount)}`
-    : `${formatPlainAmount(basePay)}${hasSupplements ? ` + ${formatPlainAmount(supplementPay)}` : ""}`;
+  // Breakdown values for animated display
+  const breakdownType: 'tax' | 'supplement' | 'none' =
+    taxEnabled ? 'tax' : hasSupplements ? 'supplement' : 'none';
+
+  const breakdownValues = {
+    first: breakdownType === 'tax' ? gross : basePay,
+    second: breakdownType === 'tax' ? taxAmount : supplementPay,
+    operator: breakdownType === 'tax' ? '−' : '+',
+  };
 
   const isActive = typeof progress === 'number' && progress >= 0 && progress <= 100;
 
@@ -168,19 +173,49 @@ export function ShiftCard({ shift, onClick, isToday = false, progress, taxSettin
         <div className="text-right">
           {showEarnings ? (
             <>
-              <p className={cn(
-                "text-2xl font-semibold tracking-tight",
+              <span className={cn(
+                "block text-2xl font-semibold tracking-tight",
                 excludedFromTotal
                   ? "text-text-muted line-through decoration-2"
                   : "text-text-primary"
               )}>
-                {formatCurrency(displayAmount)}
-              </p>
-              {showBreakdown && (
-                <p className={cn(
-                  "text-sm text-text-muted",
+                <AnimateNumber
+                  format={{
+                    style: 'currency',
+                    currency: 'NOK',
+                    maximumFractionDigits: 0,
+                  }}
+                  locales="nb-NO"
+                  transition={{
+                    visualDuration: 0.8,
+                    type: 'spring',
+                    bounce: 0.1,
+                  }}
+                >
+                  {displayAmount}
+                </AnimateNumber>
+              </span>
+              {showBreakdown && breakdownType !== 'none' && (
+                <span className={cn(
+                  "block text-sm text-text-muted",
                   excludedFromTotal && "line-through"
-                )}>{breakdown}</p>
+                )}>
+                  <AnimateNumber
+                    format={{ maximumFractionDigits: 0 }}
+                    locales="nb-NO"
+                    transition={{ visualDuration: 0.6, type: 'spring', bounce: 0.1 }}
+                  >
+                    {breakdownValues.first}
+                  </AnimateNumber>
+                  {' '}{breakdownValues.operator}{' '}
+                  <AnimateNumber
+                    format={{ maximumFractionDigits: 0 }}
+                    locales="nb-NO"
+                    transition={{ visualDuration: 0.6, type: 'spring', bounce: 0.1 }}
+                  >
+                    {breakdownValues.second}
+                  </AnimateNumber>
+                </span>
               )}
             </>
           ) : (

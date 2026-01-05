@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useEffect, useState, useRef } from 'react';
+import React from 'react';
 import { ArrowDown, ArrowUp, HelpCircle } from 'lucide-react';
-import { useMotionValue, animate, motion, AnimatePresence } from 'motion/react';
+import { AnimateNumber, Typewriter } from 'motion-plus/react';
 import { Card, CardContent } from '@/components/app/Card';
 import { ClickTooltip } from '@/components/app/Tooltip';
 import { useTranslations } from '@/lib/i18n/client';
@@ -15,6 +15,7 @@ interface TotalCardProps {
   className?: string;
   projectedTotal?: string;
   grossBeforeTax?: string;
+  /** @deprecated No longer used - animations are now number-based */
   animationDirection?: 'next' | 'previous' | null;
   subtitlePlaceholder?: string;
   useZeroPlaceholder?: boolean;
@@ -26,85 +27,45 @@ interface TotalCardProps {
   totalShiftsCount?: number;
 }
 
-// Helper to get animation classes based on direction
-function getAnimationClasses(direction: 'next' | 'previous' | null): string {
-  if (!direction) return '';
-
-  if (direction === 'next') {
-    // Going to next month: slide out right, slide in from right
-    return 'animate-[slide-in-from-right_0.4s_ease-out]';
-  } else {
-    // Going to previous month: slide out left, slide in from left
-    return 'animate-[slide-in-from-left_0.4s_ease-out]';
-  }
-}
-
 // Extract numeric value from formatted string like "16 851 kr"
 function extractNumber(value: string): number {
   const numericString = value.replace(/[^\d]/g, '');
   return parseInt(numericString, 10) || 0;
 }
 
-// Format number with spaces as thousand separators (Norwegian style)
-function formatNumber(num: number, template: string): string {
-  const suffix = template.replace(/[\d\s]/g, '').trim();
-  const formatted = Math.round(num)
-    .toString()
-    .replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-  return suffix ? `${formatted} ${suffix}` : formatted;
-}
-
-// Animated counter that starts with "---" then counts up to target value
-interface AnimatedCounterProps {
+// Animated currency display using motion-plus AnimateNumber
+interface AnimatedCurrencyProps {
   value: string;
   className?: string;
   style?: React.CSSProperties;
 }
 
-function AnimatedCounter({ value, className, style }: AnimatedCounterProps) {
-  const targetNumber = extractNumber(value);
-  const count = useMotionValue(0);
-  // Start with 0 so animation begins from the start - avoids flash of final value
-  const [displayValue, setDisplayValue] = useState(() => formatNumber(0, value));
-  const prevValueRef = useRef(value);
-  const hasAnimatedRef = useRef(false);
-
-  useEffect(() => {
-    const isValueChange = value !== prevValueRef.current;
-
-    if (isValueChange) {
-      // Value changed - reset for new animation
-      count.set(0);
-      prevValueRef.current = value;
-      hasAnimatedRef.current = false;
-    }
-
-    // Only animate from 0 if:
-    // 1. First render and we haven't animated yet, OR
-    // 2. Value changed (month navigation)
-    const shouldAnimateFromZero = !hasAnimatedRef.current || isValueChange;
-
-    if (shouldAnimateFromZero) {
-      // Reset to 0 to animate up (this happens synchronously before RAF)
-      count.set(0);
-    }
-
-    const controls = animate(count, targetNumber, {
-      duration: 1.2,
-      ease: [0.25, 0.1, 0.25, 1],
-      onUpdate: (latest) => {
-        hasAnimatedRef.current = true;
-        setDisplayValue(formatNumber(latest, value));
-      },
-    });
-
-    return () => controls.stop();
-  }, [value, targetNumber, count]);
+function AnimatedCurrency({ value, className, style }: AnimatedCurrencyProps) {
+  const numericValue = extractNumber(value);
+  const useCompact = numericValue > 99999;
 
   return (
-    <span className={className} style={style}>
-      {displayValue}
-    </span>
+    <AnimateNumber
+      format={{
+        style: 'currency',
+        currency: 'NOK',
+        maximumFractionDigits: 0,
+        ...(useCompact && {
+          notation: 'compact',
+          compactDisplay: 'short',
+        }),
+      }}
+      locales="nb-NO"
+      className={className}
+      style={style}
+      transition={{
+        visualDuration: 1.2,
+        type: 'spring',
+        bounce: 0.1,
+      }}
+    >
+      {numericValue}
+    </AnimateNumber>
   );
 }
 
@@ -116,7 +77,7 @@ export const TotalCard: React.FC<TotalCardProps> = ({
   className = '',
   projectedTotal,
   grossBeforeTax,
-  animationDirection = null,
+  animationDirection: _animationDirection = null,
   subtitlePlaceholder,
   useZeroPlaceholder = true,
   hasPendingShifts = false,
@@ -124,6 +85,31 @@ export const TotalCard: React.FC<TotalCardProps> = ({
   totalShiftsCount,
 }) => {
   const { t } = useTranslations();
+
+  // Construct subtitle text for typewriter
+  const subtitleText = (() => {
+    const showDashes = (useZeroPlaceholder && (projectedTotal ? projectedTotal === '0 kr' : total === '0 kr'));
+    if (showDashes) return '— — —';
+
+    // Build subtitle value
+    const hasFuture = projectedTotal && projectedTotal !== total && projectedTotal !== '0 kr';
+    const displayTotalVal = useZeroPlaceholder && total === '0 kr' ? '— — —' : total;
+    const showGross = !hasFuture && grossBeforeTax && grossBeforeTax !== '0 kr' && grossBeforeTax !== total;
+    const hasRealEarned = hasFuture && displayTotalVal !== '— — —';
+    const showPlanned = !showDashes && hasFuture && !hasRealEarned && plannedShiftsCount !== undefined && plannedShiftsCount > 0;
+    const showCount = !showDashes && !hasRealEarned && !showGross && !showPlanned && totalShiftsCount !== undefined;
+
+    const value = hasRealEarned ? displayTotalVal : showGross ? grossBeforeTax : showPlanned ? String(plannedShiftsCount) : showCount ? String(totalShiftsCount) : null;
+    const label = hasRealEarned ? t.components.totalCard.earnedToDate
+      : showGross ? t.components.totalCard.beforeTax
+        : showPlanned ? (plannedShiftsCount === 1 ? t.components.totalCard.shiftPlanned : t.components.totalCard.shiftsPlanned)
+          : showCount ? (totalShiftsCount === 1 ? t.components.totalCard.shift : t.components.totalCard.shifts)
+            : null;
+
+    if (value && label) return `${value} ${label}`;
+    return null;
+  })();
+
   const cardClasses = [
     'relative overflow-hidden',
     'bg-surface-primary border-border-subtle',
@@ -140,7 +126,6 @@ export const TotalCard: React.FC<TotalCardProps> = ({
   const isPercentageReady = typeof percentageChange === 'number';
   const isPositive = isPercentageReady && (percentageChange as number) >= 0;
   const hasChange = isPercentageReady && (percentageChange as number) !== 0;
-  const isZeroChange = isPercentageReady && (percentageChange as number) === 0;
   const ArrowIcon = isPositive ? ArrowUp : ArrowDown;
 
   const handleKeyDown = onClick
@@ -152,13 +137,10 @@ export const TotalCard: React.FC<TotalCardProps> = ({
     }
     : undefined;
 
-  const displayTotal = useZeroPlaceholder && total === '0 kr' ? '— — —' : total;
-
   // Determine what to show:
   // - Main display (big blue number): projected total for the whole month
   // - Subtitle: earnings up to today (when there are future shifts) OR gross before tax (when no future shifts)
   const hasFutureShifts = projectedTotal && projectedTotal !== total && projectedTotal !== '0 kr';
-  const showGrossBeforeTax = !hasFutureShifts && grossBeforeTax && grossBeforeTax !== '0 kr' && grossBeforeTax !== total;
 
   // Main display: use projected total if available, otherwise use total
   const mainDisplayValue = hasFutureShifts ? projectedTotal! : total;
@@ -166,44 +148,6 @@ export const TotalCard: React.FC<TotalCardProps> = ({
 
   // Show help tooltip when displaying placeholder but user has pending shifts
   const showPendingShiftsHelp = displayMain === '— — —' && hasPendingShifts;
-
-  // Subtitle content priority:
-  // 1. Three dashes (when main display shows dashes - no data yet)
-  // 2. Earned to date (when future shifts exist and we have real earnings)
-  // 3. Gross before tax (when no future shifts but tax applies)
-  // 4. X shifts planned (when future shifts exist but no earnings yet)
-  // 5. X shifts (fallback - show total shift count when nothing else applies)
-  const showDashesSubtitle = displayMain === '— — —';
-  const hasRealEarnedValue = hasFutureShifts && displayTotal !== '— — —';
-  const showPlannedShifts = !showDashesSubtitle && hasFutureShifts && !hasRealEarnedValue && plannedShiftsCount !== undefined && plannedShiftsCount > 0;
-  const showShiftCount = !showDashesSubtitle && !hasRealEarnedValue && !showGrossBeforeTax && !showPlannedShifts && totalShiftsCount !== undefined;
-
-  const subtitleValue = showDashesSubtitle
-    ? '— — —'
-    : hasRealEarnedValue
-      ? displayTotal
-      : showGrossBeforeTax
-        ? grossBeforeTax
-        : showPlannedShifts
-          ? String(plannedShiftsCount)
-          : showShiftCount
-            ? String(totalShiftsCount)
-            : null;
-
-  const subtitleLabel = showDashesSubtitle
-    ? null
-    : hasRealEarnedValue
-      ? t.components.totalCard.earnedToDate
-      : showGrossBeforeTax
-        ? t.components.totalCard.beforeTax
-        : showPlannedShifts
-          ? (plannedShiftsCount === 1 ? t.components.totalCard.shiftPlanned : t.components.totalCard.shiftsPlanned)
-          : showShiftCount
-            ? (totalShiftsCount === 1 ? t.components.totalCard.shift : t.components.totalCard.shifts)
-            : null;
-
-  const shouldShowSubtitle =
-    Boolean(subtitlePlaceholder) || (!subtitlePlaceholder && (showDashesSubtitle || hasRealEarnedValue || showGrossBeforeTax || showPlannedShifts || showShiftCount));
 
   return (
     <Card
@@ -222,45 +166,29 @@ export const TotalCard: React.FC<TotalCardProps> = ({
           </div>
         ) : (
           <div className="text-center">
-            {(hasChange || !isPercentageReady || isZeroChange) && (
-              <div
-                className={`flex items-center justify-center gap-2 ${getAnimationClasses(animationDirection)}`}
-              >
-                <AnimatePresence mode="wait">
-                  {hasChange ? (
-                    <motion.span
-                      key="percentage-value"
-                      initial={{ opacity: 0, y: -8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: 8 }}
-                      transition={{ duration: 0.4, ease: [0.25, 0.1, 0.25, 1] }}
-                      className={`relative text-lg font-semibold ${isPositive ? 'text-brand-highlight' : 'text-text-secondary'}`}
-                    >
-                      <ArrowIcon
-                        className="absolute right-full mr-1 h-6 w-6 top-1/2 -translate-y-1/2"
-                        strokeWidth={2}
-                      />
-                      {Math.abs(percentageChange as number)}
-                      <span className="absolute left-full ml-0.5">%</span>
-                    </motion.span>
-                  ) : (
-                    <motion.span
-                      key="percentage-placeholder"
-                      initial={{ opacity: 1 }}
-                      exit={{ opacity: 0, y: -8 }}
-                      transition={{ duration: 0.2 }}
-                      className="text-lg font-semibold text-text-muted"
-                    >
-                      — — —
-                    </motion.span>
-                  )}
-                </AnimatePresence>
-              </div>
-            )}
-            <div
-              key={`total-${total}`}
-              className={`mt-3 relative flex items-center justify-center ${getAnimationClasses(animationDirection)}`}
-            >
+            {/* Percentage change indicator */}
+            <div className="flex items-center justify-center gap-2">
+              <span className={`relative text-lg font-semibold ${hasChange ? (isPositive ? 'text-brand-highlight' : 'text-text-secondary') : 'text-text-muted'}`}>
+                {hasChange && (
+                  <ArrowIcon
+                    className="absolute right-full mr-1 h-6 w-6 top-1/2 -translate-y-1/2"
+                    strokeWidth={2}
+                  />
+                )}
+                <AnimateNumber
+                  suffix="%"
+                  transition={{
+                    visualDuration: 0.8,
+                    type: 'spring',
+                    bounce: 0.1,
+                  }}
+                >
+                  {isPercentageReady ? Math.abs(percentageChange as number) : 0}
+                </AnimateNumber>
+              </span>
+            </div>
+            {/* Main total display */}
+            <div className="mt-3 relative flex items-center justify-center">
               {/*
                 Container query container - font scales based on container width.
                 Uses clamp() with cqi units: min 28px, preferred 22cqi, max 72px.
@@ -278,7 +206,7 @@ export const TotalCard: React.FC<TotalCardProps> = ({
                     {displayMain}
                   </span>
                 ) : (
-                  <AnimatedCounter
+                  <AnimatedCurrency
                     value={displayMain}
                     className="font-bold text-brand-highlight"
                     style={{ fontSize: 'clamp(28px, 22cqi, 72px)' }}
@@ -303,34 +231,25 @@ export const TotalCard: React.FC<TotalCardProps> = ({
                 </div>
               )}
             </div>
-            {/* Always render subtitle row to prevent layout shift */}
-            <div
-              key={`subtitle-${total}`}
-              className={`mt-4 text-lg text-text-secondary min-h-7 relative flex items-baseline justify-center ${getAnimationClasses(animationDirection)}`}
-            >
-              <AnimatePresence mode="wait">
-                {subtitlePlaceholder ? (
-                  <motion.span
-                    key="subtitle-placeholder-custom"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    {subtitlePlaceholder}
-                  </motion.span>
-                ) : shouldShowSubtitle ? (
-                  <motion.span
-                    key="subtitle-value"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <span className="font-semibold text-text-primary">{subtitleValue}</span> {subtitleLabel}
-                  </motion.span>
-                ) : null}
-              </AnimatePresence>
+            {/* Subtitle row - typewriter animation */}
+            <div className="mt-4 text-lg text-text-secondary min-h-7 relative flex items-baseline justify-center">
+              {subtitlePlaceholder ? (
+                <Typewriter
+                  speed="normal"
+                  variance={0.5}
+                  cursorBlinkDuration={4}
+                >
+                  {subtitlePlaceholder}
+                </Typewriter>
+              ) : subtitleText ? (
+                <Typewriter
+                  speed="normal"
+                  variance={0.5}
+                  cursorBlinkDuration={4}
+                >
+                  {subtitleText}
+                </Typewriter>
+              ) : null}
             </div>
           </div>
         )}
