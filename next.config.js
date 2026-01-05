@@ -121,15 +121,6 @@ const nextConfig = {
           },
         ],
       },
-      {
-        source: '/splash/:path*',
-        headers: [
-          {
-            key: 'Cache-Control',
-            value: 'public, max-age=31536000, immutable',
-          },
-        ],
-      },
       // Apple App Site Association for iOS Universal Links
       {
         source: '/.well-known/apple-app-site-association',

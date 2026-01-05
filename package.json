@@ -24,8 +24,8 @@
     "dev-site:start": "pnpm --filter dev-site start",
     "ios:local": "cp ios/App/App/capacitor.config.local.json ios/App/App/capacitor.config.json && echo 'Switched to local dev server (https://local.tidex.no:3000)'",
     "ios:prod": "pnpm sync-ios && echo 'Switched to production server (https://app.tidex.no)'",
-    "sync-ios": "pnpm exec cap sync ios",
-    "ios-open": "pnpm exec cap open ios"
+    "sync-ios": "cp public/offline.html dist/offline.html && pnpm exec cap sync ios",
+    "open-ios": "pnpm exec cap open ios"
   },
   "dependencies": {
     "@capacitor-firebase/messaging": "^8.0.1",

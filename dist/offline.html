@@ -1,171 +1,391 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>Tidex - Offline</title>
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
-    html, body {
-      height: 100%;
-      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-      color: #f8fafc;
-    }
-
-    body {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
-      padding-top: env(safe-area-inset-top, 24px);
-      padding-bottom: env(safe-area-inset-bottom, 24px);
-      padding-left: env(safe-area-inset-left, 24px);
-      padding-right: env(safe-area-inset-right, 24px);
-      text-align: center;
-    }
-
-    .container {
-      max-width: 320px;
-      width: 100%;
-    }
-
-    .icon {
-      width: 64px;
-      height: 64px;
-      margin-bottom: 24px;
-      opacity: 0.8;
-    }
-
-    h1 {
-      font-size: 24px;
-      font-weight: 600;
-      margin-bottom: 12px;
-      color: #f8fafc;
-    }
-
-    p {
-      font-size: 16px;
-      line-height: 1.5;
-      color: #94a3b8;
-      margin-bottom: 32px;
-    }
-
-    button {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 100%;
-      padding: 14px 24px;
-      font-size: 16px;
-      font-weight: 500;
-      color: #0f172a;
-      background: linear-gradient(135deg, #38bdf8 0%, #818cf8 100%);
-      border: none;
-      border-radius: 12px;
-      cursor: pointer;
-      transition: transform 0.15s ease, opacity 0.15s ease;
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    button:active {
-      transform: scale(0.98);
-      opacity: 0.9;
-    }
-
-    .logo {
-      margin-top: 48px;
-      font-size: 14px;
-      font-weight: 600;
-      color: #475569;
-      letter-spacing: 0.5px;
-    }
-  </style>
-</head>
-<body>
-  <div class="container" id="content" style="display: none;">
-    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M1 1l22 22M16.72 11.06A10.94 10.94 0 0119 12.55M5 12.55a10.94 10.94 0 015.17-2.39M10.71 5.05A16 16 0 0122.58 9M1.42 9a15.91 15.91 0 014.7-2.88M8.53 16.11a6 6 0 016.95 0M12 20h.01"/>
-    </svg>
-    <h1 id="title">Du er ikke koblet til internett</h1>
-    <p id="description">Koble til, og trykk "Prøv igjen"</p>
-    <button id="retry-btn" onclick="retryConnection()">
-      Prøv igjen
-    </button>
-    <div class="logo">TIDEX</div>
-  </div>
-  <script>
-    (function() {
-      // Immediately try to reload - this page may have been shown incorrectly
-      // during a slow connection or transient network hiccup
-      var hasRetried = false;
-      var retryCount = 0;
-      var maxAutoRetries = 3;
-
-      function showContent() {
-        document.getElementById('content').style.display = 'block';
+<html lang="no">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0e172a" />
+    <title>Offline – Tidex</title>
+    <style>
+      :root {
+        --bg-primary: #0c0e14;
+        --bg-secondary: #0e172a;
+        --text-primary: #ffffff;
+        --text-secondary: #94a3b8;
+        --brand-primary: #3b82f6;
       }
 
-      async function checkAndReload() {
-        if (hasRetried) return;
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
 
-        try {
-          // Try to fetch the main page with a short timeout
-          var controller = new AbortController();
-          var timeoutId = setTimeout(function() { controller.abort(); }, 5000);
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+          'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+          sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        background: var(--bg-primary);
+        color: var(--text-primary);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      }
 
-          var response = await fetch('https://app.tidex.no/', {
-            method: 'HEAD',
-            cache: 'no-store',
-            signal: controller.signal
-          });
+      .offline-container {
+        text-align: center;
+        max-width: 400px;
+        width: 100%;
+      }
 
-          clearTimeout(timeoutId);
+      .logo {
+        width: 80px;
+        height: 80px;
+        margin: 0 auto 32px;
+        background: var(--bg-secondary);
+        border-radius: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 48px;
+        font-weight: 700;
+        color: var(--brand-primary);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      }
 
-          // If we got any response, the server is reachable - reload immediately
-          hasRetried = true;
-          window.location.href = 'https://app.tidex.no';
-        } catch (e) {
-          retryCount++;
-          // Server not reachable, show the offline UI
-          if (retryCount >= maxAutoRetries) {
-            showContent();
-          } else {
-            // Try again after a short delay
-            setTimeout(checkAndReload, 1000);
-          }
+      h1 {
+        font-size: 24px;
+        font-weight: 700;
+        margin-bottom: 12px;
+        color: var(--text-primary);
+      }
+
+      p {
+        font-size: 16px;
+        line-height: 1.6;
+        color: var(--text-secondary);
+        margin-bottom: 32px;
+      }
+
+      .retry-button {
+        display: inline-block;
+        padding: 12px 24px;
+        background: var(--brand-primary);
+        color: white;
+        text-decoration: none;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: opacity 0.2s;
+        border: none;
+        cursor: pointer;
+        font-size: 16px;
+      }
+
+      .retry-button:hover {
+        opacity: 0.9;
+      }
+
+      .retry-button:active {
+        opacity: 0.8;
+      }
+
+      .icon {
+        font-size: 64px;
+        margin-bottom: 24px;
+        opacity: 0.6;
+      }
+
+      @media (prefers-color-scheme: light) {
+        :root {
+          --bg-primary: #ffffff;
+          --bg-secondary: #f8fafc;
+          --text-primary: #0f172a;
+          --text-secondary: #64748b;
         }
       }
 
-      // Also listen for online event
-      window.addEventListener('online', function() {
-        hasRetried = true;
-        window.location.href = 'https://app.tidex.no';
-      });
-
-      // Start checking immediately
-      if (navigator.onLine) {
-        // Browser thinks we're online - likely a transient error, retry immediately
-        checkAndReload();
-      } else {
-        // Browser reports offline - show UI but still try
-        showContent();
-        checkAndReload();
+      /* Safe area padding for notched devices */
+      @supports (padding: env(safe-area-inset-bottom)) {
+        body {
+          padding-bottom: max(20px, env(safe-area-inset-bottom));
+        }
       }
+    </style>
+  </head>
+  <body>
+    <div class="offline-container" id="offline-container" style="display: none;">
+      <div class="logo">
+        <svg width="48" height="48" viewBox="-40 -40 611 627" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="logoGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stop-color="#00D4FF"/>
+              <stop offset="50%" stop-color="#7B61FF"/>
+              <stop offset="100%" stop-color="#9B4DCA"/>
+            </linearGradient>
+          </defs>
+          <g transform="matrix(1.388889,0,0,1.388889,-541.775787,-1494.193122)">
+            <path d="M756,1077c-60.8334,0.1203 -288.1826,-2.7163 -349,0c-6.0816,0.2716 -15.2292,2.138 -16,14c-0.692,10.6494 -1.6711,37.4598 0,48c0.7708,4.862 5.9602,14.1855 16,14c20.2977,-0.375 82.7506,-0.6596 105,0c13.022,0.386 25.9275,10.7905 26,26c0.2359,49.5227 -0.2537,227.5927 0,270c0.262,43.7816 89.9981,9.2281 90,-32c0.0023,-47.7505 -0.4143,-195.8051 0,-240c0.089,-9.5004 9.6491,-23.8549 25,-24c21.5403,-0.2035 81.9476,0.5129 102,0c9.1601,-0.2343 16.715,-5.0697 17,-18c0.2255,-10.2309 0.2826,-30.2076 0,-41c-0.2013,-7.6885 -5.2183,-17.0213 -16,-17Z" fill="url(#logoGradient)"/>
+          </g>
+        </svg>
+      </div>
+      <div class="icon">📡</div>
+      <h1 id="title">Du er offline</h1>
+      <p id="description">
+        Det ser ut til at du ikke har internettilkobling. Vennligst sjekk tilkoblingen din og prøv igjen.
+      </p>
+      <button class="retry-button" id="retry-button">
+        Prøv igjen
+      </button>
+    </div>
 
-      // Fallback: if nothing happened after 3 seconds, show the UI
-      setTimeout(showContent, 3000);
-    })();
+    <script>
+      (function () {
+        // Translations
+        var translations = {
+          no: {
+            title: 'Du er offline',
+            description: 'Det ser ut til at du ikke har internettilkobling. Vennligst sjekk tilkoblingen din og prøv igjen.',
+            retryButton: 'Prøv igjen',
+            connecting: 'Kobler til...',
+            tryingToConnect: function(count, max) { return 'Prøver å koble til... (forsøk ' + count + '/' + max + ')'; },
+            connectionRestored: 'Tilkobling gjenopprettet! Laster inn...',
+            connectionDetected: 'Tilkobling oppdaget! Laster inn...',
+            noConnection: function(seconds) { return 'Ingen tilkobling. Prøver igjen om ' + seconds + ' sekunder...'; },
+            couldNotConnect: 'Kunne ikke koble til. Trykk "Prøv igjen" for å prøve manuelt.'
+          },
+          en: {
+            title: 'You are offline',
+            description: 'It looks like you don\'t have an internet connection. Please check your connection and try again.',
+            retryButton: 'Try again',
+            connecting: 'Connecting...',
+            tryingToConnect: function(count, max) { return 'Trying to connect... (attempt ' + count + '/' + max + ')'; },
+            connectionRestored: 'Connection restored! Loading...',
+            connectionDetected: 'Connection detected! Loading...',
+            noConnection: function(seconds) { return 'No connection. Retrying in ' + seconds + ' seconds...'; },
+            couldNotConnect: 'Could not connect. Tap "Try again" to retry manually.'
+          }
+        };
 
-    function retryConnection() {
-      window.location.href = 'https://app.tidex.no';
-    }
-  </script>
-</body>
+        // Detect locale from multiple sources (supports both web and Capacitor)
+        function detectLocale() {
+          // 1. Check URL path first (e.g., /en/shifts, /no/login)
+          var path = window.location.pathname;
+          if (path.startsWith('/en/') || path === '/en') {
+            return 'en';
+          }
+          if (path.startsWith('/no/') || path === '/no') {
+            return 'no';
+          }
+
+          // 2. Check referrer URL (useful when Capacitor serves offline.html via errorPath)
+          try {
+            if (document.referrer) {
+              var referrerPath = new URL(document.referrer).pathname;
+              if (referrerPath.startsWith('/en/') || referrerPath === '/en') {
+                return 'en';
+              }
+              if (referrerPath.startsWith('/no/') || referrerPath === '/no') {
+                return 'no';
+              }
+            }
+          } catch (e) {
+            // Ignore referrer parsing errors
+          }
+
+          // 3. Check stored locale preference (NEXT_LOCALE cookie)
+          try {
+            var cookies = document.cookie.split(';');
+            for (var i = 0; i < cookies.length; i++) {
+              var cookie = cookies[i].trim();
+              if (cookie.startsWith('NEXT_LOCALE=')) {
+                var storedLocale = cookie.substring('NEXT_LOCALE='.length);
+                if (storedLocale === 'en' || storedLocale === 'no') {
+                  return storedLocale;
+                }
+              }
+            }
+          } catch (e) {
+            // Ignore cookie parsing errors
+          }
+
+          // 4. Check localStorage (may have user preference)
+          try {
+            var savedLocale = localStorage.getItem('locale');
+            if (savedLocale === 'en' || savedLocale === 'no') {
+              return savedLocale;
+            }
+          } catch (e) {
+            // Ignore localStorage errors (may be blocked)
+          }
+
+          // 5. Fall back to browser language
+          var browserLang = navigator.language || navigator.userLanguage || 'no';
+          if (browserLang.startsWith('en')) {
+            return 'en';
+          }
+
+          // Default to Norwegian
+          return 'no';
+        }
+
+        var locale = detectLocale();
+        var t = translations[locale];
+
+        // Update static content
+        var titleEl = document.getElementById('title');
+        var descEl = document.getElementById('description');
+        var button = document.getElementById('retry-button');
+
+        titleEl.textContent = t.title;
+        descEl.textContent = t.description;
+        button.textContent = t.retryButton;
+        document.documentElement.lang = locale;
+
+        var retryCount = 0;
+        var maxRetries = 10;
+        // Progressive backoff: 2s, 3s, 5s, 5s, 5s, 10s, 10s, 10s, 15s, 15s
+        var retryIntervals = [2000, 3000, 5000, 5000, 5000, 10000, 10000, 10000, 15000, 15000];
+        var retryTimeoutId = null;
+
+        function updateStatus(message) {
+          descEl.textContent = message;
+        }
+
+        async function tryReconnect() {
+          if (retryCount >= maxRetries) {
+            updateStatus(t.couldNotConnect);
+            button.disabled = false;
+            button.textContent = t.retryButton;
+            return;
+          }
+
+          retryCount++;
+          updateStatus(t.tryingToConnect(retryCount, maxRetries));
+          button.disabled = true;
+          button.textContent = t.connecting;
+
+          try {
+            // Use GET request with cache bypass to test connectivity
+            // GET is more reliable than HEAD across proxies and middleboxes
+            var response = await fetch('/', {
+              method: 'GET',
+              cache: 'no-store',
+              headers: { 'Cache-Control': 'no-cache', Pragma: 'no-cache' },
+            });
+
+            // Any HTTP response (even 4xx/5xx) proves network connectivity
+            // Only fetch rejection means truly offline
+            updateStatus(t.connectionRestored);
+            setTimeout(function () {
+              window.location.href = '/';
+            }, 300);
+            return;
+          } catch (error) {
+            console.log('[Offline] Retry ' + retryCount + ' failed:', error.message);
+          }
+
+          // Schedule next retry with progressive backoff
+          button.disabled = false;
+          button.textContent = t.retryButton;
+          var nextInterval = retryIntervals[Math.min(retryCount, retryIntervals.length - 1)];
+          var seconds = Math.round(nextInterval / 1000);
+          updateStatus(t.noConnection(seconds));
+          retryTimeoutId = setTimeout(tryReconnect, nextInterval);
+        }
+
+        // Manual retry button
+        button.addEventListener('click', function (e) {
+          e.preventDefault();
+          if (retryTimeoutId) {
+            clearTimeout(retryTimeoutId);
+            retryTimeoutId = null;
+          }
+          retryCount = 0;
+          tryReconnect();
+        });
+
+        // Instant reload when browser detects online status
+        window.addEventListener('online', function () {
+          console.log('[Offline] Browser reports online');
+          if (retryTimeoutId) {
+            clearTimeout(retryTimeoutId);
+            retryTimeoutId = null;
+          }
+          updateStatus(t.connectionDetected);
+          setTimeout(function () {
+            window.location.href = '/';
+          }, 300);
+        });
+
+        // Safe wrapper for async function calls to prevent unhandled rejections
+        function safeCall(fn) {
+          try {
+            var result = fn();
+            if (result && typeof result.catch === 'function') {
+              result.catch(function(e) {
+                console.error('[Offline] Unhandled error:', e);
+              });
+            }
+          } catch (e) {
+            console.error('[Offline] Sync error:', e);
+          }
+        }
+
+        // Show the offline UI container
+        function showOfflineUI() {
+          var container = document.getElementById('offline-container');
+          if (container) container.style.display = 'block';
+        }
+
+        // CRITICAL: Check connectivity IMMEDIATELY on page load
+        // This page may have been shown incorrectly due to a transient network hiccup
+        // or slow initial connection - we need to verify before showing the UI
+        async function immediateConnectivityCheck() {
+          // If browser reports offline, show UI and start normal retry flow
+          if (!navigator.onLine) {
+            showOfflineUI();
+            setTimeout(function() { safeCall(tryReconnect); }, 2000);
+            return;
+          }
+
+          // Browser thinks we're online - this is likely a false positive
+          // Try to fetch immediately to verify
+          try {
+            var controller = new AbortController();
+            var timeoutId = setTimeout(function() { controller.abort(); }, 3000);
+
+            var response = await fetch('/', {
+              method: 'HEAD',
+              cache: 'no-store',
+              signal: controller.signal
+            });
+
+            clearTimeout(timeoutId);
+
+            // Server is reachable! Navigate to homepage
+            updateStatus(t.connectionRestored);
+            setTimeout(function() {
+              window.location.href = '/';
+            }, 100);
+            return;
+          } catch (e) {
+            console.log('[Offline] Immediate connectivity check failed:', e.message);
+          }
+
+          // Failed - show UI and start normal retry flow faster
+          showOfflineUI();
+          setTimeout(function() { safeCall(tryReconnect); }, 1000);
+        }
+
+        // Fallback: show UI after 3 seconds no matter what
+        setTimeout(showOfflineUI, 3000);
+
+        // Run immediate connectivity check
+        safeCall(immediateConnectivityCheck);
+      })();
+    </script>
+  </body>
 </html>

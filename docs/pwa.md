@@ -82,7 +82,7 @@ workbox.routing.registerRoute(
 - **Manifest:** [public/manifest.json](../public/manifest.json)
 - **Icons:** Various sizes in `public/` directory
   - Android: `icon-192x192.png`, `icon-384x384.png`, `icon-512x512.png`
-  - iOS: `apple-touch-icon-*.png` (multiple sizes)
+  - iOS: `apple-touch-icon.png` (180x180)
 - **Metadata:** Configured in [app/layout.tsx](../app/layout.tsx)
 
 ## Testing

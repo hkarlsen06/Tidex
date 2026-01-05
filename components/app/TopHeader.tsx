@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { Plus, Sparkles } from "lucide-react";
 import { UserMenu } from "./UserMenu";
@@ -37,14 +36,18 @@ export function TopHeader({ userName }: TopHeaderProps) {
                 className="inline-flex items-center justify-center"
                 aria-label={t.header.goToTidex}
               >
-                <Image
-                  src="/icons/tidex-wordmark.webp"
-                  alt="Tidex"
-                  width={100}
-                  height={28}
-                  className="h-7 w-auto"
-                  priority
-                />
+                <svg width="28" height="28" viewBox="-40 -40 611 627" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                  <defs>
+                    <linearGradient id="headerLogoGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                      <stop offset="0%" stopColor="#00D4FF"/>
+                      <stop offset="50%" stopColor="#7B61FF"/>
+                      <stop offset="100%" stopColor="#9B4DCA"/>
+                    </linearGradient>
+                  </defs>
+                  <g transform="matrix(1.388889,0,0,1.388889,-541.775787,-1494.193122)">
+                    <path d="M756,1077c-60.8334,0.1203 -288.1826,-2.7163 -349,0c-6.0816,0.2716 -15.2292,2.138 -16,14c-0.692,10.6494 -1.6711,37.4598 0,48c0.7708,4.862 5.9602,14.1855 16,14c20.2977,-0.375 82.7506,-0.6596 105,0c13.022,0.386 25.9275,10.7905 26,26c0.2359,49.5227 -0.2537,227.5927 0,270c0.262,43.7816 89.9981,9.2281 90,-32c0.0023,-47.7505 -0.4143,-195.8051 0,-240c0.089,-9.5004 9.6491,-23.8549 25,-24c21.5403,-0.2035 81.9476,0.5129 102,0c9.1601,-0.2343 16.715,-5.0697 17,-18c0.2255,-10.2309 0.2826,-30.2076 0,-41c-0.2013,-7.6885 -5.2183,-17.0213 -16,-17Z" fill="url(#headerLogoGradient)"/>
+                  </g>
+                </svg>
               </Link>
             )}
             <OfflineIndicator />

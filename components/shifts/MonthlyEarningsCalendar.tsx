@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useEffect, useRef, type Ref } from "react";
-import { Clock, Copy, ArrowRightLeft, Info, Trash2, X } from "lucide-react";
+import { Clock, Copy, ArrowRightLeft, Info, Trash2, X, RotateCw } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { SafeAnimateNumber } from "@/components/app/SafeAnimateNumber";
 import { useIsRouteActive } from "@/components/app/RouteVisibilityContext";
@@ -703,7 +703,8 @@ export function MonthlyEarningsCalendar({
           </div>
         </div>
         <div className="flex flex-col items-center gap-2 pb-6">
-          <div className="inline-flex h-11 w-[90%] max-w-xs items-center gap-1 rounded-full border border-border-subtle bg-surface-secondary/80 p-1 shadow-app-sm dark:shadow-app-inner">
+          <div className="relative w-full flex justify-center">
+            <div className="inline-flex h-11 w-[90%] max-w-xs items-center gap-1 rounded-full border border-border-subtle bg-surface-secondary/80 p-1 shadow-app-sm dark:shadow-app-inner">
             {/* Multi-selection mode: show delete (if allowed) and clear buttons */}
             {selectedDates && selectedDates.size > 0 ? (
               <div className="flex h-full w-full items-center gap-2 rounded-full bg-surface-primary px-1">
@@ -734,7 +735,7 @@ export function MonthlyEarningsCalendar({
                 </Button>
               </div>
             ) : selectedDate ? (
-              <div className="flex h-full w-full items-center gap-2 rounded-full bg-surface-primary px-1">
+              <div className="flex h-full w-full items-center gap-1 rounded-full bg-surface-primary">
                 {/* Copy button - hidden in readOnly mode */}
                 {!readOnly && (
                   <Button
@@ -849,6 +850,16 @@ export function MonthlyEarningsCalendar({
                 )}
               </div>
             )}
+            </div>
+            {/* Reload button for users experiencing display bugs - positioned to the right of toggle */}
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="absolute right-4 h-11 w-11 flex items-center justify-center text-text-muted hover:text-text-primary transition-colors"
+              aria-label={t.common.refresh}
+            >
+              <RotateCw strokeWidth={2} className="h-4 w-4" />
+            </button>
           </div>
           {selectedDate && (copyMode || moveMode) && (
             <div className="text-xs font-medium leading-tight text-text-muted text-center">
