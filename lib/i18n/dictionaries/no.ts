@@ -80,6 +80,7 @@ export const no = {
       title: 'Juridisk',
       privacy: 'Personvern',
       terms: 'Vilkår',
+      security: 'Sikkerhet',
     },
     company: {
       title: 'Selskap',

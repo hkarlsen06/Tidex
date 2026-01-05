@@ -218,4 +218,104 @@ export const legalNo = {
       },
     ],
   },
+  security: {
+    meta: {
+      title: 'Retningslinjer for sikkerhetsrapportering — Tidex',
+      description: 'Hvordan rapportere sikkerhetssårbarheter til Tidex på en ansvarlig måte.',
+    },
+    title: 'Retningslinjer for sikkerhetsrapportering',
+    lastUpdatedLabel: 'Sist oppdatert',
+    dateLocale: 'nb-NO',
+    sections: [
+      {
+        heading: '1. Oversikt',
+        paragraphs: [
+          'Vi tar sikkerheten til Tidex og våre brukere på alvor. Hvis du oppdager en sikkerhetssårbarhet, oppfordrer vi deg til å rapportere den på en ansvarlig måte.',
+          'Denne policyen forklarer hvordan du rapporterer sårbarheter og hva du kan forvente fra oss.',
+        ],
+      },
+      {
+        heading: '2. Hvordan rapportere',
+        paragraphs: [
+          'Send rapporten din til contact@tidex.no med emnelinjen "Sikkerhetsrapport".',
+          'Vennligst inkluder:',
+        ],
+        list: [
+          { text: 'En tydelig beskrivelse av sårbarheten.' },
+          { text: 'Steg for å reprodusere problemet.' },
+          { text: 'Den potensielle konsekvensen hvis den utnyttes.' },
+          { text: 'Eventuell proof-of-concept-kode eller skjermbilder, hvis tilgjengelig.' },
+        ],
+      },
+      {
+        heading: '3. Responstid',
+        paragraphs: ['Når du rapporterer en sårbarhet:'],
+        list: [
+          { text: 'Vi sikter mot å bekrefte mottak innen 72 timer.' },
+          { text: 'Vi sikter mot å gi en innledende vurdering innen 10 virkedager.' },
+          { text: 'Tidslinjer for løsning avhenger av alvorlighetsgrad og kompleksitet.' },
+        ],
+        closingParagraph: 'Vi holder deg informert om fremdriften gjennom hele prosessen.',
+      },
+      {
+        heading: '4. Trygg havn',
+        paragraphs: [
+          'Vi anser sikkerhetsforskning utført i samsvar med denne policyen som autorisert, og vil ikke forfølge rettslige skritt mot forskere som:',
+        ],
+        list: [
+          { text: 'Handler i god tro og følger denne policyen.' },
+          { text: 'Unngår å få tilgang til eller endre data som tilhører andre brukere.' },
+          { text: 'Ikke forstyrrer eller forringer tjenesten.' },
+          { text: 'Rapporterer sårbarheter raskt og ikke utnytter dem utover det som er nødvendig for å demonstrere problemet.' },
+        ],
+      },
+      {
+        heading: '5. Innenfor scope',
+        paragraphs: ['Vi er interessert i sårbarheter som påvirker:'],
+        list: [
+          { text: 'Autentiserings- og autorisasjonsfeil.' },
+          { text: 'Betalingsbehandlingssikkerhet.' },
+          { text: 'API-sikkerhetsproblemer.' },
+          { text: 'Dataeksponering eller lekkasje.' },
+          { text: 'Cross-site scripting (XSS) og injeksjonssårbarheter.' },
+          { text: 'Svakheter i sesjonshåndtering.' },
+        ],
+      },
+      {
+        heading: '6. Utenfor scope',
+        paragraphs: ['Følgende anses ikke som gyldige sikkerhetsrapporter:'],
+        list: [
+          { text: 'Tjenestenektangrep (DoS).' },
+          { text: 'Sosial manipulasjon eller phishing-forsøk.' },
+          { text: 'Fysiske angrep mot infrastrukturen vår.' },
+          { text: 'Sårbarheter i tredjepartstjenester vi ikke kontrollerer.' },
+          { text: 'Problemer som krever fysisk tilgang til en brukers enhet.' },
+          { text: 'Utdaterte nettlesere eller plugins.' },
+        ],
+      },
+      {
+        heading: '7. Håndtering av brukerdata',
+        paragraphs: [
+          'Hvis du oppdager en sårbarhet som eksponerer brukerdata:',
+        ],
+        list: [
+          { text: 'Ikke få tilgang til, kopier eller lagre brukerdata utover det som er nødvendig for å demonstrere sårbarheten.' },
+          { text: 'Slett alle brukerdata du måtte ha fått tilgang til så snart rapporten er sendt inn.' },
+          { text: 'Ikke del brukerdata med tredjeparter.' },
+        ],
+      },
+      {
+        heading: '8. Koordinert offentliggjøring',
+        paragraphs: [
+          'Vi ber om at du gir oss rimelig tid til å håndtere sårbarheten før offentlig offentliggjøring.',
+          'Vi sikter mot å løse kritiske problemer så raskt som mulig og vil koordinere med deg om tidspunkt for offentliggjøring.',
+          'Hvis du ønsker å publisere funnene dine, vennligst kontakt oss først slik at vi kan sikre at brukerne er beskyttet.',
+        ],
+      },
+      {
+        heading: '9. Kontakt',
+        paragraphs: ['Sikkerhetsrapporter og spørsmål sendes til contact@tidex.no.'],
+      },
+    ],
+  },
 } as const;

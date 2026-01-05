@@ -3,23 +3,31 @@ import type { Locale } from '@/lib/i18n/config';
 import type { Dictionary } from '@/lib/i18n/dictionaries/no';
 import { TermsOfService } from '@components/legal/TermsOfService';
 import { PrivacyPolicy } from '@components/legal/PrivacyPolicy';
+import { SecurityPolicy } from '@components/legal/SecurityPolicy';
 import { MarketingLocaleToggle } from './MarketingLocaleToggle';
 import { LocaleLangSetter } from './LocaleLangSetter';
 
 interface MarketingLegalPageProps {
   locale: Locale;
   dictionary: Pick<Dictionary, 'marketing' | 'legal'>;
-  variant: 'terms' | 'privacy';
-  path: '/terms' | '/privacy';
+  variant: 'terms' | 'privacy' | 'security';
+  path: '/terms' | '/privacy' | '/security';
 }
 
 export function MarketingLegalPage({ locale, dictionary, variant, path }: MarketingLegalPageProps) {
-  const content: ReactNode =
-    variant === 'terms' ? (
-      <TermsOfService content={dictionary.legal.terms} />
-    ) : (
-      <PrivacyPolicy content={dictionary.legal.privacy} />
-    );
+  let content: ReactNode;
+
+  switch (variant) {
+    case 'terms':
+      content = <TermsOfService content={dictionary.legal.terms} />;
+      break;
+    case 'privacy':
+      content = <PrivacyPolicy content={dictionary.legal.privacy} />;
+      break;
+    case 'security':
+      content = <SecurityPolicy content={dictionary.legal.security} />;
+      break;
+  }
 
   return (
     <div className="min-h-screen bg-background">
