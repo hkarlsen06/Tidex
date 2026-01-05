@@ -2,7 +2,7 @@
 
 import type React from "react";
 import Image from "next/image";
-import { AnimateNumber } from "motion-plus/react";
+import { SafeAnimateNumber } from "@/components/app/SafeAnimateNumber";
 import { ShiftWithComputations } from "@/lib/payroll";
 import { Card, CardHeader } from "@/components/app/Card";
 import { cn } from "@/lib/cn";
@@ -179,7 +179,7 @@ export function ShiftCard({ shift, onClick, isToday = false, progress, taxSettin
                   ? "text-text-muted line-through decoration-2"
                   : "text-text-primary"
               )}>
-                <AnimateNumber
+                <SafeAnimateNumber
                   layout={false}
                   format={{
                     style: 'currency',
@@ -192,32 +192,35 @@ export function ShiftCard({ shift, onClick, isToday = false, progress, taxSettin
                     type: 'spring',
                     bounce: 0.1,
                   }}
+                  routePattern="/"
                 >
                   {displayAmount}
-                </AnimateNumber>
+                </SafeAnimateNumber>
               </span>
               {showBreakdown && breakdownType !== 'none' && (
                 <span className={cn(
                   "block text-sm text-text-muted",
                   excludedFromTotal && "line-through"
                 )}>
-                  <AnimateNumber
+                  <SafeAnimateNumber
                     layout={false}
                     format={{ maximumFractionDigits: 0 }}
                     locales="nb-NO"
                     transition={{ visualDuration: 0.6, type: 'spring', bounce: 0.1 }}
+                    routePattern="/"
                   >
                     {breakdownValues.first}
-                  </AnimateNumber>
+                  </SafeAnimateNumber>
                   {' '}{breakdownValues.operator}{' '}
-                  <AnimateNumber
+                  <SafeAnimateNumber
                     layout={false}
                     format={{ maximumFractionDigits: 0 }}
                     locales="nb-NO"
                     transition={{ visualDuration: 0.6, type: 'spring', bounce: 0.1 }}
+                    routePattern="/"
                   >
                     {breakdownValues.second}
-                  </AnimateNumber>
+                  </SafeAnimateNumber>
                 </span>
               )}
             </>

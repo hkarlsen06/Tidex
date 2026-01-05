@@ -27,7 +27,7 @@ export function RouteVisibilityProvider({ children }: { children: ReactNode }) {
     if (!pathname) return false;
     // Simple pattern matching - supports /shifts, /stats, etc.
     // Strips locale prefix for matching (e.g., /en/shifts -> /shifts)
-    const pathWithoutLocale = pathname.replace(/^\/[a-z]{2}(?=\/|$)/, '');
+    const pathWithoutLocale = pathname.replace(/^\/[a-z]{2}(?=\/|$)/, '') || '/';
     return pathWithoutLocale.startsWith(routePattern);
   };
 
