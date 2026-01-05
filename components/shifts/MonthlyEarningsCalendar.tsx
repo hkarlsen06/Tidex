@@ -274,20 +274,16 @@ function FrozenCalendarSlide({
 }) {
   // Freeze snapshot on mount using lazy state initialization
   // This only runs once when the component mounts, ignoring subsequent prop updates
-  const [frozenSnapshot, setFrozenSnapshot] = useState(() => snapshot);
-  // Track if initial snapshot was empty - if so, allow one update when data arrives
-  // Check both earningsByDate and hoursByDate since either could be the source of truth
-  const [wasInitiallyEmpty] = useState(
-    () => Object.keys(snapshot.earningsByDate).length === 0 && Object.keys(snapshot.hoursByDate).length === 0
-  );
+  const [initialSnapshot] = useState(() => snapshot);
 
-  // Allow updating the frozen snapshot ONCE if we started empty and now have data
-  useEffect(() => {
-    const hasData = Object.keys(snapshot.earningsByDate).length > 0 || Object.keys(snapshot.hoursByDate).length > 0;
-    if (wasInitiallyEmpty && hasData) {
-      setFrozenSnapshot(snapshot);
-    }
-  }, [wasInitiallyEmpty, snapshot]);
+  // Track if initial snapshot was empty - if so, use the current snapshot instead
+  // This handles the case where the user navigates to a month outside the ISR window
+  // and refreshes - the initial render has no shifts, but they arrive shortly after
+  const wasInitiallyEmpty = Object.keys(initialSnapshot.earningsByDate).length === 0
+    && Object.keys(initialSnapshot.hoursByDate).length === 0;
+
+  // Use initial snapshot for exit animations, but allow current snapshot if we started empty
+  const frozenSnapshot = wasInitiallyEmpty ? snapshot : initialSnapshot;
 
   return (
     <ShiftsCalendar
