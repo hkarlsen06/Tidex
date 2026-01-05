@@ -24,7 +24,13 @@ jobs:
           node-version: "22"
           cache: "pnpm"
 
-      - run: pnpm install --frozen-lockfile
+      - name: Install dependencies
+        run: |
+          pnpm remove motion-plus 2>/dev/null || true
+          pnpm add -w "https://api.motion.dev/registry.tgz?package=motion-plus&version=2.0.2&token=$MOTION_PLUS_ACCESS_TOKEN"
+          pnpm install
+        env:
+          MOTION_PLUS_ACCESS_TOKEN: ${{ secrets.MOTION_PLUS_ACCESS_TOKEN }}
       - run: pnpm lint
         id: lint
 
