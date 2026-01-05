@@ -89,16 +89,83 @@
   </style>
 </head>
 <body>
-  <div class="container">
+  <div class="container" id="content" style="display: none;">
     <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
       <path d="M1 1l22 22M16.72 11.06A10.94 10.94 0 0119 12.55M5 12.55a10.94 10.94 0 015.17-2.39M10.71 5.05A16 16 0 0122.58 9M1.42 9a15.91 15.91 0 014.7-2.88M8.53 16.11a6 6 0 016.95 0M12 20h.01"/>
     </svg>
-    <h1>Du er ikke koblet til internett</h1>
-    <p>Koble til, og trykk "Prøv igjen"</p>
-    <button onclick="window.location.href='https://app.tidex.no'">
+    <h1 id="title">Du er ikke koblet til internett</h1>
+    <p id="description">Koble til, og trykk "Prøv igjen"</p>
+    <button id="retry-btn" onclick="retryConnection()">
       Prøv igjen
     </button>
     <div class="logo">TIDEX</div>
   </div>
+  <script>
+    (function() {
+      // Immediately try to reload - this page may have been shown incorrectly
+      // during a slow connection or transient network hiccup
+      var hasRetried = false;
+      var retryCount = 0;
+      var maxAutoRetries = 3;
+
+      function showContent() {
+        document.getElementById('content').style.display = 'block';
+      }
+
+      async function checkAndReload() {
+        if (hasRetried) return;
+
+        try {
+          // Try to fetch the main page with a short timeout
+          var controller = new AbortController();
+          var timeoutId = setTimeout(function() { controller.abort(); }, 5000);
+
+          var response = await fetch('https://app.tidex.no/', {
+            method: 'HEAD',
+            cache: 'no-store',
+            signal: controller.signal
+          });
+
+          clearTimeout(timeoutId);
+
+          // If we got any response, the server is reachable - reload immediately
+          hasRetried = true;
+          window.location.href = 'https://app.tidex.no';
+        } catch (e) {
+          retryCount++;
+          // Server not reachable, show the offline UI
+          if (retryCount >= maxAutoRetries) {
+            showContent();
+          } else {
+            // Try again after a short delay
+            setTimeout(checkAndReload, 1000);
+          }
+        }
+      }
+
+      // Also listen for online event
+      window.addEventListener('online', function() {
+        hasRetried = true;
+        window.location.href = 'https://app.tidex.no';
+      });
+
+      // Start checking immediately
+      if (navigator.onLine) {
+        // Browser thinks we're online - likely a transient error, retry immediately
+        checkAndReload();
+      } else {
+        // Browser reports offline - show UI but still try
+        showContent();
+        checkAndReload();
+      }
+
+      // Fallback: if nothing happened after 3 seconds, show the UI
+      setTimeout(showContent, 3000);
+    })();
+
+    function retryConnection() {
+      window.location.href = 'https://app.tidex.no';
+    }
+  </script>
 </body>
 </html>
