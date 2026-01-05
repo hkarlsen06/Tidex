@@ -180,6 +180,7 @@ export function ShiftCard({ shift, onClick, isToday = false, progress, taxSettin
                   : "text-text-primary"
               )}>
                 <AnimateNumber
+                  layout={false}
                   format={{
                     style: 'currency',
                     currency: 'NOK',
@@ -201,6 +202,7 @@ export function ShiftCard({ shift, onClick, isToday = false, progress, taxSettin
                   excludedFromTotal && "line-through"
                 )}>
                   <AnimateNumber
+                    layout={false}
                     format={{ maximumFractionDigits: 0 }}
                     locales="nb-NO"
                     transition={{ visualDuration: 0.6, type: 'spring', bounce: 0.1 }}
@@ -209,6 +211,7 @@ export function ShiftCard({ shift, onClick, isToday = false, progress, taxSettin
                   </AnimateNumber>
                   {' '}{breakdownValues.operator}{' '}
                   <AnimateNumber
+                    layout={false}
                     format={{ maximumFractionDigits: 0 }}
                     locales="nb-NO"
                     transition={{ visualDuration: 0.6, type: 'spring', bounce: 0.1 }}

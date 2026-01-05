@@ -579,6 +579,7 @@ export function MonthlyEarningsCalendar({
                   <div className="font-semibold text-text-primary">
                     {totalEarnings === 0 ? '—' : (
                       <AnimateNumber
+                        layout={false}
                         format={{ maximumFractionDigits: 0 }}
                         locales="nb-NO"
                         prefix={isPrefix ? currencySymbol : undefined}
@@ -596,6 +597,7 @@ export function MonthlyEarningsCalendar({
                   {effectiveTaxEnabled && totalEarnings > 0 && (
                     <div className="text-sm text-text-muted">
                       <AnimateNumber
+                        layout={false}
                         format={{ maximumFractionDigits: 0 }}
                         locales="nb-NO"
                         prefix={isPrefix ? currencySymbol : undefined}
