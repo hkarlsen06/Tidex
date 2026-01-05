@@ -475,10 +475,15 @@ export function HomeContent({ shifts: initialShifts, settings, payoutTaxSettings
     // Use payout month (payrollMonthDate) for half tax check, not earnings month
     const payoutMonth = payrollMonthDate.getMonth() + 1;
 
+    // Get payout tax settings for the earnings month (stored by earnings month key)
+    // These settings are for the payout month (earnings month + 1)
+    const earningsPayoutTaxSettings = payoutTaxByMonth.get(earningsKey) ?? null;
+
     const totals = summarizeShiftTotals({
       shifts: relevantShifts,
       halfTaxMonth: globalHalfTaxMonth,
       month: payoutMonth,
+      payoutTaxOverride: earningsPayoutTaxSettings ?? undefined,
     });
 
     const taxAmount = totals.gross - totals.net;
@@ -498,7 +503,7 @@ export function HomeContent({ shifts: initialShifts, settings, payoutTaxSettings
       showPreviousPayroll,
       isEarningsMonthLoaded,
     };
-  }, [month, settings, shiftsByMonth, payrollDay, selectedMonthIsCurrent, locale]);
+  }, [month, settings, shiftsByMonth, payrollDay, selectedMonthIsCurrent, locale, payoutTaxByMonth]);
 
   // Find shift to display based on selected month
   const displayShift = useMemo(() => {
