@@ -1,4 +1,7 @@
 {
+  "yaml.validate": false,
+  "github-actions.workflows.pinned.ignoredVersions": ["**/*"],
+  "github-actions.workflows.validation": false,
   "deno.enablePaths": ["supabase/functions"],
   "[typescript]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode"

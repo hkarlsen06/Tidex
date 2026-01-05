@@ -3,6 +3,7 @@
 import { useMemo, useState, useEffect, useRef, type Ref } from "react";
 import { Clock, Copy, ArrowRightLeft, Info, Trash2, X } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import { AnimateNumber } from "motion-plus/react";
 import { useIsRouteActive } from "@/components/app/RouteVisibilityContext";
 import { ShiftsCalendar } from "@/components/app/ShiftsCalendar";
 import { Card } from "@/components/app/Card";
@@ -14,7 +15,6 @@ import type { ISODate, EarningsByDate, HoursByDate } from "@/components/app/cale
 import { cn } from "@/lib/cn";
 import { useTranslations } from "@/lib/i18n/client";
 import { getMonthlyTotals, summarizeShiftTotals } from "@/lib/shifts/monthlyTotals";
-import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
 import { useCurrency } from "@/components/providers/CurrencyProvider";
 
 type TaxSettings = {
@@ -341,8 +341,7 @@ export function MonthlyEarningsCalendar({
   highlightDates,
 }: MonthlyEarningsCalendarProps) {
   const { t } = useTranslations();
-  const formatCurrency = useFormatCurrency();
-  const { symbol: currencySymbol } = useCurrency();
+  const { symbol: currencySymbol, display: currencyDisplay } = useCurrency();
   // Use external month context if provided (for isolated sharing page state),
   // otherwise fall back to global MonthProvider
   const globalMonthContext = useMonth();
@@ -557,15 +556,43 @@ export function MonthlyEarningsCalendar({
               // Use payout tax settings for determining if tax should be shown
               // Fall back to taxSettings.enabled if no payout tax settings
               const effectiveTaxEnabled = payoutTaxSettings?.enabled ?? taxSettings?.enabled ?? false;
+              const displayValue = effectiveTaxEnabled ? netEarnings : totalEarnings;
+              const isPrefix = currencyDisplay === 'prefix';
 
               return (
                 <div className="text-right">
                   <div className="font-semibold text-text-primary">
-                    {totalEarnings === 0 ? '—' : formatCurrency(effectiveTaxEnabled ? netEarnings : totalEarnings)}
+                    {totalEarnings === 0 ? '—' : (
+                      <AnimateNumber
+                        format={{ maximumFractionDigits: 0 }}
+                        locales="nb-NO"
+                        prefix={isPrefix ? currencySymbol : undefined}
+                        suffix={!isPrefix ? ` ${currencySymbol}` : undefined}
+                        transition={{
+                          visualDuration: 0.8,
+                          type: 'spring',
+                          bounce: 0.1,
+                        }}
+                      >
+                        {displayValue}
+                      </AnimateNumber>
+                    )}
                   </div>
                   {effectiveTaxEnabled && totalEarnings > 0 && (
                     <div className="text-sm text-text-muted">
-                      {formatCurrency(totalEarnings)}
+                      <AnimateNumber
+                        format={{ maximumFractionDigits: 0 }}
+                        locales="nb-NO"
+                        prefix={isPrefix ? currencySymbol : undefined}
+                        suffix={!isPrefix ? ` ${currencySymbol}` : undefined}
+                        transition={{
+                          visualDuration: 0.8,
+                          type: 'spring',
+                          bounce: 0.1,
+                        }}
+                      >
+                        {totalEarnings}
+                      </AnimateNumber>
                     </div>
                   )}
                 </div>
