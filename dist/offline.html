@@ -254,6 +254,10 @@
           descEl.textContent = message;
         }
 
+        // Production server URL - must be absolute for Capacitor where relative URLs
+        // resolve to the local WebView server, not the actual backend
+        var SERVER_URL = 'https://app.tidex.no';
+
         async function tryReconnect() {
           if (retryCount >= maxRetries) {
             updateStatus(t.couldNotConnect);
@@ -270,7 +274,8 @@
           try {
             // Use GET request with cache bypass to test connectivity
             // GET is more reliable than HEAD across proxies and middleboxes
-            var response = await fetch('/', {
+            // IMPORTANT: Use absolute URL - relative '/' resolves to Capacitor's local server
+            var response = await fetch(SERVER_URL, {
               method: 'GET',
               cache: 'no-store',
               headers: { 'Cache-Control': 'no-cache', Pragma: 'no-cache' },
@@ -280,7 +285,7 @@
             // Only fetch rejection means truly offline
             updateStatus(t.connectionRestored);
             setTimeout(function () {
-              window.location.href = '/';
+              window.location.href = SERVER_URL;
             }, 300);
             return;
           } catch (error) {
@@ -316,7 +321,7 @@
           }
           updateStatus(t.connectionDetected);
           setTimeout(function () {
-            window.location.href = '/';
+            window.location.href = SERVER_URL;
           }, 300);
         });
 
@@ -353,11 +358,12 @@
 
           // Browser thinks we're online - this is likely a false positive
           // Try to fetch immediately to verify
+          // IMPORTANT: Use absolute URL - relative '/' resolves to Capacitor's local server
           try {
             var controller = new AbortController();
             var timeoutId = setTimeout(function() { controller.abort(); }, 3000);
 
-            var response = await fetch('/', {
+            var response = await fetch(SERVER_URL, {
               method: 'HEAD',
               cache: 'no-store',
               signal: controller.signal
@@ -368,7 +374,7 @@
             // Server is reachable! Navigate to homepage
             updateStatus(t.connectionRestored);
             setTimeout(function() {
-              window.location.href = '/';
+              window.location.href = SERVER_URL;
             }, 100);
             return;
           } catch (e) {

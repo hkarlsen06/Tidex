@@ -3,6 +3,7 @@
 import { useMemo, useState, useEffect, useRef, type Ref } from "react";
 import { Clock, Copy, ArrowRightLeft, Info, Trash2, X, RotateCw } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import { AnimateActivity } from "motion-plus/animate-activity";
 import { SafeAnimateNumber } from "@/components/app/SafeAnimateNumber";
 import { useIsRouteActive } from "@/components/app/RouteVisibilityContext";
 import { ShiftsCalendar } from "@/components/app/ShiftsCalendar";
@@ -447,11 +448,17 @@ export function MonthlyEarningsCalendar({
   const payoutMonth = (month.getMonth() + 2) > 12 ? 1 : month.getMonth() + 2;
 
   const { totalEarnings, netEarnings, isShowingSelectedTotal } = useMemo(() => {
-    // When dates are selected, show total for selected shifts only
-    if (selectedDates && selectedDates.size > 0) {
-      const selectedShifts = monthlyShifts.filter(
-        (shift) => selectedDates.has(shift.shift_date as ISODate)
-      );
+    // When dates are selected (multi or single), show total for selected shifts only
+    const hasMultiSelection = selectedDates && selectedDates.size > 0;
+    const hasSingleSelection = selectedDate && !hasMultiSelection;
+
+    if (hasMultiSelection || hasSingleSelection) {
+      const selectedShifts = monthlyShifts.filter((shift) => {
+        if (hasMultiSelection) {
+          return selectedDates.has(shift.shift_date as ISODate);
+        }
+        return shift.shift_date === selectedDate;
+      });
       const { gross, net } = summarizeShiftTotals({
         shifts: selectedShifts,
         taxSettings,
@@ -475,7 +482,7 @@ export function MonthlyEarningsCalendar({
     });
 
     return { totalEarnings: gross, netEarnings: net, isShowingSelectedTotal: false };
-  }, [monthlyShifts, month, taxSettings, selectedDates, payoutMonth, payoutTaxSettings]);
+  }, [monthlyShifts, month, taxSettings, selectedDates, selectedDate, payoutMonth, payoutTaxSettings]);
 
   // Swipe gesture handling
   useEffect(() => {
@@ -703,159 +710,203 @@ export function MonthlyEarningsCalendar({
           </div>
         </div>
         <div className="flex flex-col items-center gap-2 pb-6">
-          <div className="relative w-full flex justify-center">
-            <div className="inline-flex h-11 w-[90%] max-w-xs items-center gap-1 rounded-full border border-border-subtle bg-surface-secondary/80 p-1 shadow-app-sm dark:shadow-app-inner">
-            {/* Multi-selection mode: show delete (if allowed) and clear buttons */}
-            {selectedDates && selectedDates.size > 0 ? (
-              <div className="flex h-full w-full items-center gap-2 rounded-full bg-surface-primary px-1">
-                {/* Delete button - only shown when onDeleteSelected is provided (not in readOnly mode) */}
-                {onDeleteSelected && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => onDeleteSelected()}
-                    disabled={deleting || isOffline}
-                    loading={deleting}
-                    title={isOffline ? "Cannot delete while offline" : undefined}
-                    className="flex-1 h-9 gap-2 rounded-full bg-red-500/10 text-red-600 hover:bg-red-500/20 dark:text-red-400 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <Trash2 strokeWidth={2} className="h-4 w-4" />
-                    {t.pages.shifts.actions.delete}
-                  </Button>
-                )}
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => onClearMultiSelection?.()}
-                  disabled={deleting}
-                  className="flex-1 h-9 gap-2 rounded-full bg-surface-secondary text-text-secondary hover:bg-surface-secondary/80"
+          <div className="flex items-center gap-1 w-full">
+            <div className="inline-flex h-11 flex-1 min-w-0 items-center gap-1 rounded-full border border-border-subtle bg-surface-secondary/80 p-1 shadow-app-sm dark:shadow-app-inner overflow-hidden">
+              {/* Multi-selection mode: show delete (if allowed) and clear buttons */}
+              <AnimateActivity
+                mode={selectedDates && selectedDates.size > 0 ? "visible" : "hidden"}
+                layoutMode="pop"
+              >
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ type: "spring", visualDuration: 0.2, bounce: 0.1 }}
+                  className="flex h-9 w-full items-center gap-1 rounded-full bg-surface-primary"
                 >
-                  <X strokeWidth={2} className="h-4 w-4" />
-                  {t.pages.shifts.actions.clearSelection}
-                </Button>
-              </div>
-            ) : selectedDate ? (
-              <div className="flex h-full w-full items-center gap-1 rounded-full bg-surface-primary">
-                {/* Copy button - hidden in readOnly mode */}
-                {!readOnly && (
+                  {/* Delete button - only shown when onDeleteSelected is provided (not in readOnly mode) */}
+                  {onDeleteSelected && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => onDeleteSelected()}
+                      disabled={deleting || isOffline}
+                      loading={deleting}
+                      title={isOffline ? "Cannot delete while offline" : undefined}
+                      className="flex-1 h-9 gap-2 rounded-full bg-red-500/10 text-red-600 hover:bg-red-500/20 dark:text-red-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Trash2 strokeWidth={2} className="h-4 w-4" />
+                      {t.pages.shifts.actions.delete}
+                    </Button>
+                  )}
                   <Button
                     type="button"
                     variant="ghost"
-                    onClick={() => onInitiateCopy?.()}
+                    onClick={() => onClearMultiSelection?.()}
+                    disabled={deleting}
+                    className="flex-1 h-9 gap-2 rounded-full bg-surface-secondary text-text-secondary hover:bg-surface-secondary/80"
+                  >
+                    <X strokeWidth={2} className="h-4 w-4" />
+                    {t.pages.shifts.actions.clearSelection}
+                  </Button>
+                </motion.div>
+              </AnimateActivity>
+
+              {/* Single date selected mode: show copy/details/move buttons */}
+              <AnimateActivity
+                mode={selectedDate && !(selectedDates && selectedDates.size > 0) ? "visible" : "hidden"}
+                layoutMode="pop"
+              >
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ type: "spring", visualDuration: 0.2, bounce: 0.1 }}
+                  className="flex h-9 w-full items-center gap-1 rounded-full bg-surface-primary"
+                >
+                  {/* Copy button - icon only */}
+                  {!readOnly && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => onInitiateCopy?.()}
+                      disabled={
+                        !onInitiateCopy ||
+                        copyMode ||
+                        copying ||
+                        moveMode ||
+                        isOffline
+                      }
+                      loading={copying}
+                      title={t.pages.shifts.actions.copy}
+                      className="h-9 w-14 shrink-0 rounded-full bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 dark:text-blue-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Copy strokeWidth={2} className="h-4 w-4" />
+                    </Button>
+                  )}
+                  <Button
+                    type="button"
+                    variant="default"
+                    onClick={() => {
+                      if (copyMode) {
+                        onCancelCopy?.();
+                      } else if (moveMode) {
+                        onCancelMoveMode?.();
+                      } else {
+                        onOpenDetails?.();
+                      }
+                    }}
                     disabled={
-                      !onInitiateCopy ||
-                      copyMode ||
                       copying ||
-                      moveMode ||
-                      isOffline
-                    }
-                    loading={copying}
-                    title={isOffline ? "Cannot copy shifts while offline" : undefined}
-                    className="flex-1 h-9 gap-2 rounded-full bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 dark:text-blue-400 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <Copy strokeWidth={2} className="h-4 w-4" />
-                    {t.pages.shifts.actions.copy}
-                  </Button>
-                )}
-                <Button
-                  type="button"
-                  variant="default"
-                  onClick={() => {
-                    if (copyMode) {
-                      onCancelCopy?.();
-                    } else if (moveMode) {
-                      onCancelMoveMode?.();
-                    } else {
-                      onOpenDetails?.();
-                    }
-                  }}
-                  disabled={
-                    copying ||
-                    moving ||
-                    (copyMode ? !onCancelCopy : moveMode ? !onCancelMoveMode : !onOpenDetails)
-                  }
-                  className={cn(
-                    "flex-1 h-9 rounded-full",
-                    !(copyMode || moveMode) && "gap-2"
-                  )}
-                >
-                  {copyMode || moveMode ? (
-                    t.pages.shifts.actions.cancel
-                  ) : (
-                    <>
-                      <Info strokeWidth={2} className="h-4 w-4" />
-                      {t.pages.shifts.actions.details}
-                    </>
-                  )}
-                </Button>
-                {/* Move button - hidden in readOnly mode */}
-                {!readOnly && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => onInitiateMove?.()}
-                    disabled={
-                      !onInitiateMove ||
-                      copyMode ||
                       moving ||
-                      moveMode ||
-                      isOffline
+                      (copyMode ? !onCancelCopy : moveMode ? !onCancelMoveMode : !onOpenDetails)
                     }
-                    title={isOffline ? "Cannot move shifts while offline" : undefined}
                     className={cn(
-                      "flex-1 h-9 gap-2 rounded-full px-4 text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed",
-                      moveMode
-                        ? "bg-amber-500/20 text-amber-700 dark:text-amber-400"
-                        : "bg-amber-500/10 text-amber-700 hover:bg-amber-500/20 dark:text-amber-300"
+                      "flex-1 min-w-0 h-9 rounded-full",
+                      !(copyMode || moveMode) && "gap-2"
                     )}
                   >
-                    <ArrowRightLeft strokeWidth={2} className="h-4 w-4" />
-                    {t.pages.shifts.actions.move}
+                    {copyMode || moveMode ? (
+                      <span className="truncate">{t.pages.shifts.actions.cancel}</span>
+                    ) : (
+                      <>
+                        <Info strokeWidth={2} className="h-4 w-4 shrink-0" />
+                        <span className="truncate">{t.pages.shifts.actions.details}</span>
+                      </>
+                    )}
                   </Button>
-                )}
-              </div>
-            ) : (
-              <div className="flex h-full w-full items-center gap-1">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  aria-pressed={viewMode === "hours"}
-                  onClick={() => setViewMode("hours")}
-                  className={cn(
-                    "h-full rounded-full px-4 text-sm flex-1 whitespace-nowrap transition-none",
-                    viewMode === "hours" || !showEarnings
-                      ? "bg-white dark:bg-slate-700 text-black dark:text-white shadow-app-md font-semibold"
-                      : "text-text-muted hover:text-text-primary hover:bg-surface-secondary/50"
+                  {/* Move button - shows text like details */}
+                  {!readOnly && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => onInitiateMove?.()}
+                      disabled={
+                        !onInitiateMove ||
+                        copyMode ||
+                        moving ||
+                        moveMode ||
+                        isOffline
+                      }
+                      title={isOffline ? "Cannot move shifts while offline" : undefined}
+                      className={cn(
+                        "flex-1 min-w-0 h-9 gap-2 rounded-full transition-all disabled:opacity-50 disabled:cursor-not-allowed",
+                        moveMode
+                          ? "bg-amber-500/20 text-amber-700 dark:text-amber-400"
+                          : "bg-amber-500/10 text-amber-700 hover:bg-amber-500/20 dark:text-amber-300"
+                      )}
+                    >
+                      <ArrowRightLeft strokeWidth={2} className="h-4 w-4 shrink-0" />
+                      <span className="truncate">{t.pages.shifts.actions.move}</span>
+                    </Button>
                   )}
+                </motion.div>
+              </AnimateActivity>
+
+              {/* Default view mode toggle: hours/money with animated indicator */}
+              <AnimateActivity
+                mode={!selectedDate && !(selectedDates && selectedDates.size > 0) ? "visible" : "hidden"}
+                layoutMode="pop"
+              >
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ type: "spring", visualDuration: 0.2, bounce: 0.1 }}
+                  className="flex h-9 w-full items-center gap-1 relative"
                 >
-                  <span>--:--</span>
-                  <Clock strokeWidth={2} aria-hidden="true" />
-                </Button>
-                {/* Money toggle hidden when earnings are not visible */}
-                {showEarnings && (
+                  {/* Animated background indicator */}
+                  <motion.div
+                    className="absolute h-full rounded-full bg-white dark:bg-slate-700 shadow-app-md"
+                    initial={false}
+                    animate={{
+                      left: viewMode === "hours" || !showEarnings ? 0 : "50%",
+                      width: showEarnings ? "50%" : "100%",
+                    }}
+                    transition={{ type: "spring", visualDuration: 0.25, bounce: 0.15 }}
+                  />
                   <Button
                     type="button"
                     variant="ghost"
-                    aria-pressed={viewMode === "money"}
-                    onClick={() => setViewMode("money")}
+                    aria-pressed={viewMode === "hours"}
+                    onClick={() => setViewMode("hours")}
+                    disableAnimation
                     className={cn(
-                      "h-full rounded-full px-4 text-sm flex-1 whitespace-nowrap transition-none",
-                      viewMode === "money"
-                        ? "bg-white dark:bg-slate-700 text-black dark:text-white shadow-app-md font-semibold"
-                        : "text-text-muted hover:text-text-primary hover:bg-surface-secondary/50"
+                      "h-full rounded-full px-4 text-sm flex-1 whitespace-nowrap transition-colors relative z-10 hover:bg-transparent",
+                      viewMode === "hours" || !showEarnings
+                        ? "text-black dark:text-white font-semibold"
+                        : "text-text-muted hover:text-text-primary"
                     )}
                   >
-                    ---- {currencySymbol}
+                    <span>--:--</span>
+                    <Clock strokeWidth={2} aria-hidden="true" />
                   </Button>
-                )}
-              </div>
-            )}
+                  {/* Money toggle hidden when earnings are not visible */}
+                  {showEarnings && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      aria-pressed={viewMode === "money"}
+                      onClick={() => setViewMode("money")}
+                      disableAnimation
+                      className={cn(
+                        "h-full rounded-full px-4 text-sm flex-1 whitespace-nowrap transition-colors relative z-10 hover:bg-transparent",
+                        viewMode === "money"
+                          ? "text-black dark:text-white font-semibold"
+                          : "text-text-muted hover:text-text-primary"
+                      )}
+                    >
+                      ---- {currencySymbol}
+                    </Button>
+                  )}
+                </motion.div>
+              </AnimateActivity>
             </div>
-            {/* Reload button for users experiencing display bugs - positioned to the right of toggle */}
+            {/* Reload button - outside toggle but centered as a group */}
             <button
               type="button"
               onClick={() => window.location.reload()}
-              className="absolute right-4 h-11 w-11 flex items-center justify-center text-text-muted hover:text-text-primary transition-colors"
+              className="h-11 w-11 flex items-center justify-center text-text-muted hover:text-text-primary transition-colors"
               aria-label={t.common.refresh}
             >
               <RotateCw strokeWidth={2} className="h-4 w-4" />
