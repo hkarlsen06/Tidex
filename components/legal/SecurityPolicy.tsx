@@ -25,11 +25,11 @@ export function SecurityPolicy({ content }: SecurityPolicyProps) {
             <p key={`${section.heading}-p-${index}`}>{paragraph}</p>
           ))}
 
-          {'importantNote' in section && section.importantNote && (
+          {'importantNote' in section && section.importantNote ? (
             <p>
               <strong>{(section.importantNote as any).label}</strong> {(section.importantNote as any).text}
             </p>
-          )}
+          ) : null}
 
           {'list' in section && section.list && (
             <ul>

@@ -116,8 +116,21 @@
     </style>
   </head>
   <body>
-    <div class="offline-container">
-      <div class="logo">T</div>
+    <div class="offline-container" id="offline-container" style="display: none;">
+      <div class="logo">
+        <svg width="48" height="48" viewBox="-40 -40 611 627" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="logoGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stop-color="#00D4FF"/>
+              <stop offset="50%" stop-color="#7B61FF"/>
+              <stop offset="100%" stop-color="#9B4DCA"/>
+            </linearGradient>
+          </defs>
+          <g transform="matrix(1.388889,0,0,1.388889,-541.775787,-1494.193122)">
+            <path d="M756,1077c-60.8334,0.1203 -288.1826,-2.7163 -349,0c-6.0816,0.2716 -15.2292,2.138 -16,14c-0.692,10.6494 -1.6711,37.4598 0,48c0.7708,4.862 5.9602,14.1855 16,14c20.2977,-0.375 82.7506,-0.6596 105,0c13.022,0.386 25.9275,10.7905 26,26c0.2359,49.5227 -0.2537,227.5927 0,270c0.262,43.7816 89.9981,9.2281 90,-32c0.0023,-47.7505 -0.4143,-195.8051 0,-240c0.089,-9.5004 9.6491,-23.8549 25,-24c21.5403,-0.2035 81.9476,0.5129 102,0c9.1601,-0.2343 16.715,-5.0697 17,-18c0.2255,-10.2309 0.2826,-30.2076 0,-41c-0.2013,-7.6885 -5.2183,-17.0213 -16,-17Z" fill="url(#logoGradient)"/>
+          </g>
+        </svg>
+      </div>
       <div class="icon">📡</div>
       <h1 id="title">Du er offline</h1>
       <p id="description">
@@ -267,7 +280,7 @@
             // Only fetch rejection means truly offline
             updateStatus(t.connectionRestored);
             setTimeout(function () {
-              window.location.reload();
+              window.location.href = '/';
             }, 300);
             return;
           } catch (error) {
@@ -303,7 +316,7 @@
           }
           updateStatus(t.connectionDetected);
           setTimeout(function () {
-            window.location.reload();
+            window.location.href = '/';
           }, 300);
         });
 
@@ -321,13 +334,19 @@
           }
         }
 
+        // Show the offline UI container
+        function showOfflineUI() {
+          var container = document.getElementById('offline-container');
+          if (container) container.style.display = 'block';
+        }
+
         // CRITICAL: Check connectivity IMMEDIATELY on page load
         // This page may have been shown incorrectly due to a transient network hiccup
         // or slow initial connection - we need to verify before showing the UI
         async function immediateConnectivityCheck() {
-          // If browser reports offline, skip immediate check
+          // If browser reports offline, show UI and start normal retry flow
           if (!navigator.onLine) {
-            // Start normal retry flow after short delay
+            showOfflineUI();
             setTimeout(function() { safeCall(tryReconnect); }, 2000);
             return;
           }
@@ -346,19 +365,23 @@
 
             clearTimeout(timeoutId);
 
-            // Server is reachable! Reload immediately
+            // Server is reachable! Navigate to homepage
             updateStatus(t.connectionRestored);
             setTimeout(function() {
-              window.location.reload();
+              window.location.href = '/';
             }, 100);
             return;
           } catch (e) {
             console.log('[Offline] Immediate connectivity check failed:', e.message);
           }
 
-          // Failed - start normal retry flow faster
+          // Failed - show UI and start normal retry flow faster
+          showOfflineUI();
           setTimeout(function() { safeCall(tryReconnect); }, 1000);
         }
+
+        // Fallback: show UI after 3 seconds no matter what
+        setTimeout(showOfflineUI, 3000);
 
         // Run immediate connectivity check
         safeCall(immediateConnectivityCheck);

@@ -53,6 +53,7 @@ export const no = {
     bestShift: 'Beste vakt',
     on: 'På',
     off: 'Av',
+    refresh: 'Oppdater',
   },
   dateTime: {
     monthsShort: ['jan.', 'feb.', 'mar.', 'apr.', 'mai', 'jun.', 'jul.', 'aug.', 'sep.', 'okt.', 'nov.', 'des.'],

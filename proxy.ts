@@ -127,6 +127,7 @@ function shouldSkipLocaleRouting(pathname: string): boolean {
     pathname.startsWith('/.well-known/') ||
     pathname === '/favicon.ico' ||
     pathname === '/manifest.json' ||
+    pathname === '/offline.html' ||
     pathname === '/support' ||
     /\.(svg|png|jpg|jpeg|gif|webp|ico)$/.test(pathname)
   );
@@ -135,10 +136,11 @@ function shouldSkipLocaleRouting(pathname: string): boolean {
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Early exit for static assets (before Supabase initialization)
+  // Early exit for static assets and offline.html (before any processing)
   if (
     pathname.startsWith('/_next/static') ||
     pathname.startsWith('/_next/image') ||
+    pathname === '/offline.html' ||
     /\.(css|js|map)$/.test(pathname)
   ) {
     return NextResponse.next();
@@ -277,6 +279,10 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    /*
+     * Match all paths EXCEPT static files and offline.html
+     * Using negative lookahead anchored at start
+     */
+    "/((?!_next/static|_next/image|favicon.ico|offline.html).*)",
   ],
 };
