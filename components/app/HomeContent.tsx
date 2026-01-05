@@ -147,7 +147,8 @@ export function HomeContent({ shifts: initialShifts, settings, payoutTaxSettings
   // vs cacheComponents reveals (where the reference stays the same)
   const prevInitialShiftsRef = useRef<ShiftWithComputations[]>(initialShifts);
   // Track if the currently selected month is loading (for UI feedback)
-  const [isCurrentMonthLoading, setIsCurrentMonthLoading] = useState(false);
+  // We use both a synchronous check (for initial render) and state (for async updates)
+  const [isLoadingAsync, setIsLoadingAsync] = useState(false);
   // Track payout tax settings per month (key: "YYYY-MM")
   const [payoutTaxByMonth, setPayoutTaxByMonth] = useState<Map<string, PayoutTaxSettings>>(() => {
     // Initialize with SSR-provided payout tax settings for the current month
@@ -230,6 +231,11 @@ export function HomeContent({ shifts: initialShifts, settings, payoutTaxSettings
     return `${year}-${String(month).padStart(2, '0')}`;
   }, []);
 
+  // Compute loading state synchronously - this ensures we know if month needs loading
+  // on the first render after month changes (before useEffect runs)
+  const currentMonthKey = getMonthKey(month.getFullYear(), month.getMonth() + 1);
+  const isCurrentMonthLoading = isLoadingAsync || !loadedMonthsRef.current.has(currentMonthKey);
+
   // Helper to fetch a month's shifts and update state
   const fetchMonth = useCallback(async (year: number, month: number, options?: { force?: boolean }) => {
     const key = getMonthKey(year, month);
@@ -293,7 +299,7 @@ export function HomeContent({ shifts: initialShifts, settings, payoutTaxSettings
     let minLoadingTimeout: ReturnType<typeof setTimeout> | null = null;
 
     if (needsLoading) {
-      setIsCurrentMonthLoading(true);
+      setIsLoadingAsync(true);
       loadingStartTime = Date.now();
     }
 
@@ -320,10 +326,10 @@ export function HomeContent({ shifts: initialShifts, settings, payoutTaxSettings
 
         if (remaining > 0) {
           minLoadingTimeout = setTimeout(() => {
-            setIsCurrentMonthLoading(false);
+            setIsLoadingAsync(false);
           }, remaining);
         } else {
-          setIsCurrentMonthLoading(false);
+          setIsLoadingAsync(false);
         }
       }
     });
@@ -478,6 +484,9 @@ export function HomeContent({ shifts: initialShifts, settings, payoutTaxSettings
     const taxAmount = totals.gross - totals.net;
     const netAmount = totals.net;
 
+    // Check if the earnings month is loaded (for loading state)
+    const isEarningsMonthLoaded = loadedMonthsRef.current.has(earningsKey);
+
     return {
       netAmount,
       grossAmount: totals.gross,
@@ -487,6 +496,7 @@ export function HomeContent({ shifts: initialShifts, settings, payoutTaxSettings
       payrollMonthDate,
       hasPayout: relevantShifts.length > 0,
       showPreviousPayroll,
+      isEarningsMonthLoaded,
     };
   }, [month, settings, shiftsByMonth, payrollDay, selectedMonthIsCurrent, locale]);
 
@@ -624,6 +634,7 @@ export function HomeContent({ shifts: initialShifts, settings, payoutTaxSettings
                 showPreviousPayroll={payrollData.showPreviousPayroll}
                 progress={payrollCountdown.isPast ? undefined : payrollCountdown.progress}
                 isPayrollToday={payrollCountdown.isToday}
+                isLoading={!payrollData.isEarningsMonthLoaded}
               />
             </div>
           )}
