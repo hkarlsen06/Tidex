@@ -178,6 +178,7 @@ export const NextPayrollCard: React.FC<NextPayrollCardProps> = ({
     </span>
   ) : (
     <AnimateNumber
+      layout={false}
       suffix={locale === 'no' ? `. ${monthName}` : undefined}
       prefix={locale !== 'no' ? `${monthName} ` : undefined}
       transition={{ visualDuration: 0.6, type: 'spring', bounce: 0.15 }}
@@ -245,6 +246,7 @@ export const NextPayrollCard: React.FC<NextPayrollCardProps> = ({
             <div>
               <span className="block text-2xl font-semibold tracking-tight text-text-primary">
                 <AnimateNumber
+                  layout={false}
                   format={{
                     style: 'currency',
                     currency: 'NOK',
@@ -263,6 +265,7 @@ export const NextPayrollCard: React.FC<NextPayrollCardProps> = ({
               {showBreakdown && breakdownType !== 'none' && (
                 <span className="block text-sm text-text-muted">
                   <AnimateNumber
+                    layout={false}
                     format={{ maximumFractionDigits: 0 }}
                     locales="nb-NO"
                     transition={{ visualDuration: 0.6, type: 'spring', bounce: 0.1 }}
@@ -271,6 +274,7 @@ export const NextPayrollCard: React.FC<NextPayrollCardProps> = ({
                   </AnimateNumber>
                   {' '}{breakdownValues.operator}{' '}
                   <AnimateNumber
+                    layout={false}
                     format={{ maximumFractionDigits: 0 }}
                     locales="nb-NO"
                     transition={{ visualDuration: 0.6, type: 'spring', bounce: 0.1 }}

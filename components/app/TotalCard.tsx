@@ -46,6 +46,7 @@ function AnimatedCurrency({ value, className, style }: AnimatedCurrencyProps) {
 
   return (
     <AnimateNumber
+      layout={false}
       format={{
         style: 'currency',
         currency: 'NOK',
@@ -176,6 +177,7 @@ export const TotalCard: React.FC<TotalCardProps> = ({
                   />
                 )}
                 <AnimateNumber
+                  layout={false}
                   suffix="%"
                   transition={{
                     visualDuration: 0.8,
