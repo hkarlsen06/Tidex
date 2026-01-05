@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect, useLayoutEffect, useRef, memo, type Ref } from "react";
+import { useMemo, useState, useEffect, useRef, type Ref } from "react";
 import { Clock, Copy, ArrowRightLeft, Info, Trash2, X } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useIsRouteActive } from "@/components/app/RouteVisibilityContext";
@@ -241,9 +241,9 @@ type CalendarSnapshot = {
  * original data. The "stale data when returning to route" issue is handled by the parent
  * passing fresh currentSnapshot which gets frozen on the NEW component mount.
  *
- * However, when returning from another route after navigating many months, the frozen
- * data may be stale. We detect this by checking if the snapshot has data but our frozen
- * ref is empty, and sync if needed after animation completes.
+ * Uses state initialization (lazy initializer) to freeze the snapshot on first render.
+ * State is used instead of refs to comply with React 19 compiler rules that prohibit
+ * reading refs during render.
  */
 function FrozenCalendarSlide({
   snapshot,
@@ -255,7 +255,6 @@ function FrozenCalendarSlide({
   newlyAddedDates,
   taxSettings,
   highlightDates,
-  isAnimating,
 }: {
   snapshot: CalendarSnapshot;
   mode: "money" | "hours";
@@ -266,39 +265,18 @@ function FrozenCalendarSlide({
   newlyAddedDates?: Set<string>;
   taxSettings?: TaxSettings;
   highlightDates?: Set<string> | null;
-  isAnimating: boolean;
 }) {
-  // Freeze snapshot on mount - never update after initial render
-  // This is critical: AnimatePresence passes new props to exiting components,
-  // but we want exiting calendars to keep showing their original month
-  const frozenRef = useRef(snapshot);
-  const [animateCellValues, setAnimateCellValues] = useState(false);
-
-  // After animation completes, check if frozen data is stale and sync if needed
-  // This handles the case where user navigates many months on another route
-  // and returns to find stale/empty calendar data
-  useEffect(() => {
-    if (!isAnimating) {
-      const frozenHasData = Object.keys(frozenRef.current.earningsByDate).length > 0 ||
-        Object.keys(frozenRef.current.hoursByDate).length > 0;
-      const snapshotHasData = Object.keys(snapshot.earningsByDate).length > 0 ||
-        Object.keys(snapshot.hoursByDate).length > 0;
-
-      // If snapshot has data but frozen doesn't, sync and trigger pop-in animation
-      if (snapshotHasData && !frozenHasData && snapshot.key === frozenRef.current.key) {
-        frozenRef.current = snapshot;
-        setAnimateCellValues(true);
-      }
-    }
-  }, [isAnimating, snapshot]);
+  // Freeze snapshot on mount using lazy state initialization
+  // This only runs once when the component mounts, ignoring subsequent prop updates
+  const [frozenSnapshot] = useState(() => snapshot);
 
   return (
     <ShiftsCalendar
-      month={frozenRef.current.month}
+      month={frozenSnapshot.month}
       mode={mode}
-      earningsByDate={frozenRef.current.earningsByDate}
-      hoursByDate={frozenRef.current.hoursByDate}
-      overlappingDates={frozenRef.current.overlappingDates}
+      earningsByDate={frozenSnapshot.earningsByDate}
+      hoursByDate={frozenSnapshot.hoursByDate}
+      overlappingDates={frozenSnapshot.overlappingDates}
       onMonthChange={onMonthChange}
       onDayClick={onDayClick}
       selectedDate={selectedDate}
@@ -307,7 +285,6 @@ function FrozenCalendarSlide({
       newlyAddedDates={newlyAddedDates}
       taxSettings={taxSettings}
       highlightDates={highlightDates}
-      animateCellValues={animateCellValues}
     />
   );
 }
@@ -378,31 +355,15 @@ export function MonthlyEarningsCalendar({
   const swipeContainerRef = useRef<HTMLDivElement>(null);
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
-  // Track if calendar is currently animating (for stale data sync)
-  const [isAnimating, setIsAnimating] = useState(false);
   const isSwiping = useRef<boolean>(false);
 
   // Route visibility - when route is hidden by cacheComponents, we skip AnimatePresence
   // to prevent it from accumulating stale keyed children
   const isShiftsRouteActive = useIsRouteActive('/shifts');
 
-  // Freeze the month key used by AnimatePresence while the route is inactive.
-  // This ensures AnimatePresence always starts from a clean baseline when the route
-  // becomes active again, preventing any stale key accumulation.
-  const [frozenMonthKey, setFrozenMonthKey] = useState(
-    () => `${calendarId}-${month.getFullYear()}-${month.getMonth()}`
-  );
-
-  // Only update the frozen key when the route is active
-  // useLayoutEffect ensures the key syncs before paint, avoiding any flash of stale content
-  useLayoutEffect(() => {
-    if (isShiftsRouteActive) {
-      setFrozenMonthKey(`${calendarId}-${month.getFullYear()}-${month.getMonth()}`);
-    }
-  }, [isShiftsRouteActive, calendarId, month]);
-
-  // Use frozen key for AnimatePresence to prevent stale state
-  const currentMonthKey = frozenMonthKey;
+  // Compute the current month key - when route is active, always use the current month
+  // When route is hidden, we render without AnimatePresence anyway, so the key doesn't matter
+  const currentMonthKey = `${calendarId}-${month.getFullYear()}-${month.getMonth()}`;
 
   // Filter shifts once per month change
   // Include shifts from previous and next month to show on "outside days"
@@ -657,8 +618,6 @@ export function MonthlyEarningsCalendar({
                     initial="initial"
                     animate="animate"
                     exit="exit"
-                    onAnimationStart={() => setIsAnimating(true)}
-                    onAnimationComplete={() => setIsAnimating(false)}
                   >
                     <FrozenCalendarSlide
                       snapshot={currentSnapshot}
@@ -670,7 +629,6 @@ export function MonthlyEarningsCalendar({
                       newlyAddedDates={newlyAddedDates}
                       taxSettings={taxSettings}
                       highlightDates={highlightDates}
-                      isAnimating={isAnimating}
                     />
                   </motion.div>
                 </AnimatePresence>
