@@ -97,6 +97,8 @@ export async function updateShift(input: UpdateShiftInput) {
       endTime: updatedShift.end_time,
       eventType: "updated",
       mutationId,
+      oldStartTime: oldShift.start_time,
+      oldEndTime: oldShift.end_time,
     });
   }
 
