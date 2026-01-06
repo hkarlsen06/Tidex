@@ -2342,7 +2342,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
     : t.pages.shifts.list.emptyDescription;
 
   return (
-    <ScrollablePageWrapper routeKey="shifts" applyContainer={false}>
+    <ScrollablePageWrapper routeKey="shifts" applyContainer={false} pullToRefresh>
     {/* Queued Shift Notification */}
     {queuedNotification && (
       <div className="fixed top-20 left-1/2 -translate-x-1/2 z-40 animate-in slide-in-from-top-2 fade-in">
