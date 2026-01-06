@@ -657,25 +657,23 @@ export function StatsContent({ data, cacheKey }: StatsContentProps) {
           </Card>
         </ScrollAnimatedCard>
 
-        {/* Supplement breakdown chart */}
-        {selectedShiftCount > 0 && (
-          <ScrollAnimatedCard>
-            <Card className={`border-border bg-surface-primary ${animationClass}`}>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-xl font-bold text-text-primary">
-                  {t.pages.stats.cards.salaryComposition}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="px-3 pb-4 pt-1">
-                {!chartData ? (
-                  <ChartSkeleton />
-                ) : (
-                  <SupplementBreakdownChart data={chartData.currentMonthBreakdown} />
-                )}
-              </CardContent>
-            </Card>
-          </ScrollAnimatedCard>
-        )}
+        {/* Supplement breakdown chart - always render for stable layout */}
+        <ScrollAnimatedCard>
+          <Card className={`border-border bg-surface-primary ${animationClass}`}>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-xl font-bold text-text-primary">
+                {t.pages.stats.cards.salaryComposition}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="px-3 pb-4 pt-1">
+              {!chartData ? (
+                <ChartSkeleton />
+              ) : (
+                <SupplementBreakdownChart data={chartData.currentMonthBreakdown} />
+              )}
+            </CardContent>
+          </Card>
+        </ScrollAnimatedCard>
 
         {/* Weekly earnings chart - "This week" for current month, "Best week" for past months */}
         {isCurrentMonthSelected ? (
@@ -695,16 +693,26 @@ export function StatsContent({ data, cacheKey }: StatsContentProps) {
               </CardContent>
             </Card>
           </ScrollAnimatedCard>
-        ) : chartData?.bestWeek && (
+        ) : (
           <ScrollAnimatedCard>
             <Card className={`border-border bg-surface-primary ${animationClass}`}>
               <CardHeader className="pb-3">
                 <CardTitle className="text-xl font-bold text-text-primary">
-                  {`${t.pages.stats.cards.bestWeek} (${t.pages.stats.cards.week} ${chartData.bestWeek.weekNumber})`}
+                  {chartData?.bestWeek
+                    ? `${t.pages.stats.cards.bestWeek} (${t.pages.stats.cards.week} ${chartData.bestWeek.weekNumber})`
+                    : t.pages.stats.cards.bestWeek}
                 </CardTitle>
               </CardHeader>
               <CardContent className="px-3 pb-4 pt-1">
-                <WeeklyBarChart data={chartData.bestWeek.weekData} highlightBestDay showDatesInsteadOfDays />
+                {!chartData ? (
+                  <ChartSkeleton />
+                ) : chartData.bestWeek ? (
+                  <WeeklyBarChart data={chartData.bestWeek.weekData} highlightBestDay showDatesInsteadOfDays />
+                ) : (
+                  <div className="flex items-center justify-center h-65 text-text-muted">
+                    <p>{t.components.charts.weeklyBar.noData}</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </ScrollAnimatedCard>

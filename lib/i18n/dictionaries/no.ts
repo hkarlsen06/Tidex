@@ -351,6 +351,7 @@ export const no = {
         goalReached: 'Mål nådd!',
         overTarget: '+{amount} over',
         remaining: '{amount} gjenstår',
+        notEnabled: 'Sett et månedlig inntektsmål i Innstillinger for å følge fremgangen din.',
       },
     },
     wagey: {
@@ -1508,6 +1509,9 @@ export const no = {
         supplements: 'Tillegg',
         noSupplements: 'Du har ikke tjent tillegg denne måneden. Tillegg opptjenes ved kvelds-, natt- og helgevakter.',
         percentBasePay: '100% grunnlønn',
+      },
+      weeklyBar: {
+        noData: 'Ingen skift denne måneden',
       },
       monthlyCumulative: {
         currentMonth: 'Denne måneden',
