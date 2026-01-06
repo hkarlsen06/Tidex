@@ -8,7 +8,7 @@ import { MonthPicker } from "./MonthPicker";
 import { ShiftCard } from "@/components/app/ShiftCard";
 import { ShiftCardSkeleton } from "@/components/app/skeletons";
 import ShiftDetails from "@/components/shifts/ShiftDetails";
-import { ShiftWithComputations, UserSettings, computeShift, PRESET_SUPPLEMENT_RULES } from "@/lib/payroll";
+import { ShiftWithComputations, UserSettings, WageSnapshot, computeShift, PRESET_SUPPLEMENT_RULES } from "@/lib/payroll";
 import { useCountdown } from "@/lib/hooks/useCountdown";
 import { usePayrollCountdown } from "@/lib/hooks/usePayrollCountdown";
 import { useMonth } from "./MonthContext";
@@ -25,22 +25,75 @@ import type { PayoutTaxSettings } from "@/data-access/shifts";
 type HomeContentProps = {
   shifts: ShiftWithComputations[];
   settings: UserSettings;
-  /** Tax settings for current month's earnings (paid next month) - used for TotalCard */
-  payoutTaxSettings?: PayoutTaxSettings;
-  /** Tax settings for previous month's earnings (paid this month) - used for NextPayrollCard */
-  currentPayoutTaxSettings?: PayoutTaxSettings;
+  /** All wage snapshots for the user - used to calculate tax settings for any month */
+  wageSnapshots: WageSnapshot[];
   /** User-specific cache key to ensure browser HTTP cache is per-user */
   cacheKey: string;
   /** Months that were preloaded in SSR (format: "YYYY-MM") */
   preloadedMonths?: string[];
 };
 
+/**
+ * Find the applicable wage snapshot for a given date.
+ * Snapshots are ordered by from_date DESC (newest first).
+ * Returns the most recent snapshot where from_date <= date, or baseline (from_date=null).
+ */
+function getSnapshotForDate(snapshots: WageSnapshot[], date: string): WageSnapshot | null {
+  // Find the first dated snapshot where from_date <= date
+  const applicableSnapshot = snapshots.find(
+    (s) => s.from_date !== null && s.from_date <= date
+  );
+  if (applicableSnapshot) return applicableSnapshot;
+
+  // Fall back to baseline snapshot (from_date = null)
+  return snapshots.find((s) => s.from_date === null) ?? null;
+}
+
+/**
+ * Get tax settings for a specific payout date from wage snapshots.
+ */
+function getTaxSettingsForPayoutDate(
+  snapshots: WageSnapshot[],
+  payoutDate: string
+): PayoutTaxSettings {
+  const snapshot = getSnapshotForDate(snapshots, payoutDate);
+  if (!snapshot) return null;
+  return {
+    enabled: snapshot.tax_enabled,
+    percentage: snapshot.tax_percentage,
+  };
+}
+
+/**
+ * Calculate payout date for earnings in a given month.
+ * Payout is in the next month on the payroll day.
+ */
+function calculatePayoutDate(
+  earningsYear: number,
+  earningsMonth: number, // 1-12
+  payrollDay: number
+): string {
+  let payoutYear = earningsYear;
+  let payoutMonth = earningsMonth + 1;
+
+  if (payoutMonth > 12) {
+    payoutMonth = 1;
+    payoutYear += 1;
+  }
+
+  // Handle edge case: payroll_day exceeds days in payout month
+  const daysInPayoutMonth = new Date(payoutYear, payoutMonth, 0).getDate();
+  const effectivePayrollDay = Math.min(payrollDay, daysInPayoutMonth);
+
+  return `${payoutYear}-${String(payoutMonth).padStart(2, '0')}-${String(effectivePayrollDay).padStart(2, '0')}`;
+}
+
 function calculateMonthData(
   shiftsByMonth: Map<string, ShiftWithComputations[]>,
   month: Date,
   settings: UserSettings,
   formatCurrency: (value: number) => string,
-  payoutTaxSettings?: PayoutTaxSettings
+  wageSnapshots: WageSnapshot[]
 ): {
   total: string;
   percentageChange?: number;
@@ -50,6 +103,7 @@ function calculateMonthData(
 } {
   const targetYear = month.getFullYear();
   const targetMonth = month.getMonth() + 1;
+  const payrollDay = settings.payroll_day ?? 1;
 
   // O(1) lookup instead of O(n) filtering
   const targetYearMonth = `${targetYear}-${String(targetMonth).padStart(2, '0')}`;
@@ -65,7 +119,16 @@ function calculateMonthData(
   // Tax settings are now per-shift, but half_tax_month is still global
   const halfTaxMonth = settings.half_tax_month ?? null;
 
-  // Payout month = earnings month + 1 (used for half-tax and payout tax calculations)
+  // Calculate payout dates and get tax settings from snapshots
+  // TotalCard: earnings from targetMonth are paid out in targetMonth+1
+  const payoutDate = calculatePayoutDate(targetYear, targetMonth, payrollDay);
+  const payoutTaxSettings = getTaxSettingsForPayoutDate(wageSnapshots, payoutDate);
+
+  // For last month comparison
+  const lastPayoutDate = calculatePayoutDate(lastMonthYear, lastMonth, payrollDay);
+  const lastPayoutTaxSettings = getTaxSettingsForPayoutDate(wageSnapshots, lastPayoutDate);
+
+  // Payout month number (for half-tax check)
   const payoutMonth = targetMonth + 1 > 12 ? 1 : targetMonth + 1;
   const lastPayoutMonth = lastMonth + 1 > 12 ? 1 : lastMonth + 1;
 
@@ -82,8 +145,7 @@ function calculateMonthData(
     halfTaxMonth,
     now,
     month: lastPayoutMonth,
-    // Note: We don't have payout tax settings for last month from SSR,
-    // so we fall back to per-shift tax settings for last month comparison
+    payoutTaxOverride: lastPayoutTaxSettings ?? undefined,
   });
 
   // Check if payout tax is enabled (prefer payout settings, fall back to per-shift check)
@@ -127,7 +189,7 @@ function isFutureMonth(date: Date): boolean {
   );
 }
 
-export function HomeContent({ shifts: initialShifts, settings, payoutTaxSettings, currentPayoutTaxSettings, cacheKey, preloadedMonths }: HomeContentProps) {
+export function HomeContent({ shifts: initialShifts, settings, wageSnapshots, cacheKey, preloadedMonths }: HomeContentProps) {
   const { t, locale } = useTranslations();
   const formatCurrency = useFormatCurrency();
   const router = useRouter();
@@ -152,11 +214,6 @@ export function HomeContent({ shifts: initialShifts, settings, payoutTaxSettings
   // Track if the currently selected month is loading (for UI feedback)
   // We use both a synchronous check (for initial render) and state (for async updates)
   const [isLoadingAsync, setIsLoadingAsync] = useState(false);
-  // Track payout tax settings per month (key: "YYYY-MM" of EARNINGS month)
-  // API fetches store settings keyed by the requested (earnings) month
-  const [payoutTaxByMonth, setPayoutTaxByMonth] = useState<Map<string, PayoutTaxSettings>>(
-    () => new Map()
-  );
 
   // Initialize loaded months synchronously on first render
   // This must happen before any effects run
@@ -264,11 +321,6 @@ export function HomeContent({ shifts: initialShifts, settings, payoutTaxSettings
           return Array.from(byId.values());
         });
 
-        // Store payout tax settings for this month
-        if (data.payoutTaxSettings !== undefined) {
-          setPayoutTaxByMonth(prev => new Map(prev).set(key, data.payoutTaxSettings));
-        }
-
         // Mark as successfully loaded
         loadedMonthsRef.current.add(key);
       }
@@ -369,21 +421,21 @@ export function HomeContent({ shifts: initialShifts, settings, payoutTaxSettings
     return index;
   }, [shifts]);
 
-  // Get payout tax settings for the currently selected month (for TotalCard)
-  // This is the tax rate for selected month's earnings paid NEXT month
-  // Falls back to SSR-provided settings if not yet fetched for this month
-  const selectedMonthPayoutTaxSettings = useMemo(() => {
-    const key = `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, '0')}`;
-    return payoutTaxByMonth.get(key) ?? payoutTaxSettings ?? null;
-  }, [month, payoutTaxByMonth, payoutTaxSettings]);
-
+  // Calculate month data using wage snapshots for tax settings
+  // TotalCard shows earnings from selected month, paid out in selected month + 1
   const data = useMemo(
-    () => calculateMonthData(shiftsByMonth, month, settings, formatCurrency, selectedMonthPayoutTaxSettings),
-    [shiftsByMonth, month, settings, formatCurrency, selectedMonthPayoutTaxSettings]
+    () => calculateMonthData(shiftsByMonth, month, settings, formatCurrency, wageSnapshots),
+    [shiftsByMonth, month, settings, formatCurrency, wageSnapshots]
   );
 
+  // Get tax settings for the selected month's payout (for UI display purposes)
+  const selectedMonthPayoutTaxSettings = useMemo(() => {
+    const payrollDay = settings.payroll_day ?? 1;
+    const payoutDate = calculatePayoutDate(month.getFullYear(), month.getMonth() + 1, payrollDay);
+    return getTaxSettingsForPayoutDate(wageSnapshots, payoutDate);
+  }, [month, settings.payroll_day, wageSnapshots]);
+
   // Check if any shifts have tax enabled (for UI display purposes)
-  // Prefer payout tax settings if available, otherwise fall back to per-shift check
   const taxDeductionEnabled = useMemo(() => {
     return selectedMonthPayoutTaxSettings?.enabled ?? shifts.some(shift => shift.tax_enabled);
   }, [shifts, selectedMonthPayoutTaxSettings]);
@@ -471,19 +523,17 @@ export function HomeContent({ shifts: initialShifts, settings, payoutTaxSettings
     const globalHalfTaxMonth = settings.half_tax_month ?? null;
 
     // Use payout month (payrollMonthDate) for half tax check, not earnings month
-    const payoutMonth = payrollMonthDate.getMonth() + 1;
+    const payoutMonthNum = payrollMonthDate.getMonth() + 1;
 
-    // Get payout tax settings for NextPayrollCard:
-    // - For current month: use currentPayoutTaxSettings (SSR prop for current payout)
-    // - For other months: look up from Map (populated by API fetches, keyed by earnings month)
-    const effectivePayoutTaxSettings = selectedMonthIsCurrent
-      ? currentPayoutTaxSettings
-      : payoutTaxByMonth.get(earningsKey) ?? null;
+    // Get payout tax settings for NextPayrollCard from wage snapshots
+    // NextPayrollCard shows earnings from previous month, paid this month
+    const payoutDate = calculatePayoutDate(earningsMonthDate.getFullYear(), earningsMonthDate.getMonth() + 1, payrollDay);
+    const effectivePayoutTaxSettings = getTaxSettingsForPayoutDate(wageSnapshots, payoutDate);
 
     const totals = summarizeShiftTotals({
       shifts: relevantShifts,
       halfTaxMonth: globalHalfTaxMonth,
-      month: payoutMonth,
+      month: payoutMonthNum,
       payoutTaxOverride: effectivePayoutTaxSettings ?? undefined,
     });
 
@@ -504,7 +554,7 @@ export function HomeContent({ shifts: initialShifts, settings, payoutTaxSettings
       showPreviousPayroll,
       isEarningsMonthLoaded,
     };
-  }, [month, settings, shiftsByMonth, payrollDay, selectedMonthIsCurrent, locale, currentPayoutTaxSettings, payoutTaxByMonth]);
+  }, [month, settings, shiftsByMonth, payrollDay, selectedMonthIsCurrent, locale, wageSnapshots]);
 
   // Find shift to display based on selected month
   const displayShift = useMemo(() => {

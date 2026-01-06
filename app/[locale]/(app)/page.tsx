@@ -3,6 +3,7 @@ import { connection } from "next/server";
 
 import { verifySession } from "@/data-access/auth";
 import { getComputedShifts } from "@/data-access/shifts";
+import { getUserWageSnapshots } from "@/data-access/wage-snapshots";
 import {
   getCurrentYearMonth,
   getPreviousYearMonth,
@@ -49,13 +50,19 @@ export default async function Home({ params }: HomeProps) {
   const previous = getPreviousYearMonth();
   const next = getNextYearMonth();
 
-  const { shifts, settings, payoutTaxSettings, currentPayoutTaxSettings } = await getComputedShifts(user.id, {
-    startDate: getMonthStart(previous.year, previous.month),
-    endDate: getMonthEnd(next.year, next.month),
-    limit: 200, // ~50 shifts per month × 3 months + headroom
-    year: current.year,
-    month: current.month,
-  });
+  // Fetch shifts and wage snapshots in parallel
+  const [shiftsData, wageSnapshots] = await Promise.all([
+    getComputedShifts(user.id, {
+      startDate: getMonthStart(previous.year, previous.month),
+      endDate: getMonthEnd(next.year, next.month),
+      limit: 200, // ~50 shifts per month × 3 months + headroom
+      year: current.year,
+      month: current.month,
+    }),
+    getUserWageSnapshots(),
+  ]);
+
+  const { shifts, settings } = shiftsData;
 
   // Pass which months were preloaded so HomeContent knows not to fetch them
   const preloadedMonths = [
@@ -69,8 +76,7 @@ export default async function Home({ params }: HomeProps) {
       <HomeContentWrapper
         shifts={shifts}
         settings={settings}
-        payoutTaxSettings={payoutTaxSettings}
-        currentPayoutTaxSettings={currentPayoutTaxSettings}
+        wageSnapshots={wageSnapshots}
         cacheKey={user.id.slice(0, 8)}
         preloadedMonths={preloadedMonths}
       />

@@ -458,9 +458,28 @@ export const ShiftsServiceLive = Layer.effect(
         const allDates = [...shiftDates, ...virtualShiftDates];
         const snapshotMap = yield* getSnapshotsForDates(userId, allDates, skipAuthCheck);
 
+        // Calculate payout dates for all shifts to fetch tax snapshots
+        // Tax is based on payout month, not shift date
+        const payrollDay = userSettings?.payroll_day ?? 1;
+        const getPayoutDateForShift = (shiftDate: string): string => {
+          const [year, month] = shiftDate.split('-').map(Number);
+          return calculatePayoutDate(year, month, payrollDay);
+        };
+
+        // Collect unique payout dates and fetch their snapshots
+        const allPayoutDates = new Set<string>();
+        for (const date of allDates) {
+          allPayoutDates.add(getPayoutDateForShift(date));
+        }
+        const payoutSnapshotMap = yield* getSnapshotsForDates(userId, [...allPayoutDates], skipAuthCheck);
+
         // Compute regular shifts
         const computedShifts = ((shifts ?? []) as ShiftRow[]).map((shift) => {
+          // Wage/supplement snapshot based on shift date
           const snapshot = snapshotMap.get(shift.shift_date) ?? null;
+          // Tax snapshot based on payout date (when the shift is paid out)
+          const payoutDate = getPayoutDateForShift(shift.shift_date);
+          const taxSnapshot = payoutSnapshotMap.get(payoutDate) ?? null;
           // Attach supplement_rules_snapshot from wage snapshot for UI components
           // This allows CustomSupplementsModal to show correct supplement rules
           // Priority: existing shift snapshot > wage snapshot > null
@@ -470,9 +489,10 @@ export const ShiftsServiceLive = Layer.effect(
             ...shift,
             supplement_rules_snapshot: supplementRulesSnapshot,
             computed: computeShift(shift, userSettings ?? {}, PRESET_SUPPLEMENT_RULES, snapshot),
-            // Include tax settings from snapshot for after-tax calculations
-            tax_enabled: snapshot?.tax_enabled ?? false,
-            tax_percentage: snapshot?.tax_percentage ?? 0,
+            // Include tax settings from PAYOUT snapshot for after-tax calculations
+            // Tax is based on when you receive the money (payout month), not when you worked
+            tax_enabled: taxSnapshot?.tax_enabled ?? false,
+            tax_percentage: taxSnapshot?.tax_percentage ?? 0,
           };
         });
 
@@ -482,7 +502,11 @@ export const ShiftsServiceLive = Layer.effect(
           const cachedVirtuals = virtualShiftsByRecurring.get(recurring.id) ?? [];
 
           for (const virtualShift of cachedVirtuals) {
+            // Wage/supplement snapshot based on shift date
             const snapshot = snapshotMap.get(virtualShift.date) ?? null;
+            // Tax snapshot based on payout date (when the shift is paid out)
+            const payoutDate = getPayoutDateForShift(virtualShift.date);
+            const taxSnapshot = payoutSnapshotMap.get(payoutDate) ?? null;
 
             // Check if recurring shift has date-specific custom supplements for this virtual shift date
             const customSupplements: CustomSupplementsData | null = recurring.date_specific_supplements?.[virtualShift.date] ?? null;
@@ -517,9 +541,10 @@ export const ShiftsServiceLive = Layer.effect(
               recurring_id: recurring.id,
               recurring_anchor_weekday: virtualShift.weekday,
               computed,
-              // Include tax settings from snapshot for after-tax calculations
-              tax_enabled: snapshot?.tax_enabled ?? false,
-              tax_percentage: snapshot?.tax_percentage ?? 0,
+              // Include tax settings from PAYOUT snapshot for after-tax calculations
+              // Tax is based on when you receive the money (payout month), not when you worked
+              tax_enabled: taxSnapshot?.tax_enabled ?? false,
+              tax_percentage: taxSnapshot?.tax_percentage ?? 0,
             });
           }
         }

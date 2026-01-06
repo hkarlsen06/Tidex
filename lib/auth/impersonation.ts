@@ -288,18 +288,23 @@ export async function endImpersonationSession(
 
 /**
  * Get the active impersonation session for an admin.
+ * Returns any session that hasn't been formally ended (ended_at IS NULL),
+ * regardless of expiration status. This ensures we can clean up expired
+ * sessions that would otherwise block new impersonation attempts due to
+ * the unique constraint on (admin_user_id) WHERE ended_at IS NULL.
  */
 export async function getActiveSessionForAdmin(
   adminUserId: string
 ): Promise<ImpersonationSession | null> {
   const supabase = createSupabaseServiceClient();
 
+  // Find any session that hasn't been ended, even if expired
+  // The unique index blocks inserts when ended_at IS NULL, regardless of expires_at
   const { data, error } = await supabase
     .schema("internal").from("impersonation_sessions")
     .select("*")
     .eq("admin_user_id", adminUserId)
     .is("ended_at", null)
-    .gt("expires_at", new Date().toISOString())
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
