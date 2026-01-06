@@ -135,15 +135,17 @@ const DayButton = React.memo(function DayButton({
       aria-pressed={isSelected}
       className={cn(
         className,
+        // Today indicator: thick border (underneath selection ring)
+        isToday && "border-2 border-brand-highlight",
+        // Selected state: purple ring on top of everything
         isSelected &&
-          "border-brand-gradient-mid bg-brand-gradient-mid/10 text-brand-highlight shadow-app-sm",
+          "ring-2 ring-violet-500 dark:ring-violet-400 bg-violet-500/10 dark:bg-violet-500/15 shadow-app-sm",
+        // Overlap indicator (only when not selected)
         hasOverlap && !isSelected &&
           "border-orange-400/60 bg-orange-500/10 dark:border-orange-500/50 dark:bg-orange-500/15",
-        isToday && "ring-1 ring-brand-highlight",
-        isToday && !isSelected && "border-brand-highlight",
         isOutside && "opacity-40",
         // Highlight from push notification deep link (consistent with ShiftCard highlighting)
-        isHighlighted && "ring-2 ring-emerald-500 dark:ring-emerald-400 animate-pulse-subtle"
+        isHighlighted && !isSelected && "ring-2 ring-emerald-500 dark:ring-emerald-400 animate-pulse-subtle"
       )}
     >
       <div className="relative flex flex-col w-full h-full p-1">
@@ -158,7 +160,7 @@ const DayButton = React.memo(function DayButton({
         className={cn(
           "w-full text-xs font-semibold text-right pr-1 mb-1",
           isSelected
-            ? "text-brand-highlight"
+            ? "text-violet-600 dark:text-violet-400"
             : hasOverlap
               ? "text-orange-500 dark:text-orange-400"
               : hasShift
