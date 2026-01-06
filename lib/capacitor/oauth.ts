@@ -8,19 +8,12 @@ const GOOGLE_IOS_CLIENT_ID =
   "496501907923-a0sng8rs2gscdu2fdenlq4j2g8vq9gas.apps.googleusercontent.com";
 
 /**
- * Generate a random nonce for OAuth flows
- */
-function generateNonce(): string {
-  const array = new Uint8Array(32);
-  crypto.getRandomValues(array);
-  return Array.from(array, (byte) => byte.toString(16).padStart(2, "0")).join(
-    ""
-  );
-}
-
-/**
  * Perform native Google Sign-in on iOS using the native Google Sign-In SDK.
  * This shows a bottom sheet with Google accounts instead of opening a browser.
+ *
+ * Note: We don't use a nonce for Google because the iOS Google Sign-In SDK
+ * doesn't reliably pass custom nonces to the ID token. Supabase accepts
+ * tokens without nonces as long as the token itself doesn't contain one.
  */
 async function performNativeGoogleSignIn(
   supabase: SupabaseClient
@@ -35,25 +28,20 @@ async function performNativeGoogleSignIn(
       },
     });
 
-    // Generate nonce for token verification
-    const nonce = generateNonce();
-
-    // Trigger native Google Sign-in with nonce
+    // Trigger native Google Sign-in (no nonce - iOS SDK doesn't support it reliably)
     const result = await SocialLogin.login({
       provider: "google",
       options: {
         scopes: ["email", "profile"],
-        nonce,
       },
     });
 
     // Google returns idToken for online mode
     if (result.result && "idToken" in result.result && result.result.idToken) {
-      // Exchange the ID token with Supabase, including the nonce
+      // Exchange the ID token with Supabase (no nonce needed)
       const { error } = await supabase.auth.signInWithIdToken({
         provider: "google",
         token: result.result.idToken,
-        nonce,
       });
 
       if (error) {
