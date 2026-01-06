@@ -186,7 +186,7 @@ export async function performOAuthSignIn(
       provider,
       options: {
         redirectTo,
-        skipBrowserRedirect: isNativePlatform(), // Don't auto-redirect on native
+        skipBrowserRedirect: true, // Always skip - we handle redirect ourselves
         queryParams: options.queryParams,
       },
     });
@@ -195,7 +195,11 @@ export async function performOAuthSignIn(
       return { success: false, error };
     }
 
-    if (isNativePlatform() && data.url) {
+    if (!data.url) {
+      return { success: false, error: new Error("No auth URL returned") };
+    }
+
+    if (isNativePlatform()) {
       // On native, open the auth URL in Capacitor Browser
       const { Browser } = await import("@capacitor/browser");
       await Browser.open({
@@ -205,8 +209,10 @@ export async function performOAuthSignIn(
       return { success: true, authUrl: data.url };
     }
 
-    // On web, Supabase has already redirected
-    return { success: true };
+    // On web, redirect immediately to avoid Safari ITP issues
+    // Using location.href directly in the same call stack as user gesture
+    window.location.href = data.url;
+    return { success: true, authUrl: data.url };
   } catch (error) {
     return {
       success: false,
