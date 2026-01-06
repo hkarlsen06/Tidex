@@ -10,7 +10,7 @@
  */
 
 import "server-only"
-import { createSupabaseServerClient } from "@/lib/supabase/server"
+import { createSupabaseServiceClient } from "@/lib/supabase/service"
 
 // Types
 export type ShiftEventType = "added" | "updated" | "deleted"
@@ -143,7 +143,7 @@ function buildShiftBody(shiftDate: string, startTime: string, endTime: string): 
 export async function enqueueShiftNotification(params: ShiftNotificationParams) {
   const { ownerId, ownerName, shiftId, shiftDate, startTime, endTime, eventType, mutationId } =
     params
-  const supabase = await createSupabaseServerClient()
+  const supabase = createSupabaseServiceClient()
   const todayOslo = getTodayOslo()
 
   // Step 1: Get non-muted viewers for this owner
@@ -208,7 +208,7 @@ export async function enqueueShiftNotification(params: ShiftNotificationParams) 
  * Upsert into notification time window via RPC for atomic operation
  */
 async function upsertNotificationWindow(params: WindowUpsertParams) {
-  const supabase = await createSupabaseServerClient()
+  const supabase = createSupabaseServiceClient()
   const windowStart = getWindowStart()
 
   // Note: Function is in internal schema
@@ -234,7 +234,7 @@ export async function enqueueDirectNotification(params: {
   dataPayload: Record<string, unknown>
   idempotencyKey: string
 }) {
-  const supabase = await createSupabaseServerClient()
+  const supabase = createSupabaseServiceClient()
 
   await supabase.schema("internal").from("notifications_outbox").upsert(
     {
