@@ -7,13 +7,6 @@ import { Input } from "@/components/app/Input";
 import { Badge } from "@/components/app/Badge";
 import { Label } from "@/components/app/Label";
 import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from "@/components/app/Select";
-import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -61,7 +54,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 
-type NotificationFrequency = "instant" | "summary" | "muted";
+// Removed: type NotificationFrequency - using muted boolean instead
 
 interface Props {
   refreshTrigger?: number;
@@ -90,8 +83,7 @@ export function ShiftSharesCard({ refreshTrigger }: Props) {
   const [createOwner, setCreateOwner] = useState<UserSelectOption | null>(null);
   const [createViewer, setCreateViewer] = useState<UserSelectOption | null>(null);
   const [createShowEarnings, setCreateShowEarnings] = useState(true);
-  const [createNotificationFrequency, setCreateNotificationFrequency] =
-    useState<NotificationFrequency>("instant");
+  const [createMuted, setCreateMuted] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
@@ -346,7 +338,7 @@ export function ShiftSharesCard({ refreshTrigger }: Props) {
     updates: {
       showEarnings?: boolean;
       blocked?: boolean;
-      notificationFrequency?: NotificationFrequency;
+      muted?: boolean;
     }
   ) => {
     setUpdatingRow(share.id);
@@ -361,8 +353,8 @@ export function ShiftSharesCard({ refreshTrigger }: Props) {
                 showEarnings: updates.showEarnings,
               }),
               ...(updates.blocked !== undefined && { blocked: updates.blocked }),
-              ...(updates.notificationFrequency !== undefined && {
-                notificationFrequency: updates.notificationFrequency,
+              ...(updates.muted !== undefined && {
+                muted: updates.muted,
               }),
             }
           : s
@@ -419,7 +411,7 @@ export function ShiftSharesCard({ refreshTrigger }: Props) {
       ownerId: createOwner.id,
       viewerId: createViewer.id,
       showEarnings: createShowEarnings,
-      notificationFrequency: createNotificationFrequency,
+      muted: createMuted,
     });
 
     if (result.success) {
@@ -440,7 +432,7 @@ export function ShiftSharesCard({ refreshTrigger }: Props) {
     setCreateOwner(null);
     setCreateViewer(null);
     setCreateShowEarnings(true);
-    setCreateNotificationFrequency("instant");
+    setCreateMuted(false);
     setCreateError(null);
     setDuplicateWarning(null);
     setOwnerSearchQuery("");
@@ -620,22 +612,23 @@ export function ShiftSharesCard({ refreshTrigger }: Props) {
                       </button>
                     </td>
                     <td className="py-2 px-2">
-                      <Select
-                        value={share.notificationFrequency}
-                        onValueChange={(value: NotificationFrequency) =>
-                          handleUpdateShare(share, { notificationFrequency: value })
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleUpdateShare(share, { muted: !share.muted })
                         }
                         disabled={updatingRow === share.id}
+                        className="inline-flex items-center"
                       >
-                        <SelectTrigger className="w-28 h-8">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="instant">Instant</SelectItem>
-                          <SelectItem value="summary">Summary</SelectItem>
-                          <SelectItem value="muted">Muted</SelectItem>
-                        </SelectContent>
-                      </Select>
+                        <Badge
+                          variant={share.muted ? "destructive" : "outline"}
+                          className={
+                            updatingRow === share.id ? "opacity-50" : "cursor-pointer"
+                          }
+                        >
+                          {share.muted ? "Muted" : "Active"}
+                        </Badge>
+                      </button>
                     </td>
                     <td className="py-2 px-2 text-right">
                       <DropdownMenu>
@@ -841,23 +834,15 @@ export function ShiftSharesCard({ refreshTrigger }: Props) {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label>Notification frequency</Label>
-              <Select
-                value={createNotificationFrequency}
-                onValueChange={(value: NotificationFrequency) =>
-                  setCreateNotificationFrequency(value)
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="instant">Instant</SelectItem>
-                  <SelectItem value="summary">Summary</SelectItem>
-                  <SelectItem value="muted">Muted</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="create-muted"
+                checked={createMuted}
+                onChange={(e) => setCreateMuted(e.target.checked)}
+                className="h-4 w-4 rounded border-gray-300"
+              />
+              <Label htmlFor="create-muted">Mute notifications</Label>
             </div>
 
             {createError && (
