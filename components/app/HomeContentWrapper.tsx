@@ -8,6 +8,7 @@ type HomeContentWrapperProps = {
   shifts: ShiftWithComputations[];
   settings: UserSettings;
   payoutTaxSettings?: PayoutTaxSettings;
+  currentPayoutTaxSettings?: PayoutTaxSettings;
   cacheKey: string;
   preloadedMonths?: string[];
 };

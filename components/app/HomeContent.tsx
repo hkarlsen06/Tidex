@@ -25,7 +25,10 @@ import type { PayoutTaxSettings } from "@/data-access/shifts";
 type HomeContentProps = {
   shifts: ShiftWithComputations[];
   settings: UserSettings;
+  /** Tax settings for current month's earnings (paid next month) - used for TotalCard */
   payoutTaxSettings?: PayoutTaxSettings;
+  /** Tax settings for previous month's earnings (paid this month) - used for NextPayrollCard */
+  currentPayoutTaxSettings?: PayoutTaxSettings;
   /** User-specific cache key to ensure browser HTTP cache is per-user */
   cacheKey: string;
   /** Months that were preloaded in SSR (format: "YYYY-MM") */
@@ -124,7 +127,7 @@ function isFutureMonth(date: Date): boolean {
   );
 }
 
-export function HomeContent({ shifts: initialShifts, settings, payoutTaxSettings, cacheKey, preloadedMonths }: HomeContentProps) {
+export function HomeContent({ shifts: initialShifts, settings, payoutTaxSettings, currentPayoutTaxSettings, cacheKey, preloadedMonths }: HomeContentProps) {
   const { t, locale } = useTranslations();
   const formatCurrency = useFormatCurrency();
   const router = useRouter();
@@ -149,17 +152,11 @@ export function HomeContent({ shifts: initialShifts, settings, payoutTaxSettings
   // Track if the currently selected month is loading (for UI feedback)
   // We use both a synchronous check (for initial render) and state (for async updates)
   const [isLoadingAsync, setIsLoadingAsync] = useState(false);
-  // Track payout tax settings per month (key: "YYYY-MM")
-  const [payoutTaxByMonth, setPayoutTaxByMonth] = useState<Map<string, PayoutTaxSettings>>(() => {
-    // Initialize with SSR-provided payout tax settings for the current month
-    const initial = new Map<string, PayoutTaxSettings>();
-    if (payoutTaxSettings) {
-      const now = new Date();
-      const key = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-      initial.set(key, payoutTaxSettings);
-    }
-    return initial;
-  });
+  // Track payout tax settings per month (key: "YYYY-MM" of EARNINGS month)
+  // API fetches store settings keyed by the requested (earnings) month
+  const [payoutTaxByMonth, setPayoutTaxByMonth] = useState<Map<string, PayoutTaxSettings>>(
+    () => new Map()
+  );
 
   // Initialize loaded months synchronously on first render
   // This must happen before any effects run
@@ -372,23 +369,24 @@ export function HomeContent({ shifts: initialShifts, settings, payoutTaxSettings
     return index;
   }, [shifts]);
 
-  // Get payout tax settings for the currently selected month
+  // Get payout tax settings for the currently selected month (for TotalCard)
+  // This is the tax rate for selected month's earnings paid NEXT month
   // Falls back to SSR-provided settings if not yet fetched for this month
-  const currentPayoutTaxSettings = useMemo(() => {
+  const selectedMonthPayoutTaxSettings = useMemo(() => {
     const key = `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, '0')}`;
     return payoutTaxByMonth.get(key) ?? payoutTaxSettings ?? null;
   }, [month, payoutTaxByMonth, payoutTaxSettings]);
 
   const data = useMemo(
-    () => calculateMonthData(shiftsByMonth, month, settings, formatCurrency, currentPayoutTaxSettings),
-    [shiftsByMonth, month, settings, formatCurrency, currentPayoutTaxSettings]
+    () => calculateMonthData(shiftsByMonth, month, settings, formatCurrency, selectedMonthPayoutTaxSettings),
+    [shiftsByMonth, month, settings, formatCurrency, selectedMonthPayoutTaxSettings]
   );
 
   // Check if any shifts have tax enabled (for UI display purposes)
   // Prefer payout tax settings if available, otherwise fall back to per-shift check
   const taxDeductionEnabled = useMemo(() => {
-    return currentPayoutTaxSettings?.enabled ?? shifts.some(shift => shift.tax_enabled);
-  }, [shifts, currentPayoutTaxSettings]);
+    return selectedMonthPayoutTaxSettings?.enabled ?? shifts.some(shift => shift.tax_enabled);
+  }, [shifts, selectedMonthPayoutTaxSettings]);
 
   // Check if user has shifts this month but none have completed yet
   // Also count how many future/planned shifts there are and total shifts
@@ -475,15 +473,18 @@ export function HomeContent({ shifts: initialShifts, settings, payoutTaxSettings
     // Use payout month (payrollMonthDate) for half tax check, not earnings month
     const payoutMonth = payrollMonthDate.getMonth() + 1;
 
-    // Get payout tax settings for the earnings month (stored by earnings month key)
-    // These settings are for the payout month (earnings month + 1)
-    const earningsPayoutTaxSettings = payoutTaxByMonth.get(earningsKey) ?? null;
+    // Get payout tax settings for NextPayrollCard:
+    // - For current month: use currentPayoutTaxSettings (SSR prop for current payout)
+    // - For other months: look up from Map (populated by API fetches, keyed by earnings month)
+    const effectivePayoutTaxSettings = selectedMonthIsCurrent
+      ? currentPayoutTaxSettings
+      : payoutTaxByMonth.get(earningsKey) ?? null;
 
     const totals = summarizeShiftTotals({
       shifts: relevantShifts,
       halfTaxMonth: globalHalfTaxMonth,
       month: payoutMonth,
-      payoutTaxOverride: earningsPayoutTaxSettings ?? undefined,
+      payoutTaxOverride: effectivePayoutTaxSettings ?? undefined,
     });
 
     const taxAmount = totals.gross - totals.net;
@@ -503,7 +504,7 @@ export function HomeContent({ shifts: initialShifts, settings, payoutTaxSettings
       showPreviousPayroll,
       isEarningsMonthLoaded,
     };
-  }, [month, settings, shiftsByMonth, payrollDay, selectedMonthIsCurrent, locale, payoutTaxByMonth]);
+  }, [month, settings, shiftsByMonth, payrollDay, selectedMonthIsCurrent, locale, currentPayoutTaxSettings, payoutTaxByMonth]);
 
   // Find shift to display based on selected month
   const displayShift = useMemo(() => {

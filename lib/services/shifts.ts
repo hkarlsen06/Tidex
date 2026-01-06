@@ -98,11 +98,17 @@ export type ShiftData = {
   readonly settings: UserSettings;
   readonly aggregates: ShiftsAggregates;
   /**
-   * Tax settings from the payout month's snapshot.
-   * Used for calculating after-tax monthly totals.
+   * Tax settings for the requested month's payout (earnings month + 1).
+   * Used for calculating after-tax monthly totals for TotalCard.
    * Only present when year and month are provided in options.
    */
   readonly payoutTaxSettings: PayoutTaxSettings;
+  /**
+   * Tax settings for the current month's payout (previous month's earnings).
+   * Used for calculating NextPayrollCard values.
+   * Only present when year and month are provided in options.
+   */
+  readonly currentPayoutTaxSettings: PayoutTaxSettings;
 };
 
 /**
@@ -535,18 +541,35 @@ export const ShiftsServiceLive = Layer.effect(
 
         // Fetch payout month tax settings if year and month are provided
         let payoutTaxSettings: PayoutTaxSettings = null;
+        let currentPayoutTaxSettings: PayoutTaxSettings = null;
 
         if (year && month) {
           // Get payroll day from user settings (default to 1 if not set)
           const payrollDay = userSettings?.payroll_day ?? 1;
-          const payoutDate = calculatePayoutDate(year, month, payrollDay);
 
+          // 1. Tax settings for requested month's payout (earnings month + 1)
+          //    Used for TotalCard showing the requested month's earnings
+          const payoutDate = calculatePayoutDate(year, month, payrollDay);
           const payoutSnapshot = yield* getSnapshotForDate(userId, payoutDate, skipAuthCheck);
 
           if (payoutSnapshot) {
             payoutTaxSettings = {
               enabled: payoutSnapshot.tax_enabled ?? false,
               percentage: payoutSnapshot.tax_percentage ?? 0,
+            };
+          }
+
+          // 2. Tax settings for current month's payout (previous month's earnings)
+          //    Used for NextPayrollCard showing what gets paid this month
+          const prevMonth = month === 1 ? 12 : month - 1;
+          const prevYear = month === 1 ? year - 1 : year;
+          const currentPayoutDate = calculatePayoutDate(prevYear, prevMonth, payrollDay);
+          const currentPayoutSnapshot = yield* getSnapshotForDate(userId, currentPayoutDate, skipAuthCheck);
+
+          if (currentPayoutSnapshot) {
+            currentPayoutTaxSettings = {
+              enabled: currentPayoutSnapshot.tax_enabled ?? false,
+              percentage: currentPayoutSnapshot.tax_percentage ?? 0,
             };
           }
         }
@@ -557,6 +580,7 @@ export const ShiftsServiceLive = Layer.effect(
           settings: userSettings ?? {},
           aggregates,
           payoutTaxSettings,
+          currentPayoutTaxSettings,
         };
       });
 
