@@ -355,6 +355,8 @@ export async function refreshSharingData(): Promise<ActionResult> {
  * - instant: Notifications sent immediately (within 1-2 minutes)
  * - summary: Daily digest at your configured time (default 18:00)
  * - muted: No notifications from this sender
+ *
+ * @deprecated Use toggleSharerMuted instead for the new simplified UI
  */
 export async function updateNotificationFrequency(
   ownerId: string,
@@ -385,6 +387,44 @@ export async function updateNotificationFrequency(
     return { success: true };
   } catch (error: any) {
     logger.error("Failed to update notification frequency:", error);
+    return { success: false, error: SHARING_ERRORS.FAILED_TO_UPDATE_FREQUENCY };
+  }
+}
+
+/**
+ * Toggle muted status for a specific sharer
+ *
+ * Simple boolean toggle for notifications from this sharer:
+ * - muted=true: No notifications from this sender
+ * - muted=false: Notifications enabled (immediate delivery)
+ */
+export async function toggleSharerMuted(
+  ownerId: string,
+  muted: boolean
+): Promise<ActionResult> {
+  const { user } = await verifySession();
+
+  if (!ownerId) {
+    return { success: false, error: SHARING_ERRORS.SHARE_NOT_FOUND };
+  }
+
+  // Convert boolean to frequency for the existing service method
+  const frequency: NotificationFrequency = muted ? "muted" : "instant";
+
+  const program = Effect.gen(function* () {
+    const sharing = yield* SharingService;
+    yield* sharing.updateNotificationFrequency(user.id, ownerId, frequency);
+  }).pipe(Effect.provide(SharingLive), Effect.scoped);
+
+  try {
+    await Effect.runPromise(program);
+
+    // Invalidate the viewer's cache to update their friends list
+    invalidateAndRevalidate(user.id);
+
+    return { success: true };
+  } catch (error: any) {
+    logger.error("Failed to toggle sharer muted status:", error);
     return { success: false, error: SHARING_ERRORS.FAILED_TO_UPDATE_FREQUENCY };
   }
 }

@@ -40,8 +40,8 @@ import {
   removeSharer,
 } from "@/app/[locale]/(app)/sharing/_actions/sharing";
 import { useTranslations } from "@/lib/i18n/client";
-import type { Friend, NotificationFrequency } from "@/data-access/sharing";
-import { NotificationFrequencyToggle } from "./NotificationFrequencyToggle";
+import type { Friend } from "@/data-access/sharing";
+import { MuteSharerToggle } from "./MuteSharerToggle";
 import { isNativePlatform } from "@/lib/capacitor/platform";
 
 type ManageSharingModalProps = {
@@ -119,7 +119,7 @@ type OptimisticAction =
   | { type: "remove"; id: string }
   | { type: "removeSharer"; id: string }
   | { type: "shareBack"; id: string }
-  | { type: "updateFrequency"; id: string; frequency: NotificationFrequency };
+  | { type: "toggleMuted"; id: string; muted: boolean };
 
 export function ManageSharingModal({
   isOpen,
@@ -228,14 +228,15 @@ export function ManageSharingModal({
             : f,
         );
       }
-      if (action.type === "updateFrequency") {
+      if (action.type === "toggleMuted") {
         return state.map((f) =>
           f.id === action.id && f.sharesWithMe
             ? {
                 ...f,
                 sharesWithMe: {
                   ...f.sharesWithMe,
-                  notificationFrequency: action.frequency,
+                  // Convert muted boolean to frequency for compatibility with existing data type
+                  notificationFrequency: action.muted ? "muted" : "instant",
                 },
               }
             : f,
@@ -271,14 +272,6 @@ export function ManageSharingModal({
     sharesWithMe: "Deler med deg",
     sharesWithMeDesc: "Du kan se deres vakter",
     removeFriend: "Fjern",
-    notificationFrequency: {
-      instant: "Umiddelbar",
-      summary: "Daglig oppsummering",
-      muted: "Dempet",
-      instantDesc: "Varsles med en gang",
-      summaryDesc: "Samlet varsel én gang om dagen",
-      mutedDesc: "Ingen varsler fra denne personen",
-    },
   };
 
   // Helper to get display name with localized fallback
@@ -499,11 +492,14 @@ export function ManageSharingModal({
                               {sharesWithMe && (
                                 <>
                                   {isNative && (
-                                    <NotificationFrequencyToggle
+                                    <MuteSharerToggle
                                       sharerId={friend.id}
-                                      currentFrequency={sharesWithMe.notificationFrequency}
+                                      isMuted={sharesWithMe.notificationFrequency === "muted"}
                                       disabled={isActionPending}
-                                      translations={sharing.notificationFrequency as any}
+                                      translations={{
+                                        mute: "Demp varsler",
+                                        unmute: "Skru på varsler",
+                                      }}
                                       onError={(err) => setError(err)}
                                     />
                                   )}
@@ -684,11 +680,14 @@ export function ManageSharingModal({
                               {sharesWithMe && (
                                 <>
                                   {isNative && (
-                                    <NotificationFrequencyToggle
+                                    <MuteSharerToggle
                                       sharerId={friend.id}
-                                      currentFrequency={sharesWithMe.notificationFrequency}
+                                      isMuted={sharesWithMe.notificationFrequency === "muted"}
                                       disabled={isActionPending}
-                                      translations={sharing.notificationFrequency as any}
+                                      translations={{
+                                        mute: "Demp varsler",
+                                        unmute: "Skru på varsler",
+                                      }}
                                       onError={(err) => setError(err)}
                                     />
                                   )}
