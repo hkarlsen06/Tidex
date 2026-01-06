@@ -352,6 +352,7 @@ export const en: Dictionary = {
         goalReached: 'Goal reached!',
         overTarget: '{amount} over',
         remaining: '{amount} remaining',
+        notEnabled: 'Set a monthly earnings goal in Settings to track your progress.',
       },
     },
     wagey: {
@@ -1509,6 +1510,9 @@ export const en: Dictionary = {
         supplements: 'Supplements',
         noSupplements: 'You have not earned any supplements this month. Supplements are earned during evening, night and weekend shifts.',
         percentBasePay: '100% base pay',
+      },
+      weeklyBar: {
+        noData: 'No shifts this month',
       },
       monthlyCumulative: {
         currentMonth: 'This month',

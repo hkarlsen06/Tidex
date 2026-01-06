@@ -26,8 +26,25 @@ export function MonthlyGoalProgress({ data }: MonthlyGoalProgressProps) {
     [formatCurrency]
   );
 
+  // Show empty state when goal is not enabled (maintains layout stability)
   if (!data.enabled) {
-    return null;
+    return (
+      <Card className="border-border bg-surface-primary overflow-hidden">
+        <CardContent className="p-6">
+          <div className="flex items-start justify-between mb-4">
+            <h3 className="text-xl font-bold text-text-primary">
+              {t.pages.stats.monthlyGoal.title}
+            </h3>
+            <div className="text-text-muted opacity-50">
+              <Target className="w-5 h-5" />
+            </div>
+          </div>
+          <p className="text-sm text-text-muted">
+            {t.pages.stats.monthlyGoal.notEnabled}
+          </p>
+        </CardContent>
+      </Card>
+    );
   }
 
   // Cap percentage at 150% for display purposes
