@@ -49,7 +49,7 @@ export default async function Home({ params }: HomeProps) {
   const previous = getPreviousYearMonth();
   const next = getNextYearMonth();
 
-  const { shifts, settings, payoutTaxSettings } = await getComputedShifts(user.id, {
+  const { shifts, settings, payoutTaxSettings, currentPayoutTaxSettings } = await getComputedShifts(user.id, {
     startDate: getMonthStart(previous.year, previous.month),
     endDate: getMonthEnd(next.year, next.month),
     limit: 200, // ~50 shifts per month × 3 months + headroom
@@ -70,6 +70,7 @@ export default async function Home({ params }: HomeProps) {
         shifts={shifts}
         settings={settings}
         payoutTaxSettings={payoutTaxSettings}
+        currentPayoutTaxSettings={currentPayoutTaxSettings}
         cacheKey={user.id.slice(0, 8)}
         preloadedMonths={preloadedMonths}
       />

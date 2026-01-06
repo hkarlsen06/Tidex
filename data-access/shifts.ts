@@ -58,6 +58,7 @@ async function getComputedShiftsInternal(
   settings: UserSettings;
   aggregates: ShiftsAggregates;
   payoutTaxSettings: PayoutTaxSettings;
+  currentPayoutTaxSettings: PayoutTaxSettings;
 }> {
   "use cache: private";
   cacheTag(`user-${userId}`, "user-shifts");
@@ -91,6 +92,7 @@ async function getComputedShiftsInternal(
       settings: result.settings,
       aggregates: result.aggregates,
       payoutTaxSettings: result.payoutTaxSettings,
+      currentPayoutTaxSettings: result.currentPayoutTaxSettings,
     };
   } catch (error: any) {
     logger.error("Failed to fetch computed shifts:", error);
@@ -101,6 +103,7 @@ async function getComputedShiftsInternal(
       settings: {},
       aggregates: { totalHours: 0, totalEarnings: 0 },
       payoutTaxSettings: null,
+      currentPayoutTaxSettings: null,
     };
   }
 }
@@ -125,6 +128,7 @@ export const getComputedShifts = cache(
     settings: UserSettings;
     aggregates: ShiftsAggregates;
     payoutTaxSettings: PayoutTaxSettings;
+    currentPayoutTaxSettings: PayoutTaxSettings;
   }> => {
     const { user } = await verifySession();
 
@@ -155,6 +159,7 @@ export const getComputedShiftsForApi = cache(
     settings: UserSettings;
     aggregates: ShiftsAggregates;
     payoutTaxSettings: PayoutTaxSettings;
+    currentPayoutTaxSettings: PayoutTaxSettings;
   }> => {
     return getComputedShiftsInternal(userId, options);
   }
