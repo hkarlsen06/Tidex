@@ -6,6 +6,11 @@ import { convertRecurringShiftToStandalone } from "./convertRecurringShiftToStan
 import { verifySession } from "@/data-access/auth";
 import { isISODate, isHHMM } from "@/lib/validation/shift-validators";
 import { ERRORS } from "@/lib/errors/messages";
+import {
+  enqueueShiftNotification,
+  generateMutationId,
+  getOwnerName,
+} from "@/lib/notifications/enqueue";
 
 export type UpdateShiftInput = {
   id: string;
@@ -46,18 +51,19 @@ export async function updateShift(input: UpdateShiftInput) {
     return { updated: 1 };
   }
 
-  const { data: existing, error: fetchError } = await supabase
+  // Fetch current shift to compare if date/time changed
+  const { data: oldShift, error: fetchError } = await supabase
     .from("user_shifts")
-    .select("id")
+    .select("id, shift_date, start_time, end_time")
     .eq("id", input.id)
     .eq("user_id", user.id)
     .single();
 
-  if (fetchError || !existing) {
+  if (fetchError || !oldShift) {
     throw new Error(ERRORS.SHIFT_NOT_FOUND);
   }
 
-  const { error } = await supabase
+  const { data: updatedShift, error } = await supabase
     .from("user_shifts")
     .update({
       shift_date: input.shift_date,
@@ -65,10 +71,33 @@ export async function updateShift(input: UpdateShiftInput) {
       end_time: input.end,
     })
     .eq("id", input.id)
-    .eq("user_id", user.id);
+    .eq("user_id", user.id)
+    .select("id, shift_date, start_time, end_time")
+    .single();
 
   if (error) {
     throw new Error(error.message);
+  }
+
+  // ONLY notify if date or time actually changed
+  const dateChanged = oldShift.shift_date !== updatedShift.shift_date;
+  const startChanged = oldShift.start_time !== updatedShift.start_time;
+  const endChanged = oldShift.end_time !== updatedShift.end_time;
+
+  if (dateChanged || startChanged || endChanged) {
+    const mutationId = generateMutationId();
+    const ownerName = getOwnerName(user);
+
+    await enqueueShiftNotification({
+      ownerId: user.id,
+      ownerName,
+      shiftId: updatedShift.id,
+      shiftDate: updatedShift.shift_date,
+      startTime: updatedShift.start_time,
+      endTime: updatedShift.end_time,
+      eventType: "updated",
+      mutationId,
+    });
   }
 
   // Invalidate cache and revalidate paths

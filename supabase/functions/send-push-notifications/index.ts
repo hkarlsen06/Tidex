@@ -1,9 +1,10 @@
 // Supabase Edge Function: Send Push Notifications
-// - Processes queued notifications from notification_queue table
+// - Processes notifications from notifications_outbox table (pre-built messages)
 // - Uses FCM HTTP v1 API with OAuth2 for iOS/Android push
-// - Atomic queue claiming with FOR UPDATE SKIP LOCKED
+// - Atomic queue claiming via claim_outbox_notifications RPC
 // - Automatic invalid token cleanup
-// - Consolidates bulk notifications from same sender
+// - NO message building - titles/bodies are pre-computed by app
+
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.45.4";
 
@@ -20,116 +21,24 @@ const FCM_PRIVATE_KEY = (Deno.env.get("FCM_PRIVATE_KEY") ?? "").replace(/\\n/g, 
 let cachedAccessToken: { token: string; expiresAt: number } | null = null;
 
 // ---------- Types ----------
-interface ShiftNotificationPayload {
-  shift_id: string;
-  shift_date: string;
-  start_time?: string;
-  end_time?: string;
-  owner_id: string;
-  owner_name: string;
-}
-
-interface RecurringNotificationPayload {
-  recurring_id: string;
-  owner_id: string;
-  owner_name: string;
-}
-
-interface AdminBroadcastPayload {
+interface OutboxNotification {
+  id: string;
+  owner_id: string | null;
+  recipient_id: string;
+  broadcast_id: string | null;
+  notification_type: string;
+  due_at: string;
+  status: string;
   title: string;
   body: string;
-  deeplink?: string | null;
-}
-
-/** Payload for share_started notifications (when someone starts sharing with you) */
-interface ShareStartedPayload {
-  owner_id: string;
-  owner_name: string;
-  is_mutual?: boolean; // true if recipient already shares with the sender
-}
-
-/** Payload for batched shift changes (from cron processor) */
-interface ShiftChangesPayload {
-  updated_shifts: Array<{
-    shift_id: string;
-    shift_date: string;
-    start_time: string;
-    end_time: string;
-  }>;
-  deleted_shifts: Array<{
-    shift_id: string;
-    shift_date: string;
-    start_time: string;
-    end_time: string;
-  }>;
-  updated_count: number;
-  deleted_count: number;
-  owner_id: string;
-  owner_name: string;
-}
-
-/** Payload for daily summary notifications (batched by sharer preference) */
-interface ShiftSummaryPayload {
-  owner_id: string;
-  owner_name: string;
-  created_count: number;
-  updated_count: number;
-  deleted_count: number;
-  total_count: number;
-  // All affected dates for deep link
-  shift_dates: string[];
-}
-
-/** Payload for feedback_submitted notifications (notify admins) */
-interface FeedbackSubmittedPayload {
-  feedback_id: string;
-  user_name: string;
-  user_email: string;
-  message_preview: string;
-}
-
-/** Payload for feedback_responded notifications (notify user) */
-interface FeedbackRespondedPayload {
-  feedback_id: string;
-  response_preview: string;
-}
-
-type NotificationPayload = ShiftNotificationPayload | RecurringNotificationPayload | AdminBroadcastPayload | ShiftChangesPayload | ShareStartedPayload | ShiftSummaryPayload | FeedbackSubmittedPayload | FeedbackRespondedPayload;
-
-interface QueuedNotification {
-  id: string;
-  type: string;
-  recipient_id: string;
-  sender_id: string;
-  payload: NotificationPayload;
+  data_payload: Record<string, unknown>;
+  idempotency_key: string;
   created_at: string;
-  broadcast_id?: string; // For admin broadcasts
 }
 
 interface PushDevice {
   id: string;
   fcm_token: string;
-}
-
-/** Consolidated notification for bulk sends */
-interface ConsolidatedNotification {
-  notifications: QueuedNotification[];
-  recipient_id: string;
-  sender_id: string;
-  owner_name: string;
-  type: "single_shift" | "multiple_shifts" | "recurring" | "admin_broadcast" | "shift_changes" | "share_started" | "shift_summary" | "feedback_submitted" | "feedback_responded";
-  notificationType: string; // Original notification type (shared_shift_created, shared_shift_updated, shared_shift_deleted, shared_shift_changes, share_started, shared_shift_summary)
-  // For single shift
-  shift?: { date: string; start_time: string; end_time: string };
-  // For multiple shifts
-  shift_count?: number;
-  shift_dates?: string[]; // All dates for multiple shifts (for deep link highlighting)
-  // For admin broadcasts
-  broadcast?: AdminBroadcastPayload;
-  // For batched shift changes (from cron processor)
-  shift_changes?: ShiftChangesPayload;
-  // For daily summary notifications
-  shift_summary?: ShiftSummaryPayload;
 }
 
 // ---------- Helpers ----------
@@ -142,26 +51,6 @@ function json(data: unknown, status = 200) {
     status,
     headers: { "Content-Type": "application/json" },
   });
-}
-
-function capitalizeFirst(str: string): string {
-  return str.charAt(0).toUpperCase() + str.slice(1);
-}
-
-function formatDate(dateStr: string): string {
-  const date = new Date(dateStr);
-  return capitalizeFirst(
-    date.toLocaleDateString("nb-NO", {
-      weekday: "long",
-      day: "numeric",
-      month: "long",
-    })
-  );
-}
-
-function formatTime(timeStr: string): string {
-  // Handle both "HH:mm" and "HH:mm:ss+TZ" formats
-  return timeStr.slice(0, 5);
 }
 
 function base64UrlEncode(input: string | ArrayBuffer): string {
@@ -254,250 +143,31 @@ async function getFcmAccessToken(): Promise<string> {
 }
 
 /**
- * Build notification message based on consolidated notification type
+ * Send a notification to FCM
+ * Title and body are pre-computed and stored in the outbox
  */
-function buildNotificationMessage(consolidated: ConsolidatedNotification): {
-  title: string;
-  body: string;
-} {
-  const { owner_name, type, notificationType } = consolidated;
-
-  switch (type) {
-    case "admin_broadcast": {
-      const broadcast = consolidated.broadcast!;
-      return { title: broadcast.title, body: broadcast.body };
-    }
-    case "single_shift": {
-      const shift = consolidated.shift!;
-      const timeRange = `${formatDate(shift.date)} kl. ${formatTime(shift.start_time)}-${formatTime(shift.end_time)}`;
-
-      // Handle updated and deleted notifications
-      if (notificationType === "shared_shift_updated") {
-        return {
-          title: `${owner_name} endret en vakt`,
-          body: timeRange,
-        };
-      }
-
-      if (notificationType === "shared_shift_deleted") {
-        return {
-          title: `${owner_name} slettet en vakt`,
-          body: timeRange,
-        };
-      }
-
-      // Default: shared_shift_created
-      const title = `${owner_name} la til en vakt`;
-      const body = timeRange;
-      return { title, body };
-    }
-    case "multiple_shifts": {
-      const count = consolidated.shift_count!;
-
-      // Handle updated and deleted notifications for multiple shifts
-      if (notificationType === "shared_shift_updated") {
-        return {
-          title: `${owner_name} endret ${count} vakter`,
-          body: "Trykk for å se vaktene",
-        };
-      }
-
-      if (notificationType === "shared_shift_deleted") {
-        return {
-          title: `${owner_name} slettet ${count} vakter`,
-          body: "Trykk for å se vaktene",
-        };
-      }
-
-      // Default: shared_shift_created
-      const title = `${owner_name} la til ${count} vakter`;
-      const body = "Trykk for å se vaktene";
-      return { title, body };
-    }
-    case "recurring": {
-      const title = `${owner_name} la til en gjentakende vakt`;
-      const body = "Trykk for å se vaktene";
-      return { title, body };
-    }
-    case "shift_changes": {
-      // New batched notification type from cron processor
-      const changes = consolidated.shift_changes!;
-      const { updated_count, deleted_count, updated_shifts, deleted_shifts } = changes;
-
-      // Build message parts
-      const parts: string[] = [];
-
-      if (updated_count > 0) {
-        parts.push(`endret ${updated_count} ${updated_count === 1 ? "vakt" : "vakter"}`);
-      }
-
-      if (deleted_count > 0) {
-        parts.push(`slettet ${deleted_count} ${deleted_count === 1 ? "vakt" : "vakter"}`);
-      }
-
-      const title = `${owner_name} ${parts.join(" og ")}`;
-
-      // Body: show details for single shift, generic for multiple
-      let body: string;
-      const totalCount = updated_count + deleted_count;
-
-      if (totalCount === 1) {
-        // Single shift - show details
-        const shift = updated_count === 1 ? updated_shifts[0] : deleted_shifts[0];
-        body = `${formatDate(shift.shift_date)} kl. ${formatTime(shift.start_time)}-${formatTime(shift.end_time)}`;
-      } else {
-        body = "Trykk for å se endringene";
-      }
-
-      return { title, body };
-    }
-    case "share_started": {
-      // Someone started sharing their shifts with the recipient
-      // Check if this is now mutual sharing
-      const firstPayload = consolidated.notifications[0].payload as ShareStartedPayload;
-      if (firstPayload.is_mutual) {
-        // Already sharing with each other - celebrate mutual sharing
-        return {
-          title: "Dere kan nå se hverandres vakter!",
-          body: `Du og ${owner_name} deler nå vakter med hverandre`,
-        };
-      }
-      // Not mutual yet - prompt to share back
-      return {
-        title: `${owner_name} deler vaktene sine med deg`,
-        body: "Trykk for å dele tilbake",
-      };
-    }
-    case "shift_summary": {
-      // Daily summary notification (batched from summary preference)
-      const summary = consolidated.shift_summary!;
-      const { created_count, updated_count, deleted_count, total_count } = summary;
-
-      // Build message parts based on what changed
-      const parts: string[] = [];
-
-      if (created_count > 0) {
-        parts.push(`la til ${created_count} ${created_count === 1 ? "vakt" : "vakter"}`);
-      }
-
-      if (updated_count > 0) {
-        parts.push(`endret ${updated_count} ${updated_count === 1 ? "vakt" : "vakter"}`);
-      }
-
-      if (deleted_count > 0) {
-        parts.push(`slettet ${deleted_count} ${deleted_count === 1 ? "vakt" : "vakter"}`);
-      }
-
-      // Combine parts with "og" for the last item
-      let actionText: string;
-      if (parts.length === 1) {
-        actionText = parts[0];
-      } else if (parts.length === 2) {
-        actionText = parts.join(" og ");
-      } else {
-        actionText = parts.slice(0, -1).join(", ") + " og " + parts[parts.length - 1];
-      }
-
-      const title = `${owner_name} ${actionText}`;
-      const body = total_count === 1 ? "Trykk for å se vakten" : "Trykk for å se vaktene";
-
-      return { title, body };
-    }
-    case "feedback_submitted": {
-      const payload = consolidated.notifications[0].payload as FeedbackSubmittedPayload;
-      const preview = payload.message_preview;
-      return {
-        title: "Ny tilbakemelding mottatt",
-        body: `${payload.user_name}: ${preview}${preview.length >= 100 ? '...' : ''}`,
-      };
-    }
-    case "feedback_responded": {
-      const payload = consolidated.notifications[0].payload as FeedbackRespondedPayload;
-      const preview = payload.response_preview;
-      return {
-        title: "Tidex har sett på tilbakemeldingen din",
-        body: preview + (preview.length >= 150 ? '...' : ''),
-      };
-    }
-  }
-}
-
-async function sendConsolidatedToFcm(
+async function sendToFcm(
   accessToken: string,
   fcmToken: string,
-  consolidated: ConsolidatedNotification
+  notification: OutboxNotification
 ): Promise<{ success: boolean; invalidToken?: boolean }> {
-  const { title, body } = buildNotificationMessage(consolidated);
+  const { title, body, data_payload, notification_type } = notification;
 
-  // Use first notification's data for deep linking
-  const firstNotification = consolidated.notifications[0];
-
-  // Build data payload based on notification type
+  // Build data payload for deep linking
+  // data_payload already contains type, owner_id, shift_dates, deeplink, etc.
   const dataPayload: Record<string, string> = {
-    type: firstNotification.type,
+    type: notification_type,
   };
 
-  if (firstNotification.type === "admin_broadcast") {
-    // Admin broadcast - include deeplink if present
-    const adminPayload = firstNotification.payload as AdminBroadcastPayload;
-    if (adminPayload.deeplink) {
-      dataPayload.deeplink = adminPayload.deeplink;
-    }
-  } else if (firstNotification.type === "share_started") {
-    // Share started - include owner_id and appropriate deep link
-    const sharePayload = firstNotification.payload as ShareStartedPayload;
-    dataPayload.owner_id = sharePayload.owner_id;
-    if (sharePayload.is_mutual) {
-      // Mutual sharing - just go to sharing page to see their shifts
-      dataPayload.deeplink = `/sharing?user=${sharePayload.owner_id}`;
-    } else {
-      // Not mutual - open manage modal with highlight to prompt share back
-      dataPayload.deeplink = `/sharing?manage=true&highlight=${sharePayload.owner_id}`;
-    }
-  } else if (firstNotification.type === "shared_shift_changes") {
-    // Batched shift changes - collect all dates from updated + deleted shifts
-    const changesPayload = firstNotification.payload as ShiftChangesPayload;
-    dataPayload.owner_id = changesPayload.owner_id;
-
-    // Collect all dates (updated + deleted) for deep link highlighting
-    const allDates = [
-      ...changesPayload.updated_shifts.map((s) => s.shift_date),
-      ...changesPayload.deleted_shifts.map((s) => s.shift_date),
-    ];
-    const uniqueDates = [...new Set(allDates)].sort();
-    if (uniqueDates.length > 0) {
-      dataPayload.shift_dates = uniqueDates.join(",");
-    }
-  } else if (firstNotification.type === "shared_shift_summary") {
-    // Daily summary notification - include owner_id and all affected dates
-    const summaryPayload = firstNotification.payload as ShiftSummaryPayload;
-    dataPayload.owner_id = summaryPayload.owner_id;
-
-    // Include all affected dates for deep link highlighting
-    if (summaryPayload.shift_dates && summaryPayload.shift_dates.length > 0) {
-      dataPayload.shift_dates = summaryPayload.shift_dates.join(",");
-    }
-  } else if (firstNotification.type === "feedback_submitted") {
-    // Feedback submitted - deep link to admin feedback tab
-    const feedbackPayload = firstNotification.payload as FeedbackSubmittedPayload;
-    dataPayload.feedback_id = feedbackPayload.feedback_id;
-    dataPayload.deeplink = `/settings/admin?tab=feedback`;
-  } else if (firstNotification.type === "feedback_responded") {
-    // Feedback responded - deep link to user's feedback page
-    const feedbackPayload = firstNotification.payload as FeedbackRespondedPayload;
-    dataPayload.feedback_id = feedbackPayload.feedback_id;
-    dataPayload.deeplink = `/settings/feedback`;
-  } else {
-    // Regular shift notifications - include owner_id and shift info
-    const shiftPayload = firstNotification.payload as ShiftNotificationPayload;
-    dataPayload.owner_id = consolidated.sender_id;
-
-    // For multiple shifts, send comma-separated dates for highlighting
-    // For single shifts, send the single date
-    if (consolidated.shift_dates && consolidated.shift_dates.length > 0) {
-      dataPayload.shift_dates = consolidated.shift_dates.join(",");
-    } else if (shiftPayload.shift_date) {
-      dataPayload.shift_dates = shiftPayload.shift_date;
+  // Flatten data_payload to strings for FCM (FCM data values must be strings)
+  for (const [key, value] of Object.entries(data_payload)) {
+    if (value !== null && value !== undefined) {
+      if (Array.isArray(value)) {
+        // Convert arrays to comma-separated strings (e.g., shift_dates)
+        dataPayload[key] = value.join(",");
+      } else {
+        dataPayload[key] = String(value);
+      }
     }
   }
 
@@ -559,193 +229,6 @@ async function sendConsolidatedToFcm(
   return { success: false };
 }
 
-/**
- * Consolidate notifications from the same sender to the same recipient
- * Groups by (type, sender_id, recipient_id, broadcast_id) and creates appropriate message
- *
- * Admin broadcasts use broadcast_id to ensure each broadcast is a separate message
- * Shift notifications group by type to prevent mixing created/updated/deleted
- */
-function consolidateNotifications(
-  notifications: QueuedNotification[]
-): ConsolidatedNotification[] {
-  // Group by type + sender_id + recipient_id (+ broadcast_id for admin_broadcast)
-  // IMPORTANT: type is included to prevent mixing created/updated/deleted notifications
-  const groups = new Map<string, QueuedNotification[]>();
-
-  for (const notification of notifications) {
-    let key: string;
-
-    if (notification.type === "admin_broadcast") {
-      // Validate broadcast_id is set (should always be due to DB constraint)
-      if (!notification.broadcast_id) {
-        console.error(`admin_broadcast ${notification.id} missing broadcast_id, skipping`);
-        continue;
-      }
-      // Each broadcast_id is treated as a separate message (no consolidation across broadcasts)
-      key = `${notification.type}:${notification.sender_id}:${notification.recipient_id}:${notification.broadcast_id}`;
-    } else if (notification.type === "feedback_submitted" || notification.type === "feedback_responded") {
-      // Feedback notifications - include feedback_id to prevent merging separate feedback items
-      const feedbackPayload = notification.payload as FeedbackSubmittedPayload | FeedbackRespondedPayload;
-      key = `${notification.type}:${notification.sender_id}:${notification.recipient_id}:${feedbackPayload.feedback_id}`;
-    } else {
-      // Shift notifications - include type to prevent mixing created/updated/deleted
-      key = `${notification.type}:${notification.sender_id}:${notification.recipient_id}`;
-    }
-
-    if (!groups.has(key)) {
-      groups.set(key, []);
-    }
-    groups.get(key)!.push(notification);
-  }
-
-  const consolidated: ConsolidatedNotification[] = [];
-
-  for (const [, group] of groups) {
-    const first = group[0];
-    const payload = first.payload;
-
-    // Handle admin broadcast
-    if (first.type === "admin_broadcast") {
-      const adminPayload = payload as AdminBroadcastPayload;
-      consolidated.push({
-        notifications: group,
-        recipient_id: first.recipient_id,
-        sender_id: first.sender_id,
-        owner_name: "Admin", // Not shown in message
-        type: "admin_broadcast",
-        notificationType: first.type,
-        broadcast: adminPayload,
-      });
-      continue;
-    }
-
-    const owner_name = (payload as ShiftNotificationPayload).owner_name || "Noen";
-
-    // Check if this is a recurring shift notification
-    if (first.type === "recurring_shift_created") {
-      consolidated.push({
-        notifications: group,
-        recipient_id: first.recipient_id,
-        sender_id: first.sender_id,
-        owner_name,
-        type: "recurring",
-        notificationType: first.type,
-      });
-      continue;
-    }
-
-    // Handle share_started notification (someone started sharing with recipient)
-    if (first.type === "share_started") {
-      const sharePayload = payload as ShareStartedPayload;
-      consolidated.push({
-        notifications: group,
-        recipient_id: first.recipient_id,
-        sender_id: first.sender_id,
-        owner_name: sharePayload.owner_name,
-        type: "share_started",
-        notificationType: first.type,
-      });
-      continue;
-    }
-
-    // Handle batched shift changes (from cron processor - already consolidated)
-    if (first.type === "shared_shift_changes") {
-      const changesPayload = payload as ShiftChangesPayload;
-      consolidated.push({
-        notifications: group,
-        recipient_id: first.recipient_id,
-        sender_id: first.sender_id,
-        owner_name: changesPayload.owner_name,
-        type: "shift_changes",
-        notificationType: first.type,
-        shift_changes: changesPayload,
-      });
-      continue;
-    }
-
-    // Handle daily summary notifications (from process_summary_notifications)
-    if (first.type === "shared_shift_summary") {
-      const summaryPayload = payload as ShiftSummaryPayload;
-      consolidated.push({
-        notifications: group,
-        recipient_id: first.recipient_id,
-        sender_id: first.sender_id,
-        owner_name: summaryPayload.owner_name,
-        type: "shift_summary",
-        notificationType: first.type,
-        shift_summary: summaryPayload,
-      });
-      continue;
-    }
-
-    // Handle feedback_submitted notification (notify admins when user submits feedback)
-    if (first.type === "feedback_submitted") {
-      const feedbackPayload = payload as FeedbackSubmittedPayload;
-      consolidated.push({
-        notifications: group,
-        recipient_id: first.recipient_id,
-        sender_id: first.sender_id,
-        owner_name: feedbackPayload.user_name,
-        type: "feedback_submitted",
-        notificationType: first.type,
-      });
-      continue;
-    }
-
-    // Handle feedback_responded notification (notify user when admin responds)
-    if (first.type === "feedback_responded") {
-      consolidated.push({
-        notifications: group,
-        recipient_id: first.recipient_id,
-        sender_id: first.sender_id,
-        owner_name: "Tidex",
-        type: "feedback_responded",
-        notificationType: first.type,
-      });
-      continue;
-    }
-
-    // Regular shift notifications (created, updated, deleted)
-    if (group.length === 1) {
-      // Single shift - show full details
-      const shiftPayload = payload as ShiftNotificationPayload;
-      consolidated.push({
-        notifications: group,
-        recipient_id: first.recipient_id,
-        sender_id: first.sender_id,
-        owner_name,
-        type: "single_shift",
-        notificationType: first.type, // Preserve original type for message building
-        shift: {
-          date: shiftPayload.shift_date,
-          start_time: shiftPayload.start_time || "00:00",
-          end_time: shiftPayload.end_time || "00:00",
-        },
-      });
-    } else {
-      // Multiple shifts - consolidate into one message
-      // Collect all unique shift dates for deep link highlighting
-      const shiftDates = [...new Set(
-        group.map(n => (n.payload as ShiftNotificationPayload).shift_date)
-      )].sort();
-
-      consolidated.push({
-        notifications: group,
-        recipient_id: first.recipient_id,
-        sender_id: first.sender_id,
-        owner_name,
-        type: "multiple_shifts",
-        notificationType: first.type, // Preserve original type for message building
-        shift_count: group.length,
-        shift_dates: shiftDates,
-      });
-    }
-  }
-
-  return consolidated;
-}
-
 // ---------- Server ----------
 serve(async (req: Request) => {
   try {
@@ -766,12 +249,12 @@ serve(async (req: Request) => {
       auth: { persistSession: false },
     });
 
-    // Atomic claim: SELECT ... FOR UPDATE SKIP LOCKED + UPDATE in one transaction
-    // This prevents double-processing if function is invoked concurrently
-    const { data: notifications, error: claimError } = await supabase.rpc(
-      "claim_pending_notifications",
-      { batch_size: 50 }
-    );
+    // Claim notifications using the new RPC function
+    // This atomically marks notifications as 'sending' and returns them
+    // Note: Function is in internal schema, need to use schema() method
+    const { data: notifications, error: claimError } = await supabase
+      .schema("internal")
+      .rpc("claim_outbox_notifications", { batch_size: 50 });
 
     if (claimError) {
       console.error("Failed to claim notifications:", claimError);
@@ -785,39 +268,36 @@ serve(async (req: Request) => {
     // Get FCM access token
     const accessToken = await getFcmAccessToken();
 
-    // Consolidate notifications from same sender to same recipient
-    const consolidated = consolidateNotifications(notifications as QueuedNotification[]);
-
     let processed = 0;
     let failed = 0;
     const invalidTokens: string[] = [];
 
-    for (const group of consolidated) {
+    for (const notification of notifications as OutboxNotification[]) {
       try {
         // Get recipient's FCM tokens
         const { data: devices } = await supabase
-          .schema("internal").from("push_devices")
+          .schema("internal")
+          .from("push_devices")
           .select("id, fcm_token")
-          .eq("user_id", group.recipient_id);
+          .eq("user_id", notification.recipient_id);
 
         if (!devices?.length) {
-          // No devices registered, mark all as skipped
-          for (const notification of group.notifications) {
-            await supabase
-              .schema("internal").from("notification_queue")
-              .update({
-                status: "skipped",
-                processed_at: new Date().toISOString(),
-              })
-              .eq("id", notification.id);
-          }
+          // No devices registered, mark as skipped
+          await supabase
+            .schema("internal")
+            .from("notifications_outbox")
+            .update({
+              status: "skipped",
+              processed_at: new Date().toISOString(),
+            })
+            .eq("id", notification.id);
           continue;
         }
 
         // Send to each device
         let anySuccess = false;
         for (const device of devices as PushDevice[]) {
-          const result = await sendConsolidatedToFcm(accessToken, device.fcm_token, group);
+          const result = await sendToFcm(accessToken, device.fcm_token, notification);
 
           if (result.success) {
             anySuccess = true;
@@ -827,35 +307,33 @@ serve(async (req: Request) => {
           }
         }
 
-        // Mark all notifications in group
-        for (const notification of group.notifications) {
-          await supabase
-            .schema("internal").from("notification_queue")
-            .update({
-              status: anySuccess ? "sent" : "failed",
-              error_message: anySuccess ? null : "All devices failed",
-              processed_at: new Date().toISOString(),
-            })
-            .eq("id", notification.id);
-        }
+        // Mark notification status
+        await supabase
+          .schema("internal")
+          .from("notifications_outbox")
+          .update({
+            status: anySuccess ? "sent" : "failed",
+            error_message: anySuccess ? null : "All devices failed",
+            processed_at: new Date().toISOString(),
+          })
+          .eq("id", notification.id);
 
-        if (anySuccess) processed += group.notifications.length;
-        else failed += group.notifications.length;
+        if (anySuccess) processed++;
+        else failed++;
       } catch (error) {
-        console.error(`Error processing consolidated notification:`, error);
+        console.error(`Error processing notification ${notification.id}:`, error);
 
-        for (const notification of group.notifications) {
-          await supabase
-            .schema("internal").from("notification_queue")
-            .update({
-              status: "failed",
-              error_message: error instanceof Error ? error.message : "Unknown error",
-              processed_at: new Date().toISOString(),
-            })
-            .eq("id", notification.id);
-        }
+        await supabase
+          .schema("internal")
+          .from("notifications_outbox")
+          .update({
+            status: "failed",
+            error_message: error instanceof Error ? error.message : "Unknown error",
+            processed_at: new Date().toISOString(),
+          })
+          .eq("id", notification.id);
 
-        failed += group.notifications.length;
+        failed++;
       }
     }
 
@@ -866,9 +344,8 @@ serve(async (req: Request) => {
     }
 
     // Update broadcast status to 'complete' for finished admin broadcasts
-    // Collect unique broadcast_ids from this batch
     const processedBroadcastIds = new Set<string>();
-    for (const notification of notifications as QueuedNotification[]) {
+    for (const notification of notifications as OutboxNotification[]) {
       if (notification.broadcast_id) {
         processedBroadcastIds.add(notification.broadcast_id);
       }
@@ -878,15 +355,17 @@ serve(async (req: Request) => {
     for (const broadcastId of processedBroadcastIds) {
       // Count remaining pending notifications for this broadcast
       const { count: pendingCount } = await supabase
-        .schema("internal").from("notification_queue")
+        .schema("internal")
+        .from("notifications_outbox")
         .select("*", { count: "exact", head: true })
         .eq("broadcast_id", broadcastId)
-        .in("status", ["pending", "processing"]);
+        .in("status", ["pending", "sending"]);
 
       // If no pending notifications remain, mark broadcast as complete
       if (pendingCount === 0) {
         await supabase
-          .schema("internal").from("admin_broadcasts")
+          .schema("internal")
+          .from("admin_broadcasts")
           .update({ status: "complete" })
           .eq("id", broadcastId)
           .eq("status", "queued"); // Only update if currently queued (not partial_failure)
@@ -897,7 +376,6 @@ serve(async (req: Request) => {
       processed,
       failed,
       total: notifications.length,
-      consolidated: consolidated.length,
       invalidTokensRemoved: invalidTokens.length,
     });
   } catch (error) {

@@ -5,6 +5,11 @@ import { invalidateAndRevalidate } from "@/lib/revalidation/paths";
 import { logger } from "@/lib/logger";
 import { verifySession } from "@/data-access/auth";
 import { ERRORS } from "@/lib/errors/messages";
+import {
+  enqueueShiftNotification,
+  generateMutationId,
+  getOwnerName,
+} from "@/lib/notifications/enqueue";
 
 type ShiftToDelete = {
   shiftId: string;
@@ -42,10 +47,13 @@ export async function deleteShifts(shifts: ShiftToDelete[]) {
     }
 
     // Process each recurring shift pattern
+    const mutationId = generateMutationId();
+    const ownerName = getOwnerName(user);
+
     for (const [recurringId, datesToExclude] of exclusionsByRecurringId) {
       const { data: recurring, error: recurringError } = await supabase
         .from("recurring_shifts")
-        .select("exclusions")
+        .select("exclusions, start_time, end_time")
         .eq("id", recurringId)
         .eq("user_id", user.id)
         .single();
@@ -79,6 +87,22 @@ export async function deleteShifts(shifts: ShiftToDelete[]) {
         errors.push(`Failed to exclude dates from recurring shift ${recurringId}`);
       } else {
         deletedCount += datesToExclude.length;
+
+        // Enqueue notifications for each deleted virtual shift
+        await Promise.all(
+          datesToExclude.map((shiftDate) =>
+            enqueueShiftNotification({
+              ownerId: user.id,
+              ownerName,
+              shiftId: `${recurringId}:${shiftDate}`,
+              shiftDate,
+              startTime: recurring.start_time,
+              endTime: recurring.end_time,
+              eventType: "deleted",
+              mutationId,
+            })
+          )
+        );
       }
     }
   }
@@ -87,10 +111,10 @@ export async function deleteShifts(shifts: ShiftToDelete[]) {
   if (regularShifts.length > 0) {
     const shiftIds = regularShifts.map((s) => s.shiftId);
 
-    // First, fetch all shifts to get their dates for exclusion cleanup
+    // First, fetch all shifts to get their dates and times for notifications
     const { data: shiftsToDelete, error: fetchError } = await supabase
       .from("user_shifts")
-      .select("id, shift_date")
+      .select("id, shift_date, start_time, end_time")
       .in("id", shiftIds)
       .eq("user_id", user.id);
 
@@ -110,6 +134,25 @@ export async function deleteShifts(shifts: ShiftToDelete[]) {
         errors.push(deleteError.message);
       } else {
         deletedCount += count ?? shiftsToDelete.length;
+
+        // Enqueue notifications for each deleted shift
+        const mutationId = generateMutationId();
+        const ownerName = getOwnerName(user);
+
+        await Promise.all(
+          shiftsToDelete.map((shift) =>
+            enqueueShiftNotification({
+              ownerId: user.id,
+              ownerName,
+              shiftId: shift.id,
+              shiftDate: shift.shift_date,
+              startTime: shift.start_time,
+              endTime: shift.end_time,
+              eventType: "deleted",
+              mutationId,
+            })
+          )
+        );
 
         // Clean up recurring shift exclusions for deleted dates
         // Group by weekday for efficient processing

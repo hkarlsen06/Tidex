@@ -5,6 +5,11 @@ import { invalidateAndRevalidate } from "@/lib/revalidation/paths";
 import { logger } from "@/lib/logger";
 import { verifySession } from "@/data-access/auth";
 import { ERRORS } from "@/lib/errors/messages";
+import {
+  enqueueShiftNotification,
+  generateMutationId,
+  getOwnerName,
+} from "@/lib/notifications/enqueue";
 
 type DeleteShiftInput = {
   shiftId: string;
@@ -53,24 +58,20 @@ export async function deleteShift(input: string | DeleteShiftInput) {
       throw new Error(ERRORS.FAILED_TO_UPDATE_RECURRING);
     }
 
-    // Queue a pending delete for notification batching
-    // This ensures recurring shift deletions are included in batched notifications
-    // Use the recurringId as deleted_shift_id (it's a UUID) - the date makes it unique in the payload
-    const { error: pendingDeleteError } = await supabase
-      .from("pending_shift_deletes")
-      .insert({
-        deleted_shift_id: recurringId, // Use recurring shift's UUID
-        owner_id: user.id,
-        shift_date: shiftDate,
-        start_time: recurring.start_time,
-        end_time: recurring.end_time,
-        has_supplements: false,
-      });
+    // Enqueue notification for the deleted virtual shift
+    const mutationId = generateMutationId();
+    const ownerName = getOwnerName(user);
 
-    if (pendingDeleteError) {
-      // Log but don't fail - notification is nice-to-have
-      logger.error("Failed to queue pending delete for recurring shift:", pendingDeleteError);
-    }
+    await enqueueShiftNotification({
+      ownerId: user.id,
+      ownerName,
+      shiftId: `${recurringId}:${shiftDate}`, // Composite ID for virtual shift
+      shiftDate,
+      startTime: recurring.start_time,
+      endTime: recurring.end_time,
+      eventType: "deleted",
+      mutationId,
+    });
 
     // Invalidate cache and revalidate paths
     invalidateAndRevalidate(user.id);
@@ -79,10 +80,10 @@ export async function deleteShift(input: string | DeleteShiftInput) {
   }
 
   // Case 2: Deleting a standalone shift
-  // First get the shift to know its date
+  // First get the shift to know its date and times for notification
   const { data: shift, error: fetchError } = await supabase
     .from("user_shifts")
-    .select("shift_date")
+    .select("id, shift_date, start_time, end_time")
     .eq("id", shiftId)
     .eq("user_id", user.id)
     .single();
@@ -101,6 +102,21 @@ export async function deleteShift(input: string | DeleteShiftInput) {
     .eq("user_id", user.id);
 
   if (error) throw new Error(error.message);
+
+  // Enqueue notification for the deleted shift
+  const mutationId = generateMutationId();
+  const ownerName = getOwnerName(user);
+
+  await enqueueShiftNotification({
+    ownerId: user.id,
+    ownerName,
+    shiftId: shift.id,
+    shiftDate: shift.shift_date,
+    startTime: shift.start_time,
+    endTime: shift.end_time,
+    eventType: "deleted",
+    mutationId,
+  });
 
   // Check if this date should be removed from any recurring shift exclusions
   // Get the weekday of the deleted shift

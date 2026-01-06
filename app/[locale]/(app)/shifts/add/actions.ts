@@ -6,6 +6,11 @@ import { checkShiftLimit } from "@/app/[locale]/(app)/shifts/add/_checks/checkSh
 import { invalidateAndRevalidate } from "@/lib/revalidation/paths";
 import { isISODate, isHHMM } from "@/lib/validation/shift-validators";
 import { ERRORS } from "@/lib/errors/messages";
+import {
+  enqueueShiftNotification,
+  generateMutationId,
+  getOwnerName,
+} from "@/lib/notifications/enqueue";
 
 type CreateShiftsInput = {
   dates: string[]; // ISO YYYY-MM-DD (local date)
@@ -58,9 +63,28 @@ export async function createShifts(input: CreateShiftsInput) {
   const { data: insertedShifts, error } = await supabase
     .from("user_shifts")
     .insert(rows)
-    .select('id, shift_date');
+    .select('id, shift_date, start_time, end_time');
 
   if (error) throw new Error(error.message);
+
+  // Enqueue notifications for each created shift
+  const mutationId = generateMutationId();
+  const ownerName = getOwnerName(user);
+
+  await Promise.all(
+    (insertedShifts ?? []).map((shift) =>
+      enqueueShiftNotification({
+        ownerId: user.id,
+        ownerName,
+        shiftId: shift.id,
+        shiftDate: shift.shift_date,
+        startTime: shift.start_time,
+        endTime: shift.end_time,
+        eventType: "added",
+        mutationId,
+      })
+    )
+  );
 
   // Invalidate cache and revalidate paths
   invalidateAndRevalidate(user.id);

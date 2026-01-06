@@ -6,6 +6,11 @@ import type { SelectedDays, EndCondition } from "@/lib/recurring/types";
 import { invalidateAndRevalidate } from "@/lib/revalidation/paths";
 import { verifySession } from "@/data-access/auth";
 import { ERRORS } from "@/lib/errors/messages";
+import {
+  enqueueDirectNotification,
+  generateMutationId,
+  getOwnerName,
+} from "@/lib/notifications/enqueue";
 
 type UpdateRecurringInput = {
   id: string;
@@ -51,6 +56,48 @@ export async function updateRecurringShift({
   if (error) {
     logger.error("Failed to update recurring shift:", error);
     throw new Error(ERRORS.FAILED_TO_UPDATE_RECURRING);
+  }
+
+  // Enqueue notification for recurring shift update
+  const mutationId = generateMutationId();
+  const ownerName = getOwnerName(user);
+
+  // Get non-muted viewers for this owner
+  const { data: shares } = await supabase
+    .from("shift_shares")
+    .select("viewer_id")
+    .eq("owner_id", user.id)
+    .eq("muted", false);
+
+  if (shares && shares.length > 0) {
+    const { data: prefs } = await supabase
+      .from("notification_preferences")
+      .select("user_id, shared_shifts_enabled")
+      .in("user_id", shares.map((s) => s.viewer_id));
+
+    const prefsMap = new Map(prefs?.map((p) => [p.user_id, p.shared_shifts_enabled]) ?? []);
+    const eligibleViewers = shares
+      .map((s) => s.viewer_id)
+      .filter((viewerId) => prefsMap.get(viewerId) !== false);
+
+    // Enqueue notifications for each eligible viewer
+    await Promise.all(
+      eligibleViewers.map((viewerId) =>
+        enqueueDirectNotification({
+          recipientId: viewerId,
+          senderId: user.id,
+          notificationType: "recurring_shift_updated",
+          title: `${ownerName} endret en gjentagende vakt`,
+          body: `Trykk for å se endringene`,
+          dataPayload: {
+            type: "recurring_shift_updated",
+            owner_id: user.id,
+            recurring_id: id,
+          },
+          idempotencyKey: `recurring:${id}:update:${viewerId}:${mutationId}`,
+        })
+      )
+    );
   }
 
   // Invalidate cache and revalidate paths
