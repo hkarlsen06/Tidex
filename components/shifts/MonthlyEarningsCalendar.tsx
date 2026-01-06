@@ -15,7 +15,7 @@ import type { ShiftWithComputations } from "@/lib/payroll";
 import type { ISODate, EarningsByDate, HoursByDate } from "@/components/app/calendar-types";
 import { cn } from "@/lib/cn";
 import { useTranslations } from "@/lib/i18n/client";
-import { getMonthlyTotals, summarizeShiftTotals } from "@/lib/shifts/monthlyTotals";
+import { getMonthlyTotals } from "@/lib/shifts/monthlyTotals";
 import { useCurrency } from "@/components/providers/CurrencyProvider";
 
 type TaxSettings = {
@@ -43,8 +43,10 @@ type MonthlyEarningsCalendarProps = {
   selectedDates?: Set<ISODate>;
   /** Callback to clear multi-selection */
   onClearMultiSelection?: () => void;
-  /** Callback to delete selected shifts */
+  /** Callback to delete selected shifts (multi-selection) */
   onDeleteSelected?: () => void;
+  /** Callback to delete shifts on the single selected date */
+  onDeleteSingleDate?: () => void;
   /** Whether deletion is in progress */
   deleting?: boolean;
   containerRef?: Ref<HTMLDivElement>;
@@ -124,9 +126,11 @@ function buildHoursByDate(shifts: ShiftWithComputations[]): HoursByDate {
   const result: HoursByDate = {};
   const shiftsByDate = new Map<ISODate, ShiftWithComputations[]>();
 
-  // Helper to strip seconds from time (e.g., "12:30:00" -> "12:30")
-  const stripSeconds = (time: string): string => {
-    return time.substring(0, 5);
+  // Helper to strip seconds and leading zero from time (e.g., "08:30:00" -> "8:30")
+  const formatTime = (time: string): string => {
+    const hhmm = time.substring(0, 5);
+    // Remove leading zero from hour (e.g., "08:30" -> "8:30")
+    return hhmm.startsWith("0") ? hhmm.substring(1) : hhmm;
   };
 
   for (const shift of shifts) {
@@ -157,8 +161,8 @@ function buildHoursByDate(shifts: ShiftWithComputations[]): HoursByDate {
     });
 
     result[isoDate] = {
-      start: stripSeconds(earliestStart),
-      end: stripSeconds(latestEnd),
+      start: formatTime(earliestStart),
+      end: formatTime(latestEnd),
       crossesMidnight: hasMidnightCrossing
     };
   });
@@ -338,6 +342,7 @@ export function MonthlyEarningsCalendar({
   selectedDates,
   onClearMultiSelection,
   onDeleteSelected,
+  onDeleteSingleDate,
   deleting = false,
   containerRef,
   onOpenDetails,
@@ -369,6 +374,18 @@ export function MonthlyEarningsCalendar({
   // When showEarnings is false, force hours view (money mode not available)
   const [viewMode, setViewMode] = useState<"money" | "hours">("hours");
   const effectiveViewMode = showEarnings ? viewMode : "hours";
+  // Two-click delete confirmation for single date selection
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  // Track previous selectedDate to reset confirmingDelete when selection changes
+  const prevSelectedDateRef = useRef(selectedDate);
+  if (prevSelectedDateRef.current !== selectedDate) {
+    prevSelectedDateRef.current = selectedDate;
+    if (confirmingDelete) {
+      setConfirmingDelete(false);
+    }
+  }
+  // Refreshing state for spinner animation before page reload
+  const [refreshing, setRefreshing] = useState(false);
   // Use direction from context - defaults to 'next' when null (for programmatic changes)
   const animationDirection = direction ?? 'next';
   const swipeContainerRef = useRef<HTMLDivElement>(null);
@@ -445,29 +462,28 @@ export function MonthlyEarningsCalendar({
 
   // Calculate totals - use selected shifts only when in multi-selection mode
   // Note: summarizeShiftTotals/getMonthlyTotals now automatically exclude conflicting shifts
-  // Payout month = earnings month + 1 (used for half-tax and payout tax calculations)
-  const payoutMonth = (month.getMonth() + 2) > 12 ? 1 : month.getMonth() + 2;
-
   const { totalEarnings, netEarnings, isShowingSelectedTotal } = useMemo(() => {
     // When dates are selected (multi or single), show total for selected shifts only
     const hasMultiSelection = selectedDates && selectedDates.size > 0;
     const hasSingleSelection = selectedDate && !hasMultiSelection;
 
     if (hasMultiSelection || hasSingleSelection) {
-      const selectedShifts = monthlyShifts.filter((shift) => {
+      // Use full shifts array (not monthlyShifts) so selections from other months
+      // still contribute to the total when swiping between months
+      const selectedShifts = shifts.filter((shift) => {
         if (hasMultiSelection) {
           return selectedDates.has(shift.shift_date as ISODate);
         }
         return shift.shift_date === selectedDate;
       });
-      const { gross, net } = summarizeShiftTotals({
-        shifts: selectedShifts,
-        taxSettings,
-        now: new Date(),
-        month: payoutMonth,
-        halfTaxMonth: taxSettings?.halfTaxMonth,
-        payoutTaxOverride: payoutTaxSettings ?? undefined,
-      });
+
+      // Sum precomputed values directly from each shift's snapshot
+      // This ensures consistent totals regardless of which month is being viewed
+      const gross = selectedShifts.reduce((sum, shift) => sum + (shift.computed.gross || 0), 0);
+      const net = selectedShifts.reduce((sum, shift) => {
+        return sum + calculateShiftNet(shift, taxSettings?.halfTaxMonth);
+      }, 0);
+
       return { totalEarnings: gross, netEarnings: net, isShowingSelectedTotal: true };
     }
 
@@ -483,7 +499,7 @@ export function MonthlyEarningsCalendar({
     });
 
     return { totalEarnings: gross, netEarnings: net, isShowingSelectedTotal: false };
-  }, [monthlyShifts, month, taxSettings, selectedDates, selectedDate, payoutMonth, payoutTaxSettings]);
+  }, [shifts, monthlyShifts, month, taxSettings, selectedDates, selectedDate, payoutTaxSettings]);
 
   // Swipe gesture handling
   useEffect(() => {
@@ -558,24 +574,22 @@ export function MonthlyEarningsCalendar({
         <div ref={swipeContainerRef}>
           <div className="flex h-13 flex-row items-center justify-between">
             <div className="flex h-10 items-center gap-1">
+              <MonthPicker
+                key={`month-picker-${month.getFullYear()}-${month.getMonth()}`}
+                month={month}
+                onPreviousMonth={goToPreviousMonth}
+                onNextMonth={goToNextMonth}
+                direction={animationDirection === 'next' ? 'forward' : 'backward'}
+                isHydrated={isHydrated}
+                isAnimationEnabled={isHydrated}
+                calendarId={calendarId}
+              />
               {isShowingSelectedTotal ? (
-                <span className="font-semibold text-text-primary pl-1">
-                  {t.pages.shifts.actions.selectedCount.replace('{count}', String(selectedDates?.size ?? 0))}
+                <span className="font-semibold text-text-muted ml-1">
+                  ({selectedDates?.size ?? 0})
                 </span>
               ) : (
-                <>
-                  <MonthPicker
-                    key={`month-picker-${month.getFullYear()}-${month.getMonth()}`}
-                    month={month}
-                    onPreviousMonth={goToPreviousMonth}
-                    onNextMonth={goToNextMonth}
-                    direction={animationDirection === 'next' ? 'forward' : 'backward'}
-                    isHydrated={isHydrated}
-                    isAnimationEnabled={isHydrated}
-                    calendarId={calendarId}
-                  />
-                  <span className="font-medium text-text-muted ml-1">{formatYear(month)}</span>
-                </>
+                <span className="font-medium text-text-muted ml-1">{formatYear(month)}</span>
               )}
             </div>
             {showEarnings && (() => {
@@ -748,12 +762,12 @@ export function MonthlyEarningsCalendar({
                     className="flex-1 h-9 gap-2 rounded-full bg-surface-secondary text-text-secondary hover:bg-surface-secondary/80"
                   >
                     <X strokeWidth={2} className="h-4 w-4" />
-                    {t.pages.shifts.actions.clearSelection}
+                    {(selectedDates?.size ?? 0) >= 2 ? t.common.close : t.pages.shifts.actions.clearSelection}
                   </Button>
                 </motion.div>
               </AnimateActivity>
 
-              {/* Single date selected mode: show copy/details/move buttons */}
+              {/* Single date selected mode: show delete/copy/details/move buttons */}
               <AnimateActivity
                 mode={selectedDate && !(selectedDates && selectedDates.size > 0) ? "visible" : "hidden"}
                 layoutMode="pop"
@@ -763,10 +777,39 @@ export function MonthlyEarningsCalendar({
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.95 }}
                   transition={{ type: "spring", visualDuration: 0.2, bounce: 0.1 }}
-                  className="flex h-9 w-full items-center gap-1 rounded-full bg-surface-primary"
+                  className="flex h-9 w-full items-center gap-0.5 rounded-full bg-surface-primary"
                 >
+                  {/* Delete button - two-click confirmation, icon only */}
+                  {!readOnly && onDeleteSingleDate && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => {
+                        if (confirmingDelete) {
+                          onDeleteSingleDate();
+                          setConfirmingDelete(false);
+                        } else {
+                          setConfirmingDelete(true);
+                        }
+                      }}
+                      disabled={deleting || copyMode || moveMode || isOffline}
+                      loading={confirmingDelete && deleting}
+                      title={isOffline ? "Cannot delete while offline" : undefined}
+                      className={cn(
+                        "h-9 shrink-0 rounded-l-full rounded-r-md disabled:opacity-50 disabled:cursor-not-allowed",
+                        confirmingDelete
+                          ? "w-auto px-3 gap-2 bg-red-600 text-white hover:bg-red-700"
+                          : "w-14 bg-red-500/10 text-red-600 hover:bg-red-500/20 dark:text-red-400"
+                      )}
+                    >
+                      <Trash2 strokeWidth={2} className="h-4 w-4" />
+                      {confirmingDelete && (
+                        <span className="truncate">{t.pages.shifts.details.confirmDeleteButton}</span>
+                      )}
+                    </Button>
+                  )}
                   {/* Copy button - icon only */}
-                  {!readOnly && (
+                  {!readOnly && !confirmingDelete && (
                     <Button
                       type="button"
                       variant="ghost"
@@ -780,16 +823,22 @@ export function MonthlyEarningsCalendar({
                       }
                       loading={copying}
                       title={t.pages.shifts.actions.copy}
-                      className="h-9 w-14 shrink-0 rounded-full bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 dark:text-blue-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className={cn(
+                        "h-9 w-14 shrink-0 rounded-md bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 dark:text-blue-400 disabled:opacity-50 disabled:cursor-not-allowed",
+                        // First button when delete is not shown
+                        (readOnly || !onDeleteSingleDate) && "rounded-l-full"
+                      )}
                     >
                       <Copy strokeWidth={2} className="h-4 w-4" />
                     </Button>
                   )}
                   <Button
                     type="button"
-                    variant="default"
+                    variant={confirmingDelete ? "ghost" : "default"}
                     onClick={() => {
-                      if (copyMode) {
+                      if (confirmingDelete) {
+                        setConfirmingDelete(false);
+                      } else if (copyMode) {
                         onCancelCopy?.();
                       } else if (moveMode) {
                         onCancelMoveMode?.();
@@ -800,14 +849,26 @@ export function MonthlyEarningsCalendar({
                     disabled={
                       copying ||
                       moving ||
-                      (copyMode ? !onCancelCopy : moveMode ? !onCancelMoveMode : !onOpenDetails)
+                      deleting ||
+                      (copyMode ? !onCancelCopy : moveMode ? !onCancelMoveMode : !confirmingDelete && !onOpenDetails)
                     }
                     className={cn(
-                      "flex-1 min-w-0 h-9 rounded-full",
-                      !(copyMode || moveMode) && "gap-2"
+                      "flex-1 min-w-0 h-9 rounded-md",
+                      confirmingDelete
+                        ? "bg-surface-secondary text-text-secondary hover:bg-surface-secondary/80 gap-2"
+                        : !(copyMode || moveMode) && "gap-2",
+                      // First button in readOnly mode (no delete, no copy)
+                      readOnly && "rounded-l-full",
+                      // Last button when move is not shown or in confirmingDelete mode
+                      (readOnly || confirmingDelete) && "rounded-r-full"
                     )}
                   >
-                    {copyMode || moveMode ? (
+                    {confirmingDelete ? (
+                      <>
+                        <X strokeWidth={2} className="h-4 w-4 shrink-0" />
+                        <span className="truncate">{t.pages.shifts.actions.cancel}</span>
+                      </>
+                    ) : copyMode || moveMode ? (
                       <span className="truncate">{t.pages.shifts.actions.cancel}</span>
                     ) : (
                       <>
@@ -817,7 +878,7 @@ export function MonthlyEarningsCalendar({
                     )}
                   </Button>
                   {/* Move button - shows text like details */}
-                  {!readOnly && (
+                  {!readOnly && !confirmingDelete && (
                     <Button
                       type="button"
                       variant="ghost"
@@ -831,7 +892,7 @@ export function MonthlyEarningsCalendar({
                       }
                       title={isOffline ? "Cannot move shifts while offline" : undefined}
                       className={cn(
-                        "flex-1 min-w-0 h-9 gap-2 rounded-full transition-all disabled:opacity-50 disabled:cursor-not-allowed",
+                        "flex-1 min-w-0 h-9 gap-2 rounded-l-md rounded-r-full transition-all disabled:opacity-50 disabled:cursor-not-allowed",
                         moveMode
                           ? "bg-amber-500/20 text-amber-700 dark:text-amber-400"
                           : "bg-amber-500/10 text-amber-700 hover:bg-amber-500/20 dark:text-amber-300"
@@ -903,16 +964,23 @@ export function MonthlyEarningsCalendar({
                 </motion.div>
               </AnimateActivity>
             </div>
-            {/* Reload button - outside toggle but centered as a group */}
-            <button
-              type="button"
-              onClick={() => window.location.reload()}
-              className="h-11 w-11 flex items-center justify-center text-text-muted hover:text-text-primary transition-colors"
-              aria-label={t.common.refresh}
-            >
-              <RotateCw strokeWidth={2} className="h-4 w-4" />
-            </button>
           </div>
+          {/* Refresh button - below toggle, left aligned */}
+          <button
+            type="button"
+            onClick={() => {
+              setRefreshing(true);
+              window.location.reload();
+            }}
+            className={cn(
+              "flex items-center gap-1.5 text-xs text-text-muted hover:text-text-primary transition-colors py-1",
+              refreshing && "opacity-50"
+            )}
+            aria-label={t.common.refresh}
+          >
+            <RotateCw strokeWidth={2} className={cn("h-3.5 w-3.5", refreshing && "animate-spin")} />
+            <span>{t.common.refresh}</span>
+          </button>
           {selectedDate && (copyMode || moveMode) && (
             <div className="text-xs font-medium leading-tight text-text-muted text-center">
               {copyMode
