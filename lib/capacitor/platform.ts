@@ -4,26 +4,21 @@ import { Capacitor } from "@capacitor/core";
  * Check if running in a native Capacitor environment (iOS/Android)
  * Returns false on web to avoid loading Capacitor plugins
  *
- * Note: When using remote URLs, we also check for the native bridge
- * being available via window.Capacitor which is injected by the native shell.
+ * Note: Only returns true if the actual Capacitor native bridge is present.
+ * We do NOT use user agent fallbacks because they incorrectly detect
+ * Chrome iOS and other in-app browsers as "native".
  */
 export function isNativePlatform(): boolean {
   if (typeof window === "undefined") return false;
 
-  // Check both the Capacitor API and the native bridge
-  // The bridge is injected by the native shell even when loading remote content
+  // Only return true if we have the actual Capacitor native bridge
   const hasNativeBridge = !!(window as any).Capacitor?.isNativePlatform;
 
   if (hasNativeBridge) {
     return Capacitor.isNativePlatform();
   }
 
-  // Fallback: check if we're in a WebView by looking for platform hints
-  // iOS WKWebView has specific characteristics
-  const userAgent = navigator.userAgent || '';
-  const isIOSWebView = /iPhone|iPad|iPod/.test(userAgent) && !(window as any).MSStream && !/Safari/.test(userAgent);
-
-  return isIOSWebView;
+  return false;
 }
 
 /**
@@ -43,31 +38,19 @@ export function isIOSPlatform(): boolean {
 /**
  * Get the current platform name
  * Returns 'ios', 'android', or 'web'
+ *
+ * Note: Only returns 'ios' or 'android' if the actual Capacitor native bridge
+ * is present. We do NOT use user agent fallbacks because they incorrectly
+ * detect Chrome iOS and other in-app browsers as native platforms.
  */
 export function getPlatform(): "ios" | "android" | "web" {
   if (typeof window === "undefined") return "web";
 
-  // Check if Capacitor bridge is available
+  // Only return native platform if we have the actual Capacitor native bridge
   const hasNativeBridge = !!(window as any).Capacitor?.getPlatform;
 
   if (hasNativeBridge) {
     return Capacitor.getPlatform() as "ios" | "android" | "web";
-  }
-
-  // Fallback: detect platform from user agent
-  const userAgent = navigator.userAgent || '';
-
-  // Check for iOS WebView (WKWebView doesn't have Safari in UA when embedded)
-  if (/iPhone|iPad|iPod/.test(userAgent) && !(window as any).MSStream) {
-    // If we're in an iOS WebView (no Safari in UA), treat as native iOS
-    if (!/Safari/.test(userAgent) || (window as any).webkit?.messageHandlers) {
-      return "ios";
-    }
-  }
-
-  // Check for Android WebView
-  if (/Android/.test(userAgent) && /wv/.test(userAgent)) {
-    return "android";
   }
 
   return "web";
