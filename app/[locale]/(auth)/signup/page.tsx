@@ -151,6 +151,11 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
 
     if (!result.success) {
       setOauthProvider(null);
+      // Check if user cancelled (don't show error for cancellation)
+      const errorMessage = result.error?.message || '';
+      if (errorMessage.includes('cancel') || errorMessage.includes('Cancel')) {
+        return;
+      }
       setMessage({
         type: 'error',
         text: result.error
@@ -162,6 +167,19 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
       return;
     }
 
+    // Native Google sign-in: session is already created, redirect immediately
+    // Web/browser flow: waiting for OAuth callback redirect
+    if (!result.authUrl) {
+      // Native flow completed - redirect to onboarding
+      setMessage({
+        type: 'success',
+        text: t.pages.auth.login.loggingIn,
+      });
+      router.push(`/${locale}/onboarding`);
+      return;
+    }
+
+    // Browser flow - waiting for callback
     setMessage({
       type: 'success',
       text: t.pages.auth.login.waitingForGoogle,
