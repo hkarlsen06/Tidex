@@ -236,21 +236,21 @@ type CalendarSnapshot = {
 };
 
 /**
- * Wrapper that freezes calendar data on mount.
- * This ensures the exiting calendar shows its original month during exit animation.
+ * Wrapper that freezes the calendar MONTH on mount while allowing shift data to update.
+ * Ensures smooth exit animations when swiping months - the exiting calendar shows its
+ * original month while the new month slides in.
  *
- * IMPORTANT: AnimatePresence passes the same (new) props to both entering and exiting
- * children. We must freeze on mount and NEVER update, so exiting calendars keep their
- * original data. The "stale data when returning to route" issue is handled by the parent
- * passing fresh currentSnapshot which gets frozen on the NEW component mount.
+ * KEY INSIGHT: We only freeze the month, NOT the shift data (earningsByDate, hoursByDate).
+ * This allows optimistic shifts to appear immediately while still preserving proper exit
+ * animations during month transitions.
  *
- * EXCEPTION: If the initial snapshot was empty (no shifts), we allow ONE update when
- * shifts arrive. This handles the case where the user navigates to a month outside the
- * ISR window and refreshes - the initial render has no shifts, but they arrive shortly
- * after via client-side fetch. Without this, the calendar would show empty cells until
- * the user swipes away and back.
+ * How it works:
+ * - AnimatePresence uses a key based on the month (e.g., "calendar-2025-0")
+ * - When the month changes, the old component exits with its frozenMonth
+ * - The new component mounts with the new month frozen
+ * - Within the same month, shift data updates flow through normally
  *
- * Uses state initialization (lazy initializer) to freeze the snapshot on first render.
+ * Uses state initialization (lazy initializer) to freeze the month on first render.
  * State is used instead of refs to comply with React 19 compiler rules that prohibit
  * reading refs during render.
  */
@@ -275,26 +275,27 @@ function FrozenCalendarSlide({
   taxSettings?: TaxSettings;
   highlightDates?: Set<string> | null;
 }) {
-  // Freeze snapshot on mount using lazy state initialization
-  // This only runs once when the component mounts, ignoring subsequent prop updates
-  const [initialSnapshot] = useState(() => snapshot);
+  // Freeze the month on mount - this ensures exit animations show the original month
+  // The key includes the month, so when AnimatePresence triggers exit, this component
+  // will still render with its frozen month value
+  const [frozenMonth] = useState(() => snapshot.month);
 
-  // Track if initial snapshot was empty - if so, use the current snapshot instead
-  // This handles the case where the user navigates to a month outside the ISR window
-  // and refreshes - the initial render has no shifts, but they arrive shortly after
-  const wasInitiallyEmpty = Object.keys(initialSnapshot.earningsByDate).length === 0
-    && Object.keys(initialSnapshot.hoursByDate).length === 0;
-
-  // Use initial snapshot for exit animations, but allow current snapshot if we started empty
-  const frozenSnapshot = wasInitiallyEmpty ? snapshot : initialSnapshot;
+  // IMPORTANT: We only freeze the month, NOT the shift data (earningsByDate, hoursByDate)
+  // This allows optimistic shifts to appear immediately while still preserving the
+  // correct month during exit animations.
+  //
+  // Why this works:
+  // - Month changes trigger a new key in AnimatePresence, unmounting this instance
+  // - The exiting instance keeps its frozenMonth for proper exit animation
+  // - Within the same month, data updates flow through normally for optimistic updates
 
   return (
     <ShiftsCalendar
-      month={frozenSnapshot.month}
+      month={frozenMonth}
       mode={mode}
-      earningsByDate={frozenSnapshot.earningsByDate}
-      hoursByDate={frozenSnapshot.hoursByDate}
-      overlappingDates={frozenSnapshot.overlappingDates}
+      earningsByDate={snapshot.earningsByDate}
+      hoursByDate={snapshot.hoursByDate}
+      overlappingDates={snapshot.overlappingDates}
       onMonthChange={onMonthChange}
       onDayClick={onDayClick}
       selectedDate={selectedDate}
