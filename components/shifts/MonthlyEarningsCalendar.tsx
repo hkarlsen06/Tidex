@@ -957,7 +957,7 @@ export function MonthlyEarningsCalendar({
               </AnimateActivity>
             </div>
           </div>
-          {/* Refresh button - below toggle, left aligned */}
+          {/* Refresh button - below toggle, only visible on desktop (mobile uses pull-to-refresh) */}
           <button
             type="button"
             onClick={() => {
@@ -965,7 +965,7 @@ export function MonthlyEarningsCalendar({
               window.location.reload();
             }}
             className={cn(
-              "flex items-center gap-1.5 text-xs text-text-muted hover:text-text-primary transition-colors py-1",
+              "hidden md:flex items-center gap-1.5 text-xs text-text-muted hover:text-text-primary transition-colors py-1",
               refreshing && "opacity-50"
             )}
             aria-label={t.common.refresh}

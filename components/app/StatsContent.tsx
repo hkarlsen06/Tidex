@@ -541,7 +541,7 @@ export function StatsContent({ data, cacheKey }: StatsContentProps) {
         : "";
 
   return (
-    <ScrollablePageWrapper routeKey="stats" applyContainer={false}>
+    <ScrollablePageWrapper routeKey="stats" applyContainer={false} pullToRefresh>
       {/* Loading indicator - subtle spinner next to month picker */}
       {isLoadingStats && (
         <div className="fixed top-4 right-4 z-50">
