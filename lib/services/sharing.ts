@@ -37,9 +37,11 @@ import { createClient } from "@supabase/supabase-js";
 
 /**
  * Notification frequency options for a share relationship
- * - instant: Notifications sent immediately (within 1-2 minutes)
- * - summary: Daily digest at user-defined time (default 18:00)
+ * After redesign, this is simplified to just "instant" or "muted"
+ * - instant: Notifications sent immediately (same-day) or batched (future shifts)
  * - muted: No notifications from this sender
+ *
+ * @deprecated The "summary" option is no longer used. Use the `muted` boolean on shift_shares instead.
  */
 export type NotificationFrequency = "instant" | "summary" | "muted";
 
@@ -478,7 +480,7 @@ export const SharingServiceLive = Layer.effect(
             async (client) =>
               await client
                 .from("shift_shares")
-                .select("owner_id, created_at, show_earnings, notification_frequency")
+                .select("owner_id, created_at, show_earnings, muted")
                 .eq("viewer_id", userId)
                 .eq("blocked", false)
                 .order("created_at", { ascending: false }),
@@ -544,6 +546,8 @@ export const SharingServiceLive = Layer.effect(
           return shares.map((share) => {
             const profilePictureUrl = settingsMap.get(share.owner_id) ?? null;
             const authUser = usersMap.get(share.owner_id);
+            // Convert muted boolean to NotificationFrequency for backwards compatibility
+            const notificationFrequency: NotificationFrequency = share.muted ? "muted" : "instant";
             return {
               id: share.owner_id,
               email: authUser?.email ?? null,
@@ -553,7 +557,7 @@ export const SharingServiceLive = Layer.effect(
               oauthAvatarUrl: authUser?.oauthAvatarUrl ?? null,
               sharedAt: share.created_at,
               showEarnings: share.show_earnings ?? true,
-              notificationFrequency: (share.notification_frequency ?? "instant") as NotificationFrequency,
+              notificationFrequency,
             };
           }) as readonly SharedUser[];
         }).pipe(
@@ -1169,7 +1173,7 @@ export const SharingServiceLive = Layer.effect(
             async (client) =>
               await client
                 .from("shift_shares")
-                .select("owner_id, created_at, show_earnings, notification_frequency")
+                .select("owner_id, created_at, show_earnings, muted")
                 .eq("viewer_id", viewerId)
                 .eq("blocked", true)
                 .order("created_at", { ascending: false }),
@@ -1235,6 +1239,8 @@ export const SharingServiceLive = Layer.effect(
           return shares.map((share) => {
             const profilePictureUrl = settingsMap.get(share.owner_id) ?? null;
             const authUser = usersMap.get(share.owner_id);
+            // Convert muted boolean to NotificationFrequency for backwards compatibility
+            const notificationFrequency: NotificationFrequency = share.muted ? "muted" : "instant";
             return {
               id: share.owner_id,
               email: authUser?.email ?? null,
@@ -1244,7 +1250,7 @@ export const SharingServiceLive = Layer.effect(
               oauthAvatarUrl: authUser?.oauthAvatarUrl ?? null,
               sharedAt: share.created_at,
               showEarnings: share.show_earnings ?? true,
-              notificationFrequency: (share.notification_frequency ?? "instant") as NotificationFrequency,
+              notificationFrequency,
             };
           }) as readonly SharedUser[];
         }).pipe(
@@ -1269,7 +1275,7 @@ export const SharingServiceLive = Layer.effect(
             async (client) =>
               await client
                 .from("shift_shares")
-                .select("owner_id, created_at, show_earnings, blocked, notification_frequency")
+                .select("owner_id, created_at, show_earnings, blocked, muted")
                 .eq("viewer_id", viewerId)
                 .order("created_at", { ascending: false }),
             { retries: 2 }
@@ -1334,6 +1340,8 @@ export const SharingServiceLive = Layer.effect(
           return shares.map((share) => {
             const profilePictureUrl = settingsMap.get(share.owner_id) ?? null;
             const authUser = usersMap.get(share.owner_id);
+            // Convert muted boolean to NotificationFrequency for backwards compatibility
+            const notificationFrequency: NotificationFrequency = share.muted ? "muted" : "instant";
             return {
               id: share.owner_id,
               email: authUser?.email ?? null,
@@ -1343,7 +1351,7 @@ export const SharingServiceLive = Layer.effect(
               oauthAvatarUrl: authUser?.oauthAvatarUrl ?? null,
               sharedAt: share.created_at,
               showEarnings: share.show_earnings ?? true,
-              notificationFrequency: (share.notification_frequency ?? "instant") as NotificationFrequency,
+              notificationFrequency,
               blocked: share.blocked ?? false,
             };
           }) as readonly (SharedUser & { blocked: boolean })[];
@@ -1358,6 +1366,7 @@ export const SharingServiceLive = Layer.effect(
 
       /**
        * Update notification frequency for a specific sharer
+       * Now uses the `muted` boolean column instead of the old `notification_frequency` text column
        */
       updateNotificationFrequency: (
         viewerId: string,
@@ -1368,13 +1377,17 @@ export const SharingServiceLive = Layer.effect(
           // Verify viewer is authenticated
           yield* auth.verifyUserId(viewerId);
 
-          // Update the share's notification_frequency
+          // Convert frequency to muted boolean
+          // "muted" -> true, "instant" or "summary" -> false
+          const muted = frequency === "muted";
+
+          // Update the share's muted status
           const updateResult = yield* Effect.tryPromise({
             try: async () => {
               const client = await Effect.runPromise(supabase.getClient());
               return client
                 .from("shift_shares")
-                .update({ notification_frequency: frequency })
+                .update({ muted })
                 .eq("viewer_id", viewerId)
                 .eq("owner_id", ownerId);
             },
@@ -1398,10 +1411,10 @@ export const SharingServiceLive = Layer.effect(
             );
           }
 
-          logger.info(`Updated notification frequency for viewer=${viewerId} owner=${ownerId} to ${frequency}`);
+          logger.info(`Updated notification muted status for viewer=${viewerId} owner=${ownerId} to ${muted}`);
         }).pipe(
           Effect.catchTag("DatabaseError", (error) => {
-            logger.error("Failed to update notification frequency:", error);
+            logger.error("Failed to update notification muted status:", error);
             return Effect.fail(error);
           })
         ),

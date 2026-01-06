@@ -8,14 +8,11 @@ import type { AdminAction } from "@/lib/admin/action-labels";
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-const VALID_NOTIFICATION_FREQUENCIES = ["instant", "summary", "muted"] as const;
-type NotificationFrequency = (typeof VALID_NOTIFICATION_FREQUENCIES)[number];
-
 interface CreateShiftShareInput {
   ownerId: string;
   viewerId: string;
   showEarnings?: boolean;
-  notificationFrequency?: NotificationFrequency;
+  muted?: boolean;
 }
 
 interface CreateShiftShareResult {
@@ -105,26 +102,6 @@ export async function createShiftShare(
     return { success: false, message: "Eier og seer kan ikke være samme bruker" };
   }
 
-  // Validate notification_frequency
-  const notificationFrequency = input.notificationFrequency ?? "instant";
-  if (
-    !VALID_NOTIFICATION_FREQUENCIES.includes(
-      notificationFrequency as NotificationFrequency
-    )
-  ) {
-    await logAdminAction({
-      adminId: user.id,
-      adminEmail,
-      action: "admin_action_failed",
-      metadata: {
-        error: "Invalid notification_frequency value",
-        intended_action: "shift_share_created",
-        notification_frequency: notificationFrequency,
-      },
-    });
-    return { success: false, message: "Ugyldig varslingsfrekvens" };
-  }
-
   // Check that both users exist
   const { data: ownerData, error: ownerError } =
     await supabase.auth.admin.getUserById(input.ownerId);
@@ -163,6 +140,7 @@ export async function createShiftShare(
 
   // Insert the shift share
   const showEarnings = input.showEarnings ?? true;
+  const muted = input.muted ?? false;
 
   const { data: insertData, error: insertError } = await supabase
     .from("shift_shares")
@@ -170,7 +148,7 @@ export async function createShiftShare(
       owner_id: input.ownerId,
       viewer_id: input.viewerId,
       show_earnings: showEarnings,
-      notification_frequency: notificationFrequency,
+      muted,
     })
     .select("id")
     .single();
@@ -227,7 +205,7 @@ export async function createShiftShare(
       viewer_id: input.viewerId,
       viewer_email: viewerEmail,
       show_earnings: showEarnings,
-      notification_frequency: notificationFrequency,
+      muted,
     },
   });
 

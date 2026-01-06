@@ -8,14 +8,11 @@ import type { AdminAction } from "@/lib/admin/action-labels";
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-const VALID_NOTIFICATION_FREQUENCIES = ["instant", "summary", "muted"] as const;
-type NotificationFrequency = (typeof VALID_NOTIFICATION_FREQUENCIES)[number];
-
 interface UpdateShiftShareInput {
   shareId: string;
   showEarnings?: boolean;
   blocked?: boolean;
-  notificationFrequency?: NotificationFrequency;
+  muted?: boolean;
 }
 
 interface UpdateShiftShareResult {
@@ -73,30 +70,10 @@ export async function updateShiftShare(
     return { success: false, message: "Ugyldig delings-ID format" };
   }
 
-  // Validate notification_frequency if provided
-  if (
-    input.notificationFrequency !== undefined &&
-    !VALID_NOTIFICATION_FREQUENCIES.includes(
-      input.notificationFrequency as NotificationFrequency
-    )
-  ) {
-    await logAdminAction({
-      adminId: user.id,
-      adminEmail,
-      action: "admin_action_failed",
-      metadata: {
-        error: "Invalid notification_frequency value",
-        intended_action: "shift_share_updated",
-        notification_frequency: input.notificationFrequency,
-      },
-    });
-    return { success: false, message: "Ugyldig varslingsfrekvens" };
-  }
-
   // Fetch current values for audit diff
   const { data: currentData, error: fetchError } = await supabase
     .from("shift_shares")
-    .select("id, owner_id, viewer_id, show_earnings, blocked, notification_frequency")
+    .select("id, owner_id, viewer_id, show_earnings, blocked, muted")
     .eq("id", input.shareId)
     .single();
 
@@ -147,14 +124,11 @@ export async function updateShiftShare(
     };
   }
 
-  if (
-    input.notificationFrequency !== undefined &&
-    input.notificationFrequency !== currentData.notification_frequency
-  ) {
-    updates.notification_frequency = input.notificationFrequency;
-    changes.notification_frequency = {
-      before: currentData.notification_frequency,
-      after: input.notificationFrequency,
+  if (input.muted !== undefined && input.muted !== currentData.muted) {
+    updates.muted = input.muted;
+    changes.muted = {
+      before: currentData.muted,
+      after: input.muted,
     };
   }
 

@@ -171,16 +171,19 @@ export async function sendBroadcastNotification(input: BroadcastInput) {
 
   const broadcastId = broadcast.id;
 
-  // Build notification rows
+  // Build notification rows for the new outbox table
   const allNotifications = targetUserIds.map((userId) => ({
-    type: "admin_broadcast" as const,
+    owner_id: user.id, // Admin who sent the broadcast
     recipient_id: userId,
-    sender_id: user.id,
     broadcast_id: broadcastId,
-    payload: {
-      title: input.title.trim(),
-      body: input.body.trim(),
+    notification_type: "admin_broadcast",
+    due_at: new Date().toISOString(), // Immediate delivery
+    title: input.title.trim(),
+    body: input.body.trim(),
+    data_payload: {
+      type: "admin_broadcast",
       deeplink: validatedDeeplink,
+      broadcast_id: broadcastId,
     },
     idempotency_key: `broadcast:${broadcastId}:${userId}`,
   }));
@@ -190,7 +193,7 @@ export async function sendBroadcastNotification(input: BroadcastInput) {
   for (let i = 0; i < allNotifications.length; i += BATCH_SIZE) {
     const batch = allNotifications.slice(i, i + BATCH_SIZE);
     const { error: insertError } = await supabase
-      .schema("internal").from("notification_queue")
+      .schema("internal").from("notifications_outbox")
       .insert(batch);
 
     if (insertError) {

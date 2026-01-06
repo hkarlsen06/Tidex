@@ -16,7 +16,7 @@ export interface ShiftShareItem {
   createdAt: string;
   showEarnings: boolean;
   blocked: boolean;
-  notificationFrequency: "instant" | "summary" | "muted";
+  muted: boolean;
 }
 
 interface GetShiftSharesInput {
@@ -123,7 +123,7 @@ export async function getShiftShares(
       ss.created_at,
       ss.show_earnings,
       ss.blocked,
-      ss.notification_frequency
+      ss.muted
     FROM shift_shares ss
     LEFT JOIN auth.users o ON ss.owner_id = o.id
     LEFT JOIN auth.users v ON ss.viewer_id = v.id
@@ -158,7 +158,7 @@ export async function getShiftShares(
       created_at: string;
       show_earnings: boolean;
       blocked: boolean;
-      notification_frequency: "instant" | "summary" | "muted";
+      muted: boolean;
     }) => ({
       id: row.id,
       ownerId: row.owner_id,
@@ -172,7 +172,7 @@ export async function getShiftShares(
       createdAt: row.created_at,
       showEarnings: row.show_earnings,
       blocked: row.blocked,
-      notificationFrequency: row.notification_frequency,
+      muted: row.muted,
     })
   );
 
