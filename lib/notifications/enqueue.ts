@@ -108,23 +108,8 @@ function formatDateNorwegian(dateStr: string): string {
 
 /**
  * Build Norwegian notification title for a shift event
- * @param isToday - If true, uses "i dag" (today) phrasing for more context
  */
-function buildShiftTitle(
-  ownerName: string,
-  eventType: ShiftEventType,
-  isToday: boolean
-): string {
-  if (isToday) {
-    switch (eventType) {
-      case "added":
-        return `${ownerName} la til en vakt i dag`
-      case "updated":
-        return `${ownerName} endret en vakt i dag`
-      case "deleted":
-        return `${ownerName} slettet en vakt i dag`
-    }
-  }
+function buildShiftTitle(ownerName: string, eventType: ShiftEventType): string {
   switch (eventType) {
     case "added":
       return `${ownerName} la til en vakt`
@@ -137,7 +122,7 @@ function buildShiftTitle(
 
 /**
  * Build Norwegian notification body with date and time
- * @param isToday - If true, omits date (since title already says "i dag")
+ * @param isToday - If true, uses "I dag" prefix instead of full date
  * @param oldStartTime - For updates: show old time in parentheses
  * @param oldEndTime - For updates: show old time in parentheses
  */
@@ -153,23 +138,22 @@ function buildShiftBody(
   const start = startTime.slice(0, 5)
   const end = endTime.slice(0, 5)
 
-  // Build time string, with old time in parentheses if this is an update
-  let timeStr = `${start}–${end}`
+  // Build time string, with old time on separate line if this is an update
+  const timeStr = `${start}–${end}`
+  let oldTimeStr: string | undefined
   if (oldStartTime && oldEndTime) {
     const oldStart = oldStartTime.slice(0, 5)
     const oldEnd = oldEndTime.slice(0, 5)
     // Only show old time if it actually changed
     if (oldStart !== start || oldEnd !== end) {
-      timeStr = `${start}–${end} (var ${oldStart}–${oldEnd})`
+      oldTimeStr = `(var ${oldStart}–${oldEnd})`
     }
   }
 
-  if (isToday) {
-    return timeStr
-  }
+  const datePart = isToday ? "I dag" : formatDateNorwegian(shiftDate)
+  const mainLine = `${datePart} ${timeStr}`
 
-  const datePart = formatDateNorwegian(shiftDate)
-  return `${datePart} ${timeStr}`
+  return oldTimeStr ? `${mainLine}\n${oldTimeStr}` : mainLine
 }
 
 // ============================================================================
@@ -227,7 +211,7 @@ export async function enqueueShiftNotification(params: ShiftNotificationParams) 
 
   // SAME-DAY: Insert directly to outbox for immediate delivery
   if (shiftDate === todayOslo) {
-    const title = buildShiftTitle(ownerName, eventType, true)
+    const title = buildShiftTitle(ownerName, eventType)
     const body = buildShiftBody(shiftDate, startTime, endTime, true, oldStartTime, oldEndTime)
 
     const rows = eligibleViewers.map((viewerId) => ({

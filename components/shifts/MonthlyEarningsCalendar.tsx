@@ -726,7 +726,7 @@ export function MonthlyEarningsCalendar({
         </div>
         <div className="flex flex-col items-center gap-2 pb-6">
           <div className="flex items-center gap-1 w-full">
-            <div className="inline-flex h-11 flex-1 min-w-0 items-center gap-1 rounded-full border border-border-subtle bg-surface-secondary/80 p-1 shadow-app-sm dark:shadow-app-inner overflow-hidden">
+            <div className="inline-flex h-11 flex-1 min-w-0 items-center rounded-xl border border-border-subtle bg-surface-secondary/80 p-1 shadow-app-sm dark:shadow-app-inner overflow-hidden">
               {/* Multi-selection mode: show delete (if allowed) and clear buttons */}
               <AnimateActivity
                 mode={selectedDates && selectedDates.size > 0 ? "visible" : "hidden"}
@@ -737,7 +737,7 @@ export function MonthlyEarningsCalendar({
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.95 }}
                   transition={{ type: "spring", visualDuration: 0.2, bounce: 0.1 }}
-                  className="flex h-9 w-full items-center gap-1 rounded-full bg-surface-primary"
+                  className="flex h-9 w-full items-center gap-1 rounded-lg bg-surface-primary"
                 >
                   {/* Delete button - only shown when onDeleteSelected is provided (not in readOnly mode) */}
                   {onDeleteSelected && (
@@ -748,7 +748,7 @@ export function MonthlyEarningsCalendar({
                       disabled={deleting || isOffline}
                       loading={deleting}
                       title={isOffline ? "Cannot delete while offline" : undefined}
-                      className="flex-1 h-9 gap-2 rounded-full bg-red-500/10 text-red-600 hover:bg-red-500/20 dark:text-red-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex-1 h-9 gap-2 rounded-lg bg-red-500/10 text-red-600 hover:bg-red-500/20 dark:text-red-400 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <Trash2 strokeWidth={2} className="h-4 w-4" />
                       {t.pages.shifts.actions.delete}
@@ -759,7 +759,7 @@ export function MonthlyEarningsCalendar({
                     variant="ghost"
                     onClick={() => onClearMultiSelection?.()}
                     disabled={deleting}
-                    className="flex-1 h-9 gap-2 rounded-full bg-surface-secondary text-text-secondary hover:bg-surface-secondary/80"
+                    className="flex-1 h-9 gap-2 rounded-lg bg-surface-secondary text-text-secondary hover:bg-surface-secondary/80"
                   >
                     <X strokeWidth={2} className="h-4 w-4" />
                     {(selectedDates?.size ?? 0) >= 2 ? t.common.close : t.pages.shifts.actions.clearSelection}
@@ -777,7 +777,7 @@ export function MonthlyEarningsCalendar({
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.95 }}
                   transition={{ type: "spring", visualDuration: 0.2, bounce: 0.1 }}
-                  className="flex h-9 w-full items-center gap-0.5 rounded-full bg-surface-primary"
+                  className="flex h-9 w-full items-center gap-1 rounded-lg bg-surface-primary"
                 >
                   {/* Delete button - two-click confirmation, icon only */}
                   {!readOnly && onDeleteSingleDate && (
@@ -796,7 +796,7 @@ export function MonthlyEarningsCalendar({
                       loading={confirmingDelete && deleting}
                       title={isOffline ? "Cannot delete while offline" : undefined}
                       className={cn(
-                        "h-9 shrink-0 rounded-l-full rounded-r-md disabled:opacity-50 disabled:cursor-not-allowed",
+                        "h-9 shrink-0 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed",
                         confirmingDelete
                           ? "w-auto px-3 gap-2 bg-red-600 text-white hover:bg-red-700"
                           : "w-14 bg-red-500/10 text-red-600 hover:bg-red-500/20 dark:text-red-400"
@@ -823,11 +823,7 @@ export function MonthlyEarningsCalendar({
                       }
                       loading={copying}
                       title={t.pages.shifts.actions.copy}
-                      className={cn(
-                        "h-9 w-14 shrink-0 rounded-md bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 dark:text-blue-400 disabled:opacity-50 disabled:cursor-not-allowed",
-                        // First button when delete is not shown
-                        (readOnly || !onDeleteSingleDate) && "rounded-l-full"
-                      )}
+                      className="h-9 w-14 shrink-0 rounded-lg bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 dark:text-blue-400 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <Copy strokeWidth={2} className="h-4 w-4" />
                     </Button>
@@ -853,14 +849,10 @@ export function MonthlyEarningsCalendar({
                       (copyMode ? !onCancelCopy : moveMode ? !onCancelMoveMode : !confirmingDelete && !onOpenDetails)
                     }
                     className={cn(
-                      "flex-1 min-w-0 h-9 rounded-md",
+                      "flex-1 min-w-0 h-9 rounded-lg",
                       confirmingDelete
                         ? "bg-surface-secondary text-text-secondary hover:bg-surface-secondary/80 gap-2"
-                        : !(copyMode || moveMode) && "gap-2",
-                      // First button in readOnly mode (no delete, no copy)
-                      readOnly && "rounded-l-full",
-                      // Last button when move is not shown or in confirmingDelete mode
-                      (readOnly || confirmingDelete) && "rounded-r-full"
+                        : !(copyMode || moveMode) && "gap-2"
                     )}
                   >
                     {confirmingDelete ? (
@@ -892,7 +884,7 @@ export function MonthlyEarningsCalendar({
                       }
                       title={isOffline ? "Cannot move shifts while offline" : undefined}
                       className={cn(
-                        "flex-1 min-w-0 h-9 gap-2 rounded-l-md rounded-r-full transition-all disabled:opacity-50 disabled:cursor-not-allowed",
+                        "flex-1 min-w-0 h-9 gap-2 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed",
                         moveMode
                           ? "bg-amber-500/20 text-amber-700 dark:text-amber-400"
                           : "bg-amber-500/10 text-amber-700 hover:bg-amber-500/20 dark:text-amber-300"
@@ -915,11 +907,11 @@ export function MonthlyEarningsCalendar({
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.95 }}
                   transition={{ type: "spring", visualDuration: 0.2, bounce: 0.1 }}
-                  className="flex h-9 w-full items-center gap-1 relative"
+                  className="flex h-9 w-full items-center relative"
                 >
                   {/* Animated background indicator */}
                   <motion.div
-                    className="absolute h-full rounded-full bg-white dark:bg-slate-700 shadow-app-md"
+                    className="absolute inset-y-0 rounded-lg bg-white dark:bg-slate-700 shadow-app-md"
                     initial={false}
                     animate={{
                       left: viewMode === "hours" || !showEarnings ? 0 : "50%",
@@ -934,7 +926,7 @@ export function MonthlyEarningsCalendar({
                     onClick={() => setViewMode("hours")}
                     disableAnimation
                     className={cn(
-                      "h-full rounded-full px-4 text-sm flex-1 whitespace-nowrap transition-colors relative z-10 hover:bg-transparent",
+                      "h-full px-4 text-sm flex-1 whitespace-nowrap transition-colors relative z-10 hover:bg-transparent rounded-lg",
                       viewMode === "hours" || !showEarnings
                         ? "text-black dark:text-white font-semibold"
                         : "text-text-muted hover:text-text-primary"
@@ -952,7 +944,7 @@ export function MonthlyEarningsCalendar({
                       onClick={() => setViewMode("money")}
                       disableAnimation
                       className={cn(
-                        "h-full rounded-full px-4 text-sm flex-1 whitespace-nowrap transition-colors relative z-10 hover:bg-transparent",
+                        "h-full px-4 text-sm flex-1 whitespace-nowrap transition-colors relative z-10 hover:bg-transparent rounded-lg",
                         viewMode === "money"
                           ? "text-black dark:text-white font-semibold"
                           : "text-text-muted hover:text-text-primary"
