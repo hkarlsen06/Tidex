@@ -27,6 +27,13 @@ export function isNativePlatform(): boolean {
 }
 
 /**
+ * Check if running on iOS (native or web)
+ */
+export function isIOSPlatform(): boolean {
+  return getPlatform() === "ios";
+}
+
+/**
  * Get the current platform name
  * Returns 'ios', 'android', or 'web'
  */
