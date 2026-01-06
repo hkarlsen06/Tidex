@@ -24,6 +24,9 @@ export interface ShiftNotificationParams {
   endTime: string // HH:MM or HH:MM:SS
   eventType: ShiftEventType
   mutationId: string // Server-generated unique ID for this mutation request
+  // For "updated" events: include old times to show what changed
+  oldStartTime?: string // HH:MM or HH:MM:SS
+  oldEndTime?: string // HH:MM or HH:MM:SS
 }
 
 interface WindowUpsertParams {
@@ -105,8 +108,23 @@ function formatDateNorwegian(dateStr: string): string {
 
 /**
  * Build Norwegian notification title for a shift event
+ * @param isToday - If true, uses "i dag" (today) phrasing for more context
  */
-function buildShiftTitle(ownerName: string, eventType: ShiftEventType): string {
+function buildShiftTitle(
+  ownerName: string,
+  eventType: ShiftEventType,
+  isToday: boolean
+): string {
+  if (isToday) {
+    switch (eventType) {
+      case "added":
+        return `${ownerName} la til en vakt i dag`
+      case "updated":
+        return `${ownerName} endret en vakt i dag`
+      case "deleted":
+        return `${ownerName} slettet en vakt i dag`
+    }
+  }
   switch (eventType) {
     case "added":
       return `${ownerName} la til en vakt`
@@ -119,13 +137,39 @@ function buildShiftTitle(ownerName: string, eventType: ShiftEventType): string {
 
 /**
  * Build Norwegian notification body with date and time
+ * @param isToday - If true, omits date (since title already says "i dag")
+ * @param oldStartTime - For updates: show old time in parentheses
+ * @param oldEndTime - For updates: show old time in parentheses
  */
-function buildShiftBody(shiftDate: string, startTime: string, endTime: string): string {
-  const datePart = formatDateNorwegian(shiftDate)
+function buildShiftBody(
+  shiftDate: string,
+  startTime: string,
+  endTime: string,
+  isToday: boolean,
+  oldStartTime?: string,
+  oldEndTime?: string
+): string {
   // Normalize time format (handle both HH:MM and HH:MM:SS)
   const start = startTime.slice(0, 5)
   const end = endTime.slice(0, 5)
-  return `${datePart} kl. ${start}-${end}`
+
+  // Build time string, with old time in parentheses if this is an update
+  let timeStr = `${start}–${end}`
+  if (oldStartTime && oldEndTime) {
+    const oldStart = oldStartTime.slice(0, 5)
+    const oldEnd = oldEndTime.slice(0, 5)
+    // Only show old time if it actually changed
+    if (oldStart !== start || oldEnd !== end) {
+      timeStr = `${start}–${end} (var ${oldStart}–${oldEnd})`
+    }
+  }
+
+  if (isToday) {
+    return timeStr
+  }
+
+  const datePart = formatDateNorwegian(shiftDate)
+  return `${datePart} ${timeStr}`
 }
 
 // ============================================================================
@@ -141,8 +185,18 @@ function buildShiftBody(shiftDate: string, startTime: string, endTime: string): 
  * @param params - Shift notification parameters
  */
 export async function enqueueShiftNotification(params: ShiftNotificationParams) {
-  const { ownerId, ownerName, shiftId, shiftDate, startTime, endTime, eventType, mutationId } =
-    params
+  const {
+    ownerId,
+    ownerName,
+    shiftId,
+    shiftDate,
+    startTime,
+    endTime,
+    eventType,
+    mutationId,
+    oldStartTime,
+    oldEndTime,
+  } = params
   const supabase = createSupabaseServiceClient()
   const todayOslo = getTodayOslo()
 
@@ -173,8 +227,8 @@ export async function enqueueShiftNotification(params: ShiftNotificationParams) 
 
   // SAME-DAY: Insert directly to outbox for immediate delivery
   if (shiftDate === todayOslo) {
-    const title = buildShiftTitle(ownerName, eventType)
-    const body = buildShiftBody(shiftDate, startTime, endTime)
+    const title = buildShiftTitle(ownerName, eventType, true)
+    const body = buildShiftBody(shiftDate, startTime, endTime, true, oldStartTime, oldEndTime)
 
     const rows = eligibleViewers.map((viewerId) => ({
       owner_id: ownerId,
