@@ -472,6 +472,11 @@ export default function LoginClient({
 
     if (!result.success) {
       setOauthProvider(null);
+      // Check if user cancelled (don't show error for cancellation)
+      const errorMessage = result.error?.message || '';
+      if (errorMessage.includes('cancel') || errorMessage.includes('Cancel')) {
+        return;
+      }
       setMessage({
         type: 'error',
         text: result.error
@@ -481,6 +486,19 @@ export default function LoginClient({
       return;
     }
 
+    // Native Apple sign-in: session is already created, redirect immediately
+    // Web/browser flow: waiting for OAuth callback redirect
+    if (!result.authUrl) {
+      // Native flow completed - redirect to destination
+      setMessage({
+        type: 'success',
+        text: t.pages.auth.login.loggingIn,
+      });
+      await checkMfaAndRedirect(redirectPath);
+      return;
+    }
+
+    // Browser flow - waiting for callback
     setMessage({
       type: 'success',
       text: t.pages.auth.login.waitingForApple,

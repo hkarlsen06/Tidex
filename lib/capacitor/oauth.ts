@@ -1,7 +1,57 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { isNativePlatform } from "./platform";
+import { isNativePlatform, isIOSPlatform } from "./platform";
 
 type OAuthProvider = "google" | "apple";
+
+/**
+ * Perform native Apple Sign-in on iOS using the native Sign in with Apple prompt.
+ * This avoids the white overlay browser issue and respects system dark mode.
+ */
+async function performNativeAppleSignIn(
+  supabase: SupabaseClient
+): Promise<{ success: boolean; error?: Error }> {
+  try {
+    const { SocialLogin } = await import("@capgo/capacitor-social-login");
+
+    // Initialize Apple provider (no config needed on iOS - uses bundle ID)
+    await SocialLogin.initialize({
+      apple: {},
+    });
+
+    // Trigger native Apple Sign-in prompt
+    const result = await SocialLogin.login({
+      provider: "apple",
+      options: {
+        scopes: ["email", "name"],
+      },
+    });
+
+    if (!result.result?.idToken) {
+      return {
+        success: false,
+        error: new Error("No identity token received from Apple"),
+      };
+    }
+
+    // Exchange the identity token with Supabase
+    const { error } = await supabase.auth.signInWithIdToken({
+      provider: "apple",
+      token: result.result.idToken,
+    });
+
+    if (error) {
+      return { success: false, error };
+    }
+
+    return { success: true };
+  } catch (error) {
+    // User cancelled or other error
+    return {
+      success: false,
+      error: error instanceof Error ? error : new Error(String(error)),
+    };
+  }
+}
 
 interface OAuthOptions {
   redirectPath: string;
@@ -47,7 +97,8 @@ function getOAuthRedirectUrl(redirectPath: string): string {
 
 /**
  * Perform OAuth sign-in handling both native and web platforms
- * - Native: Opens Capacitor Browser and returns the auth URL
+ * - iOS + Apple: Uses native Sign in with Apple (no white overlay)
+ * - Other native: Opens Capacitor Browser
  * - Web: Lets Supabase handle the redirect naturally
  *
  * @returns Object with success status and optional auth URL for native
@@ -58,6 +109,11 @@ export async function performOAuthSignIn(
   options: OAuthOptions
 ): Promise<{ success: boolean; error?: Error; authUrl?: string }> {
   try {
+    // Use native Sign in with Apple on iOS to avoid white overlay browser
+    if (provider === "apple" && isIOSPlatform()) {
+      return await performNativeAppleSignIn(supabase);
+    }
+
     const redirectTo = getOAuthRedirectUrl(options.redirectPath);
 
     const { data, error } = await supabase.auth.signInWithOAuth({
