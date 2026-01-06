@@ -15,9 +15,8 @@
 --   outbox_rows_created: Number of outbox rows inserted
 --
 -- Message format examples:
---   - "Alvilde slettet 2 vakter"
---   - "Alvilde la til 1 vakt og endret 3 vakter"
---   - "Alvilde slettet 2 vakter, la til 2 vakter, og endret 1 vakt"
+--   Title: "Alvilde"
+--   Body: "La til 2 vakter, endret 1 vakt, og slettet 3 vakter"
 
 CREATE OR REPLACE FUNCTION internal.process_notification_windows()
 RETURNS TABLE(windows_processed INT, outbox_rows_created INT)
@@ -66,15 +65,13 @@ BEGIN
       v_owner_name := 'Noen';
     END IF;
 
-    -- Build Norwegian message
-    -- Format: "Alvilde slettet 2 vakter, la til 2 vakter, og endret 1 vakt"
-    v_action_parts := '{}';
+    -- Title is just the owner name
+    v_title := v_owner_name;
 
-    IF v_window.deleted_count > 0 THEN
-      v_action_parts := array_append(v_action_parts,
-        'slettet ' || v_window.deleted_count ||
-        CASE WHEN v_window.deleted_count = 1 THEN ' vakt' ELSE ' vakter' END);
-    END IF;
+    -- Build Norwegian body message
+    -- Order: added, updated, deleted
+    -- Format: "La til 2 vakter, endret 1 vakt, og slettet 3 vakter"
+    v_action_parts := '{}';
 
     IF v_window.added_count > 0 THEN
       v_action_parts := array_append(v_action_parts,
@@ -88,17 +85,23 @@ BEGIN
         CASE WHEN v_window.updated_count = 1 THEN ' vakt' ELSE ' vakter' END);
     END IF;
 
-    -- Build title with Norwegian conjunction rules
-    IF array_length(v_action_parts, 1) = 1 THEN
-      v_title := v_owner_name || ' ' || v_action_parts[1];
-    ELSIF array_length(v_action_parts, 1) = 2 THEN
-      v_title := v_owner_name || ' ' || v_action_parts[1] || ' og ' || v_action_parts[2];
-    ELSE
-      v_title := v_owner_name || ' ' || v_action_parts[1] || ', ' ||
-                 v_action_parts[2] || ', og ' || v_action_parts[3];
+    IF v_window.deleted_count > 0 THEN
+      v_action_parts := array_append(v_action_parts,
+        'slettet ' || v_window.deleted_count ||
+        CASE WHEN v_window.deleted_count = 1 THEN ' vakt' ELSE ' vakter' END);
     END IF;
 
-    v_body := 'Trykk for å se endringene';
+    -- Build body with Norwegian conjunction rules
+    IF array_length(v_action_parts, 1) = 1 THEN
+      -- Capitalize first letter
+      v_body := initcap(substring(v_action_parts[1] from 1 for 1)) || substring(v_action_parts[1] from 2);
+    ELSIF array_length(v_action_parts, 1) = 2 THEN
+      v_body := initcap(substring(v_action_parts[1] from 1 for 1)) || substring(v_action_parts[1] from 2) ||
+                ' og ' || v_action_parts[2];
+    ELSE
+      v_body := initcap(substring(v_action_parts[1] from 1 for 1)) || substring(v_action_parts[1] from 2) ||
+                ', ' || v_action_parts[2] || ', og ' || v_action_parts[3];
+    END IF;
 
     -- Fan out to each non-muted recipient
     INSERT INTO internal.notifications_outbox (

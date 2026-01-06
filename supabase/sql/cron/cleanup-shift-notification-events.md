@@ -2,7 +2,7 @@
 
 ## Overview
 
-Cleans up old resolved shift notification events to prevent table bloat.
+Cleans up old processed notification data to prevent table bloat.
 
 ## Schedule
 
@@ -15,19 +15,19 @@ Cleans up old resolved shift notification events to prevent table bloat.
 ## SQL Command
 
 ```sql
-DELETE FROM pending_shift_deletes WHERE status = 'resolved' AND check_at < NOW() - INTERVAL '7 days';
-DELETE FROM shift_update_events WHERE status = 'sent' AND updated_at < NOW() - INTERVAL '7 days';
+DELETE FROM internal.notification_time_windows WHERE status = 'finalized' AND updated_at < NOW() - INTERVAL '3 days';
+DELETE FROM internal.notifications_outbox WHERE status = 'sent' AND created_at < NOW() - INTERVAL '3 days';
 ```
 
 ## What It Does
 
-1. **Deletes resolved pending shift deletes** - Removes entries from `pending_shift_deletes` that have been resolved and are older than 7 days
-2. **Deletes sent shift update events** - Removes entries from `shift_update_events` that have been sent and are older than 7 days
+1. **Deletes finalized time windows** - Removes entries from `internal.notification_time_windows` that have been processed and are older than 3 days
+2. **Deletes sent outbox notifications** - Removes entries from `internal.notifications_outbox` that have been sent and are older than 3 days
 
 ## Tables Affected
 
-- `pending_shift_deletes` - Tracks deleted shifts for deferred notification processing
-- `shift_update_events` - Tracks shift updates for notification batching
+- `internal.notification_time_windows` - Aggregates non-today shift mutations into 15-minute windows
+- `internal.notifications_outbox` - Holds notifications ready for delivery
 
 ## Dependencies
 
@@ -35,8 +35,8 @@ None - runs pure SQL cleanup.
 
 ## Related Functions
 
-- `process_pending_shift_deletes()` - Processes pending deletes and sets status to 'resolved'
-- `process_shift_update_events()` - Processes update events and sets status to 'sent'
+- `internal.process_notification_windows()` - Processes windows and sets status to 'finalized'
+- `send-push-notifications` edge function - Sends notifications and sets outbox status to 'sent'
 
 ## Monitoring
 
@@ -44,9 +44,17 @@ Check for table size growth if cleanup isn't working:
 
 ```sql
 SELECT
-  relname AS table_name,
+  schemaname || '.' || relname AS table_name,
   pg_size_pretty(pg_total_relation_size(relid)) AS total_size
 FROM pg_catalog.pg_statio_user_tables
-WHERE relname IN ('pending_shift_deletes', 'shift_update_events')
+WHERE relname IN ('notification_time_windows', 'notifications_outbox')
 ORDER BY pg_total_relation_size(relid) DESC;
+```
+
+Check pending items that haven't been processed:
+
+```sql
+SELECT
+  (SELECT COUNT(*) FROM internal.notification_time_windows WHERE status != 'finalized') AS unfinalized_windows,
+  (SELECT COUNT(*) FROM internal.notifications_outbox WHERE status != 'sent') AS unsent_outbox;
 ```
