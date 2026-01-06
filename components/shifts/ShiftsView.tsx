@@ -1082,26 +1082,69 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
   // In readOnly mode without sharedOwnerId, only use server-provided initialShifts
   // When sharedOwnerId is present, include additionalShifts for shared shifts navigation
   const includeAdditionalShifts = !readOnly || !!sharedOwnerId;
-  const shifts = useMemo(
-    () => [...initialShifts, ...(includeAdditionalShifts ? additionalShifts : []), ...(readOnly ? [] : copiedShifts), ...(readOnly ? [] : optimisticShifts)]
-      .filter(shift => !deletedShiftIds.has(shift.id))
-      .map(shift => {
-        // Apply locally fetched overrides (e.g., after saving custom supplements)
-        const overridden = shiftOverrides.get(shift.id);
-        const baseShift = overridden ? { ...shift, ...overridden } : shift;
 
-        const moved = movedShifts.get(baseShift.id);
-        if (moved) {
-          return {
-            ...baseShift,
-            shift_date: moved.newDate,
-            start_time: moved.newStartTime,
-            end_time: moved.newEndTime,
-          };
+  // Combine all shift sources, deduplicate by ID, and apply overrides
+  // This handles race conditions where the same shift may appear in multiple sources:
+  // - initialShifts (SSR data, updated by router.refresh())
+  // - additionalShifts (client-fetched for adjacent months)
+  // - copiedShifts (optimistic copies)
+  // - optimisticShifts (optimistic creates)
+  const shifts = useMemo(
+    () => {
+      const seenIds = new Set<string>();
+      const result: ShiftWithComputations[] = [];
+
+      // Process sources in priority order: initialShifts first (most authoritative)
+      const allSources = [
+        initialShifts,
+        includeAdditionalShifts ? additionalShifts : [],
+        readOnly ? [] : copiedShifts,
+        readOnly ? [] : optimisticShifts,
+      ];
+
+      for (const source of allSources) {
+        for (const shift of source) {
+          // Skip deleted shifts
+          if (deletedShiftIds.has(shift.id)) continue;
+
+          // Skip duplicates (first occurrence wins - initialShifts has priority)
+          if (seenIds.has(shift.id)) continue;
+
+          // For optimistic shifts, also check if a real shift with matching data exists
+          if (shift.id.startsWith('optimistic-')) {
+            const hasMatchingReal = result.some(
+              real =>
+                real.shift_date === shift.shift_date &&
+                real.start_time === shift.start_time &&
+                real.end_time === shift.end_time
+            );
+            if (hasMatchingReal) continue;
+          }
+
+          seenIds.add(shift.id);
+
+          // Apply locally fetched overrides (e.g., after saving custom supplements)
+          const overridden = shiftOverrides.get(shift.id);
+          const baseShift = overridden ? { ...shift, ...overridden } : shift;
+
+          // Apply move overrides
+          const moved = movedShifts.get(baseShift.id);
+          if (moved) {
+            result.push({
+              ...baseShift,
+              shift_date: moved.newDate,
+              start_time: moved.newStartTime,
+              end_time: moved.newEndTime,
+            });
+          } else {
+            result.push(baseShift);
+          }
         }
-        return baseShift;
-      }),
-    [initialShifts, additionalShifts, deletedShiftIds, movedShifts, copiedShifts, shiftOverrides, readOnly, includeAdditionalShifts, optimisticShifts]
+      }
+
+      return result;
+    },
+    [initialShifts, additionalShifts, deletedShiftIds, copiedShifts, readOnly, includeAdditionalShifts, optimisticShifts, shiftOverrides, movedShifts]
   );
 
   const clearSelection = useCallback(() => {
@@ -1991,6 +2034,42 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
     });
   }, [multiSelectedDates, shiftsByDate, isOffline, router, clearMultiSelection, errorComplete]);
 
+  // Handle deletion of shifts for the single selected date (from calendar action bar)
+  const handleDeleteSingleDate = useCallback(() => {
+    if (!selectedDate || isOffline) return;
+
+    const shiftsToDeleteList = shiftsByDate.get(selectedDate) ?? [];
+    if (shiftsToDeleteList.length === 0) return;
+
+    // Optimistically remove shifts from UI
+    const idsToDelete = new Set(shiftsToDeleteList.map(s => s.id));
+    setDeletedShiftIds(prev => new Set([...prev, ...idsToDelete]));
+    clearSelection();
+
+    startDeleteTransition(async () => {
+      try {
+        // Bulk delete all shifts in a single server action
+        const shiftsPayload = shiftsToDeleteList.map(shift => ({
+          shiftId: shift.id,
+          recurringId: shift.recurring_id,
+          shiftDate: shift.shift_date,
+        }));
+        await deleteShifts(shiftsPayload);
+        router.refresh();
+      } catch (error) {
+        // Revert optimistic deletions on error
+        setDeletedShiftIds(prev => {
+          const next = new Set(prev);
+          idsToDelete.forEach(id => next.delete(id));
+          return next;
+        });
+        const errorMessage = error instanceof Error ? error.message : errorComplete;
+        setOperationError(errorMessage);
+        console.error("Failed to delete shifts", error);
+      }
+    });
+  }, [selectedDate, shiftsByDate, isOffline, router, clearSelection, errorComplete]);
+
   const selectedDateShifts = useMemo(
     () => (selectedDate ? shiftsByDate.get(selectedDate) ?? [] : []),
     [selectedDate, shiftsByDate]
@@ -2359,6 +2438,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
             selectedDates={readOnly && !showEarnings ? undefined : multiSelectedDates}
             onClearMultiSelection={readOnly && !showEarnings ? undefined : clearMultiSelection}
             onDeleteSelected={readOnly ? undefined : handleDeleteSelected}
+            onDeleteSingleDate={readOnly ? undefined : handleDeleteSingleDate}
             deleting={deleting}
             containerRef={calendarContainerRef}
             onClearSelection={clearSelection}
