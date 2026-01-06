@@ -27,10 +27,17 @@ export function isNativePlatform(): boolean {
 }
 
 /**
- * Check if running on iOS (native or web)
+ * Check if running on native iOS (inside Capacitor app)
+ * Returns false for iOS Safari/web - only true when in the native iOS app
  */
 export function isIOSPlatform(): boolean {
-  return getPlatform() === "ios";
+  if (typeof window === "undefined") return false;
+
+  // Only return true if we have the Capacitor native bridge AND it reports iOS
+  const hasNativeBridge = !!(window as any).Capacitor?.getPlatform;
+  if (!hasNativeBridge) return false;
+
+  return (window as any).Capacitor.getPlatform() === "ios";
 }
 
 /**
