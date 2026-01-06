@@ -2,46 +2,43 @@
 
 ## Overview
 
-Main notification processor that handles shift changes (creates, updates, deletes) and triggers push notifications.
+Main notification processor that handles non-today shift changes (creates, updates, deletes) aggregated into 15-minute windows, and triggers push notifications.
 
 ## Schedule
 
 ```
-* * * * *
+*/15 * * * *
 ```
 
-**Translation:** Every minute
+**Translation:** Every 15 minutes (at :00, :15, :30, :45)
 
 ## SQL Command
 
 ```sql
-SELECT run_shift_notification_workers();
+SELECT run_notification_workers();
 ```
 
 ## What It Does
 
-Calls `run_shift_notification_workers()` which:
+Calls `run_notification_workers()` which:
 
-1. **Processes pending shift deletes** - Runs `process_pending_shift_deletes()` to:
-   - Claim pending deletes that are ready to process
-   - Detect delete-then-recreate patterns (treated as updates)
-   - Queue aggregated notifications for viewers
+1. **Processes completed time windows** - Runs `internal.process_notification_windows()` to:
+   - Find windows where `window_start + 15 minutes <= now()` and status is 'pending'
+   - Build aggregated Norwegian notification messages (e.g., "Alvilde la til 2 vakter og endret 1 vakt")
+   - Fan out to each non-muted recipient with `shared_shifts_enabled`
+   - Insert rows into `internal.notifications_outbox`
+   - Mark windows as 'finalized'
 
-2. **Processes shift update events** - Runs `process_shift_update_events()` to:
-   - Claim pending update events
-   - Batch updates by owner
-   - Queue aggregated notifications for viewers
-
-3. **Triggers push notification delivery** - If there are pending notifications:
+2. **Triggers push notification delivery** - If there are pending outbox notifications:
    - Calls `send-push-notifications` edge function via `net.http_post`
 
 ## Tables Affected
 
-- `pending_shift_deletes` - Read and update status
-- `shift_update_events` - Read and update status
-- `internal.notification_queue` - Insert new notifications
-- `shift_shares` - Read to find viewers
-- `notification_preferences` - Read to check viewer preferences
+- `internal.notification_time_windows` - Read pending windows, update status
+- `internal.notifications_outbox` - Insert new notifications
+- `shift_shares` - Read to find non-muted viewers
+- `notification_preferences` - Read to check `shared_shifts_enabled`
+- `auth.users` - Read owner name for notification title
 
 ## Dependencies
 
@@ -50,21 +47,43 @@ Calls `run_shift_notification_workers()` which:
 
 ## Related Functions
 
-- `run_shift_notification_workers()` - Main orchestrator
-- `process_pending_shift_deletes()` - Handles deleted shifts
-- `process_shift_update_events()` - Handles updated shifts
+- `run_notification_workers()` - Main orchestrator (public schema)
+- `internal.process_notification_windows()` - Processes completed windows
+- `internal.upsert_notification_window()` - Called by app to aggregate mutations
 
 ## Related Edge Functions
 
 - `send-push-notifications` - Delivers the actual push notifications
 
+## How It Works
+
+1. App server actions (createShifts, updateShift, deleteShift) call `enqueueShiftNotification()`
+2. For non-today shifts, this upserts into `internal.notification_time_windows` via RPC
+3. Multiple changes in the same 15-min window are aggregated (counts incremented, dates appended)
+4. This cron job runs every minute and processes windows that have completed
+5. Notifications are fanned out to each eligible recipient in the outbox
+6. A trigger on outbox insert invokes the edge function to send push notifications
+
 ## Monitoring
 
-Check for processing backlogs:
+Check for processing status:
 
 ```sql
 SELECT
-  (SELECT COUNT(*) FROM pending_shift_deletes WHERE status = 'pending') AS pending_deletes,
-  (SELECT COUNT(*) FROM shift_update_events WHERE status = 'pending') AS pending_updates,
-  (SELECT COUNT(*) FROM internal.notification_queue WHERE status = 'pending') AS pending_notifications;
+  (SELECT COUNT(*) FROM internal.notification_time_windows WHERE status = 'pending') AS pending_windows,
+  (SELECT COUNT(*) FROM internal.notification_time_windows WHERE status = 'processing') AS processing_windows,
+  (SELECT COUNT(*) FROM internal.notifications_outbox WHERE status = 'pending') AS pending_outbox;
+```
+
+Check recent windows:
+
+```sql
+SELECT
+  id, owner_id, window_start,
+  added_count, updated_count, deleted_count,
+  array_length(affected_dates, 1) as date_count,
+  status
+FROM internal.notification_time_windows
+ORDER BY window_start DESC
+LIMIT 10;
 ```
