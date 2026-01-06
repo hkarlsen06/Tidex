@@ -3,6 +3,63 @@ import { isNativePlatform, isIOSPlatform } from "./platform";
 
 type OAuthProvider = "google" | "apple";
 
+// iOS Google Client ID from Google Cloud Console
+const GOOGLE_IOS_CLIENT_ID =
+  "496501907923-a0sng8rs2gscdu2fdenlq4j2g8vq9gas.apps.googleusercontent.com";
+
+/**
+ * Perform native Google Sign-in on iOS using the native Google Sign-In SDK.
+ * This shows a bottom sheet with Google accounts instead of opening a browser.
+ */
+async function performNativeGoogleSignIn(
+  supabase: SupabaseClient
+): Promise<{ success: boolean; error?: Error }> {
+  try {
+    const { SocialLogin } = await import("@capgo/capacitor-social-login");
+
+    // Initialize Google provider with iOS Client ID
+    await SocialLogin.initialize({
+      google: {
+        iOSClientId: GOOGLE_IOS_CLIENT_ID,
+      },
+    });
+
+    // Trigger native Google Sign-in
+    const result = await SocialLogin.login({
+      provider: "google",
+      options: {
+        scopes: ["email", "profile"],
+      },
+    });
+
+    // Google returns idToken for online mode
+    if (result.result && "idToken" in result.result && result.result.idToken) {
+      // Exchange the ID token with Supabase
+      const { error } = await supabase.auth.signInWithIdToken({
+        provider: "google",
+        token: result.result.idToken,
+      });
+
+      if (error) {
+        return { success: false, error };
+      }
+
+      return { success: true };
+    }
+
+    return {
+      success: false,
+      error: new Error("No ID token received from Google"),
+    };
+  } catch (error) {
+    // User cancelled or other error
+    return {
+      success: false,
+      error: error instanceof Error ? error : new Error(String(error)),
+    };
+  }
+}
+
 /**
  * Perform native Apple Sign-in on iOS using the native Sign in with Apple prompt.
  * This avoids the white overlay browser issue and respects system dark mode.
@@ -109,9 +166,14 @@ export async function performOAuthSignIn(
   options: OAuthOptions
 ): Promise<{ success: boolean; error?: Error; authUrl?: string }> {
   try {
-    // Use native Sign in with Apple on iOS to avoid white overlay browser
-    if (provider === "apple" && isIOSPlatform()) {
-      return await performNativeAppleSignIn(supabase);
+    // Use native sign-in on iOS to avoid white overlay browser
+    if (isIOSPlatform()) {
+      if (provider === "apple") {
+        return await performNativeAppleSignIn(supabase);
+      }
+      if (provider === "google") {
+        return await performNativeGoogleSignIn(supabase);
+      }
     }
 
     const redirectTo = getOAuthRedirectUrl(options.redirectPath);
