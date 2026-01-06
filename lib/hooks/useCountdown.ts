@@ -63,20 +63,35 @@ function calculateCountdown(
   // Check if shift is currently active (only if endTime is provided)
   let isActive = false;
   let progress = 0;
+  let endDateTime: Date | null = null;
+  let secondsUntilEnd = 0;
 
   if (endTime) {
     const { startDateTime: start, endDateTime: end } = parseShiftTimes(shiftDate, startTime, endTime);
+    endDateTime = end;
 
     if (now >= start && now <= end) {
       isActive = true;
       const totalDuration = end.getTime() - start.getTime();
       const elapsed = now.getTime() - start.getTime();
       progress = Math.min(100, Math.max(0, (elapsed / totalDuration) * 100));
+      secondsUntilEnd = Math.ceil((end.getTime() - now.getTime()) / 1000);
     }
   }
 
-  // If shift is active, return "now" text
+  // If shift is active
   if (isActive) {
+    // Show countdown in last 61 seconds (start 1 second early to compensate for animation duration)
+    // Display value is secondsUntilEnd - 1 so animation lands on the correct number
+    if (secondsUntilEnd <= 61 && secondsUntilEnd > 1) {
+      return {
+        text: String(secondsUntilEnd - 1),
+        isUpcoming: false,
+        isActive: true,
+        progress,
+        diffMs: 0,
+      };
+    }
     return {
       text: t.common.relativeTime.now,
       isUpcoming: false,
@@ -86,7 +101,13 @@ function calculateCountdown(
     };
   }
 
-  const diffMs = startDateTime.getTime() - now.getTime();
+  // For past shifts with an end time, calculate from end time instead of start time
+  // This way "3min siden" means "ended 3 minutes ago", not "started X hours ago"
+  const referenceTime = endTime && endDateTime && now > endDateTime
+    ? endDateTime
+    : startDateTime;
+
+  const diffMs = referenceTime.getTime() - now.getTime();
   const isFuture = diffMs > 0;
   const absDiffMs = Math.abs(diffMs);
 
@@ -134,11 +155,22 @@ function calculateCountdown(
   if (midnightDays === 0) {
     const h = Math.floor(totalMinutes / 60);
     const m = totalMinutes % 60;
+    const s = totalSeconds % 60;
+
+    // For past shifts that just ended (less than 1 minute ago), show seconds
+    // This provides a smooth transition from the countdown to "Xsek siden"
+    if (!isFuture && totalMinutes === 0) {
+      return {
+        text: interpolate(rt.secondsAgo, { seconds: totalSeconds }),
+        isUpcoming: false,
+        isActive: false,
+        progress: 0,
+        diffMs,
+      };
+    }
 
     // High precision: show hours, minutes and seconds when within a few hours
     if (highPrecision && totalHours < 6) {
-      const s = totalSeconds % 60;
-
       if (h === 0) {
         // Less than 1 hour - already handled above when highPrecision is true
         // This branch handles when highPrecision is false
@@ -304,8 +336,11 @@ export function useCountdown({
 
     // Determine new interval
     const sixHoursMs = 6 * 60 * 60 * 1000;
+    const oneMinuteMs = 60 * 1000;
     const isClose = Math.abs(countdownResult.diffMs) < sixHoursMs;
-    const needsFrequentUpdates = countdownResult.isActive || (highPrecision && isClose);
+    // Also need frequent updates for shifts that just ended (first minute shows seconds)
+    const justEnded = !countdownResult.isUpcoming && Math.abs(countdownResult.diffMs) < oneMinuteMs;
+    const needsFrequentUpdates = countdownResult.isActive || justEnded || (highPrecision && isClose);
     const newIntervalMs = needsFrequentUpdates ? 1000 : 60000;
 
     return {

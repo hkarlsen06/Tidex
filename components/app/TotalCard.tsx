@@ -181,6 +181,7 @@ export const TotalCard: React.FC<TotalCardProps> = ({
                 <SafeAnimateNumber
                   layout={false}
                   suffix="%"
+                  locales="nb-NO"
                   transition={{
                     visualDuration: 0.8,
                     type: 'spring',

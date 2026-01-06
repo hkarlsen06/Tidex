@@ -6,6 +6,7 @@ import { cn } from "@/lib/cn";
 import { useTranslations } from "@/lib/i18n/client";
 import { useCountdown } from "@/lib/hooks/useCountdown";
 import { formatDateParts, formatTimeRange } from "@/components/app/ShiftCard";
+import { SafeAnimateNumber } from "@/components/app/SafeAnimateNumber";
 import type { ShiftWithComputations } from "@/lib/payroll";
 
 type SharedUserShiftPreviewProps = {
@@ -141,6 +142,7 @@ export function SharedUserShiftPreview({
   );
 
   // Countdown for upcoming shifts, or elapsed time for past shifts
+  // When active and within last 60 seconds, countdown.text will be the seconds number
   const countdown = useCountdown({
     shiftDate: shift.shift_date,
     shiftTime: shift.start_time,
@@ -149,13 +151,12 @@ export function SharedUserShiftPreview({
     highPrecision: currentStatus === "active",
   });
 
-  // Determine the status text
-  const statusText = useMemo(() => {
-    if (currentStatus === "active") {
-      return t.common.relativeTime.now;
-    }
-    return countdown.text;
-  }, [currentStatus, countdown.text, t.common.relativeTime.now]);
+  // Check if we're in the final countdown (text is just a number)
+  const isCountingDown = countdown.isActive && /^\d+$/.test(countdown.text ?? '');
+  const countdownNumber = isCountingDown ? Number(countdown.text) : 0;
+
+  // Use countdown text directly - it already handles active state (either "Pågår nå" or countdown number)
+  const statusText = countdown.text;
 
   return (
     <div className="relative overflow-hidden rounded-lg">
@@ -182,15 +183,24 @@ export function SharedUserShiftPreview({
         {/* Relative time badge */}
         <div
           className={cn(
-            "shrink-0 text-xs font-medium px-2 py-1 rounded-full",
-            currentStatus === "active"
+            "shrink-0 font-medium rounded-full transition-all duration-200",
+            isCountingDown
+              ? "text-base min-w-10 text-center px-2 py-0.5 bg-green-500/20 text-green-600 dark:text-green-400"
+              : "text-xs px-2 py-1",
+            !isCountingDown && currentStatus === "active"
               ? "bg-green-500/10 text-green-600 dark:text-green-400"
-              : currentStatus === "upcoming"
+              : !isCountingDown && currentStatus === "upcoming"
                 ? "bg-blue-500/10 text-blue-600 dark:text-blue-400"
-                : "bg-surface-secondary text-text-muted"
+                : !isCountingDown && "bg-surface-secondary text-text-muted"
           )}
         >
-          {statusText}
+          {isCountingDown ? (
+            <SafeAnimateNumber routePattern="/sharing">
+              {countdownNumber}
+            </SafeAnimateNumber>
+          ) : (
+            statusText
+          )}
         </div>
       </div>
     </div>
