@@ -302,11 +302,19 @@ export function AppleIAPUpgradeOptions({
         }
 
         if (result.entitled) {
-          // Success! Refresh the page to show new entitlement
+          // Success! Show message if it was auto-restored, then refresh
+          if (result.restoredFromExisting) {
+            // Brief delay to let user see the message
+            setError(null);
+            alert(iap.subscriptionRestored || 'Your existing subscription has been restored!');
+          }
           window.location.reload();
         } else if (result.error) {
           // Purchase succeeded but verification had issues
           setError(result.error);
+        } else if (result.restoredFromExisting) {
+          // Auto-restore was attempted but no entitlement found
+          setError(result.error || iap.subscriptionOnDifferentAccount || 'This subscription is linked to a different account.');
         }
 
         setLoadingPlan(null);
