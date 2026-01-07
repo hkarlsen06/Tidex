@@ -20,7 +20,7 @@ export function SettingsPageWrapper({
   routeKey = "settings-sub",
 }: SettingsPageWrapperProps) {
   return (
-    <ScrollablePageWrapper routeKey={routeKey} pullToRefresh>
+    <ScrollablePageWrapper routeKey={routeKey}>
       <div className="py-8">
         {children}
       </div>

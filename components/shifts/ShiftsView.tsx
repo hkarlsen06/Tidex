@@ -2342,8 +2342,8 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
     : t.pages.shifts.list.emptyDescription;
 
   return (
-    <ScrollablePageWrapper routeKey="shifts" applyContainer={false} pullToRefresh>
-    {/* Queued Shift Notification */}
+    <ScrollablePageWrapper routeKey="shifts" applyContainer={false}>
+      {/* Queued Shift Notification */}
     {queuedNotification && (
       <div className="fixed top-20 left-1/2 -translate-x-1/2 z-40 animate-in slide-in-from-top-2 fade-in">
         <div className="rounded-lg border border-blue-500/20 bg-blue-500/10 px-4 py-3 shadow-lg backdrop-blur-xs">

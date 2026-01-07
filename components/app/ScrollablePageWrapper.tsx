@@ -1,11 +1,8 @@
 "use client";
 
-import { useEffect, useCallback, type ReactNode, type RefObject } from "react";
-import { useRouter } from "next/navigation";
-import PullToRefresh from "react-simple-pull-to-refresh";
+import { useEffect, type ReactNode, type RefObject } from "react";
 import { useScrollRestoration } from "@/lib/hooks/useScrollRestoration";
 import { useScrollContext } from "@/lib/contexts/ScrollContext";
-import { useIsDesktop } from "@/lib/hooks/useIsMobile";
 
 interface ScrollablePageWrapperProps {
   children: ReactNode;
@@ -27,12 +24,6 @@ interface ScrollablePageWrapperProps {
    * Optional ref callback to expose the scroll container ref to parent.
    */
   scrollRefCallback?: (ref: RefObject<HTMLDivElement | null>) => void;
-  /**
-   * Enable pull-to-refresh functionality (mobile only).
-   * When enabled, pulling down at the top of the scroll container will trigger a page refresh.
-   * Automatically disabled on desktop to prevent scroll conflicts.
-   */
-  pullToRefresh?: boolean;
 }
 
 /**
@@ -50,22 +41,9 @@ export function ScrollablePageWrapper({
   className,
   applyContainer = true,
   scrollRefCallback,
-  pullToRefresh = false,
 }: ScrollablePageWrapperProps) {
   const scrollRef = useScrollRestoration(routeKey ?? "");
   const { registerScrollContainer } = useScrollContext();
-  const router = useRouter();
-
-  // Disable pull-to-refresh on desktop to prevent nested scroll conflicts
-  // useIsDesktop returns undefined during SSR, false on mobile, true on desktop
-  const isDesktop = useIsDesktop();
-  const shouldUsePullToRefresh = pullToRefresh && isDesktop === false;
-
-  const handleRefresh = useCallback(async () => {
-    router.refresh();
-    // Small delay to ensure the refresh is visible to the user
-    await new Promise((resolve) => setTimeout(resolve, 500));
-  }, [router]);
 
   useEffect(() => {
     if (routeKey) {
@@ -88,30 +66,12 @@ export function ScrollablePageWrapper({
     children
   );
 
-  // When pull-to-refresh is active, the PullToRefresh component handles scrolling
-  // via its internal .ptr__children element with overflow-y: auto.
-  // We must NOT have overflow-y-auto on the outer wrapper to avoid nested scroll contexts.
-  // On desktop (or during SSR when isDesktop is undefined), always use overflow-y-auto.
-  const outerClassName = shouldUsePullToRefresh
-    ? `h-full pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-8 ${className ?? ""}`
-    : `h-full overflow-y-auto pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-8 ${className ?? ""}`;
-
   return (
     <div
       ref={routeKey ? scrollRef : undefined}
-      className={outerClassName}
+      className={`h-full overflow-y-auto pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-8 ${className ?? ""}`}
     >
-      {shouldUsePullToRefresh ? (
-        <PullToRefresh
-          onRefresh={handleRefresh}
-          pullingContent=""
-          resistance={2.5}
-        >
-          {content}
-        </PullToRefresh>
-      ) : (
-        content
-      )}
+      {content}
     </div>
   );
 }
