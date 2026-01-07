@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import PullToRefresh from "react-simple-pull-to-refresh";
 import { useScrollRestoration } from "@/lib/hooks/useScrollRestoration";
 import { useScrollContext } from "@/lib/contexts/ScrollContext";
+import { useIsDesktop } from "@/lib/hooks/useIsMobile";
 
 interface ScrollablePageWrapperProps {
   children: ReactNode;
@@ -27,8 +28,9 @@ interface ScrollablePageWrapperProps {
    */
   scrollRefCallback?: (ref: RefObject<HTMLDivElement | null>) => void;
   /**
-   * Enable pull-to-refresh functionality.
+   * Enable pull-to-refresh functionality (mobile only).
    * When enabled, pulling down at the top of the scroll container will trigger a page refresh.
+   * Automatically disabled on desktop to prevent scroll conflicts.
    */
   pullToRefresh?: boolean;
 }
@@ -53,6 +55,11 @@ export function ScrollablePageWrapper({
   const scrollRef = useScrollRestoration(routeKey ?? "");
   const { registerScrollContainer } = useScrollContext();
   const router = useRouter();
+
+  // Disable pull-to-refresh on desktop to prevent nested scroll conflicts
+  // useIsDesktop returns undefined during SSR, false on mobile, true on desktop
+  const isDesktop = useIsDesktop();
+  const shouldUsePullToRefresh = pullToRefresh && isDesktop === false;
 
   const handleRefresh = useCallback(async () => {
     router.refresh();
@@ -81,10 +88,11 @@ export function ScrollablePageWrapper({
     children
   );
 
-  // When pullToRefresh is enabled, the PullToRefresh component handles scrolling
+  // When pull-to-refresh is active, the PullToRefresh component handles scrolling
   // via its internal .ptr__children element with overflow-y: auto.
   // We must NOT have overflow-y-auto on the outer wrapper to avoid nested scroll contexts.
-  const outerClassName = pullToRefresh
+  // On desktop (or during SSR when isDesktop is undefined), always use overflow-y-auto.
+  const outerClassName = shouldUsePullToRefresh
     ? `h-full pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-8 ${className ?? ""}`
     : `h-full overflow-y-auto pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-8 ${className ?? ""}`;
 
@@ -93,7 +101,7 @@ export function ScrollablePageWrapper({
       ref={routeKey ? scrollRef : undefined}
       className={outerClassName}
     >
-      {pullToRefresh ? (
+      {shouldUsePullToRefresh ? (
         <PullToRefresh
           onRefresh={handleRefresh}
           pullingContent=""

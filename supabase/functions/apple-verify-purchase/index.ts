@@ -58,8 +58,8 @@ const supabaseAdmin = SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY
 // ---------- Apple JWT Generation ----------
 async function generateAppleJWT(): Promise<string> {
   console.log("[apple-verify] generateAppleJWT called");
-  console.log(`[apple-verify] APPLE_KEY_ID present: ${!!APPLE_KEY_ID}`);
-  console.log(`[apple-verify] APPLE_ISSUER_ID present: ${!!APPLE_ISSUER_ID}`);
+  console.log(`[apple-verify] APPLE_KEY_ID: ${APPLE_KEY_ID}`);
+  console.log(`[apple-verify] APPLE_ISSUER_ID: ${APPLE_ISSUER_ID}`);
   console.log(`[apple-verify] APPLE_PRIVATE_KEY length: ${APPLE_PRIVATE_KEY.length}`);
 
   if (!APPLE_KEY_ID || !APPLE_ISSUER_ID || !APPLE_PRIVATE_KEY) {
