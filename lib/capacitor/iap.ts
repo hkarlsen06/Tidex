@@ -12,6 +12,7 @@
  */
 
 import { isNativePlatform, getPlatform } from "./platform";
+import { NativePurchases, PURCHASE_TYPE } from "@capgo/native-purchases";
 
 // ---------- Types ----------
 
@@ -50,10 +51,7 @@ export const APPLE_PRODUCT_IDS = {
 
 export const ALL_APPLE_PRODUCT_IDS = Object.values(APPLE_PRODUCT_IDS);
 
-// ---------- Lazy Plugin Import ----------
-// Only import the native plugin on iOS to avoid errors on web
-let NativePurchases: any = null;
-let pluginModule: any = null;
+// ---------- Plugin Helper ----------
 
 /**
  * Check if the IAP plugin object exists at runtime
@@ -65,34 +63,17 @@ export function checkPluginAvailability(): { available: boolean; details: string
   if (getPlatform() !== "ios") {
     return { available: false, details: `Platform is ${getPlatform()}, not iOS` };
   }
-  if (pluginModule) {
-    return { available: true, details: "Plugin module loaded" };
+  if (NativePurchases) {
+    return { available: true, details: "Plugin available" };
   }
-  return { available: true, details: "Plugin not yet loaded (will be loaded on first use)" };
+  return { available: false, details: "Plugin not available" };
 }
 
-async function getNativePurchases() {
-  if (NativePurchases) {
-    return NativePurchases;
-  }
-
+function getPlugin() {
   if (!isNativePlatform() || getPlatform() !== "ios") {
     throw new Error("Native purchases only available on iOS");
   }
-
-  try {
-    // Dynamic import to avoid loading on web
-    pluginModule = await import("@capgo/native-purchases");
-    NativePurchases = pluginModule.NativePurchases;
-
-    if (!NativePurchases) {
-      throw new Error("NativePurchases not found in module exports");
-    }
-
-    return NativePurchases;
-  } catch (e: any) {
-    throw new Error(`Native purchases plugin not available: ${e.message}`);
-  }
+  return NativePurchases;
 }
 
 // ---------- IAP Functions ----------
@@ -117,16 +98,15 @@ export async function initializeIAP(): Promise<{ success: boolean; error?: strin
 
   try {
     console.log("[IAP] initializeIAP called");
-    const plugin = await getNativePurchases();
-    console.log("[IAP] Plugin loaded for init");
+    const plugin = getPlugin();
+    console.log("[IAP] Plugin obtained");
 
-    // Check if billing is supported instead of calling initialize()
-    // The @capgo/native-purchases plugin doesn't have an initialize method
+    // Check if billing is supported
     console.log("[IAP] Checking if billing is supported...");
-    const { isBillingSupported } = await plugin.isBillingSupported();
-    console.log("[IAP] isBillingSupported:", isBillingSupported);
+    const result = await plugin.isBillingSupported();
+    console.log("[IAP] isBillingSupported result:", JSON.stringify(result));
 
-    if (!isBillingSupported) {
+    if (!result.isBillingSupported) {
       return { success: false, error: "Billing is not supported on this device" };
     }
 
@@ -149,17 +129,13 @@ export async function getProducts(
 
   try {
     console.log("[IAP] getProducts called with productIds:", productIds);
-    const plugin = await getNativePurchases();
-    console.log("[IAP] Plugin loaded, calling getProducts...");
-
-    if (!plugin.getProducts) {
-      return { products: [], error: "Plugin getProducts method not found" };
-    }
+    const plugin = getPlugin();
+    console.log("[IAP] Plugin obtained, calling getProducts...");
 
     // Note: Plugin uses productIdentifiers (not productIds) and productType for subscriptions
     const result = await plugin.getProducts({
       productIdentifiers: productIds,
-      productType: "subs" // Subscriptions
+      productType: PURCHASE_TYPE.SUBS
     });
     console.log("[IAP] getProducts result:", JSON.stringify(result));
     const rawProducts = result.products || [];
@@ -211,14 +187,14 @@ export async function purchaseProduct(
   }
 
   try {
-    const plugin = await getNativePurchases();
+    const plugin = getPlugin();
 
     console.log("[IAP] Starting purchase for product:", productId);
     // Start purchase with appAccountToken
     // Plugin uses productIdentifier (not productId) and productType for subscriptions
     const purchaseResult = await plugin.purchaseProduct({
       productIdentifier: productId,
-      productType: "subs", // Subscription
+      productType: PURCHASE_TYPE.SUBS,
       appAccountToken, // Links purchase to Tidex user (must be UUID format)
     });
     console.log("[IAP] Purchase result:", JSON.stringify(purchaseResult));
@@ -226,14 +202,18 @@ export async function purchaseProduct(
     if (!purchaseResult.transactionId) {
       return {
         success: false,
-        error: purchaseResult.error || "Purchase failed - no transaction",
+        error: "Purchase failed - no transaction",
       };
     }
 
+    // The plugin's Transaction type uses transactionId as the primary identifier
+    // For original transaction ID, we use transactionId as fallback
+    const txnId = purchaseResult.transactionId;
+
     // Verify with our server
     const verifyResult = await verifyPurchaseWithServer(
-      purchaseResult.transactionId,
-      purchaseResult.originalTransactionId || purchaseResult.transactionId,
+      txnId,
+      txnId, // Use same ID for original - server will handle via Apple API
       productId,
       appAccountToken,
       supabaseAccessToken
@@ -244,8 +224,8 @@ export async function purchaseProduct(
       // Transaction is still valid - user should retry verification
       return {
         success: true, // Purchase itself succeeded
-        transactionId: purchaseResult.transactionId,
-        originalTransactionId: purchaseResult.originalTransactionId,
+        transactionId: txnId,
+        originalTransactionId: txnId,
         productId,
         error: `Verification failed: ${verifyResult.error}. Please try "Restore Purchases".`,
         entitled: false,
@@ -254,8 +234,8 @@ export async function purchaseProduct(
 
     return {
       success: true,
-      transactionId: purchaseResult.transactionId,
-      originalTransactionId: purchaseResult.originalTransactionId,
+      transactionId: txnId,
+      originalTransactionId: txnId,
       productId,
       entitled: verifyResult.entitled,
     };
@@ -285,7 +265,7 @@ export async function restorePurchases(
   }
 
   try {
-    const plugin = await getNativePurchases();
+    const plugin = getPlugin();
 
     console.log("[IAP] Restoring purchases...");
     // First call restorePurchases to sync with App Store
@@ -293,16 +273,17 @@ export async function restorePurchases(
 
     // Then get the current purchases/transactions
     console.log("[IAP] Getting purchases...");
-    const result = await plugin.getPurchases({ productType: "subs" });
+    const result = await plugin.getPurchases({ productType: PURCHASE_TYPE.SUBS });
     console.log("[IAP] getPurchases result:", JSON.stringify(result));
 
     // Find active subscription transactions
-    // Plugin uses productIdentifier not productId
-    const activeTransactions = (result.transactions || []).filter(
-      (t: any) => t.productIdentifier && ALL_APPLE_PRODUCT_IDS.includes(t.productIdentifier)
+    // Plugin returns { purchases: Transaction[] }
+    // Transaction uses productIdentifier field
+    const activePurchases = (result.purchases || []).filter(
+      (t) => t.productIdentifier && (ALL_APPLE_PRODUCT_IDS as readonly string[]).includes(t.productIdentifier)
     );
 
-    if (activeTransactions.length === 0) {
+    if (activePurchases.length === 0) {
       return { success: true, error: "No purchases to restore" };
     }
 
@@ -310,10 +291,10 @@ export async function restorePurchases(
     let lastEntitled = false;
     let lastProductId: string | undefined;
 
-    for (const txn of activeTransactions) {
+    for (const txn of activePurchases) {
       const verifyResult = await verifyPurchaseWithServer(
         txn.transactionId,
-        txn.originalTransactionId || txn.transactionId,
+        txn.transactionId, // Use same ID - server handles original via Apple API
         txn.productIdentifier,
         appAccountToken,
         supabaseAccessToken
@@ -433,8 +414,13 @@ export async function openSubscriptionManagement(): Promise<void> {
   }
 
   try {
-    const plugin = await getNativePurchases();
-    await plugin.openManagement();
+    const plugin = getPlugin();
+    // Note: openManagement may not exist on this plugin - check docs
+    if ('openManagement' in plugin) {
+      await (plugin as any).openManagement();
+    } else {
+      throw new Error("openManagement not available");
+    }
   } catch {
     // Fallback: use Capacitor Browser plugin which properly handles external URLs
     try {
