@@ -183,16 +183,33 @@ export async function getProducts(
     }
 
     // Map plugin's Product interface to our IAPProduct interface
-    // Plugin returns: identifier, title, description, price, priceString, currencyCode
-    const mappedProducts = rawProducts.map((p: any) => ({
-      id: p.identifier,
-      title: p.title || p.identifier,
-      description: p.description || "",
-      price: p.priceString || `${p.price}`,
-      priceValue: typeof p.price === "number" ? p.price : parseFloat(p.price) || 0,
-      currency: p.currencyCode || "NOK",
-      type: "subscription" as const,
-    }));
+    // Plugin returns: identifier, title, description, price, priceString, currencyCode, currencySymbol
+    // IMPORTANT: priceString is StoreKit 2's displayPrice - already formatted with the STOREFRONT's
+    // locale/currency, not the device locale. This is the correct price to display per Apple guidelines.
+    const mappedProducts = rawProducts.map((p: any) => {
+      // Log raw product data to help debug currency issues
+      console.log("[IAP] Raw product from plugin:", {
+        identifier: p.identifier,
+        price: p.price,
+        priceString: p.priceString,
+        currencyCode: p.currencyCode,
+        currencySymbol: p.currencySymbol,
+      });
+
+      // Always prefer priceString (StoreKit's displayPrice) - it's already storefront-localized
+      // Only fall back to manual formatting if priceString is missing (shouldn't happen)
+      const displayPrice = p.priceString || `${p.currencySymbol || ''}${p.price}`;
+
+      return {
+        id: p.identifier,
+        title: p.title || p.identifier,
+        description: p.description || "",
+        price: displayPrice,
+        priceValue: typeof p.price === "number" ? p.price : parseFloat(p.price) || 0,
+        currency: p.currencyCode || "USD", // Default to USD instead of NOK for international users
+        type: "subscription" as const,
+      };
+    });
     console.log("[IAP] Mapped products:", JSON.stringify(mappedProducts));
 
     // Cache products for price lookup during purchase/restore

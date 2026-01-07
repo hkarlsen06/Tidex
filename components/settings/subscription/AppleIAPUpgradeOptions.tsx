@@ -299,14 +299,16 @@ export function AppleIAPUpgradeOptions({
         );
 
         if (!result.success) {
-          // Check for cancel - the native error message is 'Purchase cancelled'
-          if (result.error !== 'Purchase cancelled' && result.error !== iap.purchaseCancelled) {
-            // For unknown errors, suggest restore as it might be "already subscribed"
-            const errorWithHint = result.error?.includes('Unable to Complete')
-              ? `${result.error}. ${iap.tryRestoreHint || 'If you already have a subscription, try "Restore purchases" below.'}`
-              : result.error || iap.purchaseFailed;
-            setError(errorWithHint);
+          // User explicitly cancelled - redirect to cancel page
+          if (result.error === 'Purchase cancelled' || result.error === iap.purchaseCancelled) {
+            router.push(`/${locale}/settings/subscription/cancel`);
+            return;
           }
+          // For other errors, show inline so user can retry
+          const errorWithHint = result.error?.includes('Unable to Complete')
+            ? `${result.error}. ${iap.tryRestoreHint || 'If you already have a subscription, try "Restore purchases" below.'}`
+            : result.error || iap.purchaseFailed;
+          setError(errorWithHint);
           setLoadingPlan(null);
           return;
         }
