@@ -321,7 +321,7 @@ async function upsertAppleSubscription(
   // First try to find existing row by apple_original_transaction_id
   const { data: existing } = await supabaseAdmin
     .from("subscriptions")
-    .select("id, user_id")
+    .select("id, user_id, price_display")
     .eq("apple_original_transaction_id", transactionInfo.originalTransactionId)
     .maybeSingle();
 
@@ -333,9 +333,19 @@ async function upsertAppleSubscription(
       return { success: false, error: "Subscription belongs to different user" };
     }
 
+    // Don't overwrite price_display if it already exists (preserve original purchase price)
+    // This prevents restore from a different locale overwriting the original price
+    const updatePayload = existing.price_display
+      ? { ...payload }
+      : payload;
+    // Remove price_display from update if existing has it
+    if (existing.price_display && 'price_display' in updatePayload) {
+      delete (updatePayload as any).price_display;
+    }
+
     const { error } = await supabaseAdmin
       .from("subscriptions")
-      .update(payload)
+      .update(updatePayload)
       .eq("id", existing.id);
 
     if (error) {
@@ -346,7 +356,7 @@ async function upsertAppleSubscription(
     // Check if user already has a subscription row (from Stripe or previous Apple)
     const { data: userSub } = await supabaseAdmin
       .from("subscriptions")
-      .select("id, provider")
+      .select("id, provider, price_display")
       .eq("user_id", userId)
       .maybeSingle();
 
@@ -354,9 +364,15 @@ async function upsertAppleSubscription(
       // User has existing subscription - update it with Apple info if provider is apple
       // or create a new row if it's from a different provider (support multiple subs)
       if (userSub.provider === "apple") {
+        // Don't overwrite price_display if it already exists
+        const userSubUpdatePayload = { ...payload };
+        if (userSub.price_display && 'price_display' in userSubUpdatePayload) {
+          delete (userSubUpdatePayload as any).price_display;
+        }
+
         const { error } = await supabaseAdmin
           .from("subscriptions")
-          .update(payload)
+          .update(userSubUpdatePayload)
           .eq("id", userSub.id);
 
         if (error) {
