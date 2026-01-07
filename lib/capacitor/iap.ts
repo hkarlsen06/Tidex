@@ -187,9 +187,11 @@ export async function getProducts(
     // IMPORTANT: priceString is StoreKit 2's displayPrice - already formatted with the STOREFRONT's
     // locale/currency, not the device locale. This is the correct price to display per Apple guidelines.
     const mappedProducts = rawProducts.map((p: any) => {
-      // Log raw product data to help debug currency issues
+      // Log raw product data to help debug StoreKit issues
       console.log("[IAP] Raw product from plugin:", {
         identifier: p.identifier,
+        title: p.title,
+        description: p.description,
         price: p.price,
         priceString: p.priceString,
         currencyCode: p.currencyCode,
