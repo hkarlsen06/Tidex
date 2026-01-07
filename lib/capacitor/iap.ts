@@ -388,15 +388,38 @@ async function getFreshAccessToken(): Promise<string | null> {
     // Dynamic import to avoid bundling Supabase in non-browser environments
     const { supabase } = await import("@/lib/supabase/browser");
 
-    // Try to refresh the session to get a fresh token
-    const { data: { session }, error } = await supabase.auth.getSession();
+    // Always try to refresh the session first to ensure we have a valid token
+    // This is important for native iOS where the app may have been in background
+    console.log("[IAP] Refreshing session to get fresh token...");
+    const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession();
 
-    if (error || !session?.access_token) {
-      console.error("[IAP] Failed to get fresh access token:", error?.message);
+    if (refreshedSession?.access_token) {
+      console.log("[IAP] Got fresh token from refreshSession");
+      return refreshedSession.access_token;
+    }
+
+    // If refresh fails, try to get the current session as fallback
+    if (refreshError) {
+      console.warn("[IAP] refreshSession failed, trying getSession:", refreshError.message);
+    }
+
+    const { data: { session: currentSession } } = await supabase.auth.getSession();
+
+    if (!currentSession?.access_token) {
+      console.error("[IAP] No valid session found");
       return null;
     }
 
-    return session.access_token;
+    // Check if the current token is expired
+    const expiresAt = currentSession.expires_at;
+    const now = Math.floor(Date.now() / 1000);
+    if (expiresAt && expiresAt <= now) {
+      console.error("[IAP] Current token is expired and refresh failed");
+      return null;
+    }
+
+    console.log("[IAP] Using current session token as fallback");
+    return currentSession.access_token;
   } catch (e: any) {
     console.error("[IAP] Error getting fresh token:", e.message);
     return null;
