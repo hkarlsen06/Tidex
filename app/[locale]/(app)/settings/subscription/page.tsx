@@ -6,6 +6,7 @@ import { EarlySupporterStatus } from '@/components/settings/subscription/EarlySu
 import { GrandfatheredSubscriberBanner } from '@/components/settings/subscription/GrandfatheredSubscriberBanner';
 import { FreePlanInfo } from '@/components/settings/subscription/FreePlanInfo';
 import { PlatformAwareUpgradeOptions } from '@/components/settings/subscription/PlatformAwareUpgradeOptions';
+import { LegalLinks } from '@/components/settings/subscription/LegalLinks';
 import { getTranslations } from '@/lib/i18n/server';
 import type { Locale } from '@/lib/i18n/config';
 import { SettingsPageWrapper } from '@/components/app/SettingsPageWrapper';
@@ -79,6 +80,8 @@ export default async function SubscriptionPage({
             <PlatformAwareUpgradeOptions t={t} />
           </>
         )}
+
+        <LegalLinks />
       </div>
     </SettingsPageWrapper>
   );

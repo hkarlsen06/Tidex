@@ -17,8 +17,18 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "
 const APPLE_APP_BUNDLE_ID = Deno.env.get("APPLE_APP_BUNDLE_ID") ?? "no.tidex.app";
 const APPLE_KEY_ID = Deno.env.get("APPLE_KEY_ID") ?? "";
 const APPLE_ISSUER_ID = Deno.env.get("APPLE_ISSUER_ID") ?? "";
-const APPLE_PRIVATE_KEY = Deno.env.get("APPLE_PRIVATE_KEY") ?? "";
+const APPLE_PRIVATE_KEY_RAW = Deno.env.get("APPLE_PRIVATE_KEY");
+const APPLE_PRIVATE_KEY = APPLE_PRIVATE_KEY_RAW ?? "";
 const APPLE_TEAM_ID = Deno.env.get("APPLE_TEAM_ID") ?? "48ZSLD4RMP";
+
+// Debug: Log environment state at startup
+console.log("[apple-verify] Environment check at startup:");
+console.log(`[apple-verify] APPLE_KEY_ID defined: ${APPLE_KEY_ID !== ""}`);
+console.log(`[apple-verify] APPLE_ISSUER_ID defined: ${APPLE_ISSUER_ID !== ""}`);
+console.log(`[apple-verify] APPLE_PRIVATE_KEY_RAW is undefined: ${APPLE_PRIVATE_KEY_RAW === undefined}`);
+console.log(`[apple-verify] APPLE_PRIVATE_KEY_RAW is null: ${APPLE_PRIVATE_KEY_RAW === null}`);
+console.log(`[apple-verify] APPLE_PRIVATE_KEY_RAW is empty string: ${APPLE_PRIVATE_KEY_RAW === ""}`);
+console.log(`[apple-verify] APPLE_PRIVATE_KEY length: ${APPLE_PRIVATE_KEY.length}`);
 
 // Apple App Store Server API endpoints
 const APPLE_PRODUCTION_URL = "https://api.storekit.itunes.apple.com";
