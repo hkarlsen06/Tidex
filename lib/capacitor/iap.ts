@@ -107,6 +107,8 @@ export function isIAPAvailable(): boolean {
 /**
  * Initialize the IAP plugin
  * Should be called once at app startup on iOS
+ * Note: @capgo/native-purchases doesn't require explicit initialization,
+ * but we check if billing is supported as a validation step.
  */
 export async function initializeIAP(): Promise<{ success: boolean; error?: string }> {
   if (!isIAPAvailable()) {
@@ -118,13 +120,16 @@ export async function initializeIAP(): Promise<{ success: boolean; error?: strin
     const plugin = await getNativePurchases();
     console.log("[IAP] Plugin loaded for init");
 
-    if (!plugin.initialize) {
-      return { success: false, error: "Plugin initialize method not found" };
+    // Check if billing is supported instead of calling initialize()
+    // The @capgo/native-purchases plugin doesn't have an initialize method
+    console.log("[IAP] Checking if billing is supported...");
+    const { isBillingSupported } = await plugin.isBillingSupported();
+    console.log("[IAP] isBillingSupported:", isBillingSupported);
+
+    if (!isBillingSupported) {
+      return { success: false, error: "Billing is not supported on this device" };
     }
 
-    console.log("[IAP] Calling plugin.initialize()...");
-    await plugin.initialize();
-    console.log("[IAP] plugin.initialize() completed");
     return { success: true };
   } catch (e: any) {
     console.error("[IAP] initializeIAP error:", e);
@@ -151,7 +156,11 @@ export async function getProducts(
       return { products: [], error: "Plugin getProducts method not found" };
     }
 
-    const result = await plugin.getProducts({ productIds });
+    // Note: Plugin uses productIdentifiers (not productIds) and productType for subscriptions
+    const result = await plugin.getProducts({
+      productIdentifiers: productIds,
+      productType: "subs" // Subscriptions
+    });
     console.log("[IAP] getProducts result:", JSON.stringify(result));
     const rawProducts = result.products || [];
 
@@ -162,15 +171,18 @@ export async function getProducts(
       };
     }
 
+    // Map plugin's Product interface to our IAPProduct interface
+    // Plugin returns: identifier, title, description, price, priceString, currencyCode
     const mappedProducts = rawProducts.map((p: any) => ({
-      id: p.id,
-      title: p.title || p.displayName || p.id,
+      id: p.identifier,
+      title: p.title || p.identifier,
       description: p.description || "",
-      price: p.priceString || p.displayPrice || `${p.price}`,
-      priceValue: parseFloat(p.price) || 0,
-      currency: p.currencyCode || "USD",
-      type: p.type === 0 || p.type === "autoRenewable" ? "subscription" : "non_consumable",
+      price: p.priceString || `${p.price}`,
+      priceValue: typeof p.price === "number" ? p.price : parseFloat(p.price) || 0,
+      currency: p.currencyCode || "NOK",
+      type: "subscription" as const,
     }));
+    console.log("[IAP] Mapped products:", JSON.stringify(mappedProducts));
 
     return { products: mappedProducts };
   } catch (e: any) {
@@ -201,11 +213,15 @@ export async function purchaseProduct(
   try {
     const plugin = await getNativePurchases();
 
+    console.log("[IAP] Starting purchase for product:", productId);
     // Start purchase with appAccountToken
+    // Plugin uses productIdentifier (not productId) and productType for subscriptions
     const purchaseResult = await plugin.purchaseProduct({
-      productId,
-      appAccountToken, // Links purchase to Tidex user
+      productIdentifier: productId,
+      productType: "subs", // Subscription
+      appAccountToken, // Links purchase to Tidex user (must be UUID format)
     });
+    console.log("[IAP] Purchase result:", JSON.stringify(purchaseResult));
 
     if (!purchaseResult.transactionId) {
       return {
@@ -270,11 +286,20 @@ export async function restorePurchases(
 
   try {
     const plugin = await getNativePurchases();
-    const result = await plugin.restorePurchases();
+
+    console.log("[IAP] Restoring purchases...");
+    // First call restorePurchases to sync with App Store
+    await plugin.restorePurchases();
+
+    // Then get the current purchases/transactions
+    console.log("[IAP] Getting purchases...");
+    const result = await plugin.getPurchases({ productType: "subs" });
+    console.log("[IAP] getPurchases result:", JSON.stringify(result));
 
     // Find active subscription transactions
+    // Plugin uses productIdentifier not productId
     const activeTransactions = (result.transactions || []).filter(
-      (t: any) => t.productId && ALL_APPLE_PRODUCT_IDS.includes(t.productId)
+      (t: any) => t.productIdentifier && ALL_APPLE_PRODUCT_IDS.includes(t.productIdentifier)
     );
 
     if (activeTransactions.length === 0) {
@@ -289,14 +314,14 @@ export async function restorePurchases(
       const verifyResult = await verifyPurchaseWithServer(
         txn.transactionId,
         txn.originalTransactionId || txn.transactionId,
-        txn.productId,
+        txn.productIdentifier,
         appAccountToken,
         supabaseAccessToken
       );
 
       if (verifyResult.entitled) {
         lastEntitled = true;
-        lastProductId = txn.productId;
+        lastProductId = txn.productIdentifier;
       }
     }
 
