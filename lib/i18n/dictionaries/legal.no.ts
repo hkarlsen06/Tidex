@@ -178,7 +178,7 @@ export const legalNo = {
         ],
         list: [
           { boldLabel: 'Utvikler:', text: 'Tidex v/ Hjalmar Samuel Kristensen-Karlsen' },
-          { boldLabel: 'Adresse:', text: 'Biskop Jens Nilssøns gate 11A, 0659 Oslo, Norge' },
+          { boldLabel: 'Adresse:', text: 'Lensmannsveien 8, 9515 Alta, Norge' },
           { boldLabel: 'E-post:', text: 'contact@tidex.no' },
         ],
       },
