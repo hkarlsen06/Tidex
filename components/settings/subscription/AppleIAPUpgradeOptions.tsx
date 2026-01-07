@@ -213,12 +213,14 @@ export function AppleIAPUpgradeOptions({
 
         if (productsResult.products.length === 0) {
           // Use specific error message for empty products
+          console.warn("[IAP UI] No products received from getProducts():", productsResult);
           setError(productsResult.error || iap.errors.noProducts);
           setErrorKey(IAP_ERROR_KEYS.NO_PRODUCTS);
           setIsInitializing(false);
           // Don't return - allow UI to show but with error state
           // This way user can still see the restore button
         } else {
+          console.log("[IAP UI] Setting products:", JSON.stringify(productsResult.products, null, 2));
           setProducts(productsResult.products);
         }
 
@@ -336,6 +338,13 @@ export function AppleIAPUpgradeOptions({
 
   const getProductPrice = (productId: string, fallback: string): string => {
     const product = products.find((p) => p.id === productId);
+    console.log("[IAP UI] getProductPrice:", {
+      productId,
+      fallback,
+      foundProduct: product,
+      returningPrice: product?.price || fallback,
+      allProductIds: products.map(p => p.id),
+    });
     return product?.price || fallback;
   };
 
