@@ -114,15 +114,20 @@ export async function initializeIAP(): Promise<{ success: boolean; error?: strin
   }
 
   try {
+    console.log("[IAP] initializeIAP called");
     const plugin = await getNativePurchases();
+    console.log("[IAP] Plugin loaded for init");
 
     if (!plugin.initialize) {
       return { success: false, error: "Plugin initialize method not found" };
     }
 
+    console.log("[IAP] Calling plugin.initialize()...");
     await plugin.initialize();
+    console.log("[IAP] plugin.initialize() completed");
     return { success: true };
   } catch (e: any) {
+    console.error("[IAP] initializeIAP error:", e);
     return { success: false, error: e.message || "Unknown initialization error" };
   }
 }
@@ -138,13 +143,16 @@ export async function getProducts(
   }
 
   try {
+    console.log("[IAP] getProducts called with productIds:", productIds);
     const plugin = await getNativePurchases();
+    console.log("[IAP] Plugin loaded, calling getProducts...");
 
     if (!plugin.getProducts) {
       return { products: [], error: "Plugin getProducts method not found" };
     }
 
     const result = await plugin.getProducts({ productIds });
+    console.log("[IAP] getProducts result:", JSON.stringify(result));
     const rawProducts = result.products || [];
 
     if (rawProducts.length === 0) {
