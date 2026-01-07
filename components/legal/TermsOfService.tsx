@@ -7,7 +7,7 @@ interface TermsOfServiceProps {
 }
 
 export function TermsOfService({ content }: TermsOfServiceProps) {
-  const formattedDate = new Date().toLocaleDateString(content.dateLocale);
+  const formattedDate = new Date(content.lastUpdatedDate).toLocaleDateString(content.dateLocale);
 
   return (
     <div className="prose prose-sm max-w-none dark:prose-invert space-y-6">
@@ -46,6 +46,17 @@ export function TermsOfService({ content }: TermsOfServiceProps) {
                 </li>
               ))}
             </ul>
+          )}
+
+          {'subsections' in section && section.subsections && (
+            <div className="mt-4 space-y-3">
+              {(section.subsections as unknown as any[]).map((subsection, index) => (
+                <div key={`${section.heading}-sub-${index}`}>
+                  <h3 className="text-base font-semibold">{subsection.subheading}</h3>
+                  <p>{subsection.text}</p>
+                </div>
+              ))}
+            </div>
           )}
 
           {'closingParagraph' in section && section.closingParagraph ? <p>{String(section.closingParagraph)}</p> : null}

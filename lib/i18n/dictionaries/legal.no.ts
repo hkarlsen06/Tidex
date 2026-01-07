@@ -17,6 +17,7 @@ export const legalNo = {
     },
     title: 'Vilkår for bruk',
     lastUpdatedLabel: 'Sist oppdatert',
+    lastUpdatedDate: '2025-01-07',
     dateLocale: 'nb-NO',
     sections: [
       {
@@ -64,11 +65,26 @@ export const legalNo = {
       },
       {
         heading: '6. Abonnement og betaling',
+        paragraphs: [
+          'Tidex tilbyr betalte abonnementer som gir tilgang til premium-funksjoner. Betalingsvilkårene varierer avhengig av plattform:',
+        ],
         list: [
-          { text: 'Betaling håndteres gjennom Stripe.' },
-          { text: 'Abonnementer fornyes automatisk med mindre du sier opp.' },
-          { text: 'Vi forbeholder oss retten til å endre priser med 30 dagers varsel.' },
-          { text: 'Refusjon gis etter individuell vurdering.' },
+          { boldLabel: 'Nettside:', text: 'Abonnementer kjøpt via tidex.no håndteres av Stripe. Du kan administrere og si opp via kontoinnstillingene.' },
+          { boldLabel: 'iOS-appen:', text: 'Abonnementer kjøpt i iOS-appen håndteres av Apple via In-App Purchase. Abonnementer fornyes automatisk med mindre du sier opp minst 24 timer før gjeldende periode utløper. Du administrerer og sier opp abonnementet i App Store-innstillingene på enheten din (Innstillinger → Apple-ID → Abonnementer).' },
+        ],
+        subsections: [
+          {
+            subheading: 'Automatisk fornyelse',
+            text: 'Alle abonnementer fornyes automatisk med mindre de sies opp før neste fakturaperiode.',
+          },
+          {
+            subheading: 'Prisendringer',
+            text: 'For abonnementer kjøpt via nettsiden, vil vi varsle deg om prisendringer. For iOS-abonnementer følger prisendringer Apples prosesser, og du kan bli bedt om å godta nye priser før fornyelse.',
+          },
+          {
+            subheading: 'Refusjoner',
+            text: 'For abonnementer kjøpt via nettsiden vurderes refusjoner individuelt – kontakt oss på contact@tidex.no. For iOS-kjøp håndteres refusjoner av Apple i henhold til App Store-retningslinjene. Besøk reportaproblem.apple.com for å be om refusjon.',
+          },
         ],
       },
       {
@@ -101,7 +117,7 @@ export const legalNo = {
       },
       {
         heading: '10. Endringer i vilkårene',
-        paragraphs: ['Vi kan oppdatere disse vilkårene. Vesentlige endringer varsles via e-post eller i tjenesten minst 30 dager før de trer i kraft. Fortsatt bruk etter endringer betyr aksept.'],
+        paragraphs: ['Vi kan oppdatere disse vilkårene. Vesentlige endringer varsles via e-post eller i tjenesten før de trer i kraft. Fortsatt bruk etter endringer betyr aksept.'],
       },
       {
         heading: '11. Gjeldende lov',
@@ -120,6 +136,7 @@ export const legalNo = {
     },
     title: 'Personvernerklæring',
     lastUpdatedLabel: 'Sist oppdatert',
+    lastUpdatedDate: '2025-01-07',
     dateLocale: 'nb-NO',
     sections: [
       {
@@ -175,9 +192,17 @@ export const legalNo = {
           },
           {
             boldLabel: 'Stripe:',
-            text: 'Betalingsbehandling. Les deres {link}.',
+            text: 'Betalingsbehandling for nettsidekjøp. Les deres {link}.',
             link: {
               href: 'https://stripe.com/privacy',
+              text: 'personvernerklæring',
+            },
+          },
+          {
+            boldLabel: 'Apple:',
+            text: 'In-App Purchase og betalingsbehandling for iOS-kjøp. Les deres {link}.',
+            link: {
+              href: 'https://www.apple.com/legal/privacy/',
               text: 'personvernerklæring',
             },
           },
@@ -225,6 +250,7 @@ export const legalNo = {
     },
     title: 'Retningslinjer for sikkerhetsrapportering',
     lastUpdatedLabel: 'Sist oppdatert',
+    lastUpdatedDate: '2025-01-07',
     dateLocale: 'nb-NO',
     sections: [
       {

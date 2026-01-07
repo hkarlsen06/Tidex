@@ -7,7 +7,7 @@ interface SecurityPolicyProps {
 }
 
 export function SecurityPolicy({ content }: SecurityPolicyProps) {
-  const formattedDate = new Date().toLocaleDateString(content.dateLocale);
+  const formattedDate = new Date(content.lastUpdatedDate).toLocaleDateString(content.dateLocale);
 
   return (
     <div className="prose prose-sm max-w-none dark:prose-invert space-y-6">
