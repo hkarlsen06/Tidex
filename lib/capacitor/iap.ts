@@ -144,14 +144,29 @@ export async function getProducts(
     console.log("[IAP] Plugin obtained, calling getProducts...");
 
     // Note: Plugin uses productIdentifiers (not productIds) and productType for subscriptions
+    console.log("[IAP] Calling plugin.getProducts with:", {
+      productIdentifiers: productIds,
+      productType: PURCHASE_TYPE.SUBS
+    });
+
     const result = await plugin.getProducts({
       productIdentifiers: productIds,
       productType: PURCHASE_TYPE.SUBS
     });
-    console.log("[IAP] getProducts result:", JSON.stringify(result));
+
+    console.log("[IAP] getProducts raw result:", JSON.stringify(result));
+    console.log("[IAP] getProducts result type:", typeof result);
+    console.log("[IAP] getProducts result.products:", result.products);
+    console.log("[IAP] getProducts result.products length:", result.products?.length);
+
     const rawProducts = result.products || [];
 
     if (rawProducts.length === 0) {
+      console.warn("[IAP] No products returned from App Store!", {
+        requestedProductIds: productIds,
+        rawResult: result,
+        resultKeys: Object.keys(result || {}),
+      });
       return {
         products: [],
         error: "No products available. The app may not be fully configured in App Store Connect yet."
