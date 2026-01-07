@@ -1153,7 +1153,6 @@ export const en: Dictionary = {
             'Save shifts across months',
             'Unlimited number of shifts',
             'All free features',
-            'No ads',
             'Lifetime access to Pro features',
           ],
           savingsTitle: 'You don\'t have to pay',
@@ -1186,7 +1185,6 @@ export const en: Dictionary = {
             'Save shifts across months',
             'Unlimited number of shifts',
             'All free features',
-            'No ads',
           ],
           maxFeatures: [
             'All Pro features',
