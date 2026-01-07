@@ -13,6 +13,12 @@ import { useTranslations } from '@/lib/i18n/client';
 const LEGACY_PRO_PRICE_IDS = ['price_1RzQ85Qiotkj8G58AO6st4fh'];
 const LEGACY_MAX_PRICE_IDS = ['price_1RzQC1Qiotkj8G58tYo4U5oO'];
 
+// Apple product ID to internal product ID mapping
+const APPLE_PRODUCT_IDS = {
+  'pro_monthly': 'pro_monthly', // Internal ID used in database
+  'no.tidex.pro': 'pro_monthly', // Apple product ID
+};
+
 interface SubscriptionStatusProps {
   subscription: Subscription;
   isGrandfathered?: boolean;
@@ -29,29 +35,46 @@ function formatDate(dateString: string | null, naText: string): string {
   return `${day}. ${month} ${year}`;
 }
 
-function getPlanInfo(priceId: string | null, t: any): { name: string; price: string; period: string } {
+function getPlanInfo(
+  priceId: string | null,
+  productId: string | null,
+  provider: string | null,
+  t: any
+): { name: string; price: string; period: string } {
   const tokens = t.pages.settings.subscription.status;
+  const proName = t.pages.settings.subscription.upgradePlans.proName;
+  const maxName = t.pages.settings.subscription.upgradePlans.maxName;
 
-  if (priceId) {
-    if (priceId === ENV.PRO_PRICE_ID) {
-      return { name: t.pages.settings.subscription.upgradePlans.proName, price: tokens.proPriceNew, period: tokens.pricePerMonth };
-    }
-    if (priceId === ENV.PRO_YEARLY_PRICE_ID) {
-      return { name: t.pages.settings.subscription.upgradePlans.proName, price: tokens.proYearlyPrice, period: tokens.pricePerYear };
-    }
-    if (LEGACY_PRO_PRICE_IDS.includes(priceId)) {
-      return { name: t.pages.settings.subscription.upgradePlans.proName, price: tokens.proPriceLegacy, period: tokens.pricePerMonth };
-    }
-    if (priceId === ENV.MAX_PRICE_ID) {
-      return { name: t.pages.settings.subscription.upgradePlans.maxName, price: tokens.maxPrice, period: tokens.pricePerMonth };
-    }
-    if (priceId === ENV.MAX_YEARLY_PRICE_ID) {
-      return { name: t.pages.settings.subscription.upgradePlans.maxName, price: tokens.maxYearlyPrice, period: tokens.pricePerYear };
-    }
-    if (LEGACY_MAX_PRICE_IDS.includes(priceId)) {
-      return { name: t.pages.settings.subscription.upgradePlans.maxName, price: tokens.maxPrice, period: tokens.pricePerMonth };
+  // Handle Apple subscriptions by product_id
+  if (provider === 'apple' && productId) {
+    const normalizedProductId = APPLE_PRODUCT_IDS[productId as keyof typeof APPLE_PRODUCT_IDS] || productId;
+    if (normalizedProductId === 'pro_monthly') {
+      return { name: proName, price: tokens.applePriceMonthly || '29 kr', period: tokens.pricePerMonth };
     }
   }
+
+  // Handle Stripe subscriptions by price_id
+  if (priceId) {
+    if (priceId === ENV.PRO_PRICE_ID) {
+      return { name: proName, price: tokens.proPriceNew, period: tokens.pricePerMonth };
+    }
+    if (priceId === ENV.PRO_YEARLY_PRICE_ID) {
+      return { name: proName, price: tokens.proYearlyPrice, period: tokens.pricePerYear };
+    }
+    if (LEGACY_PRO_PRICE_IDS.includes(priceId)) {
+      return { name: proName, price: tokens.proPriceLegacy, period: tokens.pricePerMonth };
+    }
+    if (priceId === ENV.MAX_PRICE_ID) {
+      return { name: maxName, price: tokens.maxPrice, period: tokens.pricePerMonth };
+    }
+    if (priceId === ENV.MAX_YEARLY_PRICE_ID) {
+      return { name: maxName, price: tokens.maxYearlyPrice, period: tokens.pricePerYear };
+    }
+    if (LEGACY_MAX_PRICE_IDS.includes(priceId)) {
+      return { name: maxName, price: tokens.maxPrice, period: tokens.pricePerMonth };
+    }
+  }
+
   return { name: tokens.planUnknown, price: tokens.priceNA, period: '' };
 }
 
@@ -64,9 +87,12 @@ function getStatusBadge(status: string, t: any) {
     canceled: { label: tokens.statusCanceled, variant: 'destructive' },
     incomplete: { label: tokens.statusIncomplete, variant: 'outline' },
     incomplete_expired: { label: tokens.statusExpired, variant: 'destructive' },
+    expired: { label: tokens.statusExpired, variant: 'destructive' }, // Apple subscription status
     trialing: { label: tokens.statusTrialing, variant: 'secondary' },
     unpaid: { label: tokens.statusUnpaid, variant: 'destructive' },
     paused: { label: tokens.statusPaused, variant: 'outline' },
+    grace: { label: tokens.statusGrace || 'Grace Period', variant: 'secondary' }, // Apple grace period
+    refunded: { label: tokens.statusRefunded || 'Refunded', variant: 'destructive' }, // Apple refund
   };
 
   const statusInfo = statusMap[status] || { label: status, variant: 'outline' as const };
@@ -116,18 +142,43 @@ function getStatusDescription(
     return tokens.descriptionTrialing.replace('{plan}', planName);
   }
 
+  if (status === 'expired') {
+    return (tokens.descriptionExpired || 'Your {plan} subscription has expired').replace('{plan}', planName);
+  }
+
+  if (status === 'grace') {
+    return (tokens.descriptionGrace || 'Your {plan} subscription is in a grace period').replace('{plan}', planName);
+  }
+
   return `${planName}: ${status}`;
 }
 
 export function SubscriptionStatus({ subscription, isGrandfathered = false }: SubscriptionStatusProps) {
   const { t } = useTranslations();
   const tokens = t.pages.settings.subscription.status;
-  const planInfo = getPlanInfo(subscription.price_id, t);
+  const planInfo = getPlanInfo(subscription.price_id, subscription.product_id, subscription.provider, t);
   const [isLoading, setIsLoading] = useState(false);
-  const isActive = subscription.status === 'active';
+  const isActive = subscription.status === 'active' || subscription.status === 'grace';
   const willBeCancelled = isActive && subscription.cancel_at_period_end;
+  const isAppleSubscription = subscription.provider === 'apple';
 
   const handleManageSubscription = async () => {
+    // For Apple subscriptions, open Apple's subscription management
+    if (isAppleSubscription) {
+      // iOS deep link to subscription management
+      const iosDeepLink = 'https://apps.apple.com/account/subscriptions';
+
+      // Try to use Capacitor Browser for better UX, fallback to window.open
+      try {
+        const { Browser } = await import('@capacitor/browser');
+        await Browser.open({ url: iosDeepLink });
+      } catch {
+        window.open(iosDeepLink, '_blank');
+      }
+      return;
+    }
+
+    // For Stripe subscriptions, use portal
     try {
       setIsLoading(true);
       const result = await createPortalSession();

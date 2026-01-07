@@ -1257,6 +1257,7 @@ export const en: Dictionary = {
           proPriceNew: '29.90 kr',
           proPriceLegacy: '44.90 kr',
           proYearlyPrice: '299 kr',
+          applePriceMonthly: '29 kr', // Apple IAP price (no decimal)
           maxPrice: '89.90 kr',
           maxYearlyPrice: '899 kr',
           statusLabel: 'Status',
