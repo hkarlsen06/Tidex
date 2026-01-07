@@ -17,6 +17,7 @@ export const legalEn = {
     },
     title: 'Terms of use',
     lastUpdatedLabel: 'Last updated',
+    lastUpdatedDate: '2025-01-07',
     dateLocale: 'en-US',
     sections: [
       {
@@ -64,11 +65,26 @@ export const legalEn = {
       },
       {
         heading: '6. Subscription and payment',
+        paragraphs: [
+          'Tidex offers paid subscriptions that unlock premium features. Payment terms vary by platform:',
+        ],
         list: [
-          { text: 'Payments are handled through Stripe.' },
-          { text: 'Subscriptions renew automatically unless you cancel.' },
-          { text: 'We reserve the right to change prices with 30 days’ notice.' },
-          { text: 'Refunds are evaluated individually.' },
+          { boldLabel: 'Website:', text: 'Subscriptions purchased via tidex.no are handled by Stripe. You can manage and cancel via your account settings.' },
+          { boldLabel: 'iOS app:', text: 'Subscriptions purchased in the iOS app are handled by Apple via In-App Purchase. Subscriptions renew automatically unless you cancel at least 24 hours before the current period ends. You manage and cancel your subscription in the App Store settings on your device (Settings → Apple ID → Subscriptions).' },
+        ],
+        subsections: [
+          {
+            subheading: 'Auto-renewal',
+            text: 'All subscriptions renew automatically unless cancelled before the next billing period.',
+          },
+          {
+            subheading: 'Price changes',
+            text: "For subscriptions purchased via the website, we will notify you of price changes. For iOS subscriptions, price changes follow Apple's processes, and you may be asked to consent to new pricing before renewal.",
+          },
+          {
+            subheading: 'Refunds',
+            text: 'For subscriptions purchased via the website, refunds are evaluated individually—contact us at contact@tidex.no. For iOS purchases, refunds are handled by Apple under App Store policies. Visit reportaproblem.apple.com to request a refund.',
+          },
         ],
       },
       {
@@ -101,7 +117,7 @@ export const legalEn = {
       },
       {
         heading: '10. Changes to the terms',
-        paragraphs: ['We may update these terms. Significant changes are announced via email or in the product at least 30 days before they take effect. Continued use after that means you accept the changes.'],
+        paragraphs: ['We may update these terms. Significant changes are announced via email or in the product before they take effect. Continued use after that means you accept the changes.'],
       },
       {
         heading: '11. Governing law',
@@ -120,6 +136,7 @@ export const legalEn = {
     },
     title: 'Privacy policy',
     lastUpdatedLabel: 'Last updated',
+    lastUpdatedDate: '2025-01-07',
     dateLocale: 'en-US',
     sections: [
       {
@@ -175,9 +192,17 @@ export const legalEn = {
           },
           {
             boldLabel: 'Stripe:',
-            text: 'Payment processing. Read their {link}.',
+            text: 'Payment processing for website purchases. Read their {link}.',
             link: {
               href: 'https://stripe.com/privacy',
+              text: 'privacy policy',
+            },
+          },
+          {
+            boldLabel: 'Apple:',
+            text: 'In-App Purchase and payment processing for iOS purchases. Read their {link}.',
+            link: {
+              href: 'https://www.apple.com/legal/privacy/',
               text: 'privacy policy',
             },
           },
@@ -225,6 +250,7 @@ export const legalEn = {
     },
     title: 'Security Disclosure Policy',
     lastUpdatedLabel: 'Last updated',
+    lastUpdatedDate: '2025-01-07',
     dateLocale: 'en-US',
     sections: [
       {
