@@ -39,6 +39,7 @@ function getPlanInfo(
   priceId: string | null,
   productId: string | null,
   provider: string | null,
+  priceDisplay: string | null,
   t: any
 ): { name: string; price: string; period: string } {
   const tokens = t.pages.settings.subscription.status;
@@ -49,7 +50,9 @@ function getPlanInfo(
   if (provider === 'apple' && productId) {
     const normalizedProductId = APPLE_PRODUCT_IDS[productId as keyof typeof APPLE_PRODUCT_IDS] || productId;
     if (normalizedProductId === 'pro_monthly') {
-      return { name: proName, price: tokens.applePriceMonthly || '29 kr', period: tokens.pricePerMonth };
+      // Use stored localized price from App Store, fallback to translation
+      const price = priceDisplay || tokens.applePriceMonthly || '29 kr';
+      return { name: proName, price, period: tokens.pricePerMonth };
     }
   }
 
@@ -156,7 +159,7 @@ function getStatusDescription(
 export function SubscriptionStatus({ subscription, isGrandfathered = false }: SubscriptionStatusProps) {
   const { t } = useTranslations();
   const tokens = t.pages.settings.subscription.status;
-  const planInfo = getPlanInfo(subscription.price_id, subscription.product_id, subscription.provider, t);
+  const planInfo = getPlanInfo(subscription.price_id, subscription.product_id, subscription.provider, subscription.price_display, t);
   const [isLoading, setIsLoading] = useState(false);
   const isActive = subscription.status === 'active' || subscription.status === 'grace';
   const willBeCancelled = isActive && subscription.cancel_at_period_end;

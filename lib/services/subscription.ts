@@ -50,6 +50,8 @@ export type Subscription = {
   readonly apple_last_transaction_id: string | null;
   readonly apple_environment: 'Production' | 'Sandbox' | null;
   readonly app_account_token: string | null;
+  // Localized price display (from App Store for Apple IAP)
+  readonly price_display: string | null;
 };
 
 /**

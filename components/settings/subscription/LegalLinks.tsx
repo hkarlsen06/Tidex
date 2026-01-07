@@ -21,7 +21,11 @@ async function openExternalUrl(url: string) {
   }
 }
 
-export function LegalLinks() {
+interface LegalLinksProps {
+  className?: string;
+}
+
+export function LegalLinks({ className }: LegalLinksProps) {
   const { t, locale } = useTranslations();
 
   const handleTermsClick = () => {
@@ -33,7 +37,7 @@ export function LegalLinks() {
   };
 
   return (
-    <div className="pt-4 border-t border-border-subtle">
+    <div className={className ?? "pt-4 border-t border-border-subtle"}>
       <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm">
         <button
           onClick={handleTermsClick}

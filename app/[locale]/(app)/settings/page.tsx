@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import type { MouseEvent } from 'react';
 import { Card } from '@/components/app/Card';
 import { ChevronRight, User, Banknote, Palette, Database, CreditCard, Shield, Bell, Loader2, ShieldAlert, MessageSquare } from 'lucide-react';
+import { LegalLinks } from '@/components/settings/subscription/LegalLinks';
 import { useNavigationFeedback } from '@/components/app/navigation-feedback';
 import { useTranslations } from '@/lib/i18n/client';
 import type { Dictionary } from '@/lib/i18n/dictionaries/no';
@@ -171,6 +172,12 @@ export default function SettingsPage() {
               </div>
             );
           })}
+        </div>
+
+        {/* Footer with legal links and copyright */}
+        <div className="mt-12 pt-4 border-t border-border-subtle flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-sm">
+          <LegalLinks className="" />
+          <span className="text-text-muted">© 2025 Tidex</span>
         </div>
       </div>
     </ScrollablePageWrapper>
