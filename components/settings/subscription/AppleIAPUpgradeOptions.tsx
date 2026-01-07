@@ -35,7 +35,8 @@ interface PlanCardProps {
   showSavingsBadge?: boolean;
   t: Dictionary;
   disabled?: boolean;
-  priceLoading?: boolean;
+  /** Show skeleton for price and name while StoreKit data loads */
+  storeKitLoading?: boolean;
 }
 
 function PlanCard({
@@ -50,7 +51,7 @@ function PlanCard({
   showSavingsBadge,
   t,
   disabled,
-  priceLoading,
+  storeKitLoading,
 }: PlanCardProps) {
   const periodLabel = billingPeriod === 'monthly'
     ? t.pages.settings.subscription.upgradePlans.perMonth
@@ -73,13 +74,18 @@ function PlanCard({
 
       <div className="space-y-6">
         <div>
-          <h3 className="text-2xl font-bold">{name}</h3>
+          {/* Name from StoreKit - show skeleton while loading */}
+          {storeKitLoading ? (
+            <div className="h-8 w-24 bg-surface-secondary rounded animate-pulse" />
+          ) : (
+            <h3 className="text-2xl font-bold">{name}</h3>
+          )}
           <p className="text-sm text-text-secondary mt-1">{description}</p>
         </div>
 
         <div className="space-y-2">
           <div className="flex items-baseline gap-1">
-            {priceLoading ? (
+            {storeKitLoading ? (
               <div className="h-10 w-32 bg-surface-secondary rounded animate-pulse" />
             ) : (
               <span className="text-4xl font-bold">{price}</span>
@@ -376,8 +382,11 @@ export function AppleIAPUpgradeOptions({
     }
   }, [appAccountToken, supabaseAccessToken, iap, router, locale]);
 
+  // Get product data from StoreKit - Apple requires using their provided title and price
+  const getProduct = (productId: string) => products.find((p) => p.id === productId);
+
   const getProductPrice = (productId: string, fallback: string): string => {
-    const product = products.find((p) => p.id === productId);
+    const product = getProduct(productId);
     console.log("[IAP UI] getProductPrice:", {
       productId,
       fallback,
@@ -388,6 +397,12 @@ export function AppleIAPUpgradeOptions({
     return product?.price || fallback;
   };
 
+  // Get product title from StoreKit (Apple requires this for App Store compliance)
+  const getProductTitle = (productId: string, fallback: string): string => {
+    const product = getProduct(productId);
+    return product?.title || fallback;
+  };
+
   const getProProductId = () => billingPeriod === 'monthly'
     ? APPLE_PRODUCT_IDS.PRO_MONTHLY
     : APPLE_PRODUCT_IDS.PRO_YEARLY;
@@ -395,6 +410,10 @@ export function AppleIAPUpgradeOptions({
   const getMaxProductId = () => billingPeriod === 'monthly'
     ? APPLE_PRODUCT_IDS.MAX_MONTHLY
     : APPLE_PRODUCT_IDS.MAX_YEARLY;
+
+  // Use StoreKit-provided titles (required by Apple for App Store compliance)
+  const getProTitle = () => getProductTitle(getProProductId(), t.pages.settings.subscription.upgradePlans.proName);
+  const getMaxTitle = () => getProductTitle(getMaxProductId(), t.pages.settings.subscription.upgradePlans.maxName);
 
   const getProPrice = () => billingPeriod === 'monthly'
     ? getProductPrice(APPLE_PRODUCT_IDS.PRO_MONTHLY, '29,00 kr')
@@ -476,31 +495,31 @@ export function AppleIAPUpgradeOptions({
 
           <div className="flex flex-col gap-6">
             <PlanCard
-              name={t.pages.settings.subscription.upgradePlans.proName}
+              name={getProTitle()}
               price={getProPrice()}
               description={t.pages.settings.subscription.upgradePlans.proDescription}
               features={t.pages.settings.subscription.upgradePlans.proFeatures}
               isPopular={true}
               billingPeriod={billingPeriod}
               showSavingsBadge={true}
-              onUpgrade={() => handleUpgrade('Pro', getProProductId())}
-              isLoading={loadingPlan === 'Pro'}
+              onUpgrade={() => handleUpgrade(getProTitle(), getProProductId())}
+              isLoading={loadingPlan === getProTitle()}
               disabled={shouldDisableButtons}
-              priceLoading={products.length === 0}
+              storeKitLoading={products.length === 0}
               t={t}
             />
 
             <PlanCard
-              name={t.pages.settings.subscription.upgradePlans.maxName}
+              name={getMaxTitle()}
               price={getMaxPrice()}
               description={t.pages.settings.subscription.upgradePlans.maxDescription}
               features={t.pages.settings.subscription.upgradePlans.maxFeatures}
               billingPeriod={billingPeriod}
               showSavingsBadge={true}
-              onUpgrade={() => handleUpgrade('Max', getMaxProductId())}
-              isLoading={loadingPlan === 'Max'}
+              onUpgrade={() => handleUpgrade(getMaxTitle(), getMaxProductId())}
+              isLoading={loadingPlan === getMaxTitle()}
               disabled={shouldDisableButtons}
-              priceLoading={products.length === 0}
+              storeKitLoading={products.length === 0}
               t={t}
             />
           </div>
