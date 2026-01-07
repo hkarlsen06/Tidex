@@ -1208,6 +1208,8 @@ export const en: Dictionary = {
             restoring: 'Restoring...',
             restorePurchases: 'Restore purchases',
             manageSubscription: 'Manage subscription',
+            subscriptionRestored: 'Your existing subscription has been restored!',
+            subscriptionOnDifferentAccount: 'This subscription is linked to a different account. Please log in with that account to restore.',
             legalAutoRenew: 'Subscription automatically renews unless cancelled at least 24 hours before the end of the current period.',
             legalPayment: 'Payment will be charged to your Apple ID account at confirmation of purchase.',
             initSteps: {

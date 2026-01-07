@@ -34,6 +34,8 @@ export interface IAPPurchaseResult {
   productId?: string;
   error?: string;
   entitled?: boolean;
+  /** True when purchase detected existing subscription and auto-restored */
+  restoredFromExisting?: boolean;
 }
 
 export interface IAPEntitlement {
@@ -284,9 +286,47 @@ export async function purchaseProduct(
       entitled: verifyResult.entitled,
     };
   } catch (e: any) {
+    // Log full error details for debugging
+    console.error("[IAP] Purchase error:", {
+      message: e.message,
+      code: e.code,
+      name: e.name,
+      fullError: JSON.stringify(e),
+    });
+
     // Handle specific StoreKit errors
     if (e.code === "E_USER_CANCELLED" || e.message?.includes("cancelled")) {
       return { success: false, error: "Purchase cancelled" };
+    }
+
+    // Handle "already subscribed" - StoreKit shows dialog, user taps OK, we get an error
+    // This can manifest as various error codes/messages depending on StoreKit version
+    const errorMessage = (e.message || "").toLowerCase();
+    const isAlreadySubscribed =
+      errorMessage.includes("already") ||
+      errorMessage.includes("subscribed") ||
+      errorMessage.includes("purchased") ||
+      e.code === "E_ALREADY_OWNED" ||
+      e.code === "6778003"; // StoreKit "already purchased" code
+
+    if (isAlreadySubscribed) {
+      console.log("[IAP] User already subscribed, attempting restore...");
+      // Automatically restore to sync the existing subscription
+      const restoreResult = await restorePurchases(appAccountToken, supabaseAccessToken);
+
+      // Add context about what happened
+      if (restoreResult.entitled) {
+        return {
+          ...restoreResult,
+          restoredFromExisting: true, // Flag for UI to show appropriate message
+        };
+      } else {
+        return {
+          ...restoreResult,
+          error: restoreResult.error || "You have an existing subscription on a different account. Please restore from that account.",
+          restoredFromExisting: true,
+        };
+      }
     }
 
     // Report non-cancellation errors
