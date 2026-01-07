@@ -15,7 +15,6 @@ import {
 import {
   updateNotificationSettings,
   updateShiftReminderSettings,
-  updateSummaryTime,
 } from '@/app/[locale]/(app)/settings/_actions/updateSettings';
 import { pushNotificationService } from '@/lib/notifications/push-service';
 import { isNativePlatform } from '@/lib/capacitor/platform';
@@ -30,7 +29,6 @@ interface NotificationSettingsFormProps {
     sharedShiftsEnabled: boolean;
     shiftRemindersEnabled: boolean;
     shiftReminderMinutesArray: number[];
-    summaryTime: string; // HH:MM:SS format from database
   };
   t: Dictionary;
 }
@@ -47,25 +45,14 @@ const REMINDER_OPTIONS = [
 
 const MAX_REMINDERS = 3;
 
-// Time options for summary notifications (every hour)
-const SUMMARY_TIME_OPTIONS = Array.from({ length: 24 }, (_, i) => {
-  const hour = i.toString().padStart(2, '0');
-  return { value: `${hour}:00`, label: `${hour}:00` };
-});
-
 export function NotificationSettingsForm({ initialData, t }: NotificationSettingsFormProps) {
   const router = useRouter();
   const isInitialMount = useRef(true);
   const isReminderInitialMount = useRef(true);
-  const isSummaryTimeInitialMount = useRef(true);
   const [sharedShiftsEnabled, setSharedShiftsEnabled] = useState(initialData.sharedShiftsEnabled);
   const [shiftRemindersEnabled, setShiftRemindersEnabled] = useState(initialData.shiftRemindersEnabled);
   const [shiftReminderMinutesArray, setShiftReminderMinutesArray] = useState<number[]>(
     initialData.shiftReminderMinutesArray
-  );
-  // Convert HH:MM:SS to HH:MM for display
-  const [summaryTime, setSummaryTime] = useState(() =>
-    initialData.summaryTime.substring(0, 5)
   );
   const [isSaving, setIsSaving] = useState(false);
   const [permissionStatus, setPermissionStatus] = useState<PermissionStatus>('unknown');
@@ -143,28 +130,6 @@ export function NotificationSettingsForm({ initialData, t }: NotificationSetting
 
     saveReminderPreferences();
   }, [shiftRemindersEnabled, shiftReminderMinutesArray, router]);
-
-  // Auto-save when summary time changes
-  useEffect(() => {
-    if (isSummaryTimeInitialMount.current) {
-      isSummaryTimeInitialMount.current = false;
-      return;
-    }
-
-    const saveSummaryTime = async () => {
-      setIsSaving(true);
-      try {
-        await updateSummaryTime(summaryTime);
-        router.refresh();
-      } catch (error) {
-        console.error('Failed to save summary time:', error);
-      } finally {
-        setIsSaving(false);
-      }
-    };
-
-    saveSummaryTime();
-  }, [summaryTime, router]);
 
   const handleRequestPermission = useCallback(async () => {
     if (!isNative) return;
@@ -353,40 +318,6 @@ export function NotificationSettingsForm({ initialData, t }: NotificationSetting
               </p>
             </div>
           )}
-
-          {/* Divider */}
-          <div className="border-t border-border" />
-
-          {/* Summary time setting */}
-          <div className="space-y-3">
-            <div className="space-y-0.5">
-              <Label htmlFor="summaryTime" className="text-base font-medium cursor-pointer">
-                {notifications.summaryTime?.label ?? 'Oppsummeringstidspunkt'}
-              </Label>
-              <p className="text-sm text-text-secondary">
-                {notifications.summaryTime?.description ?? 'Når du mottar daglig oppsummering av delte vakter'}
-              </p>
-            </div>
-            <Select
-              value={summaryTime}
-              onValueChange={setSummaryTime}
-              disabled={isSaving || (isNative && permissionStatus === 'denied')}
-            >
-              <SelectTrigger id="summaryTime" className="w-32">
-                <SelectValue>{summaryTime}</SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {SUMMARY_TIME_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-text-muted">
-              {notifications.summaryTime?.help ?? 'Gjelder kun for kontakter du har satt til daglig oppsummering'}
-            </p>
-          </div>
         </div>
       </Card>
     </div>

@@ -581,40 +581,4 @@ export async function updateShiftReminderSettings(data: {
   return { success: true };
 }
 
-/**
- * Update summary notification time
- * The time of day (Europe/Oslo timezone) when daily notification summaries are sent
- * Format: "HH:MM" (24-hour format)
- */
-export async function updateSummaryTime(time: string) {
-  const { user } = await verifySession();
-  const supabase = await createSupabaseServerClient();
-
-  // Validate time format (HH:MM)
-  const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
-  if (!timeRegex.test(time)) {
-    throw new Error('Ugyldig tidsformat. Bruk HH:MM (f.eks. 18:00)');
-  }
-
-  // Convert to TIME format (PostgreSQL expects HH:MM:SS)
-  const timeWithSeconds = `${time}:00`;
-
-  const { error } = await supabase
-    .from('notification_preferences')
-    .upsert(
-      {
-        user_id: user.id,
-        summary_time: timeWithSeconds,
-      },
-      { onConflict: 'user_id' }
-    );
-
-  if (error) {
-    logger.error('Failed to update summary time:', error);
-    throw error;
-  }
-
-  invalidateAndRevalidate(user.id);
-  return { success: true };
-}
 

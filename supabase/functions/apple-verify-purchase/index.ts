@@ -423,28 +423,59 @@ async function upsertAppleSubscription(
 
 // ---------- Request Handlers ----------
 serve(async (req) => {
+  // VERY FIRST THING: Log that we received the request
+  console.log("[apple-verify] ========== REQUEST RECEIVED ==========");
+  console.log(`[apple-verify] Method: ${req.method}`);
+  console.log(`[apple-verify] URL: ${req.url}`);
+
+  // Log all headers for debugging
+  const headersObj: Record<string, string> = {};
+  req.headers.forEach((value, key) => {
+    // Mask sensitive values but show they exist
+    if (key.toLowerCase() === "authorization") {
+      headersObj[key] = value ? `Bearer ${value.substring(7, 20)}...` : "(empty)";
+    } else if (key.toLowerCase() === "apikey") {
+      headersObj[key] = value ? `${value.substring(0, 15)}...` : "(empty)";
+    } else {
+      headersObj[key] = value;
+    }
+  });
+  console.log("[apple-verify] Headers:", JSON.stringify(headersObj, null, 2));
+
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
+    console.log("[apple-verify] Handling CORS preflight");
     return new Response("ok", { headers: corsHeaders });
   }
 
   try {
     if (req.method !== "POST") {
+      console.log("[apple-verify] Rejecting non-POST method");
       return json({ error: "Method not allowed" }, 405);
     }
 
     if (!supabaseAdmin) {
+      console.log("[apple-verify] supabaseAdmin not configured");
       return json({ error: "Service not configured" }, 503);
     }
 
     // Verify Supabase auth
     const authHeader = req.headers.get("Authorization");
+    console.log(`[apple-verify] Authorization header present: ${!!authHeader}`);
+    console.log(`[apple-verify] Authorization header length: ${authHeader?.length ?? 0}`);
+
     if (!authHeader) {
+      console.log("[apple-verify] REJECTING: Missing authorization header");
       return json({ error: "Missing authorization header" }, 401);
     }
 
     const token = authHeader.replace("Bearer ", "");
+    console.log(`[apple-verify] Token extracted, length: ${token.length}`);
+    console.log(`[apple-verify] Token prefix: ${token.substring(0, 20)}...`);
+    console.log("[apple-verify] Calling supabaseAdmin.auth.getUser...");
+
     const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
+    console.log(`[apple-verify] getUser result - user: ${user?.id ?? "null"}, error: ${authError?.message ?? "none"}`);
 
     if (authError || !user) {
       return json({ error: "Invalid or expired token" }, 401);
