@@ -116,16 +116,71 @@ export const legalNo = {
         ],
       },
       {
-        heading: '10. Endringer i vilkårene',
+        heading: '10. Vilkår for iOS-appen',
+        paragraphs: [
+          'Følgende tilleggsvilkår gjelder når du bruker Tidex iOS-applikasjonen lastet ned fra Apple App Store:',
+        ],
+        subsections: [
+          {
+            subheading: 'Bekreftelse',
+            text: 'Du bekrefter at disse vilkårene er inngått mellom deg og Tidex, ikke med Apple Inc. («Apple»). Tidex, ikke Apple, er eneansvarlig for Tidex-appen og dens innhold.',
+          },
+          {
+            subheading: 'Lisensomfang',
+            text: 'Lisensen som gis til deg er begrenset til en ikke-overførbar lisens til å bruke Tidex-appen på Apple-merkede enheter som du eier eller kontrollerer, i samsvar med bruksreglene i Apple Media Services-vilkårene. Appen kan brukes av andre kontoer knyttet til deg via Familiedeling eller volumkjøp.',
+          },
+          {
+            subheading: 'Vedlikehold og støtte',
+            text: 'Tidex er eneansvarlig for vedlikehold og støtte for appen. Apple har ingen forpliktelse til å levere vedlikeholds- eller støttetjenester.',
+          },
+          {
+            subheading: 'Garanti',
+            text: 'Tidex er eneansvarlig for eventuelle produktgarantier, uttrykkelige eller underforståtte. Dersom appen ikke oppfyller gjeldende garantier, kan du varsle Apple, og Apple vil refundere kjøpsprisen (hvis aktuelt). I den grad loven tillater det, har Apple ingen andre garantiforpliktelser. Alle andre garantikrav er Tidex sitt eneansvar.',
+          },
+          {
+            subheading: 'Produktkrav',
+            text: 'Tidex, ikke Apple, er ansvarlig for å håndtere eventuelle krav knyttet til appen, inkludert produktansvarskrav, krav om at appen ikke oppfyller juridiske eller regulatoriske krav, og krav under forbrukervernlovgivning eller personvernlovgivning.',
+          },
+          {
+            subheading: 'Immaterielle rettigheter',
+            text: 'Ved eventuelle tredjepartskrav om at appen krenker immaterielle rettigheter, er Tidex, ikke Apple, eneansvarlig for undersøkelse, forsvar, forlik og oppgjør av slike krav.',
+          },
+          {
+            subheading: 'Tredjepartsbegunstiget',
+            text: 'Du bekrefter og godtar at Apple og dets datterselskaper er tredjepartsbegunstigede av disse vilkårene. Ved din aksept har Apple rett til å håndheve disse vilkårene mot deg som tredjepartsbegunstiget.',
+          },
+        ],
+      },
+      {
+        heading: '11. Juridisk overholdelse',
+        paragraphs: [
+          'Ved å bruke tjenesten bekrefter og garanterer du at: (i) du ikke befinner deg i et land underlagt embargo fra amerikanske myndigheter eller utpekt som et «terrorstøttende» land; og (ii) du ikke er oppført på noen liste over forbudte eller begrensede parter fra amerikanske myndigheter.',
+        ],
+      },
+      {
+        heading: '12. Tredjepartstjenester',
+        paragraphs: [
+          'Når du bruker Tidex-appen, må du overholde eventuelle gjeldende tredjepartsavtaler, for eksempel avtalen din med mobiloperatøren.',
+        ],
+      },
+      {
+        heading: '13. Endringer i vilkårene',
         paragraphs: ['Vi kan oppdatere disse vilkårene. Vesentlige endringer varsles via e-post eller i tjenesten før de trer i kraft. Fortsatt bruk etter endringer betyr aksept.'],
       },
       {
-        heading: '11. Gjeldende lov',
+        heading: '14. Gjeldende lov',
         paragraphs: ['Disse vilkårene er underlagt norsk lov. Tvister løses i norske domstoler.'],
       },
       {
-        heading: '12. Kontakt',
-        paragraphs: ['Spørsmål om vilkårene kan sendes til contact@tidex.no.'],
+        heading: '15. Kontakt',
+        paragraphs: [
+          'For spørsmål, klager eller krav angående Tidex, kontakt oss på:',
+        ],
+        list: [
+          { boldLabel: 'Utvikler:', text: 'Tidex v/ Hjalmar Samuel Kristensen-Karlsen' },
+          { boldLabel: 'Adresse:', text: 'Biskop Jens Nilssøns gate 11A, 0659 Oslo, Norge' },
+          { boldLabel: 'E-post:', text: 'contact@tidex.no' },
+        ],
       },
     ],
   },
