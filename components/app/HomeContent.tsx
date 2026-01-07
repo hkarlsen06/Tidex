@@ -671,7 +671,7 @@ export function HomeContent({ shifts: initialShifts, settings, wageSnapshots, ca
   });
 
   return (
-    <CenteredPageWrapper routeKey="home">
+    <CenteredPageWrapper routeKey="home" pullToRefresh>
       <div ref={swipeContainerRef} className="flex items-center">
         <div className="flex flex-col gap-6 w-full">
           {payrollDay && (
