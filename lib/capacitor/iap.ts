@@ -299,18 +299,22 @@ export async function purchaseProduct(
       return { success: false, error: "Purchase cancelled" };
     }
 
-    // Handle "already subscribed" - StoreKit shows dialog, user taps OK, we get an error
-    // This can manifest as various error codes/messages depending on StoreKit version
+    // Handle "already subscribed" or generic StoreKit errors that might indicate existing subscription
+    // "Unable to Complete Request" is the generic error StoreKit returns for various issues including:
+    // - User already has active subscription
+    // - Sandbox account issues
+    // - Payment sheet dismissed after showing "already subscribed"
     const errorMessage = (e.message || "").toLowerCase();
-    const isAlreadySubscribed =
+    const isAlreadySubscribedOrGenericError =
       errorMessage.includes("already") ||
       errorMessage.includes("subscribed") ||
       errorMessage.includes("purchased") ||
+      errorMessage.includes("unable to complete") || // Generic StoreKit error
       e.code === "E_ALREADY_OWNED" ||
       e.code === "6778003"; // StoreKit "already purchased" code
 
-    if (isAlreadySubscribed) {
-      console.log("[IAP] User already subscribed, attempting restore...");
+    if (isAlreadySubscribedOrGenericError) {
+      console.log("[IAP] Possible existing subscription, attempting restore...");
       // Automatically restore to sync the existing subscription
       const restoreResult = await restorePurchases(appAccountToken, supabaseAccessToken);
 
