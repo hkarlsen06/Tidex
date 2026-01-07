@@ -1141,6 +1141,13 @@ export const no = {
         freePlan: {
           title: 'Du er på gratisplanen',
           description: 'Med gratisplanen kan du bare ha skift i én måned av gangen. Oppgrader til Pro eller Max for å lagre skift på tvers av flere måneder.',
+          restore: {
+            button: 'Gjenopprett abonnement',
+            loading: 'Søker etter abonnement...',
+            success: 'Abonnementet ditt er gjenopprettet!',
+            notFound: 'Fant ingen aktive abonnementer knyttet til kontoen din',
+            error: 'Kunne ikke gjenopprette abonnement',
+          },
         },
         earlySupporter: {
           title: 'Tidlig supporter',

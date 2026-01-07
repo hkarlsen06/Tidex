@@ -1142,6 +1142,13 @@ export const en: Dictionary = {
         freePlan: {
           title: 'You are on the free plan',
           description: 'With the free plan you can only have shifts in one month at a time. Upgrade to Pro or Max to save shifts across multiple months.',
+          restore: {
+            button: 'Restore subscription',
+            loading: 'Searching for subscription...',
+            success: 'Your subscription has been restored!',
+            notFound: 'No active subscriptions found linked to your account',
+            error: 'Could not restore subscription',
+          },
         },
         earlySupporter: {
           title: 'Early supporter',
