@@ -14,9 +14,18 @@ const LEGACY_PRO_PRICE_IDS = ['price_1RzQ85Qiotkj8G58AO6st4fh'];
 const LEGACY_MAX_PRICE_IDS = ['price_1RzQC1Qiotkj8G58tYo4U5oO'];
 
 // Apple product ID to internal product ID mapping
-const APPLE_PRODUCT_IDS = {
-  'pro_monthly': 'pro_monthly', // Internal ID used in database
-  'no.tidex.pro': 'pro_monthly', // Apple product ID
+// Maps both Apple product IDs and internal IDs to normalized internal IDs
+const APPLE_PRODUCT_IDS: Record<string, string> = {
+  // Internal IDs (stored in database)
+  'pro_monthly': 'pro_monthly',
+  'pro_yearly': 'pro_yearly',
+  'max_monthly': 'max_monthly',
+  'max_yearly': 'max_yearly',
+  // Apple product IDs
+  'no.tidex.pro': 'pro_monthly',
+  'no.tidex.pro.year': 'pro_yearly',
+  'no.tidex.max': 'max_monthly',
+  'no.tidex.max.year': 'max_yearly',
 };
 
 interface SubscriptionStatusProps {
@@ -48,11 +57,27 @@ function getPlanInfo(
 
   // Handle Apple subscriptions by product_id
   if (provider === 'apple' && productId) {
-    const normalizedProductId = APPLE_PRODUCT_IDS[productId as keyof typeof APPLE_PRODUCT_IDS] || productId;
+    const normalizedProductId = APPLE_PRODUCT_IDS[productId] || productId;
+
+    // Pro monthly
     if (normalizedProductId === 'pro_monthly') {
-      // Use stored localized price from App Store, fallback to translation
       const price = priceDisplay || tokens.applePriceMonthly || '29 kr';
       return { name: proName, price, period: tokens.pricePerMonth };
+    }
+    // Pro yearly
+    if (normalizedProductId === 'pro_yearly') {
+      const price = priceDisplay || tokens.appleProYearlyPrice || '249 kr';
+      return { name: proName, price, period: tokens.pricePerYear };
+    }
+    // Max monthly
+    if (normalizedProductId === 'max_monthly') {
+      const price = priceDisplay || tokens.appleMaxPrice || '59 kr';
+      return { name: maxName, price, period: tokens.pricePerMonth };
+    }
+    // Max yearly
+    if (normalizedProductId === 'max_yearly') {
+      const price = priceDisplay || tokens.appleMaxYearlyPrice || '499 kr';
+      return { name: maxName, price, period: tokens.pricePerYear };
     }
   }
 

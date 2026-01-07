@@ -44,9 +44,11 @@ export interface IAPEntitlement {
 
 // ---------- Apple Product IDs ----------
 // These must match the products configured in App Store Connect
-// Native users only have access to Pro monthly subscription
 export const APPLE_PRODUCT_IDS = {
   PRO_MONTHLY: "no.tidex.pro",
+  PRO_YEARLY: "no.tidex.pro.year",
+  MAX_MONTHLY: "no.tidex.max",
+  MAX_YEARLY: "no.tidex.max.year",
 } as const;
 
 export const ALL_APPLE_PRODUCT_IDS = Object.values(APPLE_PRODUCT_IDS);
