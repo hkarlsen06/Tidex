@@ -35,7 +35,7 @@ export default async function NotificationsPage({
   const supabase = await createSupabaseServerClient();
   const { data: preferences } = await supabase
     .from('notification_preferences')
-    .select('shared_shifts_enabled, shift_reminders_enabled, shift_reminder_minutes_array, summary_time')
+    .select('shared_shifts_enabled, shift_reminders_enabled, shift_reminder_minutes_array')
     .eq('user_id', user.id)
     .maybeSingle();
 
@@ -54,7 +54,6 @@ export default async function NotificationsPage({
             sharedShiftsEnabled: preferences?.shared_shifts_enabled ?? true,
             shiftRemindersEnabled: preferences?.shift_reminders_enabled ?? true,
             shiftReminderMinutesArray: preferences?.shift_reminder_minutes_array ?? [300],
-            summaryTime: preferences?.summary_time ?? '18:00:00',
           }}
           t={t}
         />
