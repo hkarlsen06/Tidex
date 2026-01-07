@@ -295,7 +295,11 @@ export function AppleIAPUpgradeOptions({
         if (!result.success) {
           // Check for cancel - the native error message is 'Purchase cancelled'
           if (result.error !== 'Purchase cancelled' && result.error !== iap.purchaseCancelled) {
-            setError(result.error || iap.purchaseFailed);
+            // For unknown errors, suggest restore as it might be "already subscribed"
+            const errorWithHint = result.error?.includes('Unable to Complete')
+              ? `${result.error}. ${iap.tryRestoreHint || 'If you already have a subscription, try "Restore purchases" below.'}`
+              : result.error || iap.purchaseFailed;
+            setError(errorWithHint);
           }
           setLoadingPlan(null);
           return;

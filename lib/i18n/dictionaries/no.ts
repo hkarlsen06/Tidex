@@ -1209,6 +1209,7 @@ export const no = {
             manageSubscription: 'Administrer abonnement',
             subscriptionRestored: 'Ditt eksisterende abonnement er gjenopprettet!',
             subscriptionOnDifferentAccount: 'Dette abonnementet er knyttet til en annen konto. Logg inn med den kontoen for å gjenopprette.',
+            tryRestoreHint: 'Hvis du allerede har et abonnement, prøv «Gjenopprett kjøp» nedenfor.',
             legalAutoRenew: 'Abonnementet fornyes automatisk med mindre det sies opp minst 24 timer før utløpet av inneværende periode.',
             legalPayment: 'Betaling belastes din Apple ID-konto ved bekreftelse av kjøp.',
             initSteps: {
