@@ -6,6 +6,7 @@ import dynamic from "next/dynamic";
 import { ArrowLeft } from "lucide-react";
 import { SharingPageSkeleton } from "@/components/app/skeletons";
 import { ManageSharingModal } from "./ManageSharingModal";
+import { CurrencyProvider } from "@/components/providers/CurrencyProvider";
 import { useTranslations } from "@/lib/i18n/client";
 import { useSharingViewState } from "@/lib/hooks/useSharingViewState";
 import type {
@@ -36,7 +37,8 @@ type SharingPageContentProps = {
   selectedOwnerId: string;
   selectedSharer: SharedUser;
   sharedShifts: ShiftWithComputations[];
-  sharedSettings: UserSettings;
+  /** Sharer's settings - includes currency for display */
+  sharedSettings: UserSettings & { currency?: string | null };
   sharedAggregates: SharedShiftsAggregates | null;
   presetRules: SupplementRule[];
   /** Whether the owner allows this viewer to see earnings data */
@@ -90,8 +92,11 @@ export function SharingPageContent({
     router.push(sharingPath);
   };
 
+  // Use the sharer's currency for displaying their shifts
+  const sharerCurrency = sharedSettings.currency ?? "kr";
+
   return (
-    <>
+    <CurrencyProvider currency={sharerCurrency}>
       <ShiftsView
         shifts={sharedShifts}
         defaultView="calendar"
@@ -125,6 +130,6 @@ export function SharingPageContent({
         friends={friends}
         shareCapacity={shareCapacity}
       />
-    </>
+    </CurrencyProvider>
   );
 }
