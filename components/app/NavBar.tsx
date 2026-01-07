@@ -2,8 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname, useSearchParams, useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import type { MouseEvent } from "react";
 import {
   Gauge,
@@ -11,10 +10,8 @@ import {
   Plus,
   ChartNoAxesCombined,
   Share2,
-  ArrowDown,
 } from "lucide-react";
 import { useNavigationFeedback } from "./navigation-feedback";
-import { supabase } from "@/lib/supabase/browser";
 import { useTranslations } from "@/lib/i18n/client";
 import { useScrollContext } from "@/lib/contexts/ScrollContext";
 import { useAddShiftFormSafe } from "@/lib/contexts/AddShiftFormContext";
@@ -84,13 +81,11 @@ function getInitials(
 }
 
 export function NavBar() {
-  const { t, locale } = useTranslations();
+  const { locale } = useTranslations();
   const rawPathname = usePathname();
-  const searchParams = useSearchParams();
   const router = useRouter();
   const { navigate, pendingPath: rawPendingPath } = useNavigationFeedback();
   const { savedSharerId, isLoaded } = useSharingViewState();
-  const [showAddShiftHint, setShowAddShiftHint] = useState(false);
   const { scrollDirection } = useScrollContext();
   const addShiftForm = useAddShiftFormSafe();
   const sharers = useSharers();
@@ -121,58 +116,6 @@ export function NavBar() {
   const pendingPath = rawPendingPath
     ? rawPendingPath.replace(/^\/(no|en)(?=\/|$)/, "") || "/"
     : null;
-
-  // Fetch shift count client-side to determine if hint should be shown
-  // This is deferred to avoid blocking the initial render
-  // Re-check when pathname changes so hint disappears after adding first shift
-  // Convert searchParams to string for stable dependency (avoids size change errors with useSearchParams)
-  const searchParamsString = searchParams?.toString() ?? "";
-  useEffect(() => {
-    // Immediately hide hint if optimistic shifts are being added
-    // This handles the case where the user just added shifts and the DB hasn't synced yet
-    const hasOptimisticShifts =
-      searchParamsString.includes("optimistic") ||
-      searchParamsString.includes("new") ||
-      searchParamsString.includes("newRecurring");
-    if (hasOptimisticShifts) {
-      // Use callback to avoid synchronous setState warning
-      queueMicrotask(() => setShowAddShiftHint(false));
-      return;
-    }
-
-    const checkShiftCount = async () => {
-      try {
-        // Use getClaims() for performance - parses JWT locally without network request
-        const { data: authData, error: authError } = await supabase.auth.getClaims();
-        if (authError || !authData?.claims) {
-          console.warn(
-            "[NavBar] Failed to get user for shift count check:",
-            authError,
-          );
-          return;
-        }
-
-        const userId = authData.claims.sub;
-
-        const { count, error } = await supabase
-          .from("user_shifts")
-          .select("id", { count: "exact", head: true })
-          .eq("user_id", userId);
-
-        if (error) {
-          console.warn("[NavBar] Failed to check shift count:", error);
-          return;
-        }
-
-        // Update hint visibility based on current shift count
-        setShowAddShiftHint((count ?? 0) === 0);
-      } catch (err) {
-        console.error("[NavBar] Unexpected error in shift count check:", err);
-      }
-    };
-
-    checkShiftCount();
-  }, [pathname, searchParamsString]);
 
   const isOnboardingPath = (path: string | null) => {
     if (typeof path !== "string") {
@@ -216,14 +159,6 @@ export function NavBar() {
     }
     return path.replace(/\/+$/, "");
   }
-
-  const isEligibleForHint = (path: string | null) => {
-    const normalizedPath = normalizePath(path);
-    if (!normalizedPath) {
-      return false;
-    }
-    return normalizedPath === "/" || normalizedPath === "/shifts";
-  };
 
   const isPathActive = (item: NavItem) => {
     const normalizedHref = normalizePath(item.href);
@@ -282,10 +217,6 @@ export function NavBar() {
             if (item.isCenter) {
               const isOnAddPage =
                 pathname === "/shifts/add" || pendingPath === "/shifts/add";
-              const shouldShowHint =
-                showAddShiftHint &&
-                !isOnAddPage &&
-                (isEligibleForHint(pathname) || isEligibleForHint(pendingPath));
 
               // When on add page with a registered form, clicking submits the form
               // Otherwise, navigate to the add page
@@ -318,18 +249,6 @@ export function NavBar() {
                   key={item.href}
                   className="relative flex items-center justify-center"
                 >
-                  {shouldShowHint ? (
-                    <div className="pointer-events-none absolute bottom-[calc(100%+1.5rem)] left-1/2 flex -translate-x-1/2 flex-col items-center gap-3">
-                      <span className="animate-gentle-pulse flex w-max flex-col items-center gap-0.5 rounded-lg border border-border-subtle bg-surface-primary px-3 py-1.5 text-center text-xs font-semibold text-text-primary shadow-app leading-tight">
-                        <span>{t.navigation.addFirstShiftLine1}</span>
-                        <span>{t.navigation.addFirstShiftLine2}</span>
-                      </span>
-                      <ArrowDown
-                        className="h-10 w-10 text-brand-highlight animate-gentle-bob drop-shadow-sm"
-                        strokeWidth={2}
-                      />
-                    </div>
-                  ) : null}
                   <Link
                     href={item.href}
                     onClick={handleCenterClick}
