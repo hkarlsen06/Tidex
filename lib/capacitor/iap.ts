@@ -13,6 +13,7 @@
 
 import { isNativePlatform, getPlatform } from "./platform";
 import { NativePurchases, PURCHASE_TYPE } from "@capgo/native-purchases";
+import { reportIAPNoProducts, reportIAPPurchaseFailed, reportIAPVerificationFailed } from "@/lib/error-reporting";
 
 // ---------- Types ----------
 
@@ -167,6 +168,12 @@ export async function getProducts(
         rawResult: result,
         resultKeys: Object.keys(result || {}),
       });
+      // Report to developer
+      reportIAPNoProducts({
+        requestedProductIds: productIds,
+        rawResult: result,
+        platform: getPlatform(),
+      });
       return {
         products: [],
         error: "No products available. The app may not be fully configured in App Store Connect yet."
@@ -255,6 +262,10 @@ export async function purchaseProduct(
     if (!verifyResult.success) {
       // Purchase succeeded but verification failed
       // Transaction is still valid - user should retry verification
+      reportIAPVerificationFailed(verifyResult.error || "Unknown verification error", {
+        transactionId: txnId,
+        productId,
+      });
       return {
         success: true, // Purchase itself succeeded
         transactionId: txnId,
@@ -278,6 +289,11 @@ export async function purchaseProduct(
       return { success: false, error: "Purchase cancelled" };
     }
 
+    // Report non-cancellation errors
+    reportIAPPurchaseFailed(e.message || "Unknown purchase error", {
+      productId,
+      errorCode: e.code,
+    });
     return { success: false, error: e.message || "Purchase failed" };
   }
 }
