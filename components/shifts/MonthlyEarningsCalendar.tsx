@@ -376,12 +376,23 @@ export function MonthlyEarningsCalendar({
   const effectiveViewMode = showEarnings ? viewMode : "hours";
   // Two-click delete confirmation for single date selection
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  // Two-click delete confirmation for multi-selection
+  const [confirmingMultiDelete, setConfirmingMultiDelete] = useState(false);
   // Track previous selectedDate to reset confirmingDelete when selection changes
-  const prevSelectedDateRef = useRef(selectedDate);
-  if (prevSelectedDateRef.current !== selectedDate) {
-    prevSelectedDateRef.current = selectedDate;
+  // Using state initialization pattern (not refs during render) per React 19 compiler rules
+  const [prevSelectedDate, setPrevSelectedDate] = useState(selectedDate);
+  if (prevSelectedDate !== selectedDate) {
+    setPrevSelectedDate(selectedDate);
     if (confirmingDelete) {
       setConfirmingDelete(false);
+    }
+  }
+  // Reset multi-delete confirmation when selection changes
+  const [prevSelectedDates, setPrevSelectedDates] = useState(selectedDates);
+  if (prevSelectedDates !== selectedDates) {
+    setPrevSelectedDates(selectedDates);
+    if (confirmingMultiDelete) {
+      setConfirmingMultiDelete(false);
     }
   }
   // Refreshing state for spinner animation before page reload
@@ -739,30 +750,52 @@ export function MonthlyEarningsCalendar({
                   transition={{ type: "spring", visualDuration: 0.2, bounce: 0.1 }}
                   className="flex h-9 w-full items-center gap-1 rounded-lg bg-surface-primary"
                 >
-                  {/* Delete button - only shown when onDeleteSelected is provided (not in readOnly mode) */}
+                  {/* Delete button - two-click confirmation, only shown when onDeleteSelected is provided (not in readOnly mode) */}
                   {onDeleteSelected && (
                     <Button
                       type="button"
                       variant="ghost"
-                      onClick={() => onDeleteSelected()}
+                      onClick={() => {
+                        if (confirmingMultiDelete) {
+                          onDeleteSelected();
+                          setConfirmingMultiDelete(false);
+                        } else {
+                          setConfirmingMultiDelete(true);
+                        }
+                      }}
                       disabled={deleting || isOffline}
-                      loading={deleting}
+                      loading={confirmingMultiDelete && deleting}
                       title={isOffline ? "Cannot delete while offline" : undefined}
-                      className="flex-1 h-9 gap-2 rounded-lg bg-red-500/10 text-red-600 hover:bg-red-500/20 dark:text-red-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className={cn(
+                        "h-9 gap-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed",
+                        confirmingMultiDelete
+                          ? "flex-1 bg-red-600 text-white hover:bg-red-700"
+                          : "flex-1 bg-red-500/10 text-red-600 hover:bg-red-500/20 dark:text-red-400"
+                      )}
                     >
                       <Trash2 strokeWidth={2} className="h-4 w-4" />
-                      {t.pages.shifts.actions.delete}
+                      {confirmingMultiDelete
+                        ? t.pages.shifts.details.confirmDeleteButton
+                        : t.pages.shifts.actions.delete}
                     </Button>
                   )}
                   <Button
                     type="button"
                     variant="ghost"
-                    onClick={() => onClearMultiSelection?.()}
+                    onClick={() => {
+                      if (confirmingMultiDelete) {
+                        setConfirmingMultiDelete(false);
+                      } else {
+                        onClearMultiSelection?.();
+                      }
+                    }}
                     disabled={deleting}
                     className="flex-1 h-9 gap-2 rounded-lg bg-surface-secondary text-text-secondary hover:bg-surface-secondary/80"
                   >
                     <X strokeWidth={2} className="h-4 w-4" />
-                    {(selectedDates?.size ?? 0) >= 2 ? t.common.close : t.pages.shifts.actions.clearSelection}
+                    {confirmingMultiDelete
+                      ? t.pages.shifts.actions.cancel
+                      : (selectedDates?.size ?? 0) >= 2 ? t.common.close : t.pages.shifts.actions.clearSelection}
                   </Button>
                 </motion.div>
               </AnimateActivity>

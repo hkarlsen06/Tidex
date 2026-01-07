@@ -137,15 +137,15 @@ const DayButton = React.memo(function DayButton({
         className,
         // Today indicator: thick border (underneath selection ring)
         isToday && "border-2 border-brand-highlight",
-        // Selected state: purple ring on top of everything
+        // Selected state: purple border (using shadow-[inset] to avoid clipping on edge cells)
         isSelected &&
-          "ring-2 ring-violet-500 dark:ring-violet-400 bg-violet-500/10 dark:bg-violet-500/15 shadow-app-sm",
+          "shadow-[inset_0_0_0_2px_rgb(139,92,246)] dark:shadow-[inset_0_0_0_2px_rgb(167,139,250)] bg-violet-500/10 dark:bg-violet-500/15",
         // Overlap indicator (only when not selected)
         hasOverlap && !isSelected &&
           "border-orange-400/60 bg-orange-500/10 dark:border-orange-500/50 dark:bg-orange-500/15",
         isOutside && "opacity-40",
-        // Highlight from push notification deep link (consistent with ShiftCard highlighting)
-        isHighlighted && !isSelected && "ring-2 ring-emerald-500 dark:ring-emerald-400 animate-pulse-subtle"
+        // Highlight from push notification deep link (using inset shadow to avoid clipping on edge cells)
+        isHighlighted && !isSelected && "shadow-[inset_0_0_0_2px_rgb(16,185,129)] dark:shadow-[inset_0_0_0_2px_rgb(52,211,153)] animate-pulse-subtle"
       )}
     >
       <div className="relative flex flex-col w-full h-full p-1">
