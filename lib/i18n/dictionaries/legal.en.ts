@@ -116,16 +116,71 @@ export const legalEn = {
         ],
       },
       {
-        heading: '10. Changes to the terms',
+        heading: '10. iOS app terms',
+        paragraphs: [
+          'The following additional terms apply when you use the Tidex iOS application downloaded from the Apple App Store:',
+        ],
+        subsections: [
+          {
+            subheading: 'Acknowledgement',
+            text: 'You acknowledge that these terms are between you and Tidex only, not with Apple Inc. ("Apple"). Tidex, not Apple, is solely responsible for the Tidex app and its content.',
+          },
+          {
+            subheading: 'Scope of license',
+            text: 'The license granted to you is limited to a non-transferable license to use the Tidex app on any Apple-branded devices that you own or control, as permitted by the Usage Rules in the Apple Media Services Terms and Conditions. The app may be accessed by other accounts associated with you via Family Sharing or volume purchasing.',
+          },
+          {
+            subheading: 'Maintenance and support',
+            text: 'Tidex is solely responsible for providing maintenance and support for the app. Apple has no obligation to provide any maintenance or support services.',
+          },
+          {
+            subheading: 'Warranty',
+            text: 'Tidex is solely responsible for any product warranties, whether express or implied. If the app fails to conform to any applicable warranty, you may notify Apple and Apple will refund the purchase price (if any). To the maximum extent permitted by law, Apple has no other warranty obligation. Any other warranty claims are Tidex\'s sole responsibility.',
+          },
+          {
+            subheading: 'Product claims',
+            text: 'Tidex, not Apple, is responsible for addressing any claims relating to the app, including product liability claims, claims that the app fails to meet legal or regulatory requirements, and claims under consumer protection or privacy legislation.',
+          },
+          {
+            subheading: 'Intellectual property',
+            text: 'In the event of any third-party claim that the app infringes intellectual property rights, Tidex, not Apple, is solely responsible for the investigation, defense, settlement, and discharge of such claims.',
+          },
+          {
+            subheading: 'Third-party beneficiary',
+            text: 'You acknowledge and agree that Apple and its subsidiaries are third-party beneficiaries of these terms. Upon your acceptance, Apple has the right to enforce these terms against you as a third-party beneficiary.',
+          },
+        ],
+      },
+      {
+        heading: '11. Legal compliance',
+        paragraphs: [
+          'By using the service, you represent and warrant that: (i) you are not located in a country subject to a U.S. Government embargo or designated as a "terrorist supporting" country; and (ii) you are not listed on any U.S. Government list of prohibited or restricted parties.',
+        ],
+      },
+      {
+        heading: '12. Third-party services',
+        paragraphs: [
+          'When using the Tidex app, you must comply with any applicable third-party terms of agreement, such as your mobile data service agreement.',
+        ],
+      },
+      {
+        heading: '13. Changes to the terms',
         paragraphs: ['We may update these terms. Significant changes are announced via email or in the product before they take effect. Continued use after that means you accept the changes.'],
       },
       {
-        heading: '11. Governing law',
+        heading: '14. Governing law',
         paragraphs: ['These terms are governed by Norwegian law. Disputes are handled by Norwegian courts.'],
       },
       {
-        heading: '12. Contact',
-        paragraphs: ['Questions about the terms can be sent to contact@tidex.no.'],
+        heading: '15. Contact',
+        paragraphs: [
+          'For questions, complaints, or claims regarding Tidex, contact us at:',
+        ],
+        list: [
+          { boldLabel: 'Developer:', text: 'Tidex / Hjalmar Samuel Kristensen-Karlsen' },
+          { boldLabel: 'Address:', text: 'Biskop Jens Nilssøns gate 11A, 0659 Oslo, Norway' },
+          { boldLabel: 'Email:', text: 'contact@tidex.no' },
+        ],
       },
     ],
   },
