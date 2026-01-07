@@ -379,53 +379,6 @@ export async function getEntitlementStatus(
 
 // ---------- Server Verification ----------
 
-/**
- * Get a fresh access token from Supabase
- * This is needed because tokens can expire during the purchase flow
- */
-async function getFreshAccessToken(): Promise<string | null> {
-  try {
-    // Dynamic import to avoid bundling Supabase in non-browser environments
-    const { supabase } = await import("@/lib/supabase/browser");
-
-    // Always try to refresh the session first to ensure we have a valid token
-    // This is important for native iOS where the app may have been in background
-    console.log("[IAP] Refreshing session to get fresh token...");
-    const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession();
-
-    if (refreshedSession?.access_token) {
-      console.log("[IAP] Got fresh token from refreshSession");
-      return refreshedSession.access_token;
-    }
-
-    // If refresh fails, try to get the current session as fallback
-    if (refreshError) {
-      console.warn("[IAP] refreshSession failed, trying getSession:", refreshError.message);
-    }
-
-    const { data: { session: currentSession } } = await supabase.auth.getSession();
-
-    if (!currentSession?.access_token) {
-      console.error("[IAP] No valid session found");
-      return null;
-    }
-
-    // Check if the current token is expired
-    const expiresAt = currentSession.expires_at;
-    const now = Math.floor(Date.now() / 1000);
-    if (expiresAt && expiresAt <= now) {
-      console.error("[IAP] Current token is expired and refresh failed");
-      return null;
-    }
-
-    console.log("[IAP] Using current session token as fallback");
-    return currentSession.access_token;
-  } catch (e: any) {
-    console.error("[IAP] Error getting fresh token:", e.message);
-    return null;
-  }
-}
-
 async function verifyPurchaseWithServer(
   transactionId: string,
   originalTransactionId: string,
@@ -435,44 +388,36 @@ async function verifyPurchaseWithServer(
   priceDisplay?: string | null // Localized price from App Store
 ): Promise<{ success: boolean; entitled?: boolean; error?: string }> {
   try {
-    // Get a fresh token to avoid 401 errors from stale tokens
-    const freshToken = await getFreshAccessToken();
-    if (!freshToken) {
-      return { success: false, error: "Failed to get authentication token" };
-    }
+    // Dynamic import to avoid bundling Supabase in non-browser environments
+    const { supabase } = await import("@/lib/supabase/browser");
 
-    console.log("[IAP] Calling apple-verify-purchase with fresh token");
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/apple-verify-purchase`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${freshToken}`,
-        },
-        body: JSON.stringify({
-          transactionId,
-          originalTransactionId,
-          productId,
-          appAccountToken,
-          priceDisplay, // Send localized price to store in database
-        }),
-      }
-    );
+    // Refresh session to ensure we have a valid token
+    // This is important for native iOS where the app may have been in background
+    console.log("[IAP] Refreshing session before edge function call...");
+    await supabase.auth.refreshSession();
 
-    const data = await response.json();
+    console.log("[IAP] Calling apple-verify-purchase via supabase.functions.invoke");
+    const { data, error } = await supabase.functions.invoke("apple-verify-purchase", {
+      body: {
+        transactionId,
+        originalTransactionId,
+        productId,
+        appAccountToken,
+        priceDisplay, // Send localized price to store in database
+      },
+    });
 
-    if (!response.ok) {
-      console.error("[IAP] Verification failed:", response.status, data);
+    if (error) {
+      console.error("[IAP] Verification failed:", error);
       return {
         success: false,
-        error: data.error || `Verification failed (${response.status})`,
+        error: error.message || "Verification failed",
       };
     }
 
     return {
       success: true,
-      entitled: data.entitled ?? false,
+      entitled: data?.entitled ?? false,
     };
   } catch (e: any) {
     console.error("[IAP] verifyPurchaseWithServer error:", e);
