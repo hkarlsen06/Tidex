@@ -51,6 +51,15 @@ export const APPLE_PRODUCT_IDS = {
 
 export const ALL_APPLE_PRODUCT_IDS = Object.values(APPLE_PRODUCT_IDS);
 
+// ---------- Product Cache ----------
+// Cache products after fetching so we can look up prices during purchase/restore
+let cachedProducts: IAPProduct[] = [];
+
+export function getCachedProductPrice(productId: string): string | null {
+  const product = cachedProducts.find((p) => p.id === productId);
+  return product?.price ?? null;
+}
+
 // ---------- Plugin Helper ----------
 
 /**
@@ -160,6 +169,9 @@ export async function getProducts(
     }));
     console.log("[IAP] Mapped products:", JSON.stringify(mappedProducts));
 
+    // Cache products for price lookup during purchase/restore
+    cachedProducts = mappedProducts;
+
     return { products: mappedProducts };
   } catch (e: any) {
     return { products: [], error: e.message || "Failed to fetch products" };
@@ -210,13 +222,17 @@ export async function purchaseProduct(
     // For original transaction ID, we use transactionId as fallback
     const txnId = purchaseResult.transactionId;
 
+    // Get the localized price from cache to store in database
+    const priceDisplay = getCachedProductPrice(productId);
+
     // Verify with our server
     const verifyResult = await verifyPurchaseWithServer(
       txnId,
       txnId, // Use same ID for original - server will handle via Apple API
       productId,
       appAccountToken,
-      supabaseAccessToken
+      supabaseAccessToken,
+      priceDisplay
     );
 
     if (!verifyResult.success) {
@@ -292,12 +308,16 @@ export async function restorePurchases(
     let lastProductId: string | undefined;
 
     for (const txn of activePurchases) {
+      // Get the localized price from cache to store in database
+      const priceDisplay = getCachedProductPrice(txn.productIdentifier);
+
       const verifyResult = await verifyPurchaseWithServer(
         txn.transactionId,
         txn.transactionId, // Use same ID - server handles original via Apple API
         txn.productIdentifier,
         appAccountToken,
-        supabaseAccessToken
+        supabaseAccessToken,
+        priceDisplay
       );
 
       if (verifyResult.entitled) {
@@ -386,7 +406,8 @@ async function verifyPurchaseWithServer(
   originalTransactionId: string,
   productId: string,
   appAccountToken: string,
-  _supabaseAccessToken: string // Kept for backward compatibility but we'll get fresh token
+  _supabaseAccessToken: string, // Kept for backward compatibility but we'll get fresh token
+  priceDisplay?: string | null // Localized price from App Store
 ): Promise<{ success: boolean; entitled?: boolean; error?: string }> {
   try {
     // Get a fresh token to avoid 401 errors from stale tokens
@@ -409,6 +430,7 @@ async function verifyPurchaseWithServer(
           originalTransactionId,
           productId,
           appAccountToken,
+          priceDisplay, // Send localized price to store in database
         }),
       }
     );

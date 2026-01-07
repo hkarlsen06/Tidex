@@ -274,7 +274,8 @@ async function upsertAppleSubscription(
   userId: string,
   transactionInfo: AppleTransactionInfo,
   renewalInfo: AppleRenewalInfo | undefined,
-  clientAppAccountToken: string | null
+  clientAppAccountToken: string | null,
+  priceDisplay: string | null
 ): Promise<{ success: boolean; error?: string }> {
   if (!supabaseAdmin) {
     return { success: false, error: "Database not configured" };
@@ -311,6 +312,8 @@ async function upsertAppleSubscription(
       renewalInfo,
       verifiedAt: new Date().toISOString(),
     },
+    // Store localized price from App Store (only if provided)
+    ...(priceDisplay ? { price_display: priceDisplay } : {}),
   };
 
   // First try to find existing row by apple_original_transaction_id
@@ -436,6 +439,7 @@ serve(async (req) => {
       originalTransactionId,
       productId,
       appAccountToken,
+      priceDisplay, // Localized price string from StoreKit (e.g., "29,00 kr")
       environment = "Sandbox" // Default to Sandbox for TestFlight testing
     } = body;
 
@@ -483,7 +487,8 @@ serve(async (req) => {
       user.id,
       transactionInfo,
       renewalInfo,
-      appAccountToken ?? null
+      appAccountToken ?? null,
+      priceDisplay ?? null
     );
 
     if (!upsertResult.success) {
