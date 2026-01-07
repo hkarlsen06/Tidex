@@ -3,8 +3,11 @@
 import { Card } from '@/components/app/Card';
 import { Button } from '@/components/app/Button';
 import { Separator } from '@/components/app/Separator';
+import { Tabs, TabsList, TabsTrigger } from '@/components/app/Tabs';
 import { Check, RefreshCw, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+type BillingPeriod = 'monthly' | 'yearly';
 import { useState, useEffect, useCallback } from 'react';
 import {
   isIAPAvailable,
@@ -24,8 +27,11 @@ interface PlanCardProps {
   price: string;
   description: string;
   features: readonly string[];
+  isPopular?: boolean;
   onUpgrade: () => void;
   isLoading?: boolean;
+  billingPeriod: BillingPeriod;
+  showSavingsBadge?: boolean;
   t: Dictionary;
   disabled?: boolean;
 }
@@ -35,26 +41,49 @@ function PlanCard({
   price,
   description,
   features,
+  isPopular,
   onUpgrade,
   isLoading,
+  billingPeriod,
+  showSavingsBadge,
   t,
   disabled,
 }: PlanCardProps) {
+  const periodLabel = billingPeriod === 'monthly'
+    ? t.pages.settings.subscription.upgradePlans.perMonth
+    : t.pages.settings.subscription.upgradePlans.perYear;
+
   return (
-    <Card className="p-6">
+    <Card
+      className={cn(
+        'p-6 relative',
+        isPopular && 'border-2 border-text-primary'
+      )}
+    >
+      {isPopular && (
+        <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+          <span className="bg-text-primary text-background px-3 py-1 text-xs font-semibold rounded-full">
+            {t.pages.settings.subscription.upgradePlans.popularBadge}
+          </span>
+        </div>
+      )}
+
       <div className="space-y-6">
         <div>
           <h3 className="text-2xl font-bold">{name}</h3>
           <p className="text-sm text-text-secondary mt-1">{description}</p>
         </div>
 
-        <div>
+        <div className="space-y-2">
           <div className="flex items-baseline gap-1">
             <span className="text-4xl font-bold">{price}</span>
-            <span className="text-text-secondary">
-              {t.pages.settings.subscription.upgradePlans.perMonth}
-            </span>
+            <span className="text-text-secondary">{periodLabel}</span>
           </div>
+          {showSavingsBadge && billingPeriod === 'yearly' && (
+            <div className="inline-flex items-center bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-2 py-1 rounded-md text-xs font-medium">
+              {t.pages.settings.subscription.upgradePlans.saveBadge}
+            </div>
+          )}
         </div>
 
         <Separator />
@@ -71,6 +100,7 @@ function PlanCard({
         <Button
           onClick={onUpgrade}
           className="w-full"
+          variant={isPopular ? 'default' : 'outline'}
           disabled={isLoading || disabled}
         >
           {isLoading
@@ -115,6 +145,7 @@ export function AppleIAPUpgradeOptions({
   const [appAccountToken, setAppAccountToken] = useState<string | null>(null);
   const [initStep, setInitStep] = useState<string>('idle');
   const [errorKey, setErrorKey] = useState<string | null>(null);
+  const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>('monthly');
 
   // Access IAP translations
   const iap = t.pages.settings.subscription.upgradePlans.iap;
@@ -303,10 +334,26 @@ export function AppleIAPUpgradeOptions({
     }
   }, [appAccountToken, supabaseAccessToken, iap]);
 
-  const getProductPrice = (productId: string): string => {
+  const getProductPrice = (productId: string, fallback: string): string => {
     const product = products.find((p) => p.id === productId);
-    return product?.price || '29,00 kr';
+    return product?.price || fallback;
   };
+
+  const getProProductId = () => billingPeriod === 'monthly'
+    ? APPLE_PRODUCT_IDS.PRO_MONTHLY
+    : APPLE_PRODUCT_IDS.PRO_YEARLY;
+
+  const getMaxProductId = () => billingPeriod === 'monthly'
+    ? APPLE_PRODUCT_IDS.MAX_MONTHLY
+    : APPLE_PRODUCT_IDS.MAX_YEARLY;
+
+  const getProPrice = () => billingPeriod === 'monthly'
+    ? getProductPrice(APPLE_PRODUCT_IDS.PRO_MONTHLY, '29,00 kr')
+    : getProductPrice(APPLE_PRODUCT_IDS.PRO_YEARLY, '249,00 kr');
+
+  const getMaxPrice = () => billingPeriod === 'monthly'
+    ? getProductPrice(APPLE_PRODUCT_IDS.MAX_MONTHLY, '59,00 kr')
+    : getProductPrice(APPLE_PRODUCT_IDS.MAX_YEARLY, '499,00 kr');
 
   // Determine if buttons should be disabled
   const shouldDisableButtons = !isInitialized || products.length === 0;
@@ -350,20 +397,48 @@ export function AppleIAPUpgradeOptions({
         </div>
       )}
 
-      <PlanCard
-        name={t.pages.settings.subscription.upgradePlans.proName}
-        price={
-          isInitialized && products.length > 0
-            ? getProductPrice(APPLE_PRODUCT_IDS.PRO_MONTHLY)
-            : '29,00 kr'
-        }
-        description={t.pages.settings.subscription.upgradePlans.proDescription}
-        features={t.pages.settings.subscription.upgradePlans.proFeatures}
-        onUpgrade={() => handleUpgrade('Pro', APPLE_PRODUCT_IDS.PRO_MONTHLY)}
-        isLoading={loadingPlan === 'Pro'}
-        disabled={shouldDisableButtons}
-        t={t}
-      />
+      {/* Billing period toggle */}
+      <div className="flex justify-center">
+        <Tabs value={billingPeriod} onValueChange={(value) => setBillingPeriod(value as BillingPeriod)}>
+          <TabsList>
+            <TabsTrigger value="monthly">
+              {t.pages.settings.subscription.upgradePlans.billingPeriodMonthly}
+            </TabsTrigger>
+            <TabsTrigger value="yearly">
+              {t.pages.settings.subscription.upgradePlans.billingPeriodYearly}
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
+
+      <div className="flex flex-col gap-6">
+        <PlanCard
+          name={t.pages.settings.subscription.upgradePlans.proName}
+          price={getProPrice()}
+          description={t.pages.settings.subscription.upgradePlans.proDescription}
+          features={t.pages.settings.subscription.upgradePlans.proFeatures}
+          isPopular={true}
+          billingPeriod={billingPeriod}
+          showSavingsBadge={true}
+          onUpgrade={() => handleUpgrade('Pro', getProProductId())}
+          isLoading={loadingPlan === 'Pro'}
+          disabled={shouldDisableButtons}
+          t={t}
+        />
+
+        <PlanCard
+          name={t.pages.settings.subscription.upgradePlans.maxName}
+          price={getMaxPrice()}
+          description={t.pages.settings.subscription.upgradePlans.maxDescription}
+          features={t.pages.settings.subscription.upgradePlans.maxFeatures}
+          billingPeriod={billingPeriod}
+          showSavingsBadge={true}
+          onUpgrade={() => handleUpgrade('Max', getMaxProductId())}
+          isLoading={loadingPlan === 'Max'}
+          disabled={shouldDisableButtons}
+          t={t}
+        />
+      </div>
 
       {/* Restore Purchases - allow even if products aren't loaded */}
       <div className="pt-4 border-t border-border">
