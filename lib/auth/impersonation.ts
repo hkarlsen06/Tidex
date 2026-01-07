@@ -434,6 +434,7 @@ export const RESTRICTED_ACTIONS = [
   "update_subscription",
   "cancel_subscription",
   "manage_billing",
+  "restore_subscription",
 ] as const;
 
 export type RestrictedAction = (typeof RESTRICTED_ACTIONS)[number];
