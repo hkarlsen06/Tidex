@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 
 type BillingPeriod = 'monthly' | 'yearly';
 import { useState, useEffect, useCallback } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   isIAPAvailable,
   initializeIAP,
@@ -152,6 +153,11 @@ export function AppleIAPUpgradeOptions({
   const [initStep, setInitStep] = useState<string>('idle');
   const [errorKey, setErrorKey] = useState<string | null>(null);
   const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>('monthly');
+
+  const router = useRouter();
+  const pathname = usePathname();
+  // Extract locale from pathname (e.g., /no/settings/subscription -> 'no')
+  const locale = pathname?.split('/')[1] || 'no';
 
   // Access IAP translations
   const iap = t.pages.settings.subscription.upgradePlans.iap;
@@ -306,13 +312,13 @@ export function AppleIAPUpgradeOptions({
         }
 
         if (result.entitled) {
-          // Success! Show message if it was auto-restored, then refresh
+          // Success! Redirect to success page (same as Stripe flow)
           if (result.restoredFromExisting) {
-            // Brief delay to let user see the message
-            setError(null);
+            // For restore, show alert then redirect
             alert(iap.subscriptionRestored || 'Your existing subscription has been restored!');
           }
-          window.location.reload();
+          router.push(`/${locale}/settings/subscription/success`);
+          return;
         } else if (result.error) {
           // Purchase succeeded but verification had issues
           setError(result.error);
@@ -327,7 +333,7 @@ export function AppleIAPUpgradeOptions({
         setLoadingPlan(null);
       }
     },
-    [appAccountToken, supabaseAccessToken, iap]
+    [appAccountToken, supabaseAccessToken, iap, router, locale]
   );
 
   const handleRestore = useCallback(async () => {
@@ -354,8 +360,9 @@ export function AppleIAPUpgradeOptions({
       }
 
       if (result.entitled) {
-        // Found active subscription, refresh page
-        window.location.reload();
+        // Found active subscription, redirect to success page
+        router.push(`/${locale}/settings/subscription/success`);
+        return;
       } else {
         setError(iap.noActiveSubscriptions);
       }
@@ -365,7 +372,7 @@ export function AppleIAPUpgradeOptions({
       setError(e.message || iap.restoreFailed);
       setIsRestoring(false);
     }
-  }, [appAccountToken, supabaseAccessToken, iap]);
+  }, [appAccountToken, supabaseAccessToken, iap, router, locale]);
 
   const getProductPrice = (productId: string, fallback: string): string => {
     const product = products.find((p) => p.id === productId);
