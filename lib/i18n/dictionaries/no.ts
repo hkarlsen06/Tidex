@@ -1152,7 +1152,6 @@ export const no = {
             'Lagre skift på tvers av måneder',
             'Ubegrenset antall skift',
             'Alle gratis funksjoner',
-            'Ingen reklame',
             'Livstidstilgang til Pro-funksjoner',
           ],
           savingsTitle: 'Du slipper å betale',
@@ -1185,7 +1184,6 @@ export const no = {
             'Lagre skift på tvers av måneder',
             'Ubegrenset antall skift',
             'Alle gratis funksjoner',
-            'Ingen reklame',
           ],
           maxFeatures: [
             'Alle Pro-funksjoner',
