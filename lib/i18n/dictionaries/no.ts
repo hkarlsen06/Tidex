@@ -1221,6 +1221,7 @@ export const no = {
               noProductsHint: 'Hvis problemet vedvarer, prøv å lukke appen helt og åpne den på nytt.',
               pluginNotAvailable: 'Kjøpsmodulen er ikke tilgjengelig. Installer appen på nytt.',
               initFailed: 'Kunne ikke initialisere kjøp. Start appen på nytt og prøv igjen.',
+              retry: 'Prøv igjen',
             },
           },
           sessionVerifyFailed: 'Kunne ikke verifisere økten din. Prøv å logge inn på nytt.',
