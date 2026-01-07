@@ -3,13 +3,15 @@ import Capacitor
 import FirebaseCore
 import FirebaseMessaging
 
-@UIApplicationMain
+@main
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
-    var window: UIWindow?
+    // Track background task to ensure proper cleanup
+    // This prevents "Background task still not ended after expiration handlers were called" warning
+    private var backgroundTaskID: UIBackgroundTaskIdentifier = .invalid
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Initialize Firebase BEFORE creating the window
+        // Initialize Firebase BEFORE creating any windows
         FirebaseApp.configure()
 
         // Set messaging delegate
@@ -18,50 +20,63 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // Set notification center delegate
         UNUserNotificationCenter.current().delegate = self
 
-        // Create window programmatically since Main.storyboard was removed
-        window = UIWindow(frame: UIScreen.main.bounds)
-
-        // Set window background to match splash screen and dark theme
-        // This prevents white flash between splash screen and WebView load
-        let darkBackground = UIColor(red: 0.008, green: 0.032, blue: 0.090, alpha: 1.0)
-        window?.backgroundColor = darkBackground
-
-        let vc = CAPBridgeViewController()
-        window?.rootViewController = vc
-
-        // Set view background after adding to window to avoid main thread I/O warning
-        vc.view.backgroundColor = darkBackground
-        window?.makeKeyAndVisible()
         return true
     }
 
-    func applicationWillResignActive(_ application: UIApplication) {
-        // Sent when the application is about to move from active to inactive state.
+    // MARK: - UISceneSession Lifecycle
+
+    func application(_ application: UIApplication, configurationForConnecting connectingSceneSession: UISceneSession, options: UIScene.ConnectionOptions) -> UISceneConfiguration {
+        // Called when a new scene session is being created.
+        return UISceneConfiguration(name: "Default Configuration", sessionRole: connectingSceneSession.role)
     }
 
-    func applicationDidEnterBackground(_ application: UIApplication) {
-        // Use this method to release shared resources, save user data, invalidate timers.
-    }
-
-    func applicationWillEnterForeground(_ application: UIApplication) {
-        // Called as part of the transition from the background to the active state.
-    }
-
-    func applicationDidBecomeActive(_ application: UIApplication) {
-        // Restart any tasks that were paused (or not yet started) while the application was inactive.
+    func application(_ application: UIApplication, didDiscardSceneSessions sceneSessions: Set<UISceneSession>) {
+        // Called when the user discards a scene session.
     }
 
     func applicationWillTerminate(_ application: UIApplication) {
         // Called when the application is about to terminate. Save data if appropriate.
+        endBackgroundTaskIfNeeded()
     }
 
+    // MARK: - Background Task Management
+
+    /// Starts a background task with a proper expiration handler
+    /// This gives Capacitor's bridge time to finish coalescing operations
+    func startBackgroundTask() {
+        // End any existing task first
+        endBackgroundTaskIfNeeded()
+
+        backgroundTaskID = UIApplication.shared.beginBackgroundTask(withName: "CapacitorCleanup") { [weak self] in
+            // Expiration handler - called when iOS is about to terminate the task
+            // We MUST end the task here to avoid the warning
+            self?.endBackgroundTaskIfNeeded()
+        }
+
+        // Give the bridge a moment to flush pending operations, then end the task
+        // This prevents the task from running indefinitely
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
+            self?.endBackgroundTaskIfNeeded()
+        }
+    }
+
+    /// Ends any active background task to prevent iOS termination warning
+    func endBackgroundTaskIfNeeded() {
+        if backgroundTaskID != .invalid {
+            UIApplication.shared.endBackgroundTask(backgroundTaskID)
+            backgroundTaskID = .invalid
+        }
+    }
+
+    // MARK: - URL Handling (for non-scene apps, kept for backwards compatibility)
+
     func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey: Any] = [:]) -> Bool {
-        // Called when the app was launched with a url.
+        // Called when the app was launched with a url (pre-iOS 13 or non-scene)
         return ApplicationDelegateProxy.shared.application(app, open: url, options: options)
     }
 
     func application(_ application: UIApplication, continue userActivity: NSUserActivity, restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void) -> Bool {
-        // Called when the app was launched with an activity, including Universal Links.
+        // Called when the app was launched with an activity, including Universal Links (pre-iOS 13 or non-scene)
         return ApplicationDelegateProxy.shared.application(application, continue: userActivity, restorationHandler: restorationHandler)
     }
 
