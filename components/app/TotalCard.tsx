@@ -7,6 +7,7 @@ import { SafeAnimateNumber } from '@/components/app/SafeAnimateNumber';
 import { Card, CardContent } from '@/components/app/Card';
 import { ClickTooltip } from '@/components/app/Tooltip';
 import { useTranslations } from '@/lib/i18n/client';
+import { useCurrency } from '@/components/providers/CurrencyProvider';
 
 interface TotalCardProps {
   total: string;
@@ -39,9 +40,11 @@ interface AnimatedCurrencyProps {
   value: string;
   className?: string;
   style?: React.CSSProperties;
+  currencySymbol: string;
+  currencyDisplay: 'prefix' | 'suffix';
 }
 
-function AnimatedCurrency({ value, className, style }: AnimatedCurrencyProps) {
+function AnimatedCurrency({ value, className, style, currencySymbol, currencyDisplay }: AnimatedCurrencyProps) {
   const numericValue = extractNumber(value);
   const useCompact = numericValue > 99999;
 
@@ -49,8 +52,6 @@ function AnimatedCurrency({ value, className, style }: AnimatedCurrencyProps) {
     <SafeAnimateNumber
       layout={false}
       format={{
-        style: 'currency',
-        currency: 'NOK',
         maximumFractionDigits: 0,
         ...(useCompact && {
           notation: 'compact',
@@ -58,6 +59,8 @@ function AnimatedCurrency({ value, className, style }: AnimatedCurrencyProps) {
         }),
       }}
       locales="nb-NO"
+      prefix={currencyDisplay === 'prefix' ? currencySymbol : undefined}
+      suffix={currencyDisplay === 'suffix' ? ` ${currencySymbol}` : undefined}
       className={className}
       style={style}
       transition={{
@@ -88,6 +91,7 @@ export const TotalCard: React.FC<TotalCardProps> = ({
   totalShiftsCount,
 }) => {
   const { t } = useTranslations();
+  const { symbol: currencySymbol, display: currencyDisplay } = useCurrency();
 
   // Construct subtitle text for typewriter
   const subtitleText = (() => {
@@ -216,6 +220,8 @@ export const TotalCard: React.FC<TotalCardProps> = ({
                     value={displayMain}
                     className="font-bold text-brand-highlight"
                     style={{ fontSize: 'clamp(28px, 22cqi, 72px)' }}
+                    currencySymbol={currencySymbol}
+                    currencyDisplay={currencyDisplay}
                   />
                 )}
               </div>
