@@ -333,21 +333,6 @@ export function AppleIAPUpgradeOptions({
         </p>
       </div>
 
-      {/* Initialization status while loading */}
-      {isInitializing && (
-        <div className="p-4 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-lg text-sm">
-          <div className="flex items-center gap-2">
-            <RefreshCw className="h-4 w-4 animate-spin" />
-            <span>
-              {initStep === 'getting_token' && iap.initSteps.gettingToken}
-              {initStep === 'initializing_iap' && iap.initSteps.initializingIAP}
-              {initStep === 'fetching_products' && iap.initSteps.fetchingProducts}
-              {initStep === 'starting' && iap.initSteps.starting}
-            </span>
-          </div>
-        </div>
-      )}
-
       {/* Error display with specific styling for "no products" */}
       {error && (
         <div className={cn(

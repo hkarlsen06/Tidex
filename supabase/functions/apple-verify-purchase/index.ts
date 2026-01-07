@@ -68,19 +68,30 @@ async function generateAppleJWT(): Promise<string> {
 
   try {
     // Parse the private key (p8 format)
-    // Handle both escaped newlines (\\n from env vars) and literal newlines
+    // Handle escaped newlines from env vars - they come as literal \n (backslash + n)
     let keyPem = APPLE_PRIVATE_KEY;
-    if (keyPem.includes("\\n")) {
-      keyPem = keyPem.replace(/\\n/g, "\n");
-    }
 
-    console.log(`[apple-verify] Key starts with: ${keyPem.substring(0, 40)}`);
+    // Debug: Check what we're dealing with
+    console.log(`[apple-verify] Raw key has literal backslash-n: ${keyPem.includes('\\n')}`);
+    console.log(`[apple-verify] Raw key has actual newlines: ${keyPem.includes('\n')}`);
+
+    // Replace literal \n (backslash followed by n) with actual newlines
+    // In a string, we need to escape the backslash, so \\n matches literal \n
+    keyPem = keyPem.replace(/\\n/g, '\n');
+
+    console.log(`[apple-verify] After replacement, key has newlines: ${keyPem.includes('\n')}`);
+    console.log(`[apple-verify] Key line count: ${keyPem.split('\n').length}`);
+    console.log(`[apple-verify] Key starts with: ${keyPem.substring(0, 30)}`);
     console.log(`[apple-verify] Key ends with: ${keyPem.substring(keyPem.length - 30)}`);
 
     const privateKey = await jose.importPKCS8(keyPem, "ES256");
     console.log("[apple-verify] Private key imported successfully");
 
-    const jwt = await new jose.SignJWT({})
+    // App Store Server API requires 'bid' (bundle ID) and 'nonce' (unique UUID) in payload
+    const jwt = await new jose.SignJWT({
+        bid: APPLE_APP_BUNDLE_ID,
+        nonce: crypto.randomUUID()
+      })
       .setProtectedHeader({
         alg: "ES256",
         kid: APPLE_KEY_ID,
@@ -91,6 +102,8 @@ async function generateAppleJWT(): Promise<string> {
       .setIssuedAt()
       .setExpirationTime("20m")
       .sign(privateKey);
+
+    console.log(`[apple-verify] JWT bundle ID: ${APPLE_APP_BUNDLE_ID}`);
 
     console.log("[apple-verify] JWT generated successfully");
     return jwt;
@@ -127,10 +140,12 @@ interface AppleRenewalInfo {
 
 async function verifyTransactionWithApple(
   transactionId: string,
-  environment: "Production" | "Sandbox" = "Production"
+  environment: "Production" | "Sandbox" = "Sandbox" // Default to Sandbox for testing
 ): Promise<{ transactionInfo: AppleTransactionInfo; renewalInfo?: AppleRenewalInfo } | null> {
   const jwt = await generateAppleJWT();
   const baseUrl = environment === "Sandbox" ? APPLE_SANDBOX_URL : APPLE_PRODUCTION_URL;
+
+  console.log(`[apple-verify] Calling Apple API: ${baseUrl}/inApps/v1/transactions/${transactionId}`);
 
   // Get transaction info
   const response = await fetch(
@@ -143,12 +158,30 @@ async function verifyTransactionWithApple(
   );
 
   if (!response.ok) {
-    // If production fails with 404, try sandbox
-    if (response.status === 404 && environment === "Production") {
-      console.log("[apple-verify] Transaction not found in Production, trying Sandbox");
-      return verifyTransactionWithApple(transactionId, "Sandbox");
+    // Log full error details
+    let errorBody = "";
+    try {
+      errorBody = await response.text();
+    } catch {
+      errorBody = "(could not read error body)";
     }
-    console.error(`[apple-verify] Apple API error: ${response.status}`);
+    console.error(`[apple-verify] Apple API error: ${response.status} - ${errorBody}`);
+
+    // If sandbox fails with 404, try production (for restored purchases from production)
+    if (response.status === 404 && environment === "Sandbox") {
+      console.log("[apple-verify] Transaction not found in Sandbox, trying Production");
+      return verifyTransactionWithApple(transactionId, "Production");
+    }
+
+    // If 401, log additional debug info
+    if (response.status === 401) {
+      console.error("[apple-verify] 401 Unauthorized - possible causes:");
+      console.error("  - API key not yet propagated (can take up to 24 hours for new keys)");
+      console.error("  - Key ID mismatch");
+      console.error("  - Issuer ID mismatch");
+      console.error("  - Private key doesn't match the Key ID");
+    }
+
     return null;
   }
 
@@ -403,7 +436,7 @@ serve(async (req) => {
       originalTransactionId,
       productId,
       appAccountToken,
-      environment = "Production"
+      environment = "Sandbox" // Default to Sandbox for TestFlight testing
     } = body;
 
     // Validate required fields
