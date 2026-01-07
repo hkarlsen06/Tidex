@@ -406,48 +406,53 @@ export function AppleIAPUpgradeOptions({
         </div>
       )}
 
-      {/* Billing period toggle */}
-      <div className="flex justify-center">
-        <Tabs value={billingPeriod} onValueChange={(value) => setBillingPeriod(value as BillingPeriod)}>
-          <TabsList>
-            <TabsTrigger value="monthly">
-              {t.pages.settings.subscription.upgradePlans.billingPeriodMonthly}
-            </TabsTrigger>
-            <TabsTrigger value="yearly">
-              {t.pages.settings.subscription.upgradePlans.billingPeriodYearly}
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
-      </div>
+      {/* Only show billing toggle and plan cards when products are loaded */}
+      {products.length > 0 && (
+        <>
+          {/* Billing period toggle */}
+          <div className="flex justify-center">
+            <Tabs value={billingPeriod} onValueChange={(value) => setBillingPeriod(value as BillingPeriod)}>
+              <TabsList>
+                <TabsTrigger value="monthly">
+                  {t.pages.settings.subscription.upgradePlans.billingPeriodMonthly}
+                </TabsTrigger>
+                <TabsTrigger value="yearly">
+                  {t.pages.settings.subscription.upgradePlans.billingPeriodYearly}
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
 
-      <div className="flex flex-col gap-6">
-        <PlanCard
-          name={t.pages.settings.subscription.upgradePlans.proName}
-          price={getProPrice()}
-          description={t.pages.settings.subscription.upgradePlans.proDescription}
-          features={t.pages.settings.subscription.upgradePlans.proFeatures}
-          isPopular={true}
-          billingPeriod={billingPeriod}
-          showSavingsBadge={true}
-          onUpgrade={() => handleUpgrade('Pro', getProProductId())}
-          isLoading={loadingPlan === 'Pro'}
-          disabled={shouldDisableButtons}
-          t={t}
-        />
+          <div className="flex flex-col gap-6">
+            <PlanCard
+              name={t.pages.settings.subscription.upgradePlans.proName}
+              price={getProPrice()}
+              description={t.pages.settings.subscription.upgradePlans.proDescription}
+              features={t.pages.settings.subscription.upgradePlans.proFeatures}
+              isPopular={true}
+              billingPeriod={billingPeriod}
+              showSavingsBadge={true}
+              onUpgrade={() => handleUpgrade('Pro', getProProductId())}
+              isLoading={loadingPlan === 'Pro'}
+              disabled={shouldDisableButtons}
+              t={t}
+            />
 
-        <PlanCard
-          name={t.pages.settings.subscription.upgradePlans.maxName}
-          price={getMaxPrice()}
-          description={t.pages.settings.subscription.upgradePlans.maxDescription}
-          features={t.pages.settings.subscription.upgradePlans.maxFeatures}
-          billingPeriod={billingPeriod}
-          showSavingsBadge={true}
-          onUpgrade={() => handleUpgrade('Max', getMaxProductId())}
-          isLoading={loadingPlan === 'Max'}
-          disabled={shouldDisableButtons}
-          t={t}
-        />
-      </div>
+            <PlanCard
+              name={t.pages.settings.subscription.upgradePlans.maxName}
+              price={getMaxPrice()}
+              description={t.pages.settings.subscription.upgradePlans.maxDescription}
+              features={t.pages.settings.subscription.upgradePlans.maxFeatures}
+              billingPeriod={billingPeriod}
+              showSavingsBadge={true}
+              onUpgrade={() => handleUpgrade('Max', getMaxProductId())}
+              isLoading={loadingPlan === 'Max'}
+              disabled={shouldDisableButtons}
+              t={t}
+            />
+          </div>
+        </>
+      )}
 
       {/* Restore Purchases - allow even if products aren't loaded */}
       <div className="pt-4 border-t border-border">
