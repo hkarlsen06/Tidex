@@ -58,7 +58,6 @@ export default async function SubscriptionSuccessPage({ params }: Props) {
               <li>✓ {t.item1}</li>
               <li>✓ {t.item2}</li>
               <li>✓ {t.item3}</li>
-              <li>✓ {t.item4}</li>
             </ul>
           </div>
 
