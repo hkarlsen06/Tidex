@@ -74,13 +74,17 @@ function PlanCard({
 
       <div className="space-y-6">
         <div>
-          {/* Name from StoreKit - show skeleton while loading */}
+          {/* Name and description from StoreKit - show skeleton while loading */}
           {storeKitLoading ? (
             <div className="h-8 w-24 bg-surface-secondary rounded animate-pulse" />
           ) : (
             <h3 className="text-2xl font-bold">{name}</h3>
           )}
-          <p className="text-sm text-text-secondary mt-1">{description}</p>
+          {storeKitLoading ? (
+            <div className="h-4 w-48 bg-surface-secondary rounded animate-pulse mt-1" />
+          ) : (
+            <p className="text-sm text-text-secondary mt-1">{description}</p>
+          )}
         </div>
 
         <div className="space-y-2">
@@ -403,6 +407,12 @@ export function AppleIAPUpgradeOptions({
     return product?.title || fallback;
   };
 
+  // Get product description from StoreKit (Apple requires this for App Store compliance)
+  const getProductDescription = (productId: string, fallback: string): string => {
+    const product = getProduct(productId);
+    return product?.description || fallback;
+  };
+
   const getProProductId = () => billingPeriod === 'monthly'
     ? APPLE_PRODUCT_IDS.PRO_MONTHLY
     : APPLE_PRODUCT_IDS.PRO_YEARLY;
@@ -411,9 +421,11 @@ export function AppleIAPUpgradeOptions({
     ? APPLE_PRODUCT_IDS.MAX_MONTHLY
     : APPLE_PRODUCT_IDS.MAX_YEARLY;
 
-  // Use StoreKit-provided titles (required by Apple for App Store compliance)
+  // Use StoreKit-provided data (required by Apple for App Store compliance)
   const getProTitle = () => getProductTitle(getProProductId(), t.pages.settings.subscription.upgradePlans.proName);
   const getMaxTitle = () => getProductTitle(getMaxProductId(), t.pages.settings.subscription.upgradePlans.maxName);
+  const getProDescription = () => getProductDescription(getProProductId(), t.pages.settings.subscription.upgradePlans.proDescription);
+  const getMaxDescription = () => getProductDescription(getMaxProductId(), t.pages.settings.subscription.upgradePlans.maxDescription);
 
   const getProPrice = () => billingPeriod === 'monthly'
     ? getProductPrice(APPLE_PRODUCT_IDS.PRO_MONTHLY, '29,00 kr')
@@ -497,7 +509,7 @@ export function AppleIAPUpgradeOptions({
             <PlanCard
               name={getProTitle()}
               price={getProPrice()}
-              description={t.pages.settings.subscription.upgradePlans.proDescription}
+              description={getProDescription()}
               features={t.pages.settings.subscription.upgradePlans.proFeatures}
               isPopular={true}
               billingPeriod={billingPeriod}
@@ -512,7 +524,7 @@ export function AppleIAPUpgradeOptions({
             <PlanCard
               name={getMaxTitle()}
               price={getMaxPrice()}
-              description={t.pages.settings.subscription.upgradePlans.maxDescription}
+              description={getMaxDescription()}
               features={t.pages.settings.subscription.upgradePlans.maxFeatures}
               billingPeriod={billingPeriod}
               showSavingsBadge={true}
