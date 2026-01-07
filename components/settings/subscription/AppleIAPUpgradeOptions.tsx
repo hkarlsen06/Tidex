@@ -34,6 +34,7 @@ interface PlanCardProps {
   showSavingsBadge?: boolean;
   t: Dictionary;
   disabled?: boolean;
+  priceLoading?: boolean;
 }
 
 function PlanCard({
@@ -48,6 +49,7 @@ function PlanCard({
   showSavingsBadge,
   t,
   disabled,
+  priceLoading,
 }: PlanCardProps) {
   const periodLabel = billingPeriod === 'monthly'
     ? t.pages.settings.subscription.upgradePlans.perMonth
@@ -76,7 +78,11 @@ function PlanCard({
 
         <div className="space-y-2">
           <div className="flex items-baseline gap-1">
-            <span className="text-4xl font-bold">{price}</span>
+            {priceLoading ? (
+              <div className="h-10 w-32 bg-surface-secondary rounded animate-pulse" />
+            ) : (
+              <span className="text-4xl font-bold">{price}</span>
+            )}
             <span className="text-text-secondary">{periodLabel}</span>
           </div>
           {showSavingsBadge && billingPeriod === 'yearly' && (
@@ -406,8 +412,9 @@ export function AppleIAPUpgradeOptions({
         </div>
       )}
 
-      {/* Only show billing toggle and plan cards when products are loaded */}
-      {products.length > 0 && (
+      {/* Show billing toggle and plan cards - with skeleton prices while loading */}
+      {/* Hide only if we got the NO_PRODUCTS error (products failed to load) */}
+      {errorKey !== IAP_ERROR_KEYS.NO_PRODUCTS && (
         <>
           {/* Billing period toggle */}
           <div className="flex justify-center">
@@ -435,6 +442,7 @@ export function AppleIAPUpgradeOptions({
               onUpgrade={() => handleUpgrade('Pro', getProProductId())}
               isLoading={loadingPlan === 'Pro'}
               disabled={shouldDisableButtons}
+              priceLoading={products.length === 0}
               t={t}
             />
 
@@ -448,6 +456,7 @@ export function AppleIAPUpgradeOptions({
               onUpgrade={() => handleUpgrade('Max', getMaxProductId())}
               isLoading={loadingPlan === 'Max'}
               disabled={shouldDisableButtons}
+              priceLoading={products.length === 0}
               t={t}
             />
           </div>
