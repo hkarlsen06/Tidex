@@ -394,30 +394,53 @@ async function verifyPurchaseWithServer(
     // Refresh session to ensure we have a valid token
     // This is important for native iOS where the app may have been in background
     console.log("[IAP] Refreshing session before edge function call...");
-    await supabase.auth.refreshSession();
+    const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
 
-    console.log("[IAP] Calling apple-verify-purchase via supabase.functions.invoke");
-    const { data, error } = await supabase.functions.invoke("apple-verify-purchase", {
-      body: {
-        transactionId,
-        originalTransactionId,
-        productId,
-        appAccountToken,
-        priceDisplay, // Send localized price to store in database
-      },
-    });
+    if (refreshError) {
+      console.error("[IAP] Session refresh failed:", refreshError.message);
+      return { success: false, error: "Failed to refresh authentication" };
+    }
 
-    if (error) {
-      console.error("[IAP] Verification failed:", error);
+    const accessToken = refreshData.session?.access_token;
+    if (!accessToken) {
+      console.error("[IAP] No access token after refresh");
+      return { success: false, error: "No authentication token available" };
+    }
+
+    console.log("[IAP] Calling apple-verify-purchase with refreshed token");
+    // Use fetch with explicit Authorization header to ensure we use the fresh token
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/apple-verify-purchase`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+          apikey: process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || "",
+        },
+        body: JSON.stringify({
+          transactionId,
+          originalTransactionId,
+          productId,
+          appAccountToken,
+          priceDisplay,
+        }),
+      }
+    );
+
+    const responseData = await response.json();
+
+    if (!response.ok) {
+      console.error("[IAP] Verification failed:", response.status, responseData);
       return {
         success: false,
-        error: error.message || "Verification failed",
+        error: responseData.error || `Verification failed (${response.status})`,
       };
     }
 
     return {
       success: true,
-      entitled: data?.entitled ?? false,
+      entitled: responseData?.entitled ?? false,
     };
   } catch (e: any) {
     console.error("[IAP] verifyPurchaseWithServer error:", e);
