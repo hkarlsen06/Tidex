@@ -19,10 +19,10 @@ const APPLE_ROOT_CA_G3_URL = "https://www.apple.com/certificateauthority/AppleRo
 // ---------- Apple Product ID Mapping ----------
 // Matches existing tiers: Pro and Max, each with monthly/yearly
 const APPLE_PRODUCT_TO_INTERNAL: Record<string, string> = {
-  "no.tidex.pro.monthly": "pro_monthly",
-  "no.tidex.pro.yearly": "pro_yearly",
-  "no.tidex.max.monthly": "max_monthly",
-  "no.tidex.max.yearly": "max_yearly",
+  "no.tidex.pro": "pro_monthly",
+  "no.tidex.pro.year": "pro_yearly",
+  "no.tidex.max": "max_monthly",
+  "no.tidex.max.year": "max_yearly",
 };
 
 function mapAppleProductToInternal(appleProductId: string): string {
