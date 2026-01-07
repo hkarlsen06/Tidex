@@ -81,10 +81,17 @@ export function ScrollablePageWrapper({
     children
   );
 
+  // When pullToRefresh is enabled, the PullToRefresh component handles scrolling
+  // via its internal .ptr__children element with overflow-y: auto.
+  // We must NOT have overflow-y-auto on the outer wrapper to avoid nested scroll contexts.
+  const outerClassName = pullToRefresh
+    ? `h-full pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-8 ${className ?? ""}`
+    : `h-full overflow-y-auto pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-8 ${className ?? ""}`;
+
   return (
     <div
       ref={routeKey ? scrollRef : undefined}
-      className={`h-full overflow-y-auto pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-8 ${className ?? ""}`}
+      className={outerClassName}
     >
       {pullToRefresh ? (
         <PullToRefresh

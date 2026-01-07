@@ -47,29 +47,47 @@ const supabaseAdmin = SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY
 
 // ---------- Apple JWT Generation ----------
 async function generateAppleJWT(): Promise<string> {
+  console.log("[apple-verify] generateAppleJWT called");
+  console.log(`[apple-verify] APPLE_KEY_ID present: ${!!APPLE_KEY_ID}`);
+  console.log(`[apple-verify] APPLE_ISSUER_ID present: ${!!APPLE_ISSUER_ID}`);
+  console.log(`[apple-verify] APPLE_PRIVATE_KEY length: ${APPLE_PRIVATE_KEY.length}`);
+
   if (!APPLE_KEY_ID || !APPLE_ISSUER_ID || !APPLE_PRIVATE_KEY) {
     throw new Error("Apple credentials not configured");
   }
 
-  // Parse the private key (p8 format)
-  const privateKey = await jose.importPKCS8(
-    APPLE_PRIVATE_KEY.replace(/\\n/g, "\n"),
-    "ES256"
-  );
+  try {
+    // Parse the private key (p8 format)
+    // Handle both escaped newlines (\\n from env vars) and literal newlines
+    let keyPem = APPLE_PRIVATE_KEY;
+    if (keyPem.includes("\\n")) {
+      keyPem = keyPem.replace(/\\n/g, "\n");
+    }
 
-  const jwt = await new jose.SignJWT({})
-    .setProtectedHeader({
-      alg: "ES256",
-      kid: APPLE_KEY_ID,
-      typ: "JWT"
-    })
-    .setIssuer(APPLE_ISSUER_ID)
-    .setAudience("appstoreconnect-v1")
-    .setIssuedAt()
-    .setExpirationTime("20m")
-    .sign(privateKey);
+    console.log(`[apple-verify] Key starts with: ${keyPem.substring(0, 40)}`);
+    console.log(`[apple-verify] Key ends with: ${keyPem.substring(keyPem.length - 30)}`);
 
-  return jwt;
+    const privateKey = await jose.importPKCS8(keyPem, "ES256");
+    console.log("[apple-verify] Private key imported successfully");
+
+    const jwt = await new jose.SignJWT({})
+      .setProtectedHeader({
+        alg: "ES256",
+        kid: APPLE_KEY_ID,
+        typ: "JWT"
+      })
+      .setIssuer(APPLE_ISSUER_ID)
+      .setAudience("appstoreconnect-v1")
+      .setIssuedAt()
+      .setExpirationTime("20m")
+      .sign(privateKey);
+
+    console.log("[apple-verify] JWT generated successfully");
+    return jwt;
+  } catch (e) {
+    console.error("[apple-verify] JWT generation failed:", e instanceof Error ? e.message : e);
+    throw e;
+  }
 }
 
 // ---------- Apple Server API Calls ----------
@@ -450,6 +468,7 @@ serve(async (req) => {
     });
   } catch (e) {
     console.error("[apple-verify] Exception:", e instanceof Error ? e.message : e);
+    console.error("[apple-verify] Stack:", e instanceof Error ? e.stack : "no stack");
     return json({ error: "Internal server error" }, 500);
   }
 });
