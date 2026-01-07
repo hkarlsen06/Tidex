@@ -26,47 +26,37 @@ export type CurrencyGroup = {
 
 /**
  * Grouped currency options for the selector dropdown.
- * Norwegian Krone options appear first, followed by popular currencies, then others.
+ * Only currencies with 2 characters or less are included.
+ * Krone appears first, followed by popular currencies, then others.
  */
 export const CURRENCY_GROUPS: CurrencyGroup[] = [
   {
-    label: "Norwegian Krone",
-    options: [
-      { value: "kr", label: "kr", display: "suffix" },
-      { value: "NOK", label: "NOK", display: "suffix" },
-    ],
+    label: "Krone",
+    options: [{ value: "kr", label: "kr", display: "suffix" }],
   },
   {
     label: "Popular",
     options: [
-      { value: "$", label: "US Dollar ($)", display: "prefix" },
+      { value: "$", label: "Dollar ($)", display: "prefix" },
       { value: "€", label: "Euro (€)", display: "prefix" },
-      { value: "£", label: "British Pound (£)", display: "prefix" },
-      { value: "SEK", label: "Swedish Krona (SEK)", display: "suffix" },
-      { value: "DKK", label: "Danish Krone (DKK)", display: "suffix" },
+      { value: "£", label: "Pound (£)", display: "prefix" },
+      { value: "¥", label: "Yen (¥)", display: "prefix" },
     ],
   },
   {
     label: "Other",
     options: [
-      { value: "CHF", label: "Swiss Franc (CHF)", display: "prefix" },
-      { value: "¥", label: "Japanese Yen (¥)", display: "prefix" },
-      { value: "C$", label: "Canadian Dollar (C$)", display: "prefix" },
-      { value: "A$", label: "Australian Dollar (A$)", display: "prefix" },
-      { value: "zł", label: "Polish Zloty (zł)", display: "suffix" },
-      { value: "Kč", label: "Czech Koruna (Kč)", display: "suffix" },
-      { value: "₹", label: "Indian Rupee (₹)", display: "prefix" },
-      { value: "R$", label: "Brazilian Real (R$)", display: "prefix" },
-      { value: "₽", label: "Russian Ruble (₽)", display: "suffix" },
-      { value: "₩", label: "South Korean Won (₩)", display: "prefix" },
-      { value: "CN¥", label: "Chinese Yuan (CN¥)", display: "prefix" },
-      { value: "MX$", label: "Mexican Peso (MX$)", display: "prefix" },
-      { value: "S$", label: "Singapore Dollar (S$)", display: "prefix" },
-      { value: "HK$", label: "Hong Kong Dollar (HK$)", display: "prefix" },
-      { value: "NZ$", label: "New Zealand Dollar (NZ$)", display: "prefix" },
-      { value: "R", label: "South African Rand (R)", display: "prefix" },
-      { value: "฿", label: "Thai Baht (฿)", display: "prefix" },
-      { value: "ISK", label: "Icelandic Króna (ISK)", display: "suffix" },
+      { value: "C$", label: "C$", display: "prefix" },
+      { value: "A$", label: "A$", display: "prefix" },
+      { value: "S$", label: "S$", display: "prefix" },
+      { value: "R$", label: "R$", display: "prefix" },
+      { value: "zł", label: "Zloty (zł)", display: "suffix" },
+      { value: "Kč", label: "Koruna (Kč)", display: "suffix" },
+      { value: "₹", label: "Rupee (₹)", display: "prefix" },
+      { value: "₽", label: "Ruble (₽)", display: "suffix" },
+      { value: "₩", label: "Won (₩)", display: "prefix" },
+      { value: "R", label: "Rand (R)", display: "prefix" },
+      { value: "฿", label: "Baht (฿)", display: "prefix" },
     ],
   },
 ];
