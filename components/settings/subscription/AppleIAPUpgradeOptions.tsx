@@ -156,6 +156,9 @@ export function AppleIAPUpgradeOptions({
   // Access IAP translations
   const iap = t.pages.settings.subscription.upgradePlans.iap;
 
+  // Retry counter to trigger re-initialization
+  const [retryCount, setRetryCount] = useState(0);
+
   // Initialize IAP and fetch products with timeout
   useEffect(() => {
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
@@ -168,6 +171,11 @@ export function AppleIAPUpgradeOptions({
         return;
       }
 
+      // Reset state for retry
+      setError(null);
+      setErrorKey(null);
+      setProducts([]);
+      setIsInitialized(false);
       setIsInitializing(true);
       currentStep = 'starting';
       setInitStep('starting');
@@ -258,7 +266,12 @@ export function AppleIAPUpgradeOptions({
         clearTimeout(timeoutId);
       }
     };
-  }, [iap]);
+  }, [iap, retryCount]);
+
+  // Retry function
+  const handleRetry = useCallback(() => {
+    setRetryCount((c) => c + 1);
+  }, []);
 
   const handleUpgrade = useCallback(
     async (planName: string, productId: string) => {
@@ -395,7 +408,7 @@ export function AppleIAPUpgradeOptions({
         </p>
       </div>
 
-      {/* Error display with specific styling for "no products" */}
+      {/* Error display with retry button */}
       {error && (
         <div className={cn(
           "p-4 rounded-lg text-sm",
@@ -403,12 +416,22 @@ export function AppleIAPUpgradeOptions({
             ? "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400"
             : "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400"
         )}>
-          {error}
+          <p>{error}</p>
           {errorKey === IAP_ERROR_KEYS.NO_PRODUCTS && (
             <p className="mt-2 text-xs opacity-75">
               {iap.errors.noProductsHint}
             </p>
           )}
+          <Button
+            variant="outline"
+            size="sm"
+            className="mt-3"
+            onClick={handleRetry}
+            disabled={isInitializing}
+          >
+            <RefreshCw className={cn("h-4 w-4 mr-2", isInitializing && "animate-spin")} />
+            {iap.errors.retry}
+          </Button>
         </div>
       )}
 

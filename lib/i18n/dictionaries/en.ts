@@ -1222,6 +1222,7 @@ export const en: Dictionary = {
               noProductsHint: 'If the problem persists, try closing the app completely and reopening it.',
               pluginNotAvailable: 'The purchase plugin is not available. Please reinstall the app.',
               initFailed: 'Failed to initialize purchases. Please restart the app and try again.',
+              retry: 'Try again',
             },
           },
           sessionVerifyFailed: 'Unable to verify your session. Please try logging in again.',
