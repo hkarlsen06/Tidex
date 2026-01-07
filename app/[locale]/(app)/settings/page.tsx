@@ -135,7 +135,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <ScrollablePageWrapper routeKey="settings" pullToRefresh>
+    <ScrollablePageWrapper routeKey="settings">
       <div className="py-8">
         <div>
           <h1 className="text-3xl font-bold mb-2">{t.pages.settings.title}</h1>
