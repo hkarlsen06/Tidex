@@ -305,18 +305,54 @@ export const SharingServiceLive = Layer.effect(
     const subscription = yield* SubscriptionService;
 
     /**
-     * Helper to get subscription tier from price_id and grandfathered status
+     * Helper to get subscription tier from subscription data and grandfathered status
      * Paid tiers (pro/max) take priority, then grandfathered, then free
+     * Supports both Stripe price IDs and Apple product IDs
+     *
+     * @param priceId - Stripe price ID (null for Apple subscriptions)
+     * @param productId - Internal product ID (e.g., "pro_monthly", "max_yearly")
+     * @param beforePaywall - Whether user is grandfathered
      */
-    const getTier = (priceId: string | null | undefined, beforePaywall?: boolean): SubscriptionTier => {
+    const getTier = (
+      priceId: string | null | undefined,
+      productId: string | null | undefined,
+      beforePaywall?: boolean
+    ): SubscriptionTier => {
+      // Stripe price IDs
       const proPriceId = process.env.NEXT_PUBLIC_PRO_PRICE_ID;
       const maxPriceId = process.env.NEXT_PUBLIC_MAX_PRICE_ID;
       const proYearlyId = process.env.NEXT_PUBLIC_PRO_YEARLY_ID;
       const maxYearlyId = process.env.NEXT_PUBLIC_MAX_YEARLY_ID;
 
-      // Paid subscriptions take priority
-      if (priceId === maxPriceId || priceId === maxYearlyId) return "max";
-      if (priceId === proPriceId || priceId === proYearlyId) return "pro";
+      // Apple product IDs (must match App Store Connect configuration)
+      const APPLE_MAX_IDS = ["no.tidex.max", "no.tidex.max.year"];
+      const APPLE_PRO_IDS = ["no.tidex.pro", "no.tidex.pro.year"];
+
+      // Internal product IDs (stored in product_id column for Apple subscriptions)
+      const INTERNAL_MAX_IDS = ["max_monthly", "max_yearly"];
+      const INTERNAL_PRO_IDS = ["pro_monthly", "pro_yearly"];
+
+      // Check for Max tier (Stripe price IDs, Apple product IDs, internal product IDs)
+      if (
+        priceId === maxPriceId ||
+        priceId === maxYearlyId ||
+        APPLE_MAX_IDS.includes(priceId ?? "") ||
+        APPLE_MAX_IDS.includes(productId ?? "") ||
+        INTERNAL_MAX_IDS.includes(productId ?? "")
+      ) {
+        return "max";
+      }
+
+      // Check for Pro tier (Stripe price IDs, Apple product IDs, internal product IDs)
+      if (
+        priceId === proPriceId ||
+        priceId === proYearlyId ||
+        APPLE_PRO_IDS.includes(priceId ?? "") ||
+        APPLE_PRO_IDS.includes(productId ?? "") ||
+        INTERNAL_PRO_IDS.includes(productId ?? "")
+      ) {
+        return "pro";
+      }
 
       // Grandfathered users (before_paywall) get 10 friends
       if (beforePaywall) return "grandfathered";
@@ -677,7 +713,7 @@ export const SharingServiceLive = Layer.effect(
 
           // Check subscription tier limit (including grandfathered status)
           const { subscription: sub, profile } = yield* subscription.getUserSubscriptionData(userId);
-          const tier = getTier(sub?.price_id, profile?.before_paywall);
+          const tier = getTier(sub?.price_id, sub?.product_id, profile?.before_paywall);
           const limit = SHARE_LIMITS[tier];
 
           // Count current shares using query method
@@ -793,7 +829,7 @@ export const SharingServiceLive = Layer.effect(
 
           // Check subscription tier limit (including grandfathered status)
           const { subscription: sub, profile } = yield* subscription.getUserSubscriptionData(userId);
-          const tier = getTier(sub?.price_id, profile?.before_paywall);
+          const tier = getTier(sub?.price_id, sub?.product_id, profile?.before_paywall);
           const limit = SHARE_LIMITS[tier];
 
           // Count current shares
@@ -913,7 +949,7 @@ export const SharingServiceLive = Layer.effect(
 
           // Get subscription tier (including grandfathered status)
           const { subscription: sub, profile } = yield* subscription.getUserSubscriptionData(userId);
-          const tier = getTier(sub?.price_id, profile?.before_paywall);
+          const tier = getTier(sub?.price_id, sub?.product_id, profile?.before_paywall);
           const limit = SHARE_LIMITS[tier];
 
           // Count current shares

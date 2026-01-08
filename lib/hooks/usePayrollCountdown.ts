@@ -96,7 +96,9 @@ function calculatePayrollCountdown(
     const diffMs = payrollDayStart.getTime() - now.getTime();
     const totalHours = Math.floor(diffMs / (1000 * 60 * 60));
     const totalMinutes = Math.floor(diffMs / (1000 * 60));
-    const days = countMidnightCrossings(today, payrollDayStart);
+    // Calculate days and hours from total time remaining (not midnight crossings)
+    // to avoid double-counting when displaying "X days Y hours"
+    const days = Math.floor(totalHours / 24);
     const hours = totalHours % 24;
     const minutes = totalMinutes % 60;
 

@@ -42,8 +42,13 @@ interface GetSubscribersError {
   message: string;
 }
 
+// Apple product IDs (must match App Store Connect configuration)
+const APPLE_MAX_IDS = ["no.tidex.max", "no.tidex.max.year"];
+const APPLE_PRO_IDS = ["no.tidex.pro", "no.tidex.pro.year"];
+
 /**
  * Determine the subscription plan (separate from grandfathered status)
+ * Supports both Stripe price IDs and Apple product IDs
  */
 function determinePlan(
   provider: string | null,
@@ -58,13 +63,32 @@ function determinePlan(
 
   // Active subscriptions
   if (status === "active" || status === "trialing" || status === "grace") {
-    // Check for Max tier
+    // Check for Max tier (Stripe price IDs, internal product IDs, and Apple product IDs)
     const maxPriceId = process.env.NEXT_PUBLIC_MAX_PRICE_ID;
-    if (priceId && maxPriceId && priceId === maxPriceId) {
+    const maxYearlyId = process.env.NEXT_PUBLIC_MAX_YEARLY_ID;
+    if (
+      (priceId && maxPriceId && priceId === maxPriceId) ||
+      (priceId && maxYearlyId && priceId === maxYearlyId) ||
+      productId === "max_monthly" ||
+      productId === "max_yearly" ||
+      APPLE_MAX_IDS.includes(priceId ?? "") ||
+      APPLE_MAX_IDS.includes(productId ?? "")
+    ) {
       return "max";
     }
-    if (productId === "max_monthly" || productId === "max_yearly") {
-      return "max";
+
+    // Check for Pro tier (Stripe price IDs, internal product IDs, and Apple product IDs)
+    const proPriceId = process.env.NEXT_PUBLIC_PRO_PRICE_ID;
+    const proYearlyId = process.env.NEXT_PUBLIC_PRO_YEARLY_ID;
+    if (
+      (priceId && proPriceId && priceId === proPriceId) ||
+      (priceId && proYearlyId && priceId === proYearlyId) ||
+      productId === "pro_monthly" ||
+      productId === "pro_yearly" ||
+      APPLE_PRO_IDS.includes(priceId ?? "") ||
+      APPLE_PRO_IDS.includes(productId ?? "")
+    ) {
+      return "pro";
     }
 
     // Default to Pro for other active subscriptions
