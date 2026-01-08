@@ -65,7 +65,7 @@ class LocaleAwareBridgeViewController: CAPBridgeViewController {
 
         // Determine if we should use secure cookies
         // Local development uses HTTP, production uses HTTPS
-        let isSecure = domain != "localhost" && !domain.starts(with: "192.168.")
+        let isSecure = !isLocalNetworkHost(domain)
 
         var cookieProperties: [HTTPCookiePropertyKey: Any] = [
             .domain: domain,
@@ -80,6 +80,35 @@ class LocaleAwareBridgeViewController: CAPBridgeViewController {
         }
 
         return HTTPCookie(properties: cookieProperties)
+    }
+
+    private static func isLocalNetworkHost(_ domain: String) -> Bool {
+        let lowercased = domain.lowercased()
+        if lowercased == "localhost" || lowercased == "127.0.0.1" {
+            return true
+        }
+
+        let parts = lowercased.split(separator: ".").compactMap { Int($0) }
+        guard parts.count == 4 else {
+            return false
+        }
+
+        // 10.0.0.0/8
+        if parts[0] == 10 {
+            return true
+        }
+
+        // 172.16.0.0/12
+        if parts[0] == 172, (16...31).contains(parts[1]) {
+            return true
+        }
+
+        // 192.168.0.0/16
+        if parts[0] == 192, parts[1] == 168 {
+            return true
+        }
+
+        return false
     }
 
     /// Override webViewConfiguration to set up the cookie before the WebView is created.

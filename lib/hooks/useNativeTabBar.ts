@@ -31,6 +31,8 @@ export function useNativeTabBar() {
   const reselectedListenerRef = useRef<PluginListenerHandle | null>(null);
   const isAvailableRef = useRef<boolean | null>(null); // Cache availability
   const lastSelectedIndexRef = useRef<number>(0);
+  const availabilityTimeoutRef = useRef<number | null>(null);
+  const availabilityAttemptsRef = useRef(0);
   // Ref to track if listeners are set up (stable across re-renders)
   const listenersSetupRef = useRef(false);
   // Refs for callbacks to avoid effect re-runs
@@ -59,18 +61,40 @@ export function useNativeTabBar() {
 
   // Initialize plugin listeners (runs once)
   useEffect(() => {
-    if (!isIOSPlatform()) return;
+    if (!isIOSPlatform() && !document.documentElement.classList.contains("native-ios")) {
+      return;
+    }
     if (listenersSetupRef.current) return; // Already initialized
 
     let mounted = true;
+    const maxAvailabilityAttempts = 20;
+    const availabilityRetryDelayMs = 100;
+
+    const scheduleRetry = () => {
+      if (!mounted) return;
+      if (availabilityAttemptsRef.current >= maxAvailabilityAttempts) return;
+      availabilityAttemptsRef.current += 1;
+      availabilityTimeoutRef.current = window.setTimeout(
+        initialize,
+        availabilityRetryDelayMs
+      );
+    };
 
     const initialize = async () => {
+      if (!isIOSPlatform()) {
+        scheduleRetry();
+        return;
+      }
+
       try {
         const { available } = await NativeTabBar.isAvailable();
         if (!mounted) return;
 
         isAvailableRef.current = available;
-        if (!available) return;
+        if (!available) {
+          scheduleRetry();
+          return;
+        }
 
         // Listen for tab selections from native
         // Use ref wrapper so we always call the latest callback
@@ -86,9 +110,11 @@ export function useNativeTabBar() {
         );
 
         listenersSetupRef.current = true;
+        availabilityAttemptsRef.current = 0;
 
       } catch (error) {
         console.error("[NativeTabBar] Init failed:", error);
+        scheduleRetry();
       }
     };
 
@@ -96,6 +122,10 @@ export function useNativeTabBar() {
 
     return () => {
       mounted = false;
+      if (availabilityTimeoutRef.current) {
+        window.clearTimeout(availabilityTimeoutRef.current);
+        availabilityTimeoutRef.current = null;
+      }
       listenerRef.current?.remove();
       listenerRef.current = null;
       reselectedListenerRef.current?.remove();

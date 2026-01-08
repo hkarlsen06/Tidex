@@ -50,7 +50,7 @@ import { TodayPlaceholderCard } from "./TodayPlaceholderCard";
 import { ScrollablePageWrapper } from "@/components/app/ScrollablePageWrapper";
 import type { PayoutTaxSettings } from "@/data-access/shifts";
 import { buildExcludedShiftIds } from "@/lib/shifts/conflictExclusion";
-import { celebrationHaptic } from "@/lib/capacitor/haptics";
+import { celebrationHaptic, impactHaptic } from "@/lib/capacitor/haptics";
 
 // Lazy load the calendar to reduce initial bundle size (~40KB savings)
 const MonthlyEarningsCalendar = dynamic(
@@ -276,9 +276,15 @@ function ShiftItemWithConnector({
   const isNextUpcomingShift = nextUpcomingShift?.id === shift.id;
   const hasConnector = conflictConnectorSet.has(shift.id);
 
-  // Report visibility changes to parent
+  // Report visibility changes to parent and trigger haptic on scroll into view
+  const wasInViewRef = useRef(false);
   useEffect(() => {
     onVisibilityChange(shift.id, inView);
+    // Trigger light haptic when card scrolls into view (not on initial render)
+    if (inView && !wasInViewRef.current) {
+      impactHaptic("light");
+    }
+    wasInViewRef.current = inView;
   }, [shift.id, inView, onVisibilityChange]);
 
   return (
