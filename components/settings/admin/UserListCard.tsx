@@ -325,8 +325,8 @@ export function UserListCard({ refreshTrigger }: Props) {
         error: null,
       });
 
-      // Navigate to home as the impersonated user
-      router.push("/");
+      // Navigate to dashboard as the impersonated user
+      router.push("/dashboard");
       router.refresh();
     } catch {
       setImpersonateDialog((prev) => ({

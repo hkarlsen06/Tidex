@@ -4,6 +4,7 @@ import { useEffect, useCallback, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { isIOSPlatform } from "@/lib/capacitor/platform";
 import { useTranslations } from "@/lib/i18n/client";
+import { useScrollContext } from "@/lib/contexts/ScrollContext";
 import type { PluginListenerHandle } from "@capacitor/core";
 // Import at module scope - no dynamic imports on route changes
 import { NativeTabBar, getTabIndexFromPath } from "@/lib/capacitor/native-tab-bar";
@@ -12,17 +13,27 @@ import { NativeTabBar, getTabIndexFromPath } from "@/lib/capacitor/native-tab-ba
  * Hook to synchronize native iOS tab bar with web navigation.
  *
  * - Native tab taps trigger router.push() (SPA navigation, no reload)
+ * - Re-tapping the current tab scrolls to top
  * - Web route changes update native tab selection
- * - Non-tab routes keep last selection (don't clear)
+ * - Non-tab routes clear selection (no tab highlighted)
  */
 export function useNativeTabBar() {
   const pathname = usePathname();
   const router = useRouter();
   const { locale } = useTranslations();
+  const { scrollToTop } = useScrollContext();
   const listenerRef = useRef<PluginListenerHandle | null>(null);
+  const reselectedListenerRef = useRef<PluginListenerHandle | null>(null);
   const isAvailableRef = useRef<boolean | null>(null); // Cache availability
   const lastSelectedIndexRef = useRef<number>(0);
-  const pathnameRef = useRef(pathname); // Capture current pathname for initial setup
+  // Ref to track if listeners are set up (stable across re-renders)
+  const listenersSetupRef = useRef(false);
+  // Refs for callbacks to avoid effect re-runs
+  const handleTabSelectedRef = useRef<(event: { index: number; route: string }) => void>();
+  const scrollToTopRef = useRef<() => void>();
+
+  // Keep refs updated with latest callbacks
+  scrollToTopRef.current = scrollToTop;
 
   // Handle native tab selection - use SPA router, not WebView reload
   const handleTabSelected = useCallback(
@@ -38,9 +49,13 @@ export function useNativeTabBar() {
     [locale, router]
   );
 
-  // Initialize plugin listener (runs once)
+  // Keep ref updated
+  handleTabSelectedRef.current = handleTabSelected;
+
+  // Initialize plugin listeners (runs once)
   useEffect(() => {
     if (!isIOSPlatform()) return;
+    if (listenersSetupRef.current) return; // Already initialized
 
     let mounted = true;
 
@@ -53,16 +68,19 @@ export function useNativeTabBar() {
         if (!available) return;
 
         // Listen for tab selections from native
+        // Use ref wrapper so we always call the latest callback
         listenerRef.current = await NativeTabBar.addListener(
           "tabSelected",
-          handleTabSelected
+          (event) => handleTabSelectedRef.current?.(event)
         );
 
-        // Set initial tab based on current route
-        // Default to Home (0) if on non-tab route at cold start
-        const initialIndex = getTabIndexFromPath(pathnameRef.current) ?? 0;
-        await NativeTabBar.setSelectedTab({ index: initialIndex });
-        lastSelectedIndexRef.current = initialIndex;
+        // Listen for tab re-selections (same tab tapped again) - scroll to top
+        reselectedListenerRef.current = await NativeTabBar.addListener(
+          "tabReselected",
+          () => scrollToTopRef.current?.()
+        );
+
+        listenersSetupRef.current = true;
 
       } catch (error) {
         console.error("[NativeTabBar] Init failed:", error);
@@ -75,8 +93,11 @@ export function useNativeTabBar() {
       mounted = false;
       listenerRef.current?.remove();
       listenerRef.current = null;
+      reselectedListenerRef.current?.remove();
+      reselectedListenerRef.current = null;
+      listenersSetupRef.current = false;
     };
-  }, [handleTabSelected]); // Only depends on handleTabSelected, not pathname
+  }, []); // Empty deps - only run once
 
   // Sync tab selection when web route changes
   useEffect(() => {

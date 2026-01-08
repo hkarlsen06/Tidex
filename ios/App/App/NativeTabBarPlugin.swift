@@ -79,4 +79,12 @@ public class NativeTabBarPlugin: CAPPlugin, CAPBridgedPlugin {
             "route": route
         ])
     }
+
+    // Called from TidexContainerViewController when same tab is re-tapped
+    func handleTabReselection(index: Int, route: String) {
+        notifyListeners("tabReselected", data: [
+            "index": index,
+            "route": route
+        ])
+    }
 }

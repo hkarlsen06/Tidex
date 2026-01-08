@@ -17,11 +17,11 @@ import { getAppDictionary } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/i18n/config";
 import { I18nProvider } from "@/components/providers/I18nProvider";
 
-interface HomeProps {
+interface DashboardProps {
   params: Promise<{ locale: string }>;
 }
 
-export async function generateMetadata({ params }: HomeProps) {
+export async function generateMetadata({ params }: DashboardProps) {
   const { locale } = await params;
   const t = getTranslations(locale as Locale, ['pages.home']);
 
@@ -30,7 +30,7 @@ export async function generateMetadata({ params }: HomeProps) {
   };
 }
 
-export default async function Home({ params }: HomeProps) {
+export default async function DashboardPage({ params }: DashboardProps) {
   await connection(); // Opt out of prerendering for dynamic authenticated pages
   const { locale: _locale } = await params;
   const dictionary = getAppDictionary(_locale as Locale, ['pages.home', 'pages.shifts']);

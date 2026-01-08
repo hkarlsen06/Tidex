@@ -196,7 +196,7 @@ export async function POST(request: NextRequest) {
       email: targetValidation.email!,
       options: {
         // Don't send the email, we just want the token
-        redirectTo: `${ENV.URL}/`,
+        redirectTo: `${ENV.URL}/dashboard`,
       },
     });
 

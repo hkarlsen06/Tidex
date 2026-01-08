@@ -34,7 +34,7 @@ export function SubscriptionSuccessButtons({ dict, locale }: SubscriptionSuccess
   return (
     <div className="flex gap-4 w-full">
       <Button asChild className="flex-1">
-        <Link href={`/${locale}/`} onClick={handleClick(`/${locale}/`)}>{dict.goToDashboard}</Link>
+        <Link href={`/${locale}/dashboard`} onClick={handleClick(`/${locale}/dashboard`)}>{dict.goToDashboard}</Link>
       </Button>
       <Button asChild variant="outline" className="flex-1">
         <Link href={`/${locale}/settings/subscription`} onClick={handleClick(`/${locale}/settings/subscription`)}>{dict.viewSubscription}</Link>

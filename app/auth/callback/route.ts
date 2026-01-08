@@ -7,14 +7,14 @@ function resolveRedirectUrl(requestUrl: URL): URL {
   const nextParam = requestUrl.searchParams.get("next");
 
   if (!nextParam) {
-    return new URL("/", requestUrl.origin);
+    return new URL("/dashboard", requestUrl.origin);
   }
 
   try {
     const candidate = new URL(nextParam, requestUrl.origin);
 
     if (candidate.origin !== requestUrl.origin) {
-      return new URL("/", requestUrl.origin);
+      return new URL("/dashboard", requestUrl.origin);
     }
 
     return candidate;
@@ -23,7 +23,7 @@ function resolveRedirectUrl(requestUrl: URL): URL {
       error,
       value: nextParam,
     });
-    return new URL("/", requestUrl.origin);
+    return new URL("/dashboard", requestUrl.origin);
   }
 }
 
