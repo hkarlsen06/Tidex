@@ -18,7 +18,9 @@ import type {
   ShiftWithComputations,
   UserSettings,
   SupplementRule,
+  WageSnapshot,
 } from "@/lib/payroll";
+import type { PayoutTaxSettings } from "@/data-access/shifts";
 
 // Dynamically import ShiftsView to avoid Turbopack HMR issues with server action imports
 // ShiftsView imports server actions (deleteShift, updateShift, etc.) that cause HMR errors
@@ -43,6 +45,10 @@ type SharingPageContentProps = {
   presetRules: SupplementRule[];
   /** Whether the owner allows this viewer to see earnings data */
   showEarnings: boolean;
+  /** Payout month tax settings for calculating after-tax monthly totals */
+  payoutTaxSettings?: PayoutTaxSettings;
+  /** Owner's wage snapshots for computing payoutTaxSettings per month */
+  wageSnapshots?: WageSnapshot[];
   /** Deep link: dates to highlight in calendar (from push notification) */
   highlightDates?: Set<string> | null;
   /** User-specific cache key for browser HTTP cache isolation */
@@ -70,6 +76,8 @@ export function SharingPageContent({
   sharedSettings,
   presetRules,
   showEarnings,
+  payoutTaxSettings,
+  wageSnapshots,
   highlightDates,
   cacheKey,
 }: SharingPageContentProps) {
@@ -106,6 +114,8 @@ export function SharingPageContent({
         sharedOwnerId={selectedOwnerId}
         ownerName={selectedSharer.firstName ?? selectedSharer.email ?? "Bruker"}
         showEarnings={showEarnings}
+        payoutTaxSettings={payoutTaxSettings}
+        wageSnapshots={wageSnapshots}
         highlightDates={highlightDates}
         cacheKey={cacheKey}
         headerSlot={

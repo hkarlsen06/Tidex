@@ -16,7 +16,7 @@ import {
 } from "@/components/app/Card";
 import { CalendarSkeleton } from "@/components/app/skeletons";
 import { Button } from "@/components/app/Button";
-import { ShiftWithComputations, UserSettings, SupplementRule, computeShift } from "@/lib/payroll";
+import { ShiftWithComputations, UserSettings, SupplementRule, WageSnapshot, computeShift } from "@/lib/payroll";
 import ShiftDetails, { type OverlappingShiftInfo } from "@/components/shifts/ShiftDetails";
 import { deleteShift } from "@/app/[locale]/(app)/shifts/_actions/deleteShift";
 import { deleteShifts } from "@/app/[locale]/(app)/shifts/_actions/deleteShifts";
@@ -69,6 +69,58 @@ export type WeekGroup = {
   shifts: ShiftWithComputations[];
 };
 
+/**
+ * Get the applicable wage snapshot for a given date from a list of snapshots.
+ * Snapshots must be ordered by from_date DESC (newest first).
+ */
+function getSnapshotForDate(snapshots: WageSnapshot[], date: string): WageSnapshot | null {
+  // Find the first dated snapshot where from_date <= date
+  const applicableSnapshot = snapshots.find(
+    (s) => s.from_date !== null && s.from_date <= date
+  );
+  if (applicableSnapshot) return applicableSnapshot;
+
+  // Fall back to baseline snapshot (from_date = null)
+  return snapshots.find((s) => s.from_date === null) ?? null;
+}
+
+/**
+ * Calculate payout date for earnings in a given month.
+ * Payout is in the next month on the payroll day.
+ */
+function calculatePayoutDate(
+  earningsYear: number,
+  earningsMonth: number, // 1-12
+  payrollDay: number
+): string {
+  // Payout happens in the following month
+  let payoutMonth = earningsMonth + 1;
+  let payoutYear = earningsYear;
+  if (payoutMonth > 12) {
+    payoutMonth = 1;
+    payoutYear += 1;
+  }
+  // Clamp payroll day to valid range for the payout month
+  const daysInPayoutMonth = new Date(payoutYear, payoutMonth, 0).getDate();
+  const clampedDay = Math.min(payrollDay, daysInPayoutMonth);
+
+  return `${payoutYear}-${String(payoutMonth).padStart(2, "0")}-${String(clampedDay).padStart(2, "0")}`;
+}
+
+/**
+ * Get tax settings for a specific payout date from wage snapshots.
+ */
+function getTaxSettingsForPayoutDate(
+  snapshots: WageSnapshot[],
+  payoutDate: string
+): PayoutTaxSettings {
+  const snapshot = getSnapshotForDate(snapshots, payoutDate);
+  if (!snapshot) return null;
+  return {
+    enabled: snapshot.tax_enabled,
+    percentage: snapshot.tax_percentage,
+  };
+}
 
 // Scroll-triggered animation for shift cards on mobile (slide in from left)
 const scrollCardVariants = {
@@ -1032,6 +1084,8 @@ type ShiftsViewProps = {
   showEarnings?: boolean;
   /** Payout month tax settings for calculating after-tax monthly totals */
   payoutTaxSettings?: PayoutTaxSettings;
+  /** Owner's wage snapshots for computing payoutTaxSettings per month (sharing view only) */
+  wageSnapshots?: WageSnapshot[];
   /** Optional external month context to isolate state from global MonthProvider */
   monthContext?: MonthContextOverride;
   /** User-specific cache key to ensure browser HTTP cache is per-user */
@@ -1040,7 +1094,7 @@ type ShiftsViewProps = {
   highlightDates?: Set<string> | null;
 };
 
-export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", userSettings, presetRules, readOnly = false, ownerName: _ownerName, headerSlot, sharedOwnerId, showEarnings = true, payoutTaxSettings, monthContext, cacheKey, highlightDates }: ShiftsViewProps) {
+export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", userSettings, presetRules, readOnly = false, ownerName: _ownerName, headerSlot, sharedOwnerId, showEarnings = true, payoutTaxSettings, wageSnapshots, monthContext, cacheKey, highlightDates }: ShiftsViewProps) {
   const { t, locale } = useTranslations();
   const formatCurrency = useFormatCurrency();
   const {
@@ -1352,11 +1406,81 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
   );
 
   // Get payout tax settings for the currently selected month
-  // Falls back to SSR-provided settings if not yet fetched for this month
+  // When wageSnapshots is provided (shared shifts), compute locally without fetching
+  // Otherwise fall back to cached/SSR-provided settings
   const currentPayoutTaxSettings = useMemo(() => {
-    const key = `${selectedMonth.getFullYear()}-${String(selectedMonth.getMonth() + 1).padStart(2, '0')}`;
+    const year = selectedMonth.getFullYear();
+    const month = selectedMonth.getMonth() + 1; // 1-12
+
+    // If we have wage snapshots, compute tax settings locally (no API fetch needed)
+    if (wageSnapshots && wageSnapshots.length > 0) {
+      const payrollDay = userSettings.payroll_day ?? 15;
+      const payoutDate = calculatePayoutDate(year, month, payrollDay);
+      return getTaxSettingsForPayoutDate(wageSnapshots, payoutDate);
+    }
+
+    // Fall back to cached or SSR-provided settings
+    const key = `${year}-${String(month).padStart(2, '0')}`;
     return payoutTaxByMonth.get(key) ?? payoutTaxSettings ?? null;
-  }, [selectedMonth, payoutTaxByMonth, payoutTaxSettings]);
+  }, [selectedMonth, payoutTaxByMonth, payoutTaxSettings, wageSnapshots, userSettings.payroll_day]);
+
+  // Track in-flight tax settings requests to prevent duplicates
+  const taxSettingsInflightRef = useRef<Set<string>>(new Set());
+
+  // Fetch payoutTaxSettings for a specific month when not cached
+  // This is called when navigating to months that have shifts loaded from SSR
+  // but don't have the correct tax settings (SSR only loads tax for current month)
+  // NOTE: When wageSnapshots is provided, tax settings are computed locally so no fetch is needed
+  useEffect(() => {
+    // Skip fetching entirely if we have wage snapshots - tax settings are computed locally
+    if (wageSnapshots && wageSnapshots.length > 0) {
+      return;
+    }
+
+    const year = selectedMonth.getFullYear();
+    const month = selectedMonth.getMonth() + 1;
+    const key = getMonthKey(year, month);
+
+    // Skip if we already have tax settings for this month
+    if (payoutTaxByMonth.has(key)) {
+      return;
+    }
+
+    // Skip if already fetching
+    if (taxSettingsInflightRef.current.has(key)) {
+      return;
+    }
+
+    // In readOnly mode, only fetch if we have a sharedOwnerId
+    if (readOnly && !sharedOwnerId) {
+      return;
+    }
+
+    // Mark as in-flight
+    taxSettingsInflightRef.current.add(key);
+
+    const fetchTaxSettings = async () => {
+      try {
+        const url = readOnly
+          ? `/api/sharing?ownerId=${sharedOwnerId}&year=${year}&month=${month}&_ck=${cacheKey || ''}&_=${cacheBuster}`
+          : `/api/shifts?year=${year}&month=${month}&_ck=${cacheKey || ''}&_=${cacheBuster}`;
+
+        const response = await fetch(url);
+        const data = await response.json();
+
+        // Store payout tax settings for this month
+        if (data.payoutTaxSettings !== undefined) {
+          setPayoutTaxByMonth(prev => new Map(prev).set(key, data.payoutTaxSettings));
+        }
+      } catch (err) {
+        console.error(`Failed to fetch tax settings for ${key}:`, err);
+      } finally {
+        taxSettingsInflightRef.current.delete(key);
+      }
+    };
+
+    fetchTaxSettings();
+  }, [selectedMonth, payoutTaxByMonth, getMonthKey, readOnly, sharedOwnerId, cacheKey, cacheBuster, wageSnapshots]);
 
   // Reset all client-side state when new data arrives from server (after router.refresh())
   // This includes: optimistic updates, client-fetched shifts, and loaded months tracking

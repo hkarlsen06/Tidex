@@ -25,7 +25,9 @@ import { SharingLive, ShiftsLive } from "@/lib/layers/app";
 import { ShiftsService } from "@/lib/services/shifts";
 import { logger } from "@/lib/logger";
 import { verifySession } from "@/data-access/auth";
-import type { ShiftWithComputations, UserSettings } from "@/lib/payroll";
+import type { ShiftWithComputations, UserSettings, WageSnapshot } from "@/lib/payroll";
+import type { PayoutTaxSettings } from "@/lib/services/shifts";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 // Re-export types for backward compatibility
 export type { SharedUser, ShareRecipient };
@@ -200,13 +202,15 @@ export type SharedShiftsAggregates = {
 async function getSharedUserShiftsInternal(
   viewerId: string,
   ownerId: string,
-  options: { startDate?: string; endDate?: string; limit?: number } = {}
+  options: { startDate?: string; endDate?: string; limit?: number; year?: number; month?: number } = {}
 ): Promise<{
   shifts: ShiftWithComputations[];
   defaultView: string;
   settings: UserSettings;
   aggregates: SharedShiftsAggregates;
   showEarnings: boolean;
+  payoutTaxSettings: PayoutTaxSettings;
+  wageSnapshots: WageSnapshot[];
 }> {
   "use cache: private";
   cacheTag(`user-${ownerId}`, "shared-shifts");
@@ -229,6 +233,8 @@ async function getSharedUserShiftsInternal(
       settings: {},
       aggregates: { totalHours: 0, totalEarnings: null },
       showEarnings: false,
+      payoutTaxSettings: null,
+      wageSnapshots: [],
     };
   }
 
@@ -243,6 +249,8 @@ async function getSharedUserShiftsInternal(
       startDate: options.startDate,
       endDate: options.endDate,
       limit: options.limit,
+      year: options.year,
+      month: options.month,
       skipAuthCheck: true, // Access already verified via getShareSettings
     });
     return data;
@@ -250,6 +258,19 @@ async function getSharedUserShiftsInternal(
 
   try {
     const result = await Effect.runPromise(program);
+
+    // Fetch owner's wage snapshots for client-side tax calculation
+    // This allows computing payoutTaxSettings for any month without additional API calls
+    let wageSnapshots: WageSnapshot[] = [];
+    if (showEarnings) {
+      const supabase = await createSupabaseServerClient();
+      const { data: snapshots } = await supabase
+        .from("wage_snapshots")
+        .select("*")
+        .eq("user_id", ownerId)
+        .order("from_date", { ascending: false, nullsFirst: false });
+      wageSnapshots = (snapshots ?? []) as WageSnapshot[];
+    }
 
     // SECURITY: If showEarnings is false, strip all earnings data server-side
     // This is the security enforcement point - data is filtered before reaching the client
@@ -266,6 +287,8 @@ async function getSharedUserShiftsInternal(
           totalEarnings: null, // Hide total earnings
         },
         showEarnings: false,
+        payoutTaxSettings: null, // Hide tax settings when earnings hidden
+        wageSnapshots: [], // Hide snapshots when earnings hidden
       };
     }
 
@@ -275,6 +298,8 @@ async function getSharedUserShiftsInternal(
       settings: result.settings,
       aggregates: result.aggregates,
       showEarnings: true,
+      payoutTaxSettings: result.payoutTaxSettings,
+      wageSnapshots,
     };
   } catch (error: any) {
     logger.error("Failed to fetch shared user shifts:", error);
@@ -284,6 +309,8 @@ async function getSharedUserShiftsInternal(
       settings: {},
       aggregates: { totalHours: 0, totalEarnings: null },
       showEarnings: false,
+      payoutTaxSettings: null,
+      wageSnapshots: [],
     };
   }
 }
@@ -299,13 +326,15 @@ async function getSharedUserShiftsInternal(
 export const getSharedUserShifts = cache(
   async (
     ownerId: string,
-    options: { startDate?: string; endDate?: string; limit?: number } = {}
+    options: { startDate?: string; endDate?: string; limit?: number; year?: number; month?: number } = {}
   ): Promise<{
     shifts: ShiftWithComputations[];
     defaultView: string;
     settings: UserSettings;
     aggregates: SharedShiftsAggregates;
     showEarnings: boolean;
+    payoutTaxSettings: PayoutTaxSettings;
+    wageSnapshots: WageSnapshot[];
   }> => {
     const { user } = await verifySession();
 
