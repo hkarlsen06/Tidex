@@ -12,7 +12,6 @@ import { useSharingViewState } from "@/lib/hooks/useSharingViewState";
 import type {
   SharedUser,
   Friend,
-  SharedShiftsAggregates,
 } from "@/data-access/sharing";
 import type {
   ShiftWithComputations,
@@ -41,7 +40,6 @@ type SharingPageContentProps = {
   sharedShifts: ShiftWithComputations[];
   /** Sharer's settings - includes currency for display */
   sharedSettings: UserSettings & { currency?: string | null };
-  sharedAggregates: SharedShiftsAggregates | null;
   presetRules: SupplementRule[];
   /** Whether the owner allows this viewer to see earnings data */
   showEarnings: boolean;

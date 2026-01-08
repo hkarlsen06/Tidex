@@ -153,7 +153,6 @@ export default async function SharingPage({ params, searchParams }: SharingPageP
         selectedSharer={selectedSharer}
         sharedShifts={sharedData.shifts}
         sharedSettings={sharedData.settings ?? {}}
-        sharedAggregates={sharedData.aggregates}
         presetRules={PRESET_RULES}
         showEarnings={sharedData.showEarnings}
         payoutTaxSettings={sharedData.payoutTaxSettings}
