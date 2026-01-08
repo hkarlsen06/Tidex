@@ -58,6 +58,7 @@ type DayButtonProps = {
   taxSettings?: TaxSettings;
   highlightDates?: Set<string> | null;
   animateCellValues?: boolean;
+  onTouchSelectDay?: (isoDate: ISODate) => void;
   [key: string]: any;
 };
 
@@ -108,6 +109,7 @@ const DayButton = React.memo(function DayButton({
   taxSettings,
   highlightDates,
   animateCellValues,
+  onTouchSelectDay,
   ...buttonProps
 }: DayButtonProps) {
   const date: Date = day.date;
@@ -127,10 +129,49 @@ const DayButton = React.memo(function DayButton({
   const week = isMonday ? getIsoWeek(date) : null;
   const netEarnings = getNetEarningsForDate(earnings, date, taxSettings);
   const isHighlighted = highlightDates?.has(iso) ?? false;
+  const touchStartRef = React.useRef<{ x: number; y: number } | null>(null);
+  const suppressClickRef = React.useRef(false);
 
   return (
     <button
       {...buttonProps}
+      onTouchStart={(event) => {
+        buttonProps.onTouchStart?.(event);
+        if (event.touches.length !== 1) return;
+        const touch = event.touches[0];
+        touchStartRef.current = { x: touch.clientX, y: touch.clientY };
+      }}
+      onTouchEnd={(event) => {
+        buttonProps.onTouchEnd?.(event);
+        const start = touchStartRef.current;
+        touchStartRef.current = null;
+        if (!start || !onTouchSelectDay || event.changedTouches.length !== 1) return;
+        const touch = event.changedTouches[0];
+        const deltaX = Math.abs(touch.clientX - start.x);
+        const deltaY = Math.abs(touch.clientY - start.y);
+        const isTapLike = deltaX < 12 && deltaY < 12;
+        if (!isTapLike) return;
+        const endTarget = document.elementFromPoint(touch.clientX, touch.clientY);
+        const endButton =
+          endTarget instanceof HTMLElement
+            ? endTarget.closest("button[data-day]")
+            : null;
+        const endDay = endButton?.getAttribute("data-day");
+        if (endDay) {
+          suppressClickRef.current = true;
+          event.preventDefault();
+          onTouchSelectDay(endDay as ISODate);
+        }
+      }}
+      onClick={(event) => {
+        if (suppressClickRef.current) {
+          suppressClickRef.current = false;
+          event.preventDefault();
+          event.stopPropagation();
+          return;
+        }
+        buttonProps.onClick?.(event);
+      }}
       data-day={iso}
       aria-pressed={isSelected}
       className={cn(
@@ -295,6 +336,28 @@ export function ShiftsCalendar({
     return names[day];
   }, [locale]);
 
+  const handleDayClick = React.useCallback(
+    (date: Date) => {
+      if (onDayClick) {
+        const iso = toISODate(date);
+        const hasShifts = !!(earningsByDate[iso] || hoursByDate[iso]);
+        onDayClick(iso, hasShifts);
+      }
+    },
+    [onDayClick, earningsByDate, hoursByDate]
+  );
+
+  const handleTouchSelectDay = React.useCallback(
+    (iso: ISODate) => {
+      if (!onDayClick) return;
+      const hasShifts = !!(earningsByDate[iso] || hoursByDate[iso]);
+      onDayClick(iso, hasShifts);
+    },
+    [onDayClick, earningsByDate, hoursByDate]
+  );
+
+  const touchSelectHandler = onDayClick ? handleTouchSelectDay : undefined;
+
   const CustomDayButton = React.useCallback(
     (props: any) => (
       <DayButton
@@ -311,20 +374,10 @@ export function ShiftsCalendar({
         taxSettings={taxSettings}
         highlightDates={highlightDates}
         animateCellValues={animateCellValues}
+        onTouchSelectDay={touchSelectHandler}
       />
     ),
-    [mode, earningsByDate, hoursByDate, employeesByDate, overlappingDates, weekNumberPosition, selectedDate, selectedDates, newlyAddedDates, taxSettings, highlightDates, animateCellValues]
-  );
-
-  const handleDayClick = React.useCallback(
-    (date: Date) => {
-      if (onDayClick) {
-        const iso = toISODate(date);
-        const hasShifts = !!(earningsByDate[iso] || hoursByDate[iso]);
-        onDayClick(iso, hasShifts);
-      }
-    },
-    [onDayClick, earningsByDate, hoursByDate]
+    [mode, earningsByDate, hoursByDate, employeesByDate, overlappingDates, weekNumberPosition, selectedDate, selectedDates, newlyAddedDates, taxSettings, highlightDates, animateCellValues, touchSelectHandler]
   );
 
   // Create a stable key from month to force remount when month changes
