@@ -80,9 +80,42 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             __html: `
               try {
                 // Detect if running in iOS native app (Capacitor WebView)
-                // iOS WKWebView doesn't have Safari in user agent when embedded
-                var ua = navigator.userAgent || '';
-                var isIOSNative = /iPhone|iPad|iPod/.test(ua) && !/Safari/.test(ua);
+                // Primary: Check for Capacitor bridge (most reliable)
+                // Fallback: Check user agent for iOS without Safari
+                function checkNativeIOS() {
+                  // Check Capacitor bridge first (injected by native shell)
+                  if (window.Capacitor && window.Capacitor.getPlatform) {
+                    return window.Capacitor.getPlatform() === 'ios';
+                  }
+                  // Fallback: iOS device without Safari in UA (WebView)
+                  var ua = navigator.userAgent || '';
+                  return /iPhone|iPad|iPod/.test(ua) && !/Safari/.test(ua);
+                }
+
+                var isIOSNative = checkNativeIOS();
+
+                // Mark native iOS immediately so CSS can hide web NavBar on first paint
+                if (isIOSNative) {
+                  document.documentElement.classList.add('native-ios');
+                }
+
+                // If Capacitor bridge wasn't ready, check again shortly
+                // This handles race condition where bridge loads after this script
+                if (!window.Capacitor) {
+                  var checkCount = 0;
+                  var maxChecks = 20; // ~200ms max wait
+                  function recheckCapacitor() {
+                    checkCount++;
+                    if (window.Capacitor && window.Capacitor.getPlatform) {
+                      if (window.Capacitor.getPlatform() === 'ios') {
+                        document.documentElement.classList.add('native-ios');
+                      }
+                    } else if (checkCount < maxChecks) {
+                      setTimeout(recheckCapacitor, 10);
+                    }
+                  }
+                  setTimeout(recheckCapacitor, 10);
+                }
 
                 // Initialize theme from localStorage or system preference
                 // ThemeProvider will sync with DB preference on authenticated pages

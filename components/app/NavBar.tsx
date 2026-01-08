@@ -20,6 +20,7 @@ import {
   useSharingViewState,
   clearSharingViewState,
 } from "@/lib/hooks/useSharingViewState";
+import { useHasNativeTabBar } from "@/lib/contexts/NativeTabBarContext";
 
 type LucideIcon = typeof Gauge;
 type NavItem = {
@@ -89,6 +90,7 @@ export function NavBar() {
   const { scrollDirection } = useScrollContext();
   const addShiftForm = useAddShiftFormSafe();
   const sharers = useSharers();
+  const isNativeIOS = useHasNativeTabBar();
 
   // Sort sharers: prioritize self-picked profile pictures, then OAuth avatars, then no avatar
   const sortedSharers = [...sharers].sort((a, b) => {
@@ -131,6 +133,11 @@ export function NavBar() {
   };
 
   if (isOnboardingPath(pathname) || isOnboardingPath(pendingPath)) {
+    return null;
+  }
+
+  // Hide web NavBar on native iOS (native UITabBar handles navigation)
+  if (isNativeIOS) {
     return null;
   }
 
@@ -202,6 +209,7 @@ export function NavBar() {
 
   return (
     <nav
+      data-web-navbar
       className={`fixed left-0 right-0 z-40 bottom-0 transition-transform duration-300 md:hidden ${isHidden ? "translate-y-full" : "translate-y-0"
         }`}
     >

@@ -16,7 +16,9 @@
 		504EC30F1FED79650016851F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 504EC30E1FED79650016851F /* Assets.xcassets */; };
 		50B271D11FEDC1A000F3C39B /* public in Resources */ = {isa = PBXBuildFile; fileRef = 50B271D01FEDC1A000F3C39B /* public */; };
 		LAUNCH0012F0500000000001 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = LAUNCH0012F0500000000002 /* LaunchScreen.storyboard */; };
+		NATTAB0012F0800000000001 /* NativeTabBarPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = NATTAB0012F0800000000002 /* NativeTabBarPlugin.swift */; };
 		SCENE0012F0700000000001 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = SCENE0012F0700000000002 /* SceneDelegate.swift */; };
+		TIDCON0012F0800000000001 /* TidexContainerViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = TIDCON0012F0800000000002 /* TidexContainerViewController.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -32,7 +34,9 @@
 		50B271D01FEDC1A000F3C39B /* public */ = {isa = PBXFileReference; lastKnownFileType = folder; path = public; sourceTree = "<group>"; };
 		958DCC722DB07C7200EA8C5F /* debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = debug.xcconfig; path = ../debug.xcconfig; sourceTree = SOURCE_ROOT; };
 		LAUNCH0012F0500000000002 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
+		NATTAB0012F0800000000002 /* NativeTabBarPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeTabBarPlugin.swift; sourceTree = "<group>"; };
 		SCENE0012F0700000000002 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
+		TIDCON0012F0800000000002 /* TidexContainerViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TidexContainerViewController.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -81,7 +85,9 @@
 				1152D0C82F01BB9B002FD5ED /* App.entitlements */,
 				50379B222058CBB4000EE86E /* capacitor.config.json */,
 				504EC3071FED79650016851F /* AppDelegate.swift */,
+				NATTAB0012F0800000000002 /* NativeTabBarPlugin.swift */,
 				SCENE0012F0700000000002 /* SceneDelegate.swift */,
+				TIDCON0012F0800000000002 /* TidexContainerViewController.swift */,
 				504EC30E1FED79650016851F /* Assets.xcassets */,
 				504EC3131FED79650016851F /* Info.plist */,
 				LAUNCH0012F0500000000002 /* LaunchScreen.storyboard */,
@@ -197,7 +203,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				504EC3081FED79650016851F /* AppDelegate.swift in Sources */,
+				NATTAB0012F0800000000001 /* NativeTabBarPlugin.swift in Sources */,
 				SCENE0012F0700000000001 /* SceneDelegate.swift in Sources */,
+				TIDCON0012F0800000000001 /* TidexContainerViewController.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

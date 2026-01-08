@@ -22,8 +22,13 @@ export function TopHeader({ userName }: TopHeaderProps) {
   const [firstWord] = cleanedName.split(/\s+/).filter(Boolean);
   const displayName = (firstWord ?? cleanedName) || t.common.guest;
 
+  // Both native iOS and web PWA use CSS env() for safe area
+  // The CSS rule for [data-top-header] provides a fallback on native iOS
+  // md:pt-0 removes padding on desktop where there's no notch
+  const topPadding = "pt-[env(safe-area-inset-top)] md:pt-0";
+
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-md pt-[env(safe-area-inset-top)] md:pt-0">
+    <header data-top-header className={`sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-md ${topPadding}`}>
       <div className="container mx-auto px-4">
         <div className="flex md:grid md:grid-cols-[1fr_auto_1fr] items-center justify-between h-16 gap-4">
           {/* Left section */}
