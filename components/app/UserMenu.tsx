@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { MouseEvent as ReactMouseEvent } from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -11,6 +11,7 @@ import { LocaleToggle } from "./LocaleToggle";
 import { cn } from "@/lib/utils";
 import { useNavigationFeedback } from "./navigation-feedback";
 import { useTranslations } from "@/lib/i18n/client";
+import { isNativePlatform } from "@/lib/capacitor/platform";
 
 export function UserMenu({
   displayName,
@@ -26,6 +27,13 @@ export function UserMenu({
   const pathname = usePathname();
   const { navigate, pendingPath } = useNavigationFeedback();
   const isLoggingOut = pendingPath === "/logout";
+
+  // Hide locale toggle on native - iOS uses system language preference
+  const isNative = useSyncExternalStore(
+    () => () => {},
+    () => isNativePlatform(),
+    () => false
+  );
 
   // Close menu on navigation
   // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -61,8 +69,9 @@ export function UserMenu({
     if (!path) {
       return null;
     }
+    // Treat "/" as "/dashboard" for consistent comparison
     if (path === "/") {
-      return "/";
+      return "/dashboard";
     }
     return path.replace(/\/+$/, "");
   };
@@ -143,7 +152,7 @@ export function UserMenu({
             {t.userMenu.settings}
           </Link>
           <ThemeToggle />
-          <LocaleToggle />
+          {!isNative && <LocaleToggle />}
           <Link
             href="/logout"
             onClick={(event) => {

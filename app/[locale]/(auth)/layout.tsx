@@ -45,9 +45,15 @@ export default async function AuthLayout({
   }
 
   const dictionary = getDictionary(locale as Locale);
+  // Auth pages are always dark mode to match native iOS launch screen and prevent flash
+  // Use inline style for background to ensure it's dark immediately (before CSS variables resolve)
+  // The dark class enables dark mode CSS variables for child components
   return (
     <I18nProvider locale={locale as Locale} dictionary={dictionary} namespaces={['pages.auth']}>
-      <div className="min-h-screen bg-background text-foreground antialiased">
+      <div
+        className="dark min-h-screen text-foreground antialiased"
+        style={{ backgroundColor: 'hsl(222.2 84% 4.9%)' }}
+      >
         <div className="app-container">
           <main className="flex min-h-screen flex-col items-center justify-center px-4 py-8">{children}</main>
         </div>

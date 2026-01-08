@@ -35,7 +35,7 @@ export default async function OnboardingPage({
   // Check if user has already completed onboarding (from user_metadata in JWT)
   const finishedOnboarding = claims.user_metadata?.finishedOnboarding;
   if (finishedOnboarding) {
-    redirect("/");
+    redirect("/dashboard");
   }
 
   // Load existing settings (if any)

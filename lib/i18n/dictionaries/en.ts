@@ -108,6 +108,14 @@ export const en: Dictionary = {
     stats: 'Stats',
     wagey: 'Wagey',
     sharing: 'Sharing',
+    // Native tab bar labels (order must match Swift tabDefinitions)
+    tabBar: {
+      home: 'Home',
+      shifts: 'Shifts',
+      add: 'Add',
+      stats: 'Stats',
+      share: 'Share',
+    },
   },
   pages: {
     home: {

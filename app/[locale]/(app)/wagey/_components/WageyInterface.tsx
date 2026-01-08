@@ -621,7 +621,7 @@ export function WageyInterface({ userId, userName, wageyAccess }: WageyInterface
       {/* Scrollable Messages Area */}
       <div
         ref={messagesContainerRef}
-        className="relative z-10 flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 pb-2 pt-8 md:px-5 md:pb-6 md:pt-10"
+        className="relative z-10 flex-1 min-h-0 overflow-y-auto overflow-x-hidden overscroll-contain px-3 pb-2 pt-8 md:px-5 md:pb-6 md:pt-10"
       >
         <div className="flex flex-col gap-3 md:gap-4 py-2 max-w-3xl mx-auto">
           <MessageList

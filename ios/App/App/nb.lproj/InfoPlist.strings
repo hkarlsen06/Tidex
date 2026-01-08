@@ -1,0 +1,7 @@
+/* Norwegian (Bokmål) localization for Info.plist strings */
+
+/* App display name */
+"CFBundleDisplayName" = "Tidex";
+
+/* App name */
+"CFBundleName" = "Tidex";

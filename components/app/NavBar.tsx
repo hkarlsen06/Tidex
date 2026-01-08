@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import type { MouseEvent } from "react";
 import {
   Gauge,
@@ -16,10 +16,8 @@ import { useTranslations } from "@/lib/i18n/client";
 import { useScrollContext } from "@/lib/contexts/ScrollContext";
 import { useAddShiftFormSafe } from "@/lib/contexts/AddShiftFormContext";
 import { useSharers } from "./SharersProvider";
-import {
-  useSharingViewState,
-  clearSharingViewState,
-} from "@/lib/hooks/useSharingViewState";
+import { clearSharingViewState } from "@/lib/hooks/useSharingViewState";
+import { useHasNativeTabBar } from "@/lib/contexts/NativeTabBarContext";
 
 type LucideIcon = typeof Gauge;
 type NavItem = {
@@ -34,7 +32,7 @@ type NavItemType = NavItem & { isSharing?: boolean };
 
 const navItems: NavItemType[] = [
   {
-    href: "/",
+    href: "/dashboard",
     label: "Home",
     icon: Gauge,
   },
@@ -83,12 +81,11 @@ function getInitials(
 export function NavBar() {
   const { locale } = useTranslations();
   const rawPathname = usePathname();
-  const router = useRouter();
   const { navigate, pendingPath: rawPendingPath } = useNavigationFeedback();
-  const { savedSharerId, isLoaded } = useSharingViewState();
   const { scrollDirection } = useScrollContext();
   const addShiftForm = useAddShiftFormSafe();
   const sharers = useSharers();
+  const isNativeIOS = useHasNativeTabBar();
 
   // Sort sharers: prioritize self-picked profile pictures, then OAuth avatars, then no avatar
   const sortedSharers = [...sharers].sort((a, b) => {
@@ -134,6 +131,11 @@ export function NavBar() {
     return null;
   }
 
+  // Hide web NavBar on native iOS (native UITabBar handles navigation)
+  if (isNativeIOS) {
+    return null;
+  }
+
   const handleItemClick =
     (href: string) => (event: MouseEvent<HTMLAnchorElement>) => {
       if (
@@ -154,8 +156,9 @@ export function NavBar() {
     if (!path) {
       return null;
     }
+    // Treat "/" as "/dashboard" for consistent comparison
     if (path === "/") {
-      return "/";
+      return "/dashboard";
     }
     return path.replace(/\/+$/, "");
   }
@@ -172,8 +175,9 @@ export function NavBar() {
         return false;
       }
 
-      if (normalizedHref === "/") {
-        return normalizedPath === "/";
+      // Dashboard is the home route
+      if (normalizedHref === "/dashboard") {
+        return normalizedPath === "/dashboard";
       }
 
       if (normalizedPath === normalizedHref) {
@@ -202,6 +206,7 @@ export function NavBar() {
 
   return (
     <nav
+      data-web-navbar
       className={`fixed left-0 right-0 z-40 bottom-0 transition-transform duration-300 md:hidden ${isHidden ? "translate-y-full" : "translate-y-0"
         }`}
     >
@@ -278,15 +283,11 @@ export function NavBar() {
                 return startAngle + idx * (360 / total);
               };
 
-              // Determine sharing href based on current location:
-              // - If on /sharing path, go to main /sharing route and clear saved state
-              // - If on another page, restore saved view state (if any)
+              // Always use the base sharing path without query params
+              // This ensures consistent navigation behavior and avoids triggering
+              // parent loading states due to query param changes
               const isOnSharingPath = normalizedPath?.startsWith("/sharing");
-              const sharingHref = isOnSharingPath
-                ? `/${locale}/sharing`
-                : savedSharerId && isLoaded
-                  ? `/${locale}/sharing?view=${savedSharerId}`
-                  : `/${locale}/sharing`;
+              const sharingHref = `/${locale}/sharing`;
 
               const handleSharingClick = (
                 event: MouseEvent<HTMLAnchorElement>,
@@ -303,15 +304,14 @@ export function NavBar() {
 
                 event.preventDefault();
 
-                // Clear saved state when navigating to main sharing list from detail view
+                // Clear saved state when navigating to main sharing list
                 if (isOnSharingPath) {
                   clearSharingViewState();
-                  // Use router.push directly to bypass navigation feedback
-                  // which ignores same-path navigations (it strips query params)
-                  router.push(sharingHref);
-                } else {
-                  navigate(sharingHref);
                 }
+
+                // Use the standard navigate() for consistent behavior with other nav items
+                // This leverages prefetch cache and avoids double skeleton flash
+                navigate(sharingHref);
               };
 
               return (

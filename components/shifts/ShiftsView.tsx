@@ -29,6 +29,7 @@ import { useNavigationFeedback } from "@/components/app/navigation-feedback";
 import { useMonth } from "@/components/app/MonthContext";
 import { queueMutation, isOfflineQueueSupported } from "@/lib/pwa/offline-queue";
 import type { ISODate } from "@/components/app/calendar-types";
+import { toISODate } from "@/components/app/calendar-utils";
 import {
   Dialog,
   DialogContent,
@@ -50,6 +51,7 @@ import { TodayPlaceholderCard } from "./TodayPlaceholderCard";
 import { ScrollablePageWrapper } from "@/components/app/ScrollablePageWrapper";
 import type { PayoutTaxSettings } from "@/data-access/shifts";
 import { buildExcludedShiftIds } from "@/lib/shifts/conflictExclusion";
+import { celebrationHaptic, selectionEndHaptic, selectionHaptic, selectionStartHaptic } from "@/lib/capacitor/haptics";
 
 // Lazy load the calendar to reduce initial bundle size (~40KB savings)
 const MonthlyEarningsCalendar = dynamic(
@@ -243,6 +245,7 @@ function ShiftItemWithConnector({
   setSelectedShift,
   setDetailsOpen,
   onVisibilityChange,
+  onSelectionHaptic,
   nextShiftInView,
 }: {
   shift: ShiftWithComputations;
@@ -263,6 +266,7 @@ function ShiftItemWithConnector({
   setSelectedShift: (shift: ShiftWithComputations) => void;
   setDetailsOpen: (open: boolean) => void;
   onVisibilityChange: (shiftId: string, inView: boolean) => void;
+  onSelectionHaptic: () => void;
   nextShiftInView: boolean;
 }) {
   const cardRef = useRef<HTMLDivElement>(null);
@@ -275,10 +279,16 @@ function ShiftItemWithConnector({
   const isNextUpcomingShift = nextUpcomingShift?.id === shift.id;
   const hasConnector = conflictConnectorSet.has(shift.id);
 
-  // Report visibility changes to parent
+  // Report visibility changes to parent and trigger haptic on scroll into view
+  const wasInViewRef = useRef(false);
   useEffect(() => {
     onVisibilityChange(shift.id, inView);
-  }, [shift.id, inView, onVisibilityChange]);
+    // Trigger selection haptic when card scrolls into view (not on initial render)
+    if (inView && !wasInViewRef.current) {
+      onSelectionHaptic();
+    }
+    wasInViewRef.current = inView;
+  }, [shift.id, inView, onVisibilityChange, onSelectionHaptic]);
 
   return (
     <Fragment>
@@ -361,6 +371,10 @@ function ShiftGroupContent({
 }) {
   // Track visibility state for each shift - lifted to parent so siblings can access
   const [visibilityMap, setVisibilityMap] = useState<Map<string, boolean>>(() => new Map());
+  const selectionSessionRef = useRef<{
+    active: boolean;
+    endTimeoutId: ReturnType<typeof setTimeout> | null;
+  }>({ active: false, endTimeoutId: null });
 
   const handleVisibilityChange = useCallback((shiftId: string, inView: boolean) => {
     setVisibilityMap(prev => {
@@ -368,6 +382,38 @@ function ShiftGroupContent({
       next.set(shiftId, inView);
       return next;
     });
+  }, []);
+
+  const handleSelectionHaptic = useCallback(() => {
+    if (!selectionSessionRef.current.active) {
+      selectionSessionRef.current.active = true;
+      selectionStartHaptic();
+    }
+
+    selectionHaptic();
+
+    if (selectionSessionRef.current.endTimeoutId) {
+      clearTimeout(selectionSessionRef.current.endTimeoutId);
+    }
+
+    selectionSessionRef.current.endTimeoutId = setTimeout(() => {
+      selectionSessionRef.current.active = false;
+      selectionSessionRef.current.endTimeoutId = null;
+      selectionEndHaptic();
+    }, 150);
+  }, []);
+
+  useEffect(() => {
+    const session = selectionSessionRef.current;
+    return () => {
+      if (session.endTimeoutId) {
+        clearTimeout(session.endTimeoutId);
+      }
+      if (session.active) {
+        session.active = false;
+        selectionEndHaptic();
+      }
+    };
   }, []);
 
   return (
@@ -397,6 +443,7 @@ function ShiftGroupContent({
             setSelectedShift={setSelectedShift}
             setDetailsOpen={setDetailsOpen}
             onVisibilityChange={handleVisibilityChange}
+            onSelectionHaptic={handleSelectionHaptic}
             nextShiftInView={nextShiftInView}
           />
         );
@@ -1041,6 +1088,10 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
   const [optimisticShifts, setOptimisticShifts] = useState<ShiftWithComputations[]>([]);
   const [createError, setCreateError] = useState<string | null>(null);
   const [operationError, setOperationError] = useState<string | null>(null); // For move/copy/delete/edit failures
+  const calendarSelectionSessionRef = useRef<{
+    active: boolean;
+    endTimeoutId: ReturnType<typeof setTimeout> | null;
+  }>({ active: false, endTimeoutId: null });
 
   // Track which months have been loaded or are currently loading
   // Using refs to avoid race conditions with effects and cacheComponents
@@ -1553,9 +1604,10 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
         url.searchParams.delete('optimistic');
         window.history.replaceState({}, '', url.toString());
 
-        // Fire confetti immediately for instant feedback
+        // Fire confetti and haptic immediately for instant feedback
         setTimeout(async () => {
           const confetti = (await import('canvas-confetti')).default;
+          celebrationHaptic();
           const currentMonth = targetMonth.getMonth();
           const currentYear = targetMonth.getFullYear();
 
@@ -1698,6 +1750,38 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
     return () => clearTimeout(dismissTimer);
   }, [operationError]);
 
+  const triggerCalendarSelectionHaptic = useCallback(() => {
+    if (!calendarSelectionSessionRef.current.active) {
+      calendarSelectionSessionRef.current.active = true;
+      selectionStartHaptic();
+    }
+
+    selectionHaptic();
+
+    if (calendarSelectionSessionRef.current.endTimeoutId) {
+      clearTimeout(calendarSelectionSessionRef.current.endTimeoutId);
+    }
+
+    calendarSelectionSessionRef.current.endTimeoutId = setTimeout(() => {
+      calendarSelectionSessionRef.current.active = false;
+      calendarSelectionSessionRef.current.endTimeoutId = null;
+      selectionEndHaptic();
+    }, 150);
+  }, []);
+
+  useEffect(() => {
+    const session = calendarSelectionSessionRef.current;
+    return () => {
+      if (session.endTimeoutId) {
+        clearTimeout(session.endTimeoutId);
+      }
+      if (session.active) {
+        session.active = false;
+        selectionEndHaptic();
+      }
+    };
+  }, []);
+
   // Confetti celebration for newly added shifts
   useEffect(() => {
     const newDates = searchParams.get('new');
@@ -1744,6 +1828,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
 
         // Dynamically import confetti only when needed (reduces initial bundle by ~2MB)
         const confetti = (await import('canvas-confetti')).default;
+        celebrationHaptic();
 
         if (datesInCurrentMonth.length > 0) {
           // Fire confetti from each newly added shift in the current month
@@ -1802,13 +1887,15 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
 
   const handleMonthChange = useCallback(
     (month: Date) => {
+      triggerCalendarSelectionHaptic();
       setSelectedMonth(startOfMonth(month));
     },
-    [setSelectedMonth]
+    [setSelectedMonth, triggerCalendarSelectionHaptic]
   );
 
   const handleDayClick = useCallback(
     (iso: string, hasShifts: boolean) => {
+      triggerCalendarSelectionHaptic();
       const isoDate = iso as ISODate;
       const targetShifts = shiftsByDate.get(isoDate) ?? [];
 
@@ -1946,7 +2033,55 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
 
       navigate(`/${locale}/shifts/add?date=${encodeURIComponent(iso)}`);
     },
-    [calendarSelectedShiftId, clearSelection, navigate, selectedDate, shiftsByDate, copyMode, router, moveMode, locale, readOnly, multiSelectedDates, errorComplete, showEarnings]
+    [calendarSelectedShiftId, clearSelection, navigate, selectedDate, shiftsByDate, copyMode, router, moveMode, locale, readOnly, multiSelectedDates, errorComplete, showEarnings, triggerCalendarSelectionHaptic]
+  );
+
+  const handleSelectDateRange = useCallback(
+    (startIso: ISODate, endIso: ISODate) => {
+      const allowMultiSelect = !copyMode && !moveMode && (!readOnly || showEarnings);
+      if (!allowMultiSelect) return;
+
+      const startDate = new Date(`${startIso}T00:00:00`);
+      const endDate = new Date(`${endIso}T00:00:00`);
+      const step = startDate <= endDate ? 1 : -1;
+      const range: ISODate[] = [];
+      const cursor = new Date(startDate);
+
+      while ((step > 0 && cursor <= endDate) || (step < 0 && cursor >= endDate)) {
+        range.push(toISODate(cursor) as ISODate);
+        cursor.setDate(cursor.getDate() + step);
+      }
+
+      const selectable = range.filter((iso) => (shiftsByDate.get(iso)?.length ?? 0) > 0);
+      if (selectable.length === 0) return;
+
+      triggerCalendarSelectionHaptic();
+      setCopyMode(false);
+      setMoveMode(false);
+      setMoveSelection([]);
+      setOpenedFromCalendar(false);
+
+      const merged = new Set<ISODate>();
+      if (selectedDate) merged.add(selectedDate);
+      multiSelectedDates.forEach((iso) => merged.add(iso));
+      selectable.forEach((iso) => merged.add(iso));
+
+      if (merged.size === 1) {
+        const onlyDate = [...merged][0];
+        const onlyShifts = shiftsByDate.get(onlyDate) ?? [];
+        if (onlyShifts.length > 0) {
+          setSelectedDate(onlyDate);
+          setCalendarSelectedShiftId(onlyShifts[0].id);
+          setMultiSelectedDates(new Set());
+        }
+        return;
+      }
+
+      setSelectedDate(null);
+      setCalendarSelectedShiftId(null);
+      setMultiSelectedDates(merged);
+    },
+    [copyMode, moveMode, readOnly, showEarnings, shiftsByDate, triggerCalendarSelectionHaptic, selectedDate, multiSelectedDates]
   );
 
   const handleOpenDetails = useCallback(() => {
@@ -2434,6 +2569,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
             month={selectedMonth}
             onMonthChange={handleMonthChange}
             onDayClick={handleDayClick}
+            onSelectDateRange={handleSelectDateRange}
             selectedDate={selectedDate}
             selectedDates={readOnly && !showEarnings ? undefined : multiSelectedDates}
             onClearMultiSelection={readOnly && !showEarnings ? undefined : clearMultiSelection}
