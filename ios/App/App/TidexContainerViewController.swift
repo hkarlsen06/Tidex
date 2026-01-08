@@ -223,6 +223,10 @@ class TidexContainerViewController: UIViewController, UITabBarDelegate {
             let splashPlugin = NativeSplashPlugin()
             bridge.registerPluginInstance(splashPlugin)
 
+            // Register ShiftActivity plugin for Live Activities
+            let shiftActivityPlugin = ShiftActivityPlugin()
+            bridge.registerPluginInstance(shiftActivityPlugin)
+
             // Inject initial tab bar height now that bridge is ready
             injectTabBarHeightToCSS()
             return
