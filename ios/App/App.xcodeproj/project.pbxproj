@@ -18,6 +18,7 @@
 		INFOP0012F0900000000001 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = INFOP0012F0900000000004 /* InfoPlist.strings */; };
 		LAUNCH0012F0500000000001 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = LAUNCH0012F0500000000002 /* LaunchScreen.storyboard */; };
 		LOCBVC0012F1000000000001 /* LocaleAwareBridgeViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = LOCBVC0012F1000000000002 /* LocaleAwareBridgeViewController.swift */; };
+		NATSPL0012F0800000000001 /* NativeSplashPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = NATSPL0012F0800000000002 /* NativeSplashPlugin.swift */; };
 		NATTAB0012F0800000000001 /* NativeTabBarPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = NATTAB0012F0800000000002 /* NativeTabBarPlugin.swift */; };
 		SCENE0012F0700000000001 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = SCENE0012F0700000000002 /* SceneDelegate.swift */; };
 		TIDCON0012F0800000000001 /* TidexContainerViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = TIDCON0012F0800000000002 /* TidexContainerViewController.swift */; };
@@ -39,6 +40,7 @@
 		INFOP0012F0900000000003 /* nb */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = nb; path = nb.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		LAUNCH0012F0500000000002 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
 		LOCBVC0012F1000000000002 /* LocaleAwareBridgeViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocaleAwareBridgeViewController.swift; sourceTree = "<group>"; };
+		NATSPL0012F0800000000002 /* NativeSplashPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeSplashPlugin.swift; sourceTree = "<group>"; };
 		NATTAB0012F0800000000002 /* NativeTabBarPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeTabBarPlugin.swift; sourceTree = "<group>"; };
 		SCENE0012F0700000000002 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
 		TIDCON0012F0800000000002 /* TidexContainerViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TidexContainerViewController.swift; sourceTree = "<group>"; };
@@ -91,6 +93,7 @@
 				50379B222058CBB4000EE86E /* capacitor.config.json */,
 				504EC3071FED79650016851F /* AppDelegate.swift */,
 				LOCBVC0012F1000000000002 /* LocaleAwareBridgeViewController.swift */,
+				NATSPL0012F0800000000002 /* NativeSplashPlugin.swift */,
 				NATTAB0012F0800000000002 /* NativeTabBarPlugin.swift */,
 				SCENE0012F0700000000002 /* SceneDelegate.swift */,
 				TIDCON0012F0800000000002 /* TidexContainerViewController.swift */,
@@ -213,6 +216,7 @@
 			files = (
 				504EC3081FED79650016851F /* AppDelegate.swift in Sources */,
 				LOCBVC0012F1000000000001 /* LocaleAwareBridgeViewController.swift in Sources */,
+				NATSPL0012F0800000000001 /* NativeSplashPlugin.swift in Sources */,
 				NATTAB0012F0800000000001 /* NativeTabBarPlugin.swift in Sources */,
 				SCENE0012F0700000000001 /* SceneDelegate.swift in Sources */,
 				TIDCON0012F0800000000001 /* TidexContainerViewController.swift in Sources */,
@@ -363,7 +367,7 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1.2.0;
+				CURRENT_PROJECT_VERSION = 1.2.1;
 				INFOPLIST_FILE = App/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = no.tidex.app;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
@@ -371,7 +375,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.2.0;
+				MARKETING_VERSION = 1.2.1;
 				OTHER_SWIFT_FLAGS = "$(inherited) \"-D\" \"COCOAPODS\" \"-DDEBUG\"";
 				PRODUCT_BUNDLE_IDENTIFIER = no.tidex.app;
 				PRODUCT_NAME = Tidex;
@@ -390,7 +394,7 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1.2.0;
+				CURRENT_PROJECT_VERSION = 1.2.1;
 				INFOPLIST_FILE = App/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = no.tidex.app;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
@@ -398,7 +402,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.2.0;
+				MARKETING_VERSION = 1.2.1;
 				PRODUCT_BUNDLE_IDENTIFIER = no.tidex.app;
 				PRODUCT_NAME = Tidex;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";

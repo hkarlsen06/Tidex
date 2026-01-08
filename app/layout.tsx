@@ -7,6 +7,7 @@ import { Analytics } from "@vercel/analytics/next";
 import SWRegister from "./sw-register";
 import { CapacitorUrlListener } from "./capacitor-url-listener";
 import { ChunkErrorRecovery } from "./chunk-error-recovery";
+import { SplashScreenManager } from "./splash-screen-manager";
 import { DynamicThemeColor } from "@/components/app/DynamicThemeColor";
 import "./globals.css";
 
@@ -214,6 +215,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <ChunkErrorRecovery />
         <DynamicThemeColor />
         <CapacitorUrlListener />
+        <SplashScreenManager />
         {children}
         <SWRegister />
         <Analytics />

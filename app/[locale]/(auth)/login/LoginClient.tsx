@@ -7,6 +7,7 @@ import { FormEvent, useState, use, useRef, useEffect } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { useTranslations } from '@/lib/i18n/client';
 import { isNativePlatform } from '@/lib/capacitor/platform';
+import { hideSplash } from '@/lib/capacitor/native-splash';
 import { turnstileLanguages, locales, LOCALE_COOKIE, type Locale } from '@/lib/i18n/config';
 
 // Animation variants for entrance animation
@@ -105,8 +106,14 @@ export default function LoginClient({
   };
 
   // Reset Turnstile widget on mount to prevent stale token issues
+  // Also hide splash screen now that login form is ready
   useEffect(() => {
     turnstileRef.current?.reset();
+
+    // Hide splash screen - login form is ready
+    if (isNativePlatform()) {
+      hideSplash(200);
+    }
   }, []);
 
   // Listen for Capacitor Browser close events to reset OAuth state
