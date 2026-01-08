@@ -50,6 +50,7 @@ import { TodayPlaceholderCard } from "./TodayPlaceholderCard";
 import { ScrollablePageWrapper } from "@/components/app/ScrollablePageWrapper";
 import type { PayoutTaxSettings } from "@/data-access/shifts";
 import { buildExcludedShiftIds } from "@/lib/shifts/conflictExclusion";
+import { celebrationHaptic } from "@/lib/capacitor/haptics";
 
 // Lazy load the calendar to reduce initial bundle size (~40KB savings)
 const MonthlyEarningsCalendar = dynamic(
@@ -1553,9 +1554,10 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
         url.searchParams.delete('optimistic');
         window.history.replaceState({}, '', url.toString());
 
-        // Fire confetti immediately for instant feedback
+        // Fire confetti and haptic immediately for instant feedback
         setTimeout(async () => {
           const confetti = (await import('canvas-confetti')).default;
+          celebrationHaptic();
           const currentMonth = targetMonth.getMonth();
           const currentYear = targetMonth.getFullYear();
 
@@ -1744,6 +1746,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
 
         // Dynamically import confetti only when needed (reduces initial bundle by ~2MB)
         const confetti = (await import('canvas-confetti')).default;
+        celebrationHaptic();
 
         if (datesInCurrentMonth.length > 0) {
           // Fire confetti from each newly added shift in the current month

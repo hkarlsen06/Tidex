@@ -18,6 +18,7 @@ import { useParams } from "next/navigation";
 import { formatNumber } from "@/lib/formatters";
 import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
 import { ScrollablePageWrapper } from "@/components/app/ScrollablePageWrapper";
+import { impactHaptic } from "@/lib/capacitor/haptics";
 
 // Scroll-triggered animation variants (slide in from left, out when leaving)
 const scrollCardVariants = {
@@ -505,6 +506,7 @@ export function StatsContent({ data, cacheKey }: StatsContentProps) {
         const threshold = 80;
 
         if (Math.abs(deltaX) > threshold) {
+          impactHaptic("light");
           if (deltaX > 0) {
             // Swipe right -> previous month
             goToPreviousMonth();

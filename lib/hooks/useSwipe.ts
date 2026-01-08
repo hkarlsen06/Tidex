@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { impactHaptic } from "@/lib/capacitor/haptics";
 
 interface UseSwipeOptions {
   onSwipeLeft?: () => void;
@@ -64,6 +65,7 @@ export function useSwipe<T extends HTMLElement = HTMLDivElement>({
       const deltaX = e.changedTouches[0].clientX - touchStartX.current;
 
       if (Math.abs(deltaX) > threshold) {
+        impactHaptic("light");
         if (deltaX > 0) {
           // Swipe right
           onSwipeRight?.();
