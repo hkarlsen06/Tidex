@@ -3,6 +3,8 @@
 import { motion } from "motion/react";
 import { CalendarSkeleton } from "../calendar/CalendarSkeleton";
 import { ShiftCardSkeleton } from "../cards/ShiftCardSkeleton";
+import { useHasNativeTabBar } from "@/lib/contexts/NativeTabBarContext";
+import { cn } from "@/lib/cn";
 
 // Animation variants for staggered skeleton sections
 const containerVariants = {
@@ -61,8 +63,15 @@ function WeekGroupSkeleton({ shiftCount }: { shiftCount: number }) {
  * When the real content loads, it simply replaces the skeleton without additional animation.
  */
 export function ShiftsSkeleton() {
+  const hasNativeTabBar = useHasNativeTabBar();
+
   return (
-    <div className="h-full overflow-y-auto pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-8">
+    <div className={cn(
+      "h-full overflow-y-auto md:pb-8",
+      hasNativeTabBar
+        ? "pb-[env(safe-area-inset-bottom)]"
+        : "pb-[calc(5rem+env(safe-area-inset-bottom))]"
+    )}>
       {/* Mobile/Tablet: vertical stack. Desktop: side-by-side */}
       <motion.div
         className="flex w-full flex-col lg:relative lg:left-1/2 lg:right-1/2 lg:-ml-[50vw] lg:-mr-[50vw] lg:w-screen lg:flex-row lg:gap-0 lg:px-0 lg:items-start lg:pt-6"
@@ -71,8 +80,14 @@ export function ShiftsSkeleton() {
         animate="visible"
       >
         {/* Calendar Section */}
+        {/* Native iOS: no web navbar (5rem), only safe areas. Web: subtract both header (3.5rem) and navbar (5rem) */}
         <motion.div
-          className="h-[calc(100dvh-3.5rem-5rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] flex flex-col justify-center px-4 shrink-0 lg:h-auto lg:w-1/2 lg:sticky lg:top-6 lg:justify-start lg:items-center lg:px-0"
+          className={cn(
+            "flex flex-col justify-center px-4 shrink-0 lg:h-auto lg:w-1/2 lg:sticky lg:top-6 lg:justify-start lg:items-center lg:px-0",
+            hasNativeTabBar
+              ? "h-[calc(100dvh-3.5rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))]"
+              : "h-[calc(100dvh-3.5rem-5rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))]"
+          )}
           variants={itemVariants}
         >
           <div className="w-full max-w-md md:max-w-lg lg:max-w-none lg:w-120">
@@ -80,9 +95,9 @@ export function ShiftsSkeleton() {
           </div>
         </motion.div>
 
-        {/* Shifts List Section */}
+        {/* Shifts List Section - Desktop only (hidden on mobile where only calendar shows) */}
         <motion.div
-          className="px-4 lg:w-1/2 lg:flex lg:justify-center lg:px-0"
+          className="hidden lg:flex px-4 lg:w-1/2 lg:justify-center lg:px-0"
           variants={itemVariants}
         >
           <div className="pb-10 w-full max-w-md md:max-w-lg lg:max-w-lg lg:overflow-y-auto lg:max-h-[calc(100vh-8rem)] lg:px-4">

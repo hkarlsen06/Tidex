@@ -1,4 +1,8 @@
+"use client";
+
 import { Card, CardHeader } from "@/components/app/Card";
+import { useHasNativeTabBar } from "@/lib/contexts/NativeTabBarContext";
+import { cn } from "@/lib/cn";
 
 /**
  * Skeleton for the calendar component
@@ -63,10 +67,23 @@ function CalendarSkeleton() {
       </div>
 
       {/* Toggle buttons for earnings/hours view */}
-      <div className="flex justify-center pb-6">
-        <div className="inline-flex items-center gap-1 rounded-full border border-border-subtle bg-surface-secondary/80 p-1 w-2/3">
-          <div className="h-9 flex-1 bg-surface-primary rounded-full animate-pulse" />
-          <div className="h-9 flex-1 bg-surface-secondary rounded-full animate-pulse" />
+      <div className="flex flex-col items-center gap-2 pb-6">
+        <div className="flex items-center gap-1 w-full">
+          <div className="inline-flex h-11 flex-1 min-w-0 items-center rounded-xl border border-border-subtle bg-surface-secondary/80 p-1 shadow-app-sm dark:shadow-app-inner overflow-hidden">
+            <div className="flex h-9 w-full items-center relative">
+              {/* Active indicator on left (hours) */}
+              <div className="absolute inset-y-0 left-0 w-1/2 rounded-lg bg-white dark:bg-slate-700 shadow-app-md" />
+              {/* Hours button (active) */}
+              <div className="h-full px-4 flex-1 flex items-center justify-center gap-1.5 relative z-10">
+                <div className="h-4 w-8 bg-surface-secondary/50 rounded animate-pulse" />
+                <div className="h-4 w-4 bg-surface-secondary/50 rounded animate-pulse" />
+              </div>
+              {/* Money button (inactive) */}
+              <div className="h-full px-4 flex-1 flex items-center justify-center gap-1.5 relative z-10">
+                <div className="h-4 w-12 bg-surface-secondary rounded animate-pulse" />
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </Card>
@@ -133,19 +150,32 @@ function WeekGroupSkeleton({ shiftCount }: { shiftCount: number }) {
  * Matches the actual ShiftsView layout with ScrollablePageWrapper
  */
 export function ShiftsSkeleton() {
+  const hasNativeTabBar = useHasNativeTabBar();
+
   return (
-    <div className="h-full overflow-y-auto pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-8">
+    <div className={cn(
+      "h-full overflow-y-auto md:pb-8",
+      hasNativeTabBar
+        ? "pb-[env(safe-area-inset-bottom)]"
+        : "pb-[calc(5rem+env(safe-area-inset-bottom))]"
+    )}>
       {/* Mobile/Tablet: vertical stack. Desktop: side-by-side */}
       <div className="flex w-full flex-col lg:relative lg:left-1/2 lg:right-1/2 lg:-ml-[50vw] lg:-mr-[50vw] lg:w-screen lg:flex-row lg:gap-0 lg:px-0 lg:items-start lg:pt-6">
         {/* Calendar Section */}
-        <div className="h-[calc(100dvh-3.5rem-5rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] flex flex-col justify-center px-4 shrink-0 lg:h-auto lg:w-1/2 lg:sticky lg:top-6 lg:justify-start lg:items-center lg:px-0">
-          <div className="w-full max-w-md md:max-w-lg lg:max-w-none lg:w-[480px]">
+        {/* Native iOS: no web navbar (5rem), only safe areas. Web: subtract both header (3.5rem) and navbar (5rem) */}
+        <div className={cn(
+          "flex flex-col justify-center px-4 shrink-0 lg:h-auto lg:w-1/2 lg:sticky lg:top-6 lg:justify-start lg:items-center lg:px-0",
+          hasNativeTabBar
+            ? "h-[calc(100dvh-3.5rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))]"
+            : "h-[calc(100dvh-3.5rem-5rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))]"
+        )}>
+          <div className="w-full max-w-md md:max-w-lg lg:max-w-none lg:w-120">
             <CalendarSkeleton />
           </div>
         </div>
 
-        {/* Shifts List Section */}
-        <div className="px-4 lg:w-1/2 lg:flex lg:justify-center lg:px-0">
+        {/* Shifts List Section - Desktop only (hidden on mobile where only calendar shows) */}
+        <div className="hidden lg:flex px-4 lg:w-1/2 lg:justify-center lg:px-0">
           <div className="pb-10 w-full max-w-md md:max-w-lg lg:max-w-lg lg:overflow-y-auto lg:max-h-[calc(100vh-8rem)] lg:px-4">
             <div className="flex flex-col gap-12">
               {/* Week groups with varying shift counts */}

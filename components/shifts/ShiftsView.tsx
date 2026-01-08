@@ -49,6 +49,7 @@ import { useOnlineStatus } from "@/lib/hooks/useOnlineStatus";
 import { useCountdown } from "@/lib/hooks/useCountdown";
 import { TodayPlaceholderCard } from "./TodayPlaceholderCard";
 import { ScrollablePageWrapper } from "@/components/app/ScrollablePageWrapper";
+import { useHasNativeTabBar } from "@/lib/contexts/NativeTabBarContext";
 import type { PayoutTaxSettings } from "@/data-access/shifts";
 import { buildExcludedShiftIds } from "@/lib/shifts/conflictExclusion";
 import { celebrationHaptic, selectionEndHaptic, selectionHaptic, selectionStartHaptic } from "@/lib/capacitor/haptics";
@@ -1128,6 +1129,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
   const [multiSelectedDates, setMultiSelectedDates] = useState<Set<ISODate>>(new Set());
   const [deleting, startDeleteTransition] = useTransition();
   const isOffline = useOnlineStatus();
+  const hasNativeTabBar = useHasNativeTabBar();
   const [additionalShifts, setAdditionalShifts] = useState<ShiftWithComputations[]>([]);
   const shiftsListRef = useRef<HTMLDivElement>(null);
   const todayRef = useRef<HTMLDivElement>(null);
@@ -2680,7 +2682,13 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
     {/* Mobile/Tablet: vertical stack. Desktop: side-by-side, break out of parent container */}
     <div className="flex w-full flex-col lg:relative lg:left-1/2 lg:right-1/2 lg:-ml-[50vw] lg:-mr-[50vw] lg:w-screen lg:flex-row lg:gap-0 lg:px-0 lg:items-start lg:pt-6">
       {/* Calendar Section - On mobile: takes full viewport height (minus header/navbar) and centers calendar */}
-      <div className="h-[calc(100dvh-3.5rem-5rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] flex flex-col justify-center px-4 shrink-0 lg:h-auto lg:w-1/2 lg:sticky lg:top-6 lg:justify-start lg:items-center lg:px-0">
+      {/* Native iOS: no web navbar (5rem), only safe areas. Web: subtract both header (3.5rem) and navbar (5rem) */}
+      <div className={cn(
+        "flex flex-col justify-center px-4 shrink-0 lg:h-auto lg:w-1/2 lg:sticky lg:top-6 lg:justify-start lg:items-center lg:px-0",
+        hasNativeTabBar
+          ? "h-[calc(100dvh-3.5rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))]"
+          : "h-[calc(100dvh-3.5rem-5rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))]"
+      )}>
         <div className="w-full max-w-md md:max-w-lg lg:max-w-none lg:w-120">
           {/* Custom header slot (e.g., sharing dropdown) - constrained to calendar width */}
           {headerSlot && (
@@ -2731,8 +2739,8 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
         </div>
       </div>
 
-      {/* Shifts List Section - Right half of screen, centered within */}
-      <div className="px-4 lg:w-1/2 lg:flex lg:justify-center lg:px-0">
+      {/* Shifts List Section - Desktop only (hidden on mobile where only calendar shows) */}
+      <div className="hidden lg:flex px-4 lg:w-1/2 lg:justify-center lg:px-0">
         <div ref={shiftsListRef} className="pb-10 w-full max-w-md md:max-w-lg lg:max-w-lg lg:overflow-y-auto lg:max-h-[calc(100vh-8rem)] lg:px-4">
         {grouped.length === 0 ? (
           <Card className="text-center">
