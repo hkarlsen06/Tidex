@@ -48,6 +48,12 @@ public class NativeTabBarPlugin: CAPPlugin, CAPBridgedPlugin {
         }
     }
 
+    /// Update tab bar titles from the web layer.
+    ///
+    /// Note: Currently unused. Tab titles are set at launch based on iOS device locale
+    /// (via `Locale.preferredLanguages` in `LocaleAwareBridgeViewController`).
+    /// This method is kept for potential future use cases where dynamic title updates
+    /// from JavaScript might be needed (e.g., runtime language switching without app restart).
     @objc func setTabTitles(_ call: CAPPluginCall) {
         guard let titles = call.getArray("titles", String.self) else {
             call.reject("Missing titles array")
