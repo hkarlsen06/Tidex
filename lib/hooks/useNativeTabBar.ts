@@ -32,9 +32,6 @@ export function useNativeTabBar() {
   const handleTabSelectedRef = useRef<(event: { index: number; route: string }) => void>();
   const scrollToTopRef = useRef<() => void>();
 
-  // Keep refs updated with latest callbacks
-  scrollToTopRef.current = scrollToTop;
-
   // Handle native tab selection - use SPA router, not WebView reload
   const handleTabSelected = useCallback(
     (event: { index: number; route: string }) => {
@@ -49,8 +46,11 @@ export function useNativeTabBar() {
     [locale, router]
   );
 
-  // Keep ref updated
-  handleTabSelectedRef.current = handleTabSelected;
+  // Keep refs updated with latest callbacks - must be in useEffect for React 19
+  useEffect(() => {
+    scrollToTopRef.current = scrollToTop;
+    handleTabSelectedRef.current = handleTabSelected;
+  });
 
   // Initialize plugin listeners (runs once)
   useEffect(() => {

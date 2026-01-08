@@ -44,6 +44,7 @@ class TidexContainerViewController: UIViewController, UITabBarDelegate {
 
         setupWebView()
         setupTabBar()
+        setupSwipeBackGesture()
     }
 
     private func setupWebView() {
@@ -105,6 +106,22 @@ class TidexContainerViewController: UIViewController, UITabBarDelegate {
             customTabBar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             customTabBar.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
+    }
+
+    // MARK: - Swipe Back Gesture
+
+    private func setupSwipeBackGesture() {
+        let edgePan = UIScreenEdgePanGestureRecognizer(target: self, action: #selector(handleSwipeBack(_:)))
+        edgePan.edges = .left
+        view.addGestureRecognizer(edgePan)
+    }
+
+    @objc private func handleSwipeBack(_ gesture: UIScreenEdgePanGestureRecognizer) {
+        guard gesture.state == .ended else { return }
+
+        // Trigger browser back navigation in the WebView
+        let js = "window.history.back();"
+        webViewController.webView?.evaluateJavaScript(js, completionHandler: nil)
     }
 
     // MARK: - Safe Area & Tab Bar Height Injection
