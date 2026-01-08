@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState, useRef, useCallback } from "react";
+import React, { useEffect, useMemo, useState, useRef, useCallback, useContext } from "react";
 import { useIsDesktop } from "@/lib/hooks/useIsMobile";
 import type { ReactNode } from "react";
 import dynamic from "next/dynamic";
@@ -18,7 +18,9 @@ import { useParams } from "next/navigation";
 import { formatNumber } from "@/lib/formatters";
 import { useFormatCurrency } from "@/lib/hooks/useFormatCurrency";
 import { ScrollablePageWrapper } from "@/components/app/ScrollablePageWrapper";
-import { impactHaptic } from "@/lib/capacitor/haptics";
+import { impactHaptic, selectionEndHaptic, selectionHaptic, selectionStartHaptic } from "@/lib/capacitor/haptics";
+
+const SelectionHapticContext = React.createContext<(() => void) | null>(null);
 
 // Scroll-triggered animation variants (slide in from left, out when leaving)
 const scrollCardVariants = {
@@ -35,12 +37,13 @@ const scrollCardVariants = {
 };
 
 // Wrapper component that animates in AND out based on viewport visibility (mobile only)
-const ScrollAnimatedCard = React.forwardRef<HTMLDivElement, { children: React.ReactNode; className?: string }>(
-  function ScrollAnimatedCard({ children, className }, forwardedRef) {
+const ScrollAnimatedCard = React.forwardRef<HTMLDivElement, { children: React.ReactNode; className?: string; onSelectionHaptic?: () => void }>(
+  function ScrollAnimatedCard({ children, className, onSelectionHaptic }, forwardedRef) {
     const internalRef = useRef<HTMLDivElement>(null);
     // Use larger top margin to account for navbar (~96px header + buffer)
     // Bottom margin for bottom navbar (~80px + buffer)
     const isInView = useInView(internalRef, { amount: 0.2, margin: "-120px 0px -100px 0px" });
+    const selectionHaptic = onSelectionHaptic ?? useContext(SelectionHapticContext);
     // useIsDesktop returns undefined during SSR/hydration, then true/false after mount
     const isDesktop = useIsDesktop();
 
@@ -59,6 +62,21 @@ const ScrollAnimatedCard = React.forwardRef<HTMLDivElement, { children: React.Re
       },
       [forwardedRef]
     );
+
+    // Trigger haptic when card scrolls into view (not on initial render)
+    const wasInViewRef = useRef(false);
+    useEffect(() => {
+      if (!selectionHaptic) {
+        wasInViewRef.current = isInView;
+        return;
+      }
+
+      if (isInView && !wasInViewRef.current) {
+        selectionHaptic();
+      }
+
+      wasInViewRef.current = isInView;
+    }, [isInView, selectionHaptic]);
 
     // During SSR/hydration (isDesktop === undefined), render without animation
     // to prevent layout shift when viewport is detected
@@ -269,6 +287,10 @@ export function StatsContent({ data, cacheKey }: StatsContentProps) {
   const touchStartY = useRef<number | null>(null);
   const isSwiping = useRef<boolean>(false);
   const touchStartTarget = useRef<EventTarget | null>(null);
+  const selectionSessionRef = useRef<{
+    active: boolean;
+    endTimeoutId: ReturnType<typeof setTimeout> | null;
+  }>({ active: false, endTimeoutId: null });
 
   const selectedYear = selectedMonth.getFullYear();
   const selectedMonthNumber = selectedMonth.getMonth() + 1;
@@ -279,6 +301,37 @@ export function StatsContent({ data, cacheKey }: StatsContentProps) {
   // Get month name for the year picker suffix
   const selectedMonthName = t.dateTime.monthsShort[selectedMonth.getMonth()];
   const yearPickerSuffix = `${t.pages.stats.cards.upTo} ${selectedMonthName.toLowerCase()}`;
+
+  const handleSelectionHaptic = useCallback(() => {
+    if (!selectionSessionRef.current.active) {
+      selectionSessionRef.current.active = true;
+      selectionStartHaptic();
+    }
+
+    selectionHaptic();
+
+    if (selectionSessionRef.current.endTimeoutId) {
+      clearTimeout(selectionSessionRef.current.endTimeoutId);
+    }
+
+    selectionSessionRef.current.endTimeoutId = setTimeout(() => {
+      selectionSessionRef.current.active = false;
+      selectionSessionRef.current.endTimeoutId = null;
+      selectionEndHaptic();
+    }, 150);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (selectionSessionRef.current.endTimeoutId) {
+        clearTimeout(selectionSessionRef.current.endTimeoutId);
+      }
+      if (selectionSessionRef.current.active) {
+        selectionSessionRef.current.active = false;
+        selectionEndHaptic();
+      }
+    };
+  }, []);
 
   // Fetch stats data for a given month
   const fetchStatsData = useCallback(
@@ -543,7 +596,8 @@ export function StatsContent({ data, cacheKey }: StatsContentProps) {
         : "";
 
   return (
-    <ScrollablePageWrapper routeKey="stats" applyContainer={false}>
+    <SelectionHapticContext.Provider value={handleSelectionHaptic}>
+      <ScrollablePageWrapper routeKey="stats" applyContainer={false}>
       {/* Loading indicator - subtle spinner next to month picker */}
       {isLoadingStats && (
         <div className="fixed top-4 right-4 z-50">
@@ -830,6 +884,7 @@ export function StatsContent({ data, cacheKey }: StatsContentProps) {
         </ScrollAnimatedCard>
       </div>
       </div>
-    </ScrollablePageWrapper>
+      </ScrollablePageWrapper>
+    </SelectionHapticContext.Provider>
   );
 }

@@ -72,6 +72,35 @@ export async function selectionHaptic(): Promise<void> {
 }
 
 /**
+ * Start a selection session for repeated selectionChanged haptics.
+ * Some platforms require this before selectionChanged will fire reliably.
+ */
+export async function selectionStartHaptic(): Promise<void> {
+  if (!isNativePlatform()) return;
+
+  try {
+    const { Haptics } = await import("@capacitor/haptics");
+    await Haptics.selectionStart();
+  } catch {
+    // Silently fail - haptics are optional enhancement
+  }
+}
+
+/**
+ * End a selection session after repeated selectionChanged haptics.
+ */
+export async function selectionEndHaptic(): Promise<void> {
+  if (!isNativePlatform()) return;
+
+  try {
+    const { Haptics } = await import("@capacitor/haptics");
+    await Haptics.selectionEnd();
+  } catch {
+    // Silently fail - haptics are optional enhancement
+  }
+}
+
+/**
  * Trigger a celebration haptic pattern
  * Use for achievements, completions, celebrations
  */

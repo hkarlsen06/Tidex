@@ -15,12 +15,12 @@
 		504EC3081FED79650016851F /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 504EC3071FED79650016851F /* AppDelegate.swift */; };
 		504EC30F1FED79650016851F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 504EC30E1FED79650016851F /* Assets.xcassets */; };
 		50B271D11FEDC1A000F3C39B /* public in Resources */ = {isa = PBXBuildFile; fileRef = 50B271D01FEDC1A000F3C39B /* public */; };
+		INFOP0012F0900000000001 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = INFOP0012F0900000000004 /* InfoPlist.strings */; };
 		LAUNCH0012F0500000000001 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = LAUNCH0012F0500000000002 /* LaunchScreen.storyboard */; };
+		LOCBVC0012F1000000000001 /* LocaleAwareBridgeViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = LOCBVC0012F1000000000002 /* LocaleAwareBridgeViewController.swift */; };
 		NATTAB0012F0800000000001 /* NativeTabBarPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = NATTAB0012F0800000000002 /* NativeTabBarPlugin.swift */; };
 		SCENE0012F0700000000001 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = SCENE0012F0700000000002 /* SceneDelegate.swift */; };
 		TIDCON0012F0800000000001 /* TidexContainerViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = TIDCON0012F0800000000002 /* TidexContainerViewController.swift */; };
-		LOCBVC0012F1000000000001 /* LocaleAwareBridgeViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = LOCBVC0012F1000000000002 /* LocaleAwareBridgeViewController.swift */; };
-		INFOP0012F0900000000001 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = INFOP0012F0900000000004 /* InfoPlist.strings */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -35,13 +35,13 @@
 		504EC3131FED79650016851F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		50B271D01FEDC1A000F3C39B /* public */ = {isa = PBXFileReference; lastKnownFileType = folder; path = public; sourceTree = "<group>"; };
 		958DCC722DB07C7200EA8C5F /* debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = debug.xcconfig; path = ../debug.xcconfig; sourceTree = SOURCE_ROOT; };
+		INFOP0012F0900000000002 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		INFOP0012F0900000000003 /* nb */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = nb; path = nb.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		LAUNCH0012F0500000000002 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
+		LOCBVC0012F1000000000002 /* LocaleAwareBridgeViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocaleAwareBridgeViewController.swift; sourceTree = "<group>"; };
 		NATTAB0012F0800000000002 /* NativeTabBarPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeTabBarPlugin.swift; sourceTree = "<group>"; };
 		SCENE0012F0700000000002 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
 		TIDCON0012F0800000000002 /* TidexContainerViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TidexContainerViewController.swift; sourceTree = "<group>"; };
-		LOCBVC0012F1000000000002 /* LocaleAwareBridgeViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocaleAwareBridgeViewController.swift; sourceTree = "<group>"; };
-		INFOP0012F0900000000002 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
-		INFOP0012F0900000000003 /* nb */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = nb; path = nb.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -105,18 +105,6 @@
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
-
-/* Begin PBXVariantGroup section */
-		INFOP0012F0900000000004 /* InfoPlist.strings */ = {
-			isa = PBXVariantGroup;
-			children = (
-				INFOP0012F0900000000002 /* en */,
-				INFOP0012F0900000000003 /* nb */,
-			);
-			name = InfoPlist.strings;
-			sourceTree = "<group>";
-		};
-/* End PBXVariantGroup section */
 
 /* Begin PBXNativeTarget section */
 		504EC3031FED79650016851F /* App */ = {
@@ -232,6 +220,18 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXVariantGroup section */
+		INFOP0012F0900000000004 /* InfoPlist.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				INFOP0012F0900000000002 /* en */,
+				INFOP0012F0900000000003 /* nb */,
+			);
+			name = InfoPlist.strings;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
 		504EC3141FED79650016851F /* Debug */ = {
@@ -363,7 +363,7 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1.1.1;
+				CURRENT_PROJECT_VERSION = 1.2.0;
 				INFOPLIST_FILE = App/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = no.tidex.app;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
@@ -371,7 +371,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1.1;
+				MARKETING_VERSION = 1.2.0;
 				OTHER_SWIFT_FLAGS = "$(inherited) \"-D\" \"COCOAPODS\" \"-DDEBUG\"";
 				PRODUCT_BUNDLE_IDENTIFIER = no.tidex.app;
 				PRODUCT_NAME = Tidex;
@@ -390,7 +390,7 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1.1.1;
+				CURRENT_PROJECT_VERSION = 1.2.0;
 				INFOPLIST_FILE = App/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = no.tidex.app;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
@@ -398,7 +398,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1.1;
+				MARKETING_VERSION = 1.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = no.tidex.app;
 				PRODUCT_NAME = Tidex;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
