@@ -12,7 +12,7 @@ import Capacitor
 /// embedding CAPBridgeViewController as a child.
 class TidexContainerViewController: UIViewController, UITabBarDelegate {
 
-    private var webViewController: CAPBridgeViewController!
+    private var webViewController: LocaleAwareBridgeViewController!
     private var customTabBar: UITabBar!
     weak var nativeTabBarPlugin: NativeTabBarPlugin?
 
@@ -38,14 +38,15 @@ class TidexContainerViewController: UIViewController, UITabBarDelegate {
     private static let tabTitlesNorwegian = ["Hjem", "Vakter", "Legg til", "Statistikk", "Del"]
     private static let tabTitlesEnglish = ["Home", "Shifts", "Add", "Stats", "Share"]
 
-    /// Get initial tab titles based on device locale
+    /// Get initial tab titles based on device locale.
+    /// Uses shared locale detection from LocaleAwareBridgeViewController for consistency.
     private func getInitialTabTitles() -> [String] {
-        // Check if device language is Norwegian (covers nb, nn, no)
-        let preferredLanguage = Locale.preferredLanguages.first ?? "en"
-        if preferredLanguage.hasPrefix("nb") || preferredLanguage.hasPrefix("nn") || preferredLanguage.hasPrefix("no") {
+        switch LocaleAwareBridgeViewController.detectDeviceLocale() {
+        case .norwegian:
             return Self.tabTitlesNorwegian
+        case .english:
+            return Self.tabTitlesEnglish
         }
-        return Self.tabTitlesEnglish
     }
 
     private var selectedIndex: Int = 0
@@ -63,7 +64,7 @@ class TidexContainerViewController: UIViewController, UITabBarDelegate {
     }
 
     private func setupWebView() {
-        webViewController = CAPBridgeViewController()
+        webViewController = LocaleAwareBridgeViewController()
 
         let darkBackground = UIColor(red: 0.008, green: 0.032, blue: 0.090, alpha: 1.0)
         webViewController.view.backgroundColor = darkBackground
@@ -248,6 +249,14 @@ class TidexContainerViewController: UIViewController, UITabBarDelegate {
         items[index].badgeValue = value
     }
 
+    /// Update tab bar titles dynamically from the web layer.
+    ///
+    /// Note: Currently unused. Tab titles are set at launch based on iOS device locale
+    /// (via `Locale.preferredLanguages` in `LocaleAwareBridgeViewController`).
+    /// This method is kept for potential future use cases where dynamic title updates
+    /// from JavaScript might be needed (e.g., runtime language switching without app restart).
+    ///
+    /// - Parameter titles: Array of title strings matching the order of `tabDefinitions`
     func setTabTitles(_ titles: [String]) {
         guard let items = customTabBar.items else { return }
         for (index, title) in titles.enumerated() {

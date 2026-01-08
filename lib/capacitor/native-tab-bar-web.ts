@@ -11,7 +11,9 @@ export class NativeTabBarWeb extends WebPlugin implements NativeTabBarPlugin {
   }
 
   async setTabTitles(_options: { titles: string[] }): Promise<void> {
-    // No-op on web
+    // No-op on web (native tab bar only exists on iOS)
+    // Note: Currently unused - tab titles are set from iOS device locale at launch.
+    // Kept for potential future use (e.g., runtime language switching).
   }
 
   async hide(): Promise<void> {

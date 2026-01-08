@@ -7,13 +7,30 @@ export interface TabSelectedEvent {
 }
 
 export interface NativeTabBarPlugin {
+  /** Update the selected tab visually (doesn't trigger navigation) */
   setSelectedTab(options: { index: number }): Promise<void>;
+  /** Clear tab selection (no tab highlighted) */
   clearSelection(): Promise<void>;
+  /** Set a badge on a tab (e.g., notification count) */
   setTabBadge(options: { index: number; value?: string }): Promise<void>;
+  /**
+   * Update tab bar titles dynamically.
+   *
+   * Note: Currently unused. Tab titles are set at launch based on iOS device locale
+   * (via `Locale.preferredLanguages` in Swift). This method is kept for potential
+   * future use cases where dynamic title updates from JavaScript might be needed
+   * (e.g., runtime language switching without app restart).
+   *
+   * @param titles - Array of title strings matching the order of Swift's tabDefinitions
+   */
   setTabTitles(options: { titles: string[] }): Promise<void>;
+  /** Hide the native tab bar */
   hide(): Promise<void>;
+  /** Show the native tab bar */
   show(): Promise<void>;
+  /** Check if native tab bar is available (iOS native only) */
   isAvailable(): Promise<{ available: boolean }>;
+  /** Get the current tab bar height in points */
   getTabBarHeight(): Promise<{ height: number }>;
   addListener(
     eventName: "tabSelected",
