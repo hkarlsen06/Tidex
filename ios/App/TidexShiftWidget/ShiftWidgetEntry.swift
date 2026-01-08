@@ -42,6 +42,9 @@ struct ShiftWidgetEntry: TimelineEntry {
     /// The layout state determining which view to render
     let layoutState: WidgetLayoutState
 
+    /// Whether the shift has already started (used to swap time emphasis)
+    let shiftHasStarted: Bool
+
     /// Placeholder entry for widget gallery and loading states
     static func placeholder(locale: String = "no") -> ShiftWidgetEntry {
         ShiftWidgetEntry(
@@ -54,7 +57,8 @@ struct ShiftWidgetEntry: TimelineEntry {
             locale: locale,
             hasShift: true,
             daysRemaining: 0,
-            layoutState: .todayOrTomorrow
+            layoutState: .todayOrTomorrow,
+            shiftHasStarted: false
         )
     }
 
@@ -71,7 +75,8 @@ struct ShiftWidgetEntry: TimelineEntry {
             locale: locale,
             hasShift: false,
             daysRemaining: 0,
-            layoutState: .empty
+            layoutState: .empty,
+            shiftHasStarted: false
         )
     }
 }
