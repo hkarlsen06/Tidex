@@ -1,5 +1,15 @@
 import WidgetKit
 
+/// Layout state for the widget - determines which layout to render
+enum WidgetLayoutState {
+    /// State A: Today or tomorrow - shows start time prominently with end time and salute
+    case todayOrTomorrow
+    /// State B: More than 1 day away - shows countdown in days with time range
+    case countdown
+    /// Empty/placeholder state - no shift available
+    case empty
+}
+
 /// Timeline entry for the Shift Home Widget
 struct ShiftWidgetEntry: TimelineEntry {
     /// The date for this timeline entry (used by WidgetKit for scheduling)
@@ -26,6 +36,12 @@ struct ShiftWidgetEntry: TimelineEntry {
     /// Whether there's a shift to display (false shows placeholder)
     let hasShift: Bool
 
+    /// Number of days until the shift (using midnight-crossing logic)
+    let daysRemaining: Int
+
+    /// The layout state determining which view to render
+    let layoutState: WidgetLayoutState
+
     /// Placeholder entry for widget gallery and loading states
     static func placeholder(locale: String = "no") -> ShiftWidgetEntry {
         ShiftWidgetEntry(
@@ -36,7 +52,9 @@ struct ShiftWidgetEntry: TimelineEntry {
             netEarnings: locale == "no" ? "892 kr" : "$156",
             salute: locale == "no" ? "God vakt!" : "You got this!",
             locale: locale,
-            hasShift: true
+            hasShift: true,
+            daysRemaining: 0,
+            layoutState: .todayOrTomorrow
         )
     }
 
@@ -51,7 +69,9 @@ struct ShiftWidgetEntry: TimelineEntry {
             netEarnings: "--- kr",
             salute: "---",
             locale: locale,
-            hasShift: false
+            hasShift: false,
+            daysRemaining: 0,
+            layoutState: .empty
         )
     }
 }

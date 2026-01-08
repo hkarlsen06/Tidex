@@ -89,6 +89,16 @@ private struct LogoWatermark: View {
 struct ShiftHomeWidgetView: View {
     let entry: ShiftWidgetEntry
 
+    /// Localized "days" label
+    private var daysLabel: String {
+        entry.locale == "no" ? "dager" : "days"
+    }
+
+    /// Localized "left" label
+    private var leftLabel: String {
+        entry.locale == "no" ? "igjen" : "left"
+    }
+
     var body: some View {
         ZStack {
             // Dark background matching app theme
@@ -98,9 +108,9 @@ struct ShiftHomeWidgetView: View {
             LogoWatermark()
                 .frame(width: 75, height: 85)
 
-            // Content
+            // Content - switches based on layout state
             VStack(spacing: 0) {
-                // TOP ROW
+                // TOP ROW (same for both states)
                 HStack(alignment: .top) {
                     Text(entry.shiftDate)
                         .font(.system(size: 14, weight: .semibold, design: .default))
@@ -117,35 +127,76 @@ struct ShiftHomeWidgetView: View {
 
                 Spacer()
 
-                // MIDDLE - HERO (large start time)
-                Text(entry.startTime)
-                    .font(.system(size: 46, weight: .bold, design: .default))
-                    .monospacedDigit()
-                    .foregroundColor(entry.hasShift ? .white : .white.opacity(0.4))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
+                // MIDDLE - HERO (different for each state)
+                if entry.layoutState == .countdown {
+                    // State B: Countdown in days
+                    countdownHeroView
+                } else {
+                    // State A: Large start time
+                    Text(entry.startTime)
+                        .font(.system(size: 46, weight: .bold, design: .default))
+                        .monospacedDigit()
+                        .foregroundColor(entry.hasShift ? .white : .white.opacity(0.4))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                }
 
                 Spacer()
 
-                // BOTTOM ROW
-                HStack(alignment: .bottom) {
-                    Text(entry.endTime)
+                // BOTTOM ROW (different for each state)
+                if entry.layoutState == .countdown {
+                    // State B: Centered time range
+                    Text("\(entry.startTime) – \(entry.endTime)")
                         .font(.system(size: 14, weight: .medium, design: .default))
                         .foregroundColor(.white.opacity(0.6))
                         .lineLimit(1)
+                } else {
+                    // State A: End time + salute
+                    HStack(alignment: .bottom) {
+                        Text(entry.endTime)
+                            .font(.system(size: 14, weight: .medium, design: .default))
+                            .foregroundColor(.white.opacity(0.6))
+                            .lineLimit(1)
 
-                    Spacer()
+                        Spacer()
 
-                    Text(entry.salute)
-                        .font(.system(size: 17, weight: .bold, design: .default))
-                        .italic()
-                        .foregroundColor(entry.hasShift ? tidexBlue : .white.opacity(0.4))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.6)
+                        Text(entry.salute)
+                            .font(.system(size: 17, weight: .bold, design: .default))
+                            .italic()
+                            .foregroundColor(entry.hasShift ? tidexBlue : .white.opacity(0.4))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.6)
+                    }
                 }
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 18)
+        }
+    }
+
+    /// Countdown hero view: large number on left, two stacked lines on right
+    /// The number and labels are horizontally centered as a group
+    private var countdownHeroView: some View {
+        HStack(alignment: .center, spacing: 8) {
+            // Large countdown number
+            Text("\(entry.daysRemaining)")
+                .font(.system(size: 46, weight: .bold, design: .default))
+                .monospacedDigit()
+                .foregroundColor(.white)
+                .lineLimit(1)
+
+            // Two stacked text lines: "days" / "dager" on top, "left" / "igjen" on bottom
+            VStack(alignment: .leading, spacing: 2) {
+                Text(daysLabel)
+                    .font(.system(size: 14, weight: .semibold, design: .default))
+                    .foregroundColor(.white.opacity(0.6))
+                    .lineLimit(1)
+
+                Text(leftLabel)
+                    .font(.system(size: 14, weight: .semibold, design: .default))
+                    .foregroundColor(.white.opacity(0.6))
+                    .lineLimit(1)
+            }
         }
     }
 }
@@ -191,6 +242,50 @@ struct ShiftWidgetProvider: TimelineProvider {
 
     // MARK: - Private Helpers
 
+    /// Count midnight boundaries crossed between two dates (matching the web app's pattern)
+    /// Users perceive "1 day" as "tomorrow", not "24 hours from now"
+    private func countMidnightCrossings(from: Date, to: Date) -> Int {
+        let calendar = Calendar.current
+        let fromMidnight = calendar.startOfDay(for: from)
+        let toMidnight = calendar.startOfDay(for: to)
+
+        let components = calendar.dateComponents([.day], from: fromMidnight, to: toMidnight)
+        return abs(components.day ?? 0)
+    }
+
+    /// Determine the layout state based on midnight crossings
+    /// - 0 crossings: today (State A)
+    /// - 1 crossing: tomorrow (State A)
+    /// - 2+ crossings: countdown (State B)
+    private func determineLayoutState(shiftDateString: String) -> (state: WidgetLayoutState, daysRemaining: Int) {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+
+        guard let shiftDate = formatter.date(from: shiftDateString) else {
+            return (.empty, 0)
+        }
+
+        let today = Date()
+        let calendar = Calendar.current
+        let todayMidnight = calendar.startOfDay(for: today)
+        let shiftMidnight = calendar.startOfDay(for: shiftDate)
+
+        // If shift is in the past, still show it with today/tomorrow layout
+        if shiftMidnight < todayMidnight {
+            return (.todayOrTomorrow, 0)
+        }
+
+        let daysRemaining = countMidnightCrossings(from: today, to: shiftDate)
+
+        // State A: today (0) or tomorrow (1)
+        // State B: more than 1 day away (2+)
+        if daysRemaining <= 1 {
+            return (.todayOrTomorrow, daysRemaining)
+        } else {
+            return (.countdown, daysRemaining)
+        }
+    }
+
     private func createEntry() -> ShiftWidgetEntry {
         guard let userDefaults = UserDefaults(suiteName: appGroupId),
               let shiftsJson = userDefaults.string(forKey: "upcoming_shifts"),
@@ -214,6 +309,9 @@ struct ShiftWidgetProvider: TimelineProvider {
         let netEarnings = shift.totalGrossEstimate * (1 - taxRate)
         let formattedEarnings = formatCurrency(netEarnings, symbol: currencySymbol)
 
+        // Determine layout state using midnight-crossing logic
+        let (layoutState, daysRemaining) = determineLayoutState(shiftDateString: shift.shiftDate)
+
         // Format date
         let formattedDate = formatShiftDate(shift.shiftDate, locale: locale)
 
@@ -228,7 +326,9 @@ struct ShiftWidgetProvider: TimelineProvider {
             netEarnings: formattedEarnings,
             salute: salute,
             locale: locale,
-            hasShift: true
+            hasShift: true,
+            daysRemaining: daysRemaining,
+            layoutState: layoutState
         )
     }
 
@@ -332,8 +432,35 @@ struct ShiftHomeWidget: Widget {
 #Preview(as: .systemSmall) {
     ShiftHomeWidget()
 } timeline: {
+    // State A: Today/Tomorrow layouts
     ShiftWidgetEntry.placeholder(locale: "no")
     ShiftWidgetEntry.placeholder(locale: "en")
+    // State B: Countdown layouts
+    ShiftWidgetEntry(
+        date: Date(),
+        shiftDate: "Man. 20.",
+        startTime: "16:00",
+        endTime: "23:15",
+        netEarnings: "1 332 kr",
+        salute: "Du klarer det!",
+        locale: "no",
+        hasShift: true,
+        daysRemaining: 5,
+        layoutState: .countdown
+    )
+    ShiftWidgetEntry(
+        date: Date(),
+        shiftDate: "Mon. 20.",
+        startTime: "16:00",
+        endTime: "23:15",
+        netEarnings: "$234",
+        salute: "You got this!",
+        locale: "en",
+        hasShift: true,
+        daysRemaining: 12,
+        layoutState: .countdown
+    )
+    // Empty state
     ShiftWidgetEntry.empty(locale: "no")
 }
 #endif
