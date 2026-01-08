@@ -7,6 +7,7 @@ import Capacitor
 /// - WebView is edge-to-edge (allows CSS env(safe-area-inset-*) to work correctly)
 /// - UITabBar is a sibling view positioned at the bottom
 /// - Tab bar height is injected into WebView as CSS custom property
+/// - Splash screen overlay shows LaunchScreen.storyboard content until JS signals ready
 ///
 /// This approach avoids UITabBarController's safe area propagation issues when
 /// embedding CAPBridgeViewController as a child.
@@ -14,6 +15,7 @@ class TidexContainerViewController: UIViewController, UITabBarDelegate {
 
     private var webViewController: LocaleAwareBridgeViewController!
     private var customTabBar: UITabBar!
+    private var splashView: UIView?
     weak var nativeTabBarPlugin: NativeTabBarPlugin?
 
     // Shared reference for plugin to locate this controller
@@ -61,6 +63,7 @@ class TidexContainerViewController: UIViewController, UITabBarDelegate {
         setupWebView()
         setupTabBar()
         setupSwipeBackGesture()
+        setupSplashScreen()
     }
 
     private func setupWebView() {
@@ -210,10 +213,15 @@ class TidexContainerViewController: UIViewController, UITabBarDelegate {
 
         // Try to get bridge
         if let bridge = webViewController.bridge {
-            let plugin = NativeTabBarPlugin()
-            plugin.containerController = self
-            bridge.registerPluginInstance(plugin)
-            self.nativeTabBarPlugin = plugin
+            // Register NativeTabBar plugin
+            let tabBarPlugin = NativeTabBarPlugin()
+            tabBarPlugin.containerController = self
+            bridge.registerPluginInstance(tabBarPlugin)
+            self.nativeTabBarPlugin = tabBarPlugin
+
+            // Register NativeSplash plugin
+            let splashPlugin = NativeSplashPlugin()
+            bridge.registerPluginInstance(splashPlugin)
 
             // Inject initial tab bar height now that bridge is ready
             injectTabBarHeightToCSS()
@@ -315,5 +323,52 @@ class TidexContainerViewController: UIViewController, UITabBarDelegate {
 
     func getTabBarHeight() -> CGFloat {
         return customTabBar.frame.height
+    }
+
+    // MARK: - Splash Screen
+
+    private func setupSplashScreen() {
+        // Load the LaunchScreen storyboard and instantiate its view controller
+        guard let launchStoryboard = UIStoryboard(name: "LaunchScreen", bundle: nil).instantiateInitialViewController() else {
+            return
+        }
+
+        let splash = launchStoryboard.view!
+        splash.frame = view.bounds
+        splash.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+
+        // Add on top of everything
+        view.addSubview(splash)
+        splashView = splash
+    }
+
+    /// Hide the splash screen with animation
+    /// - Parameters:
+    ///   - duration: Fade out duration in seconds
+    ///   - completion: Called when animation completes
+    func hideSplash(duration: TimeInterval = 0.2, completion: (() -> Void)? = nil) {
+        guard let splash = splashView else {
+            completion?()
+            return
+        }
+
+        UIView.animate(withDuration: duration, animations: {
+            splash.alpha = 0
+        }, completion: { _ in
+            splash.removeFromSuperview()
+            self.splashView = nil
+            completion?()
+        })
+    }
+
+    /// Show the splash screen (rarely needed, but available)
+    func showSplash() {
+        guard splashView == nil else { return }
+        setupSplashScreen()
+    }
+
+    /// Check if splash screen is currently visible
+    func isSplashVisible() -> Bool {
+        return splashView != nil && splashView?.alpha ?? 0 > 0
     }
 }
