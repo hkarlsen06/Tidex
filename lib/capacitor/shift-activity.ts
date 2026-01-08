@@ -25,6 +25,8 @@ export interface StoredShiftData {
   supplementRatePerHour: number;
   totalGrossEstimate: number;
   locale: string;
+  currencySymbol?: string; // e.g., "kr", "$", "€"
+  taxRate?: number; // User's tax rate (0.0-1.0)
 }
 
 export interface StartActivityResult {

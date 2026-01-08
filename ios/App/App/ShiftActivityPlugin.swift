@@ -1,6 +1,7 @@
 @preconcurrency import ActivityKit
 import Capacitor
 import Foundation
+import WidgetKit
 
 // MARK: - Activity Update Manager
 
@@ -313,7 +314,7 @@ public class ShiftActivityPlugin: CAPPlugin, CAPBridgedPlugin {
         }
     }
 
-    /// Save upcoming shifts to shared storage for background task access
+    /// Save upcoming shifts to shared storage for background task access and home widget
     @objc func saveShiftsToSharedStorage(_ call: CAPPluginCall) {
         guard let shiftsJson = call.getString("shifts") else {
             call.reject("Missing shifts parameter")
@@ -326,6 +327,9 @@ public class ShiftActivityPlugin: CAPPlugin, CAPBridgedPlugin {
         }
 
         userDefaults.set(shiftsJson, forKey: "upcoming_shifts")
+
+        // Trigger widget refresh so ShiftHomeWidget updates with new data
+        WidgetCenter.shared.reloadAllTimelines()
 
         call.resolve(["success": true])
     }

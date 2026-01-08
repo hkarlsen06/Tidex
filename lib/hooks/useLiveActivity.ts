@@ -16,6 +16,8 @@ type UseLiveActivityOptions = {
   locale: string;
   /** Currency symbol to display (e.g., "kr", "$", "€") */
   currencySymbol?: string;
+  /** User's tax rate (0.0-1.0) for net earnings calculation */
+  taxRate?: number;
   /** Whether Live Activity management is enabled (default: true) */
   enabled?: boolean;
 };
@@ -148,21 +150,25 @@ function findOngoingShift(
 }
 
 /**
- * Prepare shifts for storage (upcoming shifts for background task)
+ * Prepare shifts for storage (upcoming shifts for background task and home widget)
  */
 function prepareShiftsForStorage(
   shifts: ShiftWithComputations[],
-  locale: string
+  locale: string,
+  currencySymbol: string,
+  taxRate: number
 ): StoredShiftData[] {
   const now = new Date();
-  const tomorrow = new Date(now);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const tomorrowStr = tomorrow.toISOString().split("T")[0];
   const todayStr = now.toISOString().split("T")[0];
 
-  // Filter to today and tomorrow's shifts
+  // Include shifts from today onwards (next 7 days) for the home widget
+  const maxDate = new Date(now);
+  maxDate.setDate(maxDate.getDate() + 7);
+  const maxDateStr = maxDate.toISOString().split("T")[0];
+
+  // Filter to upcoming shifts within the next 7 days
   return shifts
-    .filter((s) => s.shift_date === todayStr || s.shift_date === tomorrowStr)
+    .filter((s) => s.shift_date >= todayStr && s.shift_date <= maxDateStr)
     .map((shift) => {
       const supplementRate = calculateAverageSupplementRate(shift);
       const hourlyWage =
@@ -179,6 +185,8 @@ function prepareShiftsForStorage(
         supplementRatePerHour: supplementRate,
         totalGrossEstimate: shift.computed.gross,
         locale,
+        currencySymbol,
+        taxRate,
       };
     });
 }
@@ -205,6 +213,7 @@ export function useLiveActivity({
   shifts,
   locale,
   currencySymbol = "kr",
+  taxRate = 0,
   enabled = true,
 }: UseLiveActivityOptions): UseLiveActivityResult {
   const activeActivityRef = useRef<string | null>(null);
@@ -275,7 +284,12 @@ export function useLiveActivity({
 
     const saveShifts = async () => {
       try {
-        const storedShifts = prepareShiftsForStorage(shifts, locale);
+        const storedShifts = prepareShiftsForStorage(
+          shifts,
+          locale,
+          currencySymbol,
+          taxRate
+        );
         await ShiftActivity.saveShiftsToSharedStorage({
           shifts: JSON.stringify(storedShifts),
         });
@@ -285,7 +299,7 @@ export function useLiveActivity({
     };
 
     saveShifts();
-  }, [shifts, locale, enabled]);
+  }, [shifts, locale, currencySymbol, taxRate, enabled]);
 
   // Auto-manage activity based on shift state
   useEffect(() => {
