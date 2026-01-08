@@ -474,7 +474,7 @@ export function MonthlyEarningsCalendar({
 
   // Calculate totals - use selected shifts only when in multi-selection mode
   // Note: summarizeShiftTotals/getMonthlyTotals now automatically exclude conflicting shifts
-  const { totalEarnings, netEarnings, isShowingSelectedTotal } = useMemo(() => {
+  const { totalEarnings, netEarnings, isShowingSelectedTotal: _isShowingSelectedTotal } = useMemo(() => {
     // When dates are selected (multi or single), show total for selected shifts only
     const hasMultiSelection = selectedDates && selectedDates.size > 0;
     const hasSingleSelection = selectedDate && !hasMultiSelection;

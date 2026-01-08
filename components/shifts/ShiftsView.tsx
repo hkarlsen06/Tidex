@@ -403,12 +403,13 @@ function ShiftGroupContent({
   }, []);
 
   useEffect(() => {
+    const session = selectionSessionRef.current;
     return () => {
-      if (selectionSessionRef.current.endTimeoutId) {
-        clearTimeout(selectionSessionRef.current.endTimeoutId);
+      if (session.endTimeoutId) {
+        clearTimeout(session.endTimeoutId);
       }
-      if (selectionSessionRef.current.active) {
-        selectionSessionRef.current.active = false;
+      if (session.active) {
+        session.active = false;
         selectionEndHaptic();
       }
     };
@@ -1768,12 +1769,13 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
   }, []);
 
   useEffect(() => {
+    const session = calendarSelectionSessionRef.current;
     return () => {
-      if (calendarSelectionSessionRef.current.endTimeoutId) {
-        clearTimeout(calendarSelectionSessionRef.current.endTimeoutId);
+      if (session.endTimeoutId) {
+        clearTimeout(session.endTimeoutId);
       }
-      if (calendarSelectionSessionRef.current.active) {
-        calendarSelectionSessionRef.current.active = false;
+      if (session.active) {
+        session.active = false;
         selectionEndHaptic();
       }
     };

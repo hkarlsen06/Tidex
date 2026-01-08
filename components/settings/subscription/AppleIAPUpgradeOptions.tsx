@@ -160,7 +160,6 @@ export function AppleIAPUpgradeOptions({
   const [error, setError] = useState<string | null>(null);
   const [isRestoring, setIsRestoring] = useState(false);
   const [appAccountToken, setAppAccountToken] = useState<string | null>(null);
-  const [initStep, setInitStep] = useState<string>('idle');
   const [errorKey, setErrorKey] = useState<string | null>(null);
   const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>('monthly');
 
@@ -194,7 +193,6 @@ export function AppleIAPUpgradeOptions({
       setIsInitialized(false);
       setIsInitializing(true);
       currentStep = 'starting';
-      setInitStep('starting');
 
       // Set up timeout - uses local currentStep variable to track progress
       timeoutId = setTimeout(() => {
@@ -208,7 +206,6 @@ export function AppleIAPUpgradeOptions({
       try {
         // Step 1: Get app account token
         currentStep = 'getting_token';
-        setInitStep('getting_token');
         const tokenResult = await getAppAccountToken();
 
         if (isCancelled) return;
@@ -222,7 +219,6 @@ export function AppleIAPUpgradeOptions({
 
         // Step 2: Initialize IAP
         currentStep = 'initializing_iap';
-        setInitStep('initializing_iap');
         const initResult = await initializeIAP();
 
         if (isCancelled) return;
@@ -236,7 +232,6 @@ export function AppleIAPUpgradeOptions({
 
         // Step 3: Fetch products
         currentStep = 'fetching_products';
-        setInitStep('fetching_products');
         const productsResult = await getProducts();
 
         if (isCancelled) return;
@@ -256,7 +251,6 @@ export function AppleIAPUpgradeOptions({
 
         // Step 4: Complete
         currentStep = 'complete';
-        setInitStep('complete');
         setIsInitialized(true);
         setIsInitializing(false);
 
