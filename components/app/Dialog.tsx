@@ -82,8 +82,8 @@ export const DialogContent = React.forwardRef<
       <DialogPrimitive.Content
         ref={ref}
         className={cn(
-          // Base positioning - use inset with safe areas instead of top/translate
-          "fixed left-[50%] z-50 grid w-[calc(100%-2rem)] max-w-lg translate-x-[-50%] gap-4 border bg-background p-6 shadow-lg rounded-lg overflow-x-hidden overflow-y-auto",
+          // Base positioning - centered with safe area constraints via inline styles
+          "fixed z-50 grid w-[calc(100%-2rem)] max-w-lg gap-4 border bg-background p-6 shadow-lg rounded-lg overflow-x-hidden overflow-y-auto",
           // Animations
           "data-[state=open]:animate-in data-[state=closed]:animate-out",
           "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
@@ -92,8 +92,9 @@ export const DialogContent = React.forwardRef<
           className
         )}
         style={{
-          // Center vertically with safe area constraints
-          // Use CSS calc to respect safe areas on iOS native
+          // Center both horizontally and vertically with safe area constraints
+          // All positioning via inline styles to avoid conflicts with Tailwind transforms
+          left: "50%",
           top: "50%",
           transform: "translate(-50%, -50%)",
           // Max height respects both safe areas (top notch + bottom tab bar/home indicator)
