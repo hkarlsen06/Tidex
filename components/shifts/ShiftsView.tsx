@@ -29,6 +29,7 @@ import { useNavigationFeedback } from "@/components/app/navigation-feedback";
 import { useMonth } from "@/components/app/MonthContext";
 import { queueMutation, isOfflineQueueSupported } from "@/lib/pwa/offline-queue";
 import type { ISODate } from "@/components/app/calendar-types";
+import { toISODate } from "@/components/app/calendar-utils";
 import {
   Dialog,
   DialogContent,
@@ -2035,6 +2036,54 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
     [calendarSelectedShiftId, clearSelection, navigate, selectedDate, shiftsByDate, copyMode, router, moveMode, locale, readOnly, multiSelectedDates, errorComplete, showEarnings, triggerCalendarSelectionHaptic]
   );
 
+  const handleSelectDateRange = useCallback(
+    (startIso: ISODate, endIso: ISODate) => {
+      const allowMultiSelect = !copyMode && !moveMode && (!readOnly || showEarnings);
+      if (!allowMultiSelect) return;
+
+      const startDate = new Date(`${startIso}T00:00:00`);
+      const endDate = new Date(`${endIso}T00:00:00`);
+      const step = startDate <= endDate ? 1 : -1;
+      const range: ISODate[] = [];
+      const cursor = new Date(startDate);
+
+      while ((step > 0 && cursor <= endDate) || (step < 0 && cursor >= endDate)) {
+        range.push(toISODate(cursor) as ISODate);
+        cursor.setDate(cursor.getDate() + step);
+      }
+
+      const selectable = range.filter((iso) => (shiftsByDate.get(iso)?.length ?? 0) > 0);
+      if (selectable.length === 0) return;
+
+      triggerCalendarSelectionHaptic();
+      setCopyMode(false);
+      setMoveMode(false);
+      setMoveSelection([]);
+      setOpenedFromCalendar(false);
+
+      const merged = new Set<ISODate>();
+      if (selectedDate) merged.add(selectedDate);
+      multiSelectedDates.forEach((iso) => merged.add(iso));
+      selectable.forEach((iso) => merged.add(iso));
+
+      if (merged.size === 1) {
+        const onlyDate = [...merged][0];
+        const onlyShifts = shiftsByDate.get(onlyDate) ?? [];
+        if (onlyShifts.length > 0) {
+          setSelectedDate(onlyDate);
+          setCalendarSelectedShiftId(onlyShifts[0].id);
+          setMultiSelectedDates(new Set());
+        }
+        return;
+      }
+
+      setSelectedDate(null);
+      setCalendarSelectedShiftId(null);
+      setMultiSelectedDates(merged);
+    },
+    [copyMode, moveMode, readOnly, showEarnings, shiftsByDate, triggerCalendarSelectionHaptic, selectedDate, multiSelectedDates]
+  );
+
   const handleOpenDetails = useCallback(() => {
     if (!selectedDate) return;
 
@@ -2520,6 +2569,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
             month={selectedMonth}
             onMonthChange={handleMonthChange}
             onDayClick={handleDayClick}
+            onSelectDateRange={handleSelectDateRange}
             selectedDate={selectedDate}
             selectedDates={readOnly && !showEarnings ? undefined : multiSelectedDates}
             onClearMultiSelection={readOnly && !showEarnings ? undefined : clearMultiSelection}
