@@ -19,7 +19,7 @@ const LEGACY_MAX_PRICE_IDS = ["price_1RzQC1Qiotkj8G58tYo4U5oO"];
  * Subscription statuses that should be treated as entitled access.
  * Matches hasProAccess logic for consistency across features.
  */
-const ENTITLED_STATUSES = ["active", "trialing", "grace"] as const;
+const ENTITLED_STATUSES: readonly string[] = ["active", "trialing", "grace"];
 
 /**
  * Apple product IDs and internal product IDs mapped to normalized IDs.

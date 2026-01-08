@@ -43,7 +43,8 @@ const ScrollAnimatedCard = React.forwardRef<HTMLDivElement, { children: React.Re
     // Use larger top margin to account for navbar (~96px header + buffer)
     // Bottom margin for bottom navbar (~80px + buffer)
     const isInView = useInView(internalRef, { amount: 0.2, margin: "-120px 0px -100px 0px" });
-    const selectionHaptic = onSelectionHaptic ?? useContext(SelectionHapticContext);
+    const contextSelectionHaptic = useContext(SelectionHapticContext);
+    const selectionHaptic = onSelectionHaptic ?? contextSelectionHaptic;
     // useIsDesktop returns undefined during SSR/hydration, then true/false after mount
     const isDesktop = useIsDesktop();
 
@@ -322,12 +323,13 @@ export function StatsContent({ data, cacheKey }: StatsContentProps) {
   }, []);
 
   useEffect(() => {
+    const session = selectionSessionRef.current;
     return () => {
-      if (selectionSessionRef.current.endTimeoutId) {
-        clearTimeout(selectionSessionRef.current.endTimeoutId);
+      if (session.endTimeoutId) {
+        clearTimeout(session.endTimeoutId);
       }
-      if (selectionSessionRef.current.active) {
-        selectionSessionRef.current.active = false;
+      if (session.active) {
+        session.active = false;
         selectionEndHaptic();
       }
     };
