@@ -626,7 +626,7 @@ function MessageBubble({
               <div className={`text-[11px] font-semibold ${labelClass} whitespace-nowrap`}>
                 {isUser ? userLabel : isToolCall ? (toolCallSucceeded ? `Wagey • ${t.pages.wagey.worked}` : `Wagey • ${t.pages.wagey.working}`) : "Wagey"}
               </div>
-              <div className="whitespace-pre-wrap wrap-break-words text-sm md:text-base leading-relaxed">
+              <div className="whitespace-pre-wrap wrap-break-word text-sm md:text-base leading-relaxed">
                 {formatContent(message.content)}
                 <span className="animate-pulse ml-0.5">▋</span>
               </div>
@@ -657,7 +657,7 @@ function MessageBubble({
               <div className={`text-[11px] font-semibold ${labelClass} whitespace-nowrap`}>
                 {isUser ? userLabel : isToolCall ? (toolCallSucceeded ? `Wagey • ${t.pages.wagey.worked}` : `Wagey • ${t.pages.wagey.working}`) : "Wagey"}
               </div>
-              <div className="whitespace-pre-wrap wrap-break-words text-sm md:text-base leading-relaxed">
+              <div className="whitespace-pre-wrap wrap-break-word text-sm md:text-base leading-relaxed">
                 {formatContent(message.content)}
               </div>
             </div>
@@ -729,7 +729,7 @@ function MessageBubble({
             <div className={`text-[11px] font-semibold ${labelClass} whitespace-nowrap`}>
               {isUser ? userLabel : isToolCall ? (toolCallSucceeded ? `Wagey • ${t.pages.wagey.worked}` : `Wagey • ${t.pages.wagey.working}`) : "Wagey"}
             </div>
-            <div className="whitespace-pre-wrap wrap-break-words text-sm md:text-base leading-relaxed">
+            <div className="whitespace-pre-wrap wrap-break-word text-sm md:text-base leading-relaxed">
               {formatContent(message.content)}
             </div>
           </div>

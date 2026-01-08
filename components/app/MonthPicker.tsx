@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { useTranslations } from "@/lib/i18n/client";
+import { impactHaptic } from "@/lib/capacitor/haptics";
 
 type MonthPickerProps = {
   month: Date;
@@ -64,11 +65,13 @@ export function MonthPicker({
 
   const handlePrevious = () => {
     setInternalDirection("backward");
+    impactHaptic("light");
     onPreviousMonth();
   };
 
   const handleNext = () => {
     setInternalDirection("forward");
+    impactHaptic("light");
     onNextMonth();
   };
 

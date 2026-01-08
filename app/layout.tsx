@@ -79,10 +79,73 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           dangerouslySetInnerHTML={{
             __html: `
               try {
+                // Track if we've confirmed platform detection (for coordinating with safe-area check)
+                var platformConfirmed = false;
+                var safeAreaReady = false;
+                var safeAreaTestElement = null;
+
+                // Function to show content once both platform and safe-area are ready
+                function maybeShowContent() {
+                  if (platformConfirmed && safeAreaReady) {
+                    document.documentElement.classList.remove('safe-area-loading');
+                    if (safeAreaTestElement) {
+                      safeAreaTestElement.remove();
+                      safeAreaTestElement = null;
+                    }
+                  }
+                }
+
                 // Detect if running in iOS native app (Capacitor WebView)
-                // iOS WKWebView doesn't have Safari in user agent when embedded
-                var ua = navigator.userAgent || '';
-                var isIOSNative = /iPhone|iPad|iPod/.test(ua) && !/Safari/.test(ua);
+                // Primary: Check for Capacitor bridge (most reliable)
+                // Fallback: Check user agent for iOS without Safari (legacy WebViews)
+                function checkNativeIOS() {
+                  // Check Capacitor bridge first (injected by native shell)
+                  if (window.Capacitor && window.Capacitor.getPlatform) {
+                    return window.Capacitor.getPlatform() === 'ios';
+                  }
+                  // Fallback: iOS device without Safari in UA (legacy WebViews only)
+                  // Note: Modern WKWebView includes Safari in UA, so this fallback
+                  // mainly catches older setups. We rely on the Capacitor retry below.
+                  var ua = navigator.userAgent || '';
+                  return /iPhone|iPad|iPod/.test(ua) && !/Safari/.test(ua);
+                }
+
+                var isIOSNative = checkNativeIOS();
+
+                // Mark native iOS immediately so CSS can hide web NavBar on first paint
+                if (isIOSNative) {
+                  document.documentElement.classList.add('native-ios');
+                }
+
+                // If Capacitor bridge wasn't ready, check again shortly
+                // This handles race condition where bridge loads after this script
+                if (!window.Capacitor) {
+                  var checkCount = 0;
+                  var maxChecks = 20; // ~200ms max wait
+                  function recheckCapacitor() {
+                    checkCount++;
+                    if (window.Capacitor && window.Capacitor.getPlatform) {
+                      if (window.Capacitor.getPlatform() === 'ios') {
+                        document.documentElement.classList.add('native-ios');
+                        // Force dark theme to match launch screen (theme was set before bridge was ready)
+                        document.documentElement.classList.add('dark');
+                      }
+                      // Platform confirmed - can show content now
+                      platformConfirmed = true;
+                      maybeShowContent();
+                    } else if (checkCount < maxChecks) {
+                      setTimeout(recheckCapacitor, 10);
+                    } else {
+                      // Max attempts reached, assume web platform
+                      platformConfirmed = true;
+                      maybeShowContent();
+                    }
+                  }
+                  setTimeout(recheckCapacitor, 10);
+                } else {
+                  // Capacitor bridge already available, platform confirmed
+                  platformConfirmed = true;
+                }
 
                 // Initialize theme from localStorage or system preference
                 // ThemeProvider will sync with DB preference on authenticated pages
@@ -102,34 +165,34 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                 // This prevents the layout shift when the header/navbar snap into position
                 (function waitForSafeArea() {
                   // Create a test element to measure safe-area-inset-top
-                  var test = document.createElement('div');
-                  test.style.cssText = 'position:fixed;top:env(safe-area-inset-top,0px);left:0;width:1px;height:1px;pointer-events:none;visibility:hidden';
-                  document.documentElement.appendChild(test);
+                  safeAreaTestElement = document.createElement('div');
+                  safeAreaTestElement.style.cssText = 'position:fixed;top:env(safe-area-inset-top,0px);left:0;width:1px;height:1px;pointer-events:none;visibility:hidden';
+                  document.documentElement.appendChild(safeAreaTestElement);
 
                   function check() {
-                    var rect = test.getBoundingClientRect();
+                    var rect = safeAreaTestElement.getBoundingClientRect();
                     // If top > 0, safe-area-insets are resolved (notched device)
                     // If top === 0, either no notch or values not yet available
                     // We use a short timeout to ensure the CSS has been applied
                     if (rect.top > 0) {
                       // Safe area is available and non-zero
-                      document.documentElement.classList.remove('safe-area-loading');
-                      test.remove();
+                      safeAreaReady = true;
+                      maybeShowContent();
                     } else {
                       // Check if we're on a device that should have safe-area
                       // Use CSS.supports to check if env() is understood by the browser
                       var supportsEnv = CSS.supports && CSS.supports('top', 'env(safe-area-inset-top)');
                       if (!supportsEnv) {
                         // Browser doesn't support env(), no need to wait
-                        document.documentElement.classList.remove('safe-area-loading');
-                        test.remove();
+                        safeAreaReady = true;
+                        maybeShowContent();
                       } else {
                         // Wait a frame and check again (max ~100ms total)
                         requestAnimationFrame(function() {
                           setTimeout(function() {
-                            // After waiting, remove regardless (fallback)
-                            document.documentElement.classList.remove('safe-area-loading');
-                            test.remove();
+                            // After waiting, mark as ready regardless (fallback)
+                            safeAreaReady = true;
+                            maybeShowContent();
                           }, 50);
                         });
                       }

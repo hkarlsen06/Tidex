@@ -195,6 +195,15 @@ export async function proxy(request: NextRequest) {
   const localeFromPath = getLocaleFromPathname(pathname);
 
   if (localeFromPath) {
+    // Check if this is the root locale path (e.g., /en or /en/) - redirect to dashboard
+    // This ensures backwards compatibility for bookmarks and links to the old root path
+    if (pathname === `/${localeFromPath}` || pathname === `/${localeFromPath}/`) {
+      const dashboardUrl = new URL(`/${localeFromPath}/dashboard`, request.url);
+      // Preserve query string if present
+      dashboardUrl.search = request.nextUrl.search;
+      return NextResponse.redirect(dashboardUrl, 308); // Permanent redirect
+    }
+
     // Path has locale - update cookie and continue
     // Add x-current-path header so server components can access the current path
     const requestHeaders = new Headers(request.headers);
@@ -258,7 +267,9 @@ export async function proxy(request: NextRequest) {
   }
 
   // Redirect to locale-prefixed path
-  const redirectUrl = new URL(`/${targetLocale}${pathname}`, request.url);
+  // Special case: root "/" redirects directly to dashboard
+  const targetPath = pathname === '/' ? '/dashboard' : pathname;
+  const redirectUrl = new URL(`/${targetLocale}${targetPath}`, request.url);
   const response = NextResponse.redirect(redirectUrl);
 
   // Set locale cookie

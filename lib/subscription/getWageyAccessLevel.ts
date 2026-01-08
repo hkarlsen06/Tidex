@@ -16,6 +16,34 @@ const LEGACY_PRO_PRICE_IDS = ["price_1RzQ85Qiotkj8G58AO6st4fh"];
 const LEGACY_MAX_PRICE_IDS = ["price_1RzQC1Qiotkj8G58tYo4U5oO"];
 
 /**
+ * Subscription statuses that should be treated as entitled access.
+ * Matches hasProAccess logic for consistency across features.
+ */
+const ENTITLED_STATUSES: readonly string[] = ["active", "trialing", "grace"];
+
+/**
+ * Apple product IDs and internal product IDs mapped to normalized IDs.
+ * This mirrors the unified subscription model used in the database.
+ */
+const PRODUCT_ID_NORMALIZATION: Record<string, string> = {
+  // Internal IDs (stored in database)
+  pro_monthly: "pro_monthly",
+  pro_yearly: "pro_yearly",
+  max_monthly: "max_monthly",
+  max_yearly: "max_yearly",
+  // Apple product IDs
+  "no.tidex.pro": "pro_monthly",
+  "no.tidex.pro.year": "pro_yearly",
+  "no.tidex.max": "max_monthly",
+  "no.tidex.max.year": "max_yearly",
+};
+
+function normalizeProductId(productId: string | null | undefined): string | null {
+  if (!productId) return null;
+  return PRODUCT_ID_NORMALIZATION[productId] ?? productId;
+}
+
+/**
  * Determines user's Wagey access level based on subscription status and profile
  *
  * Priority order:
@@ -33,20 +61,31 @@ export function getWageyAccessLevel(
   subscription: Subscription | null,
   profile: UserProfile | null
 ): WageyAccessLevel {
-  const hasActiveSubscription = subscription?.status === "active";
+  const hasEntitledSubscription =
+    !!subscription && ENTITLED_STATUSES.includes(subscription.status);
 
   // Grandfathered users get higher limits if they also have a subscription
   if (profile?.before_paywall === true) {
-    return hasActiveSubscription ? "grandfathered_plan" : "grandfathered";
+    return hasEntitledSubscription ? "grandfathered_plan" : "grandfathered";
   }
 
   // Check for active subscription
-  if (!hasActiveSubscription) {
+  if (!hasEntitledSubscription) {
     return "free";
   }
 
   // Admin trial subscriptions get Pro access
   if (subscription.provider === "admin_trial") {
+    return "pro";
+  }
+
+  const normalizedProductId = normalizeProductId(subscription.product_id);
+
+  if (normalizedProductId === "max_monthly" || normalizedProductId === "max_yearly") {
+    return "max";
+  }
+
+  if (normalizedProductId === "pro_monthly" || normalizedProductId === "pro_yearly") {
     return "pro";
   }
 

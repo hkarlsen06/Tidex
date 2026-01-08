@@ -42,7 +42,7 @@ export default async function WageyPage({ params }: WageyPageProps) {
   // Free users see the showcase with option to try Wagey
   if (!wageyAccess.hasAccess) {
     return (
-      <div className="fixed inset-0 top-(--header-height,4rem) bottom-0 md:static md:inset-auto overflow-y-auto">
+      <div className="fixed inset-0 top-[calc(4rem+env(safe-area-inset-top))] bottom-0 md:static md:inset-auto md:top-0 overflow-y-auto">
         <I18nProvider locale={locale} dictionary={dictionary}>
           <WageyTrialWrapper
             userId={user.id}
@@ -56,7 +56,7 @@ export default async function WageyPage({ params }: WageyPageProps) {
 
   // Paid/grandfathered users see the chat interface
   return (
-    <div className="fixed inset-0 top-(--header-height,4rem) bottom-0 md:static md:inset-auto">
+    <div className="fixed inset-0 top-[calc(4rem+env(safe-area-inset-top))] bottom-0 md:static md:inset-auto md:top-0">
       <I18nProvider locale={locale} dictionary={dictionary}>
         <WageyInterface
           userId={user.id}

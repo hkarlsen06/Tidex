@@ -37,7 +37,7 @@ export function SubscriptionCancelButtons({ dict, locale }: SubscriptionCancelBu
         <Link href={`/${locale}/settings/subscription`} onClick={handleClick(`/${locale}/settings/subscription`)}>{dict.tryAgain}</Link>
       </Button>
       <Button asChild variant="outline" className="flex-1">
-        <Link href={`/${locale}/home`} onClick={handleClick(`/${locale}/home`)}>{dict.goToDashboard}</Link>
+        <Link href={`/${locale}/dashboard`} onClick={handleClick(`/${locale}/dashboard`)}>{dict.goToDashboard}</Link>
       </Button>
     </div>
   );

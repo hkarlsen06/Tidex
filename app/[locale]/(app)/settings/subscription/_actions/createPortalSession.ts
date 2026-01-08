@@ -1,10 +1,12 @@
 'use server';
 
 import Stripe from 'stripe';
+import { cookies } from 'next/headers';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { logger } from '@/lib/logger';
 import { verifySession } from '@/data-access/auth';
 import { enforceNotImpersonating } from '@/lib/auth/impersonation';
+import { LOCALE_COOKIE, defaultLocale } from '@/lib/i18n/config';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-10-29.clover',
@@ -36,9 +38,15 @@ export async function createPortalSession(): Promise<PortalSessionResult> {
       return { success: false, error: 'Kunne ikke finne abonnementsinformasjon' };
     }
 
-    // Build return URL
+    // Get user's locale from cookie or user metadata
+    const cookieStore = await cookies();
+    const locale = cookieStore.get(LOCALE_COOKIE)?.value
+      || user.user_metadata?.locale
+      || defaultLocale;
+
+    // Build return URL with locale prefix
     const baseUrl = process.env.NEXT_PUBLIC_APP_BASE_URL || 'http://localhost:3000';
-    const returnUrl = `${baseUrl}/settings/subscription`;
+    const returnUrl = `${baseUrl}/${locale}/settings/subscription`;
 
     // Create Stripe customer portal session
     const session = await stripe.billingPortal.sessions.create({

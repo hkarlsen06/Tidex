@@ -1,9 +1,11 @@
 'use server';
 
 import Stripe from 'stripe';
+import { cookies } from 'next/headers';
 import { logger } from '@/lib/logger';
 import { verifySession } from '@/data-access/auth';
 import { enforceNotImpersonating } from '@/lib/auth/impersonation';
+import { LOCALE_COOKIE, defaultLocale } from '@/lib/i18n/config';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-10-29.clover',
@@ -29,10 +31,16 @@ export async function createCheckoutSession(priceId: string): Promise<CheckoutSe
       return { success: false, error: 'Kunne ikke finne e-postadressen din' };
     }
 
-    // Build success and cancel URLs
+    // Get user's locale from cookie or user metadata
+    const cookieStore = await cookies();
+    const locale = cookieStore.get(LOCALE_COOKIE)?.value
+      || user.user_metadata?.locale
+      || defaultLocale;
+
+    // Build success and cancel URLs with locale prefix
     const baseUrl = process.env.NEXT_PUBLIC_APP_BASE_URL || 'http://localhost:3000';
-    const successUrl = `${baseUrl}/settings/subscription/success?session_id={CHECKOUT_SESSION_ID}`;
-    const cancelUrl = `${baseUrl}/settings/subscription/cancel`;
+    const successUrl = `${baseUrl}/${locale}/settings/subscription/success?session_id={CHECKOUT_SESSION_ID}`;
+    const cancelUrl = `${baseUrl}/${locale}/settings/subscription/cancel`;
 
     // Create Stripe checkout session
     const session = await stripe.checkout.sessions.create({

@@ -90,7 +90,7 @@ export default async function RootLayout({
 
   // Authentication enforcement - redirect to login if no valid session
   if (error || !data?.claims) {
-    redirect("/login");
+    redirect(`/${locale}/login`);
   }
 
   const claims = data.claims;

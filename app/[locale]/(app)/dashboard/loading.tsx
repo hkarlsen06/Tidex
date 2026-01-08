@@ -1,5 +1,5 @@
 import { HomeSkeleton } from "@/components/app/skeletons";
 
-export default function HomeLoading() {
+export default function DashboardLoading() {
   return <HomeSkeleton />;
 }

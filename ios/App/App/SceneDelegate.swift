@@ -16,9 +16,8 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         let darkBackground = UIColor(red: 0.008, green: 0.032, blue: 0.090, alpha: 1.0)
         window?.backgroundColor = darkBackground
 
-        let vc = CAPBridgeViewController()
-        vc.view.backgroundColor = darkBackground
-        window?.rootViewController = vc
+        let containerController = TidexContainerViewController()
+        window?.rootViewController = containerController
         window?.makeKeyAndVisible()
 
         // Handle any URLs passed at launch

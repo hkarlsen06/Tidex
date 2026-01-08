@@ -12,7 +12,12 @@ const withBundleAnalyzer = bundleAnalyzer({
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // You can read this yourself in proxy.ts or wherever you like.
-  allowedDevOrigins: ["192.168.68.50"],
+  allowedDevOrigins: ["192.168.68.50", "192.168.68.62"],
+
+  // Move dev indicator to top-left to avoid overlap with native tab bar on iOS
+  devIndicators: {
+    position: "top-left",
+  },
 
   // Configure allowed external image hosts
   images: {

@@ -18,6 +18,55 @@ html:not(.safe-area-loading) body {
   transition: opacity 50ms ease-out;
 }
 
+/*
+ * Native iOS tab bar handling
+ * On native iOS, a UITabBar is used instead of the web NavBar.
+ * The inline script adds 'native-ios' class before React hydrates,
+ * so we can apply native-specific styles immediately to prevent flash/shift.
+ */
+html.native-ios [data-web-navbar] {
+  display: none !important;
+}
+
+/*
+ * Native iOS bottom padding override
+ * Page wrappers use 5rem bottom padding for web NavBar, but on native iOS
+ * we need padding for the native tab bar + extra spacing since WebView
+ * extends edge-to-edge behind the tab bar for proper safe area inset reporting.
+ *
+ * --native-tab-bar-height is injected by TidexContainerViewController and
+ * already includes the tab bar's internal safe area handling. We add a small
+ * buffer (8px) for visual spacing.
+ */
+html.native-ios [data-page-wrapper] {
+  padding-bottom: calc(var(--native-tab-bar-height, 83px) + 8px) !important;
+}
+
+/*
+ * When tab bar is hidden (e.g., during immersive experiences), use only safe area
+ */
+html.native-ios.native-tab-bar-hidden [data-page-wrapper] {
+  padding-bottom: calc(env(safe-area-inset-bottom) + 8px) !important;
+}
+
+/*
+ * Native iOS top padding for header
+ * Ensure the header respects safe area inset on native iOS.
+ * This provides a fallback in case React hydration doesn't apply it correctly.
+ */
+html.native-ios [data-top-header] {
+  padding-top: env(safe-area-inset-top) !important;
+}
+
+/*
+ * Native iOS always uses dark background on html element
+ * This prevents white flash during redirects/navigation on the native app.
+ * The native launch screen is dark, so html should match.
+ */
+html.native-ios {
+  background: hsl(222.2 84% 4.9%) !important;
+}
+
 /* Define content sources for scanning */
 @source '../app/**/*.{js,ts,jsx,tsx}';
 @source '../components/**/*.{js,ts,jsx,tsx}';

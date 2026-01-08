@@ -29,12 +29,14 @@ export function NavigationFeedbackProvider({ children }: { children: ReactNode }
     try {
       const url = new URL(href, window.location.origin);
       const path = url.pathname;
-      if (path === "/") return "/";
+      // Treat "/" as "/dashboard" for consistent comparison
+      if (path === "/") return "/dashboard";
       return path.replace(/\/+$/, "");
     } catch {
       // Fallback: strip query/hash manually
       const pathOnly = href.split("?")[0].split("#")[0];
-      if (pathOnly === "/") return "/";
+      // Treat "/" as "/dashboard" for consistent comparison
+      if (pathOnly === "/") return "/dashboard";
       return pathOnly.replace(/\/+$/, "");
     }
   }, []);
