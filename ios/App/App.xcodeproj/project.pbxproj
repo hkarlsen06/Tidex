@@ -19,6 +19,7 @@
 		NATTAB0012F0800000000001 /* NativeTabBarPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = NATTAB0012F0800000000002 /* NativeTabBarPlugin.swift */; };
 		SCENE0012F0700000000001 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = SCENE0012F0700000000002 /* SceneDelegate.swift */; };
 		TIDCON0012F0800000000001 /* TidexContainerViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = TIDCON0012F0800000000002 /* TidexContainerViewController.swift */; };
+		INFOP0012F0900000000001 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = INFOP0012F0900000000004 /* InfoPlist.strings */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -37,6 +38,8 @@
 		NATTAB0012F0800000000002 /* NativeTabBarPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeTabBarPlugin.swift; sourceTree = "<group>"; };
 		SCENE0012F0700000000002 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
 		TIDCON0012F0800000000002 /* TidexContainerViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TidexContainerViewController.swift; sourceTree = "<group>"; };
+		INFOP0012F0900000000002 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		INFOP0012F0900000000003 /* nb */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = nb; path = nb.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -93,11 +96,24 @@
 				LAUNCH0012F0500000000002 /* LaunchScreen.storyboard */,
 				2FAD9762203C412B000D30F8 /* config.xml */,
 				50B271D01FEDC1A000F3C39B /* public */,
+				INFOP0012F0900000000004 /* InfoPlist.strings */,
 			);
 			path = App;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
+
+/* Begin PBXVariantGroup section */
+		INFOP0012F0900000000004 /* InfoPlist.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				INFOP0012F0900000000002 /* en */,
+				INFOP0012F0900000000003 /* nb */,
+			);
+			name = InfoPlist.strings;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
 
 /* Begin PBXNativeTarget section */
 		504EC3031FED79650016851F /* App */ = {
@@ -144,6 +160,7 @@
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
+				nb,
 				Base,
 			);
 			mainGroup = 504EC2FB1FED79650016851F;
@@ -170,6 +187,7 @@
 				50379B232058CBB4000EE86E /* capacitor.config.json in Resources */,
 				2FAD9763203C412B000D30F8 /* config.xml in Resources */,
 				LAUNCH0012F0500000000001 /* LaunchScreen.storyboard in Resources */,
+				INFOP0012F0900000000001 /* InfoPlist.strings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

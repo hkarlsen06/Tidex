@@ -20,18 +20,33 @@ class TidexContainerViewController: UIViewController, UITabBarDelegate {
     static weak var shared: TidexContainerViewController?
 
     struct TabItem {
-        let title: String
         let imageName: String  // SF Symbol
         let route: String
     }
 
+    // Tab definitions without titles (titles set based on locale)
     private let tabDefinitions: [TabItem] = [
-        TabItem(title: "Home", imageName: "gauge", route: "/"),
-        TabItem(title: "Shifts", imageName: "calendar", route: "/shifts"),
-        TabItem(title: "Add", imageName: "plus.circle.fill", route: "/shifts/add"),
-        TabItem(title: "Stats", imageName: "chart.bar.xaxis", route: "/stats"),
-        TabItem(title: "Share", imageName: "square.and.arrow.up", route: "/sharing")
+        TabItem(imageName: "gauge", route: "/"),
+        TabItem(imageName: "calendar", route: "/shifts"),
+        TabItem(imageName: "plus.circle.fill", route: "/shifts/add"),
+        TabItem(imageName: "chart.bar.xaxis", route: "/stats"),
+        TabItem(imageName: "square.and.arrow.up", route: "/sharing")
     ]
+
+    // Localized tab titles - matches order of tabDefinitions
+    // Norwegian translations for "no" locale, English for others
+    private static let tabTitlesNorwegian = ["Hjem", "Vakter", "Legg til", "Statistikk", "Del"]
+    private static let tabTitlesEnglish = ["Home", "Shifts", "Add", "Stats", "Share"]
+
+    /// Get initial tab titles based on device locale
+    private func getInitialTabTitles() -> [String] {
+        // Check if device language is Norwegian (covers nb, nn, no)
+        let preferredLanguage = Locale.preferredLanguages.first ?? "en"
+        if preferredLanguage.hasPrefix("nb") || preferredLanguage.hasPrefix("nn") || preferredLanguage.hasPrefix("no") {
+            return Self.tabTitlesNorwegian
+        }
+        return Self.tabTitlesEnglish
+    }
 
     private var selectedIndex: Int = 0
 
@@ -84,11 +99,13 @@ class TidexContainerViewController: UIViewController, UITabBarDelegate {
             customTabBar.scrollEdgeAppearance = appearance
         }
 
-        // Create tab items
+        // Create tab items with locale-appropriate initial titles
+        let initialTitles = getInitialTabTitles()
         var items: [UITabBarItem] = []
         for (index, tab) in tabDefinitions.enumerated() {
+            let title = index < initialTitles.count ? initialTitles[index] : ""
             let item = UITabBarItem(
-                title: tab.title,
+                title: title,
                 image: UIImage(systemName: tab.imageName),
                 tag: index
             )
@@ -229,6 +246,14 @@ class TidexContainerViewController: UIViewController, UITabBarDelegate {
               let items = customTabBar.items,
               index < items.count else { return }
         items[index].badgeValue = value
+    }
+
+    func setTabTitles(_ titles: [String]) {
+        guard let items = customTabBar.items else { return }
+        for (index, title) in titles.enumerated() {
+            guard index < items.count else { break }
+            items[index].title = title
+        }
     }
 
     func hideTabBar() {

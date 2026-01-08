@@ -10,6 +10,10 @@ export class NativeTabBarWeb extends WebPlugin implements NativeTabBarPlugin {
     // No-op on web
   }
 
+  async setTabTitles(_options: { titles: string[] }): Promise<void> {
+    // No-op on web
+  }
+
   async hide(): Promise<void> {
     // No-op on web
   }

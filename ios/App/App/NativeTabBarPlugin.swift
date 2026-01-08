@@ -9,6 +9,7 @@ public class NativeTabBarPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "setSelectedTab", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "clearSelection", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setTabBadge", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "setTabTitles", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "hide", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "show", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "isAvailable", returnType: CAPPluginReturnPromise),
@@ -43,6 +44,17 @@ public class NativeTabBarPlugin: CAPPlugin, CAPBridgedPlugin {
         let value = call.getString("value")
         DispatchQueue.main.async { [weak self] in
             self?.containerController?.setTabBadge(index: index, value: value)
+            call.resolve()
+        }
+    }
+
+    @objc func setTabTitles(_ call: CAPPluginCall) {
+        guard let titles = call.getArray("titles", String.self) else {
+            call.reject("Missing titles array")
+            return
+        }
+        DispatchQueue.main.async { [weak self] in
+            self?.containerController?.setTabTitles(titles)
             call.resolve()
         }
     }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useCallback, useRef } from "react";
+import { useEffect, useCallback, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { isIOSPlatform } from "@/lib/capacitor/platform";
 import { useTranslations } from "@/lib/i18n/client";
@@ -8,6 +8,20 @@ import { useScrollContext } from "@/lib/contexts/ScrollContext";
 import type { PluginListenerHandle } from "@capacitor/core";
 // Import at module scope - no dynamic imports on route changes
 import { NativeTabBar, getTabIndexFromPath } from "@/lib/capacitor/native-tab-bar";
+
+/**
+ * Get localized tab titles in the order matching Swift tabDefinitions.
+ * Order: Home, Shifts, Add, Stats, Share
+ */
+function getTabTitles(t: ReturnType<typeof useTranslations>["t"]): string[] {
+  return [
+    t.navigation.tabBar.home,
+    t.navigation.tabBar.shifts,
+    t.navigation.tabBar.add,
+    t.navigation.tabBar.stats,
+    t.navigation.tabBar.share,
+  ];
+}
 
 /**
  * Hook to synchronize native iOS tab bar with web navigation.
@@ -20,7 +34,7 @@ import { NativeTabBar, getTabIndexFromPath } from "@/lib/capacitor/native-tab-ba
 export function useNativeTabBar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { locale } = useTranslations();
+  const { locale, t } = useTranslations();
   const { scrollToTop } = useScrollContext();
   const listenerRef = useRef<PluginListenerHandle | null>(null);
   const reselectedListenerRef = useRef<PluginListenerHandle | null>(null);
@@ -29,8 +43,12 @@ export function useNativeTabBar() {
   // Ref to track if listeners are set up (stable across re-renders)
   const listenersSetupRef = useRef(false);
   // Refs for callbacks to avoid effect re-runs
-  const handleTabSelectedRef = useRef<(event: { index: number; route: string }) => void>();
-  const scrollToTopRef = useRef<() => void>();
+  const handleTabSelectedRef = useRef<(event: { index: number; route: string }) => void>(undefined);
+  const scrollToTopRef = useRef<(() => void) | undefined>(undefined);
+  // Track which locale's titles we've set
+  const titlesSetForLocaleRef = useRef<string | null>(null);
+  // State to trigger re-render when plugin becomes available
+  const [isPluginReady, setIsPluginReady] = useState(false);
 
   // Handle native tab selection - use SPA router, not WebView reload
   const handleTabSelected = useCallback(
@@ -81,6 +99,8 @@ export function useNativeTabBar() {
         );
 
         listenersSetupRef.current = true;
+        // Trigger re-render so the tab titles effect can run
+        setIsPluginReady(true);
 
       } catch (error) {
         console.error("[NativeTabBar] Init failed:", error);
@@ -98,6 +118,27 @@ export function useNativeTabBar() {
       listenersSetupRef.current = false;
     };
   }, []); // Empty deps - only run once
+
+  // Set localized tab titles when locale changes or plugin becomes available
+  useEffect(() => {
+    if (!isIOSPlatform()) return;
+    // Wait for plugin to be available
+    if (!isPluginReady) return;
+    // Skip if we already set titles for this locale
+    if (titlesSetForLocaleRef.current === locale) return;
+
+    const setTitles = async () => {
+      try {
+        const titles = getTabTitles(t);
+        await NativeTabBar.setTabTitles({ titles });
+        titlesSetForLocaleRef.current = locale;
+      } catch (error) {
+        console.error("[NativeTabBar] Failed to set tab titles:", error);
+      }
+    };
+
+    setTitles();
+  }, [locale, t, isPluginReady]);
 
   // Sync tab selection when web route changes
   useEffect(() => {
