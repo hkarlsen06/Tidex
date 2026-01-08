@@ -26,7 +26,7 @@ class TidexContainerViewController: UIViewController, UITabBarDelegate {
 
     // Tab definitions without titles (titles set based on locale)
     private let tabDefinitions: [TabItem] = [
-        TabItem(imageName: "gauge", route: "/"),
+        TabItem(imageName: "gauge", route: "/dashboard"),
         TabItem(imageName: "calendar", route: "/shifts"),
         TabItem(imageName: "plus.circle.fill", route: "/shifts/add"),
         TabItem(imageName: "chart.bar.xaxis", route: "/stats"),

@@ -1,5 +1,6 @@
 import { registerPlugin } from "@capacitor/core";
 import type { PluginListenerHandle } from "@capacitor/core";
+import { locales } from "@/lib/i18n/config";
 
 export interface TabSelectedEvent {
   index: number;
@@ -54,8 +55,7 @@ const _TAB_DEFINITIONS = [
   { route: "/sharing", prefix: "/sharing" }, // Sharing section
 ] as const;
 
-// Known locales - extend this list if more locales are added
-const KNOWN_LOCALES = ["no", "en"];
+const KNOWN_LOCALES = locales as readonly string[];
 
 /**
  * Get tab index from pathname using longest-prefix matching.
