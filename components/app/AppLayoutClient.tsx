@@ -14,6 +14,7 @@ import { NativeTabBarProvider } from "@/lib/contexts/NativeTabBarContext";
 import { TopHeader } from "./TopHeader";
 import { NavBar } from "./NavBar";
 import { NativeTabBarSync } from "./NativeTabBarSync";
+import { ShowNativeTabBar } from "./ShowNativeTabBar";
 
 type AppLayoutClientProps = {
   children: ReactNode;
@@ -64,6 +65,7 @@ export function AppLayoutClient({
             </NavigationFeedbackProvider>
           </AddShiftFormProvider>
           <NativeTabBarSync />
+          <ShowNativeTabBar />
         </ScrollProvider>
       </RouteVisibilityProvider>
     </NativeTabBarProvider>

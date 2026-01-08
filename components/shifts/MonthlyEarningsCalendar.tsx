@@ -1,12 +1,12 @@
 "use client";
 
-import { useMemo, useState, useEffect, useRef, type Ref } from "react";
+import { useMemo, useState, type Ref } from "react";
 import { Clock, Copy, ArrowRightLeft, Info, Trash2, X, RotateCw } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { AnimateActivity } from "motion-plus/animate-activity";
 import { SafeAnimateNumber } from "@/components/app/SafeAnimateNumber";
 import { useIsRouteActive } from "@/components/app/RouteVisibilityContext";
-import { ShiftsCalendar } from "@/components/app/ShiftsCalendar";
+import { ShiftsCalendar, type GestureConfig, type GestureMetric } from "@/components/app/ShiftsCalendar";
 import { Card } from "@/components/app/Card";
 import { Button } from "@/components/app/Button";
 import { MonthPicker } from "@/components/app/MonthPicker";
@@ -39,6 +39,7 @@ type MonthlyEarningsCalendarProps = {
   month: Date;
   onMonthChange: (month: Date) => void;
   onDayClick?: (iso: ISODate, hasShifts: boolean) => void;
+  onSelectDateRange?: (start: ISODate, end: ISODate) => void;
   selectedDate?: ISODate | null;
   /** Set of selected dates for multi-selection mode */
   selectedDates?: Set<ISODate>;
@@ -83,6 +84,10 @@ type MonthlyEarningsCalendarProps = {
   };
   /** Deep link: dates to highlight in calendar (from push notification) */
   highlightDates?: Set<string> | null;
+  /** Optional gesture threshold overrides for the calendar */
+  gestureConfig?: Partial<GestureConfig>;
+  /** Optional gesture instrumentation hook */
+  onGestureMetric?: (metric: GestureMetric) => void;
 };
 
 /**
@@ -264,21 +269,27 @@ function FrozenCalendarSlide({
   mode,
   onMonthChange,
   onDayClick,
+  onSelectDateRange,
   selectedDate,
   selectedDates,
   newlyAddedDates,
   taxSettings,
   highlightDates,
+  gestureConfig,
+  onGestureMetric,
 }: {
   snapshot: CalendarSnapshot;
   mode: "money" | "hours";
   onMonthChange: (month: Date) => void;
   onDayClick?: (iso: ISODate, hasShifts: boolean) => void;
+  onSelectDateRange?: (start: ISODate, end: ISODate) => void;
   selectedDate?: ISODate | null;
   selectedDates?: Set<ISODate>;
   newlyAddedDates?: Set<string>;
   taxSettings?: TaxSettings;
   highlightDates?: Set<string> | null;
+  gestureConfig?: Partial<GestureConfig>;
+  onGestureMetric?: (metric: GestureMetric) => void;
 }) {
   // Freeze the month on mount - this ensures exit animations show the original month
   // The key includes the month, so when AnimatePresence triggers exit, this component
@@ -303,6 +314,9 @@ function FrozenCalendarSlide({
       overlappingDates={snapshot.overlappingDates}
       onMonthChange={onMonthChange}
       onDayClick={onDayClick}
+      onSelectDateRange={onSelectDateRange}
+      gestureConfig={gestureConfig}
+      onGestureMetric={onGestureMetric}
       selectedDate={selectedDate}
       selectedDates={selectedDates}
       weekNumberPosition="top-left"
@@ -339,6 +353,7 @@ export function MonthlyEarningsCalendar({
   month,
   onMonthChange,
   onDayClick,
+  onSelectDateRange,
   selectedDate = null,
   selectedDates,
   onClearMultiSelection,
@@ -365,6 +380,8 @@ export function MonthlyEarningsCalendar({
   routePattern = "/shifts",
   monthContext,
   highlightDates,
+  gestureConfig,
+  onGestureMetric,
 }: MonthlyEarningsCalendarProps) {
   const { t } = useTranslations();
   const { symbol: currencySymbol, display: currencyDisplay } = useCurrency();
@@ -400,10 +417,6 @@ export function MonthlyEarningsCalendar({
   const [refreshing, setRefreshing] = useState(false);
   // Use direction from context - defaults to 'next' when null (for programmatic changes)
   const animationDirection = direction ?? 'next';
-  const swipeContainerRef = useRef<HTMLDivElement>(null);
-  const touchStartX = useRef<number | null>(null);
-  const touchStartY = useRef<number | null>(null);
-  const isSwiping = useRef<boolean>(false);
 
   // Route visibility - when route is hidden by cacheComponents, we skip AnimatePresence
   // to prevent it from accumulating stale keyed children
@@ -513,78 +526,10 @@ export function MonthlyEarningsCalendar({
     return { totalEarnings: gross, netEarnings: net, isShowingSelectedTotal: false };
   }, [shifts, monthlyShifts, month, taxSettings, selectedDates, selectedDate, payoutTaxSettings]);
 
-  // Swipe gesture handling
-  useEffect(() => {
-    const container = swipeContainerRef.current;
-    if (!container) return;
-
-    const handleTouchStart = (e: TouchEvent) => {
-      touchStartX.current = e.touches[0].clientX;
-      touchStartY.current = e.touches[0].clientY;
-      isSwiping.current = false;
-    };
-
-    const handleTouchMove = (e: TouchEvent) => {
-      if (touchStartX.current === null || touchStartY.current === null) return;
-
-      const deltaX = e.touches[0].clientX - touchStartX.current;
-      const deltaY = e.touches[0].clientY - touchStartY.current;
-
-      // Determine if this is a horizontal swipe (more horizontal than vertical)
-      // Use a higher threshold (30px) to avoid interfering with day cell taps on touch devices
-      if (!isSwiping.current && Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 30) {
-        isSwiping.current = true;
-      }
-
-      // If we're swiping horizontally, prevent default scrolling
-      if (isSwiping.current) {
-        e.preventDefault();
-      }
-    };
-
-    const handleTouchEnd = (e: TouchEvent) => {
-      if (touchStartX.current === null || !isSwiping.current) {
-        touchStartX.current = null;
-        touchStartY.current = null;
-        isSwiping.current = false;
-        return;
-      }
-
-      const deltaX = e.changedTouches[0].clientX - touchStartX.current;
-      const threshold = 50; // Minimum swipe distance in pixels
-
-      if (Math.abs(deltaX) > threshold) {
-        impactHaptic("light");
-        if (deltaX > 0) {
-          // Swipe right - go to previous month
-          goToPreviousMonth();
-        } else {
-          // Swipe left - go to next month
-          goToNextMonth();
-        }
-      }
-
-      touchStartX.current = null;
-      touchStartY.current = null;
-      isSwiping.current = false;
-    };
-
-    // Add passive: false to allow preventDefault on touchmove
-    container.addEventListener('touchstart', handleTouchStart, { passive: true });
-    container.addEventListener('touchmove', handleTouchMove, { passive: false });
-    container.addEventListener('touchend', handleTouchEnd, { passive: true });
-
-    return () => {
-      container.removeEventListener('touchstart', handleTouchStart);
-      container.removeEventListener('touchmove', handleTouchMove);
-      container.removeEventListener('touchend', handleTouchEnd);
-    };
-  }, [goToPreviousMonth, goToNextMonth]);
-
   return (
     <div>
       <Card ref={containerRef} className="rounded-card border-0 bg-transparent">
-        <div ref={swipeContainerRef}>
+        <div>
           <div className="flex h-13 flex-row items-center justify-between">
             <div className="flex h-10 items-center gap-1">
               <MonthPicker
@@ -708,6 +653,9 @@ export function MonthlyEarningsCalendar({
                       mode={effectiveViewMode}
                       onMonthChange={onMonthChange}
                       onDayClick={onDayClick}
+                      onSelectDateRange={onSelectDateRange}
+                      gestureConfig={gestureConfig}
+                      onGestureMetric={onGestureMetric}
                       selectedDate={selectedDate}
                       selectedDates={selectedDates}
                       newlyAddedDates={newlyAddedDates}
@@ -726,6 +674,9 @@ export function MonthlyEarningsCalendar({
                   overlappingDates={overlappingDates}
                   onMonthChange={onMonthChange}
                   onDayClick={onDayClick}
+                  onSelectDateRange={onSelectDateRange}
+                  gestureConfig={gestureConfig}
+                  onGestureMetric={onGestureMetric}
                   selectedDate={selectedDate}
                   selectedDates={selectedDates}
                   weekNumberPosition="top-left"

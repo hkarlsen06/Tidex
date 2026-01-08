@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { isNativePlatform } from "@/lib/capacitor/platform";
 
 const RELOAD_FLAG = "chunk_reload_attempted";
 
@@ -15,6 +16,11 @@ const RELOAD_FLAG = "chunk_reload_attempted";
  * - Only triggers on known chunk load error patterns
  * - Uses sessionStorage flag to prevent reload loops (max 1 reload per session)
  * - Clears flag on successful page load so future sessions can retry
+ *
+ * Capacitor/Native:
+ * - On native platforms, we delay the reload slightly to avoid cancelling
+ *   in-progress navigations, which would trigger the offline.html page
+ * - Uses a 500ms delay to let the current navigation settle first
  */
 export function ChunkErrorRecovery() {
   useEffect(() => {
@@ -25,6 +31,21 @@ export function ChunkErrorRecovery() {
     } catch {
       // sessionStorage may not be available (e.g., private browsing restrictions)
     }
+
+    // Helper to perform reload with native platform awareness
+    const performReload = () => {
+      // On native platforms (Capacitor), delay the reload to avoid cancelling
+      // in-progress navigations. This prevents the WebView from showing
+      // offline.html due to NSURLErrorCancelled (-999).
+      if (isNativePlatform()) {
+        console.warn("[CHUNK] Native platform detected, delaying reload");
+        setTimeout(() => {
+          window.location.reload();
+        }, 500);
+      } else {
+        window.location.reload();
+      }
+    };
 
     const handleError = (event: ErrorEvent) => {
       const error = event.error;
@@ -52,7 +73,7 @@ export function ChunkErrorRecovery() {
         console.warn("[CHUNK] ChunkLoadError detected, reloading page");
 
         // Force hard reload to bypass cache
-        window.location.reload();
+        performReload();
       } catch {
         // sessionStorage not available, skip reload to avoid potential loop
       }
@@ -83,7 +104,7 @@ export function ChunkErrorRecovery() {
         sessionStorage.setItem(RELOAD_FLAG, "1");
         console.warn("[CHUNK] ChunkLoadError detected in promise, reloading page");
 
-        window.location.reload();
+        performReload();
       } catch {
         // sessionStorage not available
       }

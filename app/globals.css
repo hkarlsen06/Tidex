@@ -58,6 +58,15 @@ html.native-ios [data-top-header] {
   padding-top: env(safe-area-inset-top) !important;
 }
 
+/*
+ * Native iOS always uses dark background on html element
+ * This prevents white flash during redirects/navigation on the native app.
+ * The native launch screen is dark, so html should match.
+ */
+html.native-ios {
+  background: hsl(222.2 84% 4.9%) !important;
+}
+
 /* Define content sources for scanning */
 @source '../app/**/*.{js,ts,jsx,tsx}';
 @source '../components/**/*.{js,ts,jsx,tsx}';

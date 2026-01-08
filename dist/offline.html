@@ -254,11 +254,102 @@
           descEl.textContent = message;
         }
 
-        // Production server URL - must be absolute for Capacitor where relative URLs
-        // resolve to the local WebView server, not the actual backend
+        // Server URL - will be updated asynchronously if we can detect dev mode
+        // Start with production as default
         var SERVER_URL = 'https://app.tidex.no';
 
+        // Detect server URL dynamically to support both production and development
+        // In production: https://app.tidex.no
+        // In development: the local dev server (e.g., http://192.168.68.62:3000)
+        function detectServerUrlSync() {
+          // 1. Check referrer first - this is the URL we came from before hitting offline.html
+          try {
+            if (document.referrer) {
+              var referrerUrl = new URL(document.referrer);
+              // If referrer is a local IP or localhost, use that as the server
+              if (referrerUrl.hostname === 'localhost' ||
+                  referrerUrl.hostname.startsWith('192.168.') ||
+                  referrerUrl.hostname.startsWith('10.') ||
+                  referrerUrl.hostname.startsWith('172.')) {
+                return referrerUrl.origin;
+              }
+              // If referrer is the production domain, use production
+              if (referrerUrl.hostname === 'app.tidex.no') {
+                return 'https://app.tidex.no';
+              }
+            }
+          } catch (e) {
+            // Ignore referrer parsing errors
+          }
+
+          // 2. Check if Capacitor has injected its config with server URL
+          try {
+            if (typeof Capacitor !== 'undefined' && Capacitor.config && Capacitor.config.server && Capacitor.config.server.url) {
+              return Capacitor.config.server.url;
+            }
+          } catch (e) {
+            // Ignore errors
+          }
+
+          return null; // Could not detect
+        }
+
+        // Try to load server URL from capacitor.config.json (bundled with the app)
+        async function loadServerUrlFromConfig() {
+          // Try multiple possible paths for the config file
+          var configPaths = [
+            'capacitor.config.json',      // Same directory
+            '../capacitor.config.json',   // Parent directory (iOS: public/offline.html, config in App/)
+            '/capacitor.config.json'      // Root
+          ];
+
+          for (var i = 0; i < configPaths.length; i++) {
+            try {
+              var response = await fetch(configPaths[i], { cache: 'no-store' });
+              if (response.ok) {
+                var config = await response.json();
+                if (config && config.server && config.server.url) {
+                  console.log('[Offline] Loaded server URL from', configPaths[i] + ':', config.server.url);
+                  return config.server.url;
+                }
+              }
+            } catch (e) {
+              // Continue to next path
+            }
+          }
+
+          console.log('[Offline] Could not load capacitor.config.json from any path');
+          return null;
+        }
+
+        // Initialize server URL
+        async function initServerUrl() {
+          // Try sync detection first
+          var syncUrl = detectServerUrlSync();
+          if (syncUrl) {
+            SERVER_URL = syncUrl;
+            console.log('[Offline] Detected server URL (sync):', SERVER_URL);
+            return;
+          }
+
+          // Try async detection from config file
+          var configUrl = await loadServerUrlFromConfig();
+          if (configUrl) {
+            SERVER_URL = configUrl;
+            return;
+          }
+
+          // Keep default (production)
+          console.log('[Offline] Using default server URL:', SERVER_URL);
+        }
+
+        // Start server URL detection immediately
+        var serverUrlPromise = initServerUrl();
+
         async function tryReconnect() {
+          // Ensure server URL is detected before attempting reconnect
+          await serverUrlPromise;
+
           if (retryCount >= maxRetries) {
             updateStatus(t.couldNotConnect);
             button.disabled = false;
@@ -349,6 +440,10 @@
         // This page may have been shown incorrectly due to a transient network hiccup
         // or slow initial connection - we need to verify before showing the UI
         async function immediateConnectivityCheck() {
+          // Wait for server URL detection to complete first
+          await serverUrlPromise;
+          console.log('[Offline] Using server URL for connectivity check:', SERVER_URL);
+
           // If browser reports offline, show UI and start normal retry flow
           if (!navigator.onLine) {
             showOfflineUI();

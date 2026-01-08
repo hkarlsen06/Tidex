@@ -124,6 +124,10 @@ class TidexContainerViewController: UIViewController, UITabBarDelegate {
             customTabBar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             customTabBar.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
+
+        // Start with tab bar hidden - it will be shown when entering (app) routes
+        // This prevents the tab bar from flashing on login/onboarding screens
+        customTabBar.isHidden = true
     }
 
     // MARK: - Swipe Back Gesture
