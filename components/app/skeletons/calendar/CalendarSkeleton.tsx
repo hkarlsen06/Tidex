@@ -75,10 +75,23 @@ export function CalendarSkeleton() {
       </div>
 
       {/* Toggle buttons for earnings/hours view */}
-      <div className="flex justify-center pb-6">
-        <div className="inline-flex items-center gap-1 rounded-full border border-border-subtle bg-surface-secondary/80 p-1 w-2/3">
-          <div className="h-9 flex-1 bg-surface-primary rounded-full" />
-          <div className="h-9 flex-1 bg-surface-secondary rounded-full" />
+      <div className="flex flex-col items-center gap-2 pb-6">
+        <div className="flex items-center gap-1 w-full">
+          <div className="inline-flex h-11 flex-1 min-w-0 items-center rounded-xl border border-border-subtle bg-surface-secondary/80 p-1 shadow-app-sm dark:shadow-app-inner overflow-hidden">
+            <div className="flex h-9 w-full items-center relative">
+              {/* Active indicator on left (hours) */}
+              <div className="absolute inset-y-0 left-0 w-1/2 rounded-lg bg-white dark:bg-slate-700 shadow-app-md" />
+              {/* Hours button (active) */}
+              <div className="h-full px-4 flex-1 flex items-center justify-center gap-1.5 relative z-10">
+                <div className="h-4 w-8 bg-surface-secondary/50 rounded" />
+                <div className="h-4 w-4 bg-surface-secondary/50 rounded" />
+              </div>
+              {/* Money button (inactive) */}
+              <div className="h-full px-4 flex-1 flex items-center justify-center gap-1.5 relative z-10">
+                <div className="h-4 w-12 bg-surface-secondary rounded" />
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </Card>
