@@ -2739,8 +2739,8 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
         </div>
       </div>
 
-      {/* Shifts List Section - Desktop only (hidden on mobile where only calendar shows) */}
-      <div className="hidden lg:flex px-4 lg:w-1/2 lg:justify-center lg:px-0">
+      {/* Shifts List Section - Right half of screen on desktop, below calendar on mobile */}
+      <div className="px-4 lg:flex lg:w-1/2 lg:justify-center lg:px-0">
         <div ref={shiftsListRef} className="pb-10 w-full max-w-md md:max-w-lg lg:max-w-lg lg:overflow-y-auto lg:max-h-[calc(100vh-8rem)] lg:px-4">
         {grouped.length === 0 ? (
           <Card className="text-center">
