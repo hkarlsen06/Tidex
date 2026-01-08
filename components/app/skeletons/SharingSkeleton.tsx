@@ -265,11 +265,7 @@ export function SharingDefaultSkeleton() {
           {/* Sharers list - cards with shift previews */}
           <motion.div className="flex flex-col gap-3" variants={itemVariants}>
             <SharerCardSkeleton hasShiftPreview={true} />
-          </motion.div>
-          <motion.div className="flex flex-col gap-3" variants={itemVariants}>
             <SharerCardSkeleton hasShiftPreview={true} />
-          </motion.div>
-          <motion.div className="flex flex-col gap-3" variants={itemVariants}>
             <SharerCardSkeleton hasShiftPreview={false} />
           </motion.div>
         </motion.div>

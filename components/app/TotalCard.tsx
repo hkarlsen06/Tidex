@@ -164,7 +164,7 @@ export const TotalCard: React.FC<TotalCardProps> = ({
       tabIndex={onClick ? 0 : undefined}
       onKeyDown={handleKeyDown}
     >
-      <CardContent className="py-6">
+      <CardContent className="pt-5 pb-4">
         {isLoading ? (
           <div className="animate-pulse space-y-4 text-center" aria-hidden="true">
             <div className="mx-auto h-6 w-24 rounded-lg bg-text-muted/20" />
@@ -172,7 +172,7 @@ export const TotalCard: React.FC<TotalCardProps> = ({
             <div className="mx-auto h-5 w-32 rounded-lg bg-text-muted/20" />
           </div>
         ) : (
-          <div className="text-center">
+          <div className="flex flex-col items-center gap-1 text-center">
             {/* Percentage change indicator */}
             <div className="flex items-center justify-center">
               <span className={`inline-flex items-center gap-1 text-lg font-semibold ${hasChange ? (isPositive ? 'text-brand-highlight' : 'text-text-secondary') : 'text-text-muted'}`}>
@@ -198,7 +198,7 @@ export const TotalCard: React.FC<TotalCardProps> = ({
               </span>
             </div>
             {/* Main total display */}
-            <div className="mt-3 relative flex items-center justify-center">
+            <div className="relative flex items-center justify-center w-full">
               {/*
                 Container query container - font scales based on container width.
                 Uses clamp() with cqi units: min 28px, preferred 22cqi, max 72px.
@@ -244,7 +244,7 @@ export const TotalCard: React.FC<TotalCardProps> = ({
               )}
             </div>
             {/* Subtitle row - typewriter animation */}
-            <div className="mt-4 text-lg text-text-secondary min-h-7 relative flex items-baseline justify-center">
+            <div className="text-lg text-text-secondary min-h-7 relative flex items-baseline justify-center">
               {subtitlePlaceholder ? (
                 <Typewriter
                   speed="normal"

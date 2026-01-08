@@ -111,6 +111,10 @@ export async function getUserList(
     }
   }
 
+  // Apple product IDs (must match App Store Connect configuration)
+  const APPLE_MAX_IDS = ["no.tidex.max", "no.tidex.max.year"];
+  const APPLE_PRO_IDS = ["no.tidex.pro", "no.tidex.pro.year"];
+
   // Determine plan for a user (separate from admin status)
   const determinePlan = (userId: string): UserListItem["plan"] => {
     const sub = subscriptionMap.get(userId);
@@ -127,15 +131,35 @@ export async function getUserList(
 
     if (sub.provider === "admin_trial") return "trial";
 
+    // Check for Max tier (Stripe price IDs, internal product IDs, and Apple product IDs)
     const maxPriceId = process.env.NEXT_PUBLIC_MAX_PRICE_ID;
+    const maxYearlyId = process.env.NEXT_PUBLIC_MAX_YEARLY_ID;
     if (
       sub.priceId === maxPriceId ||
+      sub.priceId === maxYearlyId ||
       sub.productId === "max_monthly" ||
-      sub.productId === "max_yearly"
+      sub.productId === "max_yearly" ||
+      APPLE_MAX_IDS.includes(sub.priceId ?? "") ||
+      APPLE_MAX_IDS.includes(sub.productId ?? "")
     ) {
       return "max";
     }
 
+    // Check for Pro tier (Stripe price IDs, internal product IDs, and Apple product IDs)
+    const proPriceId = process.env.NEXT_PUBLIC_PRO_PRICE_ID;
+    const proYearlyId = process.env.NEXT_PUBLIC_PRO_YEARLY_ID;
+    if (
+      sub.priceId === proPriceId ||
+      sub.priceId === proYearlyId ||
+      sub.productId === "pro_monthly" ||
+      sub.productId === "pro_yearly" ||
+      APPLE_PRO_IDS.includes(sub.priceId ?? "") ||
+      APPLE_PRO_IDS.includes(sub.productId ?? "")
+    ) {
+      return "pro";
+    }
+
+    // Default to pro for any other active subscription
     return "pro";
   };
 
