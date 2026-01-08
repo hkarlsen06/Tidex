@@ -3,6 +3,7 @@
 import { useEffect, type ReactNode, type RefObject } from "react";
 import { useScrollRestoration } from "@/lib/hooks/useScrollRestoration";
 import { useScrollContext } from "@/lib/contexts/ScrollContext";
+import { useHasNativeTabBar } from "@/lib/contexts/NativeTabBarContext";
 
 interface ScrollablePageWrapperProps {
   children: ReactNode;
@@ -44,6 +45,7 @@ export function ScrollablePageWrapper({
 }: ScrollablePageWrapperProps) {
   const scrollRef = useScrollRestoration(routeKey ?? "");
   const { registerScrollContainer } = useScrollContext();
+  const hasNativeTabBar = useHasNativeTabBar();
 
   useEffect(() => {
     if (routeKey) {
@@ -66,10 +68,17 @@ export function ScrollablePageWrapper({
     children
   );
 
+  // Native iOS: safe area handles tab bar automatically
+  // Web: full padding for web NavBar (5rem + safe area)
+  const bottomPadding = hasNativeTabBar
+    ? "pb-[env(safe-area-inset-bottom)]"
+    : "pb-[calc(5rem+env(safe-area-inset-bottom))]";
+
   return (
     <div
       ref={routeKey ? scrollRef : undefined}
-      className={`h-full overflow-y-auto pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-8 ${className ?? ""}`}
+      data-page-wrapper
+      className={`h-full overflow-y-auto ${bottomPadding} md:pb-8 ${className ?? ""}`}
     >
       {content}
     </div>
