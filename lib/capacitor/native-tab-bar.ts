@@ -18,6 +18,10 @@ export interface NativeTabBarPlugin {
     eventName: "tabSelected",
     listenerFunc: (event: TabSelectedEvent) => void
   ): Promise<PluginListenerHandle>;
+  addListener(
+    eventName: "tabReselected",
+    listenerFunc: (event: TabSelectedEvent) => void
+  ): Promise<PluginListenerHandle>;
   removeAllListeners(): Promise<void>;
 }
 
@@ -25,7 +29,7 @@ export interface NativeTabBarPlugin {
 // Index order is the contract between native and web
 // Prefixed with _ as it serves as documentation; actual matching uses optimized conditionals below
 const _TAB_DEFINITIONS = [
-  { route: "/", prefix: null },            // Home - exact match only
+  { route: "/dashboard", prefix: null },   // Home/Dashboard - exact match only
   { route: "/shifts", prefix: "/shifts" }, // Shifts section
   { route: "/shifts/add", prefix: "/shifts/add" }, // Add (more specific, checked first)
   { route: "/stats", prefix: "/stats" },   // Stats section
@@ -75,8 +79,8 @@ export function getTabIndexFromPath(pathname: string): number | null {
     return 1;
   }
 
-  // Check home (exact match)
-  if (path === "/") {
+  // Check home/dashboard (exact match for both "/" and "/dashboard")
+  if (path === "/" || path === "/dashboard") {
     return 0;
   }
 

@@ -63,9 +63,9 @@ export function AppLayoutClient({
               </LayoutContent>
             </NavigationFeedbackProvider>
           </AddShiftFormProvider>
+          <NativeTabBarSync />
         </ScrollProvider>
       </RouteVisibilityProvider>
-      <NativeTabBarSync />
     </NativeTabBarProvider>
   );
 }

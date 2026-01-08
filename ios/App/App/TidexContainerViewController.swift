@@ -179,12 +179,16 @@ class TidexContainerViewController: UIViewController, UITabBarDelegate {
         let index = item.tag
         guard index >= 0 && index < tabDefinitions.count else { return }
 
-        // Always trigger navigation, even if tapping the same tab
-        // This allows users to navigate back from non-tab routes (e.g., /settings)
-        // where no tab is highlighted
-        selectedIndex = index
         let route = tabDefinitions[index].route
-        nativeTabBarPlugin?.handleTabSelection(index: index, route: route)
+
+        if index == selectedIndex {
+            // Re-tapping the same tab - scroll to top instead of navigating
+            nativeTabBarPlugin?.handleTabReselection(index: index, route: route)
+        } else {
+            // Different tab - navigate
+            selectedIndex = index
+            nativeTabBarPlugin?.handleTabSelection(index: index, route: route)
+        }
     }
 
     // MARK: - Public Methods (called from plugin)

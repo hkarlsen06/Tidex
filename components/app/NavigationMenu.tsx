@@ -4,10 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useTranslations } from "@/lib/i18n/client";
-import {
-  useSharingViewState,
-  clearSharingViewState,
-} from "@/lib/hooks/useSharingViewState";
+import { clearSharingViewState } from "@/lib/hooks/useSharingViewState";
 import {
   NavigationMenu as NavigationMenuPrimitive,
   NavigationMenuItem,
@@ -23,7 +20,7 @@ type NavItem = {
 
 const navItems: NavItem[] = [
   {
-    href: "/",
+    href: "/dashboard",
     labelKey: "home",
   },
   {
@@ -47,7 +44,6 @@ type NavigationMenuProps = {
 export function NavigationMenu({ className }: NavigationMenuProps) {
   const { t, locale } = useTranslations();
   const rawPathname = usePathname();
-  const { savedSharerId, isLoaded } = useSharingViewState();
 
   // Strip locale prefix from pathname for consistent nav item matching
   // usePathname() returns paths like "/no/settings" or "/en/shifts"
@@ -60,24 +56,19 @@ export function NavigationMenu({ className }: NavigationMenuProps) {
     <NavigationMenuPrimitive className={className}>
       <NavigationMenuList>
         {navItems.map((item) => {
+          // Dashboard is the home route - treat "/" as "/dashboard" for matching
+          const normalizedPathname = pathname === "/" ? "/dashboard" : pathname;
           const isActive =
-            item.href === "/"
-              ? pathname === "/"
-              : pathname.startsWith(item.href);
+            item.href === "/dashboard"
+              ? normalizedPathname === "/dashboard"
+              : normalizedPathname.startsWith(item.href);
 
-          // For sharing link: if on /sharing, go to main route and clear state; otherwise restore saved view
-          const isSharingItem = item.labelKey === "sharing";
-          const href = isSharingItem
-            ? isOnSharingPath
-              ? `/${locale}/sharing`
-              : savedSharerId && isLoaded
-                ? `/${locale}/sharing?view=${savedSharerId}`
-                : `/${locale}/sharing`
-            : `/${locale}${item.href}`;
+          // Always use base path without query params to avoid triggering parent loading states
+          const href = `/${locale}${item.href}`;
 
           // Clear saved sharing state when clicking sharing link while on sharing path
           const handleClick =
-            isSharingItem && isOnSharingPath
+            item.labelKey === "sharing" && isOnSharingPath
               ? () => clearSharingViewState()
               : undefined;
 

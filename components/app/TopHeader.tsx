@@ -37,7 +37,7 @@ export function TopHeader({ userName }: TopHeaderProps) {
               <ImpersonationIndicator />
             ) : (
               <Link
-                href={`/${locale}`}
+                href={`/${locale}/dashboard`}
                 className="inline-flex items-center justify-center"
                 aria-label={t.header.goToTidex}
               >

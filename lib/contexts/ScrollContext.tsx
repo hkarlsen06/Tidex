@@ -24,6 +24,12 @@ interface ScrollContextValue {
    * null if no container is registered or no scroll has occurred.
    */
   scrollDirection: ScrollDirection;
+
+  /**
+   * Scroll the registered container to the top.
+   * Used by native tab bar when re-tapping the current tab.
+   */
+  scrollToTop: () => void;
 }
 
 const ScrollContext = createContext<ScrollContextValue | null>(null);
@@ -57,6 +63,14 @@ export function ScrollProvider({
     },
     []
   );
+
+  const scrollToTop = useCallback(() => {
+    if (scrollContainer) {
+      scrollContainer.scrollTo({ top: 0, behavior: "smooth" });
+      lastScrollY.current = 0;
+      setScrollDirection(null);
+    }
+  }, [scrollContainer]);
 
   useEffect(() => {
     if (!scrollContainer) {
@@ -94,7 +108,7 @@ export function ScrollProvider({
   }, [scrollContainer, threshold]);
 
   return (
-    <ScrollContext.Provider value={{ registerScrollContainer, scrollDirection }}>
+    <ScrollContext.Provider value={{ registerScrollContainer, scrollDirection, scrollToTop }}>
       {children}
     </ScrollContext.Provider>
   );

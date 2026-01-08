@@ -61,8 +61,9 @@ export function UserMenu({
     if (!path) {
       return null;
     }
+    // Treat "/" as "/dashboard" for consistent comparison
     if (path === "/") {
-      return "/";
+      return "/dashboard";
     }
     return path.replace(/\/+$/, "");
   };
