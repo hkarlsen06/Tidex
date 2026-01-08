@@ -10,6 +10,7 @@ export interface NativeTabBarPlugin {
   setSelectedTab(options: { index: number }): Promise<void>;
   clearSelection(): Promise<void>;
   setTabBadge(options: { index: number; value?: string }): Promise<void>;
+  setTabTitles(options: { titles: string[] }): Promise<void>;
   hide(): Promise<void>;
   show(): Promise<void>;
   isAvailable(): Promise<{ available: boolean }>;

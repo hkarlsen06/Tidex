@@ -107,6 +107,14 @@ export const no = {
     stats: 'Statistikk',
     wagey: 'Wagey',
     sharing: 'Deling',
+    // Native tab bar labels (order must match Swift tabDefinitions)
+    tabBar: {
+      home: 'Hjem',
+      shifts: 'Vakter',
+      add: 'Legg til',
+      stats: 'Statistikk',
+      share: 'Del',
+    },
   },
   pages: {
     home: {
