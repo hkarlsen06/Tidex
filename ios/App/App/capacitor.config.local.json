@@ -16,6 +16,8 @@
 		"AppPlugin",
 		"CAPBrowserPlugin",
 		"DevicePlugin",
+		"HapticsPlugin",
+		"SocialLoginPlugin",
 		"NativePurchasesPlugin"
 	]
 }

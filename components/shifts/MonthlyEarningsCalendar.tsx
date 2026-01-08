@@ -17,6 +17,7 @@ import { cn } from "@/lib/cn";
 import { useTranslations } from "@/lib/i18n/client";
 import { getMonthlyTotals } from "@/lib/shifts/monthlyTotals";
 import { useCurrency } from "@/components/providers/CurrencyProvider";
+import { notificationHaptic, impactHaptic } from "@/lib/capacitor/haptics";
 
 type TaxSettings = {
   enabled: boolean;
@@ -553,6 +554,7 @@ export function MonthlyEarningsCalendar({
       const threshold = 50; // Minimum swipe distance in pixels
 
       if (Math.abs(deltaX) > threshold) {
+        impactHaptic("light");
         if (deltaX > 0) {
           // Swipe right - go to previous month
           goToPreviousMonth();
@@ -595,9 +597,9 @@ export function MonthlyEarningsCalendar({
                 isAnimationEnabled={isHydrated}
                 calendarId={calendarId}
               />
-              {isShowingSelectedTotal ? (
+              {selectedDates && selectedDates.size >= 2 ? (
                 <span className="font-semibold text-text-muted ml-1">
-                  ({selectedDates?.size ?? 0})
+                  ({selectedDates.size})
                 </span>
               ) : (
                 <span className="font-medium text-text-muted ml-1">{formatYear(month)}</span>
@@ -757,9 +759,11 @@ export function MonthlyEarningsCalendar({
                       variant="ghost"
                       onClick={() => {
                         if (confirmingMultiDelete) {
+                          notificationHaptic("warning");
                           onDeleteSelected();
                           setConfirmingMultiDelete(false);
                         } else {
+                          impactHaptic("medium");
                           setConfirmingMultiDelete(true);
                         }
                       }}
@@ -781,7 +785,7 @@ export function MonthlyEarningsCalendar({
                   )}
                   <Button
                     type="button"
-                    variant="ghost"
+                    variant={confirmingMultiDelete ? "default" : "ghost"}
                     onClick={() => {
                       if (confirmingMultiDelete) {
                         setConfirmingMultiDelete(false);
@@ -790,7 +794,10 @@ export function MonthlyEarningsCalendar({
                       }
                     }}
                     disabled={deleting}
-                    className="flex-1 h-9 gap-2 rounded-lg bg-surface-secondary text-text-secondary hover:bg-surface-secondary/80"
+                    className={cn(
+                      "flex-1 h-9 gap-2 rounded-lg",
+                      !confirmingMultiDelete && "bg-surface-secondary text-text-secondary hover:bg-surface-secondary/80"
+                    )}
                   >
                     <X strokeWidth={2} className="h-4 w-4" />
                     {confirmingMultiDelete
@@ -819,9 +826,11 @@ export function MonthlyEarningsCalendar({
                       variant="ghost"
                       onClick={() => {
                         if (confirmingDelete) {
+                          notificationHaptic("warning");
                           onDeleteSingleDate();
                           setConfirmingDelete(false);
                         } else {
+                          impactHaptic("medium");
                           setConfirmingDelete(true);
                         }
                       }}
@@ -863,7 +872,7 @@ export function MonthlyEarningsCalendar({
                   )}
                   <Button
                     type="button"
-                    variant={confirmingDelete ? "ghost" : "default"}
+                    variant="default"
                     onClick={() => {
                       if (confirmingDelete) {
                         setConfirmingDelete(false);
@@ -883,9 +892,7 @@ export function MonthlyEarningsCalendar({
                     }
                     className={cn(
                       "flex-1 min-w-0 h-9 rounded-lg",
-                      confirmingDelete
-                        ? "bg-surface-secondary text-text-secondary hover:bg-surface-secondary/80 gap-2"
-                        : !(copyMode || moveMode) && "gap-2"
+                      (confirmingDelete || !(copyMode || moveMode)) && "gap-2"
                     )}
                   >
                     {confirmingDelete ? (

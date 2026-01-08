@@ -22,7 +22,8 @@
     "dev-site:dev": "pnpm --filter dev-site dev",
     "dev-site:build": "pnpm --filter dev-site build",
     "dev-site:start": "pnpm --filter dev-site start",
-    "local-ios": "cp ios/App/App/capacitor.config.local.json ios/App/App/capacitor.config.json && pnpm exec cap open ios & pnpm local",
+    "local-ios": "pnpm sync-ios && cp ios/App/App/capacitor.config.local.json ios/App/App/capacitor.config.json && pnpm exec cap open ios & pnpm local",
+    "local-sync": "pnpm sync-ios && cp ios/App/App/capacitor.config.local.json ios/App/App/capacitor.config.json",
     "sync-ios": "cp public/offline.html dist/offline.html && pnpm exec cap sync ios",
     "open-ios": "pnpm sync-ios && pnpm exec cap open ios"
   },
@@ -33,6 +34,7 @@
     "@capacitor/cli": "^8.0.0",
     "@capacitor/core": "^8.0.0",
     "@capacitor/device": "^8.0.0",
+    "@capacitor/haptics": "^8.0.0",
     "@capacitor/ios": "^8.0.0",
     "@capgo/capacitor-social-login": "^8.2.11",
     "@capgo/native-purchases": "^8.0.10",

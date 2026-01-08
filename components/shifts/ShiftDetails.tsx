@@ -34,6 +34,7 @@ import { RecurringEditModal } from "./RecurringEditModal";
 import type { ExistingShift } from "@/lib/recurring/conflicts";
 import { queueMutation, isOfflineQueueSupported } from "@/lib/pwa/offline-queue";
 import { useOnlineStatus } from "@/lib/hooks/useOnlineStatus";
+import { notificationHaptic, impactHaptic } from "@/lib/capacitor/haptics";
 
 const MINUTES_PER_DAY = 24 * 60;
 
@@ -234,12 +235,14 @@ export function ShiftDetails({
     if (!shift) return;
     setIsEditing(false);
     setSaveError(null);
+    impactHaptic("medium");
     setConfirmingDelete(true);
   };
 
   const handleConfirmDelete = () => {
     if (!shift) return;
     setConfirmingDelete(false);
+    notificationHaptic("warning");
 
     // If recurring virtual shift, pass recurring info for exclusion handling
     if (shift.recurring_id) {
