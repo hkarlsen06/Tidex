@@ -57,6 +57,25 @@ export function getPlatform(): "ios" | "android" | "web" {
 }
 
 /**
+ * Check if running on native iOS using multiple detection methods.
+ * Uses Capacitor bridge when available, falls back to CSS class detection
+ * for cases where the bridge isn't ready yet (e.g., during initial hydration).
+ *
+ * The `native-ios` CSS class is set by an inline script in layout.tsx before
+ * React hydrates, ensuring native iOS styling is applied immediately.
+ */
+export function isNativeIOSWithFallback(): boolean {
+  if (typeof window === "undefined") return false;
+
+  // Check Capacitor bridge first (most reliable when available)
+  if (isIOSPlatform()) return true;
+
+  // Fallback: check for native-ios class added by inline script in layout.tsx
+  // This handles the case where Capacitor bridge isn't ready yet
+  return document.documentElement.classList.contains("native-ios");
+}
+
+/**
  * Wait for Capacitor bridge to be available (for use with remote URLs)
  * Returns a promise that resolves when the bridge is ready or times out
  */

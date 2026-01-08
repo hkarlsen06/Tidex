@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { NativeTabBar } from "@/lib/capacitor/native-tab-bar";
 import { hideSplash } from "@/lib/capacitor/native-splash";
-import { isIOSPlatform } from "@/lib/capacitor/platform";
+import { isNativeIOSWithFallback } from "@/lib/capacitor/platform";
 
 /**
  * Component that shows the native iOS tab bar when mounted.
@@ -18,8 +18,8 @@ import { isIOSPlatform } from "@/lib/capacitor/platform";
  */
 export function ShowNativeTabBar() {
   useEffect(() => {
-    // Only run on native iOS
-    if (!isIOSPlatform() && !document.documentElement.classList.contains("native-ios")) {
+    // Only run on native iOS (uses fallback for when Capacitor bridge isn't ready)
+    if (!isNativeIOSWithFallback()) {
       return;
     }
 

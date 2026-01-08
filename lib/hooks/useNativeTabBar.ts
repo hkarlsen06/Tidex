@@ -2,7 +2,7 @@
 
 import { useEffect, useCallback, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { isIOSPlatform } from "@/lib/capacitor/platform";
+import { isIOSPlatform, isNativeIOSWithFallback } from "@/lib/capacitor/platform";
 import { useLocale } from "@/lib/i18n/client";
 import { useScrollContext } from "@/lib/contexts/ScrollContext";
 import type { PluginListenerHandle } from "@capacitor/core";
@@ -61,7 +61,8 @@ export function useNativeTabBar() {
 
   // Initialize plugin listeners (runs once)
   useEffect(() => {
-    if (!isIOSPlatform() && !document.documentElement.classList.contains("native-ios")) {
+    // Use fallback for when Capacitor bridge isn't ready during initial hydration
+    if (!isNativeIOSWithFallback()) {
       return;
     }
     if (listenersSetupRef.current) return; // Already initialized

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ShiftActivity,
   type ShiftActivityData,
@@ -209,7 +209,7 @@ export function useLiveActivity({
 }: UseLiveActivityOptions): UseLiveActivityResult {
   const activeActivityRef = useRef<string | null>(null);
   const lastShiftIdRef = useRef<string | null>(null);
-  const isActiveRef = useRef(false);
+  const [isActive, setIsActive] = useState(false);
 
   const startActivity = useCallback(
     async (shift: ShiftWithComputations) => {
@@ -247,7 +247,7 @@ export function useLiveActivity({
         if (result.success) {
           activeActivityRef.current = result.activityId;
           lastShiftIdRef.current = shift.id;
-          isActiveRef.current = true;
+          setIsActive(true);
         }
       } catch (error) {
         console.error("[LiveActivity] Failed to start activity:", error);
@@ -263,7 +263,7 @@ export function useLiveActivity({
       await ShiftActivity.endActivity();
       activeActivityRef.current = null;
       lastShiftIdRef.current = null;
-      isActiveRef.current = false;
+      setIsActive(false);
     } catch (error) {
       console.error("[LiveActivity] Failed to end activity:", error);
     }
@@ -321,7 +321,7 @@ export function useLiveActivity({
           if (shift && isShiftOngoing(shift)) {
             activeActivityRef.current = shiftId;
             lastShiftIdRef.current = shiftId;
-            isActiveRef.current = true;
+            setIsActive(true);
           } else {
             // Shift ended - clean up
             await endActivity();
@@ -346,6 +346,6 @@ export function useLiveActivity({
   return {
     startActivity,
     endActivity,
-    isActive: isActiveRef.current,
+    isActive,
   };
 }
