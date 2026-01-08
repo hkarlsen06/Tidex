@@ -256,23 +256,13 @@ export function HomeContent({ shifts: initialShifts, settings, wageSnapshots, ca
     });
   }, [initialShifts, additionalShifts, deletedShiftIds, shiftOverrides]);
 
-  // Get the current tax rate from the most recent wage snapshot for Live Activity widget
-  const currentTaxRate = useMemo(() => {
-    // Find the most recent snapshot (baseline or dated)
-    const today = new Date().toISOString().split('T')[0];
-    const snapshot = getSnapshotForDate(wageSnapshots, today);
-    if (!snapshot?.tax_enabled) return 0;
-    // Convert percentage (e.g., 35) to decimal (0.35)
-    return (snapshot.tax_percentage ?? 0) / 100;
-  }, [wageSnapshots]);
-
   // Live Activity management for ongoing shifts (iOS only)
   // Automatically starts/ends activity based on shift state
+  // Each shift has its own tax_enabled/tax_percentage from its applicable snapshot
   useLiveActivity({
     shifts,
     locale,
     currencySymbol,
-    taxRate: currentTaxRate,
     enabled: true,
   });
 
