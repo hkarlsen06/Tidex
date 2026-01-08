@@ -36,14 +36,17 @@ export async function GET(request: NextRequest) {
 
   try {
     // getSharedUserShifts verifies share access internally
-    const { shifts, settings } = await getSharedUserShifts(ownerId, {
+    // Pass year and month to get correct payoutTaxSettings for this month
+    const { shifts, settings, payoutTaxSettings } = await getSharedUserShifts(ownerId, {
       startDate: getMonthStart(year, month),
       endDate: getMonthEnd(year, month),
       limit: 100,
+      year,
+      month,
     });
 
     return NextResponse.json(
-      { shifts, settings },
+      { shifts, settings, payoutTaxSettings },
       {
         headers: {
           // Cache for 5 minutes (300 seconds) with stale-while-revalidate

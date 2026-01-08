@@ -14,6 +14,7 @@ import { PRESET_RULES } from "@/data-access/shifts";
 import {
   getPreviousYearMonth,
   getNextYearMonth,
+  getCurrentYearMonth,
   getMonthStart,
   getMonthEnd
 } from "@/lib/date-utils";
@@ -133,11 +134,14 @@ export default async function SharingPage({ params, searchParams }: SharingPageP
   // Fetch 3 months of shifts for the selected sharer
   const prevMonth = getPreviousYearMonth();
   const nextMonth = getNextYearMonth();
+  const current = getCurrentYearMonth();
 
   const sharedData = await getSharedUserShifts(selectedOwnerId, {
     startDate: getMonthStart(prevMonth.year, prevMonth.month),
     endDate: getMonthEnd(nextMonth.year, nextMonth.month),
-    limit: 150
+    limit: 150,
+    year: current.year,
+    month: current.month,
   });
 
   return (
@@ -152,6 +156,8 @@ export default async function SharingPage({ params, searchParams }: SharingPageP
         sharedAggregates={sharedData.aggregates}
         presetRules={PRESET_RULES}
         showEarnings={sharedData.showEarnings}
+        payoutTaxSettings={sharedData.payoutTaxSettings}
+        wageSnapshots={sharedData.wageSnapshots}
         highlightDates={highlightDates}
         cacheKey={user.id.slice(0, 8)}
       />
