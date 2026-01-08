@@ -26,17 +26,17 @@ class TidexContainerViewController: UIViewController, UITabBarDelegate {
 
     // Tab definitions without titles (titles set based on locale)
     private let tabDefinitions: [TabItem] = [
-        TabItem(imageName: "gauge", route: "/dashboard"),
+        TabItem(imageName: "house.fill", route: "/dashboard"),
         TabItem(imageName: "calendar", route: "/shifts"),
         TabItem(imageName: "plus.circle.fill", route: "/shifts/add"),
         TabItem(imageName: "chart.bar.xaxis", route: "/stats"),
-        TabItem(imageName: "square.and.arrow.up", route: "/sharing")
+        TabItem(imageName: "person.2.fill", route: "/sharing")
     ]
 
     // Localized tab titles - matches order of tabDefinitions
     // Norwegian translations for "no" locale, English for others
-    private static let tabTitlesNorwegian = ["Hjem", "Vakter", "Legg til", "Statistikk", "Del"]
-    private static let tabTitlesEnglish = ["Home", "Shifts", "Add", "Stats", "Share"]
+    private static let tabTitlesNorwegian = ["Hjem", "Vakter", "Legg til", "Statistikk", "Venner"]
+    private static let tabTitlesEnglish = ["Home", "Shifts", "Add", "Stats", "Friends"]
 
     /// Get initial tab titles based on device locale.
     /// Uses shared locale detection from LocaleAwareBridgeViewController for consistency.
@@ -104,12 +104,29 @@ class TidexContainerViewController: UIViewController, UITabBarDelegate {
         let initialTitles = getInitialTabTitles()
         var items: [UITabBarItem] = []
         for (index, tab) in tabDefinitions.enumerated() {
-            let title = index < initialTitles.count ? initialTitles[index] : ""
+            let isCenterTab = index == 2  // Add tab (plus icon)
+            let title = isCenterTab ? nil : (index < initialTitles.count ? initialTitles[index] : "")
+
+            // Use larger icon for center tab
+            let image: UIImage?
+            if isCenterTab {
+                let config = UIImage.SymbolConfiguration(pointSize: 28, weight: .medium)
+                image = UIImage(systemName: tab.imageName, withConfiguration: config)
+            } else {
+                image = UIImage(systemName: tab.imageName)
+            }
+
             let item = UITabBarItem(
                 title: title,
-                image: UIImage(systemName: tab.imageName),
+                image: image,
                 tag: index
             )
+
+            // Shift center tab icon down to fill the space where title would be
+            if isCenterTab {
+                item.imageInsets = UIEdgeInsets(top: 6, left: 0, bottom: -6, right: 0)
+            }
+
             items.append(item)
         }
         customTabBar.items = items

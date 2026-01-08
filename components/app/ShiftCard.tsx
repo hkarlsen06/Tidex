@@ -204,8 +204,6 @@ export function ShiftCard({ shift, onClick, isToday = false, progress, taxSettin
                     layout={false}
                     format={{ maximumFractionDigits: 0 }}
                     locales="nb-NO"
-                    prefix={currencyDisplay === 'prefix' ? currencySymbol : undefined}
-                    suffix={currencyDisplay === 'suffix' ? ` ${currencySymbol}` : undefined}
                     transition={{ visualDuration: 0.6, type: 'spring', bounce: 0.1 }}
                     routePattern="/"
                   >
@@ -216,8 +214,6 @@ export function ShiftCard({ shift, onClick, isToday = false, progress, taxSettin
                     layout={false}
                     format={{ maximumFractionDigits: 0 }}
                     locales="nb-NO"
-                    prefix={currencyDisplay === 'prefix' ? currencySymbol : undefined}
-                    suffix={currencyDisplay === 'suffix' ? ` ${currencySymbol}` : undefined}
                     transition={{ visualDuration: 0.6, type: 'spring', bounce: 0.1 }}
                     routePattern="/"
                   >
