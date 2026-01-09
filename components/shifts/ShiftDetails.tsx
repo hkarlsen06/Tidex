@@ -131,6 +131,7 @@ export type ShiftDetailsProps = {
   showEarnings?: boolean; // When false, hides earnings-related data (for shared shifts with earnings hidden)
   onShiftUpdate?: (updatedSupplements: any) => void; // Called after shift is updated with new custom supplements
   onOptimisticEdit?: (shiftId: string, updates: { shift_date: string; start_time: string; end_time: string }) => void; // Called immediately for optimistic UI update
+  onEditSuccess?: () => void; // Called after successful edit server action + router.refresh
   onEditError?: (shiftId: string, error: string) => void; // Called when edit fails to allow parent to revert
   onSupplementSaveError?: (error: string) => void; // Called when custom supplement save fails
   /** Other shifts on the same date that overlap with this shift's time range */
@@ -168,6 +169,7 @@ export function ShiftDetails({
   showEarnings = true,
   onShiftUpdate,
   onOptimisticEdit,
+  onEditSuccess,
   onEditError,
   onSupplementSaveError,
   overlappingShifts = [],
@@ -294,6 +296,7 @@ export function ShiftDetails({
           recurring_id: shift.recurring_id, // Pass recurring_id if present
         });
         router.refresh();
+        onEditSuccess?.();
       } catch (error: any) {
         // If offline and queue is supported, queue the mutation
         if (!navigator.onLine && isOfflineQueueSupported()) {
@@ -616,6 +619,7 @@ export function ShiftDetails({
           onClose={(reason) => {
             setRecurringModalOpen(false);
             router.refresh();
+            onEditSuccess?.();
             // If the recurring shift was deleted, also close the parent ShiftDetails modal
             if (reason === 'deleted') {
               onClose();
@@ -644,6 +648,7 @@ export function ShiftDetails({
             onShiftUpdate?.(updatedSupplements);
             // Trigger router refresh to get fresh computed data
             router.refresh();
+            onEditSuccess?.();
           }}
           onSaveError={onSupplementSaveError}
         />

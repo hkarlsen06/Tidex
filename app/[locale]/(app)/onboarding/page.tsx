@@ -27,7 +27,7 @@ export default async function OnboardingPage({
 
   // This should never happen (layout redirects), but TypeScript needs the guard
   if (error || !data?.claims) {
-    redirect("/login");
+    redirect(`/${locale}/login`);
   }
 
   const claims = data.claims;
@@ -35,7 +35,7 @@ export default async function OnboardingPage({
   // Check if user has already completed onboarding (from user_metadata in JWT)
   const finishedOnboarding = claims.user_metadata?.finishedOnboarding;
   if (finishedOnboarding) {
-    redirect("/dashboard");
+    redirect(`/${locale}/dashboard`);
   }
 
   // Load existing settings (if any)

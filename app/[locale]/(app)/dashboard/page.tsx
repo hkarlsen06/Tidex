@@ -41,7 +41,7 @@ export default async function DashboardPage({ params }: DashboardProps) {
   // Redirect to onboarding if user hasn't finished onboarding
   const finishedOnboarding = user.user_metadata?.finishedOnboarding ?? false;
   if (!finishedOnboarding) {
-    redirect("/onboarding");
+    redirect(`/${_locale}/onboarding`);
   }
 
   // Load current month + adjacent months (prev, next) in a single SSR request

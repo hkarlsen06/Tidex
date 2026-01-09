@@ -6,6 +6,22 @@ import { isNativePlatform } from "@/lib/capacitor/platform";
 const RELOAD_FLAG = "chunk_reload_attempted";
 
 /**
+ * Check if we're in tunnel mode (local-ios development through Cloudflare tunnel)
+ * This disables chunk error recovery to prevent infinite reload loops
+ */
+function checkTunnelMode(): boolean {
+  // Check env variable first
+  if (process.env.NEXT_PUBLIC_TUNNEL_MODE === "true") {
+    return true;
+  }
+  // Fallback: check hostname (dev tunnel URL)
+  if (typeof window !== "undefined" && window.location.hostname === "dev.tidex.no") {
+    return true;
+  }
+  return false;
+}
+
+/**
  * Global handler for Next.js ChunkLoadError recovery.
  *
  * When a deployment happens, cached JS chunks may become stale.
@@ -16,6 +32,7 @@ const RELOAD_FLAG = "chunk_reload_attempted";
  * - Only triggers on known chunk load error patterns
  * - Uses sessionStorage flag to prevent reload loops (max 1 reload per session)
  * - Clears flag on successful page load so future sessions can retry
+ * - Disabled entirely in tunnel mode (local-ios) to prevent HMR-related loops
  *
  * Capacitor/Native:
  * - On native platforms, we delay the reload slightly to avoid cancelling
@@ -24,6 +41,12 @@ const RELOAD_FLAG = "chunk_reload_attempted";
  */
 export function ChunkErrorRecovery() {
   useEffect(() => {
+    // In tunnel mode, don't set up chunk error recovery at all
+    // HMR failures through the tunnel would cause infinite reload loops
+    if (checkTunnelMode()) {
+      console.log("[CHUNK] Tunnel mode detected, chunk error recovery disabled");
+      return;
+    }
     // Clear the reload flag on successful mount
     // This means the page loaded successfully, so future chunk errors can trigger a reload
     try {
