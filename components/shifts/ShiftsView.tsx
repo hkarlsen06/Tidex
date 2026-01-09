@@ -1797,8 +1797,8 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
               // Refresh to replace optimistic data with real data from server
               router.refresh();
 
-              // Sync widget storage with current shifts (including optimistic ones)
-              syncWidgetStorage({ shifts });
+              // Sync widget storage - let hook fetch fresh data
+              syncWidgetStorage();
             } catch (e: unknown) {
               const errorMessage = e instanceof Error ? e.message : 'Failed to save shift';
               // If offline and queue is supported, queue the mutation
@@ -2107,7 +2107,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
                   targetDate: isoDate,
                 });
                 router.refresh();
-                syncWidgetStorage({ shifts });
+                syncWidgetStorage();
               } catch (error) {
                 // Revert optimistic updates on error
                 setCopiedShifts(prev =>
@@ -2293,7 +2293,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
         }));
         await deleteShifts(shiftsPayload);
         router.refresh();
-        syncWidgetStorage({ shifts });
+        syncWidgetStorage();
       } catch (error) {
         // Revert optimistic deletions on error
         setDeletedShiftIds(prev => {
@@ -2306,7 +2306,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
         console.error("Failed to delete shifts", error);
       }
     });
-  }, [multiSelectedDates, shiftsByDate, isOffline, router, clearMultiSelection, errorComplete, syncWidgetStorage, shifts]);
+  }, [multiSelectedDates, shiftsByDate, isOffline, router, clearMultiSelection, errorComplete, syncWidgetStorage]);
 
   // Handle deletion of shifts for the single selected date (from calendar action bar)
   const handleDeleteSingleDate = useCallback(() => {
@@ -2330,7 +2330,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
         }));
         await deleteShifts(shiftsPayload);
         router.refresh();
-        syncWidgetStorage({ shifts });
+        syncWidgetStorage();
       } catch (error) {
         // Revert optimistic deletions on error
         setDeletedShiftIds(prev => {
@@ -2343,7 +2343,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
         console.error("Failed to delete shifts", error);
       }
     });
-  }, [selectedDate, shiftsByDate, isOffline, router, clearSelection, errorComplete, syncWidgetStorage, shifts]);
+  }, [selectedDate, shiftsByDate, isOffline, router, clearSelection, errorComplete, syncWidgetStorage]);
 
   const selectedDateShifts = useMemo(
     () => (selectedDate ? shiftsByDate.get(selectedDate) ?? [] : []),
@@ -2924,7 +2924,8 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
           try {
             await deleteShift(id);
             router.refresh();
-            syncWidgetStorage({ shifts });
+            // Don't pass shifts - let hook fetch fresh data since we just deleted
+            syncWidgetStorage();
           } catch (error) {
             // If offline and queue is supported, queue the mutation
             if (!navigator.onLine && isOfflineQueueSupported()) {
@@ -2972,7 +2973,8 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
       }}
       onEditSuccess={() => {
         // Sync widget storage after successful edit
-        syncWidgetStorage({ shifts });
+        // Don't pass shifts - let hook fetch fresh data since router.refresh() was just called
+        syncWidgetStorage();
       }}
       onOptimisticEdit={(shiftId, updates) => {
         // Find the shift to update

@@ -98,6 +98,9 @@ class TidexContainerViewController: UIViewController, UITabBarDelegate {
         // Configure appearance - minimal customization to preserve system materials (Liquid Glass on iOS 26)
         let appearance = UITabBarAppearance()
         appearance.configureWithDefaultBackground()
+        // Remove the top separator line (hairline border) that iOS 18 shows by default
+        appearance.shadowColor = .clear
+        appearance.shadowImage = UIImage()
         customTabBar.standardAppearance = appearance
         if #available(iOS 15.0, *) {
             customTabBar.scrollEdgeAppearance = appearance
