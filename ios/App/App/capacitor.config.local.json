@@ -4,7 +4,7 @@
 	"webDir": "dist",
 	"backgroundColor": "#020817",
 	"server": {
-		"url": "https://dev.tidex.no",
+		"url": "http://172.20.10.5:3000",
 		"cleartext": true,
 		"errorPath": "/offline.html"
 	},

@@ -58,11 +58,6 @@ struct LockScreenLiveActivityView: View {
         HStack(spacing: 16) {
             // Left side: Time info
             VStack(alignment: .leading, spacing: 4) {
-                // Shift time range
-                Text("\(context.attributes.startTime) - \(context.attributes.endTime)")
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundColor(.secondary)
-
                 // Time remaining - all on same baseline
                 HStack(alignment: .firstTextBaseline, spacing: 4) {
                     Image(systemName: "clock.fill")
@@ -75,6 +70,11 @@ struct LockScreenLiveActivityView: View {
                         .font(.system(size: 15, weight: .medium))
                         .foregroundColor(.secondary)
                 }
+
+                // Shift time range
+                Text("\(context.attributes.startTime) - \(context.attributes.endTime)")
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundColor(.secondary)
             }
 
             Spacer()

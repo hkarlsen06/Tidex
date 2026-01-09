@@ -34,7 +34,7 @@ export default async function SubscriptionSuccessPage({ params }: Props) {
 
   // This should never happen (layout redirects), but TypeScript needs the guard
   if (error || !data?.claims) {
-    redirect('/login');
+    redirect(`/${locale}/login`);
   }
 
   return (
