@@ -4,6 +4,37 @@ import { Turnstile, type TurnstileInstance } from "@marsidev/react-turnstile";
 import { useRef, useImperativeHandle, forwardRef } from "react";
 import { ENV } from "@/lib/env";
 
+/**
+ * Cloudflare Turnstile test sitekeys for development
+ * @see https://developers.cloudflare.com/turnstile/troubleshooting/testing/
+ */
+const TURNSTILE_TEST_SITEKEYS = {
+  /** Always passes - visible widget */
+  ALWAYS_PASS: "1x00000000000000000000AA",
+  /** Always fails - visible widget */
+  ALWAYS_FAIL: "2x00000000000000000000AB",
+  /** Always passes - invisible widget */
+  INVISIBLE_PASS: "1x00000000000000000000BB",
+  /** Always fails - invisible widget */
+  INVISIBLE_FAIL: "2x00000000000000000000BB",
+  /** Forces interactive challenge - visible widget */
+  FORCE_INTERACTIVE: "3x00000000000000000000FF",
+} as const;
+
+/**
+ * Get the appropriate Turnstile sitekey based on environment
+ * In development, uses a test sitekey that always passes
+ */
+function getTurnstileSiteKey(): string {
+  const isDev = process.env.NODE_ENV === "development";
+
+  if (isDev) {
+    return TURNSTILE_TEST_SITEKEYS.ALWAYS_PASS;
+  }
+
+  return ENV.TURNSTILE_SITE_KEY!;
+}
+
 interface TurnstileCaptchaProps {
   onSuccess: (token: string) => void;
   onError?: () => void;
@@ -83,7 +114,7 @@ export const TurnstileCaptcha = forwardRef<TurnstileCaptchaHandle, TurnstileCapt
     return (
       <Turnstile
         ref={turnstileRef}
-        siteKey={ENV.TURNSTILE_SITE_KEY!}
+        siteKey={getTurnstileSiteKey()}
         onSuccess={onSuccess}
         onError={onError}
         onExpire={onExpire}
