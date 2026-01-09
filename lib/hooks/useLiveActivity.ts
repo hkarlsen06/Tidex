@@ -4,9 +4,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ShiftActivity,
   type ShiftActivityData,
-  type StoredShiftData,
 } from "@/lib/capacitor/shift-activity";
 import { isIOSPlatform } from "@/lib/capacitor/platform";
+import {
+  calculateAverageSupplementRate,
+  saveShiftsToWidgetStorage,
+} from "@/lib/capacitor/widget-storage";
 import type { ShiftWithComputations } from "@/lib/payroll/types";
 
 type UseLiveActivityOptions = {
@@ -98,25 +101,6 @@ function calculateActivityState(shift: ShiftWithComputations): {
 }
 
 /**
- * Calculate average supplement rate from wage periods
- */
-function calculateAverageSupplementRate(shift: ShiftWithComputations): number {
-  const periods = shift.computed.wagePeriods;
-  if (periods.length === 0) return 0;
-
-  let totalWeightedSupplement = 0;
-  let totalMinutes = 0;
-
-  for (const period of periods) {
-    const minutes = period.toMin - period.fromMin;
-    totalWeightedSupplement += period.supplementRate * minutes;
-    totalMinutes += minutes;
-  }
-
-  return totalMinutes > 0 ? totalWeightedSupplement / totalMinutes : 0;
-}
-
-/**
  * Find the ongoing shift from a list of shifts
  * Checks today's shifts first, then yesterday's cross-midnight shifts
  */
@@ -145,53 +129,6 @@ function findOngoingShift(
   });
 
   return crossMidnightShift || null;
-}
-
-/**
- * Prepare shifts for storage (upcoming shifts for background task and home widget)
- * Each shift uses its own tax_enabled/tax_percentage from the snapshot that applies to it
- */
-function prepareShiftsForStorage(
-  shifts: ShiftWithComputations[],
-  locale: string,
-  currencySymbol: string
-): StoredShiftData[] {
-  const now = new Date();
-  const todayStr = now.toISOString().split("T")[0];
-
-  // Include shifts from today onwards (next 7 days) for the home widget
-  const maxDate = new Date(now);
-  maxDate.setDate(maxDate.getDate() + 7);
-  const maxDateStr = maxDate.toISOString().split("T")[0];
-
-  // Filter to upcoming shifts within the next 7 days
-  return shifts
-    .filter((s) => s.shift_date >= todayStr && s.shift_date <= maxDateStr)
-    .map((shift) => {
-      const supplementRate = calculateAverageSupplementRate(shift);
-      const hourlyWage =
-        shift.computed.paidHours > 0
-          ? shift.computed.basePay / shift.computed.paidHours
-          : 0;
-
-      // Use the shift's own tax settings from its applicable snapshot
-      const taxRate = shift.tax_enabled
-        ? (shift.tax_percentage ?? 0) / 100
-        : 0;
-
-      return {
-        shiftId: shift.id,
-        shiftDate: shift.shift_date,
-        startTime: shift.start_time,
-        endTime: shift.end_time,
-        hourlyWage,
-        supplementRatePerHour: supplementRate,
-        totalGrossEstimate: shift.computed.gross,
-        locale,
-        currencySymbol,
-        taxRate,
-      };
-    });
 }
 
 /**
@@ -284,18 +221,8 @@ export function useLiveActivity({
   useEffect(() => {
     if (!enabled || !isIOSPlatform()) return;
 
-    const saveShifts = async () => {
-      try {
-        const storedShifts = prepareShiftsForStorage(shifts, locale, currencySymbol);
-        await ShiftActivity.saveShiftsToSharedStorage({
-          shifts: JSON.stringify(storedShifts),
-        });
-      } catch (error) {
-        console.error("[LiveActivity] Failed to save shifts:", error);
-      }
-    };
-
-    saveShifts();
+    // Use the shared utility - it handles iOS check and error logging internally
+    saveShiftsToWidgetStorage(shifts, locale, currencySymbol);
   }, [shifts, locale, currencySymbol, enabled]);
 
   // Auto-manage activity based on shift state

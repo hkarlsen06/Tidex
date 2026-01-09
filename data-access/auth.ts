@@ -14,6 +14,7 @@ import { cookies } from 'next/headers'
 import { Effect } from 'effect'
 import { AuthService } from '@/lib/services/auth'
 import { SupabaseAuthLive } from '@/lib/layers/app'
+import { LOCALE_COOKIE, defaultLocale, locales, type Locale } from '@/lib/i18n/config'
 
 /**
  * Verify user session and redirect to login if not authenticated
@@ -24,7 +25,7 @@ import { SupabaseAuthLive } from '@/lib/layers/app'
 export const verifySession = cache(async () => {
   // Call cookies() early to satisfy Next.js 16 prerendering requirements
   // This must happen before Effect Cache uses Date.now()
-  await cookies();
+  const cookieStore = await cookies();
 
   const program = Effect.gen(function* () {
     const auth = yield* AuthService;
@@ -40,9 +41,15 @@ export const verifySession = cache(async () => {
     // Return format compatible with existing code
     return { user: result.rawUser };
   } catch {
+    // Get locale from cookie for redirect, avoiding extra redirect hop through proxy
+    const localeCookie = cookieStore.get(LOCALE_COOKIE)?.value;
+    const locale: Locale = localeCookie && locales.includes(localeCookie as Locale)
+      ? (localeCookie as Locale)
+      : defaultLocale;
+
     // Handle authentication errors by redirecting
     // redirect() throws a NEXT_REDIRECT error that Next.js catches
-    redirect('/login');
+    redirect(`/${locale}/login`);
   }
 });
 
@@ -88,7 +95,14 @@ export const verifyAdmin = cache(async () => {
   const session = await verifySession();
   const isAdmin = (session.user.app_metadata?.role as string) === 'admin';
   if (!isAdmin) {
-    redirect('/settings');
+    // Get locale from cookie for redirect, avoiding extra redirect hop through proxy
+    const cookieStore = await cookies();
+    const localeCookie = cookieStore.get(LOCALE_COOKIE)?.value;
+    const locale: Locale = localeCookie && locales.includes(localeCookie as Locale)
+      ? (localeCookie as Locale)
+      : defaultLocale;
+
+    redirect(`/${locale}/settings`);
   }
   return session;
 });
