@@ -59,12 +59,11 @@ html.native-ios [data-top-header] {
 }
 
 /*
- * Native iOS always uses dark background on html element
- * This prevents white flash during redirects/navigation on the native app.
- * The native launch screen is dark, so html should match.
+ * Native iOS uses theme-aware background on html element
+ * This ensures consistent background during redirects/navigation on the native app.
  */
 html.native-ios {
-  background: hsl(222.2 84% 4.9%) !important;
+  background: hsl(var(--background)) !important;
 }
 
 /* Define content sources for scanning */
