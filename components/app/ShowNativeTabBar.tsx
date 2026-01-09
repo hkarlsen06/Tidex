@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useLayoutEffect } from "react";
 import { NativeTabBar } from "@/lib/capacitor/native-tab-bar";
 import { hideSplash } from "@/lib/capacitor/native-splash";
 import { isNativeIOSWithFallback } from "@/lib/capacitor/platform";
@@ -13,33 +13,23 @@ import { isNativeIOSWithFallback } from "@/lib/capacitor/platform";
  * The native tab bar starts hidden by default to prevent it from flashing
  * on login/onboarding screens.
  *
- * Also hides the splash screen after the tab bar is shown, ensuring a smooth
- * transition where all UI elements are ready before the splash disappears.
+ * Uses useLayoutEffect to show tab bar synchronously before browser paint,
+ * ensuring the tab bar appears at the same time as the dashboard content.
+ *
+ * Shows tab bar and hides splash screen simultaneously for a seamless transition.
  */
 export function ShowNativeTabBar() {
-  useEffect(() => {
+  useLayoutEffect(() => {
     // Only run on native iOS (uses fallback for when Capacitor bridge isn't ready)
     if (!isNativeIOSWithFallback()) {
       return;
     }
 
-    const showTabBarAndHideSplash = async () => {
-      try {
-        // Show the tab bar first
-        await NativeTabBar.show();
-
-        // Small delay to ensure tab bar is rendered, then hide splash
-        setTimeout(() => {
-          hideSplash(200);
-        }, 50);
-      } catch (error) {
-        console.error("[ShowNativeTabBar] Failed to show:", error);
-        // Even if tab bar fails, try to hide splash so user isn't stuck
-        hideSplash(200);
-      }
-    };
-
-    showTabBarAndHideSplash();
+    // Show tab bar and hide splash simultaneously for seamless transition
+    NativeTabBar.show().catch((error) => {
+      console.error("[ShowNativeTabBar] Failed to show:", error);
+    });
+    hideSplash(200);
 
     // Hide the tab bar when component unmounts (e.g., logout)
     return () => {

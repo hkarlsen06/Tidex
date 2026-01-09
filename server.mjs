@@ -35,7 +35,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const dev = process.env.NODE_ENV !== 'production';
-const hostname = 'local.tidex.no';
+const hostname = 'dev.tidex.no';
 const port = 3000;
 
 // Initialize Next.js app
@@ -79,8 +79,8 @@ const resolveCertPath = (fileName) => {
   return null;
 };
 
-const keyPath = resolveCertPath('local.tidex.no-key.pem');
-const certPath = resolveCertPath('local.tidex.no.pem');
+const keyPath = resolveCertPath('dev.tidex.no-key.pem');
+const certPath = resolveCertPath('dev.tidex.no.pem');
 
 if (!keyPath || !certPath) {
   throw new Error(

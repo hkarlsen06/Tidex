@@ -77,6 +77,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <link rel="dns-prefetch" href="https://vercel.live" />
         {/* Inline critical scripts for instant paint without layout shift */}
         <script
+          suppressHydrationWarning
           dangerouslySetInnerHTML={{
             __html: `
               try {
