@@ -253,12 +253,12 @@ struct ShiftHomeWidgetView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(daysLabel)
                     .font(.system(size: 14, weight: .semibold, design: .default))
-                    .foregroundColor(.white.opacity(0.6))
+                    .foregroundColor(.white)
                     .lineLimit(1)
 
                 Text(leftLabel)
                     .font(.system(size: 14, weight: .semibold, design: .default))
-                    .foregroundColor(.white.opacity(0.6))
+                    .foregroundColor(.white)
                     .lineLimit(1)
             }
         }

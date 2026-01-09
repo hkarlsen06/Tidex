@@ -4,9 +4,9 @@
 	"webDir": "dist",
 	"backgroundColor": "#020817",
 	"server": {
-		"url": "http://192.168.68.62:3000",
+		"url": "https://dev.tidex.no",
 		"cleartext": true,
-		"errorPath": "/dashboard"
+		"errorPath": "/offline.html"
 	},
 	"ios": {
 		"backgroundColor": "#020817"

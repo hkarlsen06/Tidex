@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { MouseEvent as ReactMouseEvent } from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -25,8 +25,18 @@ export function UserMenu({
   const btnRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
-  const { navigate, pendingPath } = useNavigationFeedback();
-  const isLoggingOut = pendingPath === "/logout";
+  const { navigate } = useNavigationFeedback();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  // Logout via route handler that clears cookies and returns HTML with client-side redirect
+  // Can't use router.push() for route handlers - causes RSC payload errors
+  const handleLogout = useCallback((event: ReactMouseEvent<HTMLAnchorElement>) => {
+    event.preventDefault();
+    if (isLoggingOut) return;
+
+    setIsLoggingOut(true);
+    window.location.href = "/logout";
+  }, [isLoggingOut]);
 
   // Hide locale toggle on native - iOS uses system language preference
   const isNative = useSyncExternalStore(
@@ -155,13 +165,7 @@ export function UserMenu({
           {!isNative && <LocaleToggle />}
           <Link
             href="/logout"
-            onClick={(event) => {
-              if (isLoggingOut) {
-                event.preventDefault();
-                return;
-              }
-              handleNavigationClick("/logout")(event);
-            }}
+            onClick={handleLogout}
             prefetch={false}
             role="menuitem"
             aria-disabled={isLoggingOut}

@@ -10,44 +10,82 @@ export async function GET(
   { params }: { params: Promise<{ locale: string }> }
 ) {
   const { locale } = await params;
-  const loginUrl = new URL(`/${locale}/login`, request.url);
-  const response = NextResponse.redirect(loginUrl);
+  const loginUrl = `/${locale}/login`;
+
+  // Create response with HTML that does client-side redirect
+  // This avoids 307 redirect issues with Capacitor WebView
+  // Uses same background colors as the app (dark: #020817, light: #ffffff)
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="refresh" content="0;url=${loginUrl}">
+  <style>
+    :root { --bg: #ffffff; }
+    @media (prefers-color-scheme: dark) { :root { --bg: #020817; } }
+    html, body { margin: 0; padding: 0; background-color: var(--bg); height: 100%; }
+  </style>
+  <script>
+    // Check localStorage for theme preference (matches app's theme system)
+    (function() {
+      var theme = localStorage.getItem('theme');
+      if (theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.style.setProperty('--bg', '#020817');
+      }
+    })();
+    // Hide native tab bar and clear widget data on iOS before redirecting
+    (function() {
+      try {
+        if (window.Capacitor && window.Capacitor.Plugins) {
+          // Hide native tab bar
+          if (window.Capacitor.Plugins.NativeTabBar) {
+            window.Capacitor.Plugins.NativeTabBar.hide();
+          }
+          // Clear widget data (shared storage for home screen widget)
+          if (window.Capacitor.Plugins.ShiftActivity) {
+            window.Capacitor.Plugins.ShiftActivity.saveShiftsToSharedStorage({ shifts: '[]' });
+          }
+        }
+      } catch (e) {
+        // Ignore - not running in Capacitor
+      }
+    })();
+    window.location.href = "${loginUrl}";
+  </script>
+</head>
+<body></body>
+</html>`;
+
+  const response = new NextResponse(html, {
+    status: 200,
+    headers: {
+      "Content-Type": "text/html; charset=utf-8",
+    },
+  });
+
   const supabase = createSupabaseRouteHandlerClient(request, response);
 
-  // Wrap all operations in a timeout to ensure we always respond quickly
-  // This prevents the WebView from timing out and showing offline.html
-  const logoutPromise = (async () => {
+  // Get user ID before clearing cookies (for cache invalidation)
+  let userId: string | undefined;
+  try {
+    const { data } = await supabase.auth.getClaims();
+    userId = data?.claims?.sub;
+  } catch {
+    // Ignore - user may already be logged out
+  }
+
+  // Always force-clear all auth cookies
+  clearSupabaseAuthCookies(request, response);
+
+  // Clear cached user data
+  if (userId) {
     try {
-      // Get user ID before signing out so we can clear their cache
-      // Use getClaims() for performance - parses JWT locally without network request
-      const { data } = await supabase.auth.getClaims();
-      const userId = data?.claims?.sub;
-
-      const { error } = await supabase.auth.signOut({ scope: "local" });
-
-      if (error) {
-        clearSupabaseAuthCookies(request, response);
-      }
-
-      // Clear all cached user data if we have the userId
-      if (userId) {
-        try {
-          revalidateTag(`user-${userId}`, 'max');
-        } catch {
-          // Ignore cache invalidation errors
-        }
-      }
+      revalidateTag(`user-${userId}`, "max");
     } catch {
-      clearSupabaseAuthCookies(request, response);
+      // Ignore cache invalidation errors
     }
-  })();
-
-  // Wait for logout but with a timeout - if it takes too long, just return the redirect
-  // The cookies will be cleared by the clearSupabaseAuthCookies fallback
-  await Promise.race([
-    logoutPromise,
-    new Promise<void>((resolve) => setTimeout(resolve, 2000)) // 2 second timeout
-  ]);
+  }
 
   return response;
 }
