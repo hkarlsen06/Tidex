@@ -38,9 +38,10 @@ public class DocumentSharePlugin: CAPPlugin, CAPBridgedPlugin {
             return
         }
 
-        // Write to temporary directory with unique name to avoid conflicts
-        let uniqueFilename = "\(UUID().uuidString)_\(filename)"
-        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(uniqueFilename)
+        // Write to a unique subdirectory to avoid conflicts while keeping the original filename
+        let uniqueDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try? FileManager.default.createDirectory(at: uniqueDir, withIntermediateDirectories: true)
+        let tempURL = uniqueDir.appendingPathComponent(filename)
 
         do {
             try data.write(to: tempURL)

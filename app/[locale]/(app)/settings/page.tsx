@@ -25,17 +25,12 @@ interface SettingsItem {
 }
 
 const getSettingsItems = (t: Dictionary): SettingsItem[] => [
+  // Account & Security group
   {
     href: '/settings/profile',
     label: t.pages.settings.menu.profile.label,
     description: t.pages.settings.menu.profile.description,
     icon: User,
-  },
-  {
-    href: '/settings/pay',
-    label: t.pages.settings.menu.pay.label,
-    description: t.pages.settings.menu.pay.description,
-    icon: Banknote,
   },
   {
     href: '/settings/security',
@@ -49,6 +44,7 @@ const getSettingsItems = (t: Dictionary): SettingsItem[] => [
     description: t.pages.settings.menu.subscription.description,
     icon: CreditCard,
   },
+  // Preferences group
   {
     href: '/settings/notifications',
     label: t.pages.settings.menu.notifications.label,
@@ -62,6 +58,14 @@ const getSettingsItems = (t: Dictionary): SettingsItem[] => [
     description: t.pages.settings.menu.display.description,
     icon: Palette,
   },
+  // App-specific settings
+  {
+    href: '/settings/pay',
+    label: t.pages.settings.menu.pay.label,
+    description: t.pages.settings.menu.pay.description,
+    icon: Banknote,
+  },
+  // Data & Support group
   {
     href: '/settings/data',
     label: t.pages.settings.menu.data.label,
@@ -74,6 +78,7 @@ const getSettingsItems = (t: Dictionary): SettingsItem[] => [
     description: t.pages.settings.menu.feedback?.description || 'Send us your feedback',
     icon: MessageSquare,
   },
+  // Admin (always last)
   {
     href: '/settings/admin',
     label: t.pages.settings.menu.admin?.label || 'Admin',

@@ -36,17 +36,12 @@ interface SettingsItem {
 
 const getSettingsItems = (t: Dictionary, showNotifications: boolean, showAdmin: boolean): SettingsItem[] => {
   const items: SettingsItem[] = [
+    // Account & Security group
     {
       href: "/settings/profile",
       label: t.pages.settings.menu.profile.label,
       description: t.pages.settings.menu.profile.description,
       icon: User,
-    },
-    {
-      href: "/settings/pay",
-      label: t.pages.settings.menu.pay.label,
-      description: t.pages.settings.menu.pay.description,
-      icon: Banknote,
     },
     {
       href: "/settings/security",
@@ -60,12 +55,33 @@ const getSettingsItems = (t: Dictionary, showNotifications: boolean, showAdmin: 
       description: t.pages.settings.menu.subscription.description,
       icon: CreditCard,
     },
+  ];
+
+  // Preferences group - notifications only on native platforms (iOS/Android)
+  if (showNotifications) {
+    items.push({
+      href: "/settings/notifications",
+      label: t.pages.settings.menu.notifications.label,
+      description: t.pages.settings.menu.notifications.description,
+      icon: Bell,
+    });
+  }
+
+  items.push(
     {
       href: "/settings/display",
       label: t.pages.settings.menu.display.label,
       description: t.pages.settings.menu.display.description,
       icon: Palette,
     },
+    // App-specific settings
+    {
+      href: "/settings/pay",
+      label: t.pages.settings.menu.pay.label,
+      description: t.pages.settings.menu.pay.description,
+      icon: Banknote,
+    },
+    // Data & Support group
     {
       href: "/settings/data",
       label: t.pages.settings.menu.data.label,
@@ -77,20 +93,10 @@ const getSettingsItems = (t: Dictionary, showNotifications: boolean, showAdmin: 
       label: t.pages.settings.menu.feedback?.label || "Feedback",
       description: t.pages.settings.menu.feedback?.description || "Send us your feedback",
       icon: MessageSquare,
-    },
-  ];
+    }
+  );
 
-  // Only show notifications on native platforms (iOS/Android)
-  if (showNotifications) {
-    items.push({
-      href: "/settings/notifications",
-      label: t.pages.settings.menu.notifications.label,
-      description: t.pages.settings.menu.notifications.description,
-      icon: Bell,
-    });
-  }
-
-  // Only show admin for admin users (cosmetic - server enforces)
+  // Admin always last (cosmetic - server enforces)
   if (showAdmin) {
     items.push({
       href: "/settings/admin",
