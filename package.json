@@ -21,7 +21,7 @@
     "dev-site:start": "pnpm --filter dev-site start",
     "local-ios": "node scripts/update-local-ip.mjs && pnpm sync-ios && cp ios/App/App/capacitor.config.local.json ios/App/App/capacitor.config.json && pnpm exec cap open ios & next dev --hostname 0.0.0.0",
     "local-sync": "node scripts/update-local-ip.mjs && pnpm sync-ios && cp ios/App/App/capacitor.config.local.json ios/App/App/capacitor.config.json",
-    "sync-ios": "cp public/offline.html dist/offline.html && pnpm exec cap sync ios",
+    "sync-ios": "pnpm exec cap sync ios",
     "open-ios": "cap open ios"
   },
   "dependencies": {
