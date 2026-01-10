@@ -139,6 +139,55 @@
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
+		11A1D6CE2F11F48F00060819 /* Core */ = {
+			isa = PBXGroup;
+			children = (
+				504EC3071FED79650016851F /* AppDelegate.swift */,
+				SCENE0012F0700000000002 /* SceneDelegate.swift */,
+				TIDCON0012F0800000000002 /* TidexContainerViewController.swift */,
+			);
+			path = Core;
+			sourceTree = "<group>";
+		};
+		11A1D6CF2F11F4E000060819 /* Utilities */ = {
+			isa = PBXGroup;
+			children = (
+				LOCBVC0012F1000000000002 /* LocaleAwareBridgeViewController.swift */,
+				NETMON0012F2000000000002 /* NetworkMonitor.swift */,
+				TIDCLR0012F2000000000002 /* TidexBrandColors.swift */,
+			);
+			path = Utilities;
+			sourceTree = "<group>";
+		};
+		11A1D6D02F11F51B00060819 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				11F1CBDA2F101C5700246C07 /* ShiftActivityAttributes.swift */,
+				11A5CD252F101201002BAC91 /* StoredShift.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		11A1D6D12F11F53400060819 /* Plugins */ = {
+			isa = PBXGroup;
+			children = (
+				11A5CD242F101201002BAC91 /* ShiftActivityPlugin.swift */,
+				NATSPL0012F0800000000002 /* NativeSplashPlugin.swift */,
+				NATTAB0012F0800000000002 /* NativeTabBarPlugin.swift */,
+			);
+			path = Plugins;
+			sourceTree = "<group>";
+		};
+		11A1D6D22F11F55800060819 /* Features */ = {
+			isa = PBXGroup;
+			children = (
+				OFFDSH0012F3000000000002 /* OfflineDashboardCards.swift */,
+				OFFSCR0012F2000000000002 /* OfflineScreenView.swift */,
+				OFFSTR0012F2000000000002 /* OfflineShiftStorage.swift */,
+			);
+			path = Features;
+			sourceTree = "<group>";
+		};
 		504EC2FB1FED79650016851F = {
 			isa = PBXGroup;
 			children = (
@@ -164,22 +213,13 @@
 		504EC3061FED79650016851F /* App */ = {
 			isa = PBXGroup;
 			children = (
-				11F1CBDA2F101C5700246C07 /* ShiftActivityAttributes.swift */,
-				11A5CD242F101201002BAC91 /* ShiftActivityPlugin.swift */,
-				11A5CD252F101201002BAC91 /* StoredShift.swift */,
+				11A1D6D22F11F55800060819 /* Features */,
+				11A1D6D12F11F53400060819 /* Plugins */,
+				11A1D6D02F11F51B00060819 /* Models */,
+				11A1D6CF2F11F4E000060819 /* Utilities */,
+				11A1D6CE2F11F48F00060819 /* Core */,
 				1152D0C82F01BB9B002FD5ED /* App.entitlements */,
 				50379B222058CBB4000EE86E /* capacitor.config.json */,
-				504EC3071FED79650016851F /* AppDelegate.swift */,
-				LOCBVC0012F1000000000002 /* LocaleAwareBridgeViewController.swift */,
-				NATSPL0012F0800000000002 /* NativeSplashPlugin.swift */,
-				NATTAB0012F0800000000002 /* NativeTabBarPlugin.swift */,
-				NETMON0012F2000000000002 /* NetworkMonitor.swift */,
-				OFFDSH0012F3000000000002 /* OfflineDashboardCards.swift */,
-				OFFSCR0012F2000000000002 /* OfflineScreenView.swift */,
-				OFFSTR0012F2000000000002 /* OfflineShiftStorage.swift */,
-				SCENE0012F0700000000002 /* SceneDelegate.swift */,
-				TIDCLR0012F2000000000002 /* TidexBrandColors.swift */,
-				TIDCON0012F0800000000002 /* TidexContainerViewController.swift */,
 				504EC30E1FED79650016851F /* Assets.xcassets */,
 				504EC3131FED79650016851F /* Info.plist */,
 				LAUNCH0012F0500000000002 /* LaunchScreen.storyboard */,
