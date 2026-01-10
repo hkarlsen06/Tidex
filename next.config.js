@@ -85,7 +85,7 @@ const nextConfig = {
     // dynamic: cache duration for dynamic pages (30s)
     // static: cache duration for static/prefetched pages (3 min)
     staleTimes: {
-      dynamic: 30,
+      dynamic: 300,
       static: 180,
     },
   },

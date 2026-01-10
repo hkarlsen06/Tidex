@@ -413,6 +413,10 @@ struct ShiftWidgetProvider: TimelineProvider {
         // Get random salute
         let salute = MotivationalSalutes.random(locale: locale)
 
+        // Build deep link URL to open /shifts with the shift date highlighted
+        // Format: tidex://shifts?dates=2025-01-15 (matches push notification pattern)
+        let deepLinkURL = URL(string: "tidex://shifts?dates=\(shift.shiftDate)")
+
         return ShiftWidgetEntry(
             date: Date(),
             shiftDate: formattedDate,
@@ -424,7 +428,8 @@ struct ShiftWidgetProvider: TimelineProvider {
             hasShift: true,
             daysRemaining: daysRemaining,
             layoutState: layoutState,
-            shiftHasStarted: shiftStarted
+            shiftHasStarted: shiftStarted,
+            deepLinkURL: deepLinkURL
         )
     }
 
@@ -506,11 +511,13 @@ struct ShiftHomeWidget: Widget {
         StaticConfiguration(kind: kind, provider: ShiftWidgetProvider()) { entry in
             if #available(iOS 17.0, *) {
                 ShiftHomeWidgetView(entry: entry)
+                    .widgetURL(entry.deepLinkURL)
                     .containerBackground(for: .widget) {
                         tidexDarkBackground
                     }
             } else {
                 ShiftHomeWidgetView(entry: entry)
+                    .widgetURL(entry.deepLinkURL)
                     .background(tidexDarkBackground)
             }
         }
@@ -543,7 +550,8 @@ struct ShiftHomeWidget: Widget {
         hasShift: true,
         daysRemaining: 0,
         layoutState: .todayOrTomorrow,
-        shiftHasStarted: true
+        shiftHasStarted: true,
+        deepLinkURL: URL(string: "tidex://shifts?dates=2025-01-15")
     )
     // State B: Countdown layouts
     ShiftWidgetEntry(
@@ -557,7 +565,8 @@ struct ShiftHomeWidget: Widget {
         hasShift: true,
         daysRemaining: 5,
         layoutState: .countdown,
-        shiftHasStarted: false
+        shiftHasStarted: false,
+        deepLinkURL: URL(string: "tidex://shifts?dates=2025-01-20")
     )
     ShiftWidgetEntry(
         date: Date(),
@@ -570,7 +579,8 @@ struct ShiftHomeWidget: Widget {
         hasShift: true,
         daysRemaining: 12,
         layoutState: .countdown,
-        shiftHasStarted: false
+        shiftHasStarted: false,
+        deepLinkURL: URL(string: "tidex://shifts?dates=2025-01-20")
     )
     // Empty state
     ShiftWidgetEntry.empty(locale: "no")
