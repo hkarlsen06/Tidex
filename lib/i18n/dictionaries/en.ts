@@ -949,9 +949,20 @@ export const en: Dictionary = {
             title: 'Delete all shifts',
             description: 'This will permanently delete all your registered shifts',
             button: 'Delete all',
-            dialogTitle: 'Are you sure?',
-            dialogDescription: 'This will permanently delete all your shifts. This action cannot be undone.',
+            dialogTitle: 'Delete all your shifts?',
+            dialogDescription: 'This action is permanent and cannot be undone. The following will be deleted:',
+            bullets: {
+              shifts: 'All registered shifts',
+              recurring: 'All recurring shift series',
+              history: 'All wage calculations and history',
+            },
+            confirmLabel: 'Type DELETE to confirm',
+            confirmPlaceholder: 'DELETE',
             deleting: 'Deleting...',
+            errors: {
+              confirmMismatch: 'Please type DELETE to confirm',
+              deleteFailed: 'Failed to delete shifts. Please try again.',
+            },
           },
           deleteAccount: {
             title: 'Delete account',
