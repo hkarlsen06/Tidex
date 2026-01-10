@@ -15,7 +15,6 @@ import {
   initializeIAP,
   getProducts,
   purchaseProduct,
-  restorePurchases,
   openSubscriptionManagement,
   APPLE_PRODUCT_IDS,
   type IAPProduct,
@@ -158,7 +157,6 @@ export function AppleIAPUpgradeOptions({
   const [isInitialized, setIsInitialized] = useState(false);
   const [isInitializing, setIsInitializing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isRestoring, setIsRestoring] = useState(false);
   const [appAccountToken, setAppAccountToken] = useState<string | null>(null);
   const [errorKey, setErrorKey] = useState<string | null>(null);
   const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>('monthly');
@@ -318,12 +316,13 @@ export function AppleIAPUpgradeOptions({
         }
 
         if (result.entitled) {
-          // Success! Redirect to success page (same as Stripe flow)
+          // Success! Redirect immediately to success page
+          // Use window.location for immediate navigation without re-render delay
           if (result.restoredFromExisting) {
             // For restore, show alert then redirect
             alert(iap.subscriptionRestored || 'Your existing subscription has been restored!');
           }
-          router.push(`/${locale}/settings/subscription/success`);
+          window.location.href = `/${locale}/settings/subscription/success`;
           return;
         } else if (result.error) {
           // Purchase succeeded but verification had issues
@@ -341,44 +340,6 @@ export function AppleIAPUpgradeOptions({
     },
     [appAccountToken, supabaseAccessToken, iap, router, locale]
   );
-
-  const handleRestore = useCallback(async () => {
-    if (!appAccountToken) {
-      setError(iap.unableToLinkPurchases);
-      setErrorKey(null);
-      return;
-    }
-
-    try {
-      setIsRestoring(true);
-      setError(null);
-      setErrorKey(null);
-
-      const result = await restorePurchases(
-        appAccountToken,
-        supabaseAccessToken
-      );
-
-      if (!result.success) {
-        setError(result.error || iap.restoreFailed);
-        setIsRestoring(false);
-        return;
-      }
-
-      if (result.entitled) {
-        // Found active subscription, redirect to success page
-        router.push(`/${locale}/settings/subscription/success`);
-        return;
-      } else {
-        setError(iap.noActiveSubscriptions);
-      }
-
-      setIsRestoring(false);
-    } catch (e: any) {
-      setError(e.message || iap.restoreFailed);
-      setIsRestoring(false);
-    }
-  }, [appAccountToken, supabaseAccessToken, iap, router, locale]);
 
   // Get product data from StoreKit - Apple requires using their provided title and price
   const getProduct = (productId: string) => products.find((p) => p.id === productId);
@@ -531,26 +492,6 @@ export function AppleIAPUpgradeOptions({
           </div>
         </>
       )}
-
-      {/* Restore Purchases - allow even if products aren't loaded */}
-      <div className="pt-4 border-t border-border">
-        <Button
-          variant="ghost"
-          className="w-full justify-center gap-2"
-          onClick={handleRestore}
-          disabled={isRestoring || !isInitialized || !appAccountToken}
-        >
-          <RefreshCw
-            className={cn('h-4 w-4', isRestoring && 'animate-spin')}
-          />
-          {isRestoring ? iap.restoring : iap.restorePurchases}
-        </Button>
-        {isInitialized && !appAccountToken && (
-          <p className="text-xs text-text-muted text-center mt-2">
-            {t.pages.settings.subscription.upgradePlans.sessionVerifyFailed}
-          </p>
-        )}
-      </div>
 
       {/* Manage Subscription */}
       <div className="text-center">

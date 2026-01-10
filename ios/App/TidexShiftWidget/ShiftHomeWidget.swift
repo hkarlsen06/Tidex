@@ -86,7 +86,259 @@ private struct LogoWatermark: View {
 
 // MARK: - Widget View
 
+@available(iOS 17.0, *)
 struct ShiftHomeWidgetView: View {
+    let entry: ShiftWidgetEntry
+    @Environment(\.widgetRenderingMode) var renderingMode
+
+    /// Localized "days" label
+    private var daysLabel: String {
+        entry.locale == "no" ? "dager" : "days"
+    }
+
+    /// Localized "left" label
+    private var leftLabel: String {
+        entry.locale == "no" ? "igjen" : "left"
+    }
+
+    /// Primary time (large) - start time before shift, end time after shift starts
+    private var primaryTime: String {
+        entry.shiftHasStarted ? entry.endTime : entry.startTime
+    }
+
+    /// Secondary time (small) - end time before shift, start time after shift starts
+    private var secondaryTime: String {
+        entry.shiftHasStarted ? entry.startTime : entry.endTime
+    }
+
+    // MARK: - Adaptive Colors for iOS 18 Themes
+
+    /// Background color adapts to rendering mode
+    /// - fullColor: Dark theme background
+    /// - accented: Clear to show wallpaper with tint
+    /// - vibrant: Semi-transparent for lock screen
+    private var backgroundColor: Color {
+        switch renderingMode {
+        case .accented:
+            return .clear
+        case .vibrant:
+            return Color.black.opacity(0.4)
+        default:
+            return tidexDarkBackground
+        }
+    }
+
+    /// Primary text color (large time, countdown number)
+    private var primaryTextColor: Color {
+        switch renderingMode {
+        case .accented, .vibrant:
+            return .primary
+        default:
+            return .white
+        }
+    }
+
+    /// Secondary text color (earnings, secondary time, time range)
+    private var secondaryTextColor: Color {
+        switch renderingMode {
+        case .accented, .vibrant:
+            return .secondary
+        default:
+            return .white.opacity(0.6)
+        }
+    }
+
+    /// Accent color for branded elements (date, salute) - these get marked as accentable
+    private var accentColor: Color {
+        switch renderingMode {
+        case .accented:
+            return .primary  // Will receive user's tint via widgetAccentable
+        default:
+            return tidexBlue
+        }
+    }
+
+    /// Muted text color for empty/placeholder states
+    private var mutedTextColor: Color {
+        switch renderingMode {
+        case .accented, .vibrant:
+            return .secondary
+        default:
+            return .white.opacity(0.4)
+        }
+    }
+
+    /// Whether to show the watermark logo (hide in accented mode for cleaner look)
+    private var showWatermark: Bool {
+        renderingMode == .fullColor
+    }
+
+    var body: some View {
+        ZStack {
+            // Adaptive background
+            backgroundColor
+
+            // Watermark logo - only show in fullColor mode
+            if showWatermark {
+                LogoWatermark()
+                    .frame(width: 75, height: 85)
+            }
+
+            // Content - switches based on layout state
+            if entry.layoutState == .countdown {
+                countdownLayout
+            } else {
+                todayTomorrowLayout
+            }
+        }
+    }
+
+    // MARK: - State A: Today/Tomorrow Layout
+
+    /// Layout for today or tomorrow shifts with time block and salute
+    private var todayTomorrowLayout: some View {
+        VStack(spacing: 0) {
+            // TOP ROW: Date + Earnings
+            HStack(alignment: .top) {
+                Text(entry.shiftDate)
+                    .font(.system(size: 14, weight: .semibold, design: .default))
+                    .foregroundColor(entry.hasShift ? accentColor : mutedTextColor)
+                    .widgetAccentable(entry.hasShift)
+                    .lineLimit(1)
+
+                Spacer()
+
+                Text(entry.netEarnings)
+                    .font(.system(size: 14, weight: .semibold, design: .default))
+                    .foregroundColor(secondaryTextColor)
+                    .lineLimit(1)
+            }
+
+            Spacer()
+
+            // MIDDLE: Time block (vertically centered as a group)
+            timeBlockView
+
+            Spacer()
+
+            // BOTTOM: Salute - spans width with max height constraint
+            Text(entry.salute)
+                .font(.system(size: 17, weight: .bold, design: .default))
+                .italic()
+                .foregroundColor(entry.hasShift ? accentColor : mutedTextColor)
+                .widgetAccentable(entry.hasShift)
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+                .frame(maxWidth: .infinity)
+                .frame(maxHeight: 24)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 18)
+    }
+
+    /// Time block: primary time (large) + secondary time (small) stacked vertically
+    /// Before shift: Start (large) over End (small)
+    /// After shift starts: End (large) over Start (small)
+    private var timeBlockView: some View {
+        VStack(spacing: 4) {
+            // Secondary time (small) - shown on top after shift starts
+            if entry.shiftHasStarted {
+                Text(secondaryTime)
+                    .font(.system(size: 14, weight: .medium, design: .default))
+                    .monospacedDigit()
+                    .foregroundColor(secondaryTextColor)
+                    .lineLimit(1)
+            }
+
+            // Primary time (large)
+            Text(primaryTime)
+                .font(.system(size: 46, weight: .bold, design: .default))
+                .monospacedDigit()
+                .foregroundColor(entry.hasShift ? primaryTextColor : mutedTextColor)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+
+            // Secondary time (small) - shown below before shift starts
+            if !entry.shiftHasStarted {
+                Text(secondaryTime)
+                    .font(.system(size: 14, weight: .medium, design: .default))
+                    .monospacedDigit()
+                    .foregroundColor(secondaryTextColor)
+                    .lineLimit(1)
+            }
+        }
+    }
+
+    // MARK: - State B: Countdown Layout
+
+    /// Layout for shifts more than 1 day away
+    private var countdownLayout: some View {
+        VStack(spacing: 0) {
+            // TOP ROW: Date + Earnings
+            HStack(alignment: .top) {
+                Text(entry.shiftDate)
+                    .font(.system(size: 14, weight: .semibold, design: .default))
+                    .foregroundColor(entry.hasShift ? accentColor : mutedTextColor)
+                    .widgetAccentable(entry.hasShift)
+                    .lineLimit(1)
+
+                Spacer()
+
+                Text(entry.netEarnings)
+                    .font(.system(size: 14, weight: .semibold, design: .default))
+                    .foregroundColor(secondaryTextColor)
+                    .lineLimit(1)
+            }
+
+            Spacer()
+
+            // MIDDLE: Countdown hero
+            countdownHeroView
+
+            Spacer()
+
+            // BOTTOM: Centered time range
+            Text("\(entry.startTime) – \(entry.endTime)")
+                .font(.system(size: 14, weight: .medium, design: .default))
+                .foregroundColor(secondaryTextColor)
+                .lineLimit(1)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 18)
+    }
+
+    /// Countdown hero view: large number on left, two stacked lines on right
+    /// The number and labels are horizontally centered as a group
+    private var countdownHeroView: some View {
+        HStack(alignment: .center, spacing: 8) {
+            // Large countdown number
+            Text("\(entry.daysRemaining)")
+                .font(.system(size: 46, weight: .bold, design: .default))
+                .monospacedDigit()
+                .foregroundColor(primaryTextColor)
+                .lineLimit(1)
+
+            // Two stacked text lines: "days" / "dager" on top, "left" / "igjen" on bottom
+            VStack(alignment: .leading, spacing: 2) {
+                Text(daysLabel)
+                    .font(.system(size: 14, weight: .semibold, design: .default))
+                    .foregroundColor(primaryTextColor)
+                    .lineLimit(1)
+
+                Text(leftLabel)
+                    .font(.system(size: 14, weight: .semibold, design: .default))
+                    .foregroundColor(primaryTextColor)
+                    .lineLimit(1)
+            }
+        }
+    }
+}
+
+// MARK: - Legacy Widget View (iOS 16)
+
+/// Fallback view for iOS 16 that doesn't support widgetRenderingMode
+/// Uses the original hardcoded dark theme
+struct ShiftHomeWidgetViewLegacy: View {
     let entry: ShiftWidgetEntry
 
     /// Localized "days" label
@@ -129,10 +381,8 @@ struct ShiftHomeWidgetView: View {
 
     // MARK: - State A: Today/Tomorrow Layout
 
-    /// Layout for today or tomorrow shifts with time block and salute
     private var todayTomorrowLayout: some View {
         VStack(spacing: 0) {
-            // TOP ROW: Date + Earnings
             HStack(alignment: .top) {
                 Text(entry.shiftDate)
                     .font(.system(size: 14, weight: .semibold, design: .default))
@@ -149,12 +399,10 @@ struct ShiftHomeWidgetView: View {
 
             Spacer()
 
-            // MIDDLE: Time block (vertically centered as a group)
             timeBlockView
 
             Spacer()
 
-            // BOTTOM: Salute - spans width with max height constraint
             Text(entry.salute)
                 .font(.system(size: 17, weight: .bold, design: .default))
                 .italic()
@@ -168,12 +416,8 @@ struct ShiftHomeWidgetView: View {
         .padding(.vertical, 18)
     }
 
-    /// Time block: primary time (large) + secondary time (small) stacked vertically
-    /// Before shift: Start (large) over End (small)
-    /// After shift starts: End (large) over Start (small)
     private var timeBlockView: some View {
         VStack(spacing: 4) {
-            // Secondary time (small) - shown on top after shift starts
             if entry.shiftHasStarted {
                 Text(secondaryTime)
                     .font(.system(size: 14, weight: .medium, design: .default))
@@ -182,7 +426,6 @@ struct ShiftHomeWidgetView: View {
                     .lineLimit(1)
             }
 
-            // Primary time (large)
             Text(primaryTime)
                 .font(.system(size: 46, weight: .bold, design: .default))
                 .monospacedDigit()
@@ -190,7 +433,6 @@ struct ShiftHomeWidgetView: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
 
-            // Secondary time (small) - shown below before shift starts
             if !entry.shiftHasStarted {
                 Text(secondaryTime)
                     .font(.system(size: 14, weight: .medium, design: .default))
@@ -203,10 +445,8 @@ struct ShiftHomeWidgetView: View {
 
     // MARK: - State B: Countdown Layout
 
-    /// Layout for shifts more than 1 day away
     private var countdownLayout: some View {
         VStack(spacing: 0) {
-            // TOP ROW: Date + Earnings
             HStack(alignment: .top) {
                 Text(entry.shiftDate)
                     .font(.system(size: 14, weight: .semibold, design: .default))
@@ -223,12 +463,10 @@ struct ShiftHomeWidgetView: View {
 
             Spacer()
 
-            // MIDDLE: Countdown hero
             countdownHeroView
 
             Spacer()
 
-            // BOTTOM: Centered time range
             Text("\(entry.startTime) – \(entry.endTime)")
                 .font(.system(size: 14, weight: .medium, design: .default))
                 .foregroundColor(.white.opacity(0.6))
@@ -238,18 +476,14 @@ struct ShiftHomeWidgetView: View {
         .padding(.vertical, 18)
     }
 
-    /// Countdown hero view: large number on left, two stacked lines on right
-    /// The number and labels are horizontally centered as a group
     private var countdownHeroView: some View {
         HStack(alignment: .center, spacing: 8) {
-            // Large countdown number
             Text("\(entry.daysRemaining)")
                 .font(.system(size: 46, weight: .bold, design: .default))
                 .monospacedDigit()
                 .foregroundColor(.white)
                 .lineLimit(1)
 
-            // Two stacked text lines: "days" / "dager" on top, "left" / "igjen" on bottom
             VStack(alignment: .leading, spacing: 2) {
                 Text(daysLabel)
                     .font(.system(size: 14, weight: .semibold, design: .default))
@@ -529,13 +763,17 @@ struct ShiftHomeWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: ShiftWidgetProvider()) { entry in
             if #available(iOS 17.0, *) {
+                // iOS 17+: Use themed view with widgetRenderingMode support
                 ShiftHomeWidgetView(entry: entry)
                     .widgetURL(entry.deepLinkURL)
                     .containerBackground(for: .widget) {
+                        // Background is handled dynamically in the view based on renderingMode
+                        // This serves as the fallback for fullColor mode
                         tidexDarkBackground
                     }
             } else {
-                ShiftHomeWidgetView(entry: entry)
+                // iOS 16: Use legacy view with hardcoded dark theme
+                ShiftHomeWidgetViewLegacy(entry: entry)
                     .widgetURL(entry.deepLinkURL)
                     .background(tidexDarkBackground)
             }
