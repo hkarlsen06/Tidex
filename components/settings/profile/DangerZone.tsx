@@ -23,7 +23,9 @@ export function DangerZone() {
 
   // Clear shifts state
   const [showClearDialog, setShowClearDialog] = useState(false);
+  const [clearConfirmText, setClearConfirmText] = useState('');
   const [isClearing, setIsClearing] = useState(false);
+  const [clearError, setClearError] = useState<string | null>(null);
 
   // Delete account state
   const [showDeleteAccountDialog, setShowDeleteAccountDialog] = useState(false);
@@ -32,15 +34,37 @@ export function DangerZone() {
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const handleClearShifts = async () => {
+    // Validate confirmation text
+    const expectedText = t.pages.settings.profile.dangerZone.deleteAllShifts.confirmPlaceholder;
+    if (clearConfirmText !== expectedText) {
+      setClearError(t.pages.settings.profile.dangerZone.deleteAllShifts.errors.confirmMismatch);
+      return;
+    }
+
     setIsClearing(true);
+    setClearError(null);
+
     try {
       await clearAllShifts();
       setShowClearDialog(false);
+      setClearConfirmText('');
       router.refresh();
     } catch (error) {
       console.error('Failed to clear shifts:', error);
+      setClearError(t.pages.settings.profile.dangerZone.deleteAllShifts.errors.deleteFailed);
     } finally {
       setIsClearing(false);
+    }
+  };
+
+  const handleClearDialogClose = (open: boolean) => {
+    if (!isClearing) {
+      setShowClearDialog(open);
+      if (!open) {
+        // Reset state when closing
+        setClearConfirmText('');
+        setClearError(null);
+      }
     }
   };
 
@@ -130,18 +154,50 @@ export function DangerZone() {
       </Card>
 
       {/* Clear shifts dialog */}
-      <Dialog open={showClearDialog} onOpenChange={setShowClearDialog}>
+      <Dialog open={showClearDialog} onOpenChange={handleClearDialogClose}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{t.pages.settings.profile.dangerZone.deleteAllShifts.dialogTitle}</DialogTitle>
-            <DialogDescription>
-              {t.pages.settings.profile.dangerZone.deleteAllShifts.dialogDescription}
+            <DialogTitle className="text-red-600 dark:text-red-400">
+              {t.pages.settings.profile.dangerZone.deleteAllShifts.dialogTitle}
+            </DialogTitle>
+            <DialogDescription asChild>
+              <div className="space-y-3">
+                <p>{t.pages.settings.profile.dangerZone.deleteAllShifts.dialogDescription}</p>
+                <ul className="list-disc list-inside space-y-1 text-sm">
+                  <li>{t.pages.settings.profile.dangerZone.deleteAllShifts.bullets.shifts}</li>
+                  <li>{t.pages.settings.profile.dangerZone.deleteAllShifts.bullets.recurring}</li>
+                  <li>{t.pages.settings.profile.dangerZone.deleteAllShifts.bullets.history}</li>
+                </ul>
+              </div>
             </DialogDescription>
           </DialogHeader>
+
+          <div className="space-y-2 py-2">
+            <label htmlFor="clear-confirm" className="text-sm font-medium">
+              {t.pages.settings.profile.dangerZone.deleteAllShifts.confirmLabel}
+            </label>
+            <Input
+              id="clear-confirm"
+              type="text"
+              value={clearConfirmText}
+              onChange={(e) => {
+                setClearConfirmText(e.target.value);
+                setClearError(null);
+              }}
+              placeholder={t.pages.settings.profile.dangerZone.deleteAllShifts.confirmPlaceholder}
+              disabled={isClearing}
+              className="font-mono"
+              autoComplete="off"
+            />
+            {clearError && (
+              <p className="text-sm text-red-600 dark:text-red-400">{clearError}</p>
+            )}
+          </div>
+
           <DialogFooter>
             <Button
               variant="outline"
-              onClick={() => setShowClearDialog(false)}
+              onClick={() => handleClearDialogClose(false)}
               disabled={isClearing}
             >
               {t.common.cancel}
@@ -149,7 +205,7 @@ export function DangerZone() {
             <Button
               variant="destructive"
               onClick={handleClearShifts}
-              disabled={isClearing}
+              disabled={isClearing || clearConfirmText !== t.pages.settings.profile.dangerZone.deleteAllShifts.confirmPlaceholder}
             >
               {isClearing ? t.pages.settings.profile.dangerZone.deleteAllShifts.deleting : t.pages.settings.profile.dangerZone.deleteAllShifts.button}
             </Button>
