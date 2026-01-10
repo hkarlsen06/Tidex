@@ -1,10 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import type { MouseEvent } from 'react';
 import { Button } from '@/components/app/Button';
 import { useNavigationFeedback } from '@/components/app/navigation-feedback';
+import { invalidateSubscriptionCacheAction } from '../_actions/invalidateSubscriptionCache';
 
 type SubscriptionSuccessButtonsProps = {
   dict: {
@@ -15,7 +15,6 @@ type SubscriptionSuccessButtonsProps = {
 };
 
 export function SubscriptionSuccessButtons({ dict, locale }: SubscriptionSuccessButtonsProps) {
-  const router = useRouter();
   const { navigate } = useNavigationFeedback();
 
   const handleClick = (href: string) => (event: MouseEvent<HTMLAnchorElement>) => {
@@ -33,7 +32,7 @@ export function SubscriptionSuccessButtons({ dict, locale }: SubscriptionSuccess
     navigate(href);
   };
 
-  const handleViewSubscription = (event: MouseEvent<HTMLAnchorElement>) => {
+  const handleViewSubscription = async (event: MouseEvent<HTMLAnchorElement>) => {
     if (
       event.metaKey ||
       event.ctrlKey ||
@@ -45,8 +44,11 @@ export function SubscriptionSuccessButtons({ dict, locale }: SubscriptionSuccess
     }
 
     event.preventDefault();
-    // Refresh to invalidate client-side cache, then navigate
-    router.refresh();
+
+    // Invalidate server cache to ensure fresh subscription data
+    await invalidateSubscriptionCacheAction();
+
+    // Navigate to subscription page
     navigate(`/${locale}/settings/subscription`);
   };
 

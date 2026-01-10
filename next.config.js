@@ -19,7 +19,7 @@ const nextConfig = {
     NEXT_PUBLIC_TUNNEL_MODE: isTunnelMode ? "true" : "",
   },
   // You can read this yourself in proxy.ts or wherever you like.
-  allowedDevOrigins: ["192.168.68.50", "192.168.68.62", "dev.tidex.no"],
+  allowedDevOrigins: ["192.168.68.50", "192.168.68.62", "dev.tidex.no", "172.20.10.5"],
 
   // Move dev indicator to top-left to avoid overlap with native tab bar on iOS
   devIndicators: {
