@@ -130,9 +130,10 @@ export const TotalCard: React.FC<TotalCardProps> = ({
     .filter(Boolean)
     .join(' ');
 
-  const isPercentageReady = typeof percentageChange === 'number';
+  const isPercentageReady = typeof percentageChange === 'number' && isFinite(percentageChange);
   const isPositive = isPercentageReady && (percentageChange as number) >= 0;
   const hasChange = isPercentageReady && (percentageChange as number) !== 0;
+  const showPercentageDash = !isPercentageReady || percentageChange === 0;
   const ArrowIcon = isPositive ? ArrowUp : ArrowDown;
 
   const handleKeyDown = onClick
@@ -182,19 +183,23 @@ export const TotalCard: React.FC<TotalCardProps> = ({
                     strokeWidth={2.5}
                   />
                 )}
-                <SafeAnimateNumber
-                  layout={false}
-                  suffix="%"
-                  locales="nb-NO"
-                  transition={{
-                    visualDuration: 0.8,
-                    type: 'spring',
-                    bounce: 0.1,
-                  }}
-                  routePattern="/"
-                >
-                  {isPercentageReady ? Math.abs(percentageChange as number) : 0}
-                </SafeAnimateNumber>
+                {showPercentageDash ? (
+                  <span>—</span>
+                ) : (
+                  <SafeAnimateNumber
+                    layout={false}
+                    suffix="%"
+                    locales="nb-NO"
+                    transition={{
+                      visualDuration: 0.8,
+                      type: 'spring',
+                      bounce: 0.1,
+                    }}
+                    routePattern="/"
+                  >
+                    {Math.abs(percentageChange as number)}
+                  </SafeAnimateNumber>
+                )}
               </span>
             </div>
             {/* Main total display */}
