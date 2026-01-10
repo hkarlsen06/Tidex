@@ -93,6 +93,58 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    // Check if user has accepted terms of service
+    // Skip check for identity linking (user already has an account)
+    if (!isLinking) {
+      const termsAcceptedAt = sessionData?.user?.user_metadata?.terms_accepted_at;
+
+      console.log("[AUTH CALLBACK] Terms acceptance check:", {
+        termsAcceptedAt,
+        hasAcceptedTerms: !!termsAcceptedAt,
+      });
+
+      if (!termsAcceptedAt) {
+        // User hasn't accepted terms - redirect to accept-terms page
+        const locale = (userLocale && locales.includes(userLocale as Locale) ? userLocale : null)
+          || request.cookies.get(LOCALE_COOKIE)?.value
+          || defaultLocale;
+        const acceptTermsUrl = new URL(`/${locale}/accept-terms`, url.origin);
+
+        // Pass the original destination so we can redirect after terms acceptance
+        // Default to onboarding for new users
+        const localePattern = new RegExp(`^/(${locales.join('|')})(/|$)`);
+        const hasLocalePrefix = localePattern.test(redirectUrl.pathname);
+        let nextPath: string;
+        if (hasLocalePrefix) {
+          nextPath = redirectUrl.pathname.replace(
+            new RegExp(`^/(${locales.join('|')})`),
+            ''
+          );
+        } else {
+          nextPath = redirectUrl.pathname;
+        }
+        // Default to onboarding for new OAuth users
+        if (nextPath === '/dashboard' || nextPath === '/' || nextPath === '') {
+          nextPath = '/onboarding';
+        }
+        acceptTermsUrl.searchParams.set("next", nextPath + redirectUrl.search);
+
+        console.log("[AUTH CALLBACK] Redirecting to accept-terms:", {
+          acceptTermsUrl: acceptTermsUrl.toString(),
+          nextPath,
+        });
+
+        // Create new redirect but copy cookies from original response
+        const termsResponse = NextResponse.redirect(acceptTermsUrl);
+        response.cookies.getAll().forEach((cookie) => {
+          termsResponse.cookies.set(cookie.name, cookie.value, {
+            ...cookie,
+          });
+        });
+        return termsResponse;
+      }
+    }
+
     // Only skip MFA check if user was already fully authenticated before the OAuth flow
     // This prevents attackers from bypassing MFA by adding linking=true to login URLs
     if (!(isLinking && wasAlreadyAuthenticated)) {

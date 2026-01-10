@@ -760,6 +760,17 @@ export const no = {
           verified: 'Verifisering vellykket! Omdirigerer...',
         },
       },
+      acceptTerms: {
+        title: 'Vilkår og personvern',
+        description: 'Du må godta vilkårene for å bruke Tidex',
+        explanation: 'For å fortsette må du lese og godta våre vilkår for bruk og personvernerklæring.',
+        reviewTermsButton: 'Les og godta vilkår',
+        declineButton: 'Avslå og logg ut',
+        errors: {
+          updateFailed: 'Kunne ikke lagre godkjenning. Prøv igjen.',
+          genericError: 'En feil oppstod. Prøv igjen.',
+        },
+      },
     },
     settings: {
       title: 'Innstillinger',
