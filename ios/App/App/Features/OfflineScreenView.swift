@@ -181,7 +181,7 @@ struct OfflineScreenView: View {
                 taxAmount: data.previousMonthTax,
                 hasTax: data.hasTaxEnabled,
                 hasPayout: data.hasPayout,
-                locale: data.locale,
+                locale: locale,
                 currencySymbol: data.currencySymbol,
                 showPreviousPayroll: data.showPreviousPayroll
             )
@@ -195,7 +195,7 @@ struct OfflineScreenView: View {
                 shiftCount: data.currentMonthShiftCount,
                 plannedShiftsCount: data.plannedShiftsCount,
                 hasTax: data.hasTaxEnabled,
-                locale: data.locale,
+                locale: locale,
                 currencySymbol: data.currencySymbol
             )
 
@@ -203,7 +203,7 @@ struct OfflineScreenView: View {
             if let nextShift = data.nextShift {
                 OfflineFeaturedShiftCard(
                     shift: nextShift,
-                    locale: data.locale,
+                    locale: locale,
                     hasTax: data.hasTaxEnabled,
                     isToday: data.nextShiftIsToday
                 )
