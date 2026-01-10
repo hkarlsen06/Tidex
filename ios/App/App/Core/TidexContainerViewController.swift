@@ -371,6 +371,10 @@ class TidexContainerViewController: UIViewController, UITabBarDelegate, NetworkM
             let shiftActivityPlugin = ShiftActivityPlugin()
             bridge.registerPluginInstance(shiftActivityPlugin)
 
+            // Register DocumentShare plugin for PDF/CSV export
+            let documentSharePlugin = DocumentSharePlugin()
+            bridge.registerPluginInstance(documentSharePlugin)
+
             // Inject initial tab bar height now that bridge is ready
             injectTabBarHeightToCSS()
             return

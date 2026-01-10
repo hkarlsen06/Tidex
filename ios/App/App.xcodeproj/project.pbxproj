@@ -14,6 +14,7 @@
 		11A5CD302F101283002BAC91 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 11A5CD2F2F101283002BAC91 /* WidgetKit.framework */; };
 		11A5CD322F101283002BAC91 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 11A5CD312F101283002BAC91 /* SwiftUI.framework */; };
 		11A5CD412F101284002BAC91 /* TidexShiftWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 11A5CD2E2F101283002BAC91 /* TidexShiftWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		11F16DAE2F13139C00800B36 /* DocumentSharePlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11F16DAD2F13139C00800B36 /* DocumentSharePlugin.swift */; };
 		11F1CBDB2F101C5700246C07 /* ShiftActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11F1CBDA2F101C5700246C07 /* ShiftActivityAttributes.swift */; };
 		2FAD9763203C412B000D30F8 /* config.xml in Resources */ = {isa = PBXBuildFile; fileRef = 2FAD9762203C412B000D30F8 /* config.xml */; };
 		4D22ABE92AF431CB00220026 /* CapApp-SPM in Frameworks */ = {isa = PBXBuildFile; productRef = 4D22ABE82AF431CB00220026 /* CapApp-SPM */; };
@@ -69,6 +70,7 @@
 		11A5CD2F2F101283002BAC91 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		11A5CD312F101283002BAC91 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		11A5CD552F10138F002BAC91 /* TidexShiftWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TidexShiftWidgetExtension.entitlements; sourceTree = "<group>"; };
+		11F16DAD2F13139C00800B36 /* DocumentSharePlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentSharePlugin.swift; sourceTree = "<group>"; };
 		11F1CBDA2F101C5700246C07 /* ShiftActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShiftActivityAttributes.swift; sourceTree = "<group>"; };
 		2FAD9762203C412B000D30F8 /* config.xml */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = config.xml; sourceTree = "<group>"; };
 		50379B222058CBB4000EE86E /* capacitor.config.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = capacitor.config.json; sourceTree = "<group>"; };
@@ -171,6 +173,7 @@
 		11A1D6D12F11F53400060819 /* Plugins */ = {
 			isa = PBXGroup;
 			children = (
+				11F16DAD2F13139C00800B36 /* DocumentSharePlugin.swift */,
 				11A5CD242F101201002BAC91 /* ShiftActivityPlugin.swift */,
 				NATSPL0012F0800000000002 /* NativeSplashPlugin.swift */,
 				NATTAB0012F0800000000002 /* NativeTabBarPlugin.swift */,
@@ -381,6 +384,7 @@
 			files = (
 				504EC3081FED79650016851F /* AppDelegate.swift in Sources */,
 				LOCBVC0012F1000000000001 /* LocaleAwareBridgeViewController.swift in Sources */,
+				11F16DAE2F13139C00800B36 /* DocumentSharePlugin.swift in Sources */,
 				NATSPL0012F0800000000001 /* NativeSplashPlugin.swift in Sources */,
 				NETMON0012F2000000000001 /* NetworkMonitor.swift in Sources */,
 				OFFDSH0012F3000000000001 /* OfflineDashboardCards.swift in Sources */,

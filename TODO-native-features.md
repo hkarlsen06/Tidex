@@ -2,7 +2,7 @@
 
 ## Quick Wins
 
-- [ ] **Native Share Sheet** - Share stats or export shift data using `@capacitor/share`
+- [x] **Native Share Sheet** - Share stats or export shift data using `@capacitor/share`
 - [ ] **Local Notifications for Shift Reminders** - Schedule reminders before shifts start using `@capacitor/local-notifications`
 - [ ] **Native Date/Time Pickers** - Replace web date pickers with native iOS pickers for shift times
 - [ ] **Pull-to-Refresh** - Native bounce effect when refreshing shift list
