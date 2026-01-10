@@ -82,11 +82,11 @@ const nextConfig = {
 
     // Enable router cache for prefetched and dynamic pages
     // Required for 'use cache: private' to persist across navigations
-    // dynamic: cache duration for dynamic pages (30s)
-    // static: cache duration for static/prefetched pages (3 min)
+    // In development: use minimum cache times (30s) for faster iteration
+    // In production: longer cache times for performance
     staleTimes: {
-      dynamic: 300,
-      static: 180,
+      dynamic: process.env.NODE_ENV === "development" ? 30 : 300,
+      static: process.env.NODE_ENV === "development" ? 30 : 180,
     },
   },
 

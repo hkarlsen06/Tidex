@@ -10,6 +10,7 @@ import type { Dictionary } from '@/lib/i18n/dictionaries/no';
 import { useTranslations } from '@/lib/i18n/client';
 import type { Locale } from '@/lib/i18n/config';
 import { getDateFormatter } from '@/lib/i18n/locale';
+import { shareDocument, shareCsvDocument } from '@/lib/capacitor/document-share';
 
 const JSPDF_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
 
@@ -111,6 +112,7 @@ type JsPDFInstance = {
   getNumberOfPages: () => number;
   setPage: (page: number) => void;
   save: (filename: string) => void;
+  output: (type: 'datauristring' | 'blob' | 'arraybuffer' | 'bloburl' | 'dataurlstring') => string;
   setLineWidth: (width: number) => void;
   addImage: (imageData: string, format: string, x: number, y: number, width: number, height: number) => void;
   getTextWidth: (text: string) => number;
@@ -760,17 +762,10 @@ function buildCsvContent(data: PreparedExportData, t: Dictionary): string {
     .join('\n');
 }
 
-function downloadCsv(data: PreparedExportData, range: DateRange, t: Dictionary, locale: Locale, userName?: string) {
+async function downloadCsv(data: PreparedExportData, range: DateRange, t: Dictionary, locale: Locale, userName?: string) {
   const csvContent = buildCsvContent(data, t);
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = buildFileName(range, 'csv', locale, userName);
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+  const filename = buildFileName(range, 'csv', locale, userName);
+  await shareCsvDocument(csvContent, filename);
 }
 
 interface DataFormProps {
@@ -924,7 +919,12 @@ export function DataForm({ t, userName, cacheKey }: DataFormProps) {
         renderTable(doc, yRef, exportData, t, locale);
         applyFooters(doc);
 
-        doc.save(buildFileName(range, 'pdf', locale, userName));
+        const filename = buildFileName(range, 'pdf', locale, userName);
+        // Get PDF as base64 (data URI format: "data:application/pdf;base64,...")
+        const pdfDataUri = doc.output('datauristring');
+        // Extract the base64 portion after the prefix
+        const base64Data = pdfDataUri.split(',')[1];
+        await shareDocument(base64Data, filename);
       } catch (error) {
         console.error('[pdf export] Failed to generate pdf:', error);
         alert('Noe gikk galt under eksporten. Prøv igjen senere.');
@@ -943,7 +943,7 @@ export function DataForm({ t, userName, cacheKey }: DataFormProps) {
       }
 
       const exportData = prepareExportData(payload);
-      downloadCsv(exportData, range, t, locale, userName);
+      await downloadCsv(exportData, range, t, locale, userName);
     } catch (error) {
       console.error('[csv export] Failed to generate csv:', error);
       alert('Noe gikk galt under eksporten. Prøv igjen senere.');
