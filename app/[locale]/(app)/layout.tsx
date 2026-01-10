@@ -22,6 +22,7 @@ import {
   validateTargetUser,
   getImpersonationSession,
 } from "@/lib/auth/impersonation";
+import { needsTermsReAcceptance, isJwtFreshForTermsCheck } from "@/lib/legal/version";
 import type { Locale } from "@/lib/i18n/config";
 
 /**
@@ -124,21 +125,37 @@ export default async function RootLayout({
   }
 
   // Terms and onboarding enforcement - skip if impersonating (admin viewing user's account)
-  // IMPORTANT: We use getUser() here instead of getClaims() because:
-  // - getClaims() parses the JWT locally (stale data if metadata changed after token was issued)
-  // - getUser() fetches fresh user data from Supabase (ensures we see recent metadata changes)
-  // This is critical for terms acceptance because we may have just cleared terms_accepted_at in the DB
+  // Performance optimization: Use JWT claims when possible, only fetch fresh data when needed.
+  // If the JWT was issued after the current terms version date, the claims are guaranteed
+  // to reflect the user's current acceptance status. This avoids slow getUser() calls for most users.
   if (!impersonationContext) {
-    const { data: userData } = await supabase.auth.getUser();
-    const freshMetadata = userData?.user?.user_metadata ?? {};
-    const termsAcceptedAt = freshMetadata.terms_accepted_at;
-    const onboardingCompleted = freshMetadata.finishedOnboarding;
+    let termsAcceptedAt: string | null | undefined;
+    let onboardingCompleted: boolean | undefined;
 
-    // Priority 1: Terms must be accepted first
-    if (!termsAcceptedAt) {
+    // Check if JWT is fresh enough to trust for terms check
+    const jwtIsFresh = isJwtFreshForTermsCheck(claims.iat);
+
+    if (jwtIsFresh) {
+      // Fast path: JWT was issued after terms update, claims are reliable
+      const userMetadataFromClaims = claims.user_metadata ?? {};
+      termsAcceptedAt = userMetadataFromClaims.terms_accepted_at as string | undefined;
+      onboardingCompleted = userMetadataFromClaims.finishedOnboarding as boolean | undefined;
+    } else {
+      // Slow path: JWT is stale, need fresh data from Supabase
+      const { data: userData } = await supabase.auth.getUser();
+      const freshMetadata = userData?.user?.user_metadata ?? {};
+      termsAcceptedAt = freshMetadata.terms_accepted_at;
+      onboardingCompleted = freshMetadata.finishedOnboarding;
+    }
+
+    // Priority 1: Terms must be accepted first (or re-accepted if updated)
+    if (needsTermsReAcceptance(termsAcceptedAt)) {
       // Redirect to accept-terms, after which they'll go to onboarding or dashboard
       const nextPath = onboardingCompleted ? "/" : "/onboarding";
-      const acceptTermsUrl = `/${locale}/accept-terms?next=${encodeURIComponent(nextPath)}`;
+      // Add updated=true if user had previously accepted but terms have been updated
+      const isUpdate = !!termsAcceptedAt;
+      const updatedParam = isUpdate ? "&updated=true" : "";
+      const acceptTermsUrl = `/${locale}/accept-terms?next=${encodeURIComponent(nextPath)}${updatedParam}`;
       redirect(acceptTermsUrl);
     }
 

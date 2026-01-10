@@ -26,6 +26,7 @@ const cardVariants = {
 
 type AcceptTermsSearchParams = {
   next?: string | string[];
+  updated?: string | string[];
 };
 
 function pickFirst(value?: string | string[]) {
@@ -45,8 +46,17 @@ export default function AcceptTermsPage({
   const { locale } = use(params);
   const resolvedSearchParams = use(searchParams);
   const nextPathFromUrl = pickFirst(resolvedSearchParams?.next);
+  const isUpdatedTerms = pickFirst(resolvedSearchParams?.updated) === 'true';
 
   const { t } = useTranslations();
+
+  // Use updated copy if this is a terms update, otherwise use default copy
+  const content = {
+    title: isUpdatedTerms ? t.pages.auth.acceptTerms.updated.title : t.pages.auth.acceptTerms.title,
+    description: isUpdatedTerms ? t.pages.auth.acceptTerms.updated.description : t.pages.auth.acceptTerms.description,
+    explanation: isUpdatedTerms ? t.pages.auth.acceptTerms.updated.explanation : t.pages.auth.acceptTerms.explanation,
+    reviewTermsButton: isUpdatedTerms ? t.pages.auth.acceptTerms.updated.reviewTermsButton : t.pages.auth.acceptTerms.reviewTermsButton,
+  };
   const [legalModalOpen, setLegalModalOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -124,7 +134,7 @@ export default function AcceptTermsPage({
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader>
           <div className="flex items-center justify-between mb-1">
-            <CardTitle className="text-2xl font-bold">{t.pages.auth.acceptTerms.title}</CardTitle>
+            <CardTitle className="text-2xl font-bold">{content.title}</CardTitle>
             <Image
               src="/icons/short-logo-gradient.svg"
               alt="Tidex"
@@ -133,12 +143,12 @@ export default function AcceptTermsPage({
               priority
             />
           </div>
-          <CardDescription>{t.pages.auth.acceptTerms.description}</CardDescription>
+          <CardDescription>{content.description}</CardDescription>
         </CardHeader>
 
         <CardContent className="space-y-6">
           <p className="text-sm text-text-secondary">
-            {t.pages.auth.acceptTerms.explanation}
+            {content.explanation}
           </p>
 
           {error && (
@@ -158,7 +168,7 @@ export default function AcceptTermsPage({
               disabled={isProcessing}
               className="w-full"
             >
-              {t.pages.auth.acceptTerms.reviewTermsButton}
+              {content.reviewTermsButton}
             </Button>
 
             <Button

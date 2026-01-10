@@ -767,6 +767,12 @@ export const en: Dictionary = {
         explanation: 'To continue, you must read and accept our Terms of Service and Privacy Policy.',
         reviewTermsButton: 'Review and Accept Terms',
         declineButton: 'Decline and Sign Out',
+        updated: {
+          title: 'Updated Terms',
+          description: 'Our terms have been updated since you last accepted',
+          explanation: 'We have updated our Terms of Service and Privacy Policy. Please review the changes and accept the new terms to continue using Tidex.',
+          reviewTermsButton: 'Review and Accept Updated Terms',
+        },
         errors: {
           updateFailed: 'Could not save acceptance. Please try again.',
           genericError: 'An error occurred. Please try again.',
