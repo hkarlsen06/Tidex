@@ -359,7 +359,7 @@ export function CustomSupplementsModal({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-2xl sm:rounded-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         {/* Unsaved changes confirmation */}
         {showUnsavedPrompt ? (
           <>

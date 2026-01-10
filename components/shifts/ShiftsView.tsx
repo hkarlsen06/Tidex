@@ -991,7 +991,7 @@ function MoveShiftModal({
 
   return (
     <Dialog open={open} onOpenChange={(nextOpen) => { if (!nextOpen && !isSubmitting) onCancel(); }}>
-      <DialogContent className="sm:rounded-3xl max-w-lg">
+      <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="text-text-primary">{t.pages.shifts.move.title}</DialogTitle>
           <DialogDescription className="text-text-muted">

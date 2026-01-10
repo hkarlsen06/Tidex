@@ -303,7 +303,7 @@ export default function RecurringForm({ existingShifts, userSettings, presetRule
             setDraft({ ...draft, repeat_interval_weeks: num as any });
           }}
         >
-          <SelectTrigger className="h-10 w-auto min-w-[100px] rounded-xl border-border-subtle bg-surface-secondary/70 text-base text-text-primary">
+          <SelectTrigger className="h-10 w-auto min-w-25 rounded-xl border-border-subtle bg-surface-secondary/70 text-base text-text-primary">
             <SelectValue />
           </SelectTrigger>
           <SelectContent className="rounded-xl border-border-subtle bg-surface-primary shadow-app-lg">
@@ -407,7 +407,7 @@ export default function RecurringForm({ existingShifts, userSettings, presetRule
 
       {/* Preview modal */}
       <Dialog open={showPreview} onOpenChange={setShowPreview}>
-        <DialogContent className="max-w-md rounded-3xl border border-border-subtle bg-surface-primary/95 shadow-app-lg">
+        <DialogContent className="max-w-md border border-border-subtle bg-surface-primary/95 shadow-app-lg">
           <DialogHeader>
             <DialogTitle>{t.pages.shifts.add.recurring.confirmRecurring}</DialogTitle>
             <DialogDescription className="space-y-2">

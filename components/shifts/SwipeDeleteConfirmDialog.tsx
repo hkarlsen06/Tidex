@@ -58,7 +58,7 @@ export function SwipeDeleteConfirmDialog({
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent className="sm:rounded-3xl">
+      <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle className="text-text-primary">
             {t.pages.shifts.swipeActions?.deleteConfirmTitle ?? "Delete shift?"}
