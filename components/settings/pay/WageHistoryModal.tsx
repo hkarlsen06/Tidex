@@ -254,7 +254,7 @@ export function WageHistoryModal({
   if (mode === 'view' && snapshot) {
     return (
       <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-        <DialogContent className="sm:rounded-3xl sm:max-w-[520px] max-h-[90vh] overflow-y-auto overflow-x-hidden">
+        <DialogContent className="sm:max-w-130 max-h-[90vh] overflow-y-auto overflow-x-hidden">
           <DialogHeader className="pb-2 text-left">
             <DialogTitle className="flex items-center gap-2 text-left">
               <Calendar className="h-5 w-5 text-text-muted shrink-0" />
@@ -270,11 +270,11 @@ export function WageHistoryModal({
           <div className="space-y-6 py-6">
             <WageSourceCard
               usePreset={snapshot.wage_level !== null}
-              setUsePreset={() => {}}
+              setUsePreset={() => { }}
               wageLevel={snapshot.wage_level?.toString() || '1'}
-              setWageLevel={() => {}}
+              setWageLevel={() => { }}
               customWage={snapshot.hourly_wage.toString()}
-              setCustomWage={() => {}}
+              setCustomWage={() => { }}
               disabled={true}
               showCurrentWage={false}
               labels={{
@@ -305,9 +305,8 @@ export function WageHistoryModal({
                   </p>
                 </div>
                 <ChevronDown
-                  className={`h-5 w-5 text-text-muted transition-transform duration-200 ${
-                    showSupplementsInView ? 'rotate-180' : ''
-                  }`}
+                  className={`h-5 w-5 text-text-muted transition-transform duration-200 ${showSupplementsInView ? 'rotate-180' : ''
+                    }`}
                 />
               </button>
 
@@ -317,7 +316,7 @@ export function WageHistoryModal({
                     value={snapshot.supplements && snapshot.supplements.rules.length > 0
                       ? snapshot.supplements
                       : (snapshot.wage_level !== null ? TARIFF_SUPPLEMENTS_DATA : null)}
-                    onChange={() => {}}
+                    onChange={() => { }}
                     readOnly={true}
                   />
                 </div>
@@ -338,9 +337,9 @@ export function WageHistoryModal({
                 <p className="text-sm text-text-secondary">
                   {t.pages.settings.pay.breaks.methodLabel}: {
                     snapshot.break_method === 'proportional' ? t.pages.settings.pay.breaks.methodProportional :
-                    snapshot.break_method === 'base_only' ? t.pages.settings.pay.breaks.methodBaseOnly :
-                    snapshot.break_method === 'end_of_shift' ? t.pages.settings.pay.breaks.methodEndOfShift :
-                    t.common.off
+                      snapshot.break_method === 'base_only' ? t.pages.settings.pay.breaks.methodBaseOnly :
+                        snapshot.break_method === 'end_of_shift' ? t.pages.settings.pay.breaks.methodEndOfShift :
+                          t.common.off
                   }
                   {' • '}
                   {t.onboarding.completionStep.breakSummary
@@ -397,7 +396,7 @@ export function WageHistoryModal({
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && !pending && handleClose()}>
       <DialogContent
-        className="sm:rounded-3xl sm:max-w-[520px] max-h-[90vh] overflow-y-auto overflow-x-hidden"
+        className="sm:rounded-3xl sm:max-w-130 max-h-[90vh] overflow-y-auto overflow-x-hidden"
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <DialogHeader className="pb-2 text-left">
@@ -471,9 +470,8 @@ export function WageHistoryModal({
                     </p>
                   </div>
                   <ChevronDown
-                    className={`h-5 w-5 text-text-muted transition-transform duration-200 ${
-                      showTariffSupplements ? 'rotate-180' : ''
-                    }`}
+                    className={`h-5 w-5 text-text-muted transition-transform duration-200 ${showTariffSupplements ? 'rotate-180' : ''
+                      }`}
                   />
                 </button>
 
@@ -482,7 +480,7 @@ export function WageHistoryModal({
                     <SupplementsEditor
                       key="tariff"
                       value={TARIFF_SUPPLEMENTS_DATA}
-                      onChange={() => {}}
+                      onChange={() => { }}
                       readOnly={true}
                     />
                   </div>
@@ -662,7 +660,7 @@ export function WageHistoryModal({
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-        <DialogContent className="sm:rounded-3xl sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-106.25">
           <DialogHeader className="text-left">
             <DialogTitle className="flex items-center gap-2 text-destructive text-left">
               <AlertTriangle className="h-5 w-5 shrink-0" />

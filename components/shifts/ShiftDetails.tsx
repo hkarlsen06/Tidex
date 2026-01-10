@@ -358,7 +358,7 @@ export function ShiftDetails({
       {!recurringModalOpen && (
         <DialogContent
           hideCloseButton
-          className="sm:rounded-3xl max-w-120"
+          className="max-w-120"
           onOpenAutoFocus={(e) => {
             // Prevent auto-focus on inputs to avoid iOS date picker opening automatically
             e.preventDefault();
