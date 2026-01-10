@@ -73,7 +73,16 @@ interface DialogContentProps extends React.ComponentPropsWithoutRef<typeof Dialo
 export const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   DialogContentProps
->(({ children, hideCloseButton = false, className, style, ...props }, ref) => {
+>(({ children, hideCloseButton = false, className, style, onOpenAutoFocus, ...props }, ref) => {
+  // Always prevent auto-focus on open to avoid input highlighting (especially on iOS)
+  const handleOpenAutoFocus = React.useCallback(
+    (e: Event) => {
+      e.preventDefault();
+      onOpenAutoFocus?.(e);
+    },
+    [onOpenAutoFocus]
+  );
+
   return (
     <DialogPrimitive.Portal>
       <DialogPrimitive.Overlay
@@ -103,6 +112,7 @@ export const DialogContent = React.forwardRef<
             maxHeight: "100%",
             ...style,
           }}
+          onOpenAutoFocus={handleOpenAutoFocus}
           {...props}
         >
           {children}
