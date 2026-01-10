@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import { verifySession } from '@/data-access/auth';
 import { getUserProfile } from '@/data-access/settings';
+import { getUserSubscriptionData } from '@/data-access/subscription';
+import { getActiveProvider } from '@/lib/subscription/hasProAccess';
 import { ProfileForm } from '@components/settings/profile/ProfileForm';
 import { DangerZone } from '@components/settings/profile/DangerZone';
 import { getTranslations } from '@/lib/i18n/server';
@@ -30,7 +32,12 @@ export default async function ProfilePage({
   // Verify authentication and get user
   const { user } = await verifySession();
 
-  const profile = await getUserProfile(user.id);
+  const [profile, { subscription }] = await Promise.all([
+    getUserProfile(user.id),
+    getUserSubscriptionData(user.id),
+  ]);
+
+  const activeProvider = getActiveProvider(subscription);
 
   return (
     <SettingsPageWrapper routeKey="settings-profile">
@@ -46,7 +53,11 @@ export default async function ProfilePage({
 
         {/* Danger zone at the very bottom */}
         <div className="pt-4">
-          <DangerZone />
+          <DangerZone
+            activeSubscription={
+              activeProvider ? { provider: activeProvider } : null
+            }
+          />
         </div>
       </div>
     </SettingsPageWrapper>
