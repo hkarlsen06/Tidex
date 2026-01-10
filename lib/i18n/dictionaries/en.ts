@@ -953,6 +953,26 @@ export const en: Dictionary = {
             dialogDescription: 'This will permanently delete all your shifts. This action cannot be undone.',
             deleting: 'Deleting...',
           },
+          deleteAccount: {
+            title: 'Delete account',
+            description: 'Permanently delete your account and all associated data',
+            button: 'Delete account',
+            dialogTitle: 'Delete your account?',
+            dialogDescription: 'This action is permanent and cannot be undone. All your data will be deleted:',
+            bullets: {
+              shifts: 'All shifts and recurring shifts',
+              settings: 'Pay settings and wage history',
+              subscription: 'Subscription (if active)',
+              shares: 'Shift shares with other users',
+            },
+            confirmLabel: 'Type DELETE to confirm',
+            confirmPlaceholder: 'DELETE',
+            deleting: 'Deleting account...',
+            errors: {
+              confirmMismatch: 'Please type DELETE to confirm',
+              deleteFailed: 'Failed to delete account. Please try again.',
+            },
+          },
         },
       },
       security: {

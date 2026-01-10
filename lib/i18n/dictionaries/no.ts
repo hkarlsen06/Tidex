@@ -952,6 +952,26 @@ export const no = {
             dialogDescription: 'Dette vil permanent slette alle dine vakter. Denne handlingen kan ikke angres.',
             deleting: 'Sletter...',
           },
+          deleteAccount: {
+            title: 'Slett konto',
+            description: 'Slett kontoen din og alle tilknyttede data permanent',
+            button: 'Slett konto',
+            dialogTitle: 'Slette kontoen din?',
+            dialogDescription: 'Denne handlingen er permanent og kan ikke angres. Alle dine data vil bli slettet:',
+            bullets: {
+              shifts: 'Alle vakter og gjentakende vakter',
+              settings: 'Lønnsinnstillinger og lønnshistorikk',
+              subscription: 'Abonnement (hvis aktivt)',
+              shares: 'Vaktdelinger med andre brukere',
+            },
+            confirmLabel: 'Skriv SLETT for å bekrefte',
+            confirmPlaceholder: 'SLETT',
+            deleting: 'Sletter konto...',
+            errors: {
+              confirmMismatch: 'Skriv SLETT for å bekrefte',
+              deleteFailed: 'Kunne ikke slette kontoen. Vennligst prøv igjen.',
+            },
+          },
         },
       },
       security: {
