@@ -114,7 +114,7 @@ export function UserMenu({
         }}
         className="flex items-center gap-3 rounded-2xl bg-background/80 pl-4 pr-2 py-2 border border-border/40 focus:outline-none focus:ring-2 focus:ring-border"
       >
-        <span className="text-sm font-medium text-text-primary">{displayName}</span>
+        <span className="text-sm font-medium text-text-primary max-w-32 truncate">{displayName}</span>
         <span className="relative inline-flex h-8 w-8 items-center justify-center overflow-hidden rounded-xl bg-background text-xs font-semibold uppercase text-text-primary">
           {avatarUrl ? (
             <Image

@@ -140,12 +140,13 @@ export default async function RootLayout({
   }
 
   // Extract user metadata from JWT claims (available in user_metadata)
+  // Use || instead of ?? to also fall through on empty strings (e.g., when user clears their name)
   const userMetadata = claims.user_metadata ?? {};
   const rawUserName =
-    (userMetadata.full_name as string | undefined) ??
-    (userMetadata.name as string | undefined) ??
-    (userMetadata.display_name as string | undefined) ??
-    claims.email ??
+    (userMetadata.full_name as string | undefined) ||
+    (userMetadata.name as string | undefined) ||
+    (userMetadata.display_name as string | undefined) ||
+    claims.email ||
     "User";
   const userName = sanitizeDisplayName(rawUserName);
 
