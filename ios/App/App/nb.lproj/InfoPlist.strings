@@ -5,3 +5,6 @@
 
 /* App name */
 "CFBundleName" = "Tidex";
+
+/* Camera usage description */
+"NSCameraUsageDescription" = "Tidex trenger tilgang til kameraet for å ta profilbilde.";
