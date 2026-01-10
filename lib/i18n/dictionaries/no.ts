@@ -948,9 +948,20 @@ export const no = {
             title: 'Slett alle vakter',
             description: 'Dette vil permanent slette alle dine registrerte vakter',
             button: 'Slett alle',
-            dialogTitle: 'Er du sikker?',
-            dialogDescription: 'Dette vil permanent slette alle dine vakter. Denne handlingen kan ikke angres.',
+            dialogTitle: 'Slette alle vaktene dine?',
+            dialogDescription: 'Denne handlingen er permanent og kan ikke angres. Følgende vil bli slettet:',
+            bullets: {
+              shifts: 'Alle registrerte vakter',
+              recurring: 'Alle gjentakende vaktserier',
+              history: 'Alle lønnsberegninger og historikk',
+            },
+            confirmLabel: 'Skriv SLETT for å bekrefte',
+            confirmPlaceholder: 'SLETT',
             deleting: 'Sletter...',
+            errors: {
+              confirmMismatch: 'Skriv SLETT for å bekrefte',
+              deleteFailed: 'Kunne ikke slette vaktene. Vennligst prøv igjen.',
+            },
           },
           deleteAccount: {
             title: 'Slett konto',
