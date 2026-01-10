@@ -1845,7 +1845,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
         window.history.replaceState({}, '', url.toString());
       }
     }
-  }, [searchParams, userSettings, presetRules, selectedMonth, setSelectedMonth, readOnly, router, locale]);
+  }, [searchParams, userSettings, presetRules, selectedMonth, setSelectedMonth, readOnly, router, locale, syncWidgetStorage]);
 
   // Clear optimistic shifts when real data arrives from server (after router.refresh())
   // Note: We don't fire confetti here since it was already fired when optimistic shifts appeared
@@ -2171,7 +2171,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
 
       navigate(`/${locale}/shifts/add?date=${encodeURIComponent(iso)}`);
     },
-    [calendarSelectedShiftId, clearSelection, navigate, selectedDate, shiftsByDate, copyMode, router, moveMode, locale, readOnly, multiSelectedDates, errorComplete, showEarnings, triggerCalendarSelectionHaptic]
+    [calendarSelectedShiftId, clearSelection, navigate, selectedDate, shiftsByDate, copyMode, router, moveMode, locale, readOnly, multiSelectedDates, errorComplete, showEarnings, triggerCalendarSelectionHaptic, syncWidgetStorage]
   );
 
   const handleSelectDateRange = useCallback(
