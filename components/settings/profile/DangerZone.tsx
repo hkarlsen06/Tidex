@@ -14,10 +14,19 @@ import {
   DialogTitle,
 } from '@/components/app/Dialog';
 import { clearAllShifts, deleteUserAccount } from '@/app/[locale]/(app)/settings/_actions/updateSettings';
+import { createPortalSession } from '@/app/[locale]/(app)/settings/subscription/_actions/createPortalSession';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from '@/lib/i18n/client';
 
-export function DangerZone() {
+interface DangerZoneProps {
+  activeSubscription?: {
+    provider: 'stripe' | 'apple' | 'admin_trial';
+  } | null;
+}
+
+type DeleteStep = 'warning' | 'confirm';
+
+export function DangerZone({ activeSubscription }: DangerZoneProps) {
   const { t, locale } = useTranslations();
   const router = useRouter();
 
@@ -32,6 +41,15 @@ export function DangerZone() {
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  // Subscription warning step state
+  const hasActiveSubscription =
+    activeSubscription?.provider &&
+    activeSubscription.provider !== 'admin_trial';
+  const [deleteStep, setDeleteStep] = useState<DeleteStep>(
+    hasActiveSubscription ? 'warning' : 'confirm'
+  );
+  const [isOpeningPortal, setIsOpeningPortal] = useState(false);
 
   const handleClearShifts = async () => {
     // Validate confirmation text
@@ -92,13 +110,68 @@ export function DangerZone() {
   };
 
   const handleDeleteDialogClose = (open: boolean) => {
-    if (!isDeleting) {
+    if (!isDeleting && !isOpeningPortal) {
       setShowDeleteAccountDialog(open);
       if (!open) {
         // Reset state when closing
         setDeleteConfirmText('');
         setDeleteError(null);
+        setDeleteStep(hasActiveSubscription ? 'warning' : 'confirm');
       }
+    }
+  };
+
+  const handleManageSubscription = async () => {
+    // Helper to open URL - tries Capacitor Browser first (iOS in-app browser), falls back to new tab (web)
+    const openUrl = async (url: string) => {
+      try {
+        const { Browser } = await import('@capacitor/browser');
+        const { Capacitor } = await import('@capacitor/core');
+        if (Capacitor.isNativePlatform()) {
+          // Use presentationStyle to force in-app browser overlay on iOS
+          await Browser.open({
+            url,
+            presentationStyle: 'popover',
+            toolbarColor: '#000000',
+          });
+          return true;
+        }
+      } catch (error) {
+        console.error('Browser.open failed:', error);
+        // Not on native platform or Browser plugin not available
+      }
+      // Fallback: open in new tab for web
+      window.open(url, '_blank');
+      return true;
+    };
+
+    if (activeSubscription?.provider === 'apple') {
+      const iosDeepLink = 'https://apps.apple.com/account/subscriptions';
+      await openUrl(iosDeepLink);
+      return;
+    }
+
+    // Stripe
+    try {
+      setIsOpeningPortal(true);
+      const result = await createPortalSession();
+      if (result.success && result.url) {
+        await openUrl(result.url);
+      } else {
+        setDeleteError(
+          result.error ||
+            t.pages.settings.profile.dangerZone.deleteAccount.subscriptionWarning
+              .portalError
+        );
+      }
+    } catch (error) {
+      console.error('Error opening customer portal:', error);
+      setDeleteError(
+        t.pages.settings.profile.dangerZone.deleteAccount.subscriptionWarning
+          .portalError
+      );
+    } finally {
+      setIsOpeningPortal(false);
     }
   };
 
@@ -216,61 +289,132 @@ export function DangerZone() {
       {/* Delete account dialog */}
       <Dialog open={showDeleteAccountDialog} onOpenChange={handleDeleteDialogClose}>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="text-red-600 dark:text-red-400">
-              {t.pages.settings.profile.dangerZone.deleteAccount.dialogTitle}
-            </DialogTitle>
-            <DialogDescription asChild>
-              <div className="space-y-3">
-                <p>{t.pages.settings.profile.dangerZone.deleteAccount.dialogDescription}</p>
-                <ul className="list-disc list-inside space-y-1 text-sm">
-                  <li>{t.pages.settings.profile.dangerZone.deleteAccount.bullets.shifts}</li>
-                  <li>{t.pages.settings.profile.dangerZone.deleteAccount.bullets.settings}</li>
-                  <li>{t.pages.settings.profile.dangerZone.deleteAccount.bullets.subscription}</li>
-                  <li>{t.pages.settings.profile.dangerZone.deleteAccount.bullets.shares}</li>
-                </ul>
+          {/* Step 1: Subscription warning */}
+          {deleteStep === 'warning' && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="text-amber-600 dark:text-amber-400">
+                  {t.pages.settings.profile.dangerZone.deleteAccount.subscriptionWarning.title}
+                </DialogTitle>
+                <DialogDescription asChild>
+                  <div className="space-y-3">
+                    <p>{t.pages.settings.profile.dangerZone.deleteAccount.subscriptionWarning.description}</p>
+                    <div className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                      <p className="text-sm text-amber-700 dark:text-amber-300">
+                        {activeSubscription?.provider === 'apple'
+                          ? t.pages.settings.profile.dangerZone.deleteAccount.subscriptionWarning.appleNote
+                          : t.pages.settings.profile.dangerZone.deleteAccount.subscriptionWarning.stripeNote}
+                      </p>
+                    </div>
+                  </div>
+                </DialogDescription>
+              </DialogHeader>
+
+              {deleteError && (
+                <p className="text-sm text-red-600 dark:text-red-400">{deleteError}</p>
+              )}
+
+              <DialogFooter className="flex-col gap-2 sm:flex-row">
+                <Button
+                  variant="outline"
+                  onClick={() => handleDeleteDialogClose(false)}
+                  disabled={isOpeningPortal}
+                >
+                  {t.common.cancel}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleManageSubscription();
+                  }}
+                  disabled={isOpeningPortal}
+                >
+                  {isOpeningPortal
+                    ? t.common.loading
+                    : t.pages.settings.profile.dangerZone.deleteAccount.subscriptionWarning.manageButton}
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => setDeleteStep('confirm')}
+                  disabled={isOpeningPortal}
+                >
+                  {t.pages.settings.profile.dangerZone.deleteAccount.subscriptionWarning.continueButton}
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+
+          {/* Step 2: Confirmation */}
+          {deleteStep === 'confirm' && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="text-red-600 dark:text-red-400">
+                  {t.pages.settings.profile.dangerZone.deleteAccount.dialogTitle}
+                </DialogTitle>
+                <DialogDescription asChild>
+                  <div className="space-y-3">
+                    <p>{t.pages.settings.profile.dangerZone.deleteAccount.dialogDescription}</p>
+                    <ul className="list-disc list-inside space-y-1 text-sm">
+                      <li>{t.pages.settings.profile.dangerZone.deleteAccount.bullets.shifts}</li>
+                      <li>{t.pages.settings.profile.dangerZone.deleteAccount.bullets.settings}</li>
+                      <li>{t.pages.settings.profile.dangerZone.deleteAccount.bullets.subscription}</li>
+                      <li>{t.pages.settings.profile.dangerZone.deleteAccount.bullets.shares}</li>
+                    </ul>
+                  </div>
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-2 py-2">
+                <label htmlFor="delete-confirm" className="text-sm font-medium">
+                  {t.pages.settings.profile.dangerZone.deleteAccount.confirmLabel}
+                </label>
+                <Input
+                  id="delete-confirm"
+                  type="text"
+                  value={deleteConfirmText}
+                  onChange={(e) => {
+                    setDeleteConfirmText(e.target.value);
+                    setDeleteError(null);
+                  }}
+                  placeholder={t.pages.settings.profile.dangerZone.deleteAccount.confirmPlaceholder}
+                  disabled={isDeleting}
+                  className="font-mono"
+                  autoComplete="off"
+                />
+                {deleteError && (
+                  <p className="text-sm text-red-600 dark:text-red-400">{deleteError}</p>
+                )}
               </div>
-            </DialogDescription>
-          </DialogHeader>
 
-          <div className="space-y-2 py-2">
-            <label htmlFor="delete-confirm" className="text-sm font-medium">
-              {t.pages.settings.profile.dangerZone.deleteAccount.confirmLabel}
-            </label>
-            <Input
-              id="delete-confirm"
-              type="text"
-              value={deleteConfirmText}
-              onChange={(e) => {
-                setDeleteConfirmText(e.target.value);
-                setDeleteError(null);
-              }}
-              placeholder={t.pages.settings.profile.dangerZone.deleteAccount.confirmPlaceholder}
-              disabled={isDeleting}
-              className="font-mono"
-              autoComplete="off"
-            />
-            {deleteError && (
-              <p className="text-sm text-red-600 dark:text-red-400">{deleteError}</p>
-            )}
-          </div>
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => handleDeleteDialogClose(false)}
-              disabled={isDeleting}
-            >
-              {t.common.cancel}
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleDeleteAccount}
-              disabled={isDeleting || deleteConfirmText !== t.pages.settings.profile.dangerZone.deleteAccount.confirmPlaceholder}
-            >
-              {isDeleting ? t.pages.settings.profile.dangerZone.deleteAccount.deleting : t.pages.settings.profile.dangerZone.deleteAccount.button}
-            </Button>
-          </DialogFooter>
+              <DialogFooter className="flex-col gap-2 sm:flex-row">
+                {hasActiveSubscription && (
+                  <Button
+                    variant="ghost"
+                    onClick={() => setDeleteStep('warning')}
+                    disabled={isDeleting}
+                  >
+                    {t.common.back}
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  onClick={() => handleDeleteDialogClose(false)}
+                  disabled={isDeleting}
+                >
+                  {t.common.cancel}
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={handleDeleteAccount}
+                  disabled={isDeleting || deleteConfirmText !== t.pages.settings.profile.dangerZone.deleteAccount.confirmPlaceholder}
+                >
+                  {isDeleting ? t.pages.settings.profile.dangerZone.deleteAccount.deleting : t.pages.settings.profile.dangerZone.deleteAccount.button}
+                </Button>
+              </DialogFooter>
+            </>
+          )}
         </DialogContent>
       </Dialog>
     </>
