@@ -1,6 +1,7 @@
 'use server';
 
 import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { createSupabaseServiceClient } from '@/lib/supabase/service';
 import { logger } from '@/lib/logger';
 import { verifySession } from '@/data-access/auth';
 import { invalidateAndRevalidate } from '@/lib/revalidation/paths';
@@ -581,4 +582,56 @@ export async function updateShiftReminderSettings(data: {
   return { success: true };
 }
 
+/**
+ * Permanently delete the user's account and all associated data.
+ *
+ * This action:
+ * 1. Blocks if user is currently being impersonated (security)
+ * 2. Calls prepare_user_for_deletion() to clean up internal tables
+ * 3. Deletes the auth user via admin API (cascades to public tables)
+ * 4. Signs out the user
+ *
+ * The user will be redirected to the login page by the client after this action.
+ */
+export async function deleteUserAccount(): Promise<{ success: boolean }> {
+  // Block account deletion while impersonating
+  await enforceNotImpersonating('delete_account');
 
+  const { user } = await verifySession();
+  const supabase = await createSupabaseServerClient();
+
+  logger.info('Starting account deletion:', { userId: user.id });
+
+  try {
+    // Step 1: Call the database function to clean up internal tables
+    // This also logs the deletion in admin_audit_log before the user is deleted
+    const { error: cleanupError } = await supabase.rpc('prepare_user_for_deletion', {
+      target_user_id: user.id,
+    });
+
+    if (cleanupError) {
+      logger.error('Failed to prepare user for deletion:', cleanupError);
+      throw new Error('Failed to delete account. Please try again.');
+    }
+
+    // Step 2: Delete the auth user using service role (admin API)
+    // This will cascade delete all public schema data via FK constraints
+    const serviceClient = createSupabaseServiceClient();
+    const { error: deleteError } = await serviceClient.auth.admin.deleteUser(user.id);
+
+    if (deleteError) {
+      logger.error('Failed to delete auth user:', deleteError);
+      throw new Error('Failed to delete account. Please try again.');
+    }
+
+    logger.info('Account deleted successfully:', { userId: user.id });
+
+    // Step 3: Sign out the user (clear session cookies)
+    await supabase.auth.signOut();
+
+    return { success: true };
+  } catch (error) {
+    logger.error('Account deletion failed:', error);
+    throw error;
+  }
+}
