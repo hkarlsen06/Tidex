@@ -9,8 +9,8 @@ const config: CapacitorConfig = {
   backgroundColor: '#020817',
   server: {
     url: 'https://app.tidex.no',
-    cleartext: false,
-    errorPath: 'https://app.tidex.no/offline.html'
+    cleartext: false
+    // errorPath removed - native iOS offline screen handles network errors
   },
   ios: {
     // Set WebView background to match splash screen

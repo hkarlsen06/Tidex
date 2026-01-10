@@ -5,8 +5,7 @@
 	"backgroundColor": "#020817",
 	"server": {
 		"url": "http://172.20.10.5:3000",
-		"cleartext": true,
-		"errorPath": "/offline.html"
+		"cleartext": true
 	},
 	"ios": {
 		"backgroundColor": "#020817"

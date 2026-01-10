@@ -1,4 +1,5 @@
 import UIKit
+import SwiftUI
 import Capacitor
 
 /// Container view controller that hosts CAPBridgeViewController with a native UITabBar overlay.
@@ -8,15 +9,21 @@ import Capacitor
 /// - UITabBar is a sibling view positioned at the bottom
 /// - Tab bar height is injected into WebView as CSS custom property
 /// - Splash screen overlay shows LaunchScreen.storyboard content until JS signals ready
+/// - Offline screen overlay displays cached shifts when network is unavailable
 ///
 /// This approach avoids UITabBarController's safe area propagation issues when
 /// embedding CAPBridgeViewController as a child.
-class TidexContainerViewController: UIViewController, UITabBarDelegate {
+class TidexContainerViewController: UIViewController, UITabBarDelegate, NetworkMonitorDelegate {
 
     private var webViewController: LocaleAwareBridgeViewController!
     private var customTabBar: UITabBar!
     private var splashView: UIView?
     weak var nativeTabBarPlugin: NativeTabBarPlugin?
+
+    // MARK: - Offline Screen
+
+    private var offlineHostingController: UIHostingController<OfflineScreenView>?
+    private(set) var isShowingOfflineScreen: Bool = false
 
     // Shared reference for plugin to locate this controller
     static weak var shared: TidexContainerViewController?
@@ -64,6 +71,140 @@ class TidexContainerViewController: UIViewController, UITabBarDelegate {
         setupTabBar()
         setupSwipeBackGesture()
         setupSplashScreen()
+        setupNetworkMonitoring()
+    }
+
+    // MARK: - Network Monitoring
+
+    private func setupNetworkMonitoring() {
+        NetworkMonitor.shared.delegate = self
+        NetworkMonitor.shared.startMonitoring()
+    }
+
+    /// Called when network connectivity changes
+    func networkStatusDidChange(isConnected: Bool) {
+        if isConnected && isShowingOfflineScreen {
+            print("[TidexContainer] Network restored - hiding offline screen and reloading")
+            hideOfflineScreen()
+            reloadWebView()
+        }
+    }
+
+    // MARK: - Offline Screen Management
+
+    /// Minimum time splash must be shown during retry (prevents jarring flash)
+    private var splashMinimumDisplayTime: Date?
+
+    /// Show the native offline screen with cached shifts
+    func showOfflineScreen() {
+        // Always hide splash first - prevents it from showing through after retry fails
+        // This handles the case where the app launched offline (splash was never hidden by JS)
+        if splashView != nil {
+            hideSplash(duration: 0)
+        }
+
+        // If we're in a retry and splash minimum time hasn't elapsed, delay showing offline screen
+        if let minTime = splashMinimumDisplayTime {
+            let remaining = minTime.timeIntervalSinceNow
+            if remaining > 0 {
+                DispatchQueue.main.asyncAfter(deadline: .now() + remaining) { [weak self] in
+                    self?.splashMinimumDisplayTime = nil
+                    self?.showOfflineScreen()
+                }
+                return
+            }
+            splashMinimumDisplayTime = nil
+        }
+
+        guard !isShowingOfflineScreen else { return }
+
+        let locale: String
+        switch LocaleAwareBridgeViewController.detectDeviceLocale() {
+        case .norwegian:
+            locale = "no"
+        case .english:
+            locale = "en"
+        }
+
+        let offlineView = OfflineScreenView(
+            locale: locale,
+            onRetry: { [weak self] in
+                self?.handleOfflineRetry()
+            }
+        )
+
+        let hostingController = UIHostingController(rootView: offlineView)
+        hostingController.view.frame = view.bounds
+        hostingController.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        hostingController.view.alpha = 0
+
+        // Add on top of everything (including tab bar)
+        view.addSubview(hostingController.view)
+
+        // Animate in
+        UIView.animate(withDuration: 0.2) {
+            hostingController.view.alpha = 1
+        }
+
+        addChild(hostingController)
+        hostingController.didMove(toParent: self)
+
+        offlineHostingController = hostingController
+        isShowingOfflineScreen = true
+
+        print("[TidexContainer] Showing offline screen")
+    }
+
+    /// Hide the offline screen with animation
+    func hideOfflineScreen() {
+        guard isShowingOfflineScreen, let hostingController = offlineHostingController else { return }
+
+        UIView.animate(withDuration: 0.2, animations: {
+            hostingController.view.alpha = 0
+        }, completion: { _ in
+            hostingController.willMove(toParent: nil)
+            hostingController.view.removeFromSuperview()
+            hostingController.removeFromParent()
+            self.offlineHostingController = nil
+            self.isShowingOfflineScreen = false
+            print("[TidexContainer] Hid offline screen")
+        })
+    }
+
+    /// Handle manual retry from offline screen
+    private func handleOfflineRetry() {
+        // Hide offline screen and show splash during retry attempt
+        // This gives visual feedback that something is happening
+
+        // Remove offline screen immediately (no animation) so splash can show
+        if let hostingController = offlineHostingController {
+            hostingController.willMove(toParent: nil)
+            hostingController.view.removeFromSuperview()
+            hostingController.removeFromParent()
+            offlineHostingController = nil
+        }
+        isShowingOfflineScreen = false
+
+        // Set minimum splash display time (300ms) to prevent jarring flash on fast failure
+        splashMinimumDisplayTime = Date().addingTimeInterval(0.3)
+
+        showSplash()
+        reloadWebView()
+    }
+
+    /// Reload the WebView by loading the server URL
+    /// Note: webView.reload() doesn't work if the initial load failed (nothing to reload)
+    /// so we load the server URL directly from the Capacitor bridge config
+    private func reloadWebView() {
+        guard let bridge = webViewController.bridge,
+              let webView = webViewController.webView else {
+            print("[TidexContainer] Cannot reload - bridge or webView not available")
+            return
+        }
+
+        let serverURL = bridge.config.serverURL
+        print("[TidexContainer] Reloading WebView with URL: \(serverURL)")
+        webView.load(URLRequest(url: serverURL))
     }
 
     private func setupWebView() {

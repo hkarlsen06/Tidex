@@ -4,14 +4,10 @@
   "private": true,
   "packageManager": "pnpm@10.27.0",
   "scripts": {
-    "dev": "next dev --experimental-https",
-    "dev:mjs": "node server.mjs",
-    "local": "next dev --hostname 0.0.0.0",
-    "dev:turbo": "next dev --turbo",
+    "dev": "next dev --hostname 0.0.0.0",
+    "dev:https": "next dev --experimental-https",
     "build": "next build",
-    "build:analyze": "ANALYZE=true next build --webpack",
-    "start": "NODE_ENV=production node server.mjs",
-    "start:http": "next start",
+    "start": "NODE_ENV=production next start --hostname 0.0.0.0",
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -23,10 +19,10 @@
     "dev-site:dev": "pnpm --filter dev-site dev",
     "dev-site:build": "pnpm --filter dev-site build",
     "dev-site:start": "pnpm --filter dev-site start",
-    "local-ios": "node scripts/update-local-ip.mjs && pnpm sync-ios && cp ios/App/App/capacitor.config.local.json ios/App/App/capacitor.config.json && pnpm exec cap open ios & pnpm local",
+    "local-ios": "node scripts/update-local-ip.mjs && pnpm sync-ios && cp ios/App/App/capacitor.config.local.json ios/App/App/capacitor.config.json && pnpm exec cap open ios & pnpm dev",
     "local-sync": "node scripts/update-local-ip.mjs && pnpm sync-ios && cp ios/App/App/capacitor.config.local.json ios/App/App/capacitor.config.json",
     "sync-ios": "cp public/offline.html dist/offline.html && pnpm exec cap sync ios",
-    "open-ios": "pnpm sync-ios && pnpm exec cap open ios"
+    "open-ios": "cap open ios"
   },
   "dependencies": {
     "@capacitor-firebase/messaging": "^8.0.1",
