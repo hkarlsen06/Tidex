@@ -8,6 +8,8 @@ import { motion, useInView } from "motion/react";
 
 import ShiftCard from "@/components/app/ShiftCard";
 import ShiftMoveCard from "./ShiftMoveCard";
+import { SwipeableShiftCard } from "./SwipeableShiftCard";
+import { SwipeDeleteConfirmDialog } from "./SwipeDeleteConfirmDialog";
 import {
   Card,
   CardHeader,
@@ -302,6 +304,8 @@ function ShiftItemWithConnector({
   onVisibilityChange,
   onSelectionHaptic,
   nextShiftInView,
+  onSwipeDelete,
+  readOnly,
 }: {
   shift: ShiftWithComputations;
   shiftIndex: number;
@@ -319,10 +323,12 @@ function ShiftItemWithConnector({
   showEarnings: boolean;
   clearSelection: () => void;
   setSelectedShift: (shift: ShiftWithComputations) => void;
-  setDetailsOpen: (open: boolean) => void;
+  setDetailsOpen: (open: boolean, editMode?: boolean) => void;
   onVisibilityChange: (shiftId: string, inView: boolean) => void;
   onSelectionHaptic: () => void;
   nextShiftInView: boolean;
+  onSwipeDelete?: (shift: ShiftWithComputations) => void;
+  readOnly: boolean;
 }) {
   const cardRef = useRef<HTMLDivElement>(null);
   const viewportMargin = "-120px 0px -100px 0px";
@@ -345,6 +351,26 @@ function ShiftItemWithConnector({
     wasInViewRef.current = inView;
   }, [shift.id, inView, onVisibilityChange, onSelectionHaptic]);
 
+  const handleOpenDetails = useCallback(() => {
+    clearSelection();
+    setSelectedShift(shift);
+    setDetailsOpen(true, false); // Open without edit mode
+  }, [clearSelection, setSelectedShift, setDetailsOpen, shift]);
+
+  const handleSwipeEdit = useCallback(() => {
+    clearSelection();
+    setSelectedShift(shift);
+    setDetailsOpen(true, true); // Open in edit mode
+  }, [clearSelection, setSelectedShift, setDetailsOpen, shift]);
+
+  // Note: handleSwipeEdit won't trigger on readOnly since we use handleOpenDetails instead
+
+  const handleSwipeDelete = useCallback(() => {
+    if (onSwipeDelete) {
+      onSwipeDelete(shift);
+    }
+  }, [onSwipeDelete, shift]);
+
   return (
     <Fragment>
       <div className="relative" ref={cardRef}>
@@ -352,29 +378,31 @@ function ShiftItemWithConnector({
           ref={isCurrentMonth && isToday ? todayRef : undefined}
           index={shiftIndex}
         >
-          <div className="flex flex-col gap-2">
-            <ShiftCard
-              shift={shift}
-              isToday={isCurrentMonth && isToday}
-              onClick={() => {
-                clearSelection();
-                setSelectedShift(shift);
-                setDetailsOpen(true);
-              }}
-              progress={isNextUpcomingShift && countdown.isActive ? countdown.progress : undefined}
-              taxSettings={{
-                enabled: shift.tax_enabled ?? false,
-                percentage: shift.tax_percentage ?? 0,
-                halfTaxMonth: userSettings.half_tax_month ?? null,
-              }}
-              showEarnings={showEarnings}
-              hasConflict={conflictingShiftIds.has(shift.id)}
-              excludedFromTotal={excludedFromTotalIds.has(shift.id)}
-            />
-            {isNextUpcomingShift && countdown.text && (
-              <p className="text-xs text-text-muted text-center">{countdown.text}</p>
-            )}
-          </div>
+          <SwipeableShiftCard
+            shift={shift}
+            onEdit={readOnly ? handleOpenDetails : handleSwipeEdit}
+            onDelete={readOnly ? undefined : handleSwipeDelete}
+          >
+            <div className="flex flex-col gap-2">
+              <ShiftCard
+                shift={shift}
+                isToday={isCurrentMonth && isToday}
+                onClick={handleOpenDetails}
+                progress={isNextUpcomingShift && countdown.isActive ? countdown.progress : undefined}
+                taxSettings={{
+                  enabled: shift.tax_enabled ?? false,
+                  percentage: shift.tax_percentage ?? 0,
+                  halfTaxMonth: userSettings.half_tax_month ?? null,
+                }}
+                showEarnings={showEarnings}
+                hasConflict={conflictingShiftIds.has(shift.id)}
+                excludedFromTotal={excludedFromTotalIds.has(shift.id)}
+              />
+              {isNextUpcomingShift && countdown.text && (
+                <p className="text-xs text-text-muted text-center">{countdown.text}</p>
+              )}
+            </div>
+          </SwipeableShiftCard>
         </ScrollAnimatedCard>
         {/* Connector line between consecutive conflicting shifts */}
         {hasConnector && (
@@ -407,6 +435,8 @@ function ShiftGroupContent({
   clearSelection,
   setSelectedShift,
   setDetailsOpen,
+  onSwipeDelete,
+  readOnly,
 }: {
   shifts: ShiftWithComputations[];
   conflictConnectorSet: Set<string>;
@@ -422,7 +452,9 @@ function ShiftGroupContent({
   showEarnings: boolean;
   clearSelection: () => void;
   setSelectedShift: (shift: ShiftWithComputations) => void;
-  setDetailsOpen: (open: boolean) => void;
+  setDetailsOpen: (open: boolean, editMode?: boolean) => void;
+  onSwipeDelete?: (shift: ShiftWithComputations) => void;
+  readOnly: boolean;
 }) {
   // Track visibility state for each shift - lifted to parent so siblings can access
   const [visibilityMap, setVisibilityMap] = useState<Map<string, boolean>>(() => new Map());
@@ -500,6 +532,8 @@ function ShiftGroupContent({
             onVisibilityChange={handleVisibilityChange}
             onSelectionHaptic={handleSelectionHaptic}
             nextShiftInView={nextShiftInView}
+            onSwipeDelete={onSwipeDelete}
+            readOnly={readOnly}
           />
         );
       })}
@@ -1121,8 +1155,15 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
   // otherwise fall back to global MonthProvider
   const globalMonthContext = useMonth();
   const { selectedMonth, setSelectedMonth } = monthContext ?? globalMonthContext;
-  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [detailsOpen, setDetailsOpenState] = useState(false);
+  const [detailsInitialEditMode, setDetailsInitialEditMode] = useState(false);
   const [selectedShift, setSelectedShift] = useState<ShiftWithComputations | null>(null);
+
+  // Wrapper to handle both open state and edit mode
+  const setDetailsOpen = useCallback((open: boolean, editMode?: boolean) => {
+    setDetailsOpenState(open);
+    setDetailsInitialEditMode(editMode ?? false);
+  }, []);
   const [selectedDate, setSelectedDate] = useState<ISODate | null>(null);
   const [calendarSelectedShiftId, setCalendarSelectedShiftId] = useState<string | null>(null);
   const [moveModalOpen, setMoveModalOpen] = useState(false);
@@ -1152,6 +1193,9 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
   const [optimisticShifts, setOptimisticShifts] = useState<ShiftWithComputations[]>([]);
   const [createError, setCreateError] = useState<string | null>(null);
   const [operationError, setOperationError] = useState<string | null>(null); // For move/copy/delete/edit failures
+  // Swipe delete dialog state
+  const [swipeDeleteShift, setSwipeDeleteShift] = useState<ShiftWithComputations | null>(null);
+  const [swipeDeleteDialogOpen, setSwipeDeleteDialogOpen] = useState(false);
   const calendarSelectionSessionRef = useRef<{
     active: boolean;
     endTimeoutId: ReturnType<typeof setTimeout> | null;
@@ -2345,6 +2389,69 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
     });
   }, [selectedDate, shiftsByDate, isOffline, router, clearSelection, errorComplete, syncWidgetStorage]);
 
+  // Handle swipe delete - opens confirmation dialog
+  const handleSwipeOpenDelete = useCallback((shift: ShiftWithComputations) => {
+    setSwipeDeleteShift(shift);
+    setSwipeDeleteDialogOpen(true);
+  }, []);
+
+  // Handle confirmed swipe delete
+  const handleConfirmSwipeDelete = useCallback(() => {
+    if (!swipeDeleteShift) return;
+
+    const shift = swipeDeleteShift;
+    const shiftId = shift.id;
+
+    // Close dialog first
+    setSwipeDeleteDialogOpen(false);
+    setSwipeDeleteShift(null);
+
+    // Optimistically remove the shift from UI
+    setDeletedShiftIds(prev => new Set(prev).add(shiftId));
+
+    startTransition(async () => {
+      try {
+        await deleteShift(shiftId);
+        router.refresh();
+        syncWidgetStorage();
+      } catch (error) {
+        // If offline and queue is supported, queue the mutation
+        if (!navigator.onLine && isOfflineQueueSupported()) {
+          try {
+            await queueMutation({
+              type: 'DELETE',
+              endpoint: `/api/shifts/${shiftId}${
+                shift.recurring_id
+                  ? `?recurringId=${shift.recurring_id}&shiftDate=${shift.shift_date}`
+                  : ''
+              }`,
+              method: 'DELETE',
+            });
+            // Keep optimistic update - shift stays hidden
+          } catch (queueError) {
+            // Revert optimistic update if queue fails
+            setDeletedShiftIds(prev => {
+              const next = new Set(prev);
+              next.delete(shiftId);
+              return next;
+            });
+            const errorMessage = queueError instanceof Error ? queueError.message : errorComplete;
+            setOperationError(errorMessage);
+          }
+        } else {
+          // Revert optimistic update on online error
+          setDeletedShiftIds(prev => {
+            const next = new Set(prev);
+            next.delete(shiftId);
+            return next;
+          });
+          const errorMessage = error instanceof Error ? error.message : errorComplete;
+          setOperationError(errorMessage);
+        }
+      }
+    });
+  }, [swipeDeleteShift, router, errorComplete, syncWidgetStorage]);
+
   const selectedDateShifts = useMemo(
     () => (selectedDate ? shiftsByDate.get(selectedDate) ?? [] : []),
     [selectedDate, shiftsByDate]
@@ -2838,6 +2945,8 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
                       clearSelection={clearSelection}
                       setSelectedShift={setSelectedShift}
                       setDetailsOpen={setDetailsOpen}
+                      onSwipeDelete={readOnly ? undefined : handleSwipeOpenDelete}
+                      readOnly={readOnly}
                     />
                     {isTodayAfterLastShift && (
                       <div ref={todayRef}>
@@ -2872,6 +2981,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
     <ShiftDetails
       isOpen={detailsOpen}
       shift={selectedShift}
+      initialEditMode={detailsInitialEditMode}
       onClose={() => {
         setDetailsOpen(false);
         setSelectedShift(null);
@@ -3030,6 +3140,13 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
       showEarnings={showEarnings}
       overlappingShifts={overlappingShiftsForDetails}
       cacheKey={cacheKey}
+    />
+    <SwipeDeleteConfirmDialog
+      open={swipeDeleteDialogOpen}
+      onOpenChange={setSwipeDeleteDialogOpen}
+      shift={swipeDeleteShift}
+      onConfirm={handleConfirmSwipeDelete}
+      isDeleting={pending}
     />
     </ScrollablePageWrapper>
   );

@@ -326,6 +326,15 @@ export const no = {
         deleteConfirmButton: 'Slett',
         deleteCancelButton: 'Avbryt',
       },
+      swipeActions: {
+        viewDetails: 'Vis',
+        edit: 'Rediger',
+        delete: 'Slett',
+        deleteConfirmTitle: 'Slett vakt?',
+        deleteConfirmDescription: 'Dette vil permanent slette vakten den {date}.',
+        confirmButton: 'Slett',
+        cancelButton: 'Avbryt',
+      },
     },
     stats: {
       title: 'Statistikk',
