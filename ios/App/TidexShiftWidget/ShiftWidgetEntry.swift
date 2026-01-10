@@ -45,6 +45,9 @@ struct ShiftWidgetEntry: TimelineEntry {
     /// Whether the shift has already started (used to swap time emphasis)
     let shiftHasStarted: Bool
 
+    /// Deep link URL to open the shift in the app (e.g., "tidex://shifts?dates=2025-01-15")
+    let deepLinkURL: URL?
+
     /// Placeholder entry for widget gallery and loading states
     static func placeholder(locale: String = "no") -> ShiftWidgetEntry {
         ShiftWidgetEntry(
@@ -58,7 +61,8 @@ struct ShiftWidgetEntry: TimelineEntry {
             hasShift: true,
             daysRemaining: 0,
             layoutState: .todayOrTomorrow,
-            shiftHasStarted: false
+            shiftHasStarted: false,
+            deepLinkURL: nil
         )
     }
 
@@ -76,7 +80,8 @@ struct ShiftWidgetEntry: TimelineEntry {
             hasShift: false,
             daysRemaining: 0,
             layoutState: .empty,
-            shiftHasStarted: false
+            shiftHasStarted: false,
+            deepLinkURL: nil
         )
     }
 }

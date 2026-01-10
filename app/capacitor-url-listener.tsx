@@ -1,10 +1,21 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { Capacitor } from "@capacitor/core";
 
 // Module-level flag to prevent double-registration across HMR and re-renders
 let listenerRegistered = false;
+
+/**
+ * Get locale from current URL path (e.g., /no/shifts -> "no")
+ * Falls back to "no" if not found
+ */
+function getLocaleFromPath(): string {
+  const path = window.location.pathname;
+  const match = path.match(/^\/([a-z]{2})\//);
+  return match?.[1] ?? "no";
+}
 
 /**
  * Global Capacitor URL listener for handling deep links.
@@ -12,11 +23,17 @@ let listenerRegistered = false;
  * This component MUST be mounted at the root layout level so it's present
  * on ALL routes, including unauthenticated pages like /login and /signup.
  *
- * When OAuth completes on iOS, the provider redirects to tidex://auth/callback.
- * This listener:
- * 1. Receives the deep link via Capacitor's appUrlOpen event
- * 2. Closes the in-app browser overlay
- * 3. Forwards query params to the HTTPS callback URL
+ * Handles two types of deep links:
+ *
+ * 1. OAuth callback: tidex://auth/callback
+ *    - Receives the deep link via Capacitor's appUrlOpen event
+ *    - Closes the in-app browser overlay
+ *    - Forwards query params to the HTTPS callback URL
+ *
+ * 2. Widget/notification deep links: tidex://shifts?dates=2025-01-15
+ *    - Opens the shifts page with the specified dates highlighted
+ *    - Navigates to the month containing the highlighted date
+ *    - Uses same highlighting pattern as push notifications
  *
  * ChunkLoadError resilience:
  * - If dynamic imports fail due to stale chunks after a deploy, retries once after 1s
@@ -24,6 +41,7 @@ let listenerRegistered = false;
  */
 export function CapacitorUrlListener() {
   const hasRetried = useRef(false);
+  const router = useRouter();
 
   useEffect(() => {
     // Only run on native platforms (iOS/Android)
@@ -67,6 +85,22 @@ export function CapacitorUrlListener() {
             setTimeout(() => {
               window.location.href = httpsCallbackUrl.toString();
             }, 100);
+            return;
+          }
+
+          // Handle widget/notification deep links: tidex://shifts?dates=2025-01-15
+          if (url.startsWith("tidex://shifts")) {
+            const customUrl = new URL(url);
+            const dates = customUrl.searchParams.get("dates");
+            const locale = getLocaleFromPath();
+
+            // Navigate to shifts page with dates parameter for highlighting
+            const shiftsPath = dates
+              ? `/${locale}/shifts?dates=${dates}`
+              : `/${locale}/shifts`;
+
+            router.push(shiftsPath);
+            return;
           }
         });
 

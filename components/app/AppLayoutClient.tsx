@@ -32,7 +32,7 @@ export function AppLayoutClient({
   // Settings routes are prefetched on hover via Link components
   useEffect(() => {
     try {
-      router.prefetch("/");
+      router.prefetch("/dashboard");
       router.prefetch("/shifts");
     } catch {
       // Ignore if prefetch isn't available in this environment

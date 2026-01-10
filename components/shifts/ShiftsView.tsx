@@ -2706,7 +2706,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
           ? "h-[calc(100dvh-3.5rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))]"
           : "h-[calc(100dvh-3.5rem-5rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))]"
       )}>
-        <div className="w-full max-w-md md:max-w-lg lg:max-w-none lg:w-120">
+        <div className="w-full max-w-md md:max-w-lg lg:max-w-none lg:w-120 mx-auto lg:mx-0">
           {/* Custom header slot (e.g., sharing dropdown) - constrained to calendar width */}
           {headerSlot && (
             <div className="pb-3">
@@ -2757,8 +2757,9 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
       </div>
 
       {/* Shifts List Section - Right half of screen on desktop, below calendar on mobile */}
-      <div className="px-4 lg:flex lg:w-1/2 lg:justify-center lg:px-0">
-        <div ref={shiftsListRef} className="pb-10 w-full max-w-md md:max-w-lg lg:max-w-lg lg:overflow-y-auto lg:max-h-[calc(100vh-8rem)] lg:px-4">
+      <div className="px-4 lg:flex lg:w-1/2 lg:justify-center lg:px-6">
+        {/* Extra px-0.5 provides space for card selection ring/outline to render without clipping */}
+        <div ref={shiftsListRef} className="pb-10 w-full max-w-md md:max-w-lg lg:max-w-lg mx-auto lg:overflow-y-auto lg:max-h-[calc(100vh-8rem)] px-0.5">
         {grouped.length === 0 ? (
           <Card className="text-center">
             <CardHeader>

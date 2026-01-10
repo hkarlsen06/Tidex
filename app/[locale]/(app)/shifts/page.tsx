@@ -16,6 +16,9 @@ import { I18nProvider } from "@/components/providers/I18nProvider";
 
 interface ShiftsPageProps {
   params: Promise<{ locale: string }>;
+  searchParams: Promise<{
+    dates?: string; // Deep link: comma-separated dates to highlight (from widget or push notification)
+  }>;
 }
 
 export async function generateMetadata({ params }: ShiftsPageProps) {
@@ -27,10 +30,14 @@ export async function generateMetadata({ params }: ShiftsPageProps) {
   };
 }
 
-export default async function ShiftsPage({ params }: ShiftsPageProps) {
+export default async function ShiftsPage({ params, searchParams }: ShiftsPageProps) {
   await connection(); // Opt out of prerendering for dynamic authenticated pages
   const { locale: _locale } = await params;
+  const { dates } = await searchParams;
   const dictionary = getAppDictionary(_locale as Locale, ['pages.shifts']);
+
+  // Parse comma-separated dates into a Set for efficient lookup (from widget or push notification)
+  const highlightDates = dates ? new Set(dates.split(",")) : null;
 
   // Verify authentication and get user
   const { user } = await verifySession();
@@ -51,7 +58,7 @@ export default async function ShiftsPage({ params }: ShiftsPageProps) {
 
   return (
     <I18nProvider locale={_locale as Locale} dictionary={dictionary} namespaces={['pages.shifts']}>
-      <ShiftsView shifts={shifts} defaultView={defaultView} userSettings={settings} presetRules={PRESET_RULES} payoutTaxSettings={payoutTaxSettings} cacheKey={user.id.slice(0, 8)} />
+      <ShiftsView shifts={shifts} defaultView={defaultView} userSettings={settings} presetRules={PRESET_RULES} payoutTaxSettings={payoutTaxSettings} cacheKey={user.id.slice(0, 8)} highlightDates={highlightDates} />
     </I18nProvider>
   );
 }
