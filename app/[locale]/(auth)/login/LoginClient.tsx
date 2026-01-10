@@ -171,14 +171,11 @@ export default function LoginClient({
     return null;
   };
 
-  // Check if user has accepted terms, needs MFA, and redirect accordingly
-  const checkTermsMfaAndRedirect = async (destination: string) => {
+  // Check if user needs MFA and redirect accordingly
+  // Note: Terms and onboarding are handled by the app layout - we just redirect to dashboard
+  const checkMfaAndRedirect = async (destination: string) => {
     // Apply user's locale preference before redirecting
     const userLocale = await applyUserLocalePreference();
-
-    // Get user data to check terms acceptance
-    const { data: { user } } = await supabase.auth.getUser();
-    const termsAcceptedAt = user?.user_metadata?.terms_accepted_at;
 
     // Determine which locale to use in the redirect URL
     const targetLocale = userLocale || locale;
@@ -199,19 +196,6 @@ export default function LoginClient({
       finalDestination = `/${targetLocale}${destination}`;
     }
 
-    // Check if user has accepted terms of service
-    if (!termsAcceptedAt) {
-      // User hasn't accepted terms - redirect to accept-terms page
-      // Default to onboarding for new OAuth users
-      let nextPath = destination;
-      if (nextPath === '/' || nextPath === '/dashboard') {
-        nextPath = '/onboarding';
-      }
-      const acceptTermsUrl = `/${targetLocale}/accept-terms?next=${encodeURIComponent(nextPath)}`;
-      window.location.href = acceptTermsUrl;
-      return;
-    }
-
     const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
 
     if (aalData && aalData.currentLevel === 'aal1' && aalData.nextLevel === 'aal2') {
@@ -219,13 +203,11 @@ export default function LoginClient({
       const mfaUrl = `/${targetLocale}/mfa-verify?next=${encodeURIComponent(finalDestination)}`;
       window.location.href = mfaUrl;
     } else {
-      // No MFA required or already verified
+      // No MFA required or already verified - redirect to destination
+      // The app layout will handle terms/onboarding redirects
       window.location.href = finalDestination;
     }
   };
-
-  // Alias for backward compatibility with email/phone login (no terms check needed for existing users)
-  const checkMfaAndRedirect = checkTermsMfaAndRedirect;
 
   const performGoogleSignIn = async () => {
     setOauthProvider('google');

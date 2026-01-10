@@ -123,6 +123,43 @@ export default async function RootLayout({
     }
   }
 
+  // Terms and onboarding enforcement - skip if impersonating (admin viewing user's account)
+  // IMPORTANT: We use getUser() here instead of getClaims() because:
+  // - getClaims() parses the JWT locally (stale data if metadata changed after token was issued)
+  // - getUser() fetches fresh user data from Supabase (ensures we see recent metadata changes)
+  // This is critical for terms acceptance because we may have just cleared terms_accepted_at in the DB
+  if (!impersonationContext) {
+    const { data: userData } = await supabase.auth.getUser();
+    const freshMetadata = userData?.user?.user_metadata ?? {};
+    const termsAcceptedAt = freshMetadata.terms_accepted_at;
+    const onboardingCompleted = freshMetadata.onboarding_completed;
+
+    // Priority 1: Terms must be accepted first
+    if (!termsAcceptedAt) {
+      // Redirect to accept-terms, after which they'll go to onboarding or dashboard
+      const nextPath = onboardingCompleted ? "/" : "/onboarding";
+      const acceptTermsUrl = `/${locale}/accept-terms?next=${encodeURIComponent(nextPath)}`;
+      redirect(acceptTermsUrl);
+    }
+
+    // Priority 2: Onboarding must be completed (terms already accepted at this point)
+    if (!onboardingCompleted) {
+      // Get current path to check if we're already on onboarding
+      const headersList = await headers();
+      const currentPath = headersList.get("x-current-path") || "";
+      const isOnboardingPath = currentPath.includes("/onboarding");
+
+      // Only redirect if not already on onboarding page
+      if (!isOnboardingPath) {
+        redirect(`/${locale}/onboarding`);
+      }
+    }
+  }
+
+  // Extract user metadata from JWT claims for display purposes (name, avatar, etc.)
+  // These don't need to be fresh - using stale data for display is fine
+  const userMetadata = claims.user_metadata ?? {};
+
   // MFA enforcement - redirect to MFA verify if user has enrolled but not verified
   // Skip MFA check if impersonating - the admin has already authenticated with MFA
   // Note: MFA AAL info is available in claims.aal
@@ -138,10 +175,6 @@ export default async function RootLayout({
     const mfaUrl = `/${locale}/mfa-verify?next=${encodeURIComponent(currentPath)}`;
     redirect(mfaUrl);
   }
-
-  // Extract user metadata from JWT claims (available in user_metadata)
-  // Use || instead of ?? to also fall through on empty strings (e.g., when user clears their name)
-  const userMetadata = claims.user_metadata ?? {};
   const rawUserName =
     (userMetadata.full_name as string | undefined) ||
     (userMetadata.name as string | undefined) ||

@@ -25,7 +25,7 @@ export default async function AuthLayout({
 
   const { locale } = await params;
 
-  // Redirect authenticated users to dashboard (unless they need MFA verification)
+  // Redirect authenticated users to dashboard (unless they need MFA verification or terms acceptance)
   const session = await getSession();
   if (session) {
     // Check if user needs MFA verification
@@ -33,15 +33,22 @@ export default async function AuthLayout({
     const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
 
     // If user has MFA enrolled (nextLevel is aal2) but hasn't verified (currentLevel is aal1),
-    // they need to complete MFA - redirect them to the MFA verify page
+    // they need to complete MFA - let them stay on auth pages (for mfa-verify)
     const needsMfaVerification = aalData?.currentLevel === "aal1" && aalData?.nextLevel === "aal2";
 
-    if (!needsMfaVerification) {
-      // User is fully authenticated (no MFA or MFA already verified) - redirect to dashboard
+    // Check if user has accepted terms of service
+    const termsAcceptedAt = session.user?.user_metadata?.terms_accepted_at;
+    const needsTermsAcceptance = !termsAcceptedAt;
+
+    // Check if user has completed onboarding
+    const onboardingCompleted = session.user?.user_metadata?.onboarding_completed;
+    const needsOnboarding = !onboardingCompleted;
+
+    if (!needsMfaVerification && !needsTermsAcceptance && !needsOnboarding) {
+      // User is fully authenticated, has accepted terms, and completed onboarding
       redirect(`/${locale}`);
     }
-    // User needs MFA verification - let them through to auth pages (mfa-verify page will handle it)
-    // Note: If they're on /login, the LoginClient will redirect them to /mfa-verify
+    // User needs MFA verification, terms acceptance, or onboarding - let them through to auth pages
   }
 
   const dictionary = getDictionary(locale as Locale);
