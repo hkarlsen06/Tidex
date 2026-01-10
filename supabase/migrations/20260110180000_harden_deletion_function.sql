@@ -1,11 +1,8 @@
--- Function: prepare_user_for_deletion
--- Description: Prepares a user account for deletion by cleaning up internal tables.
---              Call this function before calling auth.admin.deleteUser().
+-- Migration: Harden prepare_user_for_deletion function
+-- Description: Add auth.uid() check to ensure users can only delete their own account
 --
--- Usage: SELECT public.prepare_user_for_deletion('user-uuid-here');
---
--- Security: SECURITY DEFINER to access internal schema tables.
---           Validates auth.uid() = target_user_id to prevent users from deleting others.
+-- Security improvement: The function now validates that the calling user
+-- is attempting to delete their own account, not someone else's.
 
 CREATE OR REPLACE FUNCTION public.prepare_user_for_deletion(target_user_id uuid)
 RETURNS void
@@ -66,9 +63,7 @@ BEGIN
 END;
 $$;
 
--- Grant execute permission to authenticated users (they can only delete themselves)
-GRANT EXECUTE ON FUNCTION public.prepare_user_for_deletion(uuid) TO authenticated;
-
+-- Update comment to reflect the security check
 COMMENT ON FUNCTION public.prepare_user_for_deletion(uuid) IS
 'Prepares a user account for deletion by cleaning up internal tables.
 Call this function before calling auth.admin.deleteUser().

@@ -66,7 +66,7 @@ export async function GET(
 
   const supabase = createSupabaseRouteHandlerClient(request, response);
 
-  // Get user ID before clearing cookies (for cache invalidation)
+  // Get user ID before signing out (for cache invalidation)
   let userId: string | undefined;
   try {
     const { data } = await supabase.auth.getClaims();
@@ -75,7 +75,14 @@ export async function GET(
     // Ignore - user may already be logged out
   }
 
-  // Always force-clear all auth cookies
+  // Sign out from Supabase (invalidates refresh token on server)
+  try {
+    await supabase.auth.signOut();
+  } catch {
+    // Ignore - user may already be logged out
+  }
+
+  // Always force-clear all auth cookies (belt and suspenders)
   clearSupabaseAuthCookies(request, response);
 
   // Clear cached user data

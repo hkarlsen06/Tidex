@@ -1,8 +1,7 @@
 'use client';
 
-import { useState, use } from 'react';
+import { useState, useEffect, use } from 'react';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
 import { motion } from 'motion/react';
 import { supabase } from '@/lib/supabase/browser';
 import { useTranslations } from '@/lib/i18n/client';
@@ -45,13 +44,35 @@ export default function AcceptTermsPage({
 }) {
   const { locale } = use(params);
   const resolvedSearchParams = use(searchParams);
-  const nextPath = pickFirst(resolvedSearchParams?.next) || '/onboarding';
+  const nextPathFromUrl = pickFirst(resolvedSearchParams?.next);
 
   const { t } = useTranslations();
-  const router = useRouter();
   const [legalModalOpen, setLegalModalOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [nextPath, setNextPath] = useState(nextPathFromUrl || '/onboarding');
+
+  // Determine the correct next path based on user's onboarding status
+  useEffect(() => {
+    async function determineNextPath() {
+      // If URL already specifies a path (not default), use it
+      if (nextPathFromUrl && nextPathFromUrl !== '/onboarding') {
+        return;
+      }
+
+      // Check user's onboarding status to determine correct default
+      const { data: { user } } = await supabase.auth.getUser();
+      const onboardingCompleted = user?.user_metadata?.onboarding_completed;
+
+      if (onboardingCompleted) {
+        // Existing user who has completed onboarding - go to dashboard
+        setNextPath('/');
+      }
+      // Otherwise keep the default /onboarding for new users
+    }
+
+    determineNextPath();
+  }, [nextPathFromUrl]);
 
   const handleAccept = async () => {
     setIsProcessing(true);
@@ -72,8 +93,13 @@ export default function AcceptTermsPage({
         return;
       }
 
+      // Refresh session to get new JWT with updated terms_accepted_at claim
+      // This is necessary because the app layout checks JWT claims, not user metadata
+      await supabase.auth.refreshSession();
+
       // Redirect to the next destination (usually onboarding)
-      router.push(`/${locale}${nextPath.startsWith('/') ? nextPath : `/${nextPath}`}`);
+      // Use window.location.href to force full page reload with fresh JWT
+      window.location.href = `/${locale}${nextPath.startsWith('/') ? nextPath : `/${nextPath}`}`;
     } catch (err) {
       console.error('Error accepting terms:', err);
       setError(t.pages.auth.acceptTerms.errors.genericError);
@@ -84,11 +110,8 @@ export default function AcceptTermsPage({
   const handleDecline = async () => {
     setIsProcessing(true);
 
-    // Sign out the user since they declined terms
-    await supabase.auth.signOut();
-
-    // Redirect to login page
-    router.push(`/${locale}/login`);
+    // Redirect to logout route which properly clears cookies, hides native tab bar, etc.
+    window.location.href = `/${locale}/logout`;
   };
 
   return (
