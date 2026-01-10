@@ -136,7 +136,7 @@ export function CapacitorUrlListener() {
       if (retryTimeout) clearTimeout(retryTimeout);
       cleanup?.();
     };
-  }, []);
+  }, [router]);
 
   return null;
 }

@@ -2281,7 +2281,7 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
         setDetailsOpen(true);
       }
     }
-  }, [selectedDate, shiftsByDate, calendarSelectedShiftId]);
+  }, [selectedDate, shiftsByDate, calendarSelectedShiftId, setDetailsOpen]);
 
   const handleInitiateMoveMode = useCallback(() => {
     if (!selectedDate || isOffline) return;
