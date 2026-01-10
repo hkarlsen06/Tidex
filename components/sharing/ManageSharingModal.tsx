@@ -423,7 +423,6 @@ export function ManageSharingModal({
     <Dialog open={isOpen} onOpenChange={(open) => !open && onCloseAction()}>
       <DialogContent
         className="max-w-[calc(100vw-2rem)] sm:max-w-md sm:rounded-3xl overflow-x-hidden"
-        onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
