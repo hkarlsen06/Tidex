@@ -41,7 +41,7 @@ export default async function AuthLayout({
     const needsTermsAcceptance = !termsAcceptedAt;
 
     // Check if user has completed onboarding
-    const onboardingCompleted = session.user?.user_metadata?.onboarding_completed;
+    const onboardingCompleted = session.user?.user_metadata?.finishedOnboarding;
     const needsOnboarding = !onboardingCompleted;
 
     if (!needsMfaVerification && !needsTermsAcceptance && !needsOnboarding) {

@@ -62,7 +62,7 @@ export default function AcceptTermsPage({
 
       // Check user's onboarding status to determine correct default
       const { data: { user } } = await supabase.auth.getUser();
-      const onboardingCompleted = user?.user_metadata?.onboarding_completed;
+      const onboardingCompleted = user?.user_metadata?.finishedOnboarding;
 
       if (onboardingCompleted) {
         // Existing user who has completed onboarding - go to dashboard
