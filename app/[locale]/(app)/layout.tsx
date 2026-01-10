@@ -132,7 +132,7 @@ export default async function RootLayout({
     const { data: userData } = await supabase.auth.getUser();
     const freshMetadata = userData?.user?.user_metadata ?? {};
     const termsAcceptedAt = freshMetadata.terms_accepted_at;
-    const onboardingCompleted = freshMetadata.onboarding_completed;
+    const onboardingCompleted = freshMetadata.finishedOnboarding;
 
     // Priority 1: Terms must be accepted first
     if (!termsAcceptedAt) {
