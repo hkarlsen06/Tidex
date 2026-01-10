@@ -82,7 +82,7 @@ export default async function AuthLayout({
         style={{ backgroundColor: 'hsl(222.2 84% 4.9%)' }}
       >
         <div className="app-container">
-          <main className="flex min-h-screen flex-col items-center justify-center px-4 py-8">{children}</main>
+          <main className="flex min-h-screen flex-col items-center justify-center px-4 py-8 pt-[calc(env(safe-area-inset-top)+2rem)]">{children}</main>
         </div>
       </div>
     </I18nProvider>
