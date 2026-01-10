@@ -138,6 +138,8 @@ export type ShiftDetailsProps = {
   overlappingShifts?: OverlappingShiftInfo[];
   /** User-specific cache key for browser HTTP cache isolation */
   cacheKey?: string;
+  /** Open the modal directly in edit mode */
+  initialEditMode?: boolean;
 };
 
 function capitalize(input: string) {
@@ -174,6 +176,7 @@ export function ShiftDetails({
   onSupplementSaveError,
   overlappingShifts = [],
   cacheKey,
+  initialEditMode = false,
 }: ShiftDetailsProps) {
   const { t, locale } = useTranslations();
   const formatCurrency = useFormatCurrency();
@@ -216,13 +219,13 @@ export function ShiftDetails({
   // Note: These setState calls are intentional to reset UI state when the shift prop changes
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setIsEditing(false);
+    setIsEditing(initialEditMode && !readOnly);
     setStartTime(shift?.start_time ?? "");
     setEndTime(shift?.end_time ?? "");
     setShiftDate(shift?.shift_date ?? "");
     setSaveError(null);
     setConfirmingDelete(false);
-  }, [shift]);
+  }, [shift, initialEditMode, readOnly]);
 
   const handleEdit = () => {
     if (!shift) return;
@@ -353,7 +356,14 @@ export function ShiftDetails({
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
       {!recurringModalOpen && (
-        <DialogContent hideCloseButton className="sm:rounded-3xl max-w-120">
+        <DialogContent
+          hideCloseButton
+          className="sm:rounded-3xl max-w-120"
+          onOpenAutoFocus={(e) => {
+            // Prevent auto-focus on inputs to avoid iOS date picker opening automatically
+            e.preventDefault();
+          }}
+        >
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-text-primary">
               <Clock className="h-5 w-5 text-text-muted" aria-hidden />

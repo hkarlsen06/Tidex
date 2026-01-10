@@ -327,6 +327,15 @@ export const en: Dictionary = {
         deleteConfirmButton: 'Delete',
         deleteCancelButton: 'Cancel',
       },
+      swipeActions: {
+        viewDetails: 'View',
+        edit: 'Edit',
+        delete: 'Delete',
+        deleteConfirmTitle: 'Delete shift?',
+        deleteConfirmDescription: 'This will permanently delete the shift on {date}.',
+        confirmButton: 'Delete',
+        cancelButton: 'Cancel',
+      },
     },
     stats: {
       title: 'Statistics',
