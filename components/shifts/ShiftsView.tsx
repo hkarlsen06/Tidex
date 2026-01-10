@@ -1618,23 +1618,54 @@ export function ShiftsView({ shifts: initialShifts, defaultView = "calendar", us
 
   // Handle deep link: navigate to highlighted dates' month
   // This runs once when highlightDates is provided (from push notification)
+  // When multiple dates span different months, picks the month closest to current month
   const highlightHandledRef = useRef(false);
   useEffect(() => {
     // Only run once per mount
     if (highlightHandledRef.current) return;
     if (!highlightDates || highlightDates.size === 0) return;
 
-    // Use the first date to navigate to that month
-    const firstDate = [...highlightDates][0];
-    const dateParts = firstDate.split('-');
-    if (dateParts.length >= 2) {
-      const year = parseInt(dateParts[0], 10);
-      const month = parseInt(dateParts[1], 10);
-      if (!isNaN(year) && !isNaN(month)) {
-        const targetMonth = new Date(year, month - 1, 1);
-        setSelectedMonth(targetMonth);
-        highlightHandledRef.current = true;
+    // Parse all unique months from highlight dates
+    const monthsSet = new Set<string>();
+    for (const dateStr of highlightDates) {
+      const dateParts = dateStr.split('-');
+      if (dateParts.length >= 2) {
+        const year = parseInt(dateParts[0], 10);
+        const month = parseInt(dateParts[1], 10);
+        if (!isNaN(year) && !isNaN(month)) {
+          monthsSet.add(`${year}-${month}`);
+        }
       }
+    }
+
+    if (monthsSet.size === 0) return;
+
+    // Find the month closest to current month
+    const now = new Date();
+    const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+
+    let closestMonth: Date | null = null;
+    let closestDistance = Infinity;
+
+    for (const monthKey of monthsSet) {
+      const [year, month] = monthKey.split('-').map(Number);
+      const monthDate = new Date(year, month - 1, 1);
+      const distance = Math.abs(monthDate.getTime() - currentMonthStart);
+
+      if (distance < closestDistance) {
+        closestDistance = distance;
+        closestMonth = monthDate;
+      }
+    }
+
+    if (closestMonth) {
+      // Write directly to sessionStorage to ensure it's set before any potential
+      // MonthContext restoration on subsequent navigations within the same session
+      const serialized = `${closestMonth.getFullYear()}-${String(closestMonth.getMonth() + 1).padStart(2, "0")}-01`;
+      sessionStorage.setItem("selectedMonth", serialized);
+
+      setSelectedMonth(closestMonth);
+      highlightHandledRef.current = true;
     }
   }, [highlightDates, setSelectedMonth]);
 
