@@ -507,6 +507,25 @@ struct ShiftWidgetProvider: TimelineProvider {
 struct ShiftHomeWidget: Widget {
     let kind: String = "ShiftHomeWidget"
 
+    /// Check if the user's preferred language is Norwegian
+    private var isNorwegian: Bool {
+        let preferredLanguages = Locale.preferredLanguages
+        // Check if Norwegian (any variant) is the preferred language
+        return preferredLanguages.first?.hasPrefix("nb") == true ||
+               preferredLanguages.first?.hasPrefix("no") == true ||
+               preferredLanguages.first?.hasPrefix("nn") == true
+    }
+
+    /// Localized widget display name
+    private var displayName: String {
+        isNorwegian ? "Neste vakt" : "Next Shift"
+    }
+
+    /// Localized widget description
+    private var widgetDescription: String {
+        isNorwegian ? "Se neste vakt med ett blikk" : "See your next shift at a glance"
+    }
+
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: ShiftWidgetProvider()) { entry in
             if #available(iOS 17.0, *) {
@@ -521,8 +540,8 @@ struct ShiftHomeWidget: Widget {
                     .background(tidexDarkBackground)
             }
         }
-        .configurationDisplayName("Next Shift")
-        .description("See your next shift at a glance")
+        .configurationDisplayName(displayName)
+        .description(widgetDescription)
         .supportedFamilies([.systemSmall])
         .contentMarginsDisabled()
     }

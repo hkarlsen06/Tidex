@@ -377,6 +377,7 @@ struct OfflineFeaturedShiftCard: View {
                         .font(.system(size: 17, weight: .medium))
                         .foregroundColor(tidexTextMuted)
                 }
+                .fixedSize(horizontal: true, vertical: false)
 
                 // Time range and hours
                 HStack(spacing: 8) {
