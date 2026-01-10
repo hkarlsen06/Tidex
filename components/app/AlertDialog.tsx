@@ -33,25 +33,33 @@ export const AlertDialogContent = React.forwardRef<
 >(({ className, style, ...props }, ref) => (
   <AlertDialogPortal>
     <AlertDialogOverlay />
-    <AlertDialogPrimitive.Content
-      ref={ref}
-      className={cn(
-        // Base positioning - centered with flexbox for stable animations
-        "fixed inset-0 z-50 m-auto grid h-fit w-[calc(100%-2rem)] max-w-lg gap-4 border bg-background p-6 shadow-lg rounded-3xl overflow-x-hidden overflow-y-auto",
-        // Animations - using opacity and scale with stable centering
-        "data-[state=open]:animate-in data-[state=closed]:animate-out",
-        "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
-        "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
-        "duration-200",
-        className
-      )}
+    {/* Centering wrapper - flexbox centers the content without affecting its size */}
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{
-        // Max height respects both safe areas (top notch + bottom tab bar/home indicator)
-        maxHeight: "calc(100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 2rem)",
-        ...style,
+        paddingTop: "calc(env(safe-area-inset-top, 0px) + 1rem)",
+        paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 1rem)",
       }}
-      {...props}
-    />
+    >
+      <AlertDialogPrimitive.Content
+        ref={ref}
+        className={cn(
+          // Content sizing - fits content, respects max constraints
+          "relative grid w-full max-w-lg gap-4 border bg-background p-6 shadow-lg rounded-3xl overflow-x-hidden overflow-y-auto",
+          // Animations - scale from center (no translate conflicts)
+          "data-[state=open]:animate-in data-[state=closed]:animate-out",
+          "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+          "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
+          "duration-200",
+          className
+        )}
+        style={{
+          maxHeight: "100%",
+          ...style,
+        }}
+        {...props}
+      />
+    </div>
   </AlertDialogPortal>
 ));
 AlertDialogContent.displayName = AlertDialogPrimitive.Content.displayName;
