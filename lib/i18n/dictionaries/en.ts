@@ -761,6 +761,17 @@ export const en: Dictionary = {
           verified: 'Verification successful! Redirecting...',
         },
       },
+      acceptTerms: {
+        title: 'Terms and Privacy',
+        description: 'You must accept the terms to use Tidex',
+        explanation: 'To continue, you must read and accept our Terms of Service and Privacy Policy.',
+        reviewTermsButton: 'Review and Accept Terms',
+        declineButton: 'Decline and Sign Out',
+        errors: {
+          updateFailed: 'Could not save acceptance. Please try again.',
+          genericError: 'An error occurred. Please try again.',
+        },
+      },
     },
     settings: {
       title: 'Settings',

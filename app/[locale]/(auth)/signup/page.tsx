@@ -177,11 +177,19 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
     // Native Google sign-in: session is already created, redirect immediately
     // Web/browser flow: waiting for OAuth callback redirect
     if (!result.authUrl) {
-      // Native flow completed - redirect to onboarding
+      // Native flow completed - set terms acceptance before redirecting
       setMessage({
         type: 'success',
         text: t.pages.auth.login.loggingIn,
       });
+      // User agreed to terms on signup page - save to metadata
+      const { error: updateError } = await supabase.auth.updateUser({
+        data: { terms_accepted_at: new Date().toISOString() },
+      });
+      if (updateError) {
+        console.error('Failed to update terms acceptance:', updateError);
+        // Continue anyway - the accept-terms page will catch this later
+      }
       router.push(`/${locale}/onboarding`);
       return;
     }
@@ -232,11 +240,19 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
     // Native Apple sign-in: session is already created, redirect immediately
     // Web/browser flow: waiting for OAuth callback redirect
     if (!result.authUrl) {
-      // Native flow completed - redirect to onboarding
+      // Native flow completed - set terms acceptance before redirecting
       setMessage({
         type: 'success',
         text: t.pages.auth.login.loggingIn,
       });
+      // User agreed to terms on signup page - save to metadata
+      const { error: updateError } = await supabase.auth.updateUser({
+        data: { terms_accepted_at: new Date().toISOString() },
+      });
+      if (updateError) {
+        console.error('Failed to update terms acceptance:', updateError);
+        // Continue anyway - the accept-terms page will catch this later
+      }
       router.push(`/${locale}/onboarding`);
       return;
     }
@@ -338,6 +354,7 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
           data: {
             full_name: fullName,
             locale: locale,
+            terms_accepted_at: new Date().toISOString(),
           },
           emailRedirectTo: `${window.location.origin}/auth/callback?next=/onboarding`,
           captchaToken,
@@ -377,6 +394,7 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
             data: {
               full_name: fullName,
               locale: locale,
+              terms_accepted_at: new Date().toISOString(),
             },
             captchaToken,
           },

@@ -171,12 +171,14 @@ export default function LoginClient({
     return null;
   };
 
-  // Check if user needs MFA verification and redirect accordingly
-  const checkMfaAndRedirect = async (destination: string) => {
+  // Check if user has accepted terms, needs MFA, and redirect accordingly
+  const checkTermsMfaAndRedirect = async (destination: string) => {
     // Apply user's locale preference before redirecting
     const userLocale = await applyUserLocalePreference();
 
-    const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+    // Get user data to check terms acceptance
+    const { data: { user } } = await supabase.auth.getUser();
+    const termsAcceptedAt = user?.user_metadata?.terms_accepted_at;
 
     // Determine which locale to use in the redirect URL
     const targetLocale = userLocale || locale;
@@ -197,6 +199,21 @@ export default function LoginClient({
       finalDestination = `/${targetLocale}${destination}`;
     }
 
+    // Check if user has accepted terms of service
+    if (!termsAcceptedAt) {
+      // User hasn't accepted terms - redirect to accept-terms page
+      // Default to onboarding for new OAuth users
+      let nextPath = destination;
+      if (nextPath === '/' || nextPath === '/dashboard') {
+        nextPath = '/onboarding';
+      }
+      const acceptTermsUrl = `/${targetLocale}/accept-terms?next=${encodeURIComponent(nextPath)}`;
+      window.location.href = acceptTermsUrl;
+      return;
+    }
+
+    const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+
     if (aalData && aalData.currentLevel === 'aal1' && aalData.nextLevel === 'aal2') {
       // User has MFA enrolled but hasn't verified - redirect to MFA verify
       const mfaUrl = `/${targetLocale}/mfa-verify?next=${encodeURIComponent(finalDestination)}`;
@@ -206,6 +223,9 @@ export default function LoginClient({
       window.location.href = finalDestination;
     }
   };
+
+  // Alias for backward compatibility with email/phone login (no terms check needed for existing users)
+  const checkMfaAndRedirect = checkTermsMfaAndRedirect;
 
   const performGoogleSignIn = async () => {
     setOauthProvider('google');
