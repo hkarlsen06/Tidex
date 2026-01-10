@@ -7,6 +7,7 @@ import { getDictionary } from "@/lib/i18n/dictionaries";
 import type { Locale } from "@/lib/i18n/config";
 import { getSession } from "@dal/auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { needsTermsReAcceptance, isJwtFreshForTermsCheck } from "@/lib/legal/version";
 
 export const metadata: Metadata = {
   manifest: "/manifest.json",
@@ -36,12 +37,31 @@ export default async function AuthLayout({
     // they need to complete MFA - let them stay on auth pages (for mfa-verify)
     const needsMfaVerification = aalData?.currentLevel === "aal1" && aalData?.nextLevel === "aal2";
 
-    // Check if user has accepted terms of service
-    const termsAcceptedAt = session.user?.user_metadata?.terms_accepted_at;
-    const needsTermsAcceptance = !termsAcceptedAt;
+    // Check if user has accepted terms of service (or needs to re-accept updated terms)
+    // Performance optimization: Use JWT claims when possible, only fetch fresh data when needed.
+    // If the JWT was issued after the current terms version date, the claims are guaranteed
+    // to reflect the user's current acceptance status.
+    const { data: claimsData } = await supabase.auth.getClaims();
+    const claims = claimsData?.claims;
+    const jwtIsFresh = isJwtFreshForTermsCheck(claims?.iat);
 
-    // Check if user has completed onboarding
-    const onboardingCompleted = session.user?.user_metadata?.finishedOnboarding;
+    let termsAcceptedAt: string | null | undefined;
+    let onboardingCompleted: boolean | undefined;
+
+    if (jwtIsFresh && claims) {
+      // Fast path: JWT was issued after terms update, claims are reliable
+      const userMetadataFromClaims = claims.user_metadata ?? {};
+      termsAcceptedAt = userMetadataFromClaims.terms_accepted_at as string | undefined;
+      onboardingCompleted = userMetadataFromClaims.finishedOnboarding as boolean | undefined;
+    } else {
+      // Slow path: JWT is stale, need fresh data from Supabase
+      const { data: userData } = await supabase.auth.getUser();
+      const freshMetadata = userData?.user?.user_metadata ?? {};
+      termsAcceptedAt = freshMetadata.terms_accepted_at;
+      onboardingCompleted = freshMetadata.finishedOnboarding;
+    }
+
+    const needsTermsAcceptance = needsTermsReAcceptance(termsAcceptedAt);
     const needsOnboarding = !onboardingCompleted;
 
     if (!needsMfaVerification && !needsTermsAcceptance && !needsOnboarding) {

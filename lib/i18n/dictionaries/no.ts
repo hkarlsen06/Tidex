@@ -766,6 +766,12 @@ export const no = {
         explanation: 'For å fortsette må du lese og godta våre vilkår for bruk og personvernerklæring.',
         reviewTermsButton: 'Les og godta vilkår',
         declineButton: 'Avslå og logg ut',
+        updated: {
+          title: 'Oppdaterte vilkår',
+          description: 'Vilkårene våre har blitt oppdatert siden du sist godtok dem',
+          explanation: 'Vi har oppdatert våre vilkår for bruk og personvernerklæring. Vennligst les gjennom endringene og godta de nye vilkårene for å fortsette å bruke Tidex.',
+          reviewTermsButton: 'Les og godta oppdaterte vilkår',
+        },
         errors: {
           updateFailed: 'Kunne ikke lagre godkjenning. Prøv igjen.',
           genericError: 'En feil oppstod. Prøv igjen.',

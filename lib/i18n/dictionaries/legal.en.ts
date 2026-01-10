@@ -17,7 +17,7 @@ export const legalEn = {
     },
     title: 'Terms of use',
     lastUpdatedLabel: 'Last updated',
-    lastUpdatedDate: '2025-01-07',
+    lastUpdatedDate: '2025-01-10',
     dateLocale: 'en-US',
     sections: [
       {
@@ -191,7 +191,7 @@ export const legalEn = {
     },
     title: 'Privacy policy',
     lastUpdatedLabel: 'Last updated',
-    lastUpdatedDate: '2025-01-07',
+    lastUpdatedDate: '2025-01-10',
     dateLocale: 'en-US',
     sections: [
       {
@@ -208,7 +208,7 @@ export const legalEn = {
           { boldLabel: 'Account information:', text: 'Full name, email address or phone number, and encrypted password.' },
           { boldLabel: 'Shift data:', text: 'Working hours, breaks, salary settings and related information you register.' },
           { boldLabel: 'Authentication data:', text: 'Session (cookie) information that keeps you logged in.' },
-          { boldLabel: 'Payment data:', text: 'Handled solely by Stripe. We do not store card information.' },
+          { boldLabel: 'Payment data:', text: 'Handled by Stripe (website purchases) or Apple (iOS in-app purchases). We do not store card information.' },
         ],
       },
       {
@@ -217,7 +217,7 @@ export const legalEn = {
         list: [
           { text: 'Provide shift tracking and salary calculations.' },
           { text: 'Authenticate and manage your account.' },
-          { text: 'Process subscription payments via Stripe.' },
+          { text: 'Process subscription payments via Stripe (website) or Apple (iOS app).' },
           { text: 'Communicate with you about the service.' },
         ],
         importantNote: {
@@ -305,7 +305,7 @@ export const legalEn = {
     },
     title: 'Security Disclosure Policy',
     lastUpdatedLabel: 'Last updated',
-    lastUpdatedDate: '2025-01-07',
+    lastUpdatedDate: '2025-01-10',
     dateLocale: 'en-US',
     sections: [
       {

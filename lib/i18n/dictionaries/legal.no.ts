@@ -17,7 +17,7 @@ export const legalNo = {
     },
     title: 'Vilkår for bruk',
     lastUpdatedLabel: 'Sist oppdatert',
-    lastUpdatedDate: '2025-01-07',
+    lastUpdatedDate: '2025-01-10',
     dateLocale: 'nb-NO',
     sections: [
       {
@@ -191,7 +191,7 @@ export const legalNo = {
     },
     title: 'Personvernerklæring',
     lastUpdatedLabel: 'Sist oppdatert',
-    lastUpdatedDate: '2025-01-07',
+    lastUpdatedDate: '2025-01-10',
     dateLocale: 'nb-NO',
     sections: [
       {
@@ -208,7 +208,7 @@ export const legalNo = {
           { boldLabel: 'Kontoinformasjon:', text: 'Fullt navn, e-postadresse eller telefonnummer og kryptert passord.' },
           { boldLabel: 'Skiftdata:', text: 'Arbeidstider, pauser, lønnsinnstillinger og relatert informasjon du registrerer.' },
           { boldLabel: 'Autentiseringsinformasjon:', text: 'Informasjon om økter (cookies) for å holde deg innlogget.' },
-          { boldLabel: 'Betalingsinformasjon:', text: 'Behandles utelukkende av Stripe. Vi lagrer ikke kortinformasjon.' },
+          { boldLabel: 'Betalingsinformasjon:', text: 'Behandles av Stripe (nettsidekjøp) eller Apple (iOS-kjøp i appen). Vi lagrer ikke kortinformasjon.' },
         ],
       },
       {
@@ -217,7 +217,7 @@ export const legalNo = {
         list: [
           { text: 'Tilby skiftsporing og lønnsutregning.' },
           { text: 'Autentisere og administrere kontoen din.' },
-          { text: 'Behandle abonnementsbetalinger via Stripe.' },
+          { text: 'Behandle abonnementsbetalinger via Stripe (nettside) eller Apple (iOS-appen).' },
           { text: 'Kommunisere med deg om tjenesten.' },
         ],
         importantNote: {
@@ -305,7 +305,7 @@ export const legalNo = {
     },
     title: 'Retningslinjer for sikkerhetsrapportering',
     lastUpdatedLabel: 'Sist oppdatert',
-    lastUpdatedDate: '2025-01-07',
+    lastUpdatedDate: '2025-01-10',
     dateLocale: 'nb-NO',
     sections: [
       {
