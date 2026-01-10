@@ -10,6 +10,13 @@ A Next.js 16 application for tracking work shifts and calculating wages with Sup
 
 - **Primary developer user ID**: `032d8c2a-9af6-4777-99f0-24e2c4058bf3` (Hjalmar's account for testing/debugging)
 
+## iOS Development Rules
+
+**NEVER run Xcode builds automatically.** When iOS/Swift code changes need to be verified:
+- Do NOT run `xcodebuild` commands
+- Instead, prompt the user to build in Xcode themselves
+- Say something like: "Please build the iOS app in Xcode to verify these changes compile correctly."
+
 ## CRITICAL: Cache Invalidation in Route Handlers vs Server Actions (Next.js 16)
 
 **NEVER use `updateTag()` - ALWAYS use `revalidateTag()` with second argument**

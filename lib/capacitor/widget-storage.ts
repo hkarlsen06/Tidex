@@ -34,9 +34,17 @@ function getLocalDateString(date: Date): string {
 }
 
 /**
- * Prepare shifts for widget storage.
- * Filters to shifts within the next 7 days (today through today+7) in user's local timezone.
+ * Prepare shifts for widget and offline storage.
+ * Filters to shifts from the first of the previous month through 90 days ahead.
  * Each shift uses its own tax_enabled/tax_percentage from the snapshot that applies to it.
+ *
+ * Storage window includes:
+ * - Previous month: For offline dashboard payroll card (earnings paid this month)
+ * - Current month: For offline dashboard total card
+ * - Future 90 days: For widget and upcoming shifts list
+ *
+ * The widget itself filters to show only the next upcoming shift,
+ * so extra shifts in storage don't affect widget behavior.
  */
 export function prepareShiftsForStorage(
   shifts: ShiftWithComputations[],
@@ -44,16 +52,20 @@ export function prepareShiftsForStorage(
   currencySymbol: string
 ): StoredShiftData[] {
   const now = new Date();
-  const todayStr = getLocalDateString(now);
 
-  // Widget window: today through end of day 7 days from now (inclusive)
+  // Include previous month for offline dashboard payroll card
+  // (shows last month's earnings being paid this month)
+  const minDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const minDateStr = getLocalDateString(minDate);
+
+  // Future window: 90 days from now
   const maxDate = new Date(now);
-  maxDate.setDate(maxDate.getDate() + 7);
+  maxDate.setDate(maxDate.getDate() + 90);
   const maxDateStr = getLocalDateString(maxDate);
 
-  // Filter to upcoming shifts within the widget window
+  // Filter to shifts within the storage window (prev month through 90 days ahead)
   return shifts
-    .filter((s) => s.shift_date >= todayStr && s.shift_date <= maxDateStr)
+    .filter((s) => s.shift_date >= minDateStr && s.shift_date <= maxDateStr)
     .map((shift) => {
       const supplementRate = calculateAverageSupplementRate(shift);
       const hourlyWage =

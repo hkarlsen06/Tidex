@@ -1,0 +1,107 @@
+import SwiftUI
+
+// MARK: - Tidex Brand Colors
+// Derived from globals.css dark theme HSL values
+
+/// Tidex brand highlight color - matches --brand-highlight: 217 91% 65%
+/// HSL(217, 91%, 65%) → RGB calculation
+let tidexBlue = Color(hue: 217 / 360, saturation: 0.91, brightness: 0.90)
+
+/// Dark background color matching --background: 222.2 84% 4.9%
+/// HSL(222.2, 84%, 4.9%)
+let tidexDarkBackground = Color(hue: 222.2 / 360, saturation: 0.84, brightness: 0.11)
+
+/// Surface primary for cards - matches --surface-primary: 220 49% 11%
+/// HSL(220, 49%, 11%)
+let tidexSurfacePrimary = Color(hue: 220 / 360, saturation: 0.49, brightness: 0.18)
+
+/// Text primary color - matches --text-primary: 210 40% 98%
+/// HSL(210, 40%, 98%)
+let tidexTextPrimary = Color(hue: 210 / 360, saturation: 0.40, brightness: 0.98)
+
+/// Text secondary color - matches --text-secondary: 214 32% 85%
+/// HSL(214, 32%, 85%)
+let tidexTextSecondary = Color(hue: 214 / 360, saturation: 0.32, brightness: 0.85)
+
+/// Text muted color - matches --text-muted: 215 20% 70%
+/// HSL(215, 20%, 70%)
+let tidexTextMuted = Color(hue: 215 / 360, saturation: 0.20, brightness: 0.70)
+
+/// Logo gradient colors from short-logo-gradient.svg
+let logoGradientColors = [
+    Color(red: 0, green: 212 / 255, blue: 1),              // #00D4FF - cyan (top)
+    Color(red: 123 / 255, green: 97 / 255, blue: 1),       // #7B61FF - purple (middle)
+    Color(red: 155 / 255, green: 77 / 255, blue: 202 / 255) // #9B4DCA - magenta (bottom)
+]
+
+// MARK: - Tidex Logo Shape
+
+/// Tidex "T" logo shape - exact path from short-logo-gradient.svg
+struct TidexLogoShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+
+        // Original path bounds
+        let pathMinX: CGFloat = 0.63993
+        let pathMaxX: CGFloat = 1.2635
+        let pathMinY: CGFloat = 1.7177
+        let pathMaxY: CGFloat = 2.311
+
+        let pathWidth = pathMaxX - pathMinX   // ~0.624
+        let pathHeight = pathMaxY - pathMinY  // ~0.593
+
+        // Use uniform scaling to preserve aspect ratio
+        let scale = min(rect.width / pathWidth, rect.height / pathHeight)
+
+        // Center the path in the rect
+        let scaledWidth = pathWidth * scale
+        let scaledHeight = pathHeight * scale
+        let offsetX = (rect.width - scaledWidth) / 2
+        let offsetY = (rect.height - scaledHeight) / 2
+
+        func pt(_ x: CGFloat, _ y: CGFloat) -> CGPoint {
+            CGPoint(
+                x: offsetX + (x - pathMinX) * scale,
+                y: offsetY + (y - pathMinY) * scale
+            )
+        }
+
+        path.move(to: pt(1.23732, 1.7177))
+        path.addCurve(to: pt(0.66612, 1.7177), control1: pt(1.13775, 1.7179), control2: pt(0.76566, 1.71337))
+        path.addCurve(to: pt(0.63993, 1.74003), control1: pt(0.65617, 1.71814), control2: pt(0.6412, 1.72111))
+        path.addCurve(to: pt(0.63993, 1.81659), control1: pt(0.6388, 1.75702), control2: pt(0.6372, 1.79978))
+        path.addCurve(to: pt(0.66612, 1.83892), control1: pt(0.6412, 1.82434), control2: pt(0.64969, 1.83921))
+        path.addCurve(to: pt(0.83797, 1.83892), control1: pt(0.69934, 1.83832), control2: pt(0.80156, 1.83786))
+        path.addCurve(to: pt(0.88052, 1.88038), control1: pt(0.85928, 1.83953), control2: pt(0.88041, 1.85613))
+        path.addCurve(to: pt(0.88052, 2.311), control1: pt(0.88091, 1.95937), control2: pt(0.88011, 2.24337))
+        path.addCurve(to: pt(1.02782, 2.25997), control1: pt(0.88095, 2.38083), control2: pt(1.02782, 2.32572))
+        path.addCurve(to: pt(1.02782, 1.87719), control1: pt(1.02783, 2.18381), control2: pt(1.02715, 1.94768))
+        path.addCurve(to: pt(1.06874, 1.83892), control1: pt(1.02797, 1.86204), control2: pt(1.04362, 1.83915))
+        path.addCurve(to: pt(1.23568, 1.83892), control1: pt(1.10399, 1.83859), control2: pt(1.20286, 1.83973))
+        path.addCurve(to: pt(1.2635, 1.81021), control1: pt(1.25067, 1.83854), control2: pt(1.26304, 1.83083))
+        path.addCurve(to: pt(1.2635, 1.74482), control1: pt(1.26387, 1.79389), control2: pt(1.26396, 1.76203))
+        path.addCurve(to: pt(1.23732, 1.7177), control1: pt(1.26317, 1.73255), control2: pt(1.25496, 1.71767))
+        path.closeSubpath()
+
+        return path
+    }
+}
+
+// MARK: - Logo Watermark
+
+/// Gradient-filled logo watermark with brand colors
+struct LogoWatermark: View {
+    var opacity: Double = 0.15
+
+    var body: some View {
+        TidexLogoShape()
+            .fill(
+                LinearGradient(
+                    colors: logoGradientColors,
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            )
+            .opacity(opacity)
+    }
+}

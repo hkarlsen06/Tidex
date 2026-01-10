@@ -26,7 +26,12 @@
 		LOCBVC0012F1000000000001 /* LocaleAwareBridgeViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = LOCBVC0012F1000000000002 /* LocaleAwareBridgeViewController.swift */; };
 		NATSPL0012F0800000000001 /* NativeSplashPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = NATSPL0012F0800000000002 /* NativeSplashPlugin.swift */; };
 		NATTAB0012F0800000000001 /* NativeTabBarPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = NATTAB0012F0800000000002 /* NativeTabBarPlugin.swift */; };
+		NETMON0012F2000000000001 /* NetworkMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = NETMON0012F2000000000002 /* NetworkMonitor.swift */; };
+		OFFDSH0012F3000000000001 /* OfflineDashboardCards.swift in Sources */ = {isa = PBXBuildFile; fileRef = OFFDSH0012F3000000000002 /* OfflineDashboardCards.swift */; };
+		OFFSCR0012F2000000000001 /* OfflineScreenView.swift in Sources */ = {isa = PBXBuildFile; fileRef = OFFSCR0012F2000000000002 /* OfflineScreenView.swift */; };
+		OFFSTR0012F2000000000001 /* OfflineShiftStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = OFFSTR0012F2000000000002 /* OfflineShiftStorage.swift */; };
 		SCENE0012F0700000000001 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = SCENE0012F0700000000002 /* SceneDelegate.swift */; };
+		TIDCLR0012F2000000000001 /* TidexBrandColors.swift in Sources */ = {isa = PBXBuildFile; fileRef = TIDCLR0012F2000000000002 /* TidexBrandColors.swift */; };
 		TIDCON0012F0800000000001 /* TidexContainerViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = TIDCON0012F0800000000002 /* TidexContainerViewController.swift */; };
 /* End PBXBuildFile section */
 
@@ -79,7 +84,12 @@
 		LOCBVC0012F1000000000002 /* LocaleAwareBridgeViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocaleAwareBridgeViewController.swift; sourceTree = "<group>"; };
 		NATSPL0012F0800000000002 /* NativeSplashPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeSplashPlugin.swift; sourceTree = "<group>"; };
 		NATTAB0012F0800000000002 /* NativeTabBarPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeTabBarPlugin.swift; sourceTree = "<group>"; };
+		NETMON0012F2000000000002 /* NetworkMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkMonitor.swift; sourceTree = "<group>"; };
+		OFFDSH0012F3000000000002 /* OfflineDashboardCards.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineDashboardCards.swift; sourceTree = "<group>"; };
+		OFFSCR0012F2000000000002 /* OfflineScreenView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineScreenView.swift; sourceTree = "<group>"; };
+		OFFSTR0012F2000000000002 /* OfflineShiftStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineShiftStorage.swift; sourceTree = "<group>"; };
 		SCENE0012F0700000000002 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
+		TIDCLR0012F2000000000002 /* TidexBrandColors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TidexBrandColors.swift; sourceTree = "<group>"; };
 		TIDCON0012F0800000000002 /* TidexContainerViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TidexContainerViewController.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -163,7 +173,12 @@
 				LOCBVC0012F1000000000002 /* LocaleAwareBridgeViewController.swift */,
 				NATSPL0012F0800000000002 /* NativeSplashPlugin.swift */,
 				NATTAB0012F0800000000002 /* NativeTabBarPlugin.swift */,
+				NETMON0012F2000000000002 /* NetworkMonitor.swift */,
+				OFFDSH0012F3000000000002 /* OfflineDashboardCards.swift */,
+				OFFSCR0012F2000000000002 /* OfflineScreenView.swift */,
+				OFFSTR0012F2000000000002 /* OfflineShiftStorage.swift */,
 				SCENE0012F0700000000002 /* SceneDelegate.swift */,
+				TIDCLR0012F2000000000002 /* TidexBrandColors.swift */,
 				TIDCON0012F0800000000002 /* TidexContainerViewController.swift */,
 				504EC30E1FED79650016851F /* Assets.xcassets */,
 				504EC3131FED79650016851F /* Info.plist */,
@@ -327,11 +342,16 @@
 				504EC3081FED79650016851F /* AppDelegate.swift in Sources */,
 				LOCBVC0012F1000000000001 /* LocaleAwareBridgeViewController.swift in Sources */,
 				NATSPL0012F0800000000001 /* NativeSplashPlugin.swift in Sources */,
+				NETMON0012F2000000000001 /* NetworkMonitor.swift in Sources */,
+				OFFDSH0012F3000000000001 /* OfflineDashboardCards.swift in Sources */,
+				OFFSCR0012F2000000000001 /* OfflineScreenView.swift in Sources */,
+				OFFSTR0012F2000000000001 /* OfflineShiftStorage.swift in Sources */,
 				11A5CD262F101201002BAC91 /* StoredShift.swift in Sources */,
 				11A5CD272F101201002BAC91 /* ShiftActivityPlugin.swift in Sources */,
 				NATTAB0012F0800000000001 /* NativeTabBarPlugin.swift in Sources */,
 				SCENE0012F0700000000001 /* SceneDelegate.swift in Sources */,
 				11F1CBDB2F101C5700246C07 /* ShiftActivityAttributes.swift in Sources */,
+				TIDCLR0012F2000000000001 /* TidexBrandColors.swift in Sources */,
 				TIDCON0012F0800000000001 /* TidexContainerViewController.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
