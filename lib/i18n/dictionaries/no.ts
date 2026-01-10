@@ -91,7 +91,7 @@ export const no = {
     copyright: '© 2025 Hjalmar Kristensen-Karlsen',
   },
   userMenu: {
-    profile: 'Profil',
+    profile: 'Konto',
     sharing: 'Deling',
     settings: 'Innstillinger',
     lightMode: 'Lys modus',
@@ -783,7 +783,7 @@ export const no = {
       subtitle: 'Administrer dine innstillinger og preferanser',
       menu: {
         profile: {
-          label: 'Profil',
+          label: 'Konto',
           description: 'Administrer din personlige informasjon',
         },
         pay: {
@@ -820,7 +820,7 @@ export const no = {
         },
       },
       profile: {
-        title: 'Profil',
+        title: 'Konto',
         subtitle: 'Administrer din personlige informasjon',
         connectionsTitle: 'Tilkoblinger',
         connectionsSubtitle: 'Administrer tilkoblede kontoer og autentiseringsmetoder',
@@ -1418,9 +1418,14 @@ export const no = {
             description: 'PDF-rapporten er optimalisert for A4-portrettformat og inkluderer automatisk sidetall og genereringstidspunkt. Lagre den for intern dokumentasjon eller del den ved behov.',
           },
           pdfFields: {
-            documentTitle: 'Vaktrapport',
+            documentTitle: 'Vakt- og lønnsrapport',
             documentSubject: 'Lønn og vaktdetaljer',
-            author: 'Vaktkalkulator',
+            author: 'Tidex',
+            exported: 'Eksportert:',
+            period: 'Periode:',
+            name: 'Navn:',
+            hoursUnit: 'timer',
+            currency: 'kr',
             tableHeaders: ['Dato', 'Dag', 'Start', 'Slutt', 'Timer', 'Grunnlønn', 'Tillegg', 'Totalt'],
             summaryTitle: 'Sammendrag',
             totalShifts: 'Totalt antall vakter:',
@@ -1429,14 +1434,15 @@ export const no = {
             totalSupplements: 'Totale tillegg:',
             totalPay: 'Total lønn:',
             shiftsPerType: 'Vakter per type:',
-            weekdays: 'Ukedager:',
-            saturdays: 'Lørdager:',
-            sundays: 'Søndager/helligdager:',
+            weekdays: ' Ukedager:',
+            saturdays: ' Lørdager:',
+            sundays: ' Søndager/helligdager:',
             detailedList: 'Detaljert vaktliste',
             noShifts: 'Ingen vakter tilgjengelig for eksport.',
             sum: 'Sum:',
-            generatedBy: 'Generert av Tidex lønnskalkulator',
+            generatedBy: 'Generert av Tidex',
             pageCounter: 'Side {page} av {total}',
+            exportError: 'Noe gikk galt under eksporten. Prøv igjen senere.',
           },
           csvFields: {
             headers: ['Dato', 'Dag', 'Start', 'Slutt', 'Timer', 'Grunnlonn', 'Tillegg', 'Totalt'],

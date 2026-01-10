@@ -30,20 +30,10 @@ const PAGE_CONFIG = {
 } as const;
 
 const DOCUMENT_PROPERTIES = {
-  subject: 'Lønn og vaktdetaljer',
-  author: 'Tidex',
   creator: 'Tidex',
 } as const;
 
-const DOCUMENT_TITLE = {
-  no: 'Vakt- og lønnsrapport',
-  en: 'Shift and earnings report',
-} as const;
-
-const TABLE_HEADER = {
-  columns: ['Dato', 'Dag', 'Start', 'Slutt', 'Timer', 'Grunnlønn', 'Tillegg', 'Totalt'],
-  widths: [25, 20, 15, 15, 15, 25, 25, 25],
-} as const;
+const TABLE_COLUMN_WIDTHS = [25, 20, 15, 15, 15, 25, 25, 25] as const;
 
 type PeriodPreset = 'current_month' | 'last_month' | 'current_year' | 'custom';
 
@@ -268,7 +258,6 @@ async function ensureJsPdf(): Promise<JsPDFConstructor | null> {
     return window.jspdf.jsPDF;
   }
 
-  alert('Kunne ikke laste jsPDF. Oppdater siden og prøv igjen.');
   return null;
 }
 
@@ -288,7 +277,11 @@ async function loadLogoAsBase64(): Promise<string | null> {
   }
 }
 
-async function fetchExportData(range: DateRange, cacheKey?: string): Promise<ExportPayload | null> {
+type FetchResult =
+  | { ok: true; data: ExportPayload }
+  | { ok: false; error: 'fetch_failed' | 'fetch_failed_retry' };
+
+async function fetchExportData(range: DateRange, cacheKey?: string): Promise<FetchResult> {
   try {
     const searchParams = new URLSearchParams({
       from: range.from,
@@ -303,19 +296,13 @@ async function fetchExportData(range: DateRange, cacheKey?: string): Promise<Exp
     });
 
     if (!response.ok) {
-      const body = await response.json().catch(() => null);
-      const message =
-        (body as { error?: string } | null)?.error ??
-        'Kunne ikke hente data for eksport.';
-      alert(message);
-      return null;
+      return { ok: false, error: 'fetch_failed' };
     }
 
-    return (await response.json()) as ExportPayload;
+    return { ok: true, data: (await response.json()) as ExportPayload };
   } catch (error) {
     console.error('[pdf export] Failed to fetch export data:', error);
-    alert('Kunne ikke hente data for eksport. Sjekk tilkoblingen og prøv igjen.');
-    return null;
+    return { ok: false, error: 'fetch_failed_retry' };
   }
 }
 
@@ -381,46 +368,56 @@ function formatLongDate(date: Date | null, locale: Locale): string {
 }
 
 function buildFileName(range: DateRange | null, ext: 'pdf' | 'csv', locale: Locale, userName?: string) {
-  const prefix = locale === 'no' ? 'tidex-rapport' : 'tidex-report';
-
-  // Format name as "firstname-L" (first name + first letter of last name)
-  let namePart = '';
-  if (userName) {
-    const parts = userName.trim().split(/\s+/);
-    const firstName = parts[0].toLowerCase();
-    const lastInitial = parts.length > 1 ? parts[parts.length - 1][0].toLowerCase() : '';
-    namePart = lastInitial ? `_${firstName}-${lastInitial}` : `_${firstName}`;
-  }
+  // Format: tidex_jan-2026.pdf or tidex_01jan-15jan-2026.pdf
+  const parts: string[] = ['tidex'];
 
   if (range) {
-    // Check if range covers exactly one full month
     const fromDate = new Date(range.from);
     const toDate = new Date(range.to);
 
     const isFirstOfMonth = fromDate.getDate() === 1;
     const isSameMonth = fromDate.getFullYear() === toDate.getFullYear() &&
                         fromDate.getMonth() === toDate.getMonth();
-
-    // Check if toDate is the last day of the month
     const lastDayOfMonth = new Date(toDate.getFullYear(), toDate.getMonth() + 1, 0).getDate();
     const isLastOfMonth = toDate.getDate() === lastDayOfMonth;
 
-    if (isFirstOfMonth && isSameMonth && isLastOfMonth) {
-      // Full month - use month name and year
-      const monthFormatter = getDateFormatter(locale, { month: 'long' });
-      const monthName = monthFormatter.format(fromDate).toLowerCase();
-      const year = fromDate.getFullYear();
-      return `${prefix}${namePart}_${monthName}-${year}.${ext}`;
-    }
+    // Short month name (jan, feb, etc.)
+    const monthFormatter = getDateFormatter(locale, { month: 'short' });
+    const fromMonth = monthFormatter.format(fromDate).toLowerCase().replace('.', '');
+    const toMonth = monthFormatter.format(toDate).toLowerCase().replace('.', '');
 
-    return `${prefix}${namePart}_${range.from}_${range.to}.${ext}`;
+    if (isFirstOfMonth && isSameMonth && isLastOfMonth) {
+      // Full month: tidex_jan-2026.pdf
+      parts.push(`${fromMonth}-${fromDate.getFullYear()}`);
+    } else if (isSameMonth) {
+      // Same month range: tidex_01-15jan-2026.pdf
+      const fromDay = String(fromDate.getDate()).padStart(2, '0');
+      const toDay = String(toDate.getDate()).padStart(2, '0');
+      parts.push(`${fromDay}-${toDay}${fromMonth}-${fromDate.getFullYear()}`);
+    } else if (fromDate.getFullYear() === toDate.getFullYear()) {
+      // Cross-month same year: tidex_01jan-15feb-2026.pdf
+      const fromDay = String(fromDate.getDate()).padStart(2, '0');
+      const toDay = String(toDate.getDate()).padStart(2, '0');
+      parts.push(`${fromDay}${fromMonth}-${toDay}${toMonth}-${fromDate.getFullYear()}`);
+    } else {
+      // Cross-year: tidex_dec2025-jan2026.pdf
+      parts.push(`${fromMonth}${fromDate.getFullYear()}-${toMonth}${toDate.getFullYear()}`);
+    }
+  } else {
+    // Fallback to today's date
+    const now = new Date();
+    const monthFormatter = getDateFormatter(locale, { month: 'short' });
+    const month = monthFormatter.format(now).toLowerCase().replace('.', '');
+    parts.push(`${month}-${now.getFullYear()}`);
   }
-  const stamp = new Date().toISOString().slice(0, 10);
-  return `${prefix}${namePart}_${stamp}.${ext}`;
+
+  return `${parts.join('_')}.${ext}`;
 }
 
-function renderSummary(doc: JsPDFInstance, yRef: { value: number }, data: PreparedExportData, locale: Locale) {
+function renderSummary(doc: JsPDFInstance, yRef: { value: number }, data: PreparedExportData, locale: Locale, t: Dictionary) {
   const { margins } = PAGE_CONFIG;
+  const pdfFields = t.pages.settings.data.export.pdfFields;
+
   const ensureSpace = (required: number) => {
     if (yRef.value + required > margins.bottom) {
       doc.addPage();
@@ -432,55 +429,32 @@ function renderSummary(doc: JsPDFInstance, yRef: { value: number }, data: Prepar
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(14);
-  doc.text(locale === 'no' ? 'Sammendrag' : 'Summary', margins.left, yRef.value);
+  doc.text(pdfFields.summaryTitle, margins.left, yRef.value);
   yRef.value += 10;
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(10);
 
-  const hoursLabel = locale === 'no' ? 'timer' : 'hours';
-  const currencyLabel = locale === 'no' ? 'kr' : 'NOK';
-
-  const summaryRows: Array<{ label: string; value: string }> = locale === 'no' ? [
-    { label: 'Totalt antall vakter:', value: String(data.shifts.length) },
-    { label: 'Totale timer:', value: `${formatHours(data.totals.totalHours, locale)} ${hoursLabel}` },
+  const summaryRows: Array<{ label: string; value: string }> = [
+    { label: pdfFields.totalShifts, value: String(data.shifts.length) },
+    { label: pdfFields.totalHours, value: `${formatHours(data.totals.totalHours, locale)} ${pdfFields.hoursUnit}` },
     {
-      label: 'Total grunnlønn:',
-      value: `${formatCurrencyShort(data.totals.totalBaseWage, locale)} ${currencyLabel}`,
+      label: pdfFields.totalBasePay,
+      value: `${formatCurrencyShort(data.totals.totalBaseWage, locale)} ${pdfFields.currency}`,
     },
     {
-      label: 'Totale tillegg:',
-      value: `${formatCurrencyShort(data.totals.totalSupplement, locale)} ${currencyLabel}`,
+      label: pdfFields.totalSupplements,
+      value: `${formatCurrencyShort(data.totals.totalSupplement, locale)} ${pdfFields.currency}`,
     },
     {
-      label: 'Total lønn:',
-      value: `${formatCurrencyShort(data.totals.totalWages, locale)} ${currencyLabel}`,
+      label: pdfFields.totalPay,
+      value: `${formatCurrencyShort(data.totals.totalWages, locale)} ${pdfFields.currency}`,
     },
     { label: '', value: '' },
-    { label: 'Vakter per type:', value: '' },
-    { label: ' Ukedager:', value: String(data.countsByType.weekday) },
-    { label: ' Lørdager:', value: String(data.countsByType.saturday) },
-    { label: ' Søndager/helligdager:', value: String(data.countsByType.sunday) },
-  ] : [
-    { label: 'Total number of shifts:', value: String(data.shifts.length) },
-    { label: 'Total hours:', value: `${formatHours(data.totals.totalHours, locale)} ${hoursLabel}` },
-    {
-      label: 'Total base wage:',
-      value: `${formatCurrencyShort(data.totals.totalBaseWage, locale)} ${currencyLabel}`,
-    },
-    {
-      label: 'Total supplements:',
-      value: `${formatCurrencyShort(data.totals.totalSupplement, locale)} ${currencyLabel}`,
-    },
-    {
-      label: 'Total earnings:',
-      value: `${formatCurrencyShort(data.totals.totalWages, locale)} ${currencyLabel}`,
-    },
-    { label: '', value: '' },
-    { label: 'Shifts by type:', value: '' },
-    { label: ' Weekdays:', value: String(data.countsByType.weekday) },
-    { label: ' Saturdays:', value: String(data.countsByType.saturday) },
-    { label: ' Sundays/holidays:', value: String(data.countsByType.sunday) },
+    { label: pdfFields.shiftsPerType, value: '' },
+    { label: pdfFields.weekdays, value: String(data.countsByType.weekday) },
+    { label: pdfFields.saturdays, value: String(data.countsByType.saturday) },
+    { label: pdfFields.sundays, value: String(data.countsByType.sunday) },
   ];
 
   for (const row of summaryRows) {
@@ -539,9 +513,12 @@ function renderTable(
   locale: Locale
 ) {
   const { margins } = PAGE_CONFIG;
+  const pdfFields = t.pages.settings.data.export.pdfFields;
+  const tableHeaders = pdfFields.tableHeaders;
+
   const columnPositions: number[] = [];
   let cursor = margins.left;
-  for (const width of TABLE_HEADER.widths) {
+  for (const width of TABLE_COLUMN_WIDTHS) {
     columnPositions.push(cursor);
     cursor += width;
   }
@@ -549,7 +526,7 @@ function renderTable(
   // Calculate right edge positions for right-aligned columns
   const columnRightEdges: number[] = [];
   let rightCursor = margins.left;
-  for (const width of TABLE_HEADER.widths) {
+  for (const width of TABLE_COLUMN_WIDTHS) {
     rightCursor += width;
     columnRightEdges.push(rightCursor);
   }
@@ -557,11 +534,11 @@ function renderTable(
   const renderHeader = () => {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8);
-    for (let i = 0; i < TABLE_HEADER.columns.length; i += 1) {
+    for (let i = 0; i < tableHeaders.length; i += 1) {
       if (RIGHT_ALIGNED_COLUMNS.has(i)) {
-        doc.text(TABLE_HEADER.columns[i], columnRightEdges[i], yRef.value, { align: 'right' });
+        doc.text(tableHeaders[i], columnRightEdges[i], yRef.value, { align: 'right' });
       } else {
-        doc.text(TABLE_HEADER.columns[i], columnPositions[i], yRef.value);
+        doc.text(tableHeaders[i], columnPositions[i], yRef.value);
       }
     }
     yRef.value += 5;
@@ -585,12 +562,12 @@ function renderTable(
     ensureSpace(30);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(14);
-    doc.text('Detaljert vaktliste', margins.left, yRef.value);
+    doc.text(pdfFields.detailedList, margins.left, yRef.value);
     yRef.value += 10;
 
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(10);
-    doc.text('Ingen vakter tilgjengelig for eksport.', margins.left, yRef.value);
+    doc.text(pdfFields.noShifts, margins.left, yRef.value);
     yRef.value += 5;
     return;
   }
@@ -599,7 +576,7 @@ function renderTable(
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(14);
-  doc.text('Detaljert vaktliste', margins.left, yRef.value);
+  doc.text(pdfFields.detailedList, margins.left, yRef.value);
   yRef.value += 10;
 
   renderHeader();
@@ -683,7 +660,7 @@ function renderTable(
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8);
-  doc.text('Sum:', columnPositions[0], yRef.value);
+  doc.text(pdfFields.sum, columnPositions[0], yRef.value);
   doc.text(formatHours(data.totals.totalHours, locale), columnRightEdges[4], yRef.value, { align: 'right' });
   doc.text(
     formatCurrencyShort(data.totals.totalBaseWage, locale),
@@ -707,7 +684,8 @@ function renderTable(
   yRef.value += 5;
 }
 
-function applyFooters(doc: JsPDFInstance) {
+function applyFooters(doc: JsPDFInstance, t: Dictionary) {
+  const pdfFields = t.pages.settings.data.export.pdfFields;
   const totalPages = doc.getNumberOfPages();
 
   for (let page = 1; page <= totalPages; page += 1) {
@@ -715,9 +693,9 @@ function applyFooters(doc: JsPDFInstance) {
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
 
-    doc.text('Generert av Tidex', PAGE_CONFIG.margins.left, PAGE_CONFIG.footerY);
+    doc.text(pdfFields.generatedBy, PAGE_CONFIG.margins.left, PAGE_CONFIG.footerY);
     doc.text(
-      `Side ${page} av ${totalPages}`,
+      pdfFields.pageCounter.replace('{page}', String(page)).replace('{total}', String(totalPages)),
       PAGE_CONFIG.margins.right - 20,
       PAGE_CONFIG.footerY,
       { align: 'right' }
@@ -733,10 +711,12 @@ function escapeCsvValue(value: string): string {
   return stringValue;
 }
 
-function buildCsvContent(data: PreparedExportData, t: Dictionary): string {
-  const header = ['Dato', 'Dag', 'Start', 'Slutt', 'Timer', 'Grunnlonn', 'Tillegg', 'Totalt'];
+function buildCsvContent(data: PreparedExportData, t: Dictionary, locale: Locale): string {
+  const csvFields = t.pages.settings.data.export.csvFields;
+  const header = csvFields.headers;
+  const dateLocale = locale === 'no' ? 'no-NO' : 'en-GB';
   const rows = data.shifts.map((shift) => [
-    shift.dateObj.toLocaleDateString('no-NO'),
+    shift.dateObj.toLocaleDateString(dateLocale),
     weekdayAbbrevCsv(shift.dateObj, t),
     shift.startTime,
     shift.endTime,
@@ -747,7 +727,7 @@ function buildCsvContent(data: PreparedExportData, t: Dictionary): string {
   ]);
 
   const totalsRow = [
-    'Sum',
+    csvFields.sum,
     '',
     '',
     '',
@@ -763,7 +743,7 @@ function buildCsvContent(data: PreparedExportData, t: Dictionary): string {
 }
 
 async function downloadCsv(data: PreparedExportData, range: DateRange, t: Dictionary, locale: Locale, userName?: string) {
-  const csvContent = buildCsvContent(data, t);
+  const csvContent = buildCsvContent(data, t, locale);
   const filename = buildFileName(range, 'csv', locale, userName);
   await shareCsvDocument(csvContent, filename);
 }
@@ -829,50 +809,58 @@ export function DataForm({ t, userName, cacheKey }: DataFormProps) {
       return;
     }
 
+    const errors = t.pages.settings.data.export.errors;
+
     if (format === 'pdf') {
       setIsExportingPdf(true);
       try {
         const jsPdfCtor = await ensureJsPdf();
         if (!jsPdfCtor) {
+          alert(errors.jsPDFLoadFailed);
           return;
         }
 
-        const payload = await fetchExportData(range, cacheKey);
-        if (!payload) {
+        const fetchResult = await fetchExportData(range, cacheKey);
+        if (!fetchResult.ok) {
+          alert(fetchResult.error === 'fetch_failed_retry' ? errors.fetchFailedRetry : errors.fetchFailed);
           return;
         }
 
+        const payload = fetchResult.data;
         const exportData = prepareExportData(payload);
+        const pdfFields = t.pages.settings.data.export.pdfFields;
         const doc = new jsPdfCtor({
           orientation: PAGE_CONFIG.orientation,
           unit: PAGE_CONFIG.unit,
           format: PAGE_CONFIG.format,
         });
 
-        // Get localized title
-        const documentTitle = DOCUMENT_TITLE[locale as keyof typeof DOCUMENT_TITLE] ?? DOCUMENT_TITLE.no;
-        doc.setProperties({ ...DOCUMENT_PROPERTIES, title: `Tidex · ${documentTitle}` });
+        doc.setProperties({
+          ...DOCUMENT_PROPERTIES,
+          title: `Tidex · ${pdfFields.documentTitle}`,
+          subject: pdfFields.documentSubject,
+          author: pdfFields.author,
+        });
 
         const yRef: { value: number } = { value: PAGE_CONFIG.margins.top };
         const headerStartY = yRef.value;
 
-        // Add title: "Tidex" (bold) + " · Vakt- og lønnsrapport" (normal)
+        // Add title: "Tidex" (bold) + " · <document title>" (normal)
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(16);
         doc.text('Tidex', PAGE_CONFIG.margins.left, yRef.value);
         // Get width of "Tidex" to position the rest
         const tidexWidth = doc.getTextWidth('Tidex');
         doc.setFont('helvetica', 'normal');
-        doc.text(` · ${documentTitle}`, PAGE_CONFIG.margins.left + tidexWidth, yRef.value);
+        doc.text(` · ${pdfFields.documentTitle}`, PAGE_CONFIG.margins.left + tidexWidth, yRef.value);
         yRef.value += 6;
 
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(10);
 
         const exportDate = payload.generatedAt ? new Date(payload.generatedAt) : new Date();
-        const exportedLabel = locale === 'no' ? 'Eksportert' : 'Exported';
         doc.text(
-          `${exportedLabel}: ${formatLongDate(exportDate, locale)}`,
+          `${pdfFields.exported} ${formatLongDate(exportDate, locale)}`,
           PAGE_CONFIG.margins.left,
           yRef.value
         );
@@ -880,16 +868,15 @@ export function DataForm({ t, userName, cacheKey }: DataFormProps) {
 
         const fromDate = parseIsoDate(range.from);
         const toDate = parseIsoDate(range.to);
-        const periodLabel = locale === 'no' ? 'Periode' : 'Period';
         if (fromDate && toDate) {
           doc.text(
-            `${periodLabel}: ${formatLongDate(fromDate, locale)} - ${formatLongDate(toDate, locale)}`,
+            `${pdfFields.period} ${formatLongDate(fromDate, locale)} - ${formatLongDate(toDate, locale)}`,
             PAGE_CONFIG.margins.left,
             yRef.value
           );
         } else if (exportData.shifts.length > 0) {
           doc.text(
-            `${periodLabel}: ${formatLongDate(exportData.firstDate, locale)} - ${formatLongDate(
+            `${pdfFields.period} ${formatLongDate(exportData.firstDate, locale)} - ${formatLongDate(
               exportData.lastDate,
               locale
             )}`,
@@ -901,8 +888,7 @@ export function DataForm({ t, userName, cacheKey }: DataFormProps) {
 
         // Add user name
         if (userName) {
-          const nameLabel = locale === 'no' ? 'Navn' : 'Name';
-          doc.text(`${nameLabel}: ${userName}`, PAGE_CONFIG.margins.left, yRef.value);
+          doc.text(`${pdfFields.name} ${userName}`, PAGE_CONFIG.margins.left, yRef.value);
         }
 
         // Add logo in top right corner, spanning from title to user name
@@ -915,9 +901,9 @@ export function DataForm({ t, userName, cacheKey }: DataFormProps) {
 
         yRef.value += 10;
 
-        renderSummary(doc, yRef, exportData, locale);
+        renderSummary(doc, yRef, exportData, locale, t);
         renderTable(doc, yRef, exportData, t, locale);
-        applyFooters(doc);
+        applyFooters(doc, t);
 
         const filename = buildFileName(range, 'pdf', locale, userName);
         // Get PDF as base64 (data URI format: "data:application/pdf;base64,...")
@@ -927,7 +913,7 @@ export function DataForm({ t, userName, cacheKey }: DataFormProps) {
         await shareDocument(base64Data, filename);
       } catch (error) {
         console.error('[pdf export] Failed to generate pdf:', error);
-        alert('Noe gikk galt under eksporten. Prøv igjen senere.');
+        alert(t.pages.settings.data.export.pdfFields.exportError);
       } finally {
         setIsExportingPdf(false);
       }
@@ -937,16 +923,17 @@ export function DataForm({ t, userName, cacheKey }: DataFormProps) {
 
     setIsExportingCsv(true);
     try {
-      const payload = await fetchExportData(range, cacheKey);
-      if (!payload) {
+      const fetchResult = await fetchExportData(range, cacheKey);
+      if (!fetchResult.ok) {
+        alert(fetchResult.error === 'fetch_failed_retry' ? errors.fetchFailedRetry : errors.fetchFailed);
         return;
       }
 
-      const exportData = prepareExportData(payload);
+      const exportData = prepareExportData(fetchResult.data);
       await downloadCsv(exportData, range, t, locale, userName);
     } catch (error) {
       console.error('[csv export] Failed to generate csv:', error);
-      alert('Noe gikk galt under eksporten. Prøv igjen senere.');
+      alert(t.pages.settings.data.export.pdfFields.exportError);
     } finally {
       setIsExportingCsv(false);
     }
