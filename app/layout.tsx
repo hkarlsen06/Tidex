@@ -54,6 +54,7 @@ export const metadata: Metadata = {
   // See: https://github.com/vercel/next.js/issues/74524
   other: {
     'apple-mobile-web-app-capable': 'yes',
+    'apple-itunes-app': 'app-id=6757129790',
   },
 };
 
