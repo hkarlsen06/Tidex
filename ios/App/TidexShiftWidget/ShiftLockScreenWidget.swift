@@ -70,7 +70,7 @@ struct ShiftAccessoryRectangularView: View {
                         .font(.system(size: 12, weight: .semibold))
                         .lineLimit(1)
                 }
-                .widgetAccentable()
+                .widgetAccentableIfAvailable()
 
                 // Middle row: Time range (large)
                 Text("\(entry.startTime) – \(entry.endTime)")
@@ -101,7 +101,7 @@ struct ShiftAccessoryRectangularView: View {
                         .font(.system(size: 12, weight: .semibold))
                         .lineLimit(1)
                 }
-                .widgetAccentable()
+                .widgetAccentableIfAvailable()
 
                 Text("--:-- – --:--")
                     .font(.system(size: 16, weight: .bold, design: .rounded))
@@ -213,6 +213,17 @@ struct ShiftLockScreenWidgetEntryView: View {
 }
 
 // MARK: - Previews
+
+private extension View {
+    @ViewBuilder
+    func widgetAccentableIfAvailable(_ enabled: Bool = true) -> some View {
+        if #available(iOS 17.0, *) {
+            widgetAccentable(enabled)
+        } else {
+            self
+        }
+    }
+}
 
 #if DEBUG
 @available(iOS 17.0, *)
