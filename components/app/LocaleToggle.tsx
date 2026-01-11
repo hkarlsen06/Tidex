@@ -44,7 +44,7 @@ export function LocaleToggle() {
   };
 
   return (
-    <div className="px-2 py-2" role="menuitem">
+    <div className="px-3 py-2.5" role="menuitem">
       <div className="flex rounded-lg overflow-hidden border border-border/40 bg-background">
         {locales.map((loc, index) => (
           <div key={loc.code} className="flex flex-1">
@@ -53,7 +53,7 @@ export function LocaleToggle() {
               onClick={() => switchLocale(loc.code)}
               disabled={isPending}
               className={cn(
-                "flex-1 flex flex-col items-center justify-center gap-0.5 py-1.5 transition-colors",
+                "flex-1 flex flex-col items-center justify-center gap-1 py-2.5 transition-colors",
                 "disabled:opacity-50 disabled:cursor-not-allowed",
                 currentLocale === loc.code
                   ? "bg-brand-primary text-white"
@@ -62,8 +62,8 @@ export function LocaleToggle() {
               aria-label={`Switch to ${loc.label}`}
               aria-pressed={currentLocale === loc.code}
             >
-              <span className="text-base leading-none">{loc.flag}</span>
-              <span className="text-[10px] font-medium leading-none">{loc.label}</span>
+              <span className="text-lg leading-none">{loc.flag}</span>
+              <span className="text-xs font-medium leading-none">{loc.label}</span>
             </button>
             {index < locales.length - 1 && (
               <div className="w-px bg-border/40" />
