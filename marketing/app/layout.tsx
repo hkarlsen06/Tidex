@@ -42,6 +42,9 @@ export const metadata: Metadata = {
       'Planlegg vakter, beregn tillegg og få kontroll på lønnen din med Tidex.',
     images: ['/og/landing.png'],
   },
+  other: {
+    'apple-itunes-app': 'app-id=6757129790',
+  },
 };
 
 export default function RootLayout({
