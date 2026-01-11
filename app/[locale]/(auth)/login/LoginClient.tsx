@@ -8,7 +8,7 @@ import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { useTranslations } from '@/lib/i18n/client';
 import { isNativePlatform } from '@/lib/capacitor/platform';
 import { hideSplash } from '@/lib/capacitor/native-splash';
-import { turnstileLanguages, locales, LOCALE_COOKIE, type Locale } from '@/lib/i18n/config';
+import { turnstileLanguages, locales, type Locale } from '@/lib/i18n/config';
 
 // Animation variants for entrance animation
 const cardVariants = {
@@ -140,27 +140,21 @@ export default function LoginClient({
     };
   }, []);
 
-  // Apply user's locale preference from metadata by setting the locale cookie
-  // If user doesn't have a locale preference saved, save the current locale to their metadata
-  const applyUserLocalePreference = async () => {
+  // Save the current page locale to user metadata if not already set.
+  // We do NOT override the current session's locale from saved metadata because
+  // the user explicitly chose this locale by visiting /{locale}/login.
+  const saveUserLocaleIfNeeded = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     const userLocale = user?.user_metadata?.locale;
 
-    console.log('[LOCALE] applyUserLocalePreference:', {
-      userMetadata: user?.user_metadata,
-      userLocale,
+    console.log('[LOCALE] saveUserLocaleIfNeeded:', {
+      userMetadataLocale: userLocale,
       currentPageLocale: locale,
     });
 
-    if (userLocale && locales.includes(userLocale as Locale)) {
-      // User has a saved locale preference - apply it
-      document.cookie = `${LOCALE_COOKIE}=${userLocale}; path=/; max-age=${60 * 60 * 24 * 365}; samesite=lax`;
-      return userLocale as Locale;
-    }
-
-    // User doesn't have a locale preference - save the current locale to their metadata
-    // This handles existing users who signed up before locale tracking was added
-    if (user) {
+    // If user doesn't have a locale preference saved, save the current page locale
+    // This handles new users or existing users who signed up before locale tracking was added
+    if (!userLocale && user) {
       supabase.auth.updateUser({
         data: { locale }
       }).catch((error) => {
@@ -168,17 +162,19 @@ export default function LoginClient({
       });
     }
 
+    // Always return null - we use the current page locale for this session
+    // The user explicitly chose this locale by visiting /{locale}/login
     return null;
   };
 
   // Check if user needs MFA and redirect accordingly
   // Note: Terms and onboarding are handled by the app layout - we just redirect to dashboard
   const checkMfaAndRedirect = async (destination: string) => {
-    // Apply user's locale preference before redirecting
-    const userLocale = await applyUserLocalePreference();
+    // Save user's locale preference if not already set (async, fire-and-forget)
+    await saveUserLocaleIfNeeded();
 
-    // Determine which locale to use in the redirect URL
-    const targetLocale = userLocale || locale;
+    // Always use the current page locale - user explicitly chose it by visiting /{locale}/login
+    const targetLocale = locale;
 
     // Build the final destination with proper locale prefix
     const localePattern = new RegExp(`^/(${locales.join('|')})(/|$)`);
@@ -186,13 +182,13 @@ export default function LoginClient({
     let finalDestination: string;
 
     if (hasLocalePrefix) {
-      // Replace existing locale prefix with user's preferred locale
+      // Replace existing locale prefix with current page locale
       finalDestination = destination.replace(
         new RegExp(`^/(${locales.join('|')})`),
         `/${targetLocale}`
       );
     } else {
-      // No locale prefix - prepend user's preferred locale
+      // No locale prefix - prepend current page locale
       finalDestination = `/${targetLocale}${destination}`;
     }
 

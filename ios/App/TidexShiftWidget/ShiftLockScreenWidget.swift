@@ -23,6 +23,28 @@ struct ShiftAccessoryCircularView: View {
                             .font(.system(size: 9, weight: .medium))
                             .textCase(.uppercase)
                     }
+                } else if entry.layoutState == .pastShift {
+                    // Past shift from previous day: show days ago countup
+                    let daysAgo = abs(entry.daysRemaining)
+                    VStack(spacing: 0) {
+                        Text("\(daysAgo)")
+                            .font(.system(size: 24, weight: .bold, design: .rounded))
+                            .minimumScaleFactor(0.8)
+
+                        Text(entry.locale == "no" ? "siden" : "ago")
+                            .font(.system(size: 9, weight: .medium))
+                            .textCase(.uppercase)
+                    }
+                } else if entry.shiftHasEnded {
+                    // Shift ended today: show "Done" indicator with checkmark
+                    VStack(spacing: 0) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 20))
+
+                        Text(entry.locale == "no" ? "ferdig" : "done")
+                            .font(.system(size: 9, weight: .medium))
+                            .textCase(.uppercase)
+                    }
                 } else if entry.shiftHasStarted {
                     // Shift in progress: show end time
                     VStack(spacing: 0) {
@@ -126,12 +148,21 @@ struct ShiftAccessoryInlineView: View {
     var body: some View {
         if entry.hasShift {
             if entry.layoutState == .countdown {
-                // Countdown mode: "5 days • 16:00-23:15"
+                // Countdown mode: "5d 16:00-23:15"
                 let daysText = entry.locale == "no" ? "d" : "d"
                 Label("\(entry.daysRemaining)\(daysText) \(entry.startTime)-\(entry.endTime)", systemImage: "calendar")
+            } else if entry.layoutState == .pastShift {
+                // Past shift from previous day: "3d siden" / "3d ago"
+                let daysAgo = abs(entry.daysRemaining)
+                let agoText = entry.locale == "no" ? "siden" : "ago"
+                Label("\(daysAgo)d \(agoText)", systemImage: "clock.arrow.circlepath")
+            } else if entry.shiftHasEnded {
+                // Shift ended today: "Ferdig" / "Done"
+                let doneText = entry.locale == "no" ? "Ferdig" : "Done"
+                Label(doneText, systemImage: "checkmark.circle")
             } else if entry.shiftHasStarted {
-                // In progress: "Ends 15:00"
-                let endsText = entry.locale == "no" ? "Ferdig" : "Ends"
+                // In progress: "Ends 15:00" / "Slutt 15:00"
+                let endsText = entry.locale == "no" ? "Slutt" : "Ends"
                 Label("\(endsText) \(entry.endTime)", systemImage: "clock.fill")
             } else {
                 // Today/tomorrow: "I dag 07:00"
@@ -243,6 +274,23 @@ private extension View {
         daysRemaining: 0,
         layoutState: .todayOrTomorrow,
         shiftHasStarted: true,
+        shiftHasEnded: false,
+        deepLinkURL: nil
+    )
+    // Shift ended today
+    ShiftWidgetEntry(
+        date: Date(),
+        shiftDate: "I dag",
+        startTime: "07:00",
+        endTime: "15:00",
+        netEarnings: "892 kr",
+        salute: "Godt jobbet!",
+        locale: "no",
+        hasShift: true,
+        daysRemaining: 0,
+        layoutState: .todayOrTomorrow,
+        shiftHasStarted: true,
+        shiftHasEnded: true,
         deepLinkURL: nil
     )
     ShiftWidgetEntry(
@@ -257,6 +305,23 @@ private extension View {
         daysRemaining: 5,
         layoutState: .countdown,
         shiftHasStarted: false,
+        shiftHasEnded: false,
+        deepLinkURL: nil
+    )
+    // Past shift (days ago countup)
+    ShiftWidgetEntry(
+        date: Date(),
+        shiftDate: "Fre. 9.",
+        startTime: "12:00",
+        endTime: "16:00",
+        netEarnings: "230 kr",
+        salute: "Godt jobbet!",
+        locale: "no",
+        hasShift: true,
+        daysRemaining: -3,
+        layoutState: .pastShift,
+        shiftHasStarted: true,
+        shiftHasEnded: true,
         deepLinkURL: nil
     )
     ShiftWidgetEntry.empty(locale: "no")
@@ -280,6 +345,7 @@ private extension View {
         daysRemaining: 0,
         layoutState: .todayOrTomorrow,
         shiftHasStarted: true,
+        shiftHasEnded: false,
         deepLinkURL: nil
     )
     ShiftWidgetEntry.empty(locale: "no")
@@ -302,6 +368,7 @@ private extension View {
         daysRemaining: 0,
         layoutState: .todayOrTomorrow,
         shiftHasStarted: true,
+        shiftHasEnded: false,
         deepLinkURL: nil
     )
     ShiftWidgetEntry(
@@ -316,6 +383,7 @@ private extension View {
         daysRemaining: 5,
         layoutState: .countdown,
         shiftHasStarted: false,
+        shiftHasEnded: false,
         deepLinkURL: nil
     )
     ShiftWidgetEntry.empty(locale: "en")
