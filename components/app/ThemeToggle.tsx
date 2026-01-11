@@ -26,13 +26,13 @@ export function ThemeToggle() {
     <button
       type="button"
       onClick={toggleTheme}
-      className="flex w-full items-center gap-3 px-4 py-2 text-sm text-text-primary hover:bg-accent"
+      className="flex w-full items-center gap-3 px-4 py-3.5 text-base text-text-primary hover:bg-accent"
       role="menuitem"
     >
       {theme === "dark" ? (
         <>
           <svg
-            className="h-4 w-4"
+            className="h-5 w-5"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -55,7 +55,7 @@ export function ThemeToggle() {
       ) : (
         <>
           <svg
-            className="h-4 w-4"
+            className="h-5 w-5"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"

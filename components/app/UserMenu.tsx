@@ -137,7 +137,7 @@ export function UserMenu({
           ref={menuRef}
           role="menu"
           aria-label="User menu"
-          className="absolute right-0 mt-2 w-48 overflow-hidden rounded-xl border border-border/40 bg-background shadow-app-lg"
+          className="absolute right-0 mt-2 w-56 overflow-hidden rounded-xl border border-border/40 bg-background shadow-app-lg"
         >
           <Link
             href="/settings"
@@ -154,11 +154,11 @@ export function UserMenu({
             aria-disabled={isSettingsDisabled}
             tabIndex={isSettingsDisabled ? -1 : undefined}
             className={cn(
-              "flex items-center gap-2 px-4 py-2 text-sm text-text-primary hover:bg-accent",
+              "flex items-center gap-3 px-4 py-3.5 text-base text-text-primary hover:bg-accent",
               isSettingsDisabled && "cursor-not-allowed opacity-50 hover:bg-background"
             )}
           >
-            <Settings strokeWidth={2} className="h-4 w-4" />
+            <Settings strokeWidth={2} className="h-5 w-5" />
             {t.userMenu.settings}
           </Link>
           <ThemeToggle />
@@ -171,14 +171,14 @@ export function UserMenu({
             aria-disabled={isLoggingOut}
             tabIndex={isLoggingOut ? -1 : undefined}
             className={cn(
-              "flex items-center gap-2 px-4 py-2 text-sm text-error hover:bg-error-subtle",
+              "flex items-center gap-3 px-4 py-3.5 text-base text-error hover:bg-error-subtle",
               isLoggingOut && "cursor-not-allowed opacity-70 hover:bg-transparent"
             )}
           >
             {isLoggingOut ? (
-              <Loader2 strokeWidth={2} className="h-4 w-4 animate-spin" />
+              <Loader2 strokeWidth={2} className="h-5 w-5 animate-spin" />
             ) : (
-              <LogOut strokeWidth={2} className="h-4 w-4" />
+              <LogOut strokeWidth={2} className="h-5 w-5" />
             )}
             {t.userMenu.logout}
           </Link>

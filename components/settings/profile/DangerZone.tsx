@@ -267,20 +267,20 @@ export function DangerZone({ activeSubscription }: DangerZoneProps) {
             )}
           </div>
 
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => handleClearDialogClose(false)}
-              disabled={isClearing}
-            >
-              {t.common.cancel}
-            </Button>
+          <DialogFooter className="flex-col gap-2 sm:flex-row">
             <Button
               variant="destructive"
               onClick={handleClearShifts}
               disabled={isClearing || clearConfirmText !== t.pages.settings.profile.dangerZone.deleteAllShifts.confirmPlaceholder}
             >
               {isClearing ? t.pages.settings.profile.dangerZone.deleteAllShifts.deleting : t.pages.settings.profile.dangerZone.deleteAllShifts.button}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => handleClearDialogClose(false)}
+              disabled={isClearing}
+            >
+              {t.common.cancel}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -389,6 +389,20 @@ export function DangerZone({ activeSubscription }: DangerZoneProps) {
               </div>
 
               <DialogFooter className="flex-col gap-2 sm:flex-row">
+                <Button
+                  variant="destructive"
+                  onClick={handleDeleteAccount}
+                  disabled={isDeleting || deleteConfirmText !== t.pages.settings.profile.dangerZone.deleteAccount.confirmPlaceholder}
+                >
+                  {isDeleting ? t.pages.settings.profile.dangerZone.deleteAccount.deleting : t.pages.settings.profile.dangerZone.deleteAccount.button}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => handleDeleteDialogClose(false)}
+                  disabled={isDeleting}
+                >
+                  {t.common.cancel}
+                </Button>
                 {hasActiveSubscription && (
                   <Button
                     variant="ghost"
@@ -398,20 +412,6 @@ export function DangerZone({ activeSubscription }: DangerZoneProps) {
                     {t.common.back}
                   </Button>
                 )}
-                <Button
-                  variant="outline"
-                  onClick={() => handleDeleteDialogClose(false)}
-                  disabled={isDeleting}
-                >
-                  {t.common.cancel}
-                </Button>
-                <Button
-                  variant="destructive"
-                  onClick={handleDeleteAccount}
-                  disabled={isDeleting || deleteConfirmText !== t.pages.settings.profile.dangerZone.deleteAccount.confirmPlaceholder}
-                >
-                  {isDeleting ? t.pages.settings.profile.dangerZone.deleteAccount.deleting : t.pages.settings.profile.dangerZone.deleteAccount.button}
-                </Button>
               </DialogFooter>
             </>
           )}
