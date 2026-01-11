@@ -70,17 +70,26 @@ private struct TidexLogoShape: Shape {
 }
 
 /// Gradient-filled logo watermark with brand colors from short-logo-gradient.svg
+/// Supports both full color gradient and tinted monochrome modes
 private struct LogoWatermark: View {
+    var useTint: Bool = false
+
     var body: some View {
-        TidexLogoShape()
-            .fill(
-                LinearGradient(
-                    colors: logoGradientColors,
-                    startPoint: .top,
-                    endPoint: .bottom
+        if useTint {
+            // Tinted mode: solid fill that will receive the widget's accent color
+            TidexLogoShape()
+                .fill(Color.primary.opacity(0.6))
+        } else {
+            // Full color mode: gradient fill
+            TidexLogoShape()
+                .fill(
+                    LinearGradient(
+                        colors: logoGradientColors,
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
                 )
-            )
-            .opacity(0.15)
+        }
     }
 }
 
@@ -168,9 +177,9 @@ struct ShiftHomeWidgetView: View {
         }
     }
 
-    /// Whether to show the watermark logo (hide in accented mode for cleaner look)
-    private var showWatermark: Bool {
-        renderingMode == .fullColor
+    /// Whether to use tinted monochrome logo (for accented/vibrant modes)
+    private var useTintedLogo: Bool {
+        renderingMode != .fullColor
     }
 
     var body: some View {
@@ -178,33 +187,43 @@ struct ShiftHomeWidgetView: View {
             // Adaptive background
             backgroundColor
 
-            // Watermark logo - only show in fullColor mode
-            if showWatermark {
-                LogoWatermark()
-                    .frame(width: 75, height: 85)
-            }
-
             // Content - switches based on layout state
-            if entry.layoutState == .countdown {
+            switch entry.layoutState {
+            case .countdown:
                 countdownLayout
-            } else {
+            case .pastShift, .todayOrTomorrow, .empty:
+                // Past shifts use the same layout as today/tomorrow
                 todayTomorrowLayout
             }
         }
     }
 
-    // MARK: - State A: Today/Tomorrow Layout
+    // MARK: - State A: Today/Tomorrow/Past Layout
 
-    /// Layout for today or tomorrow shifts with time block and salute
+    /// Layout for today, tomorrow, or past shifts with time block and salute
     private var todayTomorrowLayout: some View {
         VStack(spacing: 0) {
-            // TOP ROW: Date + Earnings
+            // TOP ROW: Date + Watermark Logo + Earnings
             HStack(alignment: .top) {
                 Text(entry.shiftDate)
                     .font(.system(size: 14, weight: .semibold, design: .default))
                     .foregroundColor(entry.hasShift ? accentColor : mutedTextColor)
                     .widgetAccentable(entry.hasShift)
                     .lineLimit(1)
+                    .frame(maxWidth: 70, alignment: .leading)
+                    .mask(
+                        HStack(spacing: 0) {
+                            Rectangle()
+                            LinearGradient(colors: [.white, .clear], startPoint: .leading, endPoint: .trailing)
+                                .frame(width: 12)
+                        }
+                    )
+
+                Spacer()
+
+                // Watermark logo - centered between date and earnings (in foreground)
+                LogoWatermark(useTint: useTintedLogo)
+                    .frame(width: 20, height: 23)
 
                 Spacer()
 
@@ -212,6 +231,14 @@ struct ShiftHomeWidgetView: View {
                     .font(.system(size: 14, weight: .semibold, design: .default))
                     .foregroundColor(secondaryTextColor)
                     .lineLimit(1)
+                    .frame(maxWidth: 70, alignment: .trailing)
+                    .mask(
+                        HStack(spacing: 0) {
+                            LinearGradient(colors: [.clear, .white], startPoint: .leading, endPoint: .trailing)
+                                .frame(width: 12)
+                            Rectangle()
+                        }
+                    )
             }
 
             Spacer()
@@ -221,49 +248,108 @@ struct ShiftHomeWidgetView: View {
 
             Spacer()
 
-            // BOTTOM: Salute - spans width with max height constraint
-            Text(entry.salute)
-                .font(.system(size: 17, weight: .bold, design: .default))
-                .italic()
-                .foregroundColor(entry.hasShift ? accentColor : mutedTextColor)
-                .widgetAccentable(entry.hasShift)
-                .lineLimit(1)
-                .minimumScaleFactor(0.6)
-                .frame(maxWidth: .infinity)
-                .frame(maxHeight: 24)
+            // BOTTOM: Time range for past/ended shifts, salute for active shifts
+            bottomTextView
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 18)
     }
 
+    /// Bottom text: shows time range for past/ended shifts, salute for active shifts
+    private var bottomTextView: some View {
+        Group {
+            if entry.layoutState == .pastShift || entry.shiftHasEnded {
+                // Show time range instead of salute for past/ended shifts
+                Text("\(entry.startTime) – \(entry.endTime)")
+                    .font(.system(size: 14, weight: .medium, design: .default))
+                    .foregroundColor(secondaryTextColor)
+                    .lineLimit(1)
+            } else {
+                // Show motivational salute for active/upcoming shifts
+                Text(entry.salute)
+                    .font(.system(size: 17, weight: .bold, design: .default))
+                    .italic()
+                    .foregroundColor(entry.hasShift ? accentColor : mutedTextColor)
+                    .widgetAccentable(entry.hasShift)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .frame(maxHeight: 24)
+    }
+
     /// Time block: primary time (large) + secondary time (small) stacked vertically
     /// Before shift: Start (large) over End (small)
     /// After shift starts: End (large) over Start (small)
+    /// After shift ends today: "Ferdig" / "Done" (large)
+    /// Past shift (previous day): "X dager siden" countdown
     private var timeBlockView: some View {
         VStack(spacing: 4) {
-            // Secondary time (small) - shown on top after shift starts
-            if entry.shiftHasStarted {
-                Text(secondaryTime)
-                    .font(.system(size: 14, weight: .medium, design: .default))
-                    .monospacedDigit()
-                    .foregroundColor(secondaryTextColor)
+            if entry.layoutState == .pastShift {
+                // Past shift from previous day - show days ago countdown
+                pastShiftCountupView
+            } else if entry.shiftHasEnded {
+                // Shift ended today - show "Ferdig" / "Done"
+                Text(entry.locale == "no" ? "Ferdig" : "Done")
+                    .font(.system(size: 46, weight: .bold, design: .default))
+                    .foregroundColor(entry.hasShift ? primaryTextColor : mutedTextColor)
                     .lineLimit(1)
-            }
+                    .minimumScaleFactor(0.7)
+            } else {
+                // Secondary time (small) - shown on top after shift starts
+                if entry.shiftHasStarted {
+                    Text(secondaryTime)
+                        .font(.system(size: 14, weight: .medium, design: .default))
+                        .monospacedDigit()
+                        .foregroundColor(secondaryTextColor)
+                        .lineLimit(1)
+                }
 
-            // Primary time (large)
-            Text(primaryTime)
+                // Primary time (large)
+                Text(primaryTime)
+                    .font(.system(size: 46, weight: .bold, design: .default))
+                    .monospacedDigit()
+                    .foregroundColor(entry.hasShift ? primaryTextColor : mutedTextColor)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+
+                // Secondary time (small) - shown below before shift starts
+                if !entry.shiftHasStarted {
+                    Text(secondaryTime)
+                        .font(.system(size: 14, weight: .medium, design: .default))
+                        .monospacedDigit()
+                        .foregroundColor(secondaryTextColor)
+                        .lineLimit(1)
+                }
+            }
+        }
+    }
+
+    /// Past shift countup view - shows "X dager siden" / "X days ago"
+    private var pastShiftCountupView: some View {
+        let daysAgo = abs(entry.daysRemaining)
+        let daysLabel = entry.locale == "no"
+            ? (daysAgo == 1 ? "dag" : "dager")
+            : (daysAgo == 1 ? "day" : "days")
+        let agoLabel = entry.locale == "no" ? "siden" : "ago"
+
+        return HStack(alignment: .center, spacing: 8) {
+            Text("\(daysAgo)")
                 .font(.system(size: 46, weight: .bold, design: .default))
                 .monospacedDigit()
                 .foregroundColor(entry.hasShift ? primaryTextColor : mutedTextColor)
                 .lineLimit(1)
-                .minimumScaleFactor(0.7)
 
-            // Secondary time (small) - shown below before shift starts
-            if !entry.shiftHasStarted {
-                Text(secondaryTime)
-                    .font(.system(size: 14, weight: .medium, design: .default))
-                    .monospacedDigit()
-                    .foregroundColor(secondaryTextColor)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(daysLabel)
+                    .font(.system(size: 14, weight: .semibold, design: .default))
+                    .foregroundColor(entry.hasShift ? primaryTextColor : mutedTextColor)
+                    .lineLimit(1)
+
+                Text(agoLabel)
+                    .font(.system(size: 14, weight: .semibold, design: .default))
+                    .foregroundColor(entry.hasShift ? primaryTextColor : mutedTextColor)
                     .lineLimit(1)
             }
         }
@@ -274,13 +360,27 @@ struct ShiftHomeWidgetView: View {
     /// Layout for shifts more than 1 day away
     private var countdownLayout: some View {
         VStack(spacing: 0) {
-            // TOP ROW: Date + Earnings
+            // TOP ROW: Date + Watermark Logo + Earnings
             HStack(alignment: .top) {
                 Text(entry.shiftDate)
                     .font(.system(size: 14, weight: .semibold, design: .default))
                     .foregroundColor(entry.hasShift ? accentColor : mutedTextColor)
                     .widgetAccentable(entry.hasShift)
                     .lineLimit(1)
+                    .frame(maxWidth: 70, alignment: .leading)
+                    .mask(
+                        HStack(spacing: 0) {
+                            Rectangle()
+                            LinearGradient(colors: [.white, .clear], startPoint: .leading, endPoint: .trailing)
+                                .frame(width: 12)
+                        }
+                    )
+
+                Spacer()
+
+                // Watermark logo - centered between date and earnings (in foreground)
+                LogoWatermark(useTint: useTintedLogo)
+                    .frame(width: 20, height: 23)
 
                 Spacer()
 
@@ -288,6 +388,14 @@ struct ShiftHomeWidgetView: View {
                     .font(.system(size: 14, weight: .semibold, design: .default))
                     .foregroundColor(secondaryTextColor)
                     .lineLimit(1)
+                    .frame(maxWidth: 70, alignment: .trailing)
+                    .mask(
+                        HStack(spacing: 0) {
+                            LinearGradient(colors: [.clear, .white], startPoint: .leading, endPoint: .trailing)
+                                .frame(width: 12)
+                            Rectangle()
+                        }
+                    )
             }
 
             Spacer()
@@ -366,14 +474,12 @@ struct ShiftHomeWidgetViewLegacy: View {
             // Dark background matching app theme
             tidexDarkBackground
 
-            // Watermark logo - centered behind content
-            LogoWatermark()
-                .frame(width: 75, height: 85)
-
             // Content - switches based on layout state
-            if entry.layoutState == .countdown {
+            switch entry.layoutState {
+            case .countdown:
                 countdownLayout
-            } else {
+            case .pastShift, .todayOrTomorrow, .empty:
+                // Past shifts use the same layout as today/tomorrow
                 todayTomorrowLayout
             }
         }
@@ -383,11 +489,26 @@ struct ShiftHomeWidgetViewLegacy: View {
 
     private var todayTomorrowLayout: some View {
         VStack(spacing: 0) {
+            // TOP ROW: Date + Watermark Logo + Earnings
             HStack(alignment: .top) {
                 Text(entry.shiftDate)
                     .font(.system(size: 14, weight: .semibold, design: .default))
                     .foregroundColor(entry.hasShift ? tidexBlue : .white.opacity(0.4))
                     .lineLimit(1)
+                    .frame(maxWidth: 70, alignment: .leading)
+                    .mask(
+                        HStack(spacing: 0) {
+                            Rectangle()
+                            LinearGradient(colors: [.white, .clear], startPoint: .leading, endPoint: .trailing)
+                                .frame(width: 12)
+                        }
+                    )
+
+                Spacer()
+
+                // Watermark logo - centered between date and earnings (in foreground)
+                LogoWatermark()
+                    .frame(width: 20, height: 23)
 
                 Spacer()
 
@@ -395,6 +516,14 @@ struct ShiftHomeWidgetViewLegacy: View {
                     .font(.system(size: 14, weight: .semibold, design: .default))
                     .foregroundColor(.white.opacity(0.6))
                     .lineLimit(1)
+                    .frame(maxWidth: 70, alignment: .trailing)
+                    .mask(
+                        HStack(spacing: 0) {
+                            LinearGradient(colors: [.clear, .white], startPoint: .leading, endPoint: .trailing)
+                                .frame(width: 12)
+                            Rectangle()
+                        }
+                    )
             }
 
             Spacer()
@@ -403,41 +532,98 @@ struct ShiftHomeWidgetViewLegacy: View {
 
             Spacer()
 
-            Text(entry.salute)
-                .font(.system(size: 17, weight: .bold, design: .default))
-                .italic()
-                .foregroundColor(entry.hasShift ? tidexBlue : .white.opacity(0.4))
-                .lineLimit(1)
-                .minimumScaleFactor(0.6)
-                .frame(maxWidth: .infinity)
-                .frame(maxHeight: 24)
+            bottomTextView
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 18)
     }
 
-    private var timeBlockView: some View {
-        VStack(spacing: 4) {
-            if entry.shiftHasStarted {
-                Text(secondaryTime)
+    /// Bottom text: shows time range for past/ended shifts, salute for active shifts
+    private var bottomTextView: some View {
+        Group {
+            if entry.layoutState == .pastShift || entry.shiftHasEnded {
+                // Show time range instead of salute for past/ended shifts
+                Text("\(entry.startTime) – \(entry.endTime)")
                     .font(.system(size: 14, weight: .medium, design: .default))
-                    .monospacedDigit()
                     .foregroundColor(.white.opacity(0.6))
                     .lineLimit(1)
+            } else {
+                // Show motivational salute for active/upcoming shifts
+                Text(entry.salute)
+                    .font(.system(size: 17, weight: .bold, design: .default))
+                    .italic()
+                    .foregroundColor(entry.hasShift ? tidexBlue : .white.opacity(0.4))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
             }
+        }
+        .frame(maxWidth: .infinity)
+        .frame(maxHeight: 24)
+    }
 
-            Text(primaryTime)
+    private var timeBlockView: some View {
+        VStack(spacing: 4) {
+            if entry.layoutState == .pastShift {
+                // Past shift from previous day - show days ago countdown
+                pastShiftCountupView
+            } else if entry.shiftHasEnded {
+                // Shift ended today - show "Ferdig" / "Done"
+                Text(entry.locale == "no" ? "Ferdig" : "Done")
+                    .font(.system(size: 46, weight: .bold, design: .default))
+                    .foregroundColor(entry.hasShift ? .white : .white.opacity(0.4))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+            } else {
+                if entry.shiftHasStarted {
+                    Text(secondaryTime)
+                        .font(.system(size: 14, weight: .medium, design: .default))
+                        .monospacedDigit()
+                        .foregroundColor(.white.opacity(0.6))
+                        .lineLimit(1)
+                }
+
+                Text(primaryTime)
+                    .font(.system(size: 46, weight: .bold, design: .default))
+                    .monospacedDigit()
+                    .foregroundColor(entry.hasShift ? .white : .white.opacity(0.4))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+
+                if !entry.shiftHasStarted {
+                    Text(secondaryTime)
+                        .font(.system(size: 14, weight: .medium, design: .default))
+                        .monospacedDigit()
+                        .foregroundColor(.white.opacity(0.6))
+                        .lineLimit(1)
+                }
+            }
+        }
+    }
+
+    /// Past shift countup view - shows "X dager siden" / "X days ago"
+    private var pastShiftCountupView: some View {
+        let daysAgo = abs(entry.daysRemaining)
+        let daysLabel = entry.locale == "no"
+            ? (daysAgo == 1 ? "dag" : "dager")
+            : (daysAgo == 1 ? "day" : "days")
+        let agoLabel = entry.locale == "no" ? "siden" : "ago"
+
+        return HStack(alignment: .center, spacing: 8) {
+            Text("\(daysAgo)")
                 .font(.system(size: 46, weight: .bold, design: .default))
                 .monospacedDigit()
                 .foregroundColor(entry.hasShift ? .white : .white.opacity(0.4))
                 .lineLimit(1)
-                .minimumScaleFactor(0.7)
 
-            if !entry.shiftHasStarted {
-                Text(secondaryTime)
-                    .font(.system(size: 14, weight: .medium, design: .default))
-                    .monospacedDigit()
-                    .foregroundColor(.white.opacity(0.6))
+            VStack(alignment: .leading, spacing: 2) {
+                Text(daysLabel)
+                    .font(.system(size: 14, weight: .semibold, design: .default))
+                    .foregroundColor(entry.hasShift ? .white : .white.opacity(0.4))
+                    .lineLimit(1)
+
+                Text(agoLabel)
+                    .font(.system(size: 14, weight: .semibold, design: .default))
+                    .foregroundColor(entry.hasShift ? .white : .white.opacity(0.4))
                     .lineLimit(1)
             }
         }
@@ -447,11 +633,26 @@ struct ShiftHomeWidgetViewLegacy: View {
 
     private var countdownLayout: some View {
         VStack(spacing: 0) {
+            // TOP ROW: Date + Watermark Logo + Earnings
             HStack(alignment: .top) {
                 Text(entry.shiftDate)
                     .font(.system(size: 14, weight: .semibold, design: .default))
                     .foregroundColor(entry.hasShift ? tidexBlue : .white.opacity(0.4))
                     .lineLimit(1)
+                    .frame(maxWidth: 70, alignment: .leading)
+                    .mask(
+                        HStack(spacing: 0) {
+                            Rectangle()
+                            LinearGradient(colors: [.white, .clear], startPoint: .leading, endPoint: .trailing)
+                                .frame(width: 12)
+                        }
+                    )
+
+                Spacer()
+
+                // Watermark logo - centered between date and earnings (in foreground)
+                LogoWatermark()
+                    .frame(width: 20, height: 23)
 
                 Spacer()
 
@@ -459,6 +660,14 @@ struct ShiftHomeWidgetViewLegacy: View {
                     .font(.system(size: 14, weight: .semibold, design: .default))
                     .foregroundColor(.white.opacity(0.6))
                     .lineLimit(1)
+                    .frame(maxWidth: 70, alignment: .trailing)
+                    .mask(
+                        HStack(spacing: 0) {
+                            LinearGradient(colors: [.clear, .white], startPoint: .leading, endPoint: .trailing)
+                                .frame(width: 12)
+                            Rectangle()
+                        }
+                    )
             }
 
             Spacer()
@@ -593,10 +802,61 @@ struct ShiftWidgetProvider: TimelineProvider {
         return Date() >= shiftStartDateTime
     }
 
+    /// Determine if the shift has already ended by comparing current time to shift end
+    /// Returns true ONLY if the shift is TODAY and we're past the end time
+    /// For past day shifts, returns false (those use pastShift layout with countdown instead)
+    /// Note: For cross-midnight shifts (end <= start), adds 1 day to end time
+    private func hasShiftEnded(shiftDateString: String, startTime: String, endTime: String) -> Bool {
+        guard let shiftDate = parseShiftDate(shiftDateString) else {
+            return false
+        }
+
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        let shiftDay = calendar.startOfDay(for: shiftDate)
+
+        // Only check for "ended" status if the shift is today
+        // Past day shifts use the pastShift layout with days-ago countdown
+        guard calendar.isDate(shiftDay, inSameDayAs: today) else {
+            return false
+        }
+
+        // Parse end time (HH:mm)
+        let endComponents = endTime.split(separator: ":").compactMap { Int($0) }
+        guard endComponents.count >= 2 else {
+            return false
+        }
+
+        // Parse start time to check for cross-midnight
+        let startComponents = startTime.split(separator: ":").compactMap { Int($0) }
+        guard startComponents.count >= 2 else {
+            return false
+        }
+
+        var components = calendar.dateComponents([.year, .month, .day], from: shiftDate)
+        components.hour = endComponents[0]
+        components.minute = endComponents[1]
+
+        guard var shiftEndDateTime = calendar.date(from: components) else {
+            return false
+        }
+
+        // Check for cross-midnight shift (end time <= start time means next day)
+        let startMinutes = startComponents[0] * 60 + startComponents[1]
+        let endMinutes = endComponents[0] * 60 + endComponents[1]
+        if endMinutes <= startMinutes {
+            // Cross-midnight: add 1 day to end time
+            shiftEndDateTime = calendar.date(byAdding: .day, value: 1, to: shiftEndDateTime) ?? shiftEndDateTime
+        }
+
+        return Date() >= shiftEndDateTime
+    }
+
     /// Determine the layout state based on midnight crossings
     /// - 0 crossings: today (State A)
     /// - 1 crossing: tomorrow (State A)
     /// - 2+ crossings: countdown (State B)
+    /// - Negative crossings: past shift (State C)
     private func determineLayoutState(shiftDateString: String) -> (state: WidgetLayoutState, daysRemaining: Int) {
         guard let shiftDate = parseShiftDate(shiftDateString) else {
             return (.empty, 0)
@@ -607,9 +867,11 @@ struct ShiftWidgetProvider: TimelineProvider {
         let todayMidnight = calendar.startOfDay(for: today)
         let shiftMidnight = calendar.startOfDay(for: shiftDate)
 
-        // If shift is in the past, still show it with today/tomorrow layout
+        // If shift is in the past, show it with pastShift layout
         if shiftMidnight < todayMidnight {
-            return (.todayOrTomorrow, 0)
+            let daysAgo = countMidnightCrossings(from: shiftDate, to: today)
+            // Return negative daysRemaining to indicate past
+            return (.pastShift, -daysAgo)
         }
 
         let daysRemaining = countMidnightCrossings(from: today, to: shiftDate)
@@ -652,8 +914,11 @@ struct ShiftWidgetProvider: TimelineProvider {
         // Check if shift has already started (for time emphasis swap)
         let shiftStarted = hasShiftStarted(shiftDateString: shift.shiftDate, startTime: shift.startTime)
 
-        // Format date
-        let formattedDate = formatShiftDate(shift.shiftDate, locale: locale)
+        // Check if shift has already ended (for showing "Ferdig" / "Done")
+        let shiftEnded = hasShiftEnded(shiftDateString: shift.shiftDate, startTime: shift.startTime, endTime: shift.endTime)
+
+        // Format date (pass daysRemaining for past shift formatting)
+        let formattedDate = formatShiftDate(shift.shiftDate, locale: locale, daysRemaining: daysRemaining)
 
         // Get random salute
         let salute = MotivationalSalutes.random(locale: locale)
@@ -674,6 +939,7 @@ struct ShiftWidgetProvider: TimelineProvider {
             daysRemaining: daysRemaining,
             layoutState: layoutState,
             shiftHasStarted: shiftStarted,
+            shiftHasEnded: shiftEnded,
             deepLinkURL: deepLinkURL
         )
     }
@@ -705,12 +971,26 @@ struct ShiftWidgetProvider: TimelineProvider {
         return sortedShifts.last
     }
 
-    private func formatShiftDate(_ dateString: String, locale: String) -> String {
+    private func formatShiftDate(_ dateString: String, locale: String, daysRemaining: Int) -> String {
         guard let shiftDate = parseShiftDate(dateString) else { return dateString }
 
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
         let shiftDay = calendar.startOfDay(for: shiftDate)
+
+        // Past shift - show "I går" / "Yesterday" or weekday+date for older shifts
+        if daysRemaining < 0 {
+            let daysAgo = abs(daysRemaining)
+            if daysAgo == 1 {
+                return locale == "no" ? "I går" : "Yesterday"
+            } else {
+                // 2+ days ago: show weekday + day format (e.g., "Man 12." / "Mon 12.")
+                let weekdayFormatter = DateFormatter()
+                weekdayFormatter.locale = Locale(identifier: locale == "no" ? "nb_NO" : "en_US")
+                weekdayFormatter.setLocalizedDateFormatFromTemplate("EEE d")
+                return weekdayFormatter.string(from: shiftDate).capitalized
+            }
+        }
 
         // Today
         if calendar.isDate(shiftDay, inSameDayAs: today) {
@@ -815,6 +1095,23 @@ struct ShiftHomeWidget: Widget {
         daysRemaining: 0,
         layoutState: .todayOrTomorrow,
         shiftHasStarted: true,
+        shiftHasEnded: false,
+        deepLinkURL: URL(string: "tidex://shifts?dates=2025-01-15")
+    )
+    // State A: After shift ends (shows "Ferdig")
+    ShiftWidgetEntry(
+        date: Date(),
+        shiftDate: "I dag",
+        startTime: "07:00",
+        endTime: "15:00",
+        netEarnings: "892 kr",
+        salute: "Godt jobbet!",
+        locale: "no",
+        hasShift: true,
+        daysRemaining: 0,
+        layoutState: .todayOrTomorrow,
+        shiftHasStarted: true,
+        shiftHasEnded: true,
         deepLinkURL: URL(string: "tidex://shifts?dates=2025-01-15")
     )
     // State B: Countdown layouts
@@ -830,6 +1127,7 @@ struct ShiftHomeWidget: Widget {
         daysRemaining: 5,
         layoutState: .countdown,
         shiftHasStarted: false,
+        shiftHasEnded: false,
         deepLinkURL: URL(string: "tidex://shifts?dates=2025-01-20")
     )
     ShiftWidgetEntry(
@@ -844,7 +1142,24 @@ struct ShiftHomeWidget: Widget {
         daysRemaining: 12,
         layoutState: .countdown,
         shiftHasStarted: false,
+        shiftHasEnded: false,
         deepLinkURL: URL(string: "tidex://shifts?dates=2025-01-20")
+    )
+    // State C: Past shift (days ago countup)
+    ShiftWidgetEntry(
+        date: Date(),
+        shiftDate: "Fre. 9.",
+        startTime: "12:00",
+        endTime: "16:00",
+        netEarnings: "230 kr",
+        salute: "Godt jobbet!",
+        locale: "no",
+        hasShift: true,
+        daysRemaining: -3,
+        layoutState: .pastShift,
+        shiftHasStarted: true,
+        shiftHasEnded: true,
+        deepLinkURL: URL(string: "tidex://shifts?dates=2025-01-09")
     )
     // Empty state
     ShiftWidgetEntry.empty(locale: "no")

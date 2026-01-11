@@ -6,6 +6,8 @@ enum WidgetLayoutState {
     case todayOrTomorrow
     /// State B: More than 1 day away - shows countdown in days with time range
     case countdown
+    /// State C: Past shift - shows "X days ago" when no future shifts
+    case pastShift
     /// Empty/placeholder state - no shift available
     case empty
 }
@@ -45,6 +47,9 @@ struct ShiftWidgetEntry: TimelineEntry {
     /// Whether the shift has already started (used to swap time emphasis)
     let shiftHasStarted: Bool
 
+    /// Whether the shift has already ended (used to show "Ferdig" / "Done")
+    let shiftHasEnded: Bool
+
     /// Deep link URL to open the shift in the app (e.g., "tidex://shifts?dates=2025-01-15")
     let deepLinkURL: URL?
 
@@ -62,6 +67,7 @@ struct ShiftWidgetEntry: TimelineEntry {
             daysRemaining: 0,
             layoutState: .todayOrTomorrow,
             shiftHasStarted: false,
+            shiftHasEnded: false,
             deepLinkURL: nil
         )
     }
@@ -81,6 +87,7 @@ struct ShiftWidgetEntry: TimelineEntry {
             daysRemaining: 0,
             layoutState: .empty,
             shiftHasStarted: false,
+            shiftHasEnded: false,
             deepLinkURL: nil
         )
     }

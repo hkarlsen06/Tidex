@@ -367,7 +367,7 @@ function formatLongDate(date: Date | null, locale: Locale): string {
   }).format(date);
 }
 
-function buildFileName(range: DateRange | null, ext: 'pdf' | 'csv', locale: Locale, userName?: string) {
+function buildFileName(range: DateRange | null, ext: 'pdf' | 'csv', locale: Locale, _userName?: string) {
   // Format: tidex_jan-2026.pdf or tidex_01jan-15jan-2026.pdf
   const parts: string[] = ['tidex'];
 
