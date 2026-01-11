@@ -521,6 +521,13 @@ private struct StoredShift: Codable {
 struct ShiftWidgetProvider: TimelineProvider {
     private let appGroupId = "group.no.tidex.app"
 
+    private func sharedUserDefaults() -> UserDefaults? {
+        guard FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupId) != nil else {
+            return nil
+        }
+        return UserDefaults(suiteName: appGroupId)
+    }
+
     func placeholder(in _: Context) -> ShiftWidgetEntry {
         ShiftWidgetEntry.placeholder()
     }
@@ -540,6 +547,16 @@ struct ShiftWidgetProvider: TimelineProvider {
 
     // MARK: - Private Helpers
 
+    /// Parse ISO date (YYYY-MM-DD) in a stable, locale-agnostic way.
+    private func parseShiftDate(_ dateString: String) -> Date? {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone.current
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter.date(from: dateString)
+    }
+
     /// Count midnight boundaries crossed between two dates (matching the web app's pattern)
     /// Users perceive "1 day" as "tomorrow", not "24 hours from now"
     private func countMidnightCrossings(from: Date, to: Date) -> Int {
@@ -554,10 +571,7 @@ struct ShiftWidgetProvider: TimelineProvider {
     /// Determine if the shift has already started by comparing current time to shift start
     /// Returns true if we're past the shift's start time on the shift date
     private func hasShiftStarted(shiftDateString: String, startTime: String) -> Bool {
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd"
-
-        guard let shiftDate = dateFormatter.date(from: shiftDateString) else {
+        guard let shiftDate = parseShiftDate(shiftDateString) else {
             return false
         }
 
@@ -584,10 +598,7 @@ struct ShiftWidgetProvider: TimelineProvider {
     /// - 1 crossing: tomorrow (State A)
     /// - 2+ crossings: countdown (State B)
     private func determineLayoutState(shiftDateString: String) -> (state: WidgetLayoutState, daysRemaining: Int) {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-
-        guard let shiftDate = formatter.date(from: shiftDateString) else {
+        guard let shiftDate = parseShiftDate(shiftDateString) else {
             return (.empty, 0)
         }
 
@@ -613,7 +624,7 @@ struct ShiftWidgetProvider: TimelineProvider {
     }
 
     private func createEntry() -> ShiftWidgetEntry {
-        guard let userDefaults = UserDefaults(suiteName: appGroupId),
+        guard let userDefaults = sharedUserDefaults(),
               let shiftsJson = userDefaults.string(forKey: "upcoming_shifts"),
               let data = shiftsJson.data(using: .utf8),
               let shifts = try? JSONDecoder().decode([StoredShift].self, from: data),
@@ -672,20 +683,18 @@ struct ShiftWidgetProvider: TimelineProvider {
     /// 2. Most recent past shift if no future shifts
     private func findBestShift(from shifts: [StoredShift]) -> StoredShift? {
         let today = Calendar.current.startOfDay(for: Date())
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
 
         // Sort shifts by date
         let sortedShifts = shifts.sorted { a, b in
-            guard let dateA = formatter.date(from: a.shiftDate),
-                  let dateB = formatter.date(from: b.shiftDate)
+            guard let dateA = parseShiftDate(a.shiftDate),
+                  let dateB = parseShiftDate(b.shiftDate)
             else { return false }
             return dateA < dateB
         }
 
         // Find first future shift (including today)
         for shift in sortedShifts {
-            if let shiftDate = formatter.date(from: shift.shiftDate),
+            if let shiftDate = parseShiftDate(shift.shiftDate),
                shiftDate >= today
             {
                 return shift
@@ -697,9 +706,7 @@ struct ShiftWidgetProvider: TimelineProvider {
     }
 
     private func formatShiftDate(_ dateString: String, locale: String) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        guard let shiftDate = formatter.date(from: dateString) else { return dateString }
+        guard let shiftDate = parseShiftDate(dateString) else { return dateString }
 
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
@@ -720,7 +727,7 @@ struct ShiftWidgetProvider: TimelineProvider {
         // Weekday + day: "Man 12." or "Mon 12."
         let weekdayFormatter = DateFormatter()
         weekdayFormatter.locale = Locale(identifier: locale == "no" ? "nb_NO" : "en_US")
-        weekdayFormatter.dateFormat = "EEE d."
+        weekdayFormatter.setLocalizedDateFormatFromTemplate("EEE d")
         return weekdayFormatter.string(from: shiftDate).capitalized
     }
 

@@ -120,6 +120,13 @@ public class ShiftActivityPlugin: CAPPlugin, CAPBridgedPlugin {
     // App Group identifier for shared storage
     private let appGroupId = "group.no.tidex.app"
 
+    private func sharedUserDefaults() -> UserDefaults? {
+        guard FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupId) != nil else {
+            return nil
+        }
+        return UserDefaults(suiteName: appGroupId)
+    }
+
     // MARK: - Plugin Methods
 
     /// Check if Live Activities are available on this device
@@ -321,7 +328,7 @@ public class ShiftActivityPlugin: CAPPlugin, CAPBridgedPlugin {
             return
         }
 
-        guard let userDefaults = UserDefaults(suiteName: appGroupId) else {
+        guard let userDefaults = sharedUserDefaults() else {
             call.reject("Could not access shared storage")
             return
         }

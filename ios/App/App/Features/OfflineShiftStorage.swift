@@ -42,10 +42,17 @@ enum OfflineShiftStorage {
     private static let appGroupId = "group.no.tidex.app"
     private static let shiftsKey = "upcoming_shifts"
 
+    private static func sharedUserDefaults() -> UserDefaults? {
+        guard FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupId) != nil else {
+            return nil
+        }
+        return UserDefaults(suiteName: appGroupId)
+    }
+
     /// Load cached shifts from App Group storage.
     /// Returns empty array if no shifts are cached or parsing fails.
     static func loadShifts() -> [StoredShift] {
-        guard let userDefaults = UserDefaults(suiteName: appGroupId),
+        guard let userDefaults = sharedUserDefaults(),
               let shiftsJson = userDefaults.string(forKey: shiftsKey),
               let data = shiftsJson.data(using: .utf8)
         else {

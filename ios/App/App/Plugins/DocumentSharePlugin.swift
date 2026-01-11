@@ -120,7 +120,8 @@ public class DocumentSharePlugin: CAPPlugin, CAPBridgedPlugin {
 
     private func cleanup() {
         if let url = currentTempURL {
-            try? FileManager.default.removeItem(at: url)
+            let tempDir = url.deletingLastPathComponent()
+            try? FileManager.default.removeItem(at: tempDir)
             currentTempURL = nil
         }
     }

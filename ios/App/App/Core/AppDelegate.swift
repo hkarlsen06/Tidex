@@ -18,6 +18,13 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     // Background task identifier for shift checking
     private let shiftCheckTaskId = "no.tidex.app.shiftcheck"
 
+    private func sharedUserDefaults() -> UserDefaults? {
+        guard FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupId) != nil else {
+            return nil
+        }
+        return UserDefaults(suiteName: appGroupId)
+    }
+
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         // Initialize Firebase BEFORE creating any windows
         FirebaseApp.configure()
@@ -61,7 +68,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // Cancel any existing scheduled task first
         BGTaskScheduler.shared.cancel(taskRequestWithIdentifier: shiftCheckTaskId)
 
-        guard let userDefaults = UserDefaults(suiteName: appGroupId),
+        guard let userDefaults = sharedUserDefaults(),
               let shiftsJson = userDefaults.string(forKey: "upcoming_shifts"),
               let data = shiftsJson.data(using: .utf8),
               let shifts = try? JSONDecoder().decode([StoredShift].self, from: data)
@@ -144,7 +151,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         }
 
         // Read upcoming shifts from shared storage
-        guard let userDefaults = UserDefaults(suiteName: appGroupId),
+        guard let userDefaults = sharedUserDefaults(),
               let shiftsJson = userDefaults.string(forKey: "upcoming_shifts"),
               let shiftsData = shiftsJson.data(using: .utf8) else {
             completion(true)
