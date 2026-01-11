@@ -9,8 +9,6 @@ type LoginSearchParams = {
   redirect?: string | string[];
 };
 
-const DEFAULT_REDIRECT = '/';
-
 function pickFirst(value?: string | string[]) {
   if (Array.isArray(value)) {
     return value[0];
@@ -19,18 +17,23 @@ function pickFirst(value?: string | string[]) {
   return value;
 }
 
-function resolveInitialNext(searchParams: LoginSearchParams): string {
+function resolveInitialNext(searchParams: LoginSearchParams, locale: string): string {
+  const defaultRedirect = `/${locale}/dashboard`;
   const raw =
     pickFirst(searchParams?.next) ??
     pickFirst(searchParams?.redirect) ??
-    DEFAULT_REDIRECT;
+    defaultRedirect;
 
   if (typeof raw !== 'string') {
-    return DEFAULT_REDIRECT;
+    return defaultRedirect;
   }
 
   if (!raw.startsWith('/') || raw.startsWith('//')) {
-    return DEFAULT_REDIRECT;
+    return defaultRedirect;
+  }
+
+  if (raw === '/') {
+    return defaultRedirect;
   }
 
   return raw;
@@ -70,11 +73,13 @@ export default async function Page({
   searchParams: Promise<LoginSearchParams>;
 }) {
   const resolvedSearchParams = await searchParams;
-  const initialNext = resolveInitialNext(resolvedSearchParams);
+  const paramsPromise = params;
+  const { locale } = await paramsPromise;
+  const initialNext = resolveInitialNext(resolvedSearchParams, locale);
 
   return (
-    <Suspense fallback={<LoginSkeleton params={params} />}>
-      <LoginClient initialNext={initialNext} params={params} />
+    <Suspense fallback={<LoginSkeleton params={paramsPromise} />}>
+      <LoginClient initialNext={initialNext} params={paramsPromise} />
     </Suspense>
   );
 }
