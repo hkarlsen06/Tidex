@@ -316,6 +316,13 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
         NotificationCenter.default.post(name: .capacitorDidFailToRegisterForRemoteNotifications, object: error)
     }
+
+    func application(_ application: UIApplication,
+                     didReceiveRemoteNotification userInfo: [AnyHashable: Any],
+                     fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void) {
+        Messaging.messaging().appDidReceiveMessage(userInfo)
+        completionHandler(.newData)
+    }
 }
 
 // MARK: - MessagingDelegate
@@ -333,6 +340,7 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
     func userNotificationCenter(_ center: UNUserNotificationCenter,
                                 willPresent notification: UNNotification,
                                 withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+        Messaging.messaging().appDidReceiveMessage(notification.request.content.userInfo)
         // Show banner even when app is in foreground
         completionHandler([.banner, .sound])
     }
@@ -341,6 +349,7 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
     func userNotificationCenter(_ center: UNUserNotificationCenter,
                                 didReceive response: UNNotificationResponse,
                                 withCompletionHandler completionHandler: @escaping () -> Void) {
+        Messaging.messaging().appDidReceiveMessage(response.notification.request.content.userInfo)
         // The @capacitor-firebase/messaging plugin handles forwarding tap data to JS
         completionHandler()
     }
