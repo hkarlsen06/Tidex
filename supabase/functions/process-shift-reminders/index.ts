@@ -229,7 +229,7 @@ async function sendReminderToFcm(
         payload: {
           aps: {
             alert: { title, body },
-            sound: "default",
+            sound: "tidex_notification.caf",
             "mutable-content": 1,
           },
         },

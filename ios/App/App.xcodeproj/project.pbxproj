@@ -28,6 +28,7 @@
 		NATSPL0012F0800000000001 /* NativeSplashPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = NATSPL0012F0800000000002 /* NativeSplashPlugin.swift */; };
 		NATTAB0012F0800000000001 /* NativeTabBarPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = NATTAB0012F0800000000002 /* NativeTabBarPlugin.swift */; };
 		NETMON0012F2000000000001 /* NetworkMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = NETMON0012F2000000000002 /* NetworkMonitor.swift */; };
+		NTFSND0012F1400000000001 /* tidex_notification.caf in Resources */ = {isa = PBXBuildFile; fileRef = NTFSND0012F1400000000002 /* tidex_notification.caf */; };
 		OFFDSH0012F3000000000001 /* OfflineDashboardCards.swift in Sources */ = {isa = PBXBuildFile; fileRef = OFFDSH0012F3000000000002 /* OfflineDashboardCards.swift */; };
 		OFFSCR0012F2000000000001 /* OfflineScreenView.swift in Sources */ = {isa = PBXBuildFile; fileRef = OFFSCR0012F2000000000002 /* OfflineScreenView.swift */; };
 		OFFSTR0012F2000000000001 /* OfflineShiftStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = OFFSTR0012F2000000000002 /* OfflineShiftStorage.swift */; };
@@ -87,6 +88,7 @@
 		NATSPL0012F0800000000002 /* NativeSplashPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeSplashPlugin.swift; sourceTree = "<group>"; };
 		NATTAB0012F0800000000002 /* NativeTabBarPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeTabBarPlugin.swift; sourceTree = "<group>"; };
 		NETMON0012F2000000000002 /* NetworkMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkMonitor.swift; sourceTree = "<group>"; };
+		NTFSND0012F1400000000002 /* tidex_notification.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = tidex_notification.caf; sourceTree = "<group>"; };
 		OFFDSH0012F3000000000002 /* OfflineDashboardCards.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineDashboardCards.swift; sourceTree = "<group>"; };
 		OFFSCR0012F2000000000002 /* OfflineScreenView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineScreenView.swift; sourceTree = "<group>"; };
 		OFFSTR0012F2000000000002 /* OfflineShiftStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineShiftStorage.swift; sourceTree = "<group>"; };
@@ -229,6 +231,7 @@
 				2FAD9762203C412B000D30F8 /* config.xml */,
 				50B271D01FEDC1A000F3C39B /* public */,
 				INFOP0012F0900000000004 /* InfoPlist.strings */,
+				NTFSND0012F1400000000002 /* tidex_notification.caf */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -343,6 +346,7 @@
 				2FAD9763203C412B000D30F8 /* config.xml in Resources */,
 				LAUNCH0012F0500000000001 /* LaunchScreen.storyboard in Resources */,
 				INFOP0012F0900000000001 /* InfoPlist.strings in Resources */,
+				NTFSND0012F1400000000001 /* tidex_notification.caf in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -433,7 +437,7 @@
 				CLANG_ENABLE_OBJC_WEAK = YES;
 				CODE_SIGN_ENTITLEMENTS = TidexShiftWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 120126A;
+				CURRENT_PROJECT_VERSION = 120126.1;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = TidexShiftWidget/Info.plist;
@@ -472,7 +476,7 @@
 				CLANG_ENABLE_OBJC_WEAK = YES;
 				CODE_SIGN_ENTITLEMENTS = TidexShiftWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 120126A;
+				CURRENT_PROJECT_VERSION = 120126.1;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = TidexShiftWidget/Info.plist;
@@ -630,7 +634,7 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 120126A;
+				CURRENT_PROJECT_VERSION = 120126.1;
 				INFOPLIST_FILE = "App/Info-Debug.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = no.tidex.app;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
@@ -658,7 +662,7 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				CODE_SIGN_ENTITLEMENTS = App/AppRelease.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 120126A;
+				CURRENT_PROJECT_VERSION = 120126.1;
 				INFOPLIST_FILE = App/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = no.tidex.app;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";

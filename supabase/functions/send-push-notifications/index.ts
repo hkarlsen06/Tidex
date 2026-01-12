@@ -184,7 +184,7 @@ async function sendToFcm(
         payload: {
           aps: {
             alert: { title, body },
-            sound: "default",
+            sound: "tidex_notification.caf",
             "mutable-content": 1,
           },
         },
