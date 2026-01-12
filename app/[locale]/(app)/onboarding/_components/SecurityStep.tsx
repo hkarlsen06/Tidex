@@ -224,12 +224,31 @@ export function SecurityStep({ onNext, onBack }: SecurityStepProps) {
             <p className="text-sm text-text-secondary mb-2">
               {t.onboarding.securityStep.cantScan}
             </p>
-            <a
-              href={enrollment.uri}
+            <button
+              type="button"
+              onClick={async () => {
+                const uri = enrollment.uri;
+                if (!uri) return;
+
+                try {
+                  // Try to use Capacitor's App plugin for native platforms
+                  const { Capacitor } = await import("@capacitor/core");
+                  if (Capacitor.isNativePlatform()) {
+                    const { App } = await import("@capacitor/app");
+                    await App.openUrl({ url: uri });
+                    return;
+                  }
+                } catch {
+                  // Not on native platform or plugin not available
+                }
+
+                // Fallback for web: try to open the URL directly
+                window.location.href = uri;
+              }}
               className="inline-flex items-center justify-center gap-2 rounded-md bg-brand-gradient-start px-4 py-2 text-sm font-medium text-white hover:opacity-90 transition-opacity"
             >
               {t.onboarding.securityStep.addAutomatically}
-            </a>
+            </button>
           </div>
         )}
 
