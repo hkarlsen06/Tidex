@@ -203,42 +203,27 @@ struct ShiftHomeWidgetView: View {
     /// Layout for today, tomorrow, or past shifts with time block and salute
     private var todayTomorrowLayout: some View {
         VStack(spacing: 0) {
-            // TOP ROW: Date + Watermark Logo + Earnings
+            // TOP ROW: Logo on left, Date + Earnings stacked on right
             HStack(alignment: .top) {
-                Text(entry.shiftDate)
-                    .font(.system(size: 14, weight: .semibold, design: .default))
-                    .foregroundColor(entry.hasShift ? accentColor : mutedTextColor)
-                    .widgetAccentable(entry.hasShift)
-                    .lineLimit(1)
-                    .frame(maxWidth: 70, alignment: .leading)
-                    .mask(
-                        HStack(spacing: 0) {
-                            Rectangle()
-                            LinearGradient(colors: [.white, .clear], startPoint: .leading, endPoint: .trailing)
-                                .frame(width: 12)
-                        }
-                    )
-
-                Spacer()
-
-                // Watermark logo - centered between date and earnings (in foreground)
+                // Logo - two lines high to match date + earnings
                 LogoWatermark(useTint: useTintedLogo)
-                    .frame(width: 20, height: 23)
+                    .frame(width: 28, height: 32)
 
                 Spacer()
 
-                Text(entry.netEarnings)
-                    .font(.system(size: 14, weight: .semibold, design: .default))
-                    .foregroundColor(secondaryTextColor)
-                    .lineLimit(1)
-                    .frame(maxWidth: 70, alignment: .trailing)
-                    .mask(
-                        HStack(spacing: 0) {
-                            LinearGradient(colors: [.clear, .white], startPoint: .leading, endPoint: .trailing)
-                                .frame(width: 12)
-                            Rectangle()
-                        }
-                    )
+                // Date and earnings stacked on the right
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text(entry.shiftDate)
+                        .font(.system(size: 14, weight: .semibold, design: .default))
+                        .foregroundColor(entry.hasShift ? accentColor : mutedTextColor)
+                        .widgetAccentable(entry.hasShift)
+                        .lineLimit(1)
+
+                    Text(entry.netEarnings)
+                        .font(.system(size: 14, weight: .semibold, design: .default))
+                        .foregroundColor(secondaryTextColor)
+                        .lineLimit(1)
+                }
             }
 
             Spacer()
@@ -360,42 +345,27 @@ struct ShiftHomeWidgetView: View {
     /// Layout for shifts more than 1 day away
     private var countdownLayout: some View {
         VStack(spacing: 0) {
-            // TOP ROW: Date + Watermark Logo + Earnings
+            // TOP ROW: Logo on left, Date + Earnings stacked on right
             HStack(alignment: .top) {
-                Text(entry.shiftDate)
-                    .font(.system(size: 14, weight: .semibold, design: .default))
-                    .foregroundColor(entry.hasShift ? accentColor : mutedTextColor)
-                    .widgetAccentable(entry.hasShift)
-                    .lineLimit(1)
-                    .frame(maxWidth: 70, alignment: .leading)
-                    .mask(
-                        HStack(spacing: 0) {
-                            Rectangle()
-                            LinearGradient(colors: [.white, .clear], startPoint: .leading, endPoint: .trailing)
-                                .frame(width: 12)
-                        }
-                    )
-
-                Spacer()
-
-                // Watermark logo - centered between date and earnings (in foreground)
+                // Logo - two lines high to match date + earnings
                 LogoWatermark(useTint: useTintedLogo)
-                    .frame(width: 20, height: 23)
+                    .frame(width: 28, height: 32)
 
                 Spacer()
 
-                Text(entry.netEarnings)
-                    .font(.system(size: 14, weight: .semibold, design: .default))
-                    .foregroundColor(secondaryTextColor)
-                    .lineLimit(1)
-                    .frame(maxWidth: 70, alignment: .trailing)
-                    .mask(
-                        HStack(spacing: 0) {
-                            LinearGradient(colors: [.clear, .white], startPoint: .leading, endPoint: .trailing)
-                                .frame(width: 12)
-                            Rectangle()
-                        }
-                    )
+                // Date and earnings stacked on the right
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text(entry.shiftDate)
+                        .font(.system(size: 14, weight: .semibold, design: .default))
+                        .foregroundColor(entry.hasShift ? accentColor : mutedTextColor)
+                        .widgetAccentable(entry.hasShift)
+                        .lineLimit(1)
+
+                    Text(entry.netEarnings)
+                        .font(.system(size: 14, weight: .semibold, design: .default))
+                        .foregroundColor(secondaryTextColor)
+                        .lineLimit(1)
+                }
             }
 
             Spacer()
@@ -489,41 +459,26 @@ struct ShiftHomeWidgetViewLegacy: View {
 
     private var todayTomorrowLayout: some View {
         VStack(spacing: 0) {
-            // TOP ROW: Date + Watermark Logo + Earnings
+            // TOP ROW: Logo on left, Date + Earnings stacked on right
             HStack(alignment: .top) {
-                Text(entry.shiftDate)
-                    .font(.system(size: 14, weight: .semibold, design: .default))
-                    .foregroundColor(entry.hasShift ? tidexBlue : .white.opacity(0.4))
-                    .lineLimit(1)
-                    .frame(maxWidth: 70, alignment: .leading)
-                    .mask(
-                        HStack(spacing: 0) {
-                            Rectangle()
-                            LinearGradient(colors: [.white, .clear], startPoint: .leading, endPoint: .trailing)
-                                .frame(width: 12)
-                        }
-                    )
-
-                Spacer()
-
-                // Watermark logo - centered between date and earnings (in foreground)
+                // Logo - two lines high to match date + earnings
                 LogoWatermark()
-                    .frame(width: 20, height: 23)
+                    .frame(width: 28, height: 32)
 
                 Spacer()
 
-                Text(entry.netEarnings)
-                    .font(.system(size: 14, weight: .semibold, design: .default))
-                    .foregroundColor(.white.opacity(0.6))
-                    .lineLimit(1)
-                    .frame(maxWidth: 70, alignment: .trailing)
-                    .mask(
-                        HStack(spacing: 0) {
-                            LinearGradient(colors: [.clear, .white], startPoint: .leading, endPoint: .trailing)
-                                .frame(width: 12)
-                            Rectangle()
-                        }
-                    )
+                // Date and earnings stacked on the right
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text(entry.shiftDate)
+                        .font(.system(size: 14, weight: .semibold, design: .default))
+                        .foregroundColor(entry.hasShift ? tidexBlue : .white.opacity(0.4))
+                        .lineLimit(1)
+
+                    Text(entry.netEarnings)
+                        .font(.system(size: 14, weight: .semibold, design: .default))
+                        .foregroundColor(.white.opacity(0.6))
+                        .lineLimit(1)
+                }
             }
 
             Spacer()
@@ -633,41 +588,26 @@ struct ShiftHomeWidgetViewLegacy: View {
 
     private var countdownLayout: some View {
         VStack(spacing: 0) {
-            // TOP ROW: Date + Watermark Logo + Earnings
+            // TOP ROW: Logo on left, Date + Earnings stacked on right
             HStack(alignment: .top) {
-                Text(entry.shiftDate)
-                    .font(.system(size: 14, weight: .semibold, design: .default))
-                    .foregroundColor(entry.hasShift ? tidexBlue : .white.opacity(0.4))
-                    .lineLimit(1)
-                    .frame(maxWidth: 70, alignment: .leading)
-                    .mask(
-                        HStack(spacing: 0) {
-                            Rectangle()
-                            LinearGradient(colors: [.white, .clear], startPoint: .leading, endPoint: .trailing)
-                                .frame(width: 12)
-                        }
-                    )
-
-                Spacer()
-
-                // Watermark logo - centered between date and earnings (in foreground)
+                // Logo - two lines high to match date + earnings
                 LogoWatermark()
-                    .frame(width: 20, height: 23)
+                    .frame(width: 28, height: 32)
 
                 Spacer()
 
-                Text(entry.netEarnings)
-                    .font(.system(size: 14, weight: .semibold, design: .default))
-                    .foregroundColor(.white.opacity(0.6))
-                    .lineLimit(1)
-                    .frame(maxWidth: 70, alignment: .trailing)
-                    .mask(
-                        HStack(spacing: 0) {
-                            LinearGradient(colors: [.clear, .white], startPoint: .leading, endPoint: .trailing)
-                                .frame(width: 12)
-                            Rectangle()
-                        }
-                    )
+                // Date and earnings stacked on the right
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text(entry.shiftDate)
+                        .font(.system(size: 14, weight: .semibold, design: .default))
+                        .foregroundColor(entry.hasShift ? tidexBlue : .white.opacity(0.4))
+                        .lineLimit(1)
+
+                    Text(entry.netEarnings)
+                        .font(.system(size: 14, weight: .semibold, design: .default))
+                        .foregroundColor(.white.opacity(0.6))
+                        .lineLimit(1)
+                }
             }
 
             Spacer()
