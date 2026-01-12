@@ -6,7 +6,6 @@ import {
   useContext,
   useEffect,
   useMemo,
-  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -17,14 +16,17 @@ type NavigationFeedbackContextValue = {
   pendingPath: string | null; // Pathname only (no query/hash)
 };
 
-const NavigationFeedbackContext = createContext<NavigationFeedbackContextValue | null>(null);
+const NavigationFeedbackContext =
+  createContext<NavigationFeedbackContextValue | null>(null);
 
-export function NavigationFeedbackProvider({ children }: { children: ReactNode }) {
+export function NavigationFeedbackProvider({
+  children,
+}: {
+  children: ReactNode;
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const [pendingPath, setPendingPath] = useState<string | null>(null);
-  const hideFrameRef = useRef<number | null>(null);
-  const prevPathnameRef = useRef(pathname);
 
   const toPathname = useCallback((href: string) => {
     try {
@@ -60,46 +62,18 @@ export function NavigationFeedbackProvider({ children }: { children: ReactNode }
     [pathname, router, toPathname],
   );
 
-  // Clear pendingPath when pathname actually changes.
-  // This handles both:
-  // 1. Normal navigation completing (pathname changes to pendingPath)
-  // 2. External navigation like deeplinks (pathname changes to something else)
-  // Case 2 is critical: when opening from a push notification deeplink,
-  // a stale pendingPath would cause the wrong nav item to be highlighted.
+  // ALWAYS clear pendingPath when pathname changes.
+  // This is intentionally simple and handles ALL cases:
+  // - Normal navigation completing (pathname reaches pendingPath)
+  // - Deeplinks from push notifications (pathname changes externally)
+  // - Login/logout redirects (pathname changes to auth pages or dashboard)
+  // - Interrupted navigation (something else happened)
+  //
+  // The navbar will then correctly highlight based on the actual pathname.
+  // If there's a new navigation, pendingPath will be set again by navigate().
   useEffect(() => {
-    const prevPathname = prevPathnameRef.current;
-    prevPathnameRef.current = pathname;
-
-    // Only clear pendingPath if:
-    // - There is a pendingPath set, AND
-    // - pathname actually changed (not just a re-render)
-    if (!pendingPath || pathname === prevPathname) {
-      return;
-    }
-
-    // pathname changed while pendingPath was set - clear it
-    // This works for both normal navigation (reached destination) and
-    // external navigation like deeplinks (went somewhere unexpected)
-    hideFrameRef.current = window.requestAnimationFrame(() => {
-      setPendingPath(null);
-      hideFrameRef.current = null;
-    });
-
-    return () => {
-      if (hideFrameRef.current) {
-        window.cancelAnimationFrame(hideFrameRef.current);
-        hideFrameRef.current = null;
-      }
-    };
-  }, [pathname, pendingPath]);
-
-  useEffect(() => {
-    return () => {
-      if (hideFrameRef.current) {
-        window.cancelAnimationFrame(hideFrameRef.current);
-      }
-    };
-  }, []);
+    setPendingPath(null);
+  }, [pathname]);
 
   const value = useMemo(
     () => ({
@@ -119,7 +93,9 @@ export function NavigationFeedbackProvider({ children }: { children: ReactNode }
 export function useNavigationFeedback() {
   const context = useContext(NavigationFeedbackContext);
   if (!context) {
-    throw new Error("useNavigationFeedback must be used within a NavigationFeedbackProvider");
+    throw new Error(
+      "useNavigationFeedback must be used within a NavigationFeedbackProvider",
+    );
   }
   return context;
 }
