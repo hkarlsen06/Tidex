@@ -137,6 +137,8 @@ struct DashboardView: View {
                 TotalCard(
                     gross: data.currentMonthGross,
                     net: data.currentMonthNet,
+                    completedGross: data.currentMonthCompletedGross,
+                    completedNet: data.currentMonthCompletedNet,
                     shiftCount: data.currentMonthShiftCount,
                     plannedCount: data.currentMonthPlannedCount,
                     percentageChange: data.percentageChangeVsPrevious,
