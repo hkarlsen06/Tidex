@@ -6,6 +6,15 @@ struct LoginView: View {
     @StateObject private var viewModel = LoginViewModel()
     @Environment(\.localization) private var localization
 
+    // Navigation callbacks
+    var onNavigateToSignup: (() -> Void)?
+    var onNavigateToResetPassword: (() -> Void)?
+
+    // Animation state
+    @State private var headerAppeared = false
+    @State private var cardAppeared = false
+    @State private var footerAppeared = false
+
     var body: some View {
         ZStack {
             // Background
@@ -18,6 +27,8 @@ struct LoginView: View {
                     // Header with logo
                     headerView
                         .padding(.top, 40)
+                        .opacity(headerAppeared ? 1 : 0)
+                        .offset(y: headerAppeared ? 0 : -20)
 
                     // Main card
                     TidexCard {
@@ -50,21 +61,38 @@ struct LoginView: View {
                         }
                         .padding(24)
                     }
+                    .opacity(cardAppeared ? 1 : 0)
+                    .offset(y: cardAppeared ? 0 : 30)
+                    .scaleEffect(cardAppeared ? 1 : 0.95)
 
                     // Footer
                     if viewModel.currentStep == .input {
                         footerView
+                            .opacity(footerAppeared ? 1 : 0)
                     }
 
                     // Locale switcher
                     LocaleSwitcherView()
                         .padding(.top, 16)
+                        .opacity(footerAppeared ? 1 : 0)
                 }
                 .padding(.horizontal, 20)
                 .padding(.bottom, 40)
             }
         }
         .loading(viewModel.isLoading)
+        .onAppear {
+            // Staggered entrance animations
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.8).delay(0.1)) {
+                headerAppeared = true
+            }
+            withAnimation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.2)) {
+                cardAppeared = true
+            }
+            withAnimation(.easeOut(duration: 0.4).delay(0.4)) {
+                footerAppeared = true
+            }
+        }
     }
 
     // MARK: - Header
@@ -112,7 +140,10 @@ struct LoginView: View {
 
         // Email/phone form
         if viewModel.showEmailForm {
-            EmailPasswordForm(viewModel: viewModel)
+            EmailPasswordForm(
+                viewModel: viewModel,
+                onForgotPassword: onNavigateToResetPassword
+            )
         } else {
             OutlineButton(
                 title: localization.string("login.emailOrPhoneReveal"),
@@ -149,7 +180,7 @@ struct LoginView: View {
                 .foregroundColor(.tidexTextSecondary)
 
             Button(action: {
-                // TODO: Navigate to signup
+                onNavigateToSignup?()
             }) {
                 Text(localization.string("login.createAccount"))
                     .font(.system(size: 14, weight: .medium))

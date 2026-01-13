@@ -19,7 +19,7 @@
                BlueprintIdentifier = "11A5CD2D2F101283002BAC91"
                BuildableName = "TidexShiftWidgetExtension.appex"
                BlueprintName = "TidexShiftWidgetExtension"
-               ReferencedContainer = "container:App.xcodeproj">
+               ReferencedContainer = "container:Tidex.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
          <BuildActionEntry
@@ -32,8 +32,8 @@
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "504EC3031FED79650016851F"
                BuildableName = "Tidex.app"
-               BlueprintName = "App"
-               ReferencedContainer = "container:App.xcodeproj">
+               BlueprintName = "TidexApp"
+               ReferencedContainer = "container:Tidex.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -65,7 +65,7 @@
             BlueprintIdentifier = "11A5CD2D2F101283002BAC91"
             BuildableName = "TidexShiftWidgetExtension.appex"
             BlueprintName = "TidexShiftWidgetExtension"
-            ReferencedContainer = "container:App.xcodeproj">
+            ReferencedContainer = "container:Tidex.xcodeproj">
          </BuildableReference>
       </RemoteRunnable>
       <MacroExpansion>
@@ -73,8 +73,8 @@
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "504EC3031FED79650016851F"
             BuildableName = "Tidex.app"
-            BlueprintName = "App"
-            ReferencedContainer = "container:App.xcodeproj">
+            BlueprintName = "TidexApp"
+            ReferencedContainer = "container:Tidex.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
       <EnvironmentVariables>
@@ -109,8 +109,8 @@
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "504EC3031FED79650016851F"
             BuildableName = "Tidex.app"
-            BlueprintName = "App"
-            ReferencedContainer = "container:App.xcodeproj">
+            BlueprintName = "TidexApp"
+            ReferencedContainer = "container:Tidex.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

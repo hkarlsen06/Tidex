@@ -32,11 +32,14 @@ The app uses a **fully native SwiftUI architecture** with a coordinator pattern 
                               |
            +------------------+------------------+
            |                  |                  |
-    +-----------+     +-------------+    +-------------+
-    | LoginView |     | MFAVerify   |    | MainTabView |
-    +-----------+     +-------------+    +-------------+
-           ↓                  ↓                  ↓
-    Unauthenticated    MFA Required      Authenticated
+    +------------------+  +-------------+  +-------------+
+    | AuthNavigation   |  | MFAVerify   |  | MainTabView |
+    |  ├── Login       |  +-------------+  +-------------+
+    |  ├── Signup      |        ↓                ↓
+    |  └── ResetPwd    |  MFA Required     Authenticated
+    +------------------+
+           ↓
+    Unauthenticated
 ```
 
 ### Navigation Flow
@@ -72,12 +75,24 @@ The app uses a **fully native SwiftUI architecture** with a coordinator pattern 
 | `ErrorTranslations` | Done | Supabase error message translation |
 | Shared Components | Done | Buttons, text fields, cards, etc. |
 
+### Completed (Phase 2: Signup + Password Reset)
+
+| Component | Status | Description |
+|-----------|--------|-------------|
+| `AuthNavigationView` | Done | Navigation container for login/signup/reset flows |
+| `SignupView` | Done | User registration screen with OAuth + email/phone |
+| `SignupViewModel` | Done | Signup logic, validation, OTP handling |
+| `SignupForm` | Done | Email/phone + password form with terms agreement |
+| `SignupOTPForm` | Done | OTP verification for phone signup |
+| `TermsAgreementView` | Done | Terms/privacy checkbox with legal document sheets |
+| `ResetPasswordView` | Done | Three-step password reset flow |
+| `ResetPasswordViewModel` | Done | Reset logic for email and phone flows |
+| Auth screen animations | Done | Spring entrance animations on all auth screens |
+
 ### Not Yet Implemented
 
 | Component | Status | Notes |
 |-----------|--------|-------|
-| `SignupView` | Not started | User registration screen |
-| `ResetPasswordView` | Not started | Password reset flow |
 | Dashboard data | Not started | Real shift data display |
 | Shifts CRUD | Not started | Create/read/update/delete shifts |
 | Stats views | Not started | Statistics and analytics |
@@ -99,6 +114,7 @@ ios/App/App/
 │   │
 │   ├── Features/
 │   │   ├── Auth/
+│   │   │   ├── AuthNavigationView.swift  # Navigation container for auth flows
 │   │   │   ├── Login/
 │   │   │   │   ├── LoginView.swift
 │   │   │   │   ├── LoginViewModel.swift
@@ -108,6 +124,16 @@ ios/App/App/
 │   │   │   │       ├── OTPInputField.swift
 │   │   │   │       ├── OAuthButtonsView.swift
 │   │   │   │       └── LocaleSwitcherView.swift
+│   │   │   │
+│   │   │   ├── Signup/
+│   │   │   │   ├── SignupView.swift
+│   │   │   │   ├── SignupViewModel.swift
+│   │   │   │   └── Components/
+│   │   │   │       └── TermsAgreementView.swift
+│   │   │   │
+│   │   │   ├── ResetPassword/
+│   │   │   │   ├── ResetPasswordView.swift
+│   │   │   │   └── ResetPasswordViewModel.swift
 │   │   │   │
 │   │   │   └── MFA/
 │   │   │       ├── MFAVerifyView.swift
@@ -324,7 +350,7 @@ The complete login flow:
 | Phase | Scope | Status |
 |-------|-------|--------|
 | Phase 1 | Auth screens (Login, MFA, basic dashboard) | Complete |
-| Phase 2 | Signup and password reset | Not started |
+| Phase 2 | Signup and password reset | Complete |
 | Phase 3 | Native Dashboard with real data | Not started |
 | Phase 4 | Shifts CRUD with offline-first sync | Not started |
 | Phase 5 | Native Stats | Not started |
@@ -334,15 +360,35 @@ The complete login flow:
 
 When testing the native auth:
 
+**Login:**
 - [ ] Email login: Enter email + password → Login succeeds → Dashboard loads
 - [ ] Phone OTP: Enter phone → Receive SMS → Enter OTP → Login succeeds
 - [ ] Apple Sign-In: Native prompt appears → Login succeeds
 - [ ] Google Sign-In: Native bottom sheet appears → Login succeeds
 - [ ] MFA: If MFA enabled, redirect to MFA screen → Verify TOTP → Login succeeds
-- [ ] Locale: Norwegian/English strings display correctly based on device locale
-- [ ] Error handling: Invalid credentials show translated error message
 - [ ] Session persistence: Close and reopen app → Session persists
 - [ ] Sign out: Tap sign out → Returns to login screen
+
+**Signup:**
+- [ ] Navigate to signup: Tap "Create account" on login → Signup screen appears
+- [ ] Email signup: Enter email + password + accept terms → Email confirmation sent
+- [ ] Phone signup: Enter phone + password + accept terms → OTP sent → Verify OTP → Success
+- [ ] OAuth signup: Google/Apple sign in works from signup screen
+- [ ] Terms agreement: Must check checkbox before submitting
+- [ ] Terms links: Tapping terms/privacy opens sheet with legal documents
+- [ ] Back to login: "Already have account?" navigates back to login
+
+**Password Reset:**
+- [ ] Navigate to reset: Tap "Forgot password?" on login → Reset screen appears
+- [ ] Email reset: Enter email → Send link → Success message shown
+- [ ] Phone reset: Enter phone → OTP sent → Verify → Enter new password → Success
+- [ ] Back to login: Can navigate back to login from any step
+
+**General:**
+- [ ] Locale: Norwegian/English strings display correctly based on device locale
+- [ ] Error handling: Invalid credentials show translated error message
+- [ ] Animations: Entrance animations play smoothly on all auth screens
+- [ ] Screen transitions: Navigating between login/signup/reset animates correctly
 
 ## Build Instructions
 
