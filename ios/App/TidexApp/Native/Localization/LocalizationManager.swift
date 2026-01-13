@@ -1,8 +1,8 @@
 import Foundation
 import SwiftUI
 
-/// Manages locale detection and switching for the native iOS app
-/// Mirrors the behavior of LocaleAwareBridgeViewController.detectDeviceLocale()
+/// Manages locale detection for the native iOS app
+/// Locale is determined solely by iOS Settings (Settings > Tidex > Language)
 @MainActor
 final class LocalizationManager: ObservableObject, @unchecked Sendable {
     // Static shared instance created eagerly to avoid MainActor isolation issues
@@ -23,13 +23,6 @@ final class LocalizationManager: ObservableObject, @unchecked Sendable {
             case .english: return "en_US"
             }
         }
-
-        var displayName: String {
-            switch self {
-            case .norwegian: return "Norsk"
-            case .english: return "English"
-            }
-        }
     }
 
     // MARK: - Published State
@@ -39,20 +32,14 @@ final class LocalizationManager: ObservableObject, @unchecked Sendable {
     // MARK: - Initialization
 
     private init() {
-        // Check for stored preference first
-        if let storedLocale = UserDefaults.standard.string(forKey: APIConfiguration.localeKey),
-           let locale = AppLocale(rawValue: storedLocale) {
-            currentLocale = locale
-        } else {
-            // Fall back to device locale detection
-            currentLocale = Self.detectDeviceLocale()
-        }
+        // Use iOS Settings app language preference (Settings > Tidex > Language)
+        // This respects the per-app language setting in iOS
+        currentLocale = Self.detectDeviceLocale()
     }
 
     // MARK: - Locale Detection
 
-    /// Detect the device's preferred locale
-    /// Mirrors the logic from LocaleAwareBridgeViewController
+    /// Detect the device's preferred locale from iOS Settings
     static func detectDeviceLocale() -> AppLocale {
         let preferredLanguage = Locale.preferredLanguages.first ?? "en"
 
@@ -66,16 +53,19 @@ final class LocalizationManager: ObservableObject, @unchecked Sendable {
         return .english
     }
 
-    // MARK: - Locale Switching
+    // MARK: - Locale Refresh
 
-    /// Set the current locale and persist it
-    func setLocale(_ locale: AppLocale) {
-        currentLocale = locale
-        UserDefaults.standard.set(locale.rawValue, forKey: APIConfiguration.localeKey)
+    /// Refresh locale from iOS Settings
+    /// Call this when the app returns to foreground in case user changed language in Settings
+    func refreshLocale() {
+        let newLocale = Self.detectDeviceLocale()
+        if newLocale != currentLocale {
+            currentLocale = newLocale
 
-        // Also update App Group storage for widget compatibility
-        if let sharedDefaults = UserDefaults(suiteName: APIConfiguration.appGroupID) {
-            sharedDefaults.set(locale.rawValue, forKey: APIConfiguration.localeKey)
+            // Also update App Group storage for widget compatibility
+            if let sharedDefaults = UserDefaults(suiteName: APIConfiguration.appGroupID) {
+                sharedDefaults.set(newLocale.rawValue, forKey: APIConfiguration.localeKey)
+            }
         }
     }
 

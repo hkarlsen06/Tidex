@@ -79,76 +79,183 @@ struct DashboardView: View {
     @EnvironmentObject private var coordinator: AppCoordinator
     @Environment(\.localization) private var localization
 
+    @StateObject private var viewModel = DashboardViewModel()
+
     var body: some View {
         NavigationStack {
             ZStack {
                 Color.tidexDarkBackground
                     .ignoresSafeArea()
 
-                VStack(spacing: 24) {
-                    // Welcome message
-                    VStack(spacing: 8) {
-                        Text(localization.string("dashboard.welcome"))
-                            .font(.system(size: 28, weight: .bold))
-                            .foregroundColor(.tidexTextPrimary)
-
-                        Text(localization.string("dashboard.subtitle"))
-                            .font(.system(size: 16))
-                            .foregroundColor(.tidexTextSecondary)
-                    }
-                    .padding(.top, 40)
-
-                    // Success checkmark
-                    ZStack {
-                        Circle()
-                            .fill(Color.tidexSuccess.opacity(0.1))
-                            .frame(width: 100, height: 100)
-
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(.system(size: 60))
-                            .foregroundColor(.tidexSuccess)
-                    }
-
-                    // Sign out button (for testing)
-                    Button {
-                        Task {
-                            await coordinator.signOut()
-                        }
-                    } label: {
-                        HStack(spacing: 8) {
-                            Image(systemName: "rectangle.portrait.and.arrow.right")
-                            Text(localization.string("dashboard.signOut"))
-                        }
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(.tidexError)
-                        .padding(.horizontal, 24)
-                        .padding(.vertical, 12)
-                        .background(Color.tidexError.opacity(0.1))
-                        .cornerRadius(10)
-                    }
-
-                    Spacer()
-
-                    // Coming soon notice
-                    VStack(spacing: 8) {
-                        Text(localization.string("dashboard.comingSoon"))
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(.tidexTextSecondary)
-
-                        Text(localization.string("dashboard.comingSoonDescription"))
-                            .font(.system(size: 12))
-                            .foregroundColor(.tidexTextMuted)
-                            .multilineTextAlignment(.center)
-                    }
-                    .padding(.bottom, 40)
+                if viewModel.isLoading {
+                    loadingView
+                } else if let error = viewModel.error {
+                    errorView(error: error)
+                } else if let data = viewModel.dashboardData {
+                    dashboardContent(data: data)
+                } else {
+                    emptyStateView
                 }
-                .padding(.horizontal, 20)
             }
             .navigationTitle(localization.string("dashboard.title"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(Color.tidexDarkBackground, for: .navigationBar)
             .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        Task { await viewModel.loadDashboard() }
+                    } label: {
+                        Image(systemName: "arrow.clockwise")
+                            .foregroundColor(.tidexBlue)
+                    }
+                }
+            }
         }
+        .task {
+            await viewModel.loadDashboard()
+        }
+    }
+
+    // MARK: - Dashboard Content
+
+    @ViewBuilder
+    private func dashboardContent(data: DashboardData) -> some View {
+        ScrollView {
+            VStack(spacing: 16) {
+                // Payroll Card (Previous Month)
+                PayrollCard(
+                    payrollDate: data.payrollDate,
+                    label: localization.string(data.payrollHasPassed ? "dashboard.previousPayout" : "dashboard.nextPayout"),
+                    gross: data.previousMonthGross,
+                    net: data.previousMonthNet,
+                    tax: data.previousMonthTax,
+                    taxEnabled: data.previousMonthTaxEnabled
+                )
+
+                // Total Card (Current Month)
+                TotalCard(
+                    gross: data.currentMonthGross,
+                    net: data.currentMonthNet,
+                    shiftCount: data.currentMonthShiftCount,
+                    plannedCount: data.currentMonthPlannedCount,
+                    percentageChange: data.percentageChangeVsPrevious,
+                    taxEnabled: data.currentMonthTaxEnabled
+                )
+
+                // Next Shift Card
+                if let nextShift = data.nextShift {
+                    NextShiftCard(
+                        shift: nextShift,
+                        isToday: data.isNextShiftToday
+                    )
+                }
+
+                #if DEBUG
+                // Sign out button (development only)
+                signOutButton
+                #endif
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 20)
+        }
+    }
+
+    // MARK: - Loading View
+
+    private var loadingView: some View {
+        VStack(spacing: 16) {
+            ProgressView()
+                .progressViewStyle(CircularProgressViewStyle(tint: .tidexBlue))
+                .scaleEffect(1.2)
+
+            Text(localization.string("common.loading"))
+                .font(.system(size: 14))
+                .foregroundColor(.tidexTextSecondary)
+        }
+    }
+
+    // MARK: - Empty State
+
+    private var emptyStateView: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "calendar.badge.exclamationmark")
+                .font(.system(size: 48))
+                .foregroundColor(.tidexTextMuted)
+
+            Text(localization.string("dashboard.noShifts"))
+                .font(.system(size: 16))
+                .foregroundColor(.tidexTextSecondary)
+                .multilineTextAlignment(.center)
+
+            Button {
+                Task { await viewModel.loadDashboard() }
+            } label: {
+                Text(localization.string("common.retry"))
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.tidexBlue)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 10)
+                    .background(Color.tidexBlue.opacity(0.1))
+                    .cornerRadius(8)
+            }
+        }
+        .padding(.horizontal, 40)
+    }
+
+    // MARK: - Error View
+
+    @ViewBuilder
+    private func errorView(error: Error) -> some View {
+        VStack(spacing: 16) {
+            Image(systemName: "exclamationmark.triangle")
+                .font(.system(size: 48))
+                .foregroundColor(.tidexWarning)
+
+            Text(localization.string("dashboard.loadError"))
+                .font(.system(size: 16, weight: .medium))
+                .foregroundColor(.tidexTextPrimary)
+
+            Text(error.localizedDescription)
+                .font(.system(size: 14))
+                .foregroundColor(.tidexTextSecondary)
+                .multilineTextAlignment(.center)
+
+            Button {
+                Task { await viewModel.loadDashboard() }
+            } label: {
+                Text(localization.string("common.retry"))
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.tidexBlue)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 10)
+                    .background(Color.tidexBlue.opacity(0.1))
+                    .cornerRadius(8)
+            }
+        }
+        .padding(.horizontal, 40)
+    }
+
+    // MARK: - Sign Out Button (Debug)
+
+    private var signOutButton: some View {
+        Button {
+            Task {
+                await coordinator.signOut()
+            }
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "rectangle.portrait.and.arrow.right")
+                Text(localization.string("dashboard.signOut"))
+            }
+            .font(.system(size: 14, weight: .medium))
+            .foregroundColor(.tidexError)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 10)
+            .background(Color.tidexError.opacity(0.1))
+            .cornerRadius(8)
+        }
+        .padding(.top, 20)
     }
 }
 

@@ -122,8 +122,7 @@ ios/App/App/
 │   │   │   │       ├── EmailPasswordForm.swift
 │   │   │   │       ├── PhoneOTPForm.swift
 │   │   │   │       ├── OTPInputField.swift
-│   │   │   │       ├── OAuthButtonsView.swift
-│   │   │   │       └── LocaleSwitcherView.swift
+│   │   │   │       └── OAuthButtonsView.swift
 │   │   │   │
 │   │   │   ├── Signup/
 │   │   │   │   ├── SignupView.swift
