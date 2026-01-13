@@ -1291,6 +1291,7 @@ export const no = {
             tryRestoreHint: 'Hvis du allerede har et abonnement, prøv «Gjenopprett kjøp» nedenfor.',
             legalAutoRenew: 'Abonnementet fornyes automatisk med mindre det sies opp minst 24 timer før utløpet av inneværende periode.',
             legalPayment: 'Betaling belastes din Apple ID-konto ved bekreftelse av kjøp.',
+            freeTrialBadge: '{days} dagers gratis prøveperiode',
             initSteps: {
               starting: 'Starter...',
               gettingToken: 'Henter brukertoken...',

@@ -10,22 +10,23 @@ A Next.js 16 application for tracking work shifts and calculating wages with Sup
 
 - **Primary developer user ID**: `032d8c2a-9af6-4777-99f0-24e2c4058bf3` (Hjalmar's account for testing/debugging)
 
-## Augment Context Engine (PREFERRED for Codebase Questions)
+## Augment Context Engine (REQUIRED for Codebase Research)
 
-**ALWAYS use `mcp__auggie-context__query_codebase` for codebase exploration and understanding questions.**
+**CRITICAL: ALWAYS use `mcp__auggie-context__query_codebase` for codebase exploration and understanding questions. NEVER use the Task tool with Explore agent for research - use Augment Context Engine instead.**
 
-This MCP tool provides superior context retrieval compared to manual Glob/Grep searches:
+This MCP tool provides superior context retrieval compared to manual searches or Task agents:
 - Understands code relationships across languages (TypeScript, Swift, SQL, etc.)
 - Returns relevant code excerpts with exact file paths and line numbers
 - Explains architectural patterns and data flows
-- Much faster than manual multi-file exploration
+- Much faster and more accurate than launching Task agents
 
-**When to use:**
+**MUST use Augment Context Engine for:**
 - "How does X work?" questions
 - Understanding data flows between components
 - Finding all related code for a feature
 - Architecture and pattern questions
 - Cross-language investigations (e.g., web ↔ iOS communication)
+- Any research that would otherwise use Task tool with `subagent_type=Explore`
 
 **Example:**
 ```
@@ -35,10 +36,12 @@ mcp__auggie-context__query_codebase({
 })
 ```
 
-**Still use Glob/Grep for:**
-- Finding a specific file by name
-- Searching for exact string matches
+**Use Glob/Grep directly (NOT Task agents) for:**
+- Finding a specific file by name (`Glob`)
+- Searching for exact string matches (`Grep`)
 - Quick "needle in haystack" queries where you know what you're looking for
+
+**NEVER use Task tool with Explore agent** - Augment Context Engine replaces this functionality with better results
 
 ## iOS Development Rules
 

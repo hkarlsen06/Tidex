@@ -9,6 +9,10 @@ interface SettingsPageWrapperProps {
    * Unique key for scroll restoration. Defaults to "settings-sub".
    */
   routeKey?: string;
+  /**
+   * If true, disables scroll restoration - page always starts at top.
+   */
+  disableScrollRestoration?: boolean;
 }
 
 /**
@@ -18,9 +22,10 @@ interface SettingsPageWrapperProps {
 export function SettingsPageWrapper({
   children,
   routeKey = "settings-sub",
+  disableScrollRestoration = false,
 }: SettingsPageWrapperProps) {
   return (
-    <ScrollablePageWrapper routeKey={routeKey}>
+    <ScrollablePageWrapper routeKey={routeKey} disableScrollRestoration={disableScrollRestoration}>
       <div className="py-8">
         {children}
       </div>
