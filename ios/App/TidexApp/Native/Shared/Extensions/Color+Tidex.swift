@@ -8,6 +8,10 @@ extension Color {
     /// Dark background color matching --background: 222.2 84% 4.9%
     static let tidexDarkBackground = Color(hue: 222.2 / 360, saturation: 0.84, brightness: 0.11)
 
+    /// Launch screen background - exact match for LaunchScreen.storyboard LaunchBackground color
+    /// RGB: 0.008, 0.032, 0.090 in sRGB
+    static let tidexLaunchBackground = Color(red: 0.008, green: 0.032, blue: 0.090)
+
     /// Surface primary for cards - matches --surface-primary: 220 49% 11%
     static let tidexSurfacePrimary = Color(hue: 220 / 360, saturation: 0.49, brightness: 0.18)
 
