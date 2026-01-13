@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "569253598738",
+    "project_id": "tidex-android",
+    "storage_bucket": "tidex-android.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:569253598738:android:575fa4b926ae9cb648eacb",
+        "android_client_info": {
+          "package_name": "no.tidex.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC_1UnwCXbyv3-JF2VJnaEZnn5lfpZZxb8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

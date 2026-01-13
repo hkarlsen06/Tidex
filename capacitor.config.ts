@@ -15,6 +15,14 @@ const config: CapacitorConfig = {
   ios: {
     // Set WebView background to match splash screen
     backgroundColor: '#020817'
+  },
+  android: {
+    // Set WebView background to match splash screen (prevents white flash)
+    backgroundColor: '#020817',
+    // Disable mixed content (HTTP on HTTPS pages)
+    allowMixedContent: false,
+    // Disable WebView debugging in production
+    webContentsDebuggingEnabled: false
   }
 };
 

@@ -23,10 +23,15 @@
     "local-sync": "node scripts/update-local-ip.mjs && pnpm sync-ios && cp ios/App/App/capacitor.config.local.json ios/App/App/capacitor.config.json",
     "prod-ios": "pnpm sync-ios && pnpm exec cap open ios",
     "sync-ios": "pnpm exec cap sync ios",
-    "open-ios": "cap open ios"
+    "open-ios": "cap open ios",
+    "local-android": "node scripts/update-local-ip.mjs && pnpm sync-android && pnpm exec cap open android & next dev --hostname 0.0.0.0",
+    "prod-android": "pnpm sync-android && pnpm exec cap open android",
+    "sync-android": "pnpm exec cap sync android",
+    "open-android": "cap open android"
   },
   "dependencies": {
     "@capacitor-firebase/messaging": "^8.0.1",
+    "@capacitor/android": "^8.0.1",
     "@capacitor/app": "^8.0.0",
     "@capacitor/browser": "^8.0.0",
     "@capacitor/cli": "^8.0.0",
