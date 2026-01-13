@@ -1,4 +1,9 @@
 import { registerPlugin } from "@capacitor/core";
+import {
+  initDeepLinkState,
+  hasPendingDeepLink,
+  waitForDeepLinkHandled,
+} from "./deep-link-state";
 
 // Define the NativeSplash plugin interface
 export interface NativeSplashPlugin {
@@ -29,16 +34,28 @@ let splashHidden = false;
  * behavior allows multiple components to call hideSplash() without coordination,
  * ensuring the splash is hidden when ANY component is ready.
  *
+ * If the app was opened via a deep link, this function waits for the deep link
+ * navigation to complete before hiding the splash, preventing a flash of the
+ * default route.
+ *
  * @param fadeOutDuration - Duration of fade animation in milliseconds (default: 200)
  */
 export async function hideSplash(fadeOutDuration = 200): Promise<void> {
   if (splashHidden) return;
 
-  // Set flag BEFORE async call to prevent race conditions where multiple
+  // Set flag BEFORE async calls to prevent race conditions where multiple
   // callers might pass the check before any completes
   splashHidden = true;
 
   try {
+    // Initialize deep link state (checks for launch URL)
+    await initDeepLinkState();
+
+    // If there's a pending deep link, wait for navigation to complete
+    if (hasPendingDeepLink()) {
+      await waitForDeepLinkHandled();
+    }
+
     await NativeSplash.hide({ fadeOutDuration });
   } catch {
     // Splash may already be hidden or plugin not available, ignore

@@ -113,6 +113,15 @@ export function useNativeTabBar() {
         listenersSetupRef.current = true;
         availabilityAttemptsRef.current = 0;
 
+        // Sync tab selection immediately after initialization
+        // This handles deep links that navigate before plugin is ready
+        const currentPath = window.location.pathname;
+        const tabIndex = getTabIndexFromPath(currentPath);
+        if (tabIndex !== null) {
+          await NativeTabBar.setSelectedTab({ index: tabIndex });
+          lastSelectedIndexRef.current = tabIndex;
+        }
+
       } catch (error) {
         console.error("[NativeTabBar] Init failed:", error);
         scheduleRetry();

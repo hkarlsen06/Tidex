@@ -49,7 +49,7 @@ export function useScrollRestoration(key: string, options?: { disabled?: boolean
       clearTimeout(timeout);
       el.removeEventListener("scroll", handleScroll);
     };
-  }, [key]);
+  }, [key, disabled]);
 
   return scrollRef;
 }
