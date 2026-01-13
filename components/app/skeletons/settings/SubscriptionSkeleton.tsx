@@ -2,7 +2,7 @@ import { Card } from "@/components/app/Card";
 
 /**
  * SubscriptionSkeleton - Loading skeleton for /settings/subscription
- * Matches: Title + subtitle, status/plan info card, UpgradeOptions with plan cards
+ * Matches the "not subscribed" state: Title + subtitle, upgrade options, then free plan info
  *
  * Note: Uses static layout matching SettingsPageWrapper to avoid client component
  * hydration delays in loading.tsx files.
@@ -13,29 +13,14 @@ export function SubscriptionSkeleton() {
       <div className="mx-auto max-w-md md:max-w-lg px-4 w-full">
         <div className="py-8">
           <div className="space-y-6">
-            {/* Title and subtitle */}
+            {/* Title and subtitle - "Velg en plan" for free users */}
             <div>
-              <div className="h-8 w-32 bg-surface-secondary rounded animate-pulse" />
-              <div className="h-5 w-72 bg-surface-secondary rounded animate-pulse mt-1" />
+              <div className="h-8 w-36 bg-surface-secondary rounded animate-pulse" />
+              <div className="h-5 w-80 bg-surface-secondary rounded animate-pulse mt-1" />
             </div>
 
-            {/* Free plan info / status card */}
-            <Card className="p-6">
-              <div className="space-y-4">
-                <div className="h-6 w-28 bg-surface-secondary rounded animate-pulse" />
-                <div className="h-4 w-full bg-surface-secondary rounded animate-pulse" />
-                <div className="h-4 w-3/4 bg-surface-secondary rounded animate-pulse" />
-              </div>
-            </Card>
-
-            {/* UpgradeOptions */}
+            {/* UpgradeOptions - shown first for free users */}
             <div className="space-y-6">
-              {/* Section title */}
-              <div>
-                <div className="h-6 w-40 bg-surface-secondary rounded animate-pulse mb-2" />
-                <div className="h-4 w-64 bg-surface-secondary rounded animate-pulse" />
-              </div>
-
               {/* Billing period tabs */}
               <div className="flex justify-center">
                 <div className="h-10 w-56 bg-surface-secondary rounded-md animate-pulse" />
@@ -109,6 +94,19 @@ export function SubscriptionSkeleton() {
                 </Card>
               </div>
             </div>
+
+            {/* Free plan info card - shown after upgrade options for free users */}
+            <Card className="p-6 border-border-subtle bg-surface-secondary/50">
+              <div className="flex gap-3">
+                <div className="h-5 w-5 bg-surface-secondary rounded animate-pulse shrink-0 mt-0.5" />
+                <div className="flex-1 space-y-3">
+                  <div className="h-5 w-40 bg-surface-secondary rounded animate-pulse" />
+                  <div className="h-4 w-full bg-surface-secondary rounded animate-pulse" />
+                  <div className="h-4 w-3/4 bg-surface-secondary rounded animate-pulse" />
+                  <div className="h-8 w-44 bg-surface-secondary rounded animate-pulse mt-3" />
+                </div>
+              </div>
+            </Card>
           </div>
         </div>
       </div>

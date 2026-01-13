@@ -1292,6 +1292,7 @@ export const en: Dictionary = {
             tryRestoreHint: 'If you already have a subscription, try "Restore purchases" below.',
             legalAutoRenew: 'Subscription automatically renews unless cancelled at least 24 hours before the end of the current period.',
             legalPayment: 'Payment will be charged to your Apple ID account at confirmation of purchase.',
+            freeTrialBadge: '{days}-day free trial',
             initSteps: {
               starting: 'Starting...',
               gettingToken: 'Getting user token...',

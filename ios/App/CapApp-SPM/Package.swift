@@ -17,8 +17,8 @@ let package = Package(
         .package(name: "CapacitorBrowser", path: "../../../node_modules/.pnpm/@capacitor+browser@8.0.0_@capacitor+core@8.0.0/node_modules/@capacitor/browser"),
         .package(name: "CapacitorDevice", path: "../../../node_modules/.pnpm/@capacitor+device@8.0.0_@capacitor+core@8.0.0/node_modules/@capacitor/device"),
         .package(name: "CapacitorHaptics", path: "../../../node_modules/.pnpm/@capacitor+haptics@8.0.0_@capacitor+core@8.0.0/node_modules/@capacitor/haptics"),
-        .package(name: "CapgoCapacitorSocialLogin", path: "../../../node_modules/.pnpm/@capgo+capacitor-social-login@8.2.11_@capacitor+core@8.0.0/node_modules/@capgo/capacitor-social-login"),
-        .package(name: "CapgoNativePurchases", path: "../../../node_modules/.pnpm/@capgo+native-purchases@8.0.10_@capacitor+core@8.0.0/node_modules/@capgo/native-purchases")
+        .package(name: "CapgoCapacitorSocialLogin", path: "../../../node_modules/.pnpm/@capgo+capacitor-social-login@8.2.13_@capacitor+core@8.0.0/node_modules/@capgo/capacitor-social-login"),
+        .package(name: "CapgoNativePurchases", path: "../../../node_modules/.pnpm/@capgo+native-purchases@8.0.12_@capacitor+core@8.0.0/node_modules/@capgo/native-purchases")
     ],
     targets: [
         .target(

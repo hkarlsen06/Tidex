@@ -46,13 +46,22 @@ export default async function SubscriptionPage({
   // Grandfathered subscriber: early supporter with an active subscription
   const isGrandfatheredSubscriber = isEarlySupporter && hasActiveSubscription;
 
+  // Free users see "Choose a plan" header, others see "Subscription" header
+  const isFreeUser = !subscription && !isEarlySupporter;
+  const pageTitle = isFreeUser
+    ? t.pages.settings.subscription.upgradePlans.title
+    : t.pages.settings.subscription.title;
+  const pageSubtitle = isFreeUser
+    ? t.pages.settings.subscription.upgradePlans.description
+    : t.pages.settings.subscription.subtitle;
+
   return (
-    <SettingsPageWrapper routeKey="settings-subscription">
+    <SettingsPageWrapper routeKey="settings-subscription" disableScrollRestoration>
       <div className="space-y-6">
         <div>
-          <h2 className="text-2xl font-bold">{t.pages.settings.subscription.title}</h2>
+          <h2 className="text-2xl font-bold">{pageTitle}</h2>
           <p className="text-text-secondary mt-1">
-            {t.pages.settings.subscription.subtitle}
+            {pageSubtitle}
           </p>
         </div>
 
@@ -76,8 +85,9 @@ export default async function SubscriptionPage({
           </>
         ) : (
           <>
-            <FreePlanInfo t={t} />
+            {/* Free users: show upgrade options first, then free plan info */}
             <PlatformAwareUpgradeOptions t={t} />
+            <FreePlanInfo t={t} />
           </>
         )}
 

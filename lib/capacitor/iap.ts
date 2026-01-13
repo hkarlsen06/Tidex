@@ -17,6 +17,19 @@ import { reportIAPNoProducts, reportIAPPurchaseFailed, reportIAPVerificationFail
 
 // ---------- Types ----------
 
+export interface IAPIntroductoryPrice {
+  /** Price value (0 for free trial) */
+  price: number;
+  /** Formatted price string from StoreKit */
+  priceString: string;
+  /** Number of periods the intro offer lasts */
+  numberOfPeriods: number;
+  /** Period unit: 0=day, 1=week, 2=month, 3=year */
+  periodUnit: number;
+  /** Number of units per period */
+  periodValue: number;
+}
+
 export interface IAPProduct {
   id: string;
   title: string;
@@ -25,6 +38,8 @@ export interface IAPProduct {
   priceValue: number;
   currency: string;
   type: "subscription" | "consumable" | "non_consumable";
+  /** Introductory price/free trial info from StoreKit. Null if no intro offer or user ineligible. */
+  introductoryPrice: IAPIntroductoryPrice | null;
 }
 
 export interface IAPPurchaseResult {
@@ -210,6 +225,13 @@ export async function getProducts(
         priceValue: typeof p.price === "number" ? p.price : parseFloat(p.price) || 0,
         currency: p.currencyCode || "USD", // Default to USD instead of NOK for international users
         type: "subscription" as const,
+        introductoryPrice: p.introductoryPrice ? {
+          price: p.introductoryPrice.price,
+          priceString: p.introductoryPrice.priceString,
+          numberOfPeriods: p.introductoryPrice.numberOfPeriods,
+          periodUnit: p.introductoryPrice.subscriptionPeriod?.unit ?? 0,
+          periodValue: p.introductoryPrice.subscriptionPeriod?.numberOfUnits ?? 1,
+        } : null,
       };
     });
     console.log("[IAP] Mapped products:", JSON.stringify(mappedProducts));
@@ -573,4 +595,47 @@ export async function openSubscriptionManagement(): Promise<void> {
       window.location.href = iosDeepLink;
     }
   }
+}
+
+// ---------- Trial Detection Helpers ----------
+
+/**
+ * Check if a product has a free trial available.
+ * StoreKit only returns introductoryPrice if the user is eligible.
+ */
+export function hasFreeTrial(product: IAPProduct | undefined | null): boolean {
+  if (!product?.introductoryPrice) return false;
+  return product.introductoryPrice.price === 0;
+}
+
+/**
+ * Calculate total trial duration in days from StoreKit intro offer data.
+ * Returns null if no free trial is available.
+ */
+export function getTrialDurationDays(product: IAPProduct | undefined | null): number | null {
+  if (!hasFreeTrial(product) || !product?.introductoryPrice) return null;
+
+  const { numberOfPeriods, periodUnit, periodValue } = product.introductoryPrice;
+
+  // Convert period unit to days
+  // StoreKit period units: 0=day, 1=week, 2=month, 3=year
+  let daysPerUnit: number;
+  switch (periodUnit) {
+    case 0: // day
+      daysPerUnit = 1;
+      break;
+    case 1: // week
+      daysPerUnit = 7;
+      break;
+    case 2: // month
+      daysPerUnit = 30; // approximate
+      break;
+    case 3: // year
+      daysPerUnit = 365;
+      break;
+    default:
+      daysPerUnit = 1;
+  }
+
+  return numberOfPeriods * periodValue * daysPerUnit;
 }

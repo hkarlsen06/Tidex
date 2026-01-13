@@ -17,8 +17,11 @@ import {
   purchaseProduct,
   openSubscriptionManagement,
   APPLE_PRODUCT_IDS,
+  hasFreeTrial,
+  getTrialDurationDays,
   type IAPProduct,
 } from '@/lib/capacitor/iap';
+import { FreeTrialBadge } from './FreeTrialBadge';
 import { getAppAccountToken } from '@/app/[locale]/(app)/settings/subscription/_actions/getAppAccountToken';
 import type { Dictionary } from '@/lib/i18n/dictionaries/no';
 
@@ -36,6 +39,8 @@ interface PlanCardProps {
   disabled?: boolean;
   /** Show skeleton for price and name while StoreKit data loads */
   storeKitLoading?: boolean;
+  /** Free trial duration in days (only shown for monthly plans) */
+  trialDays?: number | null;
 }
 
 function PlanCard({
@@ -51,6 +56,7 @@ function PlanCard({
   t,
   disabled,
   storeKitLoading,
+  trialDays,
 }: PlanCardProps) {
   const periodLabel = billingPeriod === 'monthly'
     ? t.pages.settings.subscription.upgradePlans.perMonth
@@ -99,6 +105,9 @@ function PlanCard({
             <div className="inline-flex items-center bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-2 py-1 rounded-md text-xs font-medium">
               {t.pages.settings.subscription.upgradePlans.saveBadge}
             </div>
+          )}
+          {trialDays && trialDays > 0 && (
+            <FreeTrialBadge durationDays={trialDays} t={t} />
           )}
         </div>
 
@@ -390,6 +399,12 @@ export function AppleIAPUpgradeOptions({
     ? getProductPrice(APPLE_PRODUCT_IDS.MAX_MONTHLY, '59,00 kr')
     : getProductPrice(APPLE_PRODUCT_IDS.MAX_YEARLY, '499,00 kr');
 
+  // Get trial duration for current billing period products (based on StoreKit eligibility)
+  const proProduct = getProduct(getProProductId());
+  const maxProduct = getProduct(getMaxProductId());
+  const proTrialDays = hasFreeTrial(proProduct) ? getTrialDurationDays(proProduct) : null;
+  const maxTrialDays = hasFreeTrial(maxProduct) ? getTrialDurationDays(maxProduct) : null;
+
   // Determine if buttons should be disabled
   const shouldDisableButtons = !isInitialized || products.length === 0;
 
@@ -406,15 +421,6 @@ export function AppleIAPUpgradeOptions({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-semibold mb-2">
-          {t.pages.settings.subscription.upgradePlans.title}
-        </h3>
-        <p className="text-sm text-text-secondary">
-          {t.pages.settings.subscription.upgradePlans.description}
-        </p>
-      </div>
-
       {/* Error display with retry button */}
       {error && (
         <div className={cn(
@@ -473,6 +479,7 @@ export function AppleIAPUpgradeOptions({
               isLoading={loadingPlan === getProTitle()}
               disabled={shouldDisableButtons}
               storeKitLoading={products.length === 0}
+              trialDays={proTrialDays}
               t={t}
             />
 
@@ -487,6 +494,7 @@ export function AppleIAPUpgradeOptions({
               isLoading={loadingPlan === getMaxTitle()}
               disabled={shouldDisableButtons}
               storeKitLoading={products.length === 0}
+              trialDays={maxTrialDays}
               t={t}
             />
           </div>

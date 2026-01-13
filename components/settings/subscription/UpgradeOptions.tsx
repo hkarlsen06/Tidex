@@ -134,13 +134,6 @@ export function UpgradeOptions({ t }: UpgradeOptionsProps) {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-semibold mb-2">{t.pages.settings.subscription.upgradePlans.title}</h3>
-        <p className="text-sm text-text-secondary">
-          {t.pages.settings.subscription.upgradePlans.description}
-        </p>
-      </div>
-
       <div className="flex justify-center">
         <Tabs value={billingPeriod} onValueChange={(value) => setBillingPeriod(value as BillingPeriod)}>
           <TabsList>

@@ -25,6 +25,10 @@ interface ScrollablePageWrapperProps {
    * Optional ref callback to expose the scroll container ref to parent.
    */
   scrollRefCallback?: (ref: RefObject<HTMLDivElement | null>) => void;
+  /**
+   * If true, disables scroll restoration - page always starts at top.
+   */
+  disableScrollRestoration?: boolean;
 }
 
 /**
@@ -42,8 +46,9 @@ export function ScrollablePageWrapper({
   className,
   applyContainer = true,
   scrollRefCallback,
+  disableScrollRestoration = false,
 }: ScrollablePageWrapperProps) {
-  const scrollRef = useScrollRestoration(routeKey ?? "");
+  const scrollRef = useScrollRestoration(routeKey ?? "", { disabled: disableScrollRestoration });
   const { registerScrollContainer } = useScrollContext();
   const hasNativeTabBar = useHasNativeTabBar();
 
