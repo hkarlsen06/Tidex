@@ -1,8 +1,12 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { Capacitor } from "@capacitor/core";
+import {
+  getPendingDeepLinkUrl,
+  markDeepLinkHandled,
+} from "@/lib/capacitor/deep-link-state";
 
 // Module-level flag to prevent double-registration across HMR and re-renders
 let listenerRegistered = false;
@@ -42,6 +46,18 @@ function getLocaleFromPath(): string {
 export function CapacitorUrlListener() {
   const hasRetried = useRef(false);
   const router = useRouter();
+  const pathname = usePathname();
+
+  // Track the target path for cold-start deep links
+  const pendingNavigationRef = useRef<string | null>(null);
+
+  // When pathname changes to our target, mark deep link as handled
+  useEffect(() => {
+    if (pendingNavigationRef.current && pathname.includes(pendingNavigationRef.current)) {
+      pendingNavigationRef.current = null;
+      markDeepLinkHandled();
+    }
+  }, [pathname]);
 
   useEffect(() => {
     // Only run on native platforms (iOS/Android)
@@ -53,6 +69,27 @@ export function CapacitorUrlListener() {
     let cleanup: (() => void) | undefined;
     let retryTimeout: ReturnType<typeof setTimeout> | undefined;
 
+    /**
+     * Navigate to a deep link target and track it for splash coordination.
+     * @param url - The tidex:// deep link URL
+     */
+    const navigateToDeepLink = (url: string) => {
+      if (url.startsWith("tidex://shifts")) {
+        const customUrl = new URL(url);
+        const dates = customUrl.searchParams.get("dates");
+        const locale = getLocaleFromPath();
+
+        // Navigate to shifts page with dates parameter for highlighting
+        const shiftsPath = dates
+          ? `/${locale}/shifts?dates=${dates}`
+          : `/${locale}/shifts`;
+
+        // Track this navigation for splash coordination
+        pendingNavigationRef.current = "/shifts";
+        router.push(shiftsPath);
+      }
+    };
+
     const setupListener = async (isRetry = false) => {
       try {
         // Dynamic import to avoid loading Capacitor plugins on web
@@ -62,6 +99,13 @@ export function CapacitorUrlListener() {
         // Mark as registered before adding listener
         listenerRegistered = true;
 
+        // Handle cold-start deep link (app was launched with this URL)
+        const pendingUrl = getPendingDeepLinkUrl();
+        if (pendingUrl) {
+          navigateToDeepLink(pendingUrl);
+        }
+
+        // Handle warm-start deep links (app was in background)
         const listenerHandle = await App.addListener("appUrlOpen", async ({ url }) => {
           // Check if this is our OAuth callback scheme
           if (url.startsWith("tidex://auth/callback")) {
@@ -89,19 +133,8 @@ export function CapacitorUrlListener() {
           }
 
           // Handle widget/notification deep links: tidex://shifts?dates=2025-01-15
-          if (url.startsWith("tidex://shifts")) {
-            const customUrl = new URL(url);
-            const dates = customUrl.searchParams.get("dates");
-            const locale = getLocaleFromPath();
-
-            // Navigate to shifts page with dates parameter for highlighting
-            const shiftsPath = dates
-              ? `/${locale}/shifts?dates=${dates}`
-              : `/${locale}/shifts`;
-
-            router.push(shiftsPath);
-            return;
-          }
+          // For warm starts, splash is already hidden so no coordination needed
+          navigateToDeepLink(url);
         });
 
         cleanup = () => {
