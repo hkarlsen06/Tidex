@@ -30,7 +30,7 @@ struct MainTabView: View {
             switch self {
             case .home: return "tabs.home"
             case .shifts: return "tabs.shifts"
-            case .add: return ""
+            case .add: return "tabs.add"
             case .stats: return "tabs.stats"
             case .sharing: return "tabs.sharing"
             }
@@ -53,7 +53,7 @@ struct MainTabView: View {
 
             AddShiftPlaceholderView()
                 .tabItem {
-                    Image(systemName: Tab.add.icon)
+                    Label(localization.string(Tab.add.localizationKey), systemImage: Tab.add.icon)
                 }
                 .tag(Tab.add)
 

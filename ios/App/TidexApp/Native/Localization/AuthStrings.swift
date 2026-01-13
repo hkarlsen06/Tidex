@@ -154,6 +154,7 @@ enum AuthStrings {
         // Tabs
         "tabs.home": "Hjem",
         "tabs.shifts": "Vakter",
+        "tabs.add": "Legg til",
         "tabs.stats": "Statistikk",
         "tabs.sharing": "Venner",
 
@@ -315,6 +316,7 @@ enum AuthStrings {
         // Tabs
         "tabs.home": "Home",
         "tabs.shifts": "Shifts",
+        "tabs.add": "Add",
         "tabs.stats": "Stats",
         "tabs.sharing": "Friends",
 
