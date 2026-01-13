@@ -47,27 +47,29 @@ struct RootView: View {
 // MARK: - Loading View
 
 /// Initial loading view shown while checking authentication state
+/// Matches the splash screen exactly, with a spinner below the logo
 struct LoadingView: View {
     var body: some View {
-        VStack(spacing: 24) {
-            // Logo
-            LogoWatermark(opacity: 1.0)
-                .frame(width: 80, height: 80)
+        GeometryReader { geometry in
+            ZStack {
+                // Background - exact match for LaunchScreen.storyboard
+                Color.tidexLaunchBackground
 
-            // App name
-            Text("Tidex")
-                .font(.system(size: 32, weight: .bold))
-                .foregroundColor(.tidexTextPrimary)
+                // Logo centered in full screen (ignoring safe areas) - matches storyboard centerX/centerY
+                Image("Splash")
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 350, height: 350)
+                    .position(x: geometry.size.width / 2, y: geometry.size.height / 2)
 
-            // Loading indicator
-            ProgressView()
-                .progressViewStyle(CircularProgressViewStyle(tint: .tidexBlue))
-                .scaleEffect(1.2)
-
-            Text("Loading...")
-                .font(.system(size: 14))
-                .foregroundColor(.tidexTextMuted)
+                // Spinner positioned below the logo
+                ProgressView()
+                    .progressViewStyle(CircularProgressViewStyle(tint: .tidexBlue))
+                    .scaleEffect(1.2)
+                    .position(x: geometry.size.width / 2, y: geometry.size.height / 2 + 220)
+            }
         }
+        .ignoresSafeArea()
     }
 }
 
