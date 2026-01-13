@@ -2,6 +2,7 @@
 
 import {
   createContext,
+  startTransition,
   useCallback,
   useContext,
   useEffect,
@@ -72,7 +73,9 @@ export function NavigationFeedbackProvider({
   // The navbar will then correctly highlight based on the actual pathname.
   // If there's a new navigation, pendingPath will be set again by navigate().
   useEffect(() => {
-    setPendingPath(null);
+    startTransition(() => {
+      setPendingPath(null);
+    });
   }, [pathname]);
 
   const value = useMemo(
