@@ -122,7 +122,7 @@ struct DashboardView: View {
     @ViewBuilder
     private func dashboardContent(data: DashboardData) -> some View {
         ScrollView {
-            VStack(spacing: 16) {
+            VStack(spacing: 12) {
                 // Payroll Card (Previous Month)
                 PayrollCard(
                     payrollDate: data.payrollDate,
@@ -156,7 +156,7 @@ struct DashboardView: View {
                 signOutButton
                 #endif
             }
-            .padding(.horizontal, 16)
+            .padding(.horizontal, 24)
             .padding(.vertical, 20)
         }
     }
