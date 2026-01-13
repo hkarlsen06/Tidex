@@ -9,6 +9,9 @@ typealias SelectedDays = [String: String]
 // MARK: - End Condition
 
 /// End condition for recurring shifts
+/// Handles two JSON formats:
+/// - {"type": "end_date", "value": "2025-12-31"} - older format with "value" key
+/// - {"type": "end_date", "date": "2026-08-03", "end_time": "23:59"} - newer format with "date" key
 enum EndCondition: Codable, Equatable {
     case months(value: Int)
     case years(value: Int)
@@ -32,8 +35,16 @@ enum EndCondition: Codable, Equatable {
             let value = try container.decode(Int.self, forKey: .value)
             self = .years(value: value)
         case "end_date":
-            let date = try container.decode(String.self, forKey: .date)
-            self = .endDate(date: date)
+            // Handle both formats: "date" key (newer) or "value" key (older)
+            if let date = try? container.decode(String.self, forKey: .date) {
+                self = .endDate(date: date)
+            } else if let value = try? container.decode(String.self, forKey: .value) {
+                self = .endDate(date: value)
+            } else {
+                throw DecodingError.dataCorrupted(
+                    DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "end_date requires either 'date' or 'value' key")
+                )
+            }
         default:
             throw DecodingError.dataCorrupted(
                 DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Unknown end condition type: \(type)")
@@ -78,8 +89,6 @@ struct RecurringShiftRow: Codable, Identifiable, Equatable {
     let exclusions: [String]?
     /// Custom supplements for specific dates
     let date_specific_supplements: [String: CustomSupplementsData]?
-    let created_at: String?
-    let updated_at: String?
 
     /// Effective exclusions (empty array if nil)
     var effectiveExclusions: [String] {

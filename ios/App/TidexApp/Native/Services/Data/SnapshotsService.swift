@@ -116,8 +116,8 @@ final class SnapshotsService: ObservableObject {
         }
 
         return PayoutTaxSettings(
-            enabled: snapshot.tax_enabled,
-            percentage: snapshot.tax_percentage
+            enabled: snapshot.effectiveTaxEnabled,
+            percentage: snapshot.effectiveTaxPercentage
         )
     }
 

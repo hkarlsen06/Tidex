@@ -104,48 +104,7 @@ struct NextShiftCard: View {
     }
 }
 
-#Preview {
-    // Create a mock shift for preview
-    let mockShiftRow = ShiftRow(
-        id: "preview-1",
-        user_id: "user-1",
-        shift_date: "2025-01-15",
-        start_time: "08:00",
-        end_time: "16:00",
-        hourly_wage_snapshot: 200,
-        supplement_rules_snapshot: nil,
-        custom_supplements: nil,
-        recurring_id: nil,
-        recurring_anchor_weekday: nil
-    )
-
-    let mockComputed = ShiftComputed(
-        id: "preview-1",
-        durationHours: 8.0,
-        paidHours: 7.5,
-        basePay: 1500,
-        supplementPay: 100,
-        gross: 1600,
-        wagePeriods: [],
-        originalWagePeriods: [],
-        breakAudit: BreakAudit(method: .proportional, thresholdHours: 5.5, deductedHours: 0.5, notes: [])
-    )
-
-    let mockShift = ShiftWithComputations(
-        shift: mockShiftRow,
-        computed: mockComputed,
-        taxEnabled: true,
-        taxPercentage: 26
-    )
-
-    return VStack(spacing: 16) {
-        // Today's shift
-        NextShiftCard(shift: mockShift, isToday: true)
-
-        // Upcoming shift
-        NextShiftCard(shift: mockShift, isToday: false)
-    }
-    .padding()
-    .background(Color.tidexDarkBackground)
-    .environment(\.localization, LocalizationManager.shared)
-}
+// Preview disabled - requires full app context
+// #Preview {
+//     NextShiftCard(shift: mockShift, isToday: true)
+// }

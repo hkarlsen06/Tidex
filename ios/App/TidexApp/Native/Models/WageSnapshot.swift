@@ -16,24 +16,56 @@ struct WageSnapshot: Codable, Identifiable, Equatable {
     let hourly_wage: Double
     /// nil = custom wage, 1-9 = tariff level
     let wage_level: Int?
-    /// Supplement rules for this snapshot
+    /// Supplement rules for this snapshot (stored as JSONB object with "rules" key)
+    /// This is NOT NULL in the database - always contains { rules: [...] }
     let supplements: SupplementRulesSnapshot
 
-    // Tax settings (per-snapshot)
-    let tax_enabled: Bool
-    let tax_percentage: Double
+    // Tax settings (per-snapshot) - nullable in DB
+    let tax_enabled: Bool?
+    let tax_percentage: Double?
 
-    // Break deduction settings (per-snapshot)
-    let break_enabled: Bool
-    let break_method: String
-    let break_threshold_hours: Double
-    let break_deduction_minutes: Int
+    // Break deduction settings (per-snapshot) - nullable in DB
+    let break_enabled: Bool?
+    let break_method: String?
+    let break_threshold_hours: Double?
+    let break_deduction_minutes: Int?
 
     let created_at: String?
 
+    /// Effective tax enabled (defaults to false if nil)
+    var effectiveTaxEnabled: Bool {
+        tax_enabled ?? false
+    }
+
+    /// Effective tax percentage (defaults to 0 if nil)
+    var effectiveTaxPercentage: Double {
+        tax_percentage ?? 0
+    }
+
+    /// Effective supplements (the rules array from supplements object)
+    var effectiveSupplements: [SupplementRule] {
+        supplements.rules
+    }
+
     /// Parsed break method enum
     var breakMethod: BreakMethod {
-        BreakMethod(rawValue: break_method) ?? .proportional
+        guard let method = break_method else { return .proportional }
+        return BreakMethod(rawValue: method) ?? .proportional
+    }
+
+    /// Effective break enabled (defaults to true if nil)
+    var effectiveBreakEnabled: Bool {
+        break_enabled ?? true
+    }
+
+    /// Effective break threshold hours (defaults to 5.5 if nil)
+    var effectiveBreakThresholdHours: Double {
+        break_threshold_hours ?? 5.5
+    }
+
+    /// Effective break deduction minutes (defaults to 30 if nil)
+    var effectiveBreakDeductionMinutes: Int {
+        break_deduction_minutes ?? 30
     }
 
     /// Whether this is a baseline (undated) snapshot
