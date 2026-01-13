@@ -71,11 +71,6 @@ struct ResetPasswordView: View {
                         footerView
                             .opacity(footerAppeared ? 1 : 0)
                     }
-
-                    // Locale switcher
-                    LocaleSwitcherView()
-                        .padding(.top, 16)
-                        .opacity(footerAppeared ? 1 : 0)
                 }
                 .padding(.horizontal, 20)
                 .padding(.bottom, 40)

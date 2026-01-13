@@ -58,10 +58,6 @@ struct MFAVerifyView: View {
                         }
                         .padding(24)
                     }
-
-                    // Locale switcher
-                    LocaleSwitcherView()
-                        .padding(.top, 16)
                 }
                 .padding(.horizontal, 20)
                 .padding(.bottom, 40)

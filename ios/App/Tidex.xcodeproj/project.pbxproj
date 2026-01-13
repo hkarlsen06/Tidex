@@ -31,7 +31,6 @@
 		119D1CF02F16E46300EC7072 /* EmailPasswordForm.swift in Sources */ = {isa = PBXBuildFile; fileRef = 119D1CBB2F16E46300EC7072 /* EmailPasswordForm.swift */; };
 		119D1CF12F16E46300EC7072 /* LoginViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 119D1CC22F16E46300EC7072 /* LoginViewModel.swift */; };
 		119D1CF22F16E46300EC7072 /* ErrorTranslations.swift in Sources */ = {isa = PBXBuildFile; fileRef = 119D1CCE2F16E46300EC7072 /* ErrorTranslations.swift */; };
-		119D1CF32F16E46300EC7072 /* LocaleSwitcherView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 119D1CBC2F16E46300EC7072 /* LocaleSwitcherView.swift */; };
 		119D1CF42F16E46300EC7072 /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 119D1CD42F16E46300EC7072 /* AuthService.swift */; };
 		119D1CF52F16E46300EC7072 /* MFAVerifyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 119D1CC42F16E46300EC7072 /* MFAVerifyView.swift */; };
 		119D1CF62F16E46300EC7072 /* LoadingOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 119D1CDB2F16E46300EC7072 /* LoadingOverlay.swift */; };
@@ -57,6 +56,23 @@
 		11AE8CCE2F16F2CF005AB062 /* ResetPasswordViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11AE8CCD2F16F2CF005AB062 /* ResetPasswordViewModel.swift */; };
 		11AE8CCF2F16F2CF005AB062 /* ResetPasswordView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11AE8CCC2F16F2CF005AB062 /* ResetPasswordView.swift */; };
 		11AE8CD12F16F2EE005AB062 /* AuthNavigationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11AE8CD02F16F2EE005AB062 /* AuthNavigationView.swift */; };
+		11AE8CE82F16FD82005AB062 /* NextShiftCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11AE8CE32F16FD82005AB062 /* NextShiftCard.swift */; };
+		11AE8CE92F16FD82005AB062 /* TotalCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11AE8CE52F16FD82005AB062 /* TotalCard.swift */; };
+		11AE8CEA2F16FD82005AB062 /* PayrollCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11AE8CE42F16FD82005AB062 /* PayrollCard.swift */; };
+		11AE8CEB2F16FD82005AB062 /* DashboardViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11AE8CE72F16FD82005AB062 /* DashboardViewModel.swift */; };
+		11AE8CF22F16FDA4005AB062 /* Shift.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11AE8CED2F16FDA4005AB062 /* Shift.swift */; };
+		11AE8CF32F16FDA4005AB062 /* RecurringShift.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11AE8CEC2F16FDA4005AB062 /* RecurringShift.swift */; };
+		11AE8CF42F16FDA4005AB062 /* SupplementRule.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11AE8CEE2F16FDA4005AB062 /* SupplementRule.swift */; };
+		11AE8CF52F16FDA4005AB062 /* UserSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11AE8CEF2F16FDA4005AB062 /* UserSettings.swift */; };
+		11AE8CF62F16FDA4005AB062 /* WageSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11AE8CF02F16FDA4005AB062 /* WageSnapshot.swift */; };
+		11AE8CFB2F16FDB2005AB062 /* ShiftsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11AE8CF82F16FDB2005AB062 /* ShiftsService.swift */; };
+		11AE8CFC2F16FDB2005AB062 /* SnapshotsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11AE8CF92F16FDB2005AB062 /* SnapshotsService.swift */; };
+		11AE8CFD2F16FDB2005AB062 /* SettingsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11AE8CF72F16FDB2005AB062 /* SettingsService.swift */; };
+		11AE8D032F16FDBD005AB062 /* RecurringShiftGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11AE8D002F16FDBD005AB062 /* RecurringShiftGenerator.swift */; };
+		11AE8D042F16FDBD005AB062 /* PayrollCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11AE8CFF2F16FDBD005AB062 /* PayrollCalculator.swift */; };
+		11AE8D052F16FDBD005AB062 /* BreakDeduction.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11AE8CFE2F16FDBD005AB062 /* BreakDeduction.swift */; };
+		11AE8D062F16FDBD005AB062 /* WagePeriodBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11AE8D012F16FDBD005AB062 /* WagePeriodBuilder.swift */; };
+		11AE8D082F16FDD8005AB062 /* Date+Tidex.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11AE8D072F16FDD8005AB062 /* Date+Tidex.swift */; };
 		11F1CBDB2F101C5700246C07 /* ShiftActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11F1CBDA2F101C5700246C07 /* ShiftActivityAttributes.swift */; };
 		504EC3081FED79650016851F /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 504EC3071FED79650016851F /* AppDelegate.swift */; };
 		504EC30F1FED79650016851F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 504EC30E1FED79650016851F /* Assets.xcassets */; };
@@ -104,7 +120,6 @@
 		119D1CB82F16E46300EC7072 /* FeatureFlags.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeatureFlags.swift; sourceTree = "<group>"; };
 		119D1CB92F16E46300EC7072 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		119D1CBB2F16E46300EC7072 /* EmailPasswordForm.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmailPasswordForm.swift; sourceTree = "<group>"; };
-		119D1CBC2F16E46300EC7072 /* LocaleSwitcherView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocaleSwitcherView.swift; sourceTree = "<group>"; };
 		119D1CBD2F16E46300EC7072 /* OAuthButtonsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OAuthButtonsView.swift; sourceTree = "<group>"; };
 		119D1CBE2F16E46300EC7072 /* OTPInputField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OTPInputField.swift; sourceTree = "<group>"; };
 		119D1CBF2F16E46300EC7072 /* PhoneOTPForm.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneOTPForm.swift; sourceTree = "<group>"; };
@@ -140,6 +155,23 @@
 		11AE8CCC2F16F2CF005AB062 /* ResetPasswordView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResetPasswordView.swift; sourceTree = "<group>"; };
 		11AE8CCD2F16F2CF005AB062 /* ResetPasswordViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResetPasswordViewModel.swift; sourceTree = "<group>"; };
 		11AE8CD02F16F2EE005AB062 /* AuthNavigationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthNavigationView.swift; sourceTree = "<group>"; };
+		11AE8CE32F16FD82005AB062 /* NextShiftCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextShiftCard.swift; sourceTree = "<group>"; };
+		11AE8CE42F16FD82005AB062 /* PayrollCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PayrollCard.swift; sourceTree = "<group>"; };
+		11AE8CE52F16FD82005AB062 /* TotalCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TotalCard.swift; sourceTree = "<group>"; };
+		11AE8CE72F16FD82005AB062 /* DashboardViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardViewModel.swift; sourceTree = "<group>"; };
+		11AE8CEC2F16FDA4005AB062 /* RecurringShift.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecurringShift.swift; sourceTree = "<group>"; };
+		11AE8CED2F16FDA4005AB062 /* Shift.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shift.swift; sourceTree = "<group>"; };
+		11AE8CEE2F16FDA4005AB062 /* SupplementRule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupplementRule.swift; sourceTree = "<group>"; };
+		11AE8CEF2F16FDA4005AB062 /* UserSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserSettings.swift; sourceTree = "<group>"; };
+		11AE8CF02F16FDA4005AB062 /* WageSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WageSnapshot.swift; sourceTree = "<group>"; };
+		11AE8CF72F16FDB2005AB062 /* SettingsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsService.swift; sourceTree = "<group>"; };
+		11AE8CF82F16FDB2005AB062 /* ShiftsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShiftsService.swift; sourceTree = "<group>"; };
+		11AE8CF92F16FDB2005AB062 /* SnapshotsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnapshotsService.swift; sourceTree = "<group>"; };
+		11AE8CFE2F16FDBD005AB062 /* BreakDeduction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BreakDeduction.swift; sourceTree = "<group>"; };
+		11AE8CFF2F16FDBD005AB062 /* PayrollCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PayrollCalculator.swift; sourceTree = "<group>"; };
+		11AE8D002F16FDBD005AB062 /* RecurringShiftGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecurringShiftGenerator.swift; sourceTree = "<group>"; };
+		11AE8D012F16FDBD005AB062 /* WagePeriodBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WagePeriodBuilder.swift; sourceTree = "<group>"; };
+		11AE8D072F16FDD8005AB062 /* Date+Tidex.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Date+Tidex.swift"; sourceTree = "<group>"; };
 		11F1CBDA2F101C5700246C07 /* ShiftActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShiftActivityAttributes.swift; sourceTree = "<group>"; };
 		504EC3041FED79650016851F /* Tidex.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Tidex.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		504EC3071FED79650016851F /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
@@ -225,7 +257,6 @@
 			isa = PBXGroup;
 			children = (
 				119D1CBB2F16E46300EC7072 /* EmailPasswordForm.swift */,
-				119D1CBC2F16E46300EC7072 /* LocaleSwitcherView.swift */,
 				119D1CBD2F16E46300EC7072 /* OAuthButtonsView.swift */,
 				119D1CBE2F16E46300EC7072 /* OTPInputField.swift */,
 				119D1CBF2F16E46300EC7072 /* PhoneOTPForm.swift */,
@@ -285,6 +316,8 @@
 		119D1CCB2F16E46300EC7072 /* Dashboard */ = {
 			isa = PBXGroup;
 			children = (
+				11AE8CE62F16FD82005AB062 /* Components */,
+				11AE8CE72F16FD82005AB062 /* DashboardViewModel.swift */,
 				119D1CCA2F16E46300EC7072 /* MainTabView.swift */,
 			);
 			path = Dashboard;
@@ -339,6 +372,8 @@
 		119D1CD92F16E46300EC7072 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				11AE8D022F16FDBD005AB062 /* Payroll */,
+				11AE8CFA2F16FDB2005AB062 /* Data */,
 				119D1CD52F16E46300EC7072 /* Auth */,
 				119D1CD82F16E46300EC7072 /* Network */,
 			);
@@ -362,6 +397,7 @@
 		119D1CE32F16E46300EC7072 /* Extensions */ = {
 			isa = PBXGroup;
 			children = (
+				11AE8D072F16FDD8005AB062 /* Date+Tidex.swift */,
 				119D1CE22F16E46300EC7072 /* Color+Tidex.swift */,
 			);
 			path = Extensions;
@@ -379,6 +415,7 @@
 		119D1CE52F16E46300EC7072 /* Native */ = {
 			isa = PBXGroup;
 			children = (
+				11AE8CF12F16FDA4005AB062 /* Models */,
 				119D1CBA2F16E46300EC7072 /* Core */,
 				119D1CCC2F16E46300EC7072 /* Features */,
 				119D1CD02F16E46300EC7072 /* Localization */,
@@ -432,6 +469,49 @@
 				11AE8CC52F16F2BF005AB062 /* TermsAgreementView.swift */,
 			);
 			path = Components;
+			sourceTree = "<group>";
+		};
+		11AE8CE62F16FD82005AB062 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				11AE8CE32F16FD82005AB062 /* NextShiftCard.swift */,
+				11AE8CE42F16FD82005AB062 /* PayrollCard.swift */,
+				11AE8CE52F16FD82005AB062 /* TotalCard.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		11AE8CF12F16FDA4005AB062 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				11AE8CEC2F16FDA4005AB062 /* RecurringShift.swift */,
+				11AE8CED2F16FDA4005AB062 /* Shift.swift */,
+				11AE8CEE2F16FDA4005AB062 /* SupplementRule.swift */,
+				11AE8CEF2F16FDA4005AB062 /* UserSettings.swift */,
+				11AE8CF02F16FDA4005AB062 /* WageSnapshot.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		11AE8CFA2F16FDB2005AB062 /* Data */ = {
+			isa = PBXGroup;
+			children = (
+				11AE8CF72F16FDB2005AB062 /* SettingsService.swift */,
+				11AE8CF82F16FDB2005AB062 /* ShiftsService.swift */,
+				11AE8CF92F16FDB2005AB062 /* SnapshotsService.swift */,
+			);
+			path = Data;
+			sourceTree = "<group>";
+		};
+		11AE8D022F16FDBD005AB062 /* Payroll */ = {
+			isa = PBXGroup;
+			children = (
+				11AE8CFE2F16FDBD005AB062 /* BreakDeduction.swift */,
+				11AE8CFF2F16FDBD005AB062 /* PayrollCalculator.swift */,
+				11AE8D002F16FDBD005AB062 /* RecurringShiftGenerator.swift */,
+				11AE8D012F16FDBD005AB062 /* WagePeriodBuilder.swift */,
+			);
+			path = Payroll;
 			sourceTree = "<group>";
 		};
 		504EC2FB1FED79650016851F = {
@@ -635,6 +715,17 @@
 				119D1CE72F16E46300EC7072 /* SecureTextField.swift in Sources */,
 				119D1CE82F16E46300EC7072 /* RootView.swift in Sources */,
 				119D1CE92F16E46300EC7072 /* SupabaseClient.swift in Sources */,
+				11AE8CE82F16FD82005AB062 /* NextShiftCard.swift in Sources */,
+				11AE8D032F16FDBD005AB062 /* RecurringShiftGenerator.swift in Sources */,
+				11AE8D042F16FDBD005AB062 /* PayrollCalculator.swift in Sources */,
+				11AE8D052F16FDBD005AB062 /* BreakDeduction.swift in Sources */,
+				11AE8D062F16FDBD005AB062 /* WagePeriodBuilder.swift in Sources */,
+				11AE8CE92F16FD82005AB062 /* TotalCard.swift in Sources */,
+				11AE8CFB2F16FDB2005AB062 /* ShiftsService.swift in Sources */,
+				11AE8CFC2F16FDB2005AB062 /* SnapshotsService.swift in Sources */,
+				11AE8CFD2F16FDB2005AB062 /* SettingsService.swift in Sources */,
+				11AE8CEA2F16FD82005AB062 /* PayrollCard.swift in Sources */,
+				11AE8CEB2F16FD82005AB062 /* DashboardViewModel.swift in Sources */,
 				119D1CEA2F16E46300EC7072 /* OTPInputField.swift in Sources */,
 				119D1CEB2F16E46300EC7072 /* TidexTextField.swift in Sources */,
 				119D1CEC2F16E46300EC7072 /* FeatureFlags.swift in Sources */,
@@ -644,7 +735,6 @@
 				119D1CF02F16E46300EC7072 /* EmailPasswordForm.swift in Sources */,
 				119D1CF12F16E46300EC7072 /* LoginViewModel.swift in Sources */,
 				119D1CF22F16E46300EC7072 /* ErrorTranslations.swift in Sources */,
-				119D1CF32F16E46300EC7072 /* LocaleSwitcherView.swift in Sources */,
 				119D1CF42F16E46300EC7072 /* AuthService.swift in Sources */,
 				119D1CF52F16E46300EC7072 /* MFAVerifyView.swift in Sources */,
 				119D1CF62F16E46300EC7072 /* LoadingOverlay.swift in Sources */,
@@ -656,6 +746,12 @@
 				119D1CFA2F16E46300EC7072 /* ErrorBanner.swift in Sources */,
 				119D1CFB2F16E46300EC7072 /* MainTabView.swift in Sources */,
 				119D1CFC2F16E46300EC7072 /* AppCoordinator.swift in Sources */,
+				11AE8CF22F16FDA4005AB062 /* Shift.swift in Sources */,
+				11AE8CF32F16FDA4005AB062 /* RecurringShift.swift in Sources */,
+				11AE8CF42F16FDA4005AB062 /* SupplementRule.swift in Sources */,
+				11AE8D082F16FDD8005AB062 /* Date+Tidex.swift in Sources */,
+				11AE8CF52F16FDA4005AB062 /* UserSettings.swift in Sources */,
+				11AE8CF62F16FDA4005AB062 /* WageSnapshot.swift in Sources */,
 				11AE8CD12F16F2EE005AB062 /* AuthNavigationView.swift in Sources */,
 				119D1CFD2F16E46300EC7072 /* LoginView.swift in Sources */,
 				119D1CFE2F16E46300EC7072 /* MFAVerifyViewModel.swift in Sources */,
