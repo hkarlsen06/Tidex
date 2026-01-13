@@ -113,6 +113,6 @@ export const marketingNo = {
     payrollDocs: 'Lønnsdokumentasjon',
     privacy: 'Personvernerklæring',
     terms: 'Vilkår for bruk',
-    copyright: '© 2025 Hjalmar Kristensen-Karlsen',
+    copyright: '© 2026 Hjalmar Kristensen-Karlsen',
   },
 } as const;

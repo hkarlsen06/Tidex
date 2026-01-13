@@ -165,7 +165,7 @@ export function PayrollDocsPage({ docs }: PayrollDocsPageProps) {
       <footer className="border-t border-border-subtle py-8">
         <div className="container mx-auto px-6 text-center sm:px-8">
           <p className="text-sm text-text-muted">
-            © 2025 Tidex — Complete transparency in payroll calculations
+            © 2026 Tidex — Complete transparency in payroll calculations
           </p>
         </div>
       </footer>
