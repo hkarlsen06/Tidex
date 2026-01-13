@@ -384,6 +384,89 @@ export async function purchaseProduct(
 }
 
 /**
+ * Sync Apple subscription state on app foreground
+ *
+ * This is called when the app returns to foreground to catch subscription
+ * changes made outside the app (e.g., upgrades via App Store Settings).
+ * Unlike Apple's server notifications which can be delayed 2-3 minutes,
+ * this queries Apple directly for immediate updates.
+ *
+ * @returns Whether a subscription was synced (for UI refresh decisions)
+ */
+export async function syncAppleSubscription(): Promise<{ synced: boolean; productId?: string }> {
+  if (!isIAPAvailable()) {
+    return { synced: false };
+  }
+
+  try {
+    const plugin = getPlugin();
+
+    console.log("[IAP] Syncing Apple subscription on foreground...");
+
+    // Get current purchases from StoreKit (this is fast, local check)
+    const result = await plugin.getPurchases({ productType: PURCHASE_TYPE.SUBS });
+
+    // Find active Tidex subscription
+    const activePurchases = (result.purchases || []).filter(
+      (t) => t.productIdentifier && (ALL_APPLE_PRODUCT_IDS as readonly string[]).includes(t.productIdentifier)
+    );
+
+    if (activePurchases.length === 0) {
+      console.log("[IAP] No active Apple subscription to sync");
+      return { synced: false };
+    }
+
+    // Get the most recent transaction
+    const latestTxn = activePurchases[0];
+    console.log("[IAP] Found active subscription, verifying with Apple:", latestTxn.productIdentifier);
+
+    // Dynamic import to avoid bundling Supabase in non-browser environments
+    const { supabase } = await import("@/lib/supabase/browser");
+
+    // Refresh session to get valid token
+    const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+    if (refreshError || !refreshData.session?.access_token) {
+      console.log("[IAP] Session refresh failed during sync, skipping");
+      return { synced: false };
+    }
+
+    // Verify with Apple and update database
+    // This queries Apple's servers directly, bypassing the webhook delay
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/apple-verify-purchase`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${refreshData.session.access_token}`,
+          apikey: process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || "",
+        },
+        body: JSON.stringify({
+          transactionId: latestTxn.transactionId,
+          productId: latestTxn.productIdentifier,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      console.log("[IAP] Sync verification failed:", response.status);
+      return { synced: false };
+    }
+
+    const data = await response.json();
+    console.log("[IAP] Sync completed:", data.subscription?.internalProductId);
+
+    return {
+      synced: true,
+      productId: data.subscription?.internalProductId
+    };
+  } catch (e: any) {
+    console.error("[IAP] Sync error:", e.message);
+    return { synced: false };
+  }
+}
+
+/**
  * Restore previous purchases
  * Call this when user taps "Restore Purchases" or on new device
  *
