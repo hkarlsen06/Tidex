@@ -130,7 +130,7 @@ export default function SupportPage() {
         <footer className="border-t border-border-subtle pt-8">
           <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
             <p className="text-sm text-text-muted">
-              &copy; 2025 Tidex. All rights reserved.
+              &copy; 2026 Tidex. All rights reserved.
             </p>
             <div className="flex gap-6">
               <Link

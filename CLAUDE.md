@@ -10,6 +10,36 @@ A Next.js 16 application for tracking work shifts and calculating wages with Sup
 
 - **Primary developer user ID**: `032d8c2a-9af6-4777-99f0-24e2c4058bf3` (Hjalmar's account for testing/debugging)
 
+## Augment Context Engine (PREFERRED for Codebase Questions)
+
+**ALWAYS use `mcp__auggie-context__query_codebase` for codebase exploration and understanding questions.**
+
+This MCP tool provides superior context retrieval compared to manual Glob/Grep searches:
+- Understands code relationships across languages (TypeScript, Swift, SQL, etc.)
+- Returns relevant code excerpts with exact file paths and line numbers
+- Explains architectural patterns and data flows
+- Much faster than manual multi-file exploration
+
+**When to use:**
+- "How does X work?" questions
+- Understanding data flows between components
+- Finding all related code for a feature
+- Architecture and pattern questions
+- Cross-language investigations (e.g., web ↔ iOS communication)
+
+**Example:**
+```
+mcp__auggie-context__query_codebase({
+  query: "How is data shared between the iOS app and widget?",
+  workspace_root: "/path/to/tidex"
+})
+```
+
+**Still use Glob/Grep for:**
+- Finding a specific file by name
+- Searching for exact string matches
+- Quick "needle in haystack" queries where you know what you're looking for
+
 ## iOS Development Rules
 
 **NEVER run Xcode builds automatically.** When iOS/Swift code changes need to be verified:
@@ -85,7 +115,7 @@ All these APIs are now **fully asynchronous** and must be awaited:
 
 ### Other Breaking Changes
 
-- **Node.js 20.9+** required (Node 18 dropped)
+- **Node.js 24+** required (see `.nvmrc`)
 - **Turbopack** is now default (webpack requires explicit `--webpack` flag)
 - **Parallel routes** require explicit `default.js` files or build fails
 - **React 19** is supported (was React 18 before)
@@ -95,9 +125,8 @@ All these APIs are now **fully asynchronous** and must be awaited:
 ## Development Commands
 
 ```bash
-pnpm dev         # Start HTTPS dev server via server.mjs (https://localhost:3000)
-pnpm dev:http    # Start HTTP dev server (http://localhost:3000)
-pnpm dev:turbo   # Start dev server with Turbo mode
+pnpm dev         # Start dev server (http://localhost:3000)
+pnpm dev:https   # Start HTTPS dev server (https://localhost:3000)
 pnpm build       # Production build
 pnpm start       # Run production server
 pnpm lint        # Run ESLint
@@ -109,8 +138,8 @@ pnpm lint        # Run ESLint
 
 The application uses locale-based routing with dynamic `[locale]` segments for internationalization:
 
-- `app/[locale]/(app)/*` - Protected routes requiring authentication (home, shifts, stats, settings)
-- `app/[locale]/(auth)/*` - Public authentication routes (login, signup, verify-email, reset-password)
+- `app/[locale]/(app)/*` - Protected routes requiring authentication (dashboard, shifts, stats, settings, wagey, sharing)
+- `app/[locale]/(auth)/*` - Public authentication routes (login, signup, verify-email, reset-password, mfa-verify, accept-terms)
 - `app/auth/callback/` - OAuth/magic link callback handler (unlocalized)
 
 Each route group has its own layout:
@@ -121,12 +150,17 @@ Each route group has its own layout:
 - `app/layout.tsx` - Root layout with theme initialization script, fonts, and metadata
 
 **Key routes:**
-- `/{locale}/` - Home/dashboard (protected)
+- `/{locale}/` - Redirects to `/{locale}/dashboard` (protected)
+- `/{locale}/dashboard` - Main dashboard/home (protected)
 - `/{locale}/shifts` - View and manage shifts (protected)
 - `/{locale}/stats` - Statistics and analytics (protected)
 - `/{locale}/settings` - Settings hub with nested routes (protected)
+- `/{locale}/wagey` - AI assistant chat (protected)
+- `/{locale}/sharing` - Share shifts feature (protected)
 - `/{locale}/login` - Login page (public)
 - `/{locale}/signup` - Sign up page (public)
+- `/{locale}/mfa-verify` - MFA challenge page (public)
+- `/{locale}/accept-terms` - Terms acceptance flow (public)
 
 ### Internationalization (i18n)
 
@@ -201,7 +235,7 @@ Theme management:
 - `ThemeToggle` component controls theme (in `components/app/ThemeToggle.tsx`)
 - Theme state synced to localStorage
 - Initial theme set via inline script in `app/layout.tsx` (prevents flash)
-- Tailwind configured with `darkMode: ["class"]` in `tailwind.config.js`
+- Tailwind v4 configured with `@custom-variant dark` in `app/globals.css`
 
 **Color system**: CSS variables in `app/globals.css` define semantic tokens for light and dark modes:
 
@@ -216,6 +250,17 @@ Theme management:
 The root `<body>` must have `bg-background text-foreground` classes for proper theming.
 
 See `docs/THEME.md` for color token management.
+
+### Animations
+
+**See skill:** Use the `motion-react` skill when adding animations to React components.
+
+This project uses **Motion for React** (formerly Framer Motion) for animations. Key points:
+
+- Import from `motion/react`, never from `framer-motion`
+- For server components: `import * as motion from "motion/react-client"`
+- Use `willChange: "transform"` for hardware-accelerated animations
+- Integrate with Radix UI using `asChild` and `forceMount` patterns
 
 ### Payroll Calculation System
 
@@ -260,6 +305,8 @@ All database queries go through the DAL, which provides:
 ```tsx
 // data-access/auth.ts
 export async function verifySession() // Returns authenticated user or redirects
+export async function getSession()    // Returns session or null (no redirect)
+export async function verifyAdmin()   // Verifies user is admin
 
 // data-access/settings.ts
 export async function getUserSettings() // Get user's pay/display settings
@@ -274,6 +321,19 @@ export async function getChartsData()   // Get chart data for stats page
 
 // data-access/subscription.ts
 export async function getUserSubscriptionData() // Get subscription status
+
+// data-access/wagey.ts
+export async function getWageyAccess()  // Check Wagey AI assistant access
+
+// data-access/sharing.ts
+export async function getSharingData()  // Get shift sharing data
+
+// data-access/snapshots.ts
+export async function getCurrentSnapshots() // Get current wage snapshots for shift creation
+
+// data-access/wage-snapshots.ts
+export async function getUserWageSnapshots() // Get all user's wage snapshots
+export async function getSnapshotForDate(date) // Get snapshot valid for a specific date
 ```
 
 **See skill:** Use the `use-data-access-layer` skill for complete DAL usage patterns and examples.
@@ -297,10 +357,11 @@ Server actions use centralized utilities from `lib/` for consistency:
 
 Configuration files are in the project root:
 
-- `tailwind.config.js` - Tailwind theme and semantic colors
-- `postcss.config.cjs` - PostCSS with Tailwind plugin
+- `postcss.config.cjs` - PostCSS with Tailwind v4 plugin (`@tailwindcss/postcss`)
 - `tsconfig.json` - TypeScript configuration with path aliases
 - `next.config.js` - Next.js configuration with PWA settings and `cacheComponents: true`
+
+**Note**: This project uses Tailwind CSS v4 which uses a CSS-first configuration approach. Theme configuration is done via `@theme` directives in `app/globals.css`, not a separate `tailwind.config.js` file.
 
 ## Dependency Management
 
@@ -370,6 +431,9 @@ All services are in `lib/services/` and accessed via Context.Tag:
 - **ShiftsService**: Shift data with payroll computations
 - **StatsService**: Statistics and analytics
 - **SubscriptionService**: Subscription and profile management
+- **ClaudeService**: Claude API integration for AI features
+- **WageyService**: Wagey AI assistant access control and chat
+- **SharingService**: Shift sharing functionality
 
 ### Service Usage Examples
 
@@ -685,6 +749,7 @@ When `verify_jwt: true`, the function expects a valid Supabase JWT token. Cron j
 | `apple-verify-purchase` | `true` | Called by authenticated app users |
 | `send-push-notifications` | `false` | Called by pg_cron |
 | `process-shift-reminders` | `false` | Called by pg_cron |
+| `before-user-created` | `false` | Auth hook called during signup flow |
 
 **When to use `verify_jwt: true`:**
 - Only for functions called directly by authenticated users from the client
@@ -749,7 +814,7 @@ Each cron job file should include:
 
 | Job Name | Schedule | Description |
 |----------|----------|-------------|
-| `process-shift-notifications` | `* * * * *` | Processes shift changes and triggers notifications |
+| `process-shift-notifications` | `*/15 * * * *` | Processes shift changes and triggers notifications (every 15 min) |
 | `process-shift-reminders` | `* * * * *` | Triggers shift reminder edge function |
 | `cleanup-shift-reminders-sent` | `0 3 * * *` | Cleans up old reminder records (7 days) |
 | `cleanup-shift-notification-events` | `0 4 * * *` | Cleans up resolved notification events (7 days) |

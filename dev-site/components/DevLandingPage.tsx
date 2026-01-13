@@ -106,7 +106,7 @@ export function DevLandingPage({ locale, dictionary }: DevLandingPageProps) {
       <footer className="border-t border-border/40 px-4 py-8">
         <div className="mx-auto flex max-w-6xl items-center justify-between">
           <p className="text-sm text-text-muted">
-            © 2025 Hjalmar Karlsen. {dictionary.footer.rights}.
+            © 2026 Hjalmar Karlsen. {dictionary.footer.rights}.
           </p>
           <a
             href="https://github.com/kkarlsen06"

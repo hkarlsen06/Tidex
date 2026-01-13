@@ -98,7 +98,7 @@ export default function SettingsPage() {
   // useSyncExternalStore ensures proper SSR hydration without setState-in-effect
   const isNative = useSyncExternalStore(
     // Subscribe is a no-op since platform doesn't change at runtime
-    () => () => {},
+    () => () => { },
     // Client snapshot: check platform
     () => isNativePlatform(),
     // Server snapshot: always false (no notifications menu in SSR)
@@ -182,7 +182,7 @@ export default function SettingsPage() {
         {/* Footer with legal links and copyright */}
         <div className="mt-12 pt-4 border-t border-border-subtle flex flex-wrap items-center justify-between gap-x-4 gap-y-2 text-sm">
           <LegalLinks className="" />
-          <span className="text-text-muted">© 2025 Tidex</span>
+          <span className="text-text-muted">© 2026 Tidex</span>
         </div>
       </div>
     </ScrollablePageWrapper>

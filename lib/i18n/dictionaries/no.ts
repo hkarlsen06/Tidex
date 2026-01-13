@@ -88,7 +88,7 @@ export const no = {
       support: 'Support',
       website: 'Tidex.no',
     },
-    copyright: '© 2025 Hjalmar Kristensen-Karlsen',
+    copyright: '© 2026 Hjalmar Kristensen-Karlsen',
   },
   userMenu: {
     profile: 'Konto',
