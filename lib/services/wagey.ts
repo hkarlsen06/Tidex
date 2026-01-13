@@ -17,7 +17,7 @@ import {
   SupabaseError,
 } from "../errors/tagged";
 import { logger } from "../logger";
-import { getWageyAccessLevel } from "../subscription/getWageyAccessLevel";
+import { getUserTier } from "../subscription/getUserTier";
 import {
   type WageyAccessResult,
   type WageyInvocationResult,
@@ -94,7 +94,7 @@ export const WageyServiceLive = Layer.effect(
         const subData = yield* subscription.getUserSubscriptionData(userId);
 
         // Determine access level
-        const level = getWageyAccessLevel(subData.subscription, subData.profile);
+        const level = getUserTier(subData.subscription, subData.profile);
         const limit = WAGEY_LIMITS[level];
         const hasAccess = level !== "free";
 
@@ -150,7 +150,7 @@ export const WageyServiceLive = Layer.effect(
 
         // Get subscription data to determine limit
         const subData = yield* subscription.getUserSubscriptionData(userId);
-        const level = getWageyAccessLevel(subData.subscription, subData.profile);
+        const level = getUserTier(subData.subscription, subData.profile);
 
         // Get limit for user's tier (free users get trial limit)
         const limit = WAGEY_LIMITS[level];

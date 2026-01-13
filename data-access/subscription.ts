@@ -25,6 +25,11 @@ import { verifySession } from "@/data-access/auth";
 // Re-export types for backward compatibility
 export type { Subscription, UserProfile, SubscriptionData };
 
+// Import and re-export getUserTier for centralized tier logic
+import { getUserTier, type SubscriptionTier } from "@/lib/subscription/getUserTier";
+export { getUserTier };
+export type { SubscriptionTier };
+
 /**
  * Internal implementation of getUserSubscription using Effect
  * @internal - Do not call directly, use getUserSubscription()
@@ -124,3 +129,25 @@ export const getUserSubscriptionData = cache(
     return getUserSubscriptionDataInternal(userId);
   }
 );
+
+/**
+ * Get subscription tier for a user.
+ * Allows admin users to check any user's tier.
+ *
+ * @param userId - The user ID to check tier for
+ */
+export async function getUserTierById(userId: string): Promise<SubscriptionTier> {
+  const { user } = await verifySession();
+
+  // Allow if checking own tier OR if user is admin
+  if (user.id !== userId) {
+    const isAdmin = user.app_metadata?.role === "admin";
+    if (!isAdmin) {
+      throw new Error("Unauthorized - only admin can check other users' tier");
+    }
+  }
+
+  // Use existing internal function
+  const { subscription, profile } = await getUserSubscriptionDataInternal(userId);
+  return getUserTier(subscription, profile);
+}

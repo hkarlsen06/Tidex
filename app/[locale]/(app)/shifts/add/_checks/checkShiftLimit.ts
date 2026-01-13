@@ -2,8 +2,8 @@
 
 import { verifySession } from '@/data-access/auth';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
-import { getUserSubscriptionData } from '@/data-access/subscription';
-import { hasProAccess, getUniqueShiftMonths } from '@/lib/subscription/hasProAccess';
+import { getUserSubscriptionData, getUserTier } from '@/data-access/subscription';
+import { getUniqueShiftMonths } from '@/lib/subscription/hasProAccess';
 
 export interface ShiftLimitCheckResult {
   allowed: boolean;
@@ -23,15 +23,16 @@ export async function checkShiftLimit(targetMonth: string): Promise<ShiftLimitCh
   const { user } = await verifySession();
   const supabase = await createSupabaseServerClient();
 
-  // Fetch subscription status
+  // Fetch subscription status and determine tier
   const { subscription, profile } = await getUserSubscriptionData(user.id);
+  const tier = getUserTier(subscription, profile);
 
-  const isFreeTier = !hasProAccess(subscription, profile);
-
-  // If user has Pro access (grandfathered or subscribed), allow all months
-  if (!isFreeTier) {
+  // If user has Pro or Max tier, allow all months
+  if (tier !== "free") {
     return { allowed: true, isFreeTier: false };
   }
+
+  const isFreeTier = true;
 
   // User is on free tier - check existing shifts
   const { data: existingShifts, error } = await supabase

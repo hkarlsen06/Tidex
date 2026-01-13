@@ -1,5 +1,6 @@
 // lib/subscription/hasProAccess.ts
 import type { Subscription, UserProfile } from '@/data-access/subscription';
+import { getUserTier } from './getUserTier';
 
 /**
  * Entitled subscription statuses
@@ -10,36 +11,16 @@ import type { Subscription, UserProfile } from '@/data-access/subscription';
 const ENTITLED_STATUSES = ['active', 'trialing', 'grace'];
 
 /**
- * Determines if a user has Pro-level access.
- * Returns true if:
- * - User is grandfathered (before_paywall: true), OR
- * - User has an entitled subscription (active, trialing, or grace)
+ * Determines if a user has Pro-level access (Pro or Max tier).
+ * Returns true if user's tier is anything other than "free".
  *
- * Works with both Stripe and Apple IAP subscriptions via unified model.
+ * Uses centralized getUserTier() for consistent tier determination.
  */
 export function hasProAccess(
   subscription: Subscription | null,
   profile: UserProfile | null
 ): boolean {
-  // Grandfathered users get lifetime Pro access
-  if (profile?.before_paywall === true) {
-    return true;
-  }
-
-  // Check for entitled subscription status
-  if (subscription && ENTITLED_STATUSES.includes(subscription.status)) {
-    // Additionally verify current_period_end is in the future (if set)
-    if (subscription.current_period_end) {
-      const periodEnd = new Date(subscription.current_period_end);
-      if (periodEnd <= new Date()) {
-        // Subscription has expired
-        return false;
-      }
-    }
-    return true;
-  }
-
-  return false;
+  return getUserTier(subscription, profile) !== "free";
 }
 
 /**

@@ -23,15 +23,18 @@ const STRIPE_LIVE = STRIPE_SECRET_KEY.startsWith("sk_live_");
 
 // ---------- Product ID Mapping ----------
 // Maps Stripe price IDs to internal product IDs for the unified subscription model
+// This is the single source of truth for Stripe → internal product ID mapping
 const STRIPE_PRICE_TO_PRODUCT: Record<string, string> = {
-  // Pro Monthly
+  // Pro Monthly (current)
+  "price_1SHBKaQiotkj8G58qBMeRs3j": "pro_monthly",
+  // Pro Monthly (legacy - users migrated away, but keep for safety)
   "price_1RzQ85Qiotkj8G58AO6st4fh": "pro_monthly",
-  // Pro Yearly (if exists)
-  // "price_xxx": "pro_yearly",
+  // Pro Yearly
+  "price_1SNCjPQiotkj8G58mQGHHmc7": "pro_yearly",
   // Max Monthly
   "price_1RzQC1Qiotkj8G58tYo4U5oO": "max_monthly",
-  // Max Yearly (if exists)
-  // "price_xxx": "max_yearly",
+  // Max Yearly
+  "price_1SNCh9Qiotkj8G58f0vg3ZbK": "max_yearly",
 };
 
 function mapStripePriceToProductId(priceId: string | null): string | null {
