@@ -57,7 +57,6 @@ struct PayrollCalculator {
         let rules = resolveSupplementRules(
             weekday: weekday,
             snapshot: snapshot,
-            shiftSnapshot: shift.supplement_rules_snapshot,
             customSupplements: shift.custom_supplements
         )
 
@@ -78,11 +77,11 @@ struct PayrollCalculator {
         let originalPeriods = periods
 
         // Resolve break settings from snapshot (with defaults for backward compatibility)
-        let breakEnabled = snapshot?.break_enabled ?? defaultBreakEnabled
+        let breakEnabled = snapshot?.effectiveBreakEnabled ?? defaultBreakEnabled
         let method = snapshot?.breakMethod ?? defaultBreakMethod
-        let threshold = snapshot?.break_threshold_hours ?? defaultBreakThresholdHours
+        let threshold = snapshot?.effectiveBreakThresholdHours ?? defaultBreakThresholdHours
         let breakMinutes = breakEnabled
-            ? (snapshot?.break_deduction_minutes ?? defaultBreakDeductionMinutes)
+            ? (snapshot?.effectiveBreakDeductionMinutes ?? defaultBreakDeductionMinutes)
             : 0
         let breakHours = Double(breakMinutes) / 60.0
 
@@ -131,19 +130,14 @@ struct PayrollCalculator {
     // MARK: - Private Helpers
 
     /// Resolve the base hourly wage rate for a shift
-    /// Priority: 1. New snapshot system, 2. Old per-shift snapshot, 3. Fallback to preset
+    /// Priority: 1. Snapshot system, 2. Fallback to preset
     private static func resolveBaseRate(shift: ShiftRow, snapshot: WageSnapshot?) -> Double {
-        // Priority 1: Use new snapshot system
+        // Priority 1: Use snapshot system
         if let rate = snapshot?.hourly_wage, rate > 0 {
             return rate
         }
 
-        // Priority 2: Backward compatibility - old per-shift snapshot
-        if let rate = shift.hourly_wage_snapshot, rate > 0 {
-            return rate
-        }
-
-        // Priority 3: Fallback to tariff level 1
+        // Priority 2: Fallback to tariff level 1
         return presetWageRates["1"] ?? 184.54
     }
 
@@ -152,7 +146,6 @@ struct PayrollCalculator {
     private static func resolveSupplementRules(
         weekday: Int,
         snapshot: WageSnapshot?,
-        shiftSnapshot: SupplementRulesSnapshot?,
         customSupplements: CustomSupplementsData?
     ) -> [SupplementRule] {
         // If custom supplements exist, they replace everything
@@ -168,13 +161,10 @@ struct PayrollCalculator {
             }
         }
 
-        // Priority: snapshot > shift snapshot > preset
-        if let rules = snapshot?.supplements.rules, !rules.isEmpty {
-            return rules
-        }
-
-        if let rules = shiftSnapshot?.rules, !rules.isEmpty {
-            return rules
+        // Priority: snapshot > preset
+        let snapshotRules = snapshot?.effectiveSupplements ?? []
+        if !snapshotRules.isEmpty {
+            return snapshotRules
         }
 
         return presetSupplementRules

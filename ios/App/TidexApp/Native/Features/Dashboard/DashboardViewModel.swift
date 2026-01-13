@@ -1,6 +1,9 @@
 import Foundation
 import SwiftUI
 import Supabase
+import os.log
+
+private let logger = Logger(subsystem: "com.tidex.app", category: "DashboardViewModel")
 
 // MARK: - Dashboard Data
 
@@ -92,10 +95,14 @@ final class DashboardViewModel: ObservableObject {
         isLoading = true
         error = nil
 
+        logger.info("🚀 Starting dashboard load...")
+
         do {
             guard let userId = try await getCurrentUserId() else {
+                logger.error("❌ Not authenticated - no user ID")
                 throw DashboardError.notAuthenticated
             }
+            logger.info("✅ Got user ID: \(userId)")
 
             // Fetch data in parallel
             let currentYM = Date.currentYearMonth()
@@ -106,35 +113,62 @@ final class DashboardViewModel: ObservableObject {
             let previousStartDate = Date.firstDayOfMonth(year: previousYM.year, month: previousYM.month)
             let previousEndDate = Date.lastDayOfMonth(year: previousYM.year, month: previousYM.month)
 
-            async let settingsTask = settingsService.fetchSettings(for: userId)
-            async let snapshotsTask = snapshotsService.fetchSnapshots(for: userId)
-            async let currentShiftsTask = shiftsService.fetchAllShifts(
-                for: userId,
-                startDate: currentStartDate,
-                endDate: currentEndDate
-            )
-            async let previousShiftsTask = shiftsService.fetchShifts(
-                for: userId,
-                startDate: previousStartDate,
-                endDate: previousEndDate
-            )
+            logger.info("📅 Date range - Current: \(currentStartDate) to \(currentEndDate), Previous: \(previousStartDate) to \(previousEndDate)")
 
-            let (
-                fetchedSettings,
-                fetchedSnapshots,
-                currentShiftsData,
-                fetchedPreviousShifts
-            ) = try await (
-                settingsTask,
-                snapshotsTask,
-                currentShiftsTask,
-                previousShiftsTask
-            )
+            // Fetch each service separately for better error isolation
+            logger.info("📡 Fetching settings...")
+            let fetchedSettings: UserSettings?
+            do {
+                fetchedSettings = try await settingsService.fetchSettings(for: userId)
+                logger.info("✅ Settings fetched: \(fetchedSettings != nil ? "found" : "nil")")
+            } catch {
+                logger.error("❌ Settings fetch failed: \(error.localizedDescription)")
+                throw error
+            }
+
+            logger.info("📡 Fetching snapshots...")
+            let fetchedSnapshots: [WageSnapshot]
+            do {
+                fetchedSnapshots = try await snapshotsService.fetchSnapshots(for: userId)
+                logger.info("✅ Snapshots fetched: \(fetchedSnapshots.count) snapshots")
+            } catch {
+                logger.error("❌ Snapshots fetch failed: \(error.localizedDescription)")
+                throw error
+            }
+
+            logger.info("📡 Fetching current month shifts...")
+            let currentShiftsData: (shifts: [ShiftRow], recurring: [RecurringShiftRow])
+            do {
+                currentShiftsData = try await shiftsService.fetchAllShifts(
+                    for: userId,
+                    startDate: currentStartDate,
+                    endDate: currentEndDate
+                )
+                logger.info("✅ Current shifts fetched: \(currentShiftsData.shifts.count) shifts, \(currentShiftsData.recurring.count) recurring")
+            } catch {
+                logger.error("❌ Current shifts fetch failed: \(error.localizedDescription)")
+                throw error
+            }
+
+            logger.info("📡 Fetching previous month shifts...")
+            let fetchedPreviousShifts: [ShiftRow]
+            do {
+                fetchedPreviousShifts = try await shiftsService.fetchShifts(
+                    for: userId,
+                    startDate: previousStartDate,
+                    endDate: previousEndDate
+                )
+                logger.info("✅ Previous shifts fetched: \(fetchedPreviousShifts.count) shifts")
+            } catch {
+                logger.error("❌ Previous shifts fetch failed: \(error.localizedDescription)")
+                throw error
+            }
 
             self.settings = fetchedSettings
             self.snapshots = fetchedSnapshots
 
             // Compute current month shifts with payroll
+            logger.info("🧮 Computing current month payroll...")
             self.currentMonthShifts = computeShiftsWithPayroll(
                 shifts: currentShiftsData.shifts,
                 recurring: currentShiftsData.recurring,
@@ -142,9 +176,10 @@ final class DashboardViewModel: ObservableObject {
                 year: currentYM.year,
                 month: currentYM.month
             )
+            logger.info("✅ Current month computed: \(self.currentMonthShifts.count) shifts")
 
             // Compute previous month shifts with payroll
-            // Note: We reuse recurring shifts from current month fetch for virtual shifts
+            logger.info("🧮 Computing previous month payroll...")
             self.previousMonthShifts = computeShiftsWithPayroll(
                 shifts: fetchedPreviousShifts,
                 recurring: currentShiftsData.recurring,
@@ -152,11 +187,29 @@ final class DashboardViewModel: ObservableObject {
                 year: previousYM.year,
                 month: previousYM.month
             )
+            logger.info("✅ Previous month computed: \(self.previousMonthShifts.count) shifts")
 
             // Build dashboard data
+            logger.info("🏗️ Building dashboard data...")
             self.dashboardData = buildDashboardData()
+            logger.info("✅ Dashboard data built successfully!")
 
         } catch {
+            logger.error("❌ Dashboard load failed: \(error.localizedDescription)")
+            if let decodingError = error as? DecodingError {
+                switch decodingError {
+                case .keyNotFound(let key, let context):
+                    logger.error("   DecodingError.keyNotFound: key '\(key.stringValue)' not found, path: \(context.codingPath.map { $0.stringValue }.joined(separator: "."))")
+                case .typeMismatch(let type, let context):
+                    logger.error("   DecodingError.typeMismatch: expected \(type), path: \(context.codingPath.map { $0.stringValue }.joined(separator: "."))")
+                case .valueNotFound(let type, let context):
+                    logger.error("   DecodingError.valueNotFound: expected \(type), path: \(context.codingPath.map { $0.stringValue }.joined(separator: "."))")
+                case .dataCorrupted(let context):
+                    logger.error("   DecodingError.dataCorrupted: \(context.debugDescription), path: \(context.codingPath.map { $0.stringValue }.joined(separator: "."))")
+                @unknown default:
+                    logger.error("   DecodingError: unknown")
+                }
+            }
             self.error = DashboardError.dataLoadFailed(underlying: error)
         }
 
@@ -226,9 +279,8 @@ final class DashboardViewModel: ObservableObject {
                     shift_date: virtual.date,
                     start_time: recurringShift.cleanStartTime,
                     end_time: recurringShift.cleanEndTime,
-                    hourly_wage_snapshot: nil,
-                    supplement_rules_snapshot: nil,
                     custom_supplements: recurringShift.date_specific_supplements?[virtual.date],
+                    created_at: nil,
                     recurring_id: recurringShift.id,
                     recurring_anchor_weekday: virtual.weekday
                 )

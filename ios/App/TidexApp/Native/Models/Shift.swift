@@ -5,27 +5,66 @@ import Foundation
 /// Raw shift data from user_shifts table
 struct ShiftRow: Codable, Identifiable, Equatable {
     let id: String
-    let user_id: String
+    let user_id: String?
     /// Shift date in ISO format (YYYY-MM-DD)
     let shift_date: String
     /// Start time (HH:mm)
     let start_time: String
     /// End time (HH:mm) - can be less than start_time for cross-midnight shifts
     let end_time: String
-    /// Snapshot of hourly wage at shift creation (legacy, for backward compatibility)
-    let hourly_wage_snapshot: Double?
-    /// Snapshot of supplement rules at shift creation (legacy)
-    let supplement_rules_snapshot: SupplementRulesSnapshot?
     /// Shift-specific custom supplements
     let custom_supplements: CustomSupplementsData?
+    /// When the shift was created
+    let created_at: String?
+
+    // Virtual shift metadata (not in database, set programmatically)
     /// Links to recurring_shifts if this is a virtual shift
-    let recurring_id: String?
+    var recurring_id: String?
     /// Which weekday anchor (0-6) generated this virtual shift
-    let recurring_anchor_weekday: Int?
+    var recurring_anchor_weekday: Int?
 
     /// Whether this shift is from a recurring pattern
     var isVirtual: Bool {
         recurring_id != nil
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id, user_id, shift_date, start_time, end_time, custom_supplements, created_at
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        user_id = try container.decodeIfPresent(String.self, forKey: .user_id)
+        shift_date = try container.decode(String.self, forKey: .shift_date)
+        start_time = try container.decode(String.self, forKey: .start_time)
+        end_time = try container.decode(String.self, forKey: .end_time)
+        custom_supplements = try container.decodeIfPresent(CustomSupplementsData.self, forKey: .custom_supplements)
+        created_at = try container.decodeIfPresent(String.self, forKey: .created_at)
+        recurring_id = nil
+        recurring_anchor_weekday = nil
+    }
+
+    init(
+        id: String,
+        user_id: String?,
+        shift_date: String,
+        start_time: String,
+        end_time: String,
+        custom_supplements: CustomSupplementsData?,
+        created_at: String? = nil,
+        recurring_id: String? = nil,
+        recurring_anchor_weekday: Int? = nil
+    ) {
+        self.id = id
+        self.user_id = user_id
+        self.shift_date = shift_date
+        self.start_time = start_time
+        self.end_time = end_time
+        self.custom_supplements = custom_supplements
+        self.created_at = created_at
+        self.recurring_id = recurring_id
+        self.recurring_anchor_weekday = recurring_anchor_weekday
     }
 }
 
