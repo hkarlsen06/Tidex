@@ -19,7 +19,7 @@
     "dev-site:dev": "pnpm --filter dev-site dev",
     "dev-site:build": "pnpm --filter dev-site build",
     "dev-site:start": "pnpm --filter dev-site start",
-    "open-ios": "open ios/App/App.xcodeproj"
+    "open-ios": "open ios/App/Tidex.xcodeproj"
   },
   "dependencies": {
     "@marsidev/react-turnstile": "^1.4.1",
