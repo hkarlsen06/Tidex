@@ -5,22 +5,18 @@
  * Simplified to focus on natural conversation - tool examples are in the tool definitions.
  */
 
-import type { WageyAccessLevel } from "@/lib/wagey/types";
-import { WAGEY_LIMITS } from "@/lib/wagey/types";
+import type { SubscriptionTier } from "@/lib/subscription/getUserTier";
+import { WAGEY_LIMITS, type WageyAccessLevel } from "@/lib/wagey/types";
 
 /**
  * Get user-friendly tier name for display
  */
-function getTierDisplayName(level: WageyAccessLevel): string {
+function getTierDisplayName(level: SubscriptionTier): string {
   switch (level) {
     case "max":
       return "Max";
     case "pro":
       return "Pro";
-    case "grandfathered":
-      return "Legacy (Free)";
-    case "grandfathered_plan":
-      return "Legacy (Subscribed)";
     case "free":
       return "Free Trial";
   }
@@ -78,12 +74,7 @@ export function getSystemPrompt(context?: SystemPromptContext): string {
 
   // Build usage context section if available
   const tierName = context ? getTierDisplayName(context.accessLevel) : "";
-  const canUpgrade = context ? context.accessLevel !== "max" && context.accessLevel !== "grandfathered_plan" : false;
-
-  // Build legacy tier explanation if applicable
-  const legacyExplanation = context?.accessLevel === "grandfathered" || context?.accessLevel === "grandfathered_plan"
-    ? `\nNote: "Legacy" tiers are for early users who signed up before Wagey launched. They keep their grandfathered benefits.`
-    : "";
+  const canUpgrade = context ? context.accessLevel !== "max" : false;
 
   const usageSection = context
     ? `
@@ -92,7 +83,7 @@ Subscription tier: ${tierName}
 Monthly message limit: ${WAGEY_LIMITS[context.accessLevel]} messages
 Messages used this month (including this message): ${context.used}
 Messages remaining after this message: ${context.remaining}
-Resets on the 1st of each month.${legacyExplanation}
+Resets on the 1st of each month.
 ${canUpgrade ? `Can upgrade: Yes (higher tiers get more messages - Pro: ${WAGEY_LIMITS.pro}, Max: ${WAGEY_LIMITS.max})` : ""}
 
 IMPORTANT RULES:

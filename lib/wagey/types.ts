@@ -5,6 +5,8 @@
  * based on subscription tiers.
  */
 
+import type { SubscriptionTier } from "@/lib/subscription/getUserTier";
+
 /**
  * Structure stored in profiles.wagey_invocations JSONB column
  */
@@ -14,9 +16,10 @@ export type WageyInvocations = {
 };
 
 /**
- * Access level determines both access and monthly message limit
+ * Access level now uses the centralized SubscriptionTier type
+ * Simplified from 5 levels to 3: "free" | "pro" | "max"
  */
-export type WageyAccessLevel = "grandfathered" | "grandfathered_plan" | "max" | "pro" | "free";
+export type WageyAccessLevel = SubscriptionTier;
 
 /**
  * Trial message limit for free users testing Wagey (client-side only, resets on navigation)
@@ -55,15 +58,14 @@ export type WageyInvocationResult = {
 
 /**
  * Monthly message limits per tier
+ * Updated: Pro tier increased from 30 to 40 messages
  * Note: Free users get WAGEY_TRIAL_LIMIT as a one-time trial (resets monthly like other tiers)
  */
-export const WAGEY_LIMITS = {
-  grandfathered: 40,
-  grandfathered_plan: 100,
-  max: 90,
-  pro: 30,
+export const WAGEY_LIMITS: Record<SubscriptionTier, number> = {
   free: WAGEY_TRIAL_LIMIT,
-} as const satisfies Record<WageyAccessLevel, number | null>;
+  pro: 40,
+  max: 90,
+};
 
 /**
  * Get the limit for an access level
