@@ -372,11 +372,11 @@ export function MfaSection() {
                         if (!uri) return;
 
                         try {
-                          // Try to use Capacitor's App plugin for native platforms
+                          // Try to use Capacitor's Browser plugin for native platforms
                           const { Capacitor } = await import("@capacitor/core");
                           if (Capacitor.isNativePlatform()) {
-                            const { App } = await import("@capacitor/app");
-                            await App.openUrl({ url: uri });
+                            const { Browser } = await import("@capacitor/browser");
+                            await Browser.open({ url: uri });
                             return;
                           }
                         } catch {
