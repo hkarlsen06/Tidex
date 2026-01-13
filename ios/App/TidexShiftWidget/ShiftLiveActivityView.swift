@@ -212,7 +212,6 @@ struct MinimalView: View {
 
 // MARK: - Live Activity Widget Configuration
 
-@available(iOS 16.2, *)
 struct ShiftLiveActivity: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: ShiftActivityAttributes.self) { context in

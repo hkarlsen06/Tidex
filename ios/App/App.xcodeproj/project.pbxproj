@@ -9,24 +9,53 @@
 /* Begin PBXBuildFile section */
 		1152D0CB2F01E2A7002FD5ED /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1152D0CA2F01E2A7002FD5ED /* StoreKit.framework */; };
 		1163EF702F04397000DC58EC /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 1163EF6F2F04397000DC58EC /* GoogleService-Info.plist */; };
+		11923C162F16B89C0076AFD6 /* AuthState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11923C152F16B89C0076AFD6 /* AuthState.swift */; };
+		11923C192F16B94B0076AFD6 /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = 11923C182F16B94B0076AFD6 /* Auth */; };
+		11923C1B2F16B94B0076AFD6 /* Functions in Frameworks */ = {isa = PBXBuildFile; productRef = 11923C1A2F16B94B0076AFD6 /* Functions */; };
+		11923C1D2F16B94B0076AFD6 /* PostgREST in Frameworks */ = {isa = PBXBuildFile; productRef = 11923C1C2F16B94B0076AFD6 /* PostgREST */; };
+		11923C1F2F16B94B0076AFD6 /* Storage in Frameworks */ = {isa = PBXBuildFile; productRef = 11923C1E2F16B94B0076AFD6 /* Storage */; };
+		11923C222F16B98A0076AFD6 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 11923C212F16B98A0076AFD6 /* GoogleSignIn */; };
+		11923C242F16B98A0076AFD6 /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 11923C232F16B98A0076AFD6 /* GoogleSignInSwift */; };
+		11923C262F16BB090076AFD6 /* Realtime in Frameworks */ = {isa = PBXBuildFile; productRef = 11923C252F16BB090076AFD6 /* Realtime */; };
+		11923C282F16BB090076AFD6 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 11923C272F16BB090076AFD6 /* Supabase */; };
+		119D1CE62F16E46300EC7072 /* OAuthButtonsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 119D1CBD2F16E46300EC7072 /* OAuthButtonsView.swift */; };
+		119D1CE72F16E46300EC7072 /* SecureTextField.swift in Sources */ = {isa = PBXBuildFile; fileRef = 119D1CDE2F16E46300EC7072 /* SecureTextField.swift */; };
+		119D1CE82F16E46300EC7072 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 119D1CB92F16E46300EC7072 /* RootView.swift */; };
+		119D1CE92F16E46300EC7072 /* SupabaseClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 119D1CD72F16E46300EC7072 /* SupabaseClient.swift */; };
+		119D1CEA2F16E46300EC7072 /* OTPInputField.swift in Sources */ = {isa = PBXBuildFile; fileRef = 119D1CBE2F16E46300EC7072 /* OTPInputField.swift */; };
+		119D1CEB2F16E46300EC7072 /* TidexTextField.swift in Sources */ = {isa = PBXBuildFile; fileRef = 119D1CE02F16E46300EC7072 /* TidexTextField.swift */; };
+		119D1CEC2F16E46300EC7072 /* FeatureFlags.swift in Sources */ = {isa = PBXBuildFile; fileRef = 119D1CB82F16E46300EC7072 /* FeatureFlags.swift */; };
+		119D1CED2F16E46300EC7072 /* LocalizationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 119D1CCF2F16E46300EC7072 /* LocalizationManager.swift */; };
+		119D1CEE2F16E46300EC7072 /* PhoneOTPForm.swift in Sources */ = {isa = PBXBuildFile; fileRef = 119D1CBF2F16E46300EC7072 /* PhoneOTPForm.swift */; };
+		119D1CEF2F16E46300EC7072 /* TidexCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 119D1CDF2F16E46300EC7072 /* TidexCard.swift */; };
+		119D1CF02F16E46300EC7072 /* EmailPasswordForm.swift in Sources */ = {isa = PBXBuildFile; fileRef = 119D1CBB2F16E46300EC7072 /* EmailPasswordForm.swift */; };
+		119D1CF12F16E46300EC7072 /* LoginViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 119D1CC22F16E46300EC7072 /* LoginViewModel.swift */; };
+		119D1CF22F16E46300EC7072 /* ErrorTranslations.swift in Sources */ = {isa = PBXBuildFile; fileRef = 119D1CCE2F16E46300EC7072 /* ErrorTranslations.swift */; };
+		119D1CF32F16E46300EC7072 /* LocaleSwitcherView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 119D1CBC2F16E46300EC7072 /* LocaleSwitcherView.swift */; };
+		119D1CF42F16E46300EC7072 /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 119D1CD42F16E46300EC7072 /* AuthService.swift */; };
+		119D1CF52F16E46300EC7072 /* MFAVerifyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 119D1CC42F16E46300EC7072 /* MFAVerifyView.swift */; };
+		119D1CF62F16E46300EC7072 /* LoadingOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 119D1CDB2F16E46300EC7072 /* LoadingOverlay.swift */; };
+		119D1CF72F16E46300EC7072 /* Color+Tidex.swift in Sources */ = {isa = PBXBuildFile; fileRef = 119D1CE22F16E46300EC7072 /* Color+Tidex.swift */; };
+		119D1CF82F16E46300EC7072 /* AuthStrings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 119D1CCD2F16E46300EC7072 /* AuthStrings.swift */; };
+		119D1CF92F16E46300EC7072 /* APIConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 119D1CD62F16E46300EC7072 /* APIConfiguration.swift */; };
+		119D1CFA2F16E46300EC7072 /* ErrorBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 119D1CDA2F16E46300EC7072 /* ErrorBanner.swift */; };
+		119D1CFB2F16E46300EC7072 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 119D1CCA2F16E46300EC7072 /* MainTabView.swift */; };
+		119D1CFC2F16E46300EC7072 /* AppCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 119D1CB72F16E46300EC7072 /* AppCoordinator.swift */; };
+		119D1CFD2F16E46300EC7072 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 119D1CC12F16E46300EC7072 /* LoginView.swift */; };
+		119D1CFE2F16E46300EC7072 /* MFAVerifyViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 119D1CC52F16E46300EC7072 /* MFAVerifyViewModel.swift */; };
+		119D1CFF2F16E46300EC7072 /* PrimaryButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 119D1CDD2F16E46300EC7072 /* PrimaryButton.swift */; };
+		119D1D002F16E46300EC7072 /* OutlineButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 119D1CDC2F16E46300EC7072 /* OutlineButton.swift */; };
+		119D1D012F16E46300EC7072 /* AppleAuthProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 119D1CD12F16E46300EC7072 /* AppleAuthProvider.swift */; };
+		119D1D022F16E46300EC7072 /* GoogleAuthProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 119D1CD22F16E46300EC7072 /* GoogleAuthProvider.swift */; };
 		11A5CD262F101201002BAC91 /* StoredShift.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A5CD252F101201002BAC91 /* StoredShift.swift */; };
-		11A5CD272F101201002BAC91 /* ShiftActivityPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A5CD242F101201002BAC91 /* ShiftActivityPlugin.swift */; };
 		11A5CD302F101283002BAC91 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 11A5CD2F2F101283002BAC91 /* WidgetKit.framework */; };
 		11A5CD322F101283002BAC91 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 11A5CD312F101283002BAC91 /* SwiftUI.framework */; };
 		11A5CD412F101284002BAC91 /* TidexShiftWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 11A5CD2E2F101283002BAC91 /* TidexShiftWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		11F16DAE2F13139C00800B36 /* DocumentSharePlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11F16DAD2F13139C00800B36 /* DocumentSharePlugin.swift */; };
 		11F1CBDB2F101C5700246C07 /* ShiftActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11F1CBDA2F101C5700246C07 /* ShiftActivityAttributes.swift */; };
-		2FAD9763203C412B000D30F8 /* config.xml in Resources */ = {isa = PBXBuildFile; fileRef = 2FAD9762203C412B000D30F8 /* config.xml */; };
-		4D22ABE92AF431CB00220026 /* CapApp-SPM in Frameworks */ = {isa = PBXBuildFile; productRef = 4D22ABE82AF431CB00220026 /* CapApp-SPM */; };
-		50379B232058CBB4000EE86E /* capacitor.config.json in Resources */ = {isa = PBXBuildFile; fileRef = 50379B222058CBB4000EE86E /* capacitor.config.json */; };
 		504EC3081FED79650016851F /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 504EC3071FED79650016851F /* AppDelegate.swift */; };
 		504EC30F1FED79650016851F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 504EC30E1FED79650016851F /* Assets.xcassets */; };
-		50B271D11FEDC1A000F3C39B /* public in Resources */ = {isa = PBXBuildFile; fileRef = 50B271D01FEDC1A000F3C39B /* public */; };
 		INFOP0012F0900000000001 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = INFOP0012F0900000000004 /* InfoPlist.strings */; };
 		LAUNCH0012F0500000000001 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = LAUNCH0012F0500000000002 /* LaunchScreen.storyboard */; };
-		LOCBVC0012F1000000000001 /* LocaleAwareBridgeViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = LOCBVC0012F1000000000002 /* LocaleAwareBridgeViewController.swift */; };
-		NATSPL0012F0800000000001 /* NativeSplashPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = NATSPL0012F0800000000002 /* NativeSplashPlugin.swift */; };
-		NATTAB0012F0800000000001 /* NativeTabBarPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = NATTAB0012F0800000000002 /* NativeTabBarPlugin.swift */; };
 		NETMON0012F2000000000001 /* NetworkMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = NETMON0012F2000000000002 /* NetworkMonitor.swift */; };
 		NTFSND0012F1400000000001 /* tidex_notification.caf in Resources */ = {isa = PBXBuildFile; fileRef = NTFSND0012F1400000000002 /* tidex_notification.caf */; };
 		OFFDSH0012F3000000000001 /* OfflineDashboardCards.swift in Sources */ = {isa = PBXBuildFile; fileRef = OFFDSH0012F3000000000002 /* OfflineDashboardCards.swift */; };
@@ -34,7 +63,6 @@
 		OFFSTR0012F2000000000001 /* OfflineShiftStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = OFFSTR0012F2000000000002 /* OfflineShiftStorage.swift */; };
 		SCENE0012F0700000000001 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = SCENE0012F0700000000002 /* SceneDelegate.swift */; };
 		TIDCLR0012F2000000000001 /* TidexBrandColors.swift in Sources */ = {isa = PBXBuildFile; fileRef = TIDCLR0012F2000000000002 /* TidexBrandColors.swift */; };
-		TIDCON0012F0800000000001 /* TidexContainerViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = TIDCON0012F0800000000002 /* TidexContainerViewController.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -65,28 +93,50 @@
 		1152D0C82F01BB9B002FD5ED /* App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = App.entitlements; sourceTree = "<group>"; };
 		1152D0CA2F01E2A7002FD5ED /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 		1163EF6F2F04397000DC58EC /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
-		11A5CD242F101201002BAC91 /* ShiftActivityPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShiftActivityPlugin.swift; sourceTree = "<group>"; };
+		11923C152F16B89C0076AFD6 /* AuthState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthState.swift; sourceTree = "<group>"; };
+		119D1CB72F16E46300EC7072 /* AppCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppCoordinator.swift; sourceTree = "<group>"; };
+		119D1CB82F16E46300EC7072 /* FeatureFlags.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeatureFlags.swift; sourceTree = "<group>"; };
+		119D1CB92F16E46300EC7072 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
+		119D1CBB2F16E46300EC7072 /* EmailPasswordForm.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmailPasswordForm.swift; sourceTree = "<group>"; };
+		119D1CBC2F16E46300EC7072 /* LocaleSwitcherView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocaleSwitcherView.swift; sourceTree = "<group>"; };
+		119D1CBD2F16E46300EC7072 /* OAuthButtonsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OAuthButtonsView.swift; sourceTree = "<group>"; };
+		119D1CBE2F16E46300EC7072 /* OTPInputField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OTPInputField.swift; sourceTree = "<group>"; };
+		119D1CBF2F16E46300EC7072 /* PhoneOTPForm.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneOTPForm.swift; sourceTree = "<group>"; };
+		119D1CC12F16E46300EC7072 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
+		119D1CC22F16E46300EC7072 /* LoginViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginViewModel.swift; sourceTree = "<group>"; };
+		119D1CC42F16E46300EC7072 /* MFAVerifyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MFAVerifyView.swift; sourceTree = "<group>"; };
+		119D1CC52F16E46300EC7072 /* MFAVerifyViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MFAVerifyViewModel.swift; sourceTree = "<group>"; };
+		119D1CCA2F16E46300EC7072 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
+		119D1CCD2F16E46300EC7072 /* AuthStrings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthStrings.swift; sourceTree = "<group>"; };
+		119D1CCE2F16E46300EC7072 /* ErrorTranslations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorTranslations.swift; sourceTree = "<group>"; };
+		119D1CCF2F16E46300EC7072 /* LocalizationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalizationManager.swift; sourceTree = "<group>"; };
+		119D1CD12F16E46300EC7072 /* AppleAuthProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleAuthProvider.swift; sourceTree = "<group>"; };
+		119D1CD22F16E46300EC7072 /* GoogleAuthProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleAuthProvider.swift; sourceTree = "<group>"; };
+		119D1CD42F16E46300EC7072 /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthService.swift; sourceTree = "<group>"; };
+		119D1CD62F16E46300EC7072 /* APIConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIConfiguration.swift; sourceTree = "<group>"; };
+		119D1CD72F16E46300EC7072 /* SupabaseClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseClient.swift; sourceTree = "<group>"; };
+		119D1CDA2F16E46300EC7072 /* ErrorBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorBanner.swift; sourceTree = "<group>"; };
+		119D1CDB2F16E46300EC7072 /* LoadingOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoadingOverlay.swift; sourceTree = "<group>"; };
+		119D1CDC2F16E46300EC7072 /* OutlineButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutlineButton.swift; sourceTree = "<group>"; };
+		119D1CDD2F16E46300EC7072 /* PrimaryButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrimaryButton.swift; sourceTree = "<group>"; };
+		119D1CDE2F16E46300EC7072 /* SecureTextField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureTextField.swift; sourceTree = "<group>"; };
+		119D1CDF2F16E46300EC7072 /* TidexCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TidexCard.swift; sourceTree = "<group>"; };
+		119D1CE02F16E46300EC7072 /* TidexTextField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TidexTextField.swift; sourceTree = "<group>"; };
+		119D1CE22F16E46300EC7072 /* Color+Tidex.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Color+Tidex.swift"; sourceTree = "<group>"; };
 		11A5CD252F101201002BAC91 /* StoredShift.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoredShift.swift; sourceTree = "<group>"; };
 		11A5CD2E2F101283002BAC91 /* TidexShiftWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TidexShiftWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		11A5CD2F2F101283002BAC91 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		11A5CD312F101283002BAC91 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		11A5CD552F10138F002BAC91 /* TidexShiftWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TidexShiftWidgetExtension.entitlements; sourceTree = "<group>"; };
-		11F16DAD2F13139C00800B36 /* DocumentSharePlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentSharePlugin.swift; sourceTree = "<group>"; };
 		11F1CBDA2F101C5700246C07 /* ShiftActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShiftActivityAttributes.swift; sourceTree = "<group>"; };
-		2FAD9762203C412B000D30F8 /* config.xml */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = config.xml; sourceTree = "<group>"; };
-		50379B222058CBB4000EE86E /* capacitor.config.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = capacitor.config.json; sourceTree = "<group>"; };
 		504EC3041FED79650016851F /* Tidex.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Tidex.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		504EC3071FED79650016851F /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		504EC30E1FED79650016851F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		504EC3131FED79650016851F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		50B271D01FEDC1A000F3C39B /* public */ = {isa = PBXFileReference; lastKnownFileType = folder; path = public; sourceTree = "<group>"; };
 		958DCC722DB07C7200EA8C5F /* debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = debug.xcconfig; path = ../debug.xcconfig; sourceTree = SOURCE_ROOT; };
 		INFOP0012F0900000000002 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		INFOP0012F0900000000003 /* nb */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = nb; path = nb.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		LAUNCH0012F0500000000002 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
-		LOCBVC0012F1000000000002 /* LocaleAwareBridgeViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocaleAwareBridgeViewController.swift; sourceTree = "<group>"; };
-		NATSPL0012F0800000000002 /* NativeSplashPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeSplashPlugin.swift; sourceTree = "<group>"; };
-		NATTAB0012F0800000000002 /* NativeTabBarPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeTabBarPlugin.swift; sourceTree = "<group>"; };
 		NETMON0012F2000000000002 /* NetworkMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkMonitor.swift; sourceTree = "<group>"; };
 		NTFSND0012F1400000000002 /* tidex_notification.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = tidex_notification.caf; sourceTree = "<group>"; };
 		OFFDSH0012F3000000000002 /* OfflineDashboardCards.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineDashboardCards.swift; sourceTree = "<group>"; };
@@ -94,7 +144,6 @@
 		OFFSTR0012F2000000000002 /* OfflineShiftStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineShiftStorage.swift; sourceTree = "<group>"; };
 		SCENE0012F0700000000002 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
 		TIDCLR0012F2000000000002 /* TidexBrandColors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TidexBrandColors.swift; sourceTree = "<group>"; };
-		TIDCON0012F0800000000002 /* TidexContainerViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TidexContainerViewController.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -108,18 +157,7 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		11A5CD332F101283002BAC91 /* TidexShiftWidget */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				113F7F842F1017390078A6D8 /* PBXFileSystemSynchronizedBuildFileExceptionSet */,
-			);
-			explicitFileTypes = {
-			};
-			explicitFolders = (
-			);
-			path = TidexShiftWidget;
-			sourceTree = "<group>";
-		};
+		11A5CD332F101283002BAC91 /* TidexShiftWidget */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (113F7F842F1017390078A6D8 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = TidexShiftWidget; sourceTree = "<group>"; };
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -136,8 +174,15 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				4D22ABE92AF431CB00220026 /* CapApp-SPM in Frameworks */,
+				11923C282F16BB090076AFD6 /* Supabase in Frameworks */,
+				11923C262F16BB090076AFD6 /* Realtime in Frameworks */,
+				11923C1F2F16B94B0076AFD6 /* Storage in Frameworks */,
 				1152D0CB2F01E2A7002FD5ED /* StoreKit.framework in Frameworks */,
+				11923C242F16B98A0076AFD6 /* GoogleSignInSwift in Frameworks */,
+				11923C1B2F16B94B0076AFD6 /* Functions in Frameworks */,
+				11923C192F16B94B0076AFD6 /* Auth in Frameworks */,
+				11923C1D2F16B94B0076AFD6 /* PostgREST in Frameworks */,
+				11923C222F16B98A0076AFD6 /* GoogleSignIn in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -154,12 +199,183 @@
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
+		119D1CBA2F16E46300EC7072 /* Core */ = {
+			isa = PBXGroup;
+			children = (
+				119D1CB72F16E46300EC7072 /* AppCoordinator.swift */,
+				119D1CB82F16E46300EC7072 /* FeatureFlags.swift */,
+				119D1CB92F16E46300EC7072 /* RootView.swift */,
+			);
+			path = Core;
+			sourceTree = "<group>";
+		};
+		119D1CC02F16E46300EC7072 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				119D1CBB2F16E46300EC7072 /* EmailPasswordForm.swift */,
+				119D1CBC2F16E46300EC7072 /* LocaleSwitcherView.swift */,
+				119D1CBD2F16E46300EC7072 /* OAuthButtonsView.swift */,
+				119D1CBE2F16E46300EC7072 /* OTPInputField.swift */,
+				119D1CBF2F16E46300EC7072 /* PhoneOTPForm.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		119D1CC32F16E46300EC7072 /* Login */ = {
+			isa = PBXGroup;
+			children = (
+				119D1CC02F16E46300EC7072 /* Components */,
+				119D1CC12F16E46300EC7072 /* LoginView.swift */,
+				119D1CC22F16E46300EC7072 /* LoginViewModel.swift */,
+			);
+			path = Login;
+			sourceTree = "<group>";
+		};
+		119D1CC62F16E46300EC7072 /* MFA */ = {
+			isa = PBXGroup;
+			children = (
+				119D1CC42F16E46300EC7072 /* MFAVerifyView.swift */,
+				119D1CC52F16E46300EC7072 /* MFAVerifyViewModel.swift */,
+			);
+			path = MFA;
+			sourceTree = "<group>";
+		};
+		119D1CC72F16E46300EC7072 /* ResetPassword */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = ResetPassword;
+			sourceTree = "<group>";
+		};
+		119D1CC82F16E46300EC7072 /* Signup */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Signup;
+			sourceTree = "<group>";
+		};
+		119D1CC92F16E46300EC7072 /* Auth */ = {
+			isa = PBXGroup;
+			children = (
+				119D1CC32F16E46300EC7072 /* Login */,
+				119D1CC62F16E46300EC7072 /* MFA */,
+				119D1CC72F16E46300EC7072 /* ResetPassword */,
+				119D1CC82F16E46300EC7072 /* Signup */,
+			);
+			path = Auth;
+			sourceTree = "<group>";
+		};
+		119D1CCB2F16E46300EC7072 /* Dashboard */ = {
+			isa = PBXGroup;
+			children = (
+				119D1CCA2F16E46300EC7072 /* MainTabView.swift */,
+			);
+			path = Dashboard;
+			sourceTree = "<group>";
+		};
+		119D1CCC2F16E46300EC7072 /* Features */ = {
+			isa = PBXGroup;
+			children = (
+				119D1CC92F16E46300EC7072 /* Auth */,
+				119D1CCB2F16E46300EC7072 /* Dashboard */,
+			);
+			path = Features;
+			sourceTree = "<group>";
+		};
+		119D1CD02F16E46300EC7072 /* Localization */ = {
+			isa = PBXGroup;
+			children = (
+				119D1CCD2F16E46300EC7072 /* AuthStrings.swift */,
+				119D1CCE2F16E46300EC7072 /* ErrorTranslations.swift */,
+				119D1CCF2F16E46300EC7072 /* LocalizationManager.swift */,
+			);
+			path = Localization;
+			sourceTree = "<group>";
+		};
+		119D1CD32F16E46300EC7072 /* OAuthProviders */ = {
+			isa = PBXGroup;
+			children = (
+				119D1CD12F16E46300EC7072 /* AppleAuthProvider.swift */,
+				119D1CD22F16E46300EC7072 /* GoogleAuthProvider.swift */,
+			);
+			path = OAuthProviders;
+			sourceTree = "<group>";
+		};
+		119D1CD52F16E46300EC7072 /* Auth */ = {
+			isa = PBXGroup;
+			children = (
+				119D1CD32F16E46300EC7072 /* OAuthProviders */,
+				119D1CD42F16E46300EC7072 /* AuthService.swift */,
+			);
+			path = Auth;
+			sourceTree = "<group>";
+		};
+		119D1CD82F16E46300EC7072 /* Network */ = {
+			isa = PBXGroup;
+			children = (
+				119D1CD62F16E46300EC7072 /* APIConfiguration.swift */,
+				119D1CD72F16E46300EC7072 /* SupabaseClient.swift */,
+			);
+			path = Network;
+			sourceTree = "<group>";
+		};
+		119D1CD92F16E46300EC7072 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				119D1CD52F16E46300EC7072 /* Auth */,
+				119D1CD82F16E46300EC7072 /* Network */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		119D1CE12F16E46300EC7072 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				119D1CDA2F16E46300EC7072 /* ErrorBanner.swift */,
+				119D1CDB2F16E46300EC7072 /* LoadingOverlay.swift */,
+				119D1CDC2F16E46300EC7072 /* OutlineButton.swift */,
+				119D1CDD2F16E46300EC7072 /* PrimaryButton.swift */,
+				119D1CDE2F16E46300EC7072 /* SecureTextField.swift */,
+				119D1CDF2F16E46300EC7072 /* TidexCard.swift */,
+				119D1CE02F16E46300EC7072 /* TidexTextField.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		119D1CE32F16E46300EC7072 /* Extensions */ = {
+			isa = PBXGroup;
+			children = (
+				119D1CE22F16E46300EC7072 /* Color+Tidex.swift */,
+			);
+			path = Extensions;
+			sourceTree = "<group>";
+		};
+		119D1CE42F16E46300EC7072 /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				119D1CE12F16E46300EC7072 /* Components */,
+				119D1CE32F16E46300EC7072 /* Extensions */,
+			);
+			path = Shared;
+			sourceTree = "<group>";
+		};
+		119D1CE52F16E46300EC7072 /* Native */ = {
+			isa = PBXGroup;
+			children = (
+				119D1CBA2F16E46300EC7072 /* Core */,
+				119D1CCC2F16E46300EC7072 /* Features */,
+				119D1CD02F16E46300EC7072 /* Localization */,
+				119D1CD92F16E46300EC7072 /* Services */,
+				119D1CE42F16E46300EC7072 /* Shared */,
+			);
+			path = Native;
+			sourceTree = "<group>";
+		};
 		11A1D6CE2F11F48F00060819 /* Core */ = {
 			isa = PBXGroup;
 			children = (
 				504EC3071FED79650016851F /* AppDelegate.swift */,
 				SCENE0012F0700000000002 /* SceneDelegate.swift */,
-				TIDCON0012F0800000000002 /* TidexContainerViewController.swift */,
 			);
 			path = Core;
 			sourceTree = "<group>";
@@ -167,7 +383,6 @@
 		11A1D6CF2F11F4E000060819 /* Utilities */ = {
 			isa = PBXGroup;
 			children = (
-				LOCBVC0012F1000000000002 /* LocaleAwareBridgeViewController.swift */,
 				NETMON0012F2000000000002 /* NetworkMonitor.swift */,
 				TIDCLR0012F2000000000002 /* TidexBrandColors.swift */,
 			);
@@ -177,21 +392,11 @@
 		11A1D6D02F11F51B00060819 /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				11923C152F16B89C0076AFD6 /* AuthState.swift */,
 				11F1CBDA2F101C5700246C07 /* ShiftActivityAttributes.swift */,
 				11A5CD252F101201002BAC91 /* StoredShift.swift */,
 			);
 			path = Models;
-			sourceTree = "<group>";
-		};
-		11A1D6D12F11F53400060819 /* Plugins */ = {
-			isa = PBXGroup;
-			children = (
-				11F16DAD2F13139C00800B36 /* DocumentSharePlugin.swift */,
-				11A5CD242F101201002BAC91 /* ShiftActivityPlugin.swift */,
-				NATSPL0012F0800000000002 /* NativeSplashPlugin.swift */,
-				NATTAB0012F0800000000002 /* NativeTabBarPlugin.swift */,
-			);
-			path = Plugins;
 			sourceTree = "<group>";
 		};
 		11A1D6D22F11F55800060819 /* Features */ = {
@@ -229,18 +434,15 @@
 		504EC3061FED79650016851F /* App */ = {
 			isa = PBXGroup;
 			children = (
+				119D1CE52F16E46300EC7072 /* Native */,
 				11A1D6D22F11F55800060819 /* Features */,
-				11A1D6D12F11F53400060819 /* Plugins */,
 				11A1D6D02F11F51B00060819 /* Models */,
 				11A1D6CF2F11F4E000060819 /* Utilities */,
 				11A1D6CE2F11F48F00060819 /* Core */,
 				1152D0C82F01BB9B002FD5ED /* App.entitlements */,
-				50379B222058CBB4000EE86E /* capacitor.config.json */,
 				504EC30E1FED79650016851F /* Assets.xcassets */,
 				504EC3131FED79650016851F /* Info.plist */,
 				LAUNCH0012F0500000000002 /* LaunchScreen.storyboard */,
-				2FAD9762203C412B000D30F8 /* config.xml */,
-				50B271D01FEDC1A000F3C39B /* public */,
 				INFOP0012F0900000000004 /* InfoPlist.strings */,
 				NTFSND0012F1400000000002 /* tidex_notification.caf */,
 			);
@@ -289,7 +491,14 @@
 			);
 			name = App;
 			packageProductDependencies = (
-				4D22ABE82AF431CB00220026 /* CapApp-SPM */,
+				11923C182F16B94B0076AFD6 /* Auth */,
+				11923C1A2F16B94B0076AFD6 /* Functions */,
+				11923C1C2F16B94B0076AFD6 /* PostgREST */,
+				11923C1E2F16B94B0076AFD6 /* Storage */,
+				11923C212F16B98A0076AFD6 /* GoogleSignIn */,
+				11923C232F16B98A0076AFD6 /* GoogleSignInSwift */,
+				11923C252F16BB090076AFD6 /* Realtime */,
+				11923C272F16BB090076AFD6 /* Supabase */,
 			);
 			productName = App;
 			productReference = 504EC3041FED79650016851F /* Tidex.app */;
@@ -326,7 +535,8 @@
 			);
 			mainGroup = 504EC2FB1FED79650016851F;
 			packageReferences = (
-				D4C12C0A2AAA248700AAC8A2 /* XCLocalSwiftPackageReference "CapApp-SPM" */,
+				11923C172F16B94B0076AFD6 /* XCRemoteSwiftPackageReference "supabase-swift" */,
+				11923C202F16B98A0076AFD6 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
 			);
 			productRefGroup = 504EC3051FED79650016851F /* Products */;
 			projectDirPath = "";
@@ -350,11 +560,8 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				50B271D11FEDC1A000F3C39B /* public in Resources */,
 				504EC30F1FED79650016851F /* Assets.xcassets in Resources */,
 				1163EF702F04397000DC58EC /* GoogleService-Info.plist in Resources */,
-				50379B232058CBB4000EE86E /* capacitor.config.json in Resources */,
-				2FAD9763203C412B000D30F8 /* config.xml in Resources */,
 				LAUNCH0012F0500000000001 /* LaunchScreen.storyboard in Resources */,
 				INFOP0012F0900000000001 /* InfoPlist.strings in Resources */,
 				NTFSND0012F1400000000001 /* tidex_notification.caf in Resources */,
@@ -398,20 +605,44 @@
 			buildActionMask = 2147483647;
 			files = (
 				504EC3081FED79650016851F /* AppDelegate.swift in Sources */,
-				LOCBVC0012F1000000000001 /* LocaleAwareBridgeViewController.swift in Sources */,
-				11F16DAE2F13139C00800B36 /* DocumentSharePlugin.swift in Sources */,
-				NATSPL0012F0800000000001 /* NativeSplashPlugin.swift in Sources */,
+				119D1CE62F16E46300EC7072 /* OAuthButtonsView.swift in Sources */,
+				119D1CE72F16E46300EC7072 /* SecureTextField.swift in Sources */,
+				119D1CE82F16E46300EC7072 /* RootView.swift in Sources */,
+				119D1CE92F16E46300EC7072 /* SupabaseClient.swift in Sources */,
+				119D1CEA2F16E46300EC7072 /* OTPInputField.swift in Sources */,
+				119D1CEB2F16E46300EC7072 /* TidexTextField.swift in Sources */,
+				119D1CEC2F16E46300EC7072 /* FeatureFlags.swift in Sources */,
+				119D1CED2F16E46300EC7072 /* LocalizationManager.swift in Sources */,
+				119D1CEE2F16E46300EC7072 /* PhoneOTPForm.swift in Sources */,
+				119D1CEF2F16E46300EC7072 /* TidexCard.swift in Sources */,
+				119D1CF02F16E46300EC7072 /* EmailPasswordForm.swift in Sources */,
+				119D1CF12F16E46300EC7072 /* LoginViewModel.swift in Sources */,
+				119D1CF22F16E46300EC7072 /* ErrorTranslations.swift in Sources */,
+				119D1CF32F16E46300EC7072 /* LocaleSwitcherView.swift in Sources */,
+				119D1CF42F16E46300EC7072 /* AuthService.swift in Sources */,
+				119D1CF52F16E46300EC7072 /* MFAVerifyView.swift in Sources */,
+				119D1CF62F16E46300EC7072 /* LoadingOverlay.swift in Sources */,
+				119D1CF72F16E46300EC7072 /* Color+Tidex.swift in Sources */,
+				119D1CF82F16E46300EC7072 /* AuthStrings.swift in Sources */,
+				119D1CF92F16E46300EC7072 /* APIConfiguration.swift in Sources */,
+				119D1CFA2F16E46300EC7072 /* ErrorBanner.swift in Sources */,
+				119D1CFB2F16E46300EC7072 /* MainTabView.swift in Sources */,
+				119D1CFC2F16E46300EC7072 /* AppCoordinator.swift in Sources */,
+				119D1CFD2F16E46300EC7072 /* LoginView.swift in Sources */,
+				119D1CFE2F16E46300EC7072 /* MFAVerifyViewModel.swift in Sources */,
+				119D1CFF2F16E46300EC7072 /* PrimaryButton.swift in Sources */,
+				119D1D002F16E46300EC7072 /* OutlineButton.swift in Sources */,
+				119D1D012F16E46300EC7072 /* AppleAuthProvider.swift in Sources */,
+				119D1D022F16E46300EC7072 /* GoogleAuthProvider.swift in Sources */,
+				11923C162F16B89C0076AFD6 /* AuthState.swift in Sources */,
 				NETMON0012F2000000000001 /* NetworkMonitor.swift in Sources */,
 				OFFDSH0012F3000000000001 /* OfflineDashboardCards.swift in Sources */,
 				OFFSCR0012F2000000000001 /* OfflineScreenView.swift in Sources */,
 				OFFSTR0012F2000000000001 /* OfflineShiftStorage.swift in Sources */,
 				11A5CD262F101201002BAC91 /* StoredShift.swift in Sources */,
-				11A5CD272F101201002BAC91 /* ShiftActivityPlugin.swift in Sources */,
-				NATTAB0012F0800000000001 /* NativeTabBarPlugin.swift in Sources */,
 				SCENE0012F0700000000001 /* SceneDelegate.swift in Sources */,
 				11F1CBDB2F101C5700246C07 /* ShiftActivityAttributes.swift in Sources */,
 				TIDCLR0012F2000000000001 /* TidexBrandColors.swift in Sources */,
-				TIDCON0012F0800000000001 /* TidexContainerViewController.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -448,20 +679,20 @@
 				CLANG_ENABLE_OBJC_WEAK = YES;
 				CODE_SIGN_ENTITLEMENTS = TidexShiftWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 120126.1;
+				CURRENT_PROJECT_VERSION = 130126.1;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = TidexShiftWidget/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = TidexShiftWidget;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				IPHONEOS_DEPLOYMENT_TARGET = 16.2;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MARKETING_VERSION = 1.3.2;
+				MARKETING_VERSION = 1.2.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				PRODUCT_BUNDLE_IDENTIFIER = no.tidex.app.TidexShiftWidget;
@@ -487,20 +718,20 @@
 				CLANG_ENABLE_OBJC_WEAK = YES;
 				CODE_SIGN_ENTITLEMENTS = TidexShiftWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 120126.1;
+				CURRENT_PROJECT_VERSION = 130126.1;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = TidexShiftWidget/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = TidexShiftWidget;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				IPHONEOS_DEPLOYMENT_TARGET = 16.2;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MARKETING_VERSION = 1.3.2;
+				MARKETING_VERSION = 1.2.0;
 				MTL_FAST_MATH = YES;
 				PRODUCT_BUNDLE_IDENTIFIER = no.tidex.app.TidexShiftWidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -645,16 +876,16 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 120126.1;
-				INFOPLIST_FILE = "App/Info-Debug.plist";
+				CURRENT_PROJECT_VERSION = 130126.1;
+				INFOPLIST_FILE = App/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = no.tidex.app;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
-				IPHONEOS_DEPLOYMENT_TARGET = 16.2;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.3.2;
+				MARKETING_VERSION = 1.2.0;
 				OTHER_SWIFT_FLAGS = "$(inherited) \"-D\" \"COCOAPODS\" \"-DDEBUG\"";
 				PRODUCT_BUNDLE_IDENTIFIER = no.tidex.app;
 				PRODUCT_NAME = Tidex;
@@ -673,16 +904,16 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				CODE_SIGN_ENTITLEMENTS = App/AppRelease.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 120126.1;
+				CURRENT_PROJECT_VERSION = 130126.1;
 				INFOPLIST_FILE = App/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = no.tidex.app;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
-				IPHONEOS_DEPLOYMENT_TARGET = 16.2;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.3.2;
+				MARKETING_VERSION = 1.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = no.tidex.app;
 				PRODUCT_NAME = Tidex;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -725,18 +956,65 @@
 		};
 /* End XCConfigurationList section */
 
-/* Begin XCLocalSwiftPackageReference section */
-		D4C12C0A2AAA248700AAC8A2 /* XCLocalSwiftPackageReference "CapApp-SPM" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = "CapApp-SPM";
+/* Begin XCRemoteSwiftPackageReference section */
+		11923C172F16B94B0076AFD6 /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/supabase/supabase-swift.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.5.1;
+			};
 		};
-/* End XCLocalSwiftPackageReference section */
+		11923C202F16B98A0076AFD6 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/google/GoogleSignIn-iOS.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 9.1.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		4D22ABE82AF431CB00220026 /* CapApp-SPM */ = {
+		11923C182F16B94B0076AFD6 /* Auth */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = D4C12C0A2AAA248700AAC8A2 /* XCLocalSwiftPackageReference "CapApp-SPM" */;
-			productName = "CapApp-SPM";
+			package = 11923C172F16B94B0076AFD6 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Auth;
+		};
+		11923C1A2F16B94B0076AFD6 /* Functions */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 11923C172F16B94B0076AFD6 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Functions;
+		};
+		11923C1C2F16B94B0076AFD6 /* PostgREST */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 11923C172F16B94B0076AFD6 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = PostgREST;
+		};
+		11923C1E2F16B94B0076AFD6 /* Storage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 11923C172F16B94B0076AFD6 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Storage;
+		};
+		11923C212F16B98A0076AFD6 /* GoogleSignIn */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 11923C202F16B98A0076AFD6 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignIn;
+		};
+		11923C232F16B98A0076AFD6 /* GoogleSignInSwift */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 11923C202F16B98A0076AFD6 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignInSwift;
+		};
+		11923C252F16BB090076AFD6 /* Realtime */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 11923C172F16B94B0076AFD6 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Realtime;
+		};
+		11923C272F16BB090076AFD6 /* Supabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 11923C172F16B94B0076AFD6 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Supabase;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
