@@ -155,6 +155,66 @@ extension Date {
     }
 }
 
+// MARK: - Shift Time Helpers
+
+extension Date {
+    /// Build a Date from ISO date string and HH:MM time string
+    /// - Parameters:
+    ///   - dateString: ISO date string (YYYY-MM-DD)
+    ///   - timeString: Time string (HH:MM)
+    /// - Returns: Date combining the date and time, or nil if parsing fails
+    static func fromDateAndTime(_ dateString: String, time timeString: String) -> Date? {
+        let parts = dateString.split(separator: "-")
+        guard parts.count == 3,
+              let year = Int(parts[0]),
+              let month = Int(parts[1]),
+              let day = Int(parts[2]) else {
+            return nil
+        }
+
+        let timeParts = timeString.split(separator: ":")
+        let hours = timeParts.count > 0 ? Int(timeParts[0]) ?? 0 : 0
+        let minutes = timeParts.count > 1 ? Int(timeParts[1]) ?? 0 : 0
+
+        var components = DateComponents()
+        components.year = year
+        components.month = month
+        components.day = day
+        components.hour = hours
+        components.minute = minutes
+        components.second = 0
+        components.timeZone = osloTimeZone
+
+        return Calendar(identifier: .gregorian).date(from: components)
+    }
+
+    /// Check if a shift has ended based on its date and end time
+    /// - Parameters:
+    ///   - shiftDate: ISO date string (YYYY-MM-DD)
+    ///   - startTime: Start time string (HH:MM)
+    ///   - endTime: End time string (HH:MM)
+    ///   - referenceDate: Date to compare against (defaults to now)
+    /// - Returns: true if the shift's end time has passed
+    static func hasShiftEnded(
+        shiftDate: String,
+        startTime: String,
+        endTime: String,
+        referenceDate: Date = Date()
+    ) -> Bool {
+        guard var endDate = fromDateAndTime(shiftDate, time: endTime),
+              let startDate = fromDateAndTime(shiftDate, time: startTime) else {
+            return false
+        }
+
+        // Handle cross-midnight shifts (e.g., 22:00-06:00)
+        if endDate <= startDate {
+            endDate = Calendar(identifier: .gregorian).date(byAdding: .day, value: 1, to: endDate) ?? endDate
+        }
+
+        return endDate <= referenceDate
+    }
+}
+
 // MARK: - Today ISO Helper
 
 /// Get today's date as ISO string in Oslo timezone

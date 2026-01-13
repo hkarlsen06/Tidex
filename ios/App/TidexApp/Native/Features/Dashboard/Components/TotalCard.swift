@@ -2,11 +2,17 @@ import SwiftUI
 
 /// Card displaying current month's total earnings
 /// Design matches OfflineTotalCard from the Capacitor app
+///
+/// When there are future/planned shifts:
+/// - Main display shows projected total (all shifts)
+/// - Subtitle shows "earned to date" (completed shifts only)
 struct TotalCard: View {
-    let gross: Double
-    let net: Double?
-    let shiftCount: Int
-    let plannedCount: Int
+    let gross: Double                  // Projected total (all shifts)
+    let net: Double?                   // Projected net (all shifts)
+    let completedGross: Double         // Earned to date (completed shifts)
+    let completedNet: Double?          // Earned net (completed shifts)
+    let shiftCount: Int                // Total shift count
+    let plannedCount: Int              // Future/planned shift count
     let percentageChange: Double?
     let taxEnabled: Bool
 
@@ -14,8 +20,19 @@ struct TotalCard: View {
 
     // MARK: - Computed Properties
 
+    /// Main display value (projected total)
     private var mainDisplayValue: Double {
         taxEnabled ? (net ?? gross) : gross
+    }
+
+    /// Earned to date value (completed shifts only)
+    private var earnedToDateValue: Double {
+        taxEnabled ? (completedNet ?? completedGross) : completedGross
+    }
+
+    /// Whether there are future shifts (show projected vs earned)
+    private var hasFutureShifts: Bool {
+        plannedCount > 0 && mainDisplayValue != earnedToDateValue
     }
 
     private var showDashes: Bool {
@@ -39,12 +56,18 @@ struct TotalCard: View {
     private var subtitleText: String? {
         if showDashes { return "— — —" }
 
-        let hasGross = taxEnabled && gross > 0 && gross != mainDisplayValue
+        // When there are future shifts, show "earned to date" amount
+        if hasFutureShifts {
+            return "\(formatCurrency(earnedToDateValue)) \(localization.string("dashboard.earnedToDate"))"
+        }
 
+        // Show gross before tax when tax is enabled
+        let hasGross = taxEnabled && gross > 0 && gross != mainDisplayValue
         if hasGross {
             return "\(formatCurrency(gross)) \(localization.string("dashboard.beforeTax"))"
         }
 
+        // Show shift count
         if shiftCount > 0 {
             let shiftsLabel = shiftCount == 1
                 ? localization.string("dashboard.shift")
@@ -52,6 +75,7 @@ struct TotalCard: View {
             return "\(shiftCount) \(shiftsLabel)"
         }
 
+        // Show planned count if no completed shifts
         if plannedCount > 0 {
             let plannedLabel = plannedCount == 1
                 ? localization.string("dashboard.shiftPlanned")
@@ -134,30 +158,36 @@ struct TotalCard: View {
 
 #Preview {
     VStack(spacing: 12) {
-        // With tax and positive change
+        // With tax and future shifts (shows projected + earned to date)
         TotalCard(
             gross: 15000,
             net: 12500,
+            completedGross: 9000,
+            completedNet: 7500,
             shiftCount: 8,
             plannedCount: 3,
             percentageChange: 15,
             taxEnabled: true
         )
 
-        // Without tax and negative change
+        // Without tax and no future shifts
         TotalCard(
             gross: 12000,
             net: nil,
+            completedGross: 12000,
+            completedNet: nil,
             shiftCount: 5,
             plannedCount: 0,
             percentageChange: -8,
             taxEnabled: false
         )
 
-        // No earnings yet
+        // No earnings yet (only planned shifts)
         TotalCard(
             gross: 0,
             net: nil,
+            completedGross: 0,
+            completedNet: nil,
             shiftCount: 0,
             plannedCount: 5,
             percentageChange: nil,

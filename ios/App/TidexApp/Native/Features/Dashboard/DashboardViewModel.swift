@@ -18,9 +18,12 @@ struct DashboardData: Equatable {
     let previousMonthTaxEnabled: Bool
 
     // Total Card (Current Month)
-    let currentMonthGross: Double
-    let currentMonthNet: Double?
-    let currentMonthShiftCount: Int
+    let currentMonthGross: Double      // All shifts (projected total)
+    let currentMonthNet: Double?       // All shifts net (projected)
+    let currentMonthCompletedGross: Double  // Only completed shifts (earned to date)
+    let currentMonthCompletedNet: Double?   // Only completed shifts net
+    let currentMonthShiftCount: Int    // Total shift count
+    let currentMonthCompletedCount: Int     // Completed shifts count
     let currentMonthPlannedCount: Int  // Future shifts
     let percentageChangeVsPrevious: Double?
     let currentMonthTaxEnabled: Bool
@@ -32,6 +35,11 @@ struct DashboardData: Equatable {
     // Metadata
     let currentMonthName: String
     let previousMonthName: String
+
+    /// Whether there are future shifts (main display should be projected total)
+    var hasFutureShifts: Bool {
+        currentMonthPlannedCount > 0
+    }
 }
 
 // MARK: - Dashboard Error
@@ -311,13 +319,14 @@ final class DashboardViewModel: ObservableObject {
     /// Build the final dashboard data from computed shifts
     private func buildDashboardData() -> DashboardData {
         let today = todayISO()
+        let now = Date()
         let payrollDay = settings?.effectivePayrollDay ?? 1
         let currentYM = Date.currentYearMonth()
         let previousYM = Date.previousYearMonth(from: currentYM)
 
         // Calculate payroll date
         let payrollDate = calculatePayrollDate(year: currentYM.year, month: currentYM.month, day: payrollDay)
-        let payrollHasPassed = Date() > payrollDate
+        let payrollHasPassed = now > payrollDate
 
         // Previous month totals (for payroll card)
         let prevGross = previousMonthShifts.reduce(0) { $0 + $1.grossPay }
@@ -326,19 +335,32 @@ final class DashboardViewModel: ObservableObject {
         let prevTax: Double? = prevTaxEnabled ? prevGross * prevTaxPercent / 100 : nil
         let prevNet: Double? = prevTaxEnabled ? prevGross - (prevTax ?? 0) : nil
 
-        // Current month totals (split by past/future)
-        let pastShifts = currentMonthShifts.filter { $0.shiftDate <= today }
-        let futureShifts = currentMonthShifts.filter { $0.shiftDate > today }
+        // Current month: compute totals for ALL shifts (projected) and completed shifts (earned)
+        let allGross = currentMonthShifts.reduce(0) { $0 + $1.grossPay }
+        let currentTaxEnabled = currentMonthShifts.first?.taxEnabled ?? false
+        let currentTaxPercent = currentMonthShifts.first?.taxPercentage ?? 0
+        let allTax: Double? = currentTaxEnabled ? allGross * currentTaxPercent / 100 : nil
+        let allNet: Double? = currentTaxEnabled ? allGross - (allTax ?? 0) : nil
 
-        let currentGross = pastShifts.reduce(0) { $0 + $1.grossPay }
-        let currentTaxEnabled = pastShifts.first?.taxEnabled ?? false
-        let currentTaxPercent = pastShifts.first?.taxPercentage ?? 0
-        let currentTax: Double? = currentTaxEnabled ? currentGross * currentTaxPercent / 100 : nil
-        let currentNet: Double? = currentTaxEnabled ? currentGross - (currentTax ?? 0) : nil
+        // Completed shifts: shifts where end time has passed
+        let completedShifts = currentMonthShifts.filter { shift in
+            Date.hasShiftEnded(
+                shiftDate: shift.shiftDate,
+                startTime: shift.startTime,
+                endTime: shift.endTime,
+                referenceDate: now
+            )
+        }
+        let completedGross = completedShifts.reduce(0) { $0 + $1.grossPay }
+        let completedTax: Double? = currentTaxEnabled ? completedGross * currentTaxPercent / 100 : nil
+        let completedNet: Double? = currentTaxEnabled ? completedGross - (completedTax ?? 0) : nil
 
-        // Percentage change vs previous month
+        // Planned shifts: shifts with date in the future (not yet started)
+        let plannedShifts = currentMonthShifts.filter { $0.shiftDate > today }
+
+        // Percentage change vs previous month (comparing projected totals)
         let percentChange: Double? = prevGross > 0
-            ? ((currentGross - prevGross) / prevGross) * 100
+            ? ((allGross - prevGross) / prevGross) * 100
             : nil
 
         // Next shift (first shift from today onwards)
@@ -356,10 +378,13 @@ final class DashboardViewModel: ObservableObject {
             previousMonthNet: prevNet,
             previousMonthTax: prevTax,
             previousMonthTaxEnabled: prevTaxEnabled,
-            currentMonthGross: currentGross,
-            currentMonthNet: currentNet,
-            currentMonthShiftCount: pastShifts.count,
-            currentMonthPlannedCount: futureShifts.count,
+            currentMonthGross: allGross,
+            currentMonthNet: allNet,
+            currentMonthCompletedGross: completedGross,
+            currentMonthCompletedNet: completedNet,
+            currentMonthShiftCount: currentMonthShifts.count,
+            currentMonthCompletedCount: completedShifts.count,
+            currentMonthPlannedCount: plannedShifts.count,
             percentageChangeVsPrevious: percentChange,
             currentMonthTaxEnabled: currentTaxEnabled,
             nextShift: nextShift,

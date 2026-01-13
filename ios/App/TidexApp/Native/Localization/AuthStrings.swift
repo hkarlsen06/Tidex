@@ -179,6 +179,9 @@ enum AuthStrings {
         "dashboard.shifts": "vakter",
         "dashboard.planned": "planlagt",
         "dashboard.hoursShort": "t",
+        "dashboard.beforeTax": "før skatt",
+        "dashboard.shiftPlanned": "vakt planlagt",
+        "dashboard.shiftsPlanned": "vakter planlagt",
 
         // Placeholders
         "placeholder.shiftsDescription": "Vaktene dine vises her",
@@ -355,6 +358,9 @@ enum AuthStrings {
         "dashboard.shifts": "shifts",
         "dashboard.planned": "planned",
         "dashboard.hoursShort": "h",
+        "dashboard.beforeTax": "before tax",
+        "dashboard.shiftPlanned": "shift planned",
+        "dashboard.shiftsPlanned": "shifts planned",
 
         // Placeholders
         "placeholder.shiftsDescription": "Your shifts will appear here",
