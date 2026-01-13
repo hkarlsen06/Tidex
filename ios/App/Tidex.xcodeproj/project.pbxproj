@@ -51,6 +51,12 @@
 		11A5CD302F101283002BAC91 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 11A5CD2F2F101283002BAC91 /* WidgetKit.framework */; };
 		11A5CD322F101283002BAC91 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 11A5CD312F101283002BAC91 /* SwiftUI.framework */; };
 		11A5CD412F101284002BAC91 /* TidexShiftWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 11A5CD2E2F101283002BAC91 /* TidexShiftWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		11AE8CC92F16F2BF005AB062 /* SignupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11AE8CC72F16F2BF005AB062 /* SignupView.swift */; };
+		11AE8CCA2F16F2BF005AB062 /* SignupViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11AE8CC82F16F2BF005AB062 /* SignupViewModel.swift */; };
+		11AE8CCB2F16F2BF005AB062 /* TermsAgreementView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11AE8CC52F16F2BF005AB062 /* TermsAgreementView.swift */; };
+		11AE8CCE2F16F2CF005AB062 /* ResetPasswordViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11AE8CCD2F16F2CF005AB062 /* ResetPasswordViewModel.swift */; };
+		11AE8CCF2F16F2CF005AB062 /* ResetPasswordView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11AE8CCC2F16F2CF005AB062 /* ResetPasswordView.swift */; };
+		11AE8CD12F16F2EE005AB062 /* AuthNavigationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11AE8CD02F16F2EE005AB062 /* AuthNavigationView.swift */; };
 		11F1CBDB2F101C5700246C07 /* ShiftActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11F1CBDA2F101C5700246C07 /* ShiftActivityAttributes.swift */; };
 		504EC3081FED79650016851F /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 504EC3071FED79650016851F /* AppDelegate.swift */; };
 		504EC30F1FED79650016851F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 504EC30E1FED79650016851F /* Assets.xcassets */; };
@@ -128,6 +134,12 @@
 		11A5CD2F2F101283002BAC91 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		11A5CD312F101283002BAC91 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		11A5CD552F10138F002BAC91 /* TidexShiftWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TidexShiftWidgetExtension.entitlements; sourceTree = "<group>"; };
+		11AE8CC52F16F2BF005AB062 /* TermsAgreementView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TermsAgreementView.swift; sourceTree = "<group>"; };
+		11AE8CC72F16F2BF005AB062 /* SignupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignupView.swift; sourceTree = "<group>"; };
+		11AE8CC82F16F2BF005AB062 /* SignupViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignupViewModel.swift; sourceTree = "<group>"; };
+		11AE8CCC2F16F2CF005AB062 /* ResetPasswordView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResetPasswordView.swift; sourceTree = "<group>"; };
+		11AE8CCD2F16F2CF005AB062 /* ResetPasswordViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResetPasswordViewModel.swift; sourceTree = "<group>"; };
+		11AE8CD02F16F2EE005AB062 /* AuthNavigationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthNavigationView.swift; sourceTree = "<group>"; };
 		11F1CBDA2F101C5700246C07 /* ShiftActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShiftActivityAttributes.swift; sourceTree = "<group>"; };
 		504EC3041FED79650016851F /* Tidex.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Tidex.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		504EC3071FED79650016851F /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
@@ -243,6 +255,8 @@
 		119D1CC72F16E46300EC7072 /* ResetPassword */ = {
 			isa = PBXGroup;
 			children = (
+				11AE8CCC2F16F2CF005AB062 /* ResetPasswordView.swift */,
+				11AE8CCD2F16F2CF005AB062 /* ResetPasswordViewModel.swift */,
 			);
 			path = ResetPassword;
 			sourceTree = "<group>";
@@ -250,6 +264,9 @@
 		119D1CC82F16E46300EC7072 /* Signup */ = {
 			isa = PBXGroup;
 			children = (
+				11AE8CC62F16F2BF005AB062 /* Components */,
+				11AE8CC72F16F2BF005AB062 /* SignupView.swift */,
+				11AE8CC82F16F2BF005AB062 /* SignupViewModel.swift */,
 			);
 			path = Signup;
 			sourceTree = "<group>";
@@ -409,6 +426,14 @@
 			path = Features;
 			sourceTree = "<group>";
 		};
+		11AE8CC62F16F2BF005AB062 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				11AE8CC52F16F2BF005AB062 /* TermsAgreementView.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
 		504EC2FB1FED79650016851F = {
 			isa = PBXGroup;
 			children = (
@@ -434,6 +459,7 @@
 		504EC3061FED79650016851F /* TidexApp */ = {
 			isa = PBXGroup;
 			children = (
+				11AE8CD02F16F2EE005AB062 /* AuthNavigationView.swift */,
 				119D1CE52F16E46300EC7072 /* Native */,
 				11A1D6D22F11F55800060819 /* Features */,
 				11A1D6D02F11F51B00060819 /* Models */,
@@ -625,9 +651,12 @@
 				119D1CF72F16E46300EC7072 /* Color+Tidex.swift in Sources */,
 				119D1CF82F16E46300EC7072 /* AuthStrings.swift in Sources */,
 				119D1CF92F16E46300EC7072 /* APIConfiguration.swift in Sources */,
+				11AE8CCE2F16F2CF005AB062 /* ResetPasswordViewModel.swift in Sources */,
+				11AE8CCF2F16F2CF005AB062 /* ResetPasswordView.swift in Sources */,
 				119D1CFA2F16E46300EC7072 /* ErrorBanner.swift in Sources */,
 				119D1CFB2F16E46300EC7072 /* MainTabView.swift in Sources */,
 				119D1CFC2F16E46300EC7072 /* AppCoordinator.swift in Sources */,
+				11AE8CD12F16F2EE005AB062 /* AuthNavigationView.swift in Sources */,
 				119D1CFD2F16E46300EC7072 /* LoginView.swift in Sources */,
 				119D1CFE2F16E46300EC7072 /* MFAVerifyViewModel.swift in Sources */,
 				119D1CFF2F16E46300EC7072 /* PrimaryButton.swift in Sources */,
@@ -635,6 +664,9 @@
 				119D1D012F16E46300EC7072 /* AppleAuthProvider.swift in Sources */,
 				119D1D022F16E46300EC7072 /* GoogleAuthProvider.swift in Sources */,
 				11923C162F16B89C0076AFD6 /* AuthState.swift in Sources */,
+				11AE8CC92F16F2BF005AB062 /* SignupView.swift in Sources */,
+				11AE8CCA2F16F2BF005AB062 /* SignupViewModel.swift in Sources */,
+				11AE8CCB2F16F2BF005AB062 /* TermsAgreementView.swift in Sources */,
 				NETMON0012F2000000000001 /* NetworkMonitor.swift in Sources */,
 				OFFDSH0012F3000000000001 /* OfflineDashboardCards.swift in Sources */,
 				OFFSCR0012F2000000000001 /* OfflineScreenView.swift in Sources */,
@@ -877,7 +909,7 @@
 				CODE_SIGN_ENTITLEMENTS = TidexApp/App.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 130126.1;
-				INFOPLIST_FILE = App/Info.plist;
+				INFOPLIST_FILE = TidexApp/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = no.tidex.app;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
@@ -905,7 +937,7 @@
 				CODE_SIGN_ENTITLEMENTS = TidexApp/AppRelease.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 130126.1;
-				INFOPLIST_FILE = App/Info.plist;
+				INFOPLIST_FILE = TidexApp/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = no.tidex.app;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
