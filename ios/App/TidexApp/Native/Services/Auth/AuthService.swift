@@ -111,6 +111,91 @@ final class AuthService: ObservableObject {
         return response
     }
 
+    // MARK: - Sign Up
+
+    /// Sign up with email and password
+    /// - Parameters:
+    ///   - email: User's email address
+    ///   - password: User's password
+    /// - Note: User will receive a confirmation email
+    func signUpWithEmail(email: String, password: String) async throws {
+        isLoading = true
+        defer { isLoading = false }
+
+        _ = try await supabase.auth.signUp(
+            email: email,
+            password: password
+        )
+        // User needs to confirm email before signing in
+    }
+
+    /// Sign up with phone number and password
+    /// - Parameters:
+    ///   - phone: Phone number in E.164 format
+    ///   - password: User's password
+    /// - Note: User will receive an OTP code via SMS to verify
+    func signUpWithPhone(phone: String, password: String) async throws {
+        isLoading = true
+        defer { isLoading = false }
+
+        _ = try await supabase.auth.signUp(
+            phone: phone,
+            password: password
+        )
+        // User needs to verify OTP before signing in
+    }
+
+    // MARK: - Password Reset
+
+    /// Send password reset email
+    /// - Parameter email: User's email address
+    func sendPasswordResetEmail(email: String) async throws {
+        isLoading = true
+        defer { isLoading = false }
+
+        try await supabase.auth.resetPasswordForEmail(email)
+    }
+
+    /// Send password reset OTP to phone
+    /// - Parameter phone: Phone number in E.164 format
+    func sendPasswordResetOTP(phone: String) async throws {
+        isLoading = true
+        defer { isLoading = false }
+
+        // For phone-based password reset, we use signInWithOTP
+        // and then update the password after verification
+        try await supabase.auth.signInWithOTP(phone: phone)
+    }
+
+    /// Verify password reset OTP and sign in
+    /// - Parameters:
+    ///   - phone: Phone number in E.164 format
+    ///   - token: The OTP code received via SMS
+    /// - Returns: The authenticated session (user can then update password)
+    func verifyPasswordResetOTP(phone: String, token: String) async throws -> Session {
+        isLoading = true
+        defer { isLoading = false }
+
+        let response = try await supabase.auth.verifyOTP(
+            phone: phone,
+            token: token,
+            type: .sms
+        )
+        guard let session = response.session else {
+            throw AuthError.sessionMissing
+        }
+        return session
+    }
+
+    /// Update user's password (requires authenticated session)
+    /// - Parameter newPassword: The new password
+    func updatePassword(newPassword: String) async throws {
+        isLoading = true
+        defer { isLoading = false }
+
+        _ = try await supabase.auth.update(user: UserAttributes(password: newPassword))
+    }
+
     // MARK: - Phone OTP Authentication
 
     /// Send OTP code to phone number

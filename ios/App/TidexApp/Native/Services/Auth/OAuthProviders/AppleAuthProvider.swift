@@ -68,15 +68,22 @@ extension AppleAuthProvider: ASAuthorizationControllerDelegate {
     ) {
         Task { @MainActor in
             if let authError = error as? ASAuthorizationError {
-                let appleError: AppleAuthError = switch authError.code {
-                case .canceled: .userCancelled
-                case .failed: .failed(authError.localizedDescription)
-                case .invalidResponse: .invalidResponse
-                case .notHandled: .notHandled
-                case .notInteractive: .notInteractive
-                case .unknown: .unknown
-                case .matchedExcludedCredential: .unknown
-                @unknown default: .unknown
+                let appleError: AppleAuthError
+                switch authError.code {
+                case .canceled:
+                    appleError = .userCancelled
+                case .failed:
+                    appleError = .failed(authError.localizedDescription)
+                case .invalidResponse:
+                    appleError = .invalidResponse
+                case .notHandled:
+                    appleError = .notHandled
+                case .notInteractive:
+                    appleError = .notInteractive
+                case .unknown:
+                    appleError = .unknown
+                @unknown default:
+                    appleError = .unknown
                 }
                 continuation?.resume(throwing: appleError)
             } else {

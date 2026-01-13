@@ -19,7 +19,7 @@ struct RootView: View {
                     LoadingView()
 
                 case .unauthenticated:
-                    LoginView()
+                    AuthNavigationView()
                         .transition(.opacity)
 
                 case .mfaRequired:
@@ -28,7 +28,7 @@ struct RootView: View {
                             .transition(.opacity)
                     } else {
                         // Fallback - shouldn't happen
-                        LoginView()
+                        AuthNavigationView()
                     }
 
                 case .authenticated:

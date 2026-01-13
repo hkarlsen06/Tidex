@@ -3,6 +3,7 @@ import SwiftUI
 /// Email/phone and password input form
 struct EmailPasswordForm: View {
     @ObservedObject var viewModel: LoginViewModel
+    var onForgotPassword: (() -> Void)?
 
     @Environment(\.localization) private var localization
 
@@ -38,7 +39,7 @@ struct EmailPasswordForm: View {
                 HStack {
                     Spacer()
                     Button(action: {
-                        // TODO: Navigate to reset password
+                        onForgotPassword?()
                     }) {
                         Text(localization.string("login.forgotPassword"))
                             .font(.system(size: 14))

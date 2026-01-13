@@ -415,7 +415,7 @@
 				11A5CD552F10138F002BAC91 /* TidexShiftWidgetExtension.entitlements */,
 				1163EF6F2F04397000DC58EC /* GoogleService-Info.plist */,
 				958DCC722DB07C7200EA8C5F /* debug.xcconfig */,
-				504EC3061FED79650016851F /* App */,
+				504EC3061FED79650016851F /* TidexApp */,
 				11A5CD332F101283002BAC91 /* TidexShiftWidget */,
 				1152D0C92F01E2A7002FD5ED /* Frameworks */,
 				504EC3051FED79650016851F /* Products */,
@@ -431,7 +431,7 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-		504EC3061FED79650016851F /* App */ = {
+		504EC3061FED79650016851F /* TidexApp */ = {
 			isa = PBXGroup;
 			children = (
 				119D1CE52F16E46300EC7072 /* Native */,
@@ -446,7 +446,7 @@
 				INFOP0012F0900000000004 /* InfoPlist.strings */,
 				NTFSND0012F1400000000002 /* tidex_notification.caf */,
 			);
-			path = App;
+			path = TidexApp;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -474,9 +474,9 @@
 			productReference = 11A5CD2E2F101283002BAC91 /* TidexShiftWidgetExtension.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
-		504EC3031FED79650016851F /* App */ = {
+		504EC3031FED79650016851F /* TidexApp */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 504EC3161FED79650016851F /* Build configuration list for PBXNativeTarget "App" */;
+			buildConfigurationList = 504EC3161FED79650016851F /* Build configuration list for PBXNativeTarget "TidexApp" */;
 			buildPhases = (
 				11LOCALDEV2F100000000001 /* Check Server Config */,
 				504EC3001FED79650016851F /* Sources */,
@@ -489,7 +489,7 @@
 			dependencies = (
 				11A5CD402F101284002BAC91 /* PBXTargetDependency */,
 			);
-			name = App;
+			name = TidexApp;
 			packageProductDependencies = (
 				11923C182F16B94B0076AFD6 /* Auth */,
 				11923C1A2F16B94B0076AFD6 /* Functions */,
@@ -524,7 +524,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 504EC2FF1FED79650016851F /* Build configuration list for PBXProject "App" */;
+			buildConfigurationList = 504EC2FF1FED79650016851F /* Build configuration list for PBXProject "Tidex" */;
 			compatibilityVersion = "Xcode 8.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -542,7 +542,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				504EC3031FED79650016851F /* App */,
+				504EC3031FED79650016851F /* TidexApp */,
 				11A5CD2D2F101283002BAC91 /* TidexShiftWidgetExtension */,
 			);
 		};
@@ -874,7 +874,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
-				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
+				CODE_SIGN_ENTITLEMENTS = TidexApp/App.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 130126.1;
 				INFOPLIST_FILE = App/Info.plist;
@@ -902,7 +902,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
-				CODE_SIGN_ENTITLEMENTS = App/AppRelease.entitlements;
+				CODE_SIGN_ENTITLEMENTS = TidexApp/AppRelease.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 130126.1;
 				INFOPLIST_FILE = App/Info.plist;
@@ -914,6 +914,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.2.0;
+				"OTHER_SWIFT_FLAGS[arch=*]" = "-supress-warnings";
 				PRODUCT_BUNDLE_IDENTIFIER = no.tidex.app;
 				PRODUCT_NAME = Tidex;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -936,7 +937,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		504EC2FF1FED79650016851F /* Build configuration list for PBXProject "App" */ = {
+		504EC2FF1FED79650016851F /* Build configuration list for PBXProject "Tidex" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				504EC3141FED79650016851F /* Debug */,
@@ -945,7 +946,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		504EC3161FED79650016851F /* Build configuration list for PBXNativeTarget "App" */ = {
+		504EC3161FED79650016851F /* Build configuration list for PBXNativeTarget "TidexApp" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				504EC3171FED79650016851F /* Debug */,

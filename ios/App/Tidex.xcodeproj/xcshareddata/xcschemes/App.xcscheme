@@ -17,8 +17,8 @@
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "504EC3031FED79650016851F"
                BuildableName = "Tidex.app"
-               BlueprintName = "App"
-               ReferencedContainer = "container:App.xcodeproj">
+               BlueprintName = "TidexApp"
+               ReferencedContainer = "container:Tidex.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -46,8 +46,8 @@
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "504EC3031FED79650016851F"
             BuildableName = "Tidex.app"
-            BlueprintName = "App"
-            ReferencedContainer = "container:App.xcodeproj">
+            BlueprintName = "TidexApp"
+            ReferencedContainer = "container:Tidex.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -63,8 +63,8 @@
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "504EC3031FED79650016851F"
             BuildableName = "Tidex.app"
-            BlueprintName = "App"
-            ReferencedContainer = "container:App.xcodeproj">
+            BlueprintName = "TidexApp"
+            ReferencedContainer = "container:Tidex.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>
