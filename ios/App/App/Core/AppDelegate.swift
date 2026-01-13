@@ -1,8 +1,5 @@
 import ActivityKit
 import BackgroundTasks
-import Capacitor
-import FirebaseCore
-import FirebaseMessaging
 import UIKit
 
 @main
@@ -26,12 +23,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Initialize Firebase BEFORE creating any windows
-        FirebaseApp.configure()
-
-        // Set messaging delegate
-        Messaging.messaging().delegate = self
-
         // Set notification center delegate
         UNUserNotificationCenter.current().delegate = self
 
@@ -123,20 +114,13 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         }
 
         // Check for ongoing shifts and start Live Activity if needed
-        if #available(iOS 16.2, *) {
-            checkAndStartLiveActivity { [weak self] success in
-                task.setTaskCompleted(success: success)
-                // Schedule the next shift's Live Activity
-                self?.scheduleNextShiftLiveActivity()
-            }
-        } else {
-            task.setTaskCompleted(success: true)
+        checkAndStartLiveActivity { [weak self] success in
+            task.setTaskCompleted(success: success)
             // Schedule the next shift's Live Activity
-            self.scheduleNextShiftLiveActivity()
+            self?.scheduleNextShiftLiveActivity()
         }
     }
 
-    @available(iOS 16.2, *)
     private func checkAndStartLiveActivity(completion: @escaping (Bool) -> Void) {
         // Check if Live Activities are enabled
         guard ActivityAuthorizationInfo().areActivitiesEnabled else {
@@ -196,7 +180,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         return date >= startDate && date < endDate
     }
 
-    @available(iOS 16.2, *)
     private func startLiveActivityForShift(_ shift: StoredShift) {
         let now = Date()
         let formatter = DateFormatter()
@@ -268,18 +251,18 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     // MARK: - Background Task Management
 
     /// Starts a background task with a proper expiration handler
-    /// This gives Capacitor's bridge time to finish coalescing operations
+    /// This gives background operations time to finish
     func startBackgroundTask() {
         // End any existing task first
         endBackgroundTaskIfNeeded()
 
-        backgroundTaskID = UIApplication.shared.beginBackgroundTask(withName: "CapacitorCleanup") { [weak self] in
+        backgroundTaskID = UIApplication.shared.beginBackgroundTask(withName: "TidexCleanup") { [weak self] in
             // Expiration handler - called when iOS is about to terminate the task
             // We MUST end the task here to avoid the warning
             self?.endBackgroundTaskIfNeeded()
         }
 
-        // Give the bridge a moment to flush pending operations, then end the task
+        // Give a moment to flush pending operations, then end the task
         // This prevents the task from running indefinitely
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
             self?.endBackgroundTaskIfNeeded()
@@ -294,43 +277,51 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         }
     }
 
-    // MARK: - URL Handling (for non-scene apps, kept for backwards compatibility)
-
-    func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey: Any] = [:]) -> Bool {
-        // Called when the app was launched with a url (pre-iOS 13 or non-scene)
-        return ApplicationDelegateProxy.shared.application(app, open: url, options: options)
-    }
-
-    func application(_ application: UIApplication, continue userActivity: NSUserActivity, restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void) -> Bool {
-        // Called when the app was launched with an activity, including Universal Links (pre-iOS 13 or non-scene)
-        return ApplicationDelegateProxy.shared.application(application, continue: userActivity, restorationHandler: restorationHandler)
-    }
-
     // MARK: - Remote Notification Registration
     func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
-        // Pass APNs token to Firebase - it will exchange for FCM token
-        Messaging.messaging().apnsToken = deviceToken
-        NotificationCenter.default.post(name: .capacitorDidRegisterForRemoteNotifications, object: deviceToken)
+        // Convert token to hex string for storage
+        let tokenString = deviceToken.map { String(format: "%02.2hhx", $0) }.joined()
+        print("[APNs] Token received: \(tokenString)")
+
+        // Store APNs token in Supabase
+        Task {
+            await registerAPNsToken(tokenString)
+        }
     }
 
     func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
-        NotificationCenter.default.post(name: .capacitorDidFailToRegisterForRemoteNotifications, object: error)
+        print("[APNs] Failed to register: \(error)")
     }
 
     func application(_ application: UIApplication,
                      didReceiveRemoteNotification userInfo: [AnyHashable: Any],
                      fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void) {
-        Messaging.messaging().appDidReceiveMessage(userInfo)
+        // Handle silent push notifications if needed
         completionHandler(.newData)
     }
-}
 
-// MARK: - MessagingDelegate
-extension AppDelegate: MessagingDelegate {
-    func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {
-        // FCM token received/refreshed
-        // The @capacitor-firebase/messaging plugin handles forwarding this to JS
-        print("[FCM] Token received: \(fcmToken ?? "nil")")
+    /// Register APNs token with Supabase backend
+    private func registerAPNsToken(_ token: String) async {
+        do {
+            // Get current user session
+            let session = try await supabase.auth.session
+
+            // Update existing device record with APNs token
+            // This preserves the fcm_token for backwards compatibility during migration
+            try await supabase
+                .schema("internal")
+                .from("push_devices")
+                .update([
+                    "apns_token": token,
+                    "updated_at": ISO8601DateFormatter().string(from: Date())
+                ])
+                .eq("user_id", value: session.user.id.uuidString)
+                .execute()
+
+            print("[APNs] Token registered with Supabase")
+        } catch {
+            print("[APNs] Failed to register token: \(error)")
+        }
     }
 }
 
@@ -340,7 +331,6 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
     func userNotificationCenter(_ center: UNUserNotificationCenter,
                                 willPresent notification: UNNotification,
                                 withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
-        Messaging.messaging().appDidReceiveMessage(notification.request.content.userInfo)
         // Show banner even when app is in foreground
         completionHandler([.banner, .sound])
     }
@@ -349,8 +339,7 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
     func userNotificationCenter(_ center: UNUserNotificationCenter,
                                 didReceive response: UNNotificationResponse,
                                 withCompletionHandler completionHandler: @escaping () -> Void) {
-        Messaging.messaging().appDidReceiveMessage(response.notification.request.content.userInfo)
-        // The @capacitor-firebase/messaging plugin handles forwarding tap data to JS
+        // Handle notification tap navigation here if needed
         completionHandler()
     }
 }

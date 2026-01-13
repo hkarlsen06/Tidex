@@ -19,28 +19,9 @@
     "dev-site:dev": "pnpm --filter dev-site dev",
     "dev-site:build": "pnpm --filter dev-site build",
     "dev-site:start": "pnpm --filter dev-site start",
-    "local-ios": "node scripts/update-local-ip.mjs && pnpm sync-ios && cp ios/App/App/capacitor.config.local.json ios/App/App/capacitor.config.json && pnpm exec cap open ios & next dev --hostname 0.0.0.0",
-    "local-sync": "node scripts/update-local-ip.mjs && pnpm sync-ios && cp ios/App/App/capacitor.config.local.json ios/App/App/capacitor.config.json",
-    "prod-ios": "pnpm sync-ios && pnpm exec cap open ios",
-    "sync-ios": "pnpm exec cap sync ios",
-    "open-ios": "cap open ios",
-    "local-android": "node scripts/update-local-ip.mjs && pnpm sync-android && pnpm exec cap open android & next dev --hostname 0.0.0.0",
-    "prod-android": "pnpm sync-android && pnpm exec cap open android",
-    "sync-android": "pnpm exec cap sync android",
-    "open-android": "cap open android"
+    "open-ios": "open ios/App/App.xcodeproj"
   },
   "dependencies": {
-    "@capacitor-firebase/messaging": "^8.0.1",
-    "@capacitor/android": "^8.0.1",
-    "@capacitor/app": "^8.0.0",
-    "@capacitor/browser": "^8.0.0",
-    "@capacitor/cli": "^8.0.0",
-    "@capacitor/core": "^8.0.0",
-    "@capacitor/device": "^8.0.0",
-    "@capacitor/haptics": "^8.0.0",
-    "@capacitor/ios": "^8.0.0",
-    "@capgo/capacitor-social-login": "^8.2.13",
-    "@capgo/native-purchases": "^8.0.12",
     "@marsidev/react-turnstile": "^1.4.1",
     "@next/bundle-analyzer": "^16.1.1",
     "@radix-ui/react-alert-dialog": "^1.1.15",
@@ -92,7 +73,6 @@
     "zod": "^4.3.5"
   },
   "devDependencies": {
-    "@capacitor/assets": "^3.0.5",
     "@eslint/config-array": "^0.23.0",
     "@eslint/eslintrc": "^3.3.3",
     "@eslint/js": "^9.39.2",

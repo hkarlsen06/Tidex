@@ -1,5 +1,6 @@
 import UIKit
-import Capacitor
+import SwiftUI
+import GoogleSignIn
 
 class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
@@ -12,15 +13,19 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         window = UIWindow(windowScene: windowScene)
 
         // Set window background to match splash screen and dark theme
-        // This prevents white flash between splash screen and WebView load
+        // This prevents white flash during app startup
         let darkBackground = UIColor(red: 0.008, green: 0.032, blue: 0.090, alpha: 1.0)
         window?.backgroundColor = darkBackground
 
-        let containerController = TidexContainerViewController()
-        window?.rootViewController = containerController
+        // Use fully native SwiftUI app
+        let rootView = RootView()
+        let hostingController = UIHostingController(rootView: rootView)
+        hostingController.view.backgroundColor = darkBackground
+
+        window?.rootViewController = hostingController
         window?.makeKeyAndVisible()
 
-        // Handle any URLs passed at launch
+        // Handle any URLs passed at launch (OAuth callbacks, deep links)
         if let urlContext = connectionOptions.urlContexts.first {
             handleURL(urlContext.url)
         }
@@ -53,8 +58,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     func sceneDidEnterBackground(_ scene: UIScene) {
         // Use this method to save data, release shared resources, and store scene-specific state.
 
-        // Start a managed background task to give Capacitor/plugins time to finish
-        // This fixes "Background Task for Coalescing" warning by properly managing the task lifecycle
+        // Start a managed background task to give time to finish pending operations
         (UIApplication.shared.delegate as? AppDelegate)?.startBackgroundTask()
     }
 
@@ -67,12 +71,38 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     }
 
     private func handleURL(_ url: URL) {
-        // Forward to Capacitor's ApplicationDelegateProxy for plugin handling
-        _ = ApplicationDelegateProxy.shared.application(
-            UIApplication.shared,
-            open: url,
-            options: [:]
-        )
+        // Handle Google Sign-In callback
+        if GIDSignIn.sharedInstance.handle(url) {
+            return
+        }
+
+        // Handle Supabase auth callbacks (magic links, OAuth redirects)
+        if url.scheme == "tidex" || url.host == "login-callback" {
+            // The Supabase SDK will handle session exchange automatically
+            // when the URL contains auth tokens
+            Task { @MainActor in
+                await handleSupabaseCallback(url)
+            }
+            return
+        }
+
+        // Handle deep links for app navigation
+        handleDeepLink(url)
+    }
+
+    /// Handle Supabase OAuth callbacks
+    private func handleSupabaseCallback(_ url: URL) async {
+        // Supabase client automatically handles the callback URL
+        // and exchanges the code for a session when auth state changes
+        // The AppCoordinator will pick up the session via authStateChanges
+        print("[SceneDelegate] Received auth callback: \(url)")
+    }
+
+    /// Handle deep links for navigation
+    private func handleDeepLink(_ url: URL) {
+        // Parse the URL path and navigate accordingly
+        // For now, just log - can be expanded for specific deep link handling
+        print("[SceneDelegate] Received deep link: \(url)")
     }
 
     // MARK: - User Activity (Universal Links)
@@ -82,11 +112,16 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     }
 
     private func handleUserActivity(_ userActivity: NSUserActivity) {
-        // Forward to Capacitor's ApplicationDelegateProxy for plugin handling
-        _ = ApplicationDelegateProxy.shared.application(
-            UIApplication.shared,
-            continue: userActivity,
-            restorationHandler: { _ in }
-        )
+        // Handle Universal Links (e.g., tidex.no/reset-password)
+        guard userActivity.activityType == NSUserActivityTypeBrowsingWeb,
+              let url = userActivity.webpageURL else {
+            return
+        }
+
+        print("[SceneDelegate] Received Universal Link: \(url)")
+
+        // Parse the path and handle accordingly
+        // For auth-related paths, the Supabase SDK handles automatically
+        handleDeepLink(url)
     }
 }
