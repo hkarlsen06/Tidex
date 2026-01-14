@@ -205,6 +205,7 @@ export const SnapshotsServiceLive = Layer.effect(
                 .from("wage_snapshots")
                 .select("*")
                 .eq("user_id", userId)
+                .is("deleted_at", null) // Exclude soft-deleted snapshots
                 .order("from_date", { ascending: false, nullsFirst: false }),
             { retries: 2 }
           );
@@ -283,7 +284,8 @@ export const SnapshotsServiceLive = Layer.effect(
           let query = client
             .from("wage_snapshots")
             .select("id")
-            .eq("user_id", userId);
+            .eq("user_id", userId)
+            .is("deleted_at", null); // Exclude soft-deleted snapshots
 
           // Handle NULL from_date (baseline snapshot)
           if (fromDate === null) {
@@ -373,7 +375,8 @@ export const SnapshotsServiceLive = Layer.effect(
                 break_deduction_minutes: data.break_deduction_minutes,
               })
               .eq("id", id)
-              .eq("user_id", userId),
+              .eq("user_id", userId)
+              .is("deleted_at", null), // Only update non-deleted snapshots
           { retries: 1 }
         );
 
@@ -395,6 +398,7 @@ export const SnapshotsServiceLive = Layer.effect(
               .select("from_date")
               .eq("id", snapshotId)
               .eq("user_id", userId)
+              .is("deleted_at", null) // Only find non-deleted snapshots
               .single(),
           { retries: 2 }
         );
@@ -423,6 +427,7 @@ export const SnapshotsServiceLive = Layer.effect(
             .from("user_shifts")
             .select("id", { count: "exact", head: true })
             .eq("user_id", userId)
+            .is("deleted_at", null) // Only count non-deleted shifts
             .gte("shift_date", snapshotFromDate);
 
           if (nextSnapshot) {
@@ -457,6 +462,7 @@ export const SnapshotsServiceLive = Layer.effect(
               .select("from_date")
               .eq("id", id)
               .eq("user_id", userId)
+              .is("deleted_at", null) // Only find non-deleted snapshots
               .single(),
           { retries: 2 }
         );
@@ -485,14 +491,15 @@ export const SnapshotsServiceLive = Layer.effect(
         // Count affected shifts before deletion
         const affectedShiftCount = yield* countAffectedShifts(userId, id);
 
-        // Delete the snapshot
+        // Soft delete the snapshot by setting deleted_at
         yield* supabase.query(
           async (client) =>
             await client
               .from("wage_snapshots")
-              .delete()
+              .update({ deleted_at: new Date().toISOString() })
               .eq("id", id)
-              .eq("user_id", userId),
+              .eq("user_id", userId)
+              .is("deleted_at", null), // Only delete if not already deleted
           { retries: 1 }
         );
 

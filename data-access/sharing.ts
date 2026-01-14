@@ -268,6 +268,7 @@ async function getSharedUserShiftsInternal(
         .from("wage_snapshots")
         .select("*")
         .eq("user_id", ownerId)
+        .is("deleted_at", null) // Exclude soft-deleted snapshots
         .order("from_date", { ascending: false, nullsFirst: false });
       wageSnapshots = (snapshots ?? []) as WageSnapshot[];
     }

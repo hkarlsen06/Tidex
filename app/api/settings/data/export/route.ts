@@ -108,6 +108,7 @@ export async function GET(request: NextRequest) {
     .from("user_shifts")
     .select("*")
     .eq("user_id", userId)
+    .is("deleted_at", null) // Exclude soft-deleted shifts
     .order("shift_date", { ascending: true })
     .order("start_time", { ascending: true });
 
@@ -135,7 +136,8 @@ export async function GET(request: NextRequest) {
   const { data: recurringShifts, error: recurringError } = await supabase
     .from("recurring_shifts")
     .select("*")
-    .eq("user_id", userId);
+    .eq("user_id", userId)
+    .is("deleted_at", null); // Exclude soft-deleted recurring shifts
 
   if (recurringError) {
     logger.error("[data export] Failed to load recurring shifts:", recurringError);
@@ -152,6 +154,7 @@ export async function GET(request: NextRequest) {
     .from('wage_snapshots')
     .select('*')
     .eq('user_id', userId)
+    .is('deleted_at', null) // Exclude soft-deleted snapshots
     .order('from_date', { ascending: false, nullsFirst: false });
 
   if (snapshotsError) {

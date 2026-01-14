@@ -52,6 +52,7 @@ export default async function AddShiftsPage({ params }: AddShiftsPageProps) {
       .from("user_shifts")
       .select("shift_date,start_time,end_time")
       .eq("user_id", user.id)
+      .is("deleted_at", null) // Exclude soft-deleted shifts
       .order("shift_date", { ascending: false });
 
     if (error) {
@@ -68,7 +69,8 @@ export default async function AddShiftsPage({ params }: AddShiftsPageProps) {
     const { data: recurringShifts, error: recurringError } = await supabase
       .from("recurring_shifts")
       .select("*")
-      .eq("user_id", user.id);
+      .eq("user_id", user.id)
+      .is("deleted_at", null); // Exclude soft-deleted recurring shifts
 
     if (recurringError) {
       logger.error("Failed to load recurring shifts for add page:", recurringError);

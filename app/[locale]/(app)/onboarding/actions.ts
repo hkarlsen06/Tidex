@@ -65,12 +65,13 @@ export async function completeOnboarding(settings: OnboardingSettings) {
     ? { rules: PRESET_SUPPLEMENT_RULES }
     : (settings.custom_supplements || { rules: [] });
 
-  // Check if baseline snapshot already exists
+  // Check if baseline snapshot already exists (exclude soft-deleted)
   const { data: existingBaseline } = await supabase
     .from("wage_snapshots")
     .select("id")
     .eq("user_id", userId)
     .is("from_date", null)
+    .is("deleted_at", null) // Exclude soft-deleted snapshots
     .maybeSingle();
 
   // Prepare snapshot data with tax/break deduction settings
