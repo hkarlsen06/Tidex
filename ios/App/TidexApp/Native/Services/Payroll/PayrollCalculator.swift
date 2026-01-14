@@ -69,9 +69,9 @@ struct PayrollCalculator {
             rules: rules
         )
 
-        // Calculate raw duration
-        let totalMinutes = periods.reduce(0) { $0 + $1.durationMinutes }
-        let durationHours = round(Double(totalMinutes) / 60.0 * 100) / 100
+        // Calculate raw duration (durationMinutes is Double for precision)
+        let totalMinutes = periods.reduce(0.0) { $0 + $1.durationMinutes }
+        let durationHours = round(totalMinutes / 60.0 * 100) / 100
 
         // Store original periods before break deduction (for display)
         let originalPeriods = periods
@@ -94,9 +94,9 @@ struct PayrollCalculator {
         )
         periods = afterBreak.periods
 
-        // Calculate paid hours
-        let paidMinutes = periods.reduce(0) { $0 + $1.durationMinutes }
-        let paidHours = round(Double(paidMinutes) / 60.0 * 100) / 100
+        // Calculate paid hours (after break deduction, with fractional precision)
+        let paidMinutes = periods.reduce(0.0) { $0 + $1.durationMinutes }
+        let paidHours = round(paidMinutes / 60.0 * 100) / 100
 
         // Calculate pay
         var basePay: Double = 0

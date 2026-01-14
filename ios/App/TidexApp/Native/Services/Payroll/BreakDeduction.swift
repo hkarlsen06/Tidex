@@ -11,6 +11,7 @@ struct BreakDeductionResult {
 struct BreakDeduction {
 
     /// Apply automatic break deduction to wage periods
+    /// Port of lib/payroll/breaks.ts - matches Next.js behavior exactly
     /// - Parameters:
     ///   - periods: Original wage periods
     ///   - method: Break deduction method
@@ -23,25 +24,26 @@ struct BreakDeduction {
         thresholdHours: Double,
         deductionHours: Double
     ) -> BreakDeductionResult {
-        let totalMinutes = periods.reduce(0) { $0 + $1.durationMinutes }
-        let totalHours = Double(totalMinutes) / 60.0
+        let totalMinutes = periods.reduce(0.0) { $0 + $1.durationMinutes }
+        let totalHours = totalMinutes / 60.0
 
-        // Only deduct if shift exceeds threshold
+        // Only deduct if shift exceeds threshold (strict >)
         let toDeduct = totalHours > thresholdHours ? deductionHours : 0
 
         var adjusted = periods
         var notes: [String] = []
 
         if toDeduct > 0 && method != .none {
-            var remainingMinutes = Int((toDeduct * 60).rounded())
+            // For end_of_shift and base_only, use rounded minutes like Next.js
+            var remaining = (toDeduct * 60).rounded()
 
             switch method {
             case .endOfShift:
                 // Subtract from tail (last periods first)
                 for i in stride(from: adjusted.count - 1, through: 0, by: -1) {
-                    guard remainingMinutes > 0 else { break }
+                    guard remaining > 0 else { break }
                     let span = adjusted[i].durationMinutes
-                    let cut = min(span, remainingMinutes)
+                    let cut = min(span, remaining)
 
                     adjusted[i] = WagePeriod(
                         fromMin: adjusted[i].fromMin,
@@ -49,19 +51,19 @@ struct BreakDeduction {
                         baseRate: adjusted[i].baseRate,
                         supplementRate: adjusted[i].supplementRate
                     )
-                    remainingMinutes -= cut
+                    remaining -= cut
                 }
                 notes.append("Deducted at end of shift")
 
             case .proportional:
-                // Deduct proportionally across all periods
-                let totalMin = Double(totalMinutes)
+                // Deduct exact proportional fractions (NOT rounded to minutes)
+                // This matches Next.js lib/payroll/breaks.ts exactly
                 var newPeriods: [WagePeriod] = []
 
                 for period in adjusted {
-                    let span = Double(period.durationMinutes)
-                    let proportion = span / totalMin
-                    let cutMinutes = Int((proportion * toDeduct * 60).rounded())
+                    let span = period.durationMinutes
+                    let proportion = span / totalMinutes
+                    let cutMinutes = proportion * toDeduct * 60  // Exact, no rounding
 
                     newPeriods.append(WagePeriod(
                         fromMin: period.fromMin,
@@ -79,9 +81,9 @@ struct BreakDeduction {
                     .sorted { $0.element.supplementRate < $1.element.supplementRate }
 
                 for (idx, _) in indexedPeriods {
-                    guard remainingMinutes > 0 else { break }
+                    guard remaining > 0 else { break }
                     let span = adjusted[idx].durationMinutes
-                    let cut = min(span, remainingMinutes)
+                    let cut = min(span, remaining)
 
                     adjusted[idx] = WagePeriod(
                         fromMin: adjusted[idx].fromMin,
@@ -89,7 +91,7 @@ struct BreakDeduction {
                         baseRate: adjusted[idx].baseRate,
                         supplementRate: adjusted[idx].supplementRate
                     )
-                    remainingMinutes -= cut
+                    remaining -= cut
                 }
                 notes.append("Deducted from base/lowest supplement periods first")
 

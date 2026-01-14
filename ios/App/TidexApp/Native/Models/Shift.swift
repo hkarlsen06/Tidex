@@ -158,3 +158,25 @@ struct ShiftsAggregates: Equatable {
         ShiftsAggregates(totalHours: 0, totalGross: 0)
     }
 }
+
+// MARK: - Shift Totals
+
+/// Monthly totals summary with half-tax and conflict exclusion support
+/// Port of lib/shifts/monthlyTotals.ts ShiftTotals
+struct ShiftTotals: Equatable {
+    /// Total gross pay for all shifts (projected)
+    let gross: Double
+    /// Total net pay after tax (with half-tax applied if applicable)
+    let net: Double
+    /// Total supplement pay
+    let supplement: Double
+    /// Gross pay for completed shifts only (earned to date)
+    let completedGross: Double
+    /// Net pay for completed shifts only
+    let completedNet: Double
+
+    /// Zero totals for empty state
+    static var zero: ShiftTotals {
+        ShiftTotals(gross: 0, net: 0, supplement: 0, completedGross: 0, completedNet: 0)
+    }
+}
