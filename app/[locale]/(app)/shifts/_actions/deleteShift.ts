@@ -35,6 +35,7 @@ export async function deleteShift(input: string | DeleteShiftInput) {
       .select("exclusions, start_time, end_time")
       .eq("id", recurringId)
       .eq("user_id", user.id)
+      .is("deleted_at", null) // Only find non-deleted recurring shifts
       .single();
 
     if (recurringError || !recurring) {
@@ -51,7 +52,8 @@ export async function deleteShift(input: string | DeleteShiftInput) {
       .from("recurring_shifts")
       .update({ exclusions: updatedExclusions })
       .eq("id", recurringId)
-      .eq("user_id", user.id);
+      .eq("user_id", user.id)
+      .is("deleted_at", null); // Only update non-deleted
 
     if (updateError) {
       logger.error("Failed to update recurring shift exclusions:", updateError);
@@ -86,6 +88,7 @@ export async function deleteShift(input: string | DeleteShiftInput) {
     .select("id, shift_date, start_time, end_time")
     .eq("id", shiftId)
     .eq("user_id", user.id)
+    .is("deleted_at", null) // Only find non-deleted shifts
     .single();
 
   if (fetchError || !shift) {
@@ -94,12 +97,13 @@ export async function deleteShift(input: string | DeleteShiftInput) {
 
   const deletedDate = shift.shift_date;
 
-  // Delete the shift
+  // Soft delete the shift by setting deleted_at
   const { error } = await supabase
     .from("user_shifts")
-    .delete()
+    .update({ deleted_at: new Date().toISOString() })
     .eq("id", shiftId)
-    .eq("user_id", user.id);
+    .eq("user_id", user.id)
+    .is("deleted_at", null); // Only delete if not already deleted
 
   if (error) throw new Error(error.message);
 
@@ -127,7 +131,8 @@ export async function deleteShift(input: string | DeleteShiftInput) {
   const { data: allRecurring, error: allRecurringError } = await supabase
     .from("recurring_shifts")
     .select("*")
-    .eq("user_id", user.id);
+    .eq("user_id", user.id)
+    .is("deleted_at", null); // Only find non-deleted recurring shifts
 
   if (allRecurringError) {
     logger.error("Failed to load recurring shifts for exclusion cleanup:", allRecurringError);
@@ -157,7 +162,8 @@ export async function deleteShift(input: string | DeleteShiftInput) {
         .from("recurring_shifts")
         .update({ exclusions: updatedExclusions })
         .eq("id", earliestRecurring.id)
-        .eq("user_id", user.id);
+        .eq("user_id", user.id)
+        .is("deleted_at", null); // Only update non-deleted
 
       if (cleanupError) {
         logger.error("Failed to cleanup recurring shift exclusions:", cleanupError);

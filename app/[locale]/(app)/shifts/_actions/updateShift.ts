@@ -57,6 +57,7 @@ export async function updateShift(input: UpdateShiftInput) {
     .select("id, shift_date, start_time, end_time")
     .eq("id", input.id)
     .eq("user_id", user.id)
+    .is("deleted_at", null) // Only find non-deleted shifts
     .single();
 
   if (fetchError || !oldShift) {
@@ -72,6 +73,7 @@ export async function updateShift(input: UpdateShiftInput) {
     })
     .eq("id", input.id)
     .eq("user_id", user.id)
+    .is("deleted_at", null) // Only update non-deleted shifts
     .select("id, shift_date, start_time, end_time")
     .single();
 

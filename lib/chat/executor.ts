@@ -189,7 +189,8 @@ async function resolveRecurringId(
   const { data: recurring } = await supabase
     .from("recurring_shifts")
     .select("id")
-    .eq("user_id", userId);
+    .eq("user_id", userId)
+    .is("deleted_at", null); // Exclude soft-deleted recurring shifts
 
   if (!recurring) return null;
 
@@ -1094,6 +1095,7 @@ async function executeManageRecurringShift(
           .select("*")
           .eq("id", fullRecurringId)
           .eq("user_id", _userId)
+          .is("deleted_at", null) // Exclude soft-deleted
           .single();
 
         if (fetchError || !currentRecurring) {
@@ -1177,6 +1179,7 @@ async function executeManageRecurringShift(
           .select("selected_days, start_time, end_time")
           .eq("id", fullRecurringId)
           .eq("user_id", _userId)
+          .is("deleted_at", null) // Exclude soft-deleted
           .single();
 
         await deleteRecurringShift(fullRecurringId);
@@ -1210,6 +1213,7 @@ async function executeManageRecurringShift(
             .select("*")
             .eq("id", fullRecurringId)
             .eq("user_id", _userId)
+            .is("deleted_at", null) // Exclude soft-deleted
             .single();
 
           if (error) {
@@ -1234,6 +1238,7 @@ async function executeManageRecurringShift(
             .from("recurring_shifts")
             .select("*")
             .eq("user_id", _userId)
+            .is("deleted_at", null) // Exclude soft-deleted
             .order("created_at", { ascending: false });
 
           if (error) {
@@ -1297,6 +1302,7 @@ async function executeManageRecurringExclusion(
       .select("exclusions, selected_days, start_time, end_time")
       .eq("id", fullRecurringId)
       .eq("user_id", _userId)
+      .is("deleted_at", null) // Exclude soft-deleted
       .single();
 
     if (fetchError || !recurring) {
@@ -1322,7 +1328,8 @@ async function executeManageRecurringExclusion(
       .from("recurring_shifts")
       .update({ exclusions: newExclusions })
       .eq("id", fullRecurringId)
-      .eq("user_id", _userId);
+      .eq("user_id", _userId)
+      .is("deleted_at", null); // Only update non-deleted
 
     if (updateError) {
       throw new Error(`Failed to update recurring shift: ${updateError.message}`);

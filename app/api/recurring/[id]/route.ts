@@ -33,6 +33,7 @@ export async function GET(
       .select("*")
       .eq("id", id)
       .eq("user_id", userId)
+      .is("deleted_at", null) // Exclude soft-deleted recurring shifts
       .single();
 
     if (error || !recurring) {

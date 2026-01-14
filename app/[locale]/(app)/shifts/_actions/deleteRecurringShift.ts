@@ -22,12 +22,13 @@ export async function deleteRecurringShift(recurringId: string): Promise<void> {
 
   logger.info("deleteRecurringShift: Attempting to delete recurring shift", { recurringId, userId: user.id });
 
-  // First, verify the recurring shift exists
+  // First, verify the recurring shift exists and is not deleted
   const { data: existingRecurring, error: fetchError } = await supabase
     .from("recurring_shifts")
     .select("id")
     .eq("id", recurringId)
     .eq("user_id", user.id)
+    .is("deleted_at", null) // Only find non-deleted recurring shifts
     .single();
 
   if (fetchError) {
@@ -35,20 +36,22 @@ export async function deleteRecurringShift(recurringId: string): Promise<void> {
     throw new Error(ERRORS.RECURRING_NOT_FOUND);
   }
 
-  logger.info("deleteRecurringShift: Found recurring shift, proceeding with delete", { existingRecurring });
+  logger.info("deleteRecurringShift: Found recurring shift, proceeding with soft delete", { existingRecurring });
 
+  // Soft delete by setting deleted_at
   const { error, count } = await supabase
     .from("recurring_shifts")
-    .delete({ count: "exact" })
+    .update({ deleted_at: new Date().toISOString() })
     .eq("id", recurringId)
-    .eq("user_id", user.id);
+    .eq("user_id", user.id)
+    .is("deleted_at", null); // Only delete if not already deleted
 
   if (error) {
     logger.error("Failed to delete recurring shift:", error);
     throw new Error(ERRORS.FAILED_TO_DELETE_RECURRING);
   }
 
-  logger.info("deleteRecurringShift: Recurring shift deleted successfully", { recurringId, deletedCount: count });
+  logger.info("deleteRecurringShift: Recurring shift soft deleted successfully", { recurringId, deletedCount: count });
 
   // Enqueue notification for recurring shift deletion
   const mutationId = generateMutationId();

@@ -360,6 +360,7 @@ export const ShiftsServiceLive = Layer.effect(
             .from("user_shifts")
             .select("*")
             .eq("user_id", userId)
+            .is("deleted_at", null) // Exclude soft-deleted shifts
             .order("shift_date", { ascending: false });
 
           if (startDate) {
@@ -380,7 +381,8 @@ export const ShiftsServiceLive = Layer.effect(
           await client
             .from("recurring_shifts")
             .select("*")
-            .eq("user_id", userId);
+            .eq("user_id", userId)
+            .is("deleted_at", null); // Exclude soft-deleted recurring shifts
 
         // Execute queries in parallel
         const [shifts, recurringShifts] = yield* Effect.all(

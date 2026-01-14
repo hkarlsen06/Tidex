@@ -20,7 +20,8 @@ export async function clearShiftSnapshots(shiftId: string) {
       supplement_rules_snapshot: snapshots.supplement_rules_snapshot,
     })
     .eq("id", shiftId)
-    .eq("user_id", user.id);
+    .eq("user_id", user.id)
+    .is("deleted_at", null); // Only update non-deleted shifts
 
   if (error) {
     logger.error("Failed to update shift snapshots:", error);
