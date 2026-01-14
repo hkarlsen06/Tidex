@@ -129,25 +129,17 @@ supabase functions deploy apple-server-notifications
 
 ---
 
-## 6. Install Capacitor IAP Plugin
-
-Add the IAP plugin to your iOS project:
-
-```bash
-# Install the native purchases plugin
-pnpm add @capgo/native-purchases
-
-# Sync Capacitor
-npx cap sync ios
-```
+## 6. iOS Project Configuration
 
 ### Verify iOS Project Configuration
-1. Open the iOS project in Xcode: `npx cap open ios`
+1. Open the iOS project in Xcode
 2. Verify the bundle ID matches: `no.tidex.app`
 3. Verify the Team is set to: `48ZSLD4RMP`
 4. Ensure **In-App Purchase** capability is enabled:
    - Select your target → **Signing & Capabilities**
    - Click **+ Capability** → Add **In-App Purchase**
+
+The iOS app uses native StoreKit 2 for in-app purchases. See `ios/App/TidexApp/Native/Services/IAP/` for the implementation.
 
 ---
 

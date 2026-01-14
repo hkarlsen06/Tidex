@@ -11,7 +11,7 @@
 - Effect-TS for type-safe services and error handling
 - Centralized Data Access Layer (DAL) with Promise boundaries
 - Supabase for database, auth, and edge functions
-- Capacitor for iOS native bridge
+- Native SwiftUI iOS app (separate from web)
 
 ## Layers
 

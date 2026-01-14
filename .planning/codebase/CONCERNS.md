@@ -50,7 +50,7 @@
 **Unsafe type assertions:**
 - Risk: Runtime type errors if assumptions are wrong
 - Count: 434 instances of `@ts-ignore`, `any`, `as any` patterns
-- Files: Concentrated in Capacitor integration, River streaming, Firebase
+- Files: Concentrated in third-party integration code, River streaming
 - Current mitigation: Limited to third-party integration code
 - Recommendations: Gradually add proper typing, especially in modified code
 
