@@ -173,6 +173,7 @@ enum AuthStrings {
         "dashboard.loadError": "Kunne ikke laste data",
         "dashboard.nextPayout": "Neste utbetaling",
         "dashboard.previousPayout": "Forrige utbetaling",
+        "dashboard.payroll": "Utbetaling",
         "dashboard.gross": "Brutto",
         "dashboard.tax": "Skatt",
         "dashboard.shift": "vakt",
@@ -182,6 +183,11 @@ enum AuthStrings {
         "dashboard.beforeTax": "før skatt",
         "dashboard.shiftPlanned": "vakt planlagt",
         "dashboard.shiftsPlanned": "vakter planlagt",
+        "dashboard.backToToday": "Tilbake til i dag",
+        "dashboard.swipeHint": "Sveip for \u{00E5} bytte m\u{00E5}ned",
+        "dashboard.bestShift": "Beste vakt",
+        "dashboard.noShiftsMonth": "Ingen vakter denne m\u{00E5}neden",
+        "dashboard.noNextShift": "Ingen kommende vakter",
 
         // Placeholders
         "placeholder.shiftsDescription": "Vaktene dine vises her",
@@ -352,6 +358,7 @@ enum AuthStrings {
         "dashboard.loadError": "Failed to load data",
         "dashboard.nextPayout": "Next payout",
         "dashboard.previousPayout": "Previous payout",
+        "dashboard.payroll": "Payroll",
         "dashboard.gross": "Gross",
         "dashboard.tax": "Tax",
         "dashboard.shift": "shift",
@@ -361,6 +368,11 @@ enum AuthStrings {
         "dashboard.beforeTax": "before tax",
         "dashboard.shiftPlanned": "shift planned",
         "dashboard.shiftsPlanned": "shifts planned",
+        "dashboard.backToToday": "Back to today",
+        "dashboard.swipeHint": "Swipe to change month",
+        "dashboard.bestShift": "Best shift",
+        "dashboard.noShiftsMonth": "No shifts this month",
+        "dashboard.noNextShift": "No upcoming shifts",
 
         // Placeholders
         "placeholder.shiftsDescription": "Your shifts will appear here",

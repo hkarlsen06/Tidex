@@ -75,6 +75,14 @@
 		11AE8D082F16FDD8005AB062 /* Date+Tidex.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11AE8D072F16FDD8005AB062 /* Date+Tidex.swift */; };
 		11AE8D1C2F17BE13005AB062 /* PayrollEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11AE8D1B2F17BE13005AB062 /* PayrollEngine.swift */; };
 		11AE8D1D2F17BE13005AB062 /* ConflictExclusion.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11AE8D1A2F17BE13005AB062 /* ConflictExclusion.swift */; };
+		11AE8D202F17CB31005AB062 /* MonthSwipeGesture.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11AE8D1E2F17CB31005AB062 /* MonthSwipeGesture.swift */; };
+		11AE8D222F17CEB4005AB062 /* FeaturedShiftCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11AE8D212F17CEB4005AB062 /* FeaturedShiftCard.swift */; };
+		11AE8D252F17CF3A005AB062 /* MonthTransition.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11AE8D232F17CF3A005AB062 /* MonthTransition.swift */; };
+		11AE8D292F17D02E005AB062 /* CountdownManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11AE8D272F17D02E005AB062 /* CountdownManager.swift */; };
+		11AE8D2A2F17D02E005AB062 /* CountdownFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11AE8D262F17D02E005AB062 /* CountdownFormatter.swift */; };
+		11AE8D2D2F17D27D005AB062 /* EmptyShiftCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11AE8D2B2F17D27D005AB062 /* EmptyShiftCard.swift */; };
+		11AE8D2E2F17D27D005AB062 /* FeaturedShiftCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11AE8D2C2F17D27D005AB062 /* FeaturedShiftCard.swift */; };
+		11AE8D302F17E000005AB062 /* PullToRefreshView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11AE8D2F2F17E000005AB062 /* PullToRefreshView.swift */; };
 		11F1CBDB2F101C5700246C07 /* ShiftActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11F1CBDA2F101C5700246C07 /* ShiftActivityAttributes.swift */; };
 		504EC3081FED79650016851F /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 504EC3071FED79650016851F /* AppDelegate.swift */; };
 		504EC30F1FED79650016851F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 504EC30E1FED79650016851F /* Assets.xcassets */; };
@@ -176,6 +184,14 @@
 		11AE8D072F16FDD8005AB062 /* Date+Tidex.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Date+Tidex.swift"; sourceTree = "<group>"; };
 		11AE8D1A2F17BE13005AB062 /* ConflictExclusion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConflictExclusion.swift; sourceTree = "<group>"; };
 		11AE8D1B2F17BE13005AB062 /* PayrollEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PayrollEngine.swift; sourceTree = "<group>"; };
+		11AE8D1E2F17CB31005AB062 /* MonthSwipeGesture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthSwipeGesture.swift; sourceTree = "<group>"; };
+		11AE8D212F17CEB4005AB062 /* FeaturedShiftCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeaturedShiftCard.swift; sourceTree = "<group>"; };
+		11AE8D232F17CF3A005AB062 /* MonthTransition.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthTransition.swift; sourceTree = "<group>"; };
+		11AE8D262F17D02E005AB062 /* CountdownFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CountdownFormatter.swift; sourceTree = "<group>"; };
+		11AE8D272F17D02E005AB062 /* CountdownManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CountdownManager.swift; sourceTree = "<group>"; };
+		11AE8D2B2F17D27D005AB062 /* EmptyShiftCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmptyShiftCard.swift; sourceTree = "<group>"; };
+		11AE8D2C2F17D27D005AB062 /* FeaturedShiftCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeaturedShiftCard.swift; sourceTree = "<group>"; };
+		11AE8D2F2F17E000005AB062 /* PullToRefreshView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PullToRefreshView.swift; sourceTree = "<group>"; };
 		11F1CBDA2F101C5700246C07 /* ShiftActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShiftActivityAttributes.swift; sourceTree = "<group>"; };
 		504EC3041FED79650016851F /* Tidex.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Tidex.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		504EC3071FED79650016851F /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
@@ -391,6 +407,7 @@
 				119D1CDB2F16E46300EC7072 /* LoadingOverlay.swift */,
 				119D1CDC2F16E46300EC7072 /* OutlineButton.swift */,
 				119D1CDD2F16E46300EC7072 /* PrimaryButton.swift */,
+				11AE8D2F2F17E000005AB062 /* PullToRefreshView.swift */,
 				119D1CDE2F16E46300EC7072 /* SecureTextField.swift */,
 				119D1CDF2F16E46300EC7072 /* TidexCard.swift */,
 				119D1CE02F16E46300EC7072 /* TidexTextField.swift */,
@@ -410,6 +427,9 @@
 		119D1CE42F16E46300EC7072 /* Shared */ = {
 			isa = PBXGroup;
 			children = (
+				11AE8D282F17D02E005AB062 /* Utilities */,
+				11AE8D242F17CF3A005AB062 /* Animations */,
+				11AE8D1F2F17CB31005AB062 /* Gestures */,
 				119D1CE12F16E46300EC7072 /* Components */,
 				119D1CE32F16E46300EC7072 /* Extensions */,
 			);
@@ -478,6 +498,9 @@
 		11AE8CE62F16FD82005AB062 /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				11AE8D2B2F17D27D005AB062 /* EmptyShiftCard.swift */,
+				11AE8D2C2F17D27D005AB062 /* FeaturedShiftCard.swift */,
+				11AE8D212F17CEB4005AB062 /* FeaturedShiftCard.swift */,
 				11AE8CE32F16FD82005AB062 /* NextShiftCard.swift */,
 				11AE8CE42F16FD82005AB062 /* PayrollCard.swift */,
 				11AE8CE52F16FD82005AB062 /* TotalCard.swift */,
@@ -518,6 +541,31 @@
 				11AE8D012F16FDBD005AB062 /* WagePeriodBuilder.swift */,
 			);
 			path = Payroll;
+			sourceTree = "<group>";
+		};
+		11AE8D1F2F17CB31005AB062 /* Gestures */ = {
+			isa = PBXGroup;
+			children = (
+				11AE8D1E2F17CB31005AB062 /* MonthSwipeGesture.swift */,
+			);
+			path = Gestures;
+			sourceTree = "<group>";
+		};
+		11AE8D242F17CF3A005AB062 /* Animations */ = {
+			isa = PBXGroup;
+			children = (
+				11AE8D232F17CF3A005AB062 /* MonthTransition.swift */,
+			);
+			path = Animations;
+			sourceTree = "<group>";
+		};
+		11AE8D282F17D02E005AB062 /* Utilities */ = {
+			isa = PBXGroup;
+			children = (
+				11AE8D262F17D02E005AB062 /* CountdownFormatter.swift */,
+				11AE8D272F17D02E005AB062 /* CountdownManager.swift */,
+			);
+			path = Utilities;
 			sourceTree = "<group>";
 		};
 		504EC2FB1FED79650016851F = {
@@ -727,6 +775,7 @@
 				11AE8D052F16FDBD005AB062 /* BreakDeduction.swift in Sources */,
 				11AE8D1C2F17BE13005AB062 /* PayrollEngine.swift in Sources */,
 				11AE8D1D2F17BE13005AB062 /* ConflictExclusion.swift in Sources */,
+				11AE8D252F17CF3A005AB062 /* MonthTransition.swift in Sources */,
 				11AE8D062F16FDBD005AB062 /* WagePeriodBuilder.swift in Sources */,
 				11AE8CE92F16FD82005AB062 /* TotalCard.swift in Sources */,
 				11AE8CFB2F16FDB2005AB062 /* ShiftsService.swift in Sources */,
@@ -747,6 +796,7 @@
 				119D1CF52F16E46300EC7072 /* MFAVerifyView.swift in Sources */,
 				119D1CF62F16E46300EC7072 /* LoadingOverlay.swift in Sources */,
 				119D1CF72F16E46300EC7072 /* Color+Tidex.swift in Sources */,
+				11AE8D202F17CB31005AB062 /* MonthSwipeGesture.swift in Sources */,
 				119D1CF82F16E46300EC7072 /* AuthStrings.swift in Sources */,
 				119D1CF92F16E46300EC7072 /* APIConfiguration.swift in Sources */,
 				11AE8CCE2F16F2CF005AB062 /* ResetPasswordViewModel.swift in Sources */,
@@ -758,12 +808,18 @@
 				11AE8CF32F16FDA4005AB062 /* RecurringShift.swift in Sources */,
 				11AE8CF42F16FDA4005AB062 /* SupplementRule.swift in Sources */,
 				11AE8D082F16FDD8005AB062 /* Date+Tidex.swift in Sources */,
+				11AE8D222F17CEB4005AB062 /* FeaturedShiftCard.swift in Sources */,
 				11AE8CF52F16FDA4005AB062 /* UserSettings.swift in Sources */,
 				11AE8CF62F16FDA4005AB062 /* WageSnapshot.swift in Sources */,
+				11AE8D2D2F17D27D005AB062 /* EmptyShiftCard.swift in Sources */,
+				11AE8D2E2F17D27D005AB062 /* FeaturedShiftCard.swift in Sources */,
 				11AE8CD12F16F2EE005AB062 /* AuthNavigationView.swift in Sources */,
+				11AE8D292F17D02E005AB062 /* CountdownManager.swift in Sources */,
+				11AE8D2A2F17D02E005AB062 /* CountdownFormatter.swift in Sources */,
 				119D1CFD2F16E46300EC7072 /* LoginView.swift in Sources */,
 				119D1CFE2F16E46300EC7072 /* MFAVerifyViewModel.swift in Sources */,
 				119D1CFF2F16E46300EC7072 /* PrimaryButton.swift in Sources */,
+				11AE8D302F17E000005AB062 /* PullToRefreshView.swift in Sources */,
 				119D1D002F16E46300EC7072 /* OutlineButton.swift in Sources */,
 				119D1D012F16E46300EC7072 /* AppleAuthProvider.swift in Sources */,
 				119D1D022F16E46300EC7072 /* GoogleAuthProvider.swift in Sources */,
