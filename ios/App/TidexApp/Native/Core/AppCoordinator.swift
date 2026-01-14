@@ -4,6 +4,11 @@ import Supabase
 
 /// Central coordinator for app-wide authentication state and navigation
 /// Manages the flow: Splash -> Login -> MFA (if needed) -> Dashboard
+///
+/// This is the single source of truth for auth state in the app.
+/// It listens to Supabase auth events and handles all navigation transitions.
+/// Individual services (like `AuthService`) perform auth operations but don't
+/// duplicate state listening - they rely on this coordinator for state management.
 @MainActor
 final class AppCoordinator: ObservableObject {
     static let shared = AppCoordinator()
@@ -55,31 +60,37 @@ final class AppCoordinator: ObservableObject {
 
     // MARK: - Initial Session Check
 
+    /// Timeout for initial session check (in nanoseconds)
+    /// If authStateChanges doesn't emit .initialSession within this time, we check manually
+    private static let initialSessionTimeout: UInt64 = 500_000_000 // 0.5 seconds
+
     /// Fallback check in case authStateChanges doesn't emit .initialSession promptly
+    /// This handles edge cases where the Supabase SDK doesn't emit the initial event
     private func setupInitialSessionCheck() {
         Task { [weak self] in
-            // Give authStateChanges a moment to emit
-            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+            // Wait for authStateChanges to emit - this is a fallback, not the primary flow
+            try? await Task.sleep(nanoseconds: Self.initialSessionTimeout)
 
             guard let self = self else { return }
 
-            // If still loading, do a manual check
+            // If still loading after timeout, the authStateChanges stream hasn't emitted
+            // This can happen if there's no stored session or the SDK initialization is slow
             if self.appState == .loading {
-                print("[AppCoordinator] Initial session check - manually checking session")
+                print("[AppCoordinator] Initial session timeout - performing manual session check")
                 await self.performInitialSessionCheck()
             }
         }
     }
 
-    /// Perform initial session check directly
+    /// Perform initial session check directly (fallback when authStateChanges doesn't emit)
     private func performInitialSessionCheck() async {
         do {
             // session is non-optional - throws if no session exists
             _ = try await supabase.auth.session
-            print("[AppCoordinator] Session check result: has session")
+            print("[AppCoordinator] Manual session check: session found")
             await checkMFAAndUpdateState()
         } catch {
-            print("[AppCoordinator] Session check error: \(error)")
+            print("[AppCoordinator] Manual session check: no session (\(error.localizedDescription))")
             appState = .unauthenticated
         }
     }

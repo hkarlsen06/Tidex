@@ -199,7 +199,12 @@ enum AuthStrings {
         // User Menu
         "userMenu.settings": "Innstillinger",
         "userMenu.logout": "Logg ut",
-        "userMenu.loggingOut": "Logger ut..."
+        "userMenu.loggingOut": "Logger ut...",
+
+        // Pull to Refresh
+        "pullToRefresh.pullDown": "Dra ned for å oppdatere",
+        "pullToRefresh.release": "Slipp for å oppdatere",
+        "pullToRefresh.refreshing": "Oppdaterer..."
     ]
 
     // MARK: - English Strings
@@ -389,6 +394,11 @@ enum AuthStrings {
         // User Menu
         "userMenu.settings": "Settings",
         "userMenu.logout": "Log out",
-        "userMenu.loggingOut": "Logging out..."
+        "userMenu.loggingOut": "Logging out...",
+
+        // Pull to Refresh
+        "pullToRefresh.pullDown": "Pull down to refresh",
+        "pullToRefresh.release": "Release to refresh",
+        "pullToRefresh.refreshing": "Refreshing..."
     ]
 }
