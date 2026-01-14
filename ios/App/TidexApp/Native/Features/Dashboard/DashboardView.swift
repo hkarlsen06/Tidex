@@ -1,0 +1,327 @@
+import SwiftUI
+
+/// Dashboard view showing the main financial overview
+/// Displays payroll, total earnings, and featured shift cards
+struct DashboardView: View {
+    @EnvironmentObject private var coordinator: AppCoordinator
+    @Environment(\.localization) private var localization
+
+    @StateObject private var viewModel = DashboardViewModel()
+    @StateObject private var countdownManager = CountdownManager()
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                // Background matching splash/loading screens
+                Color.tidexLaunchBackground
+                    .ignoresSafeArea()
+
+                // Main layout: content area + month picker at bottom
+                VStack(spacing: 0) {
+                    // Content area - fills available space above month picker
+                    Group {
+                        if let error = viewModel.error {
+                            errorView(error: error)
+                        } else if let data = viewModel.dashboardData {
+                            cardContent(data: data)
+                        } else if viewModel.isLoading {
+                            // Loading state - centered in content area
+                            loadingView
+                        } else {
+                            emptyStateView
+                        }
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+                    // Month picker - ALWAYS visible for navigation
+                    // Even during loading so user can continue navigating
+                    AnimatedMonthHeader(
+                        monthName: viewModel.displayMonthName,
+                        year: viewModel.displayYear,
+                        phase: transitionPhase,
+                        isCurrentMonth: viewModel.isCurrentMonth,
+                        config: .default,
+                        onPrevious: {
+                            viewModel.goToPreviousMonth()
+                        },
+                        onNext: {
+                            viewModel.goToNextMonth()
+                        },
+                        onReturnToCurrent: {
+                            viewModel.goToCurrentMonth()
+                        },
+                        isLoading: viewModel.isLoading,
+                        backToTodayText: localization.string("dashboard.backToToday")
+                    )
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 8)
+                }
+            }
+            .navigationTitle(localization.string("dashboard.title"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(Color.tidexLaunchBackground, for: .navigationBar)
+            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    UserMenuButton(
+                        displayName: coordinator.userDisplayName,
+                        avatarUrl: coordinator.userAvatarUrl
+                    )
+                }
+            }
+        }
+        .task {
+            await viewModel.loadDashboard()
+        }
+        .onChange(of: viewModel.dashboardData) { _, newData in
+            configureCountdown(with: newData)
+        }
+        .onDisappear {
+            countdownManager.stop()
+        }
+    }
+
+    // MARK: - Countdown Configuration
+
+    private func configureCountdown(with data: DashboardData?) {
+        guard let data = data else {
+            countdownManager.stop()
+            return
+        }
+
+        let isNorwegian = localization.currentLocale == .norwegian
+
+        // Only show shift countdown for current month with a next shift
+        let shiftDate: String?
+        let startTime: String?
+        let endTime: String?
+
+        if viewModel.isCurrentMonth, let shift = data.featuredShift, !data.featuredShiftIsBestShift {
+            shiftDate = shift.shiftDate
+            startTime = shift.startTime
+            endTime = shift.endTime
+        } else {
+            shiftDate = nil
+            startTime = nil
+            endTime = nil
+        }
+
+        // Configure countdown with current data
+        // Payroll countdown shown for all months (not just current)
+        countdownManager.configure(
+            shiftDate: shiftDate,
+            startTime: startTime,
+            endTime: endTime,
+            payrollDate: data.payrollDate,
+            isNorwegian: isNorwegian
+        )
+    }
+
+    // MARK: - Transition Phase
+
+    /// Current transition phase for animations
+    private var transitionPhase: MonthTransitionPhase {
+        MonthTransitionPhase(
+            year: viewModel.displayYear,
+            month: viewModel.displayMonth,
+            direction: viewModel.navigationDirection
+        )
+    }
+
+    // MARK: - Card Content
+
+    /// Card content with pull-to-refresh and swipe gestures
+    /// Month picker is handled separately in the main body so it's always visible
+    @ViewBuilder
+    private func cardContent(data: DashboardData) -> some View {
+        PullToRefreshContainer(onRefresh: {
+            await viewModel.refresh()
+        }) {
+            MonthSwipeContainer(
+                onSwipeLeft: {
+                    viewModel.goToNextMonth()
+                },
+                onSwipeRight: {
+                    viewModel.goToPreviousMonth()
+                },
+                isEnabled: true  // Always enabled - navigation is now non-blocking
+            ) {
+                // Cards centered on screen using GeometryReader
+                GeometryReader { geometry in
+                    VStack(spacing: 0) {
+                        Spacer()
+
+                        // Animated card content - centered vertically
+                        animatedCardContent(data: data)
+                            .padding(.horizontal, 24)
+
+                        Spacer()
+                    }
+                    .frame(width: geometry.size.width, height: geometry.size.height)
+                    // Make entire VStack hit-testable for gesture propagation
+                    .contentShape(Rectangle())
+                }
+                // Make GeometryReader hit-testable
+                .contentShape(Rectangle())
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    // MARK: - Animated Card Content
+
+    @ViewBuilder
+    private func animatedCardContent(data: DashboardData) -> some View {
+        // Determine payroll label based on whether viewing current month
+        let payrollLabel: String = {
+            if viewModel.isCurrentMonth {
+                return localization.string(data.payrollHasPassed ? "dashboard.previousPayout" : "dashboard.nextPayout")
+            } else {
+                // For non-current months, show generic "Payroll" label
+                return localization.string("dashboard.payroll")
+            }
+        }()
+
+        // Use StaggeredCardsContainer for smooth horizontal slide animation
+        // Cards are stacked with TotalCard as the visual anchor (centered in available space)
+        // Other cards position themselves above/below with consistent spacing
+        StaggeredCardsContainer(phase: transitionPhase, config: .default) {
+            VStack(spacing: 12) {
+                // Payroll countdown text - fixed height to prevent layout shift
+                Text(countdownManager.payrollCountdownText ?? " ")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.tidexTextSecondary)
+                    .opacity(countdownManager.payrollCountdownText != nil ? 1 : 0)
+                    .frame(height: 20)
+
+                // Payroll Card (Previous Month relative to displayed month)
+                PayrollCard(
+                    payrollDate: data.payrollDate,
+                    label: payrollLabel,
+                    gross: data.previousMonthGross,
+                    net: data.previousMonthNet,
+                    tax: data.previousMonthTax,
+                    taxEnabled: data.previousMonthTaxEnabled
+                )
+
+                // Total Card (Displayed Month) - THE ANCHOR
+                // This card's position should remain stable during transitions
+                TotalCard(
+                    gross: data.currentMonthGross,
+                    net: data.currentMonthNet,
+                    completedGross: data.currentMonthCompletedGross,
+                    completedNet: data.currentMonthCompletedNet,
+                    shiftCount: data.currentMonthShiftCount,
+                    plannedCount: data.currentMonthPlannedCount,
+                    percentageChange: data.percentageChangeVsPrevious,
+                    taxEnabled: data.currentMonthTaxEnabled
+                )
+
+                // Featured Shift Card - fixed height container to prevent layout shift
+                featuredShiftSection(data: data)
+            }
+        }
+    }
+
+    // MARK: - Featured Shift Section
+
+    /// Featured shift card with fixed height to prevent layout jumps
+    @ViewBuilder
+    private func featuredShiftSection(data: DashboardData) -> some View {
+        // Use a fixed height container so the layout doesn't shift
+        // when switching between FeaturedShiftCard and EmptyShiftCard
+        Group {
+            if let featuredShift = data.featuredShift {
+                FeaturedShiftCard(
+                    shift: featuredShift,
+                    isToday: data.isFeaturedShiftToday,
+                    isBestShift: data.featuredShiftIsBestShift,
+                    countdownText: countdownManager.shiftCountdownText
+                )
+            } else {
+                EmptyShiftCard(isBestShift: data.featuredShiftIsBestShift)
+            }
+        }
+    }
+
+    // MARK: - Loading View
+
+    private var loadingView: some View {
+        VStack(spacing: 16) {
+            ProgressView()
+                .progressViewStyle(CircularProgressViewStyle(tint: .tidexBlue))
+                .scaleEffect(1.2)
+
+            Text(localization.string("common.loading"))
+                .font(.system(size: 14))
+                .foregroundColor(.tidexTextSecondary)
+        }
+    }
+
+    // MARK: - Empty State
+
+    private var emptyStateView: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "calendar.badge.exclamationmark")
+                .font(.system(size: 48))
+                .foregroundColor(.tidexTextMuted)
+
+            Text(localization.string("dashboard.noShifts"))
+                .font(.system(size: 16))
+                .foregroundColor(.tidexTextSecondary)
+                .multilineTextAlignment(.center)
+
+            Button {
+                Task { await viewModel.loadDashboard() }
+            } label: {
+                Text(localization.string("common.retry"))
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.tidexBlue)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 10)
+                    .background(Color.tidexBlue.opacity(0.1))
+                    .cornerRadius(8)
+            }
+        }
+        .padding(.horizontal, 40)
+    }
+
+    // MARK: - Error View
+
+    @ViewBuilder
+    private func errorView(error: Error) -> some View {
+        VStack(spacing: 16) {
+            Image(systemName: "exclamationmark.triangle")
+                .font(.system(size: 48))
+                .foregroundColor(.tidexWarning)
+
+            Text(localization.string("dashboard.loadError"))
+                .font(.system(size: 16, weight: .medium))
+                .foregroundColor(.tidexTextPrimary)
+
+            Text(error.localizedDescription)
+                .font(.system(size: 14))
+                .foregroundColor(.tidexTextSecondary)
+                .multilineTextAlignment(.center)
+
+            Button {
+                Task { await viewModel.loadDashboard() }
+            } label: {
+                Text(localization.string("common.retry"))
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.tidexBlue)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 10)
+                    .background(Color.tidexBlue.opacity(0.1))
+                    .cornerRadius(8)
+            }
+        }
+        .padding(.horizontal, 40)
+    }
+}
+
+#Preview {
+    DashboardView()
+        .environmentObject(AppCoordinator.shared)
+        .environment(\.localization, LocalizationManager.shared)
+}
