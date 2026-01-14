@@ -46,6 +46,7 @@ export async function updateCustomSupplements(input: UpdateCustomSupplementsInpu
       .select("id, date_specific_supplements")
       .eq("id", input.recurringId)
       .eq("user_id", user.id)
+      .is("deleted_at", null) // Only find non-deleted recurring shifts
       .single();
 
     if (recurringError || !recurring) {
@@ -69,7 +70,8 @@ export async function updateCustomSupplements(input: UpdateCustomSupplementsInpu
           : null,
       })
       .eq("id", input.recurringId)
-      .eq("user_id", user.id);
+      .eq("user_id", user.id)
+      .is("deleted_at", null); // Only update non-deleted recurring shifts
 
     if (error) {
       throw new Error(error.message);
@@ -81,6 +83,7 @@ export async function updateCustomSupplements(input: UpdateCustomSupplementsInpu
       .select("id")
       .eq("id", input.shiftId)
       .eq("user_id", user.id)
+      .is("deleted_at", null) // Only find non-deleted shifts
       .single();
 
     if (fetchError || !existing) {
@@ -93,7 +96,8 @@ export async function updateCustomSupplements(input: UpdateCustomSupplementsInpu
         custom_supplements: input.customSupplements,
       })
       .eq("id", input.shiftId)
-      .eq("user_id", user.id);
+      .eq("user_id", user.id)
+      .is("deleted_at", null); // Only update non-deleted shifts
 
     if (error) {
       throw new Error(error.message);

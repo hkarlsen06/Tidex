@@ -42,6 +42,7 @@ export async function copyShifts(input: CopyShiftsInput) {
       .from("user_shifts")
       .select("*")
       .eq("user_id", user.id)
+      .is("deleted_at", null) // Exclude soft-deleted shifts
       .in("id", regularIds);
 
     if (fetchError) throw new Error(fetchError.message);
@@ -71,6 +72,7 @@ export async function copyShifts(input: CopyShiftsInput) {
         .from("recurring_shifts")
         .select("id, start_time, end_time")
         .eq("user_id", user.id)
+        .is("deleted_at", null) // Exclude soft-deleted recurring shifts
         .in("id", Array.from(virtualByRecurringId.keys()));
 
       if (recurringError) throw new Error(recurringError.message);

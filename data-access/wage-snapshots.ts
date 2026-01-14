@@ -26,6 +26,7 @@ export const getUserWageSnapshots = cache(async (): Promise<WageSnapshot[]> => {
       .from('wage_snapshots')
       .select('*')
       .eq('user_id', user.id)
+      .is('deleted_at', null) // Exclude soft-deleted snapshots
       .order('from_date', { ascending: false, nullsFirst: false });
 
     if (error) {
@@ -127,7 +128,8 @@ export async function checkExistingSnapshot(
     let query = supabase
       .from('wage_snapshots')
       .select('id')
-      .eq('user_id', user.id);
+      .eq('user_id', user.id)
+      .is('deleted_at', null); // Exclude soft-deleted snapshots
 
     // Handle NULL from_date (baseline snapshot)
     if (fromDate === null) {
@@ -248,7 +250,8 @@ export async function updateWageSnapshot(
         break_deduction_minutes: data.break_deduction_minutes,
       })
       .eq('id', id)
-      .eq('user_id', user.id); // Security: ensure user owns this snapshot
+      .eq('user_id', user.id) // Security: ensure user owns this snapshot
+      .is('deleted_at', null); // Only update non-deleted snapshots
 
     if (error) {
       logger.error('Failed to update wage snapshot:', error);
@@ -282,6 +285,7 @@ export async function countAffectedShifts(
       .select('from_date')
       .eq('id', snapshotId)
       .eq('user_id', user.id)
+      .is('deleted_at', null) // Only find non-deleted snapshots
       .single();
 
     if (snapshotError || !snapshot) {
@@ -303,6 +307,7 @@ export async function countAffectedShifts(
       .from('user_shifts')
       .select('id', { count: 'exact', head: true })
       .eq('user_id', user.id)
+      .is('deleted_at', null) // Only count non-deleted shifts
       .gte('shift_date', snapshot.from_date);
 
     if (nextSnapshot) {
@@ -346,6 +351,7 @@ export async function deleteWageSnapshot(
       .select('from_date')
       .eq('id', id)
       .eq('user_id', user.id)
+      .is('deleted_at', null) // Only find non-deleted snapshots
       .single();
 
     if (fetchError || !snapshot) {
@@ -368,11 +374,13 @@ export async function deleteWageSnapshot(
     // Count affected shifts before deletion
     const affectedShiftCount = await countAffectedShifts(id);
 
+    // Soft delete by setting deleted_at
     const { error } = await supabase
       .from('wage_snapshots')
-      .delete()
+      .update({ deleted_at: new Date().toISOString() })
       .eq('id', id)
-      .eq('user_id', user.id); // Security: ensure user owns this snapshot
+      .eq('user_id', user.id) // Security: ensure user owns this snapshot
+      .is('deleted_at', null); // Only delete if not already deleted
 
     if (error) {
       logger.error('Failed to delete wage snapshot:', error);

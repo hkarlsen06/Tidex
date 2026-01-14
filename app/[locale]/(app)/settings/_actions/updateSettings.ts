@@ -45,10 +45,12 @@ export async function clearAllShifts() {
   const { user } = await verifySession();
   const supabase = await createSupabaseServerClient();
 
+  // Soft delete all shifts by setting deleted_at
   const { error } = await supabase
     .from('user_shifts')
-    .delete()
-    .eq('user_id', user.id);
+    .update({ deleted_at: new Date().toISOString() })
+    .eq('user_id', user.id)
+    .is('deleted_at', null); // Only delete non-deleted shifts
 
   if (error) throw error;
 
