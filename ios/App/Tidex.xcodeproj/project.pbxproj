@@ -73,6 +73,8 @@
 		11AE8D052F16FDBD005AB062 /* BreakDeduction.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11AE8CFE2F16FDBD005AB062 /* BreakDeduction.swift */; };
 		11AE8D062F16FDBD005AB062 /* WagePeriodBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11AE8D012F16FDBD005AB062 /* WagePeriodBuilder.swift */; };
 		11AE8D082F16FDD8005AB062 /* Date+Tidex.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11AE8D072F16FDD8005AB062 /* Date+Tidex.swift */; };
+		11AE8D1C2F17BE13005AB062 /* PayrollEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11AE8D1B2F17BE13005AB062 /* PayrollEngine.swift */; };
+		11AE8D1D2F17BE13005AB062 /* ConflictExclusion.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11AE8D1A2F17BE13005AB062 /* ConflictExclusion.swift */; };
 		11F1CBDB2F101C5700246C07 /* ShiftActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11F1CBDA2F101C5700246C07 /* ShiftActivityAttributes.swift */; };
 		504EC3081FED79650016851F /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 504EC3071FED79650016851F /* AppDelegate.swift */; };
 		504EC30F1FED79650016851F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 504EC30E1FED79650016851F /* Assets.xcassets */; };
@@ -172,6 +174,8 @@
 		11AE8D002F16FDBD005AB062 /* RecurringShiftGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecurringShiftGenerator.swift; sourceTree = "<group>"; };
 		11AE8D012F16FDBD005AB062 /* WagePeriodBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WagePeriodBuilder.swift; sourceTree = "<group>"; };
 		11AE8D072F16FDD8005AB062 /* Date+Tidex.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Date+Tidex.swift"; sourceTree = "<group>"; };
+		11AE8D1A2F17BE13005AB062 /* ConflictExclusion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConflictExclusion.swift; sourceTree = "<group>"; };
+		11AE8D1B2F17BE13005AB062 /* PayrollEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PayrollEngine.swift; sourceTree = "<group>"; };
 		11F1CBDA2F101C5700246C07 /* ShiftActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShiftActivityAttributes.swift; sourceTree = "<group>"; };
 		504EC3041FED79650016851F /* Tidex.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Tidex.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		504EC3071FED79650016851F /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
@@ -506,6 +510,8 @@
 		11AE8D022F16FDBD005AB062 /* Payroll */ = {
 			isa = PBXGroup;
 			children = (
+				11AE8D1A2F17BE13005AB062 /* ConflictExclusion.swift */,
+				11AE8D1B2F17BE13005AB062 /* PayrollEngine.swift */,
 				11AE8CFE2F16FDBD005AB062 /* BreakDeduction.swift */,
 				11AE8CFF2F16FDBD005AB062 /* PayrollCalculator.swift */,
 				11AE8D002F16FDBD005AB062 /* RecurringShiftGenerator.swift */,
@@ -719,6 +725,8 @@
 				11AE8D032F16FDBD005AB062 /* RecurringShiftGenerator.swift in Sources */,
 				11AE8D042F16FDBD005AB062 /* PayrollCalculator.swift in Sources */,
 				11AE8D052F16FDBD005AB062 /* BreakDeduction.swift in Sources */,
+				11AE8D1C2F17BE13005AB062 /* PayrollEngine.swift in Sources */,
+				11AE8D1D2F17BE13005AB062 /* ConflictExclusion.swift in Sources */,
 				11AE8D062F16FDBD005AB062 /* WagePeriodBuilder.swift in Sources */,
 				11AE8CE92F16FD82005AB062 /* TotalCard.swift in Sources */,
 				11AE8CFB2F16FDB2005AB062 /* ShiftsService.swift in Sources */,

@@ -91,9 +91,10 @@ struct WagePeriodBuilder {
                 }
             }
 
+            // Convert Int to Double for WagePeriod (supports fractional break deductions)
             result.append(WagePeriod(
-                fromMin: a,
-                toMin: b,
+                fromMin: Double(a),
+                toMin: Double(b),
                 baseRate: baseRate,
                 supplementRate: supplement
             ))

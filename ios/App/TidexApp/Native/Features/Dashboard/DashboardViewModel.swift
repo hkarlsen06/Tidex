@@ -103,14 +103,10 @@ final class DashboardViewModel: ObservableObject {
         isLoading = true
         error = nil
 
-        logger.info("🚀 Starting dashboard load...")
-
         do {
             guard let userId = try await getCurrentUserId() else {
-                logger.error("❌ Not authenticated - no user ID")
                 throw DashboardError.notAuthenticated
             }
-            logger.info("✅ Got user ID: \(userId)")
 
             // Fetch data in parallel
             let currentYM = Date.currentYearMonth()
@@ -121,86 +117,67 @@ final class DashboardViewModel: ObservableObject {
             let previousStartDate = Date.firstDayOfMonth(year: previousYM.year, month: previousYM.month)
             let previousEndDate = Date.lastDayOfMonth(year: previousYM.year, month: previousYM.month)
 
-            logger.info("📅 Date range - Current: \(currentStartDate) to \(currentEndDate), Previous: \(previousStartDate) to \(previousEndDate)")
-
             // Fetch each service separately for better error isolation
-            logger.info("📡 Fetching settings...")
-            let fetchedSettings: UserSettings?
-            do {
-                fetchedSettings = try await settingsService.fetchSettings(for: userId)
-                logger.info("✅ Settings fetched: \(fetchedSettings != nil ? "found" : "nil")")
-            } catch {
-                logger.error("❌ Settings fetch failed: \(error.localizedDescription)")
-                throw error
-            }
+            let fetchedSettings = try await settingsService.fetchSettings(for: userId)
+            let fetchedSnapshots = try await snapshotsService.fetchSnapshots(for: userId)
 
-            logger.info("📡 Fetching snapshots...")
-            let fetchedSnapshots: [WageSnapshot]
-            do {
-                fetchedSnapshots = try await snapshotsService.fetchSnapshots(for: userId)
-                logger.info("✅ Snapshots fetched: \(fetchedSnapshots.count) snapshots")
-            } catch {
-                logger.error("❌ Snapshots fetch failed: \(error.localizedDescription)")
-                throw error
-            }
+            let currentShiftsData = try await shiftsService.fetchAllShifts(
+                for: userId,
+                startDate: currentStartDate,
+                endDate: currentEndDate
+            )
 
-            logger.info("📡 Fetching current month shifts...")
-            let currentShiftsData: (shifts: [ShiftRow], recurring: [RecurringShiftRow])
-            do {
-                currentShiftsData = try await shiftsService.fetchAllShifts(
-                    for: userId,
-                    startDate: currentStartDate,
-                    endDate: currentEndDate
-                )
-                logger.info("✅ Current shifts fetched: \(currentShiftsData.shifts.count) shifts, \(currentShiftsData.recurring.count) recurring")
-            } catch {
-                logger.error("❌ Current shifts fetch failed: \(error.localizedDescription)")
-                throw error
-            }
-
-            logger.info("📡 Fetching previous month shifts...")
-            let fetchedPreviousShifts: [ShiftRow]
-            do {
-                fetchedPreviousShifts = try await shiftsService.fetchShifts(
-                    for: userId,
-                    startDate: previousStartDate,
-                    endDate: previousEndDate
-                )
-                logger.info("✅ Previous shifts fetched: \(fetchedPreviousShifts.count) shifts")
-            } catch {
-                logger.error("❌ Previous shifts fetch failed: \(error.localizedDescription)")
-                throw error
-            }
+            let fetchedPreviousShifts = try await shiftsService.fetchShifts(
+                for: userId,
+                startDate: previousStartDate,
+                endDate: previousEndDate
+            )
 
             self.settings = fetchedSettings
             self.snapshots = fetchedSnapshots
 
-            // Compute current month shifts with payroll
-            logger.info("🧮 Computing current month payroll...")
-            self.currentMonthShifts = computeShiftsWithPayroll(
+            // Compute current month shifts with payroll using PayrollEngine
+            self.currentMonthShifts = PayrollEngine.computeShiftsForMonth(
+                year: currentYM.year,
+                month: currentYM.month,
                 shifts: currentShiftsData.shifts,
                 recurring: currentShiftsData.recurring,
                 snapshots: fetchedSnapshots,
-                year: currentYM.year,
-                month: currentYM.month
+                settings: fetchedSettings
             )
-            logger.info("✅ Current month computed: \(self.currentMonthShifts.count) shifts")
 
-            // Compute previous month shifts with payroll
-            logger.info("🧮 Computing previous month payroll...")
-            self.previousMonthShifts = computeShiftsWithPayroll(
+            // Compute previous month shifts with payroll using PayrollEngine
+            self.previousMonthShifts = PayrollEngine.computeShiftsForMonth(
+                year: previousYM.year,
+                month: previousYM.month,
                 shifts: fetchedPreviousShifts,
                 recurring: currentShiftsData.recurring,
                 snapshots: fetchedSnapshots,
-                year: previousYM.year,
-                month: previousYM.month
+                settings: fetchedSettings
             )
-            logger.info("✅ Previous month computed: \(self.previousMonthShifts.count) shifts")
+
+            // DEBUG: Log previous month shifts to identify discrepancy
+            logger.info("=== PREVIOUS MONTH SHIFTS DEBUG ===")
+            logger.info("Total shifts: \(self.previousMonthShifts.count)")
+            logger.info("Regular shifts from DB: \(fetchedPreviousShifts.count)")
+            logger.info("Recurring patterns: \(currentShiftsData.recurring.count)")
+
+            // Log recurring patterns
+            for recurring in currentShiftsData.recurring {
+                logger.info("Recurring: id=\(recurring.id.prefix(8))... | days=\(recurring.selected_days) | interval=\(recurring.repeat_interval_weeks) | times=\(recurring.cleanStartTime)-\(recurring.cleanEndTime)")
+            }
+
+            for (index, shift) in self.previousMonthShifts.enumerated() {
+                let isVirtual = shift.id.hasPrefix("virtual-")
+                let recurringId = isVirtual ? String(shift.id.dropFirst(8).prefix(8)) : "n/a"
+                logger.info("[\(index + 1)] \(shift.shiftDate) | \(shift.startTime)-\(shift.endTime) | gross=\(String(format: "%.2f", shift.grossPay)) | \(isVirtual ? "VIRTUAL(\(recurringId))" : "REAL")")
+            }
+            let totalGross = self.previousMonthShifts.reduce(0) { $0 + $1.grossPay }
+            logger.info("Total gross: \(String(format: "%.2f", totalGross))")
+            logger.info("=== END DEBUG ===")
 
             // Build dashboard data
-            logger.info("🏗️ Building dashboard data...")
             self.dashboardData = buildDashboardData()
-            logger.info("✅ Dashboard data built successfully!")
 
         } catch {
             logger.error("❌ Dashboard load failed: \(error.localizedDescription)")
@@ -232,117 +209,42 @@ final class DashboardViewModel: ObservableObject {
         return session.user.id.uuidString.lowercased()
     }
 
-    /// Compute shifts with payroll data
-    private func computeShiftsWithPayroll(
-        shifts: [ShiftRow],
-        recurring: [RecurringShiftRow],
-        snapshots: [WageSnapshot],
-        year: Int,
-        month: Int
-    ) -> [ShiftWithComputations] {
-        var result: [ShiftWithComputations] = []
-        let payrollDay = settings?.effectivePayrollDay ?? 1
-        let startDate = Date.firstDayOfMonth(year: year, month: month)
-        let endDate = Date.lastDayOfMonth(year: year, month: month)
-
-        // Regular shifts
-        for shift in shifts {
-            let snapshot = snapshotsService.snapshotForDate(shift.shift_date, from: snapshots)
-            let taxSettings = snapshotsService.payoutTaxSettings(
-                earningsYear: year,
-                earningsMonth: month,
-                payrollDay: payrollDay,
-                from: snapshots
-            )
-
-            let computed = PayrollCalculator.computeShift(shift, snapshot: snapshot)
-
-            result.append(ShiftWithComputations(
-                shift: shift,
-                computed: computed,
-                taxEnabled: taxSettings?.enabled ?? false,
-                taxPercentage: taxSettings?.percentage ?? 0
-            ))
-        }
-
-        // Virtual shifts from recurring patterns
-        for recurringShift in recurring {
-            let virtualShifts = RecurringShiftGenerator.generateVirtualShiftsForMonth(
-                year: year,
-                month: month,
-                recurring: recurringShift
-            )
-
-            for virtual in virtualShifts {
-                // Filter to date range
-                guard virtual.date >= startDate && virtual.date <= endDate else { continue }
-
-                // Skip if a real shift exists on this date (avoid duplicates)
-                if shifts.contains(where: { $0.shift_date == virtual.date }) { continue }
-
-                // Create virtual shift row
-                let virtualRow = ShiftRow(
-                    id: "virtual-\(recurringShift.id)-\(virtual.date)",
-                    user_id: recurringShift.user_id,
-                    shift_date: virtual.date,
-                    start_time: recurringShift.cleanStartTime,
-                    end_time: recurringShift.cleanEndTime,
-                    custom_supplements: recurringShift.date_specific_supplements?[virtual.date],
-                    created_at: nil,
-                    recurring_id: recurringShift.id,
-                    recurring_anchor_weekday: virtual.weekday
-                )
-
-                let snapshot = snapshotsService.snapshotForDate(virtual.date, from: snapshots)
-                let taxSettings = snapshotsService.payoutTaxSettings(
-                    earningsYear: year,
-                    earningsMonth: month,
-                    payrollDay: payrollDay,
-                    from: snapshots
-                )
-
-                let computed = PayrollCalculator.computeShift(virtualRow, snapshot: snapshot)
-
-                result.append(ShiftWithComputations(
-                    shift: virtualRow,
-                    computed: computed,
-                    taxEnabled: taxSettings?.enabled ?? false,
-                    taxPercentage: taxSettings?.percentage ?? 0
-                ))
-            }
-        }
-
-        // Sort by date
-        return result.sorted { $0.shiftDate < $1.shiftDate }
-    }
-
     /// Build the final dashboard data from computed shifts
+    /// Uses PayrollEngine.summarizeShiftTotals for correct half-tax and conflict exclusion
     private func buildDashboardData() -> DashboardData {
         let today = todayISO()
         let now = Date()
         let payrollDay = settings?.effectivePayrollDay ?? 1
+        let halfTaxMonth = settings?.half_tax_month
         let currentYM = Date.currentYearMonth()
         let previousYM = Date.previousYearMonth(from: currentYM)
 
-        // Calculate payroll date
+        // Calculate payroll date for current month
         let payrollDate = calculatePayrollDate(year: currentYM.year, month: currentYM.month, day: payrollDay)
         let payrollHasPassed = now > payrollDate
 
-        // Previous month totals (for payroll card)
-        let prevGross = previousMonthShifts.reduce(0) { $0 + $1.grossPay }
+        // Previous month totals using PayrollEngine (for payroll card)
+        // This correctly applies half-tax and conflict exclusion
+        let prevTotals = PayrollEngine.summarizeShiftTotals(
+            shifts: previousMonthShifts,
+            halfTaxMonth: halfTaxMonth,
+            earningsMonth: previousYM.month,
+            now: now
+        )
         let prevTaxEnabled = previousMonthShifts.first?.taxEnabled ?? false
-        let prevTaxPercent = previousMonthShifts.first?.taxPercentage ?? 0
-        let prevTax: Double? = prevTaxEnabled ? prevGross * prevTaxPercent / 100 : nil
-        let prevNet: Double? = prevTaxEnabled ? prevGross - (prevTax ?? 0) : nil
+        let prevTax: Double? = prevTaxEnabled ? prevTotals.gross - prevTotals.net : nil
 
-        // Current month: compute totals for ALL shifts (projected) and completed shifts (earned)
-        let allGross = currentMonthShifts.reduce(0) { $0 + $1.grossPay }
+        // Current month totals using PayrollEngine
+        // This correctly applies half-tax and conflict exclusion
+        let currentTotals = PayrollEngine.summarizeShiftTotals(
+            shifts: currentMonthShifts,
+            halfTaxMonth: halfTaxMonth,
+            earningsMonth: currentYM.month,
+            now: now
+        )
         let currentTaxEnabled = currentMonthShifts.first?.taxEnabled ?? false
-        let currentTaxPercent = currentMonthShifts.first?.taxPercentage ?? 0
-        let allTax: Double? = currentTaxEnabled ? allGross * currentTaxPercent / 100 : nil
-        let allNet: Double? = currentTaxEnabled ? allGross - (allTax ?? 0) : nil
 
-        // Completed shifts: shifts where end time has passed
+        // Count completed and planned shifts
         let completedShifts = currentMonthShifts.filter { shift in
             Date.hasShiftEnded(
                 shiftDate: shift.shiftDate,
@@ -351,16 +253,11 @@ final class DashboardViewModel: ObservableObject {
                 referenceDate: now
             )
         }
-        let completedGross = completedShifts.reduce(0) { $0 + $1.grossPay }
-        let completedTax: Double? = currentTaxEnabled ? completedGross * currentTaxPercent / 100 : nil
-        let completedNet: Double? = currentTaxEnabled ? completedGross - (completedTax ?? 0) : nil
-
-        // Planned shifts: shifts with date in the future (not yet started)
         let plannedShifts = currentMonthShifts.filter { $0.shiftDate > today }
 
         // Percentage change vs previous month (comparing projected totals)
-        let percentChange: Double? = prevGross > 0
-            ? ((allGross - prevGross) / prevGross) * 100
+        let percentChange: Double? = prevTotals.gross > 0
+            ? ((currentTotals.gross - prevTotals.gross) / prevTotals.gross) * 100
             : nil
 
         // Next shift (first shift from today onwards)
@@ -374,14 +271,14 @@ final class DashboardViewModel: ObservableObject {
         return DashboardData(
             payrollDate: payrollDate,
             payrollHasPassed: payrollHasPassed,
-            previousMonthGross: prevGross,
-            previousMonthNet: prevNet,
+            previousMonthGross: prevTotals.gross,
+            previousMonthNet: prevTaxEnabled ? prevTotals.net : nil,
             previousMonthTax: prevTax,
             previousMonthTaxEnabled: prevTaxEnabled,
-            currentMonthGross: allGross,
-            currentMonthNet: allNet,
-            currentMonthCompletedGross: completedGross,
-            currentMonthCompletedNet: completedNet,
+            currentMonthGross: currentTotals.gross,
+            currentMonthNet: currentTaxEnabled ? currentTotals.net : nil,
+            currentMonthCompletedGross: currentTotals.completedGross,
+            currentMonthCompletedNet: currentTaxEnabled ? currentTotals.completedNet : nil,
             currentMonthShiftCount: currentMonthShifts.count,
             currentMonthCompletedCount: completedShifts.count,
             currentMonthPlannedCount: plannedShifts.count,

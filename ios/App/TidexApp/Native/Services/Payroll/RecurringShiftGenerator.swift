@@ -42,15 +42,30 @@ struct RecurringShiftGenerator {
     ) -> [RecurringVirtualShift] {
         guard !recurring.selected_days.isEmpty else { return [] }
 
-        let monthStartDate = Date.firstDayOfMonthDate(year: year, month: month)
-        let monthEndDate = Date.lastDayOfMonthDate(year: year, month: month)
         let monthStartISO = Date.firstDayOfMonth(year: year, month: month)
         let monthEndISO = Date.lastDayOfMonth(year: year, month: month)
 
         var virtualShifts: [RecurringVirtualShift] = []
         let exclusionSet = Set(recurring.effectiveExclusions)
 
-        let calendar = Calendar(identifier: .gregorian)
+        // Use UTC calendar for consistent date iteration
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "UTC")!
+
+        // Create month start/end dates in UTC
+        var startComponents = DateComponents()
+        startComponents.year = year
+        startComponents.month = month
+        startComponents.day = 1
+        startComponents.hour = 12  // Noon to avoid any timezone edge cases
+        guard let monthStartDate = calendar.date(from: startComponents) else { return [] }
+
+        var endComponents = DateComponents()
+        endComponents.year = year
+        endComponents.month = month
+        endComponents.day = Date.daysInMonth(year: year, month: month)
+        endComponents.hour = 12
+        guard let monthEndDate = calendar.date(from: endComponents) else { return [] }
 
         // For each selected weekday anchor
         for (weekdayKey, anchorISO) in recurring.selected_days {
@@ -65,7 +80,7 @@ struct RecurringShiftGenerator {
 
             // Generate occurrences throughout the month
             while current <= monthEndDate {
-                let currentISO = current.toISODateString(in: TimeZone(identifier: "UTC")!)
+                let currentISO = toISODateUTC(current)
 
                 // Check date range
                 guard currentISO >= monthStartISO && currentISO <= monthEndISO else {
@@ -115,6 +130,15 @@ struct RecurringShiftGenerator {
 
     // MARK: - Private Helpers
 
+    /// Convert Date to ISO date string (YYYY-MM-DD) in UTC
+    /// Using ISO8601DateFormatter for consistency
+    private static func toISODateUTC(_ date: Date) -> String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withFullDate]
+        formatter.timeZone = TimeZone(identifier: "UTC")
+        return formatter.string(from: date)
+    }
+
     /// Check if date is within the recurring shift's end condition window
     private static func checkEndCondition(
         currentDate: Date,
@@ -134,7 +158,9 @@ struct RecurringShiftGenerator {
             return true
         }
 
-        let calendar = Calendar(identifier: .gregorian)
+        // Use UTC calendar for consistent date calculations
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "UTC")!
 
         switch endCondition {
         case .months(let value):

@@ -82,6 +82,10 @@ extension AppleAuthProvider: ASAuthorizationControllerDelegate {
                     appleError = .notInteractive
                 case .unknown:
                     appleError = .unknown
+                case .matchedExcludedCredential:
+                    appleError = .matchedExcludedCredential
+                case .credentialImport, .credentialExport, .preferSignInWithApple, .deviceNotConfiguredForPasskeyCreation:
+                    appleError = .unknown
                 @unknown default:
                     appleError = .unknown
                 }
@@ -114,6 +118,7 @@ enum AppleAuthError: Error, LocalizedError {
     case invalidCredentials
     case notHandled
     case notInteractive
+    case matchedExcludedCredential
     case unknown
 
     var errorDescription: String? {
@@ -130,6 +135,8 @@ enum AppleAuthError: Error, LocalizedError {
             return "Apple Sign-In request was not handled"
         case .notInteractive:
             return "Apple Sign-In requires user interaction"
+        case .matchedExcludedCredential:
+            return "Apple Sign-In credential was excluded"
         case .unknown:
             return "An unknown error occurred during Apple Sign-In"
         }

@@ -41,11 +41,23 @@ final class SnapshotsService: ObservableObject {
     }
 
     /// Find the applicable snapshot for a specific date using binary search
+    /// Instance method that delegates to the static version
     /// - Parameters:
     ///   - date: ISO date string (YYYY-MM-DD)
     ///   - snapshots: Array of snapshots to search
     /// - Returns: Applicable snapshot or nil
-    func snapshotForDate(_ date: String, from snapshots: [WageSnapshot]) -> WageSnapshot? {
+    nonisolated func snapshotForDate(_ date: String, from snapshots: [WageSnapshot]) -> WageSnapshot? {
+        Self.snapshotForDate(date, from: snapshots)
+    }
+
+    /// Find the applicable snapshot for a specific date using binary search
+    /// Static version for use in non-MainActor contexts (e.g., PayrollEngine)
+    /// Marked nonisolated since it's a pure function with no side effects
+    /// - Parameters:
+    ///   - date: ISO date string (YYYY-MM-DD)
+    ///   - snapshots: Array of snapshots to search
+    /// - Returns: Applicable snapshot or nil
+    nonisolated static func snapshotForDate(_ date: String, from snapshots: [WageSnapshot]) -> WageSnapshot? {
         // Find baseline snapshot (from_date == nil) as fallback
         let baseline = snapshots.first { $0.from_date == nil }
 
