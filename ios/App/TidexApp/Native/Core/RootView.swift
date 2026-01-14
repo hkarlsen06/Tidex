@@ -3,8 +3,9 @@ import SwiftUI
 /// Root view that manages the app's navigation based on authentication state
 /// Handles transitions between: Loading -> Login -> MFA -> Dashboard
 struct RootView: View {
-    @StateObject private var coordinator = AppCoordinator.shared
-    @StateObject private var localization = LocalizationManager.shared
+    // Note: Using @ObservedObject for singletons as @StateObject is meant for owned instances
+    @ObservedObject private var coordinator = AppCoordinator.shared
+    @ObservedObject private var localization = LocalizationManager.shared
 
     var body: some View {
         ZStack {

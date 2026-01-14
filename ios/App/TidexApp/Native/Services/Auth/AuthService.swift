@@ -15,50 +15,22 @@ enum AuthError: Error, LocalizedError {
 
 /// Authentication service for native iOS login
 /// Wraps Supabase auth operations and handles session management
+///
+/// Note: Auth state listening is centralized in `AppCoordinator` which handles
+/// all navigation state transitions (loading -> auth -> MFA -> authenticated).
+/// This service focuses purely on auth operations without duplicating state listening.
 @MainActor
 final class AuthService: ObservableObject {
     static let shared = AuthService()
 
     // MARK: - Published State
 
-    @Published private(set) var isAuthenticated = false
-    @Published private(set) var currentUser: User?
+    /// Loading indicator for auth operations
     @Published private(set) var isLoading = false
-
-    // MARK: - Private
-
-    private var authStateTask: Task<Void, Never>?
 
     // MARK: - Initialization
 
-    private init() {
-        setupAuthStateListener()
-    }
-
-    deinit {
-        authStateTask?.cancel()
-    }
-
-    // MARK: - Auth State Listener
-
-    private func setupAuthStateListener() {
-        authStateTask = Task { [weak self] in
-            for await (event, session) in supabase.auth.authStateChanges {
-                guard let self = self else { return }
-
-                switch event {
-                case .signedIn, .tokenRefreshed:
-                    self.currentUser = session?.user
-                    self.isAuthenticated = session != nil
-                case .signedOut:
-                    self.currentUser = nil
-                    self.isAuthenticated = false
-                default:
-                    break
-                }
-            }
-        }
-    }
+    private init() {}
 
     // MARK: - Session Management
 

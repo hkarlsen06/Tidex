@@ -269,10 +269,16 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
 
             await self.loadDashboardForDisplayedMonth(showLoadingState: false)
 
-            // Prefetch neighbors after successful load
-            if !Task.isCancelled {
-                self.prefetchNeighboringMonths()
+            // Check again after fetch - user may have navigated during the async operation
+            guard !Task.isCancelled,
+                  self.displayYear == targetYear,
+                  self.displayMonth == targetMonth else {
+                logger.info("⏭️ Skipping prefetch - user navigated during fetch")
+                return
             }
+
+            // Prefetch neighbors after successful load
+            self.prefetchNeighboringMonths()
         }
     }
 
@@ -363,6 +369,15 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
                 endDate: previousEndDate
             )
 
+            // Ensure settings are available before computing payroll
+            guard let currentSettings = self.settings else {
+                throw DashboardError.dataLoadFailed(underlying: NSError(
+                    domain: "DashboardViewModel",
+                    code: -1,
+                    userInfo: [NSLocalizedDescriptionKey: "Settings not loaded"]
+                ))
+            }
+
             // Compute displayed month shifts with payroll using PayrollEngine
             self.displayedMonthShifts = PayrollEngine.computeShiftsForMonth(
                 year: displayYM.year,
@@ -370,7 +385,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
                 shifts: displayShiftsData.shifts,
                 recurring: recurringShifts,
                 snapshots: snapshots,
-                settings: settings!
+                settings: currentSettings
             )
 
             // Compute previous month shifts with payroll using PayrollEngine
@@ -380,7 +395,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
                 shifts: fetchedPreviousShifts,
                 recurring: recurringShifts,
                 snapshots: snapshots,
-                settings: settings!
+                settings: currentSettings
             )
 
             // Cache the computed results
@@ -479,6 +494,15 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
                 endDate: previousEndDate
             )
 
+            // Ensure settings are available before computing payroll
+            guard let currentSettings = self.settings else {
+                throw DashboardError.dataLoadFailed(underlying: NSError(
+                    domain: "DashboardViewModel",
+                    code: -1,
+                    userInfo: [NSLocalizedDescriptionKey: "Settings not loaded"]
+                ))
+            }
+
             // Compute displayed month shifts with payroll using PayrollEngine
             self.displayedMonthShifts = PayrollEngine.computeShiftsForMonth(
                 year: displayYM.year,
@@ -486,7 +510,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
                 shifts: displayShiftsData.shifts,
                 recurring: recurringShifts,
                 snapshots: snapshots,
-                settings: settings!
+                settings: currentSettings
             )
 
             // Compute previous month shifts with payroll using PayrollEngine
@@ -496,7 +520,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
                 shifts: fetchedPreviousShifts,
                 recurring: recurringShifts,
                 snapshots: snapshots,
-                settings: settings!
+                settings: currentSettings
             )
 
             // Cache the computed results
