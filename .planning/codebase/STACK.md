@@ -27,7 +27,7 @@
 **Core:**
 - Next.js 16.1.1 - App Router with locale-based routing (`next.config.js`)
 - React 19 - UI framework (default with Next.js 16)
-- Capacitor 8.0.0 - iOS native bridge (`capacitor.config.ts`)
+- SwiftUI - Native iOS app (`ios/App/TidexApp/`)
 
 **Testing:**
 - Vitest 4.0.17 - Unit and integration tests (`vitest.config.ts`)
@@ -58,11 +58,11 @@
 - date-fns 4.1.0 - Date utilities
 - clsx 2.1.1, tailwind-merge 3.4.0 - Classname utilities
 
-**Mobile:**
-- `@capacitor/app` 8.0.0 - App lifecycle
-- `@capacitor/browser` 8.0.0 - Deep links
-- `@capacitor-firebase/messaging` 8.0.1 - Push notifications
-- `@capgo/native-purchases` 8.0.12 - In-app purchases
+**iOS Native:**
+- SwiftUI - Native UI framework
+- Supabase Swift SDK - Database and authentication
+- Firebase iOS SDK - Push notifications (FCM)
+- StoreKit 2 - In-app purchases
 
 ## Configuration
 

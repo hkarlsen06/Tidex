@@ -481,83 +481,24 @@ switch (type) {
 
 ## Client-Side Implementation
 
-### Push Service (`lib/notifications/push-service.ts`)
+The iOS app is fully native SwiftUI. Push notification handling is implemented in:
 
-```typescript
-class PushNotificationService {
-  private initialized = false
-  private currentToken: string | null = null
-
-  async initialize(): Promise<void> {
-    if (this.initialized || !Capacitor.isNativePlatform()) return
-
-    const { FirebaseMessaging } = await import("@capacitor-firebase/messaging")
-    const { Device } = await import("@capacitor/device")
-
-    // Request permission
-    const permResult = await FirebaseMessaging.requestPermissions()
-    if (permResult.receive !== "granted") return
-
-    // Get FCM token and save to server
-    const { token } = await FirebaseMessaging.getToken()
-    if (token) {
-      this.currentToken = token
-      await this.saveTokenToServer(token, { ... })
-    }
-
-    // Listen for token refresh
-    FirebaseMessaging.addListener("tokenReceived", async ({ token }) => {
-      await this.saveTokenToServer(token, { ... })
-    })
-
-    // Handle notification tap
-    FirebaseMessaging.addListener("notificationActionPerformed", ({ notification }) => {
-      const data = notification.data as PushNotificationPayload
-      this.handleNotificationTap(data)
-    })
-  }
-
-  private handleNotificationTap(payload: PushNotificationPayload): void {
-    const locale = this.getLocale()
-
-    switch (payload.type) {
-      case "shift_reminder":
-        window.location.href = `/${locale}/shifts?date=${payload.shift_date}`
-        break
-      case "share_started":
-        window.location.href = `/${locale}/sharing?manage=true&highlight=${payload.owner_id}`
-        break
-      default:
-        // Shared shift - navigate to sharing view
-        window.location.href = `/${locale}/sharing?user=${payload.owner_id}&highlight=${payload.shift_id}`
-    }
-  }
-}
-
-export const pushNotificationService = new PushNotificationService()
-```
+- `ios/App/TidexApp/TidexApp.swift` - Firebase initialization
+- `ios/App/TidexApp/Native/Services/Push/` - FCM token management and notification handling
 
 ### Token Registration
 
-```typescript
-private async saveTokenToServer(fcmToken: string, metadata: {...}): Promise<void> {
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return
+FCM tokens are stored in the `push_devices` table. The native app:
+1. Requests notification permission via `UNUserNotificationCenter`
+2. Receives APNs token and exchanges for FCM token via Firebase SDK
+3. Saves FCM token to Supabase `push_devices` table with device metadata
 
-  // Upsert with ON CONFLICT on fcm_token handles:
-  // 1. New device registration
-  // 2. Same device, same user (updates metadata)
-  // 3. Same device, different user (account switch)
-  await supabase.from("push_devices").upsert({
-    user_id: user.id,
-    fcm_token: fcmToken,
-    platform: Capacitor.getPlatform(),
-    device_id: metadata.deviceId,
-    device_model: metadata.deviceModel,
-    app_version: metadata.appVersion,
-  }, { onConflict: "fcm_token" })
-}
-```
+### Notification Tap Handling
+
+When a user taps a notification, the app navigates based on payload type:
+- `shift_reminder` → Opens shifts view for that date
+- `share_started` → Opens sharing view with manage modal
+- Shared shift notifications → Opens sharing view highlighting the shift
 
 ### Deep Linking
 
