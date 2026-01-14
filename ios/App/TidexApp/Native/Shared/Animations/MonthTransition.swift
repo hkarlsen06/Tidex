@@ -154,7 +154,8 @@ struct StaggeredCardsContainer<Content: View>: View {
         // No ZStack, no .id(), no .transition() - just offset animation
         content()
             .offset(x: xOffset)
-            .clipShape(Rectangle()) // Clip overflow during animation
+            .clipped() // Clip overflow during animation (doesn't affect hit testing)
+            .contentShape(Rectangle()) // Ensure gestures can pass through
             .onAppear {
                 lastPhaseId = phase.id
                 xOffset = 0
@@ -198,6 +199,7 @@ struct StaggeredCardsContainer<Content: View>: View {
 // MARK: - Animated Month Header
 
 /// An animated header showing month and year with vertical text transitions
+/// Back to today button is inline between month/year and next button (doesn't affect layout)
 struct AnimatedMonthHeader: View {
     let monthName: String
     let year: Int
@@ -208,60 +210,84 @@ struct AnimatedMonthHeader: View {
     let onNext: () -> Void
     let onReturnToCurrent: () -> Void
     let isLoading: Bool
-    let backToTodayText: String
+    let backToTodayText: String  // Kept for API compatibility, but not used in new design
 
     @State private var monthScale: CGFloat = 1.0
 
+    /// Fixed width for the side sections to ensure center stays centered
+    private let sideWidth: CGFloat = 80
+
     var body: some View {
-        VStack(spacing: 8) {
-            // Navigation row
-            HStack(spacing: 16) {
-                // Previous month button
+        // Single row navigation with perfectly centered month/year
+        HStack(spacing: 0) {
+            // Left section: Previous button (same width as right section)
+            HStack {
                 navigationButton(
                     icon: "chevron.left",
                     action: onPrevious
                 )
+                Spacer()
+            }
+            .frame(width: sideWidth)
 
+            Spacer()
+
+            // Center section: Month/Year always centered on screen
+            VStack(spacing: 2) {
+                // Month name with vertical slide
+                Text(monthName.capitalized)
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(.tidexTextPrimary)
+                    .id("month-\(phase.id)")
+                    .transition(textTransition)
+                    .scaleEffect(monthScale)
+
+                // Year with vertical slide
+                Text(String(year))
+                    .font(.system(size: 13))
+                    .foregroundColor(.tidexTextSecondary)
+                    .id("year-\(phase.id)")
+                    .transition(textTransition)
+            }
+            .animation(
+                .spring(response: config.springResponse, dampingFraction: config.dampingFraction),
+                value: phase.id
+            )
+            .onTapGesture {
+                guard !isCurrentMonth else { return }
+
+                // Quick scale bounce on tap
+                withAnimation(.spring(response: 0.15, dampingFraction: 0.5)) {
+                    monthScale = 0.95
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    withAnimation(.spring(response: 0.2, dampingFraction: 0.6)) {
+                        monthScale = 1.0
+                    }
+                }
+
+                onReturnToCurrent()
+            }
+
+            Spacer()
+
+            // Right section: Back button + Next button (same width as left section)
+            HStack(spacing: 8) {
                 Spacer()
 
-                // Month and year display with animation
-                VStack(spacing: 2) {
-                    // Month name with vertical slide
-                    Text(monthName.capitalized)
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundColor(.tidexTextPrimary)
-                        .id("month-\(phase.id)")
-                        .transition(textTransition)
-                        .scaleEffect(monthScale)
+                // Back to today button - only visible when not on current month
+                ZStack {
+                    // Invisible placeholder to maintain width
+                    backToTodayButton
+                        .opacity(0)
 
-                    // Year with vertical slide
-                    Text(String(year))
-                        .font(.system(size: 13))
-                        .foregroundColor(.tidexTextSecondary)
-                        .id("year-\(phase.id)")
-                        .transition(textTransition)
-                }
-                .animation(
-                    .spring(response: config.springResponse, dampingFraction: config.dampingFraction),
-                    value: phase.id
-                )
-                .onTapGesture {
-                    guard !isCurrentMonth else { return }
-
-                    // Quick scale bounce on tap
-                    withAnimation(.spring(response: 0.15, dampingFraction: 0.5)) {
-                        monthScale = 0.95
+                    // Actual button
+                    if !isCurrentMonth {
+                        backToTodayButton
+                            .transition(.scale.combined(with: .opacity))
+                            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isCurrentMonth)
                     }
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                        withAnimation(.spring(response: 0.2, dampingFraction: 0.6)) {
-                            monthScale = 1.0
-                        }
-                    }
-
-                    onReturnToCurrent()
                 }
-
-                Spacer()
 
                 // Next month button
                 navigationButton(
@@ -269,23 +295,10 @@ struct AnimatedMonthHeader: View {
                     action: onNext
                 )
             }
-            .padding(.horizontal, 8)
-            .padding(.bottom, 8)
-
-            // "Back to today" button - use fixed height container to prevent layout shifts
-            ZStack {
-                // Invisible placeholder to maintain height
-                backToTodayButton
-                    .opacity(0)
-
-                // Actual button - only visible when not on current month
-                if !isCurrentMonth {
-                    backToTodayButton
-                        .transition(.opacity)
-                        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isCurrentMonth)
-                }
-            }
+            .frame(width: sideWidth)
         }
+        .padding(.horizontal, 16)
+        .padding(.bottom, 16) // More space above tab bar
     }
 
     // MARK: - Subviews
@@ -300,25 +313,21 @@ struct AnimatedMonthHeader: View {
                 .background(Color.tidexBlue.opacity(0.1))
                 .clipShape(Circle())
         }
-        .disabled(isLoading)
-        .opacity(isLoading ? 0.5 : 1.0)
+        // Navigation is always enabled - data loading happens in background
+        // Visual feedback via subtle opacity when loading
+        .opacity(isLoading ? 0.7 : 1.0)
     }
 
+    /// Simple circular button with return arrow
     private var backToTodayButton: some View {
         Button(action: onReturnToCurrent) {
-            HStack(spacing: 4) {
-                Image(systemName: "arrow.uturn.backward")
-                    .font(.system(size: 11))
-                Text(backToTodayText)
-                    .font(.system(size: 12, weight: .medium))
-            }
-            .foregroundColor(.tidexBlue)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-            .background(Color.tidexBlue.opacity(0.1))
-            .cornerRadius(12)
+            Image(systemName: "arrow.uturn.backward")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(.tidexBlue)
+                .frame(width: 32, height: 32)
+                .background(Color.tidexBlue.opacity(0.1))
+                .clipShape(Circle())
         }
-        .padding(.bottom, 4)
     }
 
     // MARK: - Transitions

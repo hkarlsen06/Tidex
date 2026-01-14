@@ -194,7 +194,12 @@ enum AuthStrings {
         "placeholder.addShift": "Legg til vakt",
         "placeholder.addShiftDescription": "Legg til en ny vakt her",
         "placeholder.statsDescription": "Statistikken din vises her",
-        "placeholder.sharingDescription": "Del vakter med venner her"
+        "placeholder.sharingDescription": "Del vakter med venner her",
+
+        // User Menu
+        "userMenu.settings": "Innstillinger",
+        "userMenu.logout": "Logg ut",
+        "userMenu.loggingOut": "Logger ut..."
     ]
 
     // MARK: - English Strings
@@ -379,6 +384,11 @@ enum AuthStrings {
         "placeholder.addShift": "Add Shift",
         "placeholder.addShiftDescription": "Add a new shift here",
         "placeholder.statsDescription": "Your statistics will appear here",
-        "placeholder.sharingDescription": "Share shifts with friends here"
+        "placeholder.sharingDescription": "Share shifts with friends here",
+
+        // User Menu
+        "userMenu.settings": "Settings",
+        "userMenu.logout": "Log out",
+        "userMenu.loggingOut": "Logging out..."
     ]
 }

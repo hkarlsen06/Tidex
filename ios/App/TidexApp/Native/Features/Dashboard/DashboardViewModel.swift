@@ -122,6 +122,13 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
         return formatter.string(from: date)
     }
 
+    // MARK: - User Profile Data (for UserMenuButton)
+
+    /// User's display name (derived from email or metadata)
+    @Published private(set) var userDisplayName: String = ""
+    /// User's profile picture URL
+    @Published private(set) var userAvatarUrl: String?
+
     // MARK: - Private State
 
     private var displayedMonthShifts: [ShiftWithComputations] = []
@@ -160,8 +167,11 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
 
     // MARK: - Month Navigation
 
-    /// Navigate to the previous month
-    func goToPreviousMonth() async {
+    /// Track active navigation task to cancel stale fetches
+    private var activeNavigationTask: Task<Void, Never>?
+
+    /// Navigate to the previous month (non-blocking)
+    func goToPreviousMonth() {
         navigationDirection = .previous
 
         if displayMonth == 1 {
@@ -171,14 +181,11 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
             displayMonth -= 1
         }
 
-        await loadDashboardForDisplayedMonthWithCache()
-
-        // Prefetch the next month we might navigate to
-        prefetchNeighboringMonths()
+        loadDashboardForDisplayedMonthNonBlocking()
     }
 
-    /// Navigate to the next month
-    func goToNextMonth() async {
+    /// Navigate to the next month (non-blocking)
+    func goToNextMonth() {
         navigationDirection = .next
 
         if displayMonth == 12 {
@@ -188,14 +195,11 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
             displayMonth += 1
         }
 
-        await loadDashboardForDisplayedMonthWithCache()
-
-        // Prefetch the next month we might navigate to
-        prefetchNeighboringMonths()
+        loadDashboardForDisplayedMonthNonBlocking()
     }
 
-    /// Reset to current month
-    func goToCurrentMonth() async {
+    /// Reset to current month (non-blocking)
+    func goToCurrentMonth() {
         let current = Date.currentYearMonth()
 
         // Determine navigation direction for animation
@@ -215,7 +219,61 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
         displayYear = current.year
         displayMonth = current.month
 
-        await loadDashboardForDisplayedMonthWithCache()
+        loadDashboardForDisplayedMonthNonBlocking()
+    }
+
+    /// Non-blocking month data loader
+    /// Uses cache for instant display, fetches in background if needed
+    private func loadDashboardForDisplayedMonthNonBlocking() {
+        let targetYear = displayYear
+        let targetMonth = displayMonth
+        let displayKey = "\(targetYear)-\(targetMonth)"
+        let previousYM = Date.previousYearMonth(from: (year: targetYear, month: targetMonth))
+        let previousKey = "\(previousYM.year)-\(previousYM.month)"
+
+        // Check if we have valid cache for both displayed and previous months
+        if let displayCache = monthCache[displayKey], displayCache.isValid,
+           let previousCache = monthCache[previousKey], previousCache.isValid {
+            // Use cached data - instant navigation!
+            logger.info("📦 Using cached data for \(displayKey)")
+            self.displayedMonthShifts = displayCache.shifts
+            self.previousMonthShifts = previousCache.shifts
+            self.dashboardData = buildDashboardData()
+
+            // Still prefetch neighbors in background
+            prefetchNeighboringMonths()
+            return
+        }
+
+        // Cache miss - clear stale data and show loading state
+        logger.info("🔄 Cache miss for \(displayKey), fetching in background...")
+
+        // Clear dashboard data so we show loading state instead of stale data
+        self.dashboardData = nil
+        self.isLoading = true
+
+        // Cancel any previous navigation task
+        activeNavigationTask?.cancel()
+
+        // Start background fetch
+        activeNavigationTask = Task { [weak self] in
+            guard let self = self else { return }
+
+            // Check if this task is still relevant (user hasn't navigated away)
+            guard !Task.isCancelled,
+                  self.displayYear == targetYear,
+                  self.displayMonth == targetMonth else {
+                logger.info("⏭️ Skipping stale fetch for \(displayKey)")
+                return
+            }
+
+            await self.loadDashboardForDisplayedMonth(showLoadingState: false)
+
+            // Prefetch neighbors after successful load
+            if !Task.isCancelled {
+                self.prefetchNeighboringMonths()
+            }
+        }
     }
 
     // MARK: - Public Methods
@@ -276,6 +334,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
                 let fetchedSnapshots = try await snapshotsService.fetchSnapshots(for: userId)
                 self.settings = fetchedSettings
                 self.snapshots = fetchedSnapshots
+                updateUserAvatarFromSettings()
             }
 
             // Calculate date ranges for displayed month
@@ -365,8 +424,11 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     }
 
     /// Load dashboard data for the currently displayed month
-    private func loadDashboardForDisplayedMonth() async {
-        isLoading = true
+    /// - Parameter showLoadingState: Whether to show loading indicator (false for background navigation loads)
+    private func loadDashboardForDisplayedMonth(showLoadingState: Bool = true) async {
+        if showLoadingState {
+            isLoading = true
+        }
         error = nil
 
         do {
@@ -388,6 +450,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
                 let fetchedSnapshots = try await snapshotsService.fetchSnapshots(for: userId)
                 self.settings = fetchedSettings
                 self.snapshots = fetchedSnapshots
+                updateUserAvatarFromSettings()
             }
 
             // Calculate date ranges for displayed month
@@ -452,9 +515,18 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
                 timestamp: Date()
             )
 
-            // Build dashboard data
+            // Build dashboard data and clear loading state
             self.dashboardData = buildDashboardData()
+            self.isLoading = false
 
+        } catch is CancellationError {
+            // Task was cancelled due to rapid navigation - this is expected, not an error
+            // Don't reset isLoading here - the new navigation task will handle its own state
+            logger.info("⏭️ Load cancelled (user navigated away)")
+        } catch let urlError as URLError where urlError.code == .cancelled {
+            // Network request was cancelled - also expected during rapid navigation
+            // Don't reset isLoading here - the new navigation task will handle its own state
+            logger.info("⏭️ Network request cancelled (user navigated away)")
         } catch {
             logger.error("❌ Dashboard load failed: \(error.localizedDescription)")
             if let decodingError = error as? DecodingError {
@@ -472,32 +544,8 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
                 }
             }
             self.error = DashboardError.dataLoadFailed(underlying: error)
+            self.isLoading = false
         }
-
-        isLoading = false
-    }
-
-    /// Load dashboard data using cache when available
-    /// Falls back to full fetch if cache miss or expired
-    private func loadDashboardForDisplayedMonthWithCache() async {
-        let displayKey = "\(displayYear)-\(displayMonth)"
-        let previousYM = Date.previousYearMonth(from: (year: displayYear, month: displayMonth))
-        let previousKey = "\(previousYM.year)-\(previousYM.month)"
-
-        // Check if we have valid cache for both displayed and previous months
-        if let displayCache = monthCache[displayKey], displayCache.isValid,
-           let previousCache = monthCache[previousKey], previousCache.isValid {
-            // Use cached data - instant navigation!
-            logger.info("📦 Using cached data for \(displayKey)")
-            self.displayedMonthShifts = displayCache.shifts
-            self.previousMonthShifts = previousCache.shifts
-            self.dashboardData = buildDashboardData()
-            return
-        }
-
-        // Cache miss - do full fetch
-        logger.info("🔄 Cache miss for \(displayKey), fetching...")
-        await loadDashboardForDisplayedMonth()
     }
 
     /// Prefetch neighboring months in the background
@@ -592,10 +640,35 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
 
     // MARK: - Private Methods
 
-    /// Get current authenticated user ID
+    /// Get current authenticated user ID and update user profile data
     private func getCurrentUserId() async throws -> String? {
         let session = try await supabase.auth.session
-        return session.user.id.uuidString.lowercased()
+        let user = session.user
+
+        // Extract display name from user metadata or fall back to email
+        let displayName: String
+        if let fullName = user.userMetadata["full_name"]?.value as? String, !fullName.isEmpty {
+            displayName = fullName
+        } else if let name = user.userMetadata["name"]?.value as? String, !name.isEmpty {
+            displayName = name
+        } else if let email = user.email {
+            // Use the part before @ for email
+            displayName = email.components(separatedBy: "@").first ?? email
+        } else if let phone = user.phone {
+            displayName = phone
+        } else {
+            displayName = "User"
+        }
+
+        // Update published properties
+        self.userDisplayName = displayName
+
+        return user.id.uuidString.lowercased()
+    }
+
+    /// Update user avatar URL from settings (called after settings are loaded)
+    private func updateUserAvatarFromSettings() {
+        self.userAvatarUrl = settings?.profile_picture_url
     }
 
     /// Build the final dashboard data from computed shifts

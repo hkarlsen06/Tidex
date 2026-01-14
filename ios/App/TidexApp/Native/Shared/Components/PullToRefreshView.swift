@@ -119,13 +119,14 @@ struct PullToRefreshContainer<Content: View>: View {
             content()
                 .offset(y: contentOffset)
         }
-        .contentShape(Rectangle()) // Ensure entire area is tappable for gesture
+        .contentShape(Rectangle())
         .animation(
             .spring(response: config.springResponse, dampingFraction: config.dampingFraction),
             value: state
         )
-        // Use highPriorityGesture to ensure pull-to-refresh captures vertical drags first
-        .highPriorityGesture(pullGesture)
+        // Use simultaneousGesture so it doesn't block child gestures
+        // The gesture logic itself filters for vertical-only drags
+        .simultaneousGesture(pullGesture)
         .onAppear {
             // Pre-warm haptic generators
             thresholdHaptic.prepare()

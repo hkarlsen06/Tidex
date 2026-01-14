@@ -89,15 +89,45 @@ struct DashboardView: View {
                 Color.tidexLaunchBackground
                     .ignoresSafeArea()
 
-                if viewModel.isLoading && viewModel.dashboardData == nil {
-                    // Only show full loading view on initial load
-                    loadingView
-                } else if let error = viewModel.error {
-                    errorView(error: error)
-                } else if let data = viewModel.dashboardData {
-                    dashboardContent(data: data)
-                } else {
-                    emptyStateView
+                // Main layout: content area + month picker at bottom
+                VStack(spacing: 0) {
+                    // Content area - fills available space above month picker
+                    Group {
+                        if let error = viewModel.error {
+                            errorView(error: error)
+                        } else if let data = viewModel.dashboardData {
+                            cardContent(data: data)
+                        } else if viewModel.isLoading {
+                            // Loading state - centered in content area
+                            loadingView
+                        } else {
+                            emptyStateView
+                        }
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+                    // Month picker - ALWAYS visible for navigation
+                    // Even during loading so user can continue navigating
+                    AnimatedMonthHeader(
+                        monthName: viewModel.displayMonthName,
+                        year: viewModel.displayYear,
+                        phase: transitionPhase,
+                        isCurrentMonth: viewModel.isCurrentMonth,
+                        config: .default,
+                        onPrevious: {
+                            viewModel.goToPreviousMonth()
+                        },
+                        onNext: {
+                            viewModel.goToNextMonth()
+                        },
+                        onReturnToCurrent: {
+                            viewModel.goToCurrentMonth()
+                        },
+                        isLoading: viewModel.isLoading,
+                        backToTodayText: localization.string("dashboard.backToToday")
+                    )
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 8)
                 }
             }
             .navigationTitle(localization.string("dashboard.title"))
@@ -106,12 +136,10 @@ struct DashboardView: View {
             .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        Task { await viewModel.loadDashboard() }
-                    } label: {
-                        Image(systemName: "arrow.clockwise")
-                            .foregroundColor(.tidexBlue)
-                    }
+                    UserMenuButton(
+                        displayName: coordinator.userDisplayName,
+                        avatarUrl: coordinator.userAvatarUrl
+                    )
                 }
             }
         }
@@ -173,67 +201,41 @@ struct DashboardView: View {
         )
     }
 
-    // MARK: - Dashboard Content
+    // MARK: - Card Content
 
+    /// Card content with pull-to-refresh and swipe gestures
+    /// Month picker is handled separately in the main body so it's always visible
     @ViewBuilder
-    private func dashboardContent(data: DashboardData) -> some View {
-        // Fixed layout with pull-to-refresh and swipe gestures
-        // No ScrollView - content is fixed height, gestures don't conflict
+    private func cardContent(data: DashboardData) -> some View {
         PullToRefreshContainer(onRefresh: {
             await viewModel.refresh()
         }) {
             MonthSwipeContainer(
                 onSwipeLeft: {
-                    Task { await viewModel.goToNextMonth() }
+                    viewModel.goToNextMonth()
                 },
                 onSwipeRight: {
-                    Task { await viewModel.goToPreviousMonth() }
+                    viewModel.goToPreviousMonth()
                 },
-                isEnabled: !viewModel.isLoading
+                isEnabled: true  // Always enabled - navigation is now non-blocking
             ) {
-                // Use VStack with .top alignment and fixed spacing
-                // This prevents Spacer-based layout shifts during transitions
-                VStack(alignment: .center, spacing: 0) {
-                    // Animated Month Navigation Header
-                    AnimatedMonthHeader(
-                        monthName: viewModel.displayMonthName,
-                        year: viewModel.displayYear,
-                        phase: transitionPhase,
-                        isCurrentMonth: viewModel.isCurrentMonth,
-                        config: .default,
-                        onPrevious: {
-                            Task { await viewModel.goToPreviousMonth() }
-                        },
-                        onNext: {
-                            Task { await viewModel.goToNextMonth() }
-                        },
-                        onReturnToCurrent: {
-                            Task { await viewModel.goToCurrentMonth() }
-                        },
-                        isLoading: viewModel.isLoading,
-                        backToTodayText: localization.string("dashboard.backToToday")
-                    )
-                    .padding(.horizontal, 24)
-                    .padding(.top, 20)
-                    .padding(.bottom, 24) // Fixed spacing instead of Spacer
+                // Cards centered on screen using GeometryReader
+                GeometryReader { geometry in
+                    VStack(spacing: 0) {
+                        Spacer()
 
-                    // Animated card content with horizontal slide transition
-                    animatedCardContent(data: data)
-                        .padding(.horizontal, 24)
+                        // Animated card content - centered vertically
+                        animatedCardContent(data: data)
+                            .padding(.horizontal, 24)
 
-                    // Push remaining content to fill space, but cards stay anchored to top
-                    Spacer(minLength: 0)
-
-                    #if DEBUG
-                    // Sign out button (development only)
-                    signOutButton
-                        .padding(.horizontal, 24)
-                        .padding(.bottom, 12)
-                    #endif
+                        Spacer()
+                    }
+                    .frame(width: geometry.size.width, height: geometry.size.height)
+                    // Make entire VStack hit-testable for gesture propagation
+                    .contentShape(Rectangle())
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .opacity(viewModel.isLoading ? 0.6 : 1.0)
-                .animation(.easeInOut(duration: 0.2), value: viewModel.isLoading)
+                // Make GeometryReader hit-testable
+                .contentShape(Rectangle())
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -393,32 +395,12 @@ struct DashboardView: View {
         .padding(.horizontal, 40)
     }
 
-    // MARK: - Sign Out Button (Debug)
-
-    private var signOutButton: some View {
-        Button {
-            Task {
-                await coordinator.signOut()
-            }
-        } label: {
-            HStack(spacing: 8) {
-                Image(systemName: "rectangle.portrait.and.arrow.right")
-                Text(localization.string("dashboard.signOut"))
-            }
-            .font(.system(size: 14, weight: .medium))
-            .foregroundColor(.tidexError)
-            .padding(.horizontal, 20)
-            .padding(.vertical, 10)
-            .background(Color.tidexError.opacity(0.1))
-            .cornerRadius(8)
-        }
-        .padding(.top, 20)
-    }
 }
 
 // MARK: - Placeholder Views
 
 struct ShiftsPlaceholderView: View {
+    @EnvironmentObject private var coordinator: AppCoordinator
     @Environment(\.localization) private var localization
     @State private var isRefreshing = false
 
@@ -442,11 +424,20 @@ struct ShiftsPlaceholderView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(Color.tidexLaunchBackground, for: .navigationBar)
             .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    UserMenuButton(
+                        displayName: coordinator.userDisplayName,
+                        avatarUrl: coordinator.userAvatarUrl
+                    )
+                }
+            }
         }
     }
 }
 
 struct AddShiftPlaceholderView: View {
+    @EnvironmentObject private var coordinator: AppCoordinator
     @Environment(\.localization) private var localization
 
     var body: some View {
@@ -463,11 +454,20 @@ struct AddShiftPlaceholderView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(Color.tidexLaunchBackground, for: .navigationBar)
             .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    UserMenuButton(
+                        displayName: coordinator.userDisplayName,
+                        avatarUrl: coordinator.userAvatarUrl
+                    )
+                }
+            }
         }
     }
 }
 
 struct StatsPlaceholderView: View {
+    @EnvironmentObject private var coordinator: AppCoordinator
     @Environment(\.localization) private var localization
     @State private var isRefreshing = false
 
@@ -491,11 +491,20 @@ struct StatsPlaceholderView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(Color.tidexLaunchBackground, for: .navigationBar)
             .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    UserMenuButton(
+                        displayName: coordinator.userDisplayName,
+                        avatarUrl: coordinator.userAvatarUrl
+                    )
+                }
+            }
         }
     }
 }
 
 struct SharingPlaceholderView: View {
+    @EnvironmentObject private var coordinator: AppCoordinator
     @Environment(\.localization) private var localization
     @State private var isRefreshing = false
 
@@ -519,6 +528,14 @@ struct SharingPlaceholderView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(Color.tidexLaunchBackground, for: .navigationBar)
             .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    UserMenuButton(
+                        displayName: coordinator.userDisplayName,
+                        avatarUrl: coordinator.userAvatarUrl
+                    )
+                }
+            }
         }
     }
 }
