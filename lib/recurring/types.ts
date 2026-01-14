@@ -16,12 +16,17 @@ import type { CustomSupplementsData } from '@/lib/payroll/types';
  * - months: Duration in months from the earliest anchor
  * - years: Duration in years from the earliest anchor
  * - end_date: Specific end date with optional time (defaults to 23:59:59)
+ *
+ * Note: The end_date type supports two formats for backward compatibility:
+ * - Newer format: { type: 'end_date'; date: string; end_time?: string }
+ * - Legacy format: { type: 'end_date'; value: string }
  */
 export type EndCondition =
   | null
   | { type: 'months'; value: number }
   | { type: 'years'; value: number }
-  | { type: 'end_date'; date: string; end_time?: string };
+  | { type: 'end_date'; date: string; end_time?: string }
+  | { type: 'end_date'; value: string }; // Legacy format - some DB records use 'value' instead of 'date'
 
 /**
  * Selected anchor dates by weekday

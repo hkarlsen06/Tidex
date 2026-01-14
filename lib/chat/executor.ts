@@ -993,7 +993,8 @@ function formatEndConditionForAI(endCondition: EndCondition): { endType: string;
     case "years":
       return { endType: "after_years", endValue: endCondition.value };
     case "end_date":
-      return { endType: "on_date", endValue: endCondition.date };
+      // Handle both newer 'date' format and legacy 'value' format
+      return { endType: "on_date", endValue: 'date' in endCondition ? endCondition.date : endCondition.value };
     default:
       return { endType: "never" };
   }

@@ -127,7 +127,9 @@ export function resolveEndWindow(
     ));
   } else {
     // Specific end date - use the exact date, not end of month
-    maxDate = parseDateAsUTC(endCondition.date);
+    // Handle both formats: newer 'date' key and legacy 'value' key
+    const endDateStr = 'date' in endCondition ? endCondition.date : endCondition.value;
+    maxDate = parseDateAsUTC(endDateStr);
   }
 
   return {
