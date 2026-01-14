@@ -172,6 +172,6 @@ struct PayrollCard: View {
         )
     }
     .padding(.horizontal, 24)
-    .background(Color.tidexDarkBackground)
+    .background(Color.tidexLaunchBackground)
     .environment(\.localization, LocalizationManager.shared)
 }

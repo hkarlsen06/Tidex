@@ -80,14 +80,17 @@ struct DashboardView: View {
     @Environment(\.localization) private var localization
 
     @StateObject private var viewModel = DashboardViewModel()
+    @StateObject private var countdownManager = CountdownManager()
 
     var body: some View {
         NavigationStack {
             ZStack {
-                Color.tidexDarkBackground
+                // Background matching splash/loading screens
+                Color.tidexLaunchBackground
                     .ignoresSafeArea()
 
-                if viewModel.isLoading {
+                if viewModel.isLoading && viewModel.dashboardData == nil {
+                    // Only show full loading view on initial load
                     loadingView
                 } else if let error = viewModel.error {
                     errorView(error: error)
@@ -99,7 +102,7 @@ struct DashboardView: View {
             }
             .navigationTitle(localization.string("dashboard.title"))
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(Color.tidexDarkBackground, for: .navigationBar)
+            .toolbarBackground(Color.tidexLaunchBackground, for: .navigationBar)
             .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -115,25 +118,165 @@ struct DashboardView: View {
         .task {
             await viewModel.loadDashboard()
         }
+        .onChange(of: viewModel.dashboardData) { _, newData in
+            configureCountdown(with: newData)
+        }
+        .onDisappear {
+            countdownManager.stop()
+        }
+    }
+
+    // MARK: - Countdown Configuration
+
+    private func configureCountdown(with data: DashboardData?) {
+        guard let data = data else {
+            countdownManager.stop()
+            return
+        }
+
+        let isNorwegian = localization.currentLocale == .norwegian
+
+        // Only show shift countdown for current month with a next shift
+        let shiftDate: String?
+        let startTime: String?
+        let endTime: String?
+
+        if viewModel.isCurrentMonth, let shift = data.featuredShift, !data.featuredShiftIsBestShift {
+            shiftDate = shift.shiftDate
+            startTime = shift.startTime
+            endTime = shift.endTime
+        } else {
+            shiftDate = nil
+            startTime = nil
+            endTime = nil
+        }
+
+        // Configure countdown with current data
+        // Payroll countdown shown for all months (not just current)
+        countdownManager.configure(
+            shiftDate: shiftDate,
+            startTime: startTime,
+            endTime: endTime,
+            payrollDate: data.payrollDate,
+            isNorwegian: isNorwegian
+        )
+    }
+
+    // MARK: - Transition Phase
+
+    /// Current transition phase for animations
+    private var transitionPhase: MonthTransitionPhase {
+        MonthTransitionPhase(
+            year: viewModel.displayYear,
+            month: viewModel.displayMonth,
+            direction: viewModel.navigationDirection
+        )
     }
 
     // MARK: - Dashboard Content
 
     @ViewBuilder
     private func dashboardContent(data: DashboardData) -> some View {
-        ScrollView {
+        // Fixed layout with pull-to-refresh and swipe gestures
+        // No ScrollView - content is fixed height, gestures don't conflict
+        PullToRefreshContainer(onRefresh: {
+            await viewModel.refresh()
+        }) {
+            MonthSwipeContainer(
+                onSwipeLeft: {
+                    Task { await viewModel.goToNextMonth() }
+                },
+                onSwipeRight: {
+                    Task { await viewModel.goToPreviousMonth() }
+                },
+                isEnabled: !viewModel.isLoading
+            ) {
+                // Use VStack with .top alignment and fixed spacing
+                // This prevents Spacer-based layout shifts during transitions
+                VStack(alignment: .center, spacing: 0) {
+                    // Animated Month Navigation Header
+                    AnimatedMonthHeader(
+                        monthName: viewModel.displayMonthName,
+                        year: viewModel.displayYear,
+                        phase: transitionPhase,
+                        isCurrentMonth: viewModel.isCurrentMonth,
+                        config: .default,
+                        onPrevious: {
+                            Task { await viewModel.goToPreviousMonth() }
+                        },
+                        onNext: {
+                            Task { await viewModel.goToNextMonth() }
+                        },
+                        onReturnToCurrent: {
+                            Task { await viewModel.goToCurrentMonth() }
+                        },
+                        isLoading: viewModel.isLoading,
+                        backToTodayText: localization.string("dashboard.backToToday")
+                    )
+                    .padding(.horizontal, 24)
+                    .padding(.top, 20)
+                    .padding(.bottom, 24) // Fixed spacing instead of Spacer
+
+                    // Animated card content with horizontal slide transition
+                    animatedCardContent(data: data)
+                        .padding(.horizontal, 24)
+
+                    // Push remaining content to fill space, but cards stay anchored to top
+                    Spacer(minLength: 0)
+
+                    #if DEBUG
+                    // Sign out button (development only)
+                    signOutButton
+                        .padding(.horizontal, 24)
+                        .padding(.bottom, 12)
+                    #endif
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .opacity(viewModel.isLoading ? 0.6 : 1.0)
+                .animation(.easeInOut(duration: 0.2), value: viewModel.isLoading)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    // MARK: - Animated Card Content
+
+    @ViewBuilder
+    private func animatedCardContent(data: DashboardData) -> some View {
+        // Determine payroll label based on whether viewing current month
+        let payrollLabel: String = {
+            if viewModel.isCurrentMonth {
+                return localization.string(data.payrollHasPassed ? "dashboard.previousPayout" : "dashboard.nextPayout")
+            } else {
+                // For non-current months, show generic "Payroll" label
+                return localization.string("dashboard.payroll")
+            }
+        }()
+
+        // Use StaggeredCardsContainer for smooth horizontal slide animation
+        // Cards are stacked with TotalCard as the visual anchor (centered in available space)
+        // Other cards position themselves above/below with consistent spacing
+        StaggeredCardsContainer(phase: transitionPhase, config: .default) {
             VStack(spacing: 12) {
-                // Payroll Card (Previous Month)
+                // Payroll countdown text - fixed height to prevent layout shift
+                Text(countdownManager.payrollCountdownText ?? " ")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.tidexTextSecondary)
+                    .opacity(countdownManager.payrollCountdownText != nil ? 1 : 0)
+                    .frame(height: 20)
+
+                // Payroll Card (Previous Month relative to displayed month)
                 PayrollCard(
                     payrollDate: data.payrollDate,
-                    label: localization.string(data.payrollHasPassed ? "dashboard.previousPayout" : "dashboard.nextPayout"),
+                    label: payrollLabel,
                     gross: data.previousMonthGross,
                     net: data.previousMonthNet,
                     tax: data.previousMonthTax,
                     taxEnabled: data.previousMonthTaxEnabled
                 )
 
-                // Total Card (Current Month)
+                // Total Card (Displayed Month) - THE ANCHOR
+                // This card's position should remain stable during transitions
                 TotalCard(
                     gross: data.currentMonthGross,
                     net: data.currentMonthNet,
@@ -145,23 +288,35 @@ struct DashboardView: View {
                     taxEnabled: data.currentMonthTaxEnabled
                 )
 
-                // Next Shift Card
-                if let nextShift = data.nextShift {
-                    NextShiftCard(
-                        shift: nextShift,
-                        isToday: data.isNextShiftToday
-                    )
-                }
-
-                #if DEBUG
-                // Sign out button (development only)
-                signOutButton
-                #endif
+                // Featured Shift Card - fixed height container to prevent layout shift
+                featuredShiftSection(data: data)
             }
-            .padding(.horizontal, 24)
-            .padding(.vertical, 20)
         }
     }
+
+    // MARK: - Featured Shift Section
+
+    /// Featured shift card with fixed height to prevent layout jumps
+    @ViewBuilder
+    private func featuredShiftSection(data: DashboardData) -> some View {
+        // Use a fixed height container so the layout doesn't shift
+        // when switching between FeaturedShiftCard and EmptyShiftCard
+        Group {
+            if let featuredShift = data.featuredShift {
+                FeaturedShiftCard(
+                    shift: featuredShift,
+                    isToday: data.isFeaturedShiftToday,
+                    isBestShift: data.featuredShiftIsBestShift,
+                    countdownText: countdownManager.shiftCountdownText
+                )
+            } else {
+                EmptyShiftCard(isBestShift: data.featuredShiftIsBestShift)
+            }
+        }
+    }
+
+    // Note: Month navigation header now uses AnimatedMonthHeader from MonthTransition.swift
+    // This provides smooth vertical text transitions similar to the Next.js MonthPicker
 
     // MARK: - Loading View
 
@@ -265,17 +420,27 @@ struct DashboardView: View {
 
 struct ShiftsPlaceholderView: View {
     @Environment(\.localization) private var localization
+    @State private var isRefreshing = false
 
     var body: some View {
         NavigationStack {
-            PlaceholderContent(
-                icon: "calendar",
-                title: localization.string("tabs.shifts"),
-                description: localization.string("placeholder.shiftsDescription")
-            )
+            ScrollView {
+                PlaceholderContent(
+                    icon: "calendar",
+                    title: localization.string("tabs.shifts"),
+                    description: localization.string("placeholder.shiftsDescription")
+                )
+                .frame(maxWidth: .infinity, minHeight: UIScreen.main.bounds.height - 200)
+            }
+            .refreshable {
+                // Placeholder for future data refresh
+                isRefreshing = true
+                try? await Task.sleep(nanoseconds: 500_000_000)
+                isRefreshing = false
+            }
             .navigationTitle(localization.string("tabs.shifts"))
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(Color.tidexDarkBackground, for: .navigationBar)
+            .toolbarBackground(Color.tidexLaunchBackground, for: .navigationBar)
             .toolbarColorScheme(.dark, for: .navigationBar)
         }
     }
@@ -286,14 +451,17 @@ struct AddShiftPlaceholderView: View {
 
     var body: some View {
         NavigationStack {
-            PlaceholderContent(
-                icon: "plus.circle.fill",
-                title: localization.string("placeholder.addShift"),
-                description: localization.string("placeholder.addShiftDescription")
-            )
+            ScrollView {
+                PlaceholderContent(
+                    icon: "plus.circle.fill",
+                    title: localization.string("placeholder.addShift"),
+                    description: localization.string("placeholder.addShiftDescription")
+                )
+                .frame(maxWidth: .infinity, minHeight: UIScreen.main.bounds.height - 200)
+            }
             .navigationTitle(localization.string("placeholder.addShift"))
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(Color.tidexDarkBackground, for: .navigationBar)
+            .toolbarBackground(Color.tidexLaunchBackground, for: .navigationBar)
             .toolbarColorScheme(.dark, for: .navigationBar)
         }
     }
@@ -301,17 +469,27 @@ struct AddShiftPlaceholderView: View {
 
 struct StatsPlaceholderView: View {
     @Environment(\.localization) private var localization
+    @State private var isRefreshing = false
 
     var body: some View {
         NavigationStack {
-            PlaceholderContent(
-                icon: "chart.bar.xaxis",
-                title: localization.string("tabs.stats"),
-                description: localization.string("placeholder.statsDescription")
-            )
+            ScrollView {
+                PlaceholderContent(
+                    icon: "chart.bar.xaxis",
+                    title: localization.string("tabs.stats"),
+                    description: localization.string("placeholder.statsDescription")
+                )
+                .frame(maxWidth: .infinity, minHeight: UIScreen.main.bounds.height - 200)
+            }
+            .refreshable {
+                // Placeholder for future data refresh
+                isRefreshing = true
+                try? await Task.sleep(nanoseconds: 500_000_000)
+                isRefreshing = false
+            }
             .navigationTitle(localization.string("tabs.stats"))
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(Color.tidexDarkBackground, for: .navigationBar)
+            .toolbarBackground(Color.tidexLaunchBackground, for: .navigationBar)
             .toolbarColorScheme(.dark, for: .navigationBar)
         }
     }
@@ -319,17 +497,27 @@ struct StatsPlaceholderView: View {
 
 struct SharingPlaceholderView: View {
     @Environment(\.localization) private var localization
+    @State private var isRefreshing = false
 
     var body: some View {
         NavigationStack {
-            PlaceholderContent(
-                icon: "person.2.fill",
-                title: localization.string("tabs.sharing"),
-                description: localization.string("placeholder.sharingDescription")
-            )
+            ScrollView {
+                PlaceholderContent(
+                    icon: "person.2.fill",
+                    title: localization.string("tabs.sharing"),
+                    description: localization.string("placeholder.sharingDescription")
+                )
+                .frame(maxWidth: .infinity, minHeight: UIScreen.main.bounds.height - 200)
+            }
+            .refreshable {
+                // Placeholder for future data refresh
+                isRefreshing = true
+                try? await Task.sleep(nanoseconds: 500_000_000)
+                isRefreshing = false
+            }
             .navigationTitle(localization.string("tabs.sharing"))
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(Color.tidexDarkBackground, for: .navigationBar)
+            .toolbarBackground(Color.tidexLaunchBackground, for: .navigationBar)
             .toolbarColorScheme(.dark, for: .navigationBar)
         }
     }
@@ -342,7 +530,7 @@ struct PlaceholderContent: View {
 
     var body: some View {
         ZStack {
-            Color.tidexDarkBackground
+            Color.tidexLaunchBackground
                 .ignoresSafeArea()
 
             VStack(spacing: 16) {
