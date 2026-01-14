@@ -51,7 +51,8 @@ export async function updateRecurringShift({
       exclusions,
     })
     .eq("id", id)
-    .eq("user_id", user.id);
+    .eq("user_id", user.id)
+    .is("deleted_at", null); // Only update non-deleted recurring shifts
 
   if (error) {
     logger.error("Failed to update recurring shift:", error);

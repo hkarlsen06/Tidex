@@ -39,6 +39,7 @@ export async function convertRecurringShiftToStandalone({
     .select("exclusions")
     .eq("id", recurringId)
     .eq("user_id", user.id)
+    .is("deleted_at", null) // Only find non-deleted recurring shifts
     .single();
 
   if (recurringError || !recurring) {
@@ -57,7 +58,8 @@ export async function convertRecurringShiftToStandalone({
     .from("recurring_shifts")
     .update({ exclusions: updatedExclusions })
     .eq("id", recurringId)
-    .eq("user_id", user.id);
+    .eq("user_id", user.id)
+    .is("deleted_at", null); // Only update non-deleted recurring shifts
 
   if (updateError) {
     logger.error("Failed to update recurring shift exclusions:", updateError);

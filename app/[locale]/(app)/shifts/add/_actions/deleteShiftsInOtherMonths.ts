@@ -52,6 +52,7 @@ export async function deleteShiftsInOtherMonths(targetMonth: string): Promise<De
       .from('user_shifts')
       .select('id')
       .eq('user_id', user.id)
+      .is('deleted_at', null) // Only count non-deleted shifts
       .or(outsideMonthFilter);
 
     if (selectError) {
@@ -64,11 +65,12 @@ export async function deleteShiftsInOtherMonths(targetMonth: string): Promise<De
       return { success: true, deletedCount: 0 };
     }
 
-    // Delete all shifts NOT in the target month
+    // Soft delete all shifts NOT in the target month
     const { error: deleteError } = await supabase
       .from('user_shifts')
-      .delete()
+      .update({ deleted_at: new Date().toISOString() })
       .eq('user_id', user.id)
+      .is('deleted_at', null) // Only delete non-deleted shifts
       .or(outsideMonthFilter);
 
     if (deleteError) {
