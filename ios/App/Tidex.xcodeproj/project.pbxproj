@@ -83,6 +83,7 @@
 		11AE8D2D2F17D27D005AB062 /* EmptyShiftCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11AE8D2B2F17D27D005AB062 /* EmptyShiftCard.swift */; };
 		11AE8D2E2F17D27D005AB062 /* FeaturedShiftCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11AE8D2C2F17D27D005AB062 /* FeaturedShiftCard.swift */; };
 		11AE8D302F17E000005AB062 /* PullToRefreshView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11AE8D2F2F17E000005AB062 /* PullToRefreshView.swift */; };
+		11AE8D742F17DD44005AB062 /* UserMenuButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11AE8D732F17DD44005AB062 /* UserMenuButton.swift */; };
 		11F1CBDB2F101C5700246C07 /* ShiftActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11F1CBDA2F101C5700246C07 /* ShiftActivityAttributes.swift */; };
 		504EC3081FED79650016851F /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 504EC3071FED79650016851F /* AppDelegate.swift */; };
 		504EC30F1FED79650016851F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 504EC30E1FED79650016851F /* Assets.xcassets */; };
@@ -192,6 +193,7 @@
 		11AE8D2B2F17D27D005AB062 /* EmptyShiftCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmptyShiftCard.swift; sourceTree = "<group>"; };
 		11AE8D2C2F17D27D005AB062 /* FeaturedShiftCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeaturedShiftCard.swift; sourceTree = "<group>"; };
 		11AE8D2F2F17E000005AB062 /* PullToRefreshView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PullToRefreshView.swift; sourceTree = "<group>"; };
+		11AE8D732F17DD44005AB062 /* UserMenuButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserMenuButton.swift; sourceTree = "<group>"; };
 		11F1CBDA2F101C5700246C07 /* ShiftActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShiftActivityAttributes.swift; sourceTree = "<group>"; };
 		504EC3041FED79650016851F /* Tidex.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Tidex.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		504EC3071FED79650016851F /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
@@ -403,6 +405,7 @@
 		119D1CE12F16E46300EC7072 /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				11AE8D732F17DD44005AB062 /* UserMenuButton.swift */,
 				119D1CDA2F16E46300EC7072 /* ErrorBanner.swift */,
 				119D1CDB2F16E46300EC7072 /* LoadingOverlay.swift */,
 				119D1CDC2F16E46300EC7072 /* OutlineButton.swift */,
@@ -795,6 +798,7 @@
 				119D1CF42F16E46300EC7072 /* AuthService.swift in Sources */,
 				119D1CF52F16E46300EC7072 /* MFAVerifyView.swift in Sources */,
 				119D1CF62F16E46300EC7072 /* LoadingOverlay.swift in Sources */,
+				11AE8D742F17DD44005AB062 /* UserMenuButton.swift in Sources */,
 				119D1CF72F16E46300EC7072 /* Color+Tidex.swift in Sources */,
 				11AE8D202F17CB31005AB062 /* MonthSwipeGesture.swift in Sources */,
 				119D1CF82F16E46300EC7072 /* AuthStrings.swift in Sources */,

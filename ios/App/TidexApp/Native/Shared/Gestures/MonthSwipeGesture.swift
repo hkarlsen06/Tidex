@@ -13,6 +13,7 @@ enum MonthNavigationDirection: Equatable {
 
 /// Protocol for view models that support month navigation via swipe
 /// Must be @MainActor since it's typically used with ObservableObject view models
+/// Navigation functions are synchronous for instant UI response - data loading happens in background
 @MainActor
 protocol MonthNavigable: AnyObject {
     /// Current year being displayed
@@ -22,10 +23,10 @@ protocol MonthNavigable: AnyObject {
     /// Whether data is currently loading
     var isLoading: Bool { get }
 
-    /// Navigate to previous month
-    func goToPreviousMonth() async
-    /// Navigate to next month
-    func goToNextMonth() async
+    /// Navigate to previous month (non-blocking, data loads in background)
+    func goToPreviousMonth()
+    /// Navigate to next month (non-blocking, data loads in background)
+    func goToNextMonth()
 }
 
 // MARK: - Swipe Gesture Configuration
@@ -113,6 +114,8 @@ struct MonthSwipeContainer<Content: View>: View {
 
     var body: some View {
         content()
+            // Make entire content area hit-testable for gestures
+            .contentShape(Rectangle())
             // No visual effects during drag - let the card transition handle all animation
             // This prevents "angled" entry when swipe gesture effects combine with transitions
             // Use simultaneousGesture so pull-to-refresh (highPriorityGesture) takes precedence

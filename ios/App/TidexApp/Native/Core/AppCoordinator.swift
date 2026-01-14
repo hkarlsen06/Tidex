@@ -24,9 +24,17 @@ final class AppCoordinator: ObservableObject {
     /// MFA factor to verify (when state is .mfaRequired)
     @Published private(set) var pendingMFAFactor: AuthService.MFAFactor?
 
+    // MARK: - User Profile State
+
+    /// User's display name (for UserMenuButton)
+    @Published private(set) var userDisplayName: String = ""
+    /// User's profile picture URL (for UserMenuButton)
+    @Published private(set) var userAvatarUrl: String?
+
     // MARK: - Dependencies
 
     private let authService: AuthService
+    private let settingsService: SettingsService
 
     // MARK: - Private
 
@@ -34,8 +42,9 @@ final class AppCoordinator: ObservableObject {
 
     // MARK: - Initialization
 
-    private init(authService: AuthService? = nil) {
+    private init(authService: AuthService? = nil, settingsService: SettingsService? = nil) {
         self.authService = authService ?? AuthService.shared
+        self.settingsService = settingsService ?? SettingsService.shared
         setupAuthStateListener()
         setupInitialSessionCheck()
     }
@@ -135,15 +144,52 @@ final class AppCoordinator: ObservableObject {
                     // No verified factors, but MFA is required - shouldn't happen normally
                     // Fall back to authenticated (backend will handle enforcement)
                     self.appState = .authenticated
+                    await updateUserProfile()
                 }
             } else {
                 // No MFA required, user is fully authenticated
                 self.appState = .authenticated
+                await updateUserProfile()
             }
         } catch {
             // If MFA check fails, assume authenticated and let backend handle it
             print("[AppCoordinator] MFA check failed: \(error)")
             self.appState = .authenticated
+            await updateUserProfile()
+        }
+    }
+
+    // MARK: - User Profile
+
+    /// Update user profile data (display name and avatar)
+    private func updateUserProfile() async {
+        do {
+            let session = try await supabase.auth.session
+            let user = session.user
+
+            // Extract display name from user metadata or fall back to email
+            if let fullName = user.userMetadata["full_name"]?.value as? String, !fullName.isEmpty {
+                userDisplayName = fullName
+            } else if let name = user.userMetadata["name"]?.value as? String, !name.isEmpty {
+                userDisplayName = name
+            } else if let email = user.email {
+                // Use the part before @ for email
+                userDisplayName = email.components(separatedBy: "@").first ?? email
+            } else if let phone = user.phone {
+                userDisplayName = phone
+            } else {
+                userDisplayName = "User"
+            }
+
+            // Fetch settings to get profile picture URL
+            let userId = user.id.uuidString.lowercased()
+            if let settings = try await settingsService.fetchSettings(for: userId) {
+                userAvatarUrl = settings.profile_picture_url
+            }
+
+        } catch {
+            print("[AppCoordinator] Failed to update user profile: \(error)")
+            userDisplayName = "User"
         }
     }
 
@@ -159,6 +205,9 @@ final class AppCoordinator: ObservableObject {
     func handleMFASuccess() {
         appState = .authenticated
         pendingMFAFactor = nil
+        Task {
+            await updateUserProfile()
+        }
     }
 
     /// Sign out the user
