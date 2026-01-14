@@ -36,7 +36,10 @@ export function DurationSection({ value, onChange, className }: DurationSectionP
     value?.type === 'years' ? String(value.value) : '1'
   );
   const [endDateValue, setEndDateValue] = useState(() => {
-    if (value?.type === 'end_date') return value.date;
+    // Handle both newer 'date' format and legacy 'value' format
+    if (value?.type === 'end_date') {
+      return 'date' in value ? value.date : value.value;
+    }
     // Default to 6 months from now
     const sixMonthsAhead = new Date();
     sixMonthsAhead.setMonth(sixMonthsAhead.getMonth() + 6);

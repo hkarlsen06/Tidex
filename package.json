@@ -22,6 +22,14 @@
     "open-ios": "open ios/App/Tidex.xcodeproj"
   },
   "dependencies": {
+    "@capacitor/app": "^8.0.0",
+    "@capacitor/browser": "^8.0.0",
+    "@capacitor/core": "^8.0.1",
+    "@capacitor/haptics": "^8.0.0",
+    "@capacitor/keyboard": "^8.0.0",
+    "@capacitor/preferences": "^8.0.0",
+    "@capacitor/status-bar": "^8.0.0",
+    "@capgo/native-purchases": "^8.0.12",
     "@marsidev/react-turnstile": "^1.4.1",
     "@next/bundle-analyzer": "^16.1.1",
     "@radix-ui/react-alert-dialog": "^1.1.15",
