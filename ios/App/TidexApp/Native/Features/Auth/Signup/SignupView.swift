@@ -78,14 +78,14 @@ struct SignupView: View {
         .onAppear {
             viewModel.onNavigateToLogin = onNavigateToLogin
 
-            // Staggered entrance animations
-            withAnimation(.spring(response: 0.5, dampingFraction: 0.8).delay(0.1)) {
+            // Fast staggered entrance animations - feel snappy
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
                 headerAppeared = true
             }
-            withAnimation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.2)) {
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.8).delay(0.05)) {
                 cardAppeared = true
             }
-            withAnimation(.easeOut(duration: 0.4).delay(0.4)) {
+            withAnimation(.easeOut(duration: 0.25).delay(0.1)) {
                 footerAppeared = true
             }
         }

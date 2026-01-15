@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// Secondary/outline button with Tidex styling
 /// Used for secondary actions and expandable options
@@ -10,7 +11,10 @@ struct OutlineButton: View {
     var isDisabled: Bool = false
 
     var body: some View {
-        Button(action: action) {
+        Button {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            action()
+        } label: {
             HStack(spacing: 8) {
                 if isLoading {
                     ProgressView()
@@ -25,16 +29,28 @@ struct OutlineButton: View {
                     .font(.system(size: 16, weight: .medium))
             }
             .frame(maxWidth: .infinity)
-            .frame(height: 48)
+            .frame(height: 50)
             .foregroundColor(.tidexTextSecondary)
             .background(Color.clear)
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 10)
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
                     .stroke(Color.tidexBorder, lineWidth: 1)
             )
         }
+        .buttonStyle(SnappyOutlineButtonStyle())
         .disabled(isDisabled || isLoading)
         .opacity(isDisabled ? 0.5 : 1)
+    }
+}
+
+/// Snappy button style for outline buttons
+private struct SnappyOutlineButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
+            .opacity(configuration.isPressed ? 0.8 : 1.0)
+            .animation(.easeOut(duration: 0.1), value: configuration.isPressed)
     }
 }
 

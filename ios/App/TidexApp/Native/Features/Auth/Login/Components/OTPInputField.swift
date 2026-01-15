@@ -1,46 +1,54 @@
 import SwiftUI
+import UIKit
 
 /// 6-digit OTP input field with individual digit boxes
+/// Optimized for instant keyboard response
 struct OTPInputField: View {
     @Binding var code: String
     var error: String? = nil
     var onComplete: (() -> Void)? = nil
+    var autoFocus: Bool = true
 
     @FocusState private var isFocused: Bool
+    @State private var cursorVisible = true
 
     private let digitCount = 6
 
     var body: some View {
         VStack(spacing: 8) {
-            // Hidden text field for actual input
-            TextField("", text: $code)
-                .keyboardType(.numberPad)
-                .textContentType(.oneTimeCode)
-                .focused($isFocused)
-                .opacity(0)
-                .frame(height: 0)
-                .onChange(of: code) { _, newValue in
-                    // Limit to 6 digits
-                    if newValue.count > digitCount {
-                        code = String(newValue.prefix(digitCount))
+            // Visual digit boxes with hidden TextField overlay
+            ZStack {
+                // Hidden text field for actual input - positioned behind boxes
+                TextField("", text: $code)
+                    .keyboardType(.numberPad)
+                    .textContentType(.oneTimeCode)
+                    .focused($isFocused)
+                    .foregroundColor(.clear)
+                    .tint(.clear)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 56)
+                    .onChange(of: code) { _, newValue in
+                        handleCodeChange(newValue)
                     }
-                    // Filter non-digits
-                    code = code.filter { $0.isNumber }
-                    // Call completion when all digits entered
-                    if code.count == digitCount {
-                        onComplete?()
-                    }
-                }
 
-            // Visual digit boxes
-            HStack(spacing: 8) {
-                ForEach(0..<digitCount, id: \.self) { index in
-                    digitBox(at: index)
+                // Visual digit boxes
+                HStack(spacing: 8) {
+                    ForEach(0..<digitCount, id: \.self) { index in
+                        DigitBox(
+                            digit: getDigit(at: index),
+                            isCurrentPosition: index == code.count && isFocused,
+                            hasError: error != nil,
+                            isFilled: index < code.count,
+                            cursorVisible: cursorVisible
+                        )
+                    }
                 }
+                .allowsHitTesting(false)
             }
             .contentShape(Rectangle())
             .onTapGesture {
                 isFocused = true
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
             }
 
             // Error message
@@ -48,44 +56,37 @@ struct OTPInputField: View {
                 Text(error)
                     .font(.system(size: 12))
                     .foregroundColor(.tidexError)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
         .onAppear {
-            // Auto-focus on appear
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            if autoFocus {
+                // Focus immediately - no delay needed
                 isFocused = true
             }
+            // Start cursor blinking
+            startCursorBlink()
         }
     }
 
-    @ViewBuilder
-    private func digitBox(at index: Int) -> some View {
-        let digit = getDigit(at: index)
-        let isCurrentPosition = index == code.count && isFocused
+    private func handleCodeChange(_ newValue: String) {
+        // Filter non-digits and limit to 6 characters
+        let filtered = newValue.filter { $0.isNumber }
+        if filtered.count > digitCount {
+            code = String(filtered.prefix(digitCount))
+        } else if filtered != newValue {
+            code = filtered
+        }
 
-        ZStack {
-            // Background
-            RoundedRectangle(cornerRadius: 8)
-                .fill(Color.tidexSurfaceSecondary)
-                .frame(width: 48, height: 56)
+        // Haptic feedback on digit entry
+        if !code.isEmpty {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        }
 
-            // Border
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(borderColor(at: index, isCurrentPosition: isCurrentPosition), lineWidth: 1)
-                .frame(width: 48, height: 56)
-
-            // Digit or cursor
-            if let digit = digit {
-                Text(digit)
-                    .font(.system(size: 24, weight: .semibold, design: .monospaced))
-                    .foregroundColor(.tidexTextPrimary)
-            } else if isCurrentPosition {
-                // Blinking cursor
-                Rectangle()
-                    .fill(Color.tidexBrandPrimary)
-                    .frame(width: 2, height: 24)
-                    .animation(.easeInOut(duration: 0.5).repeatForever(), value: isCurrentPosition)
-            }
+        // Call completion when all digits entered
+        if code.count == digitCount {
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            onComplete?()
         }
     }
 
@@ -95,14 +96,56 @@ struct OTPInputField: View {
         return String(code[stringIndex])
     }
 
-    private func borderColor(at index: Int, isCurrentPosition: Bool) -> Color {
-        if error != nil {
+    private func startCursorBlink() {
+        Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { _ in
+            cursorVisible.toggle()
+        }
+    }
+}
+
+// MARK: - Digit Box
+
+/// Individual digit display box - extracted for performance
+private struct DigitBox: View {
+    let digit: String?
+    let isCurrentPosition: Bool
+    let hasError: Bool
+    let isFilled: Bool
+    let cursorVisible: Bool
+
+    var body: some View {
+        ZStack {
+            // Background
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color.tidexSurfaceSecondary)
+
+            // Border
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(borderColor, lineWidth: isCurrentPosition ? 2 : 1)
+
+            // Digit or cursor
+            if let digit = digit {
+                Text(digit)
+                    .font(.system(size: 24, weight: .semibold, design: .monospaced))
+                    .foregroundColor(.tidexTextPrimary)
+            } else if isCurrentPosition && cursorVisible {
+                // Blinking cursor
+                RoundedRectangle(cornerRadius: 1)
+                    .fill(Color.tidexBrandPrimary)
+                    .frame(width: 2, height: 24)
+            }
+        }
+        .frame(width: 48, height: 56)
+    }
+
+    private var borderColor: Color {
+        if hasError {
             return .tidexError
         }
         if isCurrentPosition {
             return .tidexBrandPrimary
         }
-        if index < code.count {
+        if isFilled {
             return .tidexBorder
         }
         return .tidexBorderSubtle
