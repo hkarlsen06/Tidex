@@ -4,7 +4,7 @@ import SwiftData
 // MARK: - Local Sync State
 
 /// SwiftData model for tracking sync state per user
-/// Stores revision cursors for incremental sync
+/// Uses updated_at cursors for incremental sync (NOT revision, as revision is per-row and new rows start at 1)
 @Model
 final class LocalSyncState {
     // MARK: - Primary Key
@@ -13,19 +13,48 @@ final class LocalSyncState {
     @Attribute(.unique)
     var userId: String
 
-    // MARK: - Revision Cursors
+    // MARK: - Legacy Revision Cursors (DEPRECATED - kept for debugging only)
 
-    /// Last synced revision for user_shifts table
+    /// Last synced revision for user_shifts table (DEPRECATED)
     var lastRevisionUserShifts: Int64
 
-    /// Last synced revision for recurring_shifts table
+    /// Last synced revision for recurring_shifts table (DEPRECATED)
     var lastRevisionRecurringShifts: Int64
 
-    /// Last synced revision for wage_snapshots table
+    /// Last synced revision for wage_snapshots table (DEPRECATED)
     var lastRevisionWageSnapshots: Int64
 
-    /// Last synced revision for user_settings table
+    /// Last synced revision for user_settings table (DEPRECATED)
     var lastRevisionUserSettings: Int64
+
+    // MARK: - Updated-At Cursors (Primary cursors for pull sync)
+
+    // These use server-managed updated_at timestamps for incremental sync.
+    // A tie-breaker (id) is used when multiple rows share the same timestamp.
+
+    /// Last synced updated_at for user_shifts table
+    var lastUserShiftsUpdatedAt: Date?
+
+    /// Tie-breaker ID at the last synced updated_at for user_shifts
+    var lastUserShiftsUpdatedAtTieId: String?
+
+    /// Last synced updated_at for recurring_shifts table
+    var lastRecurringShiftsUpdatedAt: Date?
+
+    /// Tie-breaker ID at the last synced updated_at for recurring_shifts
+    var lastRecurringShiftsUpdatedAtTieId: String?
+
+    /// Last synced updated_at for wage_snapshots table
+    var lastWageSnapshotsUpdatedAt: Date?
+
+    /// Tie-breaker ID at the last synced updated_at for wage_snapshots
+    var lastWageSnapshotsUpdatedAtTieId: String?
+
+    /// Last synced updated_at for user_settings table
+    var lastUserSettingsUpdatedAt: Date?
+
+    /// Tie-breaker ID at the last synced updated_at for user_settings
+    var lastUserSettingsUpdatedAtTieId: String?
 
     // MARK: - Sync Timestamps
 
@@ -48,7 +77,15 @@ final class LocalSyncState {
         lastRevisionUserSettings: Int64 = 0,
         lastSuccessfulSyncAt: Date? = nil,
         lastSyncAttemptAt: Date? = nil,
-        lastSyncError: String? = nil
+        lastSyncError: String? = nil,
+        lastUserShiftsUpdatedAt: Date? = nil,
+        lastUserShiftsUpdatedAtTieId: String? = nil,
+        lastRecurringShiftsUpdatedAt: Date? = nil,
+        lastRecurringShiftsUpdatedAtTieId: String? = nil,
+        lastWageSnapshotsUpdatedAt: Date? = nil,
+        lastWageSnapshotsUpdatedAtTieId: String? = nil,
+        lastUserSettingsUpdatedAt: Date? = nil,
+        lastUserSettingsUpdatedAtTieId: String? = nil
     ) {
         self.userId = userId
         self.lastRevisionUserShifts = lastRevisionUserShifts
@@ -58,6 +95,14 @@ final class LocalSyncState {
         self.lastSuccessfulSyncAt = lastSuccessfulSyncAt
         self.lastSyncAttemptAt = lastSyncAttemptAt
         self.lastSyncError = lastSyncError
+        self.lastUserShiftsUpdatedAt = lastUserShiftsUpdatedAt
+        self.lastUserShiftsUpdatedAtTieId = lastUserShiftsUpdatedAtTieId
+        self.lastRecurringShiftsUpdatedAt = lastRecurringShiftsUpdatedAt
+        self.lastRecurringShiftsUpdatedAtTieId = lastRecurringShiftsUpdatedAtTieId
+        self.lastWageSnapshotsUpdatedAt = lastWageSnapshotsUpdatedAt
+        self.lastWageSnapshotsUpdatedAtTieId = lastWageSnapshotsUpdatedAtTieId
+        self.lastUserSettingsUpdatedAt = lastUserSettingsUpdatedAt
+        self.lastUserSettingsUpdatedAtTieId = lastUserSettingsUpdatedAtTieId
     }
 
     // MARK: - Convenience Methods
@@ -72,7 +117,43 @@ final class LocalSyncState {
         lastSyncError == nil && lastSuccessfulSyncAt != nil
     }
 
-    /// Get cursor for a specific table
+    // MARK: - Updated-At Cursor Methods (Primary)
+
+    /// Get updated_at cursor for a specific table
+    func updatedAtCursor(for table: SyncTable) -> SyncCursor {
+        switch table {
+        case .userShifts:
+            return SyncCursor(updatedAt: lastUserShiftsUpdatedAt, tieId: lastUserShiftsUpdatedAtTieId ?? "")
+        case .recurringShifts:
+            return SyncCursor(updatedAt: lastRecurringShiftsUpdatedAt, tieId: lastRecurringShiftsUpdatedAtTieId ?? "")
+        case .wageSnapshots:
+            return SyncCursor(updatedAt: lastWageSnapshotsUpdatedAt, tieId: lastWageSnapshotsUpdatedAtTieId ?? "")
+        case .userSettings:
+            return SyncCursor(updatedAt: lastUserSettingsUpdatedAt, tieId: lastUserSettingsUpdatedAtTieId ?? "")
+        }
+    }
+
+    /// Update updated_at cursor for a specific table
+    func updateUpdatedAtCursor(for table: SyncTable, updatedAt: Date, tieId: String) {
+        switch table {
+        case .userShifts:
+            lastUserShiftsUpdatedAt = updatedAt
+            lastUserShiftsUpdatedAtTieId = tieId
+        case .recurringShifts:
+            lastRecurringShiftsUpdatedAt = updatedAt
+            lastRecurringShiftsUpdatedAtTieId = tieId
+        case .wageSnapshots:
+            lastWageSnapshotsUpdatedAt = updatedAt
+            lastWageSnapshotsUpdatedAtTieId = tieId
+        case .userSettings:
+            lastUserSettingsUpdatedAt = updatedAt
+            lastUserSettingsUpdatedAtTieId = tieId
+        }
+    }
+
+    // MARK: - Legacy Revision Cursor Methods (DEPRECATED)
+
+    /// Get cursor for a specific table (DEPRECATED - use updatedAtCursor instead)
     func cursor(for table: SyncTable) -> Int64 {
         switch table {
         case .userShifts:
@@ -86,7 +167,7 @@ final class LocalSyncState {
         }
     }
 
-    /// Update cursor for a specific table
+    /// Update cursor for a specific table (DEPRECATED - use updateUpdatedAtCursor instead)
     func updateCursor(for table: SyncTable, to revision: Int64) {
         switch table {
         case .userShifts:
@@ -119,10 +200,46 @@ final class LocalSyncState {
 
     /// Reset all cursors (for full re-sync)
     func resetAllCursors() {
+        // Reset updated_at cursors
+        lastUserShiftsUpdatedAt = nil
+        lastUserShiftsUpdatedAtTieId = nil
+        lastRecurringShiftsUpdatedAt = nil
+        lastRecurringShiftsUpdatedAtTieId = nil
+        lastWageSnapshotsUpdatedAt = nil
+        lastWageSnapshotsUpdatedAtTieId = nil
+        lastUserSettingsUpdatedAt = nil
+        lastUserSettingsUpdatedAtTieId = nil
+
+        // Reset legacy revision cursors (for debugging)
         lastRevisionUserShifts = 0
         lastRevisionRecurringShifts = 0
         lastRevisionWageSnapshots = 0
         lastRevisionUserSettings = 0
+    }
+}
+
+// MARK: - Sync Cursor Type
+
+/// Cursor for incremental sync using updated_at timestamp with tie-breaker
+struct SyncCursor {
+    /// Server updated_at timestamp (nil means start from beginning)
+    let updatedAt: Date?
+
+    /// Tie-breaker ID (used when multiple rows share the same timestamp)
+    let tieId: String
+
+    /// Whether this is the initial sync (no cursor set)
+    var isInitial: Bool {
+        updatedAt == nil
+    }
+
+    /// Format the cursor for logging
+    var description: String {
+        if let updatedAt = updatedAt {
+            return "updated_at: \(ISO8601DateFormatter().string(from: updatedAt)), tieId: \(tieId.prefix(8))..."
+        } else {
+            return "initial (no cursor)"
+        }
     }
 }
 

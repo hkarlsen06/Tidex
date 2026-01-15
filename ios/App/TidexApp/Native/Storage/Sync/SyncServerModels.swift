@@ -164,6 +164,11 @@ struct SyncUserSettingsRow: Codable {
 struct TablePullResult {
     let table: SyncTable
     let rowsProcessed: Int
+    /// Last updated_at timestamp processed (for cursor)
+    let lastUpdatedAt: Date?
+    /// ID of the last row at the lastUpdatedAt timestamp (tie-breaker)
+    let lastUpdatedAtTieId: String?
+    /// Legacy max revision (kept for debugging only)
     let maxRevision: Int64
     let newConflicts: Int
     let autoMerged: Int

@@ -145,9 +145,25 @@ struct SyncDebugView: View {
                     }
                 }
 
-                // Revision cursors
+                // Updated-at cursors (primary sync cursors)
                 if let state = summary.syncState {
                     Divider()
+                    Text("Sync Cursors (updated_at)")
+                        .font(.caption.bold())
+                        .foregroundColor(.secondary)
+                        .padding(.top, 4)
+
+                    updatedAtCursorRow("Shifts", cursor: state.updatedAtCursor(for: .userShifts))
+                    updatedAtCursorRow("Recurring", cursor: state.updatedAtCursor(for: .recurringShifts))
+                    updatedAtCursorRow("Snapshots", cursor: state.updatedAtCursor(for: .wageSnapshots))
+                    updatedAtCursorRow("Settings", cursor: state.updatedAtCursor(for: .userSettings))
+
+                    // Legacy revision cursors (for debugging only)
+                    Divider()
+                    Text("Legacy Revisions (debug)")
+                        .font(.caption.bold())
+                        .foregroundColor(.secondary)
+                        .padding(.top, 4)
                     revisionCursorRow("Shifts Rev", revision: state.lastRevisionUserShifts)
                     revisionCursorRow("Recurring Rev", revision: state.lastRevisionRecurringShifts)
                     revisionCursorRow("Snapshots Rev", revision: state.lastRevisionWageSnapshots)
@@ -202,6 +218,31 @@ struct SyncDebugView: View {
             Text("\(revision)")
                 .font(.caption.monospaced())
                 .foregroundColor(.secondary)
+        }
+    }
+
+    private func updatedAtCursorRow(_ label: String, cursor: SyncCursor) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack {
+                Text(label)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                Spacer()
+                if cursor.isInitial {
+                    Text("(initial)")
+                        .font(.caption.monospaced())
+                        .foregroundColor(.orange)
+                } else if let date = cursor.updatedAt {
+                    Text(date, style: .relative)
+                        .font(.caption.monospaced())
+                        .foregroundColor(.green)
+                }
+            }
+            if !cursor.isInitial, !cursor.tieId.isEmpty {
+                Text("tieId: \(cursor.tieId.prefix(8))...")
+                    .font(.caption2.monospaced())
+                    .foregroundColor(.secondary)
+            }
         }
     }
 
