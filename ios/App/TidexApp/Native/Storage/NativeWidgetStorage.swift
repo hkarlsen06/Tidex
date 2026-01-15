@@ -47,15 +47,11 @@ enum NativeWidgetStorage {
         let now = Date()
         let calendar = Calendar.current
 
-        // First day of previous month
-        var components = calendar.dateComponents([.year, .month], from: now)
-        components.month = (components.month ?? 1) - 1
-        if components.month! < 1 {
-            components.month = 12
-            components.year = (components.year ?? 2024) - 1
-        }
-        components.day = 1
-        let startDate = calendar.date(from: components) ?? now
+        // First day of previous month - use Calendar.date(byAdding:) for safe month arithmetic
+        // This correctly handles January -> December rollover without manual year/month math
+        let firstDayOfCurrentMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: now)) ?? now
+        let firstDayOfPreviousMonth = calendar.date(byAdding: .month, value: -1, to: firstDayOfCurrentMonth) ?? now
+        let startDate = firstDayOfPreviousMonth
 
         // 90 days from now
         let endDate = calendar.date(byAdding: .day, value: futureDaysWindow, to: now) ?? now

@@ -77,3 +77,56 @@ let syncJSONDecoder: JSONDecoder = {
     decoder.dateDecodingStrategy = .iso8601
     return decoder
 }()
+
+// MARK: - Encoding Error
+
+/// Error for encoding failures in critical sync paths
+enum SyncEncodingError: LocalizedError {
+    case snapshotEncodingFailed(type: String, underlyingError: Error)
+
+    /// Technical description for logging
+    var errorDescription: String? {
+        switch self {
+        case .snapshotEncodingFailed(let type, let error):
+            return "Failed to encode \(type): \(error.localizedDescription)"
+        }
+    }
+
+    /// User-friendly message for UI display
+    var userFriendlyMessage: String {
+        switch self {
+        case .snapshotEncodingFailed:
+            return "Sync failed: Unable to save local changes. Please try again."
+        }
+    }
+}
+
+/// Safely encode a value, logging and throwing on failure
+/// Use this for critical paths where empty Data would corrupt sync state
+func requireEncode<T: Encodable>(_ value: T, typeName: String) throws -> Data {
+    do {
+        return try canonicalJSONEncoder.encode(value)
+    } catch {
+        let logger = SyncLogger.shared
+        logger.log("Encoding failed for \(typeName): \(error.localizedDescription)", level: .error)
+        throw SyncEncodingError.snapshotEncodingFailed(type: typeName, underlyingError: error)
+    }
+}
+
+/// SyncLogger for encoding errors (minimal implementation)
+enum SyncLogger {
+    static let shared = SyncLoggerImpl()
+}
+
+struct SyncLoggerImpl {
+    func log(_ message: String, level: SyncLogLevel) {
+        print("[\(level.rawValue)] [Sync] \(message)")
+    }
+}
+
+enum SyncLogLevel: String {
+    case debug = "DEBUG"
+    case info = "INFO"
+    case warning = "WARN"
+    case error = "ERROR"
+}
