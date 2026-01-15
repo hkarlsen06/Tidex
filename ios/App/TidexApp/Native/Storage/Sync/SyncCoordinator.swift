@@ -261,11 +261,12 @@ final class SyncCoordinator: ObservableObject {
 
     private func pullUserShiftsPage(userId: String, cursor: Int64) async throws -> PagePullResult {
         // Query server for changes since cursor
+        // Note: Convert Int64 to Int for PostgrestFilterValue conformance
         let rows: [SyncShiftRow] = try await supabase
             .from("user_shifts")
             .select()
             .eq("user_id", value: userId)
-            .gt("revision", value: cursor)
+            .gt("revision", value: Int(cursor))
             .order("revision", ascending: true)
             .limit(pageSize)
             .execute()
@@ -452,11 +453,12 @@ final class SyncCoordinator: ObservableObject {
     // MARK: - Recurring Shifts Pull
 
     private func pullRecurringShiftsPage(userId: String, cursor: Int64) async throws -> PagePullResult {
+        // Note: Convert Int64 to Int for PostgrestFilterValue conformance
         let rows: [SyncRecurringShiftRow] = try await supabase
             .from("recurring_shifts")
             .select()
             .eq("user_id", value: userId)
-            .gt("revision", value: cursor)
+            .gt("revision", value: Int(cursor))
             .order("revision", ascending: true)
             .limit(pageSize)
             .execute()
@@ -619,11 +621,12 @@ final class SyncCoordinator: ObservableObject {
     // MARK: - Wage Snapshots Pull
 
     private func pullWageSnapshotsPage(userId: String, cursor: Int64) async throws -> PagePullResult {
+        // Note: Convert Int64 to Int for PostgrestFilterValue conformance
         let rows: [SyncWageSnapshotRow] = try await supabase
             .from("wage_snapshots")
             .select()
             .eq("user_id", value: userId)
-            .gt("revision", value: cursor)
+            .gt("revision", value: Int(cursor))
             .order("revision", ascending: true)
             .limit(pageSize)
             .execute()
@@ -795,11 +798,12 @@ final class SyncCoordinator: ObservableObject {
     // MARK: - User Settings Pull
 
     private func pullUserSettingsPage(userId: String, cursor: Int64) async throws -> PagePullResult {
+        // Note: Convert Int64 to Int for PostgrestFilterValue conformance
         let rows: [SyncUserSettingsRow] = try await supabase
             .from("user_settings")
             .select()
             .eq("user_id", value: userId)
-            .gt("revision", value: cursor)
+            .gt("revision", value: Int(cursor))
             .order("revision", ascending: true)
             .limit(pageSize)
             .execute()
@@ -1042,8 +1046,8 @@ final class SyncCoordinator: ObservableObject {
         if dirtyFields.contains(.customSupplements) {
             if let supplements = shift.decodedCustomSupplements {
                 if let jsonData = try? canonicalJSONEncoder.encode(supplements),
-                   let jsonObject = try? JSONSerialization.jsonObject(with: jsonData) {
-                    updateData["custom_supplements"] = AnyJSON(jsonObject)
+                   let decoded = try? AnyJSON.decoder.decode(AnyJSON.self, from: jsonData) {
+                    updateData["custom_supplements"] = decoded
                 }
             } else {
                 updateData["custom_supplements"] = .null
@@ -1051,7 +1055,8 @@ final class SyncCoordinator: ObservableObject {
         }
 
         // Optimistic concurrency: filter by revision
-        let serverRevision = shift.serverRevision
+        // Note: Convert Int64 to Int for PostgrestFilterValue conformance
+        let serverRevision = Int(shift.serverRevision)
 
         do {
             // UPDATE with revision filter, returning the updated row
@@ -1110,7 +1115,8 @@ final class SyncCoordinator: ObservableObject {
         storeActor: LocalStoreActor
     ) async throws -> PushResult {
         let shiftId = shift.id
-        let serverRevision = shift.serverRevision
+        // Note: Convert Int64 to Int for PostgrestFilterValue conformance
+        let serverRevision = Int(shift.serverRevision)
 
         // UPDATE deleted_at = now() with revision filter
         let returnedRows: [SyncShiftRow] = try await supabase
@@ -1341,36 +1347,37 @@ final class SyncCoordinator: ObservableObject {
         }
         if dirtyFields.contains(.selectedDays) {
             if let jsonData = shift.selectedDays.isEmpty ? nil : shift.selectedDays,
-               let jsonObject = try? JSONSerialization.jsonObject(with: jsonData) {
-                updateData["selected_days"] = AnyJSON(jsonObject)
+               let decoded = try? AnyJSON.decoder.decode(AnyJSON.self, from: jsonData) {
+                updateData["selected_days"] = decoded
             }
         }
         if dirtyFields.contains(.endCondition) {
             if let data = shift.endCondition,
-               let jsonObject = try? JSONSerialization.jsonObject(with: data) {
-                updateData["end_condition"] = AnyJSON(jsonObject)
+               let decoded = try? AnyJSON.decoder.decode(AnyJSON.self, from: data) {
+                updateData["end_condition"] = decoded
             } else {
                 updateData["end_condition"] = .null
             }
         }
         if dirtyFields.contains(.exclusions) {
             if let data = shift.exclusions,
-               let jsonObject = try? JSONSerialization.jsonObject(with: data) {
-                updateData["exclusions"] = AnyJSON(jsonObject)
+               let decoded = try? AnyJSON.decoder.decode(AnyJSON.self, from: data) {
+                updateData["exclusions"] = decoded
             } else {
                 updateData["exclusions"] = .null
             }
         }
         if dirtyFields.contains(.dateSpecificSupplements) {
             if let data = shift.dateSpecificSupplements,
-               let jsonObject = try? JSONSerialization.jsonObject(with: data) {
-                updateData["date_specific_supplements"] = AnyJSON(jsonObject)
+               let decoded = try? AnyJSON.decoder.decode(AnyJSON.self, from: data) {
+                updateData["date_specific_supplements"] = decoded
             } else {
                 updateData["date_specific_supplements"] = .null
             }
         }
 
-        let serverRevision = shift.serverRevision
+        // Note: Convert Int64 to Int for PostgrestFilterValue conformance
+        let serverRevision = Int(shift.serverRevision)
 
         do {
             let returnedRows: [SyncRecurringShiftRow] = try await supabase
@@ -1423,7 +1430,8 @@ final class SyncCoordinator: ObservableObject {
         storeActor: LocalStoreActor
     ) async throws -> PushResult {
         let shiftId = shift.id
-        let serverRevision = shift.serverRevision
+        // Note: Convert Int64 to Int for PostgrestFilterValue conformance
+        let serverRevision = Int(shift.serverRevision)
 
         let returnedRows: [SyncRecurringShiftRow] = try await supabase
             .from("recurring_shifts")
@@ -1637,8 +1645,8 @@ final class SyncCoordinator: ObservableObject {
             }
         }
         if dirtyFields.contains(.supplements) {
-            if let jsonObject = try? JSONSerialization.jsonObject(with: snapshot.supplements) {
-                updateData["supplements"] = AnyJSON(jsonObject)
+            if let decoded = try? AnyJSON.decoder.decode(AnyJSON.self, from: snapshot.supplements) {
+                updateData["supplements"] = decoded
             }
         }
         if dirtyFields.contains(.taxEnabled) {
@@ -1684,7 +1692,8 @@ final class SyncCoordinator: ObservableObject {
             }
         }
 
-        let serverRevision = snapshot.serverRevision
+        // Note: Convert Int64 to Int for PostgrestFilterValue conformance
+        let serverRevision = Int(snapshot.serverRevision)
 
         do {
             let returnedRows: [SyncWageSnapshotRow] = try await supabase
@@ -1737,7 +1746,8 @@ final class SyncCoordinator: ObservableObject {
         storeActor: LocalStoreActor
     ) async throws -> PushResult {
         let snapshotId = snapshot.id
-        let serverRevision = snapshot.serverRevision
+        // Note: Convert Int64 to Int for PostgrestFilterValue conformance
+        let serverRevision = Int(snapshot.serverRevision)
 
         let returnedRows: [SyncWageSnapshotRow] = try await supabase
             .from("wage_snapshots")
@@ -1976,7 +1986,8 @@ final class SyncCoordinator: ObservableObject {
             }
         }
 
-        let serverRevision = settings.serverRevision
+        // Note: Convert Int64 to Int for PostgrestFilterValue conformance
+        let serverRevision = Int(settings.serverRevision)
 
         do {
             let returnedRows: [SyncUserSettingsRow] = try await supabase
