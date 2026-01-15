@@ -31,7 +31,7 @@
 | 1 | Database Migrations | ✅ Complete |
 | 2 | iOS SwiftData Models | ✅ Complete |
 | 3 | LocalStore & Repositories | ✅ Complete |
-| 4 | SyncCoordinator (Pull) | ⬜ Not Started |
+| 4 | SyncCoordinator (Pull) | ✅ Complete |
 | 5 | SyncCoordinator (Push & Conflicts) | ⬜ Not Started |
 | 6 | UI/ViewModel Refactor | ⬜ Not Started |
 | 7 | Widget Integration | ⬜ Not Started |
@@ -386,7 +386,7 @@ The existing services will continue to exist but will be deprecated once:
 
 ## Phase 4: SyncCoordinator (Pull)
 
-**Status**: ⬜ Not Started
+**Status**: ✅ Complete
 
 ### Scope
 
@@ -447,7 +447,87 @@ When pulling newer server version while local is dirty:
    - Set `syncStatus = conflict`
 
 ### Notes
-<!-- Implementation notes will be added here when phase is complete -->
+
+**Completed: 2026-01-15**
+
+**Files Created**:
+
+1. **`Native/Storage/Sync/SyncServerModels.swift`** - Extended server row types for sync:
+   - `SyncShiftRow` - ShiftRow with `updated_at`, `revision`, `deleted_at` fields
+   - `SyncRecurringShiftRow` - RecurringShiftRow with sync metadata
+   - `SyncWageSnapshotRow` - WageSnapshot with sync metadata
+   - `SyncUserSettingsRow` - UserSettings with sync metadata
+   - `TablePullResult` - Result of pulling a single table
+   - `SyncResult` - Overall sync result with stats
+
+2. **`Native/Storage/Sync/SyncCoordinator.swift`** - Main sync orchestrator:
+   - `SyncCoordinator` singleton with `@Published` state for UI binding
+   - `sync(reason:userId:)` entry point with single-flight protection
+   - 60-second minimum interval for automatic syncs (manual refresh bypasses)
+   - Paginated pull (500 rows per page) for each table
+   - Field-level merge logic for dirty rows
+
+**Files Modified**:
+
+1. **`Native/Storage/LocalStore.swift`** - Added sync update operations to `LocalStoreActor`:
+   - `updateSyncState(userId:update:)` for cursor and status updates
+   - `countConflicts(userId:)` for conflict count
+   - Per-table sync operations:
+     - `updateShiftFromServer(...)` - Overwrite clean rows
+     - `markShiftConflict(...)` - Set conflict status
+     - `autoMergeShift(...)` - Field-level merge for non-overlapping changes
+     - Similar methods for recurring shifts, wage snapshots, and user settings
+
+**Architecture Decisions**:
+
+1. **Revision-based incremental sync** - Uses `revision > cursor` queries instead of timestamps
+   - More reliable than timestamps (no clock skew issues)
+   - Server triggers auto-increment revision on every update
+
+2. **Single-flight protection** - `syncInProgress` flag prevents concurrent syncs
+   - Automatic syncs respect 60-second minimum interval
+   - Manual refresh always triggers immediately
+
+3. **Field-level merge algorithm**:
+   ```
+   1. Decode lastSyncedSnapshot
+   2. Compute serverChangedFields = diff(lastSyncedSnapshot, newServerRow)
+   3. If dirtyFields ∩ serverChangedFields = ∅:
+      - Auto-merge: Apply server changes for non-dirty fields
+      - Keep local values for dirty fields
+      - Update serverRevision to new value
+      - Keep syncStatus = dirty (still needs push)
+   4. If overlap exists:
+      - Mark conflict
+      - Store conflictServerSnapshot for resolution UI
+   ```
+
+4. **Soft delete handling** - Sync includes deleted rows (`deleted_at` not filtered)
+   - Local `serverDeletedAt` is set when server row is soft-deleted
+   - UI queries exclude deleted rows; sync queries include them
+
+**Sync Query Pattern** (as implemented):
+```swift
+let rows: [SyncShiftRow] = try await supabase
+    .from("user_shifts")
+    .select()
+    .eq("user_id", value: userId)
+    .gt("revision", value: cursor)
+    .order("revision", ascending: true)
+    .limit(500)
+    .execute()
+    .value
+```
+
+**Published State for UI**:
+- `isSyncing: Bool` - Whether sync is in progress
+- `lastError: String?` - Error from last sync (nil if successful)
+- `conflictCount: Int` - Number of unresolved conflicts
+- `lastSyncedAt: Date?` - When last successful sync completed
+
+**Next Steps for Phase 5**:
+- Implement push phase with optimistic concurrency
+- Add conflict resolution UI with "Use Web" / "Use iPhone" options
 
 ---
 

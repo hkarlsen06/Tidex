@@ -406,4 +406,431 @@ actor LocalStoreActor {
                !dirtySnapshots.isEmpty ||
                dirtySettings != nil
     }
+
+    /// Count total conflicts for a user
+    func countConflicts(userId: String) throws -> Int {
+        let conflicts = try getConflicts(userId: userId)
+        return conflicts.shifts.count +
+               conflicts.recurringShifts.count +
+               conflicts.wageSnapshots.count +
+               (conflicts.settings != nil ? 1 : 0)
+    }
+
+    /// Update sync state with a closure
+    func updateSyncState(userId: String, update: (LocalSyncState) -> Void) {
+        let descriptor = FetchDescriptor<LocalSyncState>(
+            predicate: #Predicate { $0.userId == userId }
+        )
+
+        guard let state = try? modelContext.fetch(descriptor).first else {
+            return
+        }
+
+        update(state)
+        try? modelContext.save()
+    }
+
+    // MARK: - Sync Update Operations for User Shifts
+
+    /// Update a shift from server data (for clean rows)
+    func updateShiftFromServer(
+        id: String,
+        serverRow: SyncShiftRow,
+        serverUpdatedAt: Date,
+        serverRevision: Int64,
+        serverDeletedAt: Date?,
+        snapshot: UserShiftServerSnapshot
+    ) {
+        let descriptor = FetchDescriptor<LocalUserShift>(
+            predicate: #Predicate { $0.id == id }
+        )
+
+        guard let existing = try? modelContext.fetch(descriptor).first else { return }
+
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        dateFormatter.timeZone = TimeZone(identifier: "UTC")
+
+        existing.shiftDate = dateFormatter.date(from: serverRow.shift_date) ?? existing.shiftDate
+        existing.startTime = serverRow.start_time
+        existing.endTime = serverRow.end_time
+        existing.customSupplements = serverRow.custom_supplements.flatMap { try? canonicalJSONEncoder.encode($0) }
+        existing.serverUpdatedAt = serverUpdatedAt
+        existing.serverRevision = serverRevision
+        existing.serverDeletedAt = serverDeletedAt
+        existing.lastSyncedSnapshot = snapshot.encoded()
+        existing.localUpdatedAt = Date()
+    }
+
+    /// Mark a shift as having a conflict
+    func markShiftConflict(id: String, serverSnapshot: UserShiftServerSnapshot) {
+        let descriptor = FetchDescriptor<LocalUserShift>(
+            predicate: #Predicate { $0.id == id }
+        )
+
+        guard let existing = try? modelContext.fetch(descriptor).first else { return }
+
+        existing.syncStatus = .conflict
+        existing.conflictServerSnapshot = serverSnapshot.encoded()
+    }
+
+    /// Update conflict snapshot for a shift already in conflict
+    func updateShiftConflictSnapshot(id: String, serverSnapshot: UserShiftServerSnapshot) {
+        let descriptor = FetchDescriptor<LocalUserShift>(
+            predicate: #Predicate { $0.id == id }
+        )
+
+        guard let existing = try? modelContext.fetch(descriptor).first else { return }
+
+        existing.conflictServerSnapshot = serverSnapshot.encoded()
+    }
+
+    /// Auto-merge a shift (apply server changes for non-dirty fields)
+    func autoMergeShift(
+        id: String,
+        serverRow: SyncShiftRow,
+        serverUpdatedAt: Date,
+        serverRevision: Int64,
+        serverDeletedAt: Date?,
+        newSnapshot: UserShiftServerSnapshot,
+        localDirtyFields: Set<UserShiftField>
+    ) {
+        let descriptor = FetchDescriptor<LocalUserShift>(
+            predicate: #Predicate { $0.id == id }
+        )
+
+        guard let existing = try? modelContext.fetch(descriptor).first else { return }
+
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        dateFormatter.timeZone = TimeZone(identifier: "UTC")
+
+        // Apply server changes only for non-dirty fields
+        if !localDirtyFields.contains(.shiftDate) {
+            existing.shiftDate = dateFormatter.date(from: serverRow.shift_date) ?? existing.shiftDate
+        }
+        if !localDirtyFields.contains(.startTime) {
+            existing.startTime = serverRow.start_time
+        }
+        if !localDirtyFields.contains(.endTime) {
+            existing.endTime = serverRow.end_time
+        }
+        if !localDirtyFields.contains(.customSupplements) {
+            existing.customSupplements = serverRow.custom_supplements.flatMap { try? canonicalJSONEncoder.encode($0) }
+        }
+
+        // Update server metadata
+        existing.serverUpdatedAt = serverUpdatedAt
+        existing.serverRevision = serverRevision
+        existing.serverDeletedAt = serverDeletedAt
+        existing.lastSyncedSnapshot = newSnapshot.encoded()
+        // Keep syncStatus = dirty (still needs push)
+    }
+
+    // MARK: - Sync Update Operations for Recurring Shifts
+
+    func updateRecurringShiftFromServer(
+        id: String,
+        serverRow: SyncRecurringShiftRow,
+        serverUpdatedAt: Date,
+        serverRevision: Int64,
+        serverDeletedAt: Date?,
+        snapshot: RecurringShiftServerSnapshot
+    ) {
+        let descriptor = FetchDescriptor<LocalRecurringShift>(
+            predicate: #Predicate { $0.id == id }
+        )
+
+        guard let existing = try? modelContext.fetch(descriptor).first else { return }
+
+        existing.startTime = serverRow.cleanStartTime
+        existing.endTime = serverRow.cleanEndTime
+        existing.repeatIntervalWeeks = serverRow.repeat_interval_weeks
+        existing.selectedDays = (try? canonicalJSONEncoder.encode(serverRow.selected_days)) ?? Data()
+        existing.endCondition = serverRow.end_condition.flatMap { try? canonicalJSONEncoder.encode($0) }
+        existing.exclusions = serverRow.exclusions.flatMap { try? canonicalJSONEncoder.encode($0) }
+        existing.dateSpecificSupplements = serverRow.date_specific_supplements.flatMap { try? canonicalJSONEncoder.encode($0) }
+        existing.serverUpdatedAt = serverUpdatedAt
+        existing.serverRevision = serverRevision
+        existing.serverDeletedAt = serverDeletedAt
+        existing.lastSyncedSnapshot = snapshot.encoded()
+        existing.localUpdatedAt = Date()
+    }
+
+    func markRecurringShiftConflict(id: String, serverSnapshot: RecurringShiftServerSnapshot) {
+        let descriptor = FetchDescriptor<LocalRecurringShift>(
+            predicate: #Predicate { $0.id == id }
+        )
+
+        guard let existing = try? modelContext.fetch(descriptor).first else { return }
+
+        existing.syncStatus = .conflict
+        existing.conflictServerSnapshot = serverSnapshot.encoded()
+    }
+
+    func updateRecurringShiftConflictSnapshot(id: String, serverSnapshot: RecurringShiftServerSnapshot) {
+        let descriptor = FetchDescriptor<LocalRecurringShift>(
+            predicate: #Predicate { $0.id == id }
+        )
+
+        guard let existing = try? modelContext.fetch(descriptor).first else { return }
+
+        existing.conflictServerSnapshot = serverSnapshot.encoded()
+    }
+
+    func autoMergeRecurringShift(
+        id: String,
+        serverRow: SyncRecurringShiftRow,
+        serverUpdatedAt: Date,
+        serverRevision: Int64,
+        serverDeletedAt: Date?,
+        newSnapshot: RecurringShiftServerSnapshot,
+        localDirtyFields: Set<RecurringShiftField>
+    ) {
+        let descriptor = FetchDescriptor<LocalRecurringShift>(
+            predicate: #Predicate { $0.id == id }
+        )
+
+        guard let existing = try? modelContext.fetch(descriptor).first else { return }
+
+        if !localDirtyFields.contains(.startTime) {
+            existing.startTime = serverRow.cleanStartTime
+        }
+        if !localDirtyFields.contains(.endTime) {
+            existing.endTime = serverRow.cleanEndTime
+        }
+        if !localDirtyFields.contains(.repeatIntervalWeeks) {
+            existing.repeatIntervalWeeks = serverRow.repeat_interval_weeks
+        }
+        if !localDirtyFields.contains(.selectedDays) {
+            existing.selectedDays = (try? canonicalJSONEncoder.encode(serverRow.selected_days)) ?? Data()
+        }
+        if !localDirtyFields.contains(.endCondition) {
+            existing.endCondition = serverRow.end_condition.flatMap { try? canonicalJSONEncoder.encode($0) }
+        }
+        if !localDirtyFields.contains(.exclusions) {
+            existing.exclusions = serverRow.exclusions.flatMap { try? canonicalJSONEncoder.encode($0) }
+        }
+        if !localDirtyFields.contains(.dateSpecificSupplements) {
+            existing.dateSpecificSupplements = serverRow.date_specific_supplements.flatMap { try? canonicalJSONEncoder.encode($0) }
+        }
+
+        existing.serverUpdatedAt = serverUpdatedAt
+        existing.serverRevision = serverRevision
+        existing.serverDeletedAt = serverDeletedAt
+        existing.lastSyncedSnapshot = newSnapshot.encoded()
+    }
+
+    // MARK: - Sync Update Operations for Wage Snapshots
+
+    func updateWageSnapshotFromServer(
+        id: String,
+        serverRow: SyncWageSnapshotRow,
+        serverUpdatedAt: Date,
+        serverRevision: Int64,
+        serverDeletedAt: Date?,
+        snapshot: WageSnapshotServerSnapshot
+    ) {
+        let descriptor = FetchDescriptor<LocalWageSnapshot>(
+            predicate: #Predicate { $0.id == id }
+        )
+
+        guard let existing = try? modelContext.fetch(descriptor).first else { return }
+
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        dateFormatter.timeZone = TimeZone(identifier: "UTC")
+
+        existing.fromDate = serverRow.from_date.flatMap { dateFormatter.date(from: $0) }
+        existing.hourlyWage = serverRow.hourly_wage
+        existing.wageLevel = serverRow.wage_level
+        existing.supplements = (try? canonicalJSONEncoder.encode(serverRow.supplements)) ?? Data()
+        existing.taxEnabled = serverRow.tax_enabled
+        existing.taxPercentage = serverRow.tax_percentage
+        existing.breakEnabled = serverRow.break_enabled
+        existing.breakMethod = serverRow.break_method
+        existing.breakThresholdHours = serverRow.break_threshold_hours
+        existing.breakDeductionMinutes = serverRow.break_deduction_minutes
+        existing.serverUpdatedAt = serverUpdatedAt
+        existing.serverRevision = serverRevision
+        existing.serverDeletedAt = serverDeletedAt
+        existing.lastSyncedSnapshot = snapshot.encoded()
+        existing.localUpdatedAt = Date()
+    }
+
+    func markWageSnapshotConflict(id: String, serverSnapshot: WageSnapshotServerSnapshot) {
+        let descriptor = FetchDescriptor<LocalWageSnapshot>(
+            predicate: #Predicate { $0.id == id }
+        )
+
+        guard let existing = try? modelContext.fetch(descriptor).first else { return }
+
+        existing.syncStatus = .conflict
+        existing.conflictServerSnapshot = serverSnapshot.encoded()
+    }
+
+    func updateWageSnapshotConflictSnapshot(id: String, serverSnapshot: WageSnapshotServerSnapshot) {
+        let descriptor = FetchDescriptor<LocalWageSnapshot>(
+            predicate: #Predicate { $0.id == id }
+        )
+
+        guard let existing = try? modelContext.fetch(descriptor).first else { return }
+
+        existing.conflictServerSnapshot = serverSnapshot.encoded()
+    }
+
+    func autoMergeWageSnapshot(
+        id: String,
+        serverRow: SyncWageSnapshotRow,
+        serverUpdatedAt: Date,
+        serverRevision: Int64,
+        serverDeletedAt: Date?,
+        newSnapshot: WageSnapshotServerSnapshot,
+        localDirtyFields: Set<WageSnapshotField>
+    ) {
+        let descriptor = FetchDescriptor<LocalWageSnapshot>(
+            predicate: #Predicate { $0.id == id }
+        )
+
+        guard let existing = try? modelContext.fetch(descriptor).first else { return }
+
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        dateFormatter.timeZone = TimeZone(identifier: "UTC")
+
+        if !localDirtyFields.contains(.fromDate) {
+            existing.fromDate = serverRow.from_date.flatMap { dateFormatter.date(from: $0) }
+        }
+        if !localDirtyFields.contains(.hourlyWage) {
+            existing.hourlyWage = serverRow.hourly_wage
+        }
+        if !localDirtyFields.contains(.wageLevel) {
+            existing.wageLevel = serverRow.wage_level
+        }
+        if !localDirtyFields.contains(.supplements) {
+            existing.supplements = (try? canonicalJSONEncoder.encode(serverRow.supplements)) ?? Data()
+        }
+        if !localDirtyFields.contains(.taxEnabled) {
+            existing.taxEnabled = serverRow.tax_enabled
+        }
+        if !localDirtyFields.contains(.taxPercentage) {
+            existing.taxPercentage = serverRow.tax_percentage
+        }
+        if !localDirtyFields.contains(.breakEnabled) {
+            existing.breakEnabled = serverRow.break_enabled
+        }
+        if !localDirtyFields.contains(.breakMethod) {
+            existing.breakMethod = serverRow.break_method
+        }
+        if !localDirtyFields.contains(.breakThresholdHours) {
+            existing.breakThresholdHours = serverRow.break_threshold_hours
+        }
+        if !localDirtyFields.contains(.breakDeductionMinutes) {
+            existing.breakDeductionMinutes = serverRow.break_deduction_minutes
+        }
+
+        existing.serverUpdatedAt = serverUpdatedAt
+        existing.serverRevision = serverRevision
+        existing.serverDeletedAt = serverDeletedAt
+        existing.lastSyncedSnapshot = newSnapshot.encoded()
+    }
+
+    // MARK: - Sync Update Operations for User Settings
+
+    func updateUserSettingsFromServer(
+        userId: String,
+        serverRow: SyncUserSettingsRow,
+        serverUpdatedAt: Date,
+        serverRevision: Int64,
+        snapshot: UserSettingsServerSnapshot
+    ) {
+        let descriptor = FetchDescriptor<LocalUserSettings>(
+            predicate: #Predicate { $0.userId == userId }
+        )
+
+        guard let existing = try? modelContext.fetch(descriptor).first else { return }
+
+        let dateFormatter = ISO8601DateFormatter()
+
+        existing.monthlyGoal = serverRow.monthly_goal
+        existing.defaultShiftsView = serverRow.default_shifts_view
+        existing.profilePictureUrl = serverRow.profile_picture_url
+        existing.payrollDay = serverRow.payroll_day
+        existing.theme = serverRow.theme
+        existing.halfTaxMonth = serverRow.half_tax_month
+        existing.currency = serverRow.currency
+        existing.lastActive = serverRow.last_active.flatMap { dateFormatter.date(from: $0) }
+        existing.createdAt = serverRow.created_at.flatMap { dateFormatter.date(from: $0) }
+        existing.serverUpdatedAt = serverUpdatedAt
+        existing.serverRevision = serverRevision
+        existing.lastSyncedSnapshot = snapshot.encoded()
+        existing.localUpdatedAt = Date()
+    }
+
+    func markUserSettingsConflict(userId: String, serverSnapshot: UserSettingsServerSnapshot) {
+        let descriptor = FetchDescriptor<LocalUserSettings>(
+            predicate: #Predicate { $0.userId == userId }
+        )
+
+        guard let existing = try? modelContext.fetch(descriptor).first else { return }
+
+        existing.syncStatus = .conflict
+        existing.conflictServerSnapshot = serverSnapshot.encoded()
+    }
+
+    func updateUserSettingsConflictSnapshot(userId: String, serverSnapshot: UserSettingsServerSnapshot) {
+        let descriptor = FetchDescriptor<LocalUserSettings>(
+            predicate: #Predicate { $0.userId == userId }
+        )
+
+        guard let existing = try? modelContext.fetch(descriptor).first else { return }
+
+        existing.conflictServerSnapshot = serverSnapshot.encoded()
+    }
+
+    func autoMergeUserSettings(
+        userId: String,
+        serverRow: SyncUserSettingsRow,
+        serverUpdatedAt: Date,
+        serverRevision: Int64,
+        newSnapshot: UserSettingsServerSnapshot,
+        localDirtyFields: Set<UserSettingsField>
+    ) {
+        let descriptor = FetchDescriptor<LocalUserSettings>(
+            predicate: #Predicate { $0.userId == userId }
+        )
+
+        guard let existing = try? modelContext.fetch(descriptor).first else { return }
+
+        let dateFormatter = ISO8601DateFormatter()
+
+        if !localDirtyFields.contains(.monthlyGoal) {
+            existing.monthlyGoal = serverRow.monthly_goal
+        }
+        if !localDirtyFields.contains(.defaultShiftsView) {
+            existing.defaultShiftsView = serverRow.default_shifts_view
+        }
+        if !localDirtyFields.contains(.profilePictureUrl) {
+            existing.profilePictureUrl = serverRow.profile_picture_url
+        }
+        if !localDirtyFields.contains(.payrollDay) {
+            existing.payrollDay = serverRow.payroll_day
+        }
+        if !localDirtyFields.contains(.theme) {
+            existing.theme = serverRow.theme
+        }
+        if !localDirtyFields.contains(.halfTaxMonth) {
+            existing.halfTaxMonth = serverRow.half_tax_month
+        }
+        if !localDirtyFields.contains(.currency) {
+            existing.currency = serverRow.currency
+        }
+        if !localDirtyFields.contains(.lastActive) {
+            existing.lastActive = serverRow.last_active.flatMap { dateFormatter.date(from: $0) }
+        }
+
+        existing.serverUpdatedAt = serverUpdatedAt
+        existing.serverRevision = serverRevision
+        existing.lastSyncedSnapshot = newSnapshot.encoded()
+    }
 }
