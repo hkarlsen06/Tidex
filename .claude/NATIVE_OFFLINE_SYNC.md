@@ -32,7 +32,7 @@
 | 2 | iOS SwiftData Models | ✅ Complete |
 | 3 | LocalStore & Repositories | ✅ Complete |
 | 4 | SyncCoordinator (Pull) | ✅ Complete |
-| 5 | SyncCoordinator (Push & Conflicts) | ⬜ Not Started |
+| 5 | SyncCoordinator (Push & Conflicts) | ✅ Complete |
 | 6 | UI/ViewModel Refactor | ⬜ Not Started |
 | 7 | Widget Integration | ⬜ Not Started |
 | 8 | Testing & Validation | ⬜ Not Started |
@@ -533,7 +533,7 @@ let rows: [SyncShiftRow] = try await supabase
 
 ## Phase 5: SyncCoordinator (Push & Conflicts)
 
-**Status**: ⬜ Not Started
+**Status**: ✅ Complete
 
 ### Scope
 
@@ -590,7 +590,112 @@ Actions:
 **No "keep both" option**.
 
 ### Notes
-<!-- Implementation notes will be added here when phase is complete -->
+
+**Completed: 2026-01-15**
+
+**Files Modified**:
+
+1. **`Native/Storage/Sync/SyncServerModels.swift`** - Added push result types:
+   - `TablePushResult` - Result of pushing a single table (rowsPushed, newConflicts, rebased)
+   - `PushResult` enum - Result of pushing a single record (success, conflict, rebased, noChange, deleted)
+   - `ConflictResolution` enum - Resolution choice for conflicts (keepLocal, keepServer)
+   - Updated `SyncResult` to include `pushResults` and `totalRowsPushed`
+
+2. **`Native/Storage/Sync/SyncCoordinator.swift`** - Extended with push phase (~700 lines added):
+   - **Push orchestration**: `pushTable(_:userId:)` dispatches to table-specific push methods
+   - **Per-table push methods**: `pushUserShifts`, `pushRecurringShifts`, `pushWageSnapshots`, `pushUserSettings`
+   - **Record push with optimistic concurrency**: Updates filter by `revision = serverRevision` and `deleted_at IS NULL`
+   - **Soft delete push**: Updates `deleted_at = now()` with revision filter
+   - **Conflict handling with rebase**: If push fails, fetches server state and attempts field-level merge
+   - **Single retry after rebase**: Prevents infinite loops by only retrying once
+   - **Conflict resolution API**: `resolveShiftConflict`, `resolveRecurringShiftConflict`, `resolveWageSnapshotConflict`, `resolveUserSettingsConflict`
+   - **SyncError enum**: Error types for conflict resolution failures
+
+3. **`Native/Storage/LocalStore.swift`** - Added push operations to LocalStoreActor (~500 lines added):
+   - **Push success operations**: `markShiftPushed`, `markRecurringShiftPushed`, `markWageSnapshotPushed`, `markUserSettingsPushed`
+   - **Clean operations**: `markShiftClean`, `markRecurringShiftClean`, `markWageSnapshotClean`, `markUserSettingsClean`
+   - **Delete operations**: `markShiftDeleted`, `markRecurringShiftDeleted`, `markWageSnapshotDeleted`
+   - **Rebase operations**: `rebaseShift`, `rebaseRecurringShift`, `rebaseWageSnapshot`, `rebaseUserSettings`
+   - **Conflict resolution**: `resolveShiftConflictKeepServer`, `resolveShiftConflictKeepLocal` (and equivalents for all tables)
+   - Updated `markXxxConflict` methods to accept optional snapshots (for deleted records)
+
+**Push Algorithm**:
+
+```
+For each dirty/pendingDelete record:
+1. Build partial UPDATE patch from dirtyFields only
+2. Execute UPDATE with filters:
+   - id = recordId
+   - user_id = userId
+   - revision = localServerRevision
+   - deleted_at IS NULL (for non-deletes)
+3. If UPDATE returns row (success):
+   - Update local with canonical server values
+   - Clear dirtyFields
+   - Set syncStatus = clean
+   - Update lastSyncedSnapshot
+4. If UPDATE returns empty (revision mismatch):
+   - Fetch current server row by id
+   - If server deleted: mark conflict
+   - If server changed:
+     a. Compute serverChangedFields from lastSyncedSnapshot
+     b. If dirtyFields ∩ serverChangedFields = ∅ AND not retry:
+        - Rebase: apply server changes to non-dirty fields
+        - Update serverRevision to new value
+        - Retry push once
+     c. If overlap OR retry failed:
+        - Mark conflict with conflictServerSnapshot
+```
+
+**Conflict Resolution**:
+
+```
+resolveConflict(resolution):
+  keepServer:
+    - Overwrite local with conflictServerSnapshot
+    - Clear dirtyFields
+    - Set syncStatus = clean
+    - Set lastSyncedSnapshot = conflictServerSnapshot
+    - Clear conflictServerSnapshot
+
+  keepLocal:
+    - Update serverRevision to server's value (from conflictServerSnapshot)
+    - Keep local values and dirtyFields
+    - Set syncStatus = dirty
+    - Clear conflictServerSnapshot
+    - Attempt push immediately
+```
+
+**Sync Flow (Full Cycle)**:
+
+```
+sync(reason, userId):
+  1. Pull phase (existing from Phase 4):
+     - For each table:
+       - Query revision > cursor
+       - Apply incoming rows (insert/update/merge/conflict)
+       - Update cursor
+
+  2. Push phase (new in Phase 5):
+     - For each table:
+       - Get dirty/pendingDelete records
+       - Push each with optimistic concurrency
+       - Handle conflicts with rebase-and-retry
+
+  3. Update stats:
+     - totalRowsProcessed (pulled)
+     - totalRowsPushed
+     - totalConflicts
+     - totalAutoMerged (during pull)
+     - totalRebased (during push)
+```
+
+**Key Design Decisions**:
+
+1. **Partial updates only** - Push sends only dirty fields, not entire records, reducing data transfer and conflict surface
+2. **Single retry limit** - After rebase, only one retry to prevent infinite loops
+3. **Immediate resolution push** - When user chooses "keepLocal", push happens immediately
+4. **No "keep both"** - Binary resolution only (local vs server), no merge UI needed
 
 ---
 

@@ -61,7 +61,9 @@ final class SyncCoordinator: ObservableObject {
             return SyncResult(
                 success: false,
                 tableResults: [],
+                pushResults: [],
                 totalRowsProcessed: 0,
+                totalRowsPushed: 0,
                 totalConflicts: 0,
                 totalAutoMerged: 0,
                 duration: 0,
@@ -77,7 +79,9 @@ final class SyncCoordinator: ObservableObject {
                 return SyncResult(
                     success: false,
                     tableResults: [],
+                    pushResults: [],
                     totalRowsProcessed: 0,
+                    totalRowsPushed: 0,
                     totalConflicts: 0,
                     totalAutoMerged: 0,
                     duration: 0,
@@ -101,7 +105,7 @@ final class SyncCoordinator: ObservableObject {
                 state.markSyncStarted()
             }
 
-            // Pull all tables
+            // Phase 1: Pull all tables (get latest server state)
             var tableResults: [TablePullResult] = []
 
             for table in SyncTable.allCases {
@@ -109,10 +113,22 @@ final class SyncCoordinator: ObservableObject {
                 tableResults.append(result)
             }
 
+            // Phase 2: Push dirty records to server
+            var pushResults: [TablePushResult] = []
+
+            for table in SyncTable.allCases {
+                let result = try await pushTable(table, userId: userId)
+                pushResults.append(result)
+            }
+
             // Calculate totals
             let totalRows = tableResults.reduce(0) { $0 + $1.rowsProcessed }
-            let totalConflicts = tableResults.reduce(0) { $0 + $1.newConflicts }
+            let totalPushed = pushResults.reduce(0) { $0 + $1.rowsPushed }
+            let pullConflicts = tableResults.reduce(0) { $0 + $1.newConflicts }
+            let pushConflicts = pushResults.reduce(0) { $0 + $1.newConflicts }
+            let totalConflicts = pullConflicts + pushConflicts
             let totalAutoMerged = tableResults.reduce(0) { $0 + $1.autoMerged }
+            let totalRebased = pushResults.reduce(0) { $0 + $1.rebased }
             let duration = Date().timeIntervalSince(startTime)
 
             // Update sync state
@@ -128,7 +144,7 @@ final class SyncCoordinator: ObservableObject {
                 lastAutoSyncAt = Date()
             }
 
-            logger.info("Sync completed: \(totalRows) rows, \(totalConflicts) conflicts, \(totalAutoMerged) auto-merged in \(String(format: "%.2f", duration))s")
+            logger.info("Sync completed: pulled \(totalRows), pushed \(totalPushed), \(totalConflicts) conflicts, \(totalAutoMerged) auto-merged, \(totalRebased) rebased in \(String(format: "%.2f", duration))s")
 
             syncInProgress = false
             isSyncing = false
@@ -136,7 +152,9 @@ final class SyncCoordinator: ObservableObject {
             return SyncResult(
                 success: true,
                 tableResults: tableResults,
+                pushResults: pushResults,
                 totalRowsProcessed: totalRows,
+                totalRowsPushed: totalPushed,
                 totalConflicts: totalConflicts,
                 totalAutoMerged: totalAutoMerged,
                 duration: duration,
@@ -159,7 +177,9 @@ final class SyncCoordinator: ObservableObject {
             return SyncResult(
                 success: false,
                 tableResults: [],
+                pushResults: [],
                 totalRowsProcessed: 0,
+                totalRowsPushed: 0,
                 totalConflicts: 0,
                 totalAutoMerged: 0,
                 duration: duration,
@@ -936,6 +956,1293 @@ final class SyncCoordinator: ObservableObject {
         field
     }
 
+    // MARK: - Push Implementation
+
+    /// Push dirty records for a single table
+    private func pushTable(_ table: SyncTable, userId: String) async throws -> TablePushResult {
+        logger.debug("Pushing \(table.displayName)")
+
+        switch table {
+        case .userShifts:
+            return try await pushUserShifts(userId: userId)
+        case .recurringShifts:
+            return try await pushRecurringShifts(userId: userId)
+        case .wageSnapshots:
+            return try await pushWageSnapshots(userId: userId)
+        case .userSettings:
+            return try await pushUserSettings(userId: userId)
+        }
+    }
+
+    // MARK: - User Shifts Push
+
+    private func pushUserShifts(userId: String) async throws -> TablePushResult {
+        let storeActor = LocalStore.shared.storeActor
+        let dirtyShifts = try await storeActor.getDirtyUserShifts(userId: userId)
+
+        if dirtyShifts.isEmpty {
+            return TablePushResult(table: .userShifts, rowsPushed: 0, newConflicts: 0, rebased: 0)
+        }
+
+        var rowsPushed = 0
+        var newConflicts = 0
+        var rebased = 0
+
+        for shift in dirtyShifts {
+            let result = try await pushUserShift(shift, userId: userId, storeActor: storeActor, isRetry: false)
+            switch result {
+            case .success, .deleted:
+                rowsPushed += 1
+            case .conflict:
+                newConflicts += 1
+            case .rebased:
+                rebased += 1
+                rowsPushed += 1
+            case .noChange:
+                break
+            }
+        }
+
+        try await storeActor.save()
+        return TablePushResult(table: .userShifts, rowsPushed: rowsPushed, newConflicts: newConflicts, rebased: rebased)
+    }
+
+    private func pushUserShift(
+        _ shift: LocalUserShift,
+        userId: String,
+        storeActor: LocalStoreActor,
+        isRetry: Bool
+    ) async throws -> PushResult {
+        let shiftId = shift.id
+
+        if shift.syncStatus == .pendingDelete {
+            // Soft delete: UPDATE deleted_at = now()
+            return try await pushUserShiftDelete(shift, userId: userId, storeActor: storeActor)
+        }
+
+        // Build update patch using only dirty fields
+        let dirtyFields = shift.dirtyFieldKeys
+        if dirtyFields.isEmpty {
+            // No fields dirty, mark as clean
+            await storeActor.markShiftClean(id: shiftId)
+            return .noChange
+        }
+
+        // Build partial update
+        var updateData: [String: AnyJSON] = [:]
+        if dirtyFields.contains(.shiftDate) {
+            updateData["shift_date"] = .string(shift.shiftDateString)
+        }
+        if dirtyFields.contains(.startTime) {
+            updateData["start_time"] = .string(shift.startTime)
+        }
+        if dirtyFields.contains(.endTime) {
+            updateData["end_time"] = .string(shift.endTime)
+        }
+        if dirtyFields.contains(.customSupplements) {
+            if let supplements = shift.decodedCustomSupplements {
+                if let jsonData = try? canonicalJSONEncoder.encode(supplements),
+                   let jsonObject = try? JSONSerialization.jsonObject(with: jsonData) {
+                    updateData["custom_supplements"] = AnyJSON(jsonObject)
+                }
+            } else {
+                updateData["custom_supplements"] = .null
+            }
+        }
+
+        // Optimistic concurrency: filter by revision
+        let serverRevision = shift.serverRevision
+
+        do {
+            // UPDATE with revision filter, returning the updated row
+            let returnedRows: [SyncShiftRow] = try await supabase
+                .from("user_shifts")
+                .update(updateData)
+                .eq("id", value: shiftId)
+                .eq("user_id", value: userId)
+                .eq("revision", value: serverRevision)
+                .is("deleted_at", value: nil)
+                .select()
+                .execute()
+                .value
+
+            if let returnedRow = returnedRows.first {
+                // Success - update local with canonical server values
+                let serverUpdatedAt = parseISO8601(returnedRow.updated_at) ?? Date()
+                let serverSnapshot = UserShiftServerSnapshot.from(
+                    shiftDate: returnedRow.shift_date,
+                    startTime: returnedRow.start_time,
+                    endTime: returnedRow.end_time,
+                    customSupplements: returnedRow.custom_supplements,
+                    updatedAt: serverUpdatedAt,
+                    revision: returnedRow.revision,
+                    deletedAt: nil
+                )
+
+                await storeActor.markShiftPushed(
+                    id: shiftId,
+                    serverRow: returnedRow,
+                    serverUpdatedAt: serverUpdatedAt,
+                    serverRevision: returnedRow.revision,
+                    snapshot: serverSnapshot
+                )
+
+                logger.debug("Pushed shift \(shiftId.prefix(8))")
+                return .success
+            } else {
+                // Row wasn't updated - revision mismatch
+                return try await handleShiftPushConflict(
+                    shift: shift,
+                    userId: userId,
+                    storeActor: storeActor,
+                    isRetry: isRetry
+                )
+            }
+        } catch {
+            logger.error("Push shift failed: \(error.localizedDescription)")
+            throw error
+        }
+    }
+
+    private func pushUserShiftDelete(
+        _ shift: LocalUserShift,
+        userId: String,
+        storeActor: LocalStoreActor
+    ) async throws -> PushResult {
+        let shiftId = shift.id
+        let serverRevision = shift.serverRevision
+
+        // UPDATE deleted_at = now() with revision filter
+        let returnedRows: [SyncShiftRow] = try await supabase
+            .from("user_shifts")
+            .update(["deleted_at": AnyJSON.string(ISO8601DateFormatter().string(from: Date()))])
+            .eq("id", value: shiftId)
+            .eq("user_id", value: userId)
+            .eq("revision", value: serverRevision)
+            .is("deleted_at", value: nil)
+            .select()
+            .execute()
+            .value
+
+        if let returnedRow = returnedRows.first {
+            // Success - mark as deleted locally
+            let serverUpdatedAt = parseISO8601(returnedRow.updated_at) ?? Date()
+            let serverDeletedAt = returnedRow.deleted_at.flatMap { parseISO8601($0) }
+
+            await storeActor.markShiftDeleted(
+                id: shiftId,
+                serverUpdatedAt: serverUpdatedAt,
+                serverRevision: returnedRow.revision,
+                serverDeletedAt: serverDeletedAt
+            )
+
+            logger.debug("Deleted shift \(shiftId.prefix(8))")
+            return .deleted
+        } else {
+            // Conflict - fetch current server state
+            let serverRows: [SyncShiftRow] = try await supabase
+                .from("user_shifts")
+                .select()
+                .eq("id", value: shiftId)
+                .execute()
+                .value
+
+            if let serverRow = serverRows.first {
+                let serverUpdatedAt = parseISO8601(serverRow.updated_at) ?? Date()
+                let serverDeletedAt = serverRow.deleted_at.flatMap { parseISO8601($0) }
+
+                if serverDeletedAt != nil {
+                    // Already deleted on server, just clean up local
+                    await storeActor.markShiftDeleted(
+                        id: shiftId,
+                        serverUpdatedAt: serverUpdatedAt,
+                        serverRevision: serverRow.revision,
+                        serverDeletedAt: serverDeletedAt
+                    )
+                    return .deleted
+                }
+
+                // Mark conflict
+                let serverSnapshot = UserShiftServerSnapshot.from(
+                    shiftDate: serverRow.shift_date,
+                    startTime: serverRow.start_time,
+                    endTime: serverRow.end_time,
+                    customSupplements: serverRow.custom_supplements,
+                    updatedAt: serverUpdatedAt,
+                    revision: serverRow.revision,
+                    deletedAt: serverDeletedAt
+                )
+                await storeActor.markShiftConflict(id: shiftId, serverSnapshot: serverSnapshot)
+            }
+            return .conflict
+        }
+    }
+
+    private func handleShiftPushConflict(
+        shift: LocalUserShift,
+        userId: String,
+        storeActor: LocalStoreActor,
+        isRetry: Bool
+    ) async throws -> PushResult {
+        let shiftId = shift.id
+
+        // Fetch current server state
+        let serverRows: [SyncShiftRow] = try await supabase
+            .from("user_shifts")
+            .select()
+            .eq("id", value: shiftId)
+            .execute()
+            .value
+
+        guard let serverRow = serverRows.first else {
+            // Row was deleted on server
+            logger.debug("Shift \(shiftId.prefix(8)) was deleted on server")
+            await storeActor.markShiftConflict(id: shiftId, serverSnapshot: nil)
+            return .conflict
+        }
+
+        let serverUpdatedAt = parseISO8601(serverRow.updated_at) ?? Date()
+        let serverDeletedAt = serverRow.deleted_at.flatMap { parseISO8601($0) }
+
+        if serverDeletedAt != nil {
+            // Server soft-deleted this row
+            let serverSnapshot = UserShiftServerSnapshot.from(
+                shiftDate: serverRow.shift_date,
+                startTime: serverRow.start_time,
+                endTime: serverRow.end_time,
+                customSupplements: serverRow.custom_supplements,
+                updatedAt: serverUpdatedAt,
+                revision: serverRow.revision,
+                deletedAt: serverDeletedAt
+            )
+            await storeActor.markShiftConflict(id: shiftId, serverSnapshot: serverSnapshot)
+            return .conflict
+        }
+
+        // Try field-level merge
+        guard let lastSnapshot = UserShiftServerSnapshot.decode(from: shift.lastSyncedSnapshot) else {
+            // Cannot decode snapshot, mark conflict
+            let serverSnapshot = UserShiftServerSnapshot.from(
+                shiftDate: serverRow.shift_date,
+                startTime: serverRow.start_time,
+                endTime: serverRow.end_time,
+                customSupplements: serverRow.custom_supplements,
+                updatedAt: serverUpdatedAt,
+                revision: serverRow.revision,
+                deletedAt: serverDeletedAt
+            )
+            await storeActor.markShiftConflict(id: shiftId, serverSnapshot: serverSnapshot)
+            return .conflict
+        }
+
+        let newServerSnapshot = UserShiftServerSnapshot.from(
+            shiftDate: serverRow.shift_date,
+            startTime: serverRow.start_time,
+            endTime: serverRow.end_time,
+            customSupplements: serverRow.custom_supplements,
+            updatedAt: serverUpdatedAt,
+            revision: serverRow.revision,
+            deletedAt: serverDeletedAt
+        )
+
+        let serverChangedFields = newServerSnapshot.changedFields(from: lastSnapshot)
+        let localDirtyFields = shift.dirtyFieldKeys
+        let conflictingFields = serverChangedFields.intersection(Set(localDirtyFields.map { convertToUserShiftField($0) }))
+
+        if conflictingFields.isEmpty && !isRetry {
+            // Auto-merge possible: rebase and retry once
+            await storeActor.rebaseShift(
+                id: shiftId,
+                serverRow: serverRow,
+                serverUpdatedAt: serverUpdatedAt,
+                serverRevision: serverRow.revision,
+                serverDeletedAt: serverDeletedAt,
+                newSnapshot: newServerSnapshot,
+                localDirtyFields: localDirtyFields
+            )
+
+            // Reload and retry
+            if let rebasedShift = try await storeActor.getUserShift(id: shiftId) {
+                let retryResult = try await pushUserShift(rebasedShift, userId: userId, storeActor: storeActor, isRetry: true)
+                if retryResult == .success {
+                    return .rebased
+                }
+                return retryResult
+            }
+            return .conflict
+        } else {
+            // Conflict - overlapping fields or retry failed
+            await storeActor.markShiftConflict(id: shiftId, serverSnapshot: newServerSnapshot)
+            return .conflict
+        }
+    }
+
+    // MARK: - Recurring Shifts Push
+
+    private func pushRecurringShifts(userId: String) async throws -> TablePushResult {
+        let storeActor = LocalStore.shared.storeActor
+        let dirtyShifts = try await storeActor.getDirtyRecurringShifts(userId: userId)
+
+        if dirtyShifts.isEmpty {
+            return TablePushResult(table: .recurringShifts, rowsPushed: 0, newConflicts: 0, rebased: 0)
+        }
+
+        var rowsPushed = 0
+        var newConflicts = 0
+        var rebased = 0
+
+        for shift in dirtyShifts {
+            let result = try await pushRecurringShift(shift, userId: userId, storeActor: storeActor, isRetry: false)
+            switch result {
+            case .success, .deleted:
+                rowsPushed += 1
+            case .conflict:
+                newConflicts += 1
+            case .rebased:
+                rebased += 1
+                rowsPushed += 1
+            case .noChange:
+                break
+            }
+        }
+
+        try await storeActor.save()
+        return TablePushResult(table: .recurringShifts, rowsPushed: rowsPushed, newConflicts: newConflicts, rebased: rebased)
+    }
+
+    private func pushRecurringShift(
+        _ shift: LocalRecurringShift,
+        userId: String,
+        storeActor: LocalStoreActor,
+        isRetry: Bool
+    ) async throws -> PushResult {
+        let shiftId = shift.id
+
+        if shift.syncStatus == .pendingDelete {
+            return try await pushRecurringShiftDelete(shift, userId: userId, storeActor: storeActor)
+        }
+
+        let dirtyFields = shift.dirtyFieldKeys
+        if dirtyFields.isEmpty {
+            await storeActor.markRecurringShiftClean(id: shiftId)
+            return .noChange
+        }
+
+        // Build partial update
+        var updateData: [String: AnyJSON] = [:]
+        if dirtyFields.contains(.startTime) {
+            updateData["start_time"] = .string(shift.startTime)
+        }
+        if dirtyFields.contains(.endTime) {
+            updateData["end_time"] = .string(shift.endTime)
+        }
+        if dirtyFields.contains(.repeatIntervalWeeks) {
+            updateData["repeat_interval_weeks"] = .integer(shift.repeatIntervalWeeks)
+        }
+        if dirtyFields.contains(.selectedDays) {
+            if let jsonData = shift.selectedDays.isEmpty ? nil : shift.selectedDays,
+               let jsonObject = try? JSONSerialization.jsonObject(with: jsonData) {
+                updateData["selected_days"] = AnyJSON(jsonObject)
+            }
+        }
+        if dirtyFields.contains(.endCondition) {
+            if let data = shift.endCondition,
+               let jsonObject = try? JSONSerialization.jsonObject(with: data) {
+                updateData["end_condition"] = AnyJSON(jsonObject)
+            } else {
+                updateData["end_condition"] = .null
+            }
+        }
+        if dirtyFields.contains(.exclusions) {
+            if let data = shift.exclusions,
+               let jsonObject = try? JSONSerialization.jsonObject(with: data) {
+                updateData["exclusions"] = AnyJSON(jsonObject)
+            } else {
+                updateData["exclusions"] = .null
+            }
+        }
+        if dirtyFields.contains(.dateSpecificSupplements) {
+            if let data = shift.dateSpecificSupplements,
+               let jsonObject = try? JSONSerialization.jsonObject(with: data) {
+                updateData["date_specific_supplements"] = AnyJSON(jsonObject)
+            } else {
+                updateData["date_specific_supplements"] = .null
+            }
+        }
+
+        let serverRevision = shift.serverRevision
+
+        do {
+            let returnedRows: [SyncRecurringShiftRow] = try await supabase
+                .from("recurring_shifts")
+                .update(updateData)
+                .eq("id", value: shiftId)
+                .eq("user_id", value: userId)
+                .eq("revision", value: serverRevision)
+                .is("deleted_at", value: nil)
+                .select()
+                .execute()
+                .value
+
+            if let returnedRow = returnedRows.first {
+                let serverUpdatedAt = parseISO8601(returnedRow.updated_at) ?? Date()
+                let serverSnapshot = RecurringShiftServerSnapshot.from(
+                    row: returnedRow.toRecurringShiftRow(),
+                    updatedAt: serverUpdatedAt,
+                    revision: returnedRow.revision,
+                    deletedAt: nil
+                )
+
+                await storeActor.markRecurringShiftPushed(
+                    id: shiftId,
+                    serverRow: returnedRow,
+                    serverUpdatedAt: serverUpdatedAt,
+                    serverRevision: returnedRow.revision,
+                    snapshot: serverSnapshot
+                )
+
+                logger.debug("Pushed recurring shift \(shiftId.prefix(8))")
+                return .success
+            } else {
+                return try await handleRecurringShiftPushConflict(
+                    shift: shift,
+                    userId: userId,
+                    storeActor: storeActor,
+                    isRetry: isRetry
+                )
+            }
+        } catch {
+            logger.error("Push recurring shift failed: \(error.localizedDescription)")
+            throw error
+        }
+    }
+
+    private func pushRecurringShiftDelete(
+        _ shift: LocalRecurringShift,
+        userId: String,
+        storeActor: LocalStoreActor
+    ) async throws -> PushResult {
+        let shiftId = shift.id
+        let serverRevision = shift.serverRevision
+
+        let returnedRows: [SyncRecurringShiftRow] = try await supabase
+            .from("recurring_shifts")
+            .update(["deleted_at": AnyJSON.string(ISO8601DateFormatter().string(from: Date()))])
+            .eq("id", value: shiftId)
+            .eq("user_id", value: userId)
+            .eq("revision", value: serverRevision)
+            .is("deleted_at", value: nil)
+            .select()
+            .execute()
+            .value
+
+        if let returnedRow = returnedRows.first {
+            let serverUpdatedAt = parseISO8601(returnedRow.updated_at) ?? Date()
+            let serverDeletedAt = returnedRow.deleted_at.flatMap { parseISO8601($0) }
+
+            await storeActor.markRecurringShiftDeleted(
+                id: shiftId,
+                serverUpdatedAt: serverUpdatedAt,
+                serverRevision: returnedRow.revision,
+                serverDeletedAt: serverDeletedAt
+            )
+
+            logger.debug("Deleted recurring shift \(shiftId.prefix(8))")
+            return .deleted
+        } else {
+            // Fetch and check server state
+            let serverRows: [SyncRecurringShiftRow] = try await supabase
+                .from("recurring_shifts")
+                .select()
+                .eq("id", value: shiftId)
+                .execute()
+                .value
+
+            if let serverRow = serverRows.first {
+                let serverUpdatedAt = parseISO8601(serverRow.updated_at) ?? Date()
+                let serverDeletedAt = serverRow.deleted_at.flatMap { parseISO8601($0) }
+
+                if serverDeletedAt != nil {
+                    await storeActor.markRecurringShiftDeleted(
+                        id: shiftId,
+                        serverUpdatedAt: serverUpdatedAt,
+                        serverRevision: serverRow.revision,
+                        serverDeletedAt: serverDeletedAt
+                    )
+                    return .deleted
+                }
+
+                let serverSnapshot = RecurringShiftServerSnapshot.from(
+                    row: serverRow.toRecurringShiftRow(),
+                    updatedAt: serverUpdatedAt,
+                    revision: serverRow.revision,
+                    deletedAt: serverDeletedAt
+                )
+                await storeActor.markRecurringShiftConflict(id: shiftId, serverSnapshot: serverSnapshot)
+            }
+            return .conflict
+        }
+    }
+
+    private func handleRecurringShiftPushConflict(
+        shift: LocalRecurringShift,
+        userId: String,
+        storeActor: LocalStoreActor,
+        isRetry: Bool
+    ) async throws -> PushResult {
+        let shiftId = shift.id
+
+        let serverRows: [SyncRecurringShiftRow] = try await supabase
+            .from("recurring_shifts")
+            .select()
+            .eq("id", value: shiftId)
+            .execute()
+            .value
+
+        guard let serverRow = serverRows.first else {
+            logger.debug("Recurring shift \(shiftId.prefix(8)) was deleted on server")
+            await storeActor.markRecurringShiftConflict(id: shiftId, serverSnapshot: nil)
+            return .conflict
+        }
+
+        let serverUpdatedAt = parseISO8601(serverRow.updated_at) ?? Date()
+        let serverDeletedAt = serverRow.deleted_at.flatMap { parseISO8601($0) }
+
+        if serverDeletedAt != nil {
+            let serverSnapshot = RecurringShiftServerSnapshot.from(
+                row: serverRow.toRecurringShiftRow(),
+                updatedAt: serverUpdatedAt,
+                revision: serverRow.revision,
+                deletedAt: serverDeletedAt
+            )
+            await storeActor.markRecurringShiftConflict(id: shiftId, serverSnapshot: serverSnapshot)
+            return .conflict
+        }
+
+        guard let lastSnapshot = RecurringShiftServerSnapshot.decode(from: shift.lastSyncedSnapshot) else {
+            let serverSnapshot = RecurringShiftServerSnapshot.from(
+                row: serverRow.toRecurringShiftRow(),
+                updatedAt: serverUpdatedAt,
+                revision: serverRow.revision,
+                deletedAt: serverDeletedAt
+            )
+            await storeActor.markRecurringShiftConflict(id: shiftId, serverSnapshot: serverSnapshot)
+            return .conflict
+        }
+
+        let newServerSnapshot = RecurringShiftServerSnapshot.from(
+            row: serverRow.toRecurringShiftRow(),
+            updatedAt: serverUpdatedAt,
+            revision: serverRow.revision,
+            deletedAt: serverDeletedAt
+        )
+
+        let serverChangedFields = newServerSnapshot.changedFields(from: lastSnapshot)
+        let localDirtyFields = shift.dirtyFieldKeys
+        let conflictingFields = serverChangedFields.intersection(Set(localDirtyFields.map { convertToRecurringShiftField($0) }))
+
+        if conflictingFields.isEmpty && !isRetry {
+            await storeActor.rebaseRecurringShift(
+                id: shiftId,
+                serverRow: serverRow,
+                serverUpdatedAt: serverUpdatedAt,
+                serverRevision: serverRow.revision,
+                serverDeletedAt: serverDeletedAt,
+                newSnapshot: newServerSnapshot,
+                localDirtyFields: localDirtyFields
+            )
+
+            if let rebasedShift = try await storeActor.getRecurringShift(id: shiftId) {
+                let retryResult = try await pushRecurringShift(rebasedShift, userId: userId, storeActor: storeActor, isRetry: true)
+                if retryResult == .success {
+                    return .rebased
+                }
+                return retryResult
+            }
+            return .conflict
+        } else {
+            await storeActor.markRecurringShiftConflict(id: shiftId, serverSnapshot: newServerSnapshot)
+            return .conflict
+        }
+    }
+
+    // MARK: - Wage Snapshots Push
+
+    private func pushWageSnapshots(userId: String) async throws -> TablePushResult {
+        let storeActor = LocalStore.shared.storeActor
+        let dirtySnapshots = try await storeActor.getDirtyWageSnapshots(userId: userId)
+
+        if dirtySnapshots.isEmpty {
+            return TablePushResult(table: .wageSnapshots, rowsPushed: 0, newConflicts: 0, rebased: 0)
+        }
+
+        var rowsPushed = 0
+        var newConflicts = 0
+        var rebased = 0
+
+        for snapshot in dirtySnapshots {
+            let result = try await pushWageSnapshot(snapshot, userId: userId, storeActor: storeActor, isRetry: false)
+            switch result {
+            case .success, .deleted:
+                rowsPushed += 1
+            case .conflict:
+                newConflicts += 1
+            case .rebased:
+                rebased += 1
+                rowsPushed += 1
+            case .noChange:
+                break
+            }
+        }
+
+        try await storeActor.save()
+        return TablePushResult(table: .wageSnapshots, rowsPushed: rowsPushed, newConflicts: newConflicts, rebased: rebased)
+    }
+
+    private func pushWageSnapshot(
+        _ snapshot: LocalWageSnapshot,
+        userId: String,
+        storeActor: LocalStoreActor,
+        isRetry: Bool
+    ) async throws -> PushResult {
+        let snapshotId = snapshot.id
+
+        if snapshot.syncStatus == .pendingDelete {
+            return try await pushWageSnapshotDelete(snapshot, userId: userId, storeActor: storeActor)
+        }
+
+        let dirtyFields = snapshot.dirtyFieldKeys
+        if dirtyFields.isEmpty {
+            await storeActor.markWageSnapshotClean(id: snapshotId)
+            return .noChange
+        }
+
+        // Build partial update
+        var updateData: [String: AnyJSON] = [:]
+        if dirtyFields.contains(.fromDate) {
+            if let fromDateString = snapshot.fromDateString {
+                updateData["from_date"] = .string(fromDateString)
+            } else {
+                updateData["from_date"] = .null
+            }
+        }
+        if dirtyFields.contains(.hourlyWage) {
+            updateData["hourly_wage"] = .double(snapshot.hourlyWage)
+        }
+        if dirtyFields.contains(.wageLevel) {
+            if let level = snapshot.wageLevel {
+                updateData["wage_level"] = .integer(level)
+            } else {
+                updateData["wage_level"] = .null
+            }
+        }
+        if dirtyFields.contains(.supplements) {
+            if let jsonObject = try? JSONSerialization.jsonObject(with: snapshot.supplements) {
+                updateData["supplements"] = AnyJSON(jsonObject)
+            }
+        }
+        if dirtyFields.contains(.taxEnabled) {
+            if let enabled = snapshot.taxEnabled {
+                updateData["tax_enabled"] = .bool(enabled)
+            } else {
+                updateData["tax_enabled"] = .null
+            }
+        }
+        if dirtyFields.contains(.taxPercentage) {
+            if let percentage = snapshot.taxPercentage {
+                updateData["tax_percentage"] = .double(percentage)
+            } else {
+                updateData["tax_percentage"] = .null
+            }
+        }
+        if dirtyFields.contains(.breakEnabled) {
+            if let enabled = snapshot.breakEnabled {
+                updateData["break_enabled"] = .bool(enabled)
+            } else {
+                updateData["break_enabled"] = .null
+            }
+        }
+        if dirtyFields.contains(.breakMethod) {
+            if let method = snapshot.breakMethod {
+                updateData["break_method"] = .string(method)
+            } else {
+                updateData["break_method"] = .null
+            }
+        }
+        if dirtyFields.contains(.breakThresholdHours) {
+            if let hours = snapshot.breakThresholdHours {
+                updateData["break_threshold_hours"] = .double(hours)
+            } else {
+                updateData["break_threshold_hours"] = .null
+            }
+        }
+        if dirtyFields.contains(.breakDeductionMinutes) {
+            if let minutes = snapshot.breakDeductionMinutes {
+                updateData["break_deduction_minutes"] = .integer(minutes)
+            } else {
+                updateData["break_deduction_minutes"] = .null
+            }
+        }
+
+        let serverRevision = snapshot.serverRevision
+
+        do {
+            let returnedRows: [SyncWageSnapshotRow] = try await supabase
+                .from("wage_snapshots")
+                .update(updateData)
+                .eq("id", value: snapshotId)
+                .eq("user_id", value: userId)
+                .eq("revision", value: serverRevision)
+                .is("deleted_at", value: nil)
+                .select()
+                .execute()
+                .value
+
+            if let returnedRow = returnedRows.first {
+                let serverUpdatedAt = parseISO8601(returnedRow.updated_at) ?? Date()
+                let serverSnapshot = WageSnapshotServerSnapshot.from(
+                    row: returnedRow.toWageSnapshot(),
+                    updatedAt: serverUpdatedAt,
+                    revision: returnedRow.revision,
+                    deletedAt: nil
+                )
+
+                await storeActor.markWageSnapshotPushed(
+                    id: snapshotId,
+                    serverRow: returnedRow,
+                    serverUpdatedAt: serverUpdatedAt,
+                    serverRevision: returnedRow.revision,
+                    snapshot: serverSnapshot
+                )
+
+                logger.debug("Pushed wage snapshot \(snapshotId.prefix(8))")
+                return .success
+            } else {
+                return try await handleWageSnapshotPushConflict(
+                    snapshot: snapshot,
+                    userId: userId,
+                    storeActor: storeActor,
+                    isRetry: isRetry
+                )
+            }
+        } catch {
+            logger.error("Push wage snapshot failed: \(error.localizedDescription)")
+            throw error
+        }
+    }
+
+    private func pushWageSnapshotDelete(
+        _ snapshot: LocalWageSnapshot,
+        userId: String,
+        storeActor: LocalStoreActor
+    ) async throws -> PushResult {
+        let snapshotId = snapshot.id
+        let serverRevision = snapshot.serverRevision
+
+        let returnedRows: [SyncWageSnapshotRow] = try await supabase
+            .from("wage_snapshots")
+            .update(["deleted_at": AnyJSON.string(ISO8601DateFormatter().string(from: Date()))])
+            .eq("id", value: snapshotId)
+            .eq("user_id", value: userId)
+            .eq("revision", value: serverRevision)
+            .is("deleted_at", value: nil)
+            .select()
+            .execute()
+            .value
+
+        if let returnedRow = returnedRows.first {
+            let serverUpdatedAt = parseISO8601(returnedRow.updated_at) ?? Date()
+            let serverDeletedAt = returnedRow.deleted_at.flatMap { parseISO8601($0) }
+
+            await storeActor.markWageSnapshotDeleted(
+                id: snapshotId,
+                serverUpdatedAt: serverUpdatedAt,
+                serverRevision: returnedRow.revision,
+                serverDeletedAt: serverDeletedAt
+            )
+
+            logger.debug("Deleted wage snapshot \(snapshotId.prefix(8))")
+            return .deleted
+        } else {
+            let serverRows: [SyncWageSnapshotRow] = try await supabase
+                .from("wage_snapshots")
+                .select()
+                .eq("id", value: snapshotId)
+                .execute()
+                .value
+
+            if let serverRow = serverRows.first {
+                let serverUpdatedAt = parseISO8601(serverRow.updated_at) ?? Date()
+                let serverDeletedAt = serverRow.deleted_at.flatMap { parseISO8601($0) }
+
+                if serverDeletedAt != nil {
+                    await storeActor.markWageSnapshotDeleted(
+                        id: snapshotId,
+                        serverUpdatedAt: serverUpdatedAt,
+                        serverRevision: serverRow.revision,
+                        serverDeletedAt: serverDeletedAt
+                    )
+                    return .deleted
+                }
+
+                let serverSnapshot = WageSnapshotServerSnapshot.from(
+                    row: serverRow.toWageSnapshot(),
+                    updatedAt: serverUpdatedAt,
+                    revision: serverRow.revision,
+                    deletedAt: serverDeletedAt
+                )
+                await storeActor.markWageSnapshotConflict(id: snapshotId, serverSnapshot: serverSnapshot)
+            }
+            return .conflict
+        }
+    }
+
+    private func handleWageSnapshotPushConflict(
+        snapshot: LocalWageSnapshot,
+        userId: String,
+        storeActor: LocalStoreActor,
+        isRetry: Bool
+    ) async throws -> PushResult {
+        let snapshotId = snapshot.id
+
+        let serverRows: [SyncWageSnapshotRow] = try await supabase
+            .from("wage_snapshots")
+            .select()
+            .eq("id", value: snapshotId)
+            .execute()
+            .value
+
+        guard let serverRow = serverRows.first else {
+            logger.debug("Wage snapshot \(snapshotId.prefix(8)) was deleted on server")
+            await storeActor.markWageSnapshotConflict(id: snapshotId, serverSnapshot: nil)
+            return .conflict
+        }
+
+        let serverUpdatedAt = parseISO8601(serverRow.updated_at) ?? Date()
+        let serverDeletedAt = serverRow.deleted_at.flatMap { parseISO8601($0) }
+
+        if serverDeletedAt != nil {
+            let serverSnapshot = WageSnapshotServerSnapshot.from(
+                row: serverRow.toWageSnapshot(),
+                updatedAt: serverUpdatedAt,
+                revision: serverRow.revision,
+                deletedAt: serverDeletedAt
+            )
+            await storeActor.markWageSnapshotConflict(id: snapshotId, serverSnapshot: serverSnapshot)
+            return .conflict
+        }
+
+        guard let lastSnapshot = WageSnapshotServerSnapshot.decode(from: snapshot.lastSyncedSnapshot) else {
+            let serverSnapshot = WageSnapshotServerSnapshot.from(
+                row: serverRow.toWageSnapshot(),
+                updatedAt: serverUpdatedAt,
+                revision: serverRow.revision,
+                deletedAt: serverDeletedAt
+            )
+            await storeActor.markWageSnapshotConflict(id: snapshotId, serverSnapshot: serverSnapshot)
+            return .conflict
+        }
+
+        let newServerSnapshot = WageSnapshotServerSnapshot.from(
+            row: serverRow.toWageSnapshot(),
+            updatedAt: serverUpdatedAt,
+            revision: serverRow.revision,
+            deletedAt: serverDeletedAt
+        )
+
+        let serverChangedFields = newServerSnapshot.changedFields(from: lastSnapshot)
+        let localDirtyFields = snapshot.dirtyFieldKeys
+        let conflictingFields = serverChangedFields.intersection(Set(localDirtyFields.map { convertToWageSnapshotField($0) }))
+
+        if conflictingFields.isEmpty && !isRetry {
+            await storeActor.rebaseWageSnapshot(
+                id: snapshotId,
+                serverRow: serverRow,
+                serverUpdatedAt: serverUpdatedAt,
+                serverRevision: serverRow.revision,
+                serverDeletedAt: serverDeletedAt,
+                newSnapshot: newServerSnapshot,
+                localDirtyFields: localDirtyFields
+            )
+
+            if let rebasedSnapshot = try await storeActor.getWageSnapshot(id: snapshotId) {
+                let retryResult = try await pushWageSnapshot(rebasedSnapshot, userId: userId, storeActor: storeActor, isRetry: true)
+                if retryResult == .success {
+                    return .rebased
+                }
+                return retryResult
+            }
+            return .conflict
+        } else {
+            await storeActor.markWageSnapshotConflict(id: snapshotId, serverSnapshot: newServerSnapshot)
+            return .conflict
+        }
+    }
+
+    // MARK: - User Settings Push
+
+    private func pushUserSettings(userId: String) async throws -> TablePushResult {
+        let storeActor = LocalStore.shared.storeActor
+        guard let settings = try await storeActor.getDirtyUserSettings(userId: userId) else {
+            return TablePushResult(table: .userSettings, rowsPushed: 0, newConflicts: 0, rebased: 0)
+        }
+
+        let result = try await pushUserSettingsRow(settings, userId: userId, storeActor: storeActor, isRetry: false)
+
+        var rowsPushed = 0
+        var newConflicts = 0
+        var rebased = 0
+
+        switch result {
+        case .success:
+            rowsPushed = 1
+        case .conflict:
+            newConflicts = 1
+        case .rebased:
+            rebased = 1
+            rowsPushed = 1
+        case .noChange, .deleted:
+            break
+        }
+
+        try await storeActor.save()
+        return TablePushResult(table: .userSettings, rowsPushed: rowsPushed, newConflicts: newConflicts, rebased: rebased)
+    }
+
+    private func pushUserSettingsRow(
+        _ settings: LocalUserSettings,
+        userId: String,
+        storeActor: LocalStoreActor,
+        isRetry: Bool
+    ) async throws -> PushResult {
+        let dirtyFields = settings.dirtyFieldKeys
+        if dirtyFields.isEmpty {
+            await storeActor.markUserSettingsClean(userId: userId)
+            return .noChange
+        }
+
+        // Build partial update
+        var updateData: [String: AnyJSON] = [:]
+        if dirtyFields.contains(.monthlyGoal) {
+            if let goal = settings.monthlyGoal {
+                updateData["monthly_goal"] = .integer(goal)
+            } else {
+                updateData["monthly_goal"] = .null
+            }
+        }
+        if dirtyFields.contains(.defaultShiftsView) {
+            if let view = settings.defaultShiftsView {
+                updateData["default_shifts_view"] = .string(view)
+            } else {
+                updateData["default_shifts_view"] = .null
+            }
+        }
+        if dirtyFields.contains(.profilePictureUrl) {
+            if let url = settings.profilePictureUrl {
+                updateData["profile_picture_url"] = .string(url)
+            } else {
+                updateData["profile_picture_url"] = .null
+            }
+        }
+        if dirtyFields.contains(.payrollDay) {
+            if let day = settings.payrollDay {
+                updateData["payroll_day"] = .integer(day)
+            } else {
+                updateData["payroll_day"] = .null
+            }
+        }
+        if dirtyFields.contains(.theme) {
+            updateData["theme"] = .string(settings.theme)
+        }
+        if dirtyFields.contains(.halfTaxMonth) {
+            if let month = settings.halfTaxMonth {
+                updateData["half_tax_month"] = .integer(month)
+            } else {
+                updateData["half_tax_month"] = .null
+            }
+        }
+        if dirtyFields.contains(.currency) {
+            if let currency = settings.currency {
+                updateData["currency"] = .string(currency)
+            } else {
+                updateData["currency"] = .null
+            }
+        }
+        if dirtyFields.contains(.lastActive) {
+            if let lastActive = settings.lastActive {
+                updateData["last_active"] = .string(ISO8601DateFormatter().string(from: lastActive))
+            } else {
+                updateData["last_active"] = .null
+            }
+        }
+
+        let serverRevision = settings.serverRevision
+
+        do {
+            let returnedRows: [SyncUserSettingsRow] = try await supabase
+                .from("user_settings")
+                .update(updateData)
+                .eq("user_id", value: userId)
+                .eq("revision", value: serverRevision)
+                .select()
+                .execute()
+                .value
+
+            if let returnedRow = returnedRows.first {
+                let serverUpdatedAt = parseISO8601(returnedRow.updated_at) ?? Date()
+                let serverSnapshot = UserSettingsServerSnapshot.from(
+                    row: returnedRow.toUserSettings(),
+                    updatedAt: serverUpdatedAt,
+                    revision: returnedRow.revision
+                )
+
+                await storeActor.markUserSettingsPushed(
+                    userId: userId,
+                    serverRow: returnedRow,
+                    serverUpdatedAt: serverUpdatedAt,
+                    serverRevision: returnedRow.revision,
+                    snapshot: serverSnapshot
+                )
+
+                logger.debug("Pushed user settings for \(userId.prefix(8))")
+                return .success
+            } else {
+                return try await handleUserSettingsPushConflict(
+                    settings: settings,
+                    userId: userId,
+                    storeActor: storeActor,
+                    isRetry: isRetry
+                )
+            }
+        } catch {
+            logger.error("Push user settings failed: \(error.localizedDescription)")
+            throw error
+        }
+    }
+
+    private func handleUserSettingsPushConflict(
+        settings: LocalUserSettings,
+        userId: String,
+        storeActor: LocalStoreActor,
+        isRetry: Bool
+    ) async throws -> PushResult {
+        let serverRows: [SyncUserSettingsRow] = try await supabase
+            .from("user_settings")
+            .select()
+            .eq("user_id", value: userId)
+            .execute()
+            .value
+
+        guard let serverRow = serverRows.first else {
+            logger.debug("User settings for \(userId.prefix(8)) were deleted on server")
+            await storeActor.markUserSettingsConflict(userId: userId, serverSnapshot: nil)
+            return .conflict
+        }
+
+        let serverUpdatedAt = parseISO8601(serverRow.updated_at) ?? Date()
+
+        guard let lastSnapshot = UserSettingsServerSnapshot.decode(from: settings.lastSyncedSnapshot) else {
+            let serverSnapshot = UserSettingsServerSnapshot.from(
+                row: serverRow.toUserSettings(),
+                updatedAt: serverUpdatedAt,
+                revision: serverRow.revision
+            )
+            await storeActor.markUserSettingsConflict(userId: userId, serverSnapshot: serverSnapshot)
+            return .conflict
+        }
+
+        let newServerSnapshot = UserSettingsServerSnapshot.from(
+            row: serverRow.toUserSettings(),
+            updatedAt: serverUpdatedAt,
+            revision: serverRow.revision
+        )
+
+        let serverChangedFields = newServerSnapshot.changedFields(from: lastSnapshot)
+        let localDirtyFields = settings.dirtyFieldKeys
+        let conflictingFields = serverChangedFields.intersection(Set(localDirtyFields.map { convertToUserSettingsField($0) }))
+
+        if conflictingFields.isEmpty && !isRetry {
+            await storeActor.rebaseUserSettings(
+                userId: userId,
+                serverRow: serverRow,
+                serverUpdatedAt: serverUpdatedAt,
+                serverRevision: serverRow.revision,
+                newSnapshot: newServerSnapshot,
+                localDirtyFields: localDirtyFields
+            )
+
+            if let rebasedSettings = try await storeActor.getUserSettings(userId: userId) {
+                let retryResult = try await pushUserSettingsRow(rebasedSettings, userId: userId, storeActor: storeActor, isRetry: true)
+                if retryResult == .success {
+                    return .rebased
+                }
+                return retryResult
+            }
+            return .conflict
+        } else {
+            await storeActor.markUserSettingsConflict(userId: userId, serverSnapshot: newServerSnapshot)
+            return .conflict
+        }
+    }
+
+    // MARK: - Conflict Resolution API
+
+    /// Resolve a conflict for a user shift
+    func resolveShiftConflict(shiftId: String, resolution: ConflictResolution, userId: String) async throws {
+        let storeActor = LocalStore.shared.storeActor
+
+        guard let shift = try await storeActor.getUserShift(id: shiftId) else {
+            throw SyncError.notFound(table: .userShifts, id: shiftId)
+        }
+
+        guard shift.syncStatus == .conflict else {
+            throw SyncError.notInConflict(table: .userShifts, id: shiftId)
+        }
+
+        switch resolution {
+        case .keepServer:
+            // Overwrite local with server snapshot
+            guard let serverSnapshotData = shift.conflictServerSnapshot,
+                  let serverSnapshot = UserShiftServerSnapshot.decode(from: serverSnapshotData) else {
+                throw SyncError.missingConflictSnapshot(table: .userShifts, id: shiftId)
+            }
+
+            await storeActor.resolveShiftConflictKeepServer(id: shiftId, serverSnapshot: serverSnapshot)
+
+        case .keepLocal:
+            // Update serverRevision to server's value, keep local values, set dirty, attempt push
+            guard let serverSnapshotData = shift.conflictServerSnapshot,
+                  let serverSnapshot = UserShiftServerSnapshot.decode(from: serverSnapshotData) else {
+                throw SyncError.missingConflictSnapshot(table: .userShifts, id: shiftId)
+            }
+
+            await storeActor.resolveShiftConflictKeepLocal(id: shiftId, serverRevision: serverSnapshot.revision)
+
+            // Attempt to push
+            if let updatedShift = try await storeActor.getUserShift(id: shiftId) {
+                _ = try await pushUserShift(updatedShift, userId: userId, storeActor: storeActor, isRetry: false)
+                try await storeActor.save()
+            }
+        }
+
+        // Update conflict count
+        conflictCount = try await storeActor.countConflicts(userId: userId)
+    }
+
+    /// Resolve a conflict for a recurring shift
+    func resolveRecurringShiftConflict(shiftId: String, resolution: ConflictResolution, userId: String) async throws {
+        let storeActor = LocalStore.shared.storeActor
+
+        guard let shift = try await storeActor.getRecurringShift(id: shiftId) else {
+            throw SyncError.notFound(table: .recurringShifts, id: shiftId)
+        }
+
+        guard shift.syncStatus == .conflict else {
+            throw SyncError.notInConflict(table: .recurringShifts, id: shiftId)
+        }
+
+        switch resolution {
+        case .keepServer:
+            guard let serverSnapshotData = shift.conflictServerSnapshot,
+                  let serverSnapshot = RecurringShiftServerSnapshot.decode(from: serverSnapshotData) else {
+                throw SyncError.missingConflictSnapshot(table: .recurringShifts, id: shiftId)
+            }
+
+            await storeActor.resolveRecurringShiftConflictKeepServer(id: shiftId, serverSnapshot: serverSnapshot)
+
+        case .keepLocal:
+            guard let serverSnapshotData = shift.conflictServerSnapshot,
+                  let serverSnapshot = RecurringShiftServerSnapshot.decode(from: serverSnapshotData) else {
+                throw SyncError.missingConflictSnapshot(table: .recurringShifts, id: shiftId)
+            }
+
+            await storeActor.resolveRecurringShiftConflictKeepLocal(id: shiftId, serverRevision: serverSnapshot.revision)
+
+            if let updatedShift = try await storeActor.getRecurringShift(id: shiftId) {
+                _ = try await pushRecurringShift(updatedShift, userId: userId, storeActor: storeActor, isRetry: false)
+                try await storeActor.save()
+            }
+        }
+
+        conflictCount = try await storeActor.countConflicts(userId: userId)
+    }
+
+    /// Resolve a conflict for a wage snapshot
+    func resolveWageSnapshotConflict(snapshotId: String, resolution: ConflictResolution, userId: String) async throws {
+        let storeActor = LocalStore.shared.storeActor
+
+        guard let snapshot = try await storeActor.getWageSnapshot(id: snapshotId) else {
+            throw SyncError.notFound(table: .wageSnapshots, id: snapshotId)
+        }
+
+        guard snapshot.syncStatus == .conflict else {
+            throw SyncError.notInConflict(table: .wageSnapshots, id: snapshotId)
+        }
+
+        switch resolution {
+        case .keepServer:
+            guard let serverSnapshotData = snapshot.conflictServerSnapshot,
+                  let serverSnapshot = WageSnapshotServerSnapshot.decode(from: serverSnapshotData) else {
+                throw SyncError.missingConflictSnapshot(table: .wageSnapshots, id: snapshotId)
+            }
+
+            await storeActor.resolveWageSnapshotConflictKeepServer(id: snapshotId, serverSnapshot: serverSnapshot)
+
+        case .keepLocal:
+            guard let serverSnapshotData = snapshot.conflictServerSnapshot,
+                  let serverSnapshot = WageSnapshotServerSnapshot.decode(from: serverSnapshotData) else {
+                throw SyncError.missingConflictSnapshot(table: .wageSnapshots, id: snapshotId)
+            }
+
+            await storeActor.resolveWageSnapshotConflictKeepLocal(id: snapshotId, serverRevision: serverSnapshot.revision)
+
+            if let updatedSnapshot = try await storeActor.getWageSnapshot(id: snapshotId) {
+                _ = try await pushWageSnapshot(updatedSnapshot, userId: userId, storeActor: storeActor, isRetry: false)
+                try await storeActor.save()
+            }
+        }
+
+        conflictCount = try await storeActor.countConflicts(userId: userId)
+    }
+
+    /// Resolve a conflict for user settings
+    func resolveUserSettingsConflict(resolution: ConflictResolution, userId: String) async throws {
+        let storeActor = LocalStore.shared.storeActor
+
+        guard let settings = try await storeActor.getUserSettings(userId: userId) else {
+            throw SyncError.notFound(table: .userSettings, id: userId)
+        }
+
+        guard settings.syncStatus == .conflict else {
+            throw SyncError.notInConflict(table: .userSettings, id: userId)
+        }
+
+        switch resolution {
+        case .keepServer:
+            guard let serverSnapshotData = settings.conflictServerSnapshot,
+                  let serverSnapshot = UserSettingsServerSnapshot.decode(from: serverSnapshotData) else {
+                throw SyncError.missingConflictSnapshot(table: .userSettings, id: userId)
+            }
+
+            await storeActor.resolveUserSettingsConflictKeepServer(userId: userId, serverSnapshot: serverSnapshot)
+
+        case .keepLocal:
+            guard let serverSnapshotData = settings.conflictServerSnapshot,
+                  let serverSnapshot = UserSettingsServerSnapshot.decode(from: serverSnapshotData) else {
+                throw SyncError.missingConflictSnapshot(table: .userSettings, id: userId)
+            }
+
+            await storeActor.resolveUserSettingsConflictKeepLocal(userId: userId, serverRevision: serverSnapshot.revision)
+
+            if let updatedSettings = try await storeActor.getUserSettings(userId: userId) {
+                _ = try await pushUserSettingsRow(updatedSettings, userId: userId, storeActor: storeActor, isRetry: false)
+                try await storeActor.save()
+            }
+        }
+
+        conflictCount = try await storeActor.countConflicts(userId: userId)
+    }
+
     // MARK: - Helpers
 
     private enum ApplyResult {
@@ -958,5 +2265,25 @@ final class SyncCoordinator: ObservableObject {
         // Try without fractional seconds
         formatter.formatOptions = [.withInternetDateTime]
         return formatter.date(from: string)
+    }
+}
+
+// MARK: - Sync Errors
+
+/// Errors that can occur during sync operations
+enum SyncError: LocalizedError {
+    case notFound(table: SyncTable, id: String)
+    case notInConflict(table: SyncTable, id: String)
+    case missingConflictSnapshot(table: SyncTable, id: String)
+
+    var errorDescription: String? {
+        switch self {
+        case .notFound(let table, let id):
+            return "\(table.displayName) with id \(id) not found"
+        case .notInConflict(let table, let id):
+            return "\(table.displayName) with id \(id) is not in conflict state"
+        case .missingConflictSnapshot(let table, let id):
+            return "\(table.displayName) with id \(id) has no conflict snapshot"
+        }
     }
 }

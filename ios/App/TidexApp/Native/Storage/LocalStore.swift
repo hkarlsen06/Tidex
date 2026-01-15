@@ -463,7 +463,7 @@ actor LocalStoreActor {
     }
 
     /// Mark a shift as having a conflict
-    func markShiftConflict(id: String, serverSnapshot: UserShiftServerSnapshot) {
+    func markShiftConflict(id: String, serverSnapshot: UserShiftServerSnapshot?) {
         let descriptor = FetchDescriptor<LocalUserShift>(
             predicate: #Predicate { $0.id == id }
         )
@@ -471,7 +471,7 @@ actor LocalStoreActor {
         guard let existing = try? modelContext.fetch(descriptor).first else { return }
 
         existing.syncStatus = .conflict
-        existing.conflictServerSnapshot = serverSnapshot.encoded()
+        existing.conflictServerSnapshot = serverSnapshot?.encoded()
     }
 
     /// Update conflict snapshot for a shift already in conflict
@@ -557,7 +557,7 @@ actor LocalStoreActor {
         existing.localUpdatedAt = Date()
     }
 
-    func markRecurringShiftConflict(id: String, serverSnapshot: RecurringShiftServerSnapshot) {
+    func markRecurringShiftConflict(id: String, serverSnapshot: RecurringShiftServerSnapshot?) {
         let descriptor = FetchDescriptor<LocalRecurringShift>(
             predicate: #Predicate { $0.id == id }
         )
@@ -565,7 +565,7 @@ actor LocalStoreActor {
         guard let existing = try? modelContext.fetch(descriptor).first else { return }
 
         existing.syncStatus = .conflict
-        existing.conflictServerSnapshot = serverSnapshot.encoded()
+        existing.conflictServerSnapshot = serverSnapshot?.encoded()
     }
 
     func updateRecurringShiftConflictSnapshot(id: String, serverSnapshot: RecurringShiftServerSnapshot) {
@@ -658,7 +658,7 @@ actor LocalStoreActor {
         existing.localUpdatedAt = Date()
     }
 
-    func markWageSnapshotConflict(id: String, serverSnapshot: WageSnapshotServerSnapshot) {
+    func markWageSnapshotConflict(id: String, serverSnapshot: WageSnapshotServerSnapshot?) {
         let descriptor = FetchDescriptor<LocalWageSnapshot>(
             predicate: #Predicate { $0.id == id }
         )
@@ -666,7 +666,7 @@ actor LocalStoreActor {
         guard let existing = try? modelContext.fetch(descriptor).first else { return }
 
         existing.syncStatus = .conflict
-        existing.conflictServerSnapshot = serverSnapshot.encoded()
+        existing.conflictServerSnapshot = serverSnapshot?.encoded()
     }
 
     func updateWageSnapshotConflictSnapshot(id: String, serverSnapshot: WageSnapshotServerSnapshot) {
@@ -767,7 +767,7 @@ actor LocalStoreActor {
         existing.localUpdatedAt = Date()
     }
 
-    func markUserSettingsConflict(userId: String, serverSnapshot: UserSettingsServerSnapshot) {
+    func markUserSettingsConflict(userId: String, serverSnapshot: UserSettingsServerSnapshot?) {
         let descriptor = FetchDescriptor<LocalUserSettings>(
             predicate: #Predicate { $0.userId == userId }
         )
@@ -775,7 +775,7 @@ actor LocalStoreActor {
         guard let existing = try? modelContext.fetch(descriptor).first else { return }
 
         existing.syncStatus = .conflict
-        existing.conflictServerSnapshot = serverSnapshot.encoded()
+        existing.conflictServerSnapshot = serverSnapshot?.encoded()
     }
 
     func updateUserSettingsConflictSnapshot(userId: String, serverSnapshot: UserSettingsServerSnapshot) {
@@ -832,5 +832,490 @@ actor LocalStoreActor {
         existing.serverUpdatedAt = serverUpdatedAt
         existing.serverRevision = serverRevision
         existing.lastSyncedSnapshot = newSnapshot.encoded()
+    }
+
+    // MARK: - Push Operations for User Shifts
+
+    /// Mark a shift as successfully pushed (clean)
+    func markShiftPushed(
+        id: String,
+        serverRow: SyncShiftRow,
+        serverUpdatedAt: Date,
+        serverRevision: Int64,
+        snapshot: UserShiftServerSnapshot
+    ) {
+        let descriptor = FetchDescriptor<LocalUserShift>(
+            predicate: #Predicate { $0.id == id }
+        )
+
+        guard let existing = try? modelContext.fetch(descriptor).first else { return }
+
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        dateFormatter.timeZone = TimeZone(identifier: "UTC")
+
+        // Update with canonical server values
+        existing.shiftDate = dateFormatter.date(from: serverRow.shift_date) ?? existing.shiftDate
+        existing.startTime = serverRow.start_time
+        existing.endTime = serverRow.end_time
+        existing.customSupplements = serverRow.custom_supplements.flatMap { try? canonicalJSONEncoder.encode($0) }
+        existing.serverUpdatedAt = serverUpdatedAt
+        existing.serverRevision = serverRevision
+        existing.syncStatus = .clean
+        existing.dirtyFieldKeys = []
+        existing.lastSyncedSnapshot = snapshot.encoded()
+        existing.conflictServerSnapshot = nil
+        existing.localUpdatedAt = Date()
+    }
+
+    /// Mark a shift as clean (no dirty fields)
+    func markShiftClean(id: String) {
+        let descriptor = FetchDescriptor<LocalUserShift>(
+            predicate: #Predicate { $0.id == id }
+        )
+
+        guard let existing = try? modelContext.fetch(descriptor).first else { return }
+
+        existing.syncStatus = .clean
+        existing.dirtyFieldKeys = []
+        existing.conflictServerSnapshot = nil
+    }
+
+    /// Mark a shift as successfully deleted
+    func markShiftDeleted(
+        id: String,
+        serverUpdatedAt: Date,
+        serverRevision: Int64,
+        serverDeletedAt: Date?
+    ) {
+        let descriptor = FetchDescriptor<LocalUserShift>(
+            predicate: #Predicate { $0.id == id }
+        )
+
+        guard let existing = try? modelContext.fetch(descriptor).first else { return }
+
+        existing.serverUpdatedAt = serverUpdatedAt
+        existing.serverRevision = serverRevision
+        existing.serverDeletedAt = serverDeletedAt
+        existing.syncStatus = .clean
+        existing.dirtyFieldKeys = []
+        existing.conflictServerSnapshot = nil
+    }
+
+    /// Rebase a shift (update server metadata, keep local dirty fields)
+    func rebaseShift(
+        id: String,
+        serverRow: SyncShiftRow,
+        serverUpdatedAt: Date,
+        serverRevision: Int64,
+        serverDeletedAt: Date?,
+        newSnapshot: UserShiftServerSnapshot,
+        localDirtyFields: Set<UserShiftField>
+    ) {
+        // Same as autoMergeShift - apply server changes for non-dirty fields
+        autoMergeShift(
+            id: id,
+            serverRow: serverRow,
+            serverUpdatedAt: serverUpdatedAt,
+            serverRevision: serverRevision,
+            serverDeletedAt: serverDeletedAt,
+            newSnapshot: newSnapshot,
+            localDirtyFields: localDirtyFields
+        )
+    }
+
+    /// Resolve shift conflict by keeping server version
+    func resolveShiftConflictKeepServer(id: String, serverSnapshot: UserShiftServerSnapshot) {
+        let descriptor = FetchDescriptor<LocalUserShift>(
+            predicate: #Predicate { $0.id == id }
+        )
+
+        guard let existing = try? modelContext.fetch(descriptor).first else { return }
+
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        dateFormatter.timeZone = TimeZone(identifier: "UTC")
+
+        // Overwrite local with server snapshot
+        existing.shiftDate = dateFormatter.date(from: serverSnapshot.shiftDate) ?? existing.shiftDate
+        existing.startTime = serverSnapshot.startTime
+        existing.endTime = serverSnapshot.endTime
+        existing.customSupplements = serverSnapshot.customSupplements
+        existing.serverUpdatedAt = serverSnapshot.updatedAt
+        existing.serverRevision = serverSnapshot.revision
+        existing.serverDeletedAt = serverSnapshot.deletedAt
+        existing.syncStatus = .clean
+        existing.dirtyFieldKeys = []
+        existing.lastSyncedSnapshot = serverSnapshot.encoded()
+        existing.conflictServerSnapshot = nil
+        existing.localUpdatedAt = Date()
+    }
+
+    /// Resolve shift conflict by keeping local version (prepare for push)
+    func resolveShiftConflictKeepLocal(id: String, serverRevision: Int64) {
+        let descriptor = FetchDescriptor<LocalUserShift>(
+            predicate: #Predicate { $0.id == id }
+        )
+
+        guard let existing = try? modelContext.fetch(descriptor).first else { return }
+
+        // Update server revision so next push uses correct revision
+        existing.serverRevision = serverRevision
+        existing.syncStatus = .dirty
+        existing.conflictServerSnapshot = nil
+        // Keep dirtyFieldKeys - they contain the fields we want to push
+    }
+
+    // MARK: - Push Operations for Recurring Shifts
+
+    func markRecurringShiftPushed(
+        id: String,
+        serverRow: SyncRecurringShiftRow,
+        serverUpdatedAt: Date,
+        serverRevision: Int64,
+        snapshot: RecurringShiftServerSnapshot
+    ) {
+        let descriptor = FetchDescriptor<LocalRecurringShift>(
+            predicate: #Predicate { $0.id == id }
+        )
+
+        guard let existing = try? modelContext.fetch(descriptor).first else { return }
+
+        existing.startTime = serverRow.cleanStartTime
+        existing.endTime = serverRow.cleanEndTime
+        existing.repeatIntervalWeeks = serverRow.repeat_interval_weeks
+        existing.selectedDays = (try? canonicalJSONEncoder.encode(serverRow.selected_days)) ?? Data()
+        existing.endCondition = serverRow.end_condition.flatMap { try? canonicalJSONEncoder.encode($0) }
+        existing.exclusions = serverRow.exclusions.flatMap { try? canonicalJSONEncoder.encode($0) }
+        existing.dateSpecificSupplements = serverRow.date_specific_supplements.flatMap { try? canonicalJSONEncoder.encode($0) }
+        existing.serverUpdatedAt = serverUpdatedAt
+        existing.serverRevision = serverRevision
+        existing.syncStatus = .clean
+        existing.dirtyFieldKeys = []
+        existing.lastSyncedSnapshot = snapshot.encoded()
+        existing.conflictServerSnapshot = nil
+        existing.localUpdatedAt = Date()
+    }
+
+    func markRecurringShiftClean(id: String) {
+        let descriptor = FetchDescriptor<LocalRecurringShift>(
+            predicate: #Predicate { $0.id == id }
+        )
+
+        guard let existing = try? modelContext.fetch(descriptor).first else { return }
+
+        existing.syncStatus = .clean
+        existing.dirtyFieldKeys = []
+        existing.conflictServerSnapshot = nil
+    }
+
+    func markRecurringShiftDeleted(
+        id: String,
+        serverUpdatedAt: Date,
+        serverRevision: Int64,
+        serverDeletedAt: Date?
+    ) {
+        let descriptor = FetchDescriptor<LocalRecurringShift>(
+            predicate: #Predicate { $0.id == id }
+        )
+
+        guard let existing = try? modelContext.fetch(descriptor).first else { return }
+
+        existing.serverUpdatedAt = serverUpdatedAt
+        existing.serverRevision = serverRevision
+        existing.serverDeletedAt = serverDeletedAt
+        existing.syncStatus = .clean
+        existing.dirtyFieldKeys = []
+        existing.conflictServerSnapshot = nil
+    }
+
+    func rebaseRecurringShift(
+        id: String,
+        serverRow: SyncRecurringShiftRow,
+        serverUpdatedAt: Date,
+        serverRevision: Int64,
+        serverDeletedAt: Date?,
+        newSnapshot: RecurringShiftServerSnapshot,
+        localDirtyFields: Set<RecurringShiftField>
+    ) {
+        autoMergeRecurringShift(
+            id: id,
+            serverRow: serverRow,
+            serverUpdatedAt: serverUpdatedAt,
+            serverRevision: serverRevision,
+            serverDeletedAt: serverDeletedAt,
+            newSnapshot: newSnapshot,
+            localDirtyFields: localDirtyFields
+        )
+    }
+
+    func resolveRecurringShiftConflictKeepServer(id: String, serverSnapshot: RecurringShiftServerSnapshot) {
+        let descriptor = FetchDescriptor<LocalRecurringShift>(
+            predicate: #Predicate { $0.id == id }
+        )
+
+        guard let existing = try? modelContext.fetch(descriptor).first else { return }
+
+        existing.startTime = serverSnapshot.startTime
+        existing.endTime = serverSnapshot.endTime
+        existing.repeatIntervalWeeks = serverSnapshot.repeatIntervalWeeks
+        existing.selectedDays = serverSnapshot.selectedDays
+        existing.endCondition = serverSnapshot.endCondition
+        existing.exclusions = serverSnapshot.exclusions
+        existing.dateSpecificSupplements = serverSnapshot.dateSpecificSupplements
+        existing.serverUpdatedAt = serverSnapshot.updatedAt
+        existing.serverRevision = serverSnapshot.revision
+        existing.serverDeletedAt = serverSnapshot.deletedAt
+        existing.syncStatus = .clean
+        existing.dirtyFieldKeys = []
+        existing.lastSyncedSnapshot = serverSnapshot.encoded()
+        existing.conflictServerSnapshot = nil
+        existing.localUpdatedAt = Date()
+    }
+
+    func resolveRecurringShiftConflictKeepLocal(id: String, serverRevision: Int64) {
+        let descriptor = FetchDescriptor<LocalRecurringShift>(
+            predicate: #Predicate { $0.id == id }
+        )
+
+        guard let existing = try? modelContext.fetch(descriptor).first else { return }
+
+        existing.serverRevision = serverRevision
+        existing.syncStatus = .dirty
+        existing.conflictServerSnapshot = nil
+    }
+
+    // MARK: - Push Operations for Wage Snapshots
+
+    func markWageSnapshotPushed(
+        id: String,
+        serverRow: SyncWageSnapshotRow,
+        serverUpdatedAt: Date,
+        serverRevision: Int64,
+        snapshot: WageSnapshotServerSnapshot
+    ) {
+        let descriptor = FetchDescriptor<LocalWageSnapshot>(
+            predicate: #Predicate { $0.id == id }
+        )
+
+        guard let existing = try? modelContext.fetch(descriptor).first else { return }
+
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        dateFormatter.timeZone = TimeZone(identifier: "UTC")
+
+        existing.fromDate = serverRow.from_date.flatMap { dateFormatter.date(from: $0) }
+        existing.hourlyWage = serverRow.hourly_wage
+        existing.wageLevel = serverRow.wage_level
+        existing.supplements = (try? canonicalJSONEncoder.encode(serverRow.supplements)) ?? Data()
+        existing.taxEnabled = serverRow.tax_enabled
+        existing.taxPercentage = serverRow.tax_percentage
+        existing.breakEnabled = serverRow.break_enabled
+        existing.breakMethod = serverRow.break_method
+        existing.breakThresholdHours = serverRow.break_threshold_hours
+        existing.breakDeductionMinutes = serverRow.break_deduction_minutes
+        existing.serverUpdatedAt = serverUpdatedAt
+        existing.serverRevision = serverRevision
+        existing.syncStatus = .clean
+        existing.dirtyFieldKeys = []
+        existing.lastSyncedSnapshot = snapshot.encoded()
+        existing.conflictServerSnapshot = nil
+        existing.localUpdatedAt = Date()
+    }
+
+    func markWageSnapshotClean(id: String) {
+        let descriptor = FetchDescriptor<LocalWageSnapshot>(
+            predicate: #Predicate { $0.id == id }
+        )
+
+        guard let existing = try? modelContext.fetch(descriptor).first else { return }
+
+        existing.syncStatus = .clean
+        existing.dirtyFieldKeys = []
+        existing.conflictServerSnapshot = nil
+    }
+
+    func markWageSnapshotDeleted(
+        id: String,
+        serverUpdatedAt: Date,
+        serverRevision: Int64,
+        serverDeletedAt: Date?
+    ) {
+        let descriptor = FetchDescriptor<LocalWageSnapshot>(
+            predicate: #Predicate { $0.id == id }
+        )
+
+        guard let existing = try? modelContext.fetch(descriptor).first else { return }
+
+        existing.serverUpdatedAt = serverUpdatedAt
+        existing.serverRevision = serverRevision
+        existing.serverDeletedAt = serverDeletedAt
+        existing.syncStatus = .clean
+        existing.dirtyFieldKeys = []
+        existing.conflictServerSnapshot = nil
+    }
+
+    func rebaseWageSnapshot(
+        id: String,
+        serverRow: SyncWageSnapshotRow,
+        serverUpdatedAt: Date,
+        serverRevision: Int64,
+        serverDeletedAt: Date?,
+        newSnapshot: WageSnapshotServerSnapshot,
+        localDirtyFields: Set<WageSnapshotField>
+    ) {
+        autoMergeWageSnapshot(
+            id: id,
+            serverRow: serverRow,
+            serverUpdatedAt: serverUpdatedAt,
+            serverRevision: serverRevision,
+            serverDeletedAt: serverDeletedAt,
+            newSnapshot: newSnapshot,
+            localDirtyFields: localDirtyFields
+        )
+    }
+
+    func resolveWageSnapshotConflictKeepServer(id: String, serverSnapshot: WageSnapshotServerSnapshot) {
+        let descriptor = FetchDescriptor<LocalWageSnapshot>(
+            predicate: #Predicate { $0.id == id }
+        )
+
+        guard let existing = try? modelContext.fetch(descriptor).first else { return }
+
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        dateFormatter.timeZone = TimeZone(identifier: "UTC")
+
+        existing.fromDate = serverSnapshot.fromDate.flatMap { dateFormatter.date(from: $0) }
+        existing.hourlyWage = serverSnapshot.hourlyWage
+        existing.wageLevel = serverSnapshot.wageLevel
+        existing.supplements = serverSnapshot.supplements
+        existing.taxEnabled = serverSnapshot.taxEnabled
+        existing.taxPercentage = serverSnapshot.taxPercentage
+        existing.breakEnabled = serverSnapshot.breakEnabled
+        existing.breakMethod = serverSnapshot.breakMethod
+        existing.breakThresholdHours = serverSnapshot.breakThresholdHours
+        existing.breakDeductionMinutes = serverSnapshot.breakDeductionMinutes
+        existing.serverUpdatedAt = serverSnapshot.updatedAt
+        existing.serverRevision = serverSnapshot.revision
+        existing.serverDeletedAt = serverSnapshot.deletedAt
+        existing.syncStatus = .clean
+        existing.dirtyFieldKeys = []
+        existing.lastSyncedSnapshot = serverSnapshot.encoded()
+        existing.conflictServerSnapshot = nil
+        existing.localUpdatedAt = Date()
+    }
+
+    func resolveWageSnapshotConflictKeepLocal(id: String, serverRevision: Int64) {
+        let descriptor = FetchDescriptor<LocalWageSnapshot>(
+            predicate: #Predicate { $0.id == id }
+        )
+
+        guard let existing = try? modelContext.fetch(descriptor).first else { return }
+
+        existing.serverRevision = serverRevision
+        existing.syncStatus = .dirty
+        existing.conflictServerSnapshot = nil
+    }
+
+    // MARK: - Push Operations for User Settings
+
+    func markUserSettingsPushed(
+        userId: String,
+        serverRow: SyncUserSettingsRow,
+        serverUpdatedAt: Date,
+        serverRevision: Int64,
+        snapshot: UserSettingsServerSnapshot
+    ) {
+        let descriptor = FetchDescriptor<LocalUserSettings>(
+            predicate: #Predicate { $0.userId == userId }
+        )
+
+        guard let existing = try? modelContext.fetch(descriptor).first else { return }
+
+        let dateFormatter = ISO8601DateFormatter()
+
+        existing.monthlyGoal = serverRow.monthly_goal
+        existing.defaultShiftsView = serverRow.default_shifts_view
+        existing.profilePictureUrl = serverRow.profile_picture_url
+        existing.payrollDay = serverRow.payroll_day
+        existing.theme = serverRow.theme
+        existing.halfTaxMonth = serverRow.half_tax_month
+        existing.currency = serverRow.currency
+        existing.lastActive = serverRow.last_active.flatMap { dateFormatter.date(from: $0) }
+        existing.createdAt = serverRow.created_at.flatMap { dateFormatter.date(from: $0) }
+        existing.serverUpdatedAt = serverUpdatedAt
+        existing.serverRevision = serverRevision
+        existing.syncStatus = .clean
+        existing.dirtyFieldKeys = []
+        existing.lastSyncedSnapshot = snapshot.encoded()
+        existing.conflictServerSnapshot = nil
+        existing.localUpdatedAt = Date()
+    }
+
+    func markUserSettingsClean(userId: String) {
+        let descriptor = FetchDescriptor<LocalUserSettings>(
+            predicate: #Predicate { $0.userId == userId }
+        )
+
+        guard let existing = try? modelContext.fetch(descriptor).first else { return }
+
+        existing.syncStatus = .clean
+        existing.dirtyFieldKeys = []
+        existing.conflictServerSnapshot = nil
+    }
+
+    func rebaseUserSettings(
+        userId: String,
+        serverRow: SyncUserSettingsRow,
+        serverUpdatedAt: Date,
+        serverRevision: Int64,
+        newSnapshot: UserSettingsServerSnapshot,
+        localDirtyFields: Set<UserSettingsField>
+    ) {
+        autoMergeUserSettings(
+            userId: userId,
+            serverRow: serverRow,
+            serverUpdatedAt: serverUpdatedAt,
+            serverRevision: serverRevision,
+            newSnapshot: newSnapshot,
+            localDirtyFields: localDirtyFields
+        )
+    }
+
+    func resolveUserSettingsConflictKeepServer(userId: String, serverSnapshot: UserSettingsServerSnapshot) {
+        let descriptor = FetchDescriptor<LocalUserSettings>(
+            predicate: #Predicate { $0.userId == userId }
+        )
+
+        guard let existing = try? modelContext.fetch(descriptor).first else { return }
+
+        existing.monthlyGoal = serverSnapshot.monthlyGoal
+        existing.defaultShiftsView = serverSnapshot.defaultShiftsView
+        existing.profilePictureUrl = serverSnapshot.profilePictureUrl
+        existing.payrollDay = serverSnapshot.payrollDay
+        existing.theme = serverSnapshot.theme
+        existing.halfTaxMonth = serverSnapshot.halfTaxMonth
+        existing.currency = serverSnapshot.currency
+        existing.lastActive = serverSnapshot.lastActive
+        existing.serverUpdatedAt = serverSnapshot.updatedAt
+        existing.serverRevision = serverSnapshot.revision
+        existing.syncStatus = .clean
+        existing.dirtyFieldKeys = []
+        existing.lastSyncedSnapshot = serverSnapshot.encoded()
+        existing.conflictServerSnapshot = nil
+        existing.localUpdatedAt = Date()
+    }
+
+    func resolveUserSettingsConflictKeepLocal(userId: String, serverRevision: Int64) {
+        let descriptor = FetchDescriptor<LocalUserSettings>(
+            predicate: #Predicate { $0.userId == userId }
+        )
+
+        guard let existing = try? modelContext.fetch(descriptor).first else { return }
+
+        existing.serverRevision = serverRevision
+        existing.syncStatus = .dirty
+        existing.conflictServerSnapshot = nil
     }
 }
