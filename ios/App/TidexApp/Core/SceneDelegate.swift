@@ -56,6 +56,11 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
             LocalizationManager.shared.refreshLocale()
         }
 
+        // Trigger sync on foreground (interval-guarded by SyncCoordinator)
+        Task { @MainActor in
+            AppCoordinator.shared.handleAppForeground()
+        }
+
         // End background task if returning to foreground before expiration
         (UIApplication.shared.delegate as? AppDelegate)?.endBackgroundTaskIfNeeded()
     }

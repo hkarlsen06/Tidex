@@ -33,7 +33,7 @@
 | 3 | LocalStore & Repositories | ✅ Complete |
 | 4 | SyncCoordinator (Pull) | ✅ Complete |
 | 5 | SyncCoordinator (Push & Conflicts) | ✅ Complete |
-| 6 | UI/ViewModel Refactor | ⬜ Not Started |
+| 6 | UI/ViewModel Refactor | ✅ Complete |
 | 7 | Widget Integration | ⬜ Not Started |
 | 8 | Testing & Validation | ⬜ Not Started |
 
@@ -701,7 +701,7 @@ sync(reason, userId):
 
 ## Phase 6: UI/ViewModel Refactor
 
-**Status**: ⬜ Not Started
+**Status**: ✅ Complete
 
 ### Scope
 
@@ -730,7 +730,100 @@ Target behavior:
 - Networking remains only inside SyncEngine
 
 ### Notes
-<!-- Implementation notes will be added here when phase is complete -->
+
+**Completed: 2026-01-15**
+
+**Files Modified**:
+
+1. **`Native/Features/Dashboard/DashboardViewModel.swift`** - Complete refactor to local-first:
+   - Replaced service dependencies with repository dependencies:
+     - `ShiftsService` → `ShiftsRepository`
+     - `SettingsService` → `SettingsRepository`
+     - `SnapshotsService` → `SnapshotsRepository`
+     - Added `RecurringShiftsRepository` and `SyncCoordinator`
+   - `loadDashboard()` now reads from local repositories only (no network)
+   - `loadDashboardFromLocal()` new internal method for pure local reads
+   - `refresh()` now triggers `syncCoordinator.sync(reason: .manualRefresh)` then reloads local
+   - `loadDashboardForDisplayedMonth()` reads from local repositories
+   - `prefetchMonthInBackground()` reads from local repositories
+   - Added `noLocalData` error case for graceful handling when sync hasn't completed
+
+2. **`Native/Core/AppCoordinator.swift`** - Added sync triggers:
+   - Added `SyncCoordinator` dependency
+   - Added `initialSyncComplete` published state for UI awareness
+   - `updateUserProfile()` now calls `triggerInitialSync(userId:)` after authentication
+   - `triggerInitialSync(userId:)` runs sync in background with `.appLaunch` reason
+   - `handleAppForeground()` new public method for foreground sync triggers
+   - Profile picture now loaded from `SettingsRepository` (local-first)
+
+3. **`Native/Core/SceneDelegate.swift`** - Hook foreground sync:
+   - `sceneWillEnterForeground()` now calls `AppCoordinator.shared.handleAppForeground()`
+   - This triggers sync when app returns from background (interval-guarded)
+
+**Data Flow (Local-First)**:
+
+```
+App Launch
+    ↓
+AppCoordinator (auth established)
+    ↓
+triggerInitialSync(userId)
+    ↓
+SyncCoordinator.sync(reason: .appLaunch)
+    ↓
+Pull all tables → SwiftData
+Push dirty records → Server
+    ↓
+DashboardView appears
+    ↓
+DashboardViewModel.loadDashboard()
+    ↓
+Reads from ShiftsRepository, SettingsRepository, SnapshotsRepository
+    ↓
+PayrollEngine.computeShiftsForMonth()
+    ↓
+Display DashboardData
+```
+
+**Pull-to-Refresh Flow**:
+
+```
+User pulls to refresh
+    ↓
+DashboardViewModel.refresh()
+    ↓
+SyncCoordinator.sync(reason: .manualRefresh)
+    ↓
+Pull/Push cycle
+    ↓
+Clear in-memory caches
+    ↓
+loadDashboardFromLocal()
+    ↓
+Display updated data
+```
+
+**Foreground Sync Flow**:
+
+```
+App enters foreground
+    ↓
+SceneDelegate.sceneWillEnterForeground()
+    ↓
+AppCoordinator.handleAppForeground()
+    ↓
+SyncCoordinator.sync(reason: .appForeground)
+    ↓
+(60-second interval guard - skips if recent sync)
+```
+
+**Key Design Decisions**:
+
+1. **No network calls in ViewModels** - All UI reads from local SwiftData via repositories
+2. **Sync triggered at strategic points** - App launch, foreground, pull-to-refresh
+3. **Graceful degradation** - If no local data exists (first launch, never synced), shows empty state instead of error
+4. **In-memory cache preserved** - Month cache still used for instant navigation, populated from local reads
+5. **Interval-guarded foreground sync** - Prevents excessive syncs when rapidly switching apps
 
 ---
 

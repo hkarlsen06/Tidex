@@ -50,6 +50,7 @@ struct DashboardData: Equatable {
 enum DashboardError: Error, LocalizedError {
     case notAuthenticated
     case dataLoadFailed(underlying: Error)
+    case noLocalData
 
     var errorDescription: String? {
         switch self {
@@ -57,6 +58,8 @@ enum DashboardError: Error, LocalizedError {
             return "Not authenticated"
         case .dataLoadFailed(let error):
             return "Failed to load data: \(error.localizedDescription)"
+        case .noLocalData:
+            return "No local data available. Please wait for sync to complete."
         }
     }
 }
@@ -83,11 +86,13 @@ private struct MonthCacheEntry {
 @MainActor
 final class DashboardViewModel: ObservableObject, MonthNavigable {
 
-    // MARK: - Dependencies
+    // MARK: - Dependencies (Local-First Repositories)
 
-    private let shiftsService: ShiftsService
-    private let settingsService: SettingsService
-    private let snapshotsService: SnapshotsService
+    private let shiftsRepository: ShiftsRepository
+    private let settingsRepository: SettingsRepository
+    private let snapshotsRepository: SnapshotsRepository
+    private let recurringShiftsRepository: RecurringShiftsRepository
+    private let syncCoordinator: SyncCoordinator
 
     // MARK: - Published State
 
@@ -149,15 +154,19 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     // MARK: - Initialization
 
     init(
-        shiftsService: ShiftsService? = nil,
-        settingsService: SettingsService? = nil,
-        snapshotsService: SnapshotsService? = nil
+        shiftsRepository: ShiftsRepository? = nil,
+        settingsRepository: SettingsRepository? = nil,
+        snapshotsRepository: SnapshotsRepository? = nil,
+        recurringShiftsRepository: RecurringShiftsRepository? = nil,
+        syncCoordinator: SyncCoordinator? = nil
     ) {
-        // Use provided services or default to shared instances
+        // Use provided repositories or default to shared instances
         // Using optional parameters avoids Swift 6 MainActor isolation errors
-        self.shiftsService = shiftsService ?? ShiftsService.shared
-        self.settingsService = settingsService ?? SettingsService.shared
-        self.snapshotsService = snapshotsService ?? SnapshotsService.shared
+        self.shiftsRepository = shiftsRepository ?? ShiftsRepository.shared
+        self.settingsRepository = settingsRepository ?? SettingsRepository.shared
+        self.snapshotsRepository = snapshotsRepository ?? SnapshotsRepository.shared
+        self.recurringShiftsRepository = recurringShiftsRepository ?? RecurringShiftsRepository.shared
+        self.syncCoordinator = syncCoordinator ?? SyncCoordinator.shared
 
         // Initialize to current month
         let current = Date.currentYearMonth()
@@ -285,6 +294,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     // MARK: - Public Methods
 
     /// Load all dashboard data for current month (initial load)
+    /// Reads from local repositories only - sync is triggered by AppCoordinator
     /// Also prefetches neighboring months for instant navigation
     func loadDashboard() async {
         // Reset to current month on initial load
@@ -297,29 +307,73 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
         monthCache.removeAll()
         prefetchTasks.removeAll()
 
-        await loadDashboardForDisplayedMonth()
+        await loadDashboardFromLocal()
 
         // Prefetch neighboring months in the background
         prefetchNeighboringMonths()
     }
 
-    /// Refresh dashboard data with full cache invalidation
-    /// Called by pull-to-refresh - preserves existing data until fetch succeeds
+    /// Refresh dashboard data via sync then local reload
+    /// Called by pull-to-refresh - triggers network sync, then reloads from local
     func refresh() async {
-        logger.info("🔄 Pull-to-refresh: refreshing data")
+        logger.info("🔄 Pull-to-refresh: triggering sync then local reload")
 
         // Store current data as fallback in case of failure
-        let previousSettings = settings
-        let previousSnapshots = snapshots
-        let previousRecurringShifts = recurringShifts
         let previousDashboardData = dashboardData
 
-        // Clear caches to force fresh fetch
-        monthCache.removeAll()
-        prefetchTasks.removeAll()
+        do {
+            // Get user ID
+            if cachedUserId == nil {
+                guard let userId = try await getCurrentUserId() else {
+                    throw DashboardError.notAuthenticated
+                }
+                cachedUserId = userId
+            }
 
-        // Mark settings as needing refresh (but keep values until success)
-        let needsSettingsRefresh = true
+            guard let userId = cachedUserId else {
+                throw DashboardError.notAuthenticated
+            }
+
+            // Trigger sync to pull/push changes
+            let syncResult = await syncCoordinator.sync(reason: .manualRefresh, userId: userId)
+
+            if !syncResult.success, let errorMessage = syncResult.error {
+                logger.warning("⚠️ Sync had issues: \(errorMessage)")
+                // Continue anyway - we still want to show local data
+            }
+
+            // Clear in-memory caches so we pick up synced data
+            monthCache.removeAll()
+            prefetchTasks.removeAll()
+            settings = nil  // Force reload from local
+            snapshots = []
+            recurringShifts = []
+
+            // Reload from local repositories
+            await loadDashboardFromLocal()
+
+            // Prefetch neighboring months in the background
+            prefetchNeighboringMonths()
+
+            logger.info("✅ Pull-to-refresh complete (synced \(syncResult.totalRowsProcessed) rows)")
+
+        } catch {
+            logger.error("❌ Pull-to-refresh failed: \(error.localizedDescription)")
+
+            // Restore previous data so UI doesn't break
+            self.dashboardData = previousDashboardData
+
+            // Don't show error state - just log it and keep showing previous data
+            // The user can try again, but they'll still see their data
+            logger.info("📦 Restored previous data after refresh failure")
+        }
+    }
+
+    /// Load dashboard data from local repositories
+    /// This is the core local-first read path - no network calls
+    private func loadDashboardFromLocal() async {
+        isLoading = true
+        error = nil
 
         do {
             // Get or cache user ID
@@ -334,55 +388,61 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
                 throw DashboardError.notAuthenticated
             }
 
-            // Fetch fresh settings and snapshots
-            if needsSettingsRefresh {
-                let fetchedSettings = try await settingsService.fetchSettings(for: userId)
-                let fetchedSnapshots = try await snapshotsService.fetchSnapshots(for: userId)
-                self.settings = fetchedSettings
-                self.snapshots = fetchedSnapshots
+            // Load settings from local store
+            if settings == nil {
+                settings = settingsRepository.getSettings(for: userId)
                 updateUserAvatarFromSettings()
+            }
+
+            // Load snapshots from local store
+            if snapshots.isEmpty {
+                snapshots = snapshotsRepository.getSnapshots(for: userId)
+            }
+
+            // Load recurring shifts from local store
+            if recurringShifts.isEmpty {
+                let localRecurring = recurringShiftsRepository.getRecurringShifts(for: userId)
+                recurringShifts = localRecurring
             }
 
             // Calculate date ranges for displayed month
             let displayYM = (year: displayYear, month: displayMonth)
             let previousYM = Date.previousYearMonth(from: displayYM)
 
-            let displayStartDate = Date.firstDayOfMonth(year: displayYM.year, month: displayYM.month)
-            let displayEndDate = Date.lastDayOfMonth(year: displayYM.year, month: displayYM.month)
-            let previousStartDate = Date.firstDayOfMonth(year: previousYM.year, month: previousYM.month)
-            let previousEndDate = Date.lastDayOfMonth(year: previousYM.year, month: previousYM.month)
+            let displayStartDate = Date.firstDayOfMonthDate(year: displayYM.year, month: displayYM.month)
+            let displayEndDate = Date.lastDayOfMonthDate(year: displayYM.year, month: displayYM.month)
+            let previousStartDate = Date.firstDayOfMonthDate(year: previousYM.year, month: previousYM.month)
+            let previousEndDate = Date.lastDayOfMonthDate(year: previousYM.year, month: previousYM.month)
 
-            // Fetch shifts for displayed month
-            let displayShiftsData = try await shiftsService.fetchAllShifts(
+            // Load shifts from local store
+            let displayShifts = shiftsRepository.getShifts(
                 for: userId,
                 startDate: displayStartDate,
                 endDate: displayEndDate
             )
 
-            // Store recurring shifts
-            self.recurringShifts = displayShiftsData.recurring
-
-            // Fetch shifts for previous month (for comparison)
-            let fetchedPreviousShifts = try await shiftsService.fetchShifts(
+            let fetchedPreviousShifts = shiftsRepository.getShifts(
                 for: userId,
                 startDate: previousStartDate,
                 endDate: previousEndDate
             )
 
-            // Ensure settings are available before computing payroll
+            // Check if we have any data to show
+            // Note: Empty shifts is OK, but missing settings means we can't compute payroll
             guard let currentSettings = self.settings else {
-                throw DashboardError.dataLoadFailed(underlying: NSError(
-                    domain: "DashboardViewModel",
-                    code: -1,
-                    userInfo: [NSLocalizedDescriptionKey: "Settings not loaded"]
-                ))
+                // No settings yet - sync may not have completed
+                // Show a softer message instead of hard error
+                logger.info("📭 No local settings yet - waiting for sync")
+                self.isLoading = false
+                // Leave dashboardData as nil to show empty state
+                return
             }
 
             // Compute displayed month shifts with payroll using PayrollEngine
             self.displayedMonthShifts = PayrollEngine.computeShiftsForMonth(
                 year: displayYM.year,
                 month: displayYM.month,
-                shifts: displayShiftsData.shifts,
+                shifts: displayShifts,
                 recurring: recurringShifts,
                 snapshots: snapshots,
                 settings: currentSettings
@@ -414,31 +474,24 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
                 timestamp: Date()
             )
 
-            // Build dashboard data - success!
+            // Build dashboard data
             self.dashboardData = buildDashboardData()
-            self.error = nil
+            self.isLoading = false
 
-            // Prefetch neighboring months in the background
-            prefetchNeighboringMonths()
+            logger.info("📊 Loaded dashboard from local: \(displayShifts.count) shifts for \(displayKey)")
 
-            logger.info("✅ Pull-to-refresh complete")
-
+        } catch is CancellationError {
+            logger.info("⏭️ Load cancelled (user navigated away)")
+        } catch let urlError as URLError where urlError.code == .cancelled {
+            logger.info("⏭️ Request cancelled (user navigated away)")
         } catch {
-            logger.error("❌ Pull-to-refresh failed: \(error.localizedDescription)")
-
-            // Restore previous data so UI doesn't break
-            self.settings = previousSettings
-            self.snapshots = previousSnapshots
-            self.recurringShifts = previousRecurringShifts
-            self.dashboardData = previousDashboardData
-
-            // Don't show error state - just log it and keep showing previous data
-            // The user can try again, but they'll still see their data
-            logger.info("📦 Restored previous data after refresh failure")
+            logger.error("❌ Dashboard local load failed: \(error.localizedDescription)")
+            self.error = DashboardError.dataLoadFailed(underlying: error)
+            self.isLoading = false
         }
     }
 
-    /// Load dashboard data for the currently displayed month
+    /// Load dashboard data for the currently displayed month from local repositories
     /// - Parameter showLoadingState: Whether to show loading indicator (false for background navigation loads)
     private func loadDashboardForDisplayedMonth(showLoadingState: Bool = true) async {
         if showLoadingState {
@@ -459,36 +512,38 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
                 throw DashboardError.notAuthenticated
             }
 
-            // Fetch settings and snapshots if not cached
-            if settings == nil || snapshots.isEmpty {
-                let fetchedSettings = try await settingsService.fetchSettings(for: userId)
-                let fetchedSnapshots = try await snapshotsService.fetchSnapshots(for: userId)
-                self.settings = fetchedSettings
-                self.snapshots = fetchedSnapshots
+            // Load settings and snapshots from local if not cached
+            if settings == nil {
+                settings = settingsRepository.getSettings(for: userId)
                 updateUserAvatarFromSettings()
+            }
+
+            if snapshots.isEmpty {
+                snapshots = snapshotsRepository.getSnapshots(for: userId)
+            }
+
+            // Load recurring shifts if not cached
+            if recurringShifts.isEmpty {
+                recurringShifts = recurringShiftsRepository.getRecurringShifts(for: userId)
             }
 
             // Calculate date ranges for displayed month
             let displayYM = (year: displayYear, month: displayMonth)
             let previousYM = Date.previousYearMonth(from: displayYM)
 
-            let displayStartDate = Date.firstDayOfMonth(year: displayYM.year, month: displayYM.month)
-            let displayEndDate = Date.lastDayOfMonth(year: displayYM.year, month: displayYM.month)
-            let previousStartDate = Date.firstDayOfMonth(year: previousYM.year, month: previousYM.month)
-            let previousEndDate = Date.lastDayOfMonth(year: previousYM.year, month: previousYM.month)
+            let displayStartDate = Date.firstDayOfMonthDate(year: displayYM.year, month: displayYM.month)
+            let displayEndDate = Date.lastDayOfMonthDate(year: displayYM.year, month: displayYM.month)
+            let previousStartDate = Date.firstDayOfMonthDate(year: previousYM.year, month: previousYM.month)
+            let previousEndDate = Date.lastDayOfMonthDate(year: previousYM.year, month: previousYM.month)
 
-            // Fetch shifts for displayed month
-            let displayShiftsData = try await shiftsService.fetchAllShifts(
+            // Load shifts from local repositories
+            let displayShifts = shiftsRepository.getShifts(
                 for: userId,
                 startDate: displayStartDate,
                 endDate: displayEndDate
             )
 
-            // Store recurring shifts
-            self.recurringShifts = displayShiftsData.recurring
-
-            // Fetch shifts for previous month (for comparison)
-            let fetchedPreviousShifts = try await shiftsService.fetchShifts(
+            let fetchedPreviousShifts = shiftsRepository.getShifts(
                 for: userId,
                 startDate: previousStartDate,
                 endDate: previousEndDate
@@ -496,18 +551,17 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
 
             // Ensure settings are available before computing payroll
             guard let currentSettings = self.settings else {
-                throw DashboardError.dataLoadFailed(underlying: NSError(
-                    domain: "DashboardViewModel",
-                    code: -1,
-                    userInfo: [NSLocalizedDescriptionKey: "Settings not loaded"]
-                ))
+                // No settings yet - sync may not have completed
+                logger.info("📭 No local settings yet - waiting for sync")
+                self.isLoading = false
+                return
             }
 
             // Compute displayed month shifts with payroll using PayrollEngine
             self.displayedMonthShifts = PayrollEngine.computeShiftsForMonth(
                 year: displayYM.year,
                 month: displayYM.month,
-                shifts: displayShiftsData.shifts,
+                shifts: displayShifts,
                 recurring: recurringShifts,
                 snapshots: snapshots,
                 settings: currentSettings
@@ -547,26 +601,8 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
             // Task was cancelled due to rapid navigation - this is expected, not an error
             // Don't reset isLoading here - the new navigation task will handle its own state
             logger.info("⏭️ Load cancelled (user navigated away)")
-        } catch let urlError as URLError where urlError.code == .cancelled {
-            // Network request was cancelled - also expected during rapid navigation
-            // Don't reset isLoading here - the new navigation task will handle its own state
-            logger.info("⏭️ Network request cancelled (user navigated away)")
         } catch {
             logger.error("❌ Dashboard load failed: \(error.localizedDescription)")
-            if let decodingError = error as? DecodingError {
-                switch decodingError {
-                case .keyNotFound(let key, let context):
-                    logger.error("   DecodingError.keyNotFound: key '\(key.stringValue)' not found, path: \(context.codingPath.map { $0.stringValue }.joined(separator: "."))")
-                case .typeMismatch(let type, let context):
-                    logger.error("   DecodingError.typeMismatch: expected \(type), path: \(context.codingPath.map { $0.stringValue }.joined(separator: "."))")
-                case .valueNotFound(let type, let context):
-                    logger.error("   DecodingError.valueNotFound: expected \(type), path: \(context.codingPath.map { $0.stringValue }.joined(separator: "."))")
-                case .dataCorrupted(let context):
-                    logger.error("   DecodingError.dataCorrupted: \(context.debugDescription), path: \(context.codingPath.map { $0.stringValue }.joined(separator: "."))")
-                @unknown default:
-                    logger.error("   DecodingError: unknown")
-                }
-            }
             self.error = DashboardError.dataLoadFailed(underlying: error)
             self.isLoading = false
         }
@@ -592,7 +628,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
         prefetchMonthInBackground(year: nextPrevYM.year, month: nextPrevYM.month)
     }
 
-    /// Prefetch a single month's data in the background
+    /// Prefetch a single month's data in the background from local repository
     private func prefetchMonthInBackground(year: Int, month: Int) {
         let key = "\(year)-\(month)"
 
@@ -608,49 +644,49 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
 
         prefetchTasks.insert(key)
 
+        // Local reads are fast, but we run in a Task to not block UI
         Task {
-            do {
-                guard let userId = cachedUserId else { return }
-
-                let startDate = Date.firstDayOfMonth(year: year, month: month)
-                let endDate = Date.lastDayOfMonth(year: year, month: month)
-
-                let fetchedShifts = try await shiftsService.fetchShifts(
-                    for: userId,
-                    startDate: startDate,
-                    endDate: endDate
-                )
-
-                // Compute shifts with payroll
-                guard let settings = self.settings else { return }
-                let computedShifts = PayrollEngine.computeShiftsForMonth(
-                    year: year,
-                    month: month,
-                    shifts: fetchedShifts,
-                    recurring: recurringShifts,
-                    snapshots: snapshots,
-                    settings: settings
-                )
-
-                // Store in cache
-                let entry = MonthCacheEntry(
-                    year: year,
-                    month: month,
-                    shifts: computedShifts,
-                    timestamp: Date()
-                )
-                await MainActor.run {
-                    self.monthCache[key] = entry
-                    self.prefetchTasks.remove(key)
-                }
-
-                logger.info("📦 Prefetched \(key) with \(computedShifts.count) shifts")
-            } catch {
-                logger.error("⚠️ Prefetch failed for \(key): \(error.localizedDescription)")
-                await MainActor.run {
-                    self.prefetchTasks.remove(key)
-                }
+            guard let userId = cachedUserId else {
+                prefetchTasks.remove(key)
+                return
             }
+
+            let startDate = Date.firstDayOfMonthDate(year: year, month: month)
+            let endDate = Date.lastDayOfMonthDate(year: year, month: month)
+
+            // Read from local repository
+            let fetchedShifts = shiftsRepository.getShifts(
+                for: userId,
+                startDate: startDate,
+                endDate: endDate
+            )
+
+            // Compute shifts with payroll
+            guard let settings = self.settings else {
+                prefetchTasks.remove(key)
+                return
+            }
+
+            let computedShifts = PayrollEngine.computeShiftsForMonth(
+                year: year,
+                month: month,
+                shifts: fetchedShifts,
+                recurring: recurringShifts,
+                snapshots: snapshots,
+                settings: settings
+            )
+
+            // Store in cache
+            let entry = MonthCacheEntry(
+                year: year,
+                month: month,
+                shifts: computedShifts,
+                timestamp: Date()
+            )
+            self.monthCache[key] = entry
+            self.prefetchTasks.remove(key)
+
+            logger.info("📦 Prefetched \(key) with \(computedShifts.count) shifts from local")
         }
     }
 
