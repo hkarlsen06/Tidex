@@ -125,29 +125,14 @@ struct MFAVerifyView: View {
                 .foregroundColor(.tidexTextSecondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-            // 6-digit code input using OTPInputField style
-            HStack(spacing: 8) {
-                ForEach(0..<6, id: \.self) { index in
-                    SingleDigitField(
-                        digit: viewModel.digit(at: index),
-                        isFocused: index == viewModel.focusedIndex
-                    )
-                }
-            }
-            .overlay(
-                TextField("", text: $viewModel.code)
-                    .keyboardType(.numberPad)
-                    .textContentType(.oneTimeCode)
-                    .foregroundColor(.clear)
-                    .accentColor(.clear)
-                    .onChange(of: viewModel.code) { _, newValue in
-                        viewModel.handleCodeChange(newValue)
-                    }
-                    .onSubmit {
-                        if viewModel.code.count == 6 {
-                            Task { await viewModel.verifyCode() }
-                        }
-                    }
+            // Use OTPInputField for consistent, fast input
+            OTPInputField(
+                code: $viewModel.code,
+                error: nil,
+                onComplete: {
+                    Task { await viewModel.verifyCode() }
+                },
+                autoFocus: true
             )
         }
     }
@@ -168,29 +153,6 @@ struct MFAVerifyView: View {
             .foregroundColor(.tidexTextSecondary)
         }
         .buttonStyle(.plain)
-    }
-}
-
-// MARK: - Single Digit Field
-
-struct SingleDigitField: View {
-    let digit: String
-    var isFocused: Bool = false
-
-    var body: some View {
-        Text(digit)
-            .font(.system(size: 24, weight: .semibold, design: .monospaced))
-            .foregroundColor(.tidexTextPrimary)
-            .frame(width: 48, height: 56)
-            .background(Color.tidexSurfaceSecondary)
-            .cornerRadius(8)
-            .overlay(
-                RoundedRectangle(cornerRadius: 8)
-                    .stroke(
-                        isFocused ? Color.tidexBlue : Color.tidexBorder,
-                        lineWidth: isFocused ? 2 : 1
-                    )
-            )
     }
 }
 

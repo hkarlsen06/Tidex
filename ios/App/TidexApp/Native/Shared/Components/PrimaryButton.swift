@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// Primary action button with Tidex brand styling
 /// Used for main CTAs like "Log in", "Sign up", etc.
@@ -9,7 +10,10 @@ struct PrimaryButton: View {
     var isDisabled: Bool = false
 
     var body: some View {
-        Button(action: action) {
+        Button {
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            action()
+        } label: {
             HStack(spacing: 8) {
                 if isLoading {
                     ProgressView()
@@ -21,17 +25,28 @@ struct PrimaryButton: View {
                     .font(.system(size: 16, weight: .semibold))
             }
             .frame(maxWidth: .infinity)
-            .frame(height: 48)
+            .frame(height: 50)
             .background(
                 isDisabled
                     ? Color.tidexBrandPrimary.opacity(0.5)
                     : Color.tidexBrandPrimary
             )
             .foregroundColor(.white)
-            .cornerRadius(10)
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
+        .buttonStyle(SnappyPrimaryButtonStyle())
         .disabled(isDisabled || isLoading)
-        .animation(.easeInOut(duration: 0.2), value: isLoading)
+        .animation(.easeInOut(duration: 0.15), value: isLoading)
+    }
+}
+
+/// Snappy button style with scale and opacity feedback
+private struct SnappyPrimaryButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
+            .opacity(configuration.isPressed ? 0.9 : 1.0)
+            .animation(.easeOut(duration: 0.1), value: configuration.isPressed)
     }
 }
 

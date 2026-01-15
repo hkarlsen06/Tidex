@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Full-screen loading overlay
+/// Full-screen loading overlay with smooth animations
 /// Used during async operations like login
 struct LoadingOverlay: View {
     var message: String? = nil
@@ -23,12 +23,12 @@ struct LoadingOverlay: View {
             }
             .padding(32)
             .background(Color.tidexSurfacePrimary.opacity(0.95))
-            .cornerRadius(16)
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
     }
 }
 
-/// View modifier for applying loading overlay
+/// View modifier for applying loading overlay with smooth transitions
 struct LoadingModifier: ViewModifier {
     let isLoading: Bool
     var message: String? = nil
@@ -39,13 +39,18 @@ struct LoadingModifier: ViewModifier {
 
             if isLoading {
                 LoadingOverlay(message: message)
+                    .transition(
+                        .opacity
+                            .combined(with: .scale(scale: 0.95))
+                    )
             }
         }
+        .animation(.easeOut(duration: 0.2), value: isLoading)
     }
 }
 
 extension View {
-    /// Apply a loading overlay to the view
+    /// Apply a loading overlay to the view with smooth transitions
     func loading(_ isLoading: Bool, message: String? = nil) -> some View {
         modifier(LoadingModifier(isLoading: isLoading, message: message))
     }
