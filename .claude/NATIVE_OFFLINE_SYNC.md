@@ -30,7 +30,7 @@
 |-------|-------------|--------|
 | 1 | Database Migrations | ✅ Complete |
 | 2 | iOS SwiftData Models | ✅ Complete |
-| 3 | LocalStore & Repositories | ⬜ Not Started |
+| 3 | LocalStore & Repositories | ✅ Complete |
 | 4 | SyncCoordinator (Pull) | ⬜ Not Started |
 | 5 | SyncCoordinator (Push & Conflicts) | ⬜ Not Started |
 | 6 | UI/ViewModel Refactor | ⬜ Not Started |
@@ -275,7 +275,7 @@ This enables the sync logic in Phase 4/5 to:
 
 ## Phase 3: LocalStore & Repositories
 
-**Status**: ⬜ Not Started
+**Status**: ✅ Complete
 
 ### Scope
 
@@ -304,7 +304,83 @@ Refactor target:
 - All Supabase calls move into SyncEngine only
 
 ### Notes
-<!-- Implementation notes will be added here when phase is complete -->
+
+**Completed: 2026-01-15**
+
+**Files Created**:
+
+1. **`Native/Storage/LocalStore.swift`** - Central SwiftData container:
+   - `LocalStore` singleton with shared `ModelContainer`
+   - `LocalStoreActor` (`@ModelActor`) for serialized writes from sync
+   - Schema includes all 5 local models
+   - CRUD operations for all model types
+   - Conflict and pending change detection helpers
+   - `resetAllData()` for logout/debugging
+
+2. **`Native/Storage/Repositories/ShiftsRepository.swift`** - Local-first shift access:
+   - Read operations: `getShifts(for:startDate:endDate:)`, `getAllShifts(for:)`, `getShift(id:)`
+   - Write operations: `createShift(...)`, `updateShift(...)`, `deleteShift(id:)`
+   - Dirty field tracking for field-level sync
+   - Conflict resolution: `resolveConflictKeepLocal(id:)`, `resolveConflictKeepServer(id:)`
+   - Pending/conflict status queries
+
+3. **`Native/Storage/Repositories/SettingsRepository.swift`** - Local-first settings access:
+   - Read operations: `getSettings(for:)`, `getLocalSettings(for:)`
+   - Write operations: `updateSettings(for:...)`, `updateLastActive(for:)`
+   - Dirty field tracking per field
+   - Conflict resolution methods
+
+4. **`Native/Storage/Repositories/SnapshotsRepository.swift`** - Local-first wage snapshot access:
+   - Read operations: `getSnapshots(for:)`, `getSnapshot(id:)`, `getBaselineSnapshot(for:)`
+   - Date resolution: `snapshotForDate(_:userId:)`, `snapshotsForDates(_:userId:)` using binary search
+   - Write operations: `createSnapshot(...)`, `updateSnapshot(...)`, `deleteSnapshot(id:)`
+   - Conflict resolution methods
+
+5. **`Native/Storage/Repositories/RecurringShiftsRepository.swift`** - Local-first recurring shift access:
+   - Read operations: `getRecurringShifts(for:)`, `getRecurringShift(id:)`
+   - Write operations: `createRecurringShift(...)`, `updateRecurringShift(...)`, `deleteRecurringShift(id:)`
+   - Exclusion management: `addExclusion(id:date:)`
+   - Conflict resolution methods
+
+**Architecture Decisions**:
+
+1. **Singleton Repositories** - Shared instances matching existing service pattern for easy migration
+2. **@MainActor for UI reads** - Repositories are MainActor-isolated for safe SwiftUI integration
+3. **Actor for writes** - `LocalStoreActor` ensures thread-safe writes during sync operations
+4. **Dirty field tracking** - All write operations automatically track which fields changed
+5. **Conversion methods** - Repositories return existing `*Row` types for compatibility with PayrollEngine
+6. **Conflict resolution** - Both "keep local" and "keep server" resolution strategies implemented
+
+**Data Flow Design**:
+
+```
+UI Layer (Views/ViewModels)
+    ↓ reads
+Repository (SwiftData queries)
+    ↓ writes
+LocalStoreActor (serialized)
+    ↓ syncs
+SyncCoordinator (Phase 4/5)
+    ↓ network
+Supabase
+```
+
+**Existing Services vs New Repositories**:
+
+| Existing Service | New Repository | Migration Path |
+|------------------|----------------|----------------|
+| `ShiftsService` | `ShiftsRepository` | ViewModels will switch to repository for reads |
+| `SettingsService` | `SettingsRepository` | ViewModels will switch to repository for reads |
+| `SnapshotsService` | `SnapshotsRepository` | ViewModels will switch to repository for reads |
+
+The existing services will continue to exist but will be deprecated once:
+1. SyncCoordinator populates local store (Phase 4)
+2. ViewModels switch to repositories (Phase 6)
+
+**Next Steps for Phase 4**:
+- Create `SyncCoordinator` with single-flight sync
+- Implement pull logic using revision cursors
+- Apply incoming rows with field-level merge logic
 
 ---
 
