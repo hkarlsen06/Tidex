@@ -74,5 +74,5 @@ struct LoadingButton: View {
         PrimaryButton(title: "Disabled", action: {}, isDisabled: true)
     }
     .padding()
-    .background(Color.tidexDarkBackground)
+    .background(Color.tidexBackground)
 }

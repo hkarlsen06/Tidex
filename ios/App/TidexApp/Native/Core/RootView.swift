@@ -9,8 +9,9 @@ struct RootView: View {
 
     var body: some View {
         ZStack {
-            // Background - prevents white flash during transitions
-            Color.tidexDarkBackground
+            // Background - adapts to system appearance
+            // Uses tidexBackground (adaptive) for main content areas
+            Color.tidexBackground
                 .ignoresSafeArea()
 
             // Content based on app state
@@ -41,7 +42,7 @@ struct RootView: View {
         .animation(.easeInOut(duration: 0.3), value: coordinator.appState)
         .environmentObject(coordinator)
         .environment(\.localization, localization)
-        .preferredColorScheme(.dark)
+        // Note: Removed .preferredColorScheme(.dark) to respect system appearance
     }
 }
 
@@ -80,7 +81,7 @@ struct LoadingView: View {
 
 #Preview("Loading View") {
     ZStack {
-        Color.tidexDarkBackground.ignoresSafeArea()
+        Color.tidexBackground.ignoresSafeArea()
         LoadingView()
     }
 }

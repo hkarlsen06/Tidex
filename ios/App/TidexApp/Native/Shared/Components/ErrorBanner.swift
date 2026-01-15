@@ -88,5 +88,5 @@ struct SuccessBanner: View {
         )
     }
     .padding()
-    .background(Color.tidexDarkBackground)
+    .background(Color.tidexBackground)
 }

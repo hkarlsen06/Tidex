@@ -319,7 +319,7 @@ extension View {
 
         var body: some View {
             ZStack {
-                Color.tidexLaunchBackground
+                Color.tidexBackground
                     .ignoresSafeArea()
 
                 VStack(spacing: 20) {

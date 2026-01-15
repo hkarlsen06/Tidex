@@ -198,5 +198,5 @@ private struct SnappyButtonStyle: ButtonStyle {
         .cornerRadius(12)
     }
     .padding()
-    .background(Color.tidexDarkBackground)
+    .background(Color.tidexBackground)
 }

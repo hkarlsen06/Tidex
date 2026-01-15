@@ -1,33 +1,45 @@
 import SwiftUI
 
-// MARK: - Tidex Brand Colors
-// Derived from globals.css dark theme HSL values
+// MARK: - Legacy Tidex Brand Colors (Deprecated)
+//
+// These global color constants are deprecated in favor of the adaptive Color extensions
+// in Color+Tidex.swift. They are kept here for backwards compatibility with:
+// - OfflineScreenView.swift
+// - OfflineDashboardCards.swift
+// - Any other legacy code that uses global color constants
+//
+// New code should ALWAYS use Color.tidexXxx (e.g., Color.tidexBackground, Color.tidexBlue)
+// which automatically adapts to system appearance (light/dark mode).
+//
+// These legacy constants now reference the dark mode values directly since the offline
+// views that use them don't support adaptive theming yet.
 
-/// Tidex brand highlight color - matches --brand-highlight: 217 91% 65%
-/// HSL(217, 91%, 65%) → RGB calculation
+/// Tidex brand highlight color - DEPRECATED: Use Color.tidexBlue instead
+/// @available(*, deprecated, message: "Use Color.tidexBlue for adaptive theming")
 let tidexBlue = Color(hue: 217 / 360, saturation: 0.91, brightness: 0.90)
 
-/// Dark background color matching --background: 222.2 84% 4.9%
-/// HSL(222.2, 84%, 4.9%)
+/// Dark background color - DEPRECATED: Use Color.tidexBackground instead
+/// @available(*, deprecated, message: "Use Color.tidexBackground for adaptive theming")
 let tidexDarkBackground = Color(hue: 222.2 / 360, saturation: 0.84, brightness: 0.11)
 
-/// Surface primary for cards - matches --surface-primary: 220 49% 11%
-/// HSL(220, 49%, 11%)
+/// Surface primary for cards - DEPRECATED: Use Color.tidexSurfacePrimary instead
+/// @available(*, deprecated, message: "Use Color.tidexSurfacePrimary for adaptive theming")
 let tidexSurfacePrimary = Color(hue: 220 / 360, saturation: 0.49, brightness: 0.18)
 
-/// Text primary color - matches --text-primary: 210 40% 98%
-/// HSL(210, 40%, 98%)
+/// Text primary color - DEPRECATED: Use Color.tidexTextPrimary instead
+/// @available(*, deprecated, message: "Use Color.tidexTextPrimary for adaptive theming")
 let tidexTextPrimary = Color(hue: 210 / 360, saturation: 0.40, brightness: 0.98)
 
-/// Text secondary color - matches --text-secondary: 214 32% 85%
-/// HSL(214, 32%, 85%)
+/// Text secondary color - DEPRECATED: Use Color.tidexTextSecondary instead
+/// @available(*, deprecated, message: "Use Color.tidexTextSecondary for adaptive theming")
 let tidexTextSecondary = Color(hue: 214 / 360, saturation: 0.32, brightness: 0.85)
 
-/// Text muted color - matches --text-muted: 215 20% 70%
-/// HSL(215, 20%, 70%)
+/// Text muted color - DEPRECATED: Use Color.tidexTextMuted instead
+/// @available(*, deprecated, message: "Use Color.tidexTextMuted for adaptive theming")
 let tidexTextMuted = Color(hue: 215 / 360, saturation: 0.20, brightness: 0.70)
 
 /// Logo gradient colors from short-logo-gradient.svg
+/// These remain constant regardless of appearance mode
 let logoGradientColors = [
     Color(red: 0, green: 212 / 255, blue: 1),              // #00D4FF - cyan (top)
     Color(red: 123 / 255, green: 97 / 255, blue: 1),       // #7B61FF - purple (middle)

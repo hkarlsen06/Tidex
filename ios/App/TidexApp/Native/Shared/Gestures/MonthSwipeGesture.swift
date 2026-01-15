@@ -255,7 +255,7 @@ extension View {
 
         var body: some View {
             ZStack {
-                Color.tidexDarkBackground
+                Color.tidexBackground
                     .ignoresSafeArea()
 
                 MonthSwipeContainer(

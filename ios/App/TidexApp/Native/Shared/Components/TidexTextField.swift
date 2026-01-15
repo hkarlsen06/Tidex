@@ -85,5 +85,5 @@ struct TidexTextField: View {
         )
     }
     .padding()
-    .background(Color.tidexDarkBackground)
+    .background(Color.tidexBackground)
 }

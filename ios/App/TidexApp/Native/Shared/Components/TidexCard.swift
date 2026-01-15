@@ -29,5 +29,5 @@ struct TidexCard<Content: View>: View {
         .padding(24)
     }
     .padding()
-    .background(Color.tidexDarkBackground)
+    .background(Color.tidexBackground)
 }

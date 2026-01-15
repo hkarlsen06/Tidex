@@ -163,5 +163,5 @@ private struct DigitBox: View {
         OTPInputField(code: .constant("123"), error: "Invalid code")
     }
     .padding()
-    .background(Color.tidexDarkBackground)
+    .background(Color.tidexBackground)
 }

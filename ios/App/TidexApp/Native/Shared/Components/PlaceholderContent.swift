@@ -44,7 +44,7 @@ struct TabPlaceholder: View {
 
 #Preview("PlaceholderContent") {
     ZStack {
-        Color.tidexLaunchBackground.ignoresSafeArea()
+        Color.tidexBackground.ignoresSafeArea()
         PlaceholderContent(
             icon: "calendar",
             title: "Shifts",
@@ -55,7 +55,7 @@ struct TabPlaceholder: View {
 
 #Preview("TabPlaceholder") {
     ZStack {
-        Color.tidexLaunchBackground.ignoresSafeArea()
+        Color.tidexBackground.ignoresSafeArea()
         TabPlaceholder(tab: .shifts)
     }
     .environment(\.localization, LocalizationManager.shared)

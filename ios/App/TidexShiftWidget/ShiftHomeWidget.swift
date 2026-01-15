@@ -1,15 +1,28 @@
 import SwiftUI
 import WidgetKit
 
-// MARK: - Tidex Brand Colors
+// MARK: - Tidex Adaptive Colors for Widgets
+//
+// These colors adapt to iOS system appearance (light/dark mode).
+// The widget respects user's system appearance preference for a native feel.
 
-/// Tidex brand blue color - matches the app's brand gradient
-private let tidexBlue = Color(red: 77 / 255, green: 137 / 255, blue: 249 / 255)
+/// Tidex brand blue color - adapts to light/dark mode for optimal contrast
+/// Light: HSL(221, 83%, 53%) - vibrant blue
+/// Dark: HSL(217, 91%, 65%) - bright blue
+private struct TidexWidgetColors {
+    /// Light mode brand blue
+    static let lightBlue = Color(hue: 221 / 360, saturation: 0.83, brightness: 0.53)
+    /// Dark mode brand blue
+    static let darkBlue = Color(red: 77 / 255, green: 137 / 255, blue: 249 / 255)
 
-/// Dark background color matching the app's dark theme (approx #0a0f1a)
-private let tidexDarkBackground = Color(red: 10 / 255, green: 15 / 255, blue: 26 / 255)
+    /// Light mode background
+    static let lightBackground = Color(hue: 220 / 360, saturation: 0.40, brightness: 0.98)
+    /// Dark mode background
+    static let darkBackground = Color(red: 10 / 255, green: 15 / 255, blue: 26 / 255)
+}
 
 /// Logo gradient colors from short-logo-gradient.svg
+/// These remain constant regardless of appearance mode
 private let logoGradientColors = [
     Color(red: 0, green: 212 / 255, blue: 1),           // #00D4FF - cyan (top)
     Color(red: 123 / 255, green: 97 / 255, blue: 1),    // #7B61FF - purple (middle)
@@ -98,6 +111,22 @@ private struct LogoWatermark: View {
 struct ShiftHomeWidgetView: View {
     let entry: ShiftWidgetEntry
     @Environment(\.widgetRenderingMode) var renderingMode
+    @Environment(\.colorScheme) var colorScheme
+
+    /// Whether we're in light mode
+    private var isLightMode: Bool {
+        colorScheme == .light
+    }
+
+    /// Adaptive brand blue color based on color scheme
+    private var tidexBlue: Color {
+        isLightMode ? TidexWidgetColors.lightBlue : TidexWidgetColors.darkBlue
+    }
+
+    /// Adaptive background color based on color scheme
+    private var tidexDarkBackground: Color {
+        isLightMode ? TidexWidgetColors.lightBackground : TidexWidgetColors.darkBackground
+    }
 
     /// Localized "days" label
     private var daysLabel: String {
@@ -755,9 +784,9 @@ struct ShiftHomeWidget: Widget {
             ShiftHomeWidgetView(entry: entry)
                 .widgetURL(entry.deepLinkURL)
                 .containerBackground(for: .widget) {
-                    // Background is handled dynamically in the view based on renderingMode
-                    // This serves as the fallback for fullColor mode
-                    tidexDarkBackground
+                    // Background adapts to system appearance
+                    // Uses Color.primary with dynamic scheme to get system-appropriate background
+                    Color.clear // Let the view handle its own background based on colorScheme
                 }
         }
         .configurationDisplayName(displayName)
