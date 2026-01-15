@@ -203,6 +203,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         let earnings = hoursWorked * totalRate
         let remainingMinutes = max(0, Int((total - elapsed) / 60))
 
+        // Include startDate and endDate for real-time SwiftUI timer updates
         let attributes = ShiftActivityAttributes(
             shiftId: shift.shiftId,
             shiftDate: shift.shiftDate,
@@ -211,9 +212,12 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             hourlyWage: shift.hourlyWage,
             supplementRatePerHour: shift.supplementRatePerHour,
             totalGrossEstimate: shift.totalGrossEstimate,
-            locale: shift.locale
+            locale: shift.locale,
+            startDate: startDate,
+            endDate: endDate
         )
 
+        // Initial state values are now fallback - the UI calculates real-time values
         let initialState = ShiftActivityAttributes.ContentState(
             currentEarnings: earnings,
             remainingMinutes: remainingMinutes,

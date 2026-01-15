@@ -9,12 +9,14 @@ import Foundation
 /// If you modify this file, ensure the main app has access to the same definition.
 public struct ShiftActivityAttributes: ActivityAttributes, Sendable {
     /// Dynamic content that updates during the activity
+    /// Note: With the new auto-updating UI, these values are only used as initial/fallback values.
+    /// The UI calculates real-time values from the static attributes (startDate, endDate, totalGrossEstimate).
     public struct ContentState: Codable, Hashable {
-        /// Current accumulated earnings in NOK
+        /// Current accumulated earnings in NOK (initial/fallback value)
         public var currentEarnings: Double
-        /// Minutes remaining until shift ends
+        /// Minutes remaining until shift ends (initial/fallback value)
         public var remainingMinutes: Int
-        /// Shift completion percentage (0-100)
+        /// Shift completion percentage 0-100 (initial/fallback value)
         public var progressPercent: Double
 
         public init(currentEarnings: Double, remainingMinutes: Int, progressPercent: Double) {
@@ -45,6 +47,13 @@ public struct ShiftActivityAttributes: ActivityAttributes, Sendable {
     /// Currency symbol to display (e.g., "kr", "$", "€")
     public let currencySymbol: String?
 
+    // MARK: - Date Attributes for Real-Time Updates
+
+    /// Shift start date/time (for SwiftUI timer countdown)
+    public let startDate: Date
+    /// Shift end date/time (for SwiftUI timer countdown)
+    public let endDate: Date
+
     public init(
         shiftId: String,
         shiftDate: String,
@@ -54,7 +63,9 @@ public struct ShiftActivityAttributes: ActivityAttributes, Sendable {
         supplementRatePerHour: Double,
         totalGrossEstimate: Double,
         locale: String,
-        currencySymbol: String? = "kr"
+        currencySymbol: String? = "kr",
+        startDate: Date,
+        endDate: Date
     ) {
         self.shiftId = shiftId
         self.shiftDate = shiftDate
@@ -65,5 +76,7 @@ public struct ShiftActivityAttributes: ActivityAttributes, Sendable {
         self.totalGrossEstimate = totalGrossEstimate
         self.locale = locale
         self.currencySymbol = currencySymbol
+        self.startDate = startDate
+        self.endDate = endDate
     }
 }
