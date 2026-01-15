@@ -58,7 +58,7 @@ extension View {
 
 #Preview {
     ZStack {
-        Color.tidexDarkBackground.ignoresSafeArea()
+        Color.tidexBackground.ignoresSafeArea()
 
         Text("Content behind overlay")
             .foregroundColor(.tidexTextPrimary)

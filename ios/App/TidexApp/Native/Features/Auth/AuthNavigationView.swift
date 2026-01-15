@@ -13,8 +13,8 @@ struct AuthNavigationView: View {
 
     var body: some View {
         ZStack {
-            // Background
-            Color.tidexDarkBackground
+            // Background - adapts to system appearance
+            Color.tidexBackground
                 .ignoresSafeArea()
 
             // Current screen with transition

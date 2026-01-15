@@ -14,8 +14,8 @@ struct ResetPasswordView: View {
 
     var body: some View {
         ZStack {
-            // Background
-            Color.tidexDarkBackground
+            // Background - adapts to system appearance
+            Color.tidexBackground
                 .ignoresSafeArea()
 
             // Content

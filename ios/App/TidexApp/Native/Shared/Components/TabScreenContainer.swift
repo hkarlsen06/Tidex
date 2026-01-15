@@ -30,15 +30,15 @@ struct TabScreenContainer<Content: View>: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color.tidexLaunchBackground
+                Color.tidexBackground
                     .ignoresSafeArea()
 
                 content()
             }
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(Color.tidexLaunchBackground, for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbarBackground(Color.tidexBackground, for: .navigationBar)
+            // Note: Removed .toolbarColorScheme(.dark) to respect system appearance
             .toolbar {
                 if showsUserMenu {
                     ToolbarItem(placement: .topBarTrailing) {
@@ -84,11 +84,11 @@ struct RefreshableTabScreenContainer<Content: View>: View {
             .refreshable {
                 await onRefresh()
             }
-            .background(Color.tidexLaunchBackground)
+            .background(Color.tidexBackground)
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(Color.tidexLaunchBackground, for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbarBackground(Color.tidexBackground, for: .navigationBar)
+            // Note: Removed .toolbarColorScheme(.dark) to respect system appearance
             .toolbar {
                 if showsUserMenu {
                     ToolbarItem(placement: .topBarTrailing) {

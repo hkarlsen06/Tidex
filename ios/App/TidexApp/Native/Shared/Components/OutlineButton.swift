@@ -63,5 +63,5 @@ private struct SnappyOutlineButtonStyle: ButtonStyle {
         OutlineButton(title: "Loading", action: {}, isLoading: true)
     }
     .padding()
-    .background(Color.tidexDarkBackground)
+    .background(Color.tidexBackground)
 }

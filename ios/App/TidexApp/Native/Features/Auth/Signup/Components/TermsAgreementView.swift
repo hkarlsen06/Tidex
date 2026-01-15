@@ -127,7 +127,7 @@ struct LegalDocumentSheet: View {
                 }
                 .padding(20)
             }
-            .background(Color.tidexDarkBackground)
+            .background(Color.tidexBackground)
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -139,7 +139,7 @@ struct LegalDocumentSheet: View {
                 }
             }
         }
-        .preferredColorScheme(.dark)
+        // Note: Removed .preferredColorScheme(.dark) to respect system appearance
     }
 
     private var documentContent: String {
@@ -157,7 +157,7 @@ struct LegalDocumentSheet: View {
         TermsAgreementView(isAgreed: .constant(false))
     }
     .padding()
-    .background(Color.tidexDarkBackground)
+    .background(Color.tidexBackground)
     .environment(\.localization, LocalizationManager.shared)
 }
 
@@ -166,7 +166,7 @@ struct LegalDocumentSheet: View {
         TermsAgreementView(isAgreed: .constant(true))
     }
     .padding()
-    .background(Color.tidexDarkBackground)
+    .background(Color.tidexBackground)
     .environment(\.localization, LocalizationManager.shared)
 }
 
@@ -175,6 +175,6 @@ struct LegalDocumentSheet: View {
         TermsAgreementView(isAgreed: .constant(false), error: "You must agree to the terms")
     }
     .padding()
-    .background(Color.tidexDarkBackground)
+    .background(Color.tidexBackground)
     .environment(\.localization, LocalizationManager.shared)
 }

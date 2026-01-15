@@ -85,8 +85,8 @@ struct DashboardView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                // Background matching splash/loading screens
-                Color.tidexLaunchBackground
+                // Background - adapts to system appearance
+                Color.tidexBackground
                     .ignoresSafeArea()
 
                 // Main layout: content area + month picker at bottom
@@ -132,8 +132,8 @@ struct DashboardView: View {
             }
             .navigationTitle(localization.string("dashboard.title"))
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(Color.tidexLaunchBackground, for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbarBackground(Color.tidexBackground, for: .navigationBar)
+            // Note: Removed .toolbarColorScheme(.dark) to respect system appearance
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     UserMenuButton(
@@ -435,8 +435,8 @@ struct PlaceholderTabView: View {
             .applyRefreshable(enabled: supportsRefresh)
             .navigationTitle(localization.string(titleKey))
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(Color.tidexLaunchBackground, for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbarBackground(Color.tidexBackground, for: .navigationBar)
+            // Note: Removed .toolbarColorScheme(.dark) to respect system appearance
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     UserMenuButton(
@@ -518,7 +518,7 @@ struct PlaceholderContent: View {
 
     var body: some View {
         ZStack {
-            Color.tidexLaunchBackground
+            Color.tidexBackground
                 .ignoresSafeArea()
 
             VStack(spacing: 16) {

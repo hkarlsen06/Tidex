@@ -204,7 +204,7 @@ struct UserMenuButton: View {
 
 #Preview {
     ZStack {
-        Color.tidexLaunchBackground
+        Color.tidexBackground
             .ignoresSafeArea()
 
         VStack(spacing: 20) {

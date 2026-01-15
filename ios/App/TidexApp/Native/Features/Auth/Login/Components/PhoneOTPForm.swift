@@ -66,5 +66,5 @@ struct PhoneOTPForm: View {
 #Preview {
     PhoneOTPForm(viewModel: LoginViewModel())
         .padding()
-        .background(Color.tidexDarkBackground)
+        .background(Color.tidexBackground)
 }

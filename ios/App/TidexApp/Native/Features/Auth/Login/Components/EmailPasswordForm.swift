@@ -72,5 +72,5 @@ struct EmailPasswordForm: View {
 #Preview {
     EmailPasswordForm(viewModel: LoginViewModel())
         .padding()
-        .background(Color.tidexDarkBackground)
+        .background(Color.tidexBackground)
 }
