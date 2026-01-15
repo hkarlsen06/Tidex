@@ -252,7 +252,14 @@ struct WageSnapshotServerSnapshot: Codable, Equatable {
         )
     }
 
-    /// Encode to Data
+    /// Encode to Data (throws on failure for critical paths)
+    /// Use this in insert/update paths where empty Data would corrupt sync state
+    func encodedOrThrow() throws -> Data {
+        try requireEncode(self, typeName: "WageSnapshotServerSnapshot")
+    }
+
+    /// Encode to Data (returns empty Data on failure - use only for non-critical paths)
+    /// DEPRECATED: Prefer encodedOrThrow() for new code
     func encoded() -> Data {
         (try? canonicalJSONEncoder.encode(self)) ?? Data()
     }
