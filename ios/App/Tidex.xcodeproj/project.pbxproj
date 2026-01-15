@@ -21,6 +21,8 @@
 		1128F3BA2F18729100702359 /* RecurringShiftsRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1128F3A42F18729100702359 /* RecurringShiftsRepository.swift */; };
 		1128F3BB2F18729100702359 /* LocalUserShift.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1128F3A12F18729100702359 /* LocalUserShift.swift */; };
 		1128F3BD2F1877C600702359 /* NativeWidgetStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1128F3BC2F1877C600702359 /* NativeWidgetStorage.swift */; };
+		1128F3C12F187DAF00702359 /* SyncDebugView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1128F3BE2F187DAF00702359 /* SyncDebugView.swift */; };
+		1128F3C22F187DAF00702359 /* SyncTestHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1128F3BF2F187DAF00702359 /* SyncTestHelper.swift */; };
 		1152D0CB2F01E2A7002FD5ED /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1152D0CA2F01E2A7002FD5ED /* StoreKit.framework */; };
 		1163EF702F04397000DC58EC /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 1163EF6F2F04397000DC58EC /* GoogleService-Info.plist */; };
 		11923C162F16B89C0076AFD6 /* AuthState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11923C152F16B89C0076AFD6 /* AuthState.swift */; };
@@ -150,6 +152,8 @@
 		1128F3AC2F18729100702359 /* LocalStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalStore.swift; sourceTree = "<group>"; };
 		1128F3AD2F18729100702359 /* SyncTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncTypes.swift; sourceTree = "<group>"; };
 		1128F3BC2F1877C600702359 /* NativeWidgetStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeWidgetStorage.swift; sourceTree = "<group>"; };
+		1128F3BE2F187DAF00702359 /* SyncDebugView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncDebugView.swift; sourceTree = "<group>"; };
+		1128F3BF2F187DAF00702359 /* SyncTestHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncTestHelper.swift; sourceTree = "<group>"; };
 		1152D0C82F01BB9B002FD5ED /* App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = App.entitlements; sourceTree = "<group>"; };
 		1152D0CA2F01E2A7002FD5ED /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 		1163EF6F2F04397000DC58EC /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
@@ -317,6 +321,7 @@
 		1128F3AE2F18729100702359 /* Storage */ = {
 			isa = PBXGroup;
 			children = (
+				1128F3C02F187DAF00702359 /* Testing */,
 				1128F3BC2F1877C600702359 /* NativeWidgetStorage.swift */,
 				1128F3A32F18729100702359 /* Models */,
 				1128F3A82F18729100702359 /* Repositories */,
@@ -325,6 +330,15 @@
 				1128F3AD2F18729100702359 /* SyncTypes.swift */,
 			);
 			path = Storage;
+			sourceTree = "<group>";
+		};
+		1128F3C02F187DAF00702359 /* Testing */ = {
+			isa = PBXGroup;
+			children = (
+				1128F3BE2F187DAF00702359 /* SyncDebugView.swift */,
+				1128F3BF2F187DAF00702359 /* SyncTestHelper.swift */,
+			);
+			path = Testing;
 			sourceTree = "<group>";
 		};
 		1152D0C92F01E2A7002FD5ED /* Frameworks */ = {
@@ -899,6 +913,8 @@
 				11AE8CF22F16FDA4005AB062 /* Shift.swift in Sources */,
 				11AE8CF32F16FDA4005AB062 /* RecurringShift.swift in Sources */,
 				11AE8CF42F16FDA4005AB062 /* SupplementRule.swift in Sources */,
+				1128F3C12F187DAF00702359 /* SyncDebugView.swift in Sources */,
+				1128F3C22F187DAF00702359 /* SyncTestHelper.swift in Sources */,
 				11AE8D082F16FDD8005AB062 /* Date+Tidex.swift in Sources */,
 				11AE8CF52F16FDA4005AB062 /* UserSettings.swift in Sources */,
 				11AE8CF62F16FDA4005AB062 /* WageSnapshot.swift in Sources */,
