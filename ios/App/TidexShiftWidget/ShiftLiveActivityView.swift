@@ -32,7 +32,7 @@ private func formatCurrency(_ value: Double) -> String {
     return formatter.string(from: NSNumber(value: value)) ?? "\(Int(value))"
 }
 
-// MARK: - Time Formatter
+// MARK: - Time Formatter (for fallback static display)
 
 private func formatTimeRemaining(_ minutes: Int, locale: String) -> String {
     let hours = minutes / 60
@@ -45,6 +45,25 @@ private func formatTimeRemaining(_ minutes: Int, locale: String) -> String {
     return "\(mins)\(m)"
 }
 
+// MARK: - Real-Time Calculation Helpers
+
+/// Calculate current earnings based on elapsed time (linear interpolation)
+private func calculateCurrentEarnings(startDate: Date, endDate: Date, totalGross: Double, at now: Date) -> Double {
+    let total = endDate.timeIntervalSince(startDate)
+    guard total > 0 else { return 0 }
+    let elapsed = now.timeIntervalSince(startDate)
+    let progress = min(1.0, max(0.0, elapsed / total))
+    return progress * totalGross
+}
+
+/// Calculate progress percentage based on elapsed time
+private func calculateProgress(startDate: Date, endDate: Date, at now: Date) -> Double {
+    let total = endDate.timeIntervalSince(startDate)
+    guard total > 0 else { return 0 }
+    let elapsed = now.timeIntervalSince(startDate)
+    return min(100.0, max(0.0, (elapsed / total) * 100.0))
+}
+
 // MARK: - Lock Screen View
 
 struct LockScreenLiveActivityView: View {
@@ -55,58 +74,75 @@ struct LockScreenLiveActivityView: View {
     }
 
     var body: some View {
-        HStack(spacing: 16) {
-            // Left side: Time info
-            VStack(alignment: .leading, spacing: 4) {
-                // Time remaining - all on same baseline
-                HStack(alignment: .firstTextBaseline, spacing: 4) {
-                    Image(systemName: "clock.fill")
-                        .font(.system(size: 14))
-                        .foregroundColor(tidexBlue)
-                    Text(formatTimeRemaining(context.state.remainingMinutes, locale: context.attributes.locale))
-                        .font(.system(size: 20, weight: .bold, design: .rounded))
-                        .monospacedDigit()
-                    Text(localizedString("remaining", locale: context.attributes.locale))
+        // TimelineView updates the view every minute for earnings calculation
+        TimelineView(.periodic(from: context.attributes.startDate, by: 60)) { timelineContext in
+            let now = timelineContext.date
+            let currentEarnings = calculateCurrentEarnings(
+                startDate: context.attributes.startDate,
+                endDate: context.attributes.endDate,
+                totalGross: context.attributes.totalGrossEstimate,
+                at: now
+            )
+            let progress = calculateProgress(
+                startDate: context.attributes.startDate,
+                endDate: context.attributes.endDate,
+                at: now
+            )
+
+            HStack(spacing: 16) {
+                // Left side: Time info
+                VStack(alignment: .leading, spacing: 4) {
+                    // Time remaining - uses SwiftUI's auto-updating timer
+                    HStack(alignment: .firstTextBaseline, spacing: 4) {
+                        Image(systemName: "clock.fill")
+                            .font(.system(size: 14))
+                            .foregroundColor(tidexBlue)
+                        // SwiftUI timer automatically counts down every second
+                        Text(context.attributes.endDate, style: .timer)
+                            .font(.system(size: 20, weight: .bold, design: .rounded))
+                            .monospacedDigit()
+                        Text(localizedString("remaining", locale: context.attributes.locale))
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundColor(.secondary)
+                    }
+
+                    // Shift time range
+                    Text("\(context.attributes.startTime) - \(context.attributes.endTime)")
                         .font(.system(size: 15, weight: .medium))
                         .foregroundColor(.secondary)
                 }
 
-                // Shift time range
-                Text("\(context.attributes.startTime) - \(context.attributes.endTime)")
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundColor(.secondary)
-            }
+                Spacer()
 
-            Spacer()
+                // Right side: Earnings (updates every minute)
+                VStack(alignment: .trailing, spacing: 4) {
+                    // Current earnings - calculated from elapsed time
+                    Text("\(formatCurrency(currentEarnings)) \(currencySymbol)")
+                        .font(.system(size: 22, weight: .bold, design: .rounded))
+                        .monospacedDigit()
+                        .foregroundColor(tidexBlue)
 
-            // Right side: Earnings
-            VStack(alignment: .trailing, spacing: 4) {
-                // Current earnings
-                Text("\(formatCurrency(context.state.currentEarnings)) \(currencySymbol)")
-                    .font(.system(size: 22, weight: .bold, design: .rounded))
-                    .monospacedDigit()
-                    .foregroundColor(tidexBlue)
-
-                // Of total
-                Text("\(localizedString("of", locale: context.attributes.locale)) \(formatCurrency(context.attributes.totalGrossEstimate)) \(currencySymbol)")
-                    .font(.system(size: 13))
-                    .foregroundColor(.secondary)
-            }
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(
-            // Progress bar at bottom
-            GeometryReader { geometry in
-                VStack {
-                    Spacer()
-                    Rectangle()
-                        .fill(tidexBlue.opacity(0.3))
-                        .frame(width: geometry.size.width * CGFloat(context.state.progressPercent / 100), height: 3)
-                        .animation(.linear(duration: 0.5), value: context.state.progressPercent)
+                    // Of total
+                    Text("\(localizedString("of", locale: context.attributes.locale)) \(formatCurrency(context.attributes.totalGrossEstimate)) \(currencySymbol)")
+                        .font(.system(size: 13))
+                        .foregroundColor(.secondary)
                 }
             }
-        )
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(
+                // Progress bar at bottom - updates every minute
+                GeometryReader { geometry in
+                    VStack {
+                        Spacer()
+                        Rectangle()
+                            .fill(tidexBlue.opacity(0.3))
+                            .frame(width: geometry.size.width * CGFloat(progress / 100), height: 3)
+                            .animation(.linear(duration: 1.0), value: progress)
+                    }
+                }
+            )
+        }
     }
 }
 
@@ -120,7 +156,8 @@ struct CompactLeadingView: View {
             Image(systemName: "clock.fill")
                 .font(.system(size: 12))
                 .foregroundColor(tidexBlue)
-            Text(formatTimeRemaining(context.state.remainingMinutes, locale: context.attributes.locale))
+            // SwiftUI timer automatically counts down
+            Text(context.attributes.endDate, style: .timer)
                 .font(.system(size: 13, weight: .semibold, design: .rounded))
                 .monospacedDigit()
         }
@@ -135,10 +172,19 @@ struct CompactTrailingView: View {
     }
 
     var body: some View {
-        Text("\(formatCurrency(context.state.currentEarnings)) \(currencySymbol)")
-            .font(.system(size: 13, weight: .semibold, design: .rounded))
-            .monospacedDigit()
-            .foregroundColor(tidexBlue)
+        // TimelineView updates earnings every minute
+        TimelineView(.periodic(from: context.attributes.startDate, by: 60)) { timelineContext in
+            let currentEarnings = calculateCurrentEarnings(
+                startDate: context.attributes.startDate,
+                endDate: context.attributes.endDate,
+                totalGross: context.attributes.totalGrossEstimate,
+                at: timelineContext.date
+            )
+            Text("\(formatCurrency(currentEarnings)) \(currencySymbol)")
+                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                .monospacedDigit()
+                .foregroundColor(tidexBlue)
+        }
     }
 }
 
@@ -152,51 +198,68 @@ struct ExpandedView: View {
     }
 
     var body: some View {
-        VStack(spacing: 8) {
-            // Top row: Time range and remaining
-            HStack {
-                Text("\(context.attributes.startTime) - \(context.attributes.endTime)")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(.secondary)
-                Spacer()
-                HStack(alignment: .firstTextBaseline, spacing: 4) {
-                    Image(systemName: "clock.fill")
-                        .font(.system(size: 12))
-                        .foregroundColor(tidexBlue)
-                    Text(formatTimeRemaining(context.state.remainingMinutes, locale: context.attributes.locale))
-                        .font(.system(size: 14, weight: .bold, design: .rounded))
+        // TimelineView updates earnings and progress every minute
+        TimelineView(.periodic(from: context.attributes.startDate, by: 60)) { timelineContext in
+            let now = timelineContext.date
+            let currentEarnings = calculateCurrentEarnings(
+                startDate: context.attributes.startDate,
+                endDate: context.attributes.endDate,
+                totalGross: context.attributes.totalGrossEstimate,
+                at: now
+            )
+            let progress = calculateProgress(
+                startDate: context.attributes.startDate,
+                endDate: context.attributes.endDate,
+                at: now
+            )
+
+            VStack(spacing: 8) {
+                // Top row: Time range and remaining
+                HStack {
+                    Text("\(context.attributes.startTime) - \(context.attributes.endTime)")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    HStack(alignment: .firstTextBaseline, spacing: 4) {
+                        Image(systemName: "clock.fill")
+                            .font(.system(size: 12))
+                            .foregroundColor(tidexBlue)
+                        // SwiftUI timer automatically counts down
+                        Text(context.attributes.endDate, style: .timer)
+                            .font(.system(size: 14, weight: .bold, design: .rounded))
+                            .monospacedDigit()
+                    }
+                }
+
+                // Progress bar - updates every minute
+                GeometryReader { geometry in
+                    ZStack(alignment: .leading) {
+                        RoundedRectangle(cornerRadius: 2)
+                            .fill(Color.gray.opacity(0.3))
+                            .frame(height: 4)
+                        RoundedRectangle(cornerRadius: 2)
+                            .fill(tidexBlue)
+                            .frame(width: geometry.size.width * CGFloat(progress / 100), height: 4)
+                            .animation(.linear(duration: 1.0), value: progress)
+                    }
+                }
+                .frame(height: 4)
+
+                // Bottom row: Earnings - updates every minute
+                HStack {
+                    Text(localizedString("earned", locale: context.attributes.locale))
+                        .font(.system(size: 13))
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    Text("\(formatCurrency(currentEarnings)) / \(formatCurrency(context.attributes.totalGrossEstimate)) \(currencySymbol)")
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
                         .monospacedDigit()
+                        .foregroundColor(tidexBlue)
                 }
             }
-
-            // Progress bar
-            GeometryReader { geometry in
-                ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 2)
-                        .fill(Color.gray.opacity(0.3))
-                        .frame(height: 4)
-                    RoundedRectangle(cornerRadius: 2)
-                        .fill(tidexBlue)
-                        .frame(width: geometry.size.width * CGFloat(context.state.progressPercent / 100), height: 4)
-                        .animation(.linear(duration: 0.5), value: context.state.progressPercent)
-                }
-            }
-            .frame(height: 4)
-
-            // Bottom row: Earnings
-            HStack {
-                Text(localizedString("earned", locale: context.attributes.locale))
-                    .font(.system(size: 13))
-                    .foregroundColor(.secondary)
-                Spacer()
-                Text("\(formatCurrency(context.state.currentEarnings)) / \(formatCurrency(context.attributes.totalGrossEstimate)) \(currencySymbol)")
-                    .font(.system(size: 15, weight: .bold, design: .rounded))
-                    .monospacedDigit()
-                    .foregroundColor(tidexBlue)
-            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 8)
     }
 }
 

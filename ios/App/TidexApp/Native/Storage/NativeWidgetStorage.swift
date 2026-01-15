@@ -1,5 +1,6 @@
 import Foundation
 import SwiftData
+import UIKit
 import WidgetKit
 import os.log
 
@@ -111,6 +112,12 @@ enum NativeWidgetStorage {
 
         // Trigger widget reload
         reloadWidgetTimelines()
+
+        // Reschedule Live Activity background task for the next upcoming shift
+        // This ensures the background task is always scheduled for the soonest shift
+        if let appDelegate = UIApplication.shared.delegate as? AppDelegate {
+            appDelegate.scheduleNextShiftLiveActivity()
+        }
 
         logger.info("Widget storage updated with \(storedShifts.count) shifts")
     }
