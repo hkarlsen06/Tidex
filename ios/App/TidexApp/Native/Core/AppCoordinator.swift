@@ -9,6 +9,8 @@ import Supabase
 /// It listens to Supabase auth events and handles all navigation transitions.
 /// Individual services (like `AuthService`) perform auth operations but don't
 /// duplicate state listening - they rely on this coordinator for state management.
+///
+/// Also triggers SyncCoordinator after authentication and on foreground.
 @MainActor
 final class AppCoordinator: ObservableObject {
     static let shared = AppCoordinator()
@@ -36,10 +38,16 @@ final class AppCoordinator: ObservableObject {
     /// User's profile picture URL (for UserMenuButton)
     @Published private(set) var userAvatarUrl: String?
 
+    // MARK: - Sync State
+
+    /// Whether initial sync has completed after authentication
+    @Published private(set) var initialSyncComplete = false
+
     // MARK: - Dependencies
 
     private let authService: AuthService
     private let settingsService: SettingsService
+    private let syncCoordinator: SyncCoordinator
 
     // MARK: - Private
 
@@ -47,9 +55,14 @@ final class AppCoordinator: ObservableObject {
 
     // MARK: - Initialization
 
-    private init(authService: AuthService? = nil, settingsService: SettingsService? = nil) {
+    private init(
+        authService: AuthService? = nil,
+        settingsService: SettingsService? = nil,
+        syncCoordinator: SyncCoordinator? = nil
+    ) {
         self.authService = authService ?? AuthService.shared
         self.settingsService = settingsService ?? SettingsService.shared
+        self.syncCoordinator = syncCoordinator ?? SyncCoordinator.shared
         setupAuthStateListener()
         setupInitialSessionCheck()
     }
@@ -173,6 +186,7 @@ final class AppCoordinator: ObservableObject {
     // MARK: - User Profile
 
     /// Update user profile data (display name and avatar)
+    /// Also triggers initial sync in background
     private func updateUserProfile() async {
         do {
             let session = try await supabase.auth.session
@@ -192,15 +206,68 @@ final class AppCoordinator: ObservableObject {
                 userDisplayName = "User"
             }
 
-            // Fetch settings to get profile picture URL
+            // Trigger initial sync in background after authentication
             let userId = user.id.uuidString.lowercased()
-            if let settings = try await settingsService.fetchSettings(for: userId) {
+            triggerInitialSync(userId: userId)
+
+            // Profile picture will be loaded from local store after sync completes
+            // For now, check local settings repository
+            if let settings = SettingsRepository.shared.getSettings(for: userId) {
                 userAvatarUrl = settings.profile_picture_url
             }
 
         } catch {
             print("[AppCoordinator] Failed to update user profile: \(error)")
             userDisplayName = "User"
+        }
+    }
+
+    // MARK: - Sync Triggers
+
+    /// Trigger initial sync after authentication
+    private func triggerInitialSync(userId: String) {
+        initialSyncComplete = false
+
+        Task {
+            print("[AppCoordinator] Triggering initial sync for user \(userId.prefix(8))...")
+
+            let result = await syncCoordinator.sync(reason: .appLaunch, userId: userId)
+
+            if result.success {
+                print("[AppCoordinator] Initial sync completed: \(result.totalRowsProcessed) rows pulled, \(result.totalRowsPushed) pushed")
+            } else if let error = result.error {
+                print("[AppCoordinator] Initial sync failed: \(error)")
+            }
+
+            initialSyncComplete = true
+
+            // Update avatar from synced settings
+            if let settings = SettingsRepository.shared.getSettings(for: userId) {
+                userAvatarUrl = settings.profile_picture_url
+            }
+        }
+    }
+
+    /// Called when app returns to foreground
+    /// Triggers a sync with interval guard (won't sync if recent sync occurred)
+    func handleAppForeground() {
+        guard appState == .authenticated else { return }
+
+        Task {
+            do {
+                let session = try await supabase.auth.session
+                let userId = session.user.id.uuidString.lowercased()
+
+                print("[AppCoordinator] App returned to foreground, triggering sync...")
+                let result = await syncCoordinator.sync(reason: .foreground, userId: userId)
+
+                if result.success {
+                    print("[AppCoordinator] Foreground sync completed: \(result.totalRowsProcessed) rows")
+                }
+                // Note: SyncCoordinator handles interval guard - if sync was recent, it will skip
+            } catch {
+                print("[AppCoordinator] Foreground sync skipped (no session): \(error)")
+            }
         }
     }
 
@@ -226,10 +293,12 @@ final class AppCoordinator: ObservableObject {
         do {
             try await authService.signOut()
             // Auth state listener will update appState to .unauthenticated
+            initialSyncComplete = false
         } catch {
             print("[AppCoordinator] Sign out failed: \(error)")
             // Force state change even if sign out fails
             appState = .unauthenticated
+            initialSyncComplete = false
         }
     }
 

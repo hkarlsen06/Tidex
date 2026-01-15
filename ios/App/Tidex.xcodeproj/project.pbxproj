@@ -7,6 +7,19 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		1128F3AF2F18729100702359 /* LocalRecurringShift.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1128F39E2F18729100702359 /* LocalRecurringShift.swift */; };
+		1128F3B02F18729100702359 /* ShiftsRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1128F3A62F18729100702359 /* ShiftsRepository.swift */; };
+		1128F3B12F18729100702359 /* SettingsRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1128F3A52F18729100702359 /* SettingsRepository.swift */; };
+		1128F3B22F18729100702359 /* LocalUserSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1128F3A02F18729100702359 /* LocalUserSettings.swift */; };
+		1128F3B32F18729100702359 /* LocalSyncState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1128F39F2F18729100702359 /* LocalSyncState.swift */; };
+		1128F3B42F18729100702359 /* SyncServerModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1128F3AA2F18729100702359 /* SyncServerModels.swift */; };
+		1128F3B52F18729100702359 /* SnapshotsRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1128F3A72F18729100702359 /* SnapshotsRepository.swift */; };
+		1128F3B62F18729100702359 /* SyncCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1128F3A92F18729100702359 /* SyncCoordinator.swift */; };
+		1128F3B72F18729100702359 /* SyncTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1128F3AD2F18729100702359 /* SyncTypes.swift */; };
+		1128F3B82F18729100702359 /* LocalStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1128F3AC2F18729100702359 /* LocalStore.swift */; };
+		1128F3B92F18729100702359 /* LocalWageSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1128F3A22F18729100702359 /* LocalWageSnapshot.swift */; };
+		1128F3BA2F18729100702359 /* RecurringShiftsRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1128F3A42F18729100702359 /* RecurringShiftsRepository.swift */; };
+		1128F3BB2F18729100702359 /* LocalUserShift.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1128F3A12F18729100702359 /* LocalUserShift.swift */; };
 		1152D0CB2F01E2A7002FD5ED /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1152D0CA2F01E2A7002FD5ED /* StoreKit.framework */; };
 		1163EF702F04397000DC58EC /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 1163EF6F2F04397000DC58EC /* GoogleService-Info.plist */; };
 		11923C162F16B89C0076AFD6 /* AuthState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11923C152F16B89C0076AFD6 /* AuthState.swift */; };
@@ -75,7 +88,6 @@
 		11AE8D1C2F17BE13005AB062 /* PayrollEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11AE8D1B2F17BE13005AB062 /* PayrollEngine.swift */; };
 		11AE8D1D2F17BE13005AB062 /* ConflictExclusion.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11AE8D1A2F17BE13005AB062 /* ConflictExclusion.swift */; };
 		11AE8D202F17CB31005AB062 /* MonthSwipeGesture.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11AE8D1E2F17CB31005AB062 /* MonthSwipeGesture.swift */; };
-		11AE8D222F17CEB4005AB062 /* FeaturedShiftCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11AE8D212F17CEB4005AB062 /* FeaturedShiftCard.swift */; };
 		11AE8D252F17CF3A005AB062 /* MonthTransition.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11AE8D232F17CF3A005AB062 /* MonthTransition.swift */; };
 		11AE8D292F17D02E005AB062 /* CountdownManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11AE8D272F17D02E005AB062 /* CountdownManager.swift */; };
 		11AE8D2A2F17D02E005AB062 /* CountdownFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11AE8D262F17D02E005AB062 /* CountdownFormatter.swift */; };
@@ -123,6 +135,19 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		1128F39E2F18729100702359 /* LocalRecurringShift.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalRecurringShift.swift; sourceTree = "<group>"; };
+		1128F39F2F18729100702359 /* LocalSyncState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalSyncState.swift; sourceTree = "<group>"; };
+		1128F3A02F18729100702359 /* LocalUserSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalUserSettings.swift; sourceTree = "<group>"; };
+		1128F3A12F18729100702359 /* LocalUserShift.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalUserShift.swift; sourceTree = "<group>"; };
+		1128F3A22F18729100702359 /* LocalWageSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalWageSnapshot.swift; sourceTree = "<group>"; };
+		1128F3A42F18729100702359 /* RecurringShiftsRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecurringShiftsRepository.swift; sourceTree = "<group>"; };
+		1128F3A52F18729100702359 /* SettingsRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsRepository.swift; sourceTree = "<group>"; };
+		1128F3A62F18729100702359 /* ShiftsRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShiftsRepository.swift; sourceTree = "<group>"; };
+		1128F3A72F18729100702359 /* SnapshotsRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnapshotsRepository.swift; sourceTree = "<group>"; };
+		1128F3A92F18729100702359 /* SyncCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncCoordinator.swift; sourceTree = "<group>"; };
+		1128F3AA2F18729100702359 /* SyncServerModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncServerModels.swift; sourceTree = "<group>"; };
+		1128F3AC2F18729100702359 /* LocalStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalStore.swift; sourceTree = "<group>"; };
+		1128F3AD2F18729100702359 /* SyncTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncTypes.swift; sourceTree = "<group>"; };
 		1152D0C82F01BB9B002FD5ED /* App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = App.entitlements; sourceTree = "<group>"; };
 		1152D0CA2F01E2A7002FD5ED /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 		1163EF6F2F04397000DC58EC /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
@@ -255,6 +280,50 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		1128F3A32F18729100702359 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				1128F39E2F18729100702359 /* LocalRecurringShift.swift */,
+				1128F39F2F18729100702359 /* LocalSyncState.swift */,
+				1128F3A02F18729100702359 /* LocalUserSettings.swift */,
+				1128F3A12F18729100702359 /* LocalUserShift.swift */,
+				1128F3A22F18729100702359 /* LocalWageSnapshot.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		1128F3A82F18729100702359 /* Repositories */ = {
+			isa = PBXGroup;
+			children = (
+				1128F3A42F18729100702359 /* RecurringShiftsRepository.swift */,
+				1128F3A52F18729100702359 /* SettingsRepository.swift */,
+				1128F3A62F18729100702359 /* ShiftsRepository.swift */,
+				1128F3A72F18729100702359 /* SnapshotsRepository.swift */,
+			);
+			path = Repositories;
+			sourceTree = "<group>";
+		};
+		1128F3AB2F18729100702359 /* Sync */ = {
+			isa = PBXGroup;
+			children = (
+				1128F3A92F18729100702359 /* SyncCoordinator.swift */,
+				1128F3AA2F18729100702359 /* SyncServerModels.swift */,
+			);
+			path = Sync;
+			sourceTree = "<group>";
+		};
+		1128F3AE2F18729100702359 /* Storage */ = {
+			isa = PBXGroup;
+			children = (
+				1128F3A32F18729100702359 /* Models */,
+				1128F3A82F18729100702359 /* Repositories */,
+				1128F3AB2F18729100702359 /* Sync */,
+				1128F3AC2F18729100702359 /* LocalStore.swift */,
+				1128F3AD2F18729100702359 /* SyncTypes.swift */,
+			);
+			path = Storage;
+			sourceTree = "<group>";
+		};
 		1152D0C92F01E2A7002FD5ED /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
@@ -443,6 +512,7 @@
 		119D1CE52F16E46300EC7072 /* Native */ = {
 			isa = PBXGroup;
 			children = (
+				1128F3AE2F18729100702359 /* Storage */,
 				11AE8CF12F16FDA4005AB062 /* Models */,
 				119D1CBA2F16E46300EC7072 /* Core */,
 				119D1CCC2F16E46300EC7072 /* Features */,
@@ -809,11 +879,23 @@
 				119D1CFA2F16E46300EC7072 /* ErrorBanner.swift in Sources */,
 				119D1CFB2F16E46300EC7072 /* MainTabView.swift in Sources */,
 				119D1CFC2F16E46300EC7072 /* AppCoordinator.swift in Sources */,
+				1128F3AF2F18729100702359 /* LocalRecurringShift.swift in Sources */,
+				1128F3B02F18729100702359 /* ShiftsRepository.swift in Sources */,
+				1128F3B12F18729100702359 /* SettingsRepository.swift in Sources */,
+				1128F3B22F18729100702359 /* LocalUserSettings.swift in Sources */,
+				1128F3B32F18729100702359 /* LocalSyncState.swift in Sources */,
+				1128F3B42F18729100702359 /* SyncServerModels.swift in Sources */,
+				1128F3B52F18729100702359 /* SnapshotsRepository.swift in Sources */,
+				1128F3B62F18729100702359 /* SyncCoordinator.swift in Sources */,
+				1128F3B72F18729100702359 /* SyncTypes.swift in Sources */,
+				1128F3B82F18729100702359 /* LocalStore.swift in Sources */,
+				1128F3B92F18729100702359 /* LocalWageSnapshot.swift in Sources */,
+				1128F3BA2F18729100702359 /* RecurringShiftsRepository.swift in Sources */,
+				1128F3BB2F18729100702359 /* LocalUserShift.swift in Sources */,
 				11AE8CF22F16FDA4005AB062 /* Shift.swift in Sources */,
 				11AE8CF32F16FDA4005AB062 /* RecurringShift.swift in Sources */,
 				11AE8CF42F16FDA4005AB062 /* SupplementRule.swift in Sources */,
 				11AE8D082F16FDD8005AB062 /* Date+Tidex.swift in Sources */,
-				11AE8D222F17CEB4005AB062 /* FeaturedShiftCard.swift in Sources */,
 				11AE8CF52F16FDA4005AB062 /* UserSettings.swift in Sources */,
 				11AE8CF62F16FDA4005AB062 /* WageSnapshot.swift in Sources */,
 				11AE8D2D2F17D27D005AB062 /* EmptyShiftCard.swift in Sources */,
