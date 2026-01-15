@@ -173,7 +173,9 @@ struct TablePullResult {
 struct SyncResult {
     let success: Bool
     let tableResults: [TablePullResult]
+    let pushResults: [TablePushResult]
     let totalRowsProcessed: Int
+    let totalRowsPushed: Int
     let totalConflicts: Int
     let totalAutoMerged: Int
     let duration: TimeInterval
@@ -182,4 +184,33 @@ struct SyncResult {
     var hasConflicts: Bool {
         totalConflicts > 0
     }
+}
+
+// MARK: - Push Result Types
+
+/// Result of pushing a single table
+struct TablePushResult {
+    let table: SyncTable
+    let rowsPushed: Int
+    let newConflicts: Int
+    let rebased: Int
+}
+
+/// Result of pushing a single record
+enum PushResult {
+    case success
+    case conflict
+    case rebased
+    case noChange
+    case deleted
+}
+
+// MARK: - Conflict Resolution
+
+/// Resolution choice for a conflict
+enum ConflictResolution {
+    /// Keep the local (iPhone) version and push to server
+    case keepLocal
+    /// Keep the server (Web) version and discard local changes
+    case keepServer
 }
