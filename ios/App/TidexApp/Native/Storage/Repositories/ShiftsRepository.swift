@@ -41,11 +41,11 @@ final class ShiftsRepository: ObservableObject {
                 shift.shiftDate >= startDate &&
                 shift.shiftDate <= endDate
             },
-            sortBy: [SortDescriptor(\.shiftDate, order: .descending)]
+            sortBy: [SortDescriptor(\LocalUserShift.shiftDate, order: .reverse)]
         )
 
         do {
-            let localShifts = try context.fetch(descriptor)
+            let localShifts: [LocalUserShift] = try context.fetch(descriptor)
             return localShifts.map { $0.toShiftRow() }
         } catch {
             logger.error("Failed to fetch shifts: \(error.localizedDescription)")
@@ -63,11 +63,11 @@ final class ShiftsRepository: ObservableObject {
             predicate: #Predicate { shift in
                 shift.userId == userId && shift.serverDeletedAt == nil
             },
-            sortBy: [SortDescriptor(\.shiftDate, order: .descending)]
+            sortBy: [SortDescriptor(\LocalUserShift.shiftDate, order: .reverse)]
         )
 
         do {
-            let localShifts = try context.fetch(descriptor)
+            let localShifts: [LocalUserShift] = try context.fetch(descriptor)
             return localShifts.map { $0.toShiftRow() }
         } catch {
             logger.error("Failed to fetch all shifts: \(error.localizedDescription)")

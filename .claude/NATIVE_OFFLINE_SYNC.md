@@ -34,6 +34,7 @@
 | 4 | SyncCoordinator (Pull) | ✅ Complete |
 | 5 | SyncCoordinator (Push & Conflicts) | ✅ Complete |
 | 6 | UI/ViewModel Refactor | ✅ Complete |
+| 6.5 | Build Fixes (Pre-Phase 7) | ✅ Complete |
 | 7 | Widget Integration | ⬜ Not Started |
 | 8 | Testing & Validation | ⬜ Not Started |
 
@@ -824,6 +825,83 @@ SyncCoordinator.sync(reason: .appForeground)
 3. **Graceful degradation** - If no local data exists (first launch, never synced), shows empty state instead of error
 4. **In-memory cache preserved** - Month cache still used for instant navigation, populated from local reads
 5. **Interval-guarded foreground sync** - Prevents excessive syncs when rapidly switching apps
+
+---
+
+## Phase 6.5: Build Fixes (Pre-Phase 7)
+
+**Status**: ✅ Complete
+
+### Scope
+
+Fix Xcode build errors discovered after Phase 6 completion before proceeding to Phase 7.
+
+### Issues Fixed
+
+#### 6.5.1 Int64 PostgrestFilterValue Conformance
+
+**Problem**: Supabase Swift SDK's `PostgrestFilterValue` protocol doesn't include `Int64` conformance, only `Int`. This caused errors like:
+```
+Argument type 'Int64' does not conform to expected type 'PostgrestFilterValue'
+```
+
+**Solution**: Convert `Int64` values to `Int` when passing to query filter methods:
+
+**Pull queries** (4 locations in `SyncCoordinator.swift`):
+- `pullUserShiftsPage`: `.gt("revision", value: Int(cursor))`
+- `pullRecurringShiftsPage`: `.gt("revision", value: Int(cursor))`
+- `pullWageSnapshotsPage`: `.gt("revision", value: Int(cursor))`
+- `pullUserSettingsPage`: `.gt("revision", value: Int(cursor))`
+
+**Push queries** (8 locations in `SyncCoordinator.swift`):
+- All push methods now use `let serverRevision = Int(entity.serverRevision)` before filtering
+
+#### 6.5.2 AnyJSON Initializer Type Conformance
+
+**Problem**: `AnyJSON(_ value: some Codable) throws` requires a concrete `Codable` type, but `JSONSerialization.jsonObject` returns `Any` which isn't `Codable`. This caused errors like:
+```
+Initializer 'init(_:)' requires that 'some Decodable & Encodable' conform to 'Decodable'
+```
+
+**Solution**: Instead of `AnyJSON(jsonObject)`, decode the `Data` directly using `AnyJSON.decoder.decode(AnyJSON.self, from: data)`:
+
+**Locations fixed** (6 total in `SyncCoordinator.swift`):
+- `custom_supplements` in `pushUserShift`
+- `selected_days`, `end_condition`, `exclusions`, `date_specific_supplements` in `pushRecurringShift`
+- `supplements` in `pushWageSnapshot`
+
+**Pattern change**:
+```swift
+// Before (broken):
+if let jsonObject = try? JSONSerialization.jsonObject(with: data) {
+    updateData["field"] = AnyJSON(jsonObject)
+}
+
+// After (working):
+if let decoded = try? AnyJSON.decoder.decode(AnyJSON.self, from: data) {
+    updateData["field"] = decoded
+}
+```
+
+#### 6.5.3 SwiftData SortDescriptor Syntax
+
+**Problem**: SwiftData's `SortDescriptor` uses `.reverse` for descending order, not `.descending`. Also, the `fetch` call needs explicit type annotation for generic inference.
+
+**Errors**:
+```
+Type 'SortOrder' has no member 'descending'
+Generic parameter 'T' could not be inferred
+```
+
+**Solution** (2 locations in `ShiftsRepository.swift`):
+- Changed `SortDescriptor(\.shiftDate, order: .descending)` to `SortDescriptor(\LocalUserShift.shiftDate, order: .reverse)`
+- Added explicit type annotation: `let localShifts: [LocalUserShift] = try context.fetch(descriptor)`
+
+### Notes
+
+**Completed: 2026-01-15**
+
+All build errors fixed and verified by building in Xcode. Ready to proceed to Phase 7.
 
 ---
 
