@@ -19,6 +19,17 @@ struct UserMenuButton: View {
     @State private var isLoadingImage = false
     /// Track the URL we've loaded to detect changes
     @State private var loadedUrl: String?
+    /// Whether to show the sync debug sheet
+    @State private var showSyncDebug = false
+
+    /// Whether debug features are enabled (DEBUG builds only)
+    private var isDebugBuild: Bool {
+        #if DEBUG
+        return true
+        #else
+        return false
+        #endif
+    }
 
     var body: some View {
         Menu {
@@ -32,6 +43,18 @@ struct UserMenuButton: View {
                 )
             }
             .disabled(true)
+
+            // Sync Debug button (DEBUG builds only)
+            if isDebugBuild {
+                Button {
+                    showSyncDebug = true
+                } label: {
+                    Label(
+                        "Sync Debug",
+                        systemImage: "arrow.triangle.2.circlepath.circle"
+                    )
+                }
+            }
 
             Divider()
 
@@ -56,6 +79,11 @@ struct UserMenuButton: View {
             .disabled(isSigningOut)
         } label: {
             menuButton
+        }
+        .sheet(isPresented: $showSyncDebug) {
+            NavigationStack {
+                SyncDebugView()
+            }
         }
     }
 
