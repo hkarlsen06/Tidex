@@ -37,6 +37,7 @@
 | 6.5 | Build Fixes (Pre-Phase 7) | ✅ Complete |
 | 7 | Widget Integration | ✅ Complete |
 | 8 | Testing & Validation | ✅ Complete |
+| 9 | Pull Cursor Fix (Bug Fix) | ✅ Complete |
 
 ---
 
@@ -1164,13 +1165,14 @@ PayrollEngine.computeShiftsForMonth()
 Display DashboardData
 ```
 
-**Sync Pull Path**:
+**Sync Pull Path** (updated in Phase 9):
 ```
 SyncCoordinator.sync(reason, userId)
     ↓
 pullTable(table, userId, syncState)
     ↓
-Supabase: SELECT * WHERE revision > cursor ORDER BY revision LIMIT 500
+Supabase: SELECT * WHERE (updated_at > cursor OR (updated_at = cursor AND id > tieId))
+          ORDER BY updated_at, id LIMIT 500
     ↓
 For each row:
     ├─ Row doesn't exist locally → Insert as clean
@@ -1180,7 +1182,7 @@ For each row:
         ├─ If no overlap with dirtyFields → autoMergeShift()
         └─ If overlap → markShiftConflict()
     ↓
-Update revision cursor in LocalSyncState
+Update updated_at cursor in LocalSyncState
 ```
 
 **Sync Push Path**:
@@ -1277,6 +1279,109 @@ To run the validation tests:
 
 ---
 
+---
+
+## Phase 9: Pull Cursor Fix (Critical Bug Fix)
+
+**Status**: ✅ Complete
+
+### Problem
+
+New shifts created on web were not appearing on iOS after sync. Soft deletes worked correctly.
+
+### Root Cause
+
+The original incremental sync used `revision > cursor` for pull queries. However, `revision` is a **per-row** value, not a global table sequence:
+- New rows are inserted with `revision = 1`
+- Once the cursor exceeds 1 (after any update), new inserts with `revision = 1` never satisfy `revision > cursor`
+- Updates work (including soft deletes) because existing rows have `revision` incremented by triggers
+
+### Solution
+
+Changed pull cursors from `revision` to `updated_at` timestamp with a tie-breaker (`id`) to avoid missing rows when multiple changes share the same timestamp.
+
+**Important**: `revision` is still used for optimistic concurrency on PUSH (unchanged). Only PULL cursors were changed.
+
+### Files Modified
+
+1. **`Native/Storage/Models/LocalSyncState.swift`**:
+   - Added `SyncCursor` struct with `updatedAt: Date?` and `tieId: String`
+   - Added per-table `lastXxxUpdatedAt` and `lastXxxUpdatedAtTieId` fields
+   - Added `updatedAtCursor(for:)` and `updateUpdatedAtCursor(for:updatedAt:tieId:)` methods
+   - Kept legacy `lastRevisionXxx` fields for debugging only
+
+2. **`Native/Storage/Sync/SyncCoordinator.swift`**:
+   - Updated `pullTable()` to use `SyncCursor` instead of `Int64` revision
+   - Updated `PagePullResult` struct to include `lastUpdatedAt` and `lastTieId`
+   - Updated all four table pull methods to use updated_at cursor:
+     - `pullUserShiftsPage(userId:cursor:)`
+     - `pullRecurringShiftsPage(userId:cursor:)`
+     - `pullWageSnapshotsPage(userId:cursor:)`
+     - `pullUserSettingsPage(userId:cursor:)`
+   - Added `formatISO8601(_:)` helper for formatting timestamps in queries
+
+3. **`Native/Storage/Sync/SyncServerModels.swift`**:
+   - Updated `TablePullResult` to include `lastUpdatedAt` and `lastUpdatedAtTieId`
+
+4. **`Native/Storage/Testing/SyncDebugView.swift`**:
+   - Updated to show both updated_at cursors (primary) and legacy revision cursors (debug)
+
+### New Pull Query Logic
+
+**Supabase Query Condition**:
+```
+WHERE user_id = :userId
+AND (
+    updated_at > :cursorUpdatedAt
+    OR (updated_at = :cursorUpdatedAt AND id > :cursorTieId)
+)
+ORDER BY updated_at ASC, id ASC
+LIMIT 500
+```
+
+**Swift Implementation**:
+```swift
+let cursorTimestamp = formatISO8601(cursorUpdatedAt)
+let cursorTieId = cursor.tieId
+
+let rows = try await supabase
+    .from("user_shifts")
+    .select()
+    .eq("user_id", value: userId)
+    .or("updated_at.gt.\(cursorTimestamp),and(updated_at.eq.\(cursorTimestamp),id.gt.\(cursorTieId))")
+    .order("updated_at", ascending: true)
+    .order("id", ascending: true)
+    .limit(pageSize)
+    .execute()
+    .value
+```
+
+### Migration Strategy
+
+- On first run after this change, if updated_at cursors are nil, the sync starts from the beginning (initial sync)
+- Existing local data is NOT wiped
+- The first sync after upgrade will re-fetch all rows (since cursor is nil)
+- Subsequent syncs will be incremental using updated_at
+
+### Acceptance Tests
+
+1. **New shift from web appears on iOS** ✅
+   - Create shift on web (new row, revision=1)
+   - Sync iOS → shift appears locally
+
+2. **Soft delete still propagates** ✅
+   - Soft delete shift on web
+   - Sync iOS → shift disappears from UI
+
+3. **Same-timestamp safety** ✅
+   - Create multiple shifts quickly on web
+   - Sync iOS → all shifts appear (tie-breaker works)
+
+4. **Paging works correctly** ✅
+   - Tested with page size 2 → all rows fetched across pages
+
+---
+
 ## Implementation Recommendations
 
 - Use SwiftData (iOS 18+)
@@ -1284,12 +1389,13 @@ To run the validation tests:
 - Define a single "ServerRowSnapshot" codable per table for `lastSyncedSnapshot` and `conflictServerSnapshot`
 - Page size for pull: 500 (conservative, loop per table to avoid memory spikes)
 - Always keep sync single-flight and serialized
+- **Use `updated_at` for pull cursors, NOT `revision`** (revision is per-row, not global)
 
 ## No Server Infrastructure Required
 
 Direct Supabase queries work because:
-- Pull uses revision cursors and simple filters
-- Push uses optimistic concurrency by filtering revision and checking returned row
+- Pull uses updated_at cursors with tie-breaker for reliable incremental fetch
+- Push uses optimistic concurrency by filtering `revision = serverRevision` and checking returned row
 - Conflict handling fetches server row by id when needed
 
 **Optional future improvement**: Add Supabase RPCs for bulk sync performance (not required for first implementation)

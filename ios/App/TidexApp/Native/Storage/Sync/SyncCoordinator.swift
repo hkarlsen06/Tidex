@@ -194,19 +194,21 @@ final class SyncCoordinator: ObservableObject {
     // MARK: - Pull Implementation
 
     /// Pull changes for a single table
+    /// Uses updated_at timestamp cursor with tie-breaker for incremental sync
     private func pullTable(
         _ table: SyncTable,
         userId: String,
         syncState: LocalSyncState
     ) async throws -> TablePullResult {
-        var cursor = syncState.cursor(for: table)
+        var cursor = syncState.updatedAtCursor(for: table)
         var totalRows = 0
         var newConflicts = 0
         var autoMerged = 0
+        var maxRevision: Int64 = syncState.cursor(for: table) // Legacy, for debugging
 
-        logger.debug("Pulling \(table.displayName) from revision \(cursor)")
+        logger.debug("Pulling \(table.displayName) from \(cursor.description)")
 
-        // Page through all changes
+        // Page through all changes using updated_at cursor
         while true {
             let result: PagePullResult
 
@@ -225,12 +227,21 @@ final class SyncCoordinator: ObservableObject {
             newConflicts += result.newConflicts
             autoMerged += result.autoMerged
 
-            if result.maxRevision > cursor {
-                cursor = result.maxRevision
-                // Update cursor in sync state
+            // Track legacy max revision for debugging
+            if result.maxRevision > maxRevision {
+                maxRevision = result.maxRevision
+            }
+
+            // Update cursor if we processed rows
+            if let lastUpdatedAt = result.lastUpdatedAt {
+                cursor = SyncCursor(updatedAt: lastUpdatedAt, tieId: result.lastTieId)
+
+                // Persist cursor to sync state
                 let storeActor = LocalStore.shared.storeActor
                 await storeActor.updateSyncState(userId: userId) { state in
-                    state.updateCursor(for: table, to: cursor)
+                    state.updateUpdatedAtCursor(for: table, updatedAt: lastUpdatedAt, tieId: result.lastTieId)
+                    // Also update legacy cursor for debugging
+                    state.updateCursor(for: table, to: result.maxRevision)
                 }
             }
 
@@ -240,12 +251,15 @@ final class SyncCoordinator: ObservableObject {
             }
         }
 
-        logger.debug("Pulled \(table.displayName): \(totalRows) rows, max revision \(cursor)")
+        let finalCursor = cursor.updatedAt.map { ISO8601DateFormatter().string(from: $0) } ?? "initial"
+        logger.debug("Pulled \(table.displayName): \(totalRows) rows, cursor now at \(finalCursor)")
 
         return TablePullResult(
             table: table,
             rowsProcessed: totalRows,
-            maxRevision: cursor,
+            lastUpdatedAt: cursor.updatedAt,
+            lastUpdatedAtTieId: cursor.tieId,
+            maxRevision: maxRevision,
             newConflicts: newConflicts,
             autoMerged: autoMerged
         )
@@ -254,6 +268,11 @@ final class SyncCoordinator: ObservableObject {
     /// Result of pulling a single page
     private struct PagePullResult {
         let rowsProcessed: Int
+        /// Last updated_at timestamp in this page (for cursor)
+        let lastUpdatedAt: Date?
+        /// ID of the last row at lastUpdatedAt (tie-breaker)
+        let lastTieId: String
+        /// Legacy max revision in this page (for debugging)
         let maxRevision: Int64
         let newConflicts: Int
         let autoMerged: Int
@@ -262,27 +281,57 @@ final class SyncCoordinator: ObservableObject {
 
     // MARK: - User Shifts Pull
 
-    private func pullUserShiftsPage(userId: String, cursor: Int64) async throws -> PagePullResult {
-        // Query server for changes since cursor
-        // Note: Convert Int64 to Int for PostgrestFilterValue conformance
-        let rows: [SyncShiftRow] = try await supabase
-            .from("user_shifts")
-            .select()
-            .eq("user_id", value: userId)
-            .gt("revision", value: Int(cursor))
-            .order("revision", ascending: true)
-            .limit(pageSize)
-            .execute()
-            .value
+    private func pullUserShiftsPage(userId: String, cursor: SyncCursor) async throws -> PagePullResult {
+        // Query server for changes since cursor using updated_at + id tie-breaker
+        // Condition: (updated_at > cursor.updatedAt) OR (updated_at == cursor.updatedAt AND id > cursor.tieId)
+        let rows: [SyncShiftRow]
+
+        if let cursorUpdatedAt = cursor.updatedAt {
+            // Incremental sync: fetch rows after cursor
+            let cursorTimestamp = formatISO8601(cursorUpdatedAt)
+            let cursorTieId = cursor.tieId
+
+            // Use Supabase's or() filter for the compound condition
+            // (updated_at > cursor) OR (updated_at = cursor AND id > tieId)
+            rows = try await supabase
+                .from("user_shifts")
+                .select()
+                .eq("user_id", value: userId)
+                .or("updated_at.gt.\(cursorTimestamp),and(updated_at.eq.\(cursorTimestamp),id.gt.\(cursorTieId))")
+                .order("updated_at", ascending: true)
+                .order("id", ascending: true)
+                .limit(pageSize)
+                .execute()
+                .value
+        } else {
+            // Initial sync: fetch all rows
+            rows = try await supabase
+                .from("user_shifts")
+                .select()
+                .eq("user_id", value: userId)
+                .order("updated_at", ascending: true)
+                .order("id", ascending: true)
+                .limit(pageSize)
+                .execute()
+                .value
+        }
 
         if rows.isEmpty {
-            return PagePullResult(rowsProcessed: 0, maxRevision: cursor, newConflicts: 0, autoMerged: 0, hasMore: false)
+            return PagePullResult(
+                rowsProcessed: 0,
+                lastUpdatedAt: cursor.updatedAt,
+                lastTieId: cursor.tieId,
+                maxRevision: 0,
+                newConflicts: 0,
+                autoMerged: 0,
+                hasMore: false
+            )
         }
 
         let storeActor = LocalStore.shared.storeActor
         var newConflicts = 0
         var autoMerged = 0
-        var maxRevision = cursor
+        var maxRevision: Int64 = 0
 
         for row in rows {
             let result = try await applyShiftRow(row, storeActor: storeActor)
@@ -295,8 +344,14 @@ final class SyncCoordinator: ObservableObject {
 
         try await storeActor.save()
 
+        // Get cursor position from the last row
+        let lastRow = rows.last!
+        let lastUpdatedAt = parseISO8601(lastRow.updated_at) ?? Date()
+
         return PagePullResult(
             rowsProcessed: rows.count,
+            lastUpdatedAt: lastUpdatedAt,
+            lastTieId: lastRow.id,
             maxRevision: maxRevision,
             newConflicts: newConflicts,
             autoMerged: autoMerged,
@@ -455,26 +510,52 @@ final class SyncCoordinator: ObservableObject {
 
     // MARK: - Recurring Shifts Pull
 
-    private func pullRecurringShiftsPage(userId: String, cursor: Int64) async throws -> PagePullResult {
-        // Note: Convert Int64 to Int for PostgrestFilterValue conformance
-        let rows: [SyncRecurringShiftRow] = try await supabase
-            .from("recurring_shifts")
-            .select()
-            .eq("user_id", value: userId)
-            .gt("revision", value: Int(cursor))
-            .order("revision", ascending: true)
-            .limit(pageSize)
-            .execute()
-            .value
+    private func pullRecurringShiftsPage(userId: String, cursor: SyncCursor) async throws -> PagePullResult {
+        // Query using updated_at + id tie-breaker
+        let rows: [SyncRecurringShiftRow]
+
+        if let cursorUpdatedAt = cursor.updatedAt {
+            let cursorTimestamp = formatISO8601(cursorUpdatedAt)
+            let cursorTieId = cursor.tieId
+
+            rows = try await supabase
+                .from("recurring_shifts")
+                .select()
+                .eq("user_id", value: userId)
+                .or("updated_at.gt.\(cursorTimestamp),and(updated_at.eq.\(cursorTimestamp),id.gt.\(cursorTieId))")
+                .order("updated_at", ascending: true)
+                .order("id", ascending: true)
+                .limit(pageSize)
+                .execute()
+                .value
+        } else {
+            rows = try await supabase
+                .from("recurring_shifts")
+                .select()
+                .eq("user_id", value: userId)
+                .order("updated_at", ascending: true)
+                .order("id", ascending: true)
+                .limit(pageSize)
+                .execute()
+                .value
+        }
 
         if rows.isEmpty {
-            return PagePullResult(rowsProcessed: 0, maxRevision: cursor, newConflicts: 0, autoMerged: 0, hasMore: false)
+            return PagePullResult(
+                rowsProcessed: 0,
+                lastUpdatedAt: cursor.updatedAt,
+                lastTieId: cursor.tieId,
+                maxRevision: 0,
+                newConflicts: 0,
+                autoMerged: 0,
+                hasMore: false
+            )
         }
 
         let storeActor = LocalStore.shared.storeActor
         var newConflicts = 0
         var autoMerged = 0
-        var maxRevision = cursor
+        var maxRevision: Int64 = 0
 
         for row in rows {
             let result = try await applyRecurringShiftRow(row, storeActor: storeActor)
@@ -487,8 +568,13 @@ final class SyncCoordinator: ObservableObject {
 
         try await storeActor.save()
 
+        let lastRow = rows.last!
+        let lastUpdatedAt = parseISO8601(lastRow.updated_at) ?? Date()
+
         return PagePullResult(
             rowsProcessed: rows.count,
+            lastUpdatedAt: lastUpdatedAt,
+            lastTieId: lastRow.id,
             maxRevision: maxRevision,
             newConflicts: newConflicts,
             autoMerged: autoMerged,
@@ -623,26 +709,52 @@ final class SyncCoordinator: ObservableObject {
 
     // MARK: - Wage Snapshots Pull
 
-    private func pullWageSnapshotsPage(userId: String, cursor: Int64) async throws -> PagePullResult {
-        // Note: Convert Int64 to Int for PostgrestFilterValue conformance
-        let rows: [SyncWageSnapshotRow] = try await supabase
-            .from("wage_snapshots")
-            .select()
-            .eq("user_id", value: userId)
-            .gt("revision", value: Int(cursor))
-            .order("revision", ascending: true)
-            .limit(pageSize)
-            .execute()
-            .value
+    private func pullWageSnapshotsPage(userId: String, cursor: SyncCursor) async throws -> PagePullResult {
+        // Query using updated_at + id tie-breaker
+        let rows: [SyncWageSnapshotRow]
+
+        if let cursorUpdatedAt = cursor.updatedAt {
+            let cursorTimestamp = formatISO8601(cursorUpdatedAt)
+            let cursorTieId = cursor.tieId
+
+            rows = try await supabase
+                .from("wage_snapshots")
+                .select()
+                .eq("user_id", value: userId)
+                .or("updated_at.gt.\(cursorTimestamp),and(updated_at.eq.\(cursorTimestamp),id.gt.\(cursorTieId))")
+                .order("updated_at", ascending: true)
+                .order("id", ascending: true)
+                .limit(pageSize)
+                .execute()
+                .value
+        } else {
+            rows = try await supabase
+                .from("wage_snapshots")
+                .select()
+                .eq("user_id", value: userId)
+                .order("updated_at", ascending: true)
+                .order("id", ascending: true)
+                .limit(pageSize)
+                .execute()
+                .value
+        }
 
         if rows.isEmpty {
-            return PagePullResult(rowsProcessed: 0, maxRevision: cursor, newConflicts: 0, autoMerged: 0, hasMore: false)
+            return PagePullResult(
+                rowsProcessed: 0,
+                lastUpdatedAt: cursor.updatedAt,
+                lastTieId: cursor.tieId,
+                maxRevision: 0,
+                newConflicts: 0,
+                autoMerged: 0,
+                hasMore: false
+            )
         }
 
         let storeActor = LocalStore.shared.storeActor
         var newConflicts = 0
         var autoMerged = 0
-        var maxRevision = cursor
+        var maxRevision: Int64 = 0
 
         for row in rows {
             let result = try await applyWageSnapshotRow(row, storeActor: storeActor)
@@ -655,8 +767,13 @@ final class SyncCoordinator: ObservableObject {
 
         try await storeActor.save()
 
+        let lastRow = rows.last!
+        let lastUpdatedAt = parseISO8601(lastRow.updated_at) ?? Date()
+
         return PagePullResult(
             rowsProcessed: rows.count,
+            lastUpdatedAt: lastUpdatedAt,
+            lastTieId: lastRow.id,
             maxRevision: maxRevision,
             newConflicts: newConflicts,
             autoMerged: autoMerged,
@@ -800,26 +917,52 @@ final class SyncCoordinator: ObservableObject {
 
     // MARK: - User Settings Pull
 
-    private func pullUserSettingsPage(userId: String, cursor: Int64) async throws -> PagePullResult {
-        // Note: Convert Int64 to Int for PostgrestFilterValue conformance
-        let rows: [SyncUserSettingsRow] = try await supabase
-            .from("user_settings")
-            .select()
-            .eq("user_id", value: userId)
-            .gt("revision", value: Int(cursor))
-            .order("revision", ascending: true)
-            .limit(pageSize)
-            .execute()
-            .value
+    private func pullUserSettingsPage(userId: String, cursor: SyncCursor) async throws -> PagePullResult {
+        // Query using updated_at + user_id tie-breaker (user_settings uses user_id as primary key)
+        let rows: [SyncUserSettingsRow]
+
+        if let cursorUpdatedAt = cursor.updatedAt {
+            let cursorTimestamp = formatISO8601(cursorUpdatedAt)
+            let cursorTieId = cursor.tieId
+
+            rows = try await supabase
+                .from("user_settings")
+                .select()
+                .eq("user_id", value: userId)
+                .or("updated_at.gt.\(cursorTimestamp),and(updated_at.eq.\(cursorTimestamp),user_id.gt.\(cursorTieId))")
+                .order("updated_at", ascending: true)
+                .order("user_id", ascending: true)
+                .limit(pageSize)
+                .execute()
+                .value
+        } else {
+            rows = try await supabase
+                .from("user_settings")
+                .select()
+                .eq("user_id", value: userId)
+                .order("updated_at", ascending: true)
+                .order("user_id", ascending: true)
+                .limit(pageSize)
+                .execute()
+                .value
+        }
 
         if rows.isEmpty {
-            return PagePullResult(rowsProcessed: 0, maxRevision: cursor, newConflicts: 0, autoMerged: 0, hasMore: false)
+            return PagePullResult(
+                rowsProcessed: 0,
+                lastUpdatedAt: cursor.updatedAt,
+                lastTieId: cursor.tieId,
+                maxRevision: 0,
+                newConflicts: 0,
+                autoMerged: 0,
+                hasMore: false
+            )
         }
 
         let storeActor = LocalStore.shared.storeActor
         var newConflicts = 0
         var autoMerged = 0
-        var maxRevision = cursor
+        var maxRevision: Int64 = 0
 
         for row in rows {
             let result = try await applyUserSettingsRow(row, storeActor: storeActor)
@@ -832,8 +975,13 @@ final class SyncCoordinator: ObservableObject {
 
         try await storeActor.save()
 
+        let lastRow = rows.last!
+        let lastUpdatedAt = parseISO8601(lastRow.updated_at) ?? Date()
+
         return PagePullResult(
             rowsProcessed: rows.count,
+            lastUpdatedAt: lastUpdatedAt,
+            lastTieId: lastRow.user_id, // user_settings uses user_id as primary key
             maxRevision: maxRevision,
             newConflicts: newConflicts,
             autoMerged: autoMerged,
@@ -2279,6 +2427,14 @@ final class SyncCoordinator: ObservableObject {
         // Try without fractional seconds
         formatter.formatOptions = [.withInternetDateTime]
         return formatter.date(from: string)
+    }
+
+    /// Format Date to ISO8601 string for Supabase queries
+    /// Uses fractional seconds for maximum precision
+    private func formatISO8601(_ date: Date) -> String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter.string(from: date)
     }
 }
 
