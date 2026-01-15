@@ -35,7 +35,7 @@
 | 5 | SyncCoordinator (Push & Conflicts) | ✅ Complete |
 | 6 | UI/ViewModel Refactor | ✅ Complete |
 | 6.5 | Build Fixes (Pre-Phase 7) | ✅ Complete |
-| 7 | Widget Integration | ⬜ Not Started |
+| 7 | Widget Integration | ✅ Complete |
 | 8 | Testing & Validation | ⬜ Not Started |
 
 ---
@@ -907,7 +907,7 @@ All build errors fixed and verified by building in Xcode. Ready to proceed to Ph
 
 ## Phase 7: Widget Integration
 
-**Status**: ⬜ Not Started
+**Status**: ✅ Complete
 
 ### Scope
 
@@ -933,7 +933,84 @@ When `LocalUserShift` changes materially:
 - Gradually retire WebView writer later
 
 ### Notes
-<!-- Implementation notes will be added here when phase is complete -->
+
+**Completed: 2026-01-15**
+
+**Files Created**:
+
+1. **`Native/Storage/NativeWidgetStorage.swift`** - Native widget storage writer:
+   - `updateWidgetStorage(for:)` - Main entry point to update widget data
+   - `clearWidgetStorage()` - Clears widget data (for logout)
+   - Queries shifts from `ShiftsRepository` for date range (previous month through 90 days ahead)
+   - Resolves wage snapshots from `SnapshotsRepository` for payroll computation
+   - Computes wages using `PayrollCalculator.computeShift()`
+   - Calculates weighted average supplement rate from wage periods
+   - Gets locale and currency from `SettingsRepository`
+   - Writes `[StoredShift]` JSON to App Group UserDefaults (`group.no.tidex.app`)
+   - Triggers `WidgetCenter.shared.reloadAllTimelines()` after update
+
+**Files Modified**:
+
+1. **`Native/Storage/Sync/SyncCoordinator.swift`** - Added widget update trigger:
+   - After successful sync completion, calls `NativeWidgetStorage.updateWidgetStorage(for: userId)`
+   - Ensures widget displays latest synced data
+
+2. **`Native/Storage/Repositories/ShiftsRepository.swift`** - Added widget update triggers:
+   - `createShift()` - Calls `NativeWidgetStorage.updateWidgetStorage(for: userId)` after saving
+   - `updateShift()` - Calls `NativeWidgetStorage.updateWidgetStorage(for: userId)` after saving
+   - `deleteShift()` - Calls `NativeWidgetStorage.updateWidgetStorage(for: userId)` after marking for deletion
+
+**Widget Update Flow**:
+
+```
+Sync Completes Successfully
+    ↓
+SyncCoordinator.sync() returns
+    ↓
+NativeWidgetStorage.updateWidgetStorage(userId)
+    ↓
+1. Query shifts from ShiftsRepository (prev month → +90 days)
+2. Query snapshots from SnapshotsRepository
+3. For each shift:
+   - Find applicable snapshot
+   - Compute payroll via PayrollCalculator
+   - Build StoredShift with gross, hourlyWage, supplementRate, taxRate
+4. Encode as JSON to App Group UserDefaults
+5. WidgetCenter.shared.reloadAllTimelines()
+    ↓
+Widget refreshes with new data
+```
+
+**Local Change Flow**:
+
+```
+User creates/edits/deletes shift
+    ↓
+ShiftsRepository.createShift/updateShift/deleteShift()
+    ↓
+Save to SwiftData
+    ↓
+NativeWidgetStorage.updateWidgetStorage(userId)
+    ↓
+Widget refreshes immediately
+```
+
+**Key Design Decisions**:
+
+1. **Same App Group** - Uses existing `group.no.tidex.app` and `"upcoming_shifts"` key for compatibility
+2. **Same StoredShift format** - Widget code continues to work unchanged
+3. **Computed wages** - Uses native `PayrollCalculator` for accurate gross estimates
+4. **Immediate updates** - Widget updates on local changes, not just sync
+5. **Gradual migration** - WebView writer (`widget-storage.ts`) remains functional; native writer adds redundancy
+
+**Coexistence with WebView Writer**:
+
+Both the WebView (Capacitor) and native paths can write to the same App Group key. This provides:
+- Redundancy during migration
+- Latest data wins (whichever writes last)
+- No coordination needed between writers
+
+The WebView writer will be deprecated in a future phase once native-only operation is fully validated.
 
 ---
 

@@ -290,6 +290,9 @@ final class AppCoordinator: ObservableObject {
 
     /// Sign out the user
     func signOut() async {
+        // Clear widget storage before sign out
+        NativeWidgetStorage.clearWidgetStorage()
+
         do {
             try await authService.signOut()
             // Auth state listener will update appState to .unauthenticated

@@ -207,6 +207,9 @@ final class ShiftsRepository: ObservableObject {
 
         logger.info("Created new local shift: \(id)")
 
+        // Update widget storage with the new shift
+        NativeWidgetStorage.updateWidgetStorage(for: userId)
+
         return localShift.toShiftRow()
     }
 
@@ -280,6 +283,9 @@ final class ShiftsRepository: ObservableObject {
 
         logger.info("Updated local shift: \(id), dirty fields: \(newDirtyFields.map { $0.rawValue })")
 
+        // Update widget storage with the modified shift
+        NativeWidgetStorage.updateWidgetStorage(for: localShift.userId)
+
         return localShift.toShiftRow()
     }
 
@@ -306,6 +312,9 @@ final class ShiftsRepository: ObservableObject {
         try await localStore.storeActor.save()
 
         logger.info("Marked shift for deletion: \(id)")
+
+        // Update widget storage to remove the deleted shift
+        NativeWidgetStorage.updateWidgetStorage(for: localShift.userId)
     }
 
     // MARK: - Conflict Resolution

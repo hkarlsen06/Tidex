@@ -146,6 +146,9 @@ final class SyncCoordinator: ObservableObject {
 
             logger.info("Sync completed: pulled \(totalRows), pushed \(totalPushed), \(totalConflicts) conflicts, \(totalAutoMerged) auto-merged, \(totalRebased) rebased in \(String(format: "%.2f", duration))s")
 
+            // Update widget storage with latest shift data
+            NativeWidgetStorage.updateWidgetStorage(for: userId)
+
             syncInProgress = false
             isSyncing = false
 
