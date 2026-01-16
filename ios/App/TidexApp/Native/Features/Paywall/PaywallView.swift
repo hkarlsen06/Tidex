@@ -9,15 +9,27 @@ struct PaywallView: View {
     @Environment(\.localization) private var localization
     @StateObject private var viewModel = PaywallViewModel()
 
-    /// Optional context about why the paywall is being shown
+    /// Optional context type about why the paywall is being shown
+    /// Use this for localized context headers
+    var contextType: PaywallContextType?
+
+    /// Legacy: Optional pre-built context (for backward compatibility with previews)
     var context: PaywallContext?
+
+    /// Computed context that uses locale when contextType is provided
+    private var localizedContext: PaywallContext? {
+        if let contextType = contextType {
+            return PaywallContext(type: contextType, locale: localization.currentLocale)
+        }
+        return context
+    }
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 24) {
                     // Context header (if provided)
-                    if let context = context {
+                    if let context = localizedContext {
                         contextHeader(context)
                     }
 
@@ -72,7 +84,7 @@ struct PaywallView: View {
                     Button(action: {
                         Task { await viewModel.restorePurchases() }
                     }) {
-                        Text("Restore Purchases")
+                        Text(AuthStrings.string("paywall.restorePurchases", locale: localization.currentLocale))
                             .font(.system(size: 15, weight: .medium))
                             .foregroundColor(.tidexBlue)
                     }
@@ -87,7 +99,7 @@ struct PaywallView: View {
                 .padding(.top, 24)
             }
             .background(Color.tidexBackground)
-            .navigationTitle("Choose a Plan")
+            .navigationTitle(AuthStrings.string("paywall.title", locale: localization.currentLocale))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -161,14 +173,14 @@ struct PaywallView: View {
 
     private var legalLinks: some View {
         HStack(spacing: 16) {
-            Link("Terms of Use", destination: URL(string: "https://tidex.no/terms")!)
+            Link(AuthStrings.string("paywall.termsOfUse", locale: localization.currentLocale), destination: URL(string: "https://tidex.no/terms")!)
                 .font(.system(size: 13))
                 .foregroundColor(.tidexTextMuted)
 
             Text("•")
                 .foregroundColor(.tidexTextMuted)
 
-            Link("Privacy Policy", destination: URL(string: "https://tidex.no/privacy")!)
+            Link(AuthStrings.string("paywall.privacyPolicy", locale: localization.currentLocale), destination: URL(string: "https://tidex.no/privacy")!)
                 .font(.system(size: 13))
                 .foregroundColor(.tidexTextMuted)
         }
@@ -182,7 +194,7 @@ struct PaywallView: View {
                 ProgressView()
                     .scaleEffect(1.2)
 
-                Text("Loading plans...")
+                Text(AuthStrings.string("paywall.loading", locale: localization.currentLocale))
                     .font(.system(size: 15))
                     .foregroundColor(.tidexTextSecondary)
             }
@@ -194,24 +206,63 @@ struct PaywallView: View {
 // MARK: - Paywall Context
 
 /// Context for why the paywall is being shown
+enum PaywallContextType {
+    case monthLimit
+    case upgrade
+
+    var icon: String {
+        switch self {
+        case .monthLimit: return "calendar.badge.exclamationmark"
+        case .upgrade: return "crown.fill"
+        }
+    }
+
+    func title(locale: LocalizationManager.AppLocale) -> String {
+        switch self {
+        case .monthLimit: return AuthStrings.string("paywall.shiftLimit.title", locale: locale)
+        case .upgrade: return AuthStrings.string("paywall.upgrade.title", locale: locale)
+        }
+    }
+
+    func message(locale: LocalizationManager.AppLocale) -> String {
+        switch self {
+        case .monthLimit: return AuthStrings.string("paywall.shiftLimit.message", locale: locale)
+        case .upgrade: return AuthStrings.string("paywall.upgrade.message", locale: locale)
+        }
+    }
+}
+
+/// Context for why the paywall is being shown (localized)
 struct PaywallContext {
     let icon: String
     let title: String
     let message: String
 
-    /// Month limit reached context
+    init(type: PaywallContextType, locale: LocalizationManager.AppLocale) {
+        self.icon = type.icon
+        self.title = type.title(locale: locale)
+        self.message = type.message(locale: locale)
+    }
+
+    /// Month limit reached context (for backward compatibility with previews)
     static let monthLimit = PaywallContext(
         icon: "calendar.badge.exclamationmark",
         title: "Upgrade to Add More Months",
         message: "Free plan allows shifts in one month at a time. Upgrade to track shifts across multiple months."
     )
 
-    /// Generic upgrade context
+    /// Generic upgrade context (for backward compatibility with previews)
     static let upgrade = PaywallContext(
         icon: "crown.fill",
         title: "Unlock Premium Features",
         message: "Get unlimited months, advanced statistics, Wagey AI, and more."
     )
+
+    private init(icon: String, title: String, message: String) {
+        self.icon = icon
+        self.title = title
+        self.message = message
+    }
 }
 
 // MARK: - Preview

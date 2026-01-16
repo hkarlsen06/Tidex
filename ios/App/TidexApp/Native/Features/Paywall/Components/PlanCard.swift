@@ -27,7 +27,7 @@ struct PlanCard: View {
                         .foregroundColor(.tidexTextPrimary)
 
                     if isCurrentPlan {
-                        Text("Current Plan")
+                        Text(AuthStrings.string("paywall.currentPlan", locale: localization.currentLocale))
                             .font(.system(size: 12, weight: .medium))
                             .foregroundColor(.tidexSuccess)
                     }
@@ -63,7 +63,7 @@ struct PlanCard: View {
                             .progressViewStyle(CircularProgressViewStyle(tint: .white))
                             .frame(maxWidth: .infinity)
                     } else {
-                        Text(product != nil ? "Subscribe" : "Loading...")
+                        Text(product != nil ? AuthStrings.string("paywall.subscribe", locale: localization.currentLocale) : AuthStrings.string("paywall.loadingButton", locale: localization.currentLocale))
                             .font(.system(size: 16, weight: .semibold))
                             .frame(maxWidth: .infinity)
                     }
@@ -91,9 +91,9 @@ struct PlanCard: View {
 
     private var tierName: String {
         switch tier {
-        case .pro: return "Pro"
-        case .max: return "Max"
-        case .free: return "Free"
+        case .pro: return AuthStrings.string("paywall.tier.pro", locale: localization.currentLocale)
+        case .max: return AuthStrings.string("paywall.tier.max", locale: localization.currentLocale)
+        case .free: return AuthStrings.string("paywall.tier.free", locale: localization.currentLocale)
         }
     }
 
@@ -122,23 +122,23 @@ struct PlanCard: View {
         switch tier {
         case .pro:
             return [
-                "Unlimited months",
-                "Advanced statistics",
-                "Export to PDF/CSV",
-                "Priority support"
+                AuthStrings.string("paywall.pro.feature1", locale: localization.currentLocale),
+                AuthStrings.string("paywall.pro.feature2", locale: localization.currentLocale),
+                AuthStrings.string("paywall.pro.feature3", locale: localization.currentLocale),
+                AuthStrings.string("paywall.pro.feature4", locale: localization.currentLocale)
             ]
         case .max:
             return [
-                "Everything in Pro",
-                "Wagey AI Assistant",
-                "Recurring shifts",
-                "Shift sharing",
-                "Premium themes"
+                AuthStrings.string("paywall.max.feature1", locale: localization.currentLocale),
+                AuthStrings.string("paywall.max.feature2", locale: localization.currentLocale),
+                AuthStrings.string("paywall.max.feature3", locale: localization.currentLocale),
+                AuthStrings.string("paywall.max.feature4", locale: localization.currentLocale),
+                AuthStrings.string("paywall.max.feature5", locale: localization.currentLocale)
             ]
         case .free:
             return [
-                "One month of shifts",
-                "Basic statistics"
+                AuthStrings.string("paywall.free.feature1", locale: localization.currentLocale),
+                AuthStrings.string("paywall.free.feature2", locale: localization.currentLocale)
             ]
         }
     }
@@ -159,9 +159,9 @@ struct PlanCard: View {
     private func periodLabel(for product: Product) -> String {
         // Determine period from product ID
         if product.id.contains(".year") {
-            return "per year"
+            return AuthStrings.string("paywall.perYear", locale: localization.currentLocale)
         } else {
-            return "per month"
+            return AuthStrings.string("paywall.perMonth", locale: localization.currentLocale)
         }
     }
 }

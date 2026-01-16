@@ -43,7 +43,7 @@ struct AddShiftView: View {
             RecurringPreviewSheet(viewModel: viewModel)
         }
         .sheet(isPresented: $viewModel.showPaywall) {
-            PaywallView(context: .monthLimit)
+            PaywallView(contextType: .monthLimit)
         }
     }
 
