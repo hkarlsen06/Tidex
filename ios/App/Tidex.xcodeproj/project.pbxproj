@@ -113,6 +113,7 @@
 		11F42F9A2F1A65F3002B1FBE /* SuccessScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11F42F8A2F1A65F3002B1FBE /* SuccessScreen.swift */; };
 		11F42F9B2F1A65F3002B1FBE /* WelcomeScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11F42F8B2F1A65F3002B1FBE /* WelcomeScreen.swift */; };
 		11F42F9C2F1A65F3002B1FBE /* SamplePaycheckScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11F42F892F1A65F3002B1FBE /* SamplePaycheckScreen.swift */; };
+		11F42FA02F1A6A38002B1FBE /* OnboardingRateSlider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11F42F9F2F1A6A38002B1FBE /* OnboardingRateSlider.swift */; };
 		504EC3081FED79650016851F /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 504EC3071FED79650016851F /* AppDelegate.swift */; };
 		504EC30F1FED79650016851F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 504EC30E1FED79650016851F /* Assets.xcassets */; };
 		INFOP0012F0900000000001 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = INFOP0012F0900000000004 /* InfoPlist.strings */; };
@@ -252,6 +253,7 @@
 		11F42F8B2F1A65F3002B1FBE /* WelcomeScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeScreen.swift; sourceTree = "<group>"; };
 		11F42F8D2F1A65F3002B1FBE /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		11F42F8E2F1A65F3002B1FBE /* PostAuthOnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostAuthOnboardingView.swift; sourceTree = "<group>"; };
+		11F42F9F2F1A6A38002B1FBE /* OnboardingRateSlider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingRateSlider.swift; sourceTree = "<group>"; };
 		504EC3041FED79650016851F /* Tidex.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Tidex.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		504EC3071FED79650016851F /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		504EC30E1FED79650016851F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -520,6 +522,7 @@
 			isa = PBXGroup;
 			children = (
 				11AE8D732F17DD44005AB062 /* UserMenuButton.swift */,
+				11F42F802F1A65F3002B1FBE /* CountUpText.swift */,
 				119D1CDA2F16E46300EC7072 /* ErrorBanner.swift */,
 				119D1CDB2F16E46300EC7072 /* LoadingOverlay.swift */,
 				119D1CDC2F16E46300EC7072 /* OutlineButton.swift */,
@@ -689,7 +692,7 @@
 		11F42F852F1A65F3002B1FBE /* Components */ = {
 			isa = PBXGroup;
 			children = (
-				11F42F802F1A65F3002B1FBE /* CountUpText.swift */,
+				11F42F9F2F1A6A38002B1FBE /* OnboardingRateSlider.swift */,
 				11F42F812F1A65F3002B1FBE /* IndustryPicker.swift */,
 				11F42F822F1A65F3002B1FBE /* OnboardingButton.swift */,
 				11F42F832F1A65F3002B1FBE /* PageIndicator.swift */,
@@ -938,6 +941,7 @@
 				11AE8CFD2F16FDB2005AB062 /* SettingsService.swift in Sources */,
 				11AE8CEA2F16FD82005AB062 /* PayrollCard.swift in Sources */,
 				11AE8CEB2F16FD82005AB062 /* DashboardViewModel.swift in Sources */,
+				11F42FA02F1A6A38002B1FBE /* OnboardingRateSlider.swift in Sources */,
 				119D1CEA2F16E46300EC7072 /* OTPInputField.swift in Sources */,
 				119D1CEB2F16E46300EC7072 /* TidexTextField.swift in Sources */,
 				119D1CEC2F16E46300EC7072 /* FeatureFlags.swift in Sources */,

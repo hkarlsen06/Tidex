@@ -18,20 +18,7 @@ struct OTPInputField: View {
         VStack(spacing: 8) {
             // Visual digit boxes with hidden TextField overlay
             ZStack {
-                // Hidden text field for actual input - positioned behind boxes
-                TextField("", text: $code)
-                    .keyboardType(.numberPad)
-                    .textContentType(.oneTimeCode)
-                    .focused($isFocused)
-                    .foregroundColor(.clear)
-                    .tint(.clear)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 56)
-                    .onChange(of: code) { _, newValue in
-                        handleCodeChange(newValue)
-                    }
-
-                // Visual digit boxes
+                // Visual digit boxes (behind the text field)
                 HStack(spacing: 8) {
                     ForEach(0..<digitCount, id: \.self) { index in
                         DigitBox(
@@ -43,9 +30,21 @@ struct OTPInputField: View {
                         )
                     }
                 }
-                .allowsHitTesting(false)
+
+                // Text field on top - transparent but receives all touches including autofill
+                TextField("", text: $code)
+                    .keyboardType(.numberPad)
+                    .textContentType(.oneTimeCode)
+                    .focused($isFocused)
+                    .foregroundColor(.clear)
+                    .tint(.clear)
+                    .accentColor(.clear)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 56)
+                    .onChange(of: code) { _, newValue in
+                        handleCodeChange(newValue)
+                    }
             }
-            .contentShape(Rectangle())
             .onTapGesture {
                 isFocused = true
                 UIImpactFeedbackGenerator(style: .light).impactOccurred()

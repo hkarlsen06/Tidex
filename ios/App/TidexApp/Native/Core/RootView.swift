@@ -51,8 +51,8 @@ struct RootView: View {
                         )
                         .transition(.opacity)
                     } else {
-                        // Show auth navigation
-                        AuthNavigationView()
+                        // Show auth navigation with the selected destination
+                        AuthNavigationView(initialScreen: authDestination == .signup ? .signup : .login)
                             .transition(.opacity)
                     }
 

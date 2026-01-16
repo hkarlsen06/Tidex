@@ -2,14 +2,35 @@ import SwiftUI
 import UIKit
 
 /// Screen 2: Sample Paycheck (THE AHA MOMENT)
-/// Demonstrates core value with fake/sample data + interactive industry selector
+/// Demonstrates core value with dynamic data based on hourly rate
 struct SamplePaycheckScreen: View {
-    @Environment(\.localization) private var localization
-    @State private var selectedIndustry: SampleIndustry = .retail
-    @State private var hasAppeared = false
+    @Binding var hourlyRate: Double
 
+    @Environment(\.localization) private var localization
+    @State private var showHeader = false
+    @State private var showAmount = false
+    @State private var showBreakdown = false
+    @State private var showSampleLabel = false
+
+    /// Compute sample paycheck data based on hourly rate
+    /// Assumes ~120 hours/month with evening/weekend supplements
     private var sampleData: SamplePaycheckData {
-        selectedIndustry.sampleData
+        let hoursWorked: Double = 120
+        let basePay = hourlyRate * hoursWorked
+        let eveningSupplements = hourlyRate * 0.15 * 40  // ~40 evening hours
+        let weekendBonus = hourlyRate * 0.20 * 16        // ~16 weekend hours
+        let gross = basePay + eveningSupplements + weekendBonus
+        let taxDeducted = gross * 0.20                   // ~20% tax
+        let netPay = gross - taxDeducted
+
+        return SamplePaycheckData(
+            gross: gross,
+            basePay: basePay,
+            eveningSupplements: eveningSupplements,
+            weekendBonus: weekendBonus,
+            taxDeducted: taxDeducted,
+            netPay: netPay
+        )
     }
 
     var body: some View {
@@ -17,53 +38,60 @@ struct SamplePaycheckScreen: View {
             Spacer()
                 .frame(height: 40)
 
-            // Header
+            // Header with entrance animation
             Text(localization.string("onboarding.paycheck.title"))
                 .font(.system(size: 20, weight: .medium))
                 .foregroundColor(.tidexTextSecondary)
                 .multilineTextAlignment(.center)
+                .offset(y: showHeader ? 0 : 20)
+                .opacity(showHeader ? 1 : 0)
 
             Spacer()
                 .frame(height: 16)
 
-            // Large animated total
+            // Large animated total with entrance animation
             CurrencyCountUpText(amount: sampleData.gross, duration: 0.8)
                 .font(.system(size: 52, weight: .bold))
                 .foregroundColor(.tidexBlue)
-                .id(selectedIndustry) // Force re-render on industry change
-
-            Spacer()
-                .frame(height: 24)
-
-            // Industry picker
-            IndustryPicker(selection: $selectedIndustry)
-                .padding(.horizontal, 32)
+                .scaleEffect(showAmount ? 1 : 0.8)
+                .opacity(showAmount ? 1 : 0)
 
             Spacer()
                 .frame(height: 32)
 
-            // Breakdown card
+            // Breakdown card with entrance animation
             breakdownCard
                 .padding(.horizontal, 24)
-                .offset(y: hasAppeared ? 0 : 40)
-                .opacity(hasAppeared ? 1 : 0)
+                .offset(y: showBreakdown ? 0 : 40)
+                .opacity(showBreakdown ? 1 : 0)
 
             Spacer()
                 .frame(height: 16)
 
-            // Sample label
+            // Sample label with entrance animation
             Text(localization.string("onboarding.paycheck.sample_label"))
                 .font(.system(size: 13))
                 .foregroundColor(.tidexTextMuted)
                 .multilineTextAlignment(.center)
-                .opacity(hasAppeared ? 1 : 0)
+                .offset(y: showSampleLabel ? 0 : 20)
+                .opacity(showSampleLabel ? 1 : 0)
 
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear {
-            withAnimation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.3)) {
-                hasAppeared = true
+            // Staggered entrance animations for visual flow
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.8).delay(0.1)) {
+                showHeader = true
+            }
+            withAnimation(.spring(response: 0.6, dampingFraction: 0.75).delay(0.2)) {
+                showAmount = true
+            }
+            withAnimation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.4)) {
+                showBreakdown = true
+            }
+            withAnimation(.easeOut(duration: 0.5).delay(0.6)) {
+                showSampleLabel = true
             }
         }
     }
@@ -152,19 +180,34 @@ struct SamplePaycheckScreen: View {
 
     // MARK: - Formatting
 
+    private var isNorwegian: Bool {
+        localization.currentLocale == .norwegian
+    }
+
+    /// Format currency based on locale
+    /// Norwegian: "24 380 kr" (number + kr)
+    /// English: "$24,380" ($ + number)
     private func formatCurrency(_ amount: Double) -> String {
         let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.currencyCode = "NOK"
-        formatter.currencySymbol = "kr "
         formatter.maximumFractionDigits = 0
-        formatter.locale = Locale(identifier: "nb_NO")
-        return formatter.string(from: NSNumber(value: amount)) ?? "kr 0"
+
+        if isNorwegian {
+            formatter.numberStyle = .decimal
+            formatter.locale = Locale(identifier: "nb_NO")
+            let number = formatter.string(from: NSNumber(value: amount)) ?? "0"
+            return "\(number) kr"
+        } else {
+            formatter.numberStyle = .currency
+            formatter.currencyCode = "USD"
+            formatter.currencySymbol = "$"
+            formatter.locale = Locale(identifier: "en_US")
+            return formatter.string(from: NSNumber(value: amount)) ?? "$0"
+        }
     }
 }
 
 #Preview {
-    SamplePaycheckScreen()
+    SamplePaycheckScreen(hourlyRate: .constant(200))
         .background(Color.tidexBackground)
         .environment(\.localization, LocalizationManager.shared)
 }

@@ -3,12 +3,19 @@ import SwiftUI
 /// Navigation container for all authentication screens
 /// Handles routing between login, signup, and reset password flows
 struct AuthNavigationView: View {
-    @State private var currentScreen: AuthScreen = .login
+    let initialScreen: AuthScreen
+
+    @State private var currentScreen: AuthScreen
 
     enum AuthScreen {
         case login
         case signup
         case resetPassword
+    }
+
+    init(initialScreen: AuthScreen = .login) {
+        self.initialScreen = initialScreen
+        self._currentScreen = State(initialValue: initialScreen)
     }
 
     var body: some View {
