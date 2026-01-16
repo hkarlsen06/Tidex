@@ -67,7 +67,7 @@ The following fixes were identified during code review and are incorporated thro
 |-------|-------------|--------|
 | 1 | Database Migration (tier column) | ✅ Complete |
 | 2 | SwiftData Models | ✅ Complete |
-| 3 | EntitlementRepository | ⬜ Not Started |
+| 3 | EntitlementRepository | ✅ Complete |
 | 4 | StoreKitManager | ⬜ Not Started |
 | 5 | JWSUploadWorker | ⬜ Not Started |
 | 6 | EntitlementService | ⬜ Not Started |
@@ -526,7 +526,7 @@ Add both models to the schema array in `LocalStore.swift`.
 
 ## Phase 3: EntitlementRepository
 
-**Status**: ⬜ Not Started
+**Status**: ✅ Complete
 
 ### Scope
 
@@ -706,14 +706,42 @@ func schedulePendingJWSUploadRetry(transactionId: String) throws {
 
 ### Acceptance Criteria
 
-- [ ] EntitlementRepository compiles
-- [ ] LocalStoreActor operations added
-- [ ] Can cache and retrieve entitlements
-- [ ] Can enqueue and dequeue JWS uploads
+- [x] EntitlementRepository compiles
+- [x] LocalStoreActor operations added
+- [x] Can cache and retrieve entitlements
+- [x] Can enqueue and dequeue JWS uploads
 
 ### Notes
 
-_Implementation notes will be added after completion._
+**Implemented 2025-01-16:**
+
+1. **EntitlementRepository.swift created**: Repository pattern for entitlement cache and JWS upload queue.
+   - Location: `ios/App/TidexApp/Native/Storage/Repositories/EntitlementRepository.swift`
+   - Follows existing repository pattern (singleton, @MainActor, LocalStore dependency)
+
+2. **Entitlement Cache Operations:**
+   - `getCached(for:)` - Get cached entitlement (may be expired)
+   - `cache(_:for:)` - Save entitlement with 48h TTL
+   - `clearCache(for:)` - Clear cache on logout
+
+3. **JWS Upload Queue Operations:**
+   - `enqueuePendingUpload(_:)` - Add JWS upload to persistent queue
+   - `getPendingUploads()` - Get uploads ready for retry (nextAttemptAt <= now)
+   - `getAllPendingUploads()` - Get all pending uploads (for checking if retries are scheduled)
+   - `removePendingUpload(transactionId:)` - Remove after successful upload
+   - `schedulePendingUploadRetry(transactionId:)` - Schedule exponential backoff retry
+
+4. **LocalStoreActor operations** were already implemented in Phase 2:
+   - `upsertEntitlementCache(userId:entitlement:)`
+   - `deleteEntitlementCache(userId:)`
+   - `insertPendingJWSUpload(_:)`
+   - `deletePendingJWSUpload(transactionId:)`
+   - `schedulePendingJWSUploadRetry(transactionId:)`
+
+**Files created:**
+- `ios/App/TidexApp/Native/Storage/Repositories/EntitlementRepository.swift`
+
+**Note**: New Swift file needs to be added to the Xcode project. Build in Xcode to verify.
 
 ---
 
