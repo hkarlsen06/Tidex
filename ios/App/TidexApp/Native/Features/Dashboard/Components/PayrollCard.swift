@@ -11,6 +11,7 @@ struct PayrollCard: View {
     let taxEnabled: Bool
 
     @Environment(\.localization) private var localization
+    @Environment(\.userCurrency) private var currency
 
     // MARK: - Computed Properties
 
@@ -85,7 +86,7 @@ struct PayrollCard: View {
             } else {
                 // No payout placeholder
                 VStack(alignment: .trailing, spacing: 2) {
-                    Text("—— kr")
+                    Text(noPayoutPlaceholder)
                         .font(.system(size: 22, weight: .semibold))
                         .tracking(-0.5)
                         .foregroundColor(.tidexTextMuted)
@@ -129,13 +130,18 @@ struct PayrollCard: View {
     }
 
     private func formatCurrency(_ amount: Double) -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.currencyCode = "NOK"
-        formatter.currencySymbol = "kr "
-        formatter.maximumFractionDigits = 0
-        formatter.locale = Locale(identifier: "nb_NO")
-        return formatter.string(from: NSNumber(value: amount)) ?? "kr 0"
+        CurrencyConfig.format(amount, currency: currency)
+    }
+
+    /// Placeholder text when no payout (shows "—— [currency]")
+    private var noPayoutPlaceholder: String {
+        let config = CurrencyConfig.get(currency)
+        switch config.display {
+        case .prefix:
+            return "\(config.value)——"
+        case .suffix:
+            return "—— \(config.value)"
+        }
     }
 }
 

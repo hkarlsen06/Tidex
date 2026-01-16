@@ -281,6 +281,10 @@ enum AuthStrings {
         "onboarding.wage.tariff": "Tariff",
         "onboarding.wage.custom": "Timelønn",
 
+        // Currency Selector
+        "onboarding.currency.label": "Valuta",
+        "onboarding.currency.title": "Velg valuta",
+
         // Supplements Screen
         "onboarding.supplements.title": "Tillegg",
         "onboarding.supplements.subtitle": "Legg til tillegg for kvelder, helger osv.",
@@ -613,6 +617,10 @@ enum AuthStrings {
         "onboarding.wage.subtitle": "We need this to calculate your earnings",
         "onboarding.wage.tariff": "Tariff",
         "onboarding.wage.custom": "Hourly rate",
+
+        // Currency Selector
+        "onboarding.currency.label": "Currency",
+        "onboarding.currency.title": "Select currency",
 
         // Supplements Screen
         "onboarding.supplements.title": "Supplements",

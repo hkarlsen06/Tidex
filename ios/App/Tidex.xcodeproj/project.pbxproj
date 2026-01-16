@@ -70,6 +70,8 @@
 		11A196192F1AA3450030E524 /* SupplementsScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A196152F1AA3450030E524 /* SupplementsScreen.swift */; };
 		11A1961A2F1AA3450030E524 /* WageScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A196162F1AA3450030E524 /* WageScreen.swift */; };
 		11A1961D2F1AA3550030E524 /* OnboardingSaveManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A1961B2F1AA3550030E524 /* OnboardingSaveManager.swift */; };
+		11A1961F2F1AB6020030E524 /* CurrencySelector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A1961E2F1AB6020030E524 /* CurrencySelector.swift */; };
+		11A196212F1AB6160030E524 /* Currency.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A196202F1AB6160030E524 /* Currency.swift */; };
 		11A5CD262F101201002BAC91 /* StoredShift.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A5CD252F101201002BAC91 /* StoredShift.swift */; };
 		11A5CD302F101283002BAC91 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 11A5CD2F2F101283002BAC91 /* WidgetKit.framework */; };
 		11A5CD322F101283002BAC91 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 11A5CD312F101283002BAC91 /* SwiftUI.framework */; };
@@ -220,6 +222,8 @@
 		11A196152F1AA3450030E524 /* SupplementsScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupplementsScreen.swift; sourceTree = "<group>"; };
 		11A196162F1AA3450030E524 /* WageScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WageScreen.swift; sourceTree = "<group>"; };
 		11A1961B2F1AA3550030E524 /* OnboardingSaveManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingSaveManager.swift; sourceTree = "<group>"; };
+		11A1961E2F1AB6020030E524 /* CurrencySelector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CurrencySelector.swift; sourceTree = "<group>"; };
+		11A196202F1AB6160030E524 /* Currency.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Currency.swift; sourceTree = "<group>"; };
 		11A5CD252F101201002BAC91 /* StoredShift.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoredShift.swift; sourceTree = "<group>"; };
 		11A5CD2E2F101283002BAC91 /* TidexShiftWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TidexShiftWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		11A5CD2F2F101283002BAC91 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
@@ -676,6 +680,7 @@
 		11AE8CF12F16FDA4005AB062 /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				11A196202F1AB6160030E524 /* Currency.swift */,
 				11AE8CEC2F16FDA4005AB062 /* RecurringShift.swift */,
 				11AE8CED2F16FDA4005AB062 /* Shift.swift */,
 				11AE8CEE2F16FDA4005AB062 /* SupplementRule.swift */,
@@ -736,6 +741,7 @@
 		11F42F852F1A65F3002B1FBE /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				11A1961E2F1AB6020030E524 /* CurrencySelector.swift */,
 				11A1960C2F1AA3280030E524 /* AccordionSectionView.swift */,
 				11A1960D2F1AA3280030E524 /* SupplementRuleEditor.swift */,
 				11F42F9F2F1A6A38002B1FBE /* OnboardingRateSlider.swift */,
@@ -1029,6 +1035,7 @@
 				119D1CF92F16E46300EC7072 /* APIConfiguration.swift in Sources */,
 				11F42F902F1A65F3002B1FBE /* HowItWorksScreen.swift in Sources */,
 				11F42F912F1A65F3002B1FBE /* StepItem.swift in Sources */,
+				11A1961F2F1AB6020030E524 /* CurrencySelector.swift in Sources */,
 				11F42F922F1A65F3002B1FBE /* OnboardingButton.swift in Sources */,
 				11F42F932F1A65F3002B1FBE /* IndustryPicker.swift in Sources */,
 				11F42F942F1A65F3002B1FBE /* PersonalizationScreen.swift in Sources */,
@@ -1085,6 +1092,7 @@
 				11A1960E2F1AA3280030E524 /* AccordionSectionView.swift in Sources */,
 				11A1960F2F1AA3280030E524 /* SupplementRuleEditor.swift in Sources */,
 				11AE8CCB2F16F2BF005AB062 /* TermsAgreementView.swift in Sources */,
+				11A196212F1AB6160030E524 /* Currency.swift in Sources */,
 				NETMON0012F2000000000001 /* NetworkMonitor.swift in Sources */,
 				OFFDSH0012F3000000000001 /* OfflineDashboardCards.swift in Sources */,
 				OFFSCR0012F2000000000001 /* OfflineScreenView.swift in Sources */,

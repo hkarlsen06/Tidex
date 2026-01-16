@@ -19,6 +19,7 @@ private let logger = Logger(subsystem: "com.tidex.app", category: "NativeWidgetS
 enum NativeWidgetStorage {
     private static let appGroupId = "group.no.tidex.app"
     private static let shiftsKey = "upcoming_shifts"
+    private static let currencyKey = "user_currency"
 
     /// Default currency symbol if settings don't specify one
     private static let defaultCurrencySymbol = "kr"
@@ -42,7 +43,11 @@ enum NativeWidgetStorage {
         // Get settings for currency, locale comes from iOS system settings
         let settings = settingsRepository.getSettings(for: userId)
         let locale = getAppLocale()
-        let currencySymbol = settings?.effectiveCurrencySymbol ?? defaultCurrencySymbol
+        // Currency is stored directly as symbol (e.g., "kr", "$", "€")
+        let currencySymbol = settings?.currency ?? defaultCurrencySymbol
+
+        // Store currency separately so widget can access it even when no shifts exist
+        storeCurrency(currencySymbol)
 
         // Calculate date range: previous month through 90 days ahead
         let now = Date()
@@ -162,6 +167,15 @@ enum NativeWidgetStorage {
         }
     }
 
+    private static func storeCurrency(_ currency: String) {
+        guard let userDefaults = sharedUserDefaults() else {
+            logger.warning("Unable to access App Group UserDefaults for currency")
+            return
+        }
+        userDefaults.set(currency, forKey: currencyKey)
+        logger.debug("Stored user currency: \(currency)")
+    }
+
     private static func reloadWidgetTimelines() {
         WidgetCenter.shared.reloadAllTimelines()
         logger.debug("Widget timelines reloaded")
@@ -209,23 +223,5 @@ extension UserSettings {
     /// Uses iOS's preferred language for this app (from system settings)
     var effectiveLocale: String {
         return getAppLocale()
-    }
-
-    /// Effective currency symbol for widget storage
-    var effectiveCurrencySymbol: String {
-        // Map currency codes to symbols
-        guard let currency = self.currency else {
-            return "kr"
-        }
-
-        switch currency.uppercased() {
-        case "NOK": return "kr"
-        case "USD": return "$"
-        case "EUR": return "€"
-        case "GBP": return "£"
-        case "SEK": return "kr"
-        case "DKK": return "kr"
-        default: return currency
-        }
     }
 }

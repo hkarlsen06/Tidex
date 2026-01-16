@@ -77,7 +77,7 @@ struct WageScreen: View {
                             case .tariff:
                                 tariffSelector
                             case .custom:
-                                customWageSlider
+                                customWageContent
                             }
                         }
                         .padding(.horizontal, 24)
@@ -116,10 +116,25 @@ struct WageScreen: View {
         }
         .onAppear {
             if !data.hasInitializedWageForLocale {
-                // Initialize custom wage based on locale (only once)
-                let isNorwegian = localization.currentLocale == .norwegian
-                data.customHourlyWage = isNorwegian ? 200 : 25
+                // Initialize custom wage based on currency's wage range tier (only once)
+                let currencyConfig = CurrencyConfig.get(data.currency)
+                data.customHourlyWage = currencyConfig.wageRangeTier.defaultValue
                 data.hasInitializedWageForLocale = true
+            }
+        }
+        .onChange(of: data.wageType) { _, newType in
+            // Tariff uses kr (Norwegian krone) - reset currency when switching to tariff
+            if newType == .tariff {
+                data.currency = "kr"
+            }
+        }
+        .onChange(of: data.currency) { oldCurrency, newCurrency in
+            // When currency changes, check if wage range tier changed
+            // If so, reset to the new tier's default value
+            let oldTier = CurrencyConfig.get(oldCurrency).wageRangeTier
+            let newTier = CurrencyConfig.get(newCurrency).wageRangeTier
+            if oldTier != newTier {
+                data.customHourlyWage = newTier.defaultValue
             }
         }
     }
@@ -170,11 +185,21 @@ struct WageScreen: View {
         }
     }
 
-    // MARK: - Custom Wage Slider
+    // MARK: - Custom Wage Content
 
     @ViewBuilder
-    private var customWageSlider: some View {
-        OnboardingRateSlider(value: $data.customHourlyWage, style: .full)
+    private var customWageContent: some View {
+        VStack(spacing: 20) {
+            // Currency selector
+            CurrencySelector(selectedCurrency: $data.currency)
+
+            // Wage slider
+            OnboardingRateSlider(
+                value: $data.customHourlyWage,
+                currency: data.currency,
+                style: .full
+            )
+        }
     }
 }
 

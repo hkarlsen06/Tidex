@@ -74,13 +74,25 @@ struct ShiftWidgetEntry: TimelineEntry {
 
     /// Empty state entry when no shifts are available
     /// Shows placeholder values for each element instead of a single message
-    static func empty(locale: String = "no") -> ShiftWidgetEntry {
-        ShiftWidgetEntry(
+    /// - Parameters:
+    ///   - locale: User's locale ("no" or "en")
+    ///   - currency: User's currency symbol (e.g., "kr", "$"). If nil, shows "---" without currency
+    static func empty(locale: String = "no", currency: String? = nil) -> ShiftWidgetEntry {
+        // Format empty earnings based on currency
+        // If no currency is known, just show "---"
+        let emptyEarnings: String
+        if let currency = currency {
+            emptyEarnings = WidgetCurrencyFormatter.formatEmpty(currency: currency)
+        } else {
+            emptyEarnings = "---"
+        }
+
+        return ShiftWidgetEntry(
             date: Date(),
             shiftDate: "---",
             startTime: "--:--",
             endTime: "--:--",
-            netEarnings: "--- kr",
+            netEarnings: emptyEarnings,
             salute: "---",
             locale: locale,
             hasShift: false,

@@ -5,6 +5,7 @@ import UIKit
 /// Supports compact (inline) and full (with label/helper) styles
 struct OnboardingRateSlider: View {
     @Binding var value: Double
+    var currency: String? = nil  // Optional currency override (uses locale default if nil)
     var style: Style = .compact
 
     @Environment(\.localization) private var localization
@@ -26,29 +27,46 @@ struct OnboardingRateSlider: View {
         }
     }
 
-    // MARK: - Locale-Aware Configuration
+    // MARK: - Currency-Aware Configuration
 
     private var isNorwegian: Bool {
         localization.currentLocale == .norwegian
     }
 
-    /// Wage ranges differ significantly by locale
-    /// Norwegian: 150-550 kr/hour (typical hourly wages)
-    /// English: $15-$75/hour (typical US hourly wages)
+    /// Get the effective currency config (from parameter or locale default)
+    private var currencyConfig: CurrencyOption {
+        if let currency = currency {
+            return CurrencyConfig.get(currency)
+        }
+        return isNorwegian ? CurrencyConfig.defaultCurrency : CurrencyConfig.get("$")
+    }
+
+    /// Whether currency symbol should appear before the amount
+    private var isCurrencyPrefix: Bool {
+        currencyConfig.display == .prefix
+    }
+
+    /// Get the wage range tier for the current currency
+    private var wageRangeTier: WageRangeTier {
+        currencyConfig.wageRangeTier
+    }
+
+    /// Wage ranges based on currency tier (not locale)
+    /// This ensures appropriate slider ranges for each currency's typical hourly wages
     private var minValue: Double {
-        isNorwegian ? 150 : 15
+        wageRangeTier.minValue
     }
 
     private var maxValue: Double {
-        isNorwegian ? 550 : 75
+        wageRangeTier.maxValue
     }
 
     private var defaultValue: Double {
-        isNorwegian ? 200 : 25
+        wageRangeTier.defaultValue
     }
 
     private var currencySymbol: String {
-        isNorwegian ? "kr" : "$"
+        currencyConfig.value
     }
 
     private var hourSuffix: String {
@@ -68,23 +86,23 @@ struct OnboardingRateSlider: View {
 
                 Spacer()
 
-                // Tappable currency display (locale-aware)
+                // Tappable currency display (currency-aware)
                 if showingCustomInput {
                     customInputField
-                } else if isNorwegian {
-                    // Norwegian: "200 kr/t"
-                    tappableValue(formatValueWithDecimals(value))
-                    Text("\(currencySymbol)\(hourSuffix)")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(.tidexTextMuted)
-                } else {
-                    // English: "$200/hr"
+                } else if isCurrencyPrefix {
+                    // Prefix currencies: "$200/hr"
                     Text(currencySymbol)
                         .font(.system(size: 14, weight: .medium))
                         .foregroundColor(.tidexTextMuted)
                     tappableValue(formatValueWithDecimals(value))
                     Text(hourSuffix)
                         .font(.system(size: 14))
+                        .foregroundColor(.tidexTextMuted)
+                } else {
+                    // Suffix currencies: "200 kr/t"
+                    tappableValue(formatValueWithDecimals(value))
+                    Text("\(currencySymbol)\(hourSuffix)")
+                        .font(.system(size: 14, weight: .medium))
                         .foregroundColor(.tidexTextMuted)
                 }
             }
@@ -110,30 +128,30 @@ struct OnboardingRateSlider: View {
 
             // Slider card
             VStack(spacing: 16) {
-                // Current value display (locale-aware)
+                // Current value display (currency-aware)
                 HStack {
                     if showingCustomInput {
                         customInputFieldFull
-                    } else if isNorwegian {
-                        // Norwegian: "200 kr per time"
-                        tappableValueFull(formatValueWithDecimals(value))
-
-                        Text("kr")
+                    } else if isCurrencyPrefix {
+                        // Prefix currencies: "$200 per hour"
+                        Text(currencySymbol)
                             .font(.system(size: 16, weight: .medium))
                             .foregroundColor(.tidexTextSecondary)
 
-                        Text("per time")
+                        tappableValueFull(formatValueWithDecimals(value))
+
+                        Text(isNorwegian ? "per time" : "per hour")
                             .font(.system(size: 14))
                             .foregroundColor(.tidexTextMuted)
                     } else {
-                        // English: "$200 per hour"
-                        Text("$")
+                        // Suffix currencies: "200 kr per time"
+                        tappableValueFull(formatValueWithDecimals(value))
+
+                        Text(currencySymbol)
                             .font(.system(size: 16, weight: .medium))
                             .foregroundColor(.tidexTextSecondary)
 
-                        tappableValueFull(formatValueWithDecimals(value))
-
-                        Text("per hour")
+                        Text(isNorwegian ? "per time" : "per hour")
                             .font(.system(size: 14))
                             .foregroundColor(.tidexTextMuted)
                     }
@@ -197,13 +215,13 @@ struct OnboardingRateSlider: View {
     }
 
     /// Format with currency for min/max labels
-    /// Norwegian: "120 kr" / English: "$120"
+    /// Uses prefix/suffix based on currency config
     private func formatCurrencyLabel(_ amount: Double) -> String {
         let number = formatValue(amount)
-        if isNorwegian {
-            return "\(number) kr"
+        if isCurrencyPrefix {
+            return "\(currencySymbol)\(number)"
         } else {
-            return "$\(number)"
+            return "\(number) \(currencySymbol)"
         }
     }
 

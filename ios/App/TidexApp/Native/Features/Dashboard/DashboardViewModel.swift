@@ -39,6 +39,9 @@ struct DashboardData: Equatable {
     let currentMonthName: String
     let previousMonthName: String
 
+    // User Settings
+    let currency: String  // User's selected currency (e.g., "kr", "$", "€")
+
     /// Whether there are future shifts (main display should be projected total)
     var hasFutureShifts: Bool {
         currentMonthPlannedCount > 0
@@ -828,7 +831,8 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
             isFeaturedShiftToday: isFeaturedShiftToday,
             featuredShiftIsBestShift: featuredShiftIsBestShift,
             currentMonthName: displayMonthName,
-            previousMonthName: previousMonthName
+            previousMonthName: previousMonthName,
+            currency: settings?.currency ?? "kr"
         )
     }
 

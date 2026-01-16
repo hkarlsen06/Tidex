@@ -178,6 +178,11 @@ struct PostAuthOnboardingView: View {
                 saveProgress()
             }
         }
+        .onChange(of: onboardingData.currency) { _, _ in
+            if currentScreen != .success {
+                saveProgress()
+            }
+        }
     }
 
     // MARK: - Persistence
@@ -291,17 +296,12 @@ private struct MFAEnrollmentSheet: View {
                         // Show QR code and verification input
                         mfaVerificationView()
                     } else {
-                        // Start enrollment
-                        Button(action: startEnrollment) {
-                            Text(localization.string("onboarding.mfa.startSetup"))
-                                .font(.system(size: 17, weight: .semibold))
-                                .foregroundColor(.white)
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 54)
-                                .background(Color.tidexBrandPrimary)
-                                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                        }
-                        .padding(.horizontal, 24)
+                        // Waiting state before auto-start
+                        ProgressView()
+                            .progressViewStyle(.circular)
+                        Text(localization.string("onboarding.mfa.enrolling"))
+                            .font(.system(size: 15))
+                            .foregroundColor(.tidexTextSecondary)
                     }
 
                     if let error = errorMessage {
@@ -320,6 +320,12 @@ private struct MFAEnrollmentSheet: View {
                     Button(localization.string("common.cancel")) {
                         onCancel()
                     }
+                }
+            }
+            .onAppear {
+                // Auto-start enrollment when sheet opens
+                if !isEnrolling && totpUri == nil {
+                    startEnrollment()
                 }
             }
         }

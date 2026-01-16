@@ -457,16 +457,75 @@ private struct StoredShift: Codable {
     let taxRate: Double?
 }
 
+// MARK: - Widget Currency Formatter
+
+/// Currency formatting for widgets - mirrors CurrencyConfig from the main app
+/// Handles prefix vs suffix display based on currency symbol
+enum WidgetCurrencyFormatter {
+    /// Currency display position
+    enum Display {
+        case prefix  // Symbol before amount (e.g., "$100")
+        case suffix  // Symbol after amount (e.g., "100 kr")
+    }
+
+    /// Get display position for a currency symbol
+    static func display(for currency: String) -> Display {
+        switch currency {
+        // Suffix currencies
+        case "kr", "zł", "Kč", "₽":
+            return .suffix
+        // Prefix currencies (default)
+        default:
+            return .prefix
+        }
+    }
+
+    /// Format an amount with currency symbol
+    static func format(_ amount: Double, currency: String) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.minimumFractionDigits = 0
+        formatter.maximumFractionDigits = 0
+        formatter.groupingSeparator = " "
+
+        let formatted = formatter.string(from: NSNumber(value: amount)) ?? "\(Int(amount))"
+
+        switch display(for: currency) {
+        case .prefix:
+            return "\(currency)\(formatted)"
+        case .suffix:
+            return "\(formatted) \(currency)"
+        }
+    }
+
+    /// Format empty/placeholder with currency symbol (e.g., "--- kr" or "$---")
+    static func formatEmpty(currency: String) -> String {
+        switch display(for: currency) {
+        case .prefix:
+            return "\(currency)---"
+        case .suffix:
+            return "--- \(currency)"
+        }
+    }
+}
+
 // MARK: - Widget Provider
 
 struct ShiftWidgetProvider: TimelineProvider {
     private let appGroupId = "group.no.tidex.app"
+    private let shiftsKey = "upcoming_shifts"
+    private let currencyKey = "user_currency"
 
     private func sharedUserDefaults() -> UserDefaults? {
         guard FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupId) != nil else {
             return nil
         }
         return UserDefaults(suiteName: appGroupId)
+    }
+
+    /// Get the user's stored currency symbol, or nil if not set
+    private func getStoredCurrency() -> String? {
+        sharedUserDefaults()?.string(forKey: currencyKey)
     }
 
     func placeholder(in _: Context) -> ShiftWidgetEntry {
@@ -614,27 +673,44 @@ struct ShiftWidgetProvider: TimelineProvider {
     }
 
     private func createEntry() -> ShiftWidgetEntry {
+        // Get stored currency (may be nil if never set)
+        let storedCurrency = getStoredCurrency()
+
         guard let userDefaults = sharedUserDefaults(),
-              let shiftsJson = userDefaults.string(forKey: "upcoming_shifts"),
+              let shiftsJson = userDefaults.string(forKey: shiftsKey),
               let data = shiftsJson.data(using: .utf8),
               let shifts = try? JSONDecoder().decode([StoredShift].self, from: data),
               !shifts.isEmpty
         else {
-            return ShiftWidgetEntry.empty()
+            // No shifts - use stored currency if available
+            return ShiftWidgetEntry.empty(currency: storedCurrency)
         }
 
         // Find the best shift to display
         guard let shift = findBestShift(from: shifts) else {
-            return ShiftWidgetEntry.empty(locale: shifts.first?.locale ?? "no")
+            return ShiftWidgetEntry.empty(locale: shifts.first?.locale ?? "no", currency: storedCurrency)
         }
 
         let locale = shift.locale
-        let currencySymbol = shift.currencySymbol ?? "kr"
+        // Prefer shift's currency, then stored currency, then nil (no currency shown)
+        let currencySymbol = shift.currencySymbol ?? storedCurrency
         let taxRate = shift.taxRate ?? 0.0
 
         // Calculate net earnings
         let netEarnings = shift.totalGrossEstimate * (1 - taxRate)
-        let formattedEarnings = formatCurrency(netEarnings, symbol: currencySymbol)
+        // Format with currency if available, otherwise show just the number
+        let formattedEarnings: String
+        if let currency = currencySymbol {
+            formattedEarnings = WidgetCurrencyFormatter.format(netEarnings, currency: currency)
+        } else {
+            // No currency known - just show the number
+            let formatter = NumberFormatter()
+            formatter.numberStyle = .decimal
+            formatter.minimumFractionDigits = 0
+            formatter.maximumFractionDigits = 0
+            formatter.groupingSeparator = " "
+            formattedEarnings = formatter.string(from: NSNumber(value: netEarnings)) ?? "\(Int(netEarnings))"
+        }
 
         // Determine layout state using midnight-crossing logic
         var (layoutState, daysRemaining) = determineLayoutState(shiftDateString: shift.shiftDate)
@@ -742,17 +818,6 @@ struct ShiftWidgetProvider: TimelineProvider {
         weekdayFormatter.locale = Locale(identifier: locale == "no" ? "nb_NO" : "en_US")
         weekdayFormatter.setLocalizedDateFormatFromTemplate("EEE d")
         return weekdayFormatter.string(from: shiftDate).capitalized
-    }
-
-    private func formatCurrency(_ value: Double, symbol: String) -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .decimal
-        formatter.minimumFractionDigits = 0
-        formatter.maximumFractionDigits = 0
-        formatter.groupingSeparator = " "
-
-        let formatted = formatter.string(from: NSNumber(value: value)) ?? "\(Int(value))"
-        return "\(formatted) \(symbol)"
     }
 }
 

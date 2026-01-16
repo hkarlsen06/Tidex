@@ -73,6 +73,7 @@ struct SupplementsScreen: View {
                                     SupplementRuleCard(
                                         rule: rule,
                                         locale: localization.currentLocale,
+                                        currency: data.currency,
                                         onEdit: {
                                             editingRule = rule
                                             showingRuleEditor = true
@@ -163,6 +164,7 @@ struct SupplementsScreen: View {
         .sheet(isPresented: $showingRuleEditor) {
             SupplementRuleEditor(
                 rule: editingRule,
+                currency: data.currency,
                 onSave: { savedRule in
                     if let existingIndex = data.supplementRules.firstIndex(where: { $0.id == savedRule.id }) {
                         data.supplementRules[existingIndex] = savedRule
@@ -184,6 +186,7 @@ struct SupplementsScreen: View {
 private struct SupplementRuleCard: View {
     let rule: OnboardingSupplementRule
     let locale: LocalizationManager.AppLocale
+    let currency: String
     let onEdit: () -> Void
     let onDelete: () -> Void
 
@@ -203,7 +206,7 @@ private struct SupplementRuleCard: View {
                         .font(.system(size: 14))
                         .foregroundColor(.tidexTextMuted)
 
-                    Text(rule.valueDescription(locale: locale))
+                    Text(rule.valueDescription(locale: locale, currency: currency))
                         .font(.system(size: 14, weight: .medium))
                         .foregroundColor(.tidexSuccess)
                 }

@@ -84,14 +84,13 @@ struct CountUpText: View {
     }
 }
 
-/// Currency-formatted count-up text with locale-aware formatting
-/// Norwegian locale: "24 380 kr"
-/// English locale: "$24,380"
+/// Currency-formatted count-up text using the user's selected currency
+/// Uses the userCurrency environment value to format amounts correctly
 struct CurrencyCountUpText: View {
     let amount: Double
     let duration: Double
 
-    @Environment(\.localization) private var localization
+    @Environment(\.userCurrency) private var currency
 
     init(amount: Double, duration: Double = 0.8) {
         self.amount = amount
@@ -102,30 +101,8 @@ struct CurrencyCountUpText: View {
         CountUpText(
             targetValue: amount,
             duration: duration,
-            format: { Self.formatCurrency($0, locale: localization.currentLocale) }
+            format: { CurrencyConfig.format($0, currency: currency) }
         )
-    }
-
-    /// Format currency based on locale
-    /// Norwegian: number + " kr" (e.g., "24 380 kr")
-    /// English: "$" + number (e.g., "$24,380")
-    static func formatCurrency(_ value: Double, locale: LocalizationManager.AppLocale) -> String {
-        let formatter = NumberFormatter()
-        formatter.maximumFractionDigits = 0
-
-        switch locale {
-        case .norwegian:
-            formatter.numberStyle = .decimal
-            formatter.locale = Locale(identifier: "nb_NO")
-            let number = formatter.string(from: NSNumber(value: value)) ?? "0"
-            return "\(number) kr"
-        case .english:
-            formatter.numberStyle = .currency
-            formatter.currencyCode = "USD"
-            formatter.currencySymbol = "$"
-            formatter.locale = Locale(identifier: "en_US")
-            return formatter.string(from: NSNumber(value: value)) ?? "$0"
-        }
     }
 }
 
