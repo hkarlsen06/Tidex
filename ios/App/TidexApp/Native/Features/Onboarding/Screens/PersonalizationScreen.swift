@@ -7,12 +7,17 @@ struct PersonalizationScreen: View {
     let onComplete: (Double, Int) -> Void
 
     @Environment(\.localization) private var localization
-    @State private var hourlyWage: String = ""
+    @State private var hourlyWage: Double = 0  // Set on appear based on locale
+    @State private var hasInitializedWage = false
     @State private var payrollDay: Int = 15
-    @State private var wageError: String?
-    @FocusState private var isWageFocused: Bool
 
     private let payrollDayOptions = [1, 10, 15, 20, 25, 28]
+
+    /// Default hourly wage based on locale
+    /// Norwegian: 200 kr/hour, English: $25/hour
+    private var defaultHourlyWage: Double {
+        localization.currentLocale == .norwegian ? 200 : 25
+    }
 
     var body: some View {
         ZStack {
@@ -44,8 +49,8 @@ struct PersonalizationScreen: View {
 
                     // Form
                     VStack(spacing: 24) {
-                        // Hourly wage input
-                        wageInput
+                        // Hourly wage slider
+                        OnboardingRateSlider(value: $hourlyWage, style: .full)
 
                         // Payroll day picker
                         payrollDayPicker
@@ -69,57 +74,15 @@ struct PersonalizationScreen: View {
             .scrollDismissesKeyboard(.interactively)
         }
         .onAppear {
-            // Auto-focus wage input
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                isWageFocused = true
+            // Initialize hourly wage based on locale (only once)
+            if !hasInitializedWage {
+                hourlyWage = defaultHourlyWage
+                hasInitializedWage = true
             }
         }
     }
 
     // MARK: - Subviews
-
-    @ViewBuilder
-    private var wageInput: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(localization.string("onboarding.personalize.wage.label"))
-                .font(.system(size: 14, weight: .medium))
-                .foregroundColor(.tidexTextSecondary)
-
-            HStack(spacing: 0) {
-                Text("kr")
-                    .font(.system(size: 18, weight: .medium))
-                    .foregroundColor(.tidexTextSecondary)
-                    .frame(width: 40)
-
-                TextField("200", text: $hourlyWage)
-                    .font(.system(size: 24, weight: .semibold))
-                    .foregroundColor(.tidexTextPrimary)
-                    .keyboardType(.numberPad)
-                    .focused($isWageFocused)
-                    .onChange(of: hourlyWage) { _, _ in
-                        wageError = nil
-                    }
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 14)
-            .background(Color.tidexSurfaceSecondary)
-            .overlay(
-                RoundedRectangle(cornerRadius: 10)
-                    .stroke(wageError != nil ? Color.tidexError : (isWageFocused ? Color.tidexBrandPrimary : Color.tidexBorder), lineWidth: 1)
-            )
-            .cornerRadius(10)
-
-            Text(localization.string("onboarding.personalize.wage.helper"))
-                .font(.system(size: 13))
-                .foregroundColor(wageError != nil ? .tidexError : .tidexTextMuted)
-
-            if let error = wageError {
-                Text(error)
-                    .font(.system(size: 12))
-                    .foregroundColor(.tidexError)
-            }
-        }
-    }
 
     @ViewBuilder
     private var payrollDayPicker: some View {
@@ -163,18 +126,9 @@ struct PersonalizationScreen: View {
     // MARK: - Validation
 
     private func validateAndContinue() {
-        // Dismiss keyboard
-        isWageFocused = false
-
-        guard let wage = Double(hourlyWage), wage > 0 else {
-            wageError = localization.string("onboarding.personalize.wage.error")
-            UINotificationFeedbackGenerator().notificationOccurred(.error)
-            return
-        }
-
-        // Success haptic
+        // Slider always provides valid value, so just proceed
         UINotificationFeedbackGenerator().notificationOccurred(.success)
-        onComplete(wage, payrollDay)
+        onComplete(hourlyWage, payrollDay)
     }
 }
 

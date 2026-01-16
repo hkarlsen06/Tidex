@@ -9,8 +9,16 @@ struct OnboardingView: View {
 
     @Environment(\.localization) private var localization
     @State private var currentPage = 0
+    @State private var hourlyRate: Double = 0  // Set on appear based on locale
+    @State private var hasInitializedRate = false
 
     private let totalPages = 4
+
+    /// Default hourly rate based on locale
+    /// Norwegian: 200 kr/hour, English: $25/hour
+    private var defaultHourlyRate: Double {
+        localization.currentLocale == .norwegian ? 200 : 25
+    }
 
     var body: some View {
         ZStack {
@@ -19,32 +27,12 @@ struct OnboardingView: View {
                 .ignoresSafeArea()
 
             VStack(spacing: 0) {
-                // Skip button (top-right)
-                HStack {
-                    Spacer()
-                    if currentPage < totalPages - 1 {
-                        Button {
-                            // Skip to Get Started screen
-                            withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
-                                currentPage = totalPages - 1
-                            }
-                        } label: {
-                            Text(localization.string("onboarding.skip"))
-                                .font(.system(size: 16, weight: .medium))
-                                .foregroundColor(.tidexTextMuted)
-                        }
-                        .padding(.trailing, 24)
-                        .padding(.top, 16)
-                    }
-                }
-                .frame(height: 50)
-
-                // Page content
+                // Page content - takes full height, skip button overlaid
                 TabView(selection: $currentPage) {
                     WelcomeScreen()
                         .tag(0)
 
-                    SamplePaycheckScreen()
+                    SamplePaycheckScreen(hourlyRate: $hourlyRate)
                         .tag(1)
 
                     HowItWorksScreen()
@@ -65,8 +53,18 @@ struct OnboardingView: View {
                 .tabViewStyle(.page(indexDisplayMode: .never))
                 .animation(.spring(response: 0.35, dampingFraction: 0.85), value: currentPage)
 
-                // Page indicator and continue button
-                VStack(spacing: 20) {
+                // Bottom controls area
+                VStack(spacing: 16) {
+                    // Hourly rate slider (only on page 2)
+                    if currentPage == 1 {
+                        OnboardingRateSlider(value: $hourlyRate)
+                            .padding(.horizontal, 24)
+                            .transition(.asymmetric(
+                                insertion: .move(edge: .bottom).combined(with: .opacity),
+                                removal: .opacity
+                            ))
+                    }
+
                     PageIndicator(totalPages: totalPages, currentPage: currentPage)
 
                     if currentPage < totalPages - 1 {
@@ -82,6 +80,35 @@ struct OnboardingView: View {
                     }
                 }
                 .padding(.bottom, 32)
+                .animation(.spring(response: 0.4, dampingFraction: 0.8), value: currentPage)
+            }
+
+            // Skip button overlaid at top-right (doesn't clip content below)
+            VStack {
+                HStack {
+                    Spacer()
+                    if currentPage < totalPages - 1 {
+                        Button {
+                            withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                                currentPage = totalPages - 1
+                            }
+                        } label: {
+                            Text(localization.string("onboarding.skip"))
+                                .font(.system(size: 16, weight: .medium))
+                                .foregroundColor(.tidexTextMuted)
+                        }
+                        .padding(.trailing, 24)
+                        .padding(.top, 16)
+                    }
+                }
+                Spacer()
+            }
+        }
+        .onAppear {
+            // Initialize hourly rate based on locale (only once)
+            if !hasInitializedRate {
+                hourlyRate = defaultHourlyRate
+                hasInitializedRate = true
             }
         }
     }

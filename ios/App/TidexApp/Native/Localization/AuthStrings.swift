@@ -210,7 +210,7 @@ enum AuthStrings {
 
         // Onboarding
         "onboarding.skip": "Hopp over",
-        "onboarding.welcome.title": "Vet nøyaktig hva du tjener",
+        "onboarding.welcome.title": "Vit nøyaktig hva du tjener",
         "onboarding.welcome.subtitle": "Registrer vakter. Se lønna. Ingen overraskelser.",
 
         "onboarding.paycheck.title": "Denne måneden tjente du...",
@@ -224,6 +224,8 @@ enum AuthStrings {
         "onboarding.paycheck.tax": "Skatt trukket",
         "onboarding.paycheck.net": "Netto utbetalt",
 
+        "onboarding.slider.label": "Din timelønn",
+
         "onboarding.how.title": "Tre steg til klarhet",
         "onboarding.how.step1.title": "Logg vakten din",
         "onboarding.how.step1.desc": "Legg til start- og sluttid, ferdig",
@@ -231,6 +233,7 @@ enum AuthStrings {
         "onboarding.how.step2.desc": "Lønn beregnes automatisk",
         "onboarding.how.step3.title": "Følg med på måneden",
         "onboarding.how.step3.desc": "Dashbordet viser fremgangen din",
+        "onboarding.how.outcome": "Alt beregnes automatisk",
 
         "onboarding.getstarted.title": "Klar til å ta kontroll?",
         "onboarding.getstarted.subtitle": "Opprett kontoen din på sekunder",
@@ -464,6 +467,8 @@ enum AuthStrings {
         "onboarding.paycheck.tax": "Tax deducted",
         "onboarding.paycheck.net": "Net pay",
 
+        "onboarding.slider.label": "Your hourly rate",
+
         "onboarding.how.title": "Three steps to clarity",
         "onboarding.how.step1.title": "Log your shift",
         "onboarding.how.step1.desc": "Add start time, end time, done",
@@ -471,6 +476,7 @@ enum AuthStrings {
         "onboarding.how.step2.desc": "Wages calculated automatically",
         "onboarding.how.step3.title": "Track your month",
         "onboarding.how.step3.desc": "Dashboard shows your progress",
+        "onboarding.how.outcome": "All calculated automatically",
 
         "onboarding.getstarted.title": "Ready to take control?",
         "onboarding.getstarted.subtitle": "Create your account in seconds",

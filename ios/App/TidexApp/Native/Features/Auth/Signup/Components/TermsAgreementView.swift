@@ -68,32 +68,52 @@ struct TermsAgreementView: View {
     }
 
     private var termsLabel: some View {
-        // Build the terms text with tappable links on a single line
-        HStack(spacing: 4) {
-            Text(localization.string("signup.terms.prefix"))
-                .font(.system(size: 14))
-                .foregroundColor(.tidexTextSecondary)
+        // Build the terms text with proper text flow using AttributedString
+        Text(termsAttributedString)
+            .font(.system(size: 14))
+            .environment(\.openURL, OpenURLAction { url in
+                safariURL = url
+                return .handled
+            })
+    }
 
-            Button(action: { safariURL = termsURL }) {
-                Text(localization.string("signup.terms.termsLink"))
-                    .font(.system(size: 14))
-                    .foregroundColor(.tidexBlue)
-                    .underline()
-            }
-            .buttonStyle(.plain)
+    private var termsAttributedString: AttributedString {
+        let prefix = localization.string("signup.terms.prefix")
+        let termsLinkText = localization.string("signup.terms.termsLink")
+        let andText = localization.string("signup.terms.and")
+        let privacyLinkText = localization.string("signup.terms.privacyLink")
 
-            Text(localization.string("signup.terms.and"))
-                .font(.system(size: 14))
-                .foregroundColor(.tidexTextSecondary)
+        var result = AttributedString()
 
-            Button(action: { safariURL = privacyURL }) {
-                Text(localization.string("signup.terms.privacyLink"))
-                    .font(.system(size: 14))
-                    .foregroundColor(.tidexBlue)
-                    .underline()
-            }
-            .buttonStyle(.plain)
+        // Prefix text
+        var prefixPart = AttributedString(prefix + " ")
+        prefixPart.foregroundColor = .tidexTextSecondary
+        result.append(prefixPart)
+
+        // Terms link
+        var termsPart = AttributedString(termsLinkText)
+        termsPart.foregroundColor = .tidexBlue
+        termsPart.underlineStyle = .single
+        if let url = termsURL {
+            termsPart.link = url
         }
+        result.append(termsPart)
+
+        // Newline + "and " - force second line
+        var andPart = AttributedString("\n" + andText + " ")
+        andPart.foregroundColor = .tidexTextSecondary
+        result.append(andPart)
+
+        // Privacy link
+        var privacyPart = AttributedString(privacyLinkText)
+        privacyPart.foregroundColor = .tidexBlue
+        privacyPart.underlineStyle = .single
+        if let url = privacyURL {
+            privacyPart.link = url
+        }
+        result.append(privacyPart)
+
+        return result
     }
 }
 
