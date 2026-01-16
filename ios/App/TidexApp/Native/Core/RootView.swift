@@ -65,8 +65,13 @@ struct RootView: View {
                         AuthNavigationView()
                     }
 
+                case .termsRequired:
+                    AcceptTermsView(isUpdate: coordinator.isTermsUpdate, coordinator: coordinator)
+                        .transition(.opacity)
+
                 case .authenticated:
-                    if !hasCompletedPostAuthOnboarding {
+                    // Skip post-auth onboarding if already completed locally OR remotely (Supabase user metadata)
+                    if !hasCompletedPostAuthOnboarding && !coordinator.hasFinishedOnboardingRemotely {
                         // Show post-auth onboarding (screens 5-6)
                         PostAuthOnboardingView(
                             onComplete: {

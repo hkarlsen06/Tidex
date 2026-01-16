@@ -26,24 +26,24 @@ struct GetStartedScreen: View {
             Spacer()
                 .frame(height: 32)
 
-            // Header
-            Text(localization.string("onboarding.getstarted.title"))
-                .font(.system(size: 28, weight: .bold))
-                .foregroundColor(.tidexTextPrimary)
-                .multilineTextAlignment(.center)
+            // Header and subheadline - constrained for iPad
+            VStack(spacing: 12) {
+                Text(localization.string("onboarding.getstarted.title"))
+                    .font(.system(size: 28, weight: .bold))
+                    .foregroundColor(.tidexTextPrimary)
+                    .multilineTextAlignment(.center)
+
+                Text(localization.string("onboarding.getstarted.subtitle"))
+                    .font(.system(size: 17))
+                    .foregroundColor(.tidexTextSecondary)
+                    .multilineTextAlignment(.center)
+            }
+            .padding(.horizontal, 32)
+            .adaptiveContentWidth()
 
             Spacer()
-                .frame(height: 12)
 
-            // Subheadline
-            Text(localization.string("onboarding.getstarted.subtitle"))
-                .font(.system(size: 17))
-                .foregroundColor(.tidexTextSecondary)
-                .multilineTextAlignment(.center)
-
-            Spacer()
-
-            // CTAs
+            // CTAs - constrained for iPad
             VStack(spacing: 12) {
                 OnboardingButton(
                     title: localization.string("onboarding.getstarted.signup"),
@@ -57,6 +57,7 @@ struct GetStartedScreen: View {
                 )
             }
             .padding(.horizontal, 24)
+            .adaptiveContentWidth()
             .padding(.bottom, 24)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

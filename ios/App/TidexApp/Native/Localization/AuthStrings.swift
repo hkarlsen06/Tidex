@@ -141,6 +141,20 @@ enum AuthStrings {
         "legal.termsOfServiceContent": "Vilk\u{00E5}r for bruk av Tidex...\n\nVed \u{00E5} bruke Tidex godtar du disse vilk\u{00E5}rene.",
         "legal.privacyPolicyContent": "Personvernerkl\u{00E6}ring for Tidex...\n\nVi tar personvernet ditt p\u{00E5} alvor.",
 
+        // Accept Terms Screen
+        "acceptTerms.title": "Vilk\u{00E5}r og personvern",
+        "acceptTerms.description": "Du m\u{00E5} godta vilk\u{00E5}rene for \u{00E5} bruke Tidex",
+        "acceptTerms.explanation": "For \u{00E5} fortsette m\u{00E5} du lese og godta v\u{00E5}re vilk\u{00E5}r for bruk og personvernerkl\u{00E6}ring.",
+        "acceptTerms.viewTerms": "Vilk\u{00E5}r for bruk",
+        "acceptTerms.viewPrivacy": "Personvernerkl\u{00E6}ring",
+        "acceptTerms.acceptButton": "Godta og fortsett",
+        "acceptTerms.declineButton": "Avsl\u{00E5} og logg ut",
+        "acceptTerms.updated.title": "Oppdaterte vilk\u{00E5}r",
+        "acceptTerms.updated.description": "Vilk\u{00E5}rene v\u{00E5}re har blitt oppdatert siden du sist godtok dem",
+        "acceptTerms.updated.explanation": "Vi har oppdatert v\u{00E5}re vilk\u{00E5}r for bruk og personvernerkl\u{00E6}ring. Vennligst les gjennom endringene og godta de nye vilk\u{00E5}rene for \u{00E5} fortsette \u{00E5} bruke Tidex.",
+        "acceptTerms.errors.updateFailed": "Kunne ikke lagre godkjenning. Pr\u{00F8}v igjen.",
+        "acceptTerms.errors.genericError": "En feil oppstod. Pr\u{00F8}v igjen.",
+
         // Locale Switcher
         "locale.norwegian": "Norsk",
         "locale.english": "English",
@@ -172,6 +186,8 @@ enum AuthStrings {
         "dashboard.today": "I dag",
         "dashboard.earnings": "Inntekt",
         "dashboard.noShifts": "Ingen vakter funnet",
+        "dashboard.letsAddShift": "La oss legge til en vakt!",
+        "dashboard.addShiftButton": "Legg til vakt",
         "dashboard.loadError": "Kunne ikke laste data",
         "dashboard.nextPayout": "Neste utbetaling",
         "dashboard.previousPayout": "Forrige utbetaling",
@@ -384,6 +400,20 @@ enum AuthStrings {
         "legal.termsOfServiceContent": "Terms of Service for Tidex...\n\nBy using Tidex you agree to these terms.",
         "legal.privacyPolicyContent": "Privacy Policy for Tidex...\n\nWe take your privacy seriously.",
 
+        // Accept Terms Screen
+        "acceptTerms.title": "Terms and Privacy",
+        "acceptTerms.description": "You must accept the terms to use Tidex",
+        "acceptTerms.explanation": "To continue, you must read and accept our Terms of Service and Privacy Policy.",
+        "acceptTerms.viewTerms": "Terms of Service",
+        "acceptTerms.viewPrivacy": "Privacy Policy",
+        "acceptTerms.acceptButton": "Accept and Continue",
+        "acceptTerms.declineButton": "Decline and Sign Out",
+        "acceptTerms.updated.title": "Updated Terms",
+        "acceptTerms.updated.description": "Our terms have been updated since you last accepted",
+        "acceptTerms.updated.explanation": "We have updated our Terms of Service and Privacy Policy. Please review the changes and accept the new terms to continue using Tidex.",
+        "acceptTerms.errors.updateFailed": "Could not save acceptance. Please try again.",
+        "acceptTerms.errors.genericError": "An error occurred. Please try again.",
+
         // Locale Switcher
         "locale.norwegian": "Norsk",
         "locale.english": "English",
@@ -415,6 +445,8 @@ enum AuthStrings {
         "dashboard.today": "Today",
         "dashboard.earnings": "Earnings",
         "dashboard.noShifts": "No shifts found",
+        "dashboard.letsAddShift": "Let's add a shift!",
+        "dashboard.addShiftButton": "Add Shift",
         "dashboard.loadError": "Failed to load data",
         "dashboard.nextPayout": "Next payout",
         "dashboard.previousPayout": "Previous payout",

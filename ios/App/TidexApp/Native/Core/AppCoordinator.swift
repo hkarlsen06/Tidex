@@ -22,6 +22,7 @@ final class AppCoordinator: ObservableObject {
         case loading           // Initial app load, checking session
         case unauthenticated   // No valid session, show login
         case mfaRequired       // User logged in but needs MFA verification
+        case termsRequired     // User needs to accept updated terms
         case authenticated     // Fully authenticated, show main app
     }
 
@@ -32,6 +33,11 @@ final class AppCoordinator: ObservableObject {
     /// MFA factor to verify (when state is .mfaRequired)
     @Published private(set) var pendingMFAFactor: AuthService.MFAFactor?
 
+    // MARK: - Terms Acceptance State
+
+    /// Whether this is an update to terms (user previously accepted older version)
+    @Published private(set) var isTermsUpdate: Bool = false
+
     // MARK: - User Profile State
 
     /// Current user's ID (lowercase UUID string)
@@ -40,6 +46,8 @@ final class AppCoordinator: ObservableObject {
     @Published private(set) var userDisplayName: String = ""
     /// User's profile picture URL (for UserMenuButton)
     @Published private(set) var userAvatarUrl: String?
+    /// Whether the user has already completed onboarding (from Supabase user metadata)
+    @Published private(set) var hasFinishedOnboardingRemotely: Bool = false
 
     // MARK: - Sync State
 
@@ -169,18 +177,46 @@ final class AppCoordinator: ObservableObject {
                     self.appState = .mfaRequired
                 } else {
                     // No verified factors, but MFA is required - shouldn't happen normally
-                    // Fall back to authenticated (backend will handle enforcement)
-                    self.appState = .authenticated
-                    await updateUserProfile()
+                    // Fall back to checking terms (backend will handle MFA enforcement)
+                    await checkTermsAndUpdateState()
                 }
             } else {
-                // No MFA required, user is fully authenticated
+                // No MFA required, check terms acceptance
+                await checkTermsAndUpdateState()
+            }
+        } catch {
+            // If MFA check fails, check terms and let backend handle MFA
+            print("[AppCoordinator] MFA check failed: \(error)")
+            await checkTermsAndUpdateState()
+        }
+    }
+
+    // MARK: - Terms Acceptance Check
+
+    /// Check if user needs to accept updated terms
+    /// Fetches the latest terms version from the API before checking
+    private func checkTermsAndUpdateState() async {
+        do {
+            let session = try await supabase.auth.session
+            let user = session.user
+
+            // Get terms_accepted_at from user metadata
+            let termsAcceptedAt = user.userMetadata["terms_accepted_at"]?.value as? String
+
+            // Use async version that fetches latest terms version from API
+            if await TermsVersion.needsTermsReAcceptanceAsync(termsAcceptedAt) {
+                // User needs to accept terms
+                self.isTermsUpdate = termsAcceptedAt != nil  // true if they had accepted before
+                self.appState = .termsRequired
+                print("[AppCoordinator] Terms acceptance required (update: \(self.isTermsUpdate))")
+            } else {
+                // Terms are up to date, user is fully authenticated
                 self.appState = .authenticated
                 await updateUserProfile()
             }
         } catch {
-            // If MFA check fails, assume authenticated and let backend handle it
-            print("[AppCoordinator] MFA check failed: \(error)")
+            // If we can't check terms, proceed to authenticated and let backend handle it
+            print("[AppCoordinator] Terms check failed: \(error)")
             self.appState = .authenticated
             await updateUserProfile()
         }
@@ -198,6 +234,15 @@ final class AppCoordinator: ObservableObject {
             // Store user ID
             let currentUserId = user.id.uuidString.lowercased()
             self.userId = currentUserId
+
+            // Check if onboarding was already completed (from raw_user_meta_data.finishedOnboarding)
+            if let finishedOnboarding = user.userMetadata["finishedOnboarding"]?.value as? Bool {
+                self.hasFinishedOnboardingRemotely = finishedOnboarding
+                print("[AppCoordinator] User finishedOnboarding from metadata: \(finishedOnboarding)")
+            } else {
+                self.hasFinishedOnboardingRemotely = false
+                print("[AppCoordinator] User finishedOnboarding not set in metadata")
+            }
 
             // Extract display name from user metadata or fall back to email
             if let fullName = user.userMetadata["full_name"]?.value as? String, !fullName.isEmpty {
@@ -299,11 +344,25 @@ final class AppCoordinator: ObservableObject {
 
     /// Called when MFA verification is successful
     func handleMFASuccess() {
-        appState = .authenticated
         pendingMFAFactor = nil
+        Task {
+            // After MFA, check if terms acceptance is needed
+            await checkTermsAndUpdateState()
+        }
+    }
+
+    /// Called when terms are accepted
+    func handleTermsAccepted() {
+        isTermsUpdate = false
+        appState = .authenticated
         Task {
             await updateUserProfile()
         }
+    }
+
+    /// Called when user declines terms (signs out)
+    func handleTermsDeclined() async {
+        await signOut()
     }
 
     /// Sign out the user

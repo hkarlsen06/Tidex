@@ -53,12 +53,11 @@ struct OnboardingView: View {
                 .tabViewStyle(.page(indexDisplayMode: .never))
                 .animation(.spring(response: 0.35, dampingFraction: 0.85), value: currentPage)
 
-                // Bottom controls area
+                // Bottom controls area - constrained for iPad
                 VStack(spacing: 16) {
                     // Hourly rate slider (only on page 2)
                     if currentPage == 1 {
                         OnboardingRateSlider(value: $hourlyRate)
-                            .padding(.horizontal, 24)
                             .transition(.asymmetric(
                                 insertion: .move(edge: .bottom).combined(with: .opacity),
                                 removal: .opacity
@@ -76,9 +75,10 @@ struct OnboardingView: View {
                                 }
                             }
                         )
-                        .padding(.horizontal, 24)
                     }
                 }
+                .padding(.horizontal, 24)
+                .adaptiveContentWidth()
                 .padding(.bottom, 32)
                 .animation(.spring(response: 0.4, dampingFraction: 0.8), value: currentPage)
             }

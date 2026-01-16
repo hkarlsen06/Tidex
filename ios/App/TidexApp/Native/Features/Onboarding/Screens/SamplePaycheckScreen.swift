@@ -59,9 +59,10 @@ struct SamplePaycheckScreen: View {
             Spacer()
                 .frame(height: 32)
 
-            // Breakdown card with entrance animation
+            // Breakdown card with entrance animation - constrained for iPad
             breakdownCard
                 .padding(.horizontal, 24)
+                .adaptiveContentWidth()
                 .offset(y: showBreakdown ? 0 : 40)
                 .opacity(showBreakdown ? 1 : 0)
 

@@ -19,14 +19,14 @@ struct MFAVerifyView: View {
             Color.tidexBackground
                 .ignoresSafeArea()
 
-            // Content
+            // Content - constrained for iPad
             ScrollView {
                 VStack(spacing: 24) {
                     // Header with logo
                     headerView
                         .padding(.top, 40)
 
-                    // Main card
+                    // Main card - constrained width for iPad
                     TidexCard {
                         VStack(spacing: 20) {
                             // Card header
@@ -58,6 +58,7 @@ struct MFAVerifyView: View {
                         }
                         .padding(24)
                     }
+                    .adaptiveFormWidth()
                 }
                 .padding(.horizontal, 20)
                 .padding(.bottom, 40)

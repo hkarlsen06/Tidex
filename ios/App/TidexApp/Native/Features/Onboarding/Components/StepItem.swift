@@ -77,8 +77,6 @@ struct StepItem: View {
                         .foregroundColor(.tidexTextSecondary)
                         .opacity(progressState.contentOpacity * 0.9)
                 }
-
-                Spacer()
             }
 
             // Connector line below (between steps) - aligned under icon center
