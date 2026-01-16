@@ -157,60 +157,20 @@ final class ShiftsRepository: ObservableObject {
         endTime: String,
         customSupplements: CustomSupplementsData? = nil
     ) async throws -> ShiftRow {
-        // Generate new UUID for the shift
-        let id = UUID().uuidString.lowercased()
-        let now = Date()
-
-        // Encode supplements if provided
-        let supplementsData = customSupplements.flatMap { try? canonicalJSONEncoder.encode($0) }
-
-        // Create snapshot for the new shift (will be empty until server confirms)
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd"
-        dateFormatter.timeZone = TimeZone(identifier: "UTC")
-        let shiftDateString = dateFormatter.string(from: shiftDate)
-
-        let snapshot = UserShiftServerSnapshot(
-            shiftDate: shiftDateString,
-            startTime: startTime,
-            endTime: endTime,
-            customSupplements: supplementsData,
-            updatedAt: now,
-            revision: 0, // Will be set by server
-            deletedAt: nil
-        )
-
-        // Mark all fields as dirty since this is a new record
-        let allFields = UserShiftField.allCases.map { $0.rawValue }
-        let dirtyFieldsData = (try? canonicalJSONEncoder.encode(allFields)) ?? Data()
-
-        let localShift = LocalUserShift(
-            id: id,
+        let createdShift = try await localStore.storeActor.createUserShift(
             userId: userId,
             shiftDate: shiftDate,
             startTime: startTime,
             endTime: endTime,
-            customSupplements: supplementsData,
-            serverUpdatedAt: now,
-            serverRevision: 0, // New shift, no server revision yet
-            serverDeletedAt: nil,
-            syncStatus: .dirty,
-            dirtyFields: dirtyFieldsData,
-            lastSyncedSnapshot: snapshot.encoded(),
-            localUpdatedAt: now,
-            conflictServerSnapshot: nil
+            customSupplements: customSupplements
         )
 
-        // Save via actor for thread safety
-        try await localStore.storeActor.upsertUserShift(localShift)
-        try await localStore.storeActor.save()
-
-        logger.info("Created new local shift: \(id)")
+        logger.info("Created new local shift: \(createdShift.id)")
 
         // Update widget storage with the new shift
         NativeWidgetStorage.updateWidgetStorage(for: userId)
 
-        return localShift.toShiftRow()
+        return createdShift
     }
 
     /// Update a shift locally
@@ -229,92 +189,46 @@ final class ShiftsRepository: ObservableObject {
         endTime: String? = nil,
         customSupplements: CustomSupplementsData? = nil
     ) async throws -> ShiftRow? {
-        let context = localStore.mainContext
+        do {
+            let updatedShift = try await localStore.storeActor.updateUserShift(
+                id: id,
+                shiftDate: shiftDate,
+                startTime: startTime,
+                endTime: endTime,
+                customSupplements: customSupplements
+            )
 
-        // Fetch existing shift
-        let descriptor = FetchDescriptor<LocalUserShift>(
-            predicate: #Predicate { $0.id == id }
-        )
+            logger.info("Updated local shift: \(id)")
 
-        guard let localShift = try context.fetch(descriptor).first else {
+            if let userId = updatedShift.user_id {
+                NativeWidgetStorage.updateWidgetStorage(for: userId)
+            }
+
+            return updatedShift
+        } catch LocalStoreWriteError.notFound {
             logger.warning("Shift not found for update: \(id)")
             return nil
+        } catch {
+            throw error
         }
-
-        // Track which fields changed
-        var newDirtyFields = localShift.dirtyFieldKeys
-        let now = Date()
-
-        if let newDate = shiftDate, newDate != localShift.shiftDate {
-            localShift.shiftDate = newDate
-            newDirtyFields.insert(.shiftDate)
-        }
-
-        if let newStart = startTime, newStart != localShift.startTime {
-            localShift.startTime = newStart
-            newDirtyFields.insert(.startTime)
-        }
-
-        if let newEnd = endTime, newEnd != localShift.endTime {
-            localShift.endTime = newEnd
-            newDirtyFields.insert(.endTime)
-        }
-
-        if let newSupplements = customSupplements {
-            let newData = try? canonicalJSONEncoder.encode(newSupplements)
-            if newData != localShift.customSupplements {
-                localShift.customSupplements = newData
-                newDirtyFields.insert(.customSupplements)
-            }
-        }
-
-        // Update dirty tracking
-        localShift.dirtyFieldKeys = newDirtyFields
-        localShift.localUpdatedAt = now
-
-        // Set status to dirty if we have changes
-        if !newDirtyFields.isEmpty && localShift.syncStatus == .clean {
-            localShift.syncStatus = .dirty
-        }
-
-        // Save via actor
-        try await localStore.storeActor.upsertUserShift(localShift)
-        try await localStore.storeActor.save()
-
-        logger.info("Updated local shift: \(id), dirty fields: \(newDirtyFields.map { $0.rawValue })")
-
-        // Update widget storage with the modified shift
-        NativeWidgetStorage.updateWidgetStorage(for: localShift.userId)
-
-        return localShift.toShiftRow()
     }
 
     /// Mark a shift for deletion
     /// The shift will be soft-deleted on server during next sync
     /// - Parameter id: Shift ID
     func deleteShift(id: String) async throws {
-        let context = localStore.mainContext
+        do {
+            let userId = try await localStore.storeActor.markShiftPendingDelete(id: id)
 
-        let descriptor = FetchDescriptor<LocalUserShift>(
-            predicate: #Predicate { $0.id == id }
-        )
+            logger.info("Marked shift for deletion: \(id)")
 
-        guard let localShift = try context.fetch(descriptor).first else {
+            // Update widget storage to remove the deleted shift
+            NativeWidgetStorage.updateWidgetStorage(for: userId)
+        } catch LocalStoreWriteError.notFound {
             logger.warning("Shift not found for deletion: \(id)")
-            return
+        } catch {
+            throw error
         }
-
-        // Mark for deletion
-        localShift.syncStatus = .pendingDelete
-        localShift.localUpdatedAt = Date()
-
-        try await localStore.storeActor.upsertUserShift(localShift)
-        try await localStore.storeActor.save()
-
-        logger.info("Marked shift for deletion: \(id)")
-
-        // Update widget storage to remove the deleted shift
-        NativeWidgetStorage.updateWidgetStorage(for: localShift.userId)
     }
 
     // MARK: - Conflict Resolution
@@ -323,90 +237,36 @@ final class ShiftsRepository: ObservableObject {
     /// This will mark the shift as dirty and attempt to push during next sync
     /// - Parameter id: Shift ID
     func resolveConflictKeepLocal(id: String) async throws {
-        let context = localStore.mainContext
-
-        let descriptor = FetchDescriptor<LocalUserShift>(
-            predicate: #Predicate { $0.id == id }
-        )
-
-        guard let localShift = try context.fetch(descriptor).first else {
+        do {
+            try await localStore.storeActor.resolveStoredShiftConflictKeepLocal(id: id)
+            logger.info("Resolved conflict (kept local) for shift: \(id)")
+        } catch LocalStoreWriteError.notFound {
             logger.warning("Shift not found for conflict resolution: \(id)")
-            return
-        }
-
-        guard localShift.syncStatus == .conflict else {
+        } catch LocalStoreWriteError.notInConflict {
             logger.warning("Shift is not in conflict state: \(id)")
-            return
-        }
-
-        // Get server version to update our server metadata
-        guard let serverSnapshot = UserShiftServerSnapshot.decode(from: localShift.conflictServerSnapshot ?? Data()) else {
+        } catch LocalStoreWriteError.missingConflictSnapshot {
             logger.error("No server snapshot found for conflict: \(id)")
-            return
+        } catch {
+            throw error
         }
-
-        // Update server metadata but keep local values
-        localShift.serverRevision = serverSnapshot.revision
-        localShift.serverUpdatedAt = serverSnapshot.updatedAt
-        localShift.syncStatus = .dirty
-        localShift.conflictServerSnapshot = nil
-        localShift.localUpdatedAt = Date()
-
-        try await localStore.storeActor.upsertUserShift(localShift)
-        try await localStore.storeActor.save()
-
-        logger.info("Resolved conflict (kept local) for shift: \(id)")
     }
 
     /// Resolve a conflict by accepting the server version
     /// This will overwrite local changes with server data
     /// - Parameter id: Shift ID
     func resolveConflictKeepServer(id: String) async throws {
-        let context = localStore.mainContext
-
-        let descriptor = FetchDescriptor<LocalUserShift>(
-            predicate: #Predicate { $0.id == id }
-        )
-
-        guard let localShift = try context.fetch(descriptor).first else {
+        do {
+            try await localStore.storeActor.resolveStoredShiftConflictKeepServer(id: id)
+            logger.info("Resolved conflict (kept server) for shift: \(id)")
+        } catch LocalStoreWriteError.notFound {
             logger.warning("Shift not found for conflict resolution: \(id)")
-            return
-        }
-
-        guard localShift.syncStatus == .conflict else {
+        } catch LocalStoreWriteError.notInConflict {
             logger.warning("Shift is not in conflict state: \(id)")
-            return
-        }
-
-        guard let serverSnapshot = UserShiftServerSnapshot.decode(from: localShift.conflictServerSnapshot ?? Data()) else {
+        } catch LocalStoreWriteError.missingConflictSnapshot {
             logger.error("No server snapshot found for conflict: \(id)")
-            return
+        } catch {
+            throw error
         }
-
-        // Apply server values
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd"
-        dateFormatter.timeZone = TimeZone(identifier: "UTC")
-
-        localShift.shiftDate = dateFormatter.date(from: serverSnapshot.shiftDate) ?? localShift.shiftDate
-        localShift.startTime = serverSnapshot.startTime
-        localShift.endTime = serverSnapshot.endTime
-        localShift.customSupplements = serverSnapshot.customSupplements
-        localShift.serverRevision = serverSnapshot.revision
-        localShift.serverUpdatedAt = serverSnapshot.updatedAt
-        localShift.serverDeletedAt = serverSnapshot.deletedAt
-
-        // Clear dirty state
-        localShift.syncStatus = .clean
-        localShift.dirtyFieldKeys = []
-        localShift.lastSyncedSnapshot = localShift.conflictServerSnapshot ?? Data()
-        localShift.conflictServerSnapshot = nil
-        localShift.localUpdatedAt = Date()
-
-        try await localStore.storeActor.upsertUserShift(localShift)
-        try await localStore.storeActor.save()
-
-        logger.info("Resolved conflict (kept server) for shift: \(id)")
     }
 
     // MARK: - Local Shift Access (For Sync)

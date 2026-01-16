@@ -336,14 +336,18 @@ struct OfflineFeaturedShiftCard: View {
     // MARK: - Date Formatting
 
     private var dateParts: (dayName: String, dayNumber: String, monthName: String) {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: locale == "no" ? "nb_NO" : "en_US")
+        let isoFormatter = DateFormatter()
+        isoFormatter.calendar = Calendar(identifier: .gregorian)
+        isoFormatter.locale = Locale(identifier: "en_US_POSIX")
+        isoFormatter.timeZone = TimeZone.current
+        isoFormatter.dateFormat = "yyyy-MM-dd"
 
-        // Parse the shift date
-        formatter.dateFormat = "yyyy-MM-dd"
-        guard let date = formatter.date(from: shift.shiftDate) else {
+        guard let date = isoFormatter.date(from: shift.shiftDate) else {
             return ("", "", "")
         }
+
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: locale == "no" ? "nb_NO" : "en_US")
 
         // Get day name (full)
         formatter.dateFormat = "EEEE"
@@ -468,14 +472,18 @@ struct OfflineShiftRow: View {
     // MARK: - Date Formatting
 
     private var dateParts: (dayName: String, dayNumber: String, monthName: String) {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: locale == "no" ? "nb_NO" : "en_US")
+        let isoFormatter = DateFormatter()
+        isoFormatter.calendar = Calendar(identifier: .gregorian)
+        isoFormatter.locale = Locale(identifier: "en_US_POSIX")
+        isoFormatter.timeZone = TimeZone.current
+        isoFormatter.dateFormat = "yyyy-MM-dd"
 
-        // Parse the shift date
-        formatter.dateFormat = "yyyy-MM-dd"
-        guard let date = formatter.date(from: shift.shiftDate) else {
+        guard let date = isoFormatter.date(from: shift.shiftDate) else {
             return ("", "", "")
         }
+
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: locale == "no" ? "nb_NO" : "en_US")
 
         // Get day name (abbreviated)
         formatter.dateFormat = "EEE"

@@ -102,10 +102,12 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     /// Handle Supabase OAuth callbacks
     private func handleSupabaseCallback(_ url: URL) async {
-        // Supabase client automatically handles the callback URL
-        // and exchanges the code for a session when auth state changes
-        // The AppCoordinator will pick up the session via authStateChanges
-        print("[SceneDelegate] Received auth callback: \(url)")
+        do {
+            _ = try await supabase.auth.session(from: url)
+            print("[SceneDelegate] Auth callback handled: \(url)")
+        } catch {
+            print("[SceneDelegate] Auth callback failed: \(error)")
+        }
     }
 
     /// Handle deep links for navigation

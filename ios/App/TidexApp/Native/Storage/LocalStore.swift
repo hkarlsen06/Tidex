@@ -4,6 +4,12 @@ import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "LocalStore")
 
+enum LocalStoreWriteError: Error {
+    case notFound
+    case notInConflict
+    case missingConflictSnapshot
+}
+
 // MARK: - Local Store
 
 /// Central SwiftData container for offline storage
@@ -65,6 +71,15 @@ final class LocalStore {
 /// All sync operations should use this actor to prevent data races
 @ModelActor
 actor LocalStoreActor {
+    private func isoDateFormatter() -> DateFormatter {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = Date.localTimeZone
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter
+    }
+
     /// Delete all data from all tables
     func resetAllData() {
         do {
@@ -168,6 +183,190 @@ actor LocalStoreActor {
         return try modelContext.fetch(descriptor)
     }
 
+    // MARK: - Local User Shift Write Operations
+
+    func createUserShift(
+        userId: String,
+        shiftDate: Date,
+        startTime: String,
+        endTime: String,
+        customSupplements: CustomSupplementsData?
+    ) throws -> ShiftRow {
+        let id = UUID().uuidString.lowercased()
+        let now = Date()
+
+        let supplementsData = customSupplements.flatMap { try? canonicalJSONEncoder.encode($0) }
+
+        let dateFormatter = isoDateFormatter()
+        let shiftDateString = dateFormatter.string(from: shiftDate)
+
+        let snapshot = UserShiftServerSnapshot(
+            shiftDate: shiftDateString,
+            startTime: startTime,
+            endTime: endTime,
+            customSupplements: supplementsData,
+            updatedAt: now,
+            revision: 0,
+            deletedAt: nil
+        )
+
+        let allFields = UserShiftField.allCases.map { $0.rawValue }
+        let dirtyFieldsData = (try? canonicalJSONEncoder.encode(allFields)) ?? Data()
+
+        let localShift = LocalUserShift(
+            id: id,
+            userId: userId,
+            shiftDate: shiftDate,
+            startTime: startTime,
+            endTime: endTime,
+            customSupplements: supplementsData,
+            serverUpdatedAt: now,
+            serverRevision: 0,
+            serverDeletedAt: nil,
+            syncStatus: .dirty,
+            dirtyFields: dirtyFieldsData,
+            lastSyncedSnapshot: snapshot.encoded(),
+            localUpdatedAt: now,
+            conflictServerSnapshot: nil
+        )
+
+        modelContext.insert(localShift)
+        try modelContext.save()
+        return localShift.toShiftRow()
+    }
+
+    func updateUserShift(
+        id: String,
+        shiftDate: Date?,
+        startTime: String?,
+        endTime: String?,
+        customSupplements: CustomSupplementsData?
+    ) throws -> ShiftRow {
+        let descriptor = FetchDescriptor<LocalUserShift>(
+            predicate: #Predicate { $0.id == id }
+        )
+
+        guard let localShift = try modelContext.fetch(descriptor).first else {
+            throw LocalStoreWriteError.notFound
+        }
+
+        var newDirtyFields = localShift.dirtyFieldKeys
+        let now = Date()
+
+        if let newDate = shiftDate, newDate != localShift.shiftDate {
+            localShift.shiftDate = newDate
+            newDirtyFields.insert(.shiftDate)
+        }
+
+        if let newStart = startTime, newStart != localShift.startTime {
+            localShift.startTime = newStart
+            newDirtyFields.insert(.startTime)
+        }
+
+        if let newEnd = endTime, newEnd != localShift.endTime {
+            localShift.endTime = newEnd
+            newDirtyFields.insert(.endTime)
+        }
+
+        if let newSupplements = customSupplements {
+            let newData = try? canonicalJSONEncoder.encode(newSupplements)
+            if newData != localShift.customSupplements {
+                localShift.customSupplements = newData
+                newDirtyFields.insert(.customSupplements)
+            }
+        }
+
+        localShift.dirtyFieldKeys = newDirtyFields
+        localShift.localUpdatedAt = now
+
+        if !newDirtyFields.isEmpty && localShift.syncStatus == .clean {
+            localShift.syncStatus = .dirty
+        }
+
+        try modelContext.save()
+        return localShift.toShiftRow()
+    }
+
+    func markShiftPendingDelete(id: String) throws -> String {
+        let descriptor = FetchDescriptor<LocalUserShift>(
+            predicate: #Predicate { $0.id == id }
+        )
+
+        guard let localShift = try modelContext.fetch(descriptor).first else {
+            throw LocalStoreWriteError.notFound
+        }
+
+        localShift.syncStatus = .pendingDelete
+        localShift.localUpdatedAt = Date()
+
+        try modelContext.save()
+        return localShift.userId
+    }
+
+    func resolveStoredShiftConflictKeepLocal(id: String) throws {
+        let descriptor = FetchDescriptor<LocalUserShift>(
+            predicate: #Predicate { $0.id == id }
+        )
+
+        guard let localShift = try modelContext.fetch(descriptor).first else {
+            throw LocalStoreWriteError.notFound
+        }
+
+        guard localShift.syncStatus == .conflict else {
+            throw LocalStoreWriteError.notInConflict
+        }
+
+        guard let serverSnapshot = UserShiftServerSnapshot.decode(
+            from: localShift.conflictServerSnapshot ?? Data()
+        ) else {
+            throw LocalStoreWriteError.missingConflictSnapshot
+        }
+
+        localShift.serverRevision = serverSnapshot.revision
+        localShift.serverUpdatedAt = serverSnapshot.updatedAt
+        localShift.syncStatus = .dirty
+        localShift.conflictServerSnapshot = nil
+        localShift.localUpdatedAt = Date()
+
+        try modelContext.save()
+    }
+
+    func resolveStoredShiftConflictKeepServer(id: String) throws {
+        let descriptor = FetchDescriptor<LocalUserShift>(
+            predicate: #Predicate { $0.id == id }
+        )
+
+        guard let localShift = try modelContext.fetch(descriptor).first else {
+            throw LocalStoreWriteError.notFound
+        }
+
+        guard localShift.syncStatus == .conflict else {
+            throw LocalStoreWriteError.notInConflict
+        }
+
+        let conflictData = localShift.conflictServerSnapshot ?? Data()
+        guard let serverSnapshot = UserShiftServerSnapshot.decode(from: conflictData) else {
+            throw LocalStoreWriteError.missingConflictSnapshot
+        }
+
+        let dateFormatter = isoDateFormatter()
+
+        localShift.shiftDate = dateFormatter.date(from: serverSnapshot.shiftDate) ?? localShift.shiftDate
+        localShift.startTime = serverSnapshot.startTime
+        localShift.endTime = serverSnapshot.endTime
+        localShift.customSupplements = serverSnapshot.customSupplements
+        localShift.serverRevision = serverSnapshot.revision
+        localShift.serverUpdatedAt = serverSnapshot.updatedAt
+        localShift.serverDeletedAt = serverSnapshot.deletedAt
+        localShift.syncStatus = .clean
+        localShift.dirtyFieldKeys = []
+        localShift.lastSyncedSnapshot = conflictData
+        localShift.conflictServerSnapshot = nil
+        localShift.localUpdatedAt = Date()
+
+        try modelContext.save()
+    }
+
     // MARK: - Recurring Shift Operations
 
     /// Upsert a recurring shift from server data
@@ -227,6 +426,256 @@ actor LocalStoreActor {
             }
         )
         return try modelContext.fetch(descriptor)
+    }
+
+    // MARK: - Local Recurring Shift Write Operations
+
+    func createRecurringShift(
+        userId: String,
+        startTime: String,
+        endTime: String,
+        repeatIntervalWeeks: Int,
+        selectedDays: SelectedDays,
+        endCondition: EndCondition?,
+        exclusions: [String]?,
+        dateSpecificSupplements: [String: CustomSupplementsData]?
+    ) throws -> RecurringShiftRow {
+        let id = UUID().uuidString.lowercased()
+        let now = Date()
+
+        let selectedDaysData = (try? canonicalJSONEncoder.encode(selectedDays)) ?? Data()
+        let endConditionData = endCondition.flatMap { try? canonicalJSONEncoder.encode($0) }
+        let exclusionsData = exclusions.flatMap { try? canonicalJSONEncoder.encode($0) }
+        let supplementsData = dateSpecificSupplements.flatMap { try? canonicalJSONEncoder.encode($0) }
+
+        let serverSnapshot = RecurringShiftServerSnapshot(
+            startTime: startTime,
+            endTime: endTime,
+            repeatIntervalWeeks: repeatIntervalWeeks,
+            selectedDays: selectedDaysData,
+            endCondition: endConditionData,
+            exclusions: exclusionsData,
+            dateSpecificSupplements: supplementsData,
+            updatedAt: now,
+            revision: 0,
+            deletedAt: nil
+        )
+
+        let allFields = RecurringShiftField.allCases.map { $0.rawValue }
+        let dirtyFieldsData = (try? canonicalJSONEncoder.encode(allFields)) ?? Data()
+
+        let localShift = LocalRecurringShift(
+            id: id,
+            userId: userId,
+            startTime: startTime,
+            endTime: endTime,
+            repeatIntervalWeeks: repeatIntervalWeeks,
+            selectedDays: selectedDaysData,
+            endCondition: endConditionData,
+            exclusions: exclusionsData,
+            dateSpecificSupplements: supplementsData,
+            serverUpdatedAt: now,
+            serverRevision: 0,
+            serverDeletedAt: nil,
+            syncStatus: .dirty,
+            dirtyFields: dirtyFieldsData,
+            lastSyncedSnapshot: serverSnapshot.encoded(),
+            localUpdatedAt: now,
+            conflictServerSnapshot: nil
+        )
+
+        modelContext.insert(localShift)
+        try modelContext.save()
+        return localShift.toRecurringShiftRow()
+    }
+
+    func updateRecurringShift(
+        id: String,
+        startTime: String?,
+        endTime: String?,
+        repeatIntervalWeeks: Int?,
+        selectedDays: SelectedDays?,
+        endCondition: EndCondition?,
+        exclusions: [String]?,
+        dateSpecificSupplements: [String: CustomSupplementsData]?
+    ) throws -> RecurringShiftRow {
+        let descriptor = FetchDescriptor<LocalRecurringShift>(
+            predicate: #Predicate { $0.id == id }
+        )
+
+        guard let localShift = try modelContext.fetch(descriptor).first else {
+            throw LocalStoreWriteError.notFound
+        }
+
+        var newDirtyFields = localShift.dirtyFieldKeys
+        let now = Date()
+
+        if let newStart = startTime, newStart != localShift.startTime {
+            localShift.startTime = newStart
+            newDirtyFields.insert(.startTime)
+        }
+
+        if let newEnd = endTime, newEnd != localShift.endTime {
+            localShift.endTime = newEnd
+            newDirtyFields.insert(.endTime)
+        }
+
+        if let newInterval = repeatIntervalWeeks, newInterval != localShift.repeatIntervalWeeks {
+            localShift.repeatIntervalWeeks = newInterval
+            newDirtyFields.insert(.repeatIntervalWeeks)
+        }
+
+        if let newDays = selectedDays {
+            let newData = (try? canonicalJSONEncoder.encode(newDays)) ?? Data()
+            if newData != localShift.selectedDays {
+                localShift.selectedDays = newData
+                newDirtyFields.insert(.selectedDays)
+            }
+        }
+
+        if let newCondition = endCondition {
+            let newData = try? canonicalJSONEncoder.encode(newCondition)
+            if newData != localShift.endCondition {
+                localShift.endCondition = newData
+                newDirtyFields.insert(.endCondition)
+            }
+        }
+
+        if let newExclusions = exclusions {
+            let newData = try? canonicalJSONEncoder.encode(newExclusions)
+            if newData != localShift.exclusions {
+                localShift.exclusions = newData
+                newDirtyFields.insert(.exclusions)
+            }
+        }
+
+        if let newSupplements = dateSpecificSupplements {
+            let newData = try? canonicalJSONEncoder.encode(newSupplements)
+            if newData != localShift.dateSpecificSupplements {
+                localShift.dateSpecificSupplements = newData
+                newDirtyFields.insert(.dateSpecificSupplements)
+            }
+        }
+
+        localShift.dirtyFieldKeys = newDirtyFields
+        localShift.localUpdatedAt = now
+
+        if !newDirtyFields.isEmpty && localShift.syncStatus == .clean {
+            localShift.syncStatus = .dirty
+        }
+
+        try modelContext.save()
+        return localShift.toRecurringShiftRow()
+    }
+
+    func addRecurringShiftExclusion(id: String, date: String) throws -> Bool {
+        let descriptor = FetchDescriptor<LocalRecurringShift>(
+            predicate: #Predicate { $0.id == id }
+        )
+
+        guard let localShift = try modelContext.fetch(descriptor).first else {
+            throw LocalStoreWriteError.notFound
+        }
+
+        var exclusions = localShift.decodedExclusions
+        if exclusions.contains(date) {
+            return false
+        }
+
+        exclusions.append(date)
+        localShift.decodedExclusions = exclusions
+
+        var dirtyFields = localShift.dirtyFieldKeys
+        dirtyFields.insert(.exclusions)
+        localShift.dirtyFieldKeys = dirtyFields
+
+        if localShift.syncStatus == .clean {
+            localShift.syncStatus = .dirty
+        }
+        localShift.localUpdatedAt = Date()
+
+        try modelContext.save()
+        return true
+    }
+
+    func markRecurringShiftPendingDelete(id: String) throws {
+        let descriptor = FetchDescriptor<LocalRecurringShift>(
+            predicate: #Predicate { $0.id == id }
+        )
+
+        guard let localShift = try modelContext.fetch(descriptor).first else {
+            throw LocalStoreWriteError.notFound
+        }
+
+        localShift.syncStatus = .pendingDelete
+        localShift.localUpdatedAt = Date()
+
+        try modelContext.save()
+    }
+
+    func resolveStoredRecurringShiftConflictKeepLocal(id: String) throws {
+        let descriptor = FetchDescriptor<LocalRecurringShift>(
+            predicate: #Predicate { $0.id == id }
+        )
+
+        guard let localShift = try modelContext.fetch(descriptor).first else {
+            throw LocalStoreWriteError.notFound
+        }
+
+        guard localShift.syncStatus == .conflict else {
+            throw LocalStoreWriteError.notInConflict
+        }
+
+        guard let serverSnapshot = RecurringShiftServerSnapshot.decode(
+            from: localShift.conflictServerSnapshot ?? Data()
+        ) else {
+            throw LocalStoreWriteError.missingConflictSnapshot
+        }
+
+        localShift.serverRevision = serverSnapshot.revision
+        localShift.serverUpdatedAt = serverSnapshot.updatedAt
+        localShift.syncStatus = .dirty
+        localShift.conflictServerSnapshot = nil
+        localShift.localUpdatedAt = Date()
+
+        try modelContext.save()
+    }
+
+    func resolveStoredRecurringShiftConflictKeepServer(id: String) throws {
+        let descriptor = FetchDescriptor<LocalRecurringShift>(
+            predicate: #Predicate { $0.id == id }
+        )
+
+        guard let localShift = try modelContext.fetch(descriptor).first else {
+            throw LocalStoreWriteError.notFound
+        }
+
+        guard localShift.syncStatus == .conflict else {
+            throw LocalStoreWriteError.notInConflict
+        }
+
+        let conflictData = localShift.conflictServerSnapshot ?? Data()
+        guard let serverSnapshot = RecurringShiftServerSnapshot.decode(from: conflictData) else {
+            throw LocalStoreWriteError.missingConflictSnapshot
+        }
+
+        localShift.startTime = serverSnapshot.startTime
+        localShift.endTime = serverSnapshot.endTime
+        localShift.repeatIntervalWeeks = serverSnapshot.repeatIntervalWeeks
+        localShift.selectedDays = serverSnapshot.selectedDays
+        localShift.endCondition = serverSnapshot.endCondition
+        localShift.exclusions = serverSnapshot.exclusions
+        localShift.dateSpecificSupplements = serverSnapshot.dateSpecificSupplements
+        localShift.serverRevision = serverSnapshot.revision
+        localShift.serverUpdatedAt = serverSnapshot.updatedAt
+        localShift.serverDeletedAt = serverSnapshot.deletedAt
+        localShift.syncStatus = .clean
+        localShift.dirtyFieldKeys = []
+        localShift.lastSyncedSnapshot = conflictData
+        localShift.conflictServerSnapshot = nil
+        localShift.localUpdatedAt = Date()
+
+        try modelContext.save()
     }
 
     // MARK: - Wage Snapshot Operations
@@ -294,6 +743,243 @@ actor LocalStoreActor {
         return try modelContext.fetch(descriptor)
     }
 
+    // MARK: - Local Wage Snapshot Write Operations
+
+    func createWageSnapshot(
+        userId: String,
+        fromDate: Date?,
+        hourlyWage: Double,
+        wageLevel: Int?,
+        supplements: SupplementRulesSnapshot,
+        taxEnabled: Bool?,
+        taxPercentage: Double?,
+        breakEnabled: Bool?,
+        breakMethod: String?,
+        breakThresholdHours: Double?,
+        breakDeductionMinutes: Int?
+    ) throws -> WageSnapshot {
+        let id = UUID().uuidString.lowercased()
+        let now = Date()
+
+        let supplementsData = (try? canonicalJSONEncoder.encode(supplements)) ?? Data()
+
+        let dateFormatter = isoDateFormatter()
+        let fromDateString = fromDate.map { dateFormatter.string(from: $0) }
+
+        let serverSnapshot = WageSnapshotServerSnapshot(
+            fromDate: fromDateString,
+            hourlyWage: hourlyWage,
+            wageLevel: wageLevel,
+            supplements: supplementsData,
+            taxEnabled: taxEnabled,
+            taxPercentage: taxPercentage,
+            breakEnabled: breakEnabled,
+            breakMethod: breakMethod,
+            breakThresholdHours: breakThresholdHours,
+            breakDeductionMinutes: breakDeductionMinutes,
+            updatedAt: now,
+            revision: 0,
+            deletedAt: nil
+        )
+
+        let allFields = WageSnapshotField.allCases.map { $0.rawValue }
+        let dirtyFieldsData = (try? canonicalJSONEncoder.encode(allFields)) ?? Data()
+
+        let localSnapshot = LocalWageSnapshot(
+            id: id,
+            userId: userId,
+            fromDate: fromDate,
+            hourlyWage: hourlyWage,
+            wageLevel: wageLevel,
+            supplements: supplementsData,
+            taxEnabled: taxEnabled,
+            taxPercentage: taxPercentage,
+            breakEnabled: breakEnabled,
+            breakMethod: breakMethod,
+            breakThresholdHours: breakThresholdHours,
+            breakDeductionMinutes: breakDeductionMinutes,
+            serverUpdatedAt: now,
+            serverRevision: 0,
+            serverDeletedAt: nil,
+            syncStatus: .dirty,
+            dirtyFields: dirtyFieldsData,
+            lastSyncedSnapshot: serverSnapshot.encoded(),
+            localUpdatedAt: now,
+            conflictServerSnapshot: nil
+        )
+
+        modelContext.insert(localSnapshot)
+        try modelContext.save()
+        return localSnapshot.toWageSnapshot()
+    }
+
+    func updateWageSnapshot(
+        id: String,
+        hourlyWage: Double?,
+        wageLevel: Int?,
+        supplements: SupplementRulesSnapshot?,
+        taxEnabled: Bool?,
+        taxPercentage: Double?,
+        breakEnabled: Bool?,
+        breakMethod: String?,
+        breakThresholdHours: Double?,
+        breakDeductionMinutes: Int?
+    ) throws -> WageSnapshot {
+        let descriptor = FetchDescriptor<LocalWageSnapshot>(
+            predicate: #Predicate { $0.id == id }
+        )
+
+        guard let localSnapshot = try modelContext.fetch(descriptor).first else {
+            throw LocalStoreWriteError.notFound
+        }
+
+        var newDirtyFields = localSnapshot.dirtyFieldKeys
+        let now = Date()
+
+        if let newWage = hourlyWage, newWage != localSnapshot.hourlyWage {
+            localSnapshot.hourlyWage = newWage
+            newDirtyFields.insert(.hourlyWage)
+        }
+
+        if let newLevel = wageLevel, newLevel != localSnapshot.wageLevel {
+            localSnapshot.wageLevel = newLevel
+            newDirtyFields.insert(.wageLevel)
+        }
+
+        if let newSupplements = supplements {
+            let newData = (try? canonicalJSONEncoder.encode(newSupplements)) ?? Data()
+            if newData != localSnapshot.supplements {
+                localSnapshot.supplements = newData
+                newDirtyFields.insert(.supplements)
+            }
+        }
+
+        if let newTaxEnabled = taxEnabled, newTaxEnabled != localSnapshot.taxEnabled {
+            localSnapshot.taxEnabled = newTaxEnabled
+            newDirtyFields.insert(.taxEnabled)
+        }
+
+        if let newTaxPct = taxPercentage, newTaxPct != localSnapshot.taxPercentage {
+            localSnapshot.taxPercentage = newTaxPct
+            newDirtyFields.insert(.taxPercentage)
+        }
+
+        if let newBreakEnabled = breakEnabled, newBreakEnabled != localSnapshot.breakEnabled {
+            localSnapshot.breakEnabled = newBreakEnabled
+            newDirtyFields.insert(.breakEnabled)
+        }
+
+        if let newBreakMethod = breakMethod, newBreakMethod != localSnapshot.breakMethod {
+            localSnapshot.breakMethod = newBreakMethod
+            newDirtyFields.insert(.breakMethod)
+        }
+
+        if let newThreshold = breakThresholdHours, newThreshold != localSnapshot.breakThresholdHours {
+            localSnapshot.breakThresholdHours = newThreshold
+            newDirtyFields.insert(.breakThresholdHours)
+        }
+
+        if let newDeduction = breakDeductionMinutes, newDeduction != localSnapshot.breakDeductionMinutes {
+            localSnapshot.breakDeductionMinutes = newDeduction
+            newDirtyFields.insert(.breakDeductionMinutes)
+        }
+
+        localSnapshot.dirtyFieldKeys = newDirtyFields
+        localSnapshot.localUpdatedAt = now
+
+        if !newDirtyFields.isEmpty && localSnapshot.syncStatus == .clean {
+            localSnapshot.syncStatus = .dirty
+        }
+
+        try modelContext.save()
+        return localSnapshot.toWageSnapshot()
+    }
+
+    func markWageSnapshotPendingDelete(id: String) throws {
+        let descriptor = FetchDescriptor<LocalWageSnapshot>(
+            predicate: #Predicate { $0.id == id }
+        )
+
+        guard let localSnapshot = try modelContext.fetch(descriptor).first else {
+            throw LocalStoreWriteError.notFound
+        }
+
+        localSnapshot.syncStatus = .pendingDelete
+        localSnapshot.localUpdatedAt = Date()
+
+        try modelContext.save()
+    }
+
+    func resolveStoredWageSnapshotConflictKeepLocal(id: String) throws {
+        let descriptor = FetchDescriptor<LocalWageSnapshot>(
+            predicate: #Predicate { $0.id == id }
+        )
+
+        guard let localSnapshot = try modelContext.fetch(descriptor).first else {
+            throw LocalStoreWriteError.notFound
+        }
+
+        guard localSnapshot.syncStatus == .conflict else {
+            throw LocalStoreWriteError.notInConflict
+        }
+
+        guard let serverSnapshot = WageSnapshotServerSnapshot.decode(
+            from: localSnapshot.conflictServerSnapshot ?? Data()
+        ) else {
+            throw LocalStoreWriteError.missingConflictSnapshot
+        }
+
+        localSnapshot.serverRevision = serverSnapshot.revision
+        localSnapshot.serverUpdatedAt = serverSnapshot.updatedAt
+        localSnapshot.syncStatus = .dirty
+        localSnapshot.conflictServerSnapshot = nil
+        localSnapshot.localUpdatedAt = Date()
+
+        try modelContext.save()
+    }
+
+    func resolveStoredWageSnapshotConflictKeepServer(id: String) throws {
+        let descriptor = FetchDescriptor<LocalWageSnapshot>(
+            predicate: #Predicate { $0.id == id }
+        )
+
+        guard let localSnapshot = try modelContext.fetch(descriptor).first else {
+            throw LocalStoreWriteError.notFound
+        }
+
+        guard localSnapshot.syncStatus == .conflict else {
+            throw LocalStoreWriteError.notInConflict
+        }
+
+        let conflictData = localSnapshot.conflictServerSnapshot ?? Data()
+        guard let serverSnapshot = WageSnapshotServerSnapshot.decode(from: conflictData) else {
+            throw LocalStoreWriteError.missingConflictSnapshot
+        }
+
+        let dateFormatter = isoDateFormatter()
+
+        localSnapshot.fromDate = serverSnapshot.fromDate.flatMap { dateFormatter.date(from: $0) }
+        localSnapshot.hourlyWage = serverSnapshot.hourlyWage
+        localSnapshot.wageLevel = serverSnapshot.wageLevel
+        localSnapshot.supplements = serverSnapshot.supplements
+        localSnapshot.taxEnabled = serverSnapshot.taxEnabled
+        localSnapshot.taxPercentage = serverSnapshot.taxPercentage
+        localSnapshot.breakEnabled = serverSnapshot.breakEnabled
+        localSnapshot.breakMethod = serverSnapshot.breakMethod
+        localSnapshot.breakThresholdHours = serverSnapshot.breakThresholdHours
+        localSnapshot.breakDeductionMinutes = serverSnapshot.breakDeductionMinutes
+        localSnapshot.serverRevision = serverSnapshot.revision
+        localSnapshot.serverUpdatedAt = serverSnapshot.updatedAt
+        localSnapshot.serverDeletedAt = serverSnapshot.deletedAt
+        localSnapshot.syncStatus = .clean
+        localSnapshot.dirtyFieldKeys = []
+        localSnapshot.lastSyncedSnapshot = conflictData
+        localSnapshot.conflictServerSnapshot = nil
+        localSnapshot.localUpdatedAt = Date()
+
+        try modelContext.save()
+    }
+
     // MARK: - User Settings Operations
 
     /// Upsert user settings from server data
@@ -343,6 +1029,157 @@ actor LocalStoreActor {
             }
         )
         return try modelContext.fetch(descriptor).first
+    }
+
+    // MARK: - Local User Settings Write Operations
+
+    func updateUserSettings(
+        userId: String,
+        monthlyGoal: Int?,
+        defaultShiftsView: String?,
+        profilePictureUrl: String?,
+        payrollDay: Int?,
+        theme: String?,
+        halfTaxMonth: Int?,
+        currency: String?
+    ) throws -> UserSettings {
+        let descriptor = FetchDescriptor<LocalUserSettings>(
+            predicate: #Predicate { $0.userId == userId }
+        )
+
+        guard let localSettings = try modelContext.fetch(descriptor).first else {
+            throw LocalStoreWriteError.notFound
+        }
+
+        var newDirtyFields = localSettings.dirtyFieldKeys
+        let now = Date()
+
+        if let newGoal = monthlyGoal, newGoal != localSettings.monthlyGoal {
+            localSettings.monthlyGoal = newGoal
+            newDirtyFields.insert(.monthlyGoal)
+        }
+
+        if let newView = defaultShiftsView, newView != localSettings.defaultShiftsView {
+            localSettings.defaultShiftsView = newView
+            newDirtyFields.insert(.defaultShiftsView)
+        }
+
+        if let newUrl = profilePictureUrl, newUrl != localSettings.profilePictureUrl {
+            localSettings.profilePictureUrl = newUrl
+            newDirtyFields.insert(.profilePictureUrl)
+        }
+
+        if let newDay = payrollDay, newDay != localSettings.payrollDay {
+            localSettings.payrollDay = newDay
+            newDirtyFields.insert(.payrollDay)
+        }
+
+        if let newTheme = theme, newTheme != localSettings.theme {
+            localSettings.theme = newTheme
+            newDirtyFields.insert(.theme)
+        }
+
+        if let newHalfTax = halfTaxMonth, newHalfTax != localSettings.halfTaxMonth {
+            localSettings.halfTaxMonth = newHalfTax
+            newDirtyFields.insert(.halfTaxMonth)
+        }
+
+        if let newCurrency = currency, newCurrency != localSettings.currency {
+            localSettings.currency = newCurrency
+            newDirtyFields.insert(.currency)
+        }
+
+        localSettings.dirtyFieldKeys = newDirtyFields
+        localSettings.localUpdatedAt = now
+
+        if !newDirtyFields.isEmpty && localSettings.syncStatus == .clean {
+            localSettings.syncStatus = .dirty
+        }
+
+        try modelContext.save()
+        return localSettings.toUserSettings()
+    }
+
+    func updateUserSettingsLastActive(userId: String) throws -> Bool {
+        let descriptor = FetchDescriptor<LocalUserSettings>(
+            predicate: #Predicate { $0.userId == userId }
+        )
+
+        guard let localSettings = try modelContext.fetch(descriptor).first else {
+            return false
+        }
+
+        let now = Date()
+        localSettings.lastActive = now
+        localSettings.localUpdatedAt = now
+
+        try modelContext.save()
+        return true
+    }
+
+    func resolveStoredUserSettingsConflictKeepLocal(userId: String) throws {
+        let descriptor = FetchDescriptor<LocalUserSettings>(
+            predicate: #Predicate { $0.userId == userId }
+        )
+
+        guard let localSettings = try modelContext.fetch(descriptor).first else {
+            throw LocalStoreWriteError.notFound
+        }
+
+        guard localSettings.syncStatus == .conflict else {
+            throw LocalStoreWriteError.notInConflict
+        }
+
+        guard let serverSnapshot = UserSettingsServerSnapshot.decode(
+            from: localSettings.conflictServerSnapshot ?? Data()
+        ) else {
+            throw LocalStoreWriteError.missingConflictSnapshot
+        }
+
+        localSettings.serverRevision = serverSnapshot.revision
+        localSettings.serverUpdatedAt = serverSnapshot.updatedAt
+        localSettings.syncStatus = .dirty
+        localSettings.conflictServerSnapshot = nil
+        localSettings.localUpdatedAt = Date()
+
+        try modelContext.save()
+    }
+
+    func resolveStoredUserSettingsConflictKeepServer(userId: String) throws {
+        let descriptor = FetchDescriptor<LocalUserSettings>(
+            predicate: #Predicate { $0.userId == userId }
+        )
+
+        guard let localSettings = try modelContext.fetch(descriptor).first else {
+            throw LocalStoreWriteError.notFound
+        }
+
+        guard localSettings.syncStatus == .conflict else {
+            throw LocalStoreWriteError.notInConflict
+        }
+
+        let conflictData = localSettings.conflictServerSnapshot ?? Data()
+        guard let serverSnapshot = UserSettingsServerSnapshot.decode(from: conflictData) else {
+            throw LocalStoreWriteError.missingConflictSnapshot
+        }
+
+        localSettings.monthlyGoal = serverSnapshot.monthlyGoal
+        localSettings.defaultShiftsView = serverSnapshot.defaultShiftsView
+        localSettings.profilePictureUrl = serverSnapshot.profilePictureUrl
+        localSettings.payrollDay = serverSnapshot.payrollDay
+        localSettings.theme = serverSnapshot.theme
+        localSettings.halfTaxMonth = serverSnapshot.halfTaxMonth
+        localSettings.currency = serverSnapshot.currency
+        localSettings.lastActive = serverSnapshot.lastActive
+        localSettings.serverRevision = serverSnapshot.revision
+        localSettings.serverUpdatedAt = serverSnapshot.updatedAt
+        localSettings.syncStatus = .clean
+        localSettings.dirtyFieldKeys = []
+        localSettings.lastSyncedSnapshot = conflictData
+        localSettings.conflictServerSnapshot = nil
+        localSettings.localUpdatedAt = Date()
+
+        try modelContext.save()
     }
 
     // MARK: - Conflict Helpers
@@ -447,9 +1284,7 @@ actor LocalStoreActor {
 
         guard let existing = try? modelContext.fetch(descriptor).first else { return }
 
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd"
-        dateFormatter.timeZone = TimeZone(identifier: "UTC")
+        let dateFormatter = isoDateFormatter()
 
         existing.shiftDate = dateFormatter.date(from: serverRow.shift_date) ?? existing.shiftDate
         existing.startTime = serverRow.start_time
@@ -501,9 +1336,7 @@ actor LocalStoreActor {
 
         guard let existing = try? modelContext.fetch(descriptor).first else { return }
 
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd"
-        dateFormatter.timeZone = TimeZone(identifier: "UTC")
+        let dateFormatter = isoDateFormatter()
 
         // Apply server changes only for non-dirty fields
         if !localDirtyFields.contains(.shiftDate) {
@@ -637,9 +1470,7 @@ actor LocalStoreActor {
 
         guard let existing = try? modelContext.fetch(descriptor).first else { return }
 
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd"
-        dateFormatter.timeZone = TimeZone(identifier: "UTC")
+        let dateFormatter = isoDateFormatter()
 
         existing.fromDate = serverRow.from_date.flatMap { dateFormatter.date(from: $0) }
         existing.hourlyWage = serverRow.hourly_wage
@@ -694,9 +1525,7 @@ actor LocalStoreActor {
 
         guard let existing = try? modelContext.fetch(descriptor).first else { return }
 
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd"
-        dateFormatter.timeZone = TimeZone(identifier: "UTC")
+        let dateFormatter = isoDateFormatter()
 
         if !localDirtyFields.contains(.fromDate) {
             existing.fromDate = serverRow.from_date.flatMap { dateFormatter.date(from: $0) }
@@ -850,9 +1679,7 @@ actor LocalStoreActor {
 
         guard let existing = try? modelContext.fetch(descriptor).first else { return }
 
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd"
-        dateFormatter.timeZone = TimeZone(identifier: "UTC")
+        let dateFormatter = isoDateFormatter()
 
         // Update with canonical server values
         existing.shiftDate = dateFormatter.date(from: serverRow.shift_date) ?? existing.shiftDate
@@ -932,9 +1759,7 @@ actor LocalStoreActor {
 
         guard let existing = try? modelContext.fetch(descriptor).first else { return }
 
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd"
-        dateFormatter.timeZone = TimeZone(identifier: "UTC")
+        let dateFormatter = isoDateFormatter()
 
         // Overwrite local with server snapshot
         existing.shiftDate = dateFormatter.date(from: serverSnapshot.shiftDate) ?? existing.shiftDate
@@ -1100,9 +1925,7 @@ actor LocalStoreActor {
 
         guard let existing = try? modelContext.fetch(descriptor).first else { return }
 
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd"
-        dateFormatter.timeZone = TimeZone(identifier: "UTC")
+        let dateFormatter = isoDateFormatter()
 
         existing.fromDate = serverRow.from_date.flatMap { dateFormatter.date(from: $0) }
         existing.hourlyWage = serverRow.hourly_wage
@@ -1182,9 +2005,7 @@ actor LocalStoreActor {
 
         guard let existing = try? modelContext.fetch(descriptor).first else { return }
 
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd"
-        dateFormatter.timeZone = TimeZone(identifier: "UTC")
+        let dateFormatter = isoDateFormatter()
 
         existing.fromDate = serverSnapshot.fromDate.flatMap { dateFormatter.date(from: $0) }
         existing.hourlyWage = serverSnapshot.hourlyWage

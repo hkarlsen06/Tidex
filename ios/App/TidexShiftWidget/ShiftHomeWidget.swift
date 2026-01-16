@@ -544,15 +544,6 @@ struct ShiftWidgetProvider: TimelineProvider {
         }
 
         let calendar = Calendar.current
-        let today = calendar.startOfDay(for: Date())
-        let shiftDay = calendar.startOfDay(for: shiftDate)
-
-        // Only check for "ended" status if the shift is today
-        // Past day shifts use the pastShift layout with days-ago countdown
-        guard calendar.isDate(shiftDay, inSameDayAs: today) else {
-            return false
-        }
-
         // Parse end time (HH:mm)
         let endComponents = endTime.split(separator: ":").compactMap { Int($0) }
         guard endComponents.count >= 2 else {
@@ -581,7 +572,12 @@ struct ShiftWidgetProvider: TimelineProvider {
             shiftEndDateTime = calendar.date(byAdding: .day, value: 1, to: shiftEndDateTime) ?? shiftEndDateTime
         }
 
-        return Date() >= shiftEndDateTime
+        guard Date() >= shiftEndDateTime else {
+            return false
+        }
+
+        // Only treat as "ended" if the end time is today
+        return calendar.isDate(shiftEndDateTime, inSameDayAs: Date())
     }
 
     /// Determine the layout state based on midnight crossings
@@ -641,13 +637,18 @@ struct ShiftWidgetProvider: TimelineProvider {
         let formattedEarnings = formatCurrency(netEarnings, symbol: currencySymbol)
 
         // Determine layout state using midnight-crossing logic
-        let (layoutState, daysRemaining) = determineLayoutState(shiftDateString: shift.shiftDate)
+        var (layoutState, daysRemaining) = determineLayoutState(shiftDateString: shift.shiftDate)
 
         // Check if shift has already started (for time emphasis swap)
         let shiftStarted = hasShiftStarted(shiftDateString: shift.shiftDate, startTime: shift.startTime)
 
         // Check if shift has already ended (for showing "Ferdig" / "Done")
         let shiftEnded = hasShiftEnded(shiftDateString: shift.shiftDate, startTime: shift.startTime, endTime: shift.endTime)
+
+        // Ensure cross-midnight or recently ended shifts don't fall into pastShift layout
+        if shiftStarted || shiftEnded {
+            layoutState = .todayOrTomorrow
+        }
 
         // Format date (pass daysRemaining for past shift formatting)
         let formattedDate = formatShiftDate(shift.shiftDate, locale: locale, daysRemaining: daysRemaining)

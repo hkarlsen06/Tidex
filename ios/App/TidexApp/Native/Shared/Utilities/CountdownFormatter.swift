@@ -75,7 +75,9 @@ struct CountdownFormatter {
     private static func parseShiftDateTime(date: String, time: String, crossesMidnight: Bool = false) -> Date? {
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd HH:mm"
-        dateFormatter.timeZone = Date.osloTimeZone
+        dateFormatter.calendar = Calendar(identifier: .gregorian)
+        dateFormatter.locale = Locale(identifier: "en_US_POSIX")
+        dateFormatter.timeZone = Date.localTimeZone
 
         let dateTimeString = "\(date) \(time)"
         guard var result = dateFormatter.date(from: dateTimeString) else { return nil }

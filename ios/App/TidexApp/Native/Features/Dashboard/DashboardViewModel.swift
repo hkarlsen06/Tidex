@@ -839,7 +839,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
         components.year = year
         components.month = month
         components.day = day
-        components.timeZone = Date.osloTimeZone
+        components.timeZone = Date.localTimeZone
         return Calendar(identifier: .gregorian).date(from: components) ?? Date()
     }
 

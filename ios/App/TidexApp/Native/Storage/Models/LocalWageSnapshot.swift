@@ -113,7 +113,9 @@ final class LocalWageSnapshot {
         guard let date = fromDate else { return nil }
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
-        formatter.timeZone = TimeZone(identifier: "UTC")
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = Date.localTimeZone
         return formatter.string(from: date)
     }
 
@@ -340,7 +342,9 @@ extension LocalWageSnapshot {
     ) -> LocalWageSnapshot {
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd"
-        dateFormatter.timeZone = TimeZone(identifier: "UTC")
+        dateFormatter.calendar = Calendar(identifier: .gregorian)
+        dateFormatter.locale = Locale(identifier: "en_US_POSIX")
+        dateFormatter.timeZone = Date.localTimeZone
 
         let fromDate = serverRow.from_date.flatMap { dateFormatter.date(from: $0) }
 

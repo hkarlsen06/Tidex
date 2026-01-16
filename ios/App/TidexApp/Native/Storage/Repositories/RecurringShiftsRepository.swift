@@ -128,59 +128,20 @@ final class RecurringShiftsRepository: ObservableObject {
         exclusions: [String]? = nil,
         dateSpecificSupplements: [String: CustomSupplementsData]? = nil
     ) async throws -> RecurringShiftRow {
-        let id = UUID().uuidString.lowercased()
-        let now = Date()
-
-        // Encode JSON fields
-        let selectedDaysData = (try? canonicalJSONEncoder.encode(selectedDays)) ?? Data()
-        let endConditionData = endCondition.flatMap { try? canonicalJSONEncoder.encode($0) }
-        let exclusionsData = exclusions.flatMap { try? canonicalJSONEncoder.encode($0) }
-        let supplementsData = dateSpecificSupplements.flatMap { try? canonicalJSONEncoder.encode($0) }
-
-        // Create server snapshot for tracking
-        let serverSnapshot = RecurringShiftServerSnapshot(
-            startTime: startTime,
-            endTime: endTime,
-            repeatIntervalWeeks: repeatIntervalWeeks,
-            selectedDays: selectedDaysData,
-            endCondition: endConditionData,
-            exclusions: exclusionsData,
-            dateSpecificSupplements: supplementsData,
-            updatedAt: now,
-            revision: 0,
-            deletedAt: nil
-        )
-
-        // Mark all fields as dirty for new record
-        let allFields = RecurringShiftField.allCases.map { $0.rawValue }
-        let dirtyFieldsData = (try? canonicalJSONEncoder.encode(allFields)) ?? Data()
-
-        let localShift = LocalRecurringShift(
-            id: id,
+        let createdShift = try await localStore.storeActor.createRecurringShift(
             userId: userId,
             startTime: startTime,
             endTime: endTime,
             repeatIntervalWeeks: repeatIntervalWeeks,
-            selectedDays: selectedDaysData,
-            endCondition: endConditionData,
-            exclusions: exclusionsData,
-            dateSpecificSupplements: supplementsData,
-            serverUpdatedAt: now,
-            serverRevision: 0,
-            serverDeletedAt: nil,
-            syncStatus: .dirty,
-            dirtyFields: dirtyFieldsData,
-            lastSyncedSnapshot: serverSnapshot.encoded(),
-            localUpdatedAt: now,
-            conflictServerSnapshot: nil
+            selectedDays: selectedDays,
+            endCondition: endCondition,
+            exclusions: exclusions,
+            dateSpecificSupplements: dateSpecificSupplements
         )
 
-        try await localStore.storeActor.upsertRecurringShift(localShift)
-        try await localStore.storeActor.save()
+        logger.info("Created new local recurring shift: \(createdShift.id)")
 
-        logger.info("Created new local recurring shift: \(id)")
-
-        return localShift.toRecurringShiftRow()
+        return createdShift
     }
 
     /// Update a recurring shift locally
@@ -204,80 +165,27 @@ final class RecurringShiftsRepository: ObservableObject {
         exclusions: [String]? = nil,
         dateSpecificSupplements: [String: CustomSupplementsData]? = nil
     ) async throws -> RecurringShiftRow? {
-        let context = localStore.mainContext
+        do {
+            let updatedShift = try await localStore.storeActor.updateRecurringShift(
+                id: id,
+                startTime: startTime,
+                endTime: endTime,
+                repeatIntervalWeeks: repeatIntervalWeeks,
+                selectedDays: selectedDays,
+                endCondition: endCondition,
+                exclusions: exclusions,
+                dateSpecificSupplements: dateSpecificSupplements
+            )
 
-        let descriptor = FetchDescriptor<LocalRecurringShift>(
-            predicate: #Predicate { $0.id == id }
-        )
+            logger.info("Updated local recurring shift: \(id)")
 
-        guard let localShift = try context.fetch(descriptor).first else {
+            return updatedShift
+        } catch LocalStoreWriteError.notFound {
             logger.warning("Recurring shift not found for update: \(id)")
             return nil
+        } catch {
+            throw error
         }
-
-        var newDirtyFields = localShift.dirtyFieldKeys
-        let now = Date()
-
-        if let newStart = startTime, newStart != localShift.startTime {
-            localShift.startTime = newStart
-            newDirtyFields.insert(.startTime)
-        }
-
-        if let newEnd = endTime, newEnd != localShift.endTime {
-            localShift.endTime = newEnd
-            newDirtyFields.insert(.endTime)
-        }
-
-        if let newInterval = repeatIntervalWeeks, newInterval != localShift.repeatIntervalWeeks {
-            localShift.repeatIntervalWeeks = newInterval
-            newDirtyFields.insert(.repeatIntervalWeeks)
-        }
-
-        if let newDays = selectedDays {
-            let newData = (try? canonicalJSONEncoder.encode(newDays)) ?? Data()
-            if newData != localShift.selectedDays {
-                localShift.selectedDays = newData
-                newDirtyFields.insert(.selectedDays)
-            }
-        }
-
-        if let newCondition = endCondition {
-            let newData = try? canonicalJSONEncoder.encode(newCondition)
-            if newData != localShift.endCondition {
-                localShift.endCondition = newData
-                newDirtyFields.insert(.endCondition)
-            }
-        }
-
-        if let newExclusions = exclusions {
-            let newData = try? canonicalJSONEncoder.encode(newExclusions)
-            if newData != localShift.exclusions {
-                localShift.exclusions = newData
-                newDirtyFields.insert(.exclusions)
-            }
-        }
-
-        if let newSupplements = dateSpecificSupplements {
-            let newData = try? canonicalJSONEncoder.encode(newSupplements)
-            if newData != localShift.dateSpecificSupplements {
-                localShift.dateSpecificSupplements = newData
-                newDirtyFields.insert(.dateSpecificSupplements)
-            }
-        }
-
-        localShift.dirtyFieldKeys = newDirtyFields
-        localShift.localUpdatedAt = now
-
-        if !newDirtyFields.isEmpty && localShift.syncStatus == .clean {
-            localShift.syncStatus = .dirty
-        }
-
-        try await localStore.storeActor.upsertRecurringShift(localShift)
-        try await localStore.storeActor.save()
-
-        logger.info("Updated local recurring shift: \(id), dirty fields: \(newDirtyFields.map { $0.rawValue })")
-
-        return localShift.toRecurringShiftRow()
     }
 
     /// Add an exclusion date to a recurring shift
@@ -285,59 +193,29 @@ final class RecurringShiftsRepository: ObservableObject {
     ///   - id: Recurring shift ID
     ///   - date: Date to exclude (ISO string YYYY-MM-DD)
     func addExclusion(id: String, date: String) async throws {
-        let context = localStore.mainContext
-
-        let descriptor = FetchDescriptor<LocalRecurringShift>(
-            predicate: #Predicate { $0.id == id }
-        )
-
-        guard let localShift = try context.fetch(descriptor).first else {
-            logger.warning("Recurring shift not found for exclusion: \(id)")
-            return
-        }
-
-        var exclusions = localShift.decodedExclusions
-        if !exclusions.contains(date) {
-            exclusions.append(date)
-            localShift.decodedExclusions = exclusions
-
-            var dirtyFields = localShift.dirtyFieldKeys
-            dirtyFields.insert(.exclusions)
-            localShift.dirtyFieldKeys = dirtyFields
-
-            if localShift.syncStatus == .clean {
-                localShift.syncStatus = .dirty
+        do {
+            let didAdd = try await localStore.storeActor.addRecurringShiftExclusion(id: id, date: date)
+            if didAdd {
+                logger.info("Added exclusion \(date) to recurring shift: \(id)")
             }
-            localShift.localUpdatedAt = Date()
-
-            try await localStore.storeActor.upsertRecurringShift(localShift)
-            try await localStore.storeActor.save()
-
-            logger.info("Added exclusion \(date) to recurring shift: \(id)")
+        } catch LocalStoreWriteError.notFound {
+            logger.warning("Recurring shift not found for exclusion: \(id)")
+        } catch {
+            throw error
         }
     }
 
     /// Mark a recurring shift for deletion
     /// - Parameter id: Recurring shift ID
     func deleteRecurringShift(id: String) async throws {
-        let context = localStore.mainContext
-
-        let descriptor = FetchDescriptor<LocalRecurringShift>(
-            predicate: #Predicate { $0.id == id }
-        )
-
-        guard let localShift = try context.fetch(descriptor).first else {
+        do {
+            try await localStore.storeActor.markRecurringShiftPendingDelete(id: id)
+            logger.info("Marked recurring shift for deletion: \(id)")
+        } catch LocalStoreWriteError.notFound {
             logger.warning("Recurring shift not found for deletion: \(id)")
-            return
+        } catch {
+            throw error
         }
-
-        localShift.syncStatus = .pendingDelete
-        localShift.localUpdatedAt = Date()
-
-        try await localStore.storeActor.upsertRecurringShift(localShift)
-        try await localStore.storeActor.save()
-
-        logger.info("Marked recurring shift for deletion: \(id)")
     }
 
     // MARK: - Conflict Resolution
@@ -345,85 +223,35 @@ final class RecurringShiftsRepository: ObservableObject {
     /// Resolve a conflict by keeping the local version
     /// - Parameter id: Recurring shift ID
     func resolveConflictKeepLocal(id: String) async throws {
-        let context = localStore.mainContext
-
-        let descriptor = FetchDescriptor<LocalRecurringShift>(
-            predicate: #Predicate { $0.id == id }
-        )
-
-        guard let localShift = try context.fetch(descriptor).first else {
+        do {
+            try await localStore.storeActor.resolveStoredRecurringShiftConflictKeepLocal(id: id)
+            logger.info("Resolved conflict (kept local) for recurring shift: \(id)")
+        } catch LocalStoreWriteError.notFound {
             logger.warning("Recurring shift not found for conflict resolution: \(id)")
-            return
-        }
-
-        guard localShift.syncStatus == .conflict else {
+        } catch LocalStoreWriteError.notInConflict {
             logger.warning("Recurring shift is not in conflict state: \(id)")
-            return
-        }
-
-        guard let serverSnapshot = RecurringShiftServerSnapshot.decode(from: localShift.conflictServerSnapshot ?? Data()) else {
+        } catch LocalStoreWriteError.missingConflictSnapshot {
             logger.error("No server snapshot found for conflict: \(id)")
-            return
+        } catch {
+            throw error
         }
-
-        localShift.serverRevision = serverSnapshot.revision
-        localShift.serverUpdatedAt = serverSnapshot.updatedAt
-        localShift.syncStatus = .dirty
-        localShift.conflictServerSnapshot = nil
-        localShift.localUpdatedAt = Date()
-
-        try await localStore.storeActor.upsertRecurringShift(localShift)
-        try await localStore.storeActor.save()
-
-        logger.info("Resolved conflict (kept local) for recurring shift: \(id)")
     }
 
     /// Resolve a conflict by accepting the server version
     /// - Parameter id: Recurring shift ID
     func resolveConflictKeepServer(id: String) async throws {
-        let context = localStore.mainContext
-
-        let descriptor = FetchDescriptor<LocalRecurringShift>(
-            predicate: #Predicate { $0.id == id }
-        )
-
-        guard let localShift = try context.fetch(descriptor).first else {
+        do {
+            try await localStore.storeActor.resolveStoredRecurringShiftConflictKeepServer(id: id)
+            logger.info("Resolved conflict (kept server) for recurring shift: \(id)")
+        } catch LocalStoreWriteError.notFound {
             logger.warning("Recurring shift not found for conflict resolution: \(id)")
-            return
-        }
-
-        guard localShift.syncStatus == .conflict else {
+        } catch LocalStoreWriteError.notInConflict {
             logger.warning("Recurring shift is not in conflict state: \(id)")
-            return
-        }
-
-        guard let serverSnapshot = RecurringShiftServerSnapshot.decode(from: localShift.conflictServerSnapshot ?? Data()) else {
+        } catch LocalStoreWriteError.missingConflictSnapshot {
             logger.error("No server snapshot found for conflict: \(id)")
-            return
+        } catch {
+            throw error
         }
-
-        // Apply server values
-        localShift.startTime = serverSnapshot.startTime
-        localShift.endTime = serverSnapshot.endTime
-        localShift.repeatIntervalWeeks = serverSnapshot.repeatIntervalWeeks
-        localShift.selectedDays = serverSnapshot.selectedDays
-        localShift.endCondition = serverSnapshot.endCondition
-        localShift.exclusions = serverSnapshot.exclusions
-        localShift.dateSpecificSupplements = serverSnapshot.dateSpecificSupplements
-        localShift.serverRevision = serverSnapshot.revision
-        localShift.serverUpdatedAt = serverSnapshot.updatedAt
-        localShift.serverDeletedAt = serverSnapshot.deletedAt
-
-        localShift.syncStatus = .clean
-        localShift.dirtyFieldKeys = []
-        localShift.lastSyncedSnapshot = localShift.conflictServerSnapshot ?? Data()
-        localShift.conflictServerSnapshot = nil
-        localShift.localUpdatedAt = Date()
-
-        try await localStore.storeActor.upsertRecurringShift(localShift)
-        try await localStore.storeActor.save()
-
-        logger.info("Resolved conflict (kept server) for recurring shift: \(id)")
     }
 
     // MARK: - Local Shift Access (For Sync)

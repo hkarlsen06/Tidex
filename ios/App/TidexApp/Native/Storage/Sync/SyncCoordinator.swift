@@ -516,7 +516,9 @@ final class SyncCoordinator: ObservableObject {
     ) async throws {
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd"
-        dateFormatter.timeZone = TimeZone(identifier: "UTC")
+        dateFormatter.calendar = Calendar(identifier: .gregorian)
+        dateFormatter.locale = Locale(identifier: "en_US_POSIX")
+        dateFormatter.timeZone = Date.localTimeZone
 
         let shiftDate = dateFormatter.date(from: serverRow.shift_date) ?? Date()
         let supplementsData = serverRow.custom_supplements.flatMap { try? canonicalJSONEncoder.encode($0) }
@@ -974,7 +976,9 @@ final class SyncCoordinator: ObservableObject {
     ) async throws {
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd"
-        dateFormatter.timeZone = TimeZone(identifier: "UTC")
+        dateFormatter.calendar = Calendar(identifier: .gregorian)
+        dateFormatter.locale = Locale(identifier: "en_US_POSIX")
+        dateFormatter.timeZone = Date.localTimeZone
 
         let fromDate = serverRow.from_date.flatMap { dateFormatter.date(from: $0) }
 
@@ -1321,15 +1325,20 @@ final class SyncCoordinator: ObservableObject {
             updateData["end_time"] = .string(shift.endTime)
         }
         if dirtyFields.contains(.customSupplements) {
-            if let supplements = shift.decodedCustomSupplements {
-                if let jsonData = try? canonicalJSONEncoder.encode(supplements),
-                   let decoded = try? AnyJSON.decoder.decode(AnyJSON.self, from: jsonData) {
-                    updateData["custom_supplements"] = decoded
-                }
+            if let data = shift.customSupplements {
+                let decoded = try requireAnyJSON(
+                    data,
+                    table: .userShifts,
+                    id: shiftId,
+                    field: "custom_supplements"
+                )
+                updateData["custom_supplements"] = decoded
             } else {
                 updateData["custom_supplements"] = .null
             }
         }
+
+        try requireNonEmptyUpdate(updateData, table: .userShifts, id: shiftId)
 
         // Optimistic concurrency: filter by revision
         // Note: Convert Int64 to Int for PostgrestFilterValue conformance
@@ -1623,35 +1632,55 @@ final class SyncCoordinator: ObservableObject {
             updateData["repeat_interval_weeks"] = .integer(shift.repeatIntervalWeeks)
         }
         if dirtyFields.contains(.selectedDays) {
-            if let jsonData = shift.selectedDays.isEmpty ? nil : shift.selectedDays,
-               let decoded = try? AnyJSON.decoder.decode(AnyJSON.self, from: jsonData) {
-                updateData["selected_days"] = decoded
-            }
+            let decoded = try requireAnyJSON(
+                shift.selectedDays,
+                table: .recurringShifts,
+                id: shiftId,
+                field: "selected_days"
+            )
+            updateData["selected_days"] = decoded
         }
         if dirtyFields.contains(.endCondition) {
-            if let data = shift.endCondition,
-               let decoded = try? AnyJSON.decoder.decode(AnyJSON.self, from: data) {
+            if let data = shift.endCondition {
+                let decoded = try requireAnyJSON(
+                    data,
+                    table: .recurringShifts,
+                    id: shiftId,
+                    field: "end_condition"
+                )
                 updateData["end_condition"] = decoded
             } else {
                 updateData["end_condition"] = .null
             }
         }
         if dirtyFields.contains(.exclusions) {
-            if let data = shift.exclusions,
-               let decoded = try? AnyJSON.decoder.decode(AnyJSON.self, from: data) {
+            if let data = shift.exclusions {
+                let decoded = try requireAnyJSON(
+                    data,
+                    table: .recurringShifts,
+                    id: shiftId,
+                    field: "exclusions"
+                )
                 updateData["exclusions"] = decoded
             } else {
                 updateData["exclusions"] = .null
             }
         }
         if dirtyFields.contains(.dateSpecificSupplements) {
-            if let data = shift.dateSpecificSupplements,
-               let decoded = try? AnyJSON.decoder.decode(AnyJSON.self, from: data) {
+            if let data = shift.dateSpecificSupplements {
+                let decoded = try requireAnyJSON(
+                    data,
+                    table: .recurringShifts,
+                    id: shiftId,
+                    field: "date_specific_supplements"
+                )
                 updateData["date_specific_supplements"] = decoded
             } else {
                 updateData["date_specific_supplements"] = .null
             }
         }
+
+        try requireNonEmptyUpdate(updateData, table: .recurringShifts, id: shiftId)
 
         // Note: Convert Int64 to Int for PostgrestFilterValue conformance
         let serverRevision = Int(shift.serverRevision)
@@ -1922,9 +1951,13 @@ final class SyncCoordinator: ObservableObject {
             }
         }
         if dirtyFields.contains(.supplements) {
-            if let decoded = try? AnyJSON.decoder.decode(AnyJSON.self, from: snapshot.supplements) {
-                updateData["supplements"] = decoded
-            }
+            let decoded = try requireAnyJSON(
+                snapshot.supplements,
+                table: .wageSnapshots,
+                id: snapshotId,
+                field: "supplements"
+            )
+            updateData["supplements"] = decoded
         }
         if dirtyFields.contains(.taxEnabled) {
             if let enabled = snapshot.taxEnabled {
@@ -1968,6 +2001,8 @@ final class SyncCoordinator: ObservableObject {
                 updateData["break_deduction_minutes"] = .null
             }
         }
+
+        try requireNonEmptyUpdate(updateData, table: .wageSnapshots, id: snapshotId)
 
         // Note: Convert Int64 to Int for PostgrestFilterValue conformance
         let serverRevision = Int(snapshot.serverRevision)
@@ -2581,6 +2616,34 @@ final class SyncCoordinator: ObservableObject {
         }
         logger.error("Failed to parse updated_at for \(table.displayName) id=\(id): '\(string)'")
         throw SyncError.dateParsingFailed(table: table, id: id, rawValue: string)
+    }
+
+    private func requireAnyJSON(
+        _ data: Data,
+        table: SyncTable,
+        id: String,
+        field: String
+    ) throws -> AnyJSON {
+        do {
+            return try AnyJSON.decoder.decode(AnyJSON.self, from: data)
+        } catch {
+            logger.error("Failed to decode \(table.displayName) field=\(field) id=\(id)")
+            throw SyncEncodingError.payloadDecodingFailed(
+                type: "\(table.rawValue).\(field)",
+                underlyingError: error
+            )
+        }
+    }
+
+    private func requireNonEmptyUpdate(
+        _ updateData: [String: AnyJSON],
+        table: SyncTable,
+        id: String
+    ) throws {
+        guard !updateData.isEmpty else {
+            logger.error("Empty update payload for \(table.displayName) id=\(id)")
+            throw SyncEncodingError.emptyUpdatePayload(type: "\(table.rawValue).\(id)")
+        }
     }
 
     /// Format Date to ISO8601 string for Supabase queries

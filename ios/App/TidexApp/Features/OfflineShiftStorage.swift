@@ -42,6 +42,15 @@ enum OfflineShiftStorage {
     private static let appGroupId = "group.no.tidex.app"
     private static let shiftsKey = "upcoming_shifts"
 
+    private static func makeISODateFormatter() -> DateFormatter {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone.current
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter
+    }
+
     private static func sharedUserDefaults() -> UserDefaults? {
         guard FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupId) != nil else {
             return nil
@@ -74,8 +83,7 @@ enum OfflineShiftStorage {
     static func getUpcomingShifts() -> [StoredShift] {
         let allShifts = loadShifts()
         let today = Calendar.current.startOfDay(for: Date())
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
+        let formatter = makeISODateFormatter()
 
         return allShifts
             .filter { shift in
@@ -96,8 +104,7 @@ enum OfflineShiftStorage {
     ///   - locale: "no" for Norwegian, "en" for English
     /// - Returns: Formatted date string (e.g., "I dag", "Tomorrow", "Mon 12.")
     static func formatShiftDate(_ dateString: String, locale: String) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
+        let formatter = makeISODateFormatter()
         guard let shiftDate = formatter.date(from: dateString) else { return dateString }
 
         let calendar = Calendar.current
@@ -192,8 +199,7 @@ enum OfflineShiftStorage {
         // Check if next shift is today
         let nextShiftIsToday: Bool = {
             guard let next = nextShift else { return false }
-            let formatter = DateFormatter()
-            formatter.dateFormat = "yyyy-MM-dd"
+            let formatter = makeISODateFormatter()
             guard let shiftDate = formatter.date(from: next.shiftDate) else { return false }
             return calendar.isDate(shiftDate, inSameDayAs: today)
         }()
@@ -225,8 +231,7 @@ enum OfflineShiftStorage {
 
         // Calculate planned shifts (upcoming shifts this month)
         let plannedShiftsCount = upcomingAll.filter { shift in
-            let formatter = DateFormatter()
-            formatter.dateFormat = "yyyy-MM-dd"
+            let formatter = makeISODateFormatter()
             guard let shiftDate = formatter.date(from: shift.shiftDate) else { return false }
             let shiftYear = calendar.component(.year, from: shiftDate)
             let shiftMonth = calendar.component(.month, from: shiftDate)
@@ -274,8 +279,7 @@ enum OfflineShiftStorage {
 
     /// Get shifts for a specific month
     static func getShiftsForMonth(year: Int, month: Int, from shifts: [StoredShift]) -> [StoredShift] {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
+        let formatter = makeISODateFormatter()
         let calendar = Calendar.current
 
         return shifts.filter { shift in

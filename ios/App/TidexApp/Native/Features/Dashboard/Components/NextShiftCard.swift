@@ -23,7 +23,7 @@ struct NextShiftCard: View {
     }
 
     private var dateParts: (dayName: String, dayNumber: String, monthName: String) {
-        guard let date = Date.fromISODateStringUTC(shift.shiftDate) else {
+        guard let date = Date.fromISODateString(shift.shiftDate) else {
             return ("", "", "")
         }
 

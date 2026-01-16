@@ -42,6 +42,7 @@ BEGIN
     FROM user_shifts us
     WHERE us.shift_date >= CURRENT_DATE
       AND us.shift_date <= CURRENT_DATE + INTERVAL '3 days'
+      AND us.deleted_at IS NULL  -- Exclude soft-deleted shifts
   ),
   -- Cross join shifts with each user's reminder settings
   shift_reminders AS (

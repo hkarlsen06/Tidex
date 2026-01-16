@@ -318,8 +318,10 @@ struct OfflineScreenView: View {
 
     private func getUniqueMonthNames(from shifts: [StoredShift]) -> [String] {
         let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone.current
         formatter.dateFormat = "yyyy-MM-dd"
-        formatter.locale = Locale(identifier: locale == "no" ? "nb_NO" : "en_US")
 
         let monthFormatter = DateFormatter()
         monthFormatter.locale = Locale(identifier: locale == "no" ? "nb_NO" : "en_US")
@@ -368,6 +370,9 @@ struct ShiftsListSheet: View {
     /// Group shifts by month
     private var groupedShifts: [(month: String, shifts: [StoredShift])] {
         let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone.current
         formatter.dateFormat = "yyyy-MM-dd"
 
         let monthFormatter = DateFormatter()
