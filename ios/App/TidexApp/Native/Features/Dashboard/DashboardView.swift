@@ -83,6 +83,12 @@ struct DashboardView: View {
         .onDisappear {
             countdownManager.stop()
         }
+        .onReceive(NotificationCenter.default.publisher(for: .shiftsDidChange)) { _ in
+            // Reload dashboard when shifts change (e.g., after adding a shift)
+            Task {
+                await viewModel.reloadFromLocal()
+            }
+        }
     }
 
     // MARK: - Countdown Configuration
@@ -267,29 +273,42 @@ struct DashboardView: View {
     // MARK: - Empty State
 
     private var emptyStateView: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "calendar.badge.plus")
-                .font(.system(size: 48))
-                .foregroundColor(.tidexBlue)
+        PullToRefreshContainer(onRefresh: {
+            await viewModel.refresh()
+        }) {
+            GeometryReader { geometry in
+                VStack(spacing: 16) {
+                    Spacer()
 
-            Text(localization.string("dashboard.letsAddShift"))
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundColor(.tidexTextPrimary)
-                .multilineTextAlignment(.center)
+                    Image(systemName: "calendar.badge.plus")
+                        .font(.system(size: 48))
+                        .foregroundColor(.tidexBlue)
 
-            Button {
-                selectedTab = .add
-            } label: {
-                Text(localization.string("dashboard.addShiftButton"))
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 24)
-                    .padding(.vertical, 12)
-                    .background(Color.tidexBlue)
-                    .cornerRadius(10)
+                    Text(localization.string("dashboard.letsAddShift"))
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundColor(.tidexTextPrimary)
+                        .multilineTextAlignment(.center)
+
+                    Button {
+                        selectedTab = .add
+                    } label: {
+                        Text(localization.string("dashboard.addShiftButton"))
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 24)
+                            .padding(.vertical, 12)
+                            .background(Color.tidexBlue)
+                            .cornerRadius(10)
+                    }
+
+                    Spacer()
+                }
+                .frame(width: geometry.size.width, height: geometry.size.height)
+                .contentShape(Rectangle())
             }
+            .contentShape(Rectangle())
         }
-        .padding(.horizontal, 40)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     // MARK: - Error View

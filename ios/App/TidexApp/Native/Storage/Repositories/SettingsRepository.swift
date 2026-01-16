@@ -81,6 +81,27 @@ final class SettingsRepository: ObservableObject {
 
     // MARK: - Write Operations (Local with Dirty Tracking)
 
+    /// Get or create user settings
+    /// Returns existing settings if found, otherwise creates new settings with provided defaults
+    /// - Parameters:
+    ///   - userId: User ID
+    ///   - payrollDay: Payroll day (used if creating new settings)
+    ///   - currency: Currency code (used if creating new settings)
+    /// - Returns: UserSettings (existing or newly created)
+    func getOrCreateSettings(
+        for userId: String,
+        payrollDay: Int? = nil,
+        currency: String? = nil
+    ) async throws -> UserSettings {
+        let settings = try await localStore.storeActor.getOrCreateUserSettings(
+            userId: userId,
+            payrollDay: payrollDay,
+            currency: currency
+        )
+        logger.info("Got or created settings for user: \(userId)")
+        return settings
+    }
+
     /// Update user settings locally
     /// Only the changed fields will be marked dirty
     /// - Parameters:

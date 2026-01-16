@@ -106,7 +106,8 @@ final class OnboardingSaveManager: ObservableObject {
     }
 
     private func updateSettings(userId: String, payrollDay: Int, currency: String) async throws {
-        _ = try await settingsRepository.updateSettings(
+        // Use getOrCreateSettings to handle the case where no settings exist yet (new user)
+        _ = try await settingsRepository.getOrCreateSettings(
             for: userId,
             payrollDay: payrollDay,
             currency: currency

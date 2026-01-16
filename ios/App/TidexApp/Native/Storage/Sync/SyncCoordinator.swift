@@ -1313,6 +1313,11 @@ final class SyncCoordinator: ObservableObject {
             return .noChange
         }
 
+        // Check if this is a new record that needs INSERT (serverRevision == 0 means never synced)
+        if shift.serverRevision == 0 {
+            return try await insertUserShift(shift, userId: userId, storeActor: storeActor)
+        }
+
         // Build partial update
         var updateData: [String: AnyJSON] = [:]
         if dirtyFields.contains(.shiftDate) {
@@ -1390,6 +1395,13 @@ final class SyncCoordinator: ObservableObject {
                 )
             }
         } catch {
+            // Check if it's an RLS policy violation - mark as conflict, don't abort sync
+            let errorString = String(describing: error)
+            if errorString.contains("row-level security") || errorString.contains("42501") {
+                logger.warning("Shift \(shiftId.prefix(8)) blocked by RLS policy on UPDATE, marking as conflict")
+                await storeActor.markShiftConflict(id: shiftId, serverSnapshot: nil)
+                return .conflict
+            }
             logger.error("Push shift failed: \(error.localizedDescription)")
             throw error
         }
@@ -1470,6 +1482,106 @@ final class SyncCoordinator: ObservableObject {
         }
     }
 
+    /// Insert a new user shift that was created locally (serverRevision == 0)
+    private func insertUserShift(
+        _ shift: LocalUserShift,
+        userId: String,
+        storeActor: LocalStoreActor
+    ) async throws -> PushResult {
+        let shiftId = shift.id
+
+        // Build full insert data
+        var insertData: [String: AnyJSON] = [
+            "id": .string(shiftId),
+            "user_id": .string(userId),
+            "shift_date": .string(shift.shiftDateString),
+            "start_time": .string(shift.startTime),
+            "end_time": .string(shift.endTime)
+        ]
+
+        if let data = shift.customSupplements {
+            let decoded = try requireAnyJSON(
+                data,
+                table: .userShifts,
+                id: shiftId,
+                field: "custom_supplements"
+            )
+            insertData["custom_supplements"] = decoded
+        }
+
+        do {
+            let returnedRows: [SyncShiftRow] = try await supabase
+                .from("user_shifts")
+                .insert(insertData)
+                .select()
+                .execute()
+                .value
+
+            if let returnedRow = returnedRows.first {
+                let serverUpdatedAt = parseISO8601(returnedRow.updated_at) ?? Date()
+                let serverSnapshot = UserShiftServerSnapshot.from(
+                    shiftDate: returnedRow.shift_date,
+                    startTime: returnedRow.start_time,
+                    endTime: returnedRow.end_time,
+                    customSupplements: returnedRow.custom_supplements,
+                    updatedAt: serverUpdatedAt,
+                    revision: returnedRow.revision,
+                    deletedAt: nil
+                )
+
+                await storeActor.markShiftPushed(
+                    id: shiftId,
+                    serverRow: returnedRow,
+                    serverUpdatedAt: serverUpdatedAt,
+                    serverRevision: returnedRow.revision,
+                    snapshot: serverSnapshot
+                )
+
+                logger.debug("Inserted new shift \(shiftId.prefix(8))")
+                return .success
+            } else {
+                logger.error("Insert shift returned no rows for \(shiftId.prefix(8))")
+                return .conflict
+            }
+        } catch {
+            let errorString = String(describing: error)
+            // Check if it's a duplicate key error (row already exists on server)
+            if errorString.contains("duplicate") || errorString.contains("23505") {
+                logger.warning("Shift \(shiftId.prefix(8)) already exists on server, fetching and merging")
+                // Fetch the existing server row and treat as conflict
+                let serverRows: [SyncShiftRow] = try await supabase
+                    .from("user_shifts")
+                    .select()
+                    .eq("id", value: shiftId)
+                    .execute()
+                    .value
+
+                if let serverRow = serverRows.first {
+                    let serverUpdatedAt = parseISO8601(serverRow.updated_at) ?? Date()
+                    let serverSnapshot = UserShiftServerSnapshot.from(
+                        shiftDate: serverRow.shift_date,
+                        startTime: serverRow.start_time,
+                        endTime: serverRow.end_time,
+                        customSupplements: serverRow.custom_supplements,
+                        updatedAt: serverUpdatedAt,
+                        revision: serverRow.revision,
+                        deletedAt: serverRow.deleted_at.flatMap { parseISO8601($0) }
+                    )
+                    await storeActor.markShiftConflict(id: shiftId, serverSnapshot: serverSnapshot)
+                }
+                return .conflict
+            }
+            // Check if it's an RLS policy violation - mark as conflict, don't abort sync
+            if errorString.contains("row-level security") || errorString.contains("42501") {
+                logger.warning("Shift \(shiftId.prefix(8)) blocked by RLS policy, marking as conflict")
+                await storeActor.markShiftConflict(id: shiftId, serverSnapshot: nil)
+                return .conflict
+            }
+            logger.error("Insert shift failed: \(error.localizedDescription)")
+            throw error
+        }
+    }
+
     private func handleShiftPushConflict(
         shift: LocalUserShift,
         userId: String,
@@ -1487,6 +1599,11 @@ final class SyncCoordinator: ObservableObject {
             .value
 
         guard let serverRow = serverRows.first else {
+            // Server row doesn't exist - check if this is a new local record that needs INSERT
+            if shift.serverRevision == 0 {
+                logger.debug("Shift \(shiftId.prefix(8)) is new (serverRevision=0), attempting INSERT")
+                return try await insertUserShift(shift, userId: userId, storeActor: storeActor)
+            }
             // Row was deleted on server
             logger.debug("Shift \(shiftId.prefix(8)) was deleted on server")
             await storeActor.markShiftConflict(id: shiftId, serverSnapshot: nil)
@@ -1620,6 +1737,11 @@ final class SyncCoordinator: ObservableObject {
             return .noChange
         }
 
+        // Check if this is a new record that needs INSERT (serverRevision == 0 means never synced)
+        if shift.serverRevision == 0 {
+            return try await insertRecurringShift(shift, userId: userId, storeActor: storeActor)
+        }
+
         // Build partial update
         var updateData: [String: AnyJSON] = [:]
         if dirtyFields.contains(.startTime) {
@@ -1725,6 +1847,13 @@ final class SyncCoordinator: ObservableObject {
                 )
             }
         } catch {
+            // Check if it's an RLS policy violation - mark as conflict, don't abort sync
+            let errorString = String(describing: error)
+            if errorString.contains("row-level security") || errorString.contains("42501") {
+                logger.warning("Recurring shift \(shiftId.prefix(8)) blocked by RLS policy on UPDATE, marking as conflict")
+                await storeActor.markRecurringShiftConflict(id: shiftId, serverSnapshot: nil)
+                return .conflict
+            }
             logger.error("Push recurring shift failed: \(error.localizedDescription)")
             throw error
         }
@@ -1798,6 +1927,113 @@ final class SyncCoordinator: ObservableObject {
         }
     }
 
+    /// Insert a new recurring shift that was created locally (serverRevision == 0)
+    private func insertRecurringShift(
+        _ shift: LocalRecurringShift,
+        userId: String,
+        storeActor: LocalStoreActor
+    ) async throws -> PushResult {
+        let shiftId = shift.id
+
+        // Build full insert data
+        var insertData: [String: AnyJSON] = [
+            "id": .string(shiftId),
+            "user_id": .string(userId),
+            "start_time": .string(shift.startTime),
+            "end_time": .string(shift.endTime),
+            "repeat_interval_weeks": .integer(shift.repeatIntervalWeeks)
+        ]
+
+        // selected_days is required
+        let selectedDaysDecoded = try requireAnyJSON(
+            shift.selectedDays,
+            table: .recurringShifts,
+            id: shiftId,
+            field: "selected_days"
+        )
+        insertData["selected_days"] = selectedDaysDecoded
+
+        if let data = shift.endCondition {
+            let decoded = try requireAnyJSON(data, table: .recurringShifts, id: shiftId, field: "end_condition")
+            insertData["end_condition"] = decoded
+        }
+
+        if let data = shift.exclusions {
+            let decoded = try requireAnyJSON(data, table: .recurringShifts, id: shiftId, field: "exclusions")
+            insertData["exclusions"] = decoded
+        }
+
+        if let data = shift.dateSpecificSupplements {
+            let decoded = try requireAnyJSON(data, table: .recurringShifts, id: shiftId, field: "date_specific_supplements")
+            insertData["date_specific_supplements"] = decoded
+        }
+
+        do {
+            let returnedRows: [SyncRecurringShiftRow] = try await supabase
+                .from("recurring_shifts")
+                .insert(insertData)
+                .select()
+                .execute()
+                .value
+
+            if let returnedRow = returnedRows.first {
+                let serverUpdatedAt = parseISO8601(returnedRow.updated_at) ?? Date()
+                let serverSnapshot = RecurringShiftServerSnapshot.from(
+                    row: returnedRow.toRecurringShiftRow(),
+                    updatedAt: serverUpdatedAt,
+                    revision: returnedRow.revision,
+                    deletedAt: nil
+                )
+
+                await storeActor.markRecurringShiftPushed(
+                    id: shiftId,
+                    serverRow: returnedRow,
+                    serverUpdatedAt: serverUpdatedAt,
+                    serverRevision: returnedRow.revision,
+                    snapshot: serverSnapshot
+                )
+
+                logger.debug("Inserted new recurring shift \(shiftId.prefix(8))")
+                return .success
+            } else {
+                logger.error("Insert recurring shift returned no rows for \(shiftId.prefix(8))")
+                return .conflict
+            }
+        } catch {
+            let errorString = String(describing: error)
+            // Check if it's a duplicate key error
+            if errorString.contains("duplicate") || errorString.contains("23505") {
+                logger.warning("Recurring shift \(shiftId.prefix(8)) already exists on server, fetching and merging")
+                let serverRows: [SyncRecurringShiftRow] = try await supabase
+                    .from("recurring_shifts")
+                    .select()
+                    .eq("id", value: shiftId)
+                    .execute()
+                    .value
+
+                if let serverRow = serverRows.first {
+                    let serverUpdatedAt = parseISO8601(serverRow.updated_at) ?? Date()
+                    let serverSnapshot = RecurringShiftServerSnapshot.from(
+                        row: serverRow.toRecurringShiftRow(),
+                        updatedAt: serverUpdatedAt,
+                        revision: serverRow.revision,
+                        deletedAt: serverRow.deleted_at.flatMap { parseISO8601($0) }
+                    )
+                    await storeActor.markRecurringShiftConflict(id: shiftId, serverSnapshot: serverSnapshot)
+                }
+                return .conflict
+            }
+            // Check if it's an RLS policy violation - mark as conflict, don't abort sync
+            if errorString.contains("row-level security") || errorString.contains("42501") {
+                logger.warning("Recurring shift \(shiftId.prefix(8)) blocked by RLS policy, marking as conflict")
+                await storeActor.markRecurringShiftConflict(id: shiftId, serverSnapshot: nil)
+                return .conflict
+            }
+            logger.error("Insert recurring shift failed: \(error.localizedDescription)")
+            throw error
+        }
+    }
+
     private func handleRecurringShiftPushConflict(
         shift: LocalRecurringShift,
         userId: String,
@@ -1814,6 +2050,11 @@ final class SyncCoordinator: ObservableObject {
             .value
 
         guard let serverRow = serverRows.first else {
+            // Server row doesn't exist - check if this is a new local record that needs INSERT
+            if shift.serverRevision == 0 {
+                logger.debug("Recurring shift \(shiftId.prefix(8)) is new (serverRevision=0), attempting INSERT")
+                return try await insertRecurringShift(shift, userId: userId, storeActor: storeActor)
+            }
             logger.debug("Recurring shift \(shiftId.prefix(8)) was deleted on server")
             await storeActor.markRecurringShiftConflict(id: shiftId, serverSnapshot: nil)
             return .conflict
@@ -1929,6 +2170,11 @@ final class SyncCoordinator: ObservableObject {
         if dirtyFields.isEmpty {
             await storeActor.markWageSnapshotClean(id: snapshotId)
             return .noChange
+        }
+
+        // Check if this is a new record that needs INSERT (serverRevision == 0 means never synced)
+        if snapshot.serverRevision == 0 {
+            return try await insertWageSnapshot(snapshot, userId: userId, storeActor: storeActor)
         }
 
         // Build partial update
@@ -2047,6 +2293,13 @@ final class SyncCoordinator: ObservableObject {
                 )
             }
         } catch {
+            // Check if it's an RLS policy violation - mark as conflict, don't abort sync
+            let errorString = String(describing: error)
+            if errorString.contains("row-level security") || errorString.contains("42501") {
+                logger.warning("Wage snapshot \(snapshotId.prefix(8)) blocked by RLS policy on UPDATE, marking as conflict")
+                await storeActor.markWageSnapshotConflict(id: snapshotId, serverSnapshot: nil)
+                return .conflict
+            }
             logger.error("Push wage snapshot failed: \(error.localizedDescription)")
             throw error
         }
@@ -2119,6 +2372,126 @@ final class SyncCoordinator: ObservableObject {
         }
     }
 
+    /// Insert a new wage snapshot that was created locally (serverRevision == 0)
+    private func insertWageSnapshot(
+        _ snapshot: LocalWageSnapshot,
+        userId: String,
+        storeActor: LocalStoreActor
+    ) async throws -> PushResult {
+        let snapshotId = snapshot.id
+
+        // Build full insert data
+        var insertData: [String: AnyJSON] = [
+            "id": .string(snapshotId),
+            "user_id": .string(userId),
+            "hourly_wage": .double(snapshot.hourlyWage)
+        ]
+
+        // from_date (nil for baseline snapshot)
+        if let fromDateString = snapshot.fromDateString {
+            insertData["from_date"] = .string(fromDateString)
+        }
+
+        // wage_level
+        if let level = snapshot.wageLevel {
+            insertData["wage_level"] = .integer(level)
+        }
+
+        // supplements (required)
+        let supplementsDecoded = try requireAnyJSON(
+            snapshot.supplements,
+            table: .wageSnapshots,
+            id: snapshotId,
+            field: "supplements"
+        )
+        insertData["supplements"] = supplementsDecoded
+
+        // Optional fields
+        if let enabled = snapshot.taxEnabled {
+            insertData["tax_enabled"] = .bool(enabled)
+        }
+        if let percentage = snapshot.taxPercentage {
+            insertData["tax_percentage"] = .double(percentage)
+        }
+        if let enabled = snapshot.breakEnabled {
+            insertData["break_enabled"] = .bool(enabled)
+        }
+        if let method = snapshot.breakMethod {
+            insertData["break_method"] = .string(method)
+        }
+        if let hours = snapshot.breakThresholdHours {
+            insertData["break_threshold_hours"] = .double(hours)
+        }
+        if let minutes = snapshot.breakDeductionMinutes {
+            insertData["break_deduction_minutes"] = .integer(minutes)
+        }
+
+        do {
+            let returnedRows: [SyncWageSnapshotRow] = try await supabase
+                .from("wage_snapshots")
+                .insert(insertData)
+                .select()
+                .execute()
+                .value
+
+            if let returnedRow = returnedRows.first {
+                let serverUpdatedAt = parseISO8601(returnedRow.updated_at) ?? Date()
+                let serverSnapshot = WageSnapshotServerSnapshot.from(
+                    row: returnedRow.toWageSnapshot(),
+                    updatedAt: serverUpdatedAt,
+                    revision: returnedRow.revision,
+                    deletedAt: nil
+                )
+
+                await storeActor.markWageSnapshotPushed(
+                    id: snapshotId,
+                    serverRow: returnedRow,
+                    serverUpdatedAt: serverUpdatedAt,
+                    serverRevision: returnedRow.revision,
+                    snapshot: serverSnapshot
+                )
+
+                logger.debug("Inserted new wage snapshot \(snapshotId.prefix(8))")
+                return .success
+            } else {
+                logger.error("Insert wage snapshot returned no rows for \(snapshotId.prefix(8))")
+                return .conflict
+            }
+        } catch {
+            let errorString = String(describing: error)
+            // Check if it's a duplicate key error
+            if errorString.contains("duplicate") || errorString.contains("23505") {
+                logger.warning("Wage snapshot \(snapshotId.prefix(8)) already exists on server, fetching and merging")
+                let serverRows: [SyncWageSnapshotRow] = try await supabase
+                    .from("wage_snapshots")
+                    .select()
+                    .eq("id", value: snapshotId)
+                    .execute()
+                    .value
+
+                if let serverRow = serverRows.first {
+                    let serverUpdatedAt = parseISO8601(serverRow.updated_at) ?? Date()
+                    let serverSnapshot = WageSnapshotServerSnapshot.from(
+                        row: serverRow.toWageSnapshot(),
+                        updatedAt: serverUpdatedAt,
+                        revision: serverRow.revision,
+                        deletedAt: serverRow.deleted_at.flatMap { parseISO8601($0) }
+                    )
+                    await storeActor.markWageSnapshotConflict(id: snapshotId, serverSnapshot: serverSnapshot)
+                }
+                return .conflict
+            }
+            // Check if it's an RLS policy violation - mark as conflict, don't abort sync
+            if errorString.contains("row-level security") || errorString.contains("42501") {
+                logger.warning("Wage snapshot \(snapshotId.prefix(8)) blocked by RLS policy, marking as conflict")
+                await storeActor.markWageSnapshotConflict(id: snapshotId, serverSnapshot: nil)
+                return .conflict
+            }
+            logger.error("Insert wage snapshot failed: \(error.localizedDescription)")
+            throw error
+        }
+    }
+
     private func handleWageSnapshotPushConflict(
         snapshot: LocalWageSnapshot,
         userId: String,
@@ -2135,6 +2508,11 @@ final class SyncCoordinator: ObservableObject {
             .value
 
         guard let serverRow = serverRows.first else {
+            // Server row doesn't exist - check if this is a new local record that needs INSERT
+            if snapshot.serverRevision == 0 {
+                logger.debug("Wage snapshot \(snapshotId.prefix(8)) is new (serverRevision=0), attempting INSERT")
+                return try await insertWageSnapshot(snapshot, userId: userId, storeActor: storeActor)
+            }
             logger.debug("Wage snapshot \(snapshotId.prefix(8)) was deleted on server")
             await storeActor.markWageSnapshotConflict(id: snapshotId, serverSnapshot: nil)
             return .conflict
@@ -2243,6 +2621,11 @@ final class SyncCoordinator: ObservableObject {
             return .noChange
         }
 
+        // Check if this is a new record that needs INSERT (serverRevision == 0 means never synced)
+        if settings.serverRevision == 0 {
+            return try await insertUserSettings(settings, userId: userId, storeActor: storeActor)
+        }
+
         // Build partial update
         var updateData: [String: AnyJSON] = [:]
         if dirtyFields.contains(.monthlyGoal) {
@@ -2338,7 +2721,113 @@ final class SyncCoordinator: ObservableObject {
                 )
             }
         } catch {
+            // Check if it's an RLS policy violation - mark as conflict, don't abort sync
+            let errorString = String(describing: error)
+            if errorString.contains("row-level security") || errorString.contains("42501") {
+                logger.warning("User settings for \(userId.prefix(8)) blocked by RLS policy on UPDATE, marking as conflict")
+                await storeActor.markUserSettingsConflict(userId: userId, serverSnapshot: nil)
+                return .conflict
+            }
             logger.error("Push user settings failed: \(error.localizedDescription)")
+            throw error
+        }
+    }
+
+    /// Insert new user settings that were created locally (serverRevision == 0)
+    private func insertUserSettings(
+        _ settings: LocalUserSettings,
+        userId: String,
+        storeActor: LocalStoreActor
+    ) async throws -> PushResult {
+        // Build full insert data
+        var insertData: [String: AnyJSON] = [
+            "user_id": .string(userId),
+            "theme": .string(settings.theme)
+        ]
+
+        // Optional fields
+        if let goal = settings.monthlyGoal {
+            insertData["monthly_goal"] = .integer(goal)
+        }
+        if let view = settings.defaultShiftsView {
+            insertData["default_shifts_view"] = .string(view)
+        }
+        if let url = settings.profilePictureUrl {
+            insertData["profile_picture_url"] = .string(url)
+        }
+        if let day = settings.payrollDay {
+            insertData["payroll_day"] = .integer(day)
+        }
+        if let month = settings.halfTaxMonth {
+            insertData["half_tax_month"] = .integer(month)
+        }
+        if let currency = settings.currency {
+            insertData["currency"] = .string(currency)
+        }
+        if let lastActive = settings.lastActive {
+            insertData["last_active"] = .string(ISO8601DateFormatter().string(from: lastActive))
+        }
+
+        do {
+            let returnedRows: [SyncUserSettingsRow] = try await supabase
+                .from("user_settings")
+                .insert(insertData)
+                .select()
+                .execute()
+                .value
+
+            if let returnedRow = returnedRows.first {
+                let serverUpdatedAt = parseISO8601(returnedRow.updated_at) ?? Date()
+                let serverSnapshot = UserSettingsServerSnapshot.from(
+                    row: returnedRow.toUserSettings(),
+                    updatedAt: serverUpdatedAt,
+                    revision: returnedRow.revision
+                )
+
+                await storeActor.markUserSettingsPushed(
+                    userId: userId,
+                    serverRow: returnedRow,
+                    serverUpdatedAt: serverUpdatedAt,
+                    serverRevision: returnedRow.revision,
+                    snapshot: serverSnapshot
+                )
+
+                logger.debug("Inserted new user settings for \(userId.prefix(8))")
+                return .success
+            } else {
+                logger.error("Insert user settings returned no rows for \(userId.prefix(8))")
+                return .conflict
+            }
+        } catch {
+            let errorString = String(describing: error)
+            // Check if it's a duplicate key error
+            if errorString.contains("duplicate") || errorString.contains("23505") {
+                logger.warning("User settings for \(userId.prefix(8)) already exists on server, fetching and merging")
+                let serverRows: [SyncUserSettingsRow] = try await supabase
+                    .from("user_settings")
+                    .select()
+                    .eq("user_id", value: userId)
+                    .execute()
+                    .value
+
+                if let serverRow = serverRows.first {
+                    let serverUpdatedAt = parseISO8601(serverRow.updated_at) ?? Date()
+                    let serverSnapshot = UserSettingsServerSnapshot.from(
+                        row: serverRow.toUserSettings(),
+                        updatedAt: serverUpdatedAt,
+                        revision: serverRow.revision
+                    )
+                    await storeActor.markUserSettingsConflict(userId: userId, serverSnapshot: serverSnapshot)
+                }
+                return .conflict
+            }
+            // Check if it's an RLS policy violation - mark as conflict, don't abort sync
+            if errorString.contains("row-level security") || errorString.contains("42501") {
+                logger.warning("User settings for \(userId.prefix(8)) blocked by RLS policy, marking as conflict")
+                await storeActor.markUserSettingsConflict(userId: userId, serverSnapshot: nil)
+                return .conflict
+            }
+            logger.error("Insert user settings failed: \(error.localizedDescription)")
             throw error
         }
     }
@@ -2357,6 +2846,11 @@ final class SyncCoordinator: ObservableObject {
             .value
 
         guard let serverRow = serverRows.first else {
+            // Server row doesn't exist - check if this is a new local record that needs INSERT
+            if settings.serverRevision == 0 {
+                logger.debug("User settings for \(userId.prefix(8)) is new (serverRevision=0), attempting INSERT")
+                return try await insertUserSettings(settings, userId: userId, storeActor: storeActor)
+            }
             logger.debug("User settings for \(userId.prefix(8)) were deleted on server")
             await storeActor.markUserSettingsConflict(userId: userId, serverSnapshot: nil)
             return .conflict
