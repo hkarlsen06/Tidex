@@ -371,15 +371,29 @@ export default function SignupPage({ params }: { params: Promise<{ locale: strin
         return;
       }
 
-      // Redirect to email verification page
+      // Email verification disabled - sign in immediately and redirect to onboarding
       setMessage({
         type: "success",
-        text: t.pages.auth.signup.success.emailSent,
+        text: t.pages.auth.signup.success.accountCreated,
       });
 
+      // Sign in the user immediately after signup
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: emailOrPhone,
+        password,
+      });
+
+      if (signInError) {
+        setMessage({ type: "error", text: signInError.message });
+        setCaptchaToken(null);
+        turnstileRef.current?.reset();
+        return;
+      }
+
       setTimeout(() => {
-        router.replace(`/${locale}/verify-email?email=${encodeURIComponent(emailOrPhone)}`);
-      }, 1500);
+        router.replace(`/${locale}/onboarding`);
+        router.refresh();
+      }, 1000);
     } else {
       // Phone signup with OTP verification
       setIsSubmitting(true);
