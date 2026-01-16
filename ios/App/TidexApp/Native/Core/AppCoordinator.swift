@@ -273,6 +273,9 @@ final class AppCoordinator: ObservableObject {
                 userDisplayName = "User"
             }
 
+            // Configure StoreKit and load entitlements
+            await configureStoreKitAndEntitlements(userId: currentUserId)
+
             // Trigger initial sync in background after authentication
             triggerInitialSync(userId: currentUserId)
 
@@ -291,6 +294,44 @@ final class AppCoordinator: ObservableObject {
         } catch {
             print("[AppCoordinator] Failed to update user profile: \(error)")
             userDisplayName = "User"
+        }
+    }
+
+    // MARK: - StoreKit & Entitlements
+
+    /// Configure StoreKit and entitlement services after authentication
+    /// Called once during updateUserProfile() after successful login
+    private func configureStoreKitAndEntitlements(userId: String) async {
+        print("[AppCoordinator] Configuring StoreKit and entitlements for user \(userId.prefix(8))...")
+
+        // 1. Configure StoreKit with user ID (required before purchases)
+        StoreKitManager.shared.configure(userId: userId)
+
+        // 2. Load cached entitlement first (fast, offline-safe)
+        EntitlementService.shared.loadFromCache(userId: userId)
+        print("[AppCoordinator] Loaded cached entitlement: tier=\(EntitlementService.shared.effectiveTier.rawValue)")
+
+        // 3. Start StoreKit transaction listener (handles renewals, restores from other devices)
+        StoreKitManager.shared.startListening()
+
+        // 4. Start JWS upload worker (process any pending uploads from previous sessions)
+        JWSUploadWorker.shared.processQueue()
+
+        // 5. Refresh entitlement from server in background (non-blocking)
+        Task {
+            do {
+                try await EntitlementService.shared.refreshFromServer(userId: userId)
+                print("[AppCoordinator] Refreshed entitlement from server: tier=\(EntitlementService.shared.effectiveTier.rawValue)")
+            } catch {
+                print("[AppCoordinator] Failed to refresh entitlement from server: \(error.localizedDescription)")
+                // Non-fatal: we still have cache or StoreKit entitlements
+            }
+        }
+
+        // 6. Load StoreKit products in background (for paywall)
+        Task {
+            await StoreKitManager.shared.loadProducts()
+            print("[AppCoordinator] Loaded \(StoreKitManager.shared.products.count) StoreKit products")
         }
     }
 
@@ -384,6 +425,10 @@ final class AppCoordinator: ObservableObject {
     func signOut() async {
         // Clear widget storage before sign out
         NativeWidgetStorage.clearWidgetStorage()
+
+        // Stop StoreKit listener and clear entitlement cache
+        StoreKitManager.shared.stopListening()
+        await EntitlementService.shared.clearCache()
 
         do {
             try await authService.signOut()

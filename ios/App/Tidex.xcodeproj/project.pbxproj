@@ -95,6 +95,11 @@
 		11A196502F1AE8890030E524 /* StoreKitManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A1964F2F1AE8890030E524 /* StoreKitManager.swift */; };
 		11A196522F1AE8900030E524 /* JWSUploadWorker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A196512F1AE8900030E524 /* JWSUploadWorker.swift */; };
 		11A196542F1AE8AC0030E524 /* EntitlementService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A196532F1AE8AC0030E524 /* EntitlementService.swift */; };
+		11A1965B2F1AEB360030E524 /* PlanCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A196562F1AEB360030E524 /* PlanCard.swift */; };
+		11A1965C2F1AEB360030E524 /* PaywallViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A196592F1AEB360030E524 /* PaywallViewModel.swift */; };
+		11A1965D2F1AEB360030E524 /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A196582F1AEB360030E524 /* PaywallView.swift */; };
+		11A1965E2F1AEB360030E524 /* BillingToggle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A196552F1AEB360030E524 /* BillingToggle.swift */; };
+		11A196602F1AEB4D0030E524 /* VerificationRequiredView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A1965F2F1AEB4D0030E524 /* VerificationRequiredView.swift */; };
 		11A5CD262F101201002BAC91 /* StoredShift.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A5CD252F101201002BAC91 /* StoredShift.swift */; };
 		11A5CD302F101283002BAC91 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 11A5CD2F2F101283002BAC91 /* WidgetKit.framework */; };
 		11A5CD322F101283002BAC91 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 11A5CD312F101283002BAC91 /* SwiftUI.framework */; };
@@ -270,6 +275,11 @@
 		11A1964F2F1AE8890030E524 /* StoreKitManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreKitManager.swift; sourceTree = "<group>"; };
 		11A196512F1AE8900030E524 /* JWSUploadWorker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JWSUploadWorker.swift; sourceTree = "<group>"; };
 		11A196532F1AE8AC0030E524 /* EntitlementService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EntitlementService.swift; sourceTree = "<group>"; };
+		11A196552F1AEB360030E524 /* BillingToggle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BillingToggle.swift; sourceTree = "<group>"; };
+		11A196562F1AEB360030E524 /* PlanCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanCard.swift; sourceTree = "<group>"; };
+		11A196582F1AEB360030E524 /* PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallView.swift; sourceTree = "<group>"; };
+		11A196592F1AEB360030E524 /* PaywallViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallViewModel.swift; sourceTree = "<group>"; };
+		11A1965F2F1AEB4D0030E524 /* VerificationRequiredView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VerificationRequiredView.swift; sourceTree = "<group>"; };
 		11A5CD252F101201002BAC91 /* StoredShift.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoredShift.swift; sourceTree = "<group>"; };
 		11A5CD2E2F101283002BAC91 /* TidexShiftWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TidexShiftWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		11A5CD2F2F101283002BAC91 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
@@ -544,6 +554,7 @@
 		119D1CCC2F16E46300EC7072 /* Features */ = {
 			isa = PBXGroup;
 			children = (
+				11A1965A2F1AEB360030E524 /* Paywall */,
 				11A196322F1AC0070030E524 /* AddShift */,
 				11F42F8F2F1A65F3002B1FBE /* Onboarding */,
 				119D1CC92F16E46300EC7072 /* Auth */,
@@ -725,6 +736,26 @@
 				11A196462F1AE68C0030E524 /* SubscriptionModels.swift */,
 			);
 			path = Subscription;
+			sourceTree = "<group>";
+		};
+		11A196572F1AEB360030E524 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				11A196552F1AEB360030E524 /* BillingToggle.swift */,
+				11A196562F1AEB360030E524 /* PlanCard.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		11A1965A2F1AEB360030E524 /* Paywall */ = {
+			isa = PBXGroup;
+			children = (
+				11A1965F2F1AEB4D0030E524 /* VerificationRequiredView.swift */,
+				11A196572F1AEB360030E524 /* Components */,
+				11A196582F1AEB360030E524 /* PaywallView.swift */,
+				11A196592F1AEB360030E524 /* PaywallViewModel.swift */,
+			);
+			path = Paywall;
 			sourceTree = "<group>";
 		};
 		11A1D6CE2F11F48F00060819 /* Core */ = {
@@ -1156,6 +1187,10 @@
 				11F42F922F1A65F3002B1FBE /* OnboardingButton.swift in Sources */,
 				11F42F932F1A65F3002B1FBE /* IndustryPicker.swift in Sources */,
 				11F42F942F1A65F3002B1FBE /* PersonalizationScreen.swift in Sources */,
+				11A1965B2F1AEB360030E524 /* PlanCard.swift in Sources */,
+				11A1965C2F1AEB360030E524 /* PaywallViewModel.swift in Sources */,
+				11A1965D2F1AEB360030E524 /* PaywallView.swift in Sources */,
+				11A1965E2F1AEB360030E524 /* BillingToggle.swift in Sources */,
 				11F42F952F1A65F3002B1FBE /* PostAuthOnboardingView.swift in Sources */,
 				11F42F962F1A65F3002B1FBE /* PageIndicator.swift in Sources */,
 				11F42F972F1A65F3002B1FBE /* GetStartedScreen.swift in Sources */,
@@ -1197,6 +1232,7 @@
 				11AE8D2E2F17D27D005AB062 /* FeaturedShiftCard.swift in Sources */,
 				11AE8D292F17D02E005AB062 /* CountdownManager.swift in Sources */,
 				11AE8D2A2F17D02E005AB062 /* CountdownFormatter.swift in Sources */,
+				11A196602F1AEB4D0030E524 /* VerificationRequiredView.swift in Sources */,
 				119D1CFD2F16E46300EC7072 /* LoginView.swift in Sources */,
 				119D1CFE2F16E46300EC7072 /* MFAVerifyViewModel.swift in Sources */,
 				119D1CFF2F16E46300EC7072 /* PrimaryButton.swift in Sources */,

@@ -133,6 +133,12 @@ extension Color {
         tidexBlue
     }
 
+    /// Purple color for Max tier branding
+    /// HSL(258, 70%, 60%) - vibrant purple
+    static var tidexPurple: Color {
+        Color(hue: 258 / 360, saturation: 0.70, brightness: 0.75)
+    }
+
     // MARK: - Gradient Colors
 
     /// Logo gradient colors from short-logo-gradient.svg
