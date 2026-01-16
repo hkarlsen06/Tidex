@@ -1,6 +1,7 @@
 import Foundation
 import SwiftUI
 import Supabase
+import UIKit
 
 /// Central coordinator for app-wide authentication state and navigation
 /// Manages the flow: Splash -> Login -> MFA (if needed) -> Dashboard
@@ -210,6 +211,12 @@ final class AppCoordinator: ObservableObject {
             let userId = user.id.uuidString.lowercased()
             triggerInitialSync(userId: userId)
 
+            if let appDelegate = UIApplication.shared.delegate as? AppDelegate {
+                Task {
+                    await appDelegate.registerCachedAPNsTokenIfNeeded()
+                }
+            }
+
             // Profile picture will be loaded from local store after sync completes
             // For now, check local settings repository
             if let settings = SettingsRepository.shared.getSettings(for: userId) {
@@ -257,6 +264,12 @@ final class AppCoordinator: ObservableObject {
             do {
                 let session = try await supabase.auth.session
                 let userId = session.user.id.uuidString.lowercased()
+
+                if let appDelegate = UIApplication.shared.delegate as? AppDelegate {
+                    Task {
+                        await appDelegate.registerCachedAPNsTokenIfNeeded()
+                    }
+                }
 
                 print("[AppCoordinator] App returned to foreground, triggering sync...")
                 let result = await syncCoordinator.sync(reason: .foreground, userId: userId)

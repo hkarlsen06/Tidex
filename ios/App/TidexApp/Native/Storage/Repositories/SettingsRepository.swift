@@ -103,102 +103,37 @@ final class SettingsRepository: ObservableObject {
         halfTaxMonth: Int? = nil,
         currency: String? = nil
     ) async throws -> UserSettings? {
-        let context = localStore.mainContext
+        do {
+            let updatedSettings = try await localStore.storeActor.updateUserSettings(
+                userId: userId,
+                monthlyGoal: monthlyGoal,
+                defaultShiftsView: defaultShiftsView,
+                profilePictureUrl: profilePictureUrl,
+                payrollDay: payrollDay,
+                theme: theme,
+                halfTaxMonth: halfTaxMonth,
+                currency: currency
+            )
 
-        let descriptor = FetchDescriptor<LocalUserSettings>(
-            predicate: #Predicate { $0.userId == userId }
-        )
+            logger.info("Updated local settings for user: \(userId)")
 
-        guard let localSettings = try context.fetch(descriptor).first else {
+            return updatedSettings
+        } catch LocalStoreWriteError.notFound {
             logger.warning("Settings not found for update: \(userId)")
             return nil
+        } catch {
+            throw error
         }
-
-        // Track which fields changed
-        var newDirtyFields = localSettings.dirtyFieldKeys
-        let now = Date()
-
-        if let newGoal = monthlyGoal, newGoal != localSettings.monthlyGoal {
-            localSettings.monthlyGoal = newGoal
-            newDirtyFields.insert(.monthlyGoal)
-        }
-
-        if let newView = defaultShiftsView, newView != localSettings.defaultShiftsView {
-            localSettings.defaultShiftsView = newView
-            newDirtyFields.insert(.defaultShiftsView)
-        }
-
-        if let newUrl = profilePictureUrl, newUrl != localSettings.profilePictureUrl {
-            localSettings.profilePictureUrl = newUrl
-            newDirtyFields.insert(.profilePictureUrl)
-        }
-
-        if let newDay = payrollDay, newDay != localSettings.payrollDay {
-            localSettings.payrollDay = newDay
-            newDirtyFields.insert(.payrollDay)
-        }
-
-        if let newTheme = theme, newTheme != localSettings.theme {
-            localSettings.theme = newTheme
-            newDirtyFields.insert(.theme)
-        }
-
-        if let newHalfTax = halfTaxMonth {
-            // Handle nullable field - check if actually different
-            if newHalfTax != localSettings.halfTaxMonth {
-                localSettings.halfTaxMonth = newHalfTax
-                newDirtyFields.insert(.halfTaxMonth)
-            }
-        }
-
-        if let newCurrency = currency, newCurrency != localSettings.currency {
-            localSettings.currency = newCurrency
-            newDirtyFields.insert(.currency)
-        }
-
-        // Update dirty tracking
-        localSettings.dirtyFieldKeys = newDirtyFields
-        localSettings.localUpdatedAt = now
-
-        // Set status to dirty if we have changes
-        if !newDirtyFields.isEmpty && localSettings.syncStatus == .clean {
-            localSettings.syncStatus = .dirty
-        }
-
-        // Save via actor
-        try await localStore.storeActor.upsertUserSettings(localSettings)
-        try await localStore.storeActor.save()
-
-        logger.info("Updated local settings for user: \(userId), dirty fields: \(newDirtyFields.map { $0.rawValue })")
-
-        return localSettings.toUserSettings()
     }
 
     /// Update last active timestamp
     /// This is typically not synced but can be used locally
     /// - Parameter userId: User ID
     func updateLastActive(for userId: String) async throws {
-        let context = localStore.mainContext
-
-        let descriptor = FetchDescriptor<LocalUserSettings>(
-            predicate: #Predicate { $0.userId == userId }
-        )
-
-        guard let localSettings = try context.fetch(descriptor).first else {
-            return
+        let didUpdate = try await localStore.storeActor.updateUserSettingsLastActive(userId: userId)
+        if didUpdate {
+            logger.debug("Updated last active for user: \(userId)")
         }
-
-        let now = Date()
-        localSettings.lastActive = now
-        localSettings.localUpdatedAt = now
-
-        // Don't mark as dirty - lastActive updates don't need to sync
-        // They are primarily used for local tracking
-
-        try await localStore.storeActor.upsertUserSettings(localSettings)
-        try await localStore.storeActor.save()
-
-        logger.debug("Updated last active for user: \(userId)")
     }
 
     // MARK: - Conflict Resolution
@@ -206,86 +141,34 @@ final class SettingsRepository: ObservableObject {
     /// Resolve a conflict by keeping the local version
     /// - Parameter userId: User ID
     func resolveConflictKeepLocal(for userId: String) async throws {
-        let context = localStore.mainContext
-
-        let descriptor = FetchDescriptor<LocalUserSettings>(
-            predicate: #Predicate { $0.userId == userId }
-        )
-
-        guard let localSettings = try context.fetch(descriptor).first else {
+        do {
+            try await localStore.storeActor.resolveStoredUserSettingsConflictKeepLocal(userId: userId)
+            logger.info("Resolved settings conflict (kept local) for user: \(userId)")
+        } catch LocalStoreWriteError.notFound {
             logger.warning("Settings not found for conflict resolution: \(userId)")
-            return
-        }
-
-        guard localSettings.syncStatus == .conflict else {
+        } catch LocalStoreWriteError.notInConflict {
             logger.warning("Settings are not in conflict state: \(userId)")
-            return
-        }
-
-        guard let serverSnapshot = UserSettingsServerSnapshot.decode(from: localSettings.conflictServerSnapshot ?? Data()) else {
+        } catch LocalStoreWriteError.missingConflictSnapshot {
             logger.error("No server snapshot found for settings conflict: \(userId)")
-            return
+        } catch {
+            throw error
         }
-
-        // Update server metadata but keep local values
-        localSettings.serverRevision = serverSnapshot.revision
-        localSettings.serverUpdatedAt = serverSnapshot.updatedAt
-        localSettings.syncStatus = .dirty
-        localSettings.conflictServerSnapshot = nil
-        localSettings.localUpdatedAt = Date()
-
-        try await localStore.storeActor.upsertUserSettings(localSettings)
-        try await localStore.storeActor.save()
-
-        logger.info("Resolved settings conflict (kept local) for user: \(userId)")
     }
 
     /// Resolve a conflict by accepting the server version
     /// - Parameter userId: User ID
     func resolveConflictKeepServer(for userId: String) async throws {
-        let context = localStore.mainContext
-
-        let descriptor = FetchDescriptor<LocalUserSettings>(
-            predicate: #Predicate { $0.userId == userId }
-        )
-
-        guard let localSettings = try context.fetch(descriptor).first else {
+        do {
+            try await localStore.storeActor.resolveStoredUserSettingsConflictKeepServer(userId: userId)
+            logger.info("Resolved settings conflict (kept server) for user: \(userId)")
+        } catch LocalStoreWriteError.notFound {
             logger.warning("Settings not found for conflict resolution: \(userId)")
-            return
-        }
-
-        guard localSettings.syncStatus == .conflict else {
+        } catch LocalStoreWriteError.notInConflict {
             logger.warning("Settings are not in conflict state: \(userId)")
-            return
-        }
-
-        guard let serverSnapshot = UserSettingsServerSnapshot.decode(from: localSettings.conflictServerSnapshot ?? Data()) else {
+        } catch LocalStoreWriteError.missingConflictSnapshot {
             logger.error("No server snapshot found for settings conflict: \(userId)")
-            return
+        } catch {
+            throw error
         }
-
-        // Apply server values
-        localSettings.monthlyGoal = serverSnapshot.monthlyGoal
-        localSettings.defaultShiftsView = serverSnapshot.defaultShiftsView
-        localSettings.profilePictureUrl = serverSnapshot.profilePictureUrl
-        localSettings.payrollDay = serverSnapshot.payrollDay
-        localSettings.theme = serverSnapshot.theme
-        localSettings.halfTaxMonth = serverSnapshot.halfTaxMonth
-        localSettings.currency = serverSnapshot.currency
-        localSettings.lastActive = serverSnapshot.lastActive
-        localSettings.serverRevision = serverSnapshot.revision
-        localSettings.serverUpdatedAt = serverSnapshot.updatedAt
-
-        // Clear dirty state
-        localSettings.syncStatus = .clean
-        localSettings.dirtyFieldKeys = []
-        localSettings.lastSyncedSnapshot = localSettings.conflictServerSnapshot ?? Data()
-        localSettings.conflictServerSnapshot = nil
-        localSettings.localUpdatedAt = Date()
-
-        try await localStore.storeActor.upsertUserSettings(localSettings)
-        try await localStore.storeActor.save()
-
-        logger.info("Resolved settings conflict (kept server) for user: \(userId)")
     }
 }

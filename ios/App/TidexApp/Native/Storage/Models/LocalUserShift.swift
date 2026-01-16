@@ -97,7 +97,9 @@ final class LocalUserShift {
     var shiftDateString: String {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
-        formatter.timeZone = TimeZone(identifier: "UTC")
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = Date.localTimeZone
         return formatter.string(from: shiftDate)
     }
 
@@ -248,7 +250,9 @@ extension LocalUserShift {
     ) -> LocalUserShift {
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd"
-        dateFormatter.timeZone = TimeZone(identifier: "UTC")
+        dateFormatter.calendar = Calendar(identifier: .gregorian)
+        dateFormatter.locale = Locale(identifier: "en_US_POSIX")
+        dateFormatter.timeZone = Date.localTimeZone
 
         let shiftDate = dateFormatter.date(from: serverRow.shift_date) ?? Date()
         let supplementsData = serverRow.custom_supplements.flatMap { try? canonicalJSONEncoder.encode($0) }

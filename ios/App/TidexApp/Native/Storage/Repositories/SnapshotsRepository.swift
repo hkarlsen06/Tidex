@@ -188,66 +188,23 @@ final class SnapshotsRepository: ObservableObject {
         breakThresholdHours: Double? = nil,
         breakDeductionMinutes: Int? = nil
     ) async throws -> WageSnapshot {
-        let id = UUID().uuidString.lowercased()
-        let now = Date()
-
-        let supplementsData = (try? canonicalJSONEncoder.encode(supplements)) ?? Data()
-
-        // Create snapshot for tracking
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd"
-        dateFormatter.timeZone = TimeZone(identifier: "UTC")
-        let fromDateString = fromDate.map { dateFormatter.string(from: $0) }
-
-        let serverSnapshot = WageSnapshotServerSnapshot(
-            fromDate: fromDateString,
-            hourlyWage: hourlyWage,
-            wageLevel: wageLevel,
-            supplements: supplementsData,
-            taxEnabled: taxEnabled,
-            taxPercentage: taxPercentage,
-            breakEnabled: breakEnabled,
-            breakMethod: breakMethod,
-            breakThresholdHours: breakThresholdHours,
-            breakDeductionMinutes: breakDeductionMinutes,
-            updatedAt: now,
-            revision: 0,
-            deletedAt: nil
-        )
-
-        // Mark all fields as dirty for new record
-        let allFields = WageSnapshotField.allCases.map { $0.rawValue }
-        let dirtyFieldsData = (try? canonicalJSONEncoder.encode(allFields)) ?? Data()
-
-        let localSnapshot = LocalWageSnapshot(
-            id: id,
+        let createdSnapshot = try await localStore.storeActor.createWageSnapshot(
             userId: userId,
             fromDate: fromDate,
             hourlyWage: hourlyWage,
             wageLevel: wageLevel,
-            supplements: supplementsData,
+            supplements: supplements,
             taxEnabled: taxEnabled,
             taxPercentage: taxPercentage,
             breakEnabled: breakEnabled,
             breakMethod: breakMethod,
             breakThresholdHours: breakThresholdHours,
-            breakDeductionMinutes: breakDeductionMinutes,
-            serverUpdatedAt: now,
-            serverRevision: 0,
-            serverDeletedAt: nil,
-            syncStatus: .dirty,
-            dirtyFields: dirtyFieldsData,
-            lastSyncedSnapshot: serverSnapshot.encoded(),
-            localUpdatedAt: now,
-            conflictServerSnapshot: nil
+            breakDeductionMinutes: breakDeductionMinutes
         )
 
-        try await localStore.storeActor.upsertWageSnapshot(localSnapshot)
-        try await localStore.storeActor.save()
+        logger.info("Created new local snapshot: \(createdSnapshot.id)")
 
-        logger.info("Created new local snapshot: \(id)")
-
-        return localSnapshot.toWageSnapshot()
+        return createdSnapshot
     }
 
     /// Update a wage snapshot locally
@@ -275,104 +232,42 @@ final class SnapshotsRepository: ObservableObject {
         breakThresholdHours: Double? = nil,
         breakDeductionMinutes: Int? = nil
     ) async throws -> WageSnapshot? {
-        let context = localStore.mainContext
+        do {
+            let updatedSnapshot = try await localStore.storeActor.updateWageSnapshot(
+                id: id,
+                hourlyWage: hourlyWage,
+                wageLevel: wageLevel,
+                supplements: supplements,
+                taxEnabled: taxEnabled,
+                taxPercentage: taxPercentage,
+                breakEnabled: breakEnabled,
+                breakMethod: breakMethod,
+                breakThresholdHours: breakThresholdHours,
+                breakDeductionMinutes: breakDeductionMinutes
+            )
 
-        let descriptor = FetchDescriptor<LocalWageSnapshot>(
-            predicate: #Predicate { $0.id == id }
-        )
+            logger.info("Updated local snapshot: \(id)")
 
-        guard let localSnapshot = try context.fetch(descriptor).first else {
+            return updatedSnapshot
+        } catch LocalStoreWriteError.notFound {
             logger.warning("Snapshot not found for update: \(id)")
             return nil
+        } catch {
+            throw error
         }
-
-        var newDirtyFields = localSnapshot.dirtyFieldKeys
-        let now = Date()
-
-        if let newWage = hourlyWage, newWage != localSnapshot.hourlyWage {
-            localSnapshot.hourlyWage = newWage
-            newDirtyFields.insert(.hourlyWage)
-        }
-
-        if let newLevel = wageLevel, newLevel != localSnapshot.wageLevel {
-            localSnapshot.wageLevel = newLevel
-            newDirtyFields.insert(.wageLevel)
-        }
-
-        if let newSupplements = supplements {
-            let newData = (try? canonicalJSONEncoder.encode(newSupplements)) ?? Data()
-            if newData != localSnapshot.supplements {
-                localSnapshot.supplements = newData
-                newDirtyFields.insert(.supplements)
-            }
-        }
-
-        if let newTaxEnabled = taxEnabled, newTaxEnabled != localSnapshot.taxEnabled {
-            localSnapshot.taxEnabled = newTaxEnabled
-            newDirtyFields.insert(.taxEnabled)
-        }
-
-        if let newTaxPct = taxPercentage, newTaxPct != localSnapshot.taxPercentage {
-            localSnapshot.taxPercentage = newTaxPct
-            newDirtyFields.insert(.taxPercentage)
-        }
-
-        if let newBreakEnabled = breakEnabled, newBreakEnabled != localSnapshot.breakEnabled {
-            localSnapshot.breakEnabled = newBreakEnabled
-            newDirtyFields.insert(.breakEnabled)
-        }
-
-        if let newBreakMethod = breakMethod, newBreakMethod != localSnapshot.breakMethod {
-            localSnapshot.breakMethod = newBreakMethod
-            newDirtyFields.insert(.breakMethod)
-        }
-
-        if let newThreshold = breakThresholdHours, newThreshold != localSnapshot.breakThresholdHours {
-            localSnapshot.breakThresholdHours = newThreshold
-            newDirtyFields.insert(.breakThresholdHours)
-        }
-
-        if let newDeduction = breakDeductionMinutes, newDeduction != localSnapshot.breakDeductionMinutes {
-            localSnapshot.breakDeductionMinutes = newDeduction
-            newDirtyFields.insert(.breakDeductionMinutes)
-        }
-
-        localSnapshot.dirtyFieldKeys = newDirtyFields
-        localSnapshot.localUpdatedAt = now
-
-        if !newDirtyFields.isEmpty && localSnapshot.syncStatus == .clean {
-            localSnapshot.syncStatus = .dirty
-        }
-
-        try await localStore.storeActor.upsertWageSnapshot(localSnapshot)
-        try await localStore.storeActor.save()
-
-        logger.info("Updated local snapshot: \(id), dirty fields: \(newDirtyFields.map { $0.rawValue })")
-
-        return localSnapshot.toWageSnapshot()
     }
 
     /// Mark a snapshot for deletion
     /// - Parameter id: Snapshot ID
     func deleteSnapshot(id: String) async throws {
-        let context = localStore.mainContext
-
-        let descriptor = FetchDescriptor<LocalWageSnapshot>(
-            predicate: #Predicate { $0.id == id }
-        )
-
-        guard let localSnapshot = try context.fetch(descriptor).first else {
+        do {
+            try await localStore.storeActor.markWageSnapshotPendingDelete(id: id)
+            logger.info("Marked snapshot for deletion: \(id)")
+        } catch LocalStoreWriteError.notFound {
             logger.warning("Snapshot not found for deletion: \(id)")
-            return
+        } catch {
+            throw error
         }
-
-        localSnapshot.syncStatus = .pendingDelete
-        localSnapshot.localUpdatedAt = Date()
-
-        try await localStore.storeActor.upsertWageSnapshot(localSnapshot)
-        try await localStore.storeActor.save()
-
-        logger.info("Marked snapshot for deletion: \(id)")
     }
 
     // MARK: - Conflict Resolution
@@ -380,92 +275,35 @@ final class SnapshotsRepository: ObservableObject {
     /// Resolve a conflict by keeping the local version
     /// - Parameter id: Snapshot ID
     func resolveConflictKeepLocal(id: String) async throws {
-        let context = localStore.mainContext
-
-        let descriptor = FetchDescriptor<LocalWageSnapshot>(
-            predicate: #Predicate { $0.id == id }
-        )
-
-        guard let localSnapshot = try context.fetch(descriptor).first else {
+        do {
+            try await localStore.storeActor.resolveStoredWageSnapshotConflictKeepLocal(id: id)
+            logger.info("Resolved conflict (kept local) for snapshot: \(id)")
+        } catch LocalStoreWriteError.notFound {
             logger.warning("Snapshot not found for conflict resolution: \(id)")
-            return
-        }
-
-        guard localSnapshot.syncStatus == .conflict else {
+        } catch LocalStoreWriteError.notInConflict {
             logger.warning("Snapshot is not in conflict state: \(id)")
-            return
-        }
-
-        guard let serverSnapshot = WageSnapshotServerSnapshot.decode(from: localSnapshot.conflictServerSnapshot ?? Data()) else {
+        } catch LocalStoreWriteError.missingConflictSnapshot {
             logger.error("No server snapshot found for conflict: \(id)")
-            return
+        } catch {
+            throw error
         }
-
-        localSnapshot.serverRevision = serverSnapshot.revision
-        localSnapshot.serverUpdatedAt = serverSnapshot.updatedAt
-        localSnapshot.syncStatus = .dirty
-        localSnapshot.conflictServerSnapshot = nil
-        localSnapshot.localUpdatedAt = Date()
-
-        try await localStore.storeActor.upsertWageSnapshot(localSnapshot)
-        try await localStore.storeActor.save()
-
-        logger.info("Resolved conflict (kept local) for snapshot: \(id)")
     }
 
     /// Resolve a conflict by accepting the server version
     /// - Parameter id: Snapshot ID
     func resolveConflictKeepServer(id: String) async throws {
-        let context = localStore.mainContext
-
-        let descriptor = FetchDescriptor<LocalWageSnapshot>(
-            predicate: #Predicate { $0.id == id }
-        )
-
-        guard let localSnapshot = try context.fetch(descriptor).first else {
+        do {
+            try await localStore.storeActor.resolveStoredWageSnapshotConflictKeepServer(id: id)
+            logger.info("Resolved conflict (kept server) for snapshot: \(id)")
+        } catch LocalStoreWriteError.notFound {
             logger.warning("Snapshot not found for conflict resolution: \(id)")
-            return
-        }
-
-        guard localSnapshot.syncStatus == .conflict else {
+        } catch LocalStoreWriteError.notInConflict {
             logger.warning("Snapshot is not in conflict state: \(id)")
-            return
-        }
-
-        guard let serverSnapshot = WageSnapshotServerSnapshot.decode(from: localSnapshot.conflictServerSnapshot ?? Data()) else {
+        } catch LocalStoreWriteError.missingConflictSnapshot {
             logger.error("No server snapshot found for conflict: \(id)")
-            return
+        } catch {
+            throw error
         }
-
-        // Apply server values
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy-MM-dd"
-        dateFormatter.timeZone = TimeZone(identifier: "UTC")
-
-        localSnapshot.fromDate = serverSnapshot.fromDate.flatMap { dateFormatter.date(from: $0) }
-        localSnapshot.hourlyWage = serverSnapshot.hourlyWage
-        localSnapshot.wageLevel = serverSnapshot.wageLevel
-        localSnapshot.supplements = serverSnapshot.supplements
-        localSnapshot.taxEnabled = serverSnapshot.taxEnabled
-        localSnapshot.taxPercentage = serverSnapshot.taxPercentage
-        localSnapshot.breakEnabled = serverSnapshot.breakEnabled
-        localSnapshot.breakMethod = serverSnapshot.breakMethod
-        localSnapshot.breakThresholdHours = serverSnapshot.breakThresholdHours
-        localSnapshot.breakDeductionMinutes = serverSnapshot.breakDeductionMinutes
-        localSnapshot.serverRevision = serverSnapshot.revision
-        localSnapshot.serverUpdatedAt = serverSnapshot.updatedAt
-        localSnapshot.serverDeletedAt = serverSnapshot.deletedAt
-
-        localSnapshot.syncStatus = .clean
-        localSnapshot.dirtyFieldKeys = []
-        localSnapshot.lastSyncedSnapshot = localSnapshot.conflictServerSnapshot ?? Data()
-        localSnapshot.conflictServerSnapshot = nil
-        localSnapshot.localUpdatedAt = Date()
-
-        try await localStore.storeActor.upsertWageSnapshot(localSnapshot)
-        try await localStore.storeActor.save()
-
-        logger.info("Resolved conflict (kept server) for snapshot: \(id)")
     }
 
     // MARK: - Local Snapshot Access (For Sync)

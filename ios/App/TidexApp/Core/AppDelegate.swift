@@ -1,6 +1,15 @@
 import ActivityKit
 import BackgroundTasks
+import Supabase
 import UIKit
+
+private struct PushDeviceRow: Decodable {
+    let userId: String
+
+    enum CodingKeys: String, CodingKey {
+        case userId = "user_id"
+    }
+}
 
 @main
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -14,6 +23,33 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     // Background task identifier for shift checking
     private let shiftCheckTaskId = "no.tidex.app.shiftcheck"
+
+    private let apnsTokenDefaultsKey = "apns_device_token"
+    private let apnsTokenRegisteredUserKey = "apns_device_token_registered_user"
+    private let apnsTokenRegisteredValueKey = "apns_device_token_registered_value"
+
+    private func shiftDateTimeFormatter() -> DateFormatter {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone.current
+        formatter.dateFormat = "yyyy-MM-dd HH:mm"
+        return formatter
+    }
+
+    private func minutes(from time: String) -> Int? {
+        let parts = time.split(separator: ":").compactMap { Int($0) }
+        guard parts.count >= 2 else { return nil }
+        return parts[0] * 60 + parts[1]
+    }
+
+    private func isCrossMidnight(startTime: String, endTime: String) -> Bool {
+        guard let startMinutes = minutes(from: startTime),
+              let endMinutes = minutes(from: endTime) else {
+            return endTime < startTime
+        }
+        return endMinutes < startMinutes
+    }
 
     private func sharedUserDefaults() -> UserDefaults? {
         guard FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupId) != nil else {
@@ -90,8 +126,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
         do {
             try BGTaskScheduler.shared.submit(request)
-            let formatter = DateFormatter()
-            formatter.dateFormat = "yyyy-MM-dd HH:mm"
+            let formatter = shiftDateTimeFormatter()
             print("[BGTask] Live Activity scheduled for \(formatter.string(from: scheduledTime))")
         } catch {
             print("[BGTask] Failed to schedule Live Activity task: \(error)")
@@ -100,11 +135,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     /// Parse a shift's start date/time into a Date object
     private func getShiftStartDate(_ shift: StoredShift) -> Date? {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd HH:mm"
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = TimeZone.current
-        return formatter.date(from: "\(shift.shiftDate) \(shift.startTime)")
+        shiftDateTimeFormatter().date(from: "\(shift.shiftDate) \(shift.startTime)")
     }
 
     private func handleShiftCheckTask(_ task: BGAppRefreshTask) {
@@ -162,9 +193,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 
     private func isShiftOngoing(_ shift: StoredShift, at date: Date) -> Bool {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd HH:mm"
-        formatter.timeZone = TimeZone.current
+        let formatter = shiftDateTimeFormatter()
 
         guard let startDate = formatter.date(from: "\(shift.shiftDate) \(shift.startTime)") else {
             return false
@@ -173,7 +202,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         var endDate = formatter.date(from: "\(shift.shiftDate) \(shift.endTime)") ?? startDate
 
         // Handle cross-midnight shifts
-        if shift.endTime < shift.startTime {
+        if isCrossMidnight(startTime: shift.startTime, endTime: shift.endTime) {
             endDate = Calendar.current.date(byAdding: .day, value: 1, to: endDate) ?? endDate
         }
 
@@ -182,16 +211,14 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     private func startLiveActivityForShift(_ shift: StoredShift) {
         let now = Date()
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd HH:mm"
-        formatter.timeZone = TimeZone.current
+        let formatter = shiftDateTimeFormatter()
 
         guard let startDate = formatter.date(from: "\(shift.shiftDate) \(shift.startTime)") else {
             return
         }
 
         var endDate = formatter.date(from: "\(shift.shiftDate) \(shift.endTime)") ?? startDate
-        if shift.endTime < shift.startTime {
+        if isCrossMidnight(startTime: shift.startTime, endTime: shift.endTime) {
             endDate = Calendar.current.date(byAdding: .day, value: 1, to: endDate) ?? endDate
         }
 
@@ -287,6 +314,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         let tokenString = deviceToken.map { String(format: "%02.2hhx", $0) }.joined()
         print("[APNs] Token received: \(tokenString)")
 
+        cacheAPNsToken(tokenString)
+
         // Store APNs token in Supabase
         Task {
             await registerAPNsToken(tokenString)
@@ -310,22 +339,82 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             // Get current user session
             let session = try await supabase.auth.session
 
+            let userId = session.user.id.uuidString.lowercased()
+            let defaults = UserDefaults.standard
+
+            if !needsAPNsRegistration(token: token, userId: userId) {
+                return
+            }
+            let timestamp = ISO8601DateFormatter().string(from: Date())
+            let updatePayload = [
+                "apns_token": token,
+                "updated_at": timestamp
+            ]
+
             // Update existing device record with APNs token
             // This preserves the fcm_token for backwards compatibility during migration
-            try await supabase
+            let updatedRows: [PushDeviceRow] = try await supabase
                 .schema("internal")
                 .from("push_devices")
-                .update([
-                    "apns_token": token,
-                    "updated_at": ISO8601DateFormatter().string(from: Date())
-                ])
-                .eq("user_id", value: session.user.id.uuidString)
+                .update(updatePayload)
+                .eq("user_id", value: userId)
+                .select("user_id")
                 .execute()
+                .value
 
-            print("[APNs] Token registered with Supabase")
+            if updatedRows.isEmpty {
+                let insertPayload = [
+                    "user_id": userId,
+                    "apns_token": token,
+                    "updated_at": timestamp
+                ]
+
+                _ = try await supabase
+                    .schema("internal")
+                    .from("push_devices")
+                    .insert(insertPayload)
+                    .select("user_id")
+                    .execute()
+                    .value as [PushDeviceRow]
+            }
+
+            defaults.set(token, forKey: apnsTokenRegisteredValueKey)
+            defaults.set(userId, forKey: apnsTokenRegisteredUserKey)
+
+            print("[APNs] Token registered with Supabase for user \(userId.prefix(8))")
         } catch {
             print("[APNs] Failed to register token: \(error)")
         }
+    }
+
+    private func cacheAPNsToken(_ token: String) {
+        let defaults = UserDefaults.standard
+        let existingToken = defaults.string(forKey: apnsTokenDefaultsKey)
+
+        if existingToken != token {
+            defaults.set(token, forKey: apnsTokenDefaultsKey)
+            defaults.removeObject(forKey: apnsTokenRegisteredValueKey)
+            defaults.removeObject(forKey: apnsTokenRegisteredUserKey)
+        }
+    }
+
+    private func cachedAPNsToken() -> String? {
+        UserDefaults.standard.string(forKey: apnsTokenDefaultsKey)
+    }
+
+    func registerCachedAPNsTokenIfNeeded() async {
+        guard let token = cachedAPNsToken() else {
+            return
+        }
+
+        await registerAPNsToken(token)
+    }
+
+    private func needsAPNsRegistration(token: String, userId: String) -> Bool {
+        let defaults = UserDefaults.standard
+        let lastToken = defaults.string(forKey: apnsTokenRegisteredValueKey)
+        let lastUserId = defaults.string(forKey: apnsTokenRegisteredUserKey)
+        return lastToken != token || lastUserId != userId
     }
 }
 

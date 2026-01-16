@@ -5,22 +5,26 @@ import Foundation
 extension Date {
     // MARK: - Timezone
 
-    /// Europe/Oslo timezone (Norwegian timezone)
-    static let osloTimeZone = TimeZone(identifier: "Europe/Oslo")!
+    /// User-local timezone (updates dynamically if the device timezone changes)
+    static var localTimeZone: TimeZone { TimeZone.current }
 
     // MARK: - ISO Date Formatting
 
     /// Format date as ISO date string (YYYY-MM-DD)
-    func toISODateString(in timeZone: TimeZone = Date.osloTimeZone) -> String {
+    func toISODateString(in timeZone: TimeZone = Date.localTimeZone) -> String {
         let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.timeZone = timeZone
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter.string(from: self)
     }
 
     /// Parse ISO date string (YYYY-MM-DD) to Date
-    static func fromISODateString(_ string: String, in timeZone: TimeZone = Date.osloTimeZone) -> Date? {
+    static func fromISODateString(_ string: String, in timeZone: TimeZone = Date.localTimeZone) -> Date? {
         let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.timeZone = timeZone
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter.date(from: string)
@@ -30,14 +34,14 @@ extension Date {
     static func fromISODateStringUTC(_ string: String) -> Date? {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withFullDate]
-        formatter.timeZone = TimeZone(identifier: "UTC")
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
         return formatter.date(from: string)
     }
 
     // MARK: - Year/Month Components
 
     /// Get year and month components
-    func yearMonth(in timeZone: TimeZone = Date.osloTimeZone) -> (year: Int, month: Int) {
+    func yearMonth(in timeZone: TimeZone = Date.localTimeZone) -> (year: Int, month: Int) {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = timeZone
         let components = calendar.dateComponents([.year, .month], from: self)
@@ -45,7 +49,7 @@ extension Date {
     }
 
     /// Get current year and month
-    static func currentYearMonth(in timeZone: TimeZone = Date.osloTimeZone) -> (year: Int, month: Int) {
+    static func currentYearMonth(in timeZone: TimeZone = Date.localTimeZone) -> (year: Int, month: Int) {
         Date().yearMonth(in: timeZone)
     }
 
@@ -87,7 +91,9 @@ extension Date {
         components.year = year
         components.month = month
         components.day = 1
-        return Calendar(identifier: .gregorian).date(from: components) ?? Date()
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = localTimeZone
+        return calendar.date(from: components) ?? Date()
     }
 
     /// Get Date object for last day of month
@@ -96,14 +102,17 @@ extension Date {
         components.year = year
         components.month = month + 1
         components.day = 0
-        return Calendar(identifier: .gregorian).date(from: components) ?? Date()
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = localTimeZone
+        return calendar.date(from: components) ?? Date()
     }
 
     // MARK: - Weekday
 
     /// Get weekday (1-7 where 1=Monday, 7=Sunday) matching TypeScript conventions
     var tidexWeekday: Int {
-        let calendar = Calendar(identifier: .gregorian)
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = Date.localTimeZone
         let weekday = calendar.component(.weekday, from: self)
         // Calendar: 1=Sunday, 2=Monday, ..., 7=Saturday
         // Tidex: 1=Monday, ..., 7=Sunday
@@ -112,19 +121,20 @@ extension Date {
 
     /// Get weekday from ISO date string (1-7 where 1=Monday, 7=Sunday)
     static func weekdayFromISO(_ dateString: String) -> Int {
-        guard let date = fromISODateStringUTC(dateString) else { return 1 }
+        guard let date = fromISODateString(dateString) else { return 1 }
         return date.tidexWeekday
     }
 
     /// Get weekday key (0-6 where 0=Sunday) for recurring shift selected_days
     var recurringWeekdayKey: Int {
-        let calendar = Calendar(identifier: .gregorian)
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = Date.localTimeZone
         return calendar.component(.weekday, from: self) - 1
     }
 
     // MARK: - Comparison
 
-    /// Check if this date is today (in Oslo timezone)
+    /// Check if this date is today (in local timezone)
     var isToday: Bool {
         let todayString = Date().toISODateString()
         return toISODateString() == todayString
@@ -146,12 +156,15 @@ extension Date {
 
     /// Calculate days between two ISO date strings
     static func daysBetween(_ from: String, _ to: String) -> Int {
-        guard let fromDate = fromISODateStringUTC(from),
-              let toDate = fromISODateStringUTC(to) else {
+        guard let fromDate = fromISODateString(from),
+              let toDate = fromISODateString(to) else {
             return 0
         }
-        let seconds = toDate.timeIntervalSince(fromDate)
-        return Int(seconds / 86400)
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = localTimeZone
+        let fromMidnight = calendar.startOfDay(for: fromDate)
+        let toMidnight = calendar.startOfDay(for: toDate)
+        return calendar.dateComponents([.day], from: fromMidnight, to: toMidnight).day ?? 0
     }
 }
 
@@ -183,9 +196,11 @@ extension Date {
         components.hour = hours
         components.minute = minutes
         components.second = 0
-        components.timeZone = osloTimeZone
+        components.timeZone = localTimeZone
 
-        return Calendar(identifier: .gregorian).date(from: components)
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = localTimeZone
+        return calendar.date(from: components)
     }
 
     /// Check if a shift has ended based on its date and end time
@@ -217,7 +232,7 @@ extension Date {
 
 // MARK: - Today ISO Helper
 
-/// Get today's date as ISO string in Oslo timezone
+/// Get today's date as ISO string in local timezone
 func todayISO() -> String {
     Date().toISODateString()
 }

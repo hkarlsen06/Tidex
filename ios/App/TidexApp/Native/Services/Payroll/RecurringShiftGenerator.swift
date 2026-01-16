@@ -48,9 +48,9 @@ struct RecurringShiftGenerator {
         var virtualShifts: [RecurringVirtualShift] = []
         let exclusionSet = Set(recurring.effectiveExclusions)
 
-        // Use UTC calendar for consistent date iteration
+        // Use local calendar for user-facing date iteration
         var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = TimeZone(identifier: "UTC")!
+        calendar.timeZone = Date.localTimeZone
 
         // Create month start/end dates in UTC
         var startComponents = DateComponents()
@@ -80,7 +80,7 @@ struct RecurringShiftGenerator {
 
             // Generate occurrences throughout the month
             while current <= monthEndDate {
-                let currentISO = toISODateUTC(current)
+                let currentISO = toISODateLocal(current)
 
                 // Check date range
                 guard currentISO >= monthStartISO && currentISO <= monthEndISO else {
@@ -130,12 +130,11 @@ struct RecurringShiftGenerator {
 
     // MARK: - Private Helpers
 
-    /// Convert Date to ISO date string (YYYY-MM-DD) in UTC
-    /// Using ISO8601DateFormatter for consistency
-    private static func toISODateUTC(_ date: Date) -> String {
+    /// Convert Date to ISO date string (YYYY-MM-DD) in local time
+    private static func toISODateLocal(_ date: Date) -> String {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withFullDate]
-        formatter.timeZone = TimeZone(identifier: "UTC")
+        formatter.timeZone = Date.localTimeZone
         return formatter.string(from: date)
     }
 
@@ -154,13 +153,13 @@ struct RecurringShiftGenerator {
         // Find earliest anchor date for window calculation
         let anchorDates = selectedDays.values.sorted()
         guard let earliestAnchor = anchorDates.first,
-              let anchorDate = Date.fromISODateStringUTC(earliestAnchor) else {
+              let anchorDate = Date.fromISODateString(earliestAnchor) else {
             return true
         }
 
-        // Use UTC calendar for consistent date calculations
+        // Use local calendar for consistent date calculations
         var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = TimeZone(identifier: "UTC")!
+        calendar.timeZone = Date.localTimeZone
 
         switch endCondition {
         case .months(let value):

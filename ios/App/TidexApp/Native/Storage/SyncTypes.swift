@@ -83,12 +83,18 @@ let syncJSONDecoder: JSONDecoder = {
 /// Error for encoding failures in critical sync paths
 enum SyncEncodingError: LocalizedError {
     case snapshotEncodingFailed(type: String, underlyingError: Error)
+    case payloadDecodingFailed(type: String, underlyingError: Error)
+    case emptyUpdatePayload(type: String)
 
     /// Technical description for logging
     var errorDescription: String? {
         switch self {
         case .snapshotEncodingFailed(let type, let error):
             return "Failed to encode \(type): \(error.localizedDescription)"
+        case .payloadDecodingFailed(let type, let error):
+            return "Failed to decode \(type): \(error.localizedDescription)"
+        case .emptyUpdatePayload(let type):
+            return "Empty update payload for \(type)"
         }
     }
 
@@ -97,6 +103,8 @@ enum SyncEncodingError: LocalizedError {
         switch self {
         case .snapshotEncodingFailed:
             return "Sync failed: Unable to save local changes. Please try again."
+        case .payloadDecodingFailed, .emptyUpdatePayload:
+            return "Sync failed: Unable to prepare local changes. Please try again."
         }
     }
 }
