@@ -17,10 +17,16 @@ struct SyncDebugView: View {
     @State private var isRunningValidation = false
     @State private var isLoadingSummary = false
 
+    @ObservedObject private var entitlementService = EntitlementService.shared
+    @State private var isRefreshingEntitlement = false
+
     var body: some View {
         List {
             // Sync Status Section
             syncStatusSection
+
+            // Entitlement Section
+            entitlementSection
 
             // State Summary Section
             stateSummarySection
@@ -99,6 +105,89 @@ struct SyncDebugView: View {
                 }
             }
         }
+    }
+
+    // MARK: - Entitlement Section
+
+    private var entitlementSection: some View {
+        Section("Entitlement") {
+            HStack {
+                Text("Effective Tier")
+                Spacer()
+                Text(entitlementService.effectiveTier.rawValue.capitalized)
+                    .foregroundColor(tierColor(for: entitlementService.effectiveTier))
+                    .bold()
+            }
+
+            HStack {
+                Text("Cache Status")
+                Spacer()
+                if entitlementService.serverTierExpired {
+                    Text("Expired")
+                        .foregroundColor(.red)
+                } else {
+                    Text("Valid")
+                        .foregroundColor(.green)
+                }
+            }
+
+            if let cached = entitlementService.serverEntitlement {
+                HStack {
+                    Text("Cached Tier")
+                    Spacer()
+                    Text(cached.tier.rawValue.capitalized)
+                        .foregroundColor(.secondary)
+                }
+
+                HStack {
+                    Text("Valid Until")
+                    Spacer()
+                    Text(cached.validUntil, style: .relative)
+                        .foregroundColor(cached.isExpired ? .red : .secondary)
+                }
+
+                HStack {
+                    Text("Is Grandfathered")
+                    Spacer()
+                    Text(cached.isGrandfathered ? "Yes" : "No")
+                        .foregroundColor(.secondary)
+                }
+            }
+
+            Button {
+                Task { await forceRefreshEntitlement() }
+            } label: {
+                HStack {
+                    if isRefreshingEntitlement {
+                        ProgressView()
+                            .progressViewStyle(.circular)
+                    }
+                    Label("Force Refresh Entitlement", systemImage: "arrow.clockwise")
+                }
+            }
+            .disabled(isRefreshingEntitlement || userId == nil)
+        }
+    }
+
+    private func tierColor(for tier: SubscriptionTier) -> Color {
+        switch tier {
+        case .free: return .secondary
+        case .pro: return .blue
+        case .max: return .purple
+        }
+    }
+
+    private func forceRefreshEntitlement() async {
+        guard let userId = userId else { return }
+
+        isRefreshingEntitlement = true
+        do {
+            try await entitlementService.refreshFromServer(userId: userId)
+            logger.info("Entitlement refreshed: tier=\(self.entitlementService.effectiveTier.rawValue)")
+        } catch {
+            logger.error("Failed to refresh entitlement: \(error.localizedDescription)")
+        }
+        isRefreshingEntitlement = false
     }
 
     // MARK: - State Summary Section

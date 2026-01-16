@@ -22,7 +22,8 @@ struct PlanCard: View {
                     .foregroundColor(tierColor)
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(tierName)
+                    // Use App Store Connect localized name if available
+                    Text(product?.displayName ?? tierName)
                         .font(.system(size: 20, weight: .bold))
                         .foregroundColor(.tidexTextPrimary)
 
@@ -40,19 +41,12 @@ struct PlanCard: View {
                 }
             }
 
-            // Features list
-            VStack(alignment: .leading, spacing: 8) {
-                ForEach(features, id: \.self) { feature in
-                    HStack(spacing: 8) {
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(.system(size: 14))
-                            .foregroundColor(.tidexSuccess)
-
-                        Text(feature)
-                            .font(.system(size: 14))
-                            .foregroundColor(.tidexTextSecondary)
-                    }
-                }
+            // Product description from App Store Connect
+            if let product = product {
+                Text(product.description)
+                    .font(.system(size: 14))
+                    .foregroundColor(.tidexTextSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
 
             // Subscribe button
@@ -115,31 +109,6 @@ struct PlanCard: View {
         case .pro: return .tidexBlue
         case .max: return .tidexPurple
         case .free: return .tidexTextMuted
-        }
-    }
-
-    private var features: [String] {
-        switch tier {
-        case .pro:
-            return [
-                AuthStrings.string("paywall.pro.feature1", locale: localization.currentLocale),
-                AuthStrings.string("paywall.pro.feature2", locale: localization.currentLocale),
-                AuthStrings.string("paywall.pro.feature3", locale: localization.currentLocale),
-                AuthStrings.string("paywall.pro.feature4", locale: localization.currentLocale)
-            ]
-        case .max:
-            return [
-                AuthStrings.string("paywall.max.feature1", locale: localization.currentLocale),
-                AuthStrings.string("paywall.max.feature2", locale: localization.currentLocale),
-                AuthStrings.string("paywall.max.feature3", locale: localization.currentLocale),
-                AuthStrings.string("paywall.max.feature4", locale: localization.currentLocale),
-                AuthStrings.string("paywall.max.feature5", locale: localization.currentLocale)
-            ]
-        case .free:
-            return [
-                AuthStrings.string("paywall.free.feature1", locale: localization.currentLocale),
-                AuthStrings.string("paywall.free.feature2", locale: localization.currentLocale)
-            ]
         }
     }
 
