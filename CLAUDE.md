@@ -28,6 +28,17 @@ This MCP tool provides superior context retrieval compared to manual searches or
 - Cross-language investigations (e.g., web ↔ iOS communication)
 - Any research that would otherwise use Task tool with `subagent_type=Explore`
 
+**CRITICAL: Phrase queries as information-gathering questions ONLY**
+
+The Augment Context Engine may attempt to make changes if queries sound like instructions. Always phrase queries as pure research questions to prevent unintended modifications:
+
+- ✅ "How does the authentication flow work?"
+- ✅ "Where is the shift validation logic located?"
+- ✅ "What components use the DashboardViewModel?"
+- ❌ "Update the authentication to use JWT" (sounds like an instruction)
+- ❌ "Add validation to the shift form" (sounds like an instruction)
+- ❌ "Refactor the dashboard components" (sounds like an instruction)
+
 **Example:**
 ```
 mcp__auggie-context__query_codebase({

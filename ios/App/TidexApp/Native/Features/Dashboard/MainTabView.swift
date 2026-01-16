@@ -38,38 +38,45 @@ struct MainTabView: View {
     }
 
     var body: some View {
-        TabView(selection: $selectedTab) {
-            DashboardView(selectedTab: $selectedTab)
-                .tabItem {
-                    Label(localization.string(Tab.home.localizationKey), systemImage: Tab.home.icon)
-                }
-                .tag(Tab.home)
+        ZStack {
+            // Background that fills entire screen including safe areas
+            // Prevents black bars from showing behind tab content
+            Color.tidexBackground
+                .ignoresSafeArea()
 
-            ShiftsPlaceholderView()
-                .tabItem {
-                    Label(localization.string(Tab.shifts.localizationKey), systemImage: Tab.shifts.icon)
-                }
-                .tag(Tab.shifts)
+            TabView(selection: $selectedTab) {
+                DashboardView(selectedTab: $selectedTab)
+                    .tabItem {
+                        Label(localization.string(Tab.home.localizationKey), systemImage: Tab.home.icon)
+                    }
+                    .tag(Tab.home)
 
-            AddShiftPlaceholderView()
-                .tabItem {
-                    Label(localization.string(Tab.add.localizationKey), systemImage: Tab.add.icon)
-                }
-                .tag(Tab.add)
+                ShiftsPlaceholderView()
+                    .tabItem {
+                        Label(localization.string(Tab.shifts.localizationKey), systemImage: Tab.shifts.icon)
+                    }
+                    .tag(Tab.shifts)
 
-            StatsPlaceholderView()
-                .tabItem {
-                    Label(localization.string(Tab.stats.localizationKey), systemImage: Tab.stats.icon)
-                }
-                .tag(Tab.stats)
+                AddShiftPlaceholderView()
+                    .tabItem {
+                        Label(localization.string(Tab.add.localizationKey), systemImage: Tab.add.icon)
+                    }
+                    .tag(Tab.add)
 
-            SharingPlaceholderView()
-                .tabItem {
-                    Label(localization.string(Tab.sharing.localizationKey), systemImage: Tab.sharing.icon)
-                }
-                .tag(Tab.sharing)
+                StatsPlaceholderView()
+                    .tabItem {
+                        Label(localization.string(Tab.stats.localizationKey), systemImage: Tab.stats.icon)
+                    }
+                    .tag(Tab.stats)
+
+                SharingPlaceholderView()
+                    .tabItem {
+                        Label(localization.string(Tab.sharing.localizationKey), systemImage: Tab.sharing.icon)
+                    }
+                    .tag(Tab.sharing)
+            }
+            .tint(.tidexBlue)
         }
-        .tint(.tidexBlue)
     }
 }
 
@@ -100,15 +107,22 @@ struct PlaceholderTabView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                PlaceholderContent(
-                    icon: icon,
-                    title: localization.string(titleKey),
-                    description: localization.string(descriptionKey)
-                )
-                .frame(maxWidth: .infinity, minHeight: UIScreen.main.bounds.height - 200)
+            ZStack {
+                // Background that fills entire screen including safe areas
+                // Prevents black bars from showing in status bar and home indicator areas
+                Color.tidexBackground
+                    .ignoresSafeArea()
+
+                ScrollView {
+                    PlaceholderContent(
+                        icon: icon,
+                        title: localization.string(titleKey),
+                        description: localization.string(descriptionKey)
+                    )
+                    .frame(maxWidth: .infinity, minHeight: UIScreen.main.bounds.height - 200)
+                }
+                .applyRefreshable(enabled: supportsRefresh)
             }
-            .applyRefreshable(enabled: supportsRefresh)
             .navigationTitle(localization.string(titleKey))
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(Color.tidexBackground, for: .navigationBar)
@@ -158,7 +172,7 @@ struct AddShiftPlaceholderView: View {
     var body: some View {
         PlaceholderTabView(
             icon: "plus.circle.fill",
-            titleKey: "placeholder.addShift",
+            titleKey: "tabs.add",
             descriptionKey: "placeholder.addShiftDescription",
             supportsRefresh: false
         )
@@ -187,32 +201,29 @@ struct SharingPlaceholderView: View {
 
 // MARK: - Placeholder Content
 
-struct PlaceholderContent: View {
+/// Content for placeholder tab views
+/// Displays a centered icon, title, and description
+private struct PlaceholderContent: View {
     let icon: String
     let title: String
     let description: String
 
     var body: some View {
-        ZStack {
-            Color.tidexBackground
-                .ignoresSafeArea()
+        VStack(spacing: 16) {
+            Image(systemName: icon)
+                .font(.system(size: 48))
+                .foregroundColor(.tidexTextMuted)
 
-            VStack(spacing: 16) {
-                Image(systemName: icon)
-                    .font(.system(size: 48))
-                    .foregroundColor(.tidexTextMuted)
+            Text(title)
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundColor(.tidexTextPrimary)
 
-                Text(title)
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundColor(.tidexTextPrimary)
-
-                Text(description)
-                    .font(.system(size: 14))
-                    .foregroundColor(.tidexTextSecondary)
-                    .multilineTextAlignment(.center)
-            }
-            .padding(.horizontal, 40)
+            Text(description)
+                .font(.system(size: 14))
+                .foregroundColor(.tidexTextSecondary)
+                .multilineTextAlignment(.center)
         }
+        .padding(.horizontal, 40)
     }
 }
 

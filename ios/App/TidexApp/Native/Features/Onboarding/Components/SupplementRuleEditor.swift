@@ -5,6 +5,7 @@ import UIKit
 /// Uses progressive disclosure: Days → Time → Type → Value
 struct SupplementRuleEditor: View {
     let rule: OnboardingSupplementRule?
+    let currency: String
     let onSave: (OnboardingSupplementRule) -> Void
     let onCancel: () -> Void
 
@@ -29,10 +30,12 @@ struct SupplementRuleEditor: View {
 
     init(
         rule: OnboardingSupplementRule?,
+        currency: String = "kr",
         onSave: @escaping (OnboardingSupplementRule) -> Void,
         onCancel: @escaping () -> Void
     ) {
         self.rule = rule
+        self.currency = currency
         self.onSave = onSave
         self.onCancel = onCancel
         self._editedRule = State(initialValue: rule ?? OnboardingSupplementRule())
@@ -44,6 +47,20 @@ struct SupplementRuleEditor: View {
 
     private var isEditing: Bool {
         rule != nil
+    }
+
+    /// Currency configuration for display
+    private var currencyConfig: CurrencyOption {
+        CurrencyConfig.get(currency)
+    }
+
+    /// Hour suffix for rate display (e.g., "kr/t", "$/hr")
+    private var hourRateSuffix: String {
+        let isNorwegian = localization.currentLocale == .norwegian
+        let hourPart = isNorwegian ? "/t" : "/hr"
+        return currencyConfig.display == .prefix
+            ? "\(currencyConfig.value)\(hourPart)"
+            : "\(currencyConfig.value)\(hourPart)"
     }
 
     var body: some View {
@@ -262,7 +279,7 @@ struct SupplementRuleEditor: View {
             HStack(spacing: 12) {
                 TypeButton(
                     title: localization.string("onboarding.supplements.fixedRate"),
-                    subtitle: "kr/t",
+                    subtitle: hourRateSuffix,
                     isSelected: hasSelectedType && editedRule.type == .fixed,
                     action: {
                         UIImpactFeedbackGenerator(style: .light).impactOccurred()
@@ -357,7 +374,7 @@ struct SupplementRuleEditor: View {
                                     }
                                 }
 
-                            Text(editedRule.type == .fixed ? "kr/t" : "%")
+                            Text(editedRule.type == .fixed ? hourRateSuffix : "%")
                                 .font(.system(size: 14, weight: .medium))
                                 .foregroundColor(.tidexTextMuted)
                         }
@@ -382,7 +399,7 @@ struct SupplementRuleEditor: View {
                         }
                         .buttonStyle(.plain)
 
-                        Text(editedRule.type == .fixed ? "kr/t" : "%")
+                        Text(editedRule.type == .fixed ? hourRateSuffix : "%")
                             .font(.system(size: 14, weight: .medium))
                             .foregroundColor(.tidexTextMuted)
                     }
@@ -432,7 +449,21 @@ struct SupplementRuleEditor: View {
     private var quickValues: [Double] {
         switch editedRule.type {
         case .fixed:
-            return [22, 45, 55, 110, 115]
+            // Quick values based on currency tier
+            switch currencyConfig.wageRangeTier {
+            case .high:
+                // NOK, CZK, Ruble - higher nominal values
+                return [22, 45, 55, 110, 115]
+            case .medium:
+                // USD, EUR, GBP, etc. - lower nominal values
+                return [2, 5, 10, 15, 20]
+            case .low:
+                // INR, BRL, ZAR, etc. - mid-range nominal values
+                return [10, 25, 50, 75, 100]
+            case .veryLow:
+                // JPY, KRW - very high nominal values
+                return [100, 250, 500, 750, 1000]
+            }
         case .percent:
             return [25, 50, 100, 150]
         }
@@ -441,7 +472,17 @@ struct SupplementRuleEditor: View {
     private var valueRange: ClosedRange<Double> {
         switch editedRule.type {
         case .fixed:
-            return 1...200
+            // Value range based on currency tier
+            switch currencyConfig.wageRangeTier {
+            case .high:
+                return 1...200
+            case .medium:
+                return 1...50
+            case .low:
+                return 1...500
+            case .veryLow:
+                return 1...2000
+            }
         case .percent:
             return 1...200
         }

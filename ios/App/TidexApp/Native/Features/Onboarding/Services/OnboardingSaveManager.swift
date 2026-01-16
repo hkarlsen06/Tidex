@@ -53,9 +53,9 @@ final class OnboardingSaveManager: ObservableObject {
             let snapshot = try await createBaselineSnapshot(userId: userId, data: data)
             logger.info("Created baseline snapshot: \(snapshot.id)")
 
-            // Step 2: Update payroll day in settings
-            try await updateSettings(userId: userId, payrollDay: data.payrollDay)
-            logger.info("Updated settings with payroll day: \(data.payrollDay)")
+            // Step 2: Update settings (payroll day and currency)
+            try await updateSettings(userId: userId, payrollDay: data.payrollDay, currency: data.currency)
+            logger.info("Updated settings with payroll day: \(data.payrollDay), currency: \(data.currency)")
 
             // Step 3: Mark onboarding as finished in Supabase user metadata
             try await markOnboardingFinished()
@@ -105,10 +105,11 @@ final class OnboardingSaveManager: ObservableObject {
         return snapshot
     }
 
-    private func updateSettings(userId: String, payrollDay: Int) async throws {
+    private func updateSettings(userId: String, payrollDay: Int, currency: String) async throws {
         _ = try await settingsRepository.updateSettings(
             for: userId,
-            payrollDay: payrollDay
+            payrollDay: payrollDay,
+            currency: currency
         )
     }
 

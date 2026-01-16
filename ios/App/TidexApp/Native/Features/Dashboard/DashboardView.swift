@@ -15,8 +15,9 @@ struct DashboardView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                // Background matching splash/loading screens
-                Color.tidexLaunchBackground
+                // Background that fills entire screen including safe areas
+                // Uses adaptive tidexBackground to match other tabs and prevent black bars during transitions
+                Color.tidexBackground
                     .ignoresSafeArea()
 
                 // Main layout: content area + month picker at bottom
@@ -62,8 +63,8 @@ struct DashboardView: View {
             }
             .navigationTitle(localization.string("dashboard.title"))
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(Color.tidexLaunchBackground, for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbarBackground(Color.tidexBackground, for: .navigationBar)
+            // Note: Removed .toolbarColorScheme(.dark) to respect system appearance
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     UserMenuButton(
@@ -169,6 +170,8 @@ struct DashboardView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        // Pass user's currency to all child views
+        .userCurrency(data.currency)
     }
 
     // MARK: - Animated Card Content

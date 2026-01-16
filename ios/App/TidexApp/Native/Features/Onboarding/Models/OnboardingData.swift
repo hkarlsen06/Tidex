@@ -42,6 +42,11 @@ final class OnboardingData {
     /// Day of month when pay is received (1-28)
     var payrollDay: Int = 15
 
+    // MARK: - Display Settings
+
+    /// Selected currency symbol (stored in DB)
+    var currency: String = "kr"
+
     // MARK: - Computed Properties
 
     /// Resolved hourly wage based on wage type
@@ -101,7 +106,8 @@ final class OnboardingData {
             breakEnabled: breakEnabled,
             taxEnabled: taxEnabled,
             taxPercentage: taxPercentage,
-            payrollDay: payrollDay
+            payrollDay: payrollDay,
+            currency: currency
         )
 
         if let encoded = try? JSONEncoder().encode(persistedData) {
@@ -128,6 +134,7 @@ final class OnboardingData {
         self.taxEnabled = persisted.taxEnabled
         self.taxPercentage = persisted.taxPercentage
         self.payrollDay = persisted.payrollDay
+        self.currency = persisted.currency ?? "kr"
 
         return UserDefaults.standard.string(forKey: Self.screenKey)
     }
@@ -157,6 +164,7 @@ private struct PersistedOnboardingData: Codable {
     let taxEnabled: Bool
     let taxPercentage: Double
     let payrollDay: Int
+    let currency: String?
 }
 
 /// Codable wrapper for OnboardingSupplementRule persistence
@@ -256,11 +264,16 @@ struct OnboardingSupplementRule: Identifiable, Equatable {
         "\(fromTime) - \(toTime)"
     }
 
-    /// Human-readable value with localization
-    func valueDescription(locale: LocalizationManager.AppLocale) -> String {
+    /// Human-readable value with localization and currency
+    func valueDescription(locale: LocalizationManager.AppLocale, currency: String = "kr") -> String {
         switch type {
         case .fixed:
-            return "+\(Int(value)) \(AuthStrings.string("onboarding.supplements.perHour", locale: locale))"
+            let currencyConfig = CurrencyConfig.get(currency)
+            let hourPart = locale == .norwegian ? "/t" : "/hr"
+            let suffix = currencyConfig.display == .prefix
+                ? "\(currencyConfig.value)\(hourPart)"
+                : "\(currencyConfig.value)\(hourPart)"
+            return "+\(Int(value)) \(suffix)"
         case .percent:
             return "+\(Int(value))%"
         }

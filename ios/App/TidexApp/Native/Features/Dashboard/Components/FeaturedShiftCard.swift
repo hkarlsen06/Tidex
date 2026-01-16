@@ -11,6 +11,7 @@ struct FeaturedShiftCard: View {
     let countdownText: String?  // Countdown text shown below the card
 
     @Environment(\.localization) private var localization
+    @Environment(\.userCurrency) private var currency
 
     // MARK: - Computed Properties
 
@@ -157,13 +158,7 @@ struct FeaturedShiftCard: View {
     // MARK: - Formatting
 
     private func formatCurrency(_ amount: Double) -> String {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.currencyCode = "NOK"
-        formatter.currencySymbol = "kr "
-        formatter.maximumFractionDigits = 0
-        formatter.locale = Locale(identifier: "nb_NO")
-        return formatter.string(from: NSNumber(value: amount)) ?? "kr 0"
+        CurrencyConfig.format(amount, currency: currency)
     }
 }
 

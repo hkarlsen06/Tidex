@@ -144,6 +144,11 @@ final class AppCoordinator: ObservableObject {
 
                 case .signedIn:
                     // User just signed in, check MFA
+                    // Skip if already authenticated or in terms flow to prevent duplicate checks
+                    guard self.appState != .authenticated && self.appState != .termsRequired else {
+                        print("[AppCoordinator] Skipping signedIn handling - already in state: \(self.appState)")
+                        break
+                    }
                     await self.checkMFAAndUpdateState()
 
                 case .signedOut:
