@@ -91,6 +91,7 @@
 		11A196482F1AE68C0030E524 /* SubscriptionModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A196462F1AE68C0030E524 /* SubscriptionModels.swift */; };
 		11A1964B2F1AE6A20030E524 /* LocalEntitlementCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A196492F1AE6A20030E524 /* LocalEntitlementCache.swift */; };
 		11A1964C2F1AE6A20030E524 /* LocalPendingJWSUpload.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A1964A2F1AE6A20030E524 /* LocalPendingJWSUpload.swift */; };
+		11A1964E2F1AE7980030E524 /* EntitlementRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A1964D2F1AE7980030E524 /* EntitlementRepository.swift */; };
 		11A5CD262F101201002BAC91 /* StoredShift.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A5CD252F101201002BAC91 /* StoredShift.swift */; };
 		11A5CD302F101283002BAC91 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 11A5CD2F2F101283002BAC91 /* WidgetKit.framework */; };
 		11A5CD322F101283002BAC91 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 11A5CD312F101283002BAC91 /* SwiftUI.framework */; };
@@ -262,6 +263,7 @@
 		11A196462F1AE68C0030E524 /* SubscriptionModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionModels.swift; sourceTree = "<group>"; };
 		11A196492F1AE6A20030E524 /* LocalEntitlementCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalEntitlementCache.swift; sourceTree = "<group>"; };
 		11A1964A2F1AE6A20030E524 /* LocalPendingJWSUpload.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalPendingJWSUpload.swift; sourceTree = "<group>"; };
+		11A1964D2F1AE7980030E524 /* EntitlementRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EntitlementRepository.swift; sourceTree = "<group>"; };
 		11A5CD252F101201002BAC91 /* StoredShift.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoredShift.swift; sourceTree = "<group>"; };
 		11A5CD2E2F101283002BAC91 /* TidexShiftWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TidexShiftWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		11A5CD2F2F101283002BAC91 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
@@ -397,6 +399,7 @@
 		1128F3A82F18729100702359 /* Repositories */ = {
 			isa = PBXGroup;
 			children = (
+				11A1964D2F1AE7980030E524 /* EntitlementRepository.swift */,
 				1128F3A42F18729100702359 /* RecurringShiftsRepository.swift */,
 				1128F3A52F18729100702359 /* SettingsRepository.swift */,
 				1128F3A62F18729100702359 /* ShiftsRepository.swift */,
@@ -1164,6 +1167,7 @@
 				1128F3B42F18729100702359 /* SyncServerModels.swift in Sources */,
 				1128F3B52F18729100702359 /* SnapshotsRepository.swift in Sources */,
 				1128F3B62F18729100702359 /* SyncCoordinator.swift in Sources */,
+				11A1964E2F1AE7980030E524 /* EntitlementRepository.swift in Sources */,
 				1128F3B72F18729100702359 /* SyncTypes.swift in Sources */,
 				1128F3B82F18729100702359 /* LocalStore.swift in Sources */,
 				1128F3B92F18729100702359 /* LocalWageSnapshot.swift in Sources */,
