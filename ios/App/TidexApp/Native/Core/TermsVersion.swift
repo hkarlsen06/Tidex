@@ -4,7 +4,7 @@ import Foundation
 /// Fetches the current terms version from the API, with a hardcoded fallback
 enum TermsVersion {
     /// Base URL for the Tidex website
-    static let baseURL = "https://www.tidex.no"
+    static let baseURL = "https://app.tidex.no"
 
     /// API endpoint for terms version
     private static let versionEndpoint = "\(baseURL)/api/legal/version"
