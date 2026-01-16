@@ -1,3 +1,4 @@
+import SafariServices
 import SwiftUI
 
 /// Terms and conditions agreement checkbox with links
@@ -6,8 +7,15 @@ struct TermsAgreementView: View {
     var error: String?
 
     @Environment(\.localization) private var localization
-    @State private var showTermsSheet = false
-    @State private var showPrivacySheet = false
+    @State private var safariURL: URL?
+
+    private var termsURL: URL? {
+        URL(string: "https://www.tidex.no/\(localization.currentLocale.rawValue)/terms")
+    }
+
+    private var privacyURL: URL? {
+        URL(string: "https://www.tidex.no/\(localization.currentLocale.rawValue)/privacy")
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -46,17 +54,9 @@ struct TermsAgreementView: View {
                     .foregroundColor(.tidexError)
             }
         }
-        .sheet(isPresented: $showTermsSheet) {
-            LegalDocumentSheet(
-                title: localization.string("legal.termsOfService"),
-                documentType: .termsOfService
-            )
-        }
-        .sheet(isPresented: $showPrivacySheet) {
-            LegalDocumentSheet(
-                title: localization.string("legal.privacyPolicy"),
-                documentType: .privacyPolicy
-            )
+        .fullScreenCover(item: $safariURL) { url in
+            SafariView(url: url)
+                .ignoresSafeArea()
         }
     }
 
@@ -68,88 +68,52 @@ struct TermsAgreementView: View {
     }
 
     private var termsLabel: some View {
-        // Build the terms text with tappable links
-        VStack(alignment: .leading, spacing: 2) {
-            HStack(spacing: 4) {
-                Text(localization.string("signup.terms.prefix"))
+        // Build the terms text with tappable links on a single line
+        HStack(spacing: 4) {
+            Text(localization.string("signup.terms.prefix"))
+                .font(.system(size: 14))
+                .foregroundColor(.tidexTextSecondary)
+
+            Button(action: { safariURL = termsURL }) {
+                Text(localization.string("signup.terms.termsLink"))
                     .font(.system(size: 14))
-                    .foregroundColor(.tidexTextSecondary)
-
-                Button(action: { showTermsSheet = true }) {
-                    Text(localization.string("signup.terms.termsLink"))
-                        .font(.system(size: 14))
-                        .foregroundColor(.tidexBlue)
-                        .underline()
-                }
-                .buttonStyle(.plain)
+                    .foregroundColor(.tidexBlue)
+                    .underline()
             }
+            .buttonStyle(.plain)
 
-            HStack(spacing: 4) {
-                Text(localization.string("signup.terms.and"))
+            Text(localization.string("signup.terms.and"))
+                .font(.system(size: 14))
+                .foregroundColor(.tidexTextSecondary)
+
+            Button(action: { safariURL = privacyURL }) {
+                Text(localization.string("signup.terms.privacyLink"))
                     .font(.system(size: 14))
-                    .foregroundColor(.tidexTextSecondary)
-
-                Button(action: { showPrivacySheet = true }) {
-                    Text(localization.string("signup.terms.privacyLink"))
-                        .font(.system(size: 14))
-                        .foregroundColor(.tidexBlue)
-                        .underline()
-                }
-                .buttonStyle(.plain)
+                    .foregroundColor(.tidexBlue)
+                    .underline()
             }
+            .buttonStyle(.plain)
         }
     }
 }
 
-// MARK: - Legal Document Sheet
+// MARK: - Safari View
 
-/// Sheet view for displaying legal documents
-struct LegalDocumentSheet: View {
-    let title: String
-    let documentType: LegalDocumentType
+/// Wrapper for presenting SFSafariViewController in SwiftUI
+struct SafariView: UIViewControllerRepresentable {
+    let url: URL
 
-    @Environment(\.dismiss) private var dismiss
-    @Environment(\.localization) private var localization
-
-    enum LegalDocumentType {
-        case termsOfService
-        case privacyPolicy
+    func makeUIViewController(context: Context) -> SFSafariViewController {
+        SFSafariViewController(url: url)
     }
 
-    var body: some View {
-        NavigationView {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    Text(documentContent)
-                        .font(.system(size: 14))
-                        .foregroundColor(.tidexTextPrimary)
-                        .lineSpacing(4)
-                }
-                .padding(20)
-            }
-            .background(Color.tidexBackground)
-            .navigationTitle(title)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: { dismiss() }) {
-                        Image(systemName: "xmark")
-                            .foregroundColor(.tidexTextSecondary)
-                    }
-                }
-            }
-        }
-        // Note: Removed .preferredColorScheme(.dark) to respect system appearance
-    }
+    func updateUIViewController(_ uiViewController: SFSafariViewController, context: Context) {}
+}
 
-    private var documentContent: String {
-        switch documentType {
-        case .termsOfService:
-            return localization.string("legal.termsOfServiceContent")
-        case .privacyPolicy:
-            return localization.string("legal.privacyPolicyContent")
-        }
-    }
+// MARK: - URL Identifiable Extension
+
+extension URL: @retroactive Identifiable {
+    public var id: String { absoluteString }
 }
 
 #Preview("Terms Agreement - Unchecked") {

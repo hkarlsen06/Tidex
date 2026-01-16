@@ -75,6 +75,9 @@ struct SignupView: View {
             }
         }
         .loading(viewModel.isLoading)
+        .onTapGesture {
+            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        }
         .onAppear {
             viewModel.onNavigateToLogin = onNavigateToLogin
 

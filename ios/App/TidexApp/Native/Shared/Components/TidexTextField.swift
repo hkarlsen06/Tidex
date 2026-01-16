@@ -39,6 +39,7 @@ struct TidexTextField: View {
                         .stroke(borderColor, lineWidth: 1)
                 )
                 .cornerRadius(10)
+                .contentShape(Rectangle())
                 .onSubmit {
                     onSubmit?()
                 }

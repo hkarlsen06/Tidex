@@ -57,6 +57,7 @@ struct SecureTextField: View {
                     .stroke(borderColor, lineWidth: 1)
             )
             .cornerRadius(10)
+            .contentShape(Rectangle())
 
             // Error message
             if let error = error, !error.isEmpty {
