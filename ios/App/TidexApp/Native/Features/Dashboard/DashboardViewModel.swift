@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import UIKit
 import Supabase
 import os.log
 
@@ -82,12 +83,22 @@ private struct MonthCacheEntry {
     let month: Int
     let shifts: [ShiftWithComputations]
     let timestamp: Date
+    /// Last access time for LRU eviction
+    var lastAccessed: Date
 
     var key: String { "\(year)-\(month)" }
 
     /// Check if cache entry is still valid (within 5 minutes)
     var isValid: Bool {
         Date().timeIntervalSince(timestamp) < 300 // 5 minutes
+    }
+
+    init(year: Int, month: Int, shifts: [ShiftWithComputations], timestamp: Date) {
+        self.year = year
+        self.month = month
+        self.shifts = shifts
+        self.timestamp = timestamp
+        self.lastAccessed = timestamp
     }
 }
 
@@ -158,8 +169,14 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     /// Cache of computed shifts by month key (e.g., "2025-1")
     private var monthCache: [String: MonthCacheEntry] = [:]
 
+    /// Maximum number of months to keep in cache (prevents unbounded memory growth)
+    private static let maxCacheSize = 12
+
     /// Background prefetch tasks (to avoid duplicate fetches)
     private var prefetchTasks: Set<String> = []
+
+    /// Memory warning observer
+    private var memoryWarningObserver: NSObjectProtocol?
 
     // MARK: - Initialization
 
@@ -182,6 +199,52 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
         let current = Date.currentYearMonth()
         self.displayYear = current.year
         self.displayMonth = current.month
+
+        // Listen for memory warnings to clear cache
+        memoryWarningObserver = NotificationCenter.default.addObserver(
+            forName: UIApplication.didReceiveMemoryWarningNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.handleMemoryWarning()
+            }
+        }
+    }
+
+    deinit {
+        if let observer = memoryWarningObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
+    }
+
+    // MARK: - Memory Management
+
+    /// Handle memory warning by clearing the cache
+    private func handleMemoryWarning() {
+        logger.warning("⚠️ Memory warning received - clearing month cache (\(self.monthCache.count) entries)")
+        monthCache.removeAll()
+        prefetchTasks.removeAll()
+    }
+
+    /// Evict least recently used cache entries if over limit
+    private func evictCacheIfNeeded() {
+        guard monthCache.count > Self.maxCacheSize else { return }
+
+        // Sort by last accessed time (oldest first)
+        let sortedKeys = monthCache.keys.sorted { key1, key2 in
+            let entry1 = monthCache[key1]!
+            let entry2 = monthCache[key2]!
+            return entry1.lastAccessed < entry2.lastAccessed
+        }
+
+        // Remove oldest entries until we're under the limit
+        let entriesToRemove = monthCache.count - Self.maxCacheSize
+        for i in 0..<entriesToRemove {
+            let key = sortedKeys[i]
+            monthCache.removeValue(forKey: key)
+            logger.info("🗑️ Evicted cache entry: \(key)")
+        }
     }
 
     // MARK: - Month Navigation
@@ -251,12 +314,19 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
         let previousKey = "\(previousYM.year)-\(previousYM.month)"
 
         // Check if we have valid cache for both displayed and previous months
-        if let displayCache = monthCache[displayKey], displayCache.isValid,
-           let previousCache = monthCache[previousKey], previousCache.isValid {
+        if var displayCache = monthCache[displayKey], displayCache.isValid,
+           var previousCache = monthCache[previousKey], previousCache.isValid {
             // Use cached data - instant navigation!
             logger.info("📦 Using cached data for \(displayKey)")
             self.displayedMonthShifts = displayCache.shifts
             self.previousMonthShifts = previousCache.shifts
+
+            // Update last accessed time for LRU tracking
+            displayCache.lastAccessed = Date()
+            previousCache.lastAccessed = Date()
+            monthCache[displayKey] = displayCache
+            monthCache[previousKey] = previousCache
+
             self.dashboardData = buildDashboardData()
 
             // Still prefetch neighbors in background
@@ -506,6 +576,9 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
                 timestamp: Date()
             )
 
+            // Evict old cache entries if over limit
+            evictCacheIfNeeded()
+
             // Build dashboard data
             self.dashboardData = buildDashboardData()
             self.isLoading = false
@@ -625,6 +698,9 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
                 timestamp: Date()
             )
 
+            // Evict old cache entries if over limit
+            evictCacheIfNeeded()
+
             // Build dashboard data and clear loading state
             self.dashboardData = buildDashboardData()
             self.isLoading = false
@@ -717,6 +793,9 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
             )
             self.monthCache[key] = entry
             self.prefetchTasks.remove(key)
+
+            // Evict old cache entries if over limit
+            self.evictCacheIfNeeded()
 
             logger.info("📦 Prefetched \(key) with \(computedShifts.count) shifts from local")
         }
