@@ -54,7 +54,7 @@ struct VerificationRequiredView: View {
                                 .progressViewStyle(CircularProgressViewStyle(tint: .white))
                                 .frame(maxWidth: .infinity)
                         } else {
-                            Label("Try Again", systemImage: "arrow.clockwise")
+                            Label(AuthStrings.string("verification.retry", locale: localization.currentLocale), systemImage: "arrow.clockwise")
                                 .font(.system(size: 17, weight: .semibold))
                                 .frame(maxWidth: .infinity)
                         }
@@ -72,7 +72,7 @@ struct VerificationRequiredView: View {
                                 .progressViewStyle(CircularProgressViewStyle(tint: .tidexBlue))
                                 .frame(maxWidth: .infinity)
                         } else {
-                            Text("Restore Purchases")
+                            Text(AuthStrings.string("paywall.restorePurchases", locale: localization.currentLocale))
                                 .font(.system(size: 17, weight: .medium))
                                 .frame(maxWidth: .infinity)
                         }
@@ -88,7 +88,7 @@ struct VerificationRequiredView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Color.tidexBackground)
-            .navigationTitle("Verify Subscription")
+            .navigationTitle(AuthStrings.string("verification.title", locale: localization.currentLocale))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -106,14 +106,14 @@ struct VerificationRequiredView: View {
 
     private var title: String {
         isOffline
-            ? "No Internet Connection"
-            : "Verify Your Subscription"
+            ? AuthStrings.string("verification.offline.title", locale: localization.currentLocale)
+            : AuthStrings.string("verification.online.title", locale: localization.currentLocale)
     }
 
     private var message: String {
         isOffline
-            ? "Connect to the internet to verify your subscription status."
-            : "We couldn't verify your subscription. Please try again or restore your purchases."
+            ? AuthStrings.string("verification.offline.message", locale: localization.currentLocale)
+            : AuthStrings.string("verification.online.message", locale: localization.currentLocale)
     }
 
     @ViewBuilder

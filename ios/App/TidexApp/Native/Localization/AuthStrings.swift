@@ -375,7 +375,60 @@ enum AuthStrings {
         "onboarding.mfa.manualEntry": "Eller skriv inn manuelt:",
         "onboarding.mfa.enterCode": "Skriv inn koden fra appen",
         "onboarding.mfa.verify": "Bekreft",
-        "onboarding.mfa.addToPasswords": "Legg til i Passord"
+        "onboarding.mfa.addToPasswords": "Legg til i Passord",
+
+        // Paywall
+        "paywall.title": "Velg abonnement",
+        "paywall.monthly": "Månedlig",
+        "paywall.yearly": "Årlig",
+        "paywall.savePercent": "Spar %d%%",
+        "paywall.subscribe": "Abonner",
+        "paywall.restorePurchases": "Gjenopprett kjøp",
+        "paywall.currentPlan": "Din nåværende plan",
+        "paywall.loading": "Laster planer...",
+        "paywall.loadingButton": "Laster...",
+        "paywall.perMonth": "per måned",
+        "paywall.perYear": "per år",
+        "paywall.termsOfUse": "Vilkår for bruk",
+        "paywall.privacyPolicy": "Personvernerklæring",
+
+        // Paywall - Tiers
+        "paywall.tier.free": "Gratis",
+        "paywall.tier.pro": "Pro",
+        "paywall.tier.max": "Max",
+
+        // Paywall - Pro Features
+        "paywall.pro.feature1": "Ubegrenset antall måneder",
+        "paywall.pro.feature2": "Avansert statistikk",
+        "paywall.pro.feature3": "Eksporter til PDF/CSV",
+        "paywall.pro.feature4": "Prioritert support",
+
+        // Paywall - Max Features
+        "paywall.max.feature1": "Alt i Pro",
+        "paywall.max.feature2": "Wagey AI-assistent",
+        "paywall.max.feature3": "Gjentakende vakter",
+        "paywall.max.feature4": "Vaktdeling",
+        "paywall.max.feature5": "Premium-temaer",
+
+        // Paywall - Free Features
+        "paywall.free.feature1": "Én måned med vakter",
+        "paywall.free.feature2": "Grunnleggende statistikk",
+
+        // Paywall - Shift Limit Context
+        "paywall.shiftLimit.title": "Oppgrader for flere måneder",
+        "paywall.shiftLimit.message": "Gratis-planen tillater vakter i én måned om gangen. Oppgrader for å spore vakter over flere måneder.",
+
+        // Paywall - Generic Upgrade Context
+        "paywall.upgrade.title": "Lås opp premium-funksjoner",
+        "paywall.upgrade.message": "Få ubegrensede måneder, avansert statistikk, Wagey AI og mer.",
+
+        // Verification Required
+        "verification.title": "Bekreft abonnement",
+        "verification.offline.title": "Ingen internettforbindelse",
+        "verification.offline.message": "Koble til internett for å bekrefte abonnementet ditt.",
+        "verification.online.title": "Bekreft abonnementet ditt",
+        "verification.online.message": "Vi kunne ikke bekrefte abonnementet ditt. Prøv igjen eller gjenopprett kjøpene dine.",
+        "verification.retry": "Prøv igjen"
     ]
 
     // MARK: - English Strings
@@ -741,6 +794,59 @@ enum AuthStrings {
         "onboarding.mfa.manualEntry": "Or enter manually:",
         "onboarding.mfa.enterCode": "Enter the code from your app",
         "onboarding.mfa.verify": "Verify",
-        "onboarding.mfa.addToPasswords": "Add to Passwords"
+        "onboarding.mfa.addToPasswords": "Add to Passwords",
+
+        // Paywall
+        "paywall.title": "Choose a Plan",
+        "paywall.monthly": "Monthly",
+        "paywall.yearly": "Yearly",
+        "paywall.savePercent": "Save %d%%",
+        "paywall.subscribe": "Subscribe",
+        "paywall.restorePurchases": "Restore Purchases",
+        "paywall.currentPlan": "Current Plan",
+        "paywall.loading": "Loading plans...",
+        "paywall.loadingButton": "Loading...",
+        "paywall.perMonth": "per month",
+        "paywall.perYear": "per year",
+        "paywall.termsOfUse": "Terms of Use",
+        "paywall.privacyPolicy": "Privacy Policy",
+
+        // Paywall - Tiers
+        "paywall.tier.free": "Free",
+        "paywall.tier.pro": "Pro",
+        "paywall.tier.max": "Max",
+
+        // Paywall - Pro Features
+        "paywall.pro.feature1": "Unlimited months",
+        "paywall.pro.feature2": "Advanced statistics",
+        "paywall.pro.feature3": "Export to PDF/CSV",
+        "paywall.pro.feature4": "Priority support",
+
+        // Paywall - Max Features
+        "paywall.max.feature1": "Everything in Pro",
+        "paywall.max.feature2": "Wagey AI Assistant",
+        "paywall.max.feature3": "Recurring shifts",
+        "paywall.max.feature4": "Shift sharing",
+        "paywall.max.feature5": "Premium themes",
+
+        // Paywall - Free Features
+        "paywall.free.feature1": "One month of shifts",
+        "paywall.free.feature2": "Basic statistics",
+
+        // Paywall - Shift Limit Context
+        "paywall.shiftLimit.title": "Upgrade to Add More Months",
+        "paywall.shiftLimit.message": "Free plan allows shifts in one month at a time. Upgrade to track shifts across multiple months.",
+
+        // Paywall - Generic Upgrade Context
+        "paywall.upgrade.title": "Unlock Premium Features",
+        "paywall.upgrade.message": "Get unlimited months, advanced statistics, Wagey AI, and more.",
+
+        // Verification Required
+        "verification.title": "Verify Subscription",
+        "verification.offline.title": "No Internet Connection",
+        "verification.offline.message": "Connect to the internet to verify your subscription status.",
+        "verification.online.title": "Verify Your Subscription",
+        "verification.online.message": "We couldn't verify your subscription. Please try again or restore your purchases.",
+        "verification.retry": "Try Again"
     ]
 }

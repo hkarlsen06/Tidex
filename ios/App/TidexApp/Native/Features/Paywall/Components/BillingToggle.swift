@@ -5,6 +5,7 @@ import SwiftUI
 /// Segmented control for selecting monthly vs yearly billing
 /// Shows savings percentage for yearly option
 struct BillingToggle: View {
+    @Environment(\.localization) private var localization
     @Binding var selection: BillingPeriod
     var yearlySavingsPercent: Int?
 
@@ -12,7 +13,7 @@ struct BillingToggle: View {
         HStack(spacing: 0) {
             // Monthly option
             toggleOption(
-                title: "Monthly",
+                title: AuthStrings.string("paywall.monthly", locale: localization.currentLocale),
                 isSelected: selection == .monthly
             ) {
                 withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
@@ -22,8 +23,8 @@ struct BillingToggle: View {
 
             // Yearly option with savings badge
             toggleOption(
-                title: "Yearly",
-                badge: yearlySavingsPercent.map { "Save \($0)%" },
+                title: AuthStrings.string("paywall.yearly", locale: localization.currentLocale),
+                badge: yearlySavingsPercent.map { String(format: AuthStrings.string("paywall.savePercent", locale: localization.currentLocale), $0) },
                 isSelected: selection == .yearly
             ) {
                 withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
