@@ -17,7 +17,7 @@ export const legalEn = {
     },
     title: 'Terms of use',
     lastUpdatedLabel: 'Last updated',
-    lastUpdatedDate: '2025-01-10',
+    lastUpdatedDate: '2026-01-16',
     dateLocale: 'en-US',
     sections: [
       {
