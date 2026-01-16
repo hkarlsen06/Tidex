@@ -1,0 +1,139 @@
+import Foundation
+
+/// Terms version management for iOS
+/// Fetches the current terms version from the API, with a hardcoded fallback
+enum TermsVersion {
+    /// Base URL for the Tidex website
+    static let baseURL = "https://www.tidex.no"
+
+    /// API endpoint for terms version
+    private static let versionEndpoint = "\(baseURL)/api/legal/version"
+
+    /// Fallback terms version date (used when API is unavailable)
+    /// Keep this updated when terms change as a safety net
+    private static let fallbackVersionDate = "2025-01-10"
+
+    /// Cached version date (fetched from API)
+    private static var cachedVersionDate: String?
+    private static var lastFetchTime: Date?
+    private static let cacheExpiryInterval: TimeInterval = 3600 // 1 hour
+
+    // MARK: - Public API
+
+    /// Fetch the current terms version date from the API
+    /// Uses a cached value if available and not expired
+    static func fetchCurrentVersionDate() async -> String {
+        // Check cache first
+        if let cached = cachedVersionDate,
+           let fetchTime = lastFetchTime,
+           Date().timeIntervalSince(fetchTime) < cacheExpiryInterval {
+            return cached
+        }
+
+        // Fetch from API
+        do {
+            guard let url = URL(string: versionEndpoint) else {
+                print("[TermsVersion] Invalid endpoint URL")
+                return fallbackVersionDate
+            }
+
+            let (data, response) = try await URLSession.shared.data(from: url)
+
+            guard let httpResponse = response as? HTTPURLResponse,
+                  httpResponse.statusCode == 200 else {
+                print("[TermsVersion] API returned non-200 status")
+                return fallbackVersionDate
+            }
+
+            let versionResponse = try JSONDecoder().decode(VersionResponse.self, from: data)
+
+            // Cache the result
+            cachedVersionDate = versionResponse.termsVersionDate
+            lastFetchTime = Date()
+
+            print("[TermsVersion] Fetched version date from API: \(versionResponse.termsVersionDate)")
+            return versionResponse.termsVersionDate
+        } catch {
+            print("[TermsVersion] Failed to fetch version: \(error). Using fallback.")
+            return fallbackVersionDate
+        }
+    }
+
+    /// Check if the user needs to accept or re-accept terms
+    /// - Parameter termsAcceptedAt: ISO date string of when user accepted terms (from user metadata)
+    /// - Returns: true if user needs to accept/re-accept terms
+    static func needsTermsReAcceptance(_ termsAcceptedAt: String?) -> Bool {
+        guard let termsAcceptedAt = termsAcceptedAt, !termsAcceptedAt.isEmpty else {
+            // Never accepted terms
+            return true
+        }
+
+        // Use cached version if available, otherwise use fallback
+        // The async fetch happens in AppCoordinator before this is called
+        let currentVersionDate = cachedVersionDate ?? fallbackVersionDate
+
+        return compareDates(acceptedAt: termsAcceptedAt, versionDate: currentVersionDate)
+    }
+
+    /// Async version that fetches the latest version date first
+    static func needsTermsReAcceptanceAsync(_ termsAcceptedAt: String?) async -> Bool {
+        guard let termsAcceptedAt = termsAcceptedAt, !termsAcceptedAt.isEmpty else {
+            // Never accepted terms
+            return true
+        }
+
+        let currentVersionDate = await fetchCurrentVersionDate()
+        return compareDates(acceptedAt: termsAcceptedAt, versionDate: currentVersionDate)
+    }
+
+    // MARK: - Private Helpers
+
+    private static func compareDates(acceptedAt: String, versionDate: String) -> Bool {
+        // Parse the ISO date string from user metadata
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+
+        // Try with fractional seconds first, then without
+        var acceptedDate: Date?
+        acceptedDate = formatter.date(from: acceptedAt)
+        if acceptedDate == nil {
+            formatter.formatOptions = [.withInternetDateTime]
+            acceptedDate = formatter.date(from: acceptedAt)
+        }
+
+        // Fallback to simple date parsing if ISO8601 fails
+        if acceptedDate == nil {
+            let simpleDateFormatter = DateFormatter()
+            simpleDateFormatter.dateFormat = "yyyy-MM-dd"
+            simpleDateFormatter.timeZone = TimeZone(identifier: "UTC")
+            acceptedDate = simpleDateFormatter.date(from: acceptedAt)
+        }
+
+        guard let accepted = acceptedDate else {
+            // Can't parse date, require re-acceptance
+            print("[TermsVersion] Could not parse termsAcceptedAt: \(acceptedAt)")
+            return true
+        }
+
+        // Parse current version date
+        let versionFormatter = DateFormatter()
+        versionFormatter.dateFormat = "yyyy-MM-dd"
+        versionFormatter.timeZone = TimeZone(identifier: "UTC")
+
+        guard let currentVersion = versionFormatter.date(from: versionDate) else {
+            // Should never happen with valid date
+            print("[TermsVersion] Could not parse versionDate: \(versionDate)")
+            return false
+        }
+
+        // User needs to re-accept if their acceptance date is before the current terms version
+        return accepted < currentVersion
+    }
+}
+
+// MARK: - API Response Model
+
+private struct VersionResponse: Decodable {
+    let termsVersionDate: String
+    let privacyVersionDate: String
+}

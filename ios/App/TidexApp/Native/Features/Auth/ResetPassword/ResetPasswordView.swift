@@ -18,7 +18,7 @@ struct ResetPasswordView: View {
             Color.tidexBackground
                 .ignoresSafeArea()
 
-            // Content
+            // Content - constrained for iPad
             ScrollView {
                 VStack(spacing: 24) {
                     // Header with logo
@@ -27,7 +27,7 @@ struct ResetPasswordView: View {
                         .opacity(headerAppeared ? 1 : 0)
                         .offset(y: headerAppeared ? 0 : -20)
 
-                    // Main card
+                    // Main card - constrained width for iPad
                     TidexCard {
                         VStack(spacing: 20) {
                             // Card header
@@ -62,6 +62,7 @@ struct ResetPasswordView: View {
                         }
                         .padding(24)
                     }
+                    .adaptiveFormWidth()
                     .opacity(cardAppeared ? 1 : 0)
                     .offset(y: cardAppeared ? 0 : 30)
                     .scaleEffect(cardAppeared ? 1 : 0.95)

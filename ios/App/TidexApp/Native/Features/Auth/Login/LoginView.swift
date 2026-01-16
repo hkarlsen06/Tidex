@@ -20,13 +20,13 @@ struct LoginView: View {
             Color.tidexBackground
                 .ignoresSafeArea()
 
-            // Content - centered vertically like web version
+            // Content - centered vertically like web version, constrained for iPad
             GeometryReader { geometry in
                 ScrollView {
                     VStack(spacing: 24) {
                         Spacer(minLength: 0)
 
-                        // Main card
+                        // Main card - constrained width for iPad
                         TidexCard {
                             VStack(spacing: 20) {
                                 // Card header with logo inline
@@ -57,6 +57,7 @@ struct LoginView: View {
                             }
                             .padding(24)
                         }
+                        .adaptiveFormWidth()
                         .opacity(cardAppeared ? 1 : 0)
                         .offset(y: cardAppeared ? 0 : 30)
                         .scaleEffect(cardAppeared ? 1 : 0.95)

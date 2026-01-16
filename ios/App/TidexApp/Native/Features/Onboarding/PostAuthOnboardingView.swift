@@ -1,4 +1,5 @@
 import SwiftUI
+import Supabase
 
 /// Post-auth onboarding flow container (Screens 5-6)
 /// Shows personalization and success after authentication
@@ -67,6 +68,27 @@ struct PostAuthOnboardingView: View {
                 // Silently fail - will be set up properly in full settings flow
                 print("[PostAuthOnboarding] Could not update settings: \(error)")
             }
+
+            // Mark onboarding as finished in Supabase user metadata
+            await markOnboardingFinishedInMetadata()
+        }
+    }
+
+    // MARK: - Update User Metadata
+
+    /// Updates the user's Supabase metadata to mark onboarding as finished
+    /// This ensures the flag persists across devices/reinstalls
+    private func markOnboardingFinishedInMetadata() async {
+        do {
+            _ = try await supabase.auth.update(
+                user: UserAttributes(
+                    data: ["finishedOnboarding": .bool(true)]
+                )
+            )
+            print("[PostAuthOnboarding] Successfully marked finishedOnboarding in user metadata")
+        } catch {
+            // Non-critical error - local AppStorage will still work
+            print("[PostAuthOnboarding] Could not update user metadata: \(error)")
         }
     }
 }

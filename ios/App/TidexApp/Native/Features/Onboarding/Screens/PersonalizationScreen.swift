@@ -30,7 +30,7 @@ struct PersonalizationScreen: View {
                     Spacer()
                         .frame(height: 60)
 
-                    // Header
+                    // Header - constrained for iPad
                     VStack(spacing: 12) {
                         Text(localization.string("onboarding.personalize.title"))
                             .font(.system(size: 28, weight: .bold))
@@ -43,11 +43,12 @@ struct PersonalizationScreen: View {
                             .multilineTextAlignment(.center)
                     }
                     .padding(.horizontal, 32)
+                    .adaptiveContentWidth()
 
                     Spacer()
                         .frame(height: 48)
 
-                    // Form
+                    // Form - constrained for iPad
                     VStack(spacing: 24) {
                         // Hourly wage slider
                         OnboardingRateSlider(value: $hourlyWage, style: .full)
@@ -56,16 +57,18 @@ struct PersonalizationScreen: View {
                         payrollDayPicker
                     }
                     .padding(.horizontal, 24)
+                    .adaptiveContentWidth()
 
                     Spacer()
                         .frame(height: 48)
 
-                    // Continue button
+                    // Continue button - constrained for iPad
                     OnboardingButton(
                         title: localization.string("common.continue"),
                         action: validateAndContinue
                     )
                     .padding(.horizontal, 24)
+                    .adaptiveContentWidth()
 
                     Spacer()
                         .frame(height: 32)

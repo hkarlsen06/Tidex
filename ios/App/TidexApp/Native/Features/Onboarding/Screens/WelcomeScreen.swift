@@ -206,6 +206,7 @@ struct WelcomeScreen: View {
                 .offset(y: showSubheadline ? 0 : 6)
         }
         .padding(.horizontal, 40)
+        .adaptiveContentWidth()
     }
 }
 

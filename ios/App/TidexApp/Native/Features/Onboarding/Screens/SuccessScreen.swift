@@ -26,7 +26,7 @@ struct SuccessScreen: View {
                 Spacer()
                     .frame(height: 32)
 
-                // Header and content
+                // Header and content - constrained for iPad
                 VStack(spacing: 12) {
                     Text(localization.string("onboarding.success.title"))
                         .font(.system(size: 28, weight: .bold))
@@ -49,12 +49,13 @@ struct SuccessScreen: View {
                         .padding(.horizontal, 16)
                 }
                 .padding(.horizontal, 32)
+                .adaptiveContentWidth()
                 .opacity(contentVisible ? 1 : 0)
                 .offset(y: contentVisible ? 0 : 20)
 
                 Spacer()
 
-                // Go to Dashboard button
+                // Go to Dashboard button - constrained for iPad
                 OnboardingButton(
                     title: localization.string("onboarding.success.button"),
                     action: {
@@ -63,6 +64,7 @@ struct SuccessScreen: View {
                     }
                 )
                 .padding(.horizontal, 24)
+                .adaptiveContentWidth()
                 .padding(.bottom, 32)
                 .opacity(contentVisible ? 1 : 0)
             }

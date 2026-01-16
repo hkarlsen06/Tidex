@@ -6,6 +6,9 @@ struct DashboardView: View {
     @EnvironmentObject private var coordinator: AppCoordinator
     @Environment(\.localization) private var localization
 
+    /// Binding to the selected tab for navigation
+    @Binding var selectedTab: MainTabView.Tab
+
     @StateObject private var viewModel = DashboardViewModel()
     @StateObject private var countdownManager = CountdownManager()
 
@@ -262,25 +265,25 @@ struct DashboardView: View {
 
     private var emptyStateView: some View {
         VStack(spacing: 16) {
-            Image(systemName: "calendar.badge.exclamationmark")
+            Image(systemName: "calendar.badge.plus")
                 .font(.system(size: 48))
-                .foregroundColor(.tidexTextMuted)
+                .foregroundColor(.tidexBlue)
 
-            Text(localization.string("dashboard.noShifts"))
-                .font(.system(size: 16))
-                .foregroundColor(.tidexTextSecondary)
+            Text(localization.string("dashboard.letsAddShift"))
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundColor(.tidexTextPrimary)
                 .multilineTextAlignment(.center)
 
             Button {
-                Task { await viewModel.loadDashboard() }
+                selectedTab = .add
             } label: {
-                Text(localization.string("common.retry"))
+                Text(localization.string("dashboard.addShiftButton"))
                     .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(.tidexBlue)
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 10)
-                    .background(Color.tidexBlue.opacity(0.1))
-                    .cornerRadius(8)
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 12)
+                    .background(Color.tidexBlue)
+                    .cornerRadius(10)
             }
         }
         .padding(.horizontal, 40)
@@ -321,7 +324,15 @@ struct DashboardView: View {
 }
 
 #Preview {
-    DashboardView()
-        .environmentObject(AppCoordinator.shared)
-        .environment(\.localization, LocalizationManager.shared)
+    struct PreviewWrapper: View {
+        @State private var selectedTab: MainTabView.Tab = .home
+
+        var body: some View {
+            DashboardView(selectedTab: $selectedTab)
+                .environmentObject(AppCoordinator.shared)
+                .environment(\.localization, LocalizationManager.shared)
+        }
+    }
+
+    return PreviewWrapper()
 }
