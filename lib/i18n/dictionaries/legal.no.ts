@@ -17,7 +17,7 @@ export const legalNo = {
     },
     title: 'Vilkår for bruk',
     lastUpdatedLabel: 'Sist oppdatert',
-    lastUpdatedDate: '2025-01-10',
+    lastUpdatedDate: '2026-01-16',
     dateLocale: 'nb-NO',
     sections: [
       {
