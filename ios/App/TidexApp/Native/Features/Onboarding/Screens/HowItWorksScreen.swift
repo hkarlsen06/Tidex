@@ -28,7 +28,7 @@ struct HowItWorksScreen: View {
 
             // Steps as a progression timeline, not a list
             // Centered as a unit with constrained width for iPad
-            VStack(alignment: .center, spacing: 0) {
+            VStack(alignment: .leading, spacing: 0) {
                 StepItem(
                     icon: "clock.badge.checkmark",
                     title: localization.string("onboarding.how.step1.title"),
@@ -59,8 +59,8 @@ struct HowItWorksScreen: View {
                     showConnector: false
                 )
             }
+            .frame(maxWidth: AdaptiveMaxWidth.content)
             .padding(.horizontal, 40)
-            .adaptiveContentWidth()
 
             Spacer()
                 .frame(height: 28)

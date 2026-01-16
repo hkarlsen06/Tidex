@@ -203,8 +203,13 @@ final class AppCoordinator: ObservableObject {
             // Get terms_accepted_at from user metadata
             let termsAcceptedAt = user.userMetadata["terms_accepted_at"]?.value as? String
 
+            print("[AppCoordinator] Checking terms - termsAcceptedAt: \(termsAcceptedAt ?? "nil")")
+
             // Use async version that fetches latest terms version from API
-            if await TermsVersion.needsTermsReAcceptanceAsync(termsAcceptedAt) {
+            let needsReAcceptance = await TermsVersion.needsTermsReAcceptanceAsync(termsAcceptedAt)
+            print("[AppCoordinator] needsTermsReAcceptance: \(needsReAcceptance)")
+
+            if needsReAcceptance {
                 // User needs to accept terms
                 self.isTermsUpdate = termsAcceptedAt != nil  // true if they had accepted before
                 self.appState = .termsRequired
