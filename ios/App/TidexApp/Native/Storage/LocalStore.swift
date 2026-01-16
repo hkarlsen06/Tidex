@@ -33,6 +33,8 @@ final class LocalStore {
             LocalWageSnapshot.self,
             LocalUserSettings.self,
             LocalSyncState.self,
+            LocalEntitlementCache.self,
+            LocalPendingJWSUpload.self,
         ])
 
         // Configure container for persistent storage
@@ -89,6 +91,8 @@ actor LocalStoreActor {
             try modelContext.delete(model: LocalWageSnapshot.self)
             try modelContext.delete(model: LocalUserSettings.self)
             try modelContext.delete(model: LocalSyncState.self)
+            try modelContext.delete(model: LocalEntitlementCache.self)
+            try modelContext.delete(model: LocalPendingJWSUpload.self)
             try modelContext.save()
         } catch {
             logger.error("Failed to reset all data: \(error.localizedDescription)")
@@ -2238,5 +2242,83 @@ actor LocalStoreActor {
         existing.serverRevision = serverRevision
         existing.syncStatus = .dirty
         existing.conflictServerSnapshot = nil
+    }
+
+    // MARK: - Entitlement Cache Operations
+
+    /// Upsert entitlement cache from server entitlement
+    func upsertEntitlementCache(userId: String, entitlement: ServerEntitlement) throws {
+        let descriptor = FetchDescriptor<LocalEntitlementCache>(
+            predicate: #Predicate { $0.userId == userId }
+        )
+
+        if let existing = try modelContext.fetch(descriptor).first {
+            // Update existing cache
+            existing.update(from: entitlement)
+        } else {
+            // Insert new cache entry
+            let cache = LocalEntitlementCache(userId: userId, entitlement: entitlement)
+            modelContext.insert(cache)
+        }
+
+        try modelContext.save()
+    }
+
+    /// Delete entitlement cache for a user (on logout)
+    func deleteEntitlementCache(userId: String) throws {
+        let descriptor = FetchDescriptor<LocalEntitlementCache>(
+            predicate: #Predicate { $0.userId == userId }
+        )
+
+        for cache in try modelContext.fetch(descriptor) {
+            modelContext.delete(cache)
+        }
+
+        try modelContext.save()
+    }
+
+    // MARK: - JWS Upload Queue Operations
+
+    /// Insert pending JWS upload (upsert by transactionId)
+    /// Since transactionId is unique, attempting to insert a duplicate will be skipped
+    func insertPendingJWSUpload(_ upload: LocalPendingJWSUpload) throws {
+        // Check if already exists (don't reset attempt count for existing entries)
+        let transactionId = upload.transactionId
+        let descriptor = FetchDescriptor<LocalPendingJWSUpload>(
+            predicate: #Predicate { $0.transactionId == transactionId }
+        )
+
+        if try modelContext.fetch(descriptor).first != nil {
+            // Already queued - skip to avoid resetting retry state
+            return
+        }
+
+        modelContext.insert(upload)
+        try modelContext.save()
+    }
+
+    /// Delete pending JWS upload after successful upload
+    func deletePendingJWSUpload(transactionId: String) throws {
+        let descriptor = FetchDescriptor<LocalPendingJWSUpload>(
+            predicate: #Predicate { $0.transactionId == transactionId }
+        )
+
+        for upload in try modelContext.fetch(descriptor) {
+            modelContext.delete(upload)
+        }
+
+        try modelContext.save()
+    }
+
+    /// Schedule next retry for a failed upload (exponential backoff)
+    func schedulePendingJWSUploadRetry(transactionId: String) throws {
+        let descriptor = FetchDescriptor<LocalPendingJWSUpload>(
+            predicate: #Predicate { $0.transactionId == transactionId }
+        )
+
+        if let upload = try modelContext.fetch(descriptor).first {
+            upload.scheduleNextRetry()
+            try modelContext.save()
+        }
     }
 }

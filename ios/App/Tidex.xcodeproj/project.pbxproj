@@ -88,6 +88,9 @@
 		11A196422F1AC1BE0030E524 /* TabScreenContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A196412F1AC1BE0030E524 /* TabScreenContainer.swift */; };
 		11A196432F1AC1BE0030E524 /* PlaceholderContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A196402F1AC1BE0030E524 /* PlaceholderContent.swift */; };
 		11A196452F1AC20E0030E524 /* TabConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A196442F1AC20E0030E524 /* TabConfiguration.swift */; };
+		11A196482F1AE68C0030E524 /* SubscriptionModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A196462F1AE68C0030E524 /* SubscriptionModels.swift */; };
+		11A1964B2F1AE6A20030E524 /* LocalEntitlementCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A196492F1AE6A20030E524 /* LocalEntitlementCache.swift */; };
+		11A1964C2F1AE6A20030E524 /* LocalPendingJWSUpload.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A1964A2F1AE6A20030E524 /* LocalPendingJWSUpload.swift */; };
 		11A5CD262F101201002BAC91 /* StoredShift.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A5CD252F101201002BAC91 /* StoredShift.swift */; };
 		11A5CD302F101283002BAC91 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 11A5CD2F2F101283002BAC91 /* WidgetKit.framework */; };
 		11A5CD322F101283002BAC91 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 11A5CD312F101283002BAC91 /* SwiftUI.framework */; };
@@ -256,6 +259,9 @@
 		11A196402F1AC1BE0030E524 /* PlaceholderContent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceholderContent.swift; sourceTree = "<group>"; };
 		11A196412F1AC1BE0030E524 /* TabScreenContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabScreenContainer.swift; sourceTree = "<group>"; };
 		11A196442F1AC20E0030E524 /* TabConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabConfiguration.swift; sourceTree = "<group>"; };
+		11A196462F1AE68C0030E524 /* SubscriptionModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionModels.swift; sourceTree = "<group>"; };
+		11A196492F1AE6A20030E524 /* LocalEntitlementCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalEntitlementCache.swift; sourceTree = "<group>"; };
+		11A1964A2F1AE6A20030E524 /* LocalPendingJWSUpload.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalPendingJWSUpload.swift; sourceTree = "<group>"; };
 		11A5CD252F101201002BAC91 /* StoredShift.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoredShift.swift; sourceTree = "<group>"; };
 		11A5CD2E2F101283002BAC91 /* TidexShiftWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TidexShiftWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		11A5CD2F2F101283002BAC91 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
@@ -377,6 +383,8 @@
 		1128F3A32F18729100702359 /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				11A196492F1AE6A20030E524 /* LocalEntitlementCache.swift */,
+				11A1964A2F1AE6A20030E524 /* LocalPendingJWSUpload.swift */,
 				1128F39E2F18729100702359 /* LocalRecurringShift.swift */,
 				1128F39F2F18729100702359 /* LocalSyncState.swift */,
 				1128F3A02F18729100702359 /* LocalUserSettings.swift */,
@@ -575,6 +583,7 @@
 		119D1CD92F16E46300EC7072 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				11A196472F1AE68C0030E524 /* Subscription */,
 				11AE8D022F16FDBD005AB062 /* Payroll */,
 				11AE8CFA2F16FDB2005AB062 /* Data */,
 				119D1CD52F16E46300EC7072 /* Auth */,
@@ -696,6 +705,14 @@
 				11A196312F1AC0070030E524 /* AddShiftViewModel.swift */,
 			);
 			path = AddShift;
+			sourceTree = "<group>";
+		};
+		11A196472F1AE68C0030E524 /* Subscription */ = {
+			isa = PBXGroup;
+			children = (
+				11A196462F1AE68C0030E524 /* SubscriptionModels.swift */,
+			);
+			path = Subscription;
 			sourceTree = "<group>";
 		};
 		11A1D6CE2F11F48F00060819 /* Core */ = {
@@ -1106,6 +1123,7 @@
 				119D1CF22F16E46300EC7072 /* ErrorTranslations.swift in Sources */,
 				119D1CF42F16E46300EC7072 /* AuthService.swift in Sources */,
 				11F4300B2F1A92EA002B1FBE /* View+AdaptiveLayout.swift in Sources */,
+				11A196482F1AE68C0030E524 /* SubscriptionModels.swift in Sources */,
 				11A196422F1AC1BE0030E524 /* TabScreenContainer.swift in Sources */,
 				11A196432F1AC1BE0030E524 /* PlaceholderContent.swift in Sources */,
 				119D1CF52F16E46300EC7072 /* MFAVerifyView.swift in Sources */,
@@ -1117,6 +1135,8 @@
 				119D1CF82F16E46300EC7072 /* AuthStrings.swift in Sources */,
 				119D1CF92F16E46300EC7072 /* APIConfiguration.swift in Sources */,
 				11F42F902F1A65F3002B1FBE /* HowItWorksScreen.swift in Sources */,
+				11A1964B2F1AE6A20030E524 /* LocalEntitlementCache.swift in Sources */,
+				11A1964C2F1AE6A20030E524 /* LocalPendingJWSUpload.swift in Sources */,
 				11F42F912F1A65F3002B1FBE /* StepItem.swift in Sources */,
 				11A1961F2F1AB6020030E524 /* CurrencySelector.swift in Sources */,
 				11F42F922F1A65F3002B1FBE /* OnboardingButton.swift in Sources */,
