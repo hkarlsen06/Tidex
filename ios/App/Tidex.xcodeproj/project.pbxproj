@@ -62,6 +62,14 @@
 		119D1D002F16E46300EC7072 /* OutlineButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 119D1CDC2F16E46300EC7072 /* OutlineButton.swift */; };
 		119D1D012F16E46300EC7072 /* AppleAuthProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 119D1CD12F16E46300EC7072 /* AppleAuthProvider.swift */; };
 		119D1D022F16E46300EC7072 /* GoogleAuthProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 119D1CD22F16E46300EC7072 /* GoogleAuthProvider.swift */; };
+		11A1960E2F1AA3280030E524 /* AccordionSectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A1960C2F1AA3280030E524 /* AccordionSectionView.swift */; };
+		11A1960F2F1AA3280030E524 /* SupplementRuleEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A1960D2F1AA3280030E524 /* SupplementRuleEditor.swift */; };
+		11A196122F1AA3350030E524 /* OnboardingData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A196102F1AA3350030E524 /* OnboardingData.swift */; };
+		11A196172F1AA3450030E524 /* MFASetupScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A196132F1AA3450030E524 /* MFASetupScreen.swift */; };
+		11A196182F1AA3450030E524 /* SettingsAccordionScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A196142F1AA3450030E524 /* SettingsAccordionScreen.swift */; };
+		11A196192F1AA3450030E524 /* SupplementsScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A196152F1AA3450030E524 /* SupplementsScreen.swift */; };
+		11A1961A2F1AA3450030E524 /* WageScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A196162F1AA3450030E524 /* WageScreen.swift */; };
+		11A1961D2F1AA3550030E524 /* OnboardingSaveManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A1961B2F1AA3550030E524 /* OnboardingSaveManager.swift */; };
 		11A5CD262F101201002BAC91 /* StoredShift.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A5CD252F101201002BAC91 /* StoredShift.swift */; };
 		11A5CD302F101283002BAC91 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 11A5CD2F2F101283002BAC91 /* WidgetKit.framework */; };
 		11A5CD322F101283002BAC91 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 11A5CD312F101283002BAC91 /* SwiftUI.framework */; };
@@ -204,6 +212,14 @@
 		119D1CDF2F16E46300EC7072 /* TidexCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TidexCard.swift; sourceTree = "<group>"; };
 		119D1CE02F16E46300EC7072 /* TidexTextField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TidexTextField.swift; sourceTree = "<group>"; };
 		119D1CE22F16E46300EC7072 /* Color+Tidex.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Color+Tidex.swift"; sourceTree = "<group>"; };
+		11A1960C2F1AA3280030E524 /* AccordionSectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccordionSectionView.swift; sourceTree = "<group>"; };
+		11A1960D2F1AA3280030E524 /* SupplementRuleEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupplementRuleEditor.swift; sourceTree = "<group>"; };
+		11A196102F1AA3350030E524 /* OnboardingData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingData.swift; sourceTree = "<group>"; };
+		11A196132F1AA3450030E524 /* MFASetupScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MFASetupScreen.swift; sourceTree = "<group>"; };
+		11A196142F1AA3450030E524 /* SettingsAccordionScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsAccordionScreen.swift; sourceTree = "<group>"; };
+		11A196152F1AA3450030E524 /* SupplementsScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupplementsScreen.swift; sourceTree = "<group>"; };
+		11A196162F1AA3450030E524 /* WageScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WageScreen.swift; sourceTree = "<group>"; };
+		11A1961B2F1AA3550030E524 /* OnboardingSaveManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingSaveManager.swift; sourceTree = "<group>"; };
 		11A5CD252F101201002BAC91 /* StoredShift.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoredShift.swift; sourceTree = "<group>"; };
 		11A5CD2E2F101283002BAC91 /* TidexShiftWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TidexShiftWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		11A5CD2F2F101283002BAC91 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
@@ -582,6 +598,22 @@
 			path = Native;
 			sourceTree = "<group>";
 		};
+		11A196112F1AA3350030E524 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				11A196102F1AA3350030E524 /* OnboardingData.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		11A1961C2F1AA3550030E524 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				11A1961B2F1AA3550030E524 /* OnboardingSaveManager.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
 		11A1D6CE2F11F48F00060819 /* Core */ = {
 			isa = PBXGroup;
 			children = (
@@ -704,6 +736,8 @@
 		11F42F852F1A65F3002B1FBE /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				11A1960C2F1AA3280030E524 /* AccordionSectionView.swift */,
+				11A1960D2F1AA3280030E524 /* SupplementRuleEditor.swift */,
 				11F42F9F2F1A6A38002B1FBE /* OnboardingRateSlider.swift */,
 				11F42F812F1A65F3002B1FBE /* IndustryPicker.swift */,
 				11F42F822F1A65F3002B1FBE /* OnboardingButton.swift */,
@@ -716,6 +750,10 @@
 		11F42F8C2F1A65F3002B1FBE /* Screens */ = {
 			isa = PBXGroup;
 			children = (
+				11A196132F1AA3450030E524 /* MFASetupScreen.swift */,
+				11A196142F1AA3450030E524 /* SettingsAccordionScreen.swift */,
+				11A196152F1AA3450030E524 /* SupplementsScreen.swift */,
+				11A196162F1AA3450030E524 /* WageScreen.swift */,
 				11F42F862F1A65F3002B1FBE /* GetStartedScreen.swift */,
 				11F42F872F1A65F3002B1FBE /* HowItWorksScreen.swift */,
 				11F42F882F1A65F3002B1FBE /* PersonalizationScreen.swift */,
@@ -729,6 +767,8 @@
 		11F42F8F2F1A65F3002B1FBE /* Onboarding */ = {
 			isa = PBXGroup;
 			children = (
+				11A1961C2F1AA3550030E524 /* Services */,
+				11A196112F1AA3350030E524 /* Models */,
 				11F42F852F1A65F3002B1FBE /* Components */,
 				11F42F8C2F1A65F3002B1FBE /* Screens */,
 				11F42F8D2F1A65F3002B1FBE /* OnboardingView.swift */,
@@ -952,6 +992,7 @@
 				11AE8D052F16FDBD005AB062 /* BreakDeduction.swift in Sources */,
 				11AE8D1C2F17BE13005AB062 /* PayrollEngine.swift in Sources */,
 				11AE8D1D2F17BE13005AB062 /* ConflictExclusion.swift in Sources */,
+				11A196122F1AA3350030E524 /* OnboardingData.swift in Sources */,
 				11AE8D252F17CF3A005AB062 /* MonthTransition.swift in Sources */,
 				1128F3BD2F1877C600702359 /* NativeWidgetStorage.swift in Sources */,
 				11AE8D062F16FDBD005AB062 /* WagePeriodBuilder.swift in Sources */,
@@ -970,6 +1011,11 @@
 				119D1CEF2F16E46300EC7072 /* TidexCard.swift in Sources */,
 				119D1CF02F16E46300EC7072 /* EmailPasswordForm.swift in Sources */,
 				119D1CF12F16E46300EC7072 /* LoginViewModel.swift in Sources */,
+				11A196172F1AA3450030E524 /* MFASetupScreen.swift in Sources */,
+				11A1961D2F1AA3550030E524 /* OnboardingSaveManager.swift in Sources */,
+				11A196182F1AA3450030E524 /* SettingsAccordionScreen.swift in Sources */,
+				11A196192F1AA3450030E524 /* SupplementsScreen.swift in Sources */,
+				11A1961A2F1AA3450030E524 /* WageScreen.swift in Sources */,
 				119D1CF22F16E46300EC7072 /* ErrorTranslations.swift in Sources */,
 				119D1CF42F16E46300EC7072 /* AuthService.swift in Sources */,
 				11F4300B2F1A92EA002B1FBE /* View+AdaptiveLayout.swift in Sources */,
@@ -1036,6 +1082,8 @@
 				11923C162F16B89C0076AFD6 /* AuthState.swift in Sources */,
 				11AE8CC92F16F2BF005AB062 /* SignupView.swift in Sources */,
 				11AE8CCA2F16F2BF005AB062 /* SignupViewModel.swift in Sources */,
+				11A1960E2F1AA3280030E524 /* AccordionSectionView.swift in Sources */,
+				11A1960F2F1AA3280030E524 /* SupplementRuleEditor.swift in Sources */,
 				11AE8CCB2F16F2BF005AB062 /* TermsAgreementView.swift in Sources */,
 				NETMON0012F2000000000001 /* NetworkMonitor.swift in Sources */,
 				OFFDSH0012F3000000000001 /* OfflineDashboardCards.swift in Sources */,

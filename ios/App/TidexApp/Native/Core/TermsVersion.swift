@@ -3,11 +3,14 @@ import Foundation
 /// Terms version management for iOS
 /// Fetches the current terms version from the API, with a hardcoded fallback
 enum TermsVersion {
-    /// Base URL for the Tidex website
-    static let baseURL = "https://app.tidex.no"
+    /// Base URL for user-facing pages (terms, privacy)
+    static let baseURL = "https://www.tidex.no"
+
+    /// Base URL for API endpoints
+    private static let apiBaseURL = "https://app.tidex.no"
 
     /// API endpoint for terms version
-    private static let versionEndpoint = "\(baseURL)/api/legal/version"
+    private static let versionEndpoint = "\(apiBaseURL)/api/legal/version"
 
     /// Fallback terms version date (used when API is unavailable)
     /// Keep this updated when terms change as a safety net

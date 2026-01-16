@@ -41,20 +41,24 @@ struct StepItem: View {
         Double(index) * 0.12
     }
 
+    private let iconSize: CGFloat = 44
+    private let connectorHeight: CGFloat = 20
+
     var body: some View {
-        VStack(spacing: 0) {
-            HStack(alignment: .center, spacing: 16) {
+        HStack(alignment: .top, spacing: 16) {
+            // Left column: Icon + connector line (vertically stacked, centered)
+            VStack(spacing: 0) {
                 // Icon circle with optional check pulse
                 ZStack {
                     Circle()
                         .fill(Color.tidexBlue.opacity(progressState.iconBackgroundOpacity))
-                        .frame(width: 44, height: 44)
+                        .frame(width: iconSize, height: iconSize)
 
                     // Checkmark pulse ring (only for active step)
                     if progressState == .active && showCheckPulse {
                         Circle()
                             .stroke(Color.tidexBlue.opacity(0.3), lineWidth: 2)
-                            .frame(width: 44, height: 44)
+                            .frame(width: iconSize, height: iconSize)
                             .scaleEffect(showCheckPulse ? 1.3 : 1.0)
                             .opacity(showCheckPulse ? 0 : 1)
                     }
@@ -65,33 +69,35 @@ struct StepItem: View {
                         .opacity(progressState.contentOpacity)
                 }
 
-                // Text content
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(title)
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundColor(.tidexTextPrimary)
-                        .opacity(progressState.contentOpacity)
-
-                    Text(description)
-                        .font(.system(size: 14))
-                        .foregroundColor(.tidexTextSecondary)
-                        .opacity(progressState.contentOpacity * 0.9)
+                // Connector line below icon
+                if showConnector {
+                    Rectangle()
+                        .fill(Color.tidexBlue.opacity(0.15))
+                        .frame(width: 2, height: connectorHeight)
+                        .opacity(isVisible ? 1 : 0)
+                        .animation(
+                            .easeOut(duration: 0.4).delay(entranceDelay + 0.2),
+                            value: isVisible
+                        )
                 }
             }
+            .frame(width: iconSize)
 
-            // Connector line below (between steps) - aligned under icon center
-            if showConnector {
-                Rectangle()
-                    .fill(Color.tidexBlue.opacity(0.15))
-                    .frame(width: 2, height: 20)
-                    .opacity(isVisible ? 1 : 0)
-                    .animation(
-                        .easeOut(duration: 0.4).delay(entranceDelay + 0.2),
-                        value: isVisible
-                    )
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.leading, 21)  // Center under 44pt icon
+            // Right column: Text content (vertically centered to icon)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundColor(.tidexTextPrimary)
+                    .opacity(progressState.contentOpacity)
+
+                Text(description)
+                    .font(.system(size: 14))
+                    .foregroundColor(.tidexTextSecondary)
+                    .opacity(progressState.contentOpacity * 0.9)
             }
+            .frame(minHeight: iconSize, alignment: .center)
+
+            Spacer(minLength: 0)
         }
         .opacity(isVisible ? 1 : 0)
         .offset(y: isVisible ? 0 : 20)

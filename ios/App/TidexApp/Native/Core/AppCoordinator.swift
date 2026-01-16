@@ -63,6 +63,7 @@ final class AppCoordinator: ObservableObject {
     // MARK: - Private
 
     private var authStateTask: Task<Void, Never>?
+    private var didReceiveInitialSession = false
 
     // MARK: - Initialization
 
@@ -97,9 +98,10 @@ final class AppCoordinator: ObservableObject {
 
             guard let self = self else { return }
 
-            // If still loading after timeout, the authStateChanges stream hasn't emitted
-            // This can happen if there's no stored session or the SDK initialization is slow
-            if self.appState == .loading {
+            // If still loading after timeout AND we haven't received initialSession event,
+            // the authStateChanges stream hasn't emitted.
+            // This can happen if there's no stored session or the SDK initialization is slow.
+            if self.appState == .loading && !self.didReceiveInitialSession {
                 print("[AppCoordinator] Initial session timeout - performing manual session check")
                 await self.performInitialSessionCheck()
             }
@@ -130,6 +132,9 @@ final class AppCoordinator: ObservableObject {
 
                 switch event {
                 case .initialSession:
+                    // Mark that we received the initial session event (prevents duplicate check from timeout)
+                    self.didReceiveInitialSession = true
+
                     // On app launch, check if we have a valid session
                     if session != nil {
                         await self.checkMFAAndUpdateState()
