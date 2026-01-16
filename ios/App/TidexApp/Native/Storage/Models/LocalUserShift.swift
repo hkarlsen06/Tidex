@@ -108,6 +108,18 @@ final class LocalUserShift {
         serverDeletedAt != nil
     }
 
+    /// Whether this shift is pending deletion (not yet synced)
+    /// Used to avoid stringly-typed status checks
+    var isPendingDelete: Bool {
+        syncStatusRaw == "pendingDelete"
+    }
+
+    /// Whether this shift should be counted as "existing" for month gating
+    /// Excludes deleted and pending-delete shifts
+    var isActiveShift: Bool {
+        serverDeletedAt == nil && !isPendingDelete
+    }
+
     // MARK: - Initialization
 
     init(

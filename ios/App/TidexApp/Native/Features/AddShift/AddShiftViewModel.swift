@@ -33,6 +33,14 @@ final class AddShiftViewModel: ObservableObject {
 
     @Published var selectedDates: Set<String> = []  // ISO dates (YYYY-MM-DD)
 
+    // MARK: - Paywall State
+
+    /// Whether to show the paywall sheet
+    @Published var showPaywall = false
+
+    /// Set of existing months when paywall is triggered (for display purposes)
+    @Published private(set) var existingShiftMonths: Set<DateComponents> = []
+
     // MARK: - Recurring Mode State
 
     @Published var repeatInterval: Int = 0  // 0 = weekly, 1 = biweekly, etc.
@@ -240,6 +248,9 @@ final class AddShiftViewModel: ObservableObject {
         isLoading = true
         error = nil
 
+        // Get current tier for gating
+        let tier = EntitlementService.shared.effectiveTier
+
         do {
             let sortedDates = selectedDates.sorted()
 
@@ -249,12 +260,14 @@ final class AddShiftViewModel: ObservableObject {
                     continue
                 }
 
-                _ = try await shiftsRepository.createShift(
+                // Use tier-checked creation for free users
+                _ = try await shiftsRepository.createShiftWithTierCheck(
                     userId: userId,
                     shiftDate: shiftDate,
                     startTime: startTimeString,
                     endTime: endTimeString,
-                    customSupplements: nil
+                    customSupplements: nil,
+                    tier: tier
                 )
             }
 
@@ -273,6 +286,11 @@ final class AddShiftViewModel: ObservableObject {
             // Navigate to Shifts tab
             onShiftsCreated?()
 
+        } catch ShiftCreationError.monthLimitReached(let months) {
+            // Show paywall instead of error
+            logger.info("Month limit reached, showing paywall. Existing months: \(months.count)")
+            existingShiftMonths = months
+            showPaywall = true
         } catch {
             logger.error("Failed to create shifts: \(error.localizedDescription)")
             self.error = error.localizedDescription

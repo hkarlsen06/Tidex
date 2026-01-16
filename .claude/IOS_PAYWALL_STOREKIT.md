@@ -71,7 +71,7 @@ The following fixes were identified during code review and are incorporated thro
 | 4 | StoreKitManager | ✅ Complete |
 | 5 | JWSUploadWorker | ✅ Complete |
 | 6 | EntitlementService | ✅ Complete |
-| 7 | Shift Month Limit Gating | ⬜ Not Started |
+| 7 | Shift Month Limit Gating | ✅ Complete |
 | 8 | PaywallView & Components | ⬜ Not Started |
 | 9 | AppCoordinator Integration | ⬜ Not Started |
 | 10 | Localization & StoreKit Config | ⬜ Not Started |
@@ -1438,7 +1438,7 @@ final class EntitlementService: ObservableObject {
 
 ## Phase 7: Shift Month Limit Gating
 
-**Status**: ⬜ Not Started
+**Status**: ✅ Complete
 
 ### Scope
 
@@ -1596,7 +1596,40 @@ This is not in scope for the initial implementation since recurring shifts are h
 
 ### Notes
 
-_Implementation notes will be added after completion._
+**Implemented 2025-01-16:**
+
+1. **LocalUserShift computed properties added:**
+   - `isPendingDelete` - Checks if `syncStatusRaw == "pendingDelete"` (avoids stringly-typed checks)
+   - `isActiveShift` - Returns true if shift is not deleted AND not pending delete
+
+2. **ShiftCreationError enum created:**
+   - Location: `ios/App/TidexApp/Native/Storage/Repositories/ShiftsRepository.swift`
+   - Single case: `monthLimitReached(existingMonths: Set<DateComponents>)`
+   - Includes LocalizedError conformance with user-friendly message
+
+3. **ShiftsRepository month limit gating methods:**
+   - `getExistingShiftMonths(for:)` - Returns Set<DateComponents> of months with active shifts
+   - `canCreateShift(userId:targetDate:tier:)` - Returns Bool based on tier and existing months
+   - `createShiftWithTierCheck(userId:shiftDate:startTime:endTime:customSupplements:tier:)` - Throws if blocked
+
+4. **AddShiftViewModel updated:**
+   - Added `showPaywall` published property
+   - Added `existingShiftMonths` published property for display
+   - `submitSingleShifts()` now uses `createShiftWithTierCheck()` and catches `ShiftCreationError.monthLimitReached`
+   - On month limit error: sets `existingShiftMonths` and `showPaywall = true`
+
+5. **AddShiftView updated:**
+   - Added `.sheet(isPresented: $viewModel.showPaywall)` binding
+   - Added `PaywallPlaceholderView` as temporary UI until Phase 8
+   - Placeholder shows upgrade prompt with crown icon
+
+**Files modified:**
+- `ios/App/TidexApp/Native/Storage/Models/LocalUserShift.swift`
+- `ios/App/TidexApp/Native/Storage/Repositories/ShiftsRepository.swift`
+- `ios/App/TidexApp/Native/Features/AddShift/AddShiftViewModel.swift`
+- `ios/App/TidexApp/Native/Features/AddShift/AddShiftView.swift`
+
+**Note**: PaywallPlaceholderView will be replaced with actual PaywallView in Phase 8. Build in Xcode to verify.
 
 ---
 
