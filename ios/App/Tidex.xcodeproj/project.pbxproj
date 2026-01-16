@@ -72,6 +72,22 @@
 		11A1961D2F1AA3550030E524 /* OnboardingSaveManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A1961B2F1AA3550030E524 /* OnboardingSaveManager.swift */; };
 		11A1961F2F1AB6020030E524 /* CurrencySelector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A1961E2F1AB6020030E524 /* CurrencySelector.swift */; };
 		11A196212F1AB6160030E524 /* Currency.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A196202F1AB6160030E524 /* Currency.swift */; };
+		11A196332F1AC0070030E524 /* TimePickerRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A196282F1AC0070030E524 /* TimePickerRow.swift */; };
+		11A196342F1AC0070030E524 /* AddShiftView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A196302F1AC0070030E524 /* AddShiftView.swift */; };
+		11A196352F1AC0070030E524 /* RecurringShiftProjector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A1962D2F1AC0070030E524 /* RecurringShiftProjector.swift */; };
+		11A196362F1AC0070030E524 /* RecurringCalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A196232F1AC0070030E524 /* RecurringCalendarView.swift */; };
+		11A196372F1AC0070030E524 /* ShiftCalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A196262F1AC0070030E524 /* ShiftCalendarView.swift */; };
+		11A196382F1AC0070030E524 /* RepeatIntervalPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A196252F1AC0070030E524 /* RepeatIntervalPicker.swift */; };
+		11A196392F1AC0070030E524 /* AddShiftViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A196312F1AC0070030E524 /* AddShiftViewModel.swift */; };
+		11A1963A2F1AC0070030E524 /* RecurringPreviewSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A196242F1AC0070030E524 /* RecurringPreviewSheet.swift */; };
+		11A1963B2F1AC0070030E524 /* DurationPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A196222F1AC0070030E524 /* DurationPicker.swift */; };
+		11A1963C2F1AC0070030E524 /* AddShiftMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A1962B2F1AC0070030E524 /* AddShiftMode.swift */; };
+		11A1963D2F1AC0070030E524 /* WeekdayChipBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A196292F1AC0070030E524 /* WeekdayChipBar.swift */; };
+		11A1963E2F1AC0070030E524 /* ShiftModeToggle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A196272F1AC0070030E524 /* ShiftModeToggle.swift */; };
+		11A1963F2F1AC0070030E524 /* ShiftConflictDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A1962E2F1AC0070030E524 /* ShiftConflictDetector.swift */; };
+		11A196422F1AC1BE0030E524 /* TabScreenContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A196412F1AC1BE0030E524 /* TabScreenContainer.swift */; };
+		11A196432F1AC1BE0030E524 /* PlaceholderContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A196402F1AC1BE0030E524 /* PlaceholderContent.swift */; };
+		11A196452F1AC20E0030E524 /* TabConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A196442F1AC20E0030E524 /* TabConfiguration.swift */; };
 		11A5CD262F101201002BAC91 /* StoredShift.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A5CD252F101201002BAC91 /* StoredShift.swift */; };
 		11A5CD302F101283002BAC91 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 11A5CD2F2F101283002BAC91 /* WidgetKit.framework */; };
 		11A5CD322F101283002BAC91 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 11A5CD312F101283002BAC91 /* SwiftUI.framework */; };
@@ -224,6 +240,22 @@
 		11A1961B2F1AA3550030E524 /* OnboardingSaveManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingSaveManager.swift; sourceTree = "<group>"; };
 		11A1961E2F1AB6020030E524 /* CurrencySelector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CurrencySelector.swift; sourceTree = "<group>"; };
 		11A196202F1AB6160030E524 /* Currency.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Currency.swift; sourceTree = "<group>"; };
+		11A196222F1AC0070030E524 /* DurationPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DurationPicker.swift; sourceTree = "<group>"; };
+		11A196232F1AC0070030E524 /* RecurringCalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecurringCalendarView.swift; sourceTree = "<group>"; };
+		11A196242F1AC0070030E524 /* RecurringPreviewSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecurringPreviewSheet.swift; sourceTree = "<group>"; };
+		11A196252F1AC0070030E524 /* RepeatIntervalPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RepeatIntervalPicker.swift; sourceTree = "<group>"; };
+		11A196262F1AC0070030E524 /* ShiftCalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShiftCalendarView.swift; sourceTree = "<group>"; };
+		11A196272F1AC0070030E524 /* ShiftModeToggle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShiftModeToggle.swift; sourceTree = "<group>"; };
+		11A196282F1AC0070030E524 /* TimePickerRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimePickerRow.swift; sourceTree = "<group>"; };
+		11A196292F1AC0070030E524 /* WeekdayChipBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeekdayChipBar.swift; sourceTree = "<group>"; };
+		11A1962B2F1AC0070030E524 /* AddShiftMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddShiftMode.swift; sourceTree = "<group>"; };
+		11A1962D2F1AC0070030E524 /* RecurringShiftProjector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecurringShiftProjector.swift; sourceTree = "<group>"; };
+		11A1962E2F1AC0070030E524 /* ShiftConflictDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShiftConflictDetector.swift; sourceTree = "<group>"; };
+		11A196302F1AC0070030E524 /* AddShiftView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddShiftView.swift; sourceTree = "<group>"; };
+		11A196312F1AC0070030E524 /* AddShiftViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddShiftViewModel.swift; sourceTree = "<group>"; };
+		11A196402F1AC1BE0030E524 /* PlaceholderContent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceholderContent.swift; sourceTree = "<group>"; };
+		11A196412F1AC1BE0030E524 /* TabScreenContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabScreenContainer.swift; sourceTree = "<group>"; };
+		11A196442F1AC20E0030E524 /* TabConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabConfiguration.swift; sourceTree = "<group>"; };
 		11A5CD252F101201002BAC91 /* StoredShift.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoredShift.swift; sourceTree = "<group>"; };
 		11A5CD2E2F101283002BAC91 /* TidexShiftWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TidexShiftWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		11A5CD2F2F101283002BAC91 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
@@ -410,6 +442,7 @@
 		119D1CBA2F16E46300EC7072 /* Core */ = {
 			isa = PBXGroup;
 			children = (
+				11A196442F1AC20E0030E524 /* TabConfiguration.swift */,
 				11F4301D2F1A957C002B1FBE /* TermsVersion.swift */,
 				119D1CB72F16E46300EC7072 /* AppCoordinator.swift */,
 				119D1CB82F16E46300EC7072 /* FeatureFlags.swift */,
@@ -494,6 +527,7 @@
 		119D1CCC2F16E46300EC7072 /* Features */ = {
 			isa = PBXGroup;
 			children = (
+				11A196322F1AC0070030E524 /* AddShift */,
 				11F42F8F2F1A65F3002B1FBE /* Onboarding */,
 				119D1CC92F16E46300EC7072 /* Auth */,
 				119D1CCB2F16E46300EC7072 /* Dashboard */,
@@ -552,6 +586,8 @@
 		119D1CE12F16E46300EC7072 /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				11A196402F1AC1BE0030E524 /* PlaceholderContent.swift */,
+				11A196412F1AC1BE0030E524 /* TabScreenContainer.swift */,
 				11AE8D732F17DD44005AB062 /* UserMenuButton.swift */,
 				11F42F802F1A65F3002B1FBE /* CountUpText.swift */,
 				119D1CDA2F16E46300EC7072 /* ErrorBanner.swift */,
@@ -616,6 +652,50 @@
 				11A1961B2F1AA3550030E524 /* OnboardingSaveManager.swift */,
 			);
 			path = Services;
+			sourceTree = "<group>";
+		};
+		11A1962A2F1AC0070030E524 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				11A196222F1AC0070030E524 /* DurationPicker.swift */,
+				11A196232F1AC0070030E524 /* RecurringCalendarView.swift */,
+				11A196242F1AC0070030E524 /* RecurringPreviewSheet.swift */,
+				11A196252F1AC0070030E524 /* RepeatIntervalPicker.swift */,
+				11A196262F1AC0070030E524 /* ShiftCalendarView.swift */,
+				11A196272F1AC0070030E524 /* ShiftModeToggle.swift */,
+				11A196282F1AC0070030E524 /* TimePickerRow.swift */,
+				11A196292F1AC0070030E524 /* WeekdayChipBar.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		11A1962C2F1AC0070030E524 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				11A1962B2F1AC0070030E524 /* AddShiftMode.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		11A1962F2F1AC0070030E524 /* Utilities */ = {
+			isa = PBXGroup;
+			children = (
+				11A1962D2F1AC0070030E524 /* RecurringShiftProjector.swift */,
+				11A1962E2F1AC0070030E524 /* ShiftConflictDetector.swift */,
+			);
+			path = Utilities;
+			sourceTree = "<group>";
+		};
+		11A196322F1AC0070030E524 /* AddShift */ = {
+			isa = PBXGroup;
+			children = (
+				11A1962A2F1AC0070030E524 /* Components */,
+				11A1962C2F1AC0070030E524 /* Models */,
+				11A1962F2F1AC0070030E524 /* Utilities */,
+				11A196302F1AC0070030E524 /* AddShiftView.swift */,
+				11A196312F1AC0070030E524 /* AddShiftViewModel.swift */,
+			);
+			path = AddShift;
 			sourceTree = "<group>";
 		};
 		11A1D6CE2F11F48F00060819 /* Core */ = {
@@ -1014,6 +1094,7 @@
 				119D1CEC2F16E46300EC7072 /* FeatureFlags.swift in Sources */,
 				119D1CED2F16E46300EC7072 /* LocalizationManager.swift in Sources */,
 				119D1CEE2F16E46300EC7072 /* PhoneOTPForm.swift in Sources */,
+				11A196452F1AC20E0030E524 /* TabConfiguration.swift in Sources */,
 				119D1CEF2F16E46300EC7072 /* TidexCard.swift in Sources */,
 				119D1CF02F16E46300EC7072 /* EmailPasswordForm.swift in Sources */,
 				119D1CF12F16E46300EC7072 /* LoginViewModel.swift in Sources */,
@@ -1025,6 +1106,8 @@
 				119D1CF22F16E46300EC7072 /* ErrorTranslations.swift in Sources */,
 				119D1CF42F16E46300EC7072 /* AuthService.swift in Sources */,
 				11F4300B2F1A92EA002B1FBE /* View+AdaptiveLayout.swift in Sources */,
+				11A196422F1AC1BE0030E524 /* TabScreenContainer.swift in Sources */,
+				11A196432F1AC1BE0030E524 /* PlaceholderContent.swift in Sources */,
 				119D1CF52F16E46300EC7072 /* MFAVerifyView.swift in Sources */,
 				11F430212F1A9592002B1FBE /* AcceptTermsView.swift in Sources */,
 				119D1CF62F16E46300EC7072 /* LoadingOverlay.swift in Sources */,
@@ -1099,6 +1182,19 @@
 				OFFSTR0012F2000000000001 /* OfflineShiftStorage.swift in Sources */,
 				11A5CD262F101201002BAC91 /* StoredShift.swift in Sources */,
 				SCENE0012F0700000000001 /* SceneDelegate.swift in Sources */,
+				11A196332F1AC0070030E524 /* TimePickerRow.swift in Sources */,
+				11A196342F1AC0070030E524 /* AddShiftView.swift in Sources */,
+				11A196352F1AC0070030E524 /* RecurringShiftProjector.swift in Sources */,
+				11A196362F1AC0070030E524 /* RecurringCalendarView.swift in Sources */,
+				11A196372F1AC0070030E524 /* ShiftCalendarView.swift in Sources */,
+				11A196382F1AC0070030E524 /* RepeatIntervalPicker.swift in Sources */,
+				11A196392F1AC0070030E524 /* AddShiftViewModel.swift in Sources */,
+				11A1963A2F1AC0070030E524 /* RecurringPreviewSheet.swift in Sources */,
+				11A1963B2F1AC0070030E524 /* DurationPicker.swift in Sources */,
+				11A1963C2F1AC0070030E524 /* AddShiftMode.swift in Sources */,
+				11A1963D2F1AC0070030E524 /* WeekdayChipBar.swift in Sources */,
+				11A1963E2F1AC0070030E524 /* ShiftModeToggle.swift in Sources */,
+				11A1963F2F1AC0070030E524 /* ShiftConflictDetector.swift in Sources */,
 				11F1CBDB2F101C5700246C07 /* ShiftActivityAttributes.swift in Sources */,
 				TIDCLR0012F2000000000001 /* TidexBrandColors.swift in Sources */,
 			);

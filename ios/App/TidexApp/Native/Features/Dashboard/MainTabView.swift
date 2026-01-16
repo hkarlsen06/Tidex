@@ -57,7 +57,7 @@ struct MainTabView: View {
                     }
                     .tag(Tab.shifts)
 
-                AddShiftPlaceholderView()
+                AddShiftView(selectedTab: $selectedTab)
                     .tabItem {
                         Label(localization.string(Tab.add.localizationKey), systemImage: Tab.add.icon)
                     }
@@ -196,34 +196,6 @@ struct SharingPlaceholderView: View {
             titleKey: "tabs.sharing",
             descriptionKey: "placeholder.sharingDescription"
         )
-    }
-}
-
-// MARK: - Placeholder Content
-
-/// Content for placeholder tab views
-/// Displays a centered icon, title, and description
-private struct PlaceholderContent: View {
-    let icon: String
-    let title: String
-    let description: String
-
-    var body: some View {
-        VStack(spacing: 16) {
-            Image(systemName: icon)
-                .font(.system(size: 48))
-                .foregroundColor(.tidexTextMuted)
-
-            Text(title)
-                .font(.system(size: 20, weight: .semibold))
-                .foregroundColor(.tidexTextPrimary)
-
-            Text(description)
-                .font(.system(size: 14))
-                .foregroundColor(.tidexTextSecondary)
-                .multilineTextAlignment(.center)
-        }
-        .padding(.horizontal, 40)
     }
 }
 

@@ -52,10 +52,11 @@ final class LocalStore {
         }
     }
 
-    /// Get a new ModelContext for main actor operations
-    /// Use this for UI reads on the main thread
+    /// Get a fresh ModelContext for main actor operations
+    /// Creates a new context each time to ensure it sees the latest persisted data
+    /// (avoids stale cache issues when actor writes and main thread reads)
     var mainContext: ModelContext {
-        container.mainContext
+        ModelContext(container)
     }
 
     /// Reset all local data (for debugging or logout)
@@ -176,7 +177,10 @@ actor LocalStoreActor {
             predicate: #Predicate { shift in
                 shift.userId == userId && (
                     shift.syncStatusRaw == "dirty" ||
-                    shift.syncStatusRaw == "pendingDelete"
+                    shift.syncStatusRaw == "pendingDelete" ||
+                    // Include conflict records that were never synced (serverRevision=0)
+                    // These are new local records that failed initial sync and need INSERT
+                    (shift.syncStatusRaw == "conflict" && shift.serverRevision == 0)
                 )
             }
         )
@@ -421,7 +425,10 @@ actor LocalStoreActor {
             predicate: #Predicate { shift in
                 shift.userId == userId && (
                     shift.syncStatusRaw == "dirty" ||
-                    shift.syncStatusRaw == "pendingDelete"
+                    shift.syncStatusRaw == "pendingDelete" ||
+                    // Include conflict records that were never synced (serverRevision=0)
+                    // These are new local records that failed initial sync and need INSERT
+                    (shift.syncStatusRaw == "conflict" && shift.serverRevision == 0)
                 )
             }
         )
@@ -736,7 +743,10 @@ actor LocalStoreActor {
             predicate: #Predicate { snapshot in
                 snapshot.userId == userId && (
                     snapshot.syncStatusRaw == "dirty" ||
-                    snapshot.syncStatusRaw == "pendingDelete"
+                    snapshot.syncStatusRaw == "pendingDelete" ||
+                    // Include conflict records that were never synced (serverRevision=0)
+                    // These are new local records that failed initial sync and need INSERT
+                    (snapshot.syncStatusRaw == "conflict" && snapshot.serverRevision == 0)
                 )
             }
         )
@@ -1025,13 +1035,103 @@ actor LocalStoreActor {
     func getDirtyUserSettings(userId: String) throws -> LocalUserSettings? {
         let descriptor = FetchDescriptor<LocalUserSettings>(
             predicate: #Predicate { settings in
-                settings.userId == userId && settings.syncStatusRaw == "dirty"
+                settings.userId == userId && (
+                    settings.syncStatusRaw == "dirty" ||
+                    // Include conflict records that were never synced (serverRevision=0)
+                    // These are new local records that failed initial sync and need INSERT
+                    (settings.syncStatusRaw == "conflict" && settings.serverRevision == 0)
+                )
             }
         )
         return try modelContext.fetch(descriptor).first
     }
 
     // MARK: - Local User Settings Write Operations
+
+    /// Create a new local user settings entry
+    /// Used during onboarding when no settings exist yet
+    func createUserSettings(
+        userId: String,
+        payrollDay: Int? = nil,
+        currency: String? = nil,
+        theme: String = "system",
+        monthlyGoal: Int? = nil,
+        defaultShiftsView: String? = nil,
+        halfTaxMonth: Int? = nil
+    ) throws -> UserSettings {
+        let now = Date()
+
+        // Build the server snapshot for sync tracking
+        let serverSnapshot = UserSettingsServerSnapshot(
+            monthlyGoal: monthlyGoal,
+            defaultShiftsView: defaultShiftsView,
+            profilePictureUrl: nil,
+            payrollDay: payrollDay,
+            theme: theme,
+            halfTaxMonth: halfTaxMonth,
+            currency: currency,
+            lastActive: now,
+            updatedAt: now,
+            revision: 0
+        )
+
+        // Track all non-nil fields as dirty so they get pushed to server
+        var dirtyFields: [UserSettingsField] = [.theme, .lastActive]
+        if payrollDay != nil { dirtyFields.append(.payrollDay) }
+        if currency != nil { dirtyFields.append(.currency) }
+        if monthlyGoal != nil { dirtyFields.append(.monthlyGoal) }
+        if defaultShiftsView != nil { dirtyFields.append(.defaultShiftsView) }
+        if halfTaxMonth != nil { dirtyFields.append(.halfTaxMonth) }
+
+        let dirtyFieldsData = (try? canonicalJSONEncoder.encode(dirtyFields.map { $0.rawValue })) ?? Data()
+
+        let localSettings = LocalUserSettings(
+            userId: userId,
+            monthlyGoal: monthlyGoal,
+            defaultShiftsView: defaultShiftsView,
+            profilePictureUrl: nil,
+            payrollDay: payrollDay,
+            theme: theme,
+            halfTaxMonth: halfTaxMonth,
+            currency: currency,
+            lastActive: now,
+            createdAt: now,
+            serverUpdatedAt: now,
+            serverRevision: 0,
+            syncStatus: .dirty,
+            dirtyFields: dirtyFieldsData,
+            lastSyncedSnapshot: serverSnapshot.encoded(),
+            localUpdatedAt: now,
+            conflictServerSnapshot: nil
+        )
+
+        modelContext.insert(localSettings)
+        try modelContext.save()
+        return localSettings.toUserSettings()
+    }
+
+    /// Get or create user settings for a user
+    /// Returns existing settings if found, otherwise creates new settings
+    func getOrCreateUserSettings(
+        userId: String,
+        payrollDay: Int? = nil,
+        currency: String? = nil
+    ) throws -> UserSettings {
+        let descriptor = FetchDescriptor<LocalUserSettings>(
+            predicate: #Predicate { $0.userId == userId }
+        )
+
+        if let existing = try modelContext.fetch(descriptor).first {
+            return existing.toUserSettings()
+        }
+
+        // Create new settings
+        return try createUserSettings(
+            userId: userId,
+            payrollDay: payrollDay,
+            currency: currency
+        )
+    }
 
     func updateUserSettings(
         userId: String,

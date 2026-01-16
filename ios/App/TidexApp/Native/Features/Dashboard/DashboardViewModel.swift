@@ -5,6 +5,13 @@ import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "DashboardViewModel")
 
+// MARK: - Notification Names
+
+extension Notification.Name {
+    /// Posted when shifts are created/modified and dashboard should refresh
+    static let shiftsDidChange = Notification.Name("com.tidex.shiftsDidChange")
+}
+
 // MARK: - Dashboard Data
 
 /// Computed dashboard data ready for display
@@ -372,6 +379,24 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
         }
     }
 
+    /// Reload dashboard from local data without triggering sync
+    /// Called when shifts change locally (e.g., after adding a shift)
+    func reloadFromLocal() async {
+        logger.info("🔄 Reloading dashboard from local data")
+
+        // Clear in-memory caches to pick up new data
+        monthCache.removeAll()
+        prefetchTasks.removeAll()
+
+        // Reload from local repositories
+        await loadDashboardFromLocal()
+
+        // Prefetch neighboring months
+        prefetchNeighboringMonths()
+
+        logger.info("✅ Dashboard reloaded from local")
+    }
+
     /// Load dashboard data from local repositories
     /// This is the core local-first read path - no network calls
     private func loadDashboardFromLocal() async {
@@ -394,18 +419,21 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
             // Load settings from local store
             if settings == nil {
                 settings = settingsRepository.getSettings(for: userId)
+                logger.info("📋 Loaded settings: \(self.settings != nil ? "found" : "nil")")
                 updateUserAvatarFromSettings()
             }
 
             // Load snapshots from local store
             if snapshots.isEmpty {
                 snapshots = snapshotsRepository.getSnapshots(for: userId)
+                logger.info("📋 Loaded snapshots: \(self.snapshots.count)")
             }
 
             // Load recurring shifts from local store
             if recurringShifts.isEmpty {
                 let localRecurring = recurringShiftsRepository.getRecurringShifts(for: userId)
                 recurringShifts = localRecurring
+                logger.info("📋 Loaded recurring: \(self.recurringShifts.count)")
             }
 
             // Calculate date ranges for displayed month
@@ -423,6 +451,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
                 startDate: displayStartDate,
                 endDate: displayEndDate
             )
+            logger.info("📋 Loaded shifts for \(displayYM.year)-\(displayYM.month): \(displayShifts.count)")
 
             let fetchedPreviousShifts = shiftsRepository.getShifts(
                 for: userId,
@@ -435,7 +464,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
             guard let currentSettings = self.settings else {
                 // No settings yet - sync may not have completed
                 // Show a softer message instead of hard error
-                logger.info("📭 No local settings yet - waiting for sync")
+                logger.info("📭 No local settings yet - waiting for sync (userId: \(userId))")
                 self.isLoading = false
                 // Leave dashboardData as nil to show empty state
                 return
