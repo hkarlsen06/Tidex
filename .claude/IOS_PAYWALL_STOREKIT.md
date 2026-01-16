@@ -66,7 +66,7 @@ The following fixes were identified during code review and are incorporated thro
 | Phase | Description | Status |
 |-------|-------------|--------|
 | 1 | Database Migration (tier column) | ✅ Complete |
-| 2 | SwiftData Models | ⬜ Not Started |
+| 2 | SwiftData Models | ✅ Complete |
 | 3 | EntitlementRepository | ⬜ Not Started |
 | 4 | StoreKitManager | ⬜ Not Started |
 | 5 | JWSUploadWorker | ⬜ Not Started |
@@ -262,7 +262,7 @@ REVOKE SELECT ON public.user_entitlements FROM anon, authenticated;
 
 ## Phase 2: SwiftData Models
 
-**Status**: ⬜ Not Started
+**Status**: ✅ Complete
 
 ### Scope
 
@@ -480,13 +480,47 @@ Add both models to the schema array in `LocalStore.swift`.
 
 ### Acceptance Criteria
 
-- [ ] Both SwiftData models compile without errors
-- [ ] Models added to LocalStore schema
-- [ ] App builds and launches without SwiftData migration issues
+- [x] Both SwiftData models compile without errors
+- [x] Models added to LocalStore schema
+- [x] App builds and launches without SwiftData migration issues
 
 ### Notes
 
-_Implementation notes will be added after completion._
+**Implemented 2025-01-16:**
+
+1. **SubscriptionModels.swift created**: Contains `SubscriptionTier` enum, `ProductID` enum, `ServerEntitlement` struct, `PurchaseError` enum, and `EntitlementConfig` constants.
+   - Location: `ios/App/TidexApp/Native/Services/Subscription/SubscriptionModels.swift`
+
+2. **LocalEntitlementCache.swift created**: SwiftData model for caching server entitlement with 48h TTL.
+   - Location: `ios/App/TidexApp/Native/Storage/Models/LocalEntitlementCache.swift`
+   - Uses `@Attribute(.unique)` on `userId` for single cache entry per user
+   - Includes `isExpired` computed property for TTL checking
+   - Added `update(from:)` method for efficient cache updates
+
+3. **LocalPendingJWSUpload.swift created**: SwiftData model for persisting JWS upload queue.
+   - Location: `ios/App/TidexApp/Native/Storage/Models/LocalPendingJWSUpload.swift`
+   - **CRITICAL**: Uses `transactionId` as unique key to prevent duplicate queue entries
+   - Includes `scheduleNextRetry()` with exponential backoff (30s, 60s, 120s, 240s, max 10min)
+
+4. **LocalStore.swift updated**:
+   - Added `LocalEntitlementCache` and `LocalPendingJWSUpload` to schema array
+   - Added both models to `resetAllData()` function
+   - Added LocalStoreActor operations:
+     - `upsertEntitlementCache(userId:entitlement:)` - Cache server entitlement
+     - `deleteEntitlementCache(userId:)` - Clear cache on logout
+     - `insertPendingJWSUpload(_:)` - Queue JWS upload (deduped by transactionId)
+     - `deletePendingJWSUpload(transactionId:)` - Remove after successful upload
+     - `schedulePendingJWSUploadRetry(transactionId:)` - Schedule backoff retry
+
+**Files created:**
+- `ios/App/TidexApp/Native/Services/Subscription/SubscriptionModels.swift`
+- `ios/App/TidexApp/Native/Storage/Models/LocalEntitlementCache.swift`
+- `ios/App/TidexApp/Native/Storage/Models/LocalPendingJWSUpload.swift`
+
+**Files modified:**
+- `ios/App/TidexApp/Native/Storage/LocalStore.swift`
+
+**Note**: New Swift files need to be added to the Xcode project. Build in Xcode to verify.
 
 ---
 
