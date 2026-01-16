@@ -21,21 +21,21 @@ struct EmailPasswordForm: View {
                 autocorrection: false
             )
 
-            // Password field (always shown for email, optional for phone)
-            if viewModel.inputType == .email || !viewModel.password.isEmpty {
-                SecureTextField(
-                    label: localization.string("login.passwordLabel"),
-                    placeholder: localization.string("login.passwordPlaceholder"),
-                    text: $viewModel.password,
-                    error: viewModel.fieldErrors.password,
-                    onSubmit: {
-                        Task { await viewModel.signIn() }
-                    }
-                )
-            }
+            // Password field (always visible for AutoFill, optional for phone login)
+            SecureTextField(
+                label: viewModel.inputType == .phone
+                    ? localization.string("login.passwordOptionalLabel")
+                    : localization.string("login.passwordLabel"),
+                placeholder: localization.string("login.passwordPlaceholder"),
+                text: $viewModel.password,
+                error: viewModel.fieldErrors.password,
+                onSubmit: {
+                    Task { await viewModel.signIn() }
+                }
+            )
 
-            // Forgot password link
-            if viewModel.inputType == .email || !viewModel.password.isEmpty {
+            // Forgot password link (only for email login)
+            if viewModel.inputType == .email {
                 HStack {
                     Spacer()
                     Button(action: {
@@ -49,9 +49,9 @@ struct EmailPasswordForm: View {
                 }
             }
 
-            // Phone hint - show password is optional
-            if viewModel.inputType == .phone && viewModel.password.isEmpty {
-                Text("Leave password empty to receive an SMS code")
+            // Phone hint - password is optional for OTP flow
+            if viewModel.inputType == .phone {
+                Text(localization.string("login.phonePasswordHint"))
                     .font(.system(size: 12))
                     .foregroundColor(.tidexTextMuted)
                     .frame(maxWidth: .infinity, alignment: .leading)

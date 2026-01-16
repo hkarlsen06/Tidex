@@ -11,7 +11,6 @@ struct LoginView: View {
     var onNavigateToResetPassword: (() -> Void)?
 
     // Animation state
-    @State private var headerAppeared = false
     @State private var cardAppeared = false
     @State private var footerAppeared = false
 
@@ -21,67 +20,70 @@ struct LoginView: View {
             Color.tidexBackground
                 .ignoresSafeArea()
 
-            // Content
-            ScrollView {
-                VStack(spacing: 24) {
-                    // Header with logo
-                    headerView
-                        .padding(.top, 40)
-                        .opacity(headerAppeared ? 1 : 0)
-                        .offset(y: headerAppeared ? 0 : -20)
+            // Content - centered vertically like web version
+            GeometryReader { geometry in
+                ScrollView {
+                    VStack(spacing: 24) {
+                        Spacer(minLength: 0)
 
-                    // Main card
-                    TidexCard {
-                        VStack(spacing: 20) {
-                            // Card header
-                            cardHeader
+                        // Main card
+                        TidexCard {
+                            VStack(spacing: 20) {
+                                // Card header with logo inline
+                                cardHeader
 
-                            // Error/Success banners
-                            if let error = viewModel.errorMessage {
-                                ErrorBanner(
-                                    message: error,
-                                    onDismiss: { viewModel.errorMessage = nil }
-                                )
+                                // Error/Success banners
+                                if let error = viewModel.errorMessage {
+                                    ErrorBanner(
+                                        message: error,
+                                        onDismiss: { viewModel.errorMessage = nil }
+                                    )
+                                }
+
+                                if let success = viewModel.successMessage {
+                                    SuccessBanner(
+                                        message: success,
+                                        onDismiss: { viewModel.successMessage = nil }
+                                    )
+                                }
+
+                                // Step content
+                                switch viewModel.currentStep {
+                                case .input:
+                                    inputStepContent
+                                case .otp:
+                                    PhoneOTPForm(viewModel: viewModel)
+                                }
                             }
-
-                            if let success = viewModel.successMessage {
-                                SuccessBanner(
-                                    message: success,
-                                    onDismiss: { viewModel.successMessage = nil }
-                                )
-                            }
-
-                            // Step content
-                            switch viewModel.currentStep {
-                            case .input:
-                                inputStepContent
-                            case .otp:
-                                PhoneOTPForm(viewModel: viewModel)
-                            }
+                            .padding(24)
                         }
-                        .padding(24)
-                    }
-                    .opacity(cardAppeared ? 1 : 0)
-                    .offset(y: cardAppeared ? 0 : 30)
-                    .scaleEffect(cardAppeared ? 1 : 0.95)
+                        .opacity(cardAppeared ? 1 : 0)
+                        .offset(y: cardAppeared ? 0 : 30)
+                        .scaleEffect(cardAppeared ? 1 : 0.95)
 
-                    // Footer
-                    if viewModel.currentStep == .input {
-                        footerView
-                            .opacity(footerAppeared ? 1 : 0)
+                        // Footer
+                        if viewModel.currentStep == .input {
+                            footerView
+                                .opacity(footerAppeared ? 1 : 0)
+                        }
+
+                        Spacer(minLength: 0)
                     }
+                    .padding(.horizontal, 20)
+                    .frame(minHeight: geometry.size.height)
+                    .frame(maxWidth: .infinity)
                 }
-                .padding(.horizontal, 20)
-                .padding(.bottom, 40)
+                .scrollBounceBehavior(.basedOnSize)
             }
         }
         .loading(viewModel.isLoading)
+        .onTapGesture {
+            // Dismiss keyboard when tapping outside input fields
+            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        }
         .onAppear {
             // Fast staggered entrance animations - feel snappy
-            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                headerAppeared = true
-            }
-            withAnimation(.spring(response: 0.4, dampingFraction: 0.8).delay(0.05)) {
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
                 cardAppeared = true
             }
             withAnimation(.easeOut(duration: 0.25).delay(0.1)) {
@@ -90,32 +92,27 @@ struct LoginView: View {
         }
     }
 
-    // MARK: - Header
-
-    private var headerView: some View {
-        VStack(spacing: 12) {
-            // Logo
-            LogoWatermark(opacity: 1.0)
-                .frame(width: 60, height: 60)
-
-            Text("Tidex")
-                .font(.system(size: 28, weight: .bold))
-                .foregroundColor(.tidexTextPrimary)
-        }
-    }
-
     // MARK: - Card Header
 
     private var cardHeader: some View {
         VStack(spacing: 8) {
-            Text(localization.string("login.title"))
-                .font(.system(size: 20, weight: .semibold))
-                .foregroundColor(.tidexTextPrimary)
+            // Title row with logo inline (matches Next.js layout)
+            HStack {
+                Text(localization.string("login.title"))
+                    .font(.system(size: 22, weight: .bold))
+                    .foregroundColor(.tidexTextPrimary)
 
+                Spacer()
+
+                LogoWatermark(opacity: 1.0)
+                    .frame(width: 32, height: 32)
+            }
+
+            // Subtitle aligned left
             Text(localization.string("login.subtitle"))
                 .font(.system(size: 14))
                 .foregroundColor(.tidexTextSecondary)
-                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
