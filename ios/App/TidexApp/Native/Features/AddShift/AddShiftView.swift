@@ -42,6 +42,11 @@ struct AddShiftView: View {
         .sheet(isPresented: $viewModel.showPreviewSheet) {
             RecurringPreviewSheet(viewModel: viewModel)
         }
+        .sheet(isPresented: $viewModel.showPaywall) {
+            // PaywallView will be implemented in Phase 8
+            // For now, show a placeholder that can be tested
+            PaywallPlaceholderView()
+        }
     }
 
     private func hideKeyboard() {
@@ -196,6 +201,53 @@ private struct FixedBottomButton: View {
             }
         case .recurring:
             viewModel.showPreview()
+        }
+    }
+}
+
+// MARK: - Paywall Placeholder
+
+/// Placeholder for PaywallView until Phase 8 is implemented
+/// TODO: Replace with PaywallView in Phase 8
+private struct PaywallPlaceholderView: View {
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 24) {
+                Image(systemName: "crown.fill")
+                    .font(.system(size: 60))
+                    .foregroundColor(.tidexBlue)
+
+                Text("Upgrade to Pro or Max")
+                    .font(.system(size: 24, weight: .bold))
+                    .foregroundColor(.tidexText)
+
+                Text("Free plan allows shifts in one month at a time. Upgrade to add shifts in multiple months.")
+                    .font(.system(size: 16))
+                    .foregroundColor(.tidexTextSecondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 32)
+
+                Spacer()
+
+                Text("PaywallView coming in Phase 8")
+                    .font(.system(size: 14))
+                    .foregroundColor(.tidexTextMuted)
+            }
+            .padding(.top, 60)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color.tidexBackground)
+            .navigationTitle("Choose a Plan")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(action: { dismiss() }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundColor(.tidexTextMuted)
+                    }
+                }
+            }
         }
     }
 }
