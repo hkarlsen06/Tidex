@@ -89,16 +89,20 @@ final class AuthService: ObservableObject {
     /// - Parameters:
     ///   - email: User's email address
     ///   - password: User's password
-    /// - Note: User will receive a confirmation email
-    func signUpWithEmail(email: String, password: String) async throws {
+    /// - Returns: The authenticated session (email verification disabled)
+    func signUpWithEmail(email: String, password: String) async throws -> Session {
         isLoading = true
         defer { isLoading = false }
 
-        _ = try await supabase.auth.signUp(
+        let response = try await supabase.auth.signUp(
             email: email,
             password: password
         )
-        // User needs to confirm email before signing in
+        // Email verification disabled - session is returned immediately
+        guard let session = response.session else {
+            throw AuthError.sessionMissing
+        }
+        return session
     }
 
     /// Sign up with phone number and password

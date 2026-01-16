@@ -1,0 +1,60 @@
+import SwiftUI
+import UIKit
+
+/// Full-width CTA button for onboarding screens
+/// Matches PrimaryButton styling with gradient option
+struct OnboardingButton: View {
+    let title: String
+    let action: () -> Void
+    var style: ButtonStyle = .primary
+
+    enum ButtonStyle {
+        case primary    // Brand gradient/solid fill
+        case secondary  // Text link style
+    }
+
+    var body: some View {
+        Button {
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            action()
+        } label: {
+            Text(title)
+                .font(.system(size: 17, weight: .semibold))
+                .frame(maxWidth: .infinity)
+                .frame(height: 54)
+                .foregroundColor(style == .primary ? .white : .tidexBlue)
+                .background(
+                    Group {
+                        if style == .primary {
+                            Color.tidexBrandPrimary
+                        } else {
+                            Color.clear
+                        }
+                    }
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        }
+        .buttonStyle(SnappyOnboardingButtonStyle())
+    }
+}
+
+/// Snappy button style with scale and opacity feedback
+private struct SnappyOnboardingButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
+            .opacity(configuration.isPressed ? 0.9 : 1.0)
+            .animation(.easeOut(duration: 0.1), value: configuration.isPressed)
+    }
+}
+
+#Preview {
+    VStack(spacing: 16) {
+        OnboardingButton(title: "Create Account", action: {})
+
+        OnboardingButton(title: "Already have an account? Log in", action: {}, style: .secondary)
+    }
+    .padding(.horizontal, 24)
+    .frame(maxHeight: .infinity)
+    .background(Color.tidexBackground)
+}

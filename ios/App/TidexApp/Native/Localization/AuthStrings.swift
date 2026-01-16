@@ -206,7 +206,50 @@ enum AuthStrings {
         // Pull to Refresh
         "pullToRefresh.pullDown": "Dra ned for å oppdatere",
         "pullToRefresh.release": "Slipp for å oppdatere",
-        "pullToRefresh.refreshing": "Oppdaterer..."
+        "pullToRefresh.refreshing": "Oppdaterer...",
+
+        // Onboarding
+        "onboarding.skip": "Hopp over",
+        "onboarding.welcome.title": "Vet nøyaktig hva du tjener",
+        "onboarding.welcome.subtitle": "Registrer vakter. Se lønna. Ingen overraskelser.",
+
+        "onboarding.paycheck.title": "Denne måneden tjente du...",
+        "onboarding.paycheck.sample_label": "Eksempelberegning med prøvedata",
+        "onboarding.paycheck.industry.retail": "Butikk",
+        "onboarding.paycheck.industry.restaurant": "Restaurant",
+        "onboarding.paycheck.industry.healthcare": "Helse",
+        "onboarding.paycheck.base_pay": "Grunnlønn",
+        "onboarding.paycheck.evening": "Kveldstillegg",
+        "onboarding.paycheck.weekend": "Helgetillegg",
+        "onboarding.paycheck.tax": "Skatt trukket",
+        "onboarding.paycheck.net": "Netto utbetalt",
+
+        "onboarding.how.title": "Tre steg til klarhet",
+        "onboarding.how.step1.title": "Logg vakten din",
+        "onboarding.how.step1.desc": "Legg til start- og sluttid, ferdig",
+        "onboarding.how.step2.title": "Se inntekten din",
+        "onboarding.how.step2.desc": "Lønn beregnes automatisk",
+        "onboarding.how.step3.title": "Følg med på måneden",
+        "onboarding.how.step3.desc": "Dashbordet viser fremgangen din",
+
+        "onboarding.getstarted.title": "Klar til å ta kontroll?",
+        "onboarding.getstarted.subtitle": "Opprett kontoen din på sekunder",
+        "onboarding.getstarted.signup": "Opprett konto",
+        "onboarding.getstarted.login": "Har du allerede en konto? Logg inn",
+
+        "onboarding.personalize.title": "La oss gjøre dette ditt",
+        "onboarding.personalize.subtitle": "Bare to raske ting, så er du inne",
+        "onboarding.personalize.wage.label": "Timelønn",
+        "onboarding.personalize.wage.helper": "Din grunnleggende timerate",
+        "onboarding.personalize.wage.error": "Vennligst oppgi en gyldig timelønn",
+        "onboarding.personalize.payday.label": "Lønningsdag",
+        "onboarding.personalize.payday.helper": "Når får du utbetalt lønn?",
+        "onboarding.personalize.payday.lastDay": "Siste",
+
+        "onboarding.success.title": "Du er klar!",
+        "onboarding.success.subtitle": "Legg til din første vakt for å se ekte inntekt",
+        "onboarding.success.reassurance": "Du kan justere lønn, tillegg og skatt når som helst.",
+        "onboarding.success.button": "Gå til dashbord"
     ]
 
     // MARK: - English Strings
@@ -403,6 +446,49 @@ enum AuthStrings {
         // Pull to Refresh
         "pullToRefresh.pullDown": "Pull down to refresh",
         "pullToRefresh.release": "Release to refresh",
-        "pullToRefresh.refreshing": "Refreshing..."
+        "pullToRefresh.refreshing": "Refreshing...",
+
+        // Onboarding
+        "onboarding.skip": "Skip",
+        "onboarding.welcome.title": "Know exactly what you earn",
+        "onboarding.welcome.subtitle": "Track shifts. See your pay. No surprises.",
+
+        "onboarding.paycheck.title": "This month, you earned...",
+        "onboarding.paycheck.sample_label": "Example calculation using sample shifts",
+        "onboarding.paycheck.industry.retail": "Retail",
+        "onboarding.paycheck.industry.restaurant": "Restaurant",
+        "onboarding.paycheck.industry.healthcare": "Healthcare",
+        "onboarding.paycheck.base_pay": "Base pay",
+        "onboarding.paycheck.evening": "Evening supplements",
+        "onboarding.paycheck.weekend": "Weekend bonus",
+        "onboarding.paycheck.tax": "Tax deducted",
+        "onboarding.paycheck.net": "Net pay",
+
+        "onboarding.how.title": "Three steps to clarity",
+        "onboarding.how.step1.title": "Log your shift",
+        "onboarding.how.step1.desc": "Add start time, end time, done",
+        "onboarding.how.step2.title": "See your earnings",
+        "onboarding.how.step2.desc": "Wages calculated automatically",
+        "onboarding.how.step3.title": "Track your month",
+        "onboarding.how.step3.desc": "Dashboard shows your progress",
+
+        "onboarding.getstarted.title": "Ready to take control?",
+        "onboarding.getstarted.subtitle": "Create your account in seconds",
+        "onboarding.getstarted.signup": "Create Account",
+        "onboarding.getstarted.login": "Already have an account? Log in",
+
+        "onboarding.personalize.title": "Let's make this yours",
+        "onboarding.personalize.subtitle": "Just two quick things, then you're in",
+        "onboarding.personalize.wage.label": "Hourly wage",
+        "onboarding.personalize.wage.helper": "Your base hourly rate",
+        "onboarding.personalize.wage.error": "Please enter a valid hourly wage",
+        "onboarding.personalize.payday.label": "Payroll day",
+        "onboarding.personalize.payday.helper": "When do you get paid?",
+        "onboarding.personalize.payday.lastDay": "Last",
+
+        "onboarding.success.title": "You're all set!",
+        "onboarding.success.subtitle": "Add your first shift to see real earnings",
+        "onboarding.success.reassurance": "You can adjust wages, supplements, and tax anytime.",
+        "onboarding.success.button": "Go to Dashboard"
     ]
 }

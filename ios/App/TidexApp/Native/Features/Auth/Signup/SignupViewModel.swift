@@ -40,7 +40,6 @@ final class SignupViewModel: ObservableObject {
     enum SignupStep {
         case input
         case otp           // Phone OTP verification
-        case emailSent     // Email confirmation sent
     }
 
     enum InputType {
@@ -247,9 +246,9 @@ final class SignupViewModel: ObservableObject {
     // MARK: - Private Methods
 
     private func signUpWithEmail() async throws {
-        try await authService.signUpWithEmail(email: emailOrPhone, password: password)
-        successMessage = localization.string("signup.success.emailSent")
-        currentStep = .emailSent
+        // Email verification disabled - session is returned immediately
+        let _ = try await authService.signUpWithEmail(email: emailOrPhone, password: password)
+        await handleSuccessfulSignup()
     }
 
     private func signUpWithPhone() async throws {
