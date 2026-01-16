@@ -92,6 +92,9 @@
 		11A1964B2F1AE6A20030E524 /* LocalEntitlementCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A196492F1AE6A20030E524 /* LocalEntitlementCache.swift */; };
 		11A1964C2F1AE6A20030E524 /* LocalPendingJWSUpload.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A1964A2F1AE6A20030E524 /* LocalPendingJWSUpload.swift */; };
 		11A1964E2F1AE7980030E524 /* EntitlementRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A1964D2F1AE7980030E524 /* EntitlementRepository.swift */; };
+		11A196502F1AE8890030E524 /* StoreKitManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A1964F2F1AE8890030E524 /* StoreKitManager.swift */; };
+		11A196522F1AE8900030E524 /* JWSUploadWorker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A196512F1AE8900030E524 /* JWSUploadWorker.swift */; };
+		11A196542F1AE8AC0030E524 /* EntitlementService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A196532F1AE8AC0030E524 /* EntitlementService.swift */; };
 		11A5CD262F101201002BAC91 /* StoredShift.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A5CD252F101201002BAC91 /* StoredShift.swift */; };
 		11A5CD302F101283002BAC91 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 11A5CD2F2F101283002BAC91 /* WidgetKit.framework */; };
 		11A5CD322F101283002BAC91 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 11A5CD312F101283002BAC91 /* SwiftUI.framework */; };
@@ -264,6 +267,9 @@
 		11A196492F1AE6A20030E524 /* LocalEntitlementCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalEntitlementCache.swift; sourceTree = "<group>"; };
 		11A1964A2F1AE6A20030E524 /* LocalPendingJWSUpload.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalPendingJWSUpload.swift; sourceTree = "<group>"; };
 		11A1964D2F1AE7980030E524 /* EntitlementRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EntitlementRepository.swift; sourceTree = "<group>"; };
+		11A1964F2F1AE8890030E524 /* StoreKitManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreKitManager.swift; sourceTree = "<group>"; };
+		11A196512F1AE8900030E524 /* JWSUploadWorker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JWSUploadWorker.swift; sourceTree = "<group>"; };
+		11A196532F1AE8AC0030E524 /* EntitlementService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EntitlementService.swift; sourceTree = "<group>"; };
 		11A5CD252F101201002BAC91 /* StoredShift.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoredShift.swift; sourceTree = "<group>"; };
 		11A5CD2E2F101283002BAC91 /* TidexShiftWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TidexShiftWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		11A5CD2F2F101283002BAC91 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
@@ -713,6 +719,9 @@
 		11A196472F1AE68C0030E524 /* Subscription */ = {
 			isa = PBXGroup;
 			children = (
+				11A196532F1AE8AC0030E524 /* EntitlementService.swift */,
+				11A196512F1AE8900030E524 /* JWSUploadWorker.swift */,
+				11A1964F2F1AE8890030E524 /* StoreKitManager.swift */,
 				11A196462F1AE68C0030E524 /* SubscriptionModels.swift */,
 			);
 			path = Subscription;
@@ -1118,6 +1127,7 @@
 				119D1CEF2F16E46300EC7072 /* TidexCard.swift in Sources */,
 				119D1CF02F16E46300EC7072 /* EmailPasswordForm.swift in Sources */,
 				119D1CF12F16E46300EC7072 /* LoginViewModel.swift in Sources */,
+				11A196502F1AE8890030E524 /* StoreKitManager.swift in Sources */,
 				11A196172F1AA3450030E524 /* MFASetupScreen.swift in Sources */,
 				11A1961D2F1AA3550030E524 /* OnboardingSaveManager.swift in Sources */,
 				11A196182F1AA3450030E524 /* SettingsAccordionScreen.swift in Sources */,
@@ -1128,6 +1138,7 @@
 				11F4300B2F1A92EA002B1FBE /* View+AdaptiveLayout.swift in Sources */,
 				11A196482F1AE68C0030E524 /* SubscriptionModels.swift in Sources */,
 				11A196422F1AC1BE0030E524 /* TabScreenContainer.swift in Sources */,
+				11A196542F1AE8AC0030E524 /* EntitlementService.swift in Sources */,
 				11A196432F1AC1BE0030E524 /* PlaceholderContent.swift in Sources */,
 				119D1CF52F16E46300EC7072 /* MFAVerifyView.swift in Sources */,
 				11F430212F1A9592002B1FBE /* AcceptTermsView.swift in Sources */,
@@ -1202,6 +1213,7 @@
 				11A196212F1AB6160030E524 /* Currency.swift in Sources */,
 				NETMON0012F2000000000001 /* NetworkMonitor.swift in Sources */,
 				OFFDSH0012F3000000000001 /* OfflineDashboardCards.swift in Sources */,
+				11A196522F1AE8900030E524 /* JWSUploadWorker.swift in Sources */,
 				OFFSCR0012F2000000000001 /* OfflineScreenView.swift in Sources */,
 				OFFSTR0012F2000000000001 /* OfflineShiftStorage.swift in Sources */,
 				11A5CD262F101201002BAC91 /* StoredShift.swift in Sources */,

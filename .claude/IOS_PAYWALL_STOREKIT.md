@@ -68,9 +68,9 @@ The following fixes were identified during code review and are incorporated thro
 | 1 | Database Migration (tier column) | ✅ Complete |
 | 2 | SwiftData Models | ✅ Complete |
 | 3 | EntitlementRepository | ✅ Complete |
-| 4 | StoreKitManager | ⬜ Not Started |
-| 5 | JWSUploadWorker | ⬜ Not Started |
-| 6 | EntitlementService | ⬜ Not Started |
+| 4 | StoreKitManager | ✅ Complete |
+| 5 | JWSUploadWorker | ✅ Complete |
+| 6 | EntitlementService | ✅ Complete |
 | 7 | Shift Month Limit Gating | ⬜ Not Started |
 | 8 | PaywallView & Components | ⬜ Not Started |
 | 9 | AppCoordinator Integration | ⬜ Not Started |
@@ -747,7 +747,7 @@ func schedulePendingJWSUploadRetry(transactionId: String) throws {
 
 ## Phase 4: StoreKitManager
 
-**Status**: ⬜ Not Started
+**Status**: ✅ Complete
 
 ### Scope
 
@@ -959,13 +959,44 @@ final class StoreKitManager: ObservableObject {
 
 ### Notes
 
-_Implementation notes will be added after completion._
+**Implemented 2025-01-16:**
+
+1. **StoreKitManager.swift created**: Full StoreKit 2 implementation for iOS 18+.
+   - Location: `ios/App/TidexApp/Native/Services/Subscription/StoreKitManager.swift`
+
+2. **Core functionality:**
+   - `configure(userId:)` - Set user ID before purchases
+   - `startListening()` / `stopListening()` - Transaction listener lifecycle
+   - `loadProducts()` - Fetch subscription products from App Store
+   - `purchase(_:)` - Purchase flow with local verify → unlock → finish → queue
+   - `restorePurchases()` - AppStore.sync() + entitlement update
+   - `updateCurrentEntitlements()` - Compute tier from Transaction.currentEntitlements
+
+3. **Product helpers:**
+   - `product(for:)` - Get product by ProductID enum
+   - `products(yearly:)` - Filter products by billing period
+
+4. **Transaction listener:**
+   - Uses `Task.detached` to listen for `Transaction.updates`
+   - Handles renewals, family sharing, and restores from other devices
+   - Queues JWS uploads even if products aren't loaded (priceDisplay can be nil)
+   - Finishes transactions after processing
+
+5. **JWS upload queueing:**
+   - Private `queueJWSUpload(transaction:userId:priceDisplay:)` method
+   - Creates `LocalPendingJWSUpload` with all transaction data
+   - Triggers `JWSUploadWorker.shared.processQueue()` after enqueueing
+
+**Files created:**
+- `ios/App/TidexApp/Native/Services/Subscription/StoreKitManager.swift`
+
+**Note**: New Swift file needs to be added to the Xcode project. Build in Xcode to verify.
 
 ---
 
 ## Phase 5: JWSUploadWorker
 
-**Status**: ⬜ Not Started
+**Status**: ✅ Complete
 
 ### Scope
 
@@ -1192,13 +1223,40 @@ The edge function should also expect the `jws` field in the request body.
 
 ### Notes
 
-_Implementation notes will be added after completion._
+**Implemented 2025-01-16:**
+
+1. **JWSUploadWorker.swift created**: Single-flight upload worker with exponential backoff.
+   - Location: `ios/App/TidexApp/Native/Services/Subscription/JWSUploadWorker.swift`
+
+2. **Request/Response models:**
+   - `JWSUploadRequest` (private, Encodable) - Contains `jws` field with receipt
+   - `JWSUploadResponse` (private, Decodable) - Expects `{ ok: true }` or `{ error: "..." }`
+
+3. **Core functionality:**
+   - `processQueue()` - Single-flight trigger (only one worker runs at a time)
+   - `runUploadLoop()` - Main loop that processes ready uploads and sleeps until retries
+   - `uploadToServer(_:)` - Calls `apple-verify-purchase` edge function
+
+4. **Retry logic:**
+   - Checks `getPendingUploads()` for ready uploads (nextAttemptAt <= now)
+   - If no ready uploads but some scheduled, sleeps until earliest retry time
+   - Max 10 attempts before removing from queue
+   - Exponential backoff handled by `LocalPendingJWSUpload.scheduleNextRetry()`
+
+5. **Entitlement refresh debouncing:**
+   - Tracks `successfulUserIds` during upload loop
+   - Refreshes entitlement ONCE per user at end of loop (not per-upload)
+
+**Files created:**
+- `ios/App/TidexApp/Native/Services/Subscription/JWSUploadWorker.swift`
+
+**Note**: New Swift file needs to be added to the Xcode project. Edge function update for `{ ok: true }` response format may be needed.
 
 ---
 
 ## Phase 6: EntitlementService
 
-**Status**: ⬜ Not Started
+**Status**: ✅ Complete
 
 ### Scope
 
@@ -1341,7 +1399,40 @@ final class EntitlementService: ObservableObject {
 
 ### Notes
 
-_Implementation notes will be added after completion._
+**Implemented 2025-01-16:**
+
+1. **EntitlementService.swift created**: Service for merging server and StoreKit tiers.
+   - Location: `ios/App/TidexApp/Native/Services/Subscription/EntitlementService.swift`
+
+2. **Published state:**
+   - `effectiveTier` - The computed tier (max of StoreKit and valid server tier)
+   - `serverTierExpired` - Whether server cache is expired
+   - `isLoading` - Loading state for server refresh
+   - `isOffline` - Whether last server fetch failed
+
+3. **Core functionality:**
+   - `refreshFromServer(userId:)` - Fetch via `get_my_entitlement()` RPC and cache
+   - `loadFromCache(userId:)` - Fast offline-safe load on app launch
+   - `updateEffectiveTier()` - Compute effective tier = max(storeKit, serverIfValid)
+   - `clearCache()` - Clear cache on logout
+
+4. **Convenience properties:**
+   - `needsVerification` - True when server expired AND StoreKit tier is free
+   - `isEntitled` - Whether user has any entitlement
+   - `serverEntitlement` - Access to cached entitlement
+
+5. **Security:**
+   - Uses `get_my_entitlement()` RPC function (not direct view query)
+   - RPC enforces `auth.uid()` server-side, cannot be spoofed
+
+6. **State management:**
+   - `serverTierExpired` always explicitly derived from cache state
+   - Never ambiguous - computed from `cachedEntitlement?.isExpired`
+
+**Files created:**
+- `ios/App/TidexApp/Native/Services/Subscription/EntitlementService.swift`
+
+**Note**: New Swift file needs to be added to the Xcode project. Build in Xcode to verify.
 
 ---
 
