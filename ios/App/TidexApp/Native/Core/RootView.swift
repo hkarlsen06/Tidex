@@ -1,11 +1,24 @@
 import SwiftUI
 
 /// Root view that manages the app's navigation based on authentication state
-/// Handles transitions between: Loading -> Login -> MFA -> Dashboard
+/// Handles transitions between: Loading -> Onboarding -> Login -> MFA -> Post-Auth Onboarding -> Dashboard
 struct RootView: View {
     // Note: Using @ObservedObject for singletons as @StateObject is meant for owned instances
     @ObservedObject private var coordinator = AppCoordinator.shared
     @ObservedObject private var localization = LocalizationManager.shared
+
+    // Onboarding state - explicit naming for two-phase onboarding
+    @AppStorage("hasCompletedPreAuthOnboarding") private var hasCompletedPreAuthOnboarding = false
+    @AppStorage("hasCompletedPostAuthOnboarding") private var hasCompletedPostAuthOnboarding = false
+
+    // Navigation state for transitioning from onboarding to auth
+    @State private var showAuthAfterOnboarding = false
+    @State private var authDestination: AuthDestination = .login
+
+    enum AuthDestination {
+        case login
+        case signup
+    }
 
     var body: some View {
         ZStack {
@@ -21,8 +34,27 @@ struct RootView: View {
                     LoadingView()
 
                 case .unauthenticated:
-                    AuthNavigationView()
+                    if !hasCompletedPreAuthOnboarding && !showAuthAfterOnboarding {
+                        // Show pre-auth onboarding (screens 1-4)
+                        OnboardingView(
+                            onComplete: {
+                                hasCompletedPreAuthOnboarding = true
+                            },
+                            onNavigateToSignup: {
+                                authDestination = .signup
+                                showAuthAfterOnboarding = true
+                            },
+                            onNavigateToLogin: {
+                                authDestination = .login
+                                showAuthAfterOnboarding = true
+                            }
+                        )
                         .transition(.opacity)
+                    } else {
+                        // Show auth navigation
+                        AuthNavigationView()
+                            .transition(.opacity)
+                    }
 
                 case .mfaRequired:
                     if let factor = coordinator.pendingMFAFactor {
@@ -34,15 +66,38 @@ struct RootView: View {
                     }
 
                 case .authenticated:
-                    MainTabView()
+                    if !hasCompletedPostAuthOnboarding {
+                        // Show post-auth onboarding (screens 5-6)
+                        PostAuthOnboardingView(
+                            onComplete: {
+                                hasCompletedPostAuthOnboarding = true
+                            },
+                            userId: coordinator.userId ?? ""
+                        )
                         .transition(.opacity)
+                    } else {
+                        MainTabView()
+                            .transition(.opacity)
+                    }
                 }
             }
         }
         .animation(.easeInOut(duration: 0.3), value: coordinator.appState)
+        .animation(.easeInOut(duration: 0.3), value: hasCompletedPreAuthOnboarding)
+        .animation(.easeInOut(duration: 0.3), value: hasCompletedPostAuthOnboarding)
         .environmentObject(coordinator)
         .environment(\.localization, localization)
         // Note: Removed .preferredColorScheme(.dark) to respect system appearance
+        #if DEBUG
+        .onAppear {
+            // Reset onboarding state on every launch in debug builds
+            // This makes it easy to test onboarding by just rebuilding in Xcode
+            hasCompletedPreAuthOnboarding = false
+            hasCompletedPostAuthOnboarding = false
+            showAuthAfterOnboarding = false
+            print("[DEBUG] Onboarding state reset for testing")
+        }
+        #endif
     }
 }
 

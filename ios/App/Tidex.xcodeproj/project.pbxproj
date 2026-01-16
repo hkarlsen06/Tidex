@@ -100,6 +100,19 @@
 		11AE8D742F17DD44005AB062 /* UserMenuButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11AE8D732F17DD44005AB062 /* UserMenuButton.swift */; };
 		11AE8D762F1856D2005AB062 /* AuthNavigationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11AE8D752F1856D2005AB062 /* AuthNavigationView.swift */; };
 		11F1CBDB2F101C5700246C07 /* ShiftActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11F1CBDA2F101C5700246C07 /* ShiftActivityAttributes.swift */; };
+		11F42F902F1A65F3002B1FBE /* HowItWorksScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11F42F872F1A65F3002B1FBE /* HowItWorksScreen.swift */; };
+		11F42F912F1A65F3002B1FBE /* StepItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11F42F842F1A65F3002B1FBE /* StepItem.swift */; };
+		11F42F922F1A65F3002B1FBE /* OnboardingButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11F42F822F1A65F3002B1FBE /* OnboardingButton.swift */; };
+		11F42F932F1A65F3002B1FBE /* IndustryPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11F42F812F1A65F3002B1FBE /* IndustryPicker.swift */; };
+		11F42F942F1A65F3002B1FBE /* PersonalizationScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11F42F882F1A65F3002B1FBE /* PersonalizationScreen.swift */; };
+		11F42F952F1A65F3002B1FBE /* PostAuthOnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11F42F8E2F1A65F3002B1FBE /* PostAuthOnboardingView.swift */; };
+		11F42F962F1A65F3002B1FBE /* PageIndicator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11F42F832F1A65F3002B1FBE /* PageIndicator.swift */; };
+		11F42F972F1A65F3002B1FBE /* GetStartedScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11F42F862F1A65F3002B1FBE /* GetStartedScreen.swift */; };
+		11F42F982F1A65F3002B1FBE /* CountUpText.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11F42F802F1A65F3002B1FBE /* CountUpText.swift */; };
+		11F42F992F1A65F3002B1FBE /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11F42F8D2F1A65F3002B1FBE /* OnboardingView.swift */; };
+		11F42F9A2F1A65F3002B1FBE /* SuccessScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11F42F8A2F1A65F3002B1FBE /* SuccessScreen.swift */; };
+		11F42F9B2F1A65F3002B1FBE /* WelcomeScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11F42F8B2F1A65F3002B1FBE /* WelcomeScreen.swift */; };
+		11F42F9C2F1A65F3002B1FBE /* SamplePaycheckScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11F42F892F1A65F3002B1FBE /* SamplePaycheckScreen.swift */; };
 		504EC3081FED79650016851F /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 504EC3071FED79650016851F /* AppDelegate.swift */; };
 		504EC30F1FED79650016851F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 504EC30E1FED79650016851F /* Assets.xcassets */; };
 		INFOP0012F0900000000001 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = INFOP0012F0900000000004 /* InfoPlist.strings */; };
@@ -226,6 +239,19 @@
 		11AE8D732F17DD44005AB062 /* UserMenuButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserMenuButton.swift; sourceTree = "<group>"; };
 		11AE8D752F1856D2005AB062 /* AuthNavigationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthNavigationView.swift; sourceTree = "<group>"; };
 		11F1CBDA2F101C5700246C07 /* ShiftActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShiftActivityAttributes.swift; sourceTree = "<group>"; };
+		11F42F802F1A65F3002B1FBE /* CountUpText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CountUpText.swift; sourceTree = "<group>"; };
+		11F42F812F1A65F3002B1FBE /* IndustryPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IndustryPicker.swift; sourceTree = "<group>"; };
+		11F42F822F1A65F3002B1FBE /* OnboardingButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingButton.swift; sourceTree = "<group>"; };
+		11F42F832F1A65F3002B1FBE /* PageIndicator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PageIndicator.swift; sourceTree = "<group>"; };
+		11F42F842F1A65F3002B1FBE /* StepItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StepItem.swift; sourceTree = "<group>"; };
+		11F42F862F1A65F3002B1FBE /* GetStartedScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GetStartedScreen.swift; sourceTree = "<group>"; };
+		11F42F872F1A65F3002B1FBE /* HowItWorksScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HowItWorksScreen.swift; sourceTree = "<group>"; };
+		11F42F882F1A65F3002B1FBE /* PersonalizationScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonalizationScreen.swift; sourceTree = "<group>"; };
+		11F42F892F1A65F3002B1FBE /* SamplePaycheckScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SamplePaycheckScreen.swift; sourceTree = "<group>"; };
+		11F42F8A2F1A65F3002B1FBE /* SuccessScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SuccessScreen.swift; sourceTree = "<group>"; };
+		11F42F8B2F1A65F3002B1FBE /* WelcomeScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeScreen.swift; sourceTree = "<group>"; };
+		11F42F8D2F1A65F3002B1FBE /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
+		11F42F8E2F1A65F3002B1FBE /* PostAuthOnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostAuthOnboardingView.swift; sourceTree = "<group>"; };
 		504EC3041FED79650016851F /* Tidex.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Tidex.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		504EC3071FED79650016851F /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		504EC30E1FED79650016851F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -435,6 +461,7 @@
 		119D1CCC2F16E46300EC7072 /* Features */ = {
 			isa = PBXGroup;
 			children = (
+				11F42F8F2F1A65F3002B1FBE /* Onboarding */,
 				119D1CC92F16E46300EC7072 /* Auth */,
 				119D1CCB2F16E46300EC7072 /* Dashboard */,
 			);
@@ -657,6 +684,42 @@
 				11AE8D272F17D02E005AB062 /* CountdownManager.swift */,
 			);
 			path = Utilities;
+			sourceTree = "<group>";
+		};
+		11F42F852F1A65F3002B1FBE /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				11F42F802F1A65F3002B1FBE /* CountUpText.swift */,
+				11F42F812F1A65F3002B1FBE /* IndustryPicker.swift */,
+				11F42F822F1A65F3002B1FBE /* OnboardingButton.swift */,
+				11F42F832F1A65F3002B1FBE /* PageIndicator.swift */,
+				11F42F842F1A65F3002B1FBE /* StepItem.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		11F42F8C2F1A65F3002B1FBE /* Screens */ = {
+			isa = PBXGroup;
+			children = (
+				11F42F862F1A65F3002B1FBE /* GetStartedScreen.swift */,
+				11F42F872F1A65F3002B1FBE /* HowItWorksScreen.swift */,
+				11F42F882F1A65F3002B1FBE /* PersonalizationScreen.swift */,
+				11F42F892F1A65F3002B1FBE /* SamplePaycheckScreen.swift */,
+				11F42F8A2F1A65F3002B1FBE /* SuccessScreen.swift */,
+				11F42F8B2F1A65F3002B1FBE /* WelcomeScreen.swift */,
+			);
+			path = Screens;
+			sourceTree = "<group>";
+		};
+		11F42F8F2F1A65F3002B1FBE /* Onboarding */ = {
+			isa = PBXGroup;
+			children = (
+				11F42F852F1A65F3002B1FBE /* Components */,
+				11F42F8C2F1A65F3002B1FBE /* Screens */,
+				11F42F8D2F1A65F3002B1FBE /* OnboardingView.swift */,
+				11F42F8E2F1A65F3002B1FBE /* PostAuthOnboardingView.swift */,
+			);
+			path = Onboarding;
 			sourceTree = "<group>";
 		};
 		504EC2FB1FED79650016851F = {
@@ -892,6 +955,19 @@
 				11AE8D202F17CB31005AB062 /* MonthSwipeGesture.swift in Sources */,
 				119D1CF82F16E46300EC7072 /* AuthStrings.swift in Sources */,
 				119D1CF92F16E46300EC7072 /* APIConfiguration.swift in Sources */,
+				11F42F902F1A65F3002B1FBE /* HowItWorksScreen.swift in Sources */,
+				11F42F912F1A65F3002B1FBE /* StepItem.swift in Sources */,
+				11F42F922F1A65F3002B1FBE /* OnboardingButton.swift in Sources */,
+				11F42F932F1A65F3002B1FBE /* IndustryPicker.swift in Sources */,
+				11F42F942F1A65F3002B1FBE /* PersonalizationScreen.swift in Sources */,
+				11F42F952F1A65F3002B1FBE /* PostAuthOnboardingView.swift in Sources */,
+				11F42F962F1A65F3002B1FBE /* PageIndicator.swift in Sources */,
+				11F42F972F1A65F3002B1FBE /* GetStartedScreen.swift in Sources */,
+				11F42F982F1A65F3002B1FBE /* CountUpText.swift in Sources */,
+				11F42F992F1A65F3002B1FBE /* OnboardingView.swift in Sources */,
+				11F42F9A2F1A65F3002B1FBE /* SuccessScreen.swift in Sources */,
+				11F42F9B2F1A65F3002B1FBE /* WelcomeScreen.swift in Sources */,
+				11F42F9C2F1A65F3002B1FBE /* SamplePaycheckScreen.swift in Sources */,
 				11AE8CCE2F16F2CF005AB062 /* ResetPasswordViewModel.swift in Sources */,
 				11AE8CCF2F16F2CF005AB062 /* ResetPasswordView.swift in Sources */,
 				119D1CFA2F16E46300EC7072 /* ErrorBanner.swift in Sources */,

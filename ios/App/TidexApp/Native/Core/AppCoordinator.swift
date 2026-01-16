@@ -34,6 +34,8 @@ final class AppCoordinator: ObservableObject {
 
     // MARK: - User Profile State
 
+    /// Current user's ID (lowercase UUID string)
+    @Published private(set) var userId: String?
     /// User's display name (for UserMenuButton)
     @Published private(set) var userDisplayName: String = ""
     /// User's profile picture URL (for UserMenuButton)
@@ -193,6 +195,10 @@ final class AppCoordinator: ObservableObject {
             let session = try await supabase.auth.session
             let user = session.user
 
+            // Store user ID
+            let currentUserId = user.id.uuidString.lowercased()
+            self.userId = currentUserId
+
             // Extract display name from user metadata or fall back to email
             if let fullName = user.userMetadata["full_name"]?.value as? String, !fullName.isEmpty {
                 userDisplayName = fullName
@@ -208,8 +214,7 @@ final class AppCoordinator: ObservableObject {
             }
 
             // Trigger initial sync in background after authentication
-            let userId = user.id.uuidString.lowercased()
-            triggerInitialSync(userId: userId)
+            triggerInitialSync(userId: currentUserId)
 
             if let appDelegate = UIApplication.shared.delegate as? AppDelegate {
                 Task {
@@ -219,7 +224,7 @@ final class AppCoordinator: ObservableObject {
 
             // Profile picture will be loaded from local store after sync completes
             // For now, check local settings repository
-            if let settings = SettingsRepository.shared.getSettings(for: userId) {
+            if let settings = SettingsRepository.shared.getSettings(for: currentUserId) {
                 userAvatarUrl = settings.profile_picture_url
             }
 
@@ -310,11 +315,13 @@ final class AppCoordinator: ObservableObject {
             try await authService.signOut()
             // Auth state listener will update appState to .unauthenticated
             initialSyncComplete = false
+            userId = nil
         } catch {
             print("[AppCoordinator] Sign out failed: \(error)")
             // Force state change even if sign out fails
             appState = .unauthenticated
             initialSyncComplete = false
+            userId = nil
         }
     }
 

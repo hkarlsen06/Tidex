@@ -54,8 +54,6 @@ struct SignupView: View {
                                 inputStepContent
                             case .otp:
                                 SignupOTPForm(viewModel: viewModel)
-                            case .emailSent:
-                                emailSentContent
                             }
                         }
                         .padding(24)
@@ -129,8 +127,6 @@ struct SignupView: View {
             return localization.string("signup.title")
         case .otp:
             return localization.string("otp.title")
-        case .emailSent:
-            return localization.string("signup.emailSent.title")
         }
     }
 
@@ -140,8 +136,6 @@ struct SignupView: View {
             return localization.string("signup.subtitle")
         case .otp:
             return localization.string("otp.subtitle", viewModel.normalizedPhone)
-        case .emailSent:
-            return localization.string("signup.emailSent.subtitle")
         }
     }
 
@@ -167,28 +161,6 @@ struct SignupView: View {
                 title: localization.string("signup.emailOrPhoneReveal"),
                 action: { viewModel.showEmailForm = true },
                 icon: "envelope"
-            )
-        }
-    }
-
-    // MARK: - Email Sent Content
-
-    private var emailSentContent: some View {
-        VStack(spacing: 20) {
-            // Success icon
-            Image(systemName: "envelope.badge.shield.half.filled")
-                .font(.system(size: 48))
-                .foregroundColor(.tidexSuccess)
-
-            Text(localization.string("signup.emailSent.instructions"))
-                .font(.system(size: 14))
-                .foregroundColor(.tidexTextSecondary)
-                .multilineTextAlignment(.center)
-
-            // Back to login button
-            PrimaryButton(
-                title: localization.string("signup.emailSent.backToLogin"),
-                action: { onNavigateToLogin?() }
             )
         }
     }
