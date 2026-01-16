@@ -23,8 +23,8 @@ final class AddShiftViewModel: ObservableObject {
 
     // MARK: - Shared State
 
-    @Published var startTime: Date = AddShiftViewModel.defaultStartTime()
-    @Published var endTime: Date = AddShiftViewModel.defaultEndTime()
+    @Published var startTime: Date? = nil
+    @Published var endTime: Date? = nil
     @Published var displayMonth: Date = Date()
     @Published var isLoading = false
     @Published var error: String?
@@ -35,11 +35,14 @@ final class AddShiftViewModel: ObservableObject {
 
     // MARK: - Paywall State
 
-    /// Whether to show the paywall sheet
-    @Published var showPaywall = false
+    /// Whether to show the month limit sheet
+    @Published var showMonthLimitSheet = false
 
     /// Set of existing months when paywall is triggered (for display purposes)
     @Published private(set) var existingShiftMonths: Set<DateComponents> = []
+
+    /// Target month the user is trying to add shifts to (for month limit sheet)
+    @Published private(set) var targetMonth: DateComponents = DateComponents()
 
     // MARK: - Recurring Mode State
 
@@ -49,6 +52,10 @@ final class AddShiftViewModel: ObservableObject {
     @Published var showPreviewSheet = false
 
     // MARK: - Cached Data
+
+    /// Triggers view updates when cached data changes
+    /// We use this instead of making cachedShifts @Published to avoid exposing internal data
+    @Published private var cacheVersion: Int = 0
 
     private var cachedShifts: [ShiftRow] = []
     private var cachedRecurringShifts: [RecurringShiftRow] = []
@@ -87,28 +94,29 @@ final class AddShiftViewModel: ObservableObject {
 
     /// Whether the single shift form can be submitted
     var canSubmitSingle: Bool {
-        !selectedDates.isEmpty && isValidTimeRange
+        !selectedDates.isEmpty && hasValidTimes
     }
 
     /// Whether the recurring shift form can be submitted
     var canSubmitRecurring: Bool {
-        !selectedDays.isEmpty && isValidTimeRange
+        !selectedDays.isEmpty && hasValidTimes
     }
 
-    /// Whether start and end times form a valid range
-    private var isValidTimeRange: Bool {
-        // Times are always valid - cross-midnight is allowed
-        true
+    /// Whether both start and end times have been entered
+    private var hasValidTimes: Bool {
+        startTime != nil && endTime != nil
     }
 
     /// Start time as HH:mm string
     var startTimeString: String {
-        formatTimeAsHHmm(startTime)
+        guard let time = startTime else { return "" }
+        return formatTimeAsHHmm(time)
     }
 
     /// End time as HH:mm string
     var endTimeString: String {
-        formatTimeAsHHmm(endTime)
+        guard let time = endTime else { return "" }
+        return formatTimeAsHHmm(time)
     }
 
     /// Set of dates that have existing shifts
@@ -198,6 +206,9 @@ final class AddShiftViewModel: ObservableObject {
         // Load recurring shifts
         cachedRecurringShifts = recurringRepository.getRecurringShifts(for: userId)
 
+        // Trigger view update now that cached data is loaded
+        cacheVersion += 1
+
         logger.info("Loaded data: \(self.cachedShifts.count) shifts, \(self.cachedRecurringShifts.count) recurring, \(self.cachedSnapshots.count) snapshots")
     }
 
@@ -214,6 +225,9 @@ final class AddShiftViewModel: ObservableObject {
         let endDate = Date.lastDayOfMonthDate(year: year, month: month)
 
         cachedShifts = shiftsRepository.getShifts(for: userId, startDate: startDate, endDate: endDate)
+
+        // Trigger view update for new month's shift indicators
+        cacheVersion += 1
     }
 
     // MARK: - Single Shift Actions
@@ -287,10 +301,18 @@ final class AddShiftViewModel: ObservableObject {
             onShiftsCreated?()
 
         } catch ShiftCreationError.monthLimitReached(let months) {
-            // Show paywall instead of error
-            logger.info("Month limit reached, showing paywall. Existing months: \(months.count)")
+            // Show month limit sheet instead of error
+            logger.info("Month limit reached, showing month limit sheet. Existing months: \(months.count)")
             existingShiftMonths = months
-            showPaywall = true
+
+            // Calculate target month from first selected date
+            if let firstDate = selectedDates.sorted().first,
+               let date = Date.fromISODateString(firstDate) {
+                let calendar = Calendar.current
+                targetMonth = calendar.dateComponents([.year, .month], from: date)
+            }
+
+            showMonthLimitSheet = true
         } catch {
             logger.error("Failed to create shifts: \(error.localizedDescription)")
             self.error = error.localizedDescription
@@ -407,6 +429,48 @@ final class AddShiftViewModel: ObservableObject {
         isLoading = false
     }
 
+    // MARK: - Delete Shifts (Month Limit)
+
+    /// Delete shifts in other months (when free tier user chooses this option)
+    /// Returns true if successful
+    func deleteShiftsInOtherMonths() async -> Bool {
+        guard let userId = AppCoordinator.shared.userId else {
+            logger.warning("Cannot delete shifts: no user ID")
+            return false
+        }
+
+        do {
+            let deletedCount = try await shiftsRepository.deleteShiftsInOtherMonths(
+                userId: userId,
+                targetMonth: targetMonth
+            )
+
+            logger.info("Deleted \(deletedCount) shifts in other months")
+
+            // Clear existing months since they're now deleted
+            existingShiftMonths.removeAll()
+
+            // Reload cached data to reflect deletions in UI
+            reloadShiftsForDisplayedMonth()
+
+            // Notify that shifts changed (for other views like dashboard)
+            NotificationCenter.default.post(name: .shiftsDidChange, object: nil)
+
+            return true
+        } catch {
+            logger.error("Failed to delete shifts in other months: \(error.localizedDescription)")
+            return false
+        }
+    }
+
+    /// Called when deletion is complete and user wants to proceed with creating shifts
+    func onDeleteComplete() {
+        // Re-attempt shift creation now that other months are cleared
+        Task {
+            await submitSingleShifts()
+        }
+    }
+
     // MARK: - Private Helpers
 
     /// Format Date to HH:mm string
@@ -480,8 +544,22 @@ final class AddShiftViewModel: ObservableObject {
 
     /// Clear the form after successful submission
     private func clearForm() {
+        // Clear date selections
         selectedDates.removeAll()
         selectedDays.removeAll()
+
+        // Clear times so user can start fresh
+        startTime = nil
+        endTime = nil
+
+        // Reset recurring options
+        repeatInterval = 0
+        endCondition = .months(value: 6)
+
+        // Reset display month to current
+        displayMonth = Date()
+
+        // Clear error state
         error = nil
     }
 

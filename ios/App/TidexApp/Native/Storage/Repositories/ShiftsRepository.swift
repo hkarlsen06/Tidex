@@ -48,11 +48,13 @@ final class ShiftsRepository: ObservableObject {
     ) -> [ShiftRow] {
         let context = localStore.mainContext
 
-        // Build predicate for date range and non-deleted
+        // Build predicate for date range and non-deleted (including pending deletes)
+        // Note: Can't use computed `isPendingDelete` in #Predicate - must use stored `syncStatusRaw`
         let descriptor = FetchDescriptor<LocalUserShift>(
             predicate: #Predicate { shift in
                 shift.userId == userId &&
                 shift.serverDeletedAt == nil &&
+                shift.syncStatusRaw != "pendingDelete" &&
                 shift.shiftDate >= startDate &&
                 shift.shiftDate <= endDate
             },
@@ -74,9 +76,12 @@ final class ShiftsRepository: ObservableObject {
     func getAllShifts(for userId: String) -> [ShiftRow] {
         let context = localStore.mainContext
 
+        // Note: Can't use computed `isPendingDelete` in #Predicate - must use stored `syncStatusRaw`
         let descriptor = FetchDescriptor<LocalUserShift>(
             predicate: #Predicate { shift in
-                shift.userId == userId && shift.serverDeletedAt == nil
+                shift.userId == userId &&
+                shift.serverDeletedAt == nil &&
+                shift.syncStatusRaw != "pendingDelete"
             },
             sortBy: [SortDescriptor(\LocalUserShift.shiftDate, order: .reverse)]
         )
@@ -244,6 +249,66 @@ final class ShiftsRepository: ObservableObject {
         } catch {
             throw error
         }
+    }
+
+    /// Delete all shifts that are NOT in the target month
+    /// Used when free tier users choose to delete other months to add shifts to a new month
+    /// - Parameters:
+    ///   - userId: User ID
+    ///   - targetMonth: The month to keep (year and month components)
+    /// - Returns: Number of shifts deleted
+    func deleteShiftsInOtherMonths(userId: String, targetMonth: DateComponents) async throws -> Int {
+        let context = localStore.mainContext
+        let calendar = Calendar.current
+
+        // Fetch all active shifts for user
+        let descriptor = FetchDescriptor<LocalUserShift>(
+            predicate: #Predicate { shift in
+                shift.userId == userId && shift.serverDeletedAt == nil
+            }
+        )
+
+        let allShifts: [LocalUserShift]
+        do {
+            allShifts = try context.fetch(descriptor)
+        } catch {
+            logger.error("Failed to fetch shifts for deletion: \(error.localizedDescription)")
+            throw error
+        }
+
+        // Filter to only active shifts (not pending delete) that are NOT in target month
+        let shiftsToDelete = allShifts.filter { shift in
+            guard shift.isActiveShift else { return false }
+
+            let shiftComponents = calendar.dateComponents([.year, .month], from: shift.shiftDate)
+            return shiftComponents.year != targetMonth.year || shiftComponents.month != targetMonth.month
+        }
+
+        guard !shiftsToDelete.isEmpty else {
+            logger.info("No shifts to delete in other months")
+            return 0
+        }
+
+        // Mark each shift for deletion
+        var deletedCount = 0
+        for shift in shiftsToDelete {
+            do {
+                _ = try await localStore.storeActor.markShiftPendingDelete(id: shift.id)
+                deletedCount += 1
+            } catch LocalStoreWriteError.notFound {
+                logger.warning("Shift not found during batch delete: \(shift.id)")
+            } catch {
+                logger.error("Failed to mark shift for deletion: \(shift.id), error: \(error.localizedDescription)")
+                // Continue with other shifts even if one fails
+            }
+        }
+
+        logger.info("Marked \(deletedCount) shifts for deletion in other months (target: \(targetMonth.year ?? 0)-\(targetMonth.month ?? 0))")
+
+        // Update widget storage
+        NativeWidgetStorage.updateWidgetStorage(for: userId)
+
+        return deletedCount
     }
 
     // MARK: - Month Limit Gating

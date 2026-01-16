@@ -4,7 +4,7 @@ import UIKit
 /// Custom time input field that accepts 4 digits and formats as HH:MM
 /// Mimics the behavior of the web TimeInput component
 struct NumericTimeInput: View {
-    @Binding var time: Date
+    @Binding var time: Date?
     let label: String
     let focusField: FocusState<TimeField?>.Binding
     let field: TimeField
@@ -38,6 +38,12 @@ struct NumericTimeInput: View {
                 .focused(focusField, equals: field)
                 .onChange(of: inputValue) { _, newValue in
                     handleInputChange(newValue)
+                }
+                .onChange(of: time) { _, newTime in
+                    // Sync input when time is externally cleared
+                    if newTime == nil && !inputValue.isEmpty {
+                        inputValue = ""
+                    }
                 }
         }
         .padding(16)
@@ -130,8 +136,8 @@ struct NumericTimeInput: View {
 /// Combined start/end time pickers with numeric keyboard input
 /// Auto-advances from start to end field when 4 digits are entered
 struct TimeRangePicker: View {
-    @Binding var startTime: Date
-    @Binding var endTime: Date
+    @Binding var startTime: Date?
+    @Binding var endTime: Date?
     @FocusState private var focusedField: NumericTimeInput.TimeField?
     @Environment(\.localization) private var localization
 
@@ -199,8 +205,8 @@ struct TimePickerRow: View {
 #Preview {
     VStack(spacing: 16) {
         TimeRangePicker(
-            startTime: .constant(Date()),
-            endTime: .constant(Date())
+            startTime: .constant(nil),
+            endTime: .constant(nil)
         )
     }
     .padding()

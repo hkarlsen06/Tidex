@@ -422,6 +422,25 @@ enum AuthStrings {
         "paywall.upgrade.title": "Lås opp premium-funksjoner",
         "paywall.upgrade.message": "Få ubegrensede måneder, avansert statistikk, Wagey AI og mer.",
 
+        // Month Limit Sheet (Free tier - add shifts to new month)
+        "monthLimit.upgradeHeadline": "Lås opp flere måneder",
+        "monthLimit.upgradeSubheadline": "Spor vakter på tvers av flere måneder",
+        "monthLimit.feature1": "Ubegrenset antall måneder med vakter",
+        "monthLimit.feature2": "Avansert lønnsstatistikk",
+        "monthLimit.feature3": "Eksporter til PDF og CSV",
+        "monthLimit.viewPlansButton": "Se abonnementer",
+        "monthLimit.or": "eller",
+        "monthLimit.deleteShiftsLink": "Slett vakter i andre måneder",
+        "monthLimit.deleteTitle": "Slett vakter",
+        "monthLimit.deleteExplanation": "For å legge til vakter i {targetMonth}, må vaktene i {otherMonths} slettes.",
+        "monthLimit.deleteButton": "Slett vakter i andre måneder",
+        "monthLimit.confirmDeleteMessage": "Er du sikker på at du vil slette alle vakter i {months}? Dette kan ikke angres.",
+        "monthLimit.cancelDelete": "Avbryt",
+        "monthLimit.confirmDeleteButton": "Slett {count} måned",
+        "monthLimit.confirmDeleteButtonPlural": "Slett {count} måneder",
+        "monthLimit.couldNotDeleteShifts": "Kunne ikke slette vakter. Prøv igjen.",
+        "monthLimit.unexpectedError": "En uventet feil oppstod.",
+
         // Verification Required
         "verification.title": "Bekreft abonnement",
         "verification.offline.title": "Ingen internettforbindelse",
@@ -840,6 +859,25 @@ enum AuthStrings {
         // Paywall - Generic Upgrade Context
         "paywall.upgrade.title": "Unlock Premium Features",
         "paywall.upgrade.message": "Get unlimited months, advanced statistics, Wagey AI, and more.",
+
+        // Month Limit Sheet (Free tier - add shifts to new month)
+        "monthLimit.upgradeHeadline": "Unlock More Months",
+        "monthLimit.upgradeSubheadline": "Track shifts across multiple months",
+        "monthLimit.feature1": "Unlimited months of shifts",
+        "monthLimit.feature2": "Advanced wage statistics",
+        "monthLimit.feature3": "Export to PDF and CSV",
+        "monthLimit.viewPlansButton": "View Plans",
+        "monthLimit.or": "or",
+        "monthLimit.deleteShiftsLink": "Delete shifts in other months",
+        "monthLimit.deleteTitle": "Delete Shifts",
+        "monthLimit.deleteExplanation": "To add shifts in {targetMonth}, shifts in {otherMonths} must be deleted.",
+        "monthLimit.deleteButton": "Delete shifts in other months",
+        "monthLimit.confirmDeleteMessage": "Are you sure you want to delete all shifts in {months}? This cannot be undone.",
+        "monthLimit.cancelDelete": "Cancel",
+        "monthLimit.confirmDeleteButton": "Delete {count} month",
+        "monthLimit.confirmDeleteButtonPlural": "Delete {count} months",
+        "monthLimit.couldNotDeleteShifts": "Could not delete shifts. Please try again.",
+        "monthLimit.unexpectedError": "An unexpected error occurred.",
 
         // Verification Required
         "verification.title": "Verify Subscription",

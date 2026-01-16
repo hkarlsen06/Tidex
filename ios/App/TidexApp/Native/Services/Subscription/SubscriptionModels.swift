@@ -3,8 +3,8 @@ import Foundation
 // MARK: - Configuration
 
 enum EntitlementConfig {
-    /// How long server tier is valid offline (48 hours)
-    static let serverTierTTL: TimeInterval = 48 * 3600
+    /// How long server tier is valid offline (1 hour)
+    static let serverTierTTL: TimeInterval = 1 * 3600
 }
 
 // MARK: - Subscription Tier

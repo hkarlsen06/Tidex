@@ -100,6 +100,7 @@
 		11A1965D2F1AEB360030E524 /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A196582F1AEB360030E524 /* PaywallView.swift */; };
 		11A1965E2F1AEB360030E524 /* BillingToggle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A196552F1AEB360030E524 /* BillingToggle.swift */; };
 		11A196602F1AEB4D0030E524 /* VerificationRequiredView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A1965F2F1AEB4D0030E524 /* VerificationRequiredView.swift */; };
+		11A196622F1AF7E70030E524 /* MonthLimitSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A196612F1AF7E70030E524 /* MonthLimitSheet.swift */; };
 		11A5CD262F101201002BAC91 /* StoredShift.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A5CD252F101201002BAC91 /* StoredShift.swift */; };
 		11A5CD302F101283002BAC91 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 11A5CD2F2F101283002BAC91 /* WidgetKit.framework */; };
 		11A5CD322F101283002BAC91 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 11A5CD312F101283002BAC91 /* SwiftUI.framework */; };
@@ -280,6 +281,7 @@
 		11A196582F1AEB360030E524 /* PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallView.swift; sourceTree = "<group>"; };
 		11A196592F1AEB360030E524 /* PaywallViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallViewModel.swift; sourceTree = "<group>"; };
 		11A1965F2F1AEB4D0030E524 /* VerificationRequiredView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VerificationRequiredView.swift; sourceTree = "<group>"; };
+		11A196612F1AF7E70030E524 /* MonthLimitSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthLimitSheet.swift; sourceTree = "<group>"; };
 		11A5CD252F101201002BAC91 /* StoredShift.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoredShift.swift; sourceTree = "<group>"; };
 		11A5CD2E2F101283002BAC91 /* TidexShiftWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TidexShiftWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		11A5CD2F2F101283002BAC91 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
@@ -750,6 +752,7 @@
 		11A1965A2F1AEB360030E524 /* Paywall */ = {
 			isa = PBXGroup;
 			children = (
+				11A196612F1AF7E70030E524 /* MonthLimitSheet.swift */,
 				11A1965F2F1AEB4D0030E524 /* VerificationRequiredView.swift */,
 				11A196572F1AEB360030E524 /* Components */,
 				11A196582F1AEB360030E524 /* PaywallView.swift */,
@@ -1156,6 +1159,7 @@
 				119D1CEE2F16E46300EC7072 /* PhoneOTPForm.swift in Sources */,
 				11A196452F1AC20E0030E524 /* TabConfiguration.swift in Sources */,
 				119D1CEF2F16E46300EC7072 /* TidexCard.swift in Sources */,
+				11A196622F1AF7E70030E524 /* MonthLimitSheet.swift in Sources */,
 				119D1CF02F16E46300EC7072 /* EmailPasswordForm.swift in Sources */,
 				119D1CF12F16E46300EC7072 /* LoginViewModel.swift in Sources */,
 				11A196502F1AE8890030E524 /* StoreKitManager.swift in Sources */,

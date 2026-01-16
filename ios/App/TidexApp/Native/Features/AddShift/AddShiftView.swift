@@ -42,8 +42,17 @@ struct AddShiftView: View {
         .sheet(isPresented: $viewModel.showPreviewSheet) {
             RecurringPreviewSheet(viewModel: viewModel)
         }
-        .sheet(isPresented: $viewModel.showPaywall) {
-            PaywallView(contextType: .monthLimit)
+        .sheet(isPresented: $viewModel.showMonthLimitSheet) {
+            MonthLimitSheet(
+                existingMonths: viewModel.existingShiftMonths,
+                targetMonth: viewModel.targetMonth,
+                onDeleteShifts: {
+                    await viewModel.deleteShiftsInOtherMonths()
+                },
+                onDeleteComplete: {
+                    viewModel.onDeleteComplete()
+                }
+            )
         }
     }
 

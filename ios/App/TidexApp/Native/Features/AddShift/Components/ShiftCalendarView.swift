@@ -2,18 +2,13 @@ import SwiftUI
 import UIKit
 
 /// Multi-select calendar for choosing shift dates
-/// Supports tap to toggle and drag-based multi-selection
+/// Supports tap to toggle date selection
 struct ShiftCalendarView: View {
     @ObservedObject var viewModel: AddShiftViewModel
     @Environment(\.localization) private var localization
 
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 4), count: 7)
     private let calendar = Calendar.current
-
-    // State for drag selection
-    @State private var isDragSelecting = false
-    @State private var dragSelectedDates: Set<String> = []
-    @GestureState private var dragLocation: CGPoint = .zero
 
     var body: some View {
         VStack(spacing: 16) {
@@ -27,12 +22,10 @@ struct ShiftCalendarView: View {
             // Weekday headers
             WeekdayHeaderRow()
 
-            // Calendar grid with drag selection
+            // Calendar grid
             CalendarGridView(
                 days: daysInMonth(),
-                viewModel: viewModel,
-                isDragSelecting: $isDragSelecting,
-                dragSelectedDates: $dragSelectedDates
+                viewModel: viewModel
             )
         }
     }
@@ -167,21 +160,13 @@ struct WeekdayHeaderRow: View {
     }
 }
 
-// MARK: - Calendar Grid View (handles drag selection)
+// MARK: - Calendar Grid View
 
 private struct CalendarGridView: View {
     let days: [ShiftCalendarView.DayInfo]
     @ObservedObject var viewModel: AddShiftViewModel
-    @Binding var isDragSelecting: Bool
-    @Binding var dragSelectedDates: Set<String>
 
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 4), count: 7)
-
-    // Store cell frames for hit testing
-    @State private var cellFrames: [String: CGRect] = [:]
-    // Track the start date and current end date for range selection
-    @State private var dragStartDate: String?
-    @State private var lastEndDate: String?
 
     var body: some View {
         LazyVGrid(columns: columns, spacing: 4) {
@@ -190,24 +175,13 @@ private struct CalendarGridView: View {
                     CalendarDayCell(
                         dateISO: dateISO,
                         dayNumber: dateInfo.dayNumber,
-                        isSelected: viewModel.selectedDates.contains(dateISO) || dragSelectedDates.contains(dateISO),
-                        isDragHighlighted: dragSelectedDates.contains(dateISO),
+                        isSelected: viewModel.selectedDates.contains(dateISO),
                         hasExistingShift: viewModel.existingShiftDates.contains(dateISO),
                         hasConflict: viewModel.conflictDates.contains(dateISO),
                         isToday: isToday(dateISO)
                     )
-                    .background(
-                        GeometryReader { geo in
-                            Color.clear.preference(
-                                key: CellFramePreferenceKey.self,
-                                value: [dateISO: geo.frame(in: .named("calendarGrid"))]
-                            )
-                        }
-                    )
                     .onTapGesture {
-                        if !isDragSelecting {
-                            viewModel.toggleDate(dateISO)
-                        }
+                        viewModel.toggleDate(dateISO)
                     }
                 } else {
                     // Empty cell for padding
@@ -216,123 +190,11 @@ private struct CalendarGridView: View {
                 }
             }
         }
-        .coordinateSpace(name: "calendarGrid")
-        .onPreferenceChange(CellFramePreferenceKey.self) { frames in
-            cellFrames = frames
-        }
-        .gesture(
-            LongPressGesture(minimumDuration: 0.2)
-                .sequenced(before: DragGesture(minimumDistance: 0, coordinateSpace: .named("calendarGrid")))
-                .onChanged { value in
-                    switch value {
-                    case .second(true, let drag):
-                        if let drag = drag {
-                            let location = drag.location
-                            let currentDate = dateAtLocation(location)
-
-                            // Long press triggered + drag started
-                            if !isDragSelecting {
-                                // Start drag selection mode
-                                isDragSelecting = true
-                                dragStartDate = currentDate
-                                lastEndDate = nil
-                                dragSelectedDates.removeAll()
-
-                                // Add start date
-                                if let startDate = currentDate {
-                                    dragSelectedDates.insert(startDate)
-                                }
-
-                                // Haptic feedback for starting selection
-                                let generator = UIImpactFeedbackGenerator(style: .medium)
-                                generator.impactOccurred()
-                            } else if let startDate = dragStartDate, let endDate = currentDate {
-                                // Update range selection - select all dates from start to current
-                                if endDate != lastEndDate {
-                                    let newDates = datesInRange(from: startDate, to: endDate)
-                                    dragSelectedDates = newDates
-
-                                    // Light haptic when range changes
-                                    let generator = UIImpactFeedbackGenerator(style: .light)
-                                    generator.impactOccurred()
-
-                                    lastEndDate = endDate
-                                }
-                            }
-                        }
-
-                    default:
-                        break
-                    }
-                }
-                .onEnded { _ in
-                    // Commit drag selection to viewModel
-                    if isDragSelecting {
-                        for dateISO in dragSelectedDates {
-                            if !viewModel.selectedDates.contains(dateISO) {
-                                viewModel.selectedDates.insert(dateISO)
-                            }
-                        }
-                        dragSelectedDates.removeAll()
-                        dragStartDate = nil
-                        lastEndDate = nil
-                        isDragSelecting = false
-
-                        // Success haptic
-                        let generator = UINotificationFeedbackGenerator()
-                        generator.notificationOccurred(.success)
-                    }
-                }
-        )
     }
 
     private func isToday(_ dateISO: String) -> Bool {
         let today = Date().toISODateString()
         return dateISO == today
-    }
-
-    private func dateAtLocation(_ location: CGPoint) -> String? {
-        for (dateISO, frame) in cellFrames {
-            if frame.contains(location) {
-                return dateISO
-            }
-        }
-        return nil
-    }
-
-    /// Generate all dates in a range (inclusive)
-    private func datesInRange(from startISO: String, to endISO: String) -> Set<String> {
-        guard let startDate = Date.fromISODateString(startISO),
-              let endDate = Date.fromISODateString(endISO) else {
-            return []
-        }
-
-        var dates = Set<String>()
-        let calendar = Calendar.current
-
-        // Ensure we iterate from earlier to later date
-        let (earlier, later) = startDate <= endDate ? (startDate, endDate) : (endDate, startDate)
-
-        var current = earlier
-        while current <= later {
-            dates.insert(current.toISODateString())
-            guard let nextDay = calendar.date(byAdding: .day, value: 1, to: current) else {
-                break
-            }
-            current = nextDay
-        }
-
-        return dates
-    }
-}
-
-// MARK: - Cell Frame Preference Key
-
-private struct CellFramePreferenceKey: PreferenceKey {
-    static var defaultValue: [String: CGRect] = [:]
-
-    static func reduce(value: inout [String: CGRect], nextValue: () -> [String: CGRect]) {
-        value.merge(nextValue()) { _, new in new }
     }
 }
 
@@ -342,7 +204,6 @@ struct CalendarDayCell: View {
     let dateISO: String
     let dayNumber: Int
     let isSelected: Bool
-    let isDragHighlighted: Bool
     let hasExistingShift: Bool
     let hasConflict: Bool
     let isToday: Bool
@@ -358,13 +219,6 @@ struct CalendarDayCell: View {
             if isToday && !isSelected {
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
                     .strokeBorder(Color.tidexBlue, lineWidth: 2)
-                    .frame(width: 40, height: 40)
-            }
-
-            // Drag highlight indicator
-            if isDragHighlighted {
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .strokeBorder(Color.white.opacity(0.5), lineWidth: 2)
                     .frame(width: 40, height: 40)
             }
 
