@@ -5,61 +5,27 @@ import Supabase
 import Combine
 import os.log
 
-private let logger = Logger(subsystem: "com.tidex.app", category: "DashboardViewModel")
+private let logger = Logger(subsystem: "com.tidex.app", category: "ShiftsViewModel")
 
-// MARK: - Notification Names
+// MARK: - Week Group
 
-extension Notification.Name {
-    /// Posted when shifts are created/modified and dashboard should refresh
-    static let shiftsDidChange = Notification.Name("com.tidex.shiftsDidChange")
+/// A group of shifts for a single ISO week
+struct WeekGroup: Identifiable, Equatable {
+    /// Unique identifier: "YYYY-WW" format
+    let id: String
+    /// ISO week number (1-53)
+    let weekNumber: Int
+    /// Year for the week (ISO week-numbering year)
+    let year: Int
+    /// Total gross earnings for all shifts in this week
+    let totalGross: Double
+    /// Shifts in this week, sorted by date (newest first)
+    let shifts: [ShiftWithComputations]
 }
 
-// MARK: - Dashboard Data
+// MARK: - Shifts Error
 
-/// Computed dashboard data ready for display
-struct DashboardData: Equatable {
-    // Payroll Card (Previous Month)
-    let payrollDate: Date
-    let payrollHasPassed: Bool         // true = previous payout, false = next payout
-    let previousMonthGross: Double
-    let previousMonthNet: Double?      // nil if tax not enabled
-    let previousMonthTax: Double?
-    let previousMonthTaxEnabled: Bool
-
-    // Total Card (Current Month)
-    let currentMonthGross: Double      // All shifts (projected total)
-    let currentMonthNet: Double?       // All shifts net (projected)
-    let currentMonthCompletedGross: Double  // Only completed shifts (earned to date)
-    let currentMonthCompletedNet: Double?   // Only completed shifts net
-    let currentMonthShiftCount: Int    // Total shift count
-    let currentMonthCompletedCount: Int     // Completed shifts count
-    let currentMonthPlannedCount: Int  // Future shifts
-    let percentageChangeVsPrevious: Double?
-    let currentMonthTaxEnabled: Bool
-
-    // Featured Shift Card
-    // For current month: next upcoming shift (or nil if none)
-    // For other months: best shift (highest earnings) in that month
-    let featuredShift: ShiftWithComputations?
-    let isFeaturedShiftToday: Bool
-    let featuredShiftIsBestShift: Bool  // true = showing best shift, false = showing next shift
-
-    // Metadata
-    let currentMonthName: String
-    let previousMonthName: String
-
-    // User Settings
-    let currency: String  // User's selected currency (e.g., "kr", "$", "€")
-
-    /// Whether there are future shifts (main display should be projected total)
-    var hasFutureShifts: Bool {
-        currentMonthPlannedCount > 0
-    }
-}
-
-// MARK: - Dashboard Error
-
-enum DashboardError: Error, LocalizedError {
+enum ShiftsError: Error, LocalizedError {
     case notAuthenticated
     case dataLoadFailed(underlying: Error)
     case noLocalData
@@ -103,10 +69,10 @@ private struct MonthCacheEntry {
     }
 }
 
-// MARK: - Dashboard View Model
+// MARK: - Shifts View Model
 
 @MainActor
-final class DashboardViewModel: ObservableObject, MonthNavigable {
+final class ShiftsViewModel: ObservableObject, MonthNavigable {
 
     // MARK: - Dependencies (Local-First Repositories)
 
@@ -119,9 +85,18 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
 
     // MARK: - Published State
 
-    @Published private(set) var dashboardData: DashboardData?
+    /// All shifts for the displayed month (computed with payroll)
+    @Published private(set) var shifts: [ShiftWithComputations] = []
+    /// Shifts grouped by ISO week
+    @Published private(set) var weekGroups: [WeekGroup] = []
+    /// Whether data is currently loading
     @Published private(set) var isLoading = false
+    /// Error if data loading failed
     @Published private(set) var error: Error?
+    /// Set of shift IDs that have conflicts (overlapping with other shifts)
+    @Published private(set) var conflictingShiftIds: Set<String> = []
+    /// Set of shift IDs excluded from totals (higher-earning overlapping shifts are excluded)
+    @Published private(set) var excludedFromTotalIds: Set<String> = []
 
     /// Direction of last navigation (for animations) - synced from SharedMonthContext
     @Published private(set) var navigationDirection: MonthNavigationDirection?
@@ -138,17 +113,29 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     /// Computed month name for immediate display (doesn't wait for API)
     var displayMonthName: String { monthContext.displayMonthName }
 
-    // MARK: - User Profile Data (for UserMenuButton)
+    /// The period type of the displayed month (past, current, or future)
+    var monthPeriod: MonthPeriod {
+        let current = Date.currentYearMonth()
+        let displayedIndex = displayYear * 12 + displayMonth
+        let currentIndex = current.year * 12 + current.month
 
-    /// User's display name (derived from email or metadata)
-    @Published private(set) var userDisplayName: String = ""
-    /// User's profile picture URL
-    @Published private(set) var userAvatarUrl: String?
+        if displayedIndex < currentIndex {
+            return .past
+        } else if displayedIndex == currentIndex {
+            return .current
+        } else {
+            return .future
+        }
+    }
+
+    /// User's currency for formatting
+    @Published private(set) var currency: String = "kr"
+
+    /// Next upcoming shift (for countdown display)
+    @Published private(set) var nextUpcomingShift: ShiftWithComputations?
 
     // MARK: - Private State
 
-    private var displayedMonthShifts: [ShiftWithComputations] = []
-    private var previousMonthShifts: [ShiftWithComputations] = []
     private var settings: UserSettings?
     private var snapshots: [WageSnapshot] = []
     private var recurringShifts: [RecurringShiftRow] = []
@@ -175,6 +162,9 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     /// Memory warning observer
     private var memoryWarningObserver: NSObjectProtocol?
 
+    /// Track active navigation task to cancel stale fetches
+    private var activeNavigationTask: Task<Void, Never>?
+
     // MARK: - Initialization
 
     init(
@@ -186,7 +176,6 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
         monthContext: SharedMonthContext? = nil
     ) {
         // Use provided repositories or default to shared instances
-        // Using optional parameters avoids Swift 6 MainActor isolation errors
         self.shiftsRepository = shiftsRepository ?? ShiftsRepository.shared
         self.settingsRepository = settingsRepository ?? SettingsRepository.shared
         self.snapshotsRepository = snapshotsRepository ?? SnapshotsRepository.shared
@@ -233,7 +222,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
                 self.navigationDirection = self.monthContext.navigationDirection
 
                 // Trigger data reload for new month
-                self.loadDashboardForDisplayedMonthNonBlocking()
+                self.loadShiftsForDisplayedMonthNonBlocking()
             }
     }
 
@@ -274,9 +263,6 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
 
     // MARK: - Month Navigation
 
-    /// Track active navigation task to cancel stale fetches
-    private var activeNavigationTask: Task<Void, Never>?
-
     /// Navigate to the previous month (non-blocking)
     /// Delegates to SharedMonthContext - data reload happens via subscription
     func goToPreviousMonth() {
@@ -297,39 +283,33 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
 
     /// Non-blocking month data loader
     /// Uses cache for instant display, fetches in background if needed
-    private func loadDashboardForDisplayedMonthNonBlocking() {
+    private func loadShiftsForDisplayedMonthNonBlocking() {
         let targetYear = displayYear
         let targetMonth = displayMonth
         let displayKey = "\(targetYear)-\(targetMonth)"
-        let previousYM = Date.previousYearMonth(from: (year: targetYear, month: targetMonth))
-        let previousKey = "\(previousYM.year)-\(previousYM.month)"
 
-        // Check if we have valid cache for both displayed and previous months
-        if var displayCache = monthCache[displayKey], displayCache.isValid,
-           var previousCache = monthCache[previousKey], previousCache.isValid {
+        // Check if we have valid cache for displayed month
+        if var displayCache = monthCache[displayKey], displayCache.isValid {
             // Use cached data - instant navigation!
             logger.info("📦 Using cached data for \(displayKey)")
-            self.displayedMonthShifts = displayCache.shifts
-            self.previousMonthShifts = previousCache.shifts
+            self.shifts = displayCache.shifts
+            self.weekGroups = groupShiftsByWeek(displayCache.shifts)
 
             // Update last accessed time for LRU tracking
             displayCache.lastAccessed = Date()
-            previousCache.lastAccessed = Date()
             monthCache[displayKey] = displayCache
-            monthCache[previousKey] = previousCache
-
-            self.dashboardData = buildDashboardData()
 
             // Still prefetch neighbors in background
             prefetchNeighboringMonths()
             return
         }
 
-        // Cache miss - clear stale data and show loading state
+        // Cache miss - show loading state and fetch
         logger.info("🔄 Cache miss for \(displayKey), fetching in background...")
 
-        // Clear dashboard data so we show loading state instead of stale data
-        self.dashboardData = nil
+        // Clear data and show loading state
+        self.shifts = []
+        self.weekGroups = []
         self.isLoading = true
 
         // Cancel any previous navigation task
@@ -339,7 +319,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
         activeNavigationTask = Task { [weak self] in
             guard let self = self else { return }
 
-            // Check if this task is still relevant (user hasn't navigated away)
+            // Check if this task is still relevant
             guard !Task.isCancelled,
                   self.displayYear == targetYear,
                   self.displayMonth == targetMonth else {
@@ -347,9 +327,9 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
                 return
             }
 
-            await self.loadDashboardForDisplayedMonth(showLoadingState: false)
+            await self.loadShiftsForDisplayedMonth(showLoadingState: false)
 
-            // Check again after fetch - user may have navigated during the async operation
+            // Check again after fetch
             guard !Task.isCancelled,
                   self.displayYear == targetYear,
                   self.displayMonth == targetMonth else {
@@ -364,10 +344,9 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
 
     // MARK: - Public Methods
 
-    /// Load all dashboard data for current month (initial load)
+    /// Load all shifts data for current month (initial load)
     /// Reads from local repositories only - sync is triggered by AppCoordinator
-    /// Also prefetches neighboring months for instant navigation
-    func loadDashboard() async {
+    func loadShifts() async {
         // Sync tracking with current month context values
         lastObservedYear = monthContext.displayYear
         lastObservedMonth = monthContext.displayMonth
@@ -377,31 +356,32 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
         monthCache.removeAll()
         prefetchTasks.removeAll()
 
-        await loadDashboardFromLocal()
+        await loadShiftsFromLocal()
 
         // Prefetch neighboring months in the background
         prefetchNeighboringMonths()
     }
 
-    /// Refresh dashboard data via sync then local reload
+    /// Refresh shifts data via sync then local reload
     /// Called by pull-to-refresh - triggers network sync, then reloads from local
     func refresh() async {
         logger.info("🔄 Pull-to-refresh: triggering sync then local reload")
 
-        // Store current data as fallback in case of failure
-        let previousDashboardData = dashboardData
+        // Store current data as fallback
+        let previousShifts = shifts
+        let previousWeekGroups = weekGroups
 
         do {
             // Get user ID
             if cachedUserId == nil {
                 guard let userId = try await getCurrentUserId() else {
-                    throw DashboardError.notAuthenticated
+                    throw ShiftsError.notAuthenticated
                 }
                 cachedUserId = userId
             }
 
             guard let userId = cachedUserId else {
-                throw DashboardError.notAuthenticated
+                throw ShiftsError.notAuthenticated
             }
 
             // Trigger sync to pull/push changes
@@ -415,14 +395,14 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
             // Clear in-memory caches so we pick up synced data
             monthCache.removeAll()
             prefetchTasks.removeAll()
-            settings = nil  // Force reload from local
+            settings = nil
             snapshots = []
             recurringShifts = []
 
             // Reload from local repositories
-            await loadDashboardFromLocal()
+            await loadShiftsFromLocal()
 
-            // Prefetch neighboring months in the background
+            // Prefetch neighboring months
             prefetchNeighboringMonths()
 
             logger.info("✅ Pull-to-refresh complete (synced \(syncResult.totalRowsProcessed) rows)")
@@ -431,35 +411,35 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
             logger.error("❌ Pull-to-refresh failed: \(error.localizedDescription)")
 
             // Restore previous data so UI doesn't break
-            self.dashboardData = previousDashboardData
+            self.shifts = previousShifts
+            self.weekGroups = previousWeekGroups
 
-            // Don't show error state - just log it and keep showing previous data
-            // The user can try again, but they'll still see their data
             logger.info("📦 Restored previous data after refresh failure")
         }
     }
 
-    /// Reload dashboard from local data without triggering sync
+    /// Reload shifts from local data without triggering sync
     /// Called when shifts change locally (e.g., after adding a shift)
     func reloadFromLocal() async {
-        logger.info("🔄 Reloading dashboard from local data")
+        logger.info("🔄 Reloading shifts from local data")
 
         // Clear in-memory caches to pick up new data
         monthCache.removeAll()
         prefetchTasks.removeAll()
 
         // Reload from local repositories
-        await loadDashboardFromLocal()
+        await loadShiftsFromLocal()
 
         // Prefetch neighboring months
         prefetchNeighboringMonths()
 
-        logger.info("✅ Dashboard reloaded from local")
+        logger.info("✅ Shifts reloaded from local")
     }
 
-    /// Load dashboard data from local repositories
-    /// This is the core local-first read path - no network calls
-    private func loadDashboardFromLocal() async {
+    // MARK: - Private Loading Methods
+
+    /// Load shifts data from local repositories
+    private func loadShiftsFromLocal() async {
         isLoading = true
         error = nil
 
@@ -467,20 +447,22 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
             // Get or cache user ID
             if cachedUserId == nil {
                 guard let userId = try await getCurrentUserId() else {
-                    throw DashboardError.notAuthenticated
+                    throw ShiftsError.notAuthenticated
                 }
                 cachedUserId = userId
             }
 
             guard let userId = cachedUserId else {
-                throw DashboardError.notAuthenticated
+                throw ShiftsError.notAuthenticated
             }
 
             // Load settings from local store
             if settings == nil {
                 settings = settingsRepository.getSettings(for: userId)
                 logger.info("📋 Loaded settings: \(self.settings != nil ? "found" : "nil")")
-                updateUserAvatarFromSettings()
+                if let userSettings = settings {
+                    currency = userSettings.currency ?? "kr"
+                }
             }
 
             // Load snapshots from local store
@@ -491,19 +473,14 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
 
             // Load recurring shifts from local store
             if recurringShifts.isEmpty {
-                let localRecurring = recurringShiftsRepository.getRecurringShifts(for: userId)
-                recurringShifts = localRecurring
+                recurringShifts = recurringShiftsRepository.getRecurringShifts(for: userId)
                 logger.info("📋 Loaded recurring: \(self.recurringShifts.count)")
             }
 
-            // Calculate date ranges for displayed month
+            // Calculate date range for displayed month
             let displayYM = (year: displayYear, month: displayMonth)
-            let previousYM = Date.previousYearMonth(from: displayYM)
-
             let displayStartDate = Date.firstDayOfMonthDate(year: displayYM.year, month: displayYM.month)
             let displayEndDate = Date.lastDayOfMonthDate(year: displayYM.year, month: displayYM.month)
-            let previousStartDate = Date.firstDayOfMonthDate(year: previousYM.year, month: previousYM.month)
-            let previousEndDate = Date.lastDayOfMonthDate(year: previousYM.year, month: previousYM.month)
 
             // Load shifts from local store
             let displayShifts = shiftsRepository.getShifts(
@@ -513,25 +490,15 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
             )
             logger.info("📋 Loaded shifts for \(displayYM.year)-\(displayYM.month): \(displayShifts.count)")
 
-            let fetchedPreviousShifts = shiftsRepository.getShifts(
-                for: userId,
-                startDate: previousStartDate,
-                endDate: previousEndDate
-            )
-
-            // Check if we have any data to show
-            // Note: Empty shifts is OK, but missing settings means we can't compute payroll
+            // Check if we have settings to compute payroll
             guard let currentSettings = self.settings else {
-                // No settings yet - sync may not have completed
-                // Show a softer message instead of hard error
                 logger.info("📭 No local settings yet - waiting for sync (userId: \(userId))")
                 self.isLoading = false
-                // Leave dashboardData as nil to show empty state
                 return
             }
 
-            // Compute displayed month shifts with payroll using PayrollEngine
-            self.displayedMonthShifts = PayrollEngine.computeShiftsForMonth(
+            // Compute shifts with payroll using PayrollEngine
+            let computedShifts = PayrollEngine.computeShiftsForMonth(
                 year: displayYM.year,
                 month: displayYM.month,
                 shifts: displayShifts,
@@ -540,55 +507,46 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
                 settings: currentSettings
             )
 
-            // Compute previous month shifts with payroll using PayrollEngine
-            self.previousMonthShifts = PayrollEngine.computeShiftsForMonth(
-                year: previousYM.year,
-                month: previousYM.month,
-                shifts: fetchedPreviousShifts,
-                recurring: recurringShifts,
-                snapshots: snapshots,
-                settings: currentSettings
-            )
-
             // Cache the computed results
             let displayKey = "\(displayYM.year)-\(displayYM.month)"
-            let previousKey = "\(previousYM.year)-\(previousYM.month)"
             monthCache[displayKey] = MonthCacheEntry(
                 year: displayYM.year,
                 month: displayYM.month,
-                shifts: displayedMonthShifts,
-                timestamp: Date()
-            )
-            monthCache[previousKey] = MonthCacheEntry(
-                year: previousYM.year,
-                month: previousYM.month,
-                shifts: previousMonthShifts,
+                shifts: computedShifts,
                 timestamp: Date()
             )
 
             // Evict old cache entries if over limit
             evictCacheIfNeeded()
 
-            // Build dashboard data
-            self.dashboardData = buildDashboardData()
+            // Update published state
+            self.shifts = computedShifts
+            self.weekGroups = groupShiftsByWeek(computedShifts)
+
+            // Calculate conflict detection
+            updateConflictDetection(for: computedShifts)
+
+            // Find next upcoming shift (only on current month)
+            if isCurrentMonth {
+                updateNextUpcomingShift(for: computedShifts)
+            }
+
             self.isLoading = false
 
-            logger.info("📊 Loaded dashboard from local: \(displayShifts.count) shifts for \(displayKey)")
+            logger.info("📊 Loaded shifts from local: \(computedShifts.count) shifts, \(self.weekGroups.count) weeks")
 
         } catch is CancellationError {
             logger.info("⏭️ Load cancelled (user navigated away)")
-        } catch let urlError as URLError where urlError.code == .cancelled {
-            logger.info("⏭️ Request cancelled (user navigated away)")
         } catch {
-            logger.error("❌ Dashboard local load failed: \(error.localizedDescription)")
-            self.error = DashboardError.dataLoadFailed(underlying: error)
+            logger.error("❌ Shifts local load failed: \(error.localizedDescription)")
+            self.error = ShiftsError.dataLoadFailed(underlying: error)
             self.isLoading = false
         }
     }
 
-    /// Load dashboard data for the currently displayed month from local repositories
-    /// - Parameter showLoadingState: Whether to show loading indicator (false for background navigation loads)
-    private func loadDashboardForDisplayedMonth(showLoadingState: Bool = true) async {
+    /// Load shifts data for the currently displayed month
+    /// - Parameter showLoadingState: Whether to show loading indicator
+    private func loadShiftsForDisplayedMonth(showLoadingState: Bool = true) async {
         if showLoadingState {
             isLoading = true
         }
@@ -598,62 +556,52 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
             // Get or cache user ID
             if cachedUserId == nil {
                 guard let userId = try await getCurrentUserId() else {
-                    throw DashboardError.notAuthenticated
+                    throw ShiftsError.notAuthenticated
                 }
                 cachedUserId = userId
             }
 
             guard let userId = cachedUserId else {
-                throw DashboardError.notAuthenticated
+                throw ShiftsError.notAuthenticated
             }
 
             // Load settings and snapshots from local if not cached
             if settings == nil {
                 settings = settingsRepository.getSettings(for: userId)
-                updateUserAvatarFromSettings()
+                if let userSettings = settings {
+                    currency = userSettings.currency ?? "kr"
+                }
             }
 
             if snapshots.isEmpty {
                 snapshots = snapshotsRepository.getSnapshots(for: userId)
             }
 
-            // Load recurring shifts if not cached
             if recurringShifts.isEmpty {
                 recurringShifts = recurringShiftsRepository.getRecurringShifts(for: userId)
             }
 
-            // Calculate date ranges for displayed month
+            // Calculate date range for displayed month
             let displayYM = (year: displayYear, month: displayMonth)
-            let previousYM = Date.previousYearMonth(from: displayYM)
-
             let displayStartDate = Date.firstDayOfMonthDate(year: displayYM.year, month: displayYM.month)
             let displayEndDate = Date.lastDayOfMonthDate(year: displayYM.year, month: displayYM.month)
-            let previousStartDate = Date.firstDayOfMonthDate(year: previousYM.year, month: previousYM.month)
-            let previousEndDate = Date.lastDayOfMonthDate(year: previousYM.year, month: previousYM.month)
 
-            // Load shifts from local repositories
+            // Load shifts from local repository
             let displayShifts = shiftsRepository.getShifts(
                 for: userId,
                 startDate: displayStartDate,
                 endDate: displayEndDate
             )
 
-            let fetchedPreviousShifts = shiftsRepository.getShifts(
-                for: userId,
-                startDate: previousStartDate,
-                endDate: previousEndDate
-            )
-
-            // Ensure settings are available before computing payroll
+            // Ensure settings are available
             guard let currentSettings = self.settings else {
-                // No settings yet - sync may not have completed
                 logger.info("📭 No local settings yet - waiting for sync")
                 self.isLoading = false
                 return
             }
 
-            // Compute displayed month shifts with payroll using PayrollEngine
-            self.displayedMonthShifts = PayrollEngine.computeShiftsForMonth(
+            // Compute shifts with payroll
+            let computedShifts = PayrollEngine.computeShiftsForMonth(
                 year: displayYM.year,
                 month: displayYM.month,
                 shifts: displayShifts,
@@ -662,52 +610,146 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
                 settings: currentSettings
             )
 
-            // Compute previous month shifts with payroll using PayrollEngine
-            self.previousMonthShifts = PayrollEngine.computeShiftsForMonth(
-                year: previousYM.year,
-                month: previousYM.month,
-                shifts: fetchedPreviousShifts,
-                recurring: recurringShifts,
-                snapshots: snapshots,
-                settings: currentSettings
-            )
-
             // Cache the computed results
             let displayKey = "\(displayYM.year)-\(displayYM.month)"
-            let previousKey = "\(previousYM.year)-\(previousYM.month)"
             monthCache[displayKey] = MonthCacheEntry(
                 year: displayYM.year,
                 month: displayYM.month,
-                shifts: displayedMonthShifts,
-                timestamp: Date()
-            )
-            monthCache[previousKey] = MonthCacheEntry(
-                year: previousYM.year,
-                month: previousYM.month,
-                shifts: previousMonthShifts,
+                shifts: computedShifts,
                 timestamp: Date()
             )
 
             // Evict old cache entries if over limit
             evictCacheIfNeeded()
 
-            // Build dashboard data and clear loading state
-            self.dashboardData = buildDashboardData()
+            // Update published state
+            self.shifts = computedShifts
+            self.weekGroups = groupShiftsByWeek(computedShifts)
+
+            // Calculate conflict detection
+            updateConflictDetection(for: computedShifts)
+
+            // Find next upcoming shift (only on current month)
+            if isCurrentMonth {
+                updateNextUpcomingShift(for: computedShifts)
+            }
+
             self.isLoading = false
 
         } catch is CancellationError {
-            // Task was cancelled due to rapid navigation - this is expected, not an error
-            // Don't reset isLoading here - the new navigation task will handle its own state
             logger.info("⏭️ Load cancelled (user navigated away)")
         } catch {
-            logger.error("❌ Dashboard load failed: \(error.localizedDescription)")
-            self.error = DashboardError.dataLoadFailed(underlying: error)
+            logger.error("❌ Shifts load failed: \(error.localizedDescription)")
+            self.error = ShiftsError.dataLoadFailed(underlying: error)
             self.isLoading = false
         }
     }
 
+    // MARK: - Next Upcoming Shift
+
+    /// Find and update the next upcoming shift from the current shifts
+    private func updateNextUpcomingShift(for shifts: [ShiftWithComputations]) {
+        let now = Date()
+        let calendar = Calendar.current
+
+        // Filter to shifts that haven't ended yet
+        let upcomingShifts = shifts.filter { shift in
+            guard let shiftDate = Date.fromISODateString(shift.shiftDate),
+                  let endTime = parseTime(shift.endTime) else {
+                return false
+            }
+
+            // Combine date and time
+            var shiftEndComponents = calendar.dateComponents([.year, .month, .day], from: shiftDate)
+            shiftEndComponents.hour = calendar.component(.hour, from: endTime)
+            shiftEndComponents.minute = calendar.component(.minute, from: endTime)
+
+            // Handle cross-midnight shifts
+            if shift.endTime <= shift.startTime {
+                shiftEndComponents.day = (shiftEndComponents.day ?? 0) + 1
+            }
+
+            guard let shiftEnd = calendar.date(from: shiftEndComponents) else { return false }
+            return shiftEnd > now
+        }
+
+        // Sort by start datetime and take the first one
+        let sorted = upcomingShifts.sorted { a, b in
+            guard let dateA = Date.fromISODateString(a.shiftDate),
+                  let dateB = Date.fromISODateString(b.shiftDate),
+                  let timeA = parseTime(a.startTime),
+                  let timeB = parseTime(b.startTime) else {
+                return false
+            }
+
+            var componentsA = calendar.dateComponents([.year, .month, .day], from: dateA)
+            componentsA.hour = calendar.component(.hour, from: timeA)
+            componentsA.minute = calendar.component(.minute, from: timeA)
+
+            var componentsB = calendar.dateComponents([.year, .month, .day], from: dateB)
+            componentsB.hour = calendar.component(.hour, from: timeB)
+            componentsB.minute = calendar.component(.minute, from: timeB)
+
+            guard let startA = calendar.date(from: componentsA),
+                  let startB = calendar.date(from: componentsB) else {
+                return false
+            }
+
+            return startA < startB
+        }
+
+        self.nextUpcomingShift = sorted.first
+    }
+
+    private func parseTime(_ time: String) -> Date? {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm"
+        return formatter.date(from: String(time.prefix(5)))
+    }
+
+    // MARK: - Conflict Detection
+
+    /// Update conflict detection for the given shifts
+    /// Sets conflictingShiftIds and excludedFromTotalIds
+    private func updateConflictDetection(for shifts: [ShiftWithComputations]) {
+        // Find all overlapping shifts
+        var conflicting = Set<String>()
+
+        // Group shifts by date
+        var shiftsByDate: [String: [ShiftWithComputations]] = [:]
+        for shift in shifts {
+            shiftsByDate[shift.shiftDate, default: []].append(shift)
+        }
+
+        // Check each date for overlapping shifts
+        for (_, shiftsOnDate) in shiftsByDate {
+            guard shiftsOnDate.count >= 2 else { continue }
+
+            // Check all pairs for overlap
+            for i in 0..<shiftsOnDate.count {
+                for j in (i + 1)..<shiftsOnDate.count {
+                    if ConflictExclusion.shiftsOverlap(shiftsOnDate[i], shiftsOnDate[j]) {
+                        conflicting.insert(shiftsOnDate[i].id)
+                        conflicting.insert(shiftsOnDate[j].id)
+                    }
+                }
+            }
+        }
+
+        // Build excluded set (using existing ConflictExclusion logic)
+        let excluded = ConflictExclusion.buildExcludedShiftIds(shifts: shifts)
+
+        self.conflictingShiftIds = conflicting
+        self.excludedFromTotalIds = excluded
+
+        if !conflicting.isEmpty {
+            logger.info("⚠️ Found \(conflicting.count) conflicting shifts, \(excluded.count) excluded from totals")
+        }
+    }
+
+    // MARK: - Prefetching
+
     /// Prefetch neighboring months in the background
-    /// This enables instant navigation when the user swipes
     private func prefetchNeighboringMonths() {
         let displayYM = (year: displayYear, month: displayMonth)
 
@@ -715,18 +757,12 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
         let previousYM = Date.previousYearMonth(from: displayYM)
         let nextYM = nextYearMonth(from: displayYM)
 
-        // Also get the months needed for the payroll card of each neighbor
-        let prevPrevYM = Date.previousYearMonth(from: previousYM)
-        let nextPrevYM = Date.previousYearMonth(from: nextYM)
-
-        // Prefetch all needed months
+        // Prefetch both neighbors
         prefetchMonthInBackground(year: previousYM.year, month: previousYM.month)
         prefetchMonthInBackground(year: nextYM.year, month: nextYM.month)
-        prefetchMonthInBackground(year: prevPrevYM.year, month: prevPrevYM.month)
-        prefetchMonthInBackground(year: nextPrevYM.year, month: nextPrevYM.month)
     }
 
-    /// Prefetch a single month's data in the background from local repository
+    /// Prefetch a single month's data in the background
     private func prefetchMonthInBackground(year: Int, month: Int) {
         let key = "\(year)-\(month)"
 
@@ -742,7 +778,6 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
 
         prefetchTasks.insert(key)
 
-        // Local reads are fast, but we run in a Task to not block UI
         Task {
             guard let userId = cachedUserId else {
                 prefetchTasks.remove(key)
@@ -799,180 +834,64 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
         return (year: current.year, month: current.month + 1)
     }
 
-    // MARK: - Private Methods
+    // MARK: - Week Grouping
 
-    /// Get current authenticated user ID and update user profile data
-    private func getCurrentUserId() async throws -> String? {
-        let session = try await supabase.auth.session
-        let user = session.user
+    /// Group shifts by ISO week
+    /// - Parameter shifts: Shifts to group
+    /// - Returns: Array of WeekGroup, sorted by week (oldest first, ascending)
+    private func groupShiftsByWeek(_ shifts: [ShiftWithComputations]) -> [WeekGroup] {
+        guard !shifts.isEmpty else { return [] }
 
-        // Extract display name from user metadata or fall back to email
-        let displayName: String
-        if let fullName = user.userMetadata["full_name"]?.value as? String, !fullName.isEmpty {
-            displayName = fullName
-        } else if let name = user.userMetadata["name"]?.value as? String, !name.isEmpty {
-            displayName = name
-        } else if let email = user.email {
-            // Use the part before @ for email
-            displayName = email.components(separatedBy: "@").first ?? email
-        } else if let phone = user.phone {
-            displayName = phone
-        } else {
-            displayName = "User"
+        // Group shifts by ISO week key
+        var weekMap: [String: (weekNumber: Int, year: Int, shifts: [ShiftWithComputations])] = [:]
+
+        for shift in shifts {
+            guard let date = Date.fromISODateString(shift.shiftDate) else { continue }
+
+            let (weekNumber, weekYear) = getIsoWeek(from: date)
+            let key = "\(weekYear)-W\(String(format: "%02d", weekNumber))"
+
+            if var existing = weekMap[key] {
+                existing.shifts.append(shift)
+                weekMap[key] = existing
+            } else {
+                weekMap[key] = (weekNumber: weekNumber, year: weekYear, shifts: [shift])
+            }
         }
 
-        // Update published properties
-        self.userDisplayName = displayName
-
-        return user.id.uuidString.lowercased()
-    }
-
-    /// Update user avatar URL from settings (called after settings are loaded)
-    private func updateUserAvatarFromSettings() {
-        self.userAvatarUrl = settings?.profile_picture_url
-    }
-
-    /// Build the final dashboard data from computed shifts
-    /// Uses PayrollEngine.summarizeShiftTotals for correct half-tax and conflict exclusion
-    private func buildDashboardData() -> DashboardData {
-        let today = todayISO()
-        let now = Date()
-        let payrollDay = settings?.effectivePayrollDay ?? 1
-        let halfTaxMonth = settings?.half_tax_month
-        let displayYM = (year: displayYear, month: displayMonth)
-        let previousYM = Date.previousYearMonth(from: displayYM)
-
-        // Calculate payroll date for displayed month
-        let payrollDate = calculatePayrollDate(year: displayYM.year, month: displayYM.month, day: payrollDay)
-        let payrollHasPassed = now > payrollDate
-
-        // Previous month totals using PayrollEngine (for payroll card)
-        // This correctly applies half-tax and conflict exclusion
-        let prevTotals = PayrollEngine.summarizeShiftTotals(
-            shifts: previousMonthShifts,
-            halfTaxMonth: halfTaxMonth,
-            earningsMonth: previousYM.month,
-            now: now
-        )
-        let prevTaxEnabled = previousMonthShifts.first?.taxEnabled ?? false
-        let prevTax: Double? = prevTaxEnabled ? prevTotals.gross - prevTotals.net : nil
-
-        // Displayed month totals using PayrollEngine
-        // This correctly applies half-tax and conflict exclusion
-        let displayTotals = PayrollEngine.summarizeShiftTotals(
-            shifts: displayedMonthShifts,
-            halfTaxMonth: halfTaxMonth,
-            earningsMonth: displayYM.month,
-            now: now
-        )
-        let displayTaxEnabled = displayedMonthShifts.first?.taxEnabled ?? false
-
-        // Count completed and planned shifts
-        let completedShifts = displayedMonthShifts.filter { shift in
-            Date.hasShiftEnded(
-                shiftDate: shift.shiftDate,
-                startTime: shift.startTime,
-                endTime: shift.endTime,
-                referenceDate: now
+        // Convert to WeekGroup array
+        let groups = weekMap.map { key, value in
+            WeekGroup(
+                id: key,
+                weekNumber: value.weekNumber,
+                year: value.year,
+                totalGross: value.shifts.reduce(0) { $0 + $1.grossPay },
+                shifts: value.shifts.sorted { $0.shiftDate < $1.shiftDate }
             )
         }
-        let plannedShifts = displayedMonthShifts.filter { $0.shiftDate > today }
 
-        // Percentage change vs previous month (comparing projected totals)
-        let percentChange: Double? = prevTotals.gross > 0
-            ? ((displayTotals.gross - prevTotals.gross) / prevTotals.gross) * 100
-            : nil
-
-        // Featured shift logic:
-        // - Current month: show next upcoming shift
-        // - Other months: show best shift (highest earnings)
-        let current = Date.currentYearMonth()
-        let isViewingCurrentMonth = displayYM.year == current.year && displayYM.month == current.month
-
-        let featuredShift: ShiftWithComputations?
-        let isFeaturedShiftToday: Bool
-        let featuredShiftIsBestShift: Bool
-
-        if isViewingCurrentMonth {
-            // Current month: show next upcoming shift
-            featuredShift = displayedMonthShifts.first { $0.shiftDate >= today }
-            isFeaturedShiftToday = featuredShift?.shiftDate == today
-            featuredShiftIsBestShift = false
-        } else {
-            // Non-current month: show best shift (highest earnings)
-            featuredShift = findBestShift(in: displayedMonthShifts)
-            isFeaturedShiftToday = false
-            featuredShiftIsBestShift = true
-        }
-
-        // Month names for display
-        let displayMonthName = monthName(year: displayYM.year, month: displayYM.month)
-        let previousMonthName = monthName(year: previousYM.year, month: previousYM.month)
-
-        return DashboardData(
-            payrollDate: payrollDate,
-            payrollHasPassed: payrollHasPassed,
-            previousMonthGross: prevTotals.gross,
-            previousMonthNet: prevTaxEnabled ? prevTotals.net : nil,
-            previousMonthTax: prevTax,
-            previousMonthTaxEnabled: prevTaxEnabled,
-            currentMonthGross: displayTotals.gross,
-            currentMonthNet: displayTaxEnabled ? displayTotals.net : nil,
-            currentMonthCompletedGross: displayTotals.completedGross,
-            currentMonthCompletedNet: displayTaxEnabled ? displayTotals.completedNet : nil,
-            currentMonthShiftCount: displayedMonthShifts.count,
-            currentMonthCompletedCount: completedShifts.count,
-            currentMonthPlannedCount: plannedShifts.count,
-            percentageChangeVsPrevious: percentChange,
-            currentMonthTaxEnabled: displayTaxEnabled,
-            featuredShift: featuredShift,
-            isFeaturedShiftToday: isFeaturedShiftToday,
-            featuredShiftIsBestShift: featuredShiftIsBestShift,
-            currentMonthName: displayMonthName,
-            previousMonthName: previousMonthName,
-            currency: settings?.currency ?? "kr"
-        )
+        // Sort by week (oldest first, ascending)
+        return groups.sorted { $0.id < $1.id }
     }
 
-    // MARK: - Helper Methods
+    /// Get ISO week number and year for a date
+    /// Uses ISO 8601 week numbering (Monday is first day, week 1 has at least 4 days in year)
+    private func getIsoWeek(from date: Date) -> (weekNumber: Int, year: Int) {
+        var calendar = Calendar(identifier: .iso8601)
+        calendar.firstWeekday = 2  // Monday
+        calendar.minimumDaysInFirstWeek = 4
 
-    private func calculatePayrollDate(year: Int, month: Int, day: Int) -> Date {
-        var components = DateComponents()
-        components.year = year
-        components.month = month
-        components.day = day
-        components.timeZone = Date.localTimeZone
-        return Calendar(identifier: .gregorian).date(from: components) ?? Date()
+        let weekOfYear = calendar.component(.weekOfYear, from: date)
+        let yearForWeekOfYear = calendar.component(.yearForWeekOfYear, from: date)
+
+        return (weekOfYear, yearForWeekOfYear)
     }
 
-    private func monthName(year: Int, month: Int) -> String {
-        var components = DateComponents()
-        components.year = year
-        components.month = month
-        components.day = 1
-        let calendar = Calendar(identifier: .gregorian)
-        guard let date = calendar.date(from: components) else { return "" }
+    // MARK: - Private Helpers
 
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MMMM"
-        formatter.locale = Locale(identifier: LocalizationManager.shared.currentLocale.localeIdentifier)
-        return formatter.string(from: date)
-    }
-
-    /// Find the best (highest earnings) shift in a collection
-    /// Returns the first shift chronologically if multiple have the same max earnings
-    private func findBestShift(in shifts: [ShiftWithComputations]) -> ShiftWithComputations? {
-        guard !shifts.isEmpty else { return nil }
-
-        // Find max gross earnings
-        let maxGross = shifts.map { $0.grossPay }.max() ?? 0
-        guard maxGross > 0 else { return shifts.first }
-
-        // Get all shifts with max earnings, sorted chronologically
-        let bestShifts = shifts
-            .filter { $0.grossPay == maxGross }
-            .sorted { $0.shiftDate < $1.shiftDate }
-
-        return bestShifts.first
+    /// Get current authenticated user ID
+    private func getCurrentUserId() async throws -> String? {
+        let session = try await supabase.auth.session
+        return session.user.id.uuidString.lowercased()
     }
 }

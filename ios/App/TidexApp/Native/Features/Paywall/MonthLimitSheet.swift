@@ -20,7 +20,11 @@ struct MonthLimitSheet: View {
     /// Callback when deletion completes successfully and user wants to proceed
     let onDeleteComplete: () -> Void
 
+    /// Callback when user upgrades successfully - auto-retry the action
+    let onUpgradeComplete: () -> Void
+
     @State private var showPaywall = false
+    @State private var tierBeforePaywall: SubscriptionTier = .free
     @State private var showDeleteSection = false
     @State private var showConfirmDelete = false
     @State private var isDeleting = false
@@ -52,7 +56,7 @@ struct MonthLimitSheet: View {
             .padding(.top, 16)
             .padding(.trailing, 20)
         }
-        .sheet(isPresented: $showPaywall) {
+        .sheet(isPresented: $showPaywall, onDismiss: handlePaywallDismiss) {
             PaywallView(contextType: .monthLimit)
         }
     }
@@ -142,7 +146,11 @@ struct MonthLimitSheet: View {
                 .padding(.top, 8)
 
             // Primary CTA - View Plans
-            Button(action: { showPaywall = true }) {
+            Button(action: {
+                // Capture current tier before showing paywall
+                tierBeforePaywall = EntitlementService.shared.effectiveTier
+                showPaywall = true
+            }) {
                 HStack(spacing: 8) {
                     Text(AuthStrings.string("monthLimit.viewPlansButton", locale: localization.currentLocale))
                         .font(.system(size: 17, weight: .semibold))
@@ -482,6 +490,18 @@ struct MonthLimitSheet: View {
 
     // MARK: - Actions
 
+    /// Called when paywall sheet dismisses - check if user upgraded
+    private func handlePaywallDismiss() {
+        let currentTier = EntitlementService.shared.effectiveTier
+
+        // If tier changed from free to paid, user successfully upgraded
+        if tierBeforePaywall == .free && currentTier != .free {
+            // Dismiss this sheet and trigger the retry
+            dismiss()
+            onUpgradeComplete()
+        }
+    }
+
     private func handleDeleteConfirm() {
         isDeleting = true
         error = nil
@@ -514,6 +534,7 @@ struct MonthLimitSheet: View {
         ],
         targetMonth: DateComponents(year: 2025, month: 3),
         onDeleteShifts: { true },
-        onDeleteComplete: {}
+        onDeleteComplete: {},
+        onUpgradeComplete: {}
     )
 }

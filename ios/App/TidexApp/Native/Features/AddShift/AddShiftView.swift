@@ -51,6 +51,9 @@ struct AddShiftView: View {
                 },
                 onDeleteComplete: {
                     viewModel.onDeleteComplete()
+                },
+                onUpgradeComplete: {
+                    viewModel.onUpgradeComplete()
                 }
             )
         }

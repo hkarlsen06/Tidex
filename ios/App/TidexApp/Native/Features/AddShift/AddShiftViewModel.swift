@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import Combine
 import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "AddShiftViewModel")
@@ -16,6 +17,7 @@ final class AddShiftViewModel: ObservableObject {
     private let settingsRepository: SettingsRepository
     private let snapshotsRepository: SnapshotsRepository
     private let syncCoordinator: SyncCoordinator
+    private let monthContext: SharedMonthContext
 
     // MARK: - Mode State
 
@@ -25,9 +27,42 @@ final class AddShiftViewModel: ObservableObject {
 
     @Published var startTime: Date? = nil
     @Published var endTime: Date? = nil
-    @Published var displayMonth: Date = Date()
     @Published var isLoading = false
     @Published var error: String?
+
+    /// Display month as Date - computed from SharedMonthContext
+    /// Setter updates the SharedMonthContext to sync with other tabs
+    var displayMonth: Date {
+        get {
+            var components = DateComponents()
+            components.year = monthContext.displayYear
+            components.month = monthContext.displayMonth
+            components.day = 1
+            return Calendar.current.date(from: components) ?? Date()
+        }
+        set {
+            let calendar = Calendar.current
+            let components = calendar.dateComponents([.year, .month], from: newValue)
+            if let year = components.year, let month = components.month {
+                // Update tracking immediately to prevent the subscription from double-triggering
+                lastObservedYear = year
+                lastObservedMonth = month
+
+                // Update shared context (this will trigger other tabs)
+                monthContext.navigateTo(year: year, month: month)
+
+                // Notify SwiftUI that the view should update
+                objectWillChange.send()
+            }
+        }
+    }
+
+    /// Subscription to SharedMonthContext changes
+    private var monthContextCancellable: AnyCancellable?
+
+    /// Track the last observed month to detect changes
+    private var lastObservedYear: Int = 0
+    private var lastObservedMonth: Int = 0
 
     // MARK: - Single Mode State
 
@@ -81,13 +116,46 @@ final class AddShiftViewModel: ObservableObject {
         recurringRepository: RecurringShiftsRepository? = nil,
         settingsRepository: SettingsRepository? = nil,
         snapshotsRepository: SnapshotsRepository? = nil,
-        syncCoordinator: SyncCoordinator? = nil
+        syncCoordinator: SyncCoordinator? = nil,
+        monthContext: SharedMonthContext? = nil
     ) {
         self.shiftsRepository = shiftsRepository ?? ShiftsRepository.shared
         self.recurringRepository = recurringRepository ?? RecurringShiftsRepository.shared
         self.settingsRepository = settingsRepository ?? SettingsRepository.shared
         self.snapshotsRepository = snapshotsRepository ?? SnapshotsRepository.shared
         self.syncCoordinator = syncCoordinator ?? SyncCoordinator.shared
+        self.monthContext = monthContext ?? SharedMonthContext.shared
+
+        // Initialize tracking to current month context values
+        self.lastObservedYear = self.monthContext.displayYear
+        self.lastObservedMonth = self.monthContext.displayMonth
+
+        // Subscribe to month context changes
+        setupMonthContextSubscription()
+    }
+
+    /// Subscribe to SharedMonthContext changes to reload data when month changes
+    private func setupMonthContextSubscription() {
+        monthContextCancellable = monthContext.monthChanged
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] newMonth in
+                guard let self = self else { return }
+
+                // Only reload if month actually changed
+                guard newMonth.year != self.lastObservedYear || newMonth.month != self.lastObservedMonth else {
+                    return
+                }
+
+                // Update tracking
+                self.lastObservedYear = newMonth.year
+                self.lastObservedMonth = newMonth.month
+
+                // Trigger objectWillChange to refresh calendar views
+                self.objectWillChange.send()
+
+                // Reload shifts for conflict detection in the new month
+                self.reloadShiftsForDisplayedMonth()
+            }
     }
 
     // MARK: - Computed Properties
@@ -471,6 +539,14 @@ final class AddShiftViewModel: ObservableObject {
         }
     }
 
+    /// Called when user upgrades successfully - auto-retry shift creation
+    func onUpgradeComplete() {
+        // Re-attempt shift creation now that user has paid tier
+        Task {
+            await submitSingleShifts()
+        }
+    }
+
     // MARK: - Private Helpers
 
     /// Format Date to HH:mm string
@@ -556,8 +632,9 @@ final class AddShiftViewModel: ObservableObject {
         repeatInterval = 0
         endCondition = .months(value: 6)
 
-        // Reset display month to current
-        displayMonth = Date()
+        // NOTE: Do NOT reset the month context here!
+        // The user should stay on the month where they just added shifts
+        // so that when they're navigated to the Shifts tab, they see their new shifts.
 
         // Clear error state
         error = nil
