@@ -173,16 +173,26 @@ struct SharingView: View {
     @ViewBuilder
     private var sharedShiftsView: some View {
         if let sharer = viewModel.selectedSharer {
-            SharedShiftsListView(
-                sharer: sharer,
-                shifts: viewModel.sharedShifts,
-                totalHours: viewModel.totalHours,
-                shiftCount: viewModel.shiftCount,
-                year: viewModel.displayYear,
-                month: viewModel.displayMonth,
-                isLoading: viewModel.isLoadingShifts,
-                lastCacheTime: viewModel.lastCacheTime
-            )
+            // MonthSwipeContainer handles horizontal swipes for month navigation
+            MonthSwipeContainer(
+                onSwipeLeft: {
+                    viewModel.goToNextMonth()
+                },
+                onSwipeRight: {
+                    viewModel.goToPreviousMonth()
+                }
+            ) {
+                SharedShiftsListView(
+                    sharer: sharer,
+                    shifts: viewModel.sharedShifts,
+                    totalHours: viewModel.totalHours,
+                    shiftCount: viewModel.shiftCount,
+                    year: viewModel.displayYear,
+                    month: viewModel.displayMonth,
+                    isLoading: viewModel.isLoadingShifts,
+                    lastCacheTime: viewModel.lastCacheTime
+                )
+            }
         }
     }
 
