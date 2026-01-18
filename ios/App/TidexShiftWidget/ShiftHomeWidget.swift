@@ -865,7 +865,6 @@ struct ShiftHomeWidget: Widget {
 // MARK: - Preview
 
 #if DEBUG
-@available(iOS 17.0, *)
 #Preview(as: .systemSmall) {
     ShiftHomeWidget()
 } timeline: {

@@ -91,9 +91,18 @@ struct ShiftsView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(Color.tidexBackground, for: .navigationBar)
             .toolbar {
+                // View mode toggle (calendar/list)
                 ToolbarItem(placement: .topBarLeading) {
                     viewModeToggleButton
                 }
+                // Selection mode toggle (only in calendar view) - spacer separates it
+                if !showListView {
+                    ToolbarSpacer(.fixed, placement: .topBarLeading)
+                    ToolbarItem(placement: .topBarLeading) {
+                        selectionModeToggleButton
+                    }
+                }
+                // User menu on trailing side
                 ToolbarItem(placement: .topBarTrailing) {
                     UserMenuButton(
                         displayName: coordinator.userDisplayName,
@@ -238,11 +247,32 @@ struct ShiftsView: View {
             selectionHaptic.selectionChanged()
             withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
                 showListView.toggle()
+                // Exit selection mode when switching to list view
+                if showListView {
+                    viewModel.isSelectionModeEnabled = false
+                }
             }
         } label: {
             Image(systemName: showListView ? "calendar" : "list.bullet")
                 .font(.system(size: 18, weight: .medium))
                 .foregroundColor(.tidexTextPrimary)
+        }
+        .buttonStyle(.plain)
+        .contentTransition(.symbolEffect(.replace))
+    }
+
+    /// Toggle button for selection mode (calendar view only)
+    @ViewBuilder
+    private var selectionModeToggleButton: some View {
+        Button {
+            selectionHaptic.selectionChanged()
+            withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
+                viewModel.isSelectionModeEnabled.toggle()
+            }
+        } label: {
+            Image(systemName: viewModel.isSelectionModeEnabled ? "checkmark.circle.fill" : "checkmark.circle")
+                .font(.system(size: 18, weight: .medium))
+                .foregroundColor(viewModel.isSelectionModeEnabled ? .tidexBrandPrimary : .tidexTextPrimary)
         }
         .buttonStyle(.plain)
         .contentTransition(.symbolEffect(.replace))
@@ -278,6 +308,8 @@ struct ShiftsView: View {
 
     @ViewBuilder
     private var calendarViewContent: some View {
+        // MonthSwipeContainer handles horizontal swipes for month navigation
+        // Swipes are DISABLED when selection mode is enabled (drag-to-select takes priority)
         MonthSwipeContainer(
             onSwipeLeft: {
                 AppearanceTracker.shared.reset()
@@ -287,7 +319,7 @@ struct ShiftsView: View {
                 AppearanceTracker.shared.reset()
                 viewModel.goToPreviousMonth()
             },
-            isEnabled: true
+            isEnabled: !viewModel.isSelectionModeEnabled
         ) {
             GeometryReader { geometry in
                 // Calendar only - no list below. Tapping days opens day sheet.
@@ -302,19 +334,57 @@ struct ShiftsView: View {
                             currency: viewModel.currency,
                             showEarnings: true,
                             onDayTapped: { dateISO, shiftsOnDay in
-                                handleDayTapped(dateISO: dateISO, shifts: shiftsOnDay)
-                            }
+                                viewModel.handleDayTapped(dateISO: dateISO, shiftsOnDay: shiftsOnDay)
+                            },
+                            selectedDates: $viewModel.selectedDates,
+                            confirmingDelete: viewModel.confirmingDelete,
+                            isDeleting: viewModel.isDeleting,
+                            selectedEarnings: viewModel.selectedEarnings,
+                            selectedHasTaxEnabled: viewModel.selectedHasTaxEnabled,
+                            onDelete: {
+                                viewModel.confirmingDelete = true
+                            },
+                            onConfirmDelete: {
+                                Task {
+                                    await viewModel.deleteSelectedShifts()
+                                }
+                            },
+                            onCancelDelete: {
+                                viewModel.confirmingDelete = false
+                            },
+                            onCopy: {
+                                // No-op for now - to be implemented later
+                            },
+                            onDetails: {
+                                // Show DayShiftsSheet for multiple shifts, or direct details for single
+                                let shiftsOnDate = viewModel.selectedDateShifts
+                                if shiftsOnDate.count == 1, let shift = shiftsOnDate.first {
+                                    selectedShift = shift
+                                } else if let dateISO = viewModel.selectedDates.first {
+                                    selectedDayForSheet = DayShiftSelection(dateISO: dateISO, shifts: shiftsOnDate)
+                                }
+                            },
+                            onMove: {
+                                // No-op for now - to be implemented later
+                            },
+                            onClearSelection: {
+                                viewModel.clearSelection()
+                            },
+                            onSelectDateRange: { dates in
+                                viewModel.handleDateRangeSelected(dates)
+                            },
+                            onEmptyDayTapped: {
+                                // Tapping empty day clears selection
+                                viewModel.clearSelection()
+                            },
+                            isSelectionModeEnabled: $viewModel.isSelectionModeEnabled
                         )
                         .padding(.horizontal, 16)
                     }
                     Spacer()
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                // Make entire VStack hit-testable for gesture propagation
-                .contentShape(Rectangle())
             }
-            // Make GeometryReader hit-testable
-            .contentShape(Rectangle())
         }
     }
 

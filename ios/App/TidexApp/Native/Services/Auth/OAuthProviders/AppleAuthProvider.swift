@@ -104,7 +104,24 @@ extension AppleAuthProvider: ASAuthorizationControllerPresentationContextProvidi
     nonisolated func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
         // Access MainActor-isolated property safely
         return MainActor.assumeIsolated {
-            presentationAnchor ?? UIWindow()
+            if let anchor = presentationAnchor {
+                return anchor
+            }
+            // Fallback: get key window from connected scenes
+            let keyWindow = UIApplication.shared.connectedScenes
+                .compactMap { $0 as? UIWindowScene }
+                .flatMap { $0.windows }
+                .first { $0.isKeyWindow }
+            if let keyWindow {
+                return keyWindow
+            }
+            // Create window from first available scene (iOS 26+ requirement)
+            guard let windowScene = UIApplication.shared.connectedScenes
+                .compactMap({ $0 as? UIWindowScene })
+                .first else {
+                fatalError("No window scene available for Apple Sign-In presentation")
+            }
+            return UIWindow(windowScene: windowScene)
         }
     }
 }

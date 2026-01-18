@@ -86,11 +86,27 @@ extension View {
 
 // MARK: - Horizontal Size Class Helper
 
+/// View modifier that provides size class information
+struct SizeClassReader: ViewModifier {
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    let action: (Bool) -> Void
+
+    func body(content: Content) -> some View {
+        content
+            .onAppear {
+                action(horizontalSizeClass == .regular)
+            }
+            .onChange(of: horizontalSizeClass) { _, newValue in
+                action(newValue == .regular)
+            }
+    }
+}
+
 extension View {
-    /// Returns true if currently in regular width (iPad landscape, etc.)
-    @MainActor
-    var isRegularWidth: Bool {
-        UIScreen.main.bounds.width > 600
+    /// Executes a closure with the current regular width state
+    /// Use this instead of the deprecated UIScreen.main approach
+    func onSizeClass(_ action: @escaping (Bool) -> Void) -> some View {
+        modifier(SizeClassReader(action: action))
     }
 }
 

@@ -113,6 +113,7 @@
 		11A197012F1B14FA0030E524 /* NextShiftCountdownCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A196FC2F1B14FA0030E524 /* NextShiftCountdownCard.swift */; };
 		11A197022F1B14FA0030E524 /* ShiftDetailsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A196FD2F1B14FA0030E524 /* ShiftDetailsSheet.swift */; };
 		11A197042F1B15080030E524 /* ScrollAppearModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A197032F1B15080030E524 /* ScrollAppearModifier.swift */; };
+		11A197062F1D52EF0030E524 /* CalendarGestureCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A197052F1D52EF0030E524 /* CalendarGestureCoordinator.swift */; };
 		11A5CD262F101201002BAC91 /* StoredShift.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A5CD252F101201002BAC91 /* StoredShift.swift */; };
 		11A5CD302F101283002BAC91 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 11A5CD2F2F101283002BAC91 /* WidgetKit.framework */; };
 		11A5CD322F101283002BAC91 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 11A5CD312F101283002BAC91 /* SwiftUI.framework */; };
@@ -306,6 +307,7 @@
 		11A196FD2F1B14FA0030E524 /* ShiftDetailsSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShiftDetailsSheet.swift; sourceTree = "<group>"; };
 		11A196FE2F1B14FA0030E524 /* SwipeableShiftCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwipeableShiftCard.swift; sourceTree = "<group>"; };
 		11A197032F1B15080030E524 /* ScrollAppearModifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScrollAppearModifier.swift; sourceTree = "<group>"; };
+		11A197052F1D52EF0030E524 /* CalendarGestureCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarGestureCoordinator.swift; sourceTree = "<group>"; };
 		11A5CD252F101201002BAC91 /* StoredShift.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoredShift.swift; sourceTree = "<group>"; };
 		11A5CD2E2F101283002BAC91 /* TidexShiftWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TidexShiftWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		11A5CD2F2F101283002BAC91 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
@@ -910,6 +912,7 @@
 		11AE8D1F2F17CB31005AB062 /* Gestures */ = {
 			isa = PBXGroup;
 			children = (
+				11A197052F1D52EF0030E524 /* CalendarGestureCoordinator.swift */,
 				11AE8D1E2F17CB31005AB062 /* MonthSwipeGesture.swift */,
 			);
 			path = Gestures;
@@ -1308,6 +1311,7 @@
 				11AE8CCA2F16F2BF005AB062 /* SignupViewModel.swift in Sources */,
 				11A1960E2F1AA3280030E524 /* AccordionSectionView.swift in Sources */,
 				11A1960F2F1AA3280030E524 /* SupplementRuleEditor.swift in Sources */,
+				11A197062F1D52EF0030E524 /* CalendarGestureCoordinator.swift in Sources */,
 				11AE8CCB2F16F2BF005AB062 /* TermsAgreementView.swift in Sources */,
 				11A196212F1AB6160030E524 /* Currency.swift in Sources */,
 				NETMON0012F2000000000001 /* NetworkMonitor.swift in Sources */,
@@ -1379,7 +1383,7 @@
 				INFOPLIST_FILE = TidexShiftWidget/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = TidexShiftWidget;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -1418,7 +1422,7 @@
 				INFOPLIST_FILE = TidexShiftWidget/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = TidexShiftWidget;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -1574,7 +1578,7 @@
 				INFOPLIST_FILE = TidexApp/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = no.tidex.app;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
-				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -1602,7 +1606,7 @@
 				INFOPLIST_FILE = TidexApp/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = no.tidex.app;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
-				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",

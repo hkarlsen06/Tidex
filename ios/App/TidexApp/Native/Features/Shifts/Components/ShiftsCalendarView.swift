@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 // MARK: - Calendar View Mode
 
@@ -34,10 +35,21 @@ struct HoursData: Equatable {
     let crossesMidnight: Bool
 }
 
+// MARK: - Gesture State Machine
+
+/// The current mode of the gesture state machine
+private enum GestureMode: Equatable {
+    /// No touch active
+    case idle
+    /// Long-press activated, actively selecting date range
+    case selecting
+}
+
 // MARK: - Shifts Calendar View
 
 /// Full-featured calendar for the Shifts tab
 /// Shows shift times or earnings per day, ISO week numbers, and monthly totals
+/// Supports multi-date selection via long-press + drag
 struct ShiftsCalendarView: View {
     let shifts: [ShiftWithComputations]
     let month: Date
@@ -45,14 +57,63 @@ struct ShiftsCalendarView: View {
     let monthNumber: Int  // 1-12
     let currency: String
     let showEarnings: Bool
+
+    // Day tap callback (single tap for selection toggle)
     var onDayTapped: ((String, [ShiftWithComputations]) -> Void)?
+
+    // Selection state bindings from ViewModel
+    @Binding var selectedDates: Set<String>
+
+    /// Whether delete confirmation is active
+    let confirmingDelete: Bool
+
+    /// Whether deletion is in progress
+    let isDeleting: Bool
+
+    /// Selected earnings from ViewModel (computed across all months)
+    let selectedEarnings: (net: Double, gross: Double)?
+
+    /// Whether any selected shift has tax enabled
+    let selectedHasTaxEnabled: Bool
+
+    // Action callbacks
+    var onDelete: (() -> Void)?
+    var onConfirmDelete: (() -> Void)?
+    var onCancelDelete: (() -> Void)?
+    var onCopy: (() -> Void)?
+    var onDetails: (() -> Void)?
+    var onMove: (() -> Void)?
+    var onClearSelection: (() -> Void)?
+
+    // Range selection callback (for long-press + drag)
+    var onSelectDateRange: (([String]) -> Void)?
+
+    // Empty day tap callback (for deselecting)
+    var onEmptyDayTapped: (() -> Void)?
+
+    // Selection mode toggle - when enabled, taps/long-press work; when disabled, swipes work
+    @Binding var isSelectionModeEnabled: Bool
 
     @Environment(\.localization) private var localization
     @State private var viewMode: CalendarViewMode = CalendarViewMode.load()
 
-    // Haptic feedback for interactions
-    private let selectionHaptic = UISelectionFeedbackGenerator()
+    // MARK: - Gesture State
+
+    /// Current gesture state
+    @State private var gestureMode: GestureMode = .idle
+
+    /// ISO date where long-press started (anchor for range)
+    @State private var anchorDateISO: String?
+
+    /// Current hover date during drag
+    @State private var hoverDateISO: String?
+
+    /// Preview dates during drag (before committing)
+    @State private var dragPreviewDates: Set<String> = []
+
+    // Haptic feedback for UI interactions (non-gesture haptics)
     private let toggleHaptic = UIImpactFeedbackGenerator(style: .light)
+    private let warningHaptic = UINotificationFeedbackGenerator()
 
     private let calendar = Calendar.current
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 4), count: 7)
@@ -143,52 +204,78 @@ struct ShiftsCalendarView: View {
             weekdayHeaderRow
                 .padding(.bottom, 8)
 
-            // Calendar grid
+            // Calendar grid with gesture handling
             calendarGrid
                 .padding(.bottom, 12)
 
-            // View mode toggle
-            viewModeToggle
+            // Action bar (view mode toggle or selection actions)
+            actionBar
         }
     }
 
     // MARK: - Header Row
 
+    @ViewBuilder
     private var headerRow: some View {
         HStack {
-            // Month name + Year (year in muted color)
+            // Month name + Year (or selection count)
             HStack(spacing: 6) {
                 Text(monthName)
                     .font(.system(size: 20, weight: .semibold))
                     .foregroundColor(.tidexTextPrimary)
 
-                Text(String(year))
-                    .font(.system(size: 20, weight: .medium))
-                    .foregroundColor(.tidexTextMuted)
+                // Show selection count or year
+                if selectedDates.count >= 2 {
+                    Text("(\(selectedDates.count))")
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundColor(.tidexTextMuted)
+                } else {
+                    Text(String(year))
+                        .font(.system(size: 20, weight: .medium))
+                        .foregroundColor(.tidexTextMuted)
+                }
             }
 
             Spacer()
 
-            // Monthly total (if showing earnings)
+            // Monthly total or selection total (if showing earnings)
             if showEarnings {
-                VStack(alignment: .trailing, spacing: 2) {
-                    // Primary: net (or gross if no tax)
-                    let displayAmount = hasTaxEnabled ? monthlyTotals.net : monthlyTotals.gross
-                    Text(monthlyTotals.gross == 0 ? "—" : formatCurrency(displayAmount))
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundColor(.tidexTextPrimary)
-
-                    // Secondary: gross (only if tax enabled)
-                    if hasTaxEnabled && monthlyTotals.gross > 0 {
-                        Text(formatCurrency(monthlyTotals.gross))
-                            .font(.system(size: 13))
-                            .foregroundColor(.tidexTextMuted)
-                    }
-                }
+                earningsDisplay
             }
         }
         .padding(.horizontal, 4)
         .padding(.bottom, 12)
+    }
+
+    /// Earnings display - shows monthly or selection totals
+    @ViewBuilder
+    private var earningsDisplay: some View {
+        // Use selection earnings if dates are selected, otherwise monthly
+        let displayTotals: (net: Double, gross: Double) = {
+            if selectedDates.isEmpty {
+                return monthlyTotals
+            } else if let selected = selectedEarnings {
+                return selected
+            } else {
+                return monthlyTotals
+            }
+        }()
+
+        // Use selectedHasTaxEnabled when dates are selected
+        let showTax = selectedDates.isEmpty ? hasTaxEnabled : selectedHasTaxEnabled
+        let displayAmount = showTax ? displayTotals.net : displayTotals.gross
+
+        VStack(alignment: .trailing, spacing: 2) {
+            Text(displayTotals.gross == 0 ? "—" : formatCurrency(displayAmount))
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundColor(.tidexTextPrimary)
+
+            if showTax && displayTotals.gross > 0 {
+                Text(formatCurrency(displayTotals.gross))
+                    .font(.system(size: 13))
+                    .foregroundColor(.tidexTextMuted)
+            }
+        }
     }
 
     // MARK: - Month Name
@@ -224,10 +311,14 @@ struct ShiftsCalendarView: View {
 
     // MARK: - Calendar Grid
 
+    @ViewBuilder
     private var calendarGrid: some View {
+        let days = daysInMonth()
+
         LazyVGrid(columns: columns, spacing: 4) {
-            ForEach(daysInMonth(), id: \.id) { dayInfo in
+            ForEach(days, id: \.id) { dayInfo in
                 let shiftsOnDay = dayInfo.dateISO.flatMap { shiftsByDate[$0] } ?? []
+                let isInDragPreview = dayInfo.dateISO.map { dragPreviewDates.contains($0) } ?? false
 
                 ShiftsCalendarDayCell(
                     dayInfo: dayInfo,
@@ -235,109 +326,426 @@ struct ShiftsCalendarView: View {
                     earnings: dayInfo.dateISO.flatMap { earningsByDate[$0] },
                     hours: dayInfo.dateISO.flatMap { hoursByDate[$0] },
                     isToday: dayInfo.dateISO == todayISO(),
-                    hasShifts: !shiftsOnDay.isEmpty
+                    hasShifts: !shiftsOnDay.isEmpty,
+                    isSelected: dayInfo.isSelected,
+                    isInDragPreview: isInDragPreview
                 )
-                .onTapGesture {
-                    guard let dateISO = dayInfo.dateISO,
-                          !dayInfo.isOutsideMonth,
-                          !shiftsOnDay.isEmpty,
-                          onDayTapped != nil else { return }
-
-                    selectionHaptic.selectionChanged()
-                    onDayTapped?(dateISO, shiftsOnDay)
-                }
             }
         }
-        .onAppear {
-            selectionHaptic.prepare()
+        .coordinateSpace(name: "calendar")
+        // Gesture handling depends on selection mode:
+        // - Normal mode: tap to select (swipes pass through to parent)
+        // - Selection mode: tap + drag for range selection
+        .overlay(
+            GeometryReader { geometry in
+                Color.clear
+                    .contentShape(Rectangle())
+                    // Normal mode: just tap gestures (swipes work)
+                    .calendarTapGesture(
+                        onTap: { location in
+                            handleTap(at: location, geometry: geometry, days: days)
+                        },
+                        isEnabled: !isSelectionModeEnabled
+                    )
+                    // Selection mode: tap + drag gestures
+                    .calendarSelectionGestures(
+                        actions: CalendarGestureActions(
+                            onTap: { location in
+                                handleTap(at: location, geometry: geometry, days: days)
+                            },
+                            onDragStart: { location in
+                                handleDragStart(at: location, geometry: geometry, days: days)
+                            },
+                            onDragChanged: { location in
+                                handleDragChanged(at: location, geometry: geometry, days: days)
+                            },
+                            onDragEnded: {
+                                handleDragEnded()
+                            }
+                        ),
+                        config: .default,
+                        isEnabled: isSelectionModeEnabled
+                    )
+            }
+        )
+    }
+
+    // MARK: - Gesture Handling
+
+    /// Handle tap gesture
+    private func handleTap(at location: CGPoint, geometry: GeometryProxy, days: [DayInfo]) {
+        guard let dayISO = findDayAt(location: location, geometry: geometry, days: days) else {
+            // Tapped outside valid days
+            onEmptyDayTapped?()
+            return
+        }
+
+        let shiftsOnDay = shiftsByDate[dayISO] ?? []
+
+        if shiftsOnDay.isEmpty {
+            // Tapped empty day
+            onEmptyDayTapped?()
+        } else {
+            // Tapped day with shifts
+            onDayTapped?(dayISO, shiftsOnDay)
         }
     }
 
-    // MARK: - View Mode Toggle
+    /// Handle drag start (beginning of range selection)
+    private func handleDragStart(at location: CGPoint, geometry: GeometryProxy, days: [DayInfo]) {
+        guard let dayISO = findDayAt(location: location, geometry: geometry, days: days) else {
+            return
+        }
 
-    private var viewModeToggle: some View {
-        HStack(spacing: 0) {
-            // Hours button
-            Button {
-                guard viewMode != .hours else { return }
-                toggleHaptic.impactOccurred()
-                withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
-                    viewMode = .hours
-                    viewMode.save()
-                }
-            } label: {
-                HStack(spacing: 6) {
-                    Text("--:--")
-                    Image(systemName: "clock")
-                        .font(.system(size: 14, weight: .medium))
-                }
-                .font(.system(size: 14, weight: viewMode == .hours ? .semibold : .regular))
-                .foregroundColor(viewMode == .hours ? .tidexTextPrimary : .tidexTextMuted)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 10)
-                .background(
-                    Group {
-                        if viewMode == .hours {
-                            if #available(iOS 26.0, *) {
-                                // Liquid glass pill on iOS 26+
-                                Capsule()
-                                    .fill(.clear)
-                                    .glassEffect(.regular.interactive())
-                            } else {
-                                // Fallback for older iOS
-                                Capsule()
-                                    .fill(Color.tidexSurfacePrimary)
-                                    .shadow(color: .black.opacity(0.08), radius: 2, y: 1)
-                            }
-                        }
-                    }
-                )
+        // Enter selecting mode - anchor on the day where drag started
+        gestureMode = .selecting
+        anchorDateISO = dayISO
+        hoverDateISO = dayISO
+        dragPreviewDates = [dayISO]
+    }
+
+    /// Handle drag movement (extending range selection)
+    private func handleDragChanged(at location: CGPoint, geometry: GeometryProxy, days: [DayInfo]) {
+        guard gestureMode == .selecting else { return }
+
+        // Update hover date and preview
+        if let dayISO = findDayAt(location: location, geometry: geometry, days: days) {
+            if dayISO != hoverDateISO {
+                hoverDateISO = dayISO
+                updateDragPreview()
             }
-            .buttonStyle(.plain)
+        }
+    }
 
-            // Money button (only if showing earnings)
-            if showEarnings {
+    /// Handle drag end
+    private func handleDragEnded() {
+        guard gestureMode == .selecting else {
+            resetGestureState()
+            return
+        }
+
+        // Commit the drag preview selection
+        if !dragPreviewDates.isEmpty {
+            let datesToSelect = Array(dragPreviewDates)
+            onSelectDateRange?(datesToSelect)
+        }
+
+        resetGestureState()
+    }
+
+    /// Reset all gesture state
+    private func resetGestureState() {
+        gestureMode = .idle
+        anchorDateISO = nil
+        hoverDateISO = nil
+        dragPreviewDates.removeAll()
+    }
+
+    /// Update drag preview dates based on anchor and hover
+    private func updateDragPreview() {
+        guard let anchorISO = anchorDateISO, let hoverISO = hoverDateISO else {
+            dragPreviewDates.removeAll()
+            return
+        }
+
+        // Build date range from anchor to hover
+        let range = buildDateRange(from: anchorISO, to: hoverISO)
+
+        // Filter to only dates with shifts
+        let datesWithShifts = range.filter { dateISO in
+            if let shiftsOnDay = shiftsByDate[dateISO] {
+                return !shiftsOnDay.isEmpty
+            }
+            return false
+        }
+
+        dragPreviewDates = Set(datesWithShifts)
+    }
+
+    /// Build contiguous date range between two ISO dates
+    private func buildDateRange(from startISO: String, to endISO: String) -> [String] {
+        guard let startDate = Date.fromISODateString(startISO),
+              let endDate = Date.fromISODateString(endISO) else {
+            return [startISO]
+        }
+
+        // Determine direction
+        let (earlierDate, laterDate) = startDate <= endDate ? (startDate, endDate) : (endDate, startDate)
+
+        var result: [String] = []
+        var current = earlierDate
+
+        while current <= laterDate {
+            result.append(current.toISODateString())
+            guard let nextDay = calendar.date(byAdding: .day, value: 1, to: current) else { break }
+            current = nextDay
+        }
+
+        return result
+    }
+
+    /// Find the day at a given location in the calendar grid
+    private func findDayAt(location: CGPoint, geometry: GeometryProxy, days: [DayInfo]) -> String? {
+        let gridWidth = geometry.size.width
+        let gridHeight = geometry.size.height
+
+        let numRows = (days.count + 6) / 7
+        let cellWidth = gridWidth / 7
+        let cellHeight = gridHeight / CGFloat(numRows)
+
+        let col = Int(location.x / cellWidth)
+        let row = Int(location.y / cellHeight)
+
+        guard col >= 0, col < 7, row >= 0, row < numRows else { return nil }
+
+        let index = row * 7 + col
+        guard index >= 0, index < days.count else { return nil }
+
+        let dayInfo = days[index]
+        guard !dayInfo.isOutsideMonth else { return nil }
+
+        return dayInfo.dateISO
+    }
+
+    // MARK: - Action Bar
+
+    @ViewBuilder
+    private var actionBar: some View {
+        HStack(spacing: 0) {
+            if selectedDates.isEmpty {
+                // Default: Hours/Money toggle
+                viewModeToggleContent
+            } else if selectedDates.count == 1 {
+                // Single selection: Delete | Copy | Details | Move
+                singleSelectionBar
+            } else {
+                // Multi selection: Delete | Cancel
+                multiSelectionBar
+            }
+        }
+        .padding(4)
+        .background(Capsule().fill(Color.tidexSurfaceSecondary))
+        .animation(.spring(response: 0.25, dampingFraction: 0.8), value: selectedDates.count)
+        .animation(.spring(response: 0.25, dampingFraction: 0.8), value: confirmingDelete)
+        .onAppear {
+            toggleHaptic.prepare()
+            warningHaptic.prepare()
+        }
+    }
+
+    @ViewBuilder
+    private var singleSelectionBar: some View {
+        HStack(spacing: 4) {
+            // Delete button (expands on confirm)
+            deleteButton
+
+            if !confirmingDelete {
+                // Copy button
                 Button {
-                    guard viewMode != .money else { return }
                     toggleHaptic.impactOccurred()
-                    withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
-                        viewMode = .money
-                        viewMode.save()
-                    }
+                    onCopy?()
                 } label: {
-                    Text("---- \(currency)")
-                        .font(.system(size: 14, weight: viewMode == .money ? .semibold : .regular))
-                        .foregroundColor(viewMode == .money ? .tidexTextPrimary : .tidexTextMuted)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 10)
-                        .background(
-                            Group {
-                                if viewMode == .money {
-                                    if #available(iOS 26.0, *) {
-                                        // Liquid glass pill on iOS 26+
-                                        Capsule()
-                                            .fill(.clear)
-                                            .glassEffect(.regular.interactive())
-                                    } else {
-                                        // Fallback for older iOS
-                                        Capsule()
-                                            .fill(Color.tidexSurfacePrimary)
-                                            .shadow(color: .black.opacity(0.08), radius: 2, y: 1)
-                                    }
-                                }
-                            }
-                        )
+                    Image(systemName: "doc.on.doc")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.tidexBlue)
+                        .frame(width: 44, height: 36)
+                        .background(Capsule().fill(Color.tidexBlue.opacity(0.1)))
+                }
+                .buttonStyle(.plain)
+            }
+
+            // Details/Cancel button
+            if confirmingDelete {
+                cancelButton
+            } else {
+                Button {
+                    toggleHaptic.impactOccurred()
+                    onDetails?()
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "info.circle")
+                            .font(.system(size: 14, weight: .medium))
+                        Text(localization.string("shifts.details"))
+                            .font(.system(size: 14, weight: .semibold))
+                    }
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .background(Capsule().fill(Color.tidexBrandPrimary))
+                }
+                .buttonStyle(.plain)
+            }
+
+            if !confirmingDelete {
+                // Move button
+                Button {
+                    toggleHaptic.impactOccurred()
+                    onMove?()
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "arrow.left.arrow.right")
+                            .font(.system(size: 14, weight: .medium))
+                        Text(localization.string("shifts.move"))
+                            .font(.system(size: 14, weight: .medium))
+                    }
+                    .foregroundColor(.orange)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .background(Capsule().fill(Color.orange.opacity(0.1)))
                 }
                 .buttonStyle(.plain)
             }
         }
-        .padding(4)
-        .background(
-            Capsule()
-                .fill(Color.tidexSurfaceSecondary)
-        )
-        .onAppear {
-            toggleHaptic.prepare()
+        .frame(height: 36)
+    }
+
+    @ViewBuilder
+    private var multiSelectionBar: some View {
+        HStack(spacing: 4) {
+            // Delete button
+            deleteButton
+
+            // Cancel/Close button
+            if confirmingDelete {
+                cancelButton
+            } else {
+                Button {
+                    toggleHaptic.impactOccurred()
+                    onClearSelection?()
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 14, weight: .medium))
+                        Text(localization.string("common.cancel"))
+                            .font(.system(size: 14, weight: .medium))
+                    }
+                    .foregroundColor(.tidexTextSecondary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .background(Capsule().fill(Color.tidexSurfaceSecondary.opacity(0.8)))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .frame(height: 36)
+    }
+
+    @ViewBuilder
+    private var deleteButton: some View {
+        Button {
+            if confirmingDelete {
+                warningHaptic.notificationOccurred(.warning)
+                onConfirmDelete?()
+            } else {
+                toggleHaptic.impactOccurred()
+                onDelete?()
+            }
+        } label: {
+            HStack(spacing: 6) {
+                if isDeleting {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: confirmingDelete ? .white : .red))
+                        .scaleEffect(0.7)
+                } else {
+                    Image(systemName: "trash")
+                        .font(.system(size: 14, weight: .medium))
+                }
+
+                if confirmingDelete {
+                    Text(localization.string("shifts.confirm"))
+                        .font(.system(size: 14, weight: .semibold))
+                }
+            }
+            .foregroundColor(confirmingDelete ? .white : .red)
+            .frame(width: confirmingDelete ? nil : 44)
+            .frame(maxWidth: confirmingDelete ? .infinity : nil)
+            .padding(.vertical, 10)
+            .padding(.horizontal, confirmingDelete ? 16 : 0)
+            .background(Capsule().fill(confirmingDelete ? Color.red : Color.red.opacity(0.1)))
+        }
+        .buttonStyle(.plain)
+        .disabled(isDeleting)
+    }
+
+    @ViewBuilder
+    private var cancelButton: some View {
+        Button {
+            toggleHaptic.impactOccurred()
+            onCancelDelete?()
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "xmark")
+                    .font(.system(size: 14, weight: .medium))
+                Text(localization.string("common.cancel"))
+                    .font(.system(size: 14, weight: .semibold))
+            }
+            .foregroundColor(.white)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 10)
+            .background(Capsule().fill(Color.tidexBrandPrimary))
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// Hours/Money toggle content
+    @ViewBuilder
+    private var viewModeToggleContent: some View {
+        // Hours button
+        Button {
+            guard viewMode != .hours else { return }
+            toggleHaptic.impactOccurred()
+            withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
+                viewMode = .hours
+                viewMode.save()
+            }
+        } label: {
+            HStack(spacing: 6) {
+                Text("--:--")
+                Image(systemName: "clock")
+                    .font(.system(size: 14, weight: .medium))
+            }
+            .font(.system(size: 14, weight: viewMode == .hours ? .semibold : .regular))
+            .foregroundColor(viewMode == .hours ? .tidexTextPrimary : .tidexTextMuted)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 10)
+            .background(
+Group {
+                    if viewMode == .hours {
+                        Capsule()
+                            .fill(.clear)
+                            .glassEffect(.regular.interactive())
+                    }
+                }
+            )
+        }
+        .buttonStyle(.plain)
+
+        // Money button (only if showing earnings)
+        if showEarnings {
+            Button {
+                guard viewMode != .money else { return }
+                toggleHaptic.impactOccurred()
+                withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
+                    viewMode = .money
+                    viewMode.save()
+                }
+            } label: {
+                Text("---- \(currency)")
+                    .font(.system(size: 14, weight: viewMode == .money ? .semibold : .regular))
+                    .foregroundColor(viewMode == .money ? .tidexTextPrimary : .tidexTextMuted)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .background(
+Group {
+                            if viewMode == .money {
+                                Capsule()
+                                    .fill(.clear)
+                                    .glassEffect(.regular.interactive())
+                            }
+                        }
+                    )
+            }
+            .buttonStyle(.plain)
         }
     }
 
@@ -349,6 +757,7 @@ struct ShiftsCalendarView: View {
         let dateISO: String?
         let weekNumber: Int?  // ISO week number (only on Mondays)
         let isOutsideMonth: Bool
+        let isSelected: Bool  // Whether this date is in selectedDates
     }
 
     private func daysInMonth() -> [DayInfo] {
@@ -380,13 +789,15 @@ struct ShiftsCalendarView: View {
             let date = calendar.date(byAdding: .day, value: i - startOffset, to: firstOfMonth)!
             let dateISO = date.toISODateString()
             let weekNum = calendar.component(.weekday, from: date) == 2 ? getIsoWeek(from: date) : nil
+            let isSelected = selectedDates.contains(dateISO)
 
             days.append(DayInfo(
                 id: -1000 + i,
                 dayNumber: day,
                 dateISO: dateISO,
                 weekNumber: weekNum,
-                isOutsideMonth: true
+                isOutsideMonth: true,
+                isSelected: isSelected
             ))
         }
 
@@ -396,13 +807,15 @@ struct ShiftsCalendarView: View {
             let dateISO = date.toISODateString()
             let isMonday = calendar.component(.weekday, from: date) == 2
             let weekNum = isMonday ? getIsoWeek(from: date) : nil
+            let isSelected = selectedDates.contains(dateISO)
 
             days.append(DayInfo(
                 id: day,
                 dayNumber: day,
                 dateISO: dateISO,
                 weekNumber: weekNum,
-                isOutsideMonth: false
+                isOutsideMonth: false,
+                isSelected: isSelected
             ))
         }
 
@@ -415,13 +828,15 @@ struct ShiftsCalendarView: View {
                 let date = calendar.date(byAdding: .day, value: range.count + i, to: firstOfMonth)!
                 let dateISO = date.toISODateString()
                 let weekNum = calendar.component(.weekday, from: date) == 2 ? getIsoWeek(from: date) : nil
+                let isSelected = selectedDates.contains(dateISO)
 
                 days.append(DayInfo(
                     id: 1000 + i,
                     dayNumber: i + 1,
                     dateISO: dateISO,
                     weekNumber: weekNum,
-                    isOutsideMonth: true
+                    isOutsideMonth: true,
+                    isSelected: isSelected
                 ))
             }
         }
@@ -466,6 +881,8 @@ private struct ShiftsCalendarDayCell: View {
     let hours: HoursData?
     let isToday: Bool
     let hasShifts: Bool
+    let isSelected: Bool
+    let isInDragPreview: Bool
 
     private var hasShift: Bool {
         earnings != nil || hours != nil
@@ -532,14 +949,41 @@ private struct ShiftsCalendarDayCell: View {
         .clipped()
         .background(
             RoundedRectangle(cornerRadius: 8)
-                .fill(Color.tidexSurfacePrimary)
+                .fill(backgroundColor)
         )
         .overlay(
-            // Today indicator ring
+            // Selection/today indicator ring
             RoundedRectangle(cornerRadius: 8)
-                .strokeBorder(Color.tidexBlue, lineWidth: isToday ? 2 : 0)
+                .strokeBorder(borderColor, lineWidth: borderWidth)
         )
         .opacity(dayInfo.isOutsideMonth ? 0.4 : 1.0)
+    }
+
+    private var backgroundColor: Color {
+        if isSelected || isInDragPreview {
+            return Color.tidexBlue.opacity(0.15)
+        }
+        return Color.tidexSurfacePrimary
+    }
+
+    private var borderColor: Color {
+        if isSelected || isInDragPreview {
+            return Color.tidexBlue
+        }
+        if isToday {
+            return Color.tidexBlue
+        }
+        return Color.clear
+    }
+
+    private var borderWidth: CGFloat {
+        if isSelected || isInDragPreview {
+            return 2
+        }
+        if isToday {
+            return 2
+        }
+        return 0
     }
 
     private var dayNumberColor: Color {
@@ -562,17 +1006,32 @@ private struct ShiftsCalendarDayCell: View {
 // MARK: - Preview
 
 #Preview {
-    ScrollView {
-        ShiftsCalendarView(
-            shifts: [],
-            month: Date(),
-            year: 2025,
-            monthNumber: 1,
-            currency: "kr",
-            showEarnings: true
-        )
-        .padding()
+    struct PreviewWrapper: View {
+        @State private var selectedDates: Set<String> = []
+        @State private var isSelectionModeEnabled: Bool = false
+
+        var body: some View {
+            ScrollView {
+                ShiftsCalendarView(
+                    shifts: [],
+                    month: Date(),
+                    year: 2025,
+                    monthNumber: 1,
+                    currency: "kr",
+                    showEarnings: true,
+                    selectedDates: $selectedDates,
+                    confirmingDelete: false,
+                    isDeleting: false,
+                    selectedEarnings: nil,
+                    selectedHasTaxEnabled: false,
+                    isSelectionModeEnabled: $isSelectionModeEnabled
+                )
+                .padding()
+            }
+            .background(Color.tidexBackground)
+            .environment(\.localization, LocalizationManager.shared)
+        }
     }
-    .background(Color.tidexBackground)
-    .environment(\.localization, LocalizationManager.shared)
+
+    return PreviewWrapper()
 }

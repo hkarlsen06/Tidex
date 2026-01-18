@@ -107,21 +107,23 @@ struct PlaceholderTabView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                // Background that fills entire screen including safe areas
-                // Prevents black bars from showing in status bar and home indicator areas
-                Color.tidexBackground
-                    .ignoresSafeArea()
+            GeometryReader { geometry in
+                ZStack {
+                    // Background that fills entire screen including safe areas
+                    // Prevents black bars from showing in status bar and home indicator areas
+                    Color.tidexBackground
+                        .ignoresSafeArea()
 
-                ScrollView {
-                    PlaceholderContent(
-                        icon: icon,
-                        title: localization.string(titleKey),
-                        description: localization.string(descriptionKey)
-                    )
-                    .frame(maxWidth: .infinity, minHeight: UIScreen.main.bounds.height - 200)
+                    ScrollView {
+                        PlaceholderContent(
+                            icon: icon,
+                            title: localization.string(titleKey),
+                            description: localization.string(descriptionKey)
+                        )
+                        .frame(maxWidth: .infinity, minHeight: geometry.size.height - 200)
+                    }
+                    .applyRefreshable(enabled: supportsRefresh)
                 }
-                .applyRefreshable(enabled: supportsRefresh)
             }
             .navigationTitle(localization.string(titleKey))
             .navigationBarTitleDisplayMode(.inline)

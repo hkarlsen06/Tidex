@@ -65,58 +65,59 @@ struct SupplementRuleEditor: View {
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                Color.tidexBackground
-                    .ignoresSafeArea()
+            GeometryReader { geometry in
+                ZStack {
+                    Color.tidexBackground
+                        .ignoresSafeArea()
 
-                ScrollView {
-                    if isEditing {
-                        // Editing mode: normal top-to-bottom layout
-                        VStack(spacing: 24) {
-                            daysSection
-                            timeSection
-                            typeSection
-                            valueSection
-
-                            Spacer()
-                                .frame(height: 80)
-                        }
-                        .padding(24)
-                    } else {
-                        // Adding mode: content starts at bottom, pushes up as steps are added
-                        VStack(spacing: 0) {
-                            Spacer(minLength: 0)
-
+                    ScrollView {
+                        if isEditing {
+                            // Editing mode: normal top-to-bottom layout
                             VStack(spacing: 24) {
-                                // Days selector - always visible
                                 daysSection
+                                timeSection
+                                typeSection
+                                valueSection
 
-                                // Time range (visible after days selected)
-                                if currentStep >= .time {
-                                    timeSection
-                                        .transition(.opacity.combined(with: .move(edge: .bottom)))
-                                }
-
-                                // Type toggle (visible after times set)
-                                if currentStep >= .type {
-                                    typeSection
-                                        .transition(.opacity.combined(with: .move(edge: .bottom)))
-                                }
-
-                                // Value input (visible after type selected)
-                                if currentStep >= .value {
-                                    valueSection
-                                        .transition(.opacity.combined(with: .move(edge: .bottom)))
-                                }
+                                Spacer()
+                                    .frame(height: 80)
                             }
                             .padding(24)
-                            .padding(.bottom, 80)
+                        } else {
+                            // Adding mode: content starts at bottom, pushes up as steps are added
+                            VStack(spacing: 0) {
+                                Spacer(minLength: 0)
+
+                                VStack(spacing: 24) {
+                                    // Days selector - always visible
+                                    daysSection
+
+                                    // Time range (visible after days selected)
+                                    if currentStep >= .time {
+                                        timeSection
+                                            .transition(.opacity.combined(with: .move(edge: .bottom)))
+                                    }
+
+                                    // Type toggle (visible after times set)
+                                    if currentStep >= .type {
+                                        typeSection
+                                            .transition(.opacity.combined(with: .move(edge: .bottom)))
+                                    }
+
+                                    // Value input (visible after type selected)
+                                    if currentStep >= .value {
+                                        valueSection
+                                            .transition(.opacity.combined(with: .move(edge: .bottom)))
+                                    }
+                                }
+                                .padding(24)
+                                .padding(.bottom, 80)
+                            }
+                            .frame(minHeight: geometry.size.height - 150)
+                            .animation(.spring(response: 0.35, dampingFraction: 0.8), value: currentStep)
                         }
-                        .frame(minHeight: UIScreen.main.bounds.height - 150)
-                        .animation(.spring(response: 0.35, dampingFraction: 0.8), value: currentStep)
                     }
-                }
-                .defaultScrollAnchor(isEditing ? .top : .bottom)
+                    .defaultScrollAnchor(isEditing ? .top : .bottom)
 
                 // Save button at bottom
                 VStack {
@@ -142,6 +143,7 @@ struct SupplementRuleEditor: View {
                         .frame(height: 100)
                         .allowsHitTesting(false)
                     )
+                }
                 }
             }
             .navigationTitle(rule == nil

@@ -134,6 +134,77 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
     /// Next upcoming shift (for countdown display)
     @Published private(set) var nextUpcomingShift: ShiftWithComputations?
 
+    // MARK: - Selection State
+
+    /// Selected dates (ISO strings). Persists across month navigation.
+    @Published var selectedDates: Set<String> = []
+
+    /// Whether selection mode is enabled (tap/drag to select vs swipe to navigate)
+    @Published var isSelectionModeEnabled: Bool = false
+
+    /// Two-click delete confirmation state
+    @Published var confirmingDelete: Bool = false
+
+    /// Whether we're currently deleting shifts
+    @Published var isDeleting: Bool = false
+
+    /// Single vs multi-selection mode
+    var isMultiSelectMode: Bool { selectedDates.count > 1 }
+
+    /// Computed earnings for selected dates (for header display)
+    /// Looks across ALL cached months, not just the currently displayed month
+    var selectedEarnings: (net: Double, gross: Double)? {
+        guard !selectedDates.isEmpty else { return nil }
+
+        // Collect all shifts from all cached months that match selected dates
+        var allSelectedShifts: [ShiftWithComputations] = []
+
+        for (_, cacheEntry) in monthCache {
+            let matchingShifts = cacheEntry.shifts.filter { selectedDates.contains($0.shiftDate) }
+            allSelectedShifts.append(contentsOf: matchingShifts)
+        }
+
+        // Also check current month's shifts (may not be in cache yet)
+        let currentMonthMatches = shifts.filter { selectedDates.contains($0.shiftDate) }
+        for shift in currentMonthMatches {
+            // Avoid duplicates (shift might already be in cache)
+            if !allSelectedShifts.contains(where: { $0.id == shift.id }) {
+                allSelectedShifts.append(shift)
+            }
+        }
+
+        let gross = allSelectedShifts.reduce(0) { $0 + $1.grossPay }
+        let net = allSelectedShifts.reduce(0) { $0 + ($1.taxEnabled ? $1.netPay : $1.grossPay) }
+
+        return (net: net, gross: gross)
+    }
+
+    /// Whether any selected shift has tax enabled (for header display)
+    /// Looks across ALL cached months, not just the currently displayed month
+    var selectedHasTaxEnabled: Bool {
+        guard !selectedDates.isEmpty else { return false }
+
+        // Check all cached months for tax-enabled shifts
+        for (_, cacheEntry) in monthCache {
+            if cacheEntry.shifts.contains(where: { selectedDates.contains($0.shiftDate) && $0.taxEnabled }) {
+                return true
+            }
+        }
+
+        // Also check current month's shifts
+        if shifts.contains(where: { selectedDates.contains($0.shiftDate) && $0.taxEnabled }) {
+            return true
+        }
+
+        return false
+    }
+
+    /// Shifts for the selected date (single selection mode)
+    var selectedDateShifts: [ShiftWithComputations] {
+        guard selectedDates.count == 1, let dateISO = selectedDates.first else { return [] }
+        return shifts.filter { $0.shiftDate == dateISO }
+    }
+
     // MARK: - Private State
 
     private var settings: UserSettings?
@@ -279,6 +350,91 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
     /// Delegates to SharedMonthContext - data reload happens via subscription
     func goToCurrentMonth() {
         monthContext.goToCurrentMonth()
+    }
+
+    // MARK: - Selection Actions
+
+    /// Handle day tap - manages single/multi selection logic
+    func handleDayTapped(dateISO: String, shiftsOnDay: [ShiftWithComputations]) {
+        // Reset delete confirmation on any tap
+        confirmingDelete = false
+
+        // If tapping a date with no shifts, ignore (don't clear selection)
+        guard !shiftsOnDay.isEmpty else { return }
+
+        // If no current selection, select this date
+        if selectedDates.isEmpty {
+            selectedDates = [dateISO]
+            return
+        }
+
+        // If tapping already selected date
+        if selectedDates.contains(dateISO) {
+            if selectedDates.count == 1 {
+                // Single selection - deselect
+                clearSelection()
+            } else {
+                // Multi-selection - remove this date
+                selectedDates.remove(dateISO)
+            }
+            return
+        }
+
+        // Tapping a different date - add to selection (enter multi-select)
+        selectedDates.insert(dateISO)
+    }
+
+    /// Clear all selection state
+    func clearSelection() {
+        selectedDates.removeAll()
+        confirmingDelete = false
+        isSelectionModeEnabled = false
+    }
+
+    /// Handle date range selection from long-press + drag gesture
+    /// - Parameter dates: Array of ISO date strings to select
+    func handleDateRangeSelected(_ dates: [String]) {
+        // Reset delete confirmation
+        confirmingDelete = false
+
+        // Filter to only dates with shifts
+        let datesWithShifts = dates.filter { dateISO in
+            shifts.contains { $0.shiftDate == dateISO }
+        }
+
+        guard !datesWithShifts.isEmpty else { return }
+
+        // Add to existing selection (union, not replace)
+        selectedDates.formUnion(datesWithShifts)
+    }
+
+    /// Delete all shifts for selected dates
+    func deleteSelectedShifts() async {
+        let shiftsToDelete = shifts.filter { selectedDates.contains($0.shiftDate) }
+        guard !shiftsToDelete.isEmpty else { return }
+
+        isDeleting = true
+
+        do {
+            for shift in shiftsToDelete {
+                if shift.isVirtual, let recurringId = shift.shift.recurring_id {
+                    try await RecurringShiftsRepository.shared.addExclusion(
+                        id: recurringId,
+                        date: shift.shiftDate
+                    )
+                } else {
+                    try await ShiftsRepository.shared.deleteShift(id: shift.id)
+                }
+            }
+
+            clearSelection()
+            await reloadFromLocal()
+            NotificationCenter.default.post(name: .shiftsDidChange, object: nil)
+        } catch {
+            logger.error("Failed to delete shifts: \(error.localizedDescription)")
+        }
+
+        isDeleting = false
     }
 
     /// Non-blocking month data loader
