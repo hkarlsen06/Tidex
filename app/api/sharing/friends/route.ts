@@ -7,7 +7,7 @@ import type { Friend, NotificationFrequency } from "@/data-access/sharing";
 // Share limits per subscription tier
 const SHARE_LIMITS = {
   free: 1,
-  pro: 5,
+  pro: 10,
   max: 20,
 } as const;
 
@@ -238,27 +238,14 @@ export async function GET(request: NextRequest) {
     // Calculate capacity
     const outgoingCount = outgoingShares?.length || 0;
 
-    // Get user's subscription tier
-    const { data: subscriptionData } = await adminClient
-      .from("subscriptions")
-      .select("tier, status")
+    // Get user's tier from the user_entitlements view (single source of truth)
+    const { data: entitlementData } = await adminClient
+      .from("user_entitlements")
+      .select("tier")
       .eq("user_id", userId)
-      .eq("status", "active")
       .maybeSingle();
 
-    const { data: profileData } = await adminClient
-      .from("profiles")
-      .select("is_grandfathered")
-      .eq("id", userId)
-      .maybeSingle();
-
-    // Determine tier: grandfathered users get max, otherwise use subscription
-    let tier: "free" | "pro" | "max" = "free";
-    if (profileData?.is_grandfathered) {
-      tier = "max";
-    } else if (subscriptionData?.tier) {
-      tier = subscriptionData.tier as "free" | "pro" | "max";
-    }
+    const tier = (entitlementData?.tier as "free" | "pro" | "max") || "free";
 
     const limit = SHARE_LIMITS[tier];
     const capacity = {
