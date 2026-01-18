@@ -42,7 +42,7 @@ struct SwipeGestureConfig {
 
     static let `default` = SwipeGestureConfig(
         threshold: 50,
-        verticalLimit: 100,
+        verticalLimit: 50,
         flickVelocity: 300
     )
 }
@@ -110,16 +110,19 @@ struct MonthSwipeContainer<Content: View>: View {
     private let swipeHaptic = UIImpactFeedbackGenerator(style: .medium)
     private let thresholdFeedback = UISelectionFeedbackGenerator()
 
+    // MARK: - State for gesture direction lock
+
+    /// Whether we've locked into a horizontal swipe (prevents scroll from taking over)
+    @State private var isHorizontalLocked = false
+
     // MARK: - Body
 
     var body: some View {
         content()
             // Make entire content area hit-testable for gestures
             .contentShape(Rectangle())
-            // No visual effects during drag - let the card transition handle all animation
-            // This prevents "angled" entry when swipe gesture effects combine with transitions
-            // Use simultaneousGesture so pull-to-refresh (highPriorityGesture) takes precedence
-            .simultaneousGesture(swipeGesture)
+            // Use gesture() with exclusive behavior - once we lock horizontal, we own the gesture
+            .gesture(swipeGesture)
             .onAppear {
                 // Pre-warm haptic generators
                 swipeHaptic.prepare()
@@ -128,54 +131,58 @@ struct MonthSwipeContainer<Content: View>: View {
     }
 
     private var swipeGesture: some Gesture {
-        DragGesture(minimumDistance: 20) // Higher threshold - let vertical gestures win
+        DragGesture(minimumDistance: 10) // Low threshold like Next.js - decide direction early
             .onChanged { value in
                 guard isEnabled else { return }
 
                 let horizontal = value.translation.width
                 let vertical = abs(value.translation.height)
 
-                // Only accept predominantly horizontal gestures
-                // Must be much more horizontal than vertical to avoid conflicts
-                let isHorizontal = abs(horizontal) > vertical * 2.0
-
-                if isHorizontal && vertical < config.verticalLimit {
-                    isDragging = true
-                    dragOffset = horizontal
-
-                    // Haptic feedback when threshold crossed
-                    if abs(horizontal) >= config.threshold && !hasTriggeredThresholdHaptic {
-                        thresholdFeedback.selectionChanged()
-                        hasTriggeredThresholdHaptic = true
-                        swipeHaptic.prepare()
-                    } else if abs(horizontal) < config.threshold * 0.8 {
-                        hasTriggeredThresholdHaptic = false
-                        thresholdFeedback.prepare()
+                // Early direction lock (like Next.js: once horizontal > vertical at 10px, lock it)
+                // This must happen very early in the gesture to beat ScrollView
+                if !isHorizontalLocked && !isDragging {
+                    // At low distances, determine direction
+                    if abs(horizontal) > 10 && abs(horizontal) > vertical {
+                        // This gesture is horizontal - lock it in
+                        isHorizontalLocked = true
+                        isDragging = true
+                    } else if vertical > 10 {
+                        // This gesture is vertical - don't interfere, let scroll handle it
+                        return
                     }
-                } else if isDragging {
-                    // Gesture changed direction, cancel
-                    isDragging = false
-                    dragOffset = 0
+                }
+
+                // Only continue if we're locked into horizontal mode
+                guard isHorizontalLocked else { return }
+
+                dragOffset = horizontal
+
+                // Haptic feedback when threshold crossed
+                if abs(horizontal) >= config.threshold && !hasTriggeredThresholdHaptic {
+                    thresholdFeedback.selectionChanged()
+                    hasTriggeredThresholdHaptic = true
+                    swipeHaptic.prepare()
+                } else if abs(horizontal) < config.threshold * 0.8 {
                     hasTriggeredThresholdHaptic = false
+                    thresholdFeedback.prepare()
                 }
             }
             .onEnded { value in
                 guard isEnabled else { return }
 
                 let horizontal = value.translation.width
-                let vertical = abs(value.translation.height)
                 let velocity = value.velocity.width
 
-                // Reset state immediately (no animation - let card transition handle it)
+                // Only process if we were in horizontal mode
+                let wasHorizontalLocked = isHorizontalLocked
+
+                // Reset state immediately
                 isDragging = false
                 dragOffset = 0
-
-                // Reset threshold haptic tracking
+                isHorizontalLocked = false
                 hasTriggeredThresholdHaptic = false
 
-                // Only process if predominantly horizontal
-                guard vertical < config.verticalLimit else { return }
-                guard abs(horizontal) > vertical * 2.0 else { return }
+                guard wasHorizontalLocked else { return }
 
                 // Check if threshold exceeded or velocity indicates flick
                 let isFlick = abs(velocity) > config.flickVelocity
@@ -243,6 +250,174 @@ extension View {
         ) {
             self
         }
+    }
+
+    /// Add month swipe gesture directly to a ScrollView using highPriorityGesture
+    /// This gives the horizontal swipe gesture priority over ScrollView's pan gesture
+    /// Use this instead of MonthSwipeContainer when wrapping a ScrollView
+    func monthSwipeGesture(
+        onSwipeLeft: @escaping () -> Void,
+        onSwipeRight: @escaping () -> Void,
+        threshold: CGFloat = 50,
+        isEnabled: Bool = true
+    ) -> some View {
+        self.modifier(MonthSwipeGestureModifier(
+            onSwipeLeft: onSwipeLeft,
+            onSwipeRight: onSwipeRight,
+            threshold: threshold,
+            isEnabled: isEnabled
+        ))
+    }
+}
+
+// MARK: - Month Swipe Gesture Modifier
+
+/// A gesture modifier that uses UISwipeGestureRecognizer for reliable horizontal
+/// swipe detection that doesn't conflict with ScrollView.
+///
+/// Uses a clever technique: places gesture recognizers on a background view
+/// and uses `delaysTouchesBegan = false` so touches are immediately passed
+/// to the ScrollView while still allowing swipe recognition.
+private struct MonthSwipeGestureModifier: ViewModifier {
+    let onSwipeLeft: () -> Void
+    let onSwipeRight: () -> Void
+    let threshold: CGFloat
+    let isEnabled: Bool
+
+    func body(content: Content) -> some View {
+        content
+            .background(
+                SwipeGestureView(
+                    onSwipeLeft: onSwipeLeft,
+                    onSwipeRight: onSwipeRight,
+                    isEnabled: isEnabled
+                )
+            )
+    }
+}
+
+// MARK: - UIKit Swipe Gesture View
+
+/// A UIViewRepresentable that adds UISwipeGestureRecognizers for left and right swipes.
+/// The view is placed in background and uses userInteractionEnabled = false so it
+/// doesn't intercept touches, but gesture recognizers still work because they're
+/// added to a parent view that IS in the responder chain.
+private struct SwipeGestureView: UIViewRepresentable {
+    let onSwipeLeft: () -> Void
+    let onSwipeRight: () -> Void
+    let isEnabled: Bool
+
+    func makeUIView(context: Context) -> SwipeContainerView {
+        let view = SwipeContainerView()
+        view.backgroundColor = .clear
+        view.coordinator = context.coordinator
+
+        // Left swipe gesture
+        let leftSwipe = UISwipeGestureRecognizer(
+            target: context.coordinator,
+            action: #selector(Coordinator.handleSwipe(_:))
+        )
+        leftSwipe.direction = .left
+        leftSwipe.delaysTouchesBegan = false
+        leftSwipe.delaysTouchesEnded = false
+        leftSwipe.cancelsTouchesInView = false
+        view.addGestureRecognizer(leftSwipe)
+
+        // Right swipe gesture
+        let rightSwipe = UISwipeGestureRecognizer(
+            target: context.coordinator,
+            action: #selector(Coordinator.handleSwipe(_:))
+        )
+        rightSwipe.direction = .right
+        rightSwipe.delaysTouchesBegan = false
+        rightSwipe.delaysTouchesEnded = false
+        rightSwipe.cancelsTouchesInView = false
+        view.addGestureRecognizer(rightSwipe)
+
+        return view
+    }
+
+    func updateUIView(_ uiView: SwipeContainerView, context: Context) {
+        context.coordinator.onSwipeLeft = onSwipeLeft
+        context.coordinator.onSwipeRight = onSwipeRight
+        context.coordinator.isEnabled = isEnabled
+
+        // Enable/disable gesture recognizers
+        uiView.gestureRecognizers?.forEach { $0.isEnabled = isEnabled }
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onSwipeLeft: onSwipeLeft, onSwipeRight: onSwipeRight, isEnabled: isEnabled)
+    }
+
+    class Coordinator: NSObject {
+        var onSwipeLeft: () -> Void
+        var onSwipeRight: () -> Void
+        var isEnabled: Bool
+
+        private let haptic = UIImpactFeedbackGenerator(style: .medium)
+
+        init(onSwipeLeft: @escaping () -> Void, onSwipeRight: @escaping () -> Void, isEnabled: Bool) {
+            self.onSwipeLeft = onSwipeLeft
+            self.onSwipeRight = onSwipeRight
+            self.isEnabled = isEnabled
+            super.init()
+            haptic.prepare()
+        }
+
+        @objc func handleSwipe(_ gesture: UISwipeGestureRecognizer) {
+            guard isEnabled else { return }
+
+            haptic.impactOccurred()
+            haptic.prepare()
+
+            switch gesture.direction {
+            case .left:
+                onSwipeLeft()
+            case .right:
+                onSwipeRight()
+            default:
+                break
+            }
+        }
+    }
+}
+
+// MARK: - Swipe Container View
+
+/// A UIView that adds its gesture recognizers to the parent view's window
+/// once it's added to the view hierarchy. This allows swipe gestures to be
+/// recognized without blocking the ScrollView's pan gesture.
+private class SwipeContainerView: UIView {
+    weak var coordinator: SwipeGestureView.Coordinator?
+    private var addedToWindow = false
+
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+
+        guard !addedToWindow, window != nil else { return }
+        addedToWindow = true
+
+        // Find the parent ScrollView and add gesture recognizers to it
+        // This allows both swipe and scroll to work together
+        if let scrollView = findScrollView() {
+            // Move gesture recognizers to the scroll view
+            gestureRecognizers?.forEach { gesture in
+                removeGestureRecognizer(gesture)
+                scrollView.addGestureRecognizer(gesture)
+            }
+        }
+    }
+
+    private func findScrollView() -> UIScrollView? {
+        var view: UIView? = superview
+        while let current = view {
+            if let scrollView = current as? UIScrollView {
+                return scrollView
+            }
+            view = current.superview
+        }
+        return nil
     }
 }
 

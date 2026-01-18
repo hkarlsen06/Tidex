@@ -51,7 +51,7 @@ struct MainTabView: View {
                     }
                     .tag(Tab.home)
 
-                ShiftsPlaceholderView()
+                ShiftsView(selectedTab: $selectedTab)
                     .tabItem {
                         Label(localization.string(Tab.shifts.localizationKey), systemImage: Tab.shifts.icon)
                     }

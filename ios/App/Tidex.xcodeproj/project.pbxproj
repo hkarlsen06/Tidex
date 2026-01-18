@@ -101,6 +101,18 @@
 		11A1965E2F1AEB360030E524 /* BillingToggle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A196552F1AEB360030E524 /* BillingToggle.swift */; };
 		11A196602F1AEB4D0030E524 /* VerificationRequiredView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A1965F2F1AEB4D0030E524 /* VerificationRequiredView.swift */; };
 		11A196622F1AF7E70030E524 /* MonthLimitSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A196612F1AF7E70030E524 /* MonthLimitSheet.swift */; };
+		11A1966A2F1B00B50030E524 /* ShiftsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A196682F1B00B50030E524 /* ShiftsViewModel.swift */; };
+		11A1966B2F1B00B50030E524 /* ShiftsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A196672F1B00B50030E524 /* ShiftsView.swift */; };
+		11A1966C2F1B00B50030E524 /* ShiftsEmptyState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A196642F1B00B50030E524 /* ShiftsEmptyState.swift */; };
+		11A1966D2F1B00B50030E524 /* ShiftRowCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A196632F1B00B50030E524 /* ShiftRowCard.swift */; };
+		11A1966E2F1B00B50030E524 /* WeekHeaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A196652F1B00B50030E524 /* WeekHeaderView.swift */; };
+		11A196702F1B02C90030E524 /* SharedMonthContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A1966F2F1B02C90030E524 /* SharedMonthContext.swift */; };
+		11A196722F1B03760030E524 /* ShiftsCalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A196712F1B03760030E524 /* ShiftsCalendarView.swift */; };
+		11A196FF2F1B14FA0030E524 /* DayShiftsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A196FB2F1B14FA0030E524 /* DayShiftsSheet.swift */; };
+		11A197002F1B14FA0030E524 /* SwipeableShiftCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A196FE2F1B14FA0030E524 /* SwipeableShiftCard.swift */; };
+		11A197012F1B14FA0030E524 /* NextShiftCountdownCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A196FC2F1B14FA0030E524 /* NextShiftCountdownCard.swift */; };
+		11A197022F1B14FA0030E524 /* ShiftDetailsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A196FD2F1B14FA0030E524 /* ShiftDetailsSheet.swift */; };
+		11A197042F1B15080030E524 /* ScrollAppearModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A197032F1B15080030E524 /* ScrollAppearModifier.swift */; };
 		11A5CD262F101201002BAC91 /* StoredShift.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A5CD252F101201002BAC91 /* StoredShift.swift */; };
 		11A5CD302F101283002BAC91 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 11A5CD2F2F101283002BAC91 /* WidgetKit.framework */; };
 		11A5CD322F101283002BAC91 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 11A5CD312F101283002BAC91 /* SwiftUI.framework */; };
@@ -282,6 +294,18 @@
 		11A196592F1AEB360030E524 /* PaywallViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallViewModel.swift; sourceTree = "<group>"; };
 		11A1965F2F1AEB4D0030E524 /* VerificationRequiredView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VerificationRequiredView.swift; sourceTree = "<group>"; };
 		11A196612F1AF7E70030E524 /* MonthLimitSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthLimitSheet.swift; sourceTree = "<group>"; };
+		11A196632F1B00B50030E524 /* ShiftRowCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShiftRowCard.swift; sourceTree = "<group>"; };
+		11A196642F1B00B50030E524 /* ShiftsEmptyState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShiftsEmptyState.swift; sourceTree = "<group>"; };
+		11A196652F1B00B50030E524 /* WeekHeaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeekHeaderView.swift; sourceTree = "<group>"; };
+		11A196672F1B00B50030E524 /* ShiftsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShiftsView.swift; sourceTree = "<group>"; };
+		11A196682F1B00B50030E524 /* ShiftsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShiftsViewModel.swift; sourceTree = "<group>"; };
+		11A1966F2F1B02C90030E524 /* SharedMonthContext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedMonthContext.swift; sourceTree = "<group>"; };
+		11A196712F1B03760030E524 /* ShiftsCalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShiftsCalendarView.swift; sourceTree = "<group>"; };
+		11A196FB2F1B14FA0030E524 /* DayShiftsSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayShiftsSheet.swift; sourceTree = "<group>"; };
+		11A196FC2F1B14FA0030E524 /* NextShiftCountdownCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextShiftCountdownCard.swift; sourceTree = "<group>"; };
+		11A196FD2F1B14FA0030E524 /* ShiftDetailsSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShiftDetailsSheet.swift; sourceTree = "<group>"; };
+		11A196FE2F1B14FA0030E524 /* SwipeableShiftCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwipeableShiftCard.swift; sourceTree = "<group>"; };
+		11A197032F1B15080030E524 /* ScrollAppearModifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScrollAppearModifier.swift; sourceTree = "<group>"; };
 		11A5CD252F101201002BAC91 /* StoredShift.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoredShift.swift; sourceTree = "<group>"; };
 		11A5CD2E2F101283002BAC91 /* TidexShiftWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TidexShiftWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		11A5CD2F2F101283002BAC91 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
@@ -471,6 +495,7 @@
 		119D1CBA2F16E46300EC7072 /* Core */ = {
 			isa = PBXGroup;
 			children = (
+				11A1966F2F1B02C90030E524 /* SharedMonthContext.swift */,
 				11A196442F1AC20E0030E524 /* TabConfiguration.swift */,
 				11F4301D2F1A957C002B1FBE /* TermsVersion.swift */,
 				119D1CB72F16E46300EC7072 /* AppCoordinator.swift */,
@@ -556,6 +581,7 @@
 		119D1CCC2F16E46300EC7072 /* Features */ = {
 			isa = PBXGroup;
 			children = (
+				11A196692F1B00B50030E524 /* Shifts */,
 				11A1965A2F1AEB360030E524 /* Paywall */,
 				11A196322F1AC0070030E524 /* AddShift */,
 				11F42F8F2F1A65F3002B1FBE /* Onboarding */,
@@ -761,6 +787,31 @@
 			path = Paywall;
 			sourceTree = "<group>";
 		};
+		11A196662F1B00B50030E524 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				11A196FB2F1B14FA0030E524 /* DayShiftsSheet.swift */,
+				11A196FC2F1B14FA0030E524 /* NextShiftCountdownCard.swift */,
+				11A196FD2F1B14FA0030E524 /* ShiftDetailsSheet.swift */,
+				11A196FE2F1B14FA0030E524 /* SwipeableShiftCard.swift */,
+				11A196712F1B03760030E524 /* ShiftsCalendarView.swift */,
+				11A196632F1B00B50030E524 /* ShiftRowCard.swift */,
+				11A196642F1B00B50030E524 /* ShiftsEmptyState.swift */,
+				11A196652F1B00B50030E524 /* WeekHeaderView.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		11A196692F1B00B50030E524 /* Shifts */ = {
+			isa = PBXGroup;
+			children = (
+				11A196662F1B00B50030E524 /* Components */,
+				11A196672F1B00B50030E524 /* ShiftsView.swift */,
+				11A196682F1B00B50030E524 /* ShiftsViewModel.swift */,
+			);
+			path = Shifts;
+			sourceTree = "<group>";
+		};
 		11A1D6CE2F11F48F00060819 /* Core */ = {
 			isa = PBXGroup;
 			children = (
@@ -867,6 +918,7 @@
 		11AE8D242F17CF3A005AB062 /* Animations */ = {
 			isa = PBXGroup;
 			children = (
+				11A197032F1B15080030E524 /* ScrollAppearModifier.swift */,
 				11AE8D232F17CF3A005AB062 /* MonthTransition.swift */,
 			);
 			path = Animations;
@@ -1132,10 +1184,12 @@
 				504EC3081FED79650016851F /* AppDelegate.swift in Sources */,
 				119D1CE62F16E46300EC7072 /* OAuthButtonsView.swift in Sources */,
 				119D1CE72F16E46300EC7072 /* SecureTextField.swift in Sources */,
+				11A196722F1B03760030E524 /* ShiftsCalendarView.swift in Sources */,
 				119D1CE82F16E46300EC7072 /* RootView.swift in Sources */,
 				119D1CE92F16E46300EC7072 /* SupabaseClient.swift in Sources */,
 				11AE8CE82F16FD82005AB062 /* NextShiftCard.swift in Sources */,
 				11AE8D032F16FDBD005AB062 /* RecurringShiftGenerator.swift in Sources */,
+				11A196702F1B02C90030E524 /* SharedMonthContext.swift in Sources */,
 				11AE8D042F16FDBD005AB062 /* PayrollCalculator.swift in Sources */,
 				11AE8D762F1856D2005AB062 /* AuthNavigationView.swift in Sources */,
 				11AE8D052F16FDBD005AB062 /* BreakDeduction.swift in Sources */,
@@ -1246,6 +1300,11 @@
 				119D1D022F16E46300EC7072 /* GoogleAuthProvider.swift in Sources */,
 				11923C162F16B89C0076AFD6 /* AuthState.swift in Sources */,
 				11AE8CC92F16F2BF005AB062 /* SignupView.swift in Sources */,
+				11A1966A2F1B00B50030E524 /* ShiftsViewModel.swift in Sources */,
+				11A1966B2F1B00B50030E524 /* ShiftsView.swift in Sources */,
+				11A1966C2F1B00B50030E524 /* ShiftsEmptyState.swift in Sources */,
+				11A1966D2F1B00B50030E524 /* ShiftRowCard.swift in Sources */,
+				11A1966E2F1B00B50030E524 /* WeekHeaderView.swift in Sources */,
 				11AE8CCA2F16F2BF005AB062 /* SignupViewModel.swift in Sources */,
 				11A1960E2F1AA3280030E524 /* AccordionSectionView.swift in Sources */,
 				11A1960F2F1AA3280030E524 /* SupplementRuleEditor.swift in Sources */,
@@ -1258,10 +1317,15 @@
 				OFFSTR0012F2000000000001 /* OfflineShiftStorage.swift in Sources */,
 				11A5CD262F101201002BAC91 /* StoredShift.swift in Sources */,
 				SCENE0012F0700000000001 /* SceneDelegate.swift in Sources */,
+				11A197042F1B15080030E524 /* ScrollAppearModifier.swift in Sources */,
 				11A196332F1AC0070030E524 /* TimePickerRow.swift in Sources */,
 				11A196342F1AC0070030E524 /* AddShiftView.swift in Sources */,
 				11A196352F1AC0070030E524 /* RecurringShiftProjector.swift in Sources */,
 				11A196362F1AC0070030E524 /* RecurringCalendarView.swift in Sources */,
+				11A196FF2F1B14FA0030E524 /* DayShiftsSheet.swift in Sources */,
+				11A197002F1B14FA0030E524 /* SwipeableShiftCard.swift in Sources */,
+				11A197012F1B14FA0030E524 /* NextShiftCountdownCard.swift in Sources */,
+				11A197022F1B14FA0030E524 /* ShiftDetailsSheet.swift in Sources */,
 				11A196372F1AC0070030E524 /* ShiftCalendarView.swift in Sources */,
 				11A196382F1AC0070030E524 /* RepeatIntervalPicker.swift in Sources */,
 				11A196392F1AC0070030E524 /* AddShiftViewModel.swift in Sources */,

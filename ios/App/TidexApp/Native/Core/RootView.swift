@@ -92,17 +92,6 @@ struct RootView: View {
         .animation(.easeInOut(duration: 0.3), value: hasCompletedPostAuthOnboarding)
         .environmentObject(coordinator)
         .environment(\.localization, localization)
-        // Note: Removed .preferredColorScheme(.dark) to respect system appearance
-        #if DEBUG
-        .onAppear {
-            // Reset onboarding state on every launch in debug builds
-            // This makes it easy to test onboarding by just rebuilding in Xcode
-            hasCompletedPreAuthOnboarding = false
-            hasCompletedPostAuthOnboarding = false
-            showAuthAfterOnboarding = false
-            print("[DEBUG] Onboarding state reset for testing")
-        }
-        #endif
     }
 }
 

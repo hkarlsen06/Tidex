@@ -24,7 +24,7 @@ struct PullToRefreshConfig {
     let dampingFraction: Double
 
     static let `default` = PullToRefreshConfig(
-        triggerDistance: 80,
+        triggerDistance: 100,
         indicatorHeight: 60,
         springResponse: 0.35,
         dampingFraction: 0.75
@@ -183,14 +183,14 @@ struct PullToRefreshContainer<Content: View>: View {
     // MARK: - Gesture
 
     private var pullGesture: some Gesture {
-        DragGesture(minimumDistance: 3) // Lower threshold to capture vertical gesture first
+        DragGesture(minimumDistance: 15) // Higher threshold to avoid triggering during normal scrolling
             .onChanged { value in
                 let verticalDrag = value.translation.height
                 let horizontalDrag = abs(value.translation.width)
 
                 // Determine if this is a vertical pull (downward only)
-                // Must be predominantly vertical and downward
-                let isVerticalPull = verticalDrag > 0 && verticalDrag > horizontalDrag * 1.2
+                // Must be strongly vertical and downward to avoid conflicts with scroll
+                let isVerticalPull = verticalDrag > 20 && verticalDrag > horizontalDrag * 2.5
 
                 // If not a valid vertical pull, don't interfere
                 guard isVerticalPull else {

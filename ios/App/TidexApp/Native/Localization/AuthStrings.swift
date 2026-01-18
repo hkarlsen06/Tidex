@@ -447,7 +447,37 @@ enum AuthStrings {
         "verification.offline.message": "Koble til internett for å bekrefte abonnementet ditt.",
         "verification.online.title": "Bekreft abonnementet ditt",
         "verification.online.message": "Vi kunne ikke bekrefte abonnementet ditt. Prøv igjen eller gjenopprett kjøpene dine.",
-        "verification.retry": "Prøv igjen"
+        "verification.retry": "Prøv igjen",
+
+        // Shifts
+        "shifts.weekLabel": "Uke",
+        "shifts.noShiftsTitle": "Ingen vakter",
+        "shifts.noShiftsCurrentMonth": "Legg til din første vakt for å se den her",
+        "shifts.noShiftsOtherMonth": "Ingen vakter registrert denne måneden",
+        "shifts.addShiftButton": "Legg til vakt",
+        "shifts.loadError": "Kunne ikke laste vakter",
+        "shifts.detailsTitle": "Vaktdetaljer",
+        "shifts.timeSection": "Tid",
+        "shifts.timeRange": "Tidsrom",
+        "shifts.duration": "Varighet",
+        "shifts.earningsSection": "Inntekt",
+        "shifts.grossPay": "Bruttolønn",
+        "shifts.taxDeduction": "Skattetrekk",
+        "shifts.netPay": "Nettolønn",
+        "shifts.recurringShift": "Gjentakende vakt",
+        "shifts.recurringShiftDescription": "Denne vakten er generert fra et gjentakende mønster",
+        "shifts.deleteButton": "Slett vakt",
+        "shifts.deleteConfirmTitle": "Slett vakt?",
+        "shifts.deleteConfirmMessage": "Er du sikker på at du vil slette denne vakten? Dette kan ikke angres.",
+        "shifts.excludeButton": "Ekskluder denne datoen",
+        "shifts.excludeConfirmTitle": "Ekskluder denne vakten?",
+        "shifts.excludeConfirmMessage": "Denne datoen blir ekskludert fra den faste vakten. Vakten vil ikke lenger vises.",
+        "shifts.excludedFromTotal": "Ikke inkludert i total",
+        "shifts.basePay": "Grunnlønn",
+        "shifts.supplementsSection": "Tillegg",
+        "shifts.totalSupplement": "Totalt tillegg",
+        "shifts.supplementLabel": "Tillegg",
+        "shifts.customized": "Tilpasset"
     ]
 
     // MARK: - English Strings
@@ -885,6 +915,36 @@ enum AuthStrings {
         "verification.offline.message": "Connect to the internet to verify your subscription status.",
         "verification.online.title": "Verify Your Subscription",
         "verification.online.message": "We couldn't verify your subscription. Please try again or restore your purchases.",
-        "verification.retry": "Try Again"
+        "verification.retry": "Try Again",
+
+        // Shifts
+        "shifts.weekLabel": "Week",
+        "shifts.noShiftsTitle": "No shifts",
+        "shifts.noShiftsCurrentMonth": "Add your first shift to see it here",
+        "shifts.noShiftsOtherMonth": "No shifts recorded this month",
+        "shifts.addShiftButton": "Add Shift",
+        "shifts.loadError": "Failed to load shifts",
+        "shifts.detailsTitle": "Shift Details",
+        "shifts.timeSection": "Time",
+        "shifts.timeRange": "Time Range",
+        "shifts.duration": "Duration",
+        "shifts.earningsSection": "Earnings",
+        "shifts.grossPay": "Gross Pay",
+        "shifts.taxDeduction": "Tax Deduction",
+        "shifts.netPay": "Net Pay",
+        "shifts.recurringShift": "Recurring Shift",
+        "shifts.recurringShiftDescription": "This shift is generated from a recurring pattern",
+        "shifts.deleteButton": "Delete Shift",
+        "shifts.deleteConfirmTitle": "Delete Shift?",
+        "shifts.deleteConfirmMessage": "Are you sure you want to delete this shift? This cannot be undone.",
+        "shifts.excludeButton": "Exclude This Date",
+        "shifts.excludeConfirmTitle": "Exclude This Shift?",
+        "shifts.excludeConfirmMessage": "This date will be excluded from the recurring pattern. The shift will no longer appear.",
+        "shifts.excludedFromTotal": "Not included in total",
+        "shifts.basePay": "Base Pay",
+        "shifts.supplementsSection": "Supplements",
+        "shifts.totalSupplement": "Total Supplement",
+        "shifts.supplementLabel": "Supplement",
+        "shifts.customized": "Customized"
     ]
 }

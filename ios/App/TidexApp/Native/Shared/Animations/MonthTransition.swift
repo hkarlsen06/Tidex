@@ -200,6 +200,7 @@ struct StaggeredCardsContainer<Content: View>: View {
 
 /// An animated header showing month and year with vertical text transitions
 /// Back to today button is inline between month/year and next button (doesn't affect layout)
+/// Supports swipe gestures for month navigation
 struct AnimatedMonthHeader: View {
     let monthName: String
     let year: Int
@@ -216,6 +217,9 @@ struct AnimatedMonthHeader: View {
 
     /// Fixed width for the side sections to ensure center stays centered
     private let sideWidth: CGFloat = 80
+
+    // Haptic feedback for swipe
+    private let swipeHaptic = UIImpactFeedbackGenerator(style: .medium)
 
     var body: some View {
         // Single row navigation with perfectly centered month/year
@@ -298,7 +302,33 @@ struct AnimatedMonthHeader: View {
             .frame(width: sideWidth)
         }
         .padding(.horizontal, 16)
-        .padding(.bottom, 16) // More space above tab bar
+        .padding(.top, 16) // Equal space above month name
+        .padding(.bottom, 16) // Equal space below (above tab bar)
+        // Make entire header area swipeable for month navigation
+        .contentShape(Rectangle())
+        .gesture(
+            DragGesture(minimumDistance: 30)
+                .onEnded { value in
+                    let horizontal = value.translation.width
+                    let vertical = abs(value.translation.height)
+
+                    // Only trigger if horizontal movement dominates
+                    guard abs(horizontal) > vertical else { return }
+
+                    swipeHaptic.impactOccurred()
+
+                    if horizontal > 0 {
+                        // Swipe right → previous month
+                        onPrevious()
+                    } else {
+                        // Swipe left → next month
+                        onNext()
+                    }
+                }
+        )
+        .onAppear {
+            swipeHaptic.prepare()
+        }
     }
 
     // MARK: - Subviews
