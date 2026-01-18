@@ -7,6 +7,8 @@ struct SharedShiftsListView: View {
     let totalHours: Double
     let totalEarnings: Double?
     let shiftCount: Int
+    let year: Int
+    let month: Int
     let isLoading: Bool
     let lastCacheTime: Date?
     let onBack: () -> Void
@@ -23,23 +25,33 @@ struct SharedShiftsListView: View {
             // Header with back button
             headerView
 
-            // Summary card
-            summaryCard
-                .padding(.horizontal, 16)
-                .padding(.top, 16)
+            ScrollView {
+                VStack(spacing: 16) {
+                    // Summary card
+                    summaryCard
+                        .padding(.horizontal, 16)
+                        .padding(.top, 16)
 
-            // Shifts list
-            if isLoading && shifts.isEmpty {
-                loadingState
-            } else if shifts.isEmpty {
-                emptyState
-            } else {
-                shiftsList
-            }
+                    // Calendar view
+                    if isLoading && shifts.isEmpty {
+                        loadingState
+                    } else {
+                        SharedShiftsCalendarView(
+                            shifts: shifts,
+                            year: year,
+                            month: month,
+                            currency: currency,
+                            showEarnings: sharer.showEarnings
+                        )
+                        .padding(.top, 8)
+                    }
 
-            // Last updated indicator
-            if let cacheTime = lastCacheTime {
-                lastUpdatedView(cacheTime)
+                    // Last updated indicator
+                    if let cacheTime = lastCacheTime {
+                        lastUpdatedView(cacheTime)
+                    }
+                }
+                .padding(.bottom, 16)
             }
         }
     }
@@ -172,44 +184,6 @@ struct SharedShiftsListView: View {
         .padding(.vertical, 60)
     }
 
-    private var emptyState: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "calendar.badge.exclamationmark")
-                .font(.system(size: 40))
-                .foregroundColor(.tidexTextMuted)
-
-            Text(localization.string("sharing.noShiftsThisMonth"))
-                .font(.system(size: 17, weight: .medium))
-                .foregroundColor(.tidexTextPrimary)
-
-            Text(localization.string("sharing.noShiftsDescription"))
-                .font(.system(size: 15))
-                .foregroundColor(.tidexTextMuted)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 32)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding(.vertical, 60)
-    }
-
-    // MARK: - Shifts List
-
-    private var shiftsList: some View {
-        ScrollView {
-            LazyVStack(spacing: 12) {
-                ForEach(shifts) { shift in
-                    SharedShiftRow(
-                        shift: shift,
-                        isToday: shift.shiftDate == today,
-                        showEarnings: sharer.showEarnings
-                    )
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 16)
-        }
-    }
-
     // MARK: - Last Updated
 
     private func lastUpdatedView(_ date: Date) -> some View {
@@ -262,6 +236,8 @@ struct SharedShiftsListView: View {
         totalHours: 32.5,
         totalEarnings: 6500,
         shiftCount: 5,
+        year: 2025,
+        month: 1,
         isLoading: false,
         lastCacheTime: Date(),
         onBack: {}

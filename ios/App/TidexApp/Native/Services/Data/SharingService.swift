@@ -23,6 +23,35 @@ private struct SharersAPIResponse: Codable {
     }
 }
 
+/// Response from /api/sharing/previews endpoint
+private struct PreviewsAPIResponse: Codable {
+    let previews: [PreviewData]
+
+    struct PreviewData: Codable {
+        let sharerId: String
+        let shift: SharedShiftData?
+        let status: String?
+        let showEarnings: Bool
+    }
+}
+
+// MARK: - Shift Preview
+
+/// Preview of a sharer's next/active/past shift
+struct SharerShiftPreview: Equatable {
+    let sharerId: String
+    let shift: SharedShiftData?
+    let status: ShiftPreviewStatus?
+    let showEarnings: Bool
+}
+
+/// Status of a shift preview
+enum ShiftPreviewStatus: String {
+    case active
+    case upcoming
+    case past
+}
+
 // MARK: - Errors
 
 enum SharingServiceError: Error, LocalizedError {
@@ -231,6 +260,83 @@ final class SharingService: ObservableObject {
             let wrappedError = SharingServiceError.networkError(underlying: error)
             self.error = wrappedError
             throw wrappedError
+        }
+    }
+
+    // MARK: - Shift Previews (via Next.js API)
+
+    /// Fetch shift previews for all sharers
+    /// Returns the most relevant shift (active > upcoming > past) for each sharer
+    func fetchShiftPreviews(sharerIds: [String]) async throws -> [SharerShiftPreview] {
+        guard !sharerIds.isEmpty else { return [] }
+
+        do {
+            // Get the current session token
+            let session = try await supabase.auth.session
+            let accessToken = session.accessToken
+
+            // Build URL
+            var components = URLComponents(
+                url: APIConfiguration.webAppBaseURL.appendingPathComponent("/api/sharing/previews"),
+                resolvingAgainstBaseURL: false
+            )!
+            components.queryItems = [
+                URLQueryItem(name: "sharerIds", value: sharerIds.joined(separator: ","))
+            ]
+
+            guard let url = components.url else {
+                throw SharingServiceError.networkError(underlying: URLError(.badURL))
+            }
+
+            // Build request with auth header
+            var request = URLRequest(url: url)
+            request.httpMethod = "GET"
+            request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+            logger.info("Fetching shift previews from \(url.absoluteString)")
+
+            // Execute request
+            let (data, response) = try await urlSession.data(for: request)
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                throw SharingServiceError.networkError(underlying: URLError(.badServerResponse))
+            }
+
+            // Handle HTTP errors
+            switch httpResponse.statusCode {
+            case 200:
+                break // Success
+            case 401:
+                throw SharingServiceError.notAuthenticated
+            default:
+                let message = String(data: data, encoding: .utf8)
+                throw SharingServiceError.httpError(statusCode: httpResponse.statusCode, message: message)
+            }
+
+            // Decode response
+            let decoder = JSONDecoder()
+            do {
+                let apiResponse = try decoder.decode(PreviewsAPIResponse.self, from: data)
+                let previews = apiResponse.previews.map { preview in
+                    SharerShiftPreview(
+                        sharerId: preview.sharerId,
+                        shift: preview.shift,
+                        status: preview.status.flatMap { ShiftPreviewStatus(rawValue: $0) },
+                        showEarnings: preview.showEarnings
+                    )
+                }
+                logger.info("Loaded \(previews.count) shift previews")
+                return previews
+            } catch {
+                logger.error("Failed to decode shift previews: \(error)")
+                throw SharingServiceError.decodingError(underlying: error)
+            }
+
+        } catch let error as SharingServiceError {
+            throw error
+        } catch {
+            throw SharingServiceError.networkError(underlying: error)
         }
     }
 }

@@ -4,7 +4,9 @@ import SwiftUI
 struct SharerListView: View {
     let sharers: [SharedUser]
     let selectedSharer: SharedUser?
+    let shiftPreviews: [String: SharerShiftPreview]
     let isLoading: Bool
+    let isLoadingPreviews: Bool
     let onSelectSharer: (SharedUser) -> Void
 
     @Environment(\.localization) private var localization
@@ -47,7 +49,9 @@ struct SharerListView: View {
             ForEach(sharers) { sharer in
                 SharerRow(
                     sharer: sharer,
+                    preview: shiftPreviews[sharer.id],
                     isSelected: selectedSharer?.id == sharer.id,
+                    isLoadingPreview: isLoadingPreviews && shiftPreviews[sharer.id] == nil,
                     onTap: {
                         onSelectSharer(sharer)
                     }
@@ -85,7 +89,9 @@ struct SharerListView: View {
             )
         ],
         selectedSharer: nil,
+        shiftPreviews: [:],
         isLoading: false,
+        isLoadingPreviews: false,
         onSelectSharer: { _ in }
     )
     .background(Color.tidexBackground)

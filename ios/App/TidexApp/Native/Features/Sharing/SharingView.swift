@@ -89,7 +89,9 @@ struct SharingView: View {
             SharerListView(
                 sharers: viewModel.sharers,
                 selectedSharer: viewModel.selectedSharer,
+                shiftPreviews: viewModel.shiftPreviews,
                 isLoading: viewModel.isLoadingSharers,
+                isLoadingPreviews: viewModel.isLoadingPreviews,
                 onSelectSharer: { sharer in
                     withAnimation(.easeInOut(duration: 0.2)) {
                         viewModel.selectSharer(sharer)
@@ -112,6 +114,8 @@ struct SharingView: View {
                 totalHours: viewModel.totalHours,
                 totalEarnings: viewModel.totalEarnings,
                 shiftCount: viewModel.shiftCount,
+                year: viewModel.displayYear,
+                month: viewModel.displayMonth,
                 isLoading: viewModel.isLoadingShifts,
                 lastCacheTime: viewModel.lastCacheTime,
                 onBack: {
