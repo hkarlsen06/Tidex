@@ -108,22 +108,11 @@ struct SharingView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     // Only show when not viewing a sharer
                     if viewModel.selectedSharer == nil {
-                        HStack(spacing: 16) {
-                            // Manage sharing button
-                            Button(action: {
-                                showManageSheet = true
-                            }) {
-                                Image(systemName: "gearshape")
-                                    .font(.system(size: 18))
-                                    .foregroundColor(.tidexBlue)
-                            }
-
-                            // User menu
-                            UserMenuButton(
-                                displayName: coordinator.userDisplayName,
-                                avatarUrl: coordinator.userAvatarUrl
-                            )
-                        }
+                        // User menu only
+                        UserMenuButton(
+                            displayName: coordinator.userDisplayName,
+                            avatarUrl: coordinator.userAvatarUrl
+                        )
                     }
                 }
             }
@@ -174,18 +163,45 @@ struct SharingView: View {
 
     private var sharerListView: some View {
         ScrollView {
-            SharerListView(
-                sharers: viewModel.sharers,
-                selectedSharer: viewModel.selectedSharer,
-                shiftPreviews: viewModel.shiftPreviews,
-                isLoading: viewModel.isLoadingSharers,
-                isLoadingPreviews: viewModel.isLoadingPreviews,
-                onSelectSharer: { sharer in
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        viewModel.selectSharer(sharer)
+            VStack(spacing: 16) {
+                // Manage sharing button row
+                HStack {
+                    Spacer()
+                    Button(action: {
+                        showManageSheet = true
+                    }) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "gearshape")
+                                .font(.system(size: 14))
+                            Text(localization.string("sharing.manageTitle"))
+                                .font(.system(size: 14, weight: .medium))
+                        }
+                        .foregroundColor(.tidexBlue)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(Color.tidexBlue.opacity(0.1))
+                        )
                     }
+                    .buttonStyle(PlainButtonStyle())
                 }
-            )
+                .padding(.horizontal, 16)
+
+                // Sharer list
+                SharerListView(
+                    sharers: viewModel.sharers,
+                    selectedSharer: viewModel.selectedSharer,
+                    shiftPreviews: viewModel.shiftPreviews,
+                    isLoading: viewModel.isLoadingSharers,
+                    isLoadingPreviews: viewModel.isLoadingPreviews,
+                    onSelectSharer: { sharer in
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            viewModel.selectSharer(sharer)
+                        }
+                    }
+                )
+            }
             .padding(.top, 16)
             .padding(.bottom, 32)
         }
