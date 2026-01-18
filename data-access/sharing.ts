@@ -115,6 +115,20 @@ export const getUsersWhoSharedWithMe = cache(
 );
 
 /**
+ * Get users who have shared their shifts with the current user
+ * - Same as getUsersWhoSharedWithMe but skips session verification
+ * - For use in API routes where auth is handled via Bearer token
+ * - Uses React cache() for request deduplication
+ *
+ * @param userId - The authenticated user's ID (already verified by caller)
+ */
+export const getUsersWhoSharedWithMeWithUserId = cache(
+  async (userId: string): Promise<SharedUser[]> => {
+    return getUsersWhoSharedWithMeInternal(userId);
+  }
+);
+
+/**
  * Internal implementation of getMyShareRecipients
  * @internal - Do not call directly, use getMyShareRecipients()
  */
