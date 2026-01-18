@@ -344,6 +344,34 @@ export const getSharedUserShifts = cache(
 );
 
 /**
+ * Get computed shifts for a user who has shared their shifts with the viewer
+ * - Same as getSharedUserShifts but accepts viewerId as a parameter
+ * - For use in API routes where auth is handled via Bearer token
+ * - Uses React cache() for request deduplication
+ *
+ * @param viewerId - The authenticated viewer's user ID (already verified by caller)
+ * @param ownerId - The shift owner's user ID
+ * @param options - Query options (startDate, endDate, limit, year, month)
+ */
+export const getSharedUserShiftsWithViewerId = cache(
+  async (
+    viewerId: string,
+    ownerId: string,
+    options: { startDate?: string; endDate?: string; limit?: number; year?: number; month?: number } = {}
+  ): Promise<{
+    shifts: ShiftWithComputations[];
+    defaultView: string;
+    settings: UserSettings;
+    aggregates: SharedShiftsAggregates;
+    showEarnings: boolean;
+    payoutTaxSettings: PayoutTaxSettings;
+    wageSnapshots: WageSnapshot[];
+  }> => {
+    return getSharedUserShiftsInternal(viewerId, ownerId, options);
+  }
+);
+
+/**
  * Update share settings for a specific recipient
  * - Only the owner can update settings for their shares
  * - Used to toggle earnings visibility
