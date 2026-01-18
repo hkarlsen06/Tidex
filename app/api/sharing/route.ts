@@ -80,10 +80,8 @@ export async function GET(request: NextRequest) {
       { shifts, settings, payoutTaxSettings },
       {
         headers: {
-          // Cache for 5 minutes (300 seconds) with stale-while-revalidate
-          // 'private' prevents CDN caching; browser caching is made safe via _ck (user cache key)
-          // query param passed from client, ensuring different users have different cache entries
-          "Cache-Control": "private, max-age=300, stale-while-revalidate=60",
+          // No caching - shifts can change anytime (new shifts trigger notifications)
+          "Cache-Control": "private, no-cache, no-store, must-revalidate",
         },
       }
     );
