@@ -77,7 +77,8 @@ struct SharingView: View {
                     }
                 }
 
-                // Title area - show sharer info or just title
+                // Title area - only show sharer info when viewing a sharer
+                // (main title is now in content area)
                 ToolbarItem(placement: .principal) {
                     if let sharer = viewModel.selectedSharer {
                         HStack(spacing: 8) {
@@ -98,11 +99,8 @@ struct SharingView: View {
                                 .font(.system(size: 17, weight: .semibold))
                                 .foregroundColor(.tidexTextPrimary)
                         }
-                    } else {
-                        Text(localization.string(AppTab.sharing.titleKey))
-                            .font(.system(size: 17, weight: .semibold))
-                            .foregroundColor(.tidexTextPrimary)
                     }
+                    // No title when on main friends list - title is now inline with content
                 }
 
                 ToolbarItem(placement: .topBarTrailing) {
@@ -164,9 +162,16 @@ struct SharingView: View {
     private var sharerListView: some View {
         ScrollView {
             VStack(spacing: 16) {
-                // Manage sharing button row
+                // Title and manage button row
                 HStack {
+                    // "Friends" / "Venner" title
+                    Text(localization.string("sharing.friendsTitle"))
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundColor(.tidexTextPrimary)
+
                     Spacer()
+
+                    // Liquid glass manage button
                     Button(action: {
                         showManageSheet = true
                     }) {
@@ -176,15 +181,12 @@ struct SharingView: View {
                             Text(localization.string("sharing.manageTitle"))
                                 .font(.system(size: 14, weight: .medium))
                         }
-                        .foregroundColor(.tidexBlue)
+                        .foregroundColor(.tidexTextPrimary)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 8)
-                        .background(
-                            RoundedRectangle(cornerRadius: 8)
-                                .fill(Color.tidexBlue.opacity(0.1))
-                        )
                     }
                     .buttonStyle(PlainButtonStyle())
+                    .glassEffect(.regular.interactive(), in: .capsule)
                 }
                 .padding(.horizontal, 16)
 
