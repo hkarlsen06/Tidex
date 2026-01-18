@@ -82,10 +82,8 @@ export async function GET(request: NextRequest) {
       { sharers: response },
       {
         headers: {
-          // Cache for 5 minutes with stale-while-revalidate
-          // 'private' prevents CDN caching; browser caching is safe since
-          // the JWT in Authorization header scopes the request to the user
-          "Cache-Control": "private, max-age=300, stale-while-revalidate=60",
+          // No caching - data can change frequently during management
+          "Cache-Control": "private, no-cache, no-store, must-revalidate",
         },
       }
     );
