@@ -116,17 +116,106 @@ export const getUsersWhoSharedWithMe = cache(
 
 /**
  * Get users who have shared their shifts with the current user
- * - Same as getUsersWhoSharedWithMe but skips session verification
+ * - Direct implementation for API routes (bypasses Effect layer)
  * - For use in API routes where auth is handled via Bearer token
- * - Uses React cache() for request deduplication
+ * - Does NOT require cookie-based session
  *
  * @param userId - The authenticated user's ID (already verified by caller)
  */
-export const getUsersWhoSharedWithMeWithUserId = cache(
-  async (userId: string): Promise<SharedUser[]> => {
-    return getUsersWhoSharedWithMeInternal(userId);
+export async function getUsersWhoSharedWithMeWithUserId(
+  userId: string
+): Promise<SharedUser[]> {
+  const { createClient } = await import("@supabase/supabase-js");
+
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!url || !serviceRoleKey) {
+    logger.error("Missing Supabase URL or service role key");
+    return [];
   }
-);
+
+  const adminClient = createClient(url, serviceRoleKey, {
+    auth: { persistSession: false },
+  });
+
+  try {
+    // Query shift_shares where viewer_id = userId and not blocked
+    const { data: shares, error: sharesError } = await adminClient
+      .from("shift_shares")
+      .select("owner_id, created_at, show_earnings, muted")
+      .eq("viewer_id", userId)
+      .eq("blocked", false)
+      .order("created_at", { ascending: false });
+
+    if (sharesError) {
+      logger.error("Failed to fetch shares:", sharesError);
+      return [];
+    }
+
+    if (!shares || shares.length === 0) {
+      return [];
+    }
+
+    // Get profile pictures from user_settings
+    const ownerIds = shares.map((s) => s.owner_id);
+    const { data: settings } = await adminClient
+      .from("user_settings")
+      .select("user_id, profile_picture_url")
+      .in("user_id", ownerIds);
+
+    const settingsMap = new Map(
+      (settings ?? []).map((s: { user_id: string; profile_picture_url: string | null }) => [s.user_id, s.profile_picture_url])
+    );
+
+    // Get email/phone/name/avatar from admin client
+    type AuthUserInfo = { email: string | null; phone: string | null; firstName: string | null; oauthAvatarUrl: string | null };
+    const usersMap = new Map<string, AuthUserInfo>();
+
+    const { data: adminData, error: adminError } = await adminClient.auth.admin.listUsers({
+      page: 1,
+      perPage: 1000,
+    });
+
+    if (!adminError && adminData?.users) {
+      for (const user of adminData.users) {
+        if (ownerIds.includes(user.id)) {
+          const metadata = user.user_metadata ?? {};
+          usersMap.set(user.id, {
+            email: user.email ?? null,
+            phone: user.phone ?? null,
+            firstName: (metadata.full_name as string) ?? (metadata.name as string) ?? null,
+            oauthAvatarUrl: (metadata.avatar_url as string) ?? (metadata.picture as string) ?? null,
+          });
+        }
+      }
+    }
+
+    // Build SharedUser objects
+    const result: SharedUser[] = shares.map((share) => {
+      const userInfo = usersMap.get(share.owner_id);
+      const profilePictureUrl = settingsMap.get(share.owner_id) ?? null;
+      const muted = share.muted ?? false;
+
+      return {
+        id: share.owner_id,
+        email: userInfo?.email ?? null,
+        phone: userInfo?.phone ?? null,
+        firstName: userInfo?.firstName ?? null,
+        profilePictureUrl,
+        oauthAvatarUrl: userInfo?.oauthAvatarUrl ?? null,
+        sharedAt: share.created_at,
+        showEarnings: share.show_earnings ?? false,
+        notificationFrequency: muted ? "muted" as const : "instant" as const,
+      };
+    });
+
+    return result;
+  } catch (error) {
+    logger.error("Failed to fetch users who shared with me:", error);
+    return [];
+  }
+}
 
 /**
  * Internal implementation of getMyShareRecipients
