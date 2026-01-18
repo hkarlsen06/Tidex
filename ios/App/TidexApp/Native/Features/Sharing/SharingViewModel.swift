@@ -62,6 +62,12 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
     /// Direction of last navigation (for animations)
     @Published private(set) var navigationDirection: MonthNavigationDirection?
 
+    /// Shift previews for each sharer (most relevant shift per sharer)
+    @Published private(set) var shiftPreviews: [String: SharerShiftPreview] = [:]
+
+    /// Whether shift previews are being loaded
+    @Published private(set) var isLoadingPreviews = false
+
     // MARK: - Month Navigation (MonthNavigable)
 
     var displayYear: Int { monthContext.displayYear }
@@ -162,21 +168,51 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
 
             logger.info("Loaded \(freshSharers.count) sharers")
 
+            // Fetch shift previews after sharers loaded
+            isLoadingSharers = false
+            await loadShiftPreviews()
+
         } catch {
             logger.error("Failed to load sharers: \(error.localizedDescription)")
             self.error = SharingError.loadFailed(underlying: error)
+            isLoadingSharers = false
+        }
+    }
+
+    /// Load shift previews for all sharers
+    func loadShiftPreviews() async {
+        guard !sharers.isEmpty else { return }
+
+        isLoadingPreviews = true
+
+        do {
+            let sharerIds = sharers.map { $0.id }
+            let previews = try await sharingService.fetchShiftPreviews(sharerIds: sharerIds)
+
+            // Convert to dictionary for quick lookup
+            var previewMap: [String: SharerShiftPreview] = [:]
+            for preview in previews {
+                previewMap[preview.sharerId] = preview
+            }
+            shiftPreviews = previewMap
+
+            logger.info("Loaded shift previews for \(previews.count) sharers")
+        } catch {
+            logger.error("Failed to load shift previews: \(error.localizedDescription)")
+            // Don't set error - previews are non-critical
         }
 
-        isLoadingSharers = false
+        isLoadingPreviews = false
     }
 
     /// Refresh sharers (pull-to-refresh)
     func refresh() async {
-        await loadSharers()
-
-        // Also refresh shifts if a sharer is selected
         if selectedSharer != nil {
+            // Refresh shifts for selected sharer
             await loadShiftsForSelectedSharer()
+        } else {
+            // Refresh sharer list (which includes previews)
+            await loadSharers()
         }
     }
 
