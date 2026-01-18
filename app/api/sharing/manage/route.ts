@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-import { Effect } from "effect";
-import { SharingService, type NotificationFrequency } from "@/lib/services/sharing";
-import { SharingLive } from "@/lib/layers/app";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { getSession } from "@/data-access/auth";
 import { invalidateAndRevalidate } from "@/lib/revalidation/paths";
 import { logger } from "@/lib/logger";
@@ -11,6 +8,13 @@ import {
   generateMutationId,
   getOwnerName,
 } from "@/lib/notifications/enqueue";
+
+// Share limits per subscription tier
+const SHARE_LIMITS = {
+  free: 1,
+  pro: 5,
+  max: 20,
+} as const;
 
 /**
  * Sharing error messages (Norwegian)
@@ -61,10 +65,30 @@ interface AuthenticatedUser {
 }
 
 /**
+ * Get admin Supabase client for database operations
+ */
+function getAdminClient(): SupabaseClient | null {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!url || !serviceRoleKey) {
+    logger.error("Missing Supabase URL or service role key");
+    return null;
+  }
+
+  return createClient(url, serviceRoleKey, {
+    auth: { persistSession: false },
+  });
+}
+
+/**
  * POST /api/sharing/manage
  *
  * Unified endpoint for all sharing management actions.
  * Used by the iOS app's sharing management modal.
+ *
+ * This endpoint bypasses the Effect layer to avoid session verification issues
+ * when called with Bearer token auth from iOS.
  *
  * Authentication:
  * - iOS: Bearer token in Authorization header
@@ -85,75 +109,93 @@ interface AuthenticatedUser {
  * { success: true } or { success: false, error: string }
  */
 export async function POST(request: NextRequest) {
-  try {
-    // Try to get user from Authorization header first (iOS)
-    // Fall back to cookie-based session (web)
-    let user: AuthenticatedUser | null = null;
+  // Try to get user from Authorization header first (iOS)
+  // Fall back to cookie-based session (web)
+  let user: AuthenticatedUser | null = null;
 
-    const authHeader = request.headers.get("Authorization");
-    if (authHeader?.startsWith("Bearer ")) {
-      const jwt = authHeader.slice(7);
+  const authHeader = request.headers.get("Authorization");
+  if (authHeader?.startsWith("Bearer ")) {
+    const jwt = authHeader.slice(7);
 
-      // Verify JWT and get user - uses server-side validation
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
-      const supabase = createClient(supabaseUrl, supabaseKey);
-      const {
-        data: { user: supabaseUser },
-        error,
-      } = await supabase.auth.getUser(jwt);
+    // Verify JWT and get user - uses server-side validation
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+    const {
+      data: { user: supabaseUser },
+      error,
+    } = await supabase.auth.getUser(jwt);
 
-      if (error || !supabaseUser) {
-        logger.warn("Auth error in /api/sharing/manage:", error?.message);
-        return NextResponse.json(
-          { success: false, error: "Unauthorized" },
-          { status: 401 }
-        );
-      }
-
-      user = supabaseUser;
-    } else {
-      // Fall back to cookie-based session (web clients)
-      const session = await getSession();
-      if (!session) {
-        return NextResponse.json(
-          { success: false, error: "Unauthorized" },
-          { status: 401 }
-        );
-      }
-      user = session.user;
-    }
-
-    // Parse request body
-    const body: ManageRequest = await request.json();
-    const { action } = body;
-
-    if (!action) {
+    if (error || !supabaseUser) {
+      logger.warn("Auth error in /api/sharing/manage:", error?.message);
       return NextResponse.json(
-        { success: false, error: SHARING_ERRORS.INVALID_ACTION },
-        { status: 400 }
+        { success: false, error: "Unauthorized" },
+        { status: 401 }
       );
     }
 
-    logger.info(`Processing sharing action: ${action} for user ${user.id}`);
+    user = supabaseUser;
+  } else {
+    // Fall back to cookie-based session (web clients)
+    const session = await getSession();
+    if (!session) {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+    user = session.user;
+  }
 
+  // Get admin client for database operations
+  const adminClient = getAdminClient();
+  if (!adminClient) {
+    return NextResponse.json(
+      { success: false, error: "Server configuration error" },
+      { status: 500 }
+    );
+  }
+
+  // Parse request body
+  let body: ManageRequest;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json(
+      { success: false, error: SHARING_ERRORS.INVALID_ACTION },
+      { status: 400 }
+    );
+  }
+
+  const { action } = body;
+
+  if (!action) {
+    return NextResponse.json(
+      { success: false, error: SHARING_ERRORS.INVALID_ACTION },
+      { status: 400 }
+    );
+  }
+
+  logger.info(`Processing sharing action: ${action} for user ${user.id}`);
+
+  try {
     switch (action) {
       case "createShare":
-        return handleCreateShare(user, body);
+        return await handleCreateShare(adminClient, user, body);
       case "removeShare":
-        return handleRemoveShare(user, body);
+        return await handleRemoveShare(adminClient, user, body);
       case "removeSharer":
-        return handleRemoveSharer(user, body);
+        return await handleRemoveSharer(adminClient, user, body);
       case "toggleEarnings":
-        return handleToggleEarnings(user, body);
+        return await handleToggleEarnings(adminClient, user, body);
       case "blockSharer":
-        return handleBlockSharer(user, body);
+        return await handleBlockSharer(adminClient, user, body);
       case "unblockSharer":
-        return handleUnblockSharer(user, body);
+        return await handleUnblockSharer(adminClient, user, body);
       case "shareBack":
-        return handleShareBack(user, body);
+        return await handleShareBack(adminClient, user, body);
       case "toggleMuted":
-        return handleToggleMuted(user, body);
+        return await handleToggleMuted(adminClient, user, body);
       default:
         return NextResponse.json(
           { success: false, error: SHARING_ERRORS.INVALID_ACTION },
@@ -170,9 +212,66 @@ export async function POST(request: NextRequest) {
 }
 
 /**
+ * Get user's share limit based on subscription tier
+ */
+async function getUserShareLimit(
+  adminClient: SupabaseClient,
+  userId: string
+): Promise<number> {
+  // Check for grandfathered status first
+  const { data: profileData } = await adminClient
+    .from("profiles")
+    .select("is_grandfathered")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (profileData?.is_grandfathered) {
+    return SHARE_LIMITS.max;
+  }
+
+  // Check subscription tier
+  const { data: subscriptionData } = await adminClient
+    .from("subscriptions")
+    .select("tier")
+    .eq("user_id", userId)
+    .eq("status", "active")
+    .maybeSingle();
+
+  const tier = (subscriptionData?.tier as keyof typeof SHARE_LIMITS) || "free";
+  return SHARE_LIMITS[tier] || SHARE_LIMITS.free;
+}
+
+/**
+ * Find a user by email or phone
+ */
+async function findUserByIdentifier(
+  adminClient: SupabaseClient,
+  identifier: string
+): Promise<{ id: string } | null> {
+  const { data: usersData } = await adminClient.auth.admin.listUsers();
+
+  if (!usersData?.users) return null;
+
+  // Check if identifier is email or phone
+  const isEmail = identifier.includes("@");
+
+  for (const u of usersData.users) {
+    if (isEmail && u.email?.toLowerCase() === identifier.toLowerCase()) {
+      return { id: u.id };
+    }
+    if (!isEmail && u.phone === identifier) {
+      return { id: u.id };
+    }
+  }
+
+  return null;
+}
+
+/**
  * Create a new share (add recipient by email or phone)
  */
 async function handleCreateShare(
+  adminClient: SupabaseClient,
   user: AuthenticatedUser,
   body: ManageRequest
 ): Promise<NextResponse> {
@@ -186,23 +285,74 @@ async function handleCreateShare(
     );
   }
 
-  const program = Effect.gen(function* () {
-    const sharing = yield* SharingService;
-    const result = yield* sharing.createShare(user.id, trimmed, {
-      showEarnings: showEarnings ?? false,
-    });
-    return result;
-  }).pipe(Effect.provide(SharingLive), Effect.scoped);
+  // Find recipient user
+  const recipientUser = await findUserByIdentifier(adminClient, trimmed);
+  if (!recipientUser) {
+    return NextResponse.json(
+      { success: false, error: SHARING_ERRORS.USER_NOT_FOUND },
+      { status: 404 }
+    );
+  }
 
+  // Can't share with yourself
+  if (recipientUser.id === user.id) {
+    return NextResponse.json(
+      { success: false, error: SHARING_ERRORS.CANNOT_SHARE_SELF },
+      { status: 400 }
+    );
+  }
+
+  // Check share limit
+  const limit = await getUserShareLimit(adminClient, user.id);
+  const { count } = await adminClient
+    .from("shift_shares")
+    .select("*", { count: "exact", head: true })
+    .eq("owner_id", user.id);
+
+  if ((count || 0) >= limit) {
+    return NextResponse.json(
+      { success: false, error: SHARING_ERRORS.SHARE_LIMIT_REACHED },
+      { status: 400 }
+    );
+  }
+
+  // Check if already shared
+  const { data: existingShare } = await adminClient
+    .from("shift_shares")
+    .select("id")
+    .eq("owner_id", user.id)
+    .eq("viewer_id", recipientUser.id)
+    .maybeSingle();
+
+  if (existingShare) {
+    return NextResponse.json(
+      { success: false, error: SHARING_ERRORS.ALREADY_SHARED },
+      { status: 409 }
+    );
+  }
+
+  // Create the share
+  const { error: insertError } = await adminClient.from("shift_shares").insert({
+    owner_id: user.id,
+    viewer_id: recipientUser.id,
+    show_earnings: showEarnings ?? false,
+  });
+
+  if (insertError) {
+    logger.error("Failed to create share:", insertError);
+    return NextResponse.json(
+      { success: false, error: SHARING_ERRORS.FAILED_TO_CREATE_SHARE },
+      { status: 500 }
+    );
+  }
+
+  // Enqueue share_started notification to the recipient
   try {
-    const result = await Effect.runPromise(program);
-
-    // Enqueue share_started notification to the recipient
     const mutationId = generateMutationId();
     const ownerName = getOwnerName(user);
 
     await enqueueDirectNotification({
-      recipientId: result.recipientId,
+      recipientId: recipientUser.id,
       senderId: user.id,
       notificationType: "share_started",
       title: `${ownerName} deler nå vaktene sine med deg`,
@@ -211,63 +361,24 @@ async function handleCreateShare(
         type: "share_started",
         owner_id: user.id,
       },
-      idempotencyKey: `share:${user.id}:${result.recipientId}:${mutationId}`,
+      idempotencyKey: `share:${user.id}:${recipientUser.id}:${mutationId}`,
     });
-
-    // Invalidate both users' caches
-    invalidateAndRevalidate(user.id);
-
-    return NextResponse.json({ success: true });
-  } catch (error: any) {
-    logger.error("Failed to create share:", error);
-
-    // Map tagged errors to user-friendly messages
-    if (error._tag === "ValidationError") {
-      if (error.field === "limit") {
-        return NextResponse.json(
-          { success: false, error: SHARING_ERRORS.SHARE_LIMIT_REACHED },
-          { status: 400 }
-        );
-      }
-      if (error.field === "identifier") {
-        if (error.message?.includes("yourself")) {
-          return NextResponse.json(
-            { success: false, error: SHARING_ERRORS.CANNOT_SHARE_SELF },
-            { status: 400 }
-          );
-        }
-        return NextResponse.json(
-          { success: false, error: SHARING_ERRORS.INVALID_IDENTIFIER },
-          { status: 400 }
-        );
-      }
-    }
-
-    if (error._tag === "NotFoundError") {
-      return NextResponse.json(
-        { success: false, error: SHARING_ERRORS.USER_NOT_FOUND },
-        { status: 404 }
-      );
-    }
-
-    if (error._tag === "ConflictError") {
-      return NextResponse.json(
-        { success: false, error: SHARING_ERRORS.ALREADY_SHARED },
-        { status: 409 }
-      );
-    }
-
-    return NextResponse.json(
-      { success: false, error: SHARING_ERRORS.FAILED_TO_CREATE_SHARE },
-      { status: 500 }
-    );
+  } catch (notifError) {
+    // Don't fail the share creation if notification fails
+    logger.warn("Failed to enqueue share notification:", notifError);
   }
+
+  // Invalidate caches
+  invalidateAndRevalidate(user.id);
+
+  return NextResponse.json({ success: true });
 }
 
 /**
  * Remove a share (revoke recipient access)
  */
 async function handleRemoveShare(
+  adminClient: SupabaseClient,
   user: AuthenticatedUser,
   body: ManageRequest
 ): Promise<NextResponse> {
@@ -280,32 +391,32 @@ async function handleRemoveShare(
     );
   }
 
-  const program = Effect.gen(function* () {
-    const sharing = yield* SharingService;
-    yield* sharing.removeShare(user.id, recipientId);
-  }).pipe(Effect.provide(SharingLive), Effect.scoped);
+  const { error } = await adminClient
+    .from("shift_shares")
+    .delete()
+    .eq("owner_id", user.id)
+    .eq("viewer_id", recipientId);
 
-  try {
-    await Effect.runPromise(program);
-
-    // Invalidate both users' caches
-    invalidateAndRevalidate(user.id);
-    invalidateAndRevalidate(recipientId);
-
-    return NextResponse.json({ success: true });
-  } catch (error: any) {
+  if (error) {
     logger.error("Failed to remove share:", error);
     return NextResponse.json(
       { success: false, error: SHARING_ERRORS.FAILED_TO_REMOVE_SHARE },
       { status: 500 }
     );
   }
+
+  // Invalidate both users' caches
+  invalidateAndRevalidate(user.id);
+  invalidateAndRevalidate(recipientId);
+
+  return NextResponse.json({ success: true });
 }
 
 /**
  * Remove a sharer from your friends list (as the viewer)
  */
 async function handleRemoveSharer(
+  adminClient: SupabaseClient,
   user: AuthenticatedUser,
   body: ManageRequest
 ): Promise<NextResponse> {
@@ -318,32 +429,33 @@ async function handleRemoveSharer(
     );
   }
 
-  const program = Effect.gen(function* () {
-    const sharing = yield* SharingService;
-    yield* sharing.removeSharerAsViewer(user.id, ownerId);
-  }).pipe(Effect.provide(SharingLive), Effect.scoped);
+  // Delete the share where viewer is current user
+  const { error } = await adminClient
+    .from("shift_shares")
+    .delete()
+    .eq("owner_id", ownerId)
+    .eq("viewer_id", user.id);
 
-  try {
-    await Effect.runPromise(program);
-
-    // Invalidate both users' caches
-    invalidateAndRevalidate(user.id);
-    invalidateAndRevalidate(ownerId);
-
-    return NextResponse.json({ success: true });
-  } catch (error: any) {
+  if (error) {
     logger.error("Failed to remove sharer:", error);
     return NextResponse.json(
       { success: false, error: SHARING_ERRORS.FAILED_TO_REMOVE_SHARER },
       { status: 500 }
     );
   }
+
+  // Invalidate both users' caches
+  invalidateAndRevalidate(user.id);
+  invalidateAndRevalidate(ownerId);
+
+  return NextResponse.json({ success: true });
 }
 
 /**
  * Toggle earnings visibility for a share recipient
  */
 async function handleToggleEarnings(
+  adminClient: SupabaseClient,
   user: AuthenticatedUser,
   body: ManageRequest
 ): Promise<NextResponse> {
@@ -356,32 +468,32 @@ async function handleToggleEarnings(
     );
   }
 
-  const program = Effect.gen(function* () {
-    const sharing = yield* SharingService;
-    yield* sharing.updateShareSettings(user.id, recipientId, { showEarnings });
-  }).pipe(Effect.provide(SharingLive), Effect.scoped);
+  const { error } = await adminClient
+    .from("shift_shares")
+    .update({ show_earnings: showEarnings })
+    .eq("owner_id", user.id)
+    .eq("viewer_id", recipientId);
 
-  try {
-    await Effect.runPromise(program);
-
-    // Invalidate both users' caches
-    invalidateAndRevalidate(user.id);
-    invalidateAndRevalidate(recipientId);
-
-    return NextResponse.json({ success: true });
-  } catch (error: any) {
+  if (error) {
     logger.error("Failed to update share settings:", error);
     return NextResponse.json(
       { success: false, error: SHARING_ERRORS.FAILED_TO_UPDATE_SETTINGS },
       { status: 500 }
     );
   }
+
+  // Invalidate both users' caches
+  invalidateAndRevalidate(user.id);
+  invalidateAndRevalidate(recipientId);
+
+  return NextResponse.json({ success: true });
 }
 
 /**
  * Block a sharer (hide their shifts from your list)
  */
 async function handleBlockSharer(
+  adminClient: SupabaseClient,
   user: AuthenticatedUser,
   body: ManageRequest
 ): Promise<NextResponse> {
@@ -394,31 +506,31 @@ async function handleBlockSharer(
     );
   }
 
-  const program = Effect.gen(function* () {
-    const sharing = yield* SharingService;
-    yield* sharing.blockSharer(user.id, ownerId);
-  }).pipe(Effect.provide(SharingLive), Effect.scoped);
+  const { error } = await adminClient
+    .from("shift_shares")
+    .update({ blocked: true })
+    .eq("owner_id", ownerId)
+    .eq("viewer_id", user.id);
 
-  try {
-    await Effect.runPromise(program);
-
-    // Only invalidate the viewer's cache
-    invalidateAndRevalidate(user.id);
-
-    return NextResponse.json({ success: true });
-  } catch (error: any) {
+  if (error) {
     logger.error("Failed to block sharer:", error);
     return NextResponse.json(
       { success: false, error: SHARING_ERRORS.FAILED_TO_BLOCK_SHARER },
       { status: 500 }
     );
   }
+
+  // Only invalidate the viewer's cache
+  invalidateAndRevalidate(user.id);
+
+  return NextResponse.json({ success: true });
 }
 
 /**
  * Unblock a sharer (restore their shifts to your list)
  */
 async function handleUnblockSharer(
+  adminClient: SupabaseClient,
   user: AuthenticatedUser,
   body: ManageRequest
 ): Promise<NextResponse> {
@@ -431,31 +543,31 @@ async function handleUnblockSharer(
     );
   }
 
-  const program = Effect.gen(function* () {
-    const sharing = yield* SharingService;
-    yield* sharing.unblockSharer(user.id, ownerId);
-  }).pipe(Effect.provide(SharingLive), Effect.scoped);
+  const { error } = await adminClient
+    .from("shift_shares")
+    .update({ blocked: false })
+    .eq("owner_id", ownerId)
+    .eq("viewer_id", user.id);
 
-  try {
-    await Effect.runPromise(program);
-
-    // Only invalidate the viewer's cache
-    invalidateAndRevalidate(user.id);
-
-    return NextResponse.json({ success: true });
-  } catch (error: any) {
+  if (error) {
     logger.error("Failed to unblock sharer:", error);
     return NextResponse.json(
       { success: false, error: SHARING_ERRORS.FAILED_TO_UNBLOCK_SHARER },
       { status: 500 }
     );
   }
+
+  // Only invalidate the viewer's cache
+  invalidateAndRevalidate(user.id);
+
+  return NextResponse.json({ success: true });
 }
 
 /**
  * Share back with someone who has shared with you
  */
 async function handleShareBack(
+  adminClient: SupabaseClient,
   user: AuthenticatedUser,
   body: ManageRequest
 ): Promise<NextResponse> {
@@ -468,17 +580,52 @@ async function handleShareBack(
     );
   }
 
-  const program = Effect.gen(function* () {
-    const sharing = yield* SharingService;
-    yield* sharing.createShareById(user.id, recipientId, {
-      showEarnings: false,
-    });
-  }).pipe(Effect.provide(SharingLive), Effect.scoped);
+  // Check share limit
+  const limit = await getUserShareLimit(adminClient, user.id);
+  const { count } = await adminClient
+    .from("shift_shares")
+    .select("*", { count: "exact", head: true })
+    .eq("owner_id", user.id);
 
+  if ((count || 0) >= limit) {
+    return NextResponse.json(
+      { success: false, error: SHARING_ERRORS.SHARE_LIMIT_REACHED },
+      { status: 400 }
+    );
+  }
+
+  // Check if already shared
+  const { data: existingShare } = await adminClient
+    .from("shift_shares")
+    .select("id")
+    .eq("owner_id", user.id)
+    .eq("viewer_id", recipientId)
+    .maybeSingle();
+
+  if (existingShare) {
+    return NextResponse.json(
+      { success: false, error: SHARING_ERRORS.ALREADY_SHARED },
+      { status: 409 }
+    );
+  }
+
+  // Create the share
+  const { error: insertError } = await adminClient.from("shift_shares").insert({
+    owner_id: user.id,
+    viewer_id: recipientId,
+    show_earnings: false,
+  });
+
+  if (insertError) {
+    logger.error("Failed to share back:", insertError);
+    return NextResponse.json(
+      { success: false, error: SHARING_ERRORS.FAILED_TO_SHARE_BACK },
+      { status: 500 }
+    );
+  }
+
+  // Enqueue share_started notification to the recipient
   try {
-    await Effect.runPromise(program);
-
-    // Enqueue share_started notification to the recipient
     const mutationId = generateMutationId();
     const ownerName = getOwnerName(user);
 
@@ -494,41 +641,23 @@ async function handleShareBack(
       },
       idempotencyKey: `share:${user.id}:${recipientId}:${mutationId}`,
     });
-
-    // Invalidate both users' caches
-    invalidateAndRevalidate(user.id);
-    invalidateAndRevalidate(recipientId);
-
-    return NextResponse.json({ success: true });
-  } catch (error: any) {
-    logger.error("Failed to share back:", error);
-
-    // Map tagged errors
-    if (error._tag === "ValidationError" && error.field === "limit") {
-      return NextResponse.json(
-        { success: false, error: SHARING_ERRORS.SHARE_LIMIT_REACHED },
-        { status: 400 }
-      );
-    }
-
-    if (error._tag === "ConflictError") {
-      return NextResponse.json(
-        { success: false, error: SHARING_ERRORS.ALREADY_SHARED },
-        { status: 409 }
-      );
-    }
-
-    return NextResponse.json(
-      { success: false, error: SHARING_ERRORS.FAILED_TO_SHARE_BACK },
-      { status: 500 }
-    );
+  } catch (notifError) {
+    // Don't fail the share creation if notification fails
+    logger.warn("Failed to enqueue share notification:", notifError);
   }
+
+  // Invalidate both users' caches
+  invalidateAndRevalidate(user.id);
+  invalidateAndRevalidate(recipientId);
+
+  return NextResponse.json({ success: true });
 }
 
 /**
  * Toggle muted status for a specific sharer
  */
 async function handleToggleMuted(
+  adminClient: SupabaseClient,
   user: AuthenticatedUser,
   body: ManageRequest
 ): Promise<NextResponse> {
@@ -541,26 +670,22 @@ async function handleToggleMuted(
     );
   }
 
-  // Convert boolean to frequency
-  const frequency: NotificationFrequency = muted ? "muted" : "instant";
+  const { error } = await adminClient
+    .from("shift_shares")
+    .update({ muted })
+    .eq("owner_id", ownerId)
+    .eq("viewer_id", user.id);
 
-  const program = Effect.gen(function* () {
-    const sharing = yield* SharingService;
-    yield* sharing.updateNotificationFrequency(user.id, ownerId, frequency);
-  }).pipe(Effect.provide(SharingLive), Effect.scoped);
-
-  try {
-    await Effect.runPromise(program);
-
-    // Invalidate the viewer's cache
-    invalidateAndRevalidate(user.id);
-
-    return NextResponse.json({ success: true });
-  } catch (error: any) {
+  if (error) {
     logger.error("Failed to toggle sharer muted status:", error);
     return NextResponse.json(
       { success: false, error: SHARING_ERRORS.FAILED_TO_UPDATE_FREQUENCY },
       { status: 500 }
     );
   }
+
+  // Invalidate the viewer's cache
+  invalidateAndRevalidate(user.id);
+
+  return NextResponse.json({ success: true });
 }
