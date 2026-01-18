@@ -27,34 +27,20 @@ const SHARING_ERRORS = {
   CANNOT_SHARE_SELF: "Du kan ikke dele med deg selv",
   INVALID_IDENTIFIER: "Vennligst oppgi en gyldig e-post eller telefonnummer",
   FAILED_TO_CREATE_SHARE: "Kunne ikke opprette deling",
-  FAILED_TO_REMOVE_SHARE: "Kunne ikke fjerne deling",
-  SHARE_NOT_FOUND: "Fant ikke delingen",
-  FAILED_TO_UPDATE_SETTINGS: "Kunne ikke oppdatere innstillinger",
-  FAILED_TO_BLOCK_SHARER: "Kunne ikke skjule brukeren",
-  FAILED_TO_UNBLOCK_SHARER: "Kunne ikke fjerne skjuling",
   FAILED_TO_SHARE_BACK: "Kunne ikke dele tilbake",
-  FAILED_TO_UPDATE_FREQUENCY: "Kunne ikke oppdatere varslingsfrekvens",
-  FAILED_TO_REMOVE_SHARER: "Kunne ikke fjerne personen fra vennelisten",
   INVALID_ACTION: "Ugyldig handling",
 } as const;
 
-type ActionType =
-  | "createShare"
-  | "removeShare"
-  | "removeSharer"
-  | "toggleEarnings"
-  | "blockSharer"
-  | "unblockSharer"
-  | "shareBack"
-  | "toggleMuted";
+// Only actions that require server-side logic (user lookup, notifications)
+// Other actions (toggleEarnings, block/unblock, muted, remove) are handled
+// directly via Supabase from the iOS app using RLS policies
+type ActionType = "createShare" | "shareBack";
 
 interface ManageRequest {
   action: ActionType;
   identifier?: string; // For createShare (email/phone)
-  recipientId?: string; // For removeShare, toggleEarnings, shareBack
-  ownerId?: string; // For removeSharer, blockSharer, unblockSharer, toggleMuted
-  showEarnings?: boolean; // For createShare, toggleEarnings
-  muted?: boolean; // For toggleMuted
+  recipientId?: string; // For shareBack
+  showEarnings?: boolean; // For createShare
 }
 
 // User type for handlers - includes optional fields for notification handling
@@ -84,29 +70,16 @@ function getAdminClient(): SupabaseClient | null {
 /**
  * POST /api/sharing/manage
  *
- * Unified endpoint for all sharing management actions.
- * Used by the iOS app's sharing management modal.
+ * Handles sharing actions that require server-side logic:
+ * - createShare: User lookup by email/phone, limit checks, notifications
+ * - shareBack: Limit checks, notifications
  *
- * This endpoint bypasses the Effect layer to avoid session verification issues
- * when called with Bearer token auth from iOS.
+ * Other actions (toggleEarnings, block/unblock, muted, remove) are handled
+ * directly via Supabase from the iOS app using RLS policies.
  *
  * Authentication:
  * - iOS: Bearer token in Authorization header
  * - Web: Cookie-based session (fallback)
- *
- * Request body:
- * {
- *   action: "createShare" | "removeShare" | "removeSharer" | "toggleEarnings" |
- *           "blockSharer" | "unblockSharer" | "shareBack" | "toggleMuted",
- *   identifier?: string,      // For createShare
- *   recipientId?: string,     // For removeShare, toggleEarnings, shareBack
- *   ownerId?: string,         // For removeSharer, blockSharer, unblockSharer, toggleMuted
- *   showEarnings?: boolean,   // For createShare, toggleEarnings
- *   muted?: boolean           // For toggleMuted
- * }
- *
- * Response:
- * { success: true } or { success: false, error: string }
  */
 export async function POST(request: NextRequest) {
   // Try to get user from Authorization header first (iOS)
@@ -182,20 +155,8 @@ export async function POST(request: NextRequest) {
     switch (action) {
       case "createShare":
         return await handleCreateShare(adminClient, user, body);
-      case "removeShare":
-        return await handleRemoveShare(adminClient, user, body);
-      case "removeSharer":
-        return await handleRemoveSharer(adminClient, user, body);
-      case "toggleEarnings":
-        return await handleToggleEarnings(adminClient, user, body);
-      case "blockSharer":
-        return await handleBlockSharer(adminClient, user, body);
-      case "unblockSharer":
-        return await handleUnblockSharer(adminClient, user, body);
       case "shareBack":
         return await handleShareBack(adminClient, user, body);
-      case "toggleMuted":
-        return await handleToggleMuted(adminClient, user, body);
       default:
         return NextResponse.json(
           { success: false, error: SHARING_ERRORS.INVALID_ACTION },
@@ -375,195 +336,6 @@ async function handleCreateShare(
 }
 
 /**
- * Remove a share (revoke recipient access)
- */
-async function handleRemoveShare(
-  adminClient: SupabaseClient,
-  user: AuthenticatedUser,
-  body: ManageRequest
-): Promise<NextResponse> {
-  const { recipientId } = body;
-
-  if (!recipientId) {
-    return NextResponse.json(
-      { success: false, error: SHARING_ERRORS.SHARE_NOT_FOUND },
-      { status: 400 }
-    );
-  }
-
-  const { error } = await adminClient
-    .from("shift_shares")
-    .delete()
-    .eq("owner_id", user.id)
-    .eq("viewer_id", recipientId);
-
-  if (error) {
-    logger.error("Failed to remove share:", error);
-    return NextResponse.json(
-      { success: false, error: SHARING_ERRORS.FAILED_TO_REMOVE_SHARE },
-      { status: 500 }
-    );
-  }
-
-  // Invalidate both users' caches
-  invalidateAndRevalidate(user.id);
-  invalidateAndRevalidate(recipientId);
-
-  return NextResponse.json({ success: true });
-}
-
-/**
- * Remove a sharer from your friends list (as the viewer)
- */
-async function handleRemoveSharer(
-  adminClient: SupabaseClient,
-  user: AuthenticatedUser,
-  body: ManageRequest
-): Promise<NextResponse> {
-  const { ownerId } = body;
-
-  if (!ownerId) {
-    return NextResponse.json(
-      { success: false, error: SHARING_ERRORS.SHARE_NOT_FOUND },
-      { status: 400 }
-    );
-  }
-
-  // Delete the share where viewer is current user
-  const { error } = await adminClient
-    .from("shift_shares")
-    .delete()
-    .eq("owner_id", ownerId)
-    .eq("viewer_id", user.id);
-
-  if (error) {
-    logger.error("Failed to remove sharer:", error);
-    return NextResponse.json(
-      { success: false, error: SHARING_ERRORS.FAILED_TO_REMOVE_SHARER },
-      { status: 500 }
-    );
-  }
-
-  // Invalidate both users' caches
-  invalidateAndRevalidate(user.id);
-  invalidateAndRevalidate(ownerId);
-
-  return NextResponse.json({ success: true });
-}
-
-/**
- * Toggle earnings visibility for a share recipient
- */
-async function handleToggleEarnings(
-  adminClient: SupabaseClient,
-  user: AuthenticatedUser,
-  body: ManageRequest
-): Promise<NextResponse> {
-  const { recipientId, showEarnings } = body;
-
-  if (!recipientId || showEarnings === undefined) {
-    return NextResponse.json(
-      { success: false, error: SHARING_ERRORS.SHARE_NOT_FOUND },
-      { status: 400 }
-    );
-  }
-
-  const { error } = await adminClient
-    .from("shift_shares")
-    .update({ show_earnings: showEarnings })
-    .eq("owner_id", user.id)
-    .eq("viewer_id", recipientId);
-
-  if (error) {
-    logger.error("Failed to update share settings:", error);
-    return NextResponse.json(
-      { success: false, error: SHARING_ERRORS.FAILED_TO_UPDATE_SETTINGS },
-      { status: 500 }
-    );
-  }
-
-  // Invalidate both users' caches
-  invalidateAndRevalidate(user.id);
-  invalidateAndRevalidate(recipientId);
-
-  return NextResponse.json({ success: true });
-}
-
-/**
- * Block a sharer (hide their shifts from your list)
- */
-async function handleBlockSharer(
-  adminClient: SupabaseClient,
-  user: AuthenticatedUser,
-  body: ManageRequest
-): Promise<NextResponse> {
-  const { ownerId } = body;
-
-  if (!ownerId) {
-    return NextResponse.json(
-      { success: false, error: SHARING_ERRORS.SHARE_NOT_FOUND },
-      { status: 400 }
-    );
-  }
-
-  const { error } = await adminClient
-    .from("shift_shares")
-    .update({ blocked: true })
-    .eq("owner_id", ownerId)
-    .eq("viewer_id", user.id);
-
-  if (error) {
-    logger.error("Failed to block sharer:", error);
-    return NextResponse.json(
-      { success: false, error: SHARING_ERRORS.FAILED_TO_BLOCK_SHARER },
-      { status: 500 }
-    );
-  }
-
-  // Only invalidate the viewer's cache
-  invalidateAndRevalidate(user.id);
-
-  return NextResponse.json({ success: true });
-}
-
-/**
- * Unblock a sharer (restore their shifts to your list)
- */
-async function handleUnblockSharer(
-  adminClient: SupabaseClient,
-  user: AuthenticatedUser,
-  body: ManageRequest
-): Promise<NextResponse> {
-  const { ownerId } = body;
-
-  if (!ownerId) {
-    return NextResponse.json(
-      { success: false, error: SHARING_ERRORS.SHARE_NOT_FOUND },
-      { status: 400 }
-    );
-  }
-
-  const { error } = await adminClient
-    .from("shift_shares")
-    .update({ blocked: false })
-    .eq("owner_id", ownerId)
-    .eq("viewer_id", user.id);
-
-  if (error) {
-    logger.error("Failed to unblock sharer:", error);
-    return NextResponse.json(
-      { success: false, error: SHARING_ERRORS.FAILED_TO_UNBLOCK_SHARER },
-      { status: 500 }
-    );
-  }
-
-  // Only invalidate the viewer's cache
-  invalidateAndRevalidate(user.id);
-
-  return NextResponse.json({ success: true });
-}
-
-/**
  * Share back with someone who has shared with you
  */
 async function handleShareBack(
@@ -575,7 +347,7 @@ async function handleShareBack(
 
   if (!recipientId) {
     return NextResponse.json(
-      { success: false, error: SHARING_ERRORS.SHARE_NOT_FOUND },
+      { success: false, error: SHARING_ERRORS.INVALID_ACTION },
       { status: 400 }
     );
   }
@@ -646,46 +418,9 @@ async function handleShareBack(
     logger.warn("Failed to enqueue share notification:", notifError);
   }
 
-  // Invalidate both users' caches
+  // Invalidate caches
   invalidateAndRevalidate(user.id);
   invalidateAndRevalidate(recipientId);
-
-  return NextResponse.json({ success: true });
-}
-
-/**
- * Toggle muted status for a specific sharer
- */
-async function handleToggleMuted(
-  adminClient: SupabaseClient,
-  user: AuthenticatedUser,
-  body: ManageRequest
-): Promise<NextResponse> {
-  const { ownerId, muted } = body;
-
-  if (!ownerId || muted === undefined) {
-    return NextResponse.json(
-      { success: false, error: SHARING_ERRORS.SHARE_NOT_FOUND },
-      { status: 400 }
-    );
-  }
-
-  const { error } = await adminClient
-    .from("shift_shares")
-    .update({ muted })
-    .eq("owner_id", ownerId)
-    .eq("viewer_id", user.id);
-
-  if (error) {
-    logger.error("Failed to toggle sharer muted status:", error);
-    return NextResponse.json(
-      { success: false, error: SHARING_ERRORS.FAILED_TO_UPDATE_FREQUENCY },
-      { status: 500 }
-    );
-  }
-
-  // Invalidate the viewer's cache
-  invalidateAndRevalidate(user.id);
 
   return NextResponse.json({ success: true });
 }
