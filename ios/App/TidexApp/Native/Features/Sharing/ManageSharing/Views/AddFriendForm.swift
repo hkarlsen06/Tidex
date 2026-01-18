@@ -29,21 +29,38 @@ struct AddFriendForm: View {
 
                 Spacer()
 
-                if !isExpanded && canAdd {
-                    Button(action: {
-                        withAnimation(.easeInOut(duration: 0.2)) {
-                            isExpanded = true
+                if !isExpanded {
+                    // Capacity count to the left of the plus button
+                    HStack(spacing: 8) {
+                        HStack(spacing: 4) {
+                            Text(capacityDisplay)
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundColor(canAdd ? .tidexTextMuted : .orange)
+
+                            if !canAdd {
+                                Image(systemName: "exclamationmark.circle.fill")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.orange)
+                            }
                         }
-                        // Focus the input after a short delay
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                            isFocused = true
+
+                        if canAdd {
+                            Button(action: {
+                                withAnimation(.easeInOut(duration: 0.2)) {
+                                    isExpanded = true
+                                }
+                                // Focus the input after a short delay
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                    isFocused = true
+                                }
+                            }) {
+                                Image(systemName: "plus.circle.fill")
+                                    .font(.system(size: 24))
+                                    .foregroundColor(.tidexBlue)
+                            }
+                            .buttonStyle(PlainButtonStyle())
                         }
-                    }) {
-                        Image(systemName: "plus.circle.fill")
-                            .font(.system(size: 24))
-                            .foregroundColor(.tidexBlue)
                     }
-                    .buttonStyle(PlainButtonStyle())
                 }
             }
 
@@ -123,22 +140,6 @@ struct AddFriendForm: View {
                     }
                 }
                 .padding(.top, 4)
-            }
-
-            // Capacity indicator
-            if !isExpanded {
-                HStack {
-                    Spacer()
-                    Text(capacityDisplay)
-                        .font(.system(size: 12))
-                        .foregroundColor(canAdd ? .tidexTextMuted : .orange)
-
-                    if !canAdd {
-                        Image(systemName: "exclamationmark.circle.fill")
-                            .font(.system(size: 12))
-                            .foregroundColor(.orange)
-                    }
-                }
             }
         }
         .padding(16)
