@@ -248,7 +248,6 @@ private extension View {
 }
 
 #if DEBUG
-@available(iOS 17.0, *)
 #Preview("Circular", as: .accessoryCircular) {
     ShiftLockScreenWidget()
 } timeline: {
@@ -318,7 +317,6 @@ private extension View {
     ShiftWidgetEntry.empty(locale: "no")
 }
 
-@available(iOS 17.0, *)
 #Preview("Rectangular", as: .accessoryRectangular) {
     ShiftLockScreenWidget()
 } timeline: {
@@ -342,7 +340,6 @@ private extension View {
     ShiftWidgetEntry.empty(locale: "no")
 }
 
-@available(iOS 17.0, *)
 #Preview("Inline", as: .accessoryInline) {
     ShiftLockScreenWidget()
 } timeline: {

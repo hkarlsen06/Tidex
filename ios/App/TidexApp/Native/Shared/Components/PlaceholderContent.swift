@@ -33,12 +33,14 @@ struct TabPlaceholder: View {
     let tab: AppTab
 
     var body: some View {
-        PlaceholderContent(
-            icon: tab.icon,
-            title: localization.string(tab.titleKey),
-            description: localization.string(tab.descriptionKey)
-        )
-        .frame(maxWidth: .infinity, minHeight: UIScreen.main.bounds.height - 200)
+        GeometryReader { geometry in
+            PlaceholderContent(
+                icon: tab.icon,
+                title: localization.string(tab.titleKey),
+                description: localization.string(tab.descriptionKey)
+            )
+            .frame(maxWidth: .infinity, minHeight: geometry.size.height - 200)
+        }
     }
 }
 

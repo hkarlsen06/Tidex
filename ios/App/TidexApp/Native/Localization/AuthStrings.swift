@@ -477,7 +477,11 @@ enum AuthStrings {
         "shifts.supplementsSection": "Tillegg",
         "shifts.totalSupplement": "Totalt tillegg",
         "shifts.supplementLabel": "Tillegg",
-        "shifts.customized": "Tilpasset"
+        "shifts.customized": "Tilpasset",
+        "shifts.details": "Detaljer",
+        "shifts.move": "Flytt",
+        "shifts.copy": "Kopier",
+        "shifts.confirm": "Bekreft"
     ]
 
     // MARK: - English Strings
@@ -945,6 +949,10 @@ enum AuthStrings {
         "shifts.supplementsSection": "Supplements",
         "shifts.totalSupplement": "Total Supplement",
         "shifts.supplementLabel": "Supplement",
-        "shifts.customized": "Customized"
+        "shifts.customized": "Customized",
+        "shifts.details": "Details",
+        "shifts.move": "Move",
+        "shifts.copy": "Copy",
+        "shifts.confirm": "Confirm"
     ]
 }

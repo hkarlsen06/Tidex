@@ -146,9 +146,8 @@ struct StaggeredCardsContainer<Content: View>: View {
     /// Skip animation on very first render
     @State private var hasInitialized: Bool = false
 
-    private var screenWidth: CGFloat {
-        UIScreen.main.bounds.width
-    }
+    /// Container width for slide animations
+    @State private var containerWidth: CGFloat = 0
 
     var body: some View {
         // No ZStack, no .id(), no .transition() - just offset animation
@@ -156,6 +155,16 @@ struct StaggeredCardsContainer<Content: View>: View {
             .offset(x: xOffset)
             .clipped() // Clip overflow during animation (doesn't affect hit testing)
             .contentShape(Rectangle()) // Ensure gestures can pass through
+            .background(
+                GeometryReader { geometry in
+                    Color.clear.onAppear {
+                        containerWidth = geometry.size.width
+                    }
+                    .onChange(of: geometry.size.width) { _, newWidth in
+                        containerWidth = newWidth
+                    }
+                }
+            )
             .onAppear {
                 lastPhaseId = phase.id
                 xOffset = 0
@@ -177,7 +186,7 @@ struct StaggeredCardsContainer<Content: View>: View {
                 // Determine entry position:
                 // .next (going forward in time): slide in from RIGHT
                 // .previous (going back in time): slide in from LEFT
-                let startX = direction == .next ? screenWidth : -screenWidth
+                let startX = direction == .next ? containerWidth : -containerWidth
 
                 // Transaction to ensure immediate position set
                 var transaction = Transaction()

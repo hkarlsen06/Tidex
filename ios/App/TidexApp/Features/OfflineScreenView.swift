@@ -213,47 +213,14 @@ struct OfflineScreenView: View {
 
     // MARK: - View Shifts Button
 
-    @ViewBuilder
     private var viewShiftsButton: some View {
-        if #available(iOS 26.0, *) {
-            Button(action: { showShiftsList = true }) {
-                Label(shiftsButtonLabel, systemImage: "calendar")
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .contentShape(Rectangle())
-            }
-            .glassEffect()
-        } else {
-            Button(action: { showShiftsList = true }) {
-                HStack(spacing: 8) {
-                    Image(systemName: "calendar")
-                        .font(.system(size: 15, weight: .medium))
-                        .foregroundColor(tidexBlue)
-
-                    Text(shiftsButtonLabel)
-                        .font(.system(size: 15, weight: .medium))
-                        .foregroundColor(tidexTextPrimary)
-
-                    Spacer()
-
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(tidexTextMuted)
-                }
+        Button(action: { showShiftsList = true }) {
+            Label(shiftsButtonLabel, systemImage: "calendar")
                 .frame(maxWidth: .infinity)
-                .padding(.horizontal, 16)
                 .padding(.vertical, 14)
-                .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(tidexSurfacePrimary)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .strokeBorder(tidexTextMuted.opacity(0.2), lineWidth: 1)
-                )
-            }
-            .buttonStyle(.plain)
+                .contentShape(Rectangle())
         }
+        .glassEffect()
     }
 
     // MARK: - Empty State
@@ -274,37 +241,16 @@ struct OfflineScreenView: View {
 
     // MARK: - Retry Button
 
-    @ViewBuilder
     private var retryButton: some View {
-        if #available(iOS 26.0, *) {
-            Button(action: onRetry) {
-                Label(retryButtonTitle, systemImage: "arrow.clockwise")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .contentShape(Rectangle())
-            }
-            .glassEffect(.regular.tint(tidexBlue).interactive())
-        } else {
-            Button(action: onRetry) {
-                HStack(spacing: 8) {
-                    Image(systemName: "arrow.clockwise")
-                        .font(.system(size: 16, weight: .semibold))
-
-                    Text(retryButtonTitle)
-                        .font(.system(size: 16, weight: .semibold))
-                }
+        Button(action: onRetry) {
+            Label(retryButtonTitle, systemImage: "arrow.clockwise")
+                .font(.system(size: 16, weight: .semibold))
                 .foregroundColor(.white)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 16)
-                .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(tidexBlue)
-                )
-            }
-            .buttonStyle(.plain)
+                .contentShape(Rectangle())
         }
+        .glassEffect(.regular.tint(tidexBlue).interactive())
     }
 
     // MARK: - Data Loading
