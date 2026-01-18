@@ -11,13 +11,14 @@ Cherry-pick commits to another branch (e.g., main) without switching from your c
 ```
 
 **Arguments:**
-- `commit` - Commit hash or reference (default: HEAD)
+- `commit` - Commit hash, reference, or "staged" to commit staged changes first (default: staged)
 - `target-branch` - Target branch name (default: main)
 
 ## Examples
 
 ```
-/cherry-pick-remote              # Cherry-pick HEAD to main
+/cherry-pick-remote              # Commit staged changes, then cherry-pick to main
+/cherry-pick-remote staged       # Same as above (explicit)
 /cherry-pick-remote abc123       # Cherry-pick specific commit to main
 /cherry-pick-remote HEAD~2 dev   # Cherry-pick 2 commits back to dev branch
 ```
@@ -26,9 +27,17 @@ Cherry-pick commits to another branch (e.g., main) without switching from your c
 
 When this skill is invoked, follow these steps:
 
-1. **Parse arguments**: Extract commit ref and target branch from args. Defaults: commit=HEAD, target=main
+1. **Parse arguments**: Extract commit ref and target branch from args. Defaults: commit="staged", target=main
 
-2. **CRITICAL: Check for iOS changes**:
+2. **Handle staged changes** (if commit is "staged" or not specified):
+   - Check for staged changes: `git diff --cached --name-only`
+   - If no staged changes, error: "No staged changes to commit"
+   - Check staged files for iOS changes: `git diff --cached --name-only | grep -E "^ios/"`
+   - If iOS files are staged, warn and ask user to unstage them first
+   - Commit staged changes on current branch with appropriate message
+   - Use the new commit hash as the commit to cherry-pick
+
+3. **CRITICAL: Check for iOS changes** (for existing commits):
    ```bash
    git diff-tree --no-commit-id --name-only -r <commit> | grep -E "^ios/"
    ```
