@@ -12,7 +12,7 @@ import {
 // Share limits per subscription tier
 const SHARE_LIMITS = {
   free: 1,
-  pro: 5,
+  pro: 10,
   max: 20,
 } as const;
 
@@ -179,27 +179,40 @@ async function getUserShareLimit(
   adminClient: SupabaseClient,
   userId: string
 ): Promise<number> {
-  // Check for grandfathered status first
-  const { data: profileData } = await adminClient
-    .from("profiles")
-    .select("is_grandfathered")
-    .eq("id", userId)
-    .maybeSingle();
-
-  if (profileData?.is_grandfathered) {
-    return SHARE_LIMITS.max;
-  }
-
-  // Check subscription tier
-  const { data: subscriptionData } = await adminClient
-    .from("subscriptions")
+  // Use user_entitlements view (single source of truth for tier)
+  const { data: entitlementData } = await adminClient
+    .from("user_entitlements")
     .select("tier")
     .eq("user_id", userId)
-    .eq("status", "active")
     .maybeSingle();
 
-  const tier = (subscriptionData?.tier as keyof typeof SHARE_LIMITS) || "free";
+  const tier = (entitlementData?.tier as keyof typeof SHARE_LIMITS) || "free";
   return SHARE_LIMITS[tier] || SHARE_LIMITS.free;
+}
+
+/**
+ * Normalize phone number to E.164 format (47xxxxxxxx for Norwegian numbers)
+ */
+function normalizePhoneNumber(phone: string): string {
+  // Remove all non-digit characters
+  const digits = phone.replace(/\D/g, "");
+
+  // If 8 digits, assume Norwegian and add country code
+  if (digits.length === 8) {
+    return `47${digits}`;
+  }
+
+  // If starts with + and has country code, just return digits
+  if (phone.startsWith("+")) {
+    return digits;
+  }
+
+  // If starts with 00 (international prefix), remove it
+  if (digits.startsWith("00")) {
+    return digits.slice(2);
+  }
+
+  return digits;
 }
 
 /**
@@ -216,12 +229,24 @@ async function findUserByIdentifier(
   // Check if identifier is email or phone
   const isEmail = identifier.includes("@");
 
-  for (const u of usersData.users) {
-    if (isEmail && u.email?.toLowerCase() === identifier.toLowerCase()) {
-      return { id: u.id };
+  if (isEmail) {
+    for (const u of usersData.users) {
+      if (u.email?.toLowerCase() === identifier.toLowerCase()) {
+        return { id: u.id };
+      }
     }
-    if (!isEmail && u.phone === identifier) {
-      return { id: u.id };
+  } else {
+    // Normalize the input phone number
+    const normalizedInput = normalizePhoneNumber(identifier);
+
+    for (const u of usersData.users) {
+      if (u.phone) {
+        // Normalize the stored phone number for comparison
+        const normalizedStored = normalizePhoneNumber(u.phone);
+        if (normalizedStored === normalizedInput) {
+          return { id: u.id };
+        }
+      }
     }
   }
 
