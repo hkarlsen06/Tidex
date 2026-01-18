@@ -188,8 +188,8 @@ export async function GET(request: NextRequest) {
       { previews: sortedPreviews },
       {
         headers: {
-          // Short cache since previews change frequently
-          "Cache-Control": "private, max-age=60, stale-while-revalidate=30",
+          // No caching - previews should reflect latest shifts (notifications)
+          "Cache-Control": "private, no-cache, no-store, must-revalidate",
         },
       }
     );
