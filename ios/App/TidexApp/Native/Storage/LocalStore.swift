@@ -35,6 +35,8 @@ final class LocalStore {
             LocalSyncState.self,
             LocalEntitlementCache.self,
             LocalPendingJWSUpload.self,
+            LocalSharedShift.self,
+            LocalSharer.self,
         ])
 
         // Configure container for persistent storage
@@ -93,6 +95,8 @@ actor LocalStoreActor {
             try modelContext.delete(model: LocalSyncState.self)
             try modelContext.delete(model: LocalEntitlementCache.self)
             try modelContext.delete(model: LocalPendingJWSUpload.self)
+            try modelContext.delete(model: LocalSharedShift.self)
+            try modelContext.delete(model: LocalSharer.self)
             try modelContext.save()
         } catch {
             logger.error("Failed to reset all data: \(error.localizedDescription)")
@@ -2320,5 +2324,96 @@ actor LocalStoreActor {
             upload.scheduleNextRetry()
             try modelContext.save()
         }
+    }
+
+    // MARK: - Shared Shifts Operations
+
+    /// Save sharers to cache, replacing existing entries for this viewer
+    func saveSharers(_ sharers: [SharedUser], for viewerId: String) throws {
+        // Delete existing sharers for this viewer
+        let descriptor = FetchDescriptor<LocalSharer>(
+            predicate: #Predicate { $0.viewerId == viewerId }
+        )
+        for existing in try modelContext.fetch(descriptor) {
+            modelContext.delete(existing)
+        }
+
+        // Insert new sharers
+        for sharer in sharers {
+            let localSharer = LocalSharer.from(sharedUser: sharer, viewerId: viewerId)
+            modelContext.insert(localSharer)
+        }
+
+        try modelContext.save()
+    }
+
+    /// Save shared shifts to cache, replacing existing entries for this owner/month
+    func saveSharedShifts(
+        _ shifts: [SharedShiftData],
+        ownerId: String,
+        viewerId: String,
+        showEarnings: Bool,
+        year: Int,
+        month: Int
+    ) throws {
+        // Delete existing shifts for this owner/viewer/month
+        let descriptor = FetchDescriptor<LocalSharedShift>(
+            predicate: #Predicate { shift in
+                shift.ownerId == ownerId &&
+                shift.viewerId == viewerId &&
+                shift.year == year &&
+                shift.month == month
+            }
+        )
+        for existing in try modelContext.fetch(descriptor) {
+            modelContext.delete(existing)
+        }
+
+        // Insert new shifts
+        for shift in shifts {
+            let localShift = LocalSharedShift.from(
+                apiShift: shift,
+                ownerId: ownerId,
+                viewerId: viewerId,
+                showEarnings: showEarnings
+            )
+            modelContext.insert(localShift)
+        }
+
+        try modelContext.save()
+    }
+
+    /// Clear all shared data for a viewer
+    func clearSharedData(for viewerId: String) throws {
+        // Clear sharers
+        let sharerDescriptor = FetchDescriptor<LocalSharer>(
+            predicate: #Predicate { $0.viewerId == viewerId }
+        )
+        for sharer in try modelContext.fetch(sharerDescriptor) {
+            modelContext.delete(sharer)
+        }
+
+        // Clear shared shifts
+        let shiftDescriptor = FetchDescriptor<LocalSharedShift>(
+            predicate: #Predicate { $0.viewerId == viewerId }
+        )
+        for shift in try modelContext.fetch(shiftDescriptor) {
+            modelContext.delete(shift)
+        }
+
+        try modelContext.save()
+    }
+
+    /// Clear shared shifts for a specific owner
+    func clearSharedShifts(ownerId: String, viewerId: String) throws {
+        let descriptor = FetchDescriptor<LocalSharedShift>(
+            predicate: #Predicate { shift in
+                shift.ownerId == ownerId && shift.viewerId == viewerId
+            }
+        )
+        for shift in try modelContext.fetch(descriptor) {
+            modelContext.delete(shift)
+        }
+        try modelContext.save()
     }
 }

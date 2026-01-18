@@ -116,6 +116,17 @@
 		11A197082F1D62060030E524 /* AddShiftCalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A197072F1D62060030E524 /* AddShiftCalendarView.swift */; };
 		11A1970A2F1D6F510030E524 /* ConfettiView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A197092F1D6F510030E524 /* ConfettiView.swift */; };
 		11A1970D2F1D6F630030E524 /* CelebrationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A1970B2F1D6F630030E524 /* CelebrationManager.swift */; };
+		11A197162F1D7B400030E524 /* SharerRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A197112F1D7B400030E524 /* SharerRow.swift */; };
+		11A197172F1D7B400030E524 /* SharingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A197142F1D7B400030E524 /* SharingViewModel.swift */; };
+		11A197182F1D7B400030E524 /* SharingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A197132F1D7B400030E524 /* SharingView.swift */; };
+		11A197192F1D7B400030E524 /* SharerListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A197102F1D7B400030E524 /* SharerListView.swift */; };
+		11A1971A2F1D7B400030E524 /* SharedShiftsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A1970F2F1D7B400030E524 /* SharedShiftsListView.swift */; };
+		11A1971B2F1D7B400030E524 /* SharedShiftRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A1970E2F1D7B400030E524 /* SharedShiftRow.swift */; };
+		11A1971D2F1D7CD40030E524 /* SharedUser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A1971C2F1D7CD40030E524 /* SharedUser.swift */; };
+		11A1971F2F1D7D260030E524 /* SharedShiftData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A1971E2F1D7D260030E524 /* SharedShiftData.swift */; };
+		11A197212F1D7D7A0030E524 /* SharedShiftsRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A197202F1D7D7A0030E524 /* SharedShiftsRepository.swift */; };
+		11A197232F1D7DBF0030E524 /* SharingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A197222F1D7DBF0030E524 /* SharingService.swift */; };
+		11A197252F1D7EBD0030E524 /* LocalSharedShift.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A197242F1D7EBD0030E524 /* LocalSharedShift.swift */; };
 		11A5CD262F101201002BAC91 /* StoredShift.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A5CD252F101201002BAC91 /* StoredShift.swift */; };
 		11A5CD302F101283002BAC91 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 11A5CD2F2F101283002BAC91 /* WidgetKit.framework */; };
 		11A5CD322F101283002BAC91 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 11A5CD312F101283002BAC91 /* SwiftUI.framework */; };
@@ -312,6 +323,17 @@
 		11A197072F1D62060030E524 /* AddShiftCalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddShiftCalendarView.swift; sourceTree = "<group>"; };
 		11A197092F1D6F510030E524 /* ConfettiView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfettiView.swift; sourceTree = "<group>"; };
 		11A1970B2F1D6F630030E524 /* CelebrationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CelebrationManager.swift; sourceTree = "<group>"; };
+		11A1970E2F1D7B400030E524 /* SharedShiftRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedShiftRow.swift; sourceTree = "<group>"; };
+		11A1970F2F1D7B400030E524 /* SharedShiftsListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedShiftsListView.swift; sourceTree = "<group>"; };
+		11A197102F1D7B400030E524 /* SharerListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharerListView.swift; sourceTree = "<group>"; };
+		11A197112F1D7B400030E524 /* SharerRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharerRow.swift; sourceTree = "<group>"; };
+		11A197132F1D7B400030E524 /* SharingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharingView.swift; sourceTree = "<group>"; };
+		11A197142F1D7B400030E524 /* SharingViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharingViewModel.swift; sourceTree = "<group>"; };
+		11A1971C2F1D7CD40030E524 /* SharedUser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedUser.swift; sourceTree = "<group>"; };
+		11A1971E2F1D7D260030E524 /* SharedShiftData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedShiftData.swift; sourceTree = "<group>"; };
+		11A197202F1D7D7A0030E524 /* SharedShiftsRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedShiftsRepository.swift; sourceTree = "<group>"; };
+		11A197222F1D7DBF0030E524 /* SharingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharingService.swift; sourceTree = "<group>"; };
+		11A197242F1D7EBD0030E524 /* LocalSharedShift.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalSharedShift.swift; sourceTree = "<group>"; };
 		11A5CD252F101201002BAC91 /* StoredShift.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoredShift.swift; sourceTree = "<group>"; };
 		11A5CD2E2F101283002BAC91 /* TidexShiftWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TidexShiftWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		11A5CD2F2F101283002BAC91 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
@@ -433,6 +455,7 @@
 		1128F3A32F18729100702359 /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				11A197242F1D7EBD0030E524 /* LocalSharedShift.swift */,
 				11A196492F1AE6A20030E524 /* LocalEntitlementCache.swift */,
 				11A1964A2F1AE6A20030E524 /* LocalPendingJWSUpload.swift */,
 				1128F39E2F18729100702359 /* LocalRecurringShift.swift */,
@@ -447,6 +470,7 @@
 		1128F3A82F18729100702359 /* Repositories */ = {
 			isa = PBXGroup;
 			children = (
+				11A197202F1D7D7A0030E524 /* SharedShiftsRepository.swift */,
 				11A1964D2F1AE7980030E524 /* EntitlementRepository.swift */,
 				1128F3A42F18729100702359 /* RecurringShiftsRepository.swift */,
 				1128F3A52F18729100702359 /* SettingsRepository.swift */,
@@ -587,6 +611,7 @@
 		119D1CCC2F16E46300EC7072 /* Features */ = {
 			isa = PBXGroup;
 			children = (
+				11A197152F1D7B400030E524 /* Sharing */,
 				11A196692F1B00B50030E524 /* Shifts */,
 				11A1965A2F1AEB360030E524 /* Paywall */,
 				11A196322F1AC0070030E524 /* AddShift */,
@@ -828,6 +853,27 @@
 			path = Managers;
 			sourceTree = "<group>";
 		};
+		11A197122F1D7B400030E524 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				11A1970E2F1D7B400030E524 /* SharedShiftRow.swift */,
+				11A1970F2F1D7B400030E524 /* SharedShiftsListView.swift */,
+				11A197102F1D7B400030E524 /* SharerListView.swift */,
+				11A197112F1D7B400030E524 /* SharerRow.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		11A197152F1D7B400030E524 /* Sharing */ = {
+			isa = PBXGroup;
+			children = (
+				11A197122F1D7B400030E524 /* Views */,
+				11A197132F1D7B400030E524 /* SharingView.swift */,
+				11A197142F1D7B400030E524 /* SharingViewModel.swift */,
+			);
+			path = Sharing;
+			sourceTree = "<group>";
+		};
 		11A1D6CE2F11F48F00060819 /* Core */ = {
 			isa = PBXGroup;
 			children = (
@@ -890,6 +936,8 @@
 		11AE8CF12F16FDA4005AB062 /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				11A1971E2F1D7D260030E524 /* SharedShiftData.swift */,
+				11A1971C2F1D7CD40030E524 /* SharedUser.swift */,
 				11A196202F1AB6160030E524 /* Currency.swift */,
 				11AE8CEC2F16FDA4005AB062 /* RecurringShift.swift */,
 				11AE8CED2F16FDA4005AB062 /* Shift.swift */,
@@ -903,6 +951,7 @@
 		11AE8CFA2F16FDB2005AB062 /* Data */ = {
 			isa = PBXGroup;
 			children = (
+				11A197222F1D7DBF0030E524 /* SharingService.swift */,
 				11AE8CF72F16FDB2005AB062 /* SettingsService.swift */,
 				11AE8CF82F16FDB2005AB062 /* ShiftsService.swift */,
 				11AE8CF92F16FDB2005AB062 /* SnapshotsService.swift */,
@@ -1211,6 +1260,7 @@
 				11AE8D762F1856D2005AB062 /* AuthNavigationView.swift in Sources */,
 				11AE8D052F16FDBD005AB062 /* BreakDeduction.swift in Sources */,
 				11AE8D1C2F17BE13005AB062 /* PayrollEngine.swift in Sources */,
+				11A1971D2F1D7CD40030E524 /* SharedUser.swift in Sources */,
 				11AE8D1D2F17BE13005AB062 /* ConflictExclusion.swift in Sources */,
 				11A196122F1AA3350030E524 /* OnboardingData.swift in Sources */,
 				11AE8D252F17CF3A005AB062 /* MonthTransition.swift in Sources */,
@@ -1252,6 +1302,7 @@
 				119D1CF62F16E46300EC7072 /* LoadingOverlay.swift in Sources */,
 				11AE8D742F17DD44005AB062 /* UserMenuButton.swift in Sources */,
 				119D1CF72F16E46300EC7072 /* Color+Tidex.swift in Sources */,
+				11A197212F1D7D7A0030E524 /* SharedShiftsRepository.swift in Sources */,
 				11AE8D202F17CB31005AB062 /* MonthSwipeGesture.swift in Sources */,
 				119D1CF82F16E46300EC7072 /* AuthStrings.swift in Sources */,
 				119D1CF92F16E46300EC7072 /* APIConfiguration.swift in Sources */,
@@ -1260,6 +1311,12 @@
 				11A1964C2F1AE6A20030E524 /* LocalPendingJWSUpload.swift in Sources */,
 				11F42F912F1A65F3002B1FBE /* StepItem.swift in Sources */,
 				11A1961F2F1AB6020030E524 /* CurrencySelector.swift in Sources */,
+				11A197162F1D7B400030E524 /* SharerRow.swift in Sources */,
+				11A197172F1D7B400030E524 /* SharingViewModel.swift in Sources */,
+				11A197182F1D7B400030E524 /* SharingView.swift in Sources */,
+				11A197192F1D7B400030E524 /* SharerListView.swift in Sources */,
+				11A1971A2F1D7B400030E524 /* SharedShiftsListView.swift in Sources */,
+				11A1971B2F1D7B400030E524 /* SharedShiftRow.swift in Sources */,
 				11F42F922F1A65F3002B1FBE /* OnboardingButton.swift in Sources */,
 				11F42F932F1A65F3002B1FBE /* IndustryPicker.swift in Sources */,
 				11F42F942F1A65F3002B1FBE /* PersonalizationScreen.swift in Sources */,
@@ -1268,6 +1325,7 @@
 				11A1965C2F1AEB360030E524 /* PaywallViewModel.swift in Sources */,
 				11A1965D2F1AEB360030E524 /* PaywallView.swift in Sources */,
 				11A1965E2F1AEB360030E524 /* BillingToggle.swift in Sources */,
+				11A1971F2F1D7D260030E524 /* SharedShiftData.swift in Sources */,
 				11F42F952F1A65F3002B1FBE /* PostAuthOnboardingView.swift in Sources */,
 				11F42F962F1A65F3002B1FBE /* PageIndicator.swift in Sources */,
 				11F42F972F1A65F3002B1FBE /* GetStartedScreen.swift in Sources */,
@@ -1336,6 +1394,7 @@
 				11A196522F1AE8900030E524 /* JWSUploadWorker.swift in Sources */,
 				OFFSCR0012F2000000000001 /* OfflineScreenView.swift in Sources */,
 				OFFSTR0012F2000000000001 /* OfflineShiftStorage.swift in Sources */,
+				11A197252F1D7EBD0030E524 /* LocalSharedShift.swift in Sources */,
 				11A5CD262F101201002BAC91 /* StoredShift.swift in Sources */,
 				SCENE0012F0700000000001 /* SceneDelegate.swift in Sources */,
 				11A197042F1B15080030E524 /* ScrollAppearModifier.swift in Sources */,
@@ -1348,6 +1407,7 @@
 				11A197012F1B14FA0030E524 /* NextShiftCountdownCard.swift in Sources */,
 				11A197022F1B14FA0030E524 /* ShiftDetailsSheet.swift in Sources */,
 				11A196382F1AC0070030E524 /* RepeatIntervalPicker.swift in Sources */,
+				11A197232F1D7DBF0030E524 /* SharingService.swift in Sources */,
 				11A196392F1AC0070030E524 /* AddShiftViewModel.swift in Sources */,
 				11A1963A2F1AC0070030E524 /* RecurringPreviewSheet.swift in Sources */,
 				11A1963B2F1AC0070030E524 /* DurationPicker.swift in Sources */,

@@ -489,7 +489,26 @@ enum AuthStrings {
         "shifts.selectCopyTarget": "Trykk på en dato for å kopiere",
         "shifts.selectMoveTarget": "Trykk på en dato for å flytte",
         "shifts.copying": "Kopierer...",
-        "shifts.moving": "Flytter..."
+        "shifts.moving": "Flytter...",
+
+        // Sharing
+        "sharing.title": "Deling",
+        "sharing.earningsVisible": "Inntekt synlig",
+        "sharing.earningsHidden": "Inntekt skjult",
+        "sharing.noSharers": "Ingen deler med deg",
+        "sharing.noSharersDescription": "N\u{00E5}r noen deler vaktene sine med deg, vil de vises her",
+        "sharing.peopleWhoShareWithYou": "Folk som deler med deg",
+        "sharing.loading": "Laster...",
+        "sharing.loadingShifts": "Laster vakter...",
+        "sharing.shifts": "vakter",
+        "sharing.hours": "timer",
+        "sharing.earnings": "Inntekt",
+        "sharing.noShiftsThisMonth": "Ingen vakter denne m\u{00E5}neden",
+        "sharing.noShiftsDescription": "Denne personen har ingen vakter registrert for denne m\u{00E5}neden",
+        "sharing.lastUpdated": "Sist oppdatert",
+        "sharing.hidden": "Skjult",
+        "sharing.loadError": "Kunne ikke laste data",
+        "sharing.back": "Tilbake"
     ]
 
     // MARK: - English Strings
@@ -969,6 +988,25 @@ enum AuthStrings {
         "shifts.selectCopyTarget": "Tap a date to copy to",
         "shifts.selectMoveTarget": "Tap a date to move to",
         "shifts.copying": "Copying...",
-        "shifts.moving": "Moving..."
+        "shifts.moving": "Moving...",
+
+        // Sharing
+        "sharing.title": "Sharing",
+        "sharing.earningsVisible": "Earnings visible",
+        "sharing.earningsHidden": "Earnings hidden",
+        "sharing.noSharers": "No one is sharing with you",
+        "sharing.noSharersDescription": "When someone shares their shifts with you, they will appear here",
+        "sharing.peopleWhoShareWithYou": "People who share with you",
+        "sharing.loading": "Loading...",
+        "sharing.loadingShifts": "Loading shifts...",
+        "sharing.shifts": "shifts",
+        "sharing.hours": "hours",
+        "sharing.earnings": "Earnings",
+        "sharing.noShiftsThisMonth": "No shifts this month",
+        "sharing.noShiftsDescription": "This person has no shifts recorded for this month",
+        "sharing.lastUpdated": "Last updated",
+        "sharing.hidden": "Hidden",
+        "sharing.loadError": "Failed to load data",
+        "sharing.back": "Back"
     ]
 }
