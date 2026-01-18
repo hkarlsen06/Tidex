@@ -27,6 +27,12 @@ enum APIConfiguration {
     /// This is used by the native Google Sign-In SDK
     static let googleiOSClientID = "496501907923-a0sng8rs2gscdu2fdenlq4j2g8vq9gas.apps.googleusercontent.com"
 
+    // MARK: - Web App Configuration
+
+    /// Base URL for the Next.js web app API
+    /// Used for endpoints that require server-side processing (e.g., sharing)
+    static let webAppBaseURL = URL(string: "https://app.tidex.no")!
+
     // MARK: - App Configuration
 
     /// App Group identifier for shared storage with widget

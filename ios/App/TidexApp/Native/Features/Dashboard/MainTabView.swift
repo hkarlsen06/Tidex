@@ -69,7 +69,7 @@ struct MainTabView: View {
                     }
                     .tag(Tab.stats)
 
-                SharingPlaceholderView()
+                SharingView()
                     .tabItem {
                         Label(localization.string(Tab.sharing.localizationKey), systemImage: Tab.sharing.icon)
                     }
