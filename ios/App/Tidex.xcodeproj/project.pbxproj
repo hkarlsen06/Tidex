@@ -129,6 +129,12 @@
 		11A197252F1D7EBD0030E524 /* LocalSharedShift.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A197242F1D7EBD0030E524 /* LocalSharedShift.swift */; };
 		11A1978D2F1D8E310030E524 /* SharedShiftsCalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A1978C2F1D8E310030E524 /* SharedShiftsCalendarView.swift */; };
 		11A1978F2F1D92940030E524 /* CachedAsyncImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A1978E2F1D92940030E524 /* CachedAsyncImage.swift */; };
+		11A197A72F1D9D550030E524 /* FriendRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A197A22F1D9D550030E524 /* FriendRow.swift */; };
+		11A197A82F1D9D550030E524 /* ManageSharingSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A197A42F1D9D550030E524 /* ManageSharingSheet.swift */; };
+		11A197A92F1D9D550030E524 /* AddFriendForm.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A197A12F1D9D550030E524 /* AddFriendForm.swift */; };
+		11A197AA2F1D9D550030E524 /* ManageSharingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A197A52F1D9D550030E524 /* ManageSharingViewModel.swift */; };
+		11A197AC2F1D9D760030E524 /* SharingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A197AB2F1D9D760030E524 /* SharingService.swift */; };
+		11A197AE2F1D9DC30030E524 /* Friend.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A197AD2F1D9DC30030E524 /* Friend.swift */; };
 		11A5CD262F101201002BAC91 /* StoredShift.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A5CD252F101201002BAC91 /* StoredShift.swift */; };
 		11A5CD302F101283002BAC91 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 11A5CD2F2F101283002BAC91 /* WidgetKit.framework */; };
 		11A5CD322F101283002BAC91 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 11A5CD312F101283002BAC91 /* SwiftUI.framework */; };
@@ -338,6 +344,12 @@
 		11A197242F1D7EBD0030E524 /* LocalSharedShift.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalSharedShift.swift; sourceTree = "<group>"; };
 		11A1978C2F1D8E310030E524 /* SharedShiftsCalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedShiftsCalendarView.swift; sourceTree = "<group>"; };
 		11A1978E2F1D92940030E524 /* CachedAsyncImage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CachedAsyncImage.swift; sourceTree = "<group>"; };
+		11A197A12F1D9D550030E524 /* AddFriendForm.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddFriendForm.swift; sourceTree = "<group>"; };
+		11A197A22F1D9D550030E524 /* FriendRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FriendRow.swift; sourceTree = "<group>"; };
+		11A197A42F1D9D550030E524 /* ManageSharingSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManageSharingSheet.swift; sourceTree = "<group>"; };
+		11A197A52F1D9D550030E524 /* ManageSharingViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManageSharingViewModel.swift; sourceTree = "<group>"; };
+		11A197AB2F1D9D760030E524 /* SharingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharingService.swift; sourceTree = "<group>"; };
+		11A197AD2F1D9DC30030E524 /* Friend.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Friend.swift; sourceTree = "<group>"; };
 		11A5CD252F101201002BAC91 /* StoredShift.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoredShift.swift; sourceTree = "<group>"; };
 		11A5CD2E2F101283002BAC91 /* TidexShiftWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TidexShiftWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		11A5CD2F2F101283002BAC91 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
@@ -873,11 +885,31 @@
 		11A197152F1D7B400030E524 /* Sharing */ = {
 			isa = PBXGroup;
 			children = (
+				11A197A62F1D9D550030E524 /* ManageSharing */,
 				11A197122F1D7B400030E524 /* Views */,
 				11A197132F1D7B400030E524 /* SharingView.swift */,
 				11A197142F1D7B400030E524 /* SharingViewModel.swift */,
 			);
 			path = Sharing;
+			sourceTree = "<group>";
+		};
+		11A197A32F1D9D550030E524 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				11A197A12F1D9D550030E524 /* AddFriendForm.swift */,
+				11A197A22F1D9D550030E524 /* FriendRow.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		11A197A62F1D9D550030E524 /* ManageSharing */ = {
+			isa = PBXGroup;
+			children = (
+				11A197A32F1D9D550030E524 /* Views */,
+				11A197A42F1D9D550030E524 /* ManageSharingSheet.swift */,
+				11A197A52F1D9D550030E524 /* ManageSharingViewModel.swift */,
+			);
+			path = ManageSharing;
 			sourceTree = "<group>";
 		};
 		11A1D6CE2F11F48F00060819 /* Core */ = {
@@ -942,6 +974,7 @@
 		11AE8CF12F16FDA4005AB062 /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				11A197AD2F1D9DC30030E524 /* Friend.swift */,
 				11A1971E2F1D7D260030E524 /* SharedShiftData.swift */,
 				11A1971C2F1D7CD40030E524 /* SharedUser.swift */,
 				11A196202F1AB6160030E524 /* Currency.swift */,
@@ -957,6 +990,7 @@
 		11AE8CFA2F16FDB2005AB062 /* Data */ = {
 			isa = PBXGroup;
 			children = (
+				11A197AB2F1D9D760030E524 /* SharingService.swift */,
 				11A197222F1D7DBF0030E524 /* SharingService.swift */,
 				11AE8CF72F16FDB2005AB062 /* SettingsService.swift */,
 				11AE8CF82F16FDB2005AB062 /* ShiftsService.swift */,
@@ -1304,6 +1338,7 @@
 				11A196542F1AE8AC0030E524 /* EntitlementService.swift in Sources */,
 				11A196432F1AC1BE0030E524 /* PlaceholderContent.swift in Sources */,
 				119D1CF52F16E46300EC7072 /* MFAVerifyView.swift in Sources */,
+				11A197AE2F1D9DC30030E524 /* Friend.swift in Sources */,
 				11F430212F1A9592002B1FBE /* AcceptTermsView.swift in Sources */,
 				119D1CF62F16E46300EC7072 /* LoadingOverlay.swift in Sources */,
 				11AE8D742F17DD44005AB062 /* UserMenuButton.swift in Sources */,
@@ -1333,6 +1368,10 @@
 				11A1965D2F1AEB360030E524 /* PaywallView.swift in Sources */,
 				11A1965E2F1AEB360030E524 /* BillingToggle.swift in Sources */,
 				11A1971F2F1D7D260030E524 /* SharedShiftData.swift in Sources */,
+				11A197A72F1D9D550030E524 /* FriendRow.swift in Sources */,
+				11A197A82F1D9D550030E524 /* ManageSharingSheet.swift in Sources */,
+				11A197A92F1D9D550030E524 /* AddFriendForm.swift in Sources */,
+				11A197AA2F1D9D550030E524 /* ManageSharingViewModel.swift in Sources */,
 				11F42F952F1A65F3002B1FBE /* PostAuthOnboardingView.swift in Sources */,
 				11F42F962F1A65F3002B1FBE /* PageIndicator.swift in Sources */,
 				11F42F972F1A65F3002B1FBE /* GetStartedScreen.swift in Sources */,
@@ -1342,6 +1381,7 @@
 				11A1978F2F1D92940030E524 /* CachedAsyncImage.swift in Sources */,
 				11F42F9B2F1A65F3002B1FBE /* WelcomeScreen.swift in Sources */,
 				11F42F9C2F1A65F3002B1FBE /* SamplePaycheckScreen.swift in Sources */,
+				11A197AC2F1D9D760030E524 /* SharingService.swift in Sources */,
 				11AE8CCE2F16F2CF005AB062 /* ResetPasswordViewModel.swift in Sources */,
 				11AE8CCF2F16F2CF005AB062 /* ResetPasswordView.swift in Sources */,
 				119D1CFA2F16E46300EC7072 /* ErrorBanner.swift in Sources */,
