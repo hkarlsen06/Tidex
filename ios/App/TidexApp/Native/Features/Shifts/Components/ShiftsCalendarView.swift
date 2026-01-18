@@ -88,11 +88,25 @@ struct ShiftsCalendarView: View {
     // Range selection callback (for long-press + drag)
     var onSelectDateRange: (([String]) -> Void)?
 
-    // Empty day tap callback (for deselecting)
-    var onEmptyDayTapped: (() -> Void)?
+    // Empty day tap callback (for navigating to add shift with date)
+    var onEmptyDayTapped: ((_ dateISO: String?) -> Void)?
+
+    // Copy/Move mode state
+    let isCopyMode: Bool
+    let isMoveMode: Bool
+    let isCopying: Bool
+    let isMoving: Bool
+
+    // Copy/Move callbacks
+    var onCopyToDate: ((String) -> Void)?
+    var onMoveToDate: ((String) -> Void)?
+    var onCancelCopyMove: (() -> Void)?
 
     // Selection mode toggle - when enabled, taps/long-press work; when disabled, swipes work
     @Binding var isSelectionModeEnabled: Bool
+
+    // Newly added dates for celebration highlighting
+    var newlyAddedDates: Set<String> = []
 
     @Environment(\.localization) private var localization
     @State private var viewMode: CalendarViewMode = CalendarViewMode.load()
@@ -319,6 +333,7 @@ struct ShiftsCalendarView: View {
             ForEach(days, id: \.id) { dayInfo in
                 let shiftsOnDay = dayInfo.dateISO.flatMap { shiftsByDate[$0] } ?? []
                 let isInDragPreview = dayInfo.dateISO.map { dragPreviewDates.contains($0) } ?? false
+                let isNewlyAdded = dayInfo.dateISO.map { newlyAddedDates.contains($0) } ?? false
 
                 ShiftsCalendarDayCell(
                     dayInfo: dayInfo,
@@ -328,7 +343,8 @@ struct ShiftsCalendarView: View {
                     isToday: dayInfo.dateISO == todayISO(),
                     hasShifts: !shiftsOnDay.isEmpty,
                     isSelected: dayInfo.isSelected,
-                    isInDragPreview: isInDragPreview
+                    isInDragPreview: isInDragPreview,
+                    isNewlyAdded: isNewlyAdded
                 )
             }
         }
@@ -376,15 +392,32 @@ struct ShiftsCalendarView: View {
     private func handleTap(at location: CGPoint, geometry: GeometryProxy, days: [DayInfo]) {
         guard let dayISO = findDayAt(location: location, geometry: geometry, days: days) else {
             // Tapped outside valid days
-            onEmptyDayTapped?()
+            if isCopyMode || isMoveMode {
+                // In copy/move mode, tapping outside cancels
+                onCancelCopyMove?()
+            } else {
+                onEmptyDayTapped?(nil)
+            }
             return
         }
 
+        // Handle copy/move mode - any date tap triggers the operation
+        if isCopyMode {
+            onCopyToDate?(dayISO)
+            return
+        }
+
+        if isMoveMode {
+            onMoveToDate?(dayISO)
+            return
+        }
+
+        // Normal mode
         let shiftsOnDay = shiftsByDate[dayISO] ?? []
 
         if shiftsOnDay.isEmpty {
-            // Tapped empty day
-            onEmptyDayTapped?()
+            // Tapped empty day - pass the date for pre-selection in Add tab
+            onEmptyDayTapped?(dayISO)
         } else {
             // Tapped day with shifts
             onDayTapped?(dayISO, shiftsOnDay)
@@ -512,7 +545,10 @@ struct ShiftsCalendarView: View {
     @ViewBuilder
     private var actionBar: some View {
         HStack(spacing: 0) {
-            if selectedDates.isEmpty {
+            if isCopyMode || isMoveMode {
+                // Copy/Move mode: show instruction bar
+                copyMoveBar
+            } else if selectedDates.isEmpty {
                 // Default: Hours/Money toggle
                 viewModeToggleContent
             } else if selectedDates.count == 1 {
@@ -527,10 +563,63 @@ struct ShiftsCalendarView: View {
         .background(Capsule().fill(Color.tidexSurfaceSecondary))
         .animation(.spring(response: 0.25, dampingFraction: 0.8), value: selectedDates.count)
         .animation(.spring(response: 0.25, dampingFraction: 0.8), value: confirmingDelete)
+        .animation(.spring(response: 0.25, dampingFraction: 0.8), value: isCopyMode)
+        .animation(.spring(response: 0.25, dampingFraction: 0.8), value: isMoveMode)
         .onAppear {
             toggleHaptic.prepare()
             warningHaptic.prepare()
         }
+    }
+
+    /// Action bar shown when in copy or move mode
+    @ViewBuilder
+    private var copyMoveBar: some View {
+        HStack(spacing: 4) {
+            // Loading indicator or instruction text
+            if isCopying || isMoving {
+                ProgressView()
+                    .progressViewStyle(CircularProgressViewStyle(tint: isCopyMode ? .tidexBlue : .orange))
+                    .scaleEffect(0.8)
+                    .frame(width: 36, height: 36)
+
+                Text(isCopyMode
+                    ? localization.string("shifts.copying")
+                    : localization.string("shifts.moving"))
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.tidexTextSecondary)
+                    .frame(maxWidth: .infinity)
+            } else {
+                // Icon indicating mode
+                Image(systemName: isCopyMode ? "doc.on.doc" : "arrow.left.arrow.right")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(isCopyMode ? .tidexBlue : .orange)
+                    .frame(width: 36, height: 36)
+
+                // Instruction text
+                Text(isCopyMode
+                    ? localization.string("shifts.selectCopyTarget")
+                    : localization.string("shifts.selectMoveTarget"))
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.tidexTextSecondary)
+                    .frame(maxWidth: .infinity)
+            }
+
+            // Cancel button
+            Button {
+                toggleHaptic.impactOccurred()
+                onCancelCopyMove?()
+            } label: {
+                Text(localization.string("common.cancel"))
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(Capsule().fill(Color.tidexBrandPrimary))
+            }
+            .buttonStyle(.plain)
+            .disabled(isCopying || isMoving)
+        }
+        .frame(height: 36)
     }
 
     @ViewBuilder
@@ -883,6 +972,7 @@ private struct ShiftsCalendarDayCell: View {
     let hasShifts: Bool
     let isSelected: Bool
     let isInDragPreview: Bool
+    let isNewlyAdded: Bool
 
     private var hasShift: Bool {
         earnings != nil || hours != nil
@@ -959,7 +1049,13 @@ private struct ShiftsCalendarDayCell: View {
         .opacity(dayInfo.isOutsideMonth ? 0.4 : 1.0)
     }
 
+    /// Celebration green color for newly added shifts
+    private static let celebrationColor = Color(red: 0.298, green: 0.686, blue: 0.314)  // #4CAF50 Green
+
     private var backgroundColor: Color {
+        if isNewlyAdded {
+            return Self.celebrationColor.opacity(0.2)
+        }
         if isSelected || isInDragPreview {
             return Color.tidexBlue.opacity(0.15)
         }
@@ -967,6 +1063,9 @@ private struct ShiftsCalendarDayCell: View {
     }
 
     private var borderColor: Color {
+        if isNewlyAdded {
+            return Self.celebrationColor
+        }
         if isSelected || isInDragPreview {
             return Color.tidexBlue
         }
@@ -977,6 +1076,9 @@ private struct ShiftsCalendarDayCell: View {
     }
 
     private var borderWidth: CGFloat {
+        if isNewlyAdded {
+            return 2.5
+        }
         if isSelected || isInDragPreview {
             return 2
         }
@@ -1024,7 +1126,12 @@ private struct ShiftsCalendarDayCell: View {
                     isDeleting: false,
                     selectedEarnings: nil,
                     selectedHasTaxEnabled: false,
-                    isSelectionModeEnabled: $isSelectionModeEnabled
+                    isCopyMode: false,
+                    isMoveMode: false,
+                    isCopying: false,
+                    isMoving: false,
+                    isSelectionModeEnabled: $isSelectionModeEnabled,
+                    newlyAddedDates: []
                 )
                 .padding()
             }

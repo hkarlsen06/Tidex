@@ -64,6 +64,23 @@ final class AddShiftViewModel: ObservableObject {
     private var lastObservedYear: Int = 0
     private var lastObservedMonth: Int = 0
 
+    /// Direction of last navigation (for animations) - synced from SharedMonthContext
+    @Published private(set) var navigationDirection: MonthNavigationDirection?
+
+    // MARK: - Display Properties (from SharedMonthContext)
+
+    /// Currently displayed year - synced from SharedMonthContext
+    var displayYear: Int { monthContext.displayYear }
+
+    /// Currently displayed month 1-12 - synced from SharedMonthContext
+    var displayMonthNumber: Int { monthContext.displayMonth }
+
+    /// Whether viewing the current (real) month
+    var isCurrentMonth: Bool { monthContext.isCurrentMonth }
+
+    /// Computed month name for display
+    var displayMonthName: String { monthContext.displayMonthName }
+
     // MARK: - Single Mode State
 
     @Published var selectedDates: Set<String> = []  // ISO dates (YYYY-MM-DD)
@@ -150,12 +167,35 @@ final class AddShiftViewModel: ObservableObject {
                 self.lastObservedYear = newMonth.year
                 self.lastObservedMonth = newMonth.month
 
+                // Sync navigation direction from context (for animations)
+                self.navigationDirection = self.monthContext.navigationDirection
+
                 // Trigger objectWillChange to refresh calendar views
                 self.objectWillChange.send()
 
                 // Reload shifts for conflict detection in the new month
                 self.reloadShiftsForDisplayedMonth()
             }
+    }
+
+    // MARK: - Month Navigation
+
+    /// Navigate to the previous month
+    /// Delegates to SharedMonthContext - data reload happens via subscription
+    func goToPreviousMonth() {
+        monthContext.goToPreviousMonth()
+    }
+
+    /// Navigate to the next month
+    /// Delegates to SharedMonthContext - data reload happens via subscription
+    func goToNextMonth() {
+        monthContext.goToNextMonth()
+    }
+
+    /// Reset to current month
+    /// Delegates to SharedMonthContext - data reload happens via subscription
+    func goToCurrentMonth() {
+        monthContext.goToCurrentMonth()
     }
 
     // MARK: - Computed Properties
@@ -201,6 +241,26 @@ final class AddShiftViewModel: ObservableObject {
         dates.formUnion(virtualDates)
 
         return dates
+    }
+
+    /// Computed earnings for existing shifts by date
+    var existingShiftEarnings: [String: Double] {
+        var result: [String: Double] = [:]
+
+        // Compute earnings for regular shifts
+        for shift in cachedShifts {
+            let snapshot = SnapshotsService.snapshotForDate(shift.shift_date, from: cachedSnapshots)
+            let computed = PayrollCalculator.computeShift(shift, snapshot: snapshot)
+            result[shift.shift_date, default: 0] += computed.gross
+        }
+
+        // Compute earnings for virtual shifts from recurring patterns
+        let virtualShifts = generateVirtualShiftsForDisplay()
+        for virtualShift in virtualShifts {
+            result[virtualShift.date, default: 0] += virtualShift.earnings
+        }
+
+        return result
     }
 
     /// Set of dates that would conflict with the current time selection
@@ -253,6 +313,21 @@ final class AddShiftViewModel: ObservableObject {
         return result
     }
 
+    /// Preview earnings for projected recurring dates (recurring mode)
+    var previewRecurringEarnings: [String: Double] {
+        guard canSubmitRecurring else { return [:] }
+
+        var result: [String: Double] = [:]
+
+        for dateISO in projectedRecurringDates {
+            if let earnings = computeEarningsForDate(dateISO) {
+                result[dateISO] = earnings
+            }
+        }
+
+        return result
+    }
+
     // MARK: - Data Loading
 
     /// Load initial data from repositories
@@ -274,10 +349,45 @@ final class AddShiftViewModel: ObservableObject {
         // Load recurring shifts
         cachedRecurringShifts = recurringRepository.getRecurringShifts(for: userId)
 
+        // Check for pre-selected date from SharedMonthContext (e.g., tapping empty day in Shifts tab)
+        applyPreselectedDate()
+
         // Trigger view update now that cached data is loaded
         cacheVersion += 1
 
         logger.info("Loaded data: \(self.cachedShifts.count) shifts, \(self.cachedRecurringShifts.count) recurring, \(self.cachedSnapshots.count) snapshots")
+    }
+
+    /// Check and apply any pre-selected date from SharedMonthContext
+    /// Called from onAppear when tab becomes visible
+    func checkPreselectedDate() {
+        applyPreselectedDate()
+    }
+
+    /// Apply and consume the pre-selected date from SharedMonthContext
+    /// Called when the user taps an empty day in the Shifts calendar
+    private func applyPreselectedDate() {
+        guard let dateISO = monthContext.preselectedDate else { return }
+
+        // Consume the pre-selected date (one-time use)
+        monthContext.preselectedDate = nil
+
+        // Ensure we're in single mode for date selection
+        mode = .single
+
+        // Add the date to selection
+        selectedDates.insert(dateISO)
+
+        // Navigate to the month containing the pre-selected date
+        if let date = Date.fromISODateString(dateISO) {
+            let calendar = Calendar.current
+            let components = calendar.dateComponents([.year, .month], from: date)
+            if let year = components.year, let month = components.month {
+                monthContext.navigateTo(year: year, month: month)
+            }
+        }
+
+        logger.info("Applied pre-selected date: \(dateISO)")
     }
 
     /// Reload shifts for the currently displayed month
@@ -355,12 +465,15 @@ final class AddShiftViewModel: ObservableObject {
 
             logger.info("Created \(sortedDates.count) shifts")
 
+            // Trigger celebration with the dates that were added
+            // Use the current display month as the origin for confetti
+            CelebrationManager.shared.celebrate(
+                dates: Set(sortedDates),
+                originMonth: (year: displayYear, month: displayMonthNumber)
+            )
+
             // Clear form
             clearForm()
-
-            // Success feedback
-            let generator = UINotificationFeedbackGenerator()
-            generator.notificationOccurred(.success)
 
             // Notify that shifts changed (for dashboard refresh)
             NotificationCenter.default.post(name: .shiftsDidChange, object: nil)
@@ -473,15 +586,21 @@ final class AddShiftViewModel: ObservableObject {
 
             logger.info("Created recurring shift with \(self.cachedProjectedDates.count) projected dates, \(conflicts.count) exclusions")
 
+            // Get non-excluded dates for celebration (the ones actually created)
+            let createdDates = Set(cachedProjectedDates).subtracting(conflicts)
+
+            // Trigger celebration with created dates
+            // Use the current display month as the origin for confetti
+            CelebrationManager.shared.celebrate(
+                dates: createdDates,
+                originMonth: (year: displayYear, month: displayMonthNumber)
+            )
+
             // Clear form
             clearForm()
 
             // Dismiss preview sheet
             showPreviewSheet = false
-
-            // Success feedback
-            let generator = UINotificationFeedbackGenerator()
-            generator.notificationOccurred(.success)
 
             // Notify that shifts changed (for dashboard refresh)
             NotificationCenter.default.post(name: .shiftsDidChange, object: nil)
@@ -583,39 +702,54 @@ final class AddShiftViewModel: ObservableObject {
         return computed.gross
     }
 
+    /// Virtual shift with computed earnings
+    struct VirtualShiftWithEarnings {
+        let date: String
+        let earnings: Double
+    }
+
     /// Generate virtual shift dates from recurring patterns for display
     private func generateVirtualShiftDatesForDisplay() -> Set<String> {
-        var dates = Set<String>()
-        let calendar = Calendar.current
+        Set(generateVirtualShiftsForDisplay().map { $0.date })
+    }
 
-        let now = Date()
-        let startYear = calendar.component(.year, from: now)
-        let startMonth = calendar.component(.month, from: now)
+    /// Generate virtual shifts with computed earnings from recurring patterns
+    private func generateVirtualShiftsForDisplay() -> [VirtualShiftWithEarnings] {
+        var results: [VirtualShiftWithEarnings] = []
 
-        // Generate for next 12 months
-        for i in 0..<12 {
-            var targetMonth = startMonth + i
-            var targetYear = startYear
+        // Only generate for the currently displayed month
+        let year = displayYear
+        let month = displayMonthNumber
 
-            while targetMonth > 12 {
-                targetMonth -= 12
-                targetYear += 1
-            }
+        for recurring in cachedRecurringShifts {
+            let virtualShifts = RecurringShiftGenerator.generateVirtualShiftsForMonth(
+                year: year,
+                month: month,
+                recurring: recurring
+            )
 
-            for recurring in cachedRecurringShifts {
-                let virtualShifts = RecurringShiftGenerator.generateVirtualShiftsForMonth(
-                    year: targetYear,
-                    month: targetMonth,
-                    recurring: recurring
+            for virtualShift in virtualShifts {
+                // Create a temporary shift to compute earnings
+                let shift = ShiftRow(
+                    id: "virtual-\(virtualShift.date)",
+                    user_id: nil,
+                    shift_date: virtualShift.date,
+                    start_time: recurring.start_time,
+                    end_time: recurring.end_time,
+                    custom_supplements: nil
                 )
 
-                for virtualShift in virtualShifts {
-                    dates.insert(virtualShift.date)
-                }
+                let snapshot = SnapshotsService.snapshotForDate(virtualShift.date, from: cachedSnapshots)
+                let computed = PayrollCalculator.computeShift(shift, snapshot: snapshot)
+
+                results.append(VirtualShiftWithEarnings(
+                    date: virtualShift.date,
+                    earnings: computed.gross
+                ))
             }
         }
 
-        return dates
+        return results
     }
 
     /// Clear the form after successful submission

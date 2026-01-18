@@ -19,6 +19,8 @@ struct MonthTransitionConfig {
     let textOffset: CGFloat
     /// Stagger delay between cards
     let staggerDelay: Double
+    /// Whether to use compact vertical layout for month/year
+    let isCompact: Bool
 
     static let `default` = MonthTransitionConfig(
         duration: 0.35,
@@ -26,7 +28,8 @@ struct MonthTransitionConfig {
         dampingFraction: 0.85,
         slideOffset: 60,
         textOffset: 20,
-        staggerDelay: 0.05
+        staggerDelay: 0.05,
+        isCompact: false
     )
 
     static let fast = MonthTransitionConfig(
@@ -35,7 +38,18 @@ struct MonthTransitionConfig {
         dampingFraction: 0.9,
         slideOffset: 40,
         textOffset: 15,
-        staggerDelay: 0.03
+        staggerDelay: 0.03,
+        isCompact: false
+    )
+
+    static let compact = MonthTransitionConfig(
+        duration: 0.3,
+        springResponse: 0.3,
+        dampingFraction: 0.85,
+        slideOffset: 40,
+        textOffset: 15,
+        staggerDelay: 0.03,
+        isCompact: true
     )
 }
 
@@ -224,120 +238,161 @@ struct AnimatedMonthHeader: View {
 
     @State private var monthScale: CGFloat = 1.0
 
-    /// Fixed width for the side sections to ensure center stays centered
-    private let sideWidth: CGFloat = 80
-
     // Haptic feedback for swipe
     private let swipeHaptic = UIImpactFeedbackGenerator(style: .medium)
 
+    // Width for side sections to keep center text perfectly centered (default mode only)
+    private let defaultSideWidth: CGFloat = 80  // Enough for back button (36) + spacing (8) + nav button (36)
+
     var body: some View {
-        // Single row navigation with perfectly centered month/year
-        HStack(spacing: 0) {
-            // Left section: Previous button (same width as right section)
-            HStack {
-                navigationButton(
-                    icon: "chevron.left",
-                    action: onPrevious
-                )
-                Spacer()
-            }
-            .frame(width: sideWidth)
+        if config.isCompact {
+            compactLayout
+        } else {
+            defaultLayout
+        }
+    }
 
-            Spacer()
+    // MARK: - Compact Layout (for Add tab)
 
-            // Center section: Month/Year always centered on screen
-            VStack(spacing: 2) {
-                // Month name with vertical slide
+    private var compactLayout: some View {
+        HStack(spacing: 8) {
+            // Previous button
+            navigationButton(icon: "chevron.left", action: onPrevious)
+
+            // Month and Year - vertically stacked, centered, takes available space
+            VStack(spacing: 0) {
                 Text(monthName.capitalized)
-                    .font(.system(size: 18, weight: .semibold))
+                    .font(.system(size: 15, weight: .semibold))
                     .foregroundColor(.tidexTextPrimary)
-                    .id("month-\(phase.id)")
-                    .transition(textTransition)
-                    .scaleEffect(monthScale)
 
-                // Year with vertical slide
                 Text(String(year))
-                    .font(.system(size: 13))
+                    .font(.system(size: 13, weight: .regular))
                     .foregroundColor(.tidexTextSecondary)
-                    .id("year-\(phase.id)")
-                    .transition(textTransition)
             }
+            .frame(maxWidth: .infinity)
+            .id("month-\(phase.id)")
+            .transition(textTransition)
+            .scaleEffect(monthScale)
             .animation(
                 .spring(response: config.springResponse, dampingFraction: config.dampingFraction),
                 value: phase.id
             )
             .onTapGesture {
                 guard !isCurrentMonth else { return }
+                bounceAndReturn()
+            }
 
-                // Quick scale bounce on tap
-                withAnimation(.spring(response: 0.15, dampingFraction: 0.5)) {
-                    monthScale = 0.95
-                }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                    withAnimation(.spring(response: 0.2, dampingFraction: 0.6)) {
-                        monthScale = 1.0
-                    }
-                }
+            // Next button
+            navigationButton(icon: "chevron.right", action: onNext)
 
-                onReturnToCurrent()
+            // Back-to-today button (outside the main picker area)
+            Button(action: onReturnToCurrent) {
+                Image(systemName: "arrow.uturn.backward")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.tidexBlue)
+                    .frame(width: 36, height: 36)
+                    .background(Color.tidexBlue.opacity(0.1))
+                    .clipShape(Circle())
+            }
+            .opacity(isCurrentMonth ? 0 : 1)
+            .disabled(isCurrentMonth)
+        }
+        .contentShape(Rectangle())
+        .gesture(swipeGesture)
+        .onAppear { swipeHaptic.prepare() }
+    }
+
+    // MARK: - Default Layout (for Dashboard/Shifts)
+
+    private var defaultLayout: some View {
+        HStack(spacing: 0) {
+            // Left section: Previous button (fixed width to match right side)
+            HStack {
+                navigationButton(icon: "chevron.left", action: onPrevious)
+                Spacer()
+            }
+            .frame(width: defaultSideWidth)
+
+            Spacer()
+
+            // Center section: Month and Year (horizontal)
+            HStack(spacing: 6) {
+                Text(monthName.capitalized)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(.tidexTextPrimary)
+
+                Text(String(year))
+                    .font(.system(size: 16, weight: .regular))
+                    .foregroundColor(.tidexTextSecondary)
+            }
+            .id("month-\(phase.id)")
+            .transition(textTransition)
+            .scaleEffect(monthScale)
+            .animation(
+                .spring(response: config.springResponse, dampingFraction: config.dampingFraction),
+                value: phase.id
+            )
+            .onTapGesture {
+                guard !isCurrentMonth else { return }
+                bounceAndReturn()
             }
 
             Spacer()
 
-            // Right section: Back button + Next button (same width as left section)
+            // Right section: Back-to-today button + Next button
             HStack(spacing: 8) {
-                Spacer()
-
-                // Back to today button - only visible when not on current month
-                ZStack {
-                    // Invisible placeholder to maintain width
-                    backToTodayButton
-                        .opacity(0)
-
-                    // Actual button
-                    if !isCurrentMonth {
-                        backToTodayButton
-                            .transition(.scale.combined(with: .opacity))
-                            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isCurrentMonth)
-                    }
+                Button(action: onReturnToCurrent) {
+                    Image(systemName: "arrow.uturn.backward")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.tidexBlue)
+                        .frame(width: 36, height: 36)
+                        .background(Color.tidexBlue.opacity(0.1))
+                        .clipShape(Circle())
                 }
+                .opacity(isCurrentMonth ? 0 : 1)
+                .disabled(isCurrentMonth)
 
-                // Next month button
-                navigationButton(
-                    icon: "chevron.right",
-                    action: onNext
-                )
+                navigationButton(icon: "chevron.right", action: onNext)
             }
-            .frame(width: sideWidth)
+            .frame(width: defaultSideWidth)
         }
         .padding(.horizontal, 16)
-        .padding(.top, 16) // Equal space above month name
-        .padding(.bottom, 16) // Equal space below (above tab bar)
-        // Make entire header area swipeable for month navigation
+        .padding(.vertical, 10)
         .contentShape(Rectangle())
-        .gesture(
-            DragGesture(minimumDistance: 30)
-                .onEnded { value in
-                    let horizontal = value.translation.width
-                    let vertical = abs(value.translation.height)
+        .gesture(swipeGesture)
+        .onAppear { swipeHaptic.prepare() }
+    }
 
-                    // Only trigger if horizontal movement dominates
-                    guard abs(horizontal) > vertical else { return }
+    // MARK: - Shared Helpers
 
-                    swipeHaptic.impactOccurred()
-
-                    if horizontal > 0 {
-                        // Swipe right → previous month
-                        onPrevious()
-                    } else {
-                        // Swipe left → next month
-                        onNext()
-                    }
-                }
-        )
-        .onAppear {
-            swipeHaptic.prepare()
+    private func bounceAndReturn() {
+        withAnimation(.spring(response: 0.15, dampingFraction: 0.5)) {
+            monthScale = 0.95
         }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            withAnimation(.spring(response: 0.2, dampingFraction: 0.6)) {
+                monthScale = 1.0
+            }
+        }
+        onReturnToCurrent()
+    }
+
+    private var swipeGesture: some Gesture {
+        DragGesture(minimumDistance: 30)
+            .onEnded { value in
+                let horizontal = value.translation.width
+                let vertical = abs(value.translation.height)
+
+                guard abs(horizontal) > vertical else { return }
+
+                swipeHaptic.impactOccurred()
+
+                if horizontal > 0 {
+                    onPrevious()
+                } else {
+                    onNext()
+                }
+            }
     }
 
     // MARK: - Subviews
@@ -355,18 +410,6 @@ struct AnimatedMonthHeader: View {
         // Navigation is always enabled - data loading happens in background
         // Visual feedback via subtle opacity when loading
         .opacity(isLoading ? 0.7 : 1.0)
-    }
-
-    /// Simple circular button with return arrow
-    private var backToTodayButton: some View {
-        Button(action: onReturnToCurrent) {
-            Image(systemName: "arrow.uturn.backward")
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(.tidexBlue)
-                .frame(width: 32, height: 32)
-                .background(Color.tidexBlue.opacity(0.1))
-                .clipShape(Circle())
-        }
     }
 
     // MARK: - Transitions

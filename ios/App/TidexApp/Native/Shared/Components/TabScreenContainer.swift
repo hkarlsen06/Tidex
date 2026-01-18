@@ -9,22 +9,25 @@ import SwiftUI
 ///     // Your tab content here
 /// }
 /// ```
-struct TabScreenContainer<Content: View>: View {
+struct TabScreenContainer<Content: View, PrincipalContent: View>: View {
     @EnvironmentObject private var coordinator: AppCoordinator
     @Environment(\.localization) private var localization
 
     let title: String
     let showsUserMenu: Bool
     @ViewBuilder let content: () -> Content
+    @ViewBuilder let principalContent: () -> PrincipalContent
 
     init(
         title: String,
         showsUserMenu: Bool = true,
-        @ViewBuilder content: @escaping () -> Content
+        @ViewBuilder content: @escaping () -> Content,
+        @ViewBuilder principalContent: @escaping () -> PrincipalContent
     ) {
         self.title = title
         self.showsUserMenu = showsUserMenu
         self.content = content
+        self.principalContent = principalContent
     }
 
     var body: some View {
@@ -35,11 +38,12 @@ struct TabScreenContainer<Content: View>: View {
 
                 content()
             }
-            .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(Color.tidexBackground, for: .navigationBar)
-            // Note: Removed .toolbarColorScheme(.dark) to respect system appearance
             .toolbar {
+                ToolbarItem(placement: .principal) {
+                    principalContent()
+                }
                 if showsUserMenu {
                     ToolbarItem(placement: .topBarTrailing) {
                         UserMenuButton(
@@ -49,6 +53,23 @@ struct TabScreenContainer<Content: View>: View {
                     }
                 }
             }
+        }
+    }
+}
+
+// Convenience initializer for screens that just want a title
+extension TabScreenContainer where PrincipalContent == Text {
+    init(
+        title: String,
+        showsUserMenu: Bool = true,
+        @ViewBuilder content: @escaping () -> Content
+    ) {
+        self.title = title
+        self.showsUserMenu = showsUserMenu
+        self.content = content
+        self.principalContent = {
+            Text(title)
+                .font(.headline)
         }
     }
 }
@@ -88,7 +109,6 @@ struct RefreshableTabScreenContainer<Content: View>: View {
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(Color.tidexBackground, for: .navigationBar)
-            // Note: Removed .toolbarColorScheme(.dark) to respect system appearance
             .toolbar {
                 if showsUserMenu {
                     ToolbarItem(placement: .topBarTrailing) {

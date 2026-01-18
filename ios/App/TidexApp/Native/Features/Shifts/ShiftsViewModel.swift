@@ -148,6 +148,23 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
     /// Whether we're currently deleting shifts
     @Published var isDeleting: Bool = false
 
+    // MARK: - Copy/Move State
+
+    /// Whether copy mode is active (waiting for target date selection)
+    @Published var isCopyMode: Bool = false
+
+    /// Whether move mode is active (waiting for target date selection)
+    @Published var isMoveMode: Bool = false
+
+    /// Whether a copy operation is in progress
+    @Published var isCopying: Bool = false
+
+    /// Whether a move operation is in progress
+    @Published var isMoving: Bool = false
+
+    /// The shift being copied or moved (stored when entering copy/move mode)
+    private var shiftForOperation: ShiftWithComputations?
+
     /// Single vs multi-selection mode
     var isMultiSelectMode: Bool { selectedDates.count > 1 }
 
@@ -389,6 +406,10 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
         selectedDates.removeAll()
         confirmingDelete = false
         isSelectionModeEnabled = false
+        // Also clear copy/move state
+        isCopyMode = false
+        isMoveMode = false
+        shiftForOperation = nil
     }
 
     /// Handle date range selection from long-press + drag gesture
@@ -435,6 +456,161 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
         }
 
         isDeleting = false
+    }
+
+    // MARK: - Copy/Move Actions
+
+    /// Enter copy mode - prepares to copy the selected shift to a new date
+    func initiateCopy() {
+        guard selectedDates.count == 1,
+              let dateISO = selectedDates.first else { return }
+
+        // Get the shift for this date
+        let shiftsOnDate = shifts.filter { $0.shiftDate == dateISO }
+        guard shiftsOnDate.count == 1, let shift = shiftsOnDate.first else {
+            // Multiple shifts on date or no shift found - can't copy
+            return
+        }
+
+        // Store the shift and enter copy mode
+        shiftForOperation = shift
+        isCopyMode = true
+        confirmingDelete = false
+    }
+
+    /// Enter move mode - prepares to move the selected shift to a new date
+    func initiateMove() {
+        guard selectedDates.count == 1,
+              let dateISO = selectedDates.first else { return }
+
+        // Get the shift for this date
+        let shiftsOnDate = shifts.filter { $0.shiftDate == dateISO }
+        guard shiftsOnDate.count == 1, let shift = shiftsOnDate.first else {
+            // Multiple shifts on date or no shift found - can't move
+            return
+        }
+
+        // Store the shift and enter move mode
+        shiftForOperation = shift
+        isMoveMode = true
+        confirmingDelete = false
+    }
+
+    /// Cancel copy/move mode and return to normal selection
+    func cancelCopyMoveMode() {
+        isCopyMode = false
+        isMoveMode = false
+        shiftForOperation = nil
+        // Keep the original selection so user can try again
+    }
+
+    /// Handle date tap when in copy mode - copy shift to the tapped date
+    /// - Parameter targetDateISO: The ISO date string to copy to
+    func handleCopyToDate(_ targetDateISO: String) async {
+        guard isCopyMode,
+              let sourceShift = shiftForOperation else { return }
+
+        // Don't copy to the same date
+        guard targetDateISO != sourceShift.shiftDate else {
+            cancelCopyMoveMode()
+            return
+        }
+
+        isCopying = true
+
+        do {
+            // Get current user ID
+            guard let userId = cachedUserId else {
+                throw ShiftsError.notAuthenticated
+            }
+
+            // Parse the target date
+            guard let targetDate = Date.fromISODateString(targetDateISO) else {
+                logger.error("Invalid target date: \(targetDateISO)")
+                isCopying = false
+                cancelCopyMoveMode()
+                return
+            }
+
+            // Create a new shift with the same times at the target date
+            _ = try await shiftsRepository.createShift(
+                userId: userId,
+                shiftDate: targetDate,
+                startTime: sourceShift.startTime,
+                endTime: sourceShift.endTime,
+                customSupplements: sourceShift.shift.custom_supplements
+            )
+
+            logger.info("Copied shift from \(sourceShift.shiftDate) to \(targetDateISO)")
+
+            // Exit copy mode and clear selection
+            isCopyMode = false
+            shiftForOperation = nil
+            clearSelection()
+
+            // Reload to show the new shift
+            await reloadFromLocal()
+            NotificationCenter.default.post(name: .shiftsDidChange, object: nil)
+
+        } catch {
+            logger.error("Failed to copy shift: \(error.localizedDescription)")
+        }
+
+        isCopying = false
+    }
+
+    /// Handle date tap when in move mode - move shift to the tapped date
+    /// - Parameter targetDateISO: The ISO date string to move to
+    func handleMoveToDate(_ targetDateISO: String) async {
+        guard isMoveMode,
+              let sourceShift = shiftForOperation else { return }
+
+        // Don't move to the same date
+        guard targetDateISO != sourceShift.shiftDate else {
+            cancelCopyMoveMode()
+            return
+        }
+
+        // Virtual shifts (from recurring patterns) cannot be moved
+        if sourceShift.isVirtual {
+            logger.warning("Cannot move virtual shift - must move the recurring pattern")
+            cancelCopyMoveMode()
+            return
+        }
+
+        isMoving = true
+
+        do {
+            // Parse the target date
+            guard let targetDate = Date.fromISODateString(targetDateISO) else {
+                logger.error("Invalid target date: \(targetDateISO)")
+                isMoving = false
+                cancelCopyMoveMode()
+                return
+            }
+
+            // Update the shift's date
+            _ = try await shiftsRepository.updateShift(
+                id: sourceShift.id,
+                shiftDate: targetDate
+            )
+
+            logger.info("Moved shift from \(sourceShift.shiftDate) to \(targetDateISO)")
+
+            // Exit move mode and clear selection
+            isMoveMode = false
+            shiftForOperation = nil
+            clearSelection()
+
+            // Reload to show the moved shift
+            await reloadFromLocal()
+            NotificationCenter.default.post(name: .shiftsDidChange, object: nil)
+
+        } catch {
+            logger.error("Failed to move shift: \(error.localizedDescription)")
+        }
+
+        isMoving = false
     }
 
     /// Non-blocking month data loader

@@ -1,15 +1,15 @@
 import SwiftUI
+import UIKit
 
-/// Calendar for selecting anchor dates in recurring shift mode
-/// Uses the same visual style as ShiftsCalendarView with rectangular cells and week numbers
-/// Allows one anchor per weekday (max 7 anchors)
-/// Note: Month navigation is handled by AnimatedMonthHeader in AddShiftView
-struct RecurringCalendarView: View {
+/// Multi-select calendar for choosing shift dates in AddShift
+/// Uses the same visual style as ShiftsCalendarView but adapted for date selection
+/// Supports tap to toggle date selection with existing shift and conflict indicators
+struct AddShiftCalendarView: View {
     @ObservedObject var viewModel: AddShiftViewModel
     @Environment(\.localization) private var localization
 
-    private let columns = Array(repeating: GridItem(.flexible(), spacing: 4), count: 7)
     private let calendar = Calendar.current
+    private let columns = Array(repeating: GridItem(.flexible(), spacing: 4), count: 7)
 
     var body: some View {
         VStack(spacing: 0) {
@@ -19,12 +19,6 @@ struct RecurringCalendarView: View {
 
             // Calendar grid
             calendarGrid
-
-            // Instructions
-            if viewModel.selectedDays.isEmpty {
-                CalendarInstructions()
-                    .padding(.top, 16)
-            }
         }
     }
 
@@ -58,30 +52,25 @@ struct RecurringCalendarView: View {
 
         LazyVGrid(columns: columns, spacing: 4) {
             ForEach(days, id: \.id) { dayInfo in
-                RecurringCalendarDayCell(
+                AddShiftCalendarDayCell(
                     dayInfo: dayInfo,
-                    isAnchor: dayInfo.dateISO.map { isAnchorDate($0) } ?? false,
-                    isProjected: dayInfo.dateISO.map { viewModel.projectedRecurringDates.contains($0) } ?? false,
-                    hasConflict: dayInfo.dateISO.map { viewModel.conflictDates.contains($0) } ?? false,
-                    hasExistingShift: dayInfo.dateISO.map { viewModel.existingShiftDates.contains($0) } ?? false,
                     isToday: dayInfo.dateISO == todayISO(),
+                    isSelected: dayInfo.dateISO.map { viewModel.selectedDates.contains($0) } ?? false,
+                    hasExistingShift: dayInfo.dateISO.map { viewModel.existingShiftDates.contains($0) } ?? false,
+                    hasConflict: dayInfo.dateISO.map { viewModel.conflictDates.contains($0) } ?? false,
                     existingEarnings: dayInfo.dateISO.flatMap { viewModel.existingShiftEarnings[$0] },
-                    previewEarnings: dayInfo.dateISO.flatMap { viewModel.previewRecurringEarnings[$0] }
+                    previewEarnings: dayInfo.dateISO.flatMap { viewModel.previewEarnings[$0] }
                 )
                 .onTapGesture {
                     if let dateISO = dayInfo.dateISO, !dayInfo.isOutsideMonth {
-                        viewModel.toggleAnchorDate(dateISO)
+                        viewModel.toggleDate(dateISO)
                     }
                 }
             }
         }
     }
 
-    // MARK: - Helpers
-
-    private func isAnchorDate(_ dateISO: String) -> Bool {
-        viewModel.selectedDays.values.contains(dateISO)
-    }
+    // MARK: - Calendar Helpers
 
     struct DayInfo: Identifiable {
         let id: Int
@@ -94,12 +83,17 @@ struct RecurringCalendarView: View {
     private func daysInMonth() -> [DayInfo] {
         var days: [DayInfo] = []
 
+        // Get first day of month from viewModel's displayMonth
         let components = calendar.dateComponents([.year, .month], from: viewModel.displayMonth)
         guard let firstOfMonth = calendar.date(from: components) else { return days }
 
+        // Get weekday of first day (1 = Sunday, 7 = Saturday)
         let firstWeekday = calendar.component(.weekday, from: firstOfMonth)
+
+        // Convert to Monday-start (0 = Monday, 6 = Sunday)
         let startOffset = (firstWeekday + 5) % 7
 
+        // Get number of days in month
         guard let range = calendar.range(of: .day, in: .month, for: firstOfMonth) else { return days }
 
         // Get last day of previous month for "outside days"
@@ -169,15 +163,14 @@ struct RecurringCalendarView: View {
     }
 }
 
-// MARK: - Recurring Calendar Day Cell
+// MARK: - Day Cell
 
-private struct RecurringCalendarDayCell: View {
-    let dayInfo: RecurringCalendarView.DayInfo
-    let isAnchor: Bool
-    let isProjected: Bool
-    let hasConflict: Bool
-    let hasExistingShift: Bool
+private struct AddShiftCalendarDayCell: View {
+    let dayInfo: AddShiftCalendarView.DayInfo
     let isToday: Bool
+    let isSelected: Bool
+    let hasExistingShift: Bool
+    let hasConflict: Bool
     let existingEarnings: Double?
     let previewEarnings: Double?
 
@@ -215,24 +208,18 @@ private struct RecurringCalendarDayCell: View {
             VStack {
                 Spacer()
 
-                if isAnchor {
-                    // Anchor indicator - star icon (always show for anchor dates)
-                    Image(systemName: "star.fill")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundColor(.white)
-                        .padding(.bottom, 8)
-                } else if isProjected, let earnings = previewEarnings {
-                    // Preview earnings for projected dates (blue)
+                if isSelected, let earnings = previewEarnings {
+                    // Preview earnings for selected dates (blue)
                     Text(formatCompactCurrency(earnings))
                         .font(.system(size: 15, weight: .bold))
                         .foregroundColor(hasConflict ? .tidexWarning : .tidexBlue)
                         .lineLimit(1)
                         .minimumScaleFactor(0.6)
                         .padding(.bottom, 6)
-                } else if isProjected {
-                    // Projected but no earnings yet (need times)
+                } else if isSelected {
+                    // Selected but no preview earnings yet (need times)
                     Image(systemName: "checkmark")
-                        .font(.system(size: 14, weight: .bold))
+                        .font(.system(size: 16, weight: .bold))
                         .foregroundColor(hasConflict ? .tidexWarning : .tidexBlue)
                         .padding(.bottom, 8)
                 } else if let earnings = existingEarnings, !dayInfo.isOutsideMonth {
@@ -263,20 +250,14 @@ private struct RecurringCalendarDayCell: View {
     }
 
     private var backgroundColor: Color {
-        if isAnchor {
-            return .tidexBlue
-        }
-        if isProjected {
+        if isSelected {
             return hasConflict ? Color.tidexWarning.opacity(0.15) : Color.tidexBlue.opacity(0.15)
         }
         return Color.tidexSurfacePrimary
     }
 
     private var borderColor: Color {
-        if isAnchor {
-            return .tidexBlue
-        }
-        if isProjected {
+        if isSelected {
             return hasConflict ? Color.tidexWarning : Color.tidexBlue
         }
         if isToday && !dayInfo.isOutsideMonth {
@@ -286,20 +267,17 @@ private struct RecurringCalendarDayCell: View {
     }
 
     private var borderWidth: CGFloat {
-        if isAnchor || isProjected || (isToday && !dayInfo.isOutsideMonth) {
+        if isSelected || (isToday && !dayInfo.isOutsideMonth) {
             return 2
         }
         return 0
     }
 
     private var dayNumberColor: Color {
-        if isAnchor {
-            return .white
+        if hasConflict && isSelected {
+            return .tidexWarning
         }
-        if isProjected {
-            return hasConflict ? .tidexWarning : .tidexBlue
-        }
-        if hasExistingShift && !dayInfo.isOutsideMonth {
+        if isSelected || (hasExistingShift && !dayInfo.isOutsideMonth) {
             return .tidexBlue
         }
         return .tidexTextPrimary
@@ -315,38 +293,11 @@ private struct RecurringCalendarDayCell: View {
     }
 }
 
-// MARK: - Calendar Instructions
-
-private struct CalendarInstructions: View {
-    @Environment(\.localization) private var localization
-
-    var body: some View {
-        VStack(spacing: 8) {
-            Image(systemName: "calendar.badge.plus")
-                .font(.system(size: 24))
-                .foregroundColor(.tidexTextMuted)
-
-            Text("Tap dates to set anchor days")
-                .font(.system(size: 14))
-                .foregroundColor(.tidexTextSecondary)
-                .multilineTextAlignment(.center)
-
-            Text("One anchor per weekday (max 7)")
-                .font(.system(size: 12))
-                .foregroundColor(.tidexTextMuted)
-        }
-        .padding(20)
-        .frame(maxWidth: .infinity)
-        .background(Color.tidexSurfaceSecondary)
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-    }
-}
-
 // MARK: - Preview
 
 #Preview {
     ScrollView {
-        RecurringCalendarView(viewModel: AddShiftViewModel())
+        AddShiftCalendarView(viewModel: AddShiftViewModel())
             .padding()
     }
     .background(Color.tidexBackground)
