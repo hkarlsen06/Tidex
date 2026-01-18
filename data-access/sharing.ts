@@ -25,7 +25,7 @@ import { SharingLive, ShiftsLive } from "@/lib/layers/app";
 import { ShiftsService } from "@/lib/services/shifts";
 import { logger } from "@/lib/logger";
 import { verifySession } from "@/data-access/auth";
-import type { ShiftWithComputations, UserSettings, WageSnapshot } from "@/lib/payroll";
+import type { ShiftWithComputations, UserSettings, WageSnapshot, ShiftRow } from "@/lib/payroll";
 import type { PayoutTaxSettings } from "@/lib/services/shifts";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -448,31 +448,309 @@ export const getSharedUserShifts = cache(
 
 /**
  * Get computed shifts for a user who has shared their shifts with the viewer
- * - Same as getSharedUserShifts but accepts viewerId as a parameter
+ * - Direct implementation for API routes (bypasses Effect layer)
  * - For use in API routes where auth is handled via Bearer token
- * - Uses React cache() for request deduplication
+ * - Does NOT require cookie-based session
  *
  * @param viewerId - The authenticated viewer's user ID (already verified by caller)
  * @param ownerId - The shift owner's user ID
  * @param options - Query options (startDate, endDate, limit, year, month)
  */
-export const getSharedUserShiftsWithViewerId = cache(
-  async (
-    viewerId: string,
-    ownerId: string,
-    options: { startDate?: string; endDate?: string; limit?: number; year?: number; month?: number } = {}
-  ): Promise<{
-    shifts: ShiftWithComputations[];
-    defaultView: string;
-    settings: UserSettings;
-    aggregates: SharedShiftsAggregates;
-    showEarnings: boolean;
-    payoutTaxSettings: PayoutTaxSettings;
-    wageSnapshots: WageSnapshot[];
-  }> => {
-    return getSharedUserShiftsInternal(viewerId, ownerId, options);
+export async function getSharedUserShiftsWithViewerId(
+  viewerId: string,
+  ownerId: string,
+  options: { startDate?: string; endDate?: string; limit?: number; year?: number; month?: number } = {}
+): Promise<{
+  shifts: ShiftWithComputations[];
+  defaultView: string;
+  settings: UserSettings;
+  aggregates: SharedShiftsAggregates;
+  showEarnings: boolean;
+  payoutTaxSettings: PayoutTaxSettings;
+  wageSnapshots: WageSnapshot[];
+}> {
+  const { createClient } = await import("@supabase/supabase-js");
+  const { computeShift, PRESET_SUPPLEMENT_RULES } = await import("@/lib/payroll");
+  const { generateVirtualShiftsForMonth } = await import("@/lib/recurring/utils");
+  const { cleanTime } = await import("@/lib/time-utils");
+
+  // Calculate the payout date for a given earnings month.
+  // Payout is in the month after earnings, on the user's payroll_day.
+  const calculatePayoutDate = (
+    earningsYear: number,
+    earningsMonth: number,
+    payrollDay: number
+  ): string => {
+    let payoutYear = earningsYear;
+    let payoutMonth = earningsMonth + 1;
+
+    if (payoutMonth > 12) {
+      payoutMonth = 1;
+      payoutYear += 1;
+    }
+
+    const daysInPayoutMonth = new Date(payoutYear, payoutMonth, 0).getDate();
+    const adjustedPayrollDay = Math.min(payrollDay, daysInPayoutMonth);
+
+    return `${payoutYear}-${String(payoutMonth).padStart(2, "0")}-${String(adjustedPayrollDay).padStart(2, "0")}`;
+  };
+
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!url || !serviceRoleKey) {
+    logger.error("Missing Supabase URL or service role key");
+    return {
+      shifts: [],
+      defaultView: "calendar",
+      settings: {},
+      aggregates: { totalHours: 0, totalEarnings: null },
+      showEarnings: false,
+      payoutTaxSettings: null,
+      wageSnapshots: [],
+    };
   }
-);
+
+  const adminClient = createClient(url, serviceRoleKey, {
+    auth: { persistSession: false },
+  });
+
+  try {
+    // Step 1: Verify share access
+    const { data: shareSettings, error: shareError } = await adminClient
+      .from("shift_shares")
+      .select("show_earnings, blocked")
+      .eq("owner_id", ownerId)
+      .eq("viewer_id", viewerId)
+      .maybeSingle();
+
+    if (shareError || !shareSettings || shareSettings.blocked) {
+      logger.warn(`User ${viewerId} attempted to access shifts of ${ownerId} without permission`);
+      return {
+        shifts: [],
+        defaultView: "calendar",
+        settings: {},
+        aggregates: { totalHours: 0, totalEarnings: null },
+        showEarnings: false,
+        payoutTaxSettings: null,
+        wageSnapshots: [],
+      };
+    }
+
+    const showEarnings = shareSettings.show_earnings ?? false;
+
+    // Step 2: Calculate date range
+    const { startDate, endDate, limit = 100, year, month } = options;
+
+    // Step 3: Fetch user settings, shifts, recurring shifts, and snapshots in parallel
+    const [settingsResult, shiftsResult, recurringResult, snapshotsResult] = await Promise.all([
+      adminClient
+        .from("user_settings")
+        .select("*")
+        .eq("user_id", ownerId)
+        .maybeSingle(),
+      adminClient
+        .from("user_shifts")
+        .select("*")
+        .eq("user_id", ownerId)
+        .is("deleted_at", null)
+        .gte("shift_date", startDate ?? "1900-01-01")
+        .lte("shift_date", endDate ?? "2100-12-31")
+        .order("shift_date", { ascending: false })
+        .limit(limit),
+      adminClient
+        .from("recurring_shifts")
+        .select("*")
+        .eq("user_id", ownerId)
+        .is("deleted_at", null),
+      adminClient
+        .from("wage_snapshots")
+        .select("*")
+        .eq("user_id", ownerId)
+        .is("deleted_at", null)
+        .order("from_date", { ascending: false, nullsFirst: false }),
+    ]);
+
+    const userSettings = settingsResult.data ?? {};
+    const shifts = (shiftsResult.data ?? []) as ShiftRow[];
+    const recurringShifts = recurringResult.data ?? [];
+    const snapshots = (snapshotsResult.data ?? []) as WageSnapshot[];
+
+    // Step 4: Build snapshot map for date lookup
+    const baselineSnapshot = snapshots.find((s) => s.from_date === null) ?? null;
+    const getSnapshotForDate = (date: string): WageSnapshot | null => {
+      const applicableSnapshot = snapshots.find(
+        (s) => s.from_date !== null && s.from_date <= date
+      );
+      return applicableSnapshot || baselineSnapshot || null;
+    };
+
+    // Step 5: Generate virtual shifts from recurring patterns
+    type VirtualShift = { date: string; weekday: number };
+    const virtualShiftsByRecurring = new Map<string, VirtualShift[]>();
+
+    if (startDate && endDate) {
+      const startYear = new Date(startDate).getFullYear();
+      const startMonth = new Date(startDate).getMonth() + 1;
+      const endYear = new Date(endDate).getFullYear();
+      const endMonth = new Date(endDate).getMonth() + 1;
+
+      for (const recurring of recurringShifts) {
+        const recurringVirtuals: VirtualShift[] = [];
+        let currentYear = startYear;
+        let currentMonth = startMonth;
+
+        while (
+          currentYear < endYear ||
+          (currentYear === endYear && currentMonth <= endMonth)
+        ) {
+          const virtualShifts = generateVirtualShiftsForMonth(
+            { year: currentYear, month: currentMonth },
+            {
+              start_time: cleanTime(recurring.start_time),
+              end_time: cleanTime(recurring.end_time),
+              repeat_interval_weeks: recurring.repeat_interval_weeks,
+              selected_days: recurring.selected_days,
+              end_condition: recurring.end_condition,
+              exclusions: recurring.exclusions || [],
+            }
+          );
+
+          for (const vs of virtualShifts) {
+            if (vs.date >= startDate && vs.date <= endDate) {
+              recurringVirtuals.push(vs);
+            }
+          }
+
+          currentMonth++;
+          if (currentMonth > 12) {
+            currentMonth = 1;
+            currentYear++;
+          }
+        }
+
+        virtualShiftsByRecurring.set(recurring.id, recurringVirtuals);
+      }
+    }
+
+    // Step 6: Compute payroll for all shifts
+    const payrollDay = userSettings.payroll_day ?? 1;
+    const getPayoutDateForShift = (shiftDate: string): string => {
+      const [y, m] = shiftDate.split("-").map(Number);
+      return calculatePayoutDate(y, m, payrollDay);
+    };
+
+    const computedShifts: ShiftWithComputations[] = shifts.map((shift) => {
+      const snapshot = getSnapshotForDate(shift.shift_date);
+      const payoutDate = getPayoutDateForShift(shift.shift_date);
+      const taxSnapshot = getSnapshotForDate(payoutDate);
+      const supplementRulesSnapshot =
+        shift.supplement_rules_snapshot ??
+        (snapshot?.supplements ? snapshot.supplements : null);
+
+      return {
+        ...shift,
+        supplement_rules_snapshot: supplementRulesSnapshot,
+        computed: computeShift(shift, userSettings, PRESET_SUPPLEMENT_RULES, snapshot),
+        tax_enabled: taxSnapshot?.tax_enabled ?? false,
+        tax_percentage: taxSnapshot?.tax_percentage ?? 0,
+      };
+    });
+
+    // Step 7: Compute recurring virtual shifts
+    const recurringVirtualShifts: ShiftWithComputations[] = [];
+    for (const recurring of recurringShifts) {
+      const cachedVirtuals = virtualShiftsByRecurring.get(recurring.id) ?? [];
+
+      for (const virtualShift of cachedVirtuals) {
+        const snapshot = getSnapshotForDate(virtualShift.date);
+        const payoutDate = getPayoutDateForShift(virtualShift.date);
+        const taxSnapshot = getSnapshotForDate(payoutDate);
+        const customSupplements = recurring.date_specific_supplements?.[virtualShift.date] ?? null;
+
+        const shiftRow: ShiftRow = {
+          id: `virtual-${recurring.id}-${virtualShift.date}`,
+          user_id: ownerId,
+          shift_date: virtualShift.date,
+          start_time: cleanTime(recurring.start_time),
+          end_time: cleanTime(recurring.end_time),
+          custom_supplements: customSupplements,
+          recurring_id: recurring.id,
+          recurring_anchor_weekday: virtualShift.weekday,
+        };
+
+        recurringVirtualShifts.push({
+          ...shiftRow,
+          supplement_rules_snapshot: snapshot?.supplements ?? null,
+          computed: computeShift(shiftRow, userSettings, PRESET_SUPPLEMENT_RULES, snapshot),
+          tax_enabled: taxSnapshot?.tax_enabled ?? false,
+          tax_percentage: taxSnapshot?.tax_percentage ?? 0,
+        });
+      }
+    }
+
+    // Step 8: Merge and sort shifts
+    const allShifts = [...computedShifts, ...recurringVirtualShifts].sort(
+      (a, b) => a.shift_date.localeCompare(b.shift_date)
+    );
+
+    // Step 9: Calculate aggregates
+    const aggregates: SharedShiftsAggregates = allShifts.reduce(
+      (acc, shift) => ({
+        totalHours: acc.totalHours + shift.computed.paidHours,
+        totalEarnings: (acc.totalEarnings ?? 0) + shift.computed.gross,
+      }),
+      { totalHours: 0, totalEarnings: 0 as number | null }
+    );
+
+    // Step 10: Get payout tax settings for the requested month
+    let payoutTaxSettings: PayoutTaxSettings = null;
+    if (year && month) {
+      const payoutDate = calculatePayoutDate(year, month, payrollDay);
+      const payoutSnapshot = getSnapshotForDate(payoutDate);
+      if (payoutSnapshot) {
+        payoutTaxSettings = {
+          enabled: payoutSnapshot.tax_enabled ?? false,
+          percentage: payoutSnapshot.tax_percentage ?? 0,
+        };
+      }
+    }
+
+    // Step 11: Strip earnings if not allowed
+    if (!showEarnings) {
+      return {
+        shifts: allShifts.map(stripEarningsFromShift),
+        defaultView: userSettings.default_shifts_view ?? "calendar",
+        settings: userSettings,
+        aggregates: { totalHours: aggregates.totalHours, totalEarnings: null },
+        showEarnings: false,
+        payoutTaxSettings: null,
+        wageSnapshots: [],
+      };
+    }
+
+    return {
+      shifts: allShifts,
+      defaultView: userSettings.default_shifts_view ?? "calendar",
+      settings: userSettings,
+      aggregates,
+      showEarnings: true,
+      payoutTaxSettings,
+      wageSnapshots: snapshots,
+    };
+  } catch (error) {
+    logger.error("Failed to fetch shared user shifts:", error);
+    return {
+      shifts: [],
+      defaultView: "calendar",
+      settings: {},
+      aggregates: { totalHours: 0, totalEarnings: null },
+      showEarnings: false,
+      payoutTaxSettings: null,
+      wageSnapshots: [],
+    };
+  }
+}
 
 /**
  * Update share settings for a specific recipient
