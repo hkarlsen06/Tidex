@@ -127,6 +127,8 @@
 		11A197212F1D7D7A0030E524 /* SharedShiftsRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A197202F1D7D7A0030E524 /* SharedShiftsRepository.swift */; };
 		11A197232F1D7DBF0030E524 /* SharingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A197222F1D7DBF0030E524 /* SharingService.swift */; };
 		11A197252F1D7EBD0030E524 /* LocalSharedShift.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A197242F1D7EBD0030E524 /* LocalSharedShift.swift */; };
+		11A1978D2F1D8E310030E524 /* SharedShiftsCalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A1978C2F1D8E310030E524 /* SharedShiftsCalendarView.swift */; };
+		11A1978F2F1D92940030E524 /* CachedAsyncImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A1978E2F1D92940030E524 /* CachedAsyncImage.swift */; };
 		11A5CD262F101201002BAC91 /* StoredShift.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A5CD252F101201002BAC91 /* StoredShift.swift */; };
 		11A5CD302F101283002BAC91 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 11A5CD2F2F101283002BAC91 /* WidgetKit.framework */; };
 		11A5CD322F101283002BAC91 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 11A5CD312F101283002BAC91 /* SwiftUI.framework */; };
@@ -334,6 +336,8 @@
 		11A197202F1D7D7A0030E524 /* SharedShiftsRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedShiftsRepository.swift; sourceTree = "<group>"; };
 		11A197222F1D7DBF0030E524 /* SharingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharingService.swift; sourceTree = "<group>"; };
 		11A197242F1D7EBD0030E524 /* LocalSharedShift.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalSharedShift.swift; sourceTree = "<group>"; };
+		11A1978C2F1D8E310030E524 /* SharedShiftsCalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedShiftsCalendarView.swift; sourceTree = "<group>"; };
+		11A1978E2F1D92940030E524 /* CachedAsyncImage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CachedAsyncImage.swift; sourceTree = "<group>"; };
 		11A5CD252F101201002BAC91 /* StoredShift.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoredShift.swift; sourceTree = "<group>"; };
 		11A5CD2E2F101283002BAC91 /* TidexShiftWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TidexShiftWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		11A5CD2F2F101283002BAC91 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
@@ -674,6 +678,7 @@
 		119D1CE12F16E46300EC7072 /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				11A1978E2F1D92940030E524 /* CachedAsyncImage.swift */,
 				11A197092F1D6F510030E524 /* ConfettiView.swift */,
 				11A196402F1AC1BE0030E524 /* PlaceholderContent.swift */,
 				11A196412F1AC1BE0030E524 /* TabScreenContainer.swift */,
@@ -856,6 +861,7 @@
 		11A197122F1D7B400030E524 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				11A1978C2F1D8E310030E524 /* SharedShiftsCalendarView.swift */,
 				11A1970E2F1D7B400030E524 /* SharedShiftRow.swift */,
 				11A1970F2F1D7B400030E524 /* SharedShiftsListView.swift */,
 				11A197102F1D7B400030E524 /* SharerListView.swift */,
@@ -1309,6 +1315,7 @@
 				11F42F902F1A65F3002B1FBE /* HowItWorksScreen.swift in Sources */,
 				11A1964B2F1AE6A20030E524 /* LocalEntitlementCache.swift in Sources */,
 				11A1964C2F1AE6A20030E524 /* LocalPendingJWSUpload.swift in Sources */,
+				11A1978D2F1D8E310030E524 /* SharedShiftsCalendarView.swift in Sources */,
 				11F42F912F1A65F3002B1FBE /* StepItem.swift in Sources */,
 				11A1961F2F1AB6020030E524 /* CurrencySelector.swift in Sources */,
 				11A197162F1D7B400030E524 /* SharerRow.swift in Sources */,
@@ -1332,6 +1339,7 @@
 				11F42F982F1A65F3002B1FBE /* CountUpText.swift in Sources */,
 				11F42F992F1A65F3002B1FBE /* OnboardingView.swift in Sources */,
 				11F42F9A2F1A65F3002B1FBE /* SuccessScreen.swift in Sources */,
+				11A1978F2F1D92940030E524 /* CachedAsyncImage.swift in Sources */,
 				11F42F9B2F1A65F3002B1FBE /* WelcomeScreen.swift in Sources */,
 				11F42F9C2F1A65F3002B1FBE /* SamplePaycheckScreen.swift in Sources */,
 				11AE8CCE2F16F2CF005AB062 /* ResetPasswordViewModel.swift in Sources */,

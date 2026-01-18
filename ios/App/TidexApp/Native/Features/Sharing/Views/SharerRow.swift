@@ -23,16 +23,13 @@ struct SharerRow: View {
                             .font(.system(size: 17, weight: .medium))
                             .foregroundColor(.tidexTextPrimary)
 
-                        // Earnings visibility status
-                        HStack(spacing: 4) {
-                            Image(systemName: sharer.showEarnings ? "eye.fill" : "eye.slash.fill")
-                                .font(.system(size: 12))
-                            Text(sharer.showEarnings
-                                ? localization.string("sharing.earningsVisible")
-                                : localization.string("sharing.earningsHidden"))
+                        // Contact info (email or phone)
+                        if let contactInfo = sharer.contactInfo {
+                            Text(contactInfo)
                                 .font(.system(size: 13))
+                                .foregroundColor(.tidexTextMuted)
+                                .lineLimit(1)
                         }
-                        .foregroundColor(.tidexTextMuted)
                     }
 
                     Spacer()
@@ -73,19 +70,14 @@ struct SharerRow: View {
     @ViewBuilder
     private var avatarView: some View {
         if let urlString = sharer.avatarUrl, let url = URL(string: urlString) {
-            AsyncImage(url: url) { phase in
-                switch phase {
-                case .success(let image):
-                    image
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                        .frame(width: 44, height: 44)
-                        .clipShape(Circle())
-                case .failure, .empty:
-                    initialsAvatar
-                @unknown default:
-                    initialsAvatar
-                }
+            CachedAsyncImage(url: url) { image in
+                image
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: 44, height: 44)
+                    .clipShape(Circle())
+            } placeholder: {
+                initialsAvatar
             }
         } else {
             initialsAvatar
@@ -184,7 +176,7 @@ private struct ShiftPreviewCard: View {
 
         guard startComponents.count >= 2, endComponents.count >= 2 else { return }
 
-        var start = Calendar.current.date(
+        let start = Calendar.current.date(
             bySettingHour: startComponents[0],
             minute: startComponents[1],
             second: 0,
