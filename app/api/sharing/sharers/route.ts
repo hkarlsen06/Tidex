@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { getSession } from "@/data-access/auth";
-import { getUsersWhoSharedWithMe } from "@/data-access/sharing";
+import { getUsersWhoSharedWithMeWithUserId } from "@/data-access/sharing";
 import { isTaggedError } from "@/lib/errors/tagged";
 
 /**
@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const sharers = await getUsersWhoSharedWithMe(userId);
+    const sharers = await getUsersWhoSharedWithMeWithUserId(userId);
 
     // Map to the format expected by iOS, adding the blocked field
     // (getUsersWhoSharedWithMe excludes blocked sharers, so blocked is always false here)
