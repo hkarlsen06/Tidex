@@ -411,4 +411,186 @@ final class SharingService: ObservableObject {
             throw SharingServiceError.networkError(underlying: error)
         }
     }
+
+    // MARK: - Friends Management (via Next.js API)
+
+    /// Fetch all friends (bidirectional relationships) and share capacity
+    /// Used by the sharing management modal
+    func fetchAllFriends() async throws -> (friends: [Friend], capacity: ShareCapacity) {
+        do {
+            let session = try await supabase.auth.session
+            let accessToken = session.accessToken
+
+            let url = APIConfiguration.webAppBaseURL.appendingPathComponent("/api/sharing/friends")
+
+            var request = URLRequest(url: url)
+            request.httpMethod = "GET"
+            request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+            logger.info("Fetching all friends from \(url.absoluteString)")
+
+            let (data, response) = try await urlSession.data(for: request)
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                throw SharingServiceError.networkError(underlying: URLError(.badServerResponse))
+            }
+
+            switch httpResponse.statusCode {
+            case 200:
+                break
+            case 401:
+                throw SharingServiceError.notAuthenticated
+            default:
+                let message = String(data: data, encoding: .utf8)
+                throw SharingServiceError.httpError(statusCode: httpResponse.statusCode, message: message)
+            }
+
+            let decoder = JSONDecoder()
+            do {
+                let apiResponse = try decoder.decode(FriendsAPIResponse.self, from: data)
+                logger.info("Loaded \(apiResponse.friends.count) friends (capacity: \(apiResponse.capacity.currentCount)/\(apiResponse.capacity.limit))")
+                return (apiResponse.friends, apiResponse.capacity)
+            } catch {
+                logger.error("Failed to decode friends response: \(error)")
+                throw SharingServiceError.decodingError(underlying: error)
+            }
+
+        } catch let error as SharingServiceError {
+            throw error
+        } catch {
+            throw SharingServiceError.networkError(underlying: error)
+        }
+    }
+
+    // MARK: - Share Management Actions
+
+    /// Action types for the manage endpoint
+    enum ManageAction: String, Encodable {
+        case createShare
+        case removeShare
+        case removeSharer
+        case toggleEarnings
+        case blockSharer
+        case unblockSharer
+        case shareBack
+        case toggleMuted
+    }
+
+    /// Generic method to call the /api/sharing/manage endpoint
+    private func performManageAction(
+        action: ManageAction,
+        identifier: String? = nil,
+        recipientId: String? = nil,
+        ownerId: String? = nil,
+        showEarnings: Bool? = nil,
+        muted: Bool? = nil
+    ) async throws {
+        let session = try await supabase.auth.session
+        let accessToken = session.accessToken
+
+        let url = APIConfiguration.webAppBaseURL.appendingPathComponent("/api/sharing/manage")
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        // Build request body
+        var body: [String: Any] = ["action": action.rawValue]
+        if let identifier = identifier { body["identifier"] = identifier }
+        if let recipientId = recipientId { body["recipientId"] = recipientId }
+        if let ownerId = ownerId { body["ownerId"] = ownerId }
+        if let showEarnings = showEarnings { body["showEarnings"] = showEarnings }
+        if let muted = muted { body["muted"] = muted }
+
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        logger.info("Performing manage action: \(action.rawValue)")
+
+        let (data, response) = try await urlSession.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw SharingServiceError.networkError(underlying: URLError(.badServerResponse))
+        }
+
+        // Decode response to check for errors
+        let decoder = JSONDecoder()
+        let result = try decoder.decode(ManageActionResponse.self, from: data)
+
+        if !result.success {
+            let errorMessage = result.error ?? "Unknown error"
+            logger.error("Manage action failed: \(errorMessage)")
+            throw SharingServiceError.httpError(statusCode: httpResponse.statusCode, message: errorMessage)
+        }
+
+        logger.info("Manage action \(action.rawValue) succeeded")
+    }
+
+    /// Create a new share by email or phone
+    func createShare(identifier: String, showEarnings: Bool = false) async throws {
+        try await performManageAction(
+            action: .createShare,
+            identifier: identifier,
+            showEarnings: showEarnings
+        )
+    }
+
+    /// Remove a share (revoke recipient's access to my shifts)
+    func removeShare(recipientId: String) async throws {
+        try await performManageAction(
+            action: .removeShare,
+            recipientId: recipientId
+        )
+    }
+
+    /// Remove a sharer from my friends list (as the viewer)
+    func removeSharer(ownerId: String) async throws {
+        try await performManageAction(
+            action: .removeSharer,
+            ownerId: ownerId
+        )
+    }
+
+    /// Toggle earnings visibility for a share recipient
+    func toggleShareEarnings(recipientId: String, showEarnings: Bool) async throws {
+        try await performManageAction(
+            action: .toggleEarnings,
+            recipientId: recipientId,
+            showEarnings: showEarnings
+        )
+    }
+
+    /// Block a sharer (hide their shifts from my list)
+    func blockSharer(ownerId: String) async throws {
+        try await performManageAction(
+            action: .blockSharer,
+            ownerId: ownerId
+        )
+    }
+
+    /// Unblock a sharer (restore their shifts to my list)
+    func unblockSharer(ownerId: String) async throws {
+        try await performManageAction(
+            action: .unblockSharer,
+            ownerId: ownerId
+        )
+    }
+
+    /// Share back with someone who has shared with me
+    func shareBack(recipientId: String) async throws {
+        try await performManageAction(
+            action: .shareBack,
+            recipientId: recipientId
+        )
+    }
+
+    /// Toggle muted status for a specific sharer
+    func toggleSharerMuted(ownerId: String, muted: Bool) async throws {
+        try await performManageAction(
+            action: .toggleMuted,
+            ownerId: ownerId,
+            muted: muted
+        )
+    }
 }

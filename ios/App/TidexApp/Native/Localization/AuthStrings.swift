@@ -510,7 +510,21 @@ enum AuthStrings {
         "sharing.loadError": "Kunne ikke laste data",
         "sharing.back": "Tilbake",
         "sharing.statusActive": "Pågår nå",
-        "sharing.synced": "synkronisert"
+        "sharing.synced": "synkronisert",
+
+        // Sharing Management Modal
+        "sharing.manageTitle": "Administrer deling",
+        "sharing.manageDescription": "Del vaktene dine med venner og kolleger slik at de kan f\u{00F8}lge med p\u{00E5} n\u{00E5}r du jobber.",
+        "sharing.mutual": "Begge deler",
+        "sharing.iShareWith": "Jeg deler med",
+        "sharing.sharesWithMe": "Deler med meg",
+        "sharing.noFriends": "Ingen venner enda",
+        "sharing.addFriend": "Legg til venn",
+        "sharing.emailOrPhone": "E-post eller telefonnummer",
+        "sharing.showEarnings": "Vis inntjening",
+        "sharing.shareBack": "Del tilbake",
+        "sharing.remove": "Fjern",
+        "sharing.add": "Legg til"
     ]
 
     // MARK: - English Strings
@@ -1011,6 +1025,20 @@ enum AuthStrings {
         "sharing.loadError": "Failed to load data",
         "sharing.back": "Back",
         "sharing.statusActive": "Active now",
-        "sharing.synced": "synced"
+        "sharing.synced": "synced",
+
+        // Sharing Management Modal
+        "sharing.manageTitle": "Manage Sharing",
+        "sharing.manageDescription": "Share your shifts with friends and colleagues so they can see when you work.",
+        "sharing.mutual": "Both share",
+        "sharing.iShareWith": "I share with",
+        "sharing.sharesWithMe": "Shares with me",
+        "sharing.noFriends": "No friends yet",
+        "sharing.addFriend": "Add friend",
+        "sharing.emailOrPhone": "Email or phone number",
+        "sharing.showEarnings": "Show earnings",
+        "sharing.shareBack": "Share back",
+        "sharing.remove": "Remove",
+        "sharing.add": "Add"
     ]
 }

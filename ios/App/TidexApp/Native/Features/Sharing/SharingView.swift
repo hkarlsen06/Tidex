@@ -12,6 +12,9 @@ struct SharingView: View {
 
     @StateObject private var viewModel = SharingViewModel()
 
+    /// State for showing the manage sharing sheet
+    @State private var showManageSheet = false
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -103,12 +106,24 @@ struct SharingView: View {
                 }
 
                 ToolbarItem(placement: .topBarTrailing) {
-                    // Only show user menu when not viewing a sharer
+                    // Only show when not viewing a sharer
                     if viewModel.selectedSharer == nil {
-                        UserMenuButton(
-                            displayName: coordinator.userDisplayName,
-                            avatarUrl: coordinator.userAvatarUrl
-                        )
+                        HStack(spacing: 16) {
+                            // Manage sharing button
+                            Button(action: {
+                                showManageSheet = true
+                            }) {
+                                Image(systemName: "gearshape")
+                                    .font(.system(size: 18))
+                                    .foregroundColor(.tidexBlue)
+                            }
+
+                            // User menu
+                            UserMenuButton(
+                                displayName: coordinator.userDisplayName,
+                                avatarUrl: coordinator.userAvatarUrl
+                            )
+                        }
                     }
                 }
             }
@@ -131,6 +146,14 @@ struct SharingView: View {
             withAnimation(.easeInOut(duration: 0.2)) {
                 viewModel.deselectSharer()
             }
+        }
+        .sheet(isPresented: $showManageSheet) {
+            ManageSharingSheet(onVisibilityChange: {
+                // Refresh sharers list when visibility changes (block/unblock)
+                Task {
+                    await viewModel.loadSharers(forceRefreshPreviews: true)
+                }
+            })
         }
     }
 
