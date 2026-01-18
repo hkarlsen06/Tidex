@@ -138,6 +138,8 @@ struct NumericTimeInput: View {
 struct TimeRangePicker: View {
     @Binding var startTime: Date?
     @Binding var endTime: Date?
+    var scrollProxy: ScrollViewProxy?
+    var scrollId: String?
     @FocusState private var focusedField: NumericTimeInput.TimeField?
     @Environment(\.localization) private var localization
 
@@ -160,6 +162,15 @@ struct TimeRangePicker: View {
                 nextField: nil,
                 onComplete: nil
             )
+        }
+        .id(scrollId)
+        .onChange(of: focusedField) { _, newValue in
+            if newValue != nil, let proxy = scrollProxy, let id = scrollId {
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    // Use center anchor to position above the floating glass card
+                    proxy.scrollTo(id, anchor: .center)
+                }
+            }
         }
     }
 }

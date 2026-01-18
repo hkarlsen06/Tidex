@@ -10,13 +10,14 @@ private struct DayShiftSelection: Identifiable {
 /// Shifts tab view - displays list of user's shifts grouped by week
 /// Supports month navigation, pull-to-refresh, swipe gestures, and calendar/list view toggle
 struct ShiftsView: View {
-    @Environment(\.localization) private var localization
     @EnvironmentObject private var coordinator: AppCoordinator
+    @Environment(\.localization) private var localization
 
     /// Binding to the selected tab for navigation (to switch to Add tab)
     @Binding var selectedTab: MainTabView.Tab
 
     @StateObject private var viewModel = ShiftsViewModel()
+    @ObservedObject private var celebrationManager = CelebrationManager.shared
 
     // Sheet state for shift details (using item-based presentation to fix first-tap bug)
     @State private var selectedShift: ShiftWithComputations?
@@ -26,12 +27,16 @@ struct ShiftsView: View {
     // State for day shifts sheet (when tapping a calendar day)
     @State private var selectedDayForSheet: DayShiftSelection?
 
+    // Celebration state
+    @State private var showConfetti = false
+
     // View mode toggle (calendar vs list) - persisted across app launches
     @AppStorage("shiftsViewMode") private var showListView = false
 
     // Haptic feedback
     private let selectionHaptic = UISelectionFeedbackGenerator()
     private let impactHaptic = UIImpactFeedbackGenerator(style: .medium)
+    private let celebrationHaptic = UINotificationFeedbackGenerator()
 
     // MARK: - Body
 
@@ -58,7 +63,8 @@ struct ShiftsView: View {
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-                    // Month picker - ALWAYS visible for navigation
+                    // Month picker - ALWAYS visible for navigation (liquid glass style)
+                    // Matches tab bar dimensions exactly
                     AnimatedMonthHeader(
                         monthName: viewModel.displayMonthName,
                         year: viewModel.displayYear,
@@ -83,7 +89,9 @@ struct ShiftsView: View {
                         isLoading: viewModel.isLoading,
                         backToTodayText: localization.string("dashboard.backToToday")
                     )
-                    .padding(.horizontal, 24)
+                    .frame(height: 56)
+                    .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 30))
+                    .padding(.horizontal, 16)
                     .padding(.bottom, 8)
                 }
             }
@@ -167,6 +175,27 @@ struct ShiftsView: View {
         .onAppear {
             selectionHaptic.prepare()
             impactHaptic.prepare()
+            celebrationHaptic.prepare()
+        }
+        // Confetti overlay for celebration when shifts are added
+        .overlay {
+            ConfettiView(isActive: showConfetti) {
+                showConfetti = false
+                celebrationManager.confettiDidShow()
+            }
+            .allowsHitTesting(false)
+        }
+        // Trigger celebration when shifts are added (check on view appear and when month matches)
+        .onChange(of: celebrationManager.shouldShowConfetti) { _, shouldShow in
+            if shouldShow && celebrationManager.shouldShowConfetti(forYear: viewModel.displayYear, month: viewModel.displayMonth) {
+                triggerCelebration()
+            }
+        }
+        .onChange(of: viewModel.displayMonth) { _, _ in
+            // Check if we should show confetti for the newly navigated month
+            if celebrationManager.shouldShowConfetti(forYear: viewModel.displayYear, month: viewModel.displayMonth) {
+                triggerCelebration()
+            }
         }
         // Day shifts sheet (when tapping a calendar day)
         .sheet(item: $selectedDayForSheet) { daySelection in
@@ -183,6 +212,20 @@ struct ShiftsView: View {
             )
             .presentationDetents([.medium])
             .presentationDragIndicator(.visible)
+        }
+    }
+
+    // MARK: - Celebration
+
+    /// Trigger celebration effects (confetti + haptic)
+    private func triggerCelebration() {
+        // Small delay to allow view to render
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+            // Haptic feedback
+            celebrationHaptic.notificationOccurred(.success)
+
+            // Show confetti
+            showConfetti = true
         }
     }
 
@@ -323,65 +366,111 @@ struct ShiftsView: View {
         ) {
             GeometryReader { geometry in
                 // Calendar only - no list below. Tapping days opens day sheet.
-                VStack {
-                    Spacer()
-                    StaggeredCardsContainer(phase: transitionPhase, config: .default) {
-                        ShiftsCalendarView(
-                            shifts: viewModel.shifts,
-                            month: displayedMonthDate,
-                            year: viewModel.displayYear,
-                            monthNumber: viewModel.displayMonth,
-                            currency: viewModel.currency,
-                            showEarnings: true,
-                            onDayTapped: { dateISO, shiftsOnDay in
-                                viewModel.handleDayTapped(dateISO: dateISO, shiftsOnDay: shiftsOnDay)
-                            },
-                            selectedDates: $viewModel.selectedDates,
-                            confirmingDelete: viewModel.confirmingDelete,
-                            isDeleting: viewModel.isDeleting,
-                            selectedEarnings: viewModel.selectedEarnings,
-                            selectedHasTaxEnabled: viewModel.selectedHasTaxEnabled,
-                            onDelete: {
-                                viewModel.confirmingDelete = true
-                            },
-                            onConfirmDelete: {
-                                Task {
-                                    await viewModel.deleteSelectedShifts()
-                                }
-                            },
-                            onCancelDelete: {
-                                viewModel.confirmingDelete = false
-                            },
-                            onCopy: {
-                                // No-op for now - to be implemented later
-                            },
-                            onDetails: {
-                                // Show DayShiftsSheet for multiple shifts, or direct details for single
-                                let shiftsOnDate = viewModel.selectedDateShifts
-                                if shiftsOnDate.count == 1, let shift = shiftsOnDate.first {
-                                    selectedShift = shift
-                                } else if let dateISO = viewModel.selectedDates.first {
-                                    selectedDayForSheet = DayShiftSelection(dateISO: dateISO, shifts: shiftsOnDate)
-                                }
-                            },
-                            onMove: {
-                                // No-op for now - to be implemented later
-                            },
-                            onClearSelection: {
+                ZStack {
+                    // Background layer to dismiss selection when tapping outside calendar
+                    Color.clear
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            if !viewModel.selectedDates.isEmpty {
                                 viewModel.clearSelection()
-                            },
-                            onSelectDateRange: { dates in
-                                viewModel.handleDateRangeSelected(dates)
-                            },
-                            onEmptyDayTapped: {
-                                // Tapping empty day clears selection
-                                viewModel.clearSelection()
-                            },
-                            isSelectionModeEnabled: $viewModel.isSelectionModeEnabled
-                        )
-                        .padding(.horizontal, 16)
+                            }
+                        }
+
+                    // Calendar content
+                    VStack {
+                        Spacer()
+                        StaggeredCardsContainer(phase: transitionPhase, config: .default) {
+                            ShiftsCalendarView(
+                                shifts: viewModel.shifts,
+                                month: displayedMonthDate,
+                                year: viewModel.displayYear,
+                                monthNumber: viewModel.displayMonth,
+                                currency: viewModel.currency,
+                                showEarnings: true,
+                                onDayTapped: { dateISO, shiftsOnDay in
+                                    viewModel.handleDayTapped(dateISO: dateISO, shiftsOnDay: shiftsOnDay)
+                                },
+                                selectedDates: $viewModel.selectedDates,
+                                confirmingDelete: viewModel.confirmingDelete,
+                                isDeleting: viewModel.isDeleting,
+                                selectedEarnings: viewModel.selectedEarnings,
+                                selectedHasTaxEnabled: viewModel.selectedHasTaxEnabled,
+                                onDelete: {
+                                    viewModel.confirmingDelete = true
+                                },
+                                onConfirmDelete: {
+                                    Task {
+                                        await viewModel.deleteSelectedShifts()
+                                    }
+                                },
+                                onCancelDelete: {
+                                    viewModel.confirmingDelete = false
+                                },
+                                onCopy: {
+                                    viewModel.initiateCopy()
+                                },
+                                onDetails: {
+                                    // Show DayShiftsSheet for multiple shifts, or direct details for single
+                                    let shiftsOnDate = viewModel.selectedDateShifts
+                                    if shiftsOnDate.count == 1, let shift = shiftsOnDate.first {
+                                        selectedShift = shift
+                                    } else if let dateISO = viewModel.selectedDates.first {
+                                        selectedDayForSheet = DayShiftSelection(dateISO: dateISO, shifts: shiftsOnDate)
+                                    }
+                                },
+                                onMove: {
+                                    viewModel.initiateMove()
+                                },
+                                onClearSelection: {
+                                    viewModel.clearSelection()
+                                },
+                                onSelectDateRange: { dates in
+                                    viewModel.handleDateRangeSelected(dates)
+                                },
+                                onEmptyDayTapped: { dateISO in
+                                    // If in copy/move mode, handle that instead
+                                    if viewModel.isCopyMode || viewModel.isMoveMode {
+                                        // Tapping outside valid dates cancels operation
+                                        viewModel.cancelCopyMoveMode()
+                                        return
+                                    }
+
+                                    // If shifts are selected, just clear the selection
+                                    if !viewModel.selectedDates.isEmpty {
+                                        viewModel.clearSelection()
+                                        return
+                                    }
+
+                                    // No selection active - navigate to Add tab with date pre-selected
+                                    if let dateISO = dateISO {
+                                        SharedMonthContext.shared.preselectedDate = dateISO
+                                        selectedTab = .add
+                                    }
+                                },
+                                isCopyMode: viewModel.isCopyMode,
+                                isMoveMode: viewModel.isMoveMode,
+                                isCopying: viewModel.isCopying,
+                                isMoving: viewModel.isMoving,
+                                onCopyToDate: { targetDateISO in
+                                    Task {
+                                        await viewModel.handleCopyToDate(targetDateISO)
+                                    }
+                                },
+                                onMoveToDate: { targetDateISO in
+                                    Task {
+                                        await viewModel.handleMoveToDate(targetDateISO)
+                                    }
+                                },
+                                onCancelCopyMove: {
+                                    viewModel.cancelCopyMoveMode()
+                                },
+                                isSelectionModeEnabled: $viewModel.isSelectionModeEnabled,
+                                newlyAddedDates: celebrationManager.newlyAddedDates
+                            )
+                            .padding(.horizontal, 16)
+                        }
+                        Spacer()
                     }
-                    Spacer()
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }

@@ -182,7 +182,7 @@ enum AuthStrings {
         "dashboard.signOut": "Logg ut",
         "dashboard.comingSoon": "Full dashboard kommer snart",
         "dashboard.comingSoonDescription": "Vi jobber med \u{00E5} bygge en fullstendig native iOS-app. F\u{00F8}lg med!",
-        "dashboard.earnedToDate": "Tjent hittil",
+        "dashboard.earnedToDate": "hittil",
         "dashboard.nextShift": "Neste vakt",
         "dashboard.today": "I dag",
         "dashboard.earnings": "Inntekt",
@@ -329,8 +329,12 @@ enum AuthStrings {
         "onboarding.settings.payday.customValue": "Lønningsdag: {day}. i måneden",
 
         // Add Shift
-        "addShift.modeSingle": "Enkelt",
-        "addShift.modeRecurring": "Gjentakende",
+        "addShift.singleTitle": "Legg til vakter",
+        "addShift.singleSubtitle": "Velg datoer først",
+        "addShift.recurringTitle": "Faste vakter",
+        "addShift.recurringSubtitle": "Velg ankerdatoer først",
+        "addShift.modeSingle": "Enkel",
+        "addShift.modeRecurring": "Fast",
         "addShift.startTime": "Starttid",
         "addShift.endTime": "Sluttid",
         "addShift.selectDates": "Velg datoer",
@@ -481,7 +485,11 @@ enum AuthStrings {
         "shifts.details": "Detaljer",
         "shifts.move": "Flytt",
         "shifts.copy": "Kopier",
-        "shifts.confirm": "Bekreft"
+        "shifts.confirm": "Bekreft",
+        "shifts.selectCopyTarget": "Trykk på en dato for å kopiere",
+        "shifts.selectMoveTarget": "Trykk på en dato for å flytte",
+        "shifts.copying": "Kopierer...",
+        "shifts.moving": "Flytter..."
     ]
 
     // MARK: - English Strings
@@ -654,7 +662,7 @@ enum AuthStrings {
         "dashboard.signOut": "Sign out",
         "dashboard.comingSoon": "Full dashboard coming soon",
         "dashboard.comingSoonDescription": "We're working on building a fully native iOS app. Stay tuned!",
-        "dashboard.earnedToDate": "Earned to date",
+        "dashboard.earnedToDate": "to date",
         "dashboard.nextShift": "Next shift",
         "dashboard.today": "Today",
         "dashboard.earnings": "Earnings",
@@ -801,8 +809,12 @@ enum AuthStrings {
         "onboarding.settings.payday.customValue": "Payday: {day}th of the month",
 
         // Add Shift
+        "addShift.singleTitle": "Add shifts",
+        "addShift.singleSubtitle": "Select dates first",
+        "addShift.recurringTitle": "Recurring shifts",
+        "addShift.recurringSubtitle": "Select anchor dates first",
         "addShift.modeSingle": "Single",
-        "addShift.modeRecurring": "Recurring",
+        "addShift.modeRecurring": "Fixed",
         "addShift.startTime": "Start time",
         "addShift.endTime": "End time",
         "addShift.selectDates": "Select dates",
@@ -953,6 +965,10 @@ enum AuthStrings {
         "shifts.details": "Details",
         "shifts.move": "Move",
         "shifts.copy": "Copy",
-        "shifts.confirm": "Confirm"
+        "shifts.confirm": "Confirm",
+        "shifts.selectCopyTarget": "Tap a date to copy to",
+        "shifts.selectMoveTarget": "Tap a date to move to",
+        "shifts.copying": "Copying...",
+        "shifts.moving": "Moving..."
     ]
 }

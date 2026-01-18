@@ -25,6 +25,11 @@ final class SharedMonthContext: ObservableObject {
     /// Direction of last navigation (for animations)
     @Published private(set) var navigationDirection: MonthNavigationDirection?
 
+    /// Pre-selected date for AddShift (ISO format, e.g., "2025-01-15")
+    /// Set when navigating from an empty calendar day to the Add tab
+    /// AddShiftViewModel consumes and clears this on load
+    @Published var preselectedDate: String?
+
     // MARK: - Computed Properties
 
     /// Whether viewing the current (real) month

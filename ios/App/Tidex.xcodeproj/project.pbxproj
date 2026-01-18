@@ -76,7 +76,6 @@
 		11A196342F1AC0070030E524 /* AddShiftView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A196302F1AC0070030E524 /* AddShiftView.swift */; };
 		11A196352F1AC0070030E524 /* RecurringShiftProjector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A1962D2F1AC0070030E524 /* RecurringShiftProjector.swift */; };
 		11A196362F1AC0070030E524 /* RecurringCalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A196232F1AC0070030E524 /* RecurringCalendarView.swift */; };
-		11A196372F1AC0070030E524 /* ShiftCalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A196262F1AC0070030E524 /* ShiftCalendarView.swift */; };
 		11A196382F1AC0070030E524 /* RepeatIntervalPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A196252F1AC0070030E524 /* RepeatIntervalPicker.swift */; };
 		11A196392F1AC0070030E524 /* AddShiftViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A196312F1AC0070030E524 /* AddShiftViewModel.swift */; };
 		11A1963A2F1AC0070030E524 /* RecurringPreviewSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A196242F1AC0070030E524 /* RecurringPreviewSheet.swift */; };
@@ -114,6 +113,9 @@
 		11A197022F1B14FA0030E524 /* ShiftDetailsSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A196FD2F1B14FA0030E524 /* ShiftDetailsSheet.swift */; };
 		11A197042F1B15080030E524 /* ScrollAppearModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A197032F1B15080030E524 /* ScrollAppearModifier.swift */; };
 		11A197062F1D52EF0030E524 /* CalendarGestureCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A197052F1D52EF0030E524 /* CalendarGestureCoordinator.swift */; };
+		11A197082F1D62060030E524 /* AddShiftCalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A197072F1D62060030E524 /* AddShiftCalendarView.swift */; };
+		11A1970A2F1D6F510030E524 /* ConfettiView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A197092F1D6F510030E524 /* ConfettiView.swift */; };
+		11A1970D2F1D6F630030E524 /* CelebrationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A1970B2F1D6F630030E524 /* CelebrationManager.swift */; };
 		11A5CD262F101201002BAC91 /* StoredShift.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A5CD252F101201002BAC91 /* StoredShift.swift */; };
 		11A5CD302F101283002BAC91 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 11A5CD2F2F101283002BAC91 /* WidgetKit.framework */; };
 		11A5CD322F101283002BAC91 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 11A5CD312F101283002BAC91 /* SwiftUI.framework */; };
@@ -270,7 +272,6 @@
 		11A196232F1AC0070030E524 /* RecurringCalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecurringCalendarView.swift; sourceTree = "<group>"; };
 		11A196242F1AC0070030E524 /* RecurringPreviewSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecurringPreviewSheet.swift; sourceTree = "<group>"; };
 		11A196252F1AC0070030E524 /* RepeatIntervalPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RepeatIntervalPicker.swift; sourceTree = "<group>"; };
-		11A196262F1AC0070030E524 /* ShiftCalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShiftCalendarView.swift; sourceTree = "<group>"; };
 		11A196272F1AC0070030E524 /* ShiftModeToggle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShiftModeToggle.swift; sourceTree = "<group>"; };
 		11A196282F1AC0070030E524 /* TimePickerRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimePickerRow.swift; sourceTree = "<group>"; };
 		11A196292F1AC0070030E524 /* WeekdayChipBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeekdayChipBar.swift; sourceTree = "<group>"; };
@@ -308,6 +309,9 @@
 		11A196FE2F1B14FA0030E524 /* SwipeableShiftCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwipeableShiftCard.swift; sourceTree = "<group>"; };
 		11A197032F1B15080030E524 /* ScrollAppearModifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScrollAppearModifier.swift; sourceTree = "<group>"; };
 		11A197052F1D52EF0030E524 /* CalendarGestureCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarGestureCoordinator.swift; sourceTree = "<group>"; };
+		11A197072F1D62060030E524 /* AddShiftCalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddShiftCalendarView.swift; sourceTree = "<group>"; };
+		11A197092F1D6F510030E524 /* ConfettiView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfettiView.swift; sourceTree = "<group>"; };
+		11A1970B2F1D6F630030E524 /* CelebrationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CelebrationManager.swift; sourceTree = "<group>"; };
 		11A5CD252F101201002BAC91 /* StoredShift.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoredShift.swift; sourceTree = "<group>"; };
 		11A5CD2E2F101283002BAC91 /* TidexShiftWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TidexShiftWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		11A5CD2F2F101283002BAC91 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
@@ -645,6 +649,7 @@
 		119D1CE12F16E46300EC7072 /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				11A197092F1D6F510030E524 /* ConfettiView.swift */,
 				11A196402F1AC1BE0030E524 /* PlaceholderContent.swift */,
 				11A196412F1AC1BE0030E524 /* TabScreenContainer.swift */,
 				11AE8D732F17DD44005AB062 /* UserMenuButton.swift */,
@@ -674,6 +679,7 @@
 		119D1CE42F16E46300EC7072 /* Shared */ = {
 			isa = PBXGroup;
 			children = (
+				11A1970C2F1D6F630030E524 /* Managers */,
 				11AE8D282F17D02E005AB062 /* Utilities */,
 				11AE8D242F17CF3A005AB062 /* Animations */,
 				11AE8D1F2F17CB31005AB062 /* Gestures */,
@@ -716,11 +722,11 @@
 		11A1962A2F1AC0070030E524 /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				11A197072F1D62060030E524 /* AddShiftCalendarView.swift */,
 				11A196222F1AC0070030E524 /* DurationPicker.swift */,
 				11A196232F1AC0070030E524 /* RecurringCalendarView.swift */,
 				11A196242F1AC0070030E524 /* RecurringPreviewSheet.swift */,
 				11A196252F1AC0070030E524 /* RepeatIntervalPicker.swift */,
-				11A196262F1AC0070030E524 /* ShiftCalendarView.swift */,
 				11A196272F1AC0070030E524 /* ShiftModeToggle.swift */,
 				11A196282F1AC0070030E524 /* TimePickerRow.swift */,
 				11A196292F1AC0070030E524 /* WeekdayChipBar.swift */,
@@ -812,6 +818,14 @@
 				11A196682F1B00B50030E524 /* ShiftsViewModel.swift */,
 			);
 			path = Shifts;
+			sourceTree = "<group>";
+		};
+		11A1970C2F1D6F630030E524 /* Managers */ = {
+			isa = PBXGroup;
+			children = (
+				11A1970B2F1D6F630030E524 /* CelebrationManager.swift */,
+			);
+			path = Managers;
 			sourceTree = "<group>";
 		};
 		11A1D6CE2F11F48F00060819 /* Core */ = {
@@ -1216,6 +1230,7 @@
 				119D1CEE2F16E46300EC7072 /* PhoneOTPForm.swift in Sources */,
 				11A196452F1AC20E0030E524 /* TabConfiguration.swift in Sources */,
 				119D1CEF2F16E46300EC7072 /* TidexCard.swift in Sources */,
+				11A1970A2F1D6F510030E524 /* ConfettiView.swift in Sources */,
 				11A196622F1AF7E70030E524 /* MonthLimitSheet.swift in Sources */,
 				119D1CF02F16E46300EC7072 /* EmailPasswordForm.swift in Sources */,
 				119D1CF12F16E46300EC7072 /* LoginViewModel.swift in Sources */,
@@ -1249,6 +1264,7 @@
 				11F42F932F1A65F3002B1FBE /* IndustryPicker.swift in Sources */,
 				11F42F942F1A65F3002B1FBE /* PersonalizationScreen.swift in Sources */,
 				11A1965B2F1AEB360030E524 /* PlanCard.swift in Sources */,
+				11A1970D2F1D6F630030E524 /* CelebrationManager.swift in Sources */,
 				11A1965C2F1AEB360030E524 /* PaywallViewModel.swift in Sources */,
 				11A1965D2F1AEB360030E524 /* PaywallView.swift in Sources */,
 				11A1965E2F1AEB360030E524 /* BillingToggle.swift in Sources */,
@@ -1293,6 +1309,7 @@
 				11AE8D2E2F17D27D005AB062 /* FeaturedShiftCard.swift in Sources */,
 				11AE8D292F17D02E005AB062 /* CountdownManager.swift in Sources */,
 				11AE8D2A2F17D02E005AB062 /* CountdownFormatter.swift in Sources */,
+				11A197082F1D62060030E524 /* AddShiftCalendarView.swift in Sources */,
 				11A196602F1AEB4D0030E524 /* VerificationRequiredView.swift in Sources */,
 				119D1CFD2F16E46300EC7072 /* LoginView.swift in Sources */,
 				119D1CFE2F16E46300EC7072 /* MFAVerifyViewModel.swift in Sources */,
@@ -1330,7 +1347,6 @@
 				11A197002F1B14FA0030E524 /* SwipeableShiftCard.swift in Sources */,
 				11A197012F1B14FA0030E524 /* NextShiftCountdownCard.swift in Sources */,
 				11A197022F1B14FA0030E524 /* ShiftDetailsSheet.swift in Sources */,
-				11A196372F1AC0070030E524 /* ShiftCalendarView.swift in Sources */,
 				11A196382F1AC0070030E524 /* RepeatIntervalPicker.swift in Sources */,
 				11A196392F1AC0070030E524 /* AddShiftViewModel.swift in Sources */,
 				11A1963A2F1AC0070030E524 /* RecurringPreviewSheet.swift in Sources */,

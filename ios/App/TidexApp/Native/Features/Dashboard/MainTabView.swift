@@ -128,7 +128,6 @@ struct PlaceholderTabView: View {
             .navigationTitle(localization.string(titleKey))
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(Color.tidexBackground, for: .navigationBar)
-            // Note: Removed .toolbarColorScheme(.dark) to respect system appearance
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     UserMenuButton(

@@ -37,8 +37,8 @@ struct DashboardView: View {
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-                    // Month picker - ALWAYS visible for navigation
-                    // Even during loading so user can continue navigating
+                    // Month picker - ALWAYS visible for navigation (liquid glass style)
+                    // Matches tab bar dimensions exactly
                     AnimatedMonthHeader(
                         monthName: viewModel.displayMonthName,
                         year: viewModel.displayYear,
@@ -57,14 +57,15 @@ struct DashboardView: View {
                         isLoading: viewModel.isLoading,
                         backToTodayText: localization.string("dashboard.backToToday")
                     )
-                    .padding(.horizontal, 24)
+                    .frame(height: 56)
+                    .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 30))
+                    .padding(.horizontal, 16)
                     .padding(.bottom, 8)
                 }
             }
             .navigationTitle(localization.string("dashboard.title"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(Color.tidexBackground, for: .navigationBar)
-            // Note: Removed .toolbarColorScheme(.dark) to respect system appearance
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     UserMenuButton(
@@ -163,7 +164,7 @@ struct DashboardView: View {
 
                         // Animated card content - centered vertically
                         animatedCardContent(data: data)
-                            .padding(.horizontal, 24)
+                            .padding(.horizontal, 16)
 
                         Spacer()
                     }
