@@ -1,5 +1,12 @@
 import SwiftUI
 
+// MARK: - Tab Reselection Notification
+
+extension Notification.Name {
+    /// Posted when a tab is tapped while already selected
+    static let tabReselected = Notification.Name("tabReselected")
+}
+
 /// Main tab view for authenticated users
 /// This is the home screen after successful login
 /// Currently a placeholder - will be expanded with full dashboard functionality
@@ -37,6 +44,25 @@ struct MainTabView: View {
         }
     }
 
+    /// Custom binding that detects tab reselection and posts notification
+    private var tabSelection: Binding<Tab> {
+        Binding(
+            get: { selectedTab },
+            set: { newTab in
+                if newTab == selectedTab {
+                    // Same tab tapped again - post notification
+                    NotificationCenter.default.post(
+                        name: .tabReselected,
+                        object: nil,
+                        userInfo: ["tab": newTab]
+                    )
+                } else {
+                    selectedTab = newTab
+                }
+            }
+        )
+    }
+
     var body: some View {
         ZStack {
             // Background that fills entire screen including safe areas
@@ -44,7 +70,7 @@ struct MainTabView: View {
             Color.tidexBackground
                 .ignoresSafeArea()
 
-            TabView(selection: $selectedTab) {
+            TabView(selection: tabSelection) {
                 DashboardView(selectedTab: $selectedTab)
                     .tabItem {
                         Label(localization.string(Tab.home.localizationKey), systemImage: Tab.home.icon)
@@ -69,7 +95,7 @@ struct MainTabView: View {
                     }
                     .tag(Tab.stats)
 
-                SharingView()
+                SharingView(selectedTab: $selectedTab)
                     .tabItem {
                         Label(localization.string(Tab.sharing.localizationKey), systemImage: Tab.sharing.icon)
                     }

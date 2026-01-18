@@ -77,6 +77,14 @@ enum SharingServiceError: Error, LocalizedError {
     }
 }
 
+// MARK: - Cached Preview
+
+/// Cached shift preview with timestamp
+private struct CachedPreview {
+    let preview: SharerShiftPreview
+    let cachedAt: Date
+}
+
 // MARK: - Sharing Service
 
 /// Service for fetching shared shifts and sharers
@@ -92,11 +100,33 @@ final class SharingService: ObservableObject {
 
     private let urlSession: URLSession
 
+    /// Cache for shift previews (by sharer ID)
+    private var previewCache: [String: CachedPreview] = [:]
+
+    /// Cache validity duration (5 minutes)
+    private let previewCacheValiditySeconds: TimeInterval = 5 * 60
+
     private init() {
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = 30
         config.timeoutIntervalForResource = 60
         self.urlSession = URLSession(configuration: config)
+    }
+
+    /// Get cached preview if still valid
+    func getCachedPreview(for sharerId: String) -> SharerShiftPreview? {
+        guard let cached = previewCache[sharerId] else { return nil }
+        let age = Date().timeIntervalSince(cached.cachedAt)
+        guard age < previewCacheValiditySeconds else {
+            previewCache.removeValue(forKey: sharerId)
+            return nil
+        }
+        return cached.preview
+    }
+
+    /// Clear all preview cache
+    func clearPreviewCache() {
+        previewCache.removeAll()
     }
 
     // MARK: - Sharer List (via Next.js API)
@@ -267,21 +297,44 @@ final class SharingService: ObservableObject {
 
     /// Fetch shift previews for all sharers
     /// Returns the most relevant shift (active > upcoming > past) for each sharer
-    func fetchShiftPreviews(sharerIds: [String]) async throws -> [SharerShiftPreview] {
+    /// Uses cache for recently fetched previews (5 minute validity)
+    func fetchShiftPreviews(sharerIds: [String], forceRefresh: Bool = false) async throws -> [SharerShiftPreview] {
         guard !sharerIds.isEmpty else { return [] }
+
+        // Check cache first (unless force refresh)
+        var cachedPreviews: [SharerShiftPreview] = []
+        var uncachedIds: [String] = []
+
+        if !forceRefresh {
+            for sharerId in sharerIds {
+                if let cached = getCachedPreview(for: sharerId) {
+                    cachedPreviews.append(cached)
+                } else {
+                    uncachedIds.append(sharerId)
+                }
+            }
+
+            // If all are cached, return immediately
+            if uncachedIds.isEmpty {
+                logger.info("Returning \(cachedPreviews.count) cached shift previews")
+                return cachedPreviews
+            }
+        } else {
+            uncachedIds = sharerIds
+        }
 
         do {
             // Get the current session token
             let session = try await supabase.auth.session
             let accessToken = session.accessToken
 
-            // Build URL
+            // Build URL - only fetch uncached IDs
             var components = URLComponents(
                 url: APIConfiguration.webAppBaseURL.appendingPathComponent("/api/sharing/previews"),
                 resolvingAgainstBaseURL: false
             )!
             components.queryItems = [
-                URLQueryItem(name: "sharerIds", value: sharerIds.joined(separator: ","))
+                URLQueryItem(name: "sharerIds", value: uncachedIds.joined(separator: ","))
             ]
 
             guard let url = components.url else {
@@ -294,7 +347,7 @@ final class SharingService: ObservableObject {
             request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
-            logger.info("Fetching shift previews from \(url.absoluteString)")
+            logger.info("Fetching \(uncachedIds.count) shift previews from API (cached: \(cachedPreviews.count))")
 
             // Execute request
             let (data, response) = try await urlSession.data(for: request)
@@ -318,7 +371,8 @@ final class SharingService: ObservableObject {
             let decoder = JSONDecoder()
             do {
                 let apiResponse = try decoder.decode(PreviewsAPIResponse.self, from: data)
-                let previews = apiResponse.previews.map { preview in
+                let now = Date()
+                let freshPreviews = apiResponse.previews.map { preview in
                     SharerShiftPreview(
                         sharerId: preview.sharerId,
                         shift: preview.shift,
@@ -326,16 +380,34 @@ final class SharingService: ObservableObject {
                         showEarnings: preview.showEarnings
                     )
                 }
-                logger.info("Loaded \(previews.count) shift previews")
-                return previews
+
+                // Cache the fresh previews
+                for preview in freshPreviews {
+                    previewCache[preview.sharerId] = CachedPreview(preview: preview, cachedAt: now)
+                }
+
+                // Merge cached + fresh and return
+                let allPreviews = cachedPreviews + freshPreviews
+                logger.info("Loaded \(freshPreviews.count) fresh + \(cachedPreviews.count) cached shift previews")
+                return allPreviews
             } catch {
                 logger.error("Failed to decode shift previews: \(error)")
                 throw SharingServiceError.decodingError(underlying: error)
             }
 
         } catch let error as SharingServiceError {
+            // If we have cached data, return it even on error
+            if !cachedPreviews.isEmpty {
+                logger.warning("API error, returning \(cachedPreviews.count) cached previews")
+                return cachedPreviews
+            }
             throw error
         } catch {
+            // If we have cached data, return it even on error
+            if !cachedPreviews.isEmpty {
+                logger.warning("Network error, returning \(cachedPreviews.count) cached previews")
+                return cachedPreviews
+            }
             throw SharingServiceError.networkError(underlying: error)
         }
     }

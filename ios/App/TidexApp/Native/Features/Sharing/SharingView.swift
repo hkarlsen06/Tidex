@@ -7,6 +7,9 @@ struct SharingView: View {
     @Environment(\.localization) private var localization
     @Environment(\.userCurrency) private var currency
 
+    /// Binding to the selected tab for navigation
+    @Binding var selectedTab: MainTabView.Tab
+
     @StateObject private var viewModel = SharingViewModel()
 
     var body: some View {
@@ -49,15 +52,64 @@ struct SharingView: View {
                     }
                 }
             }
-            .navigationTitle(localization.string(AppTab.sharing.titleKey))
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(Color.tidexBackground, for: .navigationBar)
             .toolbar {
+                // Back button when viewing a sharer
+                ToolbarItem(placement: .topBarLeading) {
+                    if viewModel.selectedSharer != nil {
+                        Button(action: {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                viewModel.deselectSharer()
+                            }
+                        }) {
+                            HStack(spacing: 6) {
+                                Image(systemName: "chevron.left")
+                                    .font(.system(size: 16, weight: .semibold))
+                                Text(localization.string("common.back"))
+                                    .font(.system(size: 17))
+                            }
+                            .foregroundColor(.tidexBlue)
+                        }
+                    }
+                }
+
+                // Title area - show sharer info or just title
+                ToolbarItem(placement: .principal) {
+                    if let sharer = viewModel.selectedSharer {
+                        HStack(spacing: 8) {
+                            if let urlString = sharer.avatarUrl, let url = URL(string: urlString) {
+                                CachedAsyncImage(url: url) { image in
+                                    image
+                                        .resizable()
+                                        .aspectRatio(contentMode: .fill)
+                                        .frame(width: 28, height: 28)
+                                        .clipShape(Circle())
+                                } placeholder: {
+                                    sharerInitialsAvatar(sharer: sharer)
+                                }
+                            } else {
+                                sharerInitialsAvatar(sharer: sharer)
+                            }
+                            Text(sharer.displayName)
+                                .font(.system(size: 17, weight: .semibold))
+                                .foregroundColor(.tidexTextPrimary)
+                        }
+                    } else {
+                        Text(localization.string(AppTab.sharing.titleKey))
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundColor(.tidexTextPrimary)
+                    }
+                }
+
                 ToolbarItem(placement: .topBarTrailing) {
-                    UserMenuButton(
-                        displayName: coordinator.userDisplayName,
-                        avatarUrl: coordinator.userAvatarUrl
-                    )
+                    // Only show user menu when not viewing a sharer
+                    if viewModel.selectedSharer == nil {
+                        UserMenuButton(
+                            displayName: coordinator.userDisplayName,
+                            avatarUrl: coordinator.userAvatarUrl
+                        )
+                    }
                 }
             }
             .refreshable {
@@ -66,6 +118,19 @@ struct SharingView: View {
         }
         .task {
             await viewModel.loadSharers()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .tabReselected)) { notification in
+            // Handle tab reselection - if sharing tab is tapped again while viewing a sharer,
+            // navigate back to the sharer list
+            guard let tab = notification.userInfo?["tab"] as? MainTabView.Tab,
+                  tab == .sharing,
+                  viewModel.selectedSharer != nil else {
+                return
+            }
+
+            withAnimation(.easeInOut(duration: 0.2)) {
+                viewModel.deselectSharer()
+            }
         }
     }
 
@@ -112,19 +177,26 @@ struct SharingView: View {
                 sharer: sharer,
                 shifts: viewModel.sharedShifts,
                 totalHours: viewModel.totalHours,
-                totalEarnings: viewModel.totalEarnings,
                 shiftCount: viewModel.shiftCount,
                 year: viewModel.displayYear,
                 month: viewModel.displayMonth,
                 isLoading: viewModel.isLoadingShifts,
-                lastCacheTime: viewModel.lastCacheTime,
-                onBack: {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        viewModel.deselectSharer()
-                    }
-                }
+                lastCacheTime: viewModel.lastCacheTime
             )
         }
+    }
+
+    // MARK: - Helper Views
+
+    private func sharerInitialsAvatar(sharer: SharedUser) -> some View {
+        Circle()
+            .fill(Color.tidexBlue.opacity(0.2))
+            .frame(width: 28, height: 28)
+            .overlay(
+                Text(sharer.initials)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(.tidexBlue)
+            )
     }
 
     // MARK: - Transition Phase
@@ -139,8 +211,16 @@ struct SharingView: View {
 }
 
 #Preview {
-    SharingView()
-        .environmentObject(AppCoordinator.shared)
-        .environment(\.localization, LocalizationManager.shared)
-        .environment(\.userCurrency, "kr")
+    struct PreviewWrapper: View {
+        @State private var selectedTab: MainTabView.Tab = .sharing
+
+        var body: some View {
+            SharingView(selectedTab: $selectedTab)
+                .environmentObject(AppCoordinator.shared)
+                .environment(\.localization, LocalizationManager.shared)
+                .environment(\.userCurrency, "kr")
+        }
+    }
+
+    return PreviewWrapper()
 }

@@ -509,7 +509,8 @@ enum AuthStrings {
         "sharing.hidden": "Skjult",
         "sharing.loadError": "Kunne ikke laste data",
         "sharing.back": "Tilbake",
-        "sharing.statusActive": "Pågår nå"
+        "sharing.statusActive": "Pågår nå",
+        "sharing.synced": "synkronisert"
     ]
 
     // MARK: - English Strings
@@ -1009,6 +1010,7 @@ enum AuthStrings {
         "sharing.hidden": "Hidden",
         "sharing.loadError": "Failed to load data",
         "sharing.back": "Back",
-        "sharing.statusActive": "Active now"
+        "sharing.statusActive": "Active now",
+        "sharing.synced": "synced"
     ]
 }

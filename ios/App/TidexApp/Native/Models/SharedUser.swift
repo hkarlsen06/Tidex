@@ -46,4 +46,28 @@ struct SharedUser: Codable, Identifiable, Equatable {
         }
         return String(name.prefix(2)).uppercased()
     }
+
+    /// Contact info to display (email or phone, preferring email)
+    /// Returns nil if the contact info would duplicate the display name
+    var contactInfo: String? {
+        // If we have email and it's not already used as displayName
+        if let email = email, !email.isEmpty {
+            if firstName != nil && !firstName!.isEmpty {
+                // firstName is used as display name, so show email
+                return email
+            }
+            // Email is used as display name, don't duplicate
+            return nil
+        }
+        // If we have phone and it's not already used as displayName
+        if let phone = phone, !phone.isEmpty {
+            if firstName != nil && !firstName!.isEmpty {
+                // firstName is used as display name, so show phone
+                return phone
+            }
+            // Phone is used as display name, don't duplicate
+            return nil
+        }
+        return nil
+    }
 }

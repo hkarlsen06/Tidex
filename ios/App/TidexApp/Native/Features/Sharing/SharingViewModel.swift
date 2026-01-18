@@ -144,7 +144,8 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
     // MARK: - Public Methods
 
     /// Load initial data (sharers list)
-    func loadSharers() async {
+    /// - Parameter forceRefreshPreviews: If true, forces fresh preview data (used on pull-to-refresh)
+    func loadSharers(forceRefreshPreviews: Bool = false) async {
         isLoadingSharers = true
         error = nil
 
@@ -170,7 +171,7 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
 
             // Fetch shift previews after sharers loaded
             isLoadingSharers = false
-            await loadShiftPreviews()
+            await loadShiftPreviews(forceRefresh: forceRefreshPreviews)
 
         } catch {
             logger.error("Failed to load sharers: \(error.localizedDescription)")
@@ -180,14 +181,18 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
     }
 
     /// Load shift previews for all sharers
-    func loadShiftPreviews() async {
+    /// - Parameter forceRefresh: If true, bypasses cache and fetches fresh data
+    func loadShiftPreviews(forceRefresh: Bool = false) async {
         guard !sharers.isEmpty else { return }
 
         isLoadingPreviews = true
 
         do {
             let sharerIds = sharers.map { $0.id }
-            let previews = try await sharingService.fetchShiftPreviews(sharerIds: sharerIds)
+            let previews = try await sharingService.fetchShiftPreviews(
+                sharerIds: sharerIds,
+                forceRefresh: forceRefresh
+            )
 
             // Convert to dictionary for quick lookup
             var previewMap: [String: SharerShiftPreview] = [:]
@@ -196,7 +201,7 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
             }
             shiftPreviews = previewMap
 
-            logger.info("Loaded shift previews for \(previews.count) sharers")
+            logger.info("Loaded shift previews for \(previews.count) sharers (forceRefresh: \(forceRefresh))")
         } catch {
             logger.error("Failed to load shift previews: \(error.localizedDescription)")
             // Don't set error - previews are non-critical
@@ -205,14 +210,14 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
         isLoadingPreviews = false
     }
 
-    /// Refresh sharers (pull-to-refresh)
+    /// Refresh sharers (pull-to-refresh) - forces fresh data
     func refresh() async {
         if selectedSharer != nil {
             // Refresh shifts for selected sharer
             await loadShiftsForSelectedSharer()
         } else {
-            // Refresh sharer list (which includes previews)
-            await loadSharers()
+            // Refresh sharer list and previews with forced refresh
+            await loadSharers(forceRefreshPreviews: true)
         }
     }
 
@@ -320,9 +325,21 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
     }
 
     /// Total earnings for the current month's shifts (nil if earnings hidden)
+    /// Returns the net earnings (after tax)
     var totalEarnings: Double? {
         guard showEarnings else { return nil }
+        return sharedShifts.reduce(0) { $0 + ($1.taxEnabled ? $1.netPay : $1.grossPay) }
+    }
+
+    /// Gross earnings for the current month's shifts (nil if earnings hidden)
+    var totalGrossEarnings: Double? {
+        guard showEarnings else { return nil }
         return sharedShifts.reduce(0) { $0 + $1.grossPay }
+    }
+
+    /// Whether any shift in the current month has tax enabled
+    var hasTaxEnabled: Bool {
+        sharedShifts.contains { $0.taxEnabled }
     }
 
     /// Shift count for the current month

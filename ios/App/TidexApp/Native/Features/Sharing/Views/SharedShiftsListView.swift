@@ -5,118 +5,65 @@ struct SharedShiftsListView: View {
     let sharer: SharedUser
     let shifts: [ShiftWithComputations]
     let totalHours: Double
-    let totalEarnings: Double?
     let shiftCount: Int
     let year: Int
     let month: Int
     let isLoading: Bool
     let lastCacheTime: Date?
-    let onBack: () -> Void
 
     @Environment(\.localization) private var localization
     @Environment(\.userCurrency) private var currency
+
+    // Sheet state for shift details
+    @State private var selectedShift: ShiftWithComputations?
+    @State private var showingShiftDetails = false
+
+    // Timer for updating relative time
+    @State private var currentTime = Date()
+    private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     private var today: String {
         todayISO()
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            // Header with back button
-            headerView
+        ScrollView {
+            VStack(spacing: 16) {
+                // Summary card
+                summaryCard
+                    .padding(.horizontal, 16)
+                    .padding(.top, 16)
 
-            ScrollView {
-                VStack(spacing: 16) {
-                    // Summary card
-                    summaryCard
-                        .padding(.horizontal, 16)
-                        .padding(.top, 16)
-
-                    // Calendar view
-                    if isLoading && shifts.isEmpty {
-                        loadingState
-                    } else {
-                        SharedShiftsCalendarView(
-                            shifts: shifts,
-                            year: year,
-                            month: month,
-                            currency: currency,
-                            showEarnings: sharer.showEarnings
-                        )
-                        .padding(.top, 8)
-                    }
-
-                    // Last updated indicator
-                    if let cacheTime = lastCacheTime {
-                        lastUpdatedView(cacheTime)
-                    }
-                }
-                .padding(.bottom, 16)
-            }
-        }
-    }
-
-    // MARK: - Header
-
-    private var headerView: some View {
-        HStack(spacing: 12) {
-            // Back button
-            Button(action: onBack) {
-                HStack(spacing: 6) {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 16, weight: .semibold))
-                    Text(localization.string("common.back"))
-                        .font(.system(size: 17))
-                }
-                .foregroundColor(.tidexBlue)
-            }
-
-            Spacer()
-
-            // Sharer name
-            HStack(spacing: 8) {
-                if let urlString = sharer.avatarUrl, let url = URL(string: urlString) {
-                    AsyncImage(url: url) { phase in
-                        switch phase {
-                        case .success(let image):
-                            image
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
-                                .frame(width: 28, height: 28)
-                                .clipShape(Circle())
-                        default:
-                            initialsAvatar(size: 28, fontSize: 12)
-                        }
-                    }
+                // Calendar view
+                if isLoading && shifts.isEmpty {
+                    loadingState
                 } else {
-                    initialsAvatar(size: 28, fontSize: 12)
+                    SharedShiftsCalendarView(
+                        shifts: shifts,
+                        year: year,
+                        month: month,
+                        currency: currency,
+                        showEarnings: sharer.showEarnings,
+                        onShiftTapped: { shift in
+                            selectedShift = shift
+                            showingShiftDetails = true
+                        }
+                    )
+                    .padding(.top, 8)
                 }
-
-                Text(sharer.displayName)
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundColor(.tidexTextPrimary)
             }
-
-            Spacer()
-
-            // Placeholder for symmetry
-            Color.clear
-                .frame(width: 60)
+            .padding(.bottom, 16)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(Color.tidexSurfacePrimary)
-    }
-
-    private func initialsAvatar(size: CGFloat, fontSize: CGFloat) -> some View {
-        Circle()
-            .fill(Color.tidexBlue.opacity(0.2))
-            .frame(width: size, height: size)
-            .overlay(
-                Text(sharer.initials)
-                    .font(.system(size: fontSize, weight: .semibold))
-                    .foregroundColor(.tidexBlue)
-            )
+        .sheet(isPresented: $showingShiftDetails) {
+            if let shift = selectedShift {
+                ShiftDetailsSheet(shift: shift, onDelete: nil)
+                    .presentationDetents([.medium, .large])
+                    .presentationDragIndicator(.visible)
+            }
+        }
+        .onReceive(timer) { _ in
+            currentTime = Date()
+        }
     }
 
     // MARK: - Summary Card
@@ -138,16 +85,11 @@ struct SharedShiftsListView: View {
                 label: localization.string("sharing.hours")
             )
 
-            if let earnings = totalEarnings {
-                Divider()
-                    .frame(height: 32)
+            Divider()
+                .frame(height: 32)
 
-                // Total earnings
-                statItem(
-                    value: formatCurrency(earnings),
-                    label: localization.string("sharing.earnings")
-                )
-            }
+            // Last synced
+            syncStatusItem
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 16)
@@ -169,6 +111,29 @@ struct SharedShiftsListView: View {
         }
     }
 
+    /// Sync status item showing time since last sync
+    private var syncStatusItem: some View {
+        VStack(spacing: 2) {
+            if let cacheTime = lastCacheTime {
+                // Calculate time since sync using currentTime for live updates
+                let timeSinceSync = formatTimeSinceSync(from: cacheTime, to: currentTime)
+                Text(timeSinceSync)
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundColor(.tidexTextPrimary)
+            } else if isLoading {
+                ProgressView()
+                    .scaleEffect(0.8)
+            } else {
+                Text("—")
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundColor(.tidexTextMuted)
+            }
+            Text(localization.string("sharing.synced"))
+                .font(.system(size: 12))
+                .foregroundColor(.tidexTextMuted)
+        }
+    }
+
     // MARK: - States
 
     private var loadingState: some View {
@@ -182,20 +147,6 @@ struct SharedShiftsListView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(.vertical, 60)
-    }
-
-    // MARK: - Last Updated
-
-    private func lastUpdatedView(_ date: Date) -> some View {
-        HStack(spacing: 4) {
-            Image(systemName: "clock")
-                .font(.system(size: 11))
-            Text(localization.string("sharing.lastUpdated"))
-            Text(formatRelativeTime(date))
-        }
-        .font(.system(size: 12))
-        .foregroundColor(.tidexTextMuted)
-        .padding(.vertical, 8)
     }
 
     // MARK: - Formatting
@@ -212,10 +163,23 @@ struct SharedShiftsListView: View {
         CurrencyConfig.format(amount, currency: currency)
     }
 
-    private func formatRelativeTime(_ date: Date) -> String {
-        let formatter = RelativeDateTimeFormatter()
-        formatter.unitsStyle = .abbreviated
-        return formatter.localizedString(for: date, relativeTo: Date())
+    /// Format time since sync in a compact way
+    /// Shows: "Nå" (< 5s), "Xs" (< 60s), "Xm" (< 60m), "Xt" (hours)
+    private func formatTimeSinceSync(from startDate: Date, to endDate: Date) -> String {
+        let seconds = Int(endDate.timeIntervalSince(startDate))
+
+        if seconds < 5 {
+            return localization.currentLocale == .norwegian ? "Nå" : "Now"
+        } else if seconds < 60 {
+            return "\(seconds)s"
+        } else if seconds < 3600 {
+            let minutes = seconds / 60
+            return "\(minutes)m"
+        } else {
+            let hours = seconds / 3600
+            let hoursLabel = localization.currentLocale == .norwegian ? "t" : "h"
+            return "\(hours)\(hoursLabel)"
+        }
     }
 }
 
@@ -234,13 +198,11 @@ struct SharedShiftsListView: View {
         ),
         shifts: [],
         totalHours: 32.5,
-        totalEarnings: 6500,
         shiftCount: 5,
         year: 2025,
         month: 1,
         isLoading: false,
-        lastCacheTime: Date(),
-        onBack: {}
+        lastCacheTime: Date().addingTimeInterval(-125)  // 2 minutes ago
     )
     .background(Color.tidexBackground)
     .environment(\.localization, LocalizationManager.shared)
