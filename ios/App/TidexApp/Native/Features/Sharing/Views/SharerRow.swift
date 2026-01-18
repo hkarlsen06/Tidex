@@ -99,6 +99,7 @@ struct SharerRow: View {
 // MARK: - Shift Preview Card
 
 /// Compact preview of a shift (shown under sharer info)
+/// Matches the Next.js SharedUserShiftPreview component behavior
 private struct ShiftPreviewCard: View {
     let shift: SharedShiftData
     let status: ShiftPreviewStatus
@@ -108,6 +109,7 @@ private struct ShiftPreviewCard: View {
     // Real-time status tracking
     @State private var currentStatus: ShiftPreviewStatus
     @State private var progress: Double = 0
+    @State private var secondsUntilEnd: Int = 0
     @State private var timer: Timer?
 
     init(shift: SharedShiftData, status: ShiftPreviewStatus) {
@@ -201,80 +203,210 @@ private struct ShiftPreviewCard: View {
             let totalDuration = end.timeIntervalSince(start)
             let elapsed = now.timeIntervalSince(start)
             progress = min(100, max(0, (elapsed / totalDuration) * 100))
+            secondsUntilEnd = Int(ceil(end.timeIntervalSince(now)))
         } else if now < start {
             currentStatus = .upcoming
             progress = 0
+            secondsUntilEnd = 0
         } else {
             currentStatus = .past
             progress = 100
+            secondsUntilEnd = 0
         }
     }
 
+    /// Format date to match Next.js: "Mandag · 15 jan."
     private var formattedDate: String {
         guard let date = Date.fromISODateString(shift.shift_date) else { return "" }
 
-        let formatter = DateFormatter()
         let isNorwegian = localization.currentLocale == .norwegian
-        formatter.locale = Locale(identifier: isNorwegian ? "nb_NO" : "en_US")
 
-        formatter.dateFormat = "EEEE"
-        let dayName = formatter.string(from: date).capitalized
+        // Get day name
+        let dayFormatter = DateFormatter()
+        dayFormatter.locale = Locale(identifier: isNorwegian ? "nb_NO" : "en_US")
+        dayFormatter.dateFormat = "EEEE"
+        let dayName = dayFormatter.string(from: date).capitalized
 
-        formatter.dateFormat = "d"
-        let dayNumber = formatter.string(from: date)
+        // Get day number
+        let dayNumber = Calendar.current.component(.day, from: date)
 
-        formatter.dateFormat = "MMM"
-        let monthName = formatter.string(from: date).lowercased()
+        // Get month abbreviation - match Next.js format with period
+        let monthIndex = Calendar.current.component(.month, from: date) - 1
+        let monthsShort = isNorwegian
+            ? ["jan.", "feb.", "mar.", "apr.", "mai", "jun.", "jul.", "aug.", "sep.", "okt.", "nov.", "des."]
+            : ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+        let monthName = monthsShort[monthIndex]
 
         return "\(dayName) · \(dayNumber) \(monthName)"
     }
 
+    /// Format time range to match Next.js: "09:00 – 17:00" (with spaces around en-dash)
     private var formattedTimeRange: String {
         let start = String(shift.start_time.prefix(5))
         let end = String(shift.end_time.prefix(5))
-        return "\(start)–\(end)"
+        return "\(start) – \(end)"
+    }
+
+    /// Check if we're in the final countdown (last 60 seconds of active shift)
+    private var isCountingDown: Bool {
+        currentStatus == .active && secondsUntilEnd <= 60 && secondsUntilEnd > 0
     }
 
     @ViewBuilder
     private var statusBadge: some View {
-        Text(statusText)
-            .font(.system(size: 12, weight: .medium))
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(statusBackgroundColor)
-            )
-            .foregroundColor(statusTextColor)
+        if isCountingDown {
+            // Show countdown number for final 60 seconds (matches Next.js behavior)
+            Text("\(secondsUntilEnd)")
+                .font(.system(size: 16, weight: .medium))
+                .monospacedDigit()
+                .frame(minWidth: 40)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color.green.opacity(0.2))
+                )
+                .foregroundColor(.green)
+                .contentTransition(.numericText())
+                .animation(.default, value: secondsUntilEnd)
+        } else {
+            Text(statusText)
+                .font(.system(size: 12, weight: .medium))
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(statusBackgroundColor)
+                )
+                .foregroundColor(statusTextColor)
+        }
     }
 
     private var statusText: String {
         switch currentStatus {
         case .active:
             return localization.string("sharing.statusActive")
-        case .upcoming:
-            return relativeTimeText
-        case .past:
+        case .upcoming, .past:
             return relativeTimeText
         }
     }
 
+    /// Custom relative time formatting to match Next.js useCountdown hook
+    /// Format: "Om 2t 30min", "I morgen", "2t siden", etc.
     private var relativeTimeText: String {
         guard let shiftDate = Date.fromISODateString(shift.shift_date) else { return "" }
 
         let startComponents = shift.start_time.split(separator: ":").compactMap { Int($0) }
-        guard startComponents.count >= 2 else { return "" }
+        let endComponents = shift.end_time.split(separator: ":").compactMap { Int($0) }
+        guard startComponents.count >= 2, endComponents.count >= 2 else { return "" }
 
-        guard let shiftTime = Calendar.current.date(
+        guard var shiftStart = Calendar.current.date(
             bySettingHour: startComponents[0],
             minute: startComponents[1],
             second: 0,
             of: shiftDate
         ) else { return "" }
 
-        let formatter = RelativeDateTimeFormatter()
-        formatter.unitsStyle = .abbreviated
-        return formatter.localizedString(for: shiftTime, relativeTo: Date())
+        var shiftEnd = Calendar.current.date(
+            bySettingHour: endComponents[0],
+            minute: endComponents[1],
+            second: 0,
+            of: shiftDate
+        ) ?? shiftDate
+
+        // Handle cross-midnight
+        if shiftEnd <= shiftStart {
+            shiftEnd = Calendar.current.date(byAdding: .day, value: 1, to: shiftEnd) ?? shiftEnd
+        }
+
+        let now = Date()
+        let isNorwegian = localization.currentLocale == .norwegian
+
+        // For past shifts, calculate from end time (matches Next.js behavior)
+        // "3min siden" means "ended 3 minutes ago", not "started X hours ago"
+        let referenceTime: Date
+        if now > shiftEnd {
+            referenceTime = shiftEnd
+        } else {
+            referenceTime = shiftStart
+        }
+
+        let diffSeconds = referenceTime.timeIntervalSince(now)
+        let isFuture = diffSeconds > 0
+        let absDiffSeconds = abs(diffSeconds)
+
+        let totalSeconds = Int(absDiffSeconds)
+        let totalMinutes = totalSeconds / 60
+        let totalHours = totalMinutes / 60
+
+        // Count midnight crossings for day-based formatting
+        let midnightDays = countMidnightCrossings(from: min(now, shiftStart), to: max(now, shiftStart))
+
+        // Within the same day (0 midnight crossings)
+        if midnightDays == 0 {
+            let h = totalMinutes / 60
+            let m = totalMinutes % 60
+
+            if totalMinutes == 0 {
+                // Less than a minute
+                let s = totalSeconds
+                if isNorwegian {
+                    return isFuture ? "Om \(s)sek" : "\(s)sek siden"
+                } else {
+                    return isFuture ? "In \(s)s" : "\(s)s ago"
+                }
+            }
+
+            if h == 0 {
+                // Less than an hour - show minutes
+                if isNorwegian {
+                    return isFuture ? "Om \(m)min" : "\(m)min siden"
+                } else {
+                    return isFuture ? "In \(m)min" : "\(m)min ago"
+                }
+            }
+
+            if m == 0 {
+                // Exact hours
+                if isNorwegian {
+                    return isFuture ? "Om \(h)t" : "\(h)t siden"
+                } else {
+                    return isFuture ? "In \(h)h" : "\(h)h ago"
+                }
+            }
+
+            // Hours and minutes
+            if isNorwegian {
+                return isFuture ? "Om \(h)t \(m)min" : "\(h)t \(m)min siden"
+            } else {
+                return isFuture ? "In \(h)h \(m)min" : "\(h)h \(m)min ago"
+            }
+        }
+
+        // 1 midnight crossing = tomorrow/yesterday
+        if midnightDays == 1 {
+            if isNorwegian {
+                return isFuture ? "I morgen" : "I går"
+            } else {
+                return isFuture ? "Tomorrow" : "Yesterday"
+            }
+        }
+
+        // Multiple days
+        if isNorwegian {
+            return isFuture ? "Om \(midnightDays) dager" : "\(midnightDays) dager siden"
+        } else {
+            return isFuture ? "In \(midnightDays) days" : "\(midnightDays) days ago"
+        }
+    }
+
+    /// Count midnight crossings between two dates (matches Next.js logic)
+    private func countMidnightCrossings(from startDate: Date, to endDate: Date) -> Int {
+        let calendar = Calendar.current
+        let startOfStartDay = calendar.startOfDay(for: startDate)
+        let startOfEndDay = calendar.startOfDay(for: endDate)
+        let components = calendar.dateComponents([.day], from: startOfStartDay, to: startOfEndDay)
+        return abs(components.day ?? 0)
     }
 
     private var statusBackgroundColor: Color {

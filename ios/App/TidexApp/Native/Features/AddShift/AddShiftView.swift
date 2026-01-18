@@ -47,20 +47,21 @@ struct AddShiftView: View {
                         ScrollView {
                             VStack(spacing: 24) {
                                 // Mode-specific header with inline toggle
-                                VStack(alignment: .leading, spacing: 4) {
-                                    HStack(alignment: .center, spacing: 12) {
+                                HStack(alignment: .center) {
+                                    VStack(alignment: .leading, spacing: 2) {
                                         Text(modeTitle)
                                             .font(.title2.weight(.semibold))
                                             .foregroundColor(.tidexTextPrimary)
 
-                                        ShiftModeToggle(mode: $viewModel.mode)
+                                        Text(modeSubtitle)
+                                            .font(.subheadline)
+                                            .foregroundColor(.tidexTextSecondary)
                                     }
 
-                                    Text(modeSubtitle)
-                                        .font(.subheadline)
-                                        .foregroundColor(.tidexTextSecondary)
+                                    Spacer()
+
+                                    ShiftModeToggle(mode: $viewModel.mode)
                                 }
-                                .frame(maxWidth: .infinity, alignment: .leading)
 
                                 switch viewModel.mode {
                                 case .single:
@@ -129,6 +130,9 @@ struct AddShiftView: View {
                     .padding(.horizontal, 16)
                     .padding(.bottom, 8)
                 }
+            },
+            principalContent: {
+                EmptyView()
             }
         )
         .task {
