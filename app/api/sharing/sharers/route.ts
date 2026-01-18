@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 import { getSession } from "@/data-access/auth";
 import { getUsersWhoSharedWithMe } from "@/data-access/sharing";
 import { isTaggedError } from "@/lib/errors/tagged";
@@ -11,6 +12,10 @@ import { isTaggedError } from "@/lib/errors/tagged";
  * This endpoint exists because iOS cannot use the Supabase admin client
  * to access user profile data from auth.users. The web server uses the
  * service role key to fetch email, phone, firstName, and oauthAvatarUrl.
+ *
+ * Authentication:
+ * - iOS: Bearer token in Authorization header
+ * - Web: Cookie-based session (fallback)
  *
  * Response format:
  * {
@@ -27,15 +32,37 @@ import { isTaggedError } from "@/lib/errors/tagged";
  *   }>
  * }
  */
-export async function GET() {
-  // Manual auth check for API routes (redirect() not supported)
-  const session = await getSession();
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+export async function GET(request: NextRequest) {
+  // Try to get user ID from Authorization header first (iOS)
+  // Fall back to cookie-based session (web)
+  let userId: string | null = null;
+
+  const authHeader = request.headers.get("Authorization");
+  if (authHeader?.startsWith("Bearer ")) {
+    const jwt = authHeader.slice(7);
+
+    // Verify JWT and get user - uses server-side validation
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+    const { data: { user }, error } = await supabase.auth.getUser(jwt);
+
+    if (error || !user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    userId = user.id;
+  } else {
+    // Fall back to cookie-based session (web clients)
+    const session = await getSession();
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    userId = session.user.id;
   }
 
   try {
-    const sharers = await getUsersWhoSharedWithMe(session.user.id);
+    const sharers = await getUsersWhoSharedWithMe(userId);
 
     // Map to the format expected by iOS, adding the blocked field
     // (getUsersWhoSharedWithMe excludes blocked sharers, so blocked is always false here)
