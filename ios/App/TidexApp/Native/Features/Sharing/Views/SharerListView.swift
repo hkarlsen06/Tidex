@@ -108,13 +108,6 @@ struct SharerListView: View {
 
     private var sharersList: some View {
         VStack(alignment: .leading, spacing: 12) {
-            // Header
-            Text(localization.string("sharing.peopleWhoShareWithYou"))
-                .font(.system(size: 13, weight: .medium))
-                .foregroundColor(.tidexTextMuted)
-                .textCase(.uppercase)
-                .padding(.horizontal, 4)
-
             // Sharers - sorted by shift proximity
             ForEach(sortedSharers) { sharer in
                 SharerRow(

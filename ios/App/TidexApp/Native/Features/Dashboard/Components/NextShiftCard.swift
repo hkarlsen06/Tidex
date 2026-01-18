@@ -118,11 +118,6 @@ struct NextShiftCard: View {
             RoundedRectangle(cornerRadius: 24)
                 .fill(Color.tidexSurfacePrimary)
         )
-        .overlay(
-            // Today indicator ring
-            RoundedRectangle(cornerRadius: 24)
-                .strokeBorder(Color.tidexBlue, lineWidth: isToday ? 2 : 0)
-        )
     }
 
     // MARK: - Formatting

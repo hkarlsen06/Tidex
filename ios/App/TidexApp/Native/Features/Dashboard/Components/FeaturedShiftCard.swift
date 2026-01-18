@@ -132,11 +132,6 @@ struct FeaturedShiftCard: View {
                 RoundedRectangle(cornerRadius: 24)
                     .fill(Color.tidexSurfacePrimary)
             )
-            .overlay(
-                // Today indicator ring (only for current month next shift)
-                RoundedRectangle(cornerRadius: 24)
-                    .strokeBorder(Color.tidexBlue, lineWidth: isToday && !isBestShift ? 2 : 0)
-            )
 
             // Footer text below the card (countdown or "Best shift")
             // Uses fixed height to prevent layout shift during transitions

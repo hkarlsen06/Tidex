@@ -528,6 +528,7 @@ final class SharingService: ObservableObject {
     }
 
     /// Create a new share by email or phone
+    /// Requires API for user lookup, limit checks, and notifications
     func createShare(identifier: String, showEarnings: Bool = false) async throws {
         try await performManageAction(
             action: .createShare,
@@ -537,47 +538,97 @@ final class SharingService: ObservableObject {
     }
 
     /// Remove a share (revoke recipient's access to my shifts)
+    /// Owner can delete directly via Supabase (RLS allows this)
     func removeShare(recipientId: String) async throws {
-        try await performManageAction(
-            action: .removeShare,
-            recipientId: recipientId
-        )
+        let session = try await supabase.auth.session
+        let userId = session.user.id.uuidString
+
+        logger.info("Removing share for recipient \(recipientId)")
+
+        try await supabase
+            .from("shift_shares")
+            .delete()
+            .eq("owner_id", value: userId)
+            .eq("viewer_id", value: recipientId)
+            .execute()
+
+        logger.info("Successfully removed share")
     }
 
     /// Remove a sharer from my friends list (as the viewer)
+    /// Viewer can delete directly via Supabase (RLS allows this)
     func removeSharer(ownerId: String) async throws {
-        try await performManageAction(
-            action: .removeSharer,
-            ownerId: ownerId
-        )
+        let session = try await supabase.auth.session
+        let userId = session.user.id.uuidString
+
+        logger.info("Removing sharer \(ownerId) from friends list")
+
+        try await supabase
+            .from("shift_shares")
+            .delete()
+            .eq("owner_id", value: ownerId)
+            .eq("viewer_id", value: userId)
+            .execute()
+
+        logger.info("Successfully removed sharer")
     }
 
     /// Toggle earnings visibility for a share recipient
+    /// Owner can update show_earnings directly via Supabase (RLS allows this)
     func toggleShareEarnings(recipientId: String, showEarnings: Bool) async throws {
-        try await performManageAction(
-            action: .toggleEarnings,
-            recipientId: recipientId,
-            showEarnings: showEarnings
-        )
+        let session = try await supabase.auth.session
+        let userId = session.user.id.uuidString
+
+        logger.info("Toggling earnings visibility for recipient \(recipientId) to \(showEarnings)")
+
+        try await supabase
+            .from("shift_shares")
+            .update(["show_earnings": showEarnings])
+            .eq("owner_id", value: userId)
+            .eq("viewer_id", value: recipientId)
+            .execute()
+
+        logger.info("Successfully toggled earnings visibility")
     }
 
     /// Block a sharer (hide their shifts from my list)
+    /// Viewer can update blocked directly via Supabase (RLS allows this)
     func blockSharer(ownerId: String) async throws {
-        try await performManageAction(
-            action: .blockSharer,
-            ownerId: ownerId
-        )
+        let session = try await supabase.auth.session
+        let userId = session.user.id.uuidString
+
+        logger.info("Blocking sharer \(ownerId)")
+
+        try await supabase
+            .from("shift_shares")
+            .update(["blocked": true])
+            .eq("owner_id", value: ownerId)
+            .eq("viewer_id", value: userId)
+            .execute()
+
+        logger.info("Successfully blocked sharer")
     }
 
     /// Unblock a sharer (restore their shifts to my list)
+    /// Viewer can update blocked directly via Supabase (RLS allows this)
     func unblockSharer(ownerId: String) async throws {
-        try await performManageAction(
-            action: .unblockSharer,
-            ownerId: ownerId
-        )
+        let session = try await supabase.auth.session
+        let userId = session.user.id.uuidString
+
+        logger.info("Unblocking sharer \(ownerId)")
+
+        try await supabase
+            .from("shift_shares")
+            .update(["blocked": false])
+            .eq("owner_id", value: ownerId)
+            .eq("viewer_id", value: userId)
+            .execute()
+
+        logger.info("Successfully unblocked sharer")
     }
 
     /// Share back with someone who has shared with me
+    /// Requires API for limit checks and notifications
     func shareBack(recipientId: String) async throws {
         try await performManageAction(
             action: .shareBack,
@@ -586,11 +637,20 @@ final class SharingService: ObservableObject {
     }
 
     /// Toggle muted status for a specific sharer
+    /// Viewer can update muted directly via Supabase (RLS allows this)
     func toggleSharerMuted(ownerId: String, muted: Bool) async throws {
-        try await performManageAction(
-            action: .toggleMuted,
-            ownerId: ownerId,
-            muted: muted
-        )
+        let session = try await supabase.auth.session
+        let userId = session.user.id.uuidString
+
+        logger.info("Toggling muted status for sharer \(ownerId) to \(muted)")
+
+        try await supabase
+            .from("shift_shares")
+            .update(["muted": muted])
+            .eq("owner_id", value: ownerId)
+            .eq("viewer_id", value: userId)
+            .execute()
+
+        logger.info("Successfully toggled muted status")
     }
 }

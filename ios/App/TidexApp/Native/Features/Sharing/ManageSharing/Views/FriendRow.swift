@@ -30,11 +30,12 @@ struct FriendRow: View {
             // Avatar
             avatarView
 
-            // Name and contact info
+            // Name and contact info - with truncation fade effect
             VStack(alignment: .leading, spacing: 2) {
                 Text(friend.displayName)
                     .font(.system(size: 16, weight: .medium))
                     .foregroundColor(.tidexTextPrimary)
+                    .lineLimit(1)
 
                 if let contactInfo = friend.contactInfo {
                     Text(contactInfo)
@@ -43,11 +44,13 @@ struct FriendRow: View {
                         .lineLimit(1)
                 }
             }
+            .truncationFade()
 
-            Spacer()
+            Spacer(minLength: 8)
 
             // Action buttons based on section type
             actionButtons
+                .layoutPriority(1) // Ensure buttons get priority over name
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
@@ -128,7 +131,7 @@ struct FriendRow: View {
         Button(action: onToggleBlocked) {
             Image(systemName: friend.sharesWithMe?.blocked == true ? "eye.slash.fill" : "eye.fill")
                 .font(.system(size: 16))
-                .foregroundColor(friend.sharesWithMe?.blocked == true ? .orange : .tidexTextMuted)
+                .foregroundColor(friend.sharesWithMe?.blocked == true ? .red : .tidexBlue)
         }
         .buttonStyle(PlainButtonStyle())
         .disabled(isActionInProgress)
@@ -138,14 +141,14 @@ struct FriendRow: View {
         HStack(spacing: 4) {
             Image(systemName: "dollarsign.circle.fill")
                 .font(.system(size: 14))
-                .foregroundColor(friend.iShareWith?.showEarningsToThem == true ? .green : .tidexTextMuted)
+                .foregroundColor(.tidexBlue)
 
             Toggle("", isOn: .init(
                 get: { friend.iShareWith?.showEarningsToThem ?? false },
                 set: { _ in onToggleEarnings() }
             ))
             .labelsHidden()
-            .toggleStyle(SwitchToggleStyle(tint: .green))
+            .toggleStyle(SwitchToggleStyle(tint: .tidexBlue))
             .scaleEffect(0.8)
         }
         .disabled(isActionInProgress)

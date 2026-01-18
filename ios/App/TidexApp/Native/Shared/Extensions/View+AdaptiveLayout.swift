@@ -84,6 +84,39 @@ extension View {
     }
 }
 
+// MARK: - Truncation Fade Effect
+
+/// View modifier that creates a fade-out effect for truncated text
+/// Mimics the CSS `truncate-fade` utility from the Next.js web app
+struct TruncationFadeModifier: ViewModifier {
+    let fadeWidth: CGFloat
+
+    func body(content: Content) -> some View {
+        content
+            .mask(
+                LinearGradient(
+                    gradient: Gradient(stops: [
+                        .init(color: .black, location: 0),
+                        .init(color: .black, location: 1 - (fadeWidth / 200)), // Approximate position
+                        .init(color: .clear, location: 1)
+                    ]),
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+            )
+    }
+}
+
+extension View {
+    /// Applies a fade-out effect to truncated text
+    /// Creates a smooth gradient fade at the trailing edge instead of hard truncation
+    ///
+    /// - Parameter fadeWidth: Width of the fade gradient (default: 24pt to match web CSS)
+    func truncationFade(fadeWidth: CGFloat = 24) -> some View {
+        modifier(TruncationFadeModifier(fadeWidth: fadeWidth))
+    }
+}
+
 // MARK: - Horizontal Size Class Helper
 
 /// View modifier that provides size class information

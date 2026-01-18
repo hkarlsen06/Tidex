@@ -512,8 +512,11 @@ enum AuthStrings {
         "sharing.statusActive": "Pågår nå",
         "sharing.synced": "synkronisert",
 
+        // Sharing Tab
+        "sharing.friendsTitle": "Venner",
+
         // Sharing Management Modal
-        "sharing.manageTitle": "Administrer deling",
+        "sharing.manageTitle": "Administrer",
         "sharing.manageDescription": "Del vaktene dine med venner og kolleger slik at de kan f\u{00F8}lge med p\u{00E5} n\u{00E5}r du jobber.",
         "sharing.mutual": "Begge deler",
         "sharing.iShareWith": "Jeg deler med",
@@ -1027,8 +1030,11 @@ enum AuthStrings {
         "sharing.statusActive": "Active now",
         "sharing.synced": "synced",
 
+        // Sharing Tab
+        "sharing.friendsTitle": "Friends",
+
         // Sharing Management Modal
-        "sharing.manageTitle": "Manage Sharing",
+        "sharing.manageTitle": "Manage",
         "sharing.manageDescription": "Share your shifts with friends and colleagues so they can see when you work.",
         "sharing.mutual": "Both share",
         "sharing.iShareWith": "I share with",
