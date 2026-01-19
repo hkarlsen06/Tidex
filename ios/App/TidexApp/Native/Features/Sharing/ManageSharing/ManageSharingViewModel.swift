@@ -86,10 +86,19 @@ final class ManageSharingViewModel: ObservableObject {
             friends = result.friends
             capacity = result.capacity
             logger.info("Loaded \(result.friends.count) friends")
+        } catch is CancellationError {
+            // Task was cancelled (e.g., user released pull-to-refresh early)
+            // This is not an error, just log and return without showing error message
+            logger.info("loadFriends was cancelled")
         } catch let error as SharingServiceError {
-            logger.error("Failed to load friends (SharingServiceError): \(error)")
-            // Use specific error message from service if available
-            errorMessage = error.localizedDescription
+            // Check if the underlying error is a cancellation
+            if case .networkError(let underlying) = error,
+               (underlying as? URLError)?.code == .cancelled {
+                logger.info("loadFriends network request was cancelled")
+            } else {
+                logger.error("Failed to load friends (SharingServiceError): \(error)")
+                errorMessage = error.localizedDescription
+            }
         } catch {
             logger.error("Failed to load friends: \(error.localizedDescription)")
             errorMessage = localization.string("sharing.error.loadFriends")
