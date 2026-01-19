@@ -1,12 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { createSupabaseServiceClient } from '@/lib/supabase/service';
+import { createClient } from '@supabase/supabase-js';
 
 /**
  * POST /api/push-device
  *
  * Register or update a push notification device for the authenticated user.
  * Supports both FCM tokens (web/Android) and APNs tokens (iOS native).
+ *
+ * Authentication:
+ * - Cookie-based session (web app)
+ * - Bearer token in Authorization header (native iOS app)
  *
  * Body:
  * - apnsToken?: string - APNs device token (iOS native)
@@ -18,14 +23,42 @@ import { createSupabaseServiceClient } from '@/lib/supabase/service';
  */
 export async function POST(request: NextRequest) {
   try {
-    // Verify authentication using the user's session
-    const supabase = await createSupabaseServerClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    // Try to authenticate via Bearer token first (native apps)
+    const authHeader = request.headers.get('Authorization');
+    let user: { id: string } | null = null;
 
-    if (authError || !user) {
+    if (authHeader?.startsWith('Bearer ')) {
+      const token = authHeader.substring(7);
+
+      // Create a Supabase client with the user's JWT to verify it
+      const supabaseWithToken = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+        {
+          global: {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          },
+        }
+      );
+
+      const { data, error: authError } = await supabaseWithToken.auth.getUser();
+      if (!authError && data.user) {
+        user = { id: data.user.id };
+      }
+    }
+
+    // Fall back to cookie-based session (web app)
+    if (!user) {
+      const supabase = await createSupabaseServerClient();
+      const { data, error: authError } = await supabase.auth.getUser();
+      if (!authError && data.user) {
+        user = { id: data.user.id };
+      }
+    }
+
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
