@@ -48,6 +48,9 @@ struct SharingView: View {
                             onReturnToCurrent: {
                                 viewModel.goToCurrentMonth()
                             },
+                            onNavigateToMonth: { year, month in
+                                SharedMonthContext.shared.navigateTo(year: year, month: month)
+                            },
                             isLoading: viewModel.isLoadingShifts,
                             backToTodayText: localization.string("dashboard.backToToday")
                         )
