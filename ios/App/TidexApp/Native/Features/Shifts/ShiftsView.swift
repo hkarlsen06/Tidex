@@ -30,6 +30,9 @@ struct ShiftsView: View {
     // Celebration state
     @State private var showConfetti = false
 
+    // Deep link navigation state
+    @State private var highlightedDateISO: String?
+
     // View mode toggle (calendar vs list) - persisted across app launches
     @AppStorage("shiftsViewMode") private var showListView = false
 
@@ -176,6 +179,8 @@ struct ShiftsView: View {
             selectionHaptic.prepare()
             impactHaptic.prepare()
             celebrationHaptic.prepare()
+            // Handle any pending deep link on initial appearance
+            handleDeepLink(coordinator.pendingDeepLink)
         }
         // Confetti overlay for celebration when shifts are added
         .overlay {
@@ -195,6 +200,27 @@ struct ShiftsView: View {
             // Check if we should show confetti for the newly navigated month
             if celebrationManager.shouldShowConfetti(forYear: viewModel.displayYear, month: viewModel.displayMonth) {
                 triggerCelebration()
+            }
+            // Check if we have a pending deep link for this month
+            if let dateISO = highlightedDateISO, !viewModel.isLoading {
+                selectShiftFromDeepLink(dateISO: dateISO, shifts: viewModel.shifts)
+            }
+        }
+        // Deep link handling - navigate to specific date from widget
+        .onChange(of: coordinator.pendingDeepLink) { _, deepLink in
+            handleDeepLink(deepLink)
+        }
+        // When shifts finish loading, check if we should highlight/select a date from deep link
+        .onChange(of: viewModel.isLoading) { _, isLoading in
+            if !isLoading, let dateISO = highlightedDateISO {
+                print("[ShiftsView] Shifts finished loading, checking for deep link date: \(dateISO)")
+                selectShiftFromDeepLink(dateISO: dateISO, shifts: viewModel.shifts)
+            }
+        }
+        // Also watch for shifts array changes (handles cases where shifts update without loading state change)
+        .onChange(of: viewModel.shifts) { _, shifts in
+            if let dateISO = highlightedDateISO, !shifts.isEmpty {
+                selectShiftFromDeepLink(dateISO: dateISO, shifts: shifts)
             }
         }
         // Day shifts sheet (when tapping a calendar day)
@@ -226,6 +252,102 @@ struct ShiftsView: View {
 
             // Show confetti
             showConfetti = true
+        }
+    }
+
+    // MARK: - Deep Link Handling
+
+    /// Handle pending deep link from widget or notification
+    private func handleDeepLink(_ deepLink: AppCoordinator.DeepLink?) {
+        guard case .shifts(let dates) = deepLink,
+              let dateISO = dates?.first else { return }
+
+        // Avoid processing the same deep link twice
+        if highlightedDateISO == dateISO {
+            print("[ShiftsView] Deep link already being processed for: \(dateISO)")
+            return
+        }
+
+        print("[ShiftsView] Handling deep link for date: \(dateISO)")
+
+        // Parse the date to extract year and month
+        guard let date = Date.fromISODateString(dateISO) else {
+            print("[ShiftsView] Failed to parse date: \(dateISO)")
+            coordinator.clearPendingDeepLink()
+            return
+        }
+
+        let calendar = Calendar.current
+        let targetYear = calendar.component(.year, from: date)
+        let targetMonth = calendar.component(.month, from: date)
+
+        // Store the date to highlight/select once shifts are loaded
+        // This persists across async operations until we successfully show the shift
+        highlightedDateISO = dateISO
+
+        // Clear the deep link immediately to prevent MainTabView from re-processing
+        coordinator.clearPendingDeepLink()
+
+        // Navigate to the correct month if not already there
+        if viewModel.displayYear != targetYear || viewModel.displayMonth != targetMonth {
+            print("[ShiftsView] Navigating to \(targetYear)-\(targetMonth)")
+            SharedMonthContext.shared.navigateTo(year: targetYear, month: targetMonth)
+            // Shifts will load via the month change subscription
+            // The onChange(of: viewModel.shifts) will then call selectShiftFromDeepLink
+        } else if !viewModel.shifts.isEmpty {
+            // Already on the correct month and shifts are loaded - select immediately
+            selectShiftFromDeepLink(dateISO: dateISO, shifts: viewModel.shifts)
+        }
+        // If shifts are empty, the onChange(of: viewModel.shifts) will handle it when they load
+    }
+
+    /// Select or highlight shift for the given date once shifts are loaded
+    private func selectShiftFromDeepLink(dateISO: String, shifts: [ShiftWithComputations]) {
+        // Parse target date to verify we're looking at the correct month
+        guard let targetDate = Date.fromISODateString(dateISO) else {
+            print("[ShiftsView] Invalid date format: \(dateISO)")
+            highlightedDateISO = nil
+            return
+        }
+
+        let calendar = Calendar.current
+        let targetYear = calendar.component(.year, from: targetDate)
+        let targetMonth = calendar.component(.month, from: targetDate)
+
+        // Make sure we're on the correct month before trying to find the shift
+        guard viewModel.displayYear == targetYear && viewModel.displayMonth == targetMonth else {
+            print("[ShiftsView] Not on target month yet (current: \(viewModel.displayYear)-\(viewModel.displayMonth), target: \(targetYear)-\(targetMonth))")
+            // Keep highlightedDateISO - month navigation is still in progress
+            return
+        }
+
+        // Find shifts on the target date
+        let shiftsOnDate = shifts.filter { $0.shiftDate == dateISO }
+
+        guard !shiftsOnDate.isEmpty else {
+            print("[ShiftsView] No shifts found for date: \(dateISO) (shifts loaded: \(shifts.count))")
+            // Clear highlighted date - we're on the right month but there's no shift
+            // This handles the case where the shift was deleted
+            highlightedDateISO = nil
+            return
+        }
+
+        print("[ShiftsView] Found \(shiftsOnDate.count) shift(s) on \(dateISO)")
+
+        // Clear the highlighted date since we're handling it now
+        highlightedDateISO = nil
+
+        // Small delay to allow view to stabilize after month navigation
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            selectionHaptic.selectionChanged()
+
+            if shiftsOnDate.count == 1, let shift = shiftsOnDate.first {
+                // Single shift - open shift details directly
+                selectedShift = shift
+            } else {
+                // Multiple shifts - open day sheet
+                selectedDayForSheet = DayShiftSelection(dateISO: dateISO, shifts: shiftsOnDate)
+            }
         }
     }
 
