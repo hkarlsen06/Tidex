@@ -24,7 +24,6 @@
 		1128F3C12F187DAF00702359 /* SyncDebugView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1128F3BE2F187DAF00702359 /* SyncDebugView.swift */; };
 		1128F3C22F187DAF00702359 /* SyncTestHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1128F3BF2F187DAF00702359 /* SyncTestHelper.swift */; };
 		1152D0CB2F01E2A7002FD5ED /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1152D0CA2F01E2A7002FD5ED /* StoreKit.framework */; };
-		1163EF702F04397000DC58EC /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 1163EF6F2F04397000DC58EC /* GoogleService-Info.plist */; };
 		11923C162F16B89C0076AFD6 /* AuthState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11923C152F16B89C0076AFD6 /* AuthState.swift */; };
 		11923C192F16B94B0076AFD6 /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = 11923C182F16B94B0076AFD6 /* Auth */; };
 		11923C1B2F16B94B0076AFD6 /* Functions in Frameworks */ = {isa = PBXBuildFile; productRef = 11923C1A2F16B94B0076AFD6 /* Functions */; };
@@ -253,7 +252,6 @@
 		1128F3BF2F187DAF00702359 /* SyncTestHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncTestHelper.swift; sourceTree = "<group>"; };
 		1152D0C82F01BB9B002FD5ED /* App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = App.entitlements; sourceTree = "<group>"; };
 		1152D0CA2F01E2A7002FD5ED /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
-		1163EF6F2F04397000DC58EC /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		11923C152F16B89C0076AFD6 /* AuthState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthState.swift; sourceTree = "<group>"; };
 		119D1CB72F16E46300EC7072 /* AppCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppCoordinator.swift; sourceTree = "<group>"; };
 		119D1CB82F16E46300EC7072 /* FeatureFlags.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeatureFlags.swift; sourceTree = "<group>"; };
@@ -1124,7 +1122,6 @@
 			isa = PBXGroup;
 			children = (
 				11A5CD552F10138F002BAC91 /* TidexShiftWidgetExtension.entitlements */,
-				1163EF6F2F04397000DC58EC /* GoogleService-Info.plist */,
 				958DCC722DB07C7200EA8C5F /* debug.xcconfig */,
 				504EC3061FED79650016851F /* TidexApp */,
 				11A5CD332F101283002BAC91 /* TidexShiftWidget */,
@@ -1272,7 +1269,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				504EC30F1FED79650016851F /* Assets.xcassets in Resources */,
-				1163EF702F04397000DC58EC /* GoogleService-Info.plist in Resources */,
 				LAUNCH0012F0500000000001 /* LaunchScreen.storyboard in Resources */,
 				INFOP0012F0900000000001 /* InfoPlist.strings in Resources */,
 				NTFSND0012F1400000000001 /* tidex_notification.caf in Resources */,
