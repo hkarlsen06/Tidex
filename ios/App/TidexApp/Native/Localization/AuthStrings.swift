@@ -364,6 +364,8 @@ enum AuthStrings {
         "addShift.yearPlural": "{n} \u{00E5}r",
         "addShift.selectAnchorDates": "Velg ankerdatoer",
         "addShift.previewShifts": "Forh\u{00E5}ndsvis vakter",
+        "addShift.tapToSetAnchors": "Trykk på datoer for å sette ankerdager",
+        "addShift.oneAnchorPerWeekday": "Ett anker per ukedag (maks 7)",
 
         // MFA Screen
         "onboarding.mfa.title": "Ekstra sikkerhet",
@@ -921,6 +923,8 @@ enum AuthStrings {
         "addShift.yearPlural": "{n} years",
         "addShift.selectAnchorDates": "Select anchor dates",
         "addShift.previewShifts": "Preview shifts",
+        "addShift.tapToSetAnchors": "Tap dates to set anchor days",
+        "addShift.oneAnchorPerWeekday": "One anchor per weekday (max 7)",
 
         // MFA Screen
         "onboarding.mfa.title": "Extra security",

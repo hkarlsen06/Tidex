@@ -55,18 +55,23 @@ struct RecurringCalendarView: View {
     @ViewBuilder
     private var calendarGrid: some View {
         let days = daysInMonth()
+        let projectedDatesSet = Set(viewModel.projectedRecurringDates)
 
         LazyVGrid(columns: columns, spacing: 4) {
             ForEach(days, id: \.id) { dayInfo in
+                let isAnchor = dayInfo.dateISO.map { isAnchorDate($0) } ?? false
+                let isProjected = dayInfo.dateISO.map { projectedDatesSet.contains($0) } ?? false
+
                 RecurringCalendarDayCell(
                     dayInfo: dayInfo,
-                    isAnchor: dayInfo.dateISO.map { isAnchorDate($0) } ?? false,
-                    isProjected: dayInfo.dateISO.map { viewModel.projectedRecurringDates.contains($0) } ?? false,
+                    isAnchor: isAnchor,
+                    isProjected: isProjected,
                     hasConflict: dayInfo.dateISO.map { viewModel.conflictDates.contains($0) } ?? false,
                     hasExistingShift: dayInfo.dateISO.map { viewModel.existingShiftDates.contains($0) } ?? false,
                     isToday: dayInfo.dateISO == todayISO(),
                     existingEarnings: dayInfo.dateISO.flatMap { viewModel.existingShiftEarnings[$0] },
-                    previewEarnings: dayInfo.dateISO.flatMap { viewModel.previewRecurringEarnings[$0] }
+                    // Only show earnings for anchor dates - projected dates show a dot
+                    anchorEarnings: isAnchor ? dayInfo.dateISO.flatMap { viewModel.earningsForRecurringDate($0) } : nil
                 )
                 .onTapGesture {
                     if let dateISO = dayInfo.dateISO, !dayInfo.isOutsideMonth {
@@ -179,7 +184,7 @@ private struct RecurringCalendarDayCell: View {
     let hasExistingShift: Bool
     let isToday: Bool
     let existingEarnings: Double?
-    let previewEarnings: Double?
+    let anchorEarnings: Double?  // Only set for anchor dates
 
     var body: some View {
         ZStack {
@@ -216,25 +221,26 @@ private struct RecurringCalendarDayCell: View {
                 Spacer()
 
                 if isAnchor {
-                    // Anchor indicator - star icon (always show for anchor dates)
-                    Image(systemName: "star.fill")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundColor(.white)
-                        .padding(.bottom, 8)
-                } else if isProjected, let earnings = previewEarnings {
-                    // Preview earnings for projected dates (blue)
-                    Text(formatCompactCurrency(earnings))
-                        .font(.system(size: 15, weight: .bold))
-                        .foregroundColor(hasConflict ? .tidexWarning : .tidexBlue)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.6)
-                        .padding(.bottom, 6)
+                    // Anchor date: show earnings if available, otherwise star icon
+                    if let earnings = anchorEarnings {
+                        Text(formatCompactCurrency(earnings))
+                            .font(.system(size: 15, weight: .bold))
+                            .foregroundColor(.white)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.6)
+                            .padding(.bottom, 6)
+                    } else {
+                        Image(systemName: "star.fill")
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundColor(.white)
+                            .padding(.bottom, 8)
+                    }
                 } else if isProjected {
-                    // Projected but no earnings yet (need times)
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundColor(hasConflict ? .tidexWarning : .tidexBlue)
-                        .padding(.bottom, 8)
+                    // Projected dates: simple dot indicator (no earnings computation)
+                    Circle()
+                        .fill(hasConflict ? Color.tidexWarning : Color.tidexBlue)
+                        .frame(width: 8, height: 8)
+                        .padding(.bottom, 10)
                 } else if let earnings = existingEarnings, !dayInfo.isOutsideMonth {
                     // Existing shift earnings (grey)
                     Text(formatCompactCurrency(earnings))
@@ -326,12 +332,12 @@ private struct CalendarInstructions: View {
                 .font(.system(size: 24))
                 .foregroundColor(.tidexTextMuted)
 
-            Text("Tap dates to set anchor days")
+            Text(localization.string("addShift.tapToSetAnchors"))
                 .font(.system(size: 14))
                 .foregroundColor(.tidexTextSecondary)
                 .multilineTextAlignment(.center)
 
-            Text("One anchor per weekday (max 7)")
+            Text(localization.string("addShift.oneAnchorPerWeekday"))
                 .font(.system(size: 12))
                 .foregroundColor(.tidexTextMuted)
         }

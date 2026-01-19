@@ -27,109 +27,88 @@ struct AddShiftView: View {
         }
     }
 
-    /// Subtitle hint for current mode
-    private var modeSubtitle: String {
-        switch viewModel.mode {
-        case .single:
-            return localization.string("addShift.singleSubtitle")
-        case .recurring:
-            return localization.string("addShift.recurringSubtitle")
-        }
-    }
-
     var body: some View {
-        TabScreenContainer(
-            title: localization.string(AppTab.add.titleKey),
-            content: {
-                ZStack(alignment: .bottom) {
-                    // Scrollable content area - fills available space
-                    ScrollViewReader { scrollProxy in
-                        ScrollView {
-                            VStack(spacing: 24) {
-                                // Mode-specific header with inline toggle
-                                HStack(alignment: .center) {
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text(modeTitle)
-                                            .font(.title2.weight(.semibold))
-                                            .foregroundColor(.tidexTextPrimary)
+        NavigationStack {
+            ZStack(alignment: .bottom) {
+                // Background that fills entire screen including safe areas
+                Color.tidexBackground
+                    .ignoresSafeArea()
 
-                                        Text(modeSubtitle)
-                                            .font(.subheadline)
-                                            .foregroundColor(.tidexTextSecondary)
-                                    }
-
-                                    Spacer()
-
-                                    ShiftModeToggle(mode: $viewModel.mode)
-                                }
-
-                                switch viewModel.mode {
-                                case .single:
-                                    SingleShiftContent(viewModel: viewModel, scrollProxy: scrollProxy)
-                                case .recurring:
-                                    RecurringShiftContent(viewModel: viewModel, scrollProxy: scrollProxy)
-                                }
+                // Scrollable content area - fills available space
+                ScrollViewReader { scrollProxy in
+                    ScrollView {
+                        VStack(spacing: 24) {
+                            switch viewModel.mode {
+                            case .single:
+                                SingleShiftContent(viewModel: viewModel, scrollProxy: scrollProxy)
+                            case .recurring:
+                                RecurringShiftContent(viewModel: viewModel, scrollProxy: scrollProxy)
                             }
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 24)
-                            // Add bottom padding to account for fixed month picker
-                            .padding(.bottom, 100)
                         }
-                        .scrollDismissesKeyboard(.interactively)
-                        .onTapGesture {
-                            hideKeyboard()
-                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 24)
+                        // Add bottom padding to account for fixed month picker
+                        .padding(.bottom, 100)
                     }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-                    // Fixed bottom area with month picker
-                    VStack(spacing: 8) {
-                        // Error display (if any)
-                        if let error = viewModel.error {
-                            HStack(spacing: 8) {
-                                Image(systemName: "exclamationmark.circle.fill")
-                                    .foregroundColor(.tidexError)
-
-                                Text(error)
-                                    .font(.system(size: 14))
-                                    .foregroundColor(.tidexError)
-                            }
-                            .padding(.horizontal, 16)
-                        }
-
-                        // Month picker - same styling as Dashboard/Shifts/Sharing
-                        AnimatedMonthHeader(
-                            monthName: viewModel.displayMonthName,
-                            year: viewModel.displayYear,
-                            phase: transitionPhase,
-                            isCurrentMonth: viewModel.isCurrentMonth,
-                            config: .default,
-                            onPrevious: {
-                                viewModel.goToPreviousMonth()
-                            },
-                            onNext: {
-                                viewModel.goToNextMonth()
-                            },
-                            onReturnToCurrent: {
-                                viewModel.goToCurrentMonth()
-                            },
-                            onNavigateToMonth: { year, month in
-                                SharedMonthContext.shared.navigateTo(year: year, month: month)
-                            },
-                            isLoading: viewModel.isLoading,
-                            backToTodayText: localization.string("dashboard.backToToday")
-                        )
-                        .frame(height: MonthPickerLayout.height)
-                        .glassEffect(.regular.interactive(), in: .rect(cornerRadius: MonthPickerLayout.cornerRadius))
+                    .scrollDismissesKeyboard(.interactively)
+                    .onTapGesture {
+                        hideKeyboard()
                     }
-                    .padding(.horizontal, MonthPickerLayout.horizontalPadding)
-                    .padding(.bottom, MonthPickerLayout.bottomPadding)
                 }
-            },
-            principalContent: {
-                EmptyView()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+                // Fixed bottom area with month picker
+                VStack(spacing: 8) {
+                    // Error display (if any)
+                    if let error = viewModel.error {
+                        HStack(spacing: 8) {
+                            Image(systemName: "exclamationmark.circle.fill")
+                                .foregroundColor(.tidexError)
+
+                            Text(error)
+                                .font(.system(size: 14))
+                                .foregroundColor(.tidexError)
+                        }
+                        .padding(.horizontal, 16)
+                    }
+
+                    // Month picker - same styling as Dashboard/Shifts/Sharing
+                    AnimatedMonthHeader(
+                        monthName: viewModel.displayMonthName,
+                        year: viewModel.displayYear,
+                        phase: transitionPhase,
+                        isCurrentMonth: viewModel.isCurrentMonth,
+                        config: .default,
+                        onPrevious: {
+                            viewModel.goToPreviousMonth()
+                        },
+                        onNext: {
+                            viewModel.goToNextMonth()
+                        },
+                        onReturnToCurrent: {
+                            viewModel.goToCurrentMonth()
+                        },
+                        onNavigateToMonth: { year, month in
+                            SharedMonthContext.shared.navigateTo(year: year, month: month)
+                        },
+                        isLoading: viewModel.isLoading,
+                        backToTodayText: localization.string("dashboard.backToToday")
+                    )
+                    .frame(height: MonthPickerLayout.height)
+                    .glassEffect(.regular.interactive(), in: .rect(cornerRadius: MonthPickerLayout.cornerRadius))
+                }
+                .padding(.horizontal, MonthPickerLayout.horizontalPadding)
+                .padding(.bottom, MonthPickerLayout.bottomPadding)
             }
-        )
+            .navigationTitle(modeTitle)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(Color.tidexBackground, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    ShiftModeToggle(mode: $viewModel.mode)
+                }
+            }
+        }
         .task {
             await viewModel.loadData()
         }
@@ -199,13 +178,22 @@ private struct RecurringShiftContent: View {
 
     var body: some View {
         VStack(spacing: 20) {
+            DurationPicker(endCondition: $viewModel.endCondition)
+
             RepeatIntervalPicker(interval: $viewModel.repeatInterval)
 
-            DurationPicker(endCondition: $viewModel.endCondition)
+            // Time picker above calendar for better UX
+            TimeRangePicker(
+                startTime: $viewModel.startTime,
+                endTime: $viewModel.endTime,
+                scrollProxy: scrollProxy,
+                scrollId: "recurringTimePicker"
+            )
 
             Divider()
                 .background(Color.tidexBorder)
 
+            // Chip bar with preallocated space to prevent layout shifts
             WeekdayChipBar(
                 selectedDays: viewModel.selectedDays,
                 onRemove: { weekday in
@@ -214,13 +202,6 @@ private struct RecurringShiftContent: View {
             )
 
             RecurringCalendarView(viewModel: viewModel)
-
-            TimeRangePicker(
-                startTime: $viewModel.startTime,
-                endTime: $viewModel.endTime,
-                scrollProxy: scrollProxy,
-                scrollId: "recurringTimePicker"
-            )
 
             AddShiftButton(viewModel: viewModel, mode: .recurring)
         }

@@ -61,35 +61,45 @@ struct TotalCard: View {
 
     // MARK: - Subtitle Text
 
+    /// Subtitle logic matches Next.js TotalCard exactly:
+    /// 1. If showing dashes (loading/zero) → no subtitle (skeleton shown instead)
+    /// 2. If has future shifts AND has real earned amount → show "[earned] hittil/to date"
+    /// 3. If no future with real earnings, but tax enabled with different gross → show "[gross] før skatt/before tax"
+    /// 4. If has future shifts but no real earnings yet → show "[count] vakter planlagt/shifts planned"
+    /// 5. Otherwise if has any shifts → show "[count] vakter/shifts"
     private var subtitleText: String? {
         // Don't return text when showing placeholder - we'll show a skeleton line instead
         if showDashes { return nil }
 
-        // When there are future shifts, show "earned to date" amount
-        if hasFutureShifts {
+        // Check if we have real earnings to date (not zero)
+        let hasRealEarned = hasFutureShifts && earnedToDateValue > 0
+
+        // When there are future shifts AND real earnings, show "earned to date" amount
+        if hasRealEarned {
             return "\(formatCurrency(earnedToDateValue)) \(localization.string("dashboard.earnedToDate"))"
         }
 
-        // Show gross before tax when tax is enabled
-        let hasGross = taxEnabled && gross > 0 && gross != mainDisplayValue
+        // Show gross before tax when tax is enabled (only when NOT showing earned to date)
+        let hasGross = !hasFutureShifts && taxEnabled && gross > 0 && gross != mainDisplayValue
         if hasGross {
             return "\(formatCurrency(gross)) \(localization.string("dashboard.beforeTax"))"
         }
 
-        // Show shift count
+        // When there are future/planned shifts but no real earnings yet, show planned count
+        let showPlanned = hasFutureShifts && !hasRealEarned && plannedCount > 0
+        if showPlanned {
+            let plannedLabel = plannedCount == 1
+                ? localization.string("dashboard.shiftPlanned")
+                : localization.string("dashboard.shiftsPlanned")
+            return "\(plannedCount) \(plannedLabel)"
+        }
+
+        // Show total shift count as fallback
         if shiftCount > 0 {
             let shiftsLabel = shiftCount == 1
                 ? localization.string("dashboard.shift")
                 : localization.string("dashboard.shifts")
             return "\(shiftCount) \(shiftsLabel)"
-        }
-
-        // Show planned count if no completed shifts
-        if plannedCount > 0 {
-            let plannedLabel = plannedCount == 1
-                ? localization.string("dashboard.shiftPlanned")
-                : localization.string("dashboard.shiftsPlanned")
-            return "\(plannedCount) \(plannedLabel)"
         }
 
         return nil
@@ -180,7 +190,7 @@ struct TotalCard: View {
 
 #Preview {
     VStack(spacing: 12) {
-        // With tax and future shifts (shows projected + earned to date)
+        // Case 1: Has future shifts AND real earned amount → "7 500 kr hittil"
         TotalCard(
             gross: 15000,
             net: 12500,
@@ -192,7 +202,19 @@ struct TotalCard: View {
             taxEnabled: true
         )
 
-        // Without tax and no future shifts
+        // Case 2: No future shifts, tax enabled → "12 000 kr før skatt"
+        TotalCard(
+            gross: 12000,
+            net: 10000,
+            completedGross: 12000,
+            completedNet: 10000,
+            shiftCount: 5,
+            plannedCount: 0,
+            percentageChange: -8,
+            taxEnabled: true
+        )
+
+        // Case 3: No future shifts, no tax → "5 vakter"
         TotalCard(
             gross: 12000,
             net: nil,
@@ -204,14 +226,26 @@ struct TotalCard: View {
             taxEnabled: false
         )
 
-        // No earnings yet (only planned shifts)
+        // Case 4: Has future/planned shifts but NO real earnings yet → "3 vakter planlagt"
+        TotalCard(
+            gross: 5000,
+            net: nil,
+            completedGross: 0,
+            completedNet: nil,
+            shiftCount: 3,
+            plannedCount: 3,
+            percentageChange: nil,
+            taxEnabled: false
+        )
+
+        // Case 5: Zero earnings (shows dashes with skeleton subtitle)
         TotalCard(
             gross: 0,
             net: nil,
             completedGross: 0,
             completedNet: nil,
             shiftCount: 0,
-            plannedCount: 5,
+            plannedCount: 0,
             percentageChange: nil,
             taxEnabled: false
         )
