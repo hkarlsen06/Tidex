@@ -135,6 +135,7 @@
 		11A197AC2F1D9D760030E524 /* SharingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A197AB2F1D9D760030E524 /* SharingService.swift */; };
 		11A197AE2F1D9DC30030E524 /* Friend.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A197AD2F1D9DC30030E524 /* Friend.swift */; };
 		11A197C42F1DB4F30030E524 /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A197C22F1DB4F30030E524 /* NotificationService.swift */; };
+		11A197C62F1DCF9A0030E524 /* RecurringShiftEditorSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A197C52F1DCF9A0030E524 /* RecurringShiftEditorSheet.swift */; };
 		11A5CD262F101201002BAC91 /* StoredShift.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A5CD252F101201002BAC91 /* StoredShift.swift */; };
 		11A5CD302F101283002BAC91 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 11A5CD2F2F101283002BAC91 /* WidgetKit.framework */; };
 		11A5CD322F101283002BAC91 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 11A5CD312F101283002BAC91 /* SwiftUI.framework */; };
@@ -351,6 +352,7 @@
 		11A197AB2F1D9D760030E524 /* SharingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharingService.swift; sourceTree = "<group>"; };
 		11A197AD2F1D9DC30030E524 /* Friend.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Friend.swift; sourceTree = "<group>"; };
 		11A197C22F1DB4F30030E524 /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationService.swift; sourceTree = "<group>"; };
+		11A197C52F1DCF9A0030E524 /* RecurringShiftEditorSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecurringShiftEditorSheet.swift; sourceTree = "<group>"; };
 		11A5CD252F101201002BAC91 /* StoredShift.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoredShift.swift; sourceTree = "<group>"; };
 		11A5CD2E2F101283002BAC91 /* TidexShiftWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TidexShiftWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		11A5CD2F2F101283002BAC91 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
@@ -842,6 +844,7 @@
 		11A196662F1B00B50030E524 /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				11A197C52F1DCF9A0030E524 /* RecurringShiftEditorSheet.swift */,
 				11A196FB2F1B14FA0030E524 /* DayShiftsSheet.swift */,
 				11A196FC2F1B14FA0030E524 /* NextShiftCountdownCard.swift */,
 				11A196FD2F1B14FA0030E524 /* ShiftDetailsSheet.swift */,
@@ -1367,6 +1370,7 @@
 				11A197162F1D7B400030E524 /* SharerRow.swift in Sources */,
 				11A197172F1D7B400030E524 /* SharingViewModel.swift in Sources */,
 				11A197182F1D7B400030E524 /* SharingView.swift in Sources */,
+				11A197C62F1DCF9A0030E524 /* RecurringShiftEditorSheet.swift in Sources */,
 				11A197192F1D7B400030E524 /* SharerListView.swift in Sources */,
 				11A1971A2F1D7B400030E524 /* SharedShiftsListView.swift in Sources */,
 				11A1971B2F1D7B400030E524 /* SharedShiftRow.swift in Sources */,

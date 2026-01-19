@@ -26,9 +26,12 @@ final class RecurringShiftsRepository: ObservableObject {
     func getRecurringShifts(for userId: String) -> [RecurringShiftRow] {
         let context = localStore.mainContext
 
+        // Filter out both server-deleted and locally pending delete shifts
         let descriptor = FetchDescriptor<LocalRecurringShift>(
             predicate: #Predicate { shift in
-                shift.userId == userId && shift.serverDeletedAt == nil
+                shift.userId == userId &&
+                shift.serverDeletedAt == nil &&
+                shift.syncStatusRaw != "pendingDelete"
             }
         )
 

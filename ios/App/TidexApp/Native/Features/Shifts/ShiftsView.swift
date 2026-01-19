@@ -30,6 +30,9 @@ struct ShiftsView: View {
     // State for day shifts sheet (when tapping a calendar day)
     @State private var selectedDayForSheet: DayShiftSelection?
 
+    // Recurring shift editor state
+    @State private var recurringShiftToEdit: RecurringShiftRow?
+
     // Celebration state
     @State private var showConfetti = false
 
@@ -153,6 +156,15 @@ struct ShiftsView: View {
                     Task {
                         await viewModel.updateShift(editResult)
                     }
+                },
+                onEditRecurring: { recurringId in
+                    selectedShift = nil
+                    // Small delay to allow sheet to dismiss
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        if let recurring = viewModel.getRecurringShift(id: recurringId) {
+                            recurringShiftToEdit = recurring
+                        }
+                    }
                 }
             )
             .presentationDetents([.medium, .large])
@@ -173,6 +185,14 @@ struct ShiftsView: View {
                     shiftToEditDirectly = nil
                     Task {
                         await viewModel.updateShift(editResult)
+                    }
+                },
+                onEditRecurring: { recurringId in
+                    shiftToEditDirectly = nil
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        if let recurring = viewModel.getRecurringShift(id: recurringId) {
+                            recurringShiftToEdit = recurring
+                        }
                     }
                 },
                 startInEditMode: true
@@ -268,6 +288,27 @@ struct ShiftsView: View {
                 }
             )
             .presentationDetents([.medium])
+            .presentationDragIndicator(.visible)
+        }
+        // Recurring shift editor sheet
+        .sheet(item: $recurringShiftToEdit) { recurring in
+            RecurringShiftEditorSheet(
+                recurringShift: recurring,
+                onSave: { editResult in
+                    recurringShiftToEdit = nil
+                    Task {
+                        await viewModel.updateRecurringShift(editResult)
+                    }
+                },
+                onDelete: {
+                    let recurringId = recurring.id
+                    recurringShiftToEdit = nil
+                    Task {
+                        await viewModel.deleteRecurringShift(recurringId)
+                    }
+                }
+            )
+            .presentationDetents([.large])
             .presentationDragIndicator(.visible)
         }
     }

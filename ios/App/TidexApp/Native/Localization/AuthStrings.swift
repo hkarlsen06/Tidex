@@ -500,6 +500,19 @@ enum AuthStrings {
         "shifts.endTime": "Sluttid",
         "shifts.crossMidnightInfo": "Vakten går over midnatt til neste dag",
         "shifts.virtualConversionInfo": "Endringer oppretter en ny vakt og ekskluderer denne datoen fra den faste vakten",
+        "shifts.editRecurringButton": "Rediger fast vakt",
+
+        // Recurring Shift Editor
+        "recurring.editTitle": "Rediger fast vakt",
+        "recurring.weekdaysSection": "Ukedager",
+        "recurring.repeatSection": "Gjenta",
+        "recurring.durationSection": "Varighet",
+        "recurring.indefiniteHint": "Denne vakten gjentas på ubestemt tid",
+        "recurring.endDateLabel": "Sluttdato",
+        "recurring.deleteButton": "Slett fast vakt",
+        "recurring.deleteConfirmTitle": "Slett fast vakt?",
+        "recurring.deleteConfirmMessage": "Er du sikker på at du vil slette denne faste vakten? Alle fremtidige vakter vil bli fjernet.",
+        "recurring.deleteConfirmButton": "Slett",
 
         // Sharing
         "sharing.title": "Deling",
@@ -1042,6 +1055,19 @@ enum AuthStrings {
         "shifts.endTime": "End time",
         "shifts.crossMidnightInfo": "Shift continues past midnight to the next day",
         "shifts.virtualConversionInfo": "Changes will create a new shift and exclude this date from the recurring pattern",
+        "shifts.editRecurringButton": "Edit recurring shift",
+
+        // Recurring Shift Editor
+        "recurring.editTitle": "Edit Recurring Shift",
+        "recurring.weekdaysSection": "Weekdays",
+        "recurring.repeatSection": "Repeat",
+        "recurring.durationSection": "Duration",
+        "recurring.indefiniteHint": "This shift repeats indefinitely",
+        "recurring.endDateLabel": "End date",
+        "recurring.deleteButton": "Delete Recurring Shift",
+        "recurring.deleteConfirmTitle": "Delete Recurring Shift?",
+        "recurring.deleteConfirmMessage": "Are you sure you want to delete this recurring shift? All future occurrences will be removed.",
+        "recurring.deleteConfirmButton": "Delete",
 
         // Sharing
         "sharing.title": "Sharing",

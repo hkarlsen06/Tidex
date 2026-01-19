@@ -18,6 +18,7 @@ struct ShiftDetailsSheet: View {
     let shift: ShiftWithComputations
     let onDelete: (() -> Void)?
     let onUpdate: ((ShiftEditResult) -> Void)?
+    let onEditRecurring: ((String) -> Void)?  // Callback with recurring shift ID
 
     @Environment(\.localization) private var localization
     @Environment(\.userCurrency) private var currency
@@ -66,11 +67,13 @@ struct ShiftDetailsSheet: View {
         shift: ShiftWithComputations,
         onDelete: (() -> Void)? = nil,
         onUpdate: ((ShiftEditResult) -> Void)? = nil,
+        onEditRecurring: ((String) -> Void)? = nil,
         startInEditMode: Bool = false
     ) {
         self.shift = shift
         self.onDelete = onDelete
         self.onUpdate = onUpdate
+        self.onEditRecurring = onEditRecurring
         self.startInEditMode = startInEditMode
     }
 
@@ -616,6 +619,29 @@ struct ShiftDetailsSheet: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 14)
                     .background(Color.tidexBlue)
+                    .cornerRadius(12)
+                }
+            }
+
+            // Edit recurring shift button (only for virtual shifts)
+            if isVirtualShift, let recurringId = shift.shift.recurring_id, onEditRecurring != nil {
+                Button {
+                    dismiss()
+                    // Small delay to allow sheet to dismiss before opening editor
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        onEditRecurring?(recurringId)
+                    }
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "repeat")
+                            .font(.system(size: 15, weight: .medium))
+                        Text(localization.string("shifts.editRecurringButton"))
+                            .font(.system(size: 15, weight: .semibold))
+                    }
+                    .foregroundColor(.tidexBlue)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(Color.tidexBlue.opacity(0.1))
                     .cornerRadius(12)
                 }
             }
