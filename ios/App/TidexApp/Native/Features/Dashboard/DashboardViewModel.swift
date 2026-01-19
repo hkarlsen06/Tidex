@@ -440,8 +440,9 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     }
 
     /// Reload dashboard from local data without triggering sync
-    /// Called when shifts change locally (e.g., after adding a shift)
-    func reloadFromLocal() async {
+    /// Called when shifts change locally (e.g., after adding a shift) or after initial sync completes
+    /// - Parameter showLoadingState: Whether to show loading indicator (false for seamless updates after sync)
+    func reloadFromLocal(showLoadingState: Bool = true) async {
         logger.info("🔄 Reloading dashboard from local data")
 
         // Clear in-memory caches to pick up new data
@@ -449,7 +450,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
         prefetchTasks.removeAll()
 
         // Reload from local repositories
-        await loadDashboardFromLocal()
+        await loadDashboardFromLocal(showLoadingState: showLoadingState)
 
         // Prefetch neighboring months
         prefetchNeighboringMonths()
@@ -459,8 +460,14 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
 
     /// Load dashboard data from local repositories
     /// This is the core local-first read path - no network calls
-    private func loadDashboardFromLocal() async {
-        isLoading = true
+    /// - Parameter showLoadingState: Whether to show/update loading indicator (false for seamless background updates)
+    private func loadDashboardFromLocal(showLoadingState: Bool = true) async {
+        if showLoadingState {
+            isLoading = true
+        }
+        // When not showing loading state, keep isLoading as-is until we have data
+        // This prevents flashing the empty state during background reloads
+        let shouldUpdateLoadingState = showLoadingState
         error = nil
 
         do {
@@ -525,7 +532,9 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
                 // No settings yet - sync may not have completed
                 // Show a softer message instead of hard error
                 logger.info("📭 No local settings yet - waiting for sync (userId: \(userId))")
-                self.isLoading = false
+                if shouldUpdateLoadingState {
+                    self.isLoading = false
+                }
                 // Leave dashboardData as nil to show empty state
                 return
             }
@@ -569,7 +578,8 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
             // Evict old cache entries if over limit
             evictCacheIfNeeded()
 
-            // Build dashboard data
+            // Build dashboard data and clear loading state
+            // Always clear isLoading on success since we have data to show
             self.dashboardData = buildDashboardData()
             self.isLoading = false
 
@@ -581,8 +591,10 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
             logger.info("⏭️ Request cancelled (user navigated away)")
         } catch {
             logger.error("❌ Dashboard local load failed: \(error.localizedDescription)")
-            self.error = DashboardError.dataLoadFailed(underlying: error)
-            self.isLoading = false
+            if shouldUpdateLoadingState {
+                self.error = DashboardError.dataLoadFailed(underlying: error)
+                self.isLoading = false
+            }
         }
     }
 

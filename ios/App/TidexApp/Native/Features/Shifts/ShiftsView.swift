@@ -86,6 +86,10 @@ struct ShiftsView: View {
                         AppearanceTracker.shared.reset()
                         viewModel.goToCurrentMonth()
                     },
+                    onNavigateToMonth: { year, month in
+                        AppearanceTracker.shared.reset()
+                        SharedMonthContext.shared.navigateTo(year: year, month: month)
+                    },
                     isLoading: viewModel.isLoading,
                     backToTodayText: localization.string("dashboard.backToToday")
                 )

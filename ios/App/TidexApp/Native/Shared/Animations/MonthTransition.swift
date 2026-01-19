@@ -238,11 +238,100 @@ struct StaggeredCardsContainer<Content: View>: View {
     }
 }
 
+// MARK: - Month Year Picker Sheet
+
+/// A sheet with wheel pickers for selecting month and year
+struct MonthYearPickerSheet: View {
+    @Environment(\.localization) private var localization
+    @Binding var isPresented: Bool
+    let currentYear: Int
+    let currentMonth: Int
+    let onSelect: (Int, Int) -> Void
+
+    @State private var selectedYear: Int
+    @State private var selectedMonth: Int
+
+    // Year range: 5 years back to 5 years forward
+    private var yearRange: [Int] {
+        let currentCalendarYear = Calendar.current.component(.year, from: Date())
+        return Array((currentCalendarYear - 5)...(currentCalendarYear + 5))
+    }
+
+    // Month names (localized)
+    private var monthNames: [String] {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: LocalizationManager.shared.currentLocale.localeIdentifier)
+        return formatter.monthSymbols.map { $0.capitalized }
+    }
+
+    init(isPresented: Binding<Bool>, currentYear: Int, currentMonth: Int, onSelect: @escaping (Int, Int) -> Void) {
+        self._isPresented = isPresented
+        self.currentYear = currentYear
+        self.currentMonth = currentMonth
+        self.onSelect = onSelect
+        self._selectedYear = State(initialValue: currentYear)
+        self._selectedMonth = State(initialValue: currentMonth)
+    }
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 0) {
+                // Wheel pickers
+                HStack(spacing: 0) {
+                    // Month picker
+                    Picker("Month", selection: $selectedMonth) {
+                        ForEach(1...12, id: \.self) { month in
+                            Text(monthNames[month - 1])
+                                .tag(month)
+                        }
+                    }
+                    .pickerStyle(.wheel)
+                    .frame(maxWidth: .infinity)
+
+                    // Year picker
+                    Picker("Year", selection: $selectedYear) {
+                        ForEach(yearRange, id: \.self) { year in
+                            Text(String(year))
+                                .tag(year)
+                        }
+                    }
+                    .pickerStyle(.wheel)
+                    .frame(width: 100)
+                }
+                .padding(.horizontal)
+
+                Spacer()
+            }
+            .background(Color.tidexBackground)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(localization.string("common.cancel")) {
+                        isPresented = false
+                    }
+                    .foregroundColor(.tidexBlue)
+                }
+
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(localization.string("common.done")) {
+                        onSelect(selectedYear, selectedMonth)
+                        isPresented = false
+                    }
+                    .fontWeight(.semibold)
+                    .foregroundColor(.tidexBlue)
+                }
+            }
+        }
+        .presentationDetents([.height(300)])
+        .presentationDragIndicator(.visible)
+    }
+}
+
 // MARK: - Animated Month Header
 
 /// An animated header showing month and year with vertical text transitions
 /// Back to today button is inline between month/year and next button (doesn't affect layout)
-/// Supports swipe gestures for month navigation
+/// Supports swipe gestures for month navigation and tap to open month/year picker
 struct AnimatedMonthHeader: View {
     let monthName: String
     let year: Int
@@ -252,22 +341,38 @@ struct AnimatedMonthHeader: View {
     let onPrevious: () -> Void
     let onNext: () -> Void
     let onReturnToCurrent: () -> Void
+    let onNavigateToMonth: ((Int, Int) -> Void)?
     let isLoading: Bool
     let backToTodayText: String  // Kept for API compatibility, but not used in new design
 
     @State private var monthScale: CGFloat = 1.0
+    @State private var showingMonthPicker = false
 
-    // Haptic feedback for swipe
+    // Haptic feedback for swipe and tap
     private let swipeHaptic = UIImpactFeedbackGenerator(style: .medium)
+    private let tapHaptic = UIImpactFeedbackGenerator(style: .light)
 
-    // Width for side sections to keep center text perfectly centered (default mode only)
-    private let defaultSideWidth: CGFloat = 80  // Enough for back button (36) + spacing (8) + nav button (36)
+    // Width for navigation button only (when return button is hidden)
+    private let navButtonWidth: CGFloat = 36
+    // Width for return button + spacing + nav button
+    private let fullRightWidth: CGFloat = 80  // 36 + 8 + 36
 
     var body: some View {
-        if config.isCompact {
-            compactLayout
-        } else {
-            defaultLayout
+        Group {
+            if config.isCompact {
+                compactLayout
+            } else {
+                defaultLayout
+            }
+        }
+        .sheet(isPresented: $showingMonthPicker) {
+            MonthYearPickerSheet(
+                isPresented: $showingMonthPicker,
+                currentYear: phase.year,
+                currentMonth: phase.month
+            ) { selectedYear, selectedMonth in
+                onNavigateToMonth?(selectedYear, selectedMonth)
+            }
         }
     }
 
@@ -297,8 +402,8 @@ struct AnimatedMonthHeader: View {
                 value: phase.id
             )
             .onTapGesture {
-                guard !isCurrentMonth else { return }
-                bounceAndReturn()
+                tapHaptic.impactOccurred()
+                showMonthPicker()
             }
 
             // Next button
@@ -318,23 +423,26 @@ struct AnimatedMonthHeader: View {
         }
         .contentShape(Rectangle())
         .gesture(swipeGesture)
-        .onAppear { swipeHaptic.prepare() }
+        .onAppear {
+            swipeHaptic.prepare()
+            tapHaptic.prepare()
+        }
     }
 
     // MARK: - Default Layout (for Dashboard/Shifts)
 
     private var defaultLayout: some View {
         HStack(spacing: 0) {
-            // Left section: Previous button (fixed width to match right side)
-            HStack {
+            // Left section: Previous button
+            HStack(spacing: 0) {
                 navigationButton(icon: "chevron.left", action: onPrevious)
-                Spacer()
             }
-            .frame(width: defaultSideWidth)
+            .frame(width: navButtonWidth)
 
             Spacer()
 
             // Center section: Month and Year (horizontal)
+            // Naturally centers in available space between left and right sections
             HStack(spacing: 6) {
                 Text(monthName.capitalized)
                     .font(.system(size: 16, weight: .semibold))
@@ -352,14 +460,15 @@ struct AnimatedMonthHeader: View {
                 value: phase.id
             )
             .onTapGesture {
-                guard !isCurrentMonth else { return }
-                bounceAndReturn()
+                tapHaptic.impactOccurred()
+                showMonthPicker()
             }
 
             Spacer()
 
-            // Right section: Back-to-today button + Next button
+            // Right section: Back-to-today button (animated width) + Next button
             HStack(spacing: 8) {
+                // Return button with animated width - collapses when hidden
                 Button(action: onReturnToCurrent) {
                     Image(systemName: "arrow.uturn.backward")
                         .font(.system(size: 14, weight: .semibold))
@@ -368,21 +477,41 @@ struct AnimatedMonthHeader: View {
                         .background(Color.tidexBlue.opacity(0.1))
                         .clipShape(Circle())
                 }
+                .frame(width: isCurrentMonth ? 0 : 36)
                 .opacity(isCurrentMonth ? 0 : 1)
+                .clipped()
                 .disabled(isCurrentMonth)
+                .animation(.spring(response: 0.35, dampingFraction: 0.85), value: isCurrentMonth)
 
                 navigationButton(icon: "chevron.right", action: onNext)
             }
-            .frame(width: defaultSideWidth)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
         .contentShape(Rectangle())
         .gesture(swipeGesture)
-        .onAppear { swipeHaptic.prepare() }
+        .onAppear {
+            swipeHaptic.prepare()
+            tapHaptic.prepare()
+        }
+        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: isCurrentMonth)
     }
 
     // MARK: - Shared Helpers
+
+    private func showMonthPicker() {
+        // Bounce animation on tap
+        withAnimation(.spring(response: 0.15, dampingFraction: 0.5)) {
+            monthScale = 0.95
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            withAnimation(.spring(response: 0.2, dampingFraction: 0.6)) {
+                monthScale = 1.0
+            }
+            // Show picker after bounce completes
+            showingMonthPicker = true
+        }
+    }
 
     private func bounceAndReturn() {
         withAnimation(.spring(response: 0.15, dampingFraction: 0.5)) {

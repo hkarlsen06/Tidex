@@ -28,8 +28,9 @@ struct DashboardView: View {
                             errorView(error: error)
                         } else if let data = viewModel.dashboardData {
                             cardContent(data: data)
-                        } else if viewModel.isLoading {
-                            // Loading state - centered in content area
+                        } else if viewModel.isLoading || !coordinator.initialSyncComplete {
+                            // Show loading while fetching OR while initial sync is in progress
+                            // This prevents showing "no shifts" before sync has had a chance to populate data
                             loadingView
                         } else {
                             emptyStateView
@@ -54,6 +55,9 @@ struct DashboardView: View {
                         onReturnToCurrent: {
                             viewModel.goToCurrentMonth()
                         },
+                        onNavigateToMonth: { year, month in
+                            SharedMonthContext.shared.navigateTo(year: year, month: month)
+                        },
                         isLoading: viewModel.isLoading,
                         backToTodayText: localization.string("dashboard.backToToday")
                     )
@@ -77,6 +81,15 @@ struct DashboardView: View {
         }
         .task {
             await viewModel.loadDashboard()
+        }
+        .onChange(of: coordinator.initialSyncComplete) { _, completed in
+            // When initial sync completes after login, reload dashboard to show synced data
+            // Don't show loading state to avoid a flash - data should just appear
+            if completed {
+                Task {
+                    await viewModel.reloadFromLocal(showLoadingState: false)
+                }
+            }
         }
         .onChange(of: viewModel.dashboardData) { _, newData in
             configureCountdown(with: newData)

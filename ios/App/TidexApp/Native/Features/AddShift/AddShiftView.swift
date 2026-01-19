@@ -113,6 +113,9 @@ struct AddShiftView: View {
                             onReturnToCurrent: {
                                 viewModel.goToCurrentMonth()
                             },
+                            onNavigateToMonth: { year, month in
+                                SharedMonthContext.shared.navigateTo(year: year, month: month)
+                            },
                             isLoading: viewModel.isLoading,
                             backToTodayText: localization.string("dashboard.backToToday")
                         )
