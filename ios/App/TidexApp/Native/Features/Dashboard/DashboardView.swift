@@ -57,10 +57,10 @@ struct DashboardView: View {
                         isLoading: viewModel.isLoading,
                         backToTodayText: localization.string("dashboard.backToToday")
                     )
-                    .frame(height: 56)
-                    .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 30))
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 8)
+                    .frame(height: MonthPickerLayout.height)
+                    .glassEffect(.regular.interactive(), in: .rect(cornerRadius: MonthPickerLayout.cornerRadius))
+                    .padding(.horizontal, MonthPickerLayout.horizontalPadding)
+                    .padding(.bottom, MonthPickerLayout.bottomPadding)
                 }
             }
             .navigationTitle(localization.string("dashboard.title"))

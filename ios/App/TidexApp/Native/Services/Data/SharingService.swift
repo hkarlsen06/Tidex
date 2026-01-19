@@ -150,6 +150,7 @@ final class SharingService: ObservableObject {
             // Build request with auth header
             var request = URLRequest(url: url)
             request.httpMethod = "GET"
+            request.cachePolicy = .reloadIgnoringLocalCacheData
             request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
@@ -205,6 +206,9 @@ final class SharingService: ObservableObject {
         } catch let error as SharingServiceError {
             self.error = error
             throw error
+        } catch is CancellationError {
+            // Re-throw cancellation without wrapping
+            throw CancellationError()
         } catch {
             let wrappedError = SharingServiceError.networkError(underlying: error)
             self.error = wrappedError
@@ -424,7 +428,7 @@ final class SharingService: ObservableObject {
             let session: Session
             do {
                 session = try await supabase.auth.session
-                logger.info("Got session, token expires at: \(session.expiresAt ?? 0)")
+                logger.info("Got session, token expires at: \(session.expiresAt)")
             } catch {
                 logger.error("Failed to get session: \(error.localizedDescription)")
                 throw SharingServiceError.notAuthenticated
@@ -435,6 +439,7 @@ final class SharingService: ObservableObject {
 
             var request = URLRequest(url: url)
             request.httpMethod = "GET"
+            request.cachePolicy = .reloadIgnoringLocalCacheData
             request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 

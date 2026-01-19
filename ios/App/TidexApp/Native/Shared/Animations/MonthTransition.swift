@@ -3,6 +3,25 @@ import SwiftUI
 // MonthNavigationDirection is defined in MonthSwipeGesture.swift
 // This file provides animation utilities for month transitions
 
+// MARK: - Layout Constants
+
+/// Layout constants for the floating MonthPicker above the tab bar
+enum MonthPickerLayout {
+    /// Horizontal padding for the MonthPicker pill
+    /// This value is calculated so the edges of the MonthPicker align with
+    /// where a 30pt corner radius "flattens out" on a full-width element
+    static let horizontalPadding: CGFloat = 40
+
+    /// Bottom padding between MonthPicker and tab bar
+    static let bottomPadding: CGFloat = 8
+
+    /// Height of the MonthPicker pill
+    static let height: CGFloat = 56
+
+    /// Corner radius for the glass effect
+    static let cornerRadius: CGFloat = 30
+}
+
 // MARK: - Month Transition Configuration
 
 /// Configuration for month transition animations

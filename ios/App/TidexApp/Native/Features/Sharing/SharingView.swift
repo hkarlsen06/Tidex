@@ -51,10 +51,10 @@ struct SharingView: View {
                             isLoading: viewModel.isLoadingShifts,
                             backToTodayText: localization.string("dashboard.backToToday")
                         )
-                        .frame(height: 56)
-                        .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 30))
-                        .padding(.horizontal, 16)
-                        .padding(.bottom, 8)
+                        .frame(height: MonthPickerLayout.height)
+                        .glassEffect(.regular.interactive(), in: .rect(cornerRadius: MonthPickerLayout.cornerRadius))
+                        .padding(.horizontal, MonthPickerLayout.horizontalPadding)
+                        .padding(.bottom, MonthPickerLayout.bottomPadding)
                     }
                 }
             }
