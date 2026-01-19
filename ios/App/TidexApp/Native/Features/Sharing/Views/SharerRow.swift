@@ -6,7 +6,6 @@ struct SharerRow: View {
     let sharer: SharedUser
     let preview: SharerShiftPreview?
     let isSelected: Bool
-    let isLoadingPreview: Bool
     let onTap: () -> Void
 
     @Environment(\.localization) private var localization
@@ -41,15 +40,13 @@ struct SharerRow: View {
                 .padding(.horizontal, 16)
                 .padding(.vertical, 14)
 
-                // Shift preview (if available)
+                // Shift preview (only shown when data is available, no skeleton)
+                // This allows for a cleaner staged reveal: sort first, then show cards
                 if let preview = preview, let shift = preview.shift, let status = preview.status {
                     ShiftPreviewCard(shift: shift, status: status)
                         .padding(.horizontal, 12)
                         .padding(.bottom, 12)
-                } else if isLoadingPreview {
-                    ShiftPreviewSkeleton()
-                        .padding(.horizontal, 12)
-                        .padding(.bottom, 12)
+                        .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .top)))
                 }
             }
             .background(
@@ -431,36 +428,6 @@ private struct ShiftPreviewCard: View {
     }
 }
 
-// MARK: - Shift Preview Skeleton
-
-private struct ShiftPreviewSkeleton: View {
-    var body: some View {
-        HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 4) {
-                RoundedRectangle(cornerRadius: 4)
-                    .fill(Color.tidexSurfaceSecondary)
-                    .frame(width: 120, height: 14)
-
-                RoundedRectangle(cornerRadius: 4)
-                    .fill(Color.tidexSurfaceSecondary)
-                    .frame(width: 80, height: 12)
-            }
-
-            Spacer()
-
-            RoundedRectangle(cornerRadius: 8)
-                .fill(Color.tidexSurfaceSecondary)
-                .frame(width: 60, height: 24)
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color.tidexSurfaceSecondary.opacity(0.5))
-        )
-    }
-}
-
 // MARK: - Empty State
 
 /// Shown when no one has shared shifts with the user
@@ -504,7 +471,6 @@ struct SharerListEmptyState: View {
             ),
             preview: nil,
             isSelected: false,
-            isLoadingPreview: true,
             onTap: {}
         )
 
@@ -522,7 +488,6 @@ struct SharerListEmptyState: View {
             ),
             preview: nil,
             isSelected: true,
-            isLoadingPreview: false,
             onTap: {}
         )
     }
