@@ -61,6 +61,10 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
             AppCoordinator.shared.handleAppForeground()
         }
 
+        // Check for ongoing shifts and start Live Activity if needed
+        // This ensures the Live Activity starts even if BGTask didn't fire
+        (UIApplication.shared.delegate as? AppDelegate)?.checkAndStartLiveActivityIfNeeded()
+
         // End background task if returning to foreground before expiration
         (UIApplication.shared.delegate as? AppDelegate)?.endBackgroundTaskIfNeeded()
     }

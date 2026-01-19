@@ -207,6 +207,35 @@ struct DashboardView: View {
             }
         }()
 
+        // Calculate progress through the month until payroll (matches Next.js behavior)
+        // Only show for current month when payroll hasn't passed yet
+        let payrollProgress: Double? = {
+            guard viewModel.isCurrentMonth && !data.payrollHasPassed else { return nil }
+
+            let now = Date()
+            let calendar = Calendar.current
+
+            // Get start of the current month
+            guard let monthStart = calendar.date(from: calendar.dateComponents([.year, .month], from: now)) else {
+                return nil
+            }
+
+            // Get start of the payroll day
+            let payrollDayStart = calendar.startOfDay(for: data.payrollDate)
+
+            let totalDuration = payrollDayStart.timeIntervalSince(monthStart)
+            let elapsed = now.timeIntervalSince(monthStart)
+
+            guard totalDuration > 0 else {
+                // Edge case: payroll is on the 1st
+                return 100
+            }
+
+            let progress = (elapsed / totalDuration) * 100
+            // Clamp to 1-100 (minimum 1% so users recognize it's a progress bar)
+            return max(1, min(100, progress))
+        }()
+
         // Use StaggeredCardsContainer for smooth horizontal slide animation
         // Cards are stacked with TotalCard as the visual anchor (centered in available space)
         // Other cards position themselves above/below with consistent spacing
@@ -226,7 +255,8 @@ struct DashboardView: View {
                     gross: data.previousMonthGross,
                     net: data.previousMonthNet,
                     tax: data.previousMonthTax,
-                    taxEnabled: data.previousMonthTaxEnabled
+                    taxEnabled: data.previousMonthTaxEnabled,
+                    progress: payrollProgress
                 )
 
                 // Total Card (Displayed Month) - THE ANCHOR
@@ -257,11 +287,14 @@ struct DashboardView: View {
         // when switching between FeaturedShiftCard and EmptyShiftCard
         Group {
             if let featuredShift = data.featuredShift {
+                // Only show progress bar for active shifts (matching Next.js behavior)
+                let shiftProgress: Double? = countdownManager.isShiftActive ? countdownManager.shiftProgress : nil
                 FeaturedShiftCard(
                     shift: featuredShift,
                     isToday: data.isFeaturedShiftToday,
                     isBestShift: data.featuredShiftIsBestShift,
-                    countdownText: countdownManager.shiftCountdownText
+                    countdownText: countdownManager.shiftCountdownText,
+                    progress: shiftProgress
                 )
             } else {
                 EmptyShiftCard(isBestShift: data.featuredShiftIsBestShift)

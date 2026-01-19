@@ -165,6 +165,9 @@ enum NativeWidgetStorage {
         // This ensures the background task is always scheduled for the soonest shift
         if let appDelegate = UIApplication.shared.delegate as? AppDelegate {
             appDelegate.scheduleNextShiftLiveActivity()
+            // Also check if there's an ongoing shift that needs a Live Activity right now
+            // This handles the case where the app is opened during a shift and sync just completed
+            appDelegate.checkAndStartLiveActivityIfNeeded()
         }
 
         logger.info("Widget storage updated with \(storedShifts.count) shifts")

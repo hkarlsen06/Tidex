@@ -105,7 +105,7 @@ struct NextShiftCountdownCard: View {
     }
 
     private func updateCountdown() {
-        let (text, active) = CountdownFormatter.formatShiftCountdown(
+        let (text, active, _) = CountdownFormatter.formatShiftCountdown(
             shiftDate: shift.shiftDate,
             startTime: shift.startTime,
             endTime: shift.endTime,
