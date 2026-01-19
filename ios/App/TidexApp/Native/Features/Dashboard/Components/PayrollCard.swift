@@ -11,6 +11,8 @@ struct PayrollCard: View {
     let taxEnabled: Bool
     /// Progress through the month until payroll (0-100), shows a subtle progress bar when provided
     var progress: Double?
+    /// When true, shows skeleton state with shimmer animation (for loading)
+    var isLoading: Bool = false
 
     @Environment(\.localization) private var localization
     @Environment(\.userCurrency) private var currency
@@ -29,7 +31,7 @@ struct PayrollCard: View {
     }
 
     private var hasPayout: Bool {
-        gross > 0
+        !isLoading && gross > 0
     }
 
     // MARK: - Body
@@ -48,15 +50,15 @@ struct PayrollCard: View {
                 if isPayrollToday {
                     HStack(spacing: 8) {
                         Text(localization.string("dashboard.today"))
-                            .font(.system(size: 17, weight: .medium))
+                            .font(.system(size: 18, weight: .medium))
                             .foregroundColor(.tidexTextPrimary)
                         Image(systemName: "party.popper.fill")
-                            .font(.system(size: 15))
+                            .font(.system(size: 16))
                             .foregroundColor(.tidexBlue)
                     }
                 } else {
                     Text(formattedPayrollDate)
-                        .font(.system(size: 17, weight: .medium))
+                        .font(.system(size: 18, weight: .medium))
                         .foregroundColor(.tidexTextPrimary)
                 }
 
@@ -79,36 +81,35 @@ struct PayrollCard: View {
                     // Net/gross amount (primary display)
                     let primaryAmount = taxEnabled ? (net ?? gross) : gross
                     Text(formatCurrency(primaryAmount))
-                        .font(.system(size: 22, weight: .semibold))
+                        .font(.system(size: 24, weight: .semibold))
                         .tracking(-0.5)
                         .foregroundColor(.tidexTextPrimary)
 
                     // Breakdown (gross - tax) when tax enabled
                     if showBreakdown {
                         HStack(spacing: 4) {
-                            Text(formatCurrency(gross))
+                            Text(formatPlainAmount(gross))
                             Text("−")
-                            Text(formatCurrency(tax ?? 0))
+                            Text(formatPlainAmount(tax ?? 0))
                         }
-                        .font(.system(size: 13, weight: .regular))
+                        .font(.system(size: 14, weight: .regular))
                         .foregroundColor(.tidexTextMuted)
                     }
                 }
             } else {
-                // No payout placeholder
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text(noPayoutPlaceholder)
-                        .font(.system(size: 22, weight: .semibold))
-                        .tracking(-0.5)
-                        .foregroundColor(.tidexTextMuted)
-                    Text("——")
-                        .font(.system(size: 13, weight: .regular))
-                        .foregroundColor(.tidexTextMuted)
+                // No payout placeholder - skeleton lines
+                VStack(alignment: .trailing, spacing: 6) {
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(Color.tidexTextMuted.opacity(0.3))
+                        .frame(width: 100, height: 20)
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(Color.tidexTextMuted.opacity(0.2))
+                        .frame(width: 70, height: 12)
                 }
             }
         }
         .padding(.horizontal, 20)
-        .padding(.vertical, 20)
+        .padding(.vertical, 24)
         .background(Color.tidexSurfacePrimary)
         .overlay(alignment: .leading) {
             // Progress bar overlay - fills from left based on progress
@@ -123,6 +124,7 @@ struct PayrollCard: View {
             }
         }
         .clipShape(RoundedRectangle(cornerRadius: 24))
+        .shimmer(isActive: isLoading)
         .onChange(of: progress) { _, newValue in
             // Animate to new progress value
             withAnimation(.linear(duration: 1.0)) {
@@ -168,15 +170,9 @@ struct PayrollCard: View {
         CurrencyConfig.format(amount, currency: currency)
     }
 
-    /// Placeholder text when no payout (shows "—— [currency]")
-    private var noPayoutPlaceholder: String {
-        let config = CurrencyConfig.get(currency)
-        switch config.display {
-        case .prefix:
-            return "\(config.value)——"
-        case .suffix:
-            return "—— \(config.value)"
-        }
+    /// Format amount without currency symbol (for breakdown display)
+    private func formatPlainAmount(_ amount: Double) -> String {
+        CurrencyConfig.formatPlain(amount)
     }
 }
 

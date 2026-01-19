@@ -147,6 +147,17 @@ enum CurrencyConfig {
             return "\(formattedNumber) \(config.value)"
         }
     }
+
+    /// Format an amount without the currency symbol (for breakdown displays)
+    static func formatPlain(_ amount: Double, includeDecimals: Bool = false) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.minimumFractionDigits = includeDecimals ? 2 : 0
+        formatter.maximumFractionDigits = includeDecimals ? 2 : 0
+        formatter.locale = Locale(identifier: "nb_NO")
+
+        return formatter.string(from: NSNumber(value: amount)) ?? "\(Int(amount))"
+    }
 }
 
 // MARK: - Environment Key for User Currency

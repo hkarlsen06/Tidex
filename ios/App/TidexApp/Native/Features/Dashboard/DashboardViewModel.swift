@@ -439,18 +439,34 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
         }
     }
 
+    /// Prepare for reload by setting loading state synchronously
+    /// Call this BEFORE starting a Task to reload, to prevent empty state flash
+    /// This ensures the loading indicator shows immediately when sync completes
+    func prepareForReload() {
+        isLoading = true
+    }
+
     /// Reload dashboard from local data without triggering sync
     /// Called when shifts change locally (e.g., after adding a shift) or after initial sync completes
     /// - Parameter showLoadingState: Whether to show loading indicator (false for seamless updates after sync)
     func reloadFromLocal(showLoadingState: Bool = true) async {
         logger.info("🔄 Reloading dashboard from local data")
 
-        // Clear in-memory caches to pick up new data
+        // Set loading state if not already set (e.g., by prepareForReload)
+        if showLoadingState && !isLoading {
+            isLoading = true
+        }
+
+        // Clear ALL in-memory caches to pick up new data from sync
+        // This is critical after initial sync completes - settings/snapshots may now exist
         monthCache.removeAll()
         prefetchTasks.removeAll()
+        settings = nil  // Force re-read settings from repository
+        snapshots = []  // Force re-read snapshots from repository
+        recurringShifts = []  // Force re-read recurring shifts from repository
 
-        // Reload from local repositories
-        await loadDashboardFromLocal(showLoadingState: showLoadingState)
+        // Reload from local repositories (pass false since we already set loading state)
+        await loadDashboardFromLocal(showLoadingState: false)
 
         // Prefetch neighboring months
         prefetchNeighboringMonths()
@@ -465,9 +481,6 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
         if showLoadingState {
             isLoading = true
         }
-        // When not showing loading state, keep isLoading as-is until we have data
-        // This prevents flashing the empty state during background reloads
-        let shouldUpdateLoadingState = showLoadingState
         error = nil
 
         do {
@@ -487,8 +500,42 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
             if settings == nil {
                 settings = settingsRepository.getSettings(for: userId)
                 logger.info("📋 Loaded settings: \(self.settings != nil ? "found" : "nil")")
-                updateUserAvatarFromSettings()
             }
+
+            // Check if we have any data to show
+            // Note: Empty shifts is OK, but missing settings means we can't compute payroll
+            if self.settings == nil {
+                // No settings yet - retry multiple times with delays
+                // This handles the race condition where sync completes but data isn't readable yet
+                for attempt in 1...5 {
+                    logger.info("📭 No local settings yet - retry \(attempt)/5 in 400ms (userId: \(userId))")
+
+                    do {
+                        try await Task.sleep(nanoseconds: 400_000_000) // 400ms
+                    } catch {
+                        // Sleep was cancelled - exit retry loop
+                        logger.info("⏭️ Retry sleep cancelled")
+                        break
+                    }
+
+                    // Retry loading settings
+                    settings = settingsRepository.getSettings(for: userId)
+                    if settings != nil {
+                        logger.info("📋 Settings found on retry \(attempt)")
+                        break
+                    }
+                }
+            }
+
+            guard let currentSettings = self.settings else {
+                // Still no settings after all retries - this is a real error
+                logger.error("❌ No settings after retries - cannot load dashboard")
+                self.error = DashboardError.noLocalData
+                self.isLoading = false
+                return
+            }
+
+            updateUserAvatarFromSettings()
 
             // Load snapshots from local store
             if snapshots.isEmpty {
@@ -512,7 +559,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
             let previousStartDate = Date.firstDayOfMonthDate(year: previousYM.year, month: previousYM.month)
             let previousEndDate = Date.lastDayOfMonthDate(year: previousYM.year, month: previousYM.month)
 
-            // Load shifts from local store
+            // Load shifts from local store (after settings retry to avoid stale empty reads)
             let displayShifts = shiftsRepository.getShifts(
                 for: userId,
                 startDate: displayStartDate,
@@ -525,19 +572,6 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
                 startDate: previousStartDate,
                 endDate: previousEndDate
             )
-
-            // Check if we have any data to show
-            // Note: Empty shifts is OK, but missing settings means we can't compute payroll
-            guard let currentSettings = self.settings else {
-                // No settings yet - sync may not have completed
-                // Show a softer message instead of hard error
-                logger.info("📭 No local settings yet - waiting for sync (userId: \(userId))")
-                if shouldUpdateLoadingState {
-                    self.isLoading = false
-                }
-                // Leave dashboardData as nil to show empty state
-                return
-            }
 
             // Compute displayed month shifts with payroll using PayrollEngine
             self.displayedMonthShifts = PayrollEngine.computeShiftsForMonth(
@@ -587,14 +621,15 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
 
         } catch is CancellationError {
             logger.info("⏭️ Load cancelled (user navigated away)")
+            // Don't clear isLoading on cancellation - another load should be in progress
         } catch let urlError as URLError where urlError.code == .cancelled {
             logger.info("⏭️ Request cancelled (user navigated away)")
+            // Don't clear isLoading on cancellation - another load should be in progress
         } catch {
             logger.error("❌ Dashboard local load failed: \(error.localizedDescription)")
-            if shouldUpdateLoadingState {
-                self.error = DashboardError.dataLoadFailed(underlying: error)
-                self.isLoading = false
-            }
+            self.error = DashboardError.dataLoadFailed(underlying: error)
+            // Always clear loading state on completion
+            self.isLoading = false
         }
     }
 

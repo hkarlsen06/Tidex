@@ -6,6 +6,7 @@ import SwiftUI
 struct UserMenuButton: View {
     @EnvironmentObject private var coordinator: AppCoordinator
     @Environment(\.localization) private var localization
+    @Environment(\.displayScale) private var displayScale
 
     /// User's display name (email or name from profile)
     let displayName: String
@@ -14,7 +15,7 @@ struct UserMenuButton: View {
     /// Whether the sign out action is in progress
     @State private var isSigningOut = false
     /// Cached profile image (downloaded once, then reused)
-    @State private var cachedImage: Image?
+    @State private var cachedImage: UIImage?
     /// Whether image download is in progress
     @State private var isLoadingImage = false
     /// Track the URL we've loaded to detect changes
@@ -116,7 +117,7 @@ struct UserMenuButton: View {
         Group {
             if let cached = cachedImage {
                 // Use cached image
-                cached
+                Image(uiImage: cached)
                     .resizable()
                     .aspectRatio(contentMode: .fill)
             } else if isLoadingImage {
@@ -160,16 +161,17 @@ struct UserMenuButton: View {
         Task {
             do {
                 let (data, _) = try await URLSession.shared.data(from: url)
-                if let uiImage = UIImage(data: data) {
-                    await MainActor.run {
-                        cachedImage = Image(uiImage: uiImage)
+                let targetSize = CGSize(width: 28 * displayScale, height: 28 * displayScale)
+                let uiImage: UIImage? = await Task.detached(priority: .utility) { () -> UIImage? in
+                    guard let baseImage = UIImage(data: data) else { return nil }
+                    return baseImage.preparingThumbnail(of: targetSize) ?? baseImage
+                }.value
+                await MainActor.run {
+                    if let uiImage = uiImage {
+                        cachedImage = uiImage
                         loadedUrl = urlString
-                        isLoadingImage = false
                     }
-                } else {
-                    await MainActor.run {
-                        isLoadingImage = false
-                    }
+                    isLoadingImage = false
                 }
             } catch {
                 await MainActor.run {

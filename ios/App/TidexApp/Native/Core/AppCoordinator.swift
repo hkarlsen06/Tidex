@@ -173,6 +173,11 @@ final class AppCoordinator: ObservableObject {
 
                 case .mfaChallengeVerified:
                     // MFA verified, user is now fully authenticated
+                    // Load onboarding state BEFORE setting authenticated to prevent flash
+                    if let session = session {
+                        self.loadOnboardingStateFromUser(session.user)
+                    }
+                    self.initialSyncComplete = false
                     self.appState = .authenticated
                     self.pendingMFAFactor = nil
 
@@ -238,14 +243,37 @@ final class AppCoordinator: ObservableObject {
                 print("[AppCoordinator] Terms acceptance required (update: \(self.isTermsUpdate))")
             } else {
                 // Terms are up to date, user is fully authenticated
+                // Load onboarding state BEFORE setting authenticated to prevent flash
+                loadOnboardingStateFromUser(user)
+                // Reset initialSyncComplete BEFORE setting authenticated state
+                // This ensures DashboardView shows loading instead of empty state
+                self.initialSyncComplete = false
                 self.appState = .authenticated
                 await updateUserProfile()
             }
         } catch {
             // If we can't check terms, proceed to authenticated and let backend handle it
             print("[AppCoordinator] Terms check failed: \(error)")
+            // Try to load onboarding state even on error
+            if let session = try? await supabase.auth.session {
+                loadOnboardingStateFromUser(session.user)
+            }
+            // Reset initialSyncComplete BEFORE setting authenticated state
+            self.initialSyncComplete = false
             self.appState = .authenticated
             await updateUserProfile()
+        }
+    }
+
+    /// Load onboarding completion state from user metadata
+    /// Called before setting appState to .authenticated to prevent PostAuthOnboarding flash
+    private func loadOnboardingStateFromUser(_ user: User) {
+        if let finishedOnboarding = user.userMetadata["finishedOnboarding"]?.value as? Bool {
+            self.hasFinishedOnboardingRemotely = finishedOnboarding
+            print("[AppCoordinator] User finishedOnboarding from metadata: \(finishedOnboarding)")
+        } else {
+            self.hasFinishedOnboardingRemotely = false
+            print("[AppCoordinator] User finishedOnboarding not set in metadata")
         }
     }
 
@@ -425,6 +453,9 @@ final class AppCoordinator: ObservableObject {
     /// Called when terms are accepted
     func handleTermsAccepted() {
         isTermsUpdate = false
+        // Reset initialSyncComplete BEFORE setting authenticated state
+        // This ensures DashboardView shows loading instead of empty state
+        initialSyncComplete = false
         appState = .authenticated
         Task {
             await updateUserProfile()

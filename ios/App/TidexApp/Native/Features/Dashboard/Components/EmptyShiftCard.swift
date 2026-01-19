@@ -4,6 +4,8 @@ import SwiftUI
 /// Shows dashed placeholders matching the FeaturedShiftCard layout
 struct EmptyShiftCard: View {
     let isBestShift: Bool  // true = other month (no best shift), false = current month (no next shift)
+    /// When true, shows shimmer animation and hides footer text (for loading)
+    var isLoading: Bool = false
 
     @Environment(\.localization) private var localization
 
@@ -13,39 +15,51 @@ struct EmptyShiftCard: View {
         VStack(spacing: 8) {
             // Main card content
             HStack(alignment: .center, spacing: 16) {
-                // Left side: placeholder date and time
-                VStack(alignment: .leading, spacing: 4) {
+                // Left side: skeleton lines for date and time
+                VStack(alignment: .leading, spacing: 8) {
                     // Placeholder day name and date
-                    Text("———")
-                        .font(.system(size: 17, weight: .medium))
-                        .foregroundColor(.tidexTextMuted)
+                    RoundedRectangle(cornerRadius: 5)
+                        .fill(Color.tidexTextMuted.opacity(0.3))
+                        .frame(width: 140, height: 16)
 
                     // Placeholder time range
-                    Text("———")
-                        .font(.system(size: 14, weight: .regular))
-                        .foregroundColor(.tidexTextMuted)
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(Color.tidexTextMuted.opacity(0.2))
+                        .frame(width: 100, height: 12)
                 }
 
                 Spacer()
 
-                // Right side: placeholder earnings
-                Text("—— kr")
-                    .font(.system(size: 22, weight: .semibold))
-                    .tracking(-0.5)
-                    .foregroundColor(.tidexTextMuted)
+                // Right side: skeleton lines for earnings
+                VStack(alignment: .trailing, spacing: 6) {
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(Color.tidexTextMuted.opacity(0.3))
+                        .frame(width: 80, height: 20)
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(Color.tidexTextMuted.opacity(0.2))
+                        .frame(width: 60, height: 12)
+                }
             }
             .padding(.horizontal, 20)
-            .padding(.vertical, 20)
+            .padding(.vertical, 24)
             .background(
                 RoundedRectangle(cornerRadius: 24)
                     .fill(Color.tidexSurfacePrimary)
             )
+            .shimmer(isActive: isLoading)
 
             // Footer text below the card - fixed height to match FeaturedShiftCard
-            Text(localization.string(isBestShift ? "dashboard.noShiftsMonth" : "dashboard.noNextShift"))
-                .font(.system(size: 14, weight: .medium))
-                .foregroundColor(.tidexTextMuted)
-                .frame(height: 20) // Match FeaturedShiftCard footer height
+            // Hidden during loading state
+            Group {
+                if isLoading {
+                    Color.clear
+                } else {
+                    Text(localization.string(isBestShift ? "dashboard.noShiftsMonth" : "dashboard.noNextShift"))
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.tidexTextMuted)
+                }
+            }
+            .frame(height: 20) // Match FeaturedShiftCard footer height
         }
     }
 }
