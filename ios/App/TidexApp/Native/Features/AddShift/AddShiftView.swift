@@ -100,10 +100,19 @@ struct AddShiftView: View {
                 .padding(.horizontal, MonthPickerLayout.horizontalPadding)
                 .padding(.bottom, MonthPickerLayout.bottomPadding)
             }
-            .navigationTitle(modeTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(Color.tidexBackground, for: .navigationBar)
             .toolbar {
+                ToolbarItem(placement: .principal) {
+                    HStack {
+                        Image("TidexWordmark")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(height: 22)
+                        Spacer()
+                    }
+                    .frame(maxWidth: .infinity)
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     ShiftModeToggle(mode: $viewModel.mode)
                 }

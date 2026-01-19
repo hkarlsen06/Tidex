@@ -568,7 +568,21 @@ enum AuthStrings {
         "sharing.error.updateNotifications": "Kunne ikke oppdatere varslingsinnstillinger",
         "sharing.error.removeShare": "Kunne ikke fjerne deling",
         "sharing.error.removePerson": "Kunne ikke fjerne personen",
-        "sharing.error.shareBack": "Kunne ikke dele tilbake"
+        "sharing.error.shareBack": "Kunne ikke dele tilbake",
+
+        // Custom Supplements Editor
+        "supplements.editTitle": "Tillegg for vakt",
+        "supplements.editButton": "Rediger tillegg",
+        "supplements.addRule": "Legg til tillegg",
+        "supplements.deleteRule": "Slett",
+        "supplements.deleteRuleTitle": "Slett tillegg?",
+        "supplements.deleteRuleMessage": "Er du sikker p\u{00E5} at du vil fjerne dette tillegget?",
+        "supplements.resetToStandard": "Tilbakestill til standard",
+        "supplements.tariff": "Tariff",
+        "supplements.custom": "Tilpasset",
+        "supplements.noRules": "Ingen tillegg",
+        "supplements.noRulesHint": "Trykk p\u{00E5} knappen under for \u{00E5} legge til et tillegg",
+        "supplements.editorHint": "Tillegg beregnes basert p\u{00E5} vaktens tid. Endringer her gjelder kun for denne vakten."
     ]
 
     // MARK: - English Strings
@@ -1127,6 +1141,20 @@ enum AuthStrings {
         "sharing.error.updateNotifications": "Could not update notification settings",
         "sharing.error.removeShare": "Could not remove share",
         "sharing.error.removePerson": "Could not remove person",
-        "sharing.error.shareBack": "Could not share back"
+        "sharing.error.shareBack": "Could not share back",
+
+        // Custom Supplements Editor
+        "supplements.editTitle": "Shift Supplements",
+        "supplements.editButton": "Edit supplements",
+        "supplements.addRule": "Add supplement",
+        "supplements.deleteRule": "Delete",
+        "supplements.deleteRuleTitle": "Delete supplement?",
+        "supplements.deleteRuleMessage": "Are you sure you want to remove this supplement?",
+        "supplements.resetToStandard": "Reset to standard",
+        "supplements.tariff": "Tariff",
+        "supplements.custom": "Custom",
+        "supplements.noRules": "No supplements",
+        "supplements.noRulesHint": "Tap the button below to add a supplement",
+        "supplements.editorHint": "Supplements are calculated based on shift times. Changes here apply only to this shift."
     ]
 }

@@ -114,7 +114,7 @@ struct TotalCard: View {
 
             // Main total display (large centered) - fixed height for consistency
             mainAmountDisplay
-                .frame(height: 72) // Match the 72pt font line height
+                .frame(height: 88) // Match the 88pt font line height
 
             // Subtitle row - fixed height for consistent card size
             Group {
@@ -174,9 +174,9 @@ struct TotalCard: View {
                 .frame(width: 200, height: 56)
         } else {
             Text(formatCurrency(mainDisplayValue))
-                .font(.system(size: 72, weight: .bold))
+                .font(.system(size: 88, weight: .bold))
                 .foregroundColor(.tidexBlue)
-                .minimumScaleFactor(0.5)
+                .minimumScaleFactor(0.4)
                 .lineLimit(1)
         }
     }

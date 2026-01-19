@@ -137,6 +137,10 @@
 		11A197C42F1DB4F30030E524 /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A197C22F1DB4F30030E524 /* NotificationService.swift */; };
 		11A197C62F1DCF9A0030E524 /* RecurringShiftEditorSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A197C52F1DCF9A0030E524 /* RecurringShiftEditorSheet.swift */; };
 		11A197C82F1DDC5A0030E524 /* ShimmerModifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A197C72F1DDC5A0030E524 /* ShimmerModifier.swift */; };
+		11A197CB2F1DF01F0030E524 /* SupplementRuleCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A197CA2F1DF01F0030E524 /* SupplementRuleCard.swift */; };
+		11A197CC2F1DF01F0030E524 /* CustomSupplementsEditorSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A197C92F1DF01F0030E524 /* CustomSupplementsEditorSheet.swift */; };
+		11A197CF2F1DF0750030E524 /* NorwegianHolidays.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A197CD2F1DF0750030E524 /* NorwegianHolidays.swift */; };
+		11A197D02F1DF0750030E524 /* PayrollDateAdjuster.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A197CE2F1DF0750030E524 /* PayrollDateAdjuster.swift */; };
 		11A5CD262F101201002BAC91 /* StoredShift.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A5CD252F101201002BAC91 /* StoredShift.swift */; };
 		11A5CD302F101283002BAC91 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 11A5CD2F2F101283002BAC91 /* WidgetKit.framework */; };
 		11A5CD322F101283002BAC91 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 11A5CD312F101283002BAC91 /* SwiftUI.framework */; };
@@ -355,6 +359,10 @@
 		11A197C22F1DB4F30030E524 /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationService.swift; sourceTree = "<group>"; };
 		11A197C52F1DCF9A0030E524 /* RecurringShiftEditorSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecurringShiftEditorSheet.swift; sourceTree = "<group>"; };
 		11A197C72F1DDC5A0030E524 /* ShimmerModifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShimmerModifier.swift; sourceTree = "<group>"; };
+		11A197C92F1DF01F0030E524 /* CustomSupplementsEditorSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomSupplementsEditorSheet.swift; sourceTree = "<group>"; };
+		11A197CA2F1DF01F0030E524 /* SupplementRuleCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupplementRuleCard.swift; sourceTree = "<group>"; };
+		11A197CD2F1DF0750030E524 /* NorwegianHolidays.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NorwegianHolidays.swift; sourceTree = "<group>"; };
+		11A197CE2F1DF0750030E524 /* PayrollDateAdjuster.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PayrollDateAdjuster.swift; sourceTree = "<group>"; };
 		11A5CD252F101201002BAC91 /* StoredShift.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoredShift.swift; sourceTree = "<group>"; };
 		11A5CD2E2F101283002BAC91 /* TidexShiftWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TidexShiftWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		11A5CD2F2F101283002BAC91 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
@@ -846,6 +854,8 @@
 		11A196662F1B00B50030E524 /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				11A197C92F1DF01F0030E524 /* CustomSupplementsEditorSheet.swift */,
+				11A197CA2F1DF01F0030E524 /* SupplementRuleCard.swift */,
 				11A197C52F1DCF9A0030E524 /* RecurringShiftEditorSheet.swift */,
 				11A196FB2F1B14FA0030E524 /* DayShiftsSheet.swift */,
 				11A196FC2F1B14FA0030E524 /* NextShiftCountdownCard.swift */,
@@ -1049,6 +1059,8 @@
 		11AE8D282F17D02E005AB062 /* Utilities */ = {
 			isa = PBXGroup;
 			children = (
+				11A197CD2F1DF0750030E524 /* NorwegianHolidays.swift */,
+				11A197CE2F1DF0750030E524 /* PayrollDateAdjuster.swift */,
 				11AE8D262F17D02E005AB062 /* CountdownFormatter.swift */,
 				11AE8D272F17D02E005AB062 /* CountdownManager.swift */,
 			);
@@ -1330,6 +1342,8 @@
 				11AE8CEB2F16FD82005AB062 /* DashboardViewModel.swift in Sources */,
 				11F42FA02F1A6A38002B1FBE /* OnboardingRateSlider.swift in Sources */,
 				119D1CEA2F16E46300EC7072 /* OTPInputField.swift in Sources */,
+				11A197CF2F1DF0750030E524 /* NorwegianHolidays.swift in Sources */,
+				11A197D02F1DF0750030E524 /* PayrollDateAdjuster.swift in Sources */,
 				119D1CEB2F16E46300EC7072 /* TidexTextField.swift in Sources */,
 				119D1CEC2F16E46300EC7072 /* FeatureFlags.swift in Sources */,
 				119D1CED2F16E46300EC7072 /* LocalizationManager.swift in Sources */,
@@ -1374,6 +1388,8 @@
 				11A197172F1D7B400030E524 /* SharingViewModel.swift in Sources */,
 				11A197182F1D7B400030E524 /* SharingView.swift in Sources */,
 				11A197C62F1DCF9A0030E524 /* RecurringShiftEditorSheet.swift in Sources */,
+				11A197CB2F1DF01F0030E524 /* SupplementRuleCard.swift in Sources */,
+				11A197CC2F1DF01F0030E524 /* CustomSupplementsEditorSheet.swift in Sources */,
 				11A197192F1D7B400030E524 /* SharerListView.swift in Sources */,
 				11A1971A2F1D7B400030E524 /* SharedShiftsListView.swift in Sources */,
 				11A1971B2F1D7B400030E524 /* SharedShiftRow.swift in Sources */,

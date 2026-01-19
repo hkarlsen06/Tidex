@@ -90,17 +90,22 @@ struct UserMenuButton: View {
 
     // MARK: - Computed Properties
 
-    /// Extract first name only from display name
-    private var firstName: String {
-        displayName.components(separatedBy: " ").first ?? displayName
+    /// Extract first name only from display name, truncated if too long
+    private var truncatedDisplayName: String {
+        let name = displayName.components(separatedBy: " ").first ?? displayName
+        // Limit to 12 characters to prevent overlapping the logo
+        if name.count > 12 {
+            return String(name.prefix(11)) + "…"
+        }
+        return name
     }
 
     // MARK: - Menu Button Label
 
     private var menuButton: some View {
         HStack(spacing: 8) {
-            // First name only (no truncation needed for first name)
-            Text(firstName)
+            // First name only, truncated to prevent overlap with logo
+            Text(truncatedDisplayName)
                 .font(.system(size: 14, weight: .medium))
                 .foregroundColor(.tidexTextPrimary)
                 .lineLimit(1)
@@ -216,7 +221,7 @@ struct UserMenuButton: View {
                 avatarUrl: nil
             )
 
-            // Shows "jane@example.com" (no space = full string)
+            // Shows "jane@exampl…" (truncated to 12 chars)
             UserMenuButton(
                 displayName: "jane@example.com",
                 avatarUrl: "https://example.com/avatar.jpg"
@@ -225,6 +230,12 @@ struct UserMenuButton: View {
             // Shows "Hjalmar" (first name only from full name)
             UserMenuButton(
                 displayName: "Hjalmar Samuelsson-Kristensen",
+                avatarUrl: nil
+            )
+
+            // Shows "Christopher…" (long first name truncated)
+            UserMenuButton(
+                displayName: "Christopherson McAllister",
                 avatarUrl: nil
             )
         }

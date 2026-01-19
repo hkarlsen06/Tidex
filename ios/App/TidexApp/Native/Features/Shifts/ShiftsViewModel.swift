@@ -737,7 +737,7 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
                     shiftDate: newDate,
                     startTime: editResult.startTime,
                     endTime: editResult.endTime,
-                    customSupplements: nil // Virtual shifts don't have custom supplements
+                    customSupplements: editResult.customSupplements
                 )
                 logger.info("✅ Created new shift on \(editResult.shiftDate)")
 
@@ -747,7 +747,8 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
                     id: editResult.shiftId,
                     shiftDate: newDate,
                     startTime: editResult.startTime,
-                    endTime: editResult.endTime
+                    endTime: editResult.endTime,
+                    customSupplements: editResult.customSupplements
                 )
                 logger.info("✅ Updated shift \(editResult.shiftId)")
             }
@@ -877,6 +878,17 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
     }
 
     // MARK: - Public Methods
+
+    /// Get tariff supplement rules for a specific shift date
+    /// Used by CustomSupplementsEditorSheet to show applicable tariff rules
+    /// - Parameter shiftDate: ISO date string (YYYY-MM-DD)
+    /// - Returns: Array of supplement rules from the applicable snapshot
+    func getTariffRules(for shiftDate: String) -> [SupplementRule] {
+        guard let snapshot = SnapshotsService.snapshotForDate(shiftDate, from: snapshots) else {
+            return []
+        }
+        return snapshot.effectiveSupplements
+    }
 
     /// Load all shifts data for current month (initial load)
     /// Reads from local repositories only - sync is triggered by AppCoordinator

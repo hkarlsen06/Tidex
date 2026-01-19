@@ -983,13 +983,10 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
 
     // MARK: - Helper Methods
 
+    /// Calculate the adjusted payroll date for a given month
+    /// Adjusts backwards if the date falls on a weekend, Monday, or Norwegian public holiday
     private func calculatePayrollDate(year: Int, month: Int, day: Int) -> Date {
-        var components = DateComponents()
-        components.year = year
-        components.month = month
-        components.day = day
-        components.timeZone = Date.localTimeZone
-        return Calendar(identifier: .gregorian).date(from: components) ?? Date()
+        return PayrollDateAdjuster.adjustPayrollDate(payrollDay: day, month: month, year: year)
     }
 
     private func monthName(year: Int, month: Int) -> String {
