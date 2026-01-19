@@ -17,9 +17,13 @@ struct SharerListView: View {
     @Environment(\.localization) private var localization
 
     /// Sharers sorted by shift proximity (matches Next.js SharersList.tsx sorting)
+    /// Sorting is deferred until previews finish loading to prevent layout jumps
     private var sortedSharers: [SharedUser] {
-        // If no previews loaded yet, return original order
-        guard !shiftPreviews.isEmpty else { return sharers }
+        // While previews are loading, maintain stable alphabetical order
+        // This prevents jarring re-sorts as individual previews arrive
+        guard !isLoadingPreviews && !shiftPreviews.isEmpty else {
+            return sharers.sorted { $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending }
+        }
 
         return sharers.sorted { a, b in
             let previewA = shiftPreviews[a.id]
@@ -114,7 +118,6 @@ struct SharerListView: View {
                     sharer: sharer,
                     preview: shiftPreviews[sharer.id],
                     isSelected: selectedSharer?.id == sharer.id,
-                    isLoadingPreview: isLoadingPreviews && shiftPreviews[sharer.id] == nil,
                     onTap: {
                         onSelectSharer(sharer)
                     }
@@ -122,6 +125,9 @@ struct SharerListView: View {
             }
         }
         .padding(.horizontal, 16)
+        // Animate the sort and card reveal together
+        // Uses spring for natural movement when rows reorder and cards expand
+        .animation(.spring(duration: 0.4, bounce: 0.15), value: isLoadingPreviews)
     }
 }
 
