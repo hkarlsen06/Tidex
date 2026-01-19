@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// Sharing tab view - displays shifts from users who share with the current user
 /// Fetches shared shifts from the Next.js API for proper payroll computation
@@ -17,6 +18,10 @@ struct SharingView: View {
 
     /// User ID to highlight in the manage sheet (from deep link)
     @State private var highlightUserId: String?
+
+    /// Timer for updating relative sync time
+    @State private var currentTime = Date()
+    private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     var body: some View {
         NavigationStack {
@@ -117,6 +122,13 @@ struct SharingView: View {
                     }
                 }
 
+                // Sync time in trailing position when viewing a sharer
+                ToolbarItem(placement: .topBarTrailing) {
+                    if viewModel.selectedSharer != nil {
+                        syncTimeView
+                    }
+                }
+
                 ToolbarItem(placement: .topBarTrailing) {
                     // Only show when not viewing a sharer
                     if viewModel.selectedSharer == nil {
@@ -147,6 +159,9 @@ struct SharingView: View {
             withAnimation(.easeInOut(duration: 0.2)) {
                 viewModel.deselectSharer()
             }
+        }
+        .onReceive(timer) { _ in
+            currentTime = Date()
         }
         .sheet(isPresented: $showManageSheet, onDismiss: {
             // Clear highlight when sheet is dismissed
@@ -293,14 +308,18 @@ struct SharingView: View {
                 SharedShiftsListView(
                     sharer: sharer,
                     shifts: viewModel.sharedShifts,
-                    totalHours: viewModel.totalHours,
-                    shiftCount: viewModel.shiftCount,
                     year: viewModel.displayYear,
                     month: viewModel.displayMonth,
-                    isLoading: viewModel.isLoadingShifts,
-                    lastCacheTime: viewModel.lastCacheTime
+                    isLoading: viewModel.isLoadingShifts
                 )
             }
+            .background(
+                EdgeSwipeBackGesture {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        viewModel.deselectSharer()
+                    }
+                }
+            )
         }
     }
 
@@ -317,6 +336,38 @@ struct SharingView: View {
             )
     }
 
+    /// Sync time indicator shown in the toolbar
+    @ViewBuilder
+    private var syncTimeView: some View {
+        if let cacheTime = viewModel.lastCacheTime {
+            Text(formatTimeSinceSync(from: cacheTime, to: currentTime))
+                .font(.system(size: 15))
+                .foregroundColor(.tidexTextMuted)
+        } else if viewModel.isLoadingShifts {
+            ProgressView()
+                .scaleEffect(0.7)
+        }
+    }
+
+    /// Format time since sync in a compact way
+    /// Shows: "Nå"/"Now" (< 5s), "Xs" (< 60s), "Xm" (< 60m), "Xt"/"Xh" (hours)
+    private func formatTimeSinceSync(from startDate: Date, to endDate: Date) -> String {
+        let seconds = Int(endDate.timeIntervalSince(startDate))
+
+        if seconds < 5 {
+            return localization.currentLocale == .norwegian ? "Nå" : "Now"
+        } else if seconds < 60 {
+            return "\(seconds)s"
+        } else if seconds < 3600 {
+            let minutes = seconds / 60
+            return "\(minutes)m"
+        } else {
+            let hours = seconds / 3600
+            let hoursLabel = localization.currentLocale == .norwegian ? "t" : "h"
+            return "\(hours)\(hoursLabel)"
+        }
+    }
+
     // MARK: - Transition Phase
 
     private var transitionPhase: MonthTransitionPhase {
@@ -325,6 +376,108 @@ struct SharingView: View {
             month: viewModel.displayMonth,
             direction: viewModel.navigationDirection
         )
+    }
+}
+
+// MARK: - Edge Swipe Back Gesture
+
+/// A UIViewRepresentable that adds a screen edge pan gesture for back navigation
+/// Uses UIScreenEdgePanGestureRecognizer to detect swipes from the left edge
+private struct EdgeSwipeBackGesture: UIViewRepresentable {
+    let onSwipeBack: () -> Void
+
+    func makeUIView(context: Context) -> UIView {
+        let view = EdgeSwipeView()
+        view.backgroundColor = .clear
+
+        let edgeGesture = UIScreenEdgePanGestureRecognizer(
+            target: context.coordinator,
+            action: #selector(Coordinator.handleEdgeSwipe(_:))
+        )
+        edgeGesture.edges = .left
+        edgeGesture.delaysTouchesBegan = false
+        edgeGesture.delaysTouchesEnded = false
+        view.addGestureRecognizer(edgeGesture)
+
+        context.coordinator.view = view
+
+        return view
+    }
+
+    func updateUIView(_: UIView, context: Context) {
+        context.coordinator.onSwipeBack = onSwipeBack
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onSwipeBack: onSwipeBack)
+    }
+
+    class Coordinator: NSObject {
+        var onSwipeBack: () -> Void
+        weak var view: UIView?
+        private let haptic = UIImpactFeedbackGenerator(style: .medium)
+        private var hasTriggeredAction = false
+
+        init(onSwipeBack: @escaping () -> Void) {
+            self.onSwipeBack = onSwipeBack
+            super.init()
+            haptic.prepare()
+        }
+
+        @objc func handleEdgeSwipe(_ gesture: UIScreenEdgePanGestureRecognizer) {
+            guard let view = view else { return }
+
+            let translation = gesture.translation(in: view)
+            let threshold: CGFloat = 80
+
+            switch gesture.state {
+            case .changed:
+                // Trigger haptic when threshold is reached
+                if translation.x >= threshold && !hasTriggeredAction {
+                    haptic.impactOccurred()
+                    hasTriggeredAction = true
+                }
+            case .ended, .cancelled:
+                if hasTriggeredAction || translation.x >= threshold {
+                    onSwipeBack()
+                }
+                hasTriggeredAction = false
+                haptic.prepare()
+            default:
+                break
+            }
+        }
+    }
+}
+
+/// A UIView that moves its gesture recognizers to the parent scroll view
+private class EdgeSwipeView: UIView {
+    private var movedGestures = false
+
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+
+        guard !movedGestures, window != nil else { return }
+        movedGestures = true
+
+        // Find parent scroll view and add gesture there for better recognition
+        if let scrollView = findScrollView() {
+            gestureRecognizers?.forEach { gesture in
+                removeGestureRecognizer(gesture)
+                scrollView.addGestureRecognizer(gesture)
+            }
+        }
+    }
+
+    private func findScrollView() -> UIScrollView? {
+        var view: UIView? = superview
+        while let current = view {
+            if let scrollView = current as? UIScrollView {
+                return scrollView
+            }
+            view = current.superview
+        }
+        return nil
     }
 }
 
