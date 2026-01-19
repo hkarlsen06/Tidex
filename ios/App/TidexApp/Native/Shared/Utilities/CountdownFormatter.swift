@@ -12,32 +12,38 @@ struct CountdownFormatter {
     ///   - startTime: Start time (HH:mm)
     ///   - endTime: End time (HH:mm)
     ///   - isNorwegian: Whether to use Norwegian locale
-    /// - Returns: Formatted countdown text and whether shift is active
+    /// - Returns: Formatted countdown text, whether shift is active, and progress (0-100) if active
     static func formatShiftCountdown(
         shiftDate: String,
         startTime: String,
         endTime: String,
         isNorwegian: Bool
-    ) -> (text: String, isActive: Bool) {
+    ) -> (text: String, isActive: Bool, progress: Double) {
         let now = Date()
 
         guard let shiftStart = parseShiftDateTime(date: shiftDate, time: startTime),
               let shiftEnd = parseShiftDateTime(date: shiftDate, time: endTime, crossesMidnight: endTime <= startTime) else {
-            return ("---", false)
+            return ("---", false, 0)
         }
 
         // Check if shift is active
         if now >= shiftStart && now < shiftEnd {
-            return (isNorwegian ? "Pågår nå" : "In progress", true)
+            // Calculate progress through the shift (0-100)
+            let totalDuration = shiftEnd.timeIntervalSince(shiftStart)
+            let elapsed = now.timeIntervalSince(shiftStart)
+            let progress = totalDuration > 0 ? min(100, max(0, (elapsed / totalDuration) * 100)) : 0
+            return (isNorwegian ? "Pågår nå" : "In progress", true, progress)
         }
 
         // Check if shift is in the past
         if now >= shiftEnd {
-            return formatPastTime(from: shiftEnd, isNorwegian: isNorwegian)
+            let (text, _) = formatPastTime(from: shiftEnd, isNorwegian: isNorwegian)
+            return (text, false, 0)
         }
 
         // Shift is in the future
-        return formatFutureTime(to: shiftStart, isNorwegian: isNorwegian)
+        let (text, _) = formatFutureTime(to: shiftStart, isNorwegian: isNorwegian)
+        return (text, false, 0)
     }
 
     // MARK: - Payroll Countdown

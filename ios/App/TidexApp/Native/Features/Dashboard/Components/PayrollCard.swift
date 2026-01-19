@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Card displaying previous month's earnings and payroll information
-/// Design matches OfflinePayrollCard from the Capacitor app
+/// Design matches NextPayrollCard from the Next.js app
 struct PayrollCard: View {
     let payrollDate: Date
     let label: String
@@ -9,9 +9,14 @@ struct PayrollCard: View {
     let net: Double?
     let tax: Double?
     let taxEnabled: Bool
+    /// Progress through the month until payroll (0-100), shows a subtle progress bar when provided
+    var progress: Double?
 
     @Environment(\.localization) private var localization
     @Environment(\.userCurrency) private var currency
+
+    /// Animated progress value for smooth entrance animation
+    @State private var animatedProgress: Double = 0
 
     // MARK: - Computed Properties
 
@@ -28,6 +33,12 @@ struct PayrollCard: View {
     }
 
     // MARK: - Body
+
+    /// Whether to show the progress bar (valid progress between 1-100)
+    private var hasProgress: Bool {
+        guard let progress = progress else { return false }
+        return progress >= 1 && progress <= 100
+    }
 
     var body: some View {
         HStack(alignment: showBreakdown ? .top : .center, spacing: 16) {
@@ -98,10 +109,34 @@ struct PayrollCard: View {
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 20)
-        .background(
-            RoundedRectangle(cornerRadius: 24)
-                .fill(Color.tidexSurfacePrimary)
-        )
+        .background(Color.tidexSurfacePrimary)
+        .overlay(alignment: .leading) {
+            // Progress bar overlay - fills from left based on progress
+            // Uses Rectangle instead of RoundedRectangle so small widths don't overflow
+            // The clipShape on the parent handles the rounded corners
+            if hasProgress {
+                GeometryReader { geometry in
+                    Rectangle()
+                        .fill(Color.tidexBlue.opacity(0.1))
+                        .frame(width: geometry.size.width * (animatedProgress / 100))
+                }
+            }
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 24))
+        .onChange(of: progress) { _, newValue in
+            // Animate to new progress value
+            withAnimation(.linear(duration: 1.0)) {
+                animatedProgress = newValue ?? 0
+            }
+        }
+        .onAppear {
+            // Animate from 0 to current progress on appear (matches CSS animation)
+            if let progress = progress, progress >= 1, progress <= 100 {
+                withAnimation(.linear(duration: 1.0)) {
+                    animatedProgress = progress
+                }
+            }
+        }
     }
 
     // MARK: - Formatting
@@ -147,17 +182,18 @@ struct PayrollCard: View {
 
 #Preview {
     VStack(spacing: 12) {
-        // With tax
+        // With tax and progress bar
         PayrollCard(
             payrollDate: Date(),
             label: "Neste utbetaling",
             gross: 15800,
             net: 12500,
             tax: 3300,
-            taxEnabled: true
+            taxEnabled: true,
+            progress: 65
         )
 
-        // Without tax
+        // Without tax, no progress
         PayrollCard(
             payrollDate: Date(),
             label: "Forrige utbetaling",

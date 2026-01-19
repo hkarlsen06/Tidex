@@ -3,15 +3,20 @@ import SwiftUI
 /// Card displaying a featured shift
 /// - For current month: shows next upcoming shift with countdown
 /// - For other months: shows best shift (highest earnings)
-/// Design matches OfflineFeaturedShiftCard from the Capacitor app
+/// Design matches ShiftCard from the Next.js app
 struct FeaturedShiftCard: View {
     let shift: ShiftWithComputations
     let isToday: Bool
     let isBestShift: Bool  // true = showing best shift, false = showing next shift
     let countdownText: String?  // Countdown text shown below the card
+    /// Progress through the shift (0-100), shows a subtle progress bar when provided (for active shifts)
+    var progress: Double?
 
     @Environment(\.localization) private var localization
     @Environment(\.userCurrency) private var currency
+
+    /// Animated progress value for smooth entrance animation
+    @State private var animatedProgress: Double = 0
 
     // MARK: - Computed Properties
 
@@ -57,6 +62,12 @@ struct FeaturedShiftCard: View {
             return localization.string("dashboard.bestShift")
         }
         return countdownText
+    }
+
+    /// Whether to show the progress bar (valid progress between 0-100)
+    private var hasProgress: Bool {
+        guard let progress = progress else { return false }
+        return progress >= 0 && progress <= 100
     }
 
     // MARK: - Body
@@ -128,10 +139,34 @@ struct FeaturedShiftCard: View {
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 20)
-            .background(
-                RoundedRectangle(cornerRadius: 24)
-                    .fill(Color.tidexSurfacePrimary)
-            )
+            .background(Color.tidexSurfacePrimary)
+            .overlay(alignment: .leading) {
+                // Progress bar overlay - fills from left based on progress (for active shifts)
+                // Uses Rectangle instead of RoundedRectangle so small widths don't overflow
+                // The clipShape on the parent handles the rounded corners
+                if hasProgress {
+                    GeometryReader { geometry in
+                        Rectangle()
+                            .fill(Color.tidexBlue.opacity(0.1))
+                            .frame(width: geometry.size.width * (animatedProgress / 100))
+                    }
+                }
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 24))
+            .onChange(of: progress) { _, newValue in
+                // Animate to new progress value
+                withAnimation(.linear(duration: 1.0)) {
+                    animatedProgress = newValue ?? 0
+                }
+            }
+            .onAppear {
+                // Animate from 0 to current progress on appear (matches CSS animation)
+                if let progress = progress, progress >= 0, progress <= 100 {
+                    withAnimation(.linear(duration: 1.0)) {
+                        animatedProgress = progress
+                    }
+                }
+            }
 
             // Footer text below the card (countdown or "Best shift")
             // Uses fixed height to prevent layout shift during transitions

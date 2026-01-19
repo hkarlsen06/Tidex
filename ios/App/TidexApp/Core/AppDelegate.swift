@@ -61,6 +61,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // Uses cached shift data from App Group storage (synced when app is used)
         scheduleNextShiftLiveActivity()
 
+        // Check immediately if there's an ongoing shift that needs a Live Activity
+        // This handles the case where app launches during a shift
+        checkAndStartLiveActivityIfNeeded()
+
         return true
     }
 
@@ -145,15 +149,27 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 
     private func checkAndStartLiveActivity(completion: @escaping (Bool) -> Void) {
+        checkAndStartLiveActivityIfNeeded()
+        completion(true)
+    }
+
+    /// Check if there's an ongoing shift and start a Live Activity if needed.
+    /// This is called from:
+    /// - Background task handler (when the scheduled task fires)
+    /// - App foreground (when user opens the app)
+    /// - App launch (in didFinishLaunchingWithOptions)
+    ///
+    /// This ensures the Live Activity starts reliably, not just depending on BGTask timing.
+    func checkAndStartLiveActivityIfNeeded() {
         // Check if Live Activities are enabled
         guard ActivityAuthorizationInfo().areActivitiesEnabled else {
-            completion(true)
+            print("[LiveActivity] Activities not enabled by user")
             return
         }
 
         // Check if there's already an active activity
         guard Activity<ShiftActivityAttributes>.activities.isEmpty else {
-            completion(true)
+            print("[LiveActivity] Activity already running")
             return
         }
 
@@ -161,7 +177,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         guard let userDefaults = sharedUserDefaults(),
               let shiftsJson = userDefaults.string(forKey: "upcoming_shifts"),
               let shiftsData = shiftsJson.data(using: .utf8) else {
-            completion(true)
+            print("[LiveActivity] No cached shifts available")
             return
         }
 
@@ -169,18 +185,26 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         do {
             let shifts = try JSONDecoder().decode([StoredShift].self, from: shiftsData)
             let now = Date()
+            let formatter = shiftDateTimeFormatter()
+            print("[LiveActivity] Checking \(shifts.count) shifts at \(formatter.string(from: now))")
 
+            var foundOngoing = false
             for shift in shifts {
-                if isShiftOngoing(shift, at: now) {
+                let isOngoing = isShiftOngoing(shift, at: now)
+                print("[LiveActivity] Shift \(shift.shiftId): \(shift.shiftDate) \(shift.startTime)-\(shift.endTime), ongoing=\(isOngoing)")
+                if isOngoing {
                     // Start Live Activity for this shift
+                    print("[LiveActivity] Found ongoing shift \(shift.shiftId), starting activity")
                     startLiveActivityForShift(shift)
+                    foundOngoing = true
                     break
                 }
             }
-            completion(true)
+            if !foundOngoing {
+                print("[LiveActivity] No ongoing shift found")
+            }
         } catch {
-            print("[BGTask] Failed to parse shifts: \(error)")
-            completion(false)
+            print("[LiveActivity] Failed to parse shifts: \(error)")
         }
     }
 
@@ -232,6 +256,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             supplementRatePerHour: shift.supplementRatePerHour,
             totalGrossEstimate: shift.totalGrossEstimate,
             locale: shift.locale,
+            currencySymbol: shift.currencySymbol ?? "kr",
             startDate: startDate,
             endDate: endDate
         )
@@ -244,14 +269,16 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         )
 
         do {
-            _ = try Activity.request(
+            let activity = try Activity.request(
                 attributes: attributes,
                 content: .init(state: initialState, staleDate: nil),
                 pushType: nil
             )
-            print("[BGTask] Started Live Activity for shift \(shift.shiftId)")
+            print("[LiveActivity] Started activity \(activity.id) for shift \(shift.shiftId)")
+            print("[LiveActivity] Activity state: \(activity.activityState)")
+            print("[LiveActivity] Total active activities: \(Activity<ShiftActivityAttributes>.activities.count)")
         } catch {
-            print("[BGTask] Failed to start Live Activity: \(error)")
+            print("[LiveActivity] Failed to start: \(error)")
         }
     }
 
@@ -354,13 +381,16 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             ]
 
             // Add device metadata
-            let device = await UIDevice.current
-            payload["deviceModel"] = await device.model
+            let (deviceModel, deviceId) = await MainActor.run {
+                let device = UIDevice.current
+                return (device.model, device.identifierForVendor?.uuidString)
+            }
+            payload["deviceModel"] = deviceModel
             if let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String {
                 payload["appVersion"] = appVersion
             }
             // Use identifierForVendor as device ID for token rotation detection
-            if let deviceId = await device.identifierForVendor?.uuidString {
+            if let deviceId = deviceId {
                 payload["deviceId"] = deviceId
             }
 
