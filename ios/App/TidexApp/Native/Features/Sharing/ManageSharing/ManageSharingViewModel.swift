@@ -86,6 +86,10 @@ final class ManageSharingViewModel: ObservableObject {
             friends = result.friends
             capacity = result.capacity
             logger.info("Loaded \(result.friends.count) friends")
+        } catch let error as SharingServiceError {
+            logger.error("Failed to load friends (SharingServiceError): \(error)")
+            // Use specific error message from service if available
+            errorMessage = error.localizedDescription
         } catch {
             logger.error("Failed to load friends: \(error.localizedDescription)")
             errorMessage = localization.string("sharing.error.loadFriends")

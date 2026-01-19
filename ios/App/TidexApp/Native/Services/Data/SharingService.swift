@@ -1,5 +1,6 @@
 import Foundation
 import Supabase
+import Auth
 import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "SharingService")
@@ -418,9 +419,18 @@ final class SharingService: ObservableObject {
     /// Used by the sharing management modal
     func fetchAllFriends() async throws -> (friends: [Friend], capacity: ShareCapacity) {
         do {
-            let session = try await supabase.auth.session
-            let accessToken = session.accessToken
+            logger.info("Starting fetchAllFriends...")
 
+            let session: Session
+            do {
+                session = try await supabase.auth.session
+                logger.info("Got session, token expires at: \(session.expiresAt ?? 0)")
+            } catch {
+                logger.error("Failed to get session: \(error.localizedDescription)")
+                throw SharingServiceError.notAuthenticated
+            }
+
+            let accessToken = session.accessToken
             let url = APIConfiguration.webAppBaseURL.appendingPathComponent("/api/sharing/friends")
 
             var request = URLRequest(url: url)
@@ -433,16 +443,21 @@ final class SharingService: ObservableObject {
             let (data, response) = try await urlSession.data(for: request)
 
             guard let httpResponse = response as? HTTPURLResponse else {
+                logger.error("Response was not HTTPURLResponse")
                 throw SharingServiceError.networkError(underlying: URLError(.badServerResponse))
             }
+
+            logger.info("HTTP status: \(httpResponse.statusCode), data size: \(data.count) bytes")
 
             switch httpResponse.statusCode {
             case 200:
                 break
             case 401:
+                logger.error("Got 401 Unauthorized")
                 throw SharingServiceError.notAuthenticated
             default:
                 let message = String(data: data, encoding: .utf8)
+                logger.error("HTTP error \(httpResponse.statusCode): \(message ?? "no message")")
                 throw SharingServiceError.httpError(statusCode: httpResponse.statusCode, message: message)
             }
 
@@ -451,14 +466,35 @@ final class SharingService: ObservableObject {
                 let apiResponse = try decoder.decode(FriendsAPIResponse.self, from: data)
                 logger.info("Loaded \(apiResponse.friends.count) friends (capacity: \(apiResponse.capacity.currentCount)/\(apiResponse.capacity.limit))")
                 return (apiResponse.friends, apiResponse.capacity)
+            } catch let decodingError as DecodingError {
+                // Log detailed decoding error info
+                switch decodingError {
+                case .keyNotFound(let key, let context):
+                    logger.error("Decoding error - key not found: '\(key.stringValue)' at path: \(context.codingPath.map { $0.stringValue }.joined(separator: "."))")
+                case .typeMismatch(let type, let context):
+                    logger.error("Decoding error - type mismatch: expected \(type) at path: \(context.codingPath.map { $0.stringValue }.joined(separator: "."))")
+                case .valueNotFound(let type, let context):
+                    logger.error("Decoding error - value not found: \(type) at path: \(context.codingPath.map { $0.stringValue }.joined(separator: "."))")
+                case .dataCorrupted(let context):
+                    logger.error("Decoding error - data corrupted at path: \(context.codingPath.map { $0.stringValue }.joined(separator: "."))")
+                @unknown default:
+                    logger.error("Decoding error - unknown: \(decodingError)")
+                }
+                // Also log raw response for debugging
+                if let rawString = String(data: data, encoding: .utf8) {
+                    logger.error("Raw response (first 500 chars): \(String(rawString.prefix(500)))")
+                }
+                throw SharingServiceError.decodingError(underlying: decodingError)
             } catch {
                 logger.error("Failed to decode friends response: \(error)")
                 throw SharingServiceError.decodingError(underlying: error)
             }
 
         } catch let error as SharingServiceError {
+            logger.error("SharingServiceError in fetchAllFriends: \(error.localizedDescription)")
             throw error
         } catch {
+            logger.error("Unexpected error in fetchAllFriends: \(error.localizedDescription)")
             throw SharingServiceError.networkError(underlying: error)
         }
     }
