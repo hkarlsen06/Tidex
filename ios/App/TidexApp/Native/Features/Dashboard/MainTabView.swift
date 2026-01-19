@@ -103,6 +103,35 @@ struct MainTabView: View {
             }
             .tint(.tidexBlue)
         }
+        .onChange(of: coordinator.pendingDeepLink) { _, deepLink in
+            handlePendingDeepLink(deepLink)
+        }
+        .onAppear {
+            // Handle any pending deep link on initial appearance
+            handlePendingDeepLink(coordinator.pendingDeepLink)
+        }
+    }
+
+    // MARK: - Deep Link Handling
+
+    /// Handle pending deep link from AppCoordinator
+    /// Switches to the appropriate tab based on the deep link type
+    private func handlePendingDeepLink(_ deepLink: AppCoordinator.DeepLink?) {
+        guard let deepLink = deepLink else { return }
+
+        switch deepLink {
+        case .sharing, .sharingManage:
+            // Switch to sharing tab - SharingView will handle the specific navigation
+            if selectedTab != .sharing {
+                selectedTab = .sharing
+            }
+        case .shifts:
+            // Switch to shifts tab - ShiftsView will handle the specific navigation
+            if selectedTab != .shifts {
+                selectedTab = .shifts
+            }
+        }
+        // Note: We don't clear the deep link here - the destination view will consume and clear it
     }
 }
 

@@ -15,6 +15,9 @@ struct SharingView: View {
     /// State for showing the manage sharing sheet
     @State private var showManageSheet = false
 
+    /// User ID to highlight in the manage sheet (from deep link)
+    @State private var highlightUserId: String?
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -134,13 +137,66 @@ struct SharingView: View {
                 viewModel.deselectSharer()
             }
         }
-        .sheet(isPresented: $showManageSheet) {
-            ManageSharingSheet(onVisibilityChange: {
-                // Refresh sharers list when visibility changes (block/unblock)
-                Task {
-                    await viewModel.loadSharers(forceRefreshPreviews: true)
+        .sheet(isPresented: $showManageSheet, onDismiss: {
+            // Clear highlight when sheet is dismissed
+            highlightUserId = nil
+        }) {
+            ManageSharingSheet(
+                highlightUserId: highlightUserId,
+                onVisibilityChange: {
+                    // Refresh sharers list when visibility changes (block/unblock)
+                    Task {
+                        await viewModel.loadSharers(forceRefreshPreviews: true)
+                    }
                 }
-            })
+            )
+        }
+        .onChange(of: coordinator.pendingDeepLink) { _, deepLink in
+            handlePendingDeepLink(deepLink)
+        }
+        .onAppear {
+            // Handle any pending deep link on initial appearance
+            handlePendingDeepLink(coordinator.pendingDeepLink)
+        }
+    }
+
+    // MARK: - Deep Link Handling
+
+    /// Handle pending deep link from AppCoordinator
+    /// Navigates to a specific sharer or opens the manage modal
+    private func handlePendingDeepLink(_ deepLink: AppCoordinator.DeepLink?) {
+        guard let deepLink = deepLink else { return }
+
+        switch deepLink {
+        case .sharing(let sharerId):
+            if let sharerId = sharerId {
+                // Wait for sharers to load, then select the sharer
+                Task {
+                    // If sharers aren't loaded yet, wait for them
+                    if viewModel.sharers.isEmpty && viewModel.isLoadingSharers {
+                        // Wait a bit for loading to complete
+                        try? await Task.sleep(nanoseconds: 500_000_000)
+                    }
+
+                    // Find and select the sharer
+                    if let sharer = viewModel.sharers.first(where: { $0.id == sharerId }) {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            viewModel.selectSharer(sharer)
+                        }
+                    }
+                }
+            }
+            coordinator.clearPendingDeepLink()
+
+        case .sharingManage(let highlightId):
+            // Open manage modal with optional highlight
+            highlightUserId = highlightId
+            showManageSheet = true
+            coordinator.clearPendingDeepLink()
+
+        case .shifts:
+            // Not handled here - ShiftsView will handle this
+            break
         }
     }
 

@@ -522,12 +522,26 @@ enum AuthStrings {
         "sharing.iShareWith": "Jeg deler med",
         "sharing.sharesWithMe": "Deler med meg",
         "sharing.noFriends": "Ingen venner enda",
+        "sharing.noFriendsDescription": "Legg til venner for å dele vaktene dine",
         "sharing.addFriend": "Legg til venn",
         "sharing.emailOrPhone": "E-post eller telefonnummer",
         "sharing.showEarnings": "Vis inntjening",
         "sharing.shareBack": "Del tilbake",
         "sharing.remove": "Fjern",
-        "sharing.add": "Legg til"
+        "sharing.add": "Legg til",
+        "sharing.loadingFriends": "Laster venner...",
+        "sharing.stopSharingWith": "Slutte å dele med %@?",
+        "sharing.removeFromList": "Fjerne %@ fra listen?",
+
+        // Sharing error messages
+        "sharing.error.loadFriends": "Kunne ikke laste venner",
+        "sharing.error.addFriend": "Kunne ikke legge til venn",
+        "sharing.error.addFriendEmpty": "Vennligst oppgi en e-post eller telefonnummer",
+        "sharing.error.updateSettings": "Kunne ikke oppdatere innstillinger",
+        "sharing.error.updateNotifications": "Kunne ikke oppdatere varslingsinnstillinger",
+        "sharing.error.removeShare": "Kunne ikke fjerne deling",
+        "sharing.error.removePerson": "Kunne ikke fjerne personen",
+        "sharing.error.shareBack": "Kunne ikke dele tilbake"
     ]
 
     // MARK: - English Strings
@@ -1040,11 +1054,25 @@ enum AuthStrings {
         "sharing.iShareWith": "I share with",
         "sharing.sharesWithMe": "Shares with me",
         "sharing.noFriends": "No friends yet",
+        "sharing.noFriendsDescription": "Add friends to share your shifts",
         "sharing.addFriend": "Add friend",
         "sharing.emailOrPhone": "Email or phone number",
         "sharing.showEarnings": "Show earnings",
         "sharing.shareBack": "Share back",
         "sharing.remove": "Remove",
-        "sharing.add": "Add"
+        "sharing.add": "Add",
+        "sharing.loadingFriends": "Loading friends...",
+        "sharing.stopSharingWith": "Stop sharing with %@?",
+        "sharing.removeFromList": "Remove %@ from list?",
+
+        // Sharing error messages
+        "sharing.error.loadFriends": "Could not load friends",
+        "sharing.error.addFriend": "Could not add friend",
+        "sharing.error.addFriendEmpty": "Please enter an email or phone number",
+        "sharing.error.updateSettings": "Could not update settings",
+        "sharing.error.updateNotifications": "Could not update notification settings",
+        "sharing.error.removeShare": "Could not remove share",
+        "sharing.error.removePerson": "Could not remove person",
+        "sharing.error.shareBack": "Could not share back"
     ]
 }

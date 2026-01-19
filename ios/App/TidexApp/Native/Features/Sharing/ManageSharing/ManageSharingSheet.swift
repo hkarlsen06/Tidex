@@ -10,12 +10,18 @@ struct ManageSharingSheet: View {
 
     @StateObject private var viewModel = ManageSharingViewModel()
 
+    /// User ID to highlight and scroll to (from deep link)
+    var highlightUserId: String?
+
     /// Callback when visibility changes (block/unblock) to refresh the sharer list
     var onVisibilityChange: (() -> Void)?
 
     /// Confirmation dialog state
     @State private var friendToRemove: Friend?
     @State private var removeAction: RemoveAction?
+
+    /// Whether the highlighted user is currently pulsing
+    @State private var isHighlightActive = false
 
     enum RemoveAction {
         case removeShare    // Revoke their access to my shifts
@@ -28,50 +34,56 @@ struct ManageSharingSheet: View {
                 Color.tidexBackground
                     .ignoresSafeArea()
 
-                ScrollView {
-                    VStack(spacing: 20) {
-                        // Description
-                        descriptionSection
+                ScrollViewReader { scrollProxy in
+                    ScrollView {
+                        VStack(spacing: 20) {
+                            // Description
+                            descriptionSection
 
-                        // Error banner
-                        if let error = viewModel.errorMessage {
-                            errorBanner(error)
-                        }
-
-                        // Friend sections
-                        if viewModel.isLoading {
-                            loadingView
-                        } else if viewModel.friends.isEmpty {
-                            emptyState
-                        } else {
-                            friendSections
-                        }
-
-                        // Add friend form
-                        AddFriendForm(
-                            isExpanded: $viewModel.isAddFormExpanded,
-                            identifier: $viewModel.addIdentifier,
-                            showEarnings: $viewModel.addShowEarnings,
-                            error: $viewModel.addError,
-                            isLoading: viewModel.isAdding,
-                            canAdd: viewModel.canAddMore,
-                            capacityDisplay: viewModel.capacityDisplay,
-                            onAdd: {
-                                Task {
-                                    await viewModel.addFriend()
-                                }
-                            },
-                            onCancel: {
-                                viewModel.cancelAddFriend()
+                            // Error banner
+                            if let error = viewModel.errorMessage {
+                                errorBanner(error)
                             }
-                        )
+
+                            // Friend sections
+                            if viewModel.isLoading {
+                                loadingView
+                            } else if viewModel.friends.isEmpty {
+                                emptyState
+                            } else {
+                                friendSections
+                            }
+
+                            // Add friend form
+                            AddFriendForm(
+                                isExpanded: $viewModel.isAddFormExpanded,
+                                identifier: $viewModel.addIdentifier,
+                                showEarnings: $viewModel.addShowEarnings,
+                                error: $viewModel.addError,
+                                isLoading: viewModel.isAdding,
+                                canAdd: viewModel.canAddMore,
+                                capacityDisplay: viewModel.capacityDisplay,
+                                onAdd: {
+                                    Task {
+                                        await viewModel.addFriend()
+                                    }
+                                },
+                                onCancel: {
+                                    viewModel.cancelAddFriend()
+                                }
+                            )
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.top, 16)
+                        .padding(.bottom, 32)
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.top, 16)
-                    .padding(.bottom, 32)
-                }
-                .refreshable {
-                    await viewModel.refresh()
+                    .refreshable {
+                        await viewModel.refresh()
+                    }
+                    .onChange(of: viewModel.friends) { _, friends in
+                        // Scroll to highlighted user after friends load
+                        scrollToHighlightedUserIfNeeded(scrollProxy: scrollProxy, friends: friends)
+                    }
                 }
             }
             .navigationTitle(localization.string("sharing.manageTitle"))
@@ -132,9 +144,9 @@ struct ManageSharingSheet: View {
 
         switch action {
         case .removeShare:
-            return "Slutte å dele med \(friend.displayName)?"
+            return String(format: localization.string("sharing.stopSharingWith"), friend.displayName)
         case .removeSharer:
-            return "Fjerne \(friend.displayName) fra listen?"
+            return String(format: localization.string("sharing.removeFromList"), friend.displayName)
         }
     }
 
@@ -185,7 +197,7 @@ struct ManageSharingSheet: View {
                 .progressViewStyle(CircularProgressViewStyle(tint: .tidexBlue))
                 .scaleEffect(1.2)
 
-            Text("Laster venner...")
+            Text(localization.string("sharing.loadingFriends"))
                 .font(.system(size: 15))
                 .foregroundColor(.tidexTextMuted)
         }
@@ -205,7 +217,7 @@ struct ManageSharingSheet: View {
                 .font(.system(size: 17, weight: .medium))
                 .foregroundColor(.tidexTextPrimary)
 
-            Text("Legg til venner for å dele vaktene dine")
+            Text(localization.string("sharing.noFriendsDescription"))
                 .font(.system(size: 15))
                 .foregroundColor(.tidexTextMuted)
                 .multilineTextAlignment(.center)
@@ -258,10 +270,13 @@ struct ManageSharingSheet: View {
             // Friends list
             VStack(spacing: 0) {
                 ForEach(Array(friends.enumerated()), id: \.element.id) { index, friend in
+                    let isHighlighted = highlightUserId == friend.id && isHighlightActive
+
                     FriendRow(
                         friend: friend,
                         sectionType: sectionType,
                         isActionInProgress: viewModel.actionInProgress == friend.id,
+                        isHighlighted: isHighlighted,
                         onToggleMuted: {
                             Task {
                                 await viewModel.toggleMuted(for: friend)
@@ -289,6 +304,7 @@ struct ManageSharingSheet: View {
                             removeAction = sectionType == .incoming ? .removeSharer : .removeShare
                         }
                     )
+                    .id(friend.id) // For ScrollViewReader
 
                     // Divider (except last item)
                     if index < friends.count - 1 {
@@ -301,6 +317,37 @@ struct ManageSharingSheet: View {
                 RoundedRectangle(cornerRadius: 12)
                     .fill(Color.tidexSurfacePrimary)
             )
+        }
+    }
+
+    // MARK: - Highlight Handling
+
+    /// Scroll to the highlighted user if present
+    private func scrollToHighlightedUserIfNeeded(scrollProxy: ScrollViewProxy, friends: [Friend]) {
+        guard let highlightUserId = highlightUserId,
+              friends.contains(where: { $0.id == highlightUserId }) else {
+            return
+        }
+
+        // Delay scroll slightly to ensure layout is complete
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            withAnimation(.easeInOut(duration: 0.3)) {
+                scrollProxy.scrollTo(highlightUserId, anchor: .center)
+            }
+
+            // Start highlight animation after scroll completes
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    isHighlightActive = true
+                }
+
+                // Turn off highlight after 5 seconds
+                DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
+                    withAnimation(.easeInOut(duration: 0.5)) {
+                        isHighlightActive = false
+                    }
+                }
+            }
         }
     }
 }

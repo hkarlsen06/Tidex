@@ -14,6 +14,7 @@ final class ManageSharingViewModel: ObservableObject {
     // MARK: - Dependencies
 
     private let sharingService: SharingService
+    private let localization = LocalizationManager.shared
 
     // MARK: - Published State
 
@@ -87,7 +88,7 @@ final class ManageSharingViewModel: ObservableObject {
             logger.info("Loaded \(result.friends.count) friends")
         } catch {
             logger.error("Failed to load friends: \(error.localizedDescription)")
-            errorMessage = "Kunne ikke laste venner"
+            errorMessage = localization.string("sharing.error.loadFriends")
         }
 
         isLoading = false
@@ -104,7 +105,7 @@ final class ManageSharingViewModel: ObservableObject {
     func addFriend() async {
         let identifier = addIdentifier.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !identifier.isEmpty else {
-            addError = "Vennligst oppgi en e-post eller telefonnummer"
+            addError = localization.string("sharing.error.addFriendEmpty")
             return
         }
 
@@ -128,7 +129,7 @@ final class ManageSharingViewModel: ObservableObject {
             addError = error.localizedDescription
         } catch {
             logger.error("Failed to add friend: \(error.localizedDescription)")
-            addError = "Kunne ikke legge til venn"
+            addError = localization.string("sharing.error.addFriend")
         }
 
         isAdding = false
@@ -161,7 +162,7 @@ final class ManageSharingViewModel: ObservableObject {
             // Revert on failure
             applyOptimisticEarningsUpdate(friendId: friend.id, showEarnings: !newValue)
             logger.error("Failed to toggle earnings: \(error.localizedDescription)")
-            errorMessage = "Kunne ikke oppdatere innstillinger"
+            errorMessage = localization.string("sharing.error.updateSettings")
         }
 
         actionInProgress = nil
@@ -211,7 +212,7 @@ final class ManageSharingViewModel: ObservableObject {
             // Revert on failure
             applyOptimisticBlockedUpdate(friendId: friend.id, blocked: !newValue)
             logger.error("Failed to toggle blocked: \(error.localizedDescription)")
-            errorMessage = "Kunne ikke oppdatere innstillinger"
+            errorMessage = localization.string("sharing.error.updateSettings")
         }
 
         actionInProgress = nil
@@ -259,7 +260,7 @@ final class ManageSharingViewModel: ObservableObject {
             // Revert on failure
             applyOptimisticMutedUpdate(friendId: friend.id, muted: !newValue)
             logger.error("Failed to toggle muted: \(error.localizedDescription)")
-            errorMessage = "Kunne ikke oppdatere varslingsinnstillinger"
+            errorMessage = localization.string("sharing.error.updateNotifications")
         }
 
         actionInProgress = nil
@@ -307,7 +308,7 @@ final class ManageSharingViewModel: ObservableObject {
             // Revert on failure
             revertOptimisticRemove(originalFriend: originalFriend)
             logger.error("Failed to remove share: \(error.localizedDescription)")
-            errorMessage = "Kunne ikke fjerne deling"
+            errorMessage = localization.string("sharing.error.removeShare")
         }
 
         actionInProgress = nil
@@ -354,7 +355,7 @@ final class ManageSharingViewModel: ObservableObject {
             // Revert on failure
             revertOptimisticRemove(originalFriend: originalFriend)
             logger.error("Failed to remove sharer: \(error.localizedDescription)")
-            errorMessage = "Kunne ikke fjerne personen"
+            errorMessage = localization.string("sharing.error.removePerson")
         }
 
         actionInProgress = nil
@@ -417,7 +418,7 @@ final class ManageSharingViewModel: ObservableObject {
             // Revert on failure
             revertOptimisticShareBack(originalFriend: originalFriend)
             logger.error("Failed to share back: \(error.localizedDescription)")
-            errorMessage = "Kunne ikke dele tilbake"
+            errorMessage = localization.string("sharing.error.shareBack")
         }
 
         actionInProgress = nil
