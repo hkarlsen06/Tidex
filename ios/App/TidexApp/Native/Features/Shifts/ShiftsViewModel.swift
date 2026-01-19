@@ -634,6 +634,70 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
         isMoving = false
     }
 
+    // MARK: - Recurring Shift Editing
+
+    /// Update a recurring shift pattern
+    /// - Parameter editResult: The result from the recurring shift edit form
+    func updateRecurringShift(_ editResult: RecurringShiftEditResult) async {
+        logger.info("📝 Updating recurring shift \(editResult.recurringId)")
+
+        do {
+            _ = try await recurringShiftsRepository.updateRecurringShift(
+                id: editResult.recurringId,
+                startTime: editResult.startTime,
+                endTime: editResult.endTime,
+                repeatIntervalWeeks: editResult.repeatIntervalWeeks,
+                selectedDays: editResult.selectedDays,
+                endCondition: editResult.endCondition
+            )
+
+            logger.info("✅ Updated recurring shift \(editResult.recurringId)")
+
+            // Clear recurring shifts cache so changes are picked up
+            recurringShifts = []
+
+            // Reload to show the changes
+            await reloadFromLocal()
+
+            // Post notification for other views
+            NotificationCenter.default.post(name: .shiftsDidChange, object: nil)
+
+        } catch {
+            logger.error("❌ Failed to update recurring shift: \(error.localizedDescription)")
+        }
+    }
+
+    /// Delete a recurring shift pattern
+    /// - Parameter recurringId: The ID of the recurring shift to delete
+    func deleteRecurringShift(_ recurringId: String) async {
+        logger.info("🗑️ Deleting recurring shift \(recurringId)")
+
+        do {
+            try await recurringShiftsRepository.deleteRecurringShift(id: recurringId)
+
+            logger.info("✅ Deleted recurring shift \(recurringId)")
+
+            // Clear recurring shifts cache so changes are picked up
+            recurringShifts = []
+
+            // Reload to show the changes
+            await reloadFromLocal()
+
+            // Post notification for other views
+            NotificationCenter.default.post(name: .shiftsDidChange, object: nil)
+
+        } catch {
+            logger.error("❌ Failed to delete recurring shift: \(error.localizedDescription)")
+        }
+    }
+
+    /// Get a recurring shift by ID
+    /// - Parameter id: The recurring shift ID
+    /// - Returns: The recurring shift if found
+    func getRecurringShift(id: String) -> RecurringShiftRow? {
+        recurringShiftsRepository.getRecurringShift(id: id)
+    }
+
     // MARK: - Shift Editing
 
     /// Update a shift with new date/time values
@@ -899,6 +963,9 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
         monthCache.removeAll()
         prefetchCache.removeAll()
         prefetchTasks.removeAll()
+
+        // Also clear in-memory recurring shifts cache so exclusions are picked up
+        recurringShifts = []
 
         // Reload from local repositories
         await loadShiftsFromLocal()
