@@ -171,8 +171,11 @@ final class AddShiftViewModel: ObservableObject {
     /// Cached preview earnings - only recomputed when selection or times change
     @Published private(set) var cachedPreviewEarnings: [String: Double] = [:]
 
-    /// Cached projected recurring dates - only recomputed when recurring settings change
+    /// Cached projected recurring dates for calendar display (current month only)
     @Published private(set) var cachedProjectedRecurringDates: [String] = []
+
+    /// Cached earnings per anchor weekday - computed once per anchor, shared by all projected dates
+    @Published private(set) var cachedAnchorEarnings: [String: Double] = [:]
 
     // MARK: - Preview Cache (computed only when preview sheet is shown)
 
@@ -317,19 +320,11 @@ final class AddShiftViewModel: ObservableObject {
         cachedPreviewEarnings
     }
 
-    /// Preview earnings for projected recurring dates (recurring mode)
-    var previewRecurringEarnings: [String: Double] {
-        guard canSubmitRecurring else { return [:] }
-
-        var result: [String: Double] = [:]
-
-        for dateISO in cachedProjectedRecurringDates {
-            if let earnings = computeEarningsForDate(dateISO) {
-                result[dateISO] = earnings
-            }
-        }
-
-        return result
+    /// Get earnings for a recurring date by looking up its anchor's earnings
+    /// All dates on the same weekday share the same earnings
+    func earningsForRecurringDate(_ dateISO: String) -> Double? {
+        let weekday = weekdayFromDate(dateISO)
+        return cachedAnchorEarnings[weekday]
     }
 
     // MARK: - Data Loading
@@ -534,10 +529,14 @@ final class AddShiftViewModel: ObservableObject {
         if selectedDays[weekday] == dateISO {
             // Remove this anchor
             selectedDays.removeValue(forKey: weekday)
+            cachedAnchorEarnings.removeValue(forKey: weekday)
         } else {
             // Set or replace anchor for this weekday
             selectedDays[weekday] = dateISO
         }
+
+        // Update projected dates for the new anchor configuration
+        updateProjectedRecurringDates()
 
         // Haptic feedback
         let generator = UIImpactFeedbackGenerator(style: .light)
@@ -547,6 +546,10 @@ final class AddShiftViewModel: ObservableObject {
     /// Remove anchor for a specific weekday
     func removeAnchor(weekday: String) {
         selectedDays.removeValue(forKey: weekday)
+        cachedAnchorEarnings.removeValue(forKey: weekday)
+
+        // Update projected dates
+        updateProjectedRecurringDates()
 
         // Haptic feedback
         let generator = UIImpactFeedbackGenerator(style: .light)
@@ -556,6 +559,9 @@ final class AddShiftViewModel: ObservableObject {
     /// Clear all anchors
     func clearAnchors() {
         selectedDays.removeAll()
+        cachedAnchorEarnings.removeAll()
+        cachedProjectedRecurringDates.removeAll()
+        cachedConflictDatesForCalendar.removeAll()
     }
 
     /// Show the preview sheet - computes projected dates once
@@ -785,6 +791,7 @@ final class AddShiftViewModel: ObservableObject {
         cachedPreviewEarnings.removeAll()
         cachedConflictDatesForCalendar.removeAll()
         cachedProjectedRecurringDates.removeAll()
+        cachedAnchorEarnings.removeAll()
 
         // Cancel any pending preview update before clearing times
         previewUpdateTask?.cancel()
@@ -924,15 +931,28 @@ final class AddShiftViewModel: ObservableObject {
         case .single:
             datesToCheck = Array(selectedDates)
         case .recurring:
-            // Regenerate projected dates when recurring settings change
+            // Regenerate projected dates for calendar display only (current month)
             if !selectedDays.isEmpty {
-                cachedProjectedRecurringDates = RecurringShiftProjector.generateDates(
+                cachedProjectedRecurringDates = RecurringShiftProjector.generateDatesForCalendarDisplay(
                     selectedDays: selectedDays,
                     repeatInterval: repeatInterval,
+                    displayMonth: displayMonth,
                     endCondition: endCondition
                 )
+
+                // Compute earnings once per anchor (all dates on same weekday share earnings)
+                if hasValidTimes {
+                    var anchorEarnings: [String: Double] = [:]
+                    for (weekday, anchorISO) in selectedDays {
+                        if let earnings = computeEarningsForDate(anchorISO) {
+                            anchorEarnings[weekday] = earnings
+                        }
+                    }
+                    cachedAnchorEarnings = anchorEarnings
+                }
             } else {
                 cachedProjectedRecurringDates = []
+                cachedAnchorEarnings = [:]
             }
             datesToCheck = cachedProjectedRecurringDates
         }
@@ -1001,17 +1021,29 @@ final class AddShiftViewModel: ObservableObject {
     func updateProjectedRecurringDates() {
         guard !selectedDays.isEmpty else {
             cachedProjectedRecurringDates = []
+            cachedAnchorEarnings = [:]
             return
         }
 
-        cachedProjectedRecurringDates = RecurringShiftProjector.generateDates(
+        // Only generate dates for calendar display (current month)
+        cachedProjectedRecurringDates = RecurringShiftProjector.generateDatesForCalendarDisplay(
             selectedDays: selectedDays,
             repeatInterval: repeatInterval,
+            displayMonth: displayMonth,
             endCondition: endCondition
         )
 
-        // Also update conflicts for the new projected dates
+        // Compute earnings once per anchor
         if hasValidTimes {
+            var anchorEarnings: [String: Double] = [:]
+            for (weekday, anchorISO) in selectedDays {
+                if let earnings = computeEarningsForDate(anchorISO) {
+                    anchorEarnings[weekday] = earnings
+                }
+            }
+            cachedAnchorEarnings = anchorEarnings
+
+            // Update conflicts for the projected dates
             cachedConflictDatesForCalendar = ShiftConflictDetector.detectConflicts(
                 dates: cachedProjectedRecurringDates,
                 startTime: startTimeString,

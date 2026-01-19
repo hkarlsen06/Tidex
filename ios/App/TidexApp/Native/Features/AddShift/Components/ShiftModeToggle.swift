@@ -22,9 +22,6 @@ struct ShiftModeToggle: View {
                 }
             }
         }
-        .padding(4)
-        .background(Color.tidexSurfaceSecondary)
-        .clipShape(Capsule())
     }
 
     private func localizedTitle(for mode: AddShiftMode) -> String {
@@ -49,11 +46,9 @@ private struct ModeButton: View {
             Text(title)
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundColor(isSelected ? .white : .tidexTextSecondary)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
-                .background(
-                    isSelected ? Color.tidexBlue : Color.clear
-                )
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(isSelected ? Color.tidexBlue : Color.clear)
                 .clipShape(Capsule())
         }
         .buttonStyle(.plain)

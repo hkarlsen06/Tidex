@@ -49,6 +49,8 @@ struct RepeatIntervalPicker: View {
                 .background(Color.tidexSurfaceSecondary)
                 .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
             }
+
+            Spacer()
         }
         .padding(.vertical, 8)
     }

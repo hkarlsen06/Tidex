@@ -1,6 +1,10 @@
 import SwiftUI
 
+/// Fixed height for the chip bar area to prevent layout shifts
+private let chipBarHeight: CGFloat = 44
+
 /// Horizontal bar showing selected weekday anchors as dismissible chips
+/// Always reserves space to prevent layout shifts when chips are added/removed
 struct WeekdayChipBar: View {
     let selectedDays: [String: String]  // weekday "0"-"6" -> anchor ISO date
     let onRemove: (String) -> Void
@@ -13,23 +17,37 @@ struct WeekdayChipBar: View {
     }
 
     var body: some View {
-        if !selectedDays.isEmpty {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    ForEach(sortedWeekdays, id: \.self) { weekday in
-                        if let anchorDate = selectedDays[weekday] {
-                            WeekdayChip(
-                                weekday: weekday,
-                                anchorDate: anchorDate,
-                                onRemove: { onRemove(weekday) }
-                            )
+        // Always allocate space for the chip bar to prevent layout shifts
+        ZStack {
+            if selectedDays.isEmpty {
+                // Placeholder when no chips - shows subtle hint
+                HStack(spacing: 6) {
+                    Image(systemName: "star.fill")
+                        .font(.system(size: 12))
+                        .foregroundColor(.tidexTextMuted.opacity(0.5))
+                    Text(localization.string("addShift.selectAnchorDates"))
+                        .font(.system(size: 13))
+                        .foregroundColor(.tidexTextMuted)
+                }
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(sortedWeekdays, id: \.self) { weekday in
+                            if let anchorDate = selectedDays[weekday] {
+                                WeekdayChip(
+                                    weekday: weekday,
+                                    anchorDate: anchorDate,
+                                    onRemove: { onRemove(weekday) }
+                                )
+                            }
                         }
                     }
+                    .padding(.horizontal, 4)
                 }
-                .padding(.horizontal, 4)
             }
-            .frame(height: 36)
         }
+        .frame(height: chipBarHeight)
+        .frame(maxWidth: .infinity)
     }
 }
 
