@@ -43,25 +43,44 @@ struct PayrollCard: View {
     }
 
     var body: some View {
-        HStack(alignment: showBreakdown ? .top : .center, spacing: 16) {
-            // Left side: date and label
-            VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 4) {
+            // Row 1: Date (left) and amount (right) - center aligned
+            HStack(alignment: .center) {
                 // Date display
                 if isPayrollToday {
                     HStack(spacing: 8) {
                         Text(localization.string("dashboard.today"))
-                            .font(.system(size: 18, weight: .medium))
+                            .font(.system(size: 20, weight: .medium))
                             .foregroundColor(.tidexTextPrimary)
                         Image(systemName: "party.popper.fill")
-                            .font(.system(size: 16))
+                            .font(.system(size: 18))
                             .foregroundColor(.tidexBlue)
                     }
                 } else {
                     Text(formattedPayrollDate)
-                        .font(.system(size: 18, weight: .medium))
+                        .font(.system(size: 20, weight: .medium))
                         .foregroundColor(.tidexTextPrimary)
                 }
 
+                Spacer()
+
+                // Right side: amount
+                if hasPayout {
+                    let primaryAmount = taxEnabled ? (net ?? gross) : gross
+                    Text(formatCurrency(primaryAmount))
+                        .font(.system(size: 22, weight: .semibold))
+                        .tracking(-0.5)
+                        .foregroundColor(.tidexTextPrimary)
+                } else {
+                    // Skeleton for amount
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(Color.tidexTextMuted.opacity(0.3))
+                        .frame(width: 100, height: 20)
+                }
+            }
+
+            // Row 2: Label (left) and breakdown (right) - center aligned
+            HStack(alignment: .center) {
                 // Label with calendar icon
                 HStack(spacing: 4) {
                     Image(systemName: "calendar")
@@ -71,37 +90,20 @@ struct PayrollCard: View {
                         .font(.system(size: 14, weight: .regular))
                         .foregroundColor(.tidexTextPrimary)
                 }
-            }
 
-            Spacer()
+                Spacer()
 
-            // Right side: amount and breakdown
-            if hasPayout {
-                VStack(alignment: .trailing, spacing: 2) {
-                    // Net/gross amount (primary display)
-                    let primaryAmount = taxEnabled ? (net ?? gross) : gross
-                    Text(formatCurrency(primaryAmount))
-                        .font(.system(size: 24, weight: .semibold))
-                        .tracking(-0.5)
-                        .foregroundColor(.tidexTextPrimary)
-
-                    // Breakdown (gross - tax) when tax enabled
-                    if showBreakdown {
-                        HStack(spacing: 4) {
-                            Text(formatPlainAmount(gross))
-                            Text("−")
-                            Text(formatPlainAmount(tax ?? 0))
-                        }
-                        .font(.system(size: 14, weight: .regular))
-                        .foregroundColor(.tidexTextMuted)
+                // Breakdown (gross - tax) when tax enabled
+                if hasPayout && showBreakdown {
+                    HStack(spacing: 4) {
+                        Text(formatPlainAmount(gross))
+                        Text("−")
+                        Text(formatPlainAmount(tax ?? 0))
                     }
-                }
-            } else {
-                // No payout placeholder - skeleton lines
-                VStack(alignment: .trailing, spacing: 6) {
-                    RoundedRectangle(cornerRadius: 6)
-                        .fill(Color.tidexTextMuted.opacity(0.3))
-                        .frame(width: 100, height: 20)
+                    .font(.system(size: 14, weight: .regular))
+                    .foregroundColor(.tidexTextMuted)
+                } else if !hasPayout {
+                    // Skeleton for breakdown
                     RoundedRectangle(cornerRadius: 4)
                         .fill(Color.tidexTextMuted.opacity(0.2))
                         .frame(width: 70, height: 12)

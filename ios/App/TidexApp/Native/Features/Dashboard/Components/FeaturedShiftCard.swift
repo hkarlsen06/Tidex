@@ -75,22 +75,34 @@ struct FeaturedShiftCard: View {
     var body: some View {
         VStack(spacing: 8) {
             // Main card content
-            HStack(alignment: showBreakdown ? .top : .center, spacing: 16) {
-                // Left side: date and time info
-                VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 4) {
+                // Row 1: Date (left) and earnings amount (right) - center aligned
+                HStack(alignment: .center) {
                     // Day name and date
                     HStack(spacing: 4) {
                         Text(dateParts.dayName)
-                            .font(.system(size: 18, weight: .medium))
+                            .font(.system(size: 20, weight: .medium))
                             .foregroundColor(.tidexTextPrimary)
                         Text("·")
                             .foregroundColor(.tidexTextMuted)
                         Text("\(dateParts.dayNumber) \(dateParts.monthName)")
-                            .font(.system(size: 18, weight: .medium))
+                            .font(.system(size: 20, weight: .medium))
                             .foregroundColor(.tidexTextMuted)
                     }
                     .fixedSize(horizontal: true, vertical: false)
 
+                    Spacer()
+
+                    // Net/gross amount
+                    let displayAmount = shift.taxEnabled ? shift.netPay : shift.grossPay
+                    Text(formatCurrency(displayAmount))
+                        .font(.system(size: 22, weight: .semibold))
+                        .tracking(-0.5)
+                        .foregroundColor(.tidexTextPrimary)
+                }
+
+                // Row 2: Time range (left) and breakdown (right) - center aligned
+                HStack(alignment: .center) {
                     // Time range and hours
                     HStack(spacing: 8) {
                         // Time with clock icon
@@ -112,18 +124,8 @@ struct FeaturedShiftCard: View {
                             .lineLimit(1)
                             .fixedSize(horizontal: true, vertical: false)
                     }
-                }
 
-                Spacer()
-
-                // Right side: earnings
-                VStack(alignment: .trailing, spacing: 2) {
-                    // Net/gross amount
-                    let displayAmount = shift.taxEnabled ? shift.netPay : shift.grossPay
-                    Text(formatCurrency(displayAmount))
-                        .font(.system(size: 24, weight: .semibold))
-                        .tracking(-0.5)
-                        .foregroundColor(.tidexTextPrimary)
+                    Spacer()
 
                     // Breakdown (gross - tax) when tax enabled
                     if showBreakdown {
