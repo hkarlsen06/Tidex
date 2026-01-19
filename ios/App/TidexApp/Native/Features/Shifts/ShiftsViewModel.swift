@@ -634,6 +634,71 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
         isMoving = false
     }
 
+    // MARK: - Shift Editing
+
+    /// Update a shift with new date/time values
+    /// - Parameter editResult: The result from the shift edit form
+    func updateShift(_ editResult: ShiftEditResult) async {
+        logger.info("📝 Updating shift \(editResult.shiftId)")
+
+        do {
+            // Parse the new date
+            guard let newDate = Date.fromISODateString(editResult.shiftDate) else {
+                logger.error("Invalid date format: \(editResult.shiftDate)")
+                return
+            }
+
+            if editResult.isVirtualShiftConversion {
+                // Virtual shift conversion:
+                // 1. Add exclusion to the recurring shift for the original date
+                // 2. Create a new regular shift with the edited values
+                logger.info("🔄 Converting virtual shift to regular shift")
+
+                guard let recurringId = editResult.recurringId,
+                      let userId = cachedUserId else {
+                    logger.error("Missing recurringId or userId for virtual shift conversion")
+                    return
+                }
+
+                // Step 1: Add exclusion for the original date
+                try await RecurringShiftsRepository.shared.addExclusion(
+                    id: recurringId,
+                    date: editResult.originalDate
+                )
+                logger.info("✅ Added exclusion for \(editResult.originalDate)")
+
+                // Step 2: Create a new regular shift with the edited values
+                _ = try await shiftsRepository.createShift(
+                    userId: userId,
+                    shiftDate: newDate,
+                    startTime: editResult.startTime,
+                    endTime: editResult.endTime,
+                    customSupplements: nil // Virtual shifts don't have custom supplements
+                )
+                logger.info("✅ Created new shift on \(editResult.shiftDate)")
+
+            } else {
+                // Regular shift update - just update the existing shift
+                _ = try await shiftsRepository.updateShift(
+                    id: editResult.shiftId,
+                    shiftDate: newDate,
+                    startTime: editResult.startTime,
+                    endTime: editResult.endTime
+                )
+                logger.info("✅ Updated shift \(editResult.shiftId)")
+            }
+
+            // Reload to show the changes
+            await reloadFromLocal()
+
+            // Post notification for other views
+            NotificationCenter.default.post(name: .shiftsDidChange, object: nil)
+
+        } catch {
+            logger.error("❌ Failed to update shift: \(error.localizedDescription)")
+        }
+    }
+
     /// Non-blocking month data loader
     /// Uses cache for instant display, fetches in background if needed
     private func loadShiftsForDisplayedMonthNonBlocking() {

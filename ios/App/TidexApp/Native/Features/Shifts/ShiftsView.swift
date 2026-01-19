@@ -24,6 +24,9 @@ struct ShiftsView: View {
     @State private var showDeleteConfirmation = false
     @State private var shiftToDelete: ShiftWithComputations?
 
+    // Edit mode state (when opening from swipe action)
+    @State private var shiftToEditDirectly: ShiftWithComputations?
+
     // State for day shifts sheet (when tapping a calendar day)
     @State private var selectedDayForSheet: DayShiftSelection?
 
@@ -144,7 +147,35 @@ struct ShiftsView: View {
                         shiftToDelete = shift
                         showDeleteConfirmation = true
                     }
+                },
+                onUpdate: { editResult in
+                    selectedShift = nil
+                    Task {
+                        await viewModel.updateShift(editResult)
+                    }
                 }
+            )
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
+        }
+        // Sheet for editing directly (opens in edit mode from swipe action)
+        .sheet(item: $shiftToEditDirectly) { shift in
+            ShiftDetailsSheet(
+                shift: shift,
+                onDelete: {
+                    shiftToEditDirectly = nil
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        shiftToDelete = shift
+                        showDeleteConfirmation = true
+                    }
+                },
+                onUpdate: { editResult in
+                    shiftToEditDirectly = nil
+                    Task {
+                        await viewModel.updateShift(editResult)
+                    }
+                },
+                startInEditMode: true
             )
             .presentationDetents([.medium, .large])
             .presentationDragIndicator(.visible)
@@ -652,7 +683,8 @@ struct ShiftsView: View {
                             .swipeActions(edge: .leading, allowsFullSwipe: true) {
                                 Button {
                                     selectionHaptic.selectionChanged()
-                                    handleShiftTapped(shift)
+                                    // Open sheet directly in edit mode
+                                    shiftToEditDirectly = shift
                                 } label: {
                                     Label("Edit", systemImage: "pencil")
                                 }
