@@ -33,6 +33,18 @@ final class AppCoordinator: ObservableObject {
     /// MFA factor to verify (when state is .mfaRequired)
     @Published private(set) var pendingMFAFactor: AuthService.MFAFactor?
 
+    // MARK: - Deep Link Navigation State
+
+    /// Pending deep link navigation to execute after authentication/tab setup
+    @Published var pendingDeepLink: DeepLink?
+
+    /// Supported deep link types
+    enum DeepLink: Equatable {
+        case shifts(dates: [String]?)           // Navigate to shifts view, optionally filtering dates
+        case sharing(sharerId: String?)         // Navigate to sharing tab, optionally selecting a sharer
+        case sharingManage(highlightUserId: String?) // Open sharing management modal, optionally highlighting a user
+    }
+
     // MARK: - Terms Acceptance State
 
     /// Whether this is an update to terms (user previously accepted older version)
@@ -457,5 +469,52 @@ final class AppCoordinator: ObservableObject {
         } catch {
             appState = .unauthenticated
         }
+    }
+
+    // MARK: - Deep Link Handling
+
+    /// Handle a deep link URL and set pendingDeepLink for navigation
+    /// Called from SceneDelegate when the app receives a tidex:// URL
+    ///
+    /// Supported URL formats:
+    /// - tidex://sharing?user=<userId> → Navigate to sharing tab and select the sharer
+    /// - tidex://sharing/manage?highlight=<userId> → Open manage modal and highlight user
+    /// - tidex://shifts?dates=2025-01-15,2025-01-16 → Navigate to shifts with dates selected
+    func handleDeepLink(_ url: URL) {
+        guard url.scheme == "tidex" else { return }
+
+        let host = url.host?.lowercased()
+        let queryItems = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
+
+        print("[AppCoordinator] Handling deep link: \(url)")
+
+        switch host {
+        case "sharing":
+            // Check for manage path
+            if url.path == "/manage" || url.pathComponents.contains("manage") {
+                let highlightUserId = queryItems.first(where: { $0.name == "highlight" })?.value
+                pendingDeepLink = .sharingManage(highlightUserId: highlightUserId)
+                print("[AppCoordinator] Deep link: sharing/manage, highlight=\(highlightUserId ?? "nil")")
+            } else {
+                // Navigate to sharer
+                let sharerId = queryItems.first(where: { $0.name == "user" })?.value
+                pendingDeepLink = .sharing(sharerId: sharerId)
+                print("[AppCoordinator] Deep link: sharing, user=\(sharerId ?? "nil")")
+            }
+
+        case "shifts":
+            let datesString = queryItems.first(where: { $0.name == "dates" })?.value
+            let dates = datesString?.components(separatedBy: ",").map { $0.trimmingCharacters(in: .whitespaces) }
+            pendingDeepLink = .shifts(dates: dates)
+            print("[AppCoordinator] Deep link: shifts, dates=\(dates ?? [])")
+
+        default:
+            print("[AppCoordinator] Unknown deep link host: \(host ?? "nil")")
+        }
+    }
+
+    /// Clear the pending deep link after it has been consumed
+    func clearPendingDeepLink() {
+        pendingDeepLink = nil
     }
 }

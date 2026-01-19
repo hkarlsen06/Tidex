@@ -17,6 +17,7 @@ struct FriendRow: View {
     let friend: Friend
     let sectionType: FriendSectionType
     let isActionInProgress: Bool
+    var isHighlighted: Bool = false
     let onToggleMuted: () -> Void
     let onToggleBlocked: () -> Void
     let onToggleEarnings: () -> Void
@@ -55,6 +56,12 @@ struct FriendRow: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
         .opacity(isActionInProgress ? 0.6 : 1.0)
+        .background(
+            // Highlight background for deep link navigation
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color.tidexBlue.opacity(isHighlighted ? 0.15 : 0))
+                .animation(.easeInOut(duration: 0.8).repeatCount(3, autoreverses: true), value: isHighlighted)
+        )
     }
 
     // MARK: - Avatar

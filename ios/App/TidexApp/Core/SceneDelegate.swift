@@ -86,18 +86,24 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
             return
         }
 
-        // Handle Supabase auth callbacks (magic links, OAuth redirects)
-        if url.scheme == "tidex" || url.host == "login-callback" {
-            // The Supabase SDK will handle session exchange automatically
-            // when the URL contains auth tokens
+        // Check if this is an auth callback (contains code/token in query or is login-callback)
+        let queryItems = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
+        let isAuthCallback = url.host == "login-callback" ||
+            queryItems.contains(where: { $0.name == "code" || $0.name == "access_token" || $0.name == "refresh_token" })
+
+        if url.scheme == "tidex" && isAuthCallback {
+            // Handle Supabase auth callbacks (magic links, OAuth redirects)
             Task { @MainActor in
                 await handleSupabaseCallback(url)
             }
             return
         }
 
-        // Handle deep links for app navigation
-        handleDeepLink(url)
+        // Handle deep links for app navigation (tidex://sharing, tidex://shifts, etc.)
+        if url.scheme == "tidex" {
+            handleDeepLink(url)
+            return
+        }
     }
 
     /// Handle Supabase OAuth callbacks
@@ -111,10 +117,12 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     }
 
     /// Handle deep links for navigation
+    /// Delegates to AppCoordinator which stores pendingDeepLink for views to consume
     private func handleDeepLink(_ url: URL) {
-        // Parse the URL path and navigate accordingly
-        // For now, just log - can be expanded for specific deep link handling
         print("[SceneDelegate] Received deep link: \(url)")
+        Task { @MainActor in
+            AppCoordinator.shared.handleDeepLink(url)
+        }
     }
 
     // MARK: - User Activity (Universal Links)
