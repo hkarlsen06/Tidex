@@ -28,12 +28,10 @@ struct DashboardView: View {
                             errorView(error: error)
                         } else if let data = viewModel.dashboardData {
                             cardContent(data: data)
-                        } else if viewModel.isLoading || !coordinator.initialSyncComplete {
-                            // Show loading while fetching OR while initial sync is in progress
-                            // This prevents showing "no shifts" before sync has had a chance to populate data
-                            loadingView
                         } else {
-                            emptyStateView
+                            // Show skeleton cards with shimmer while loading or waiting for sync
+                            // This provides a consistent visual preview of the layout
+                            loadingSkeletonView
                         }
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -81,10 +79,19 @@ struct DashboardView: View {
         }
         .task {
             await viewModel.loadDashboard()
+
+            // If sync already completed before view appeared, reload to pick up synced data
+            // This handles the race condition where sync finishes before .onChange is registered
+            if coordinator.initialSyncComplete && viewModel.dashboardData == nil {
+                await viewModel.reloadFromLocal()
+            }
         }
         .onChange(of: coordinator.initialSyncComplete) { _, completed in
             // When initial sync completes after login, reload dashboard to show synced data
             if completed {
+                // Set loading state SYNCHRONOUSLY before starting async task
+                // This prevents the empty state from flashing while data loads
+                viewModel.prepareForReload()
                 Task {
                     await viewModel.reloadFromLocal()
                 }
@@ -302,50 +309,52 @@ struct DashboardView: View {
         }
     }
 
-    // MARK: - Loading View
+    // MARK: - Loading Skeleton View
 
-    private var loadingView: some View {
-        VStack(spacing: 16) {
-            ProgressView()
-                .progressViewStyle(CircularProgressViewStyle(tint: .tidexBlue))
-                .scaleEffect(1.2)
-
-            Text(localization.string("common.loading"))
-                .font(.system(size: 14))
-                .foregroundColor(.tidexTextSecondary)
-        }
-    }
-
-    // MARK: - Empty State
-
-    private var emptyStateView: some View {
+    /// Skeleton cards with shimmer animation shown while loading
+    /// Provides a visual preview of the dashboard layout during data fetch
+    private var loadingSkeletonView: some View {
         PullToRefreshContainer(onRefresh: {
             await viewModel.refresh()
         }) {
             GeometryReader { geometry in
-                VStack(spacing: 16) {
+                VStack(spacing: 0) {
                     Spacer()
 
-                    Image(systemName: "calendar.badge.plus")
-                        .font(.system(size: 48))
-                        .foregroundColor(.tidexBlue)
+                    // Skeleton cards matching the real dashboard layout
+                    VStack(spacing: 12) {
+                        // Placeholder for payroll countdown text
+                        Color.clear
+                            .frame(height: 20)
 
-                    Text(localization.string("dashboard.letsAddShift"))
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundColor(.tidexTextPrimary)
-                        .multilineTextAlignment(.center)
+                        // Payroll Card skeleton
+                        PayrollCard(
+                            payrollDate: Date(),
+                            label: localization.string("dashboard.nextPayout"),
+                            gross: 0,
+                            net: nil,
+                            tax: nil,
+                            taxEnabled: false,
+                            isLoading: true
+                        )
 
-                    Button {
-                        selectedTab = .add
-                    } label: {
-                        Text(localization.string("dashboard.addShiftButton"))
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 24)
-                            .padding(.vertical, 12)
-                            .background(Color.tidexBlue)
-                            .cornerRadius(10)
+                        // Total Card skeleton
+                        TotalCard(
+                            gross: 0,
+                            net: nil,
+                            completedGross: 0,
+                            completedNet: nil,
+                            shiftCount: 0,
+                            plannedCount: 0,
+                            percentageChange: nil,
+                            taxEnabled: false,
+                            isLoading: true
+                        )
+
+                        // Featured Shift Card skeleton
+                        EmptyShiftCard(isBestShift: false, isLoading: true)
                     }
+                    .padding(.horizontal, 16)
 
                     Spacer()
                 }

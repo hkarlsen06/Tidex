@@ -81,12 +81,12 @@ struct FeaturedShiftCard: View {
                     // Day name and date
                     HStack(spacing: 4) {
                         Text(dateParts.dayName)
-                            .font(.system(size: 17, weight: .medium))
+                            .font(.system(size: 18, weight: .medium))
                             .foregroundColor(.tidexTextPrimary)
                         Text("·")
                             .foregroundColor(.tidexTextMuted)
                         Text("\(dateParts.dayNumber) \(dateParts.monthName)")
-                            .font(.system(size: 17, weight: .medium))
+                            .font(.system(size: 18, weight: .medium))
                             .foregroundColor(.tidexTextMuted)
                     }
                     .fixedSize(horizontal: true, vertical: false)
@@ -96,7 +96,7 @@ struct FeaturedShiftCard: View {
                         // Time with clock icon
                         HStack(spacing: 4) {
                             Image(systemName: "clock")
-                                .font(.system(size: 13, weight: .regular))
+                                .font(.system(size: 14, weight: .regular))
                                 .foregroundColor(.tidexTextMuted)
                             Text("\(shift.startTime)–\(shift.endTime)")
                                 .font(.system(size: 14, weight: .regular))
@@ -121,24 +121,24 @@ struct FeaturedShiftCard: View {
                     // Net/gross amount
                     let displayAmount = shift.taxEnabled ? shift.netPay : shift.grossPay
                     Text(formatCurrency(displayAmount))
-                        .font(.system(size: 22, weight: .semibold))
+                        .font(.system(size: 24, weight: .semibold))
                         .tracking(-0.5)
                         .foregroundColor(.tidexTextPrimary)
 
                     // Breakdown (gross - tax) when tax enabled
                     if showBreakdown {
                         HStack(spacing: 4) {
-                            Text(formatCurrency(shift.grossPay))
+                            Text(formatPlainAmount(shift.grossPay))
                             Text("−")
-                            Text(formatCurrency(shift.taxAmount))
+                            Text(formatPlainAmount(shift.taxAmount))
                         }
-                        .font(.system(size: 13, weight: .regular))
+                        .font(.system(size: 14, weight: .regular))
                         .foregroundColor(.tidexTextMuted)
                     }
                 }
             }
             .padding(.horizontal, 20)
-            .padding(.vertical, 20)
+            .padding(.vertical, 24)
             .background(Color.tidexSurfacePrimary)
             .overlay(alignment: .leading) {
                 // Progress bar overlay - fills from left based on progress (for active shifts)
@@ -189,6 +189,11 @@ struct FeaturedShiftCard: View {
 
     private func formatCurrency(_ amount: Double) -> String {
         CurrencyConfig.format(amount, currency: currency)
+    }
+
+    /// Format amount without currency symbol (for breakdown display)
+    private func formatPlainAmount(_ amount: Double) -> String {
+        CurrencyConfig.formatPlain(amount)
     }
 }
 

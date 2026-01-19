@@ -15,6 +15,8 @@ struct TotalCard: View {
     let plannedCount: Int              // Future/planned shift count
     let percentageChange: Double?
     let taxEnabled: Bool
+    /// When true, shows skeleton state with shimmer animation (for loading)
+    var isLoading: Bool = false
 
     @Environment(\.localization) private var localization
     @Environment(\.userCurrency) private var currency
@@ -37,7 +39,7 @@ struct TotalCard: View {
     }
 
     private var showDashes: Bool {
-        mainDisplayValue == 0
+        isLoading || mainDisplayValue == 0
     }
 
     private var hasChange: Bool {
@@ -52,10 +54,16 @@ struct TotalCard: View {
         abs(percentageChange ?? 0)
     }
 
+    /// Whether to show a dash instead of percentage (nil or zero means no meaningful comparison)
+    private var showPercentageDash: Bool {
+        percentageChange == nil || percentageChange == 0
+    }
+
     // MARK: - Subtitle Text
 
     private var subtitleText: String? {
-        if showDashes { return "— — —" }
+        // Don't return text when showing placeholder - we'll show a skeleton line instead
+        if showDashes { return nil }
 
         // When there are future shifts, show "earned to date" amount
         if hasFutureShifts {
@@ -94,24 +102,37 @@ struct TotalCard: View {
             // Percentage change indicator (top)
             percentageIndicator
 
-            // Main total display (large centered)
+            // Main total display (large centered) - fixed height for consistency
             mainAmountDisplay
+                .frame(height: 72) // Match the 72pt font line height
 
-            // Subtitle row
-            if let subtitle = subtitleText {
-                Text(subtitle)
-                    .font(.system(size: 17, weight: .regular))
-                    .foregroundColor(.tidexTextSecondary)
-                    .padding(.top, 2)
+            // Subtitle row - fixed height for consistent card size
+            Group {
+                if showDashes {
+                    // Skeleton placeholder line
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(Color.tidexTextMuted.opacity(0.3))
+                        .frame(width: 120, height: 16)
+                } else if let subtitle = subtitleText {
+                    Text(subtitle)
+                        .font(.system(size: 18, weight: .regular))
+                        .foregroundColor(.tidexTextSecondary)
+                } else {
+                    // Empty spacer to maintain height
+                    Color.clear
+                }
             }
+            .frame(height: 24) // Fixed height for subtitle area
         }
         .frame(maxWidth: .infinity)
-        .padding(.horizontal, 20)
-        .padding(.vertical, 20)
+        .padding(.horizontal, 24)
+        .padding(.top, 20)
+        .padding(.bottom, 16)
         .background(
             RoundedRectangle(cornerRadius: 24)
                 .fill(Color.tidexSurfacePrimary)
         )
+        .shimmer(isActive: isLoading)
     }
 
     // MARK: - Subviews
@@ -121,10 +142,15 @@ struct TotalCard: View {
         HStack(spacing: 4) {
             if hasChange {
                 Image(systemName: isPositive ? "arrow.up" : "arrow.down")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 16, weight: .semibold))
             }
-            Text(String(format: "%.0f%%", displayPercentage))
-                .font(.system(size: 17, weight: .semibold))
+            if showPercentageDash {
+                Text("—")
+                    .font(.system(size: 18, weight: .semibold))
+            } else {
+                Text(String(format: "%.0f%%", displayPercentage))
+                    .font(.system(size: 18, weight: .semibold))
+            }
         }
         .foregroundColor(hasChange ? (isPositive ? .tidexBlue : .tidexTextSecondary) : .tidexTextMuted)
     }
@@ -132,12 +158,13 @@ struct TotalCard: View {
     @ViewBuilder
     private var mainAmountDisplay: some View {
         if showDashes {
-            Text("— — —")
-                .font(.system(size: 48, weight: .bold))
-                .foregroundColor(.tidexBlue)
+            // Skeleton placeholder line matching the height of the large text
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.tidexBlue.opacity(0.3))
+                .frame(width: 200, height: 56)
         } else {
             Text(formatCurrency(mainDisplayValue))
-                .font(.system(size: 48, weight: .bold))
+                .font(.system(size: 72, weight: .bold))
                 .foregroundColor(.tidexBlue)
                 .minimumScaleFactor(0.5)
                 .lineLimit(1)
