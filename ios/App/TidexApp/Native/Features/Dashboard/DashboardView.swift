@@ -65,10 +65,19 @@ struct DashboardView: View {
                     .padding(.bottom, MonthPickerLayout.bottomPadding)
                 }
             }
-            .navigationTitle(localization.string("dashboard.title"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(Color.tidexBackground, for: .navigationBar)
             .toolbar {
+                ToolbarItem(placement: .principal) {
+                    HStack {
+                        Image("TidexWordmark")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(height: 22)
+                        Spacer()
+                    }
+                    .frame(maxWidth: .infinity)
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     UserMenuButton(
                         displayName: coordinator.userDisplayName,

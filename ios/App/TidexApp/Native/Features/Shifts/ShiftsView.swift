@@ -104,10 +104,20 @@ struct ShiftsView: View {
                 .padding(.horizontal, MonthPickerLayout.horizontalPadding)
                 .padding(.bottom, MonthPickerLayout.bottomPadding)
             }
-            .navigationTitle(localization.string(AppTab.shifts.titleKey))
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(Color.tidexBackground, for: .navigationBar)
             .toolbar {
+                // Logo in title area, left-aligned
+                ToolbarItem(placement: .principal) {
+                    HStack {
+                        Image("TidexWordmark")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(height: 22)
+                        Spacer()
+                    }
+                    .frame(maxWidth: .infinity)
+                }
                 // View mode toggle (calendar/list)
                 ToolbarItem(placement: .topBarLeading) {
                     viewModeToggleButton
@@ -165,7 +175,8 @@ struct ShiftsView: View {
                             recurringShiftToEdit = recurring
                         }
                     }
-                }
+                },
+                tariffRules: viewModel.getTariffRules(for: shift.shiftDate)
             )
             .presentationDetents([.medium, .large])
             .presentationDragIndicator(.visible)
@@ -195,7 +206,8 @@ struct ShiftsView: View {
                         }
                     }
                 },
-                startInEditMode: true
+                startInEditMode: true,
+                tariffRules: viewModel.getTariffRules(for: shift.shiftDate)
             )
             .presentationDetents([.medium, .large])
             .presentationDragIndicator(.visible)

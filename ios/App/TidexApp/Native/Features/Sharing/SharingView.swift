@@ -83,8 +83,7 @@ struct SharingView: View {
                     }
                 }
 
-                // Title area - only show sharer info when viewing a sharer
-                // (main title is now in content area)
+                // Title area - show logo on main list, sharer info when viewing a sharer
                 ToolbarItem(placement: .principal) {
                     if let sharer = viewModel.selectedSharer {
                         HStack(spacing: 8) {
@@ -105,8 +104,17 @@ struct SharingView: View {
                                 .font(.system(size: 17, weight: .semibold))
                                 .foregroundColor(.tidexTextPrimary)
                         }
+                    } else {
+                        // Logo on main friends list
+                        HStack {
+                            Image("TidexWordmark")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(height: 22)
+                            Spacer()
+                        }
+                        .frame(maxWidth: .infinity)
                     }
-                    // No title when on main friends list - title is now inline with content
                 }
 
                 ToolbarItem(placement: .topBarTrailing) {

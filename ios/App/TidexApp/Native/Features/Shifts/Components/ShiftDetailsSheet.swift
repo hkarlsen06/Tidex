@@ -12,6 +12,8 @@ struct ShiftEditResult {
     let isVirtualShiftConversion: Bool  // If true, exclude from recurring and create new shift
     let recurringId: String?   // The recurring shift ID if converting virtual shift
     let originalDate: String   // Original date (for exclusion when converting virtual)
+    /// Custom supplements for this shift. nil = no change, empty rules = clear supplements
+    let customSupplements: CustomSupplementsData?
 }
 
 struct ShiftDetailsSheet: View {
@@ -19,6 +21,8 @@ struct ShiftDetailsSheet: View {
     let onDelete: (() -> Void)?
     let onUpdate: ((ShiftEditResult) -> Void)?
     let onEditRecurring: ((String) -> Void)?  // Callback with recurring shift ID
+    /// Tariff supplement rules from the applicable snapshot (used for supplements editor)
+    let tariffRules: [SupplementRule]
 
     @Environment(\.localization) private var localization
     @Environment(\.userCurrency) private var currency
@@ -41,11 +45,20 @@ struct ShiftDetailsSheet: View {
     /// Edited end time
     @State private var editedEndTime: Date = Date()
 
+    /// Edited custom supplements (nil = unchanged, set to clear or modify)
+    @State private var editedSupplements: CustomSupplementsData?
+
+    /// Whether supplements were edited (to track changes)
+    @State private var supplementsWereEdited = false
+
     /// Whether currently saving
     @State private var isSaving = false
 
     /// Error message to display
     @State private var errorMessage: String?
+
+    /// Whether showing the supplements editor sheet
+    @State private var showingSupplementsEditor = false
 
     /// Haptic feedback generator
     private let impactHaptic = UIImpactFeedbackGenerator(style: .medium)
@@ -68,13 +81,15 @@ struct ShiftDetailsSheet: View {
         onDelete: (() -> Void)? = nil,
         onUpdate: ((ShiftEditResult) -> Void)? = nil,
         onEditRecurring: ((String) -> Void)? = nil,
-        startInEditMode: Bool = false
+        startInEditMode: Bool = false,
+        tariffRules: [SupplementRule] = []
     ) {
         self.shift = shift
         self.onDelete = onDelete
         self.onUpdate = onUpdate
         self.onEditRecurring = onEditRecurring
         self.startInEditMode = startInEditMode
+        self.tariffRules = tariffRules
     }
 
     private var formattedDate: String {
@@ -259,6 +274,39 @@ struct ShiftDetailsSheet: View {
             }
         }
         .interactiveDismissDisabled(isEditing && hasChanges)
+        .sheet(isPresented: $showingSupplementsEditor) {
+            CustomSupplementsEditorSheet(
+                shift: shift,
+                currency: currency,
+                tariffRules: tariffRules,
+                onSave: { customSupplements in
+                    // Update the edited supplements state
+                    editedSupplements = customSupplements
+                    supplementsWereEdited = true
+                    showingSupplementsEditor = false
+
+                    // If we're not already in edit mode, immediately save with just supplements
+                    // (Otherwise, wait for user to click Save in edit mode)
+                    if !isEditing {
+                        let editResult = ShiftEditResult(
+                            shiftId: shift.id,
+                            shiftDate: shift.shiftDate,
+                            startTime: shift.startTime,
+                            endTime: shift.endTime,
+                            isVirtualShiftConversion: isVirtualShift,
+                            recurringId: shift.shift.recurring_id,
+                            originalDate: shift.shiftDate,
+                            customSupplements: customSupplements
+                        )
+                        onUpdate?(editResult)
+                        dismiss()
+                    }
+                },
+                onCancel: {
+                    showingSupplementsEditor = false
+                }
+            )
+        }
     }
 
     // MARK: - Edit State Management
@@ -318,7 +366,8 @@ struct ShiftDetailsSheet: View {
 
         return newDate != shift.shiftDate ||
                newStartTime != String(shift.startTime.prefix(5)) ||
-               newEndTime != String(shift.endTime.prefix(5))
+               newEndTime != String(shift.endTime.prefix(5)) ||
+               supplementsWereEdited
     }
 
     /// Cancel editing and reset state
@@ -353,7 +402,8 @@ struct ShiftDetailsSheet: View {
                 endTime: newEndTime,
                 isVirtualShiftConversion: isVirtualShift,
                 recurringId: shift.shift.recurring_id,
-                originalDate: shift.shiftDate
+                originalDate: shift.shiftDate,
+                customSupplements: supplementsWereEdited ? editedSupplements : nil
             )
             onUpdate(editResult)
             // The parent will handle dismissing or showing errors
@@ -707,6 +757,29 @@ struct ShiftDetailsSheet: View {
                         value: formatCurrency(shift.netPay),
                         isHighlighted: true
                     )
+                }
+
+                // Edit supplements button (always show if tariff rules are available)
+                if onUpdate != nil && !tariffRules.isEmpty {
+                    Divider()
+
+                    Button {
+                        impactHaptic.impactOccurred()
+                        showingSupplementsEditor = true
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "slider.horizontal.3")
+                                .font(.system(size: 13))
+                            Text(localization.string("supplements.editButton"))
+                                .font(.system(size: 14, weight: .medium))
+                        }
+                        .foregroundColor(.tidexBlue)
+                        .padding(.vertical, 8)
+                        .frame(maxWidth: .infinity)
+                        .background(Color.tidexBlue.opacity(0.08))
+                        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
                 }
             }
             .padding(16)

@@ -180,10 +180,19 @@ struct PlaceholderTabView: View {
                     .applyRefreshable(enabled: supportsRefresh)
                 }
             }
-            .navigationTitle(localization.string(titleKey))
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(Color.tidexBackground, for: .navigationBar)
             .toolbar {
+                ToolbarItem(placement: .principal) {
+                    HStack {
+                        Image("TidexWordmark")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(height: 22)
+                        Spacer()
+                    }
+                    .frame(maxWidth: .infinity)
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     UserMenuButton(
                         displayName: coordinator.userDisplayName,
