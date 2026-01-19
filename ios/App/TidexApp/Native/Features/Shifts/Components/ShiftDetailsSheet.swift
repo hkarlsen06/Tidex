@@ -2,18 +2,76 @@ import SwiftUI
 
 /// Sheet view displaying detailed information about a shift
 /// Shows date, time, hours, earnings breakdown, and actions
+/// Supports edit mode for modifying date and times
+/// Result of a shift edit operation
+struct ShiftEditResult {
+    let shiftId: String
+    let shiftDate: String      // ISO format YYYY-MM-DD
+    let startTime: String      // HH:mm format
+    let endTime: String        // HH:mm format
+    let isVirtualShiftConversion: Bool  // If true, exclude from recurring and create new shift
+    let recurringId: String?   // The recurring shift ID if converting virtual shift
+    let originalDate: String   // Original date (for exclusion when converting virtual)
+}
+
 struct ShiftDetailsSheet: View {
     let shift: ShiftWithComputations
     let onDelete: (() -> Void)?
+    let onUpdate: ((ShiftEditResult) -> Void)?
 
     @Environment(\.localization) private var localization
     @Environment(\.userCurrency) private var currency
     @Environment(\.dismiss) private var dismiss
 
+    // MARK: - Edit Mode State
+
+    /// Whether the sheet is in edit mode
+    @State private var isEditing = false
+
+    /// Whether to start in edit mode (passed from parent)
+    var startInEditMode: Bool = false
+
+    /// Edited date (ISO format YYYY-MM-DD)
+    @State private var editedDate: Date = Date()
+
+    /// Edited start time
+    @State private var editedStartTime: Date = Date()
+
+    /// Edited end time
+    @State private var editedEndTime: Date = Date()
+
+    /// Whether currently saving
+    @State private var isSaving = false
+
+    /// Error message to display
+    @State private var errorMessage: String?
+
+    /// Haptic feedback generator
+    private let impactHaptic = UIImpactFeedbackGenerator(style: .medium)
+
     // MARK: - Computed Properties
 
     private var isVirtualShift: Bool {
         shift.isVirtual
+    }
+
+    /// Whether editing is allowed
+    /// All shifts can be edited - virtual shifts will be converted to regular shifts
+    private var canEditTimes: Bool {
+        true
+    }
+
+    /// Initialize the edit mode from the passed parameter
+    init(
+        shift: ShiftWithComputations,
+        onDelete: (() -> Void)? = nil,
+        onUpdate: ((ShiftEditResult) -> Void)? = nil,
+        startInEditMode: Bool = false
+    ) {
+        self.shift = shift
+        self.onDelete = onDelete
+        self.onUpdate = onUpdate
+        self.startInEditMode = startInEditMode
     }
 
     private var formattedDate: String {
@@ -126,36 +184,180 @@ struct ShiftDetailsSheet: View {
                     // Header with date
                     headerSection
 
-                    // Time and hours
-                    timeSection
+                    // Time and hours (editable in edit mode)
+                    if isEditing {
+                        editableTimeSection
+                    } else {
+                        timeSection
+                    }
 
-                    // Earnings breakdown
-                    earningsSection
+                    // Error message
+                    if let error = errorMessage {
+                        errorBanner(message: error)
+                    }
+
+                    // Earnings breakdown (hidden in edit mode)
+                    if !isEditing {
+                        earningsSection
+                    }
 
                     // Virtual shift indicator
-                    if isVirtualShift {
+                    if isVirtualShift && !isEditing {
                         virtualShiftBanner
                     }
 
-                    // Delete button (for all shifts - virtual shifts get excluded)
-                    if let onDelete = onDelete {
-                        deleteButton(onDelete: onDelete, isVirtual: isVirtualShift)
+                    // Action buttons
+                    if isEditing {
+                        editActionButtons
+                    } else {
+                        viewModeActionButtons
                     }
                 }
                 .padding(20)
             }
             .background(Color.tidexBackground)
-            .navigationTitle(localization.string("shifts.detailsTitle"))
+            .navigationTitle(isEditing
+                ? localization.string("shifts.editTitle")
+                : localization.string("shifts.detailsTitle"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button(localization.string("common.done")) {
-                        dismiss()
+                ToolbarItem(placement: .topBarLeading) {
+                    if isEditing {
+                        Button(localization.string("common.cancel")) {
+                            cancelEditing()
+                        }
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.tidexTextSecondary)
                     }
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.tidexBlue)
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    if isEditing {
+                        Button(localization.string("common.save")) {
+                            saveChanges()
+                        }
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.tidexBlue)
+                        .disabled(isSaving || !hasChanges)
+                        .opacity(isSaving || !hasChanges ? 0.5 : 1)
+                    } else {
+                        Button(localization.string("common.done")) {
+                            dismiss()
+                        }
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.tidexBlue)
+                    }
                 }
             }
+        }
+        .onAppear {
+            initializeEditState()
+            if startInEditMode {
+                isEditing = true
+            }
+        }
+        .interactiveDismissDisabled(isEditing && hasChanges)
+    }
+
+    // MARK: - Edit State Management
+
+    /// Initialize edit state from the shift data
+    private func initializeEditState() {
+        // Parse shift date
+        if let date = Date.fromISODateString(shift.shiftDate) {
+            editedDate = date
+        }
+
+        // Parse start time
+        if let startTime = parseTimeToDate(shift.startTime) {
+            editedStartTime = startTime
+        }
+
+        // Parse end time
+        if let endTime = parseTimeToDate(shift.endTime) {
+            editedEndTime = endTime
+        }
+    }
+
+    /// Parse HH:mm string to Date (using today as base)
+    private func parseTimeToDate(_ timeString: String) -> Date? {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm"
+        guard let time = formatter.date(from: String(timeString.prefix(5))) else { return nil }
+
+        // Combine with today's date
+        let calendar = Calendar.current
+        let now = Date()
+        var components = calendar.dateComponents([.year, .month, .day], from: now)
+        components.hour = calendar.component(.hour, from: time)
+        components.minute = calendar.component(.minute, from: time)
+        return calendar.date(from: components)
+    }
+
+    /// Format Date to HH:mm string
+    private func formatTimeToString(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm"
+        return formatter.string(from: date)
+    }
+
+    /// Format Date to ISO date string (YYYY-MM-DD)
+    private func formatDateToISO(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter.string(from: date)
+    }
+
+    /// Check if any changes have been made
+    private var hasChanges: Bool {
+        let newDate = formatDateToISO(editedDate)
+        let newStartTime = formatTimeToString(editedStartTime)
+        let newEndTime = formatTimeToString(editedEndTime)
+
+        return newDate != shift.shiftDate ||
+               newStartTime != String(shift.startTime.prefix(5)) ||
+               newEndTime != String(shift.endTime.prefix(5))
+    }
+
+    /// Cancel editing and reset state
+    private func cancelEditing() {
+        initializeEditState()
+        errorMessage = nil
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+            isEditing = false
+        }
+    }
+
+    /// Save changes
+    private func saveChanges() {
+        // Validate times (basic validation)
+        let newDate = formatDateToISO(editedDate)
+        let newStartTime = formatTimeToString(editedStartTime)
+        let newEndTime = formatTimeToString(editedEndTime)
+
+        // Clear any previous error
+        errorMessage = nil
+
+        // Call the update callback
+        isSaving = true
+        impactHaptic.impactOccurred()
+
+        if let onUpdate = onUpdate {
+            // Create the edit result with all necessary information
+            let editResult = ShiftEditResult(
+                shiftId: shift.id,
+                shiftDate: newDate,
+                startTime: newStartTime,
+                endTime: newEndTime,
+                isVirtualShiftConversion: isVirtualShift,
+                recurringId: shift.shift.recurring_id,
+                originalDate: shift.shiftDate
+            )
+            onUpdate(editResult)
+            // The parent will handle dismissing or showing errors
+            dismiss()
+        } else {
+            isSaving = false
+            errorMessage = "Update not available"
         }
     }
 
@@ -212,6 +414,216 @@ struct ShiftDetailsSheet: View {
                 RoundedRectangle(cornerRadius: 16)
                     .fill(Color.tidexSurfacePrimary)
             )
+        }
+    }
+
+    // MARK: - Editable Time Section
+
+    private var editableTimeSection: some View {
+        VStack(spacing: 16) {
+            // Section header
+            HStack {
+                Image(systemName: "pencil")
+                    .foregroundColor(.tidexBlue)
+                Text(localization.string("shifts.editTimeSection"))
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.tidexTextSecondary)
+                Spacer()
+            }
+
+            // Editable fields card
+            VStack(spacing: 16) {
+                // Date picker row
+                HStack {
+                    Text(localization.string("shifts.date"))
+                        .font(.system(size: 15))
+                        .foregroundColor(.tidexTextSecondary)
+                    Spacer()
+                    DatePicker(
+                        "",
+                        selection: $editedDate,
+                        displayedComponents: .date
+                    )
+                    .labelsHidden()
+                    .tint(.tidexBlue)
+                }
+
+                Divider()
+
+                // Start time row
+                HStack {
+                    Text(localization.string("shifts.startTime"))
+                        .font(.system(size: 15))
+                        .foregroundColor(.tidexTextSecondary)
+                    Spacer()
+                    DatePicker(
+                        "",
+                        selection: $editedStartTime,
+                        displayedComponents: .hourAndMinute
+                    )
+                    .labelsHidden()
+                    .tint(.tidexBlue)
+                    .disabled(!canEditTimes)
+                    .opacity(canEditTimes ? 1 : 0.5)
+                }
+
+                Divider()
+
+                // End time row
+                HStack {
+                    Text(localization.string("shifts.endTime"))
+                        .font(.system(size: 15))
+                        .foregroundColor(.tidexTextSecondary)
+                    Spacer()
+                    DatePicker(
+                        "",
+                        selection: $editedEndTime,
+                        displayedComponents: .hourAndMinute
+                    )
+                    .labelsHidden()
+                    .tint(.tidexBlue)
+                    .disabled(!canEditTimes)
+                    .opacity(canEditTimes ? 1 : 0.5)
+                }
+
+                // Info about cross-midnight shifts
+                if isCrossMidnightShift {
+                    HStack(spacing: 8) {
+                        Image(systemName: "moon.fill")
+                            .font(.system(size: 12))
+                            .foregroundColor(.tidexBlue)
+                        Text(localization.string("shifts.crossMidnightInfo"))
+                            .font(.system(size: 13))
+                            .foregroundColor(.tidexTextSecondary)
+                        Spacer()
+                    }
+                    .padding(.top, 4)
+                }
+
+                // Virtual shift info (will be converted to regular shift)
+                if isVirtualShift {
+                    HStack(spacing: 8) {
+                        Image(systemName: "info.circle")
+                            .font(.system(size: 14))
+                            .foregroundColor(.tidexBlue)
+                        Text(localization.string("shifts.virtualConversionInfo"))
+                            .font(.system(size: 13))
+                            .foregroundColor(.tidexTextSecondary)
+                        Spacer()
+                    }
+                    .padding(.top, 4)
+                }
+            }
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color.tidexSurfacePrimary)
+            )
+        }
+    }
+
+    /// Whether the edited times represent a cross-midnight shift
+    private var isCrossMidnightShift: Bool {
+        let startStr = formatTimeToString(editedStartTime)
+        let endStr = formatTimeToString(editedEndTime)
+        return endStr <= startStr && endStr != "00:00"
+    }
+
+    // MARK: - Error Banner
+
+    @ViewBuilder
+    private func errorBanner(message: String) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 14))
+                .foregroundColor(.tidexError)
+            Text(message)
+                .font(.system(size: 14))
+                .foregroundColor(.tidexError)
+            Spacer()
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.tidexError.opacity(0.1))
+        )
+    }
+
+    // MARK: - Action Buttons
+
+    /// Action buttons for edit mode
+    private var editActionButtons: some View {
+        VStack(spacing: 12) {
+            // Save button
+            Button {
+                saveChanges()
+            } label: {
+                HStack(spacing: 8) {
+                    if isSaving {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                            .scaleEffect(0.8)
+                    } else {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 15, weight: .medium))
+                    }
+                    Text(localization.string("common.saveChanges"))
+                        .font(.system(size: 15, weight: .semibold))
+                }
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(hasChanges ? Color.tidexBlue : Color.tidexBlue.opacity(0.5))
+                .cornerRadius(12)
+            }
+            .disabled(isSaving || !hasChanges)
+
+            // Cancel button
+            Button {
+                cancelEditing()
+            } label: {
+                Text(localization.string("common.cancel"))
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundColor(.tidexTextSecondary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(Color.tidexSurfaceSecondary)
+                    .cornerRadius(12)
+            }
+            .disabled(isSaving)
+        }
+        .padding(.top, 8)
+    }
+
+    /// Action buttons for view mode
+    @ViewBuilder
+    private var viewModeActionButtons: some View {
+        VStack(spacing: 12) {
+            // Edit button (only show if onUpdate callback is provided)
+            if onUpdate != nil {
+                Button {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                        isEditing = true
+                    }
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "pencil")
+                            .font(.system(size: 15, weight: .medium))
+                        Text(localization.string("shifts.editButton"))
+                            .font(.system(size: 15, weight: .semibold))
+                    }
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(Color.tidexBlue)
+                    .cornerRadius(12)
+                }
+            }
+
+            // Delete button
+            if let onDelete = onDelete {
+                deleteButton(onDelete: onDelete, isVirtual: isVirtualShift)
+            }
         }
     }
 
@@ -518,7 +930,43 @@ struct SupplementSegment: Identifiable {
             taxEnabled: true,
             taxPercentage: 30
         ),
-        onDelete: { print("Delete tapped") }
+        onDelete: { print("Delete tapped") },
+        onUpdate: { result in print("Update: \(result)") }
+    )
+}
+
+#Preview("Edit Mode") {
+    ShiftDetailsSheet(
+        shift: ShiftWithComputations(
+            shift: ShiftRow(
+                id: "preview-edit",
+                user_id: "user-1",
+                shift_date: "2025-01-17",
+                start_time: "08:00",
+                end_time: "16:00",
+                custom_supplements: nil
+            ),
+            computed: ShiftComputed(
+                id: "preview-edit",
+                durationHours: 8.0,
+                paidHours: 7.5,
+                basePay: 1500,
+                supplementPay: 0,
+                gross: 1500,
+                wagePeriods: [
+                    WagePeriod(fromMin: 480, toMin: 960, baseRate: 200, supplementRate: 0)
+                ],
+                originalWagePeriods: [
+                    WagePeriod(fromMin: 480, toMin: 960, baseRate: 200, supplementRate: 0)
+                ],
+                breakAudit: BreakAudit(method: .proportional, thresholdHours: 5.0, deductedHours: 0.5, notes: [])
+            ),
+            taxEnabled: false,
+            taxPercentage: 0
+        ),
+        onDelete: { print("Delete tapped") },
+        onUpdate: { result in print("Update: \(result)") },
+        startInEditMode: true
     )
 }
 
@@ -551,6 +999,7 @@ struct SupplementSegment: Identifiable {
             taxEnabled: false,
             taxPercentage: 0
         ),
-        onDelete: { print("Delete tapped") }
+        onDelete: { print("Delete tapped") },
+        onUpdate: { result in print("Update: \(result)") }
     )
 }

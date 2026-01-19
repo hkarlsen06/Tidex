@@ -167,6 +167,8 @@ enum AuthStrings {
         "common.continue": "Fortsett",
         "common.back": "Tilbake",
         "common.done": "Ferdig",
+        "common.save": "Lagre",
+        "common.saveChanges": "Lagre endringer",
 
         // Tabs
         "tabs.home": "Hjem",
@@ -490,6 +492,14 @@ enum AuthStrings {
         "shifts.selectMoveTarget": "Trykk på en dato for å flytte",
         "shifts.copying": "Kopierer...",
         "shifts.moving": "Flytter...",
+        "shifts.editTitle": "Rediger vakt",
+        "shifts.editTimeSection": "Rediger tid",
+        "shifts.editButton": "Rediger",
+        "shifts.date": "Dato",
+        "shifts.startTime": "Starttid",
+        "shifts.endTime": "Sluttid",
+        "shifts.crossMidnightInfo": "Vakten går over midnatt til neste dag",
+        "shifts.virtualConversionInfo": "Endringer oppretter en ny vakt og ekskluderer denne datoen fra den faste vakten",
 
         // Sharing
         "sharing.title": "Deling",
@@ -699,6 +709,8 @@ enum AuthStrings {
         "common.continue": "Continue",
         "common.back": "Back",
         "common.done": "Done",
+        "common.save": "Save",
+        "common.saveChanges": "Save changes",
 
         // Tabs
         "tabs.home": "Home",
@@ -1022,6 +1034,14 @@ enum AuthStrings {
         "shifts.selectMoveTarget": "Tap a date to move to",
         "shifts.copying": "Copying...",
         "shifts.moving": "Moving...",
+        "shifts.editTitle": "Edit Shift",
+        "shifts.editTimeSection": "Edit Time",
+        "shifts.editButton": "Edit",
+        "shifts.date": "Date",
+        "shifts.startTime": "Start time",
+        "shifts.endTime": "End time",
+        "shifts.crossMidnightInfo": "Shift continues past midnight to the next day",
+        "shifts.virtualConversionInfo": "Changes will create a new shift and exclude this date from the recurring pattern",
 
         // Sharing
         "sharing.title": "Sharing",

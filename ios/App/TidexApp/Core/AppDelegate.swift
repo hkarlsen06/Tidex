@@ -154,10 +154,12 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 
     /// Check if there's an ongoing shift and start a Live Activity if needed.
+    /// Also ends any Live Activities for shifts that are no longer ongoing.
     /// This is called from:
     /// - Background task handler (when the scheduled task fires)
     /// - App foreground (when user opens the app)
     /// - App launch (in didFinishLaunchingWithOptions)
+    /// - After widget storage update (when shifts are synced/edited)
     ///
     /// This ensures the Live Activity starts reliably, not just depending on BGTask timing.
     func checkAndStartLiveActivityIfNeeded() {
@@ -166,6 +168,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             print("[LiveActivity] Activities not enabled by user")
             return
         }
+
+        // First, end any Live Activities for shifts that are no longer ongoing
+        endStaleActivities()
 
         // Check if there's already an active activity
         guard Activity<ShiftActivityAttributes>.activities.isEmpty else {
@@ -205,6 +210,58 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             }
         } catch {
             print("[LiveActivity] Failed to parse shifts: \(error)")
+        }
+    }
+
+    /// End any Live Activities whose shifts are no longer ongoing.
+    /// This handles cases where:
+    /// - A shift was edited to change its time so it's no longer current
+    /// - A shift was deleted
+    /// - The shift has ended naturally
+    private func endStaleActivities() {
+        let activities = Activity<ShiftActivityAttributes>.activities
+        guard !activities.isEmpty else { return }
+
+        // Read current shifts from storage
+        let currentShifts: [StoredShift]
+        if let userDefaults = sharedUserDefaults(),
+           let shiftsJson = userDefaults.string(forKey: "upcoming_shifts"),
+           let shiftsData = shiftsJson.data(using: .utf8),
+           let shifts = try? JSONDecoder().decode([StoredShift].self, from: shiftsData) {
+            currentShifts = shifts
+        } else {
+            currentShifts = []
+        }
+
+        let now = Date()
+
+        for activity in activities {
+            let shiftId = activity.attributes.shiftId
+
+            // Find the shift in current storage
+            let matchingShift = currentShifts.first { $0.shiftId == shiftId }
+
+            var shouldEnd = false
+            var reason = ""
+
+            if matchingShift == nil {
+                // Shift was deleted
+                shouldEnd = true
+                reason = "shift was deleted"
+            } else if let shift = matchingShift {
+                // Shift exists - check if it's still ongoing
+                if !isShiftOngoing(shift, at: now) {
+                    shouldEnd = true
+                    reason = "shift is no longer ongoing (edited or ended)"
+                }
+            }
+
+            if shouldEnd {
+                print("[LiveActivity] Ending activity for shift \(shiftId): \(reason)")
+                Task {
+                    await activity.end(nil, dismissalPolicy: .immediate)
+                }
+            }
         }
     }
 
