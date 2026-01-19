@@ -104,16 +104,39 @@ export async function POST(request: NextRequest) {
       payload.fcm_token = fcmToken;
     }
 
-    // For APNs-only registration, try to update existing record by user_id first
+    // For APNs-only registration, try to update existing record
+    // Match by device_id (if provided) or fall back to user_id + platform
     // This handles the case where FCM token was registered first via Capacitor
     if (apnsToken && !fcmToken) {
-      const { data: existingDevice } = await serviceClient
-        .schema('internal')
-        .from('push_devices')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('platform', 'ios')
-        .maybeSingle();
+      let existingDevice: { id: string } | null = null;
+
+      // First try to find by device_id (most accurate match for same device)
+      if (deviceId) {
+        const { data: deviceMatch } = await serviceClient
+          .schema('internal')
+          .from('push_devices')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('device_id', deviceId)
+          .maybeSingle();
+
+        existingDevice = deviceMatch;
+      }
+
+      // Fall back to user_id + platform if no device_id match
+      if (!existingDevice) {
+        const { data: platformMatch } = await serviceClient
+          .schema('internal')
+          .from('push_devices')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('platform', 'ios')
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        existingDevice = platformMatch;
+      }
 
       if (existingDevice) {
         // Update existing record with APNs token
