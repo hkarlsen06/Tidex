@@ -3,14 +3,6 @@ import BackgroundTasks
 import Supabase
 import UIKit
 
-private struct PushDeviceRow: Decodable {
-    let userId: String
-
-    enum CodingKeys: String, CodingKey {
-        case userId = "user_id"
-    }
-}
-
 @main
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
@@ -333,55 +325,65 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         completionHandler(.newData)
     }
 
-    /// Register APNs token with Supabase backend
+    /// Register APNs token via the web app API
+    /// The API uses service role credentials to access the internal.push_devices table
     private func registerAPNsToken(_ token: String) async {
         do {
-            // Get current user session
+            // Get current user session for auth and user ID
             let session = try await supabase.auth.session
-
             let userId = session.user.id.uuidString.lowercased()
             let defaults = UserDefaults.standard
 
+            // Skip if already registered for this user
             if !needsAPNsRegistration(token: token, userId: userId) {
+                print("[APNs] Token already registered for user \(userId.prefix(8))")
                 return
             }
-            let timestamp = ISO8601DateFormatter().string(from: Date())
-            let updatePayload = [
-                "apns_token": token,
-                "updated_at": timestamp
+
+            // Build API request
+            let url = APIConfiguration.webAppBaseURL.appendingPathComponent("api/push-device")
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.setValue("Bearer \(session.accessToken)", forHTTPHeaderField: "Authorization")
+
+            // Build payload with device info
+            var payload: [String: Any] = [
+                "apnsToken": token,
+                "platform": "ios"
             ]
 
-            // Update existing device record with APNs token
-            // This preserves the fcm_token for backwards compatibility during migration
-            let updatedRows: [PushDeviceRow] = try await supabase
-                .schema("internal")
-                .from("push_devices")
-                .update(updatePayload)
-                .eq("user_id", value: userId)
-                .select("user_id")
-                .execute()
-                .value
-
-            if updatedRows.isEmpty {
-                let insertPayload = [
-                    "user_id": userId,
-                    "apns_token": token,
-                    "updated_at": timestamp
-                ]
-
-                _ = try await supabase
-                    .schema("internal")
-                    .from("push_devices")
-                    .insert(insertPayload)
-                    .select("user_id")
-                    .execute()
-                    .value as [PushDeviceRow]
+            // Add device metadata
+            let device = await UIDevice.current
+            payload["deviceModel"] = await device.model
+            if let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String {
+                payload["appVersion"] = appVersion
+            }
+            // Use identifierForVendor as device ID for token rotation detection
+            if let deviceId = await device.identifierForVendor?.uuidString {
+                payload["deviceId"] = deviceId
             }
 
-            defaults.set(token, forKey: apnsTokenRegisteredValueKey)
-            defaults.set(userId, forKey: apnsTokenRegisteredUserKey)
+            request.httpBody = try JSONSerialization.data(withJSONObject: payload)
 
-            print("[APNs] Token registered with Supabase for user \(userId.prefix(8))")
+            // Make the API call
+            let (data, response) = try await URLSession.shared.data(for: request)
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                print("[APNs] Invalid response type")
+                return
+            }
+
+            if httpResponse.statusCode == 200 {
+                // Success - cache the registration
+                defaults.set(token, forKey: apnsTokenRegisteredValueKey)
+                defaults.set(userId, forKey: apnsTokenRegisteredUserKey)
+                print("[APNs] Token registered via API for user \(userId.prefix(8))")
+            } else {
+                // Log error response
+                let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
+                print("[APNs] API error (\(httpResponse.statusCode)): \(errorMessage)")
+            }
         } catch {
             print("[APNs] Failed to register token: \(error)")
         }

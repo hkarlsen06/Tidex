@@ -5,6 +5,34 @@ import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "AddShiftViewModel")
 
+// MARK: - Calendar Display Data
+
+/// Pre-computed display data for calendar cells to avoid redundant computation
+struct CalendarDisplayData {
+    /// Set of dates that have existing shifts
+    let existingShiftDates: Set<String>
+    /// Earnings by date for existing shifts
+    let existingShiftEarnings: [String: Double]
+    /// Virtual shifts with computed earnings (cached)
+    let virtualShifts: [VirtualShiftWithEarnings]
+    /// Year and month this data is for
+    let year: Int
+    let month: Int
+    /// Timestamp for cache invalidation
+    let timestamp: Date
+
+    /// Virtual shift with computed earnings
+    struct VirtualShiftWithEarnings {
+        let date: String
+        let earnings: Double
+    }
+
+    /// Check if cache is valid for the given month
+    func isValid(for year: Int, month: Int) -> Bool {
+        self.year == year && self.month == month
+    }
+}
+
 /// ViewModel for the Add Shift screen
 /// Manages state for both single and recurring shift modes
 @MainActor
@@ -25,10 +53,28 @@ final class AddShiftViewModel: ObservableObject {
 
     // MARK: - Shared State
 
-    @Published var startTime: Date? = nil
-    @Published var endTime: Date? = nil
+    @Published var startTime: Date? = nil {
+        didSet {
+            // Debounce time changes - schedule recomputation
+            schedulePreviewUpdate()
+        }
+    }
+    @Published var endTime: Date? = nil {
+        didSet {
+            // Debounce time changes - schedule recomputation
+            schedulePreviewUpdate()
+        }
+    }
     @Published var isLoading = false
     @Published var error: String?
+
+    // MARK: - Time Input Debouncing
+
+    /// Debounce timer for time input changes
+    private var previewUpdateTask: Task<Void, Never>?
+
+    /// Debounce delay in seconds (wait for user to finish typing)
+    private static let previewDebounceDelay: UInt64 = 300_000_000 // 300ms
 
     /// Display month as Date - computed from SharedMonthContext
     /// Setter updates the SharedMonthContext to sync with other tabs
@@ -113,6 +159,20 @@ final class AddShiftViewModel: ObservableObject {
     private var cachedRecurringShifts: [RecurringShiftRow] = []
     private var cachedSnapshots: [WageSnapshot] = []
     private var cachedSettings: UserSettings?
+
+    // MARK: - Performance Optimized Caches
+
+    /// Cached calendar display data - computed once per month, not per view update
+    @Published private(set) var cachedDisplayData: CalendarDisplayData?
+
+    /// Cached conflict dates - only recomputed when dates or times change
+    @Published private(set) var cachedConflictDatesForCalendar: Set<String> = []
+
+    /// Cached preview earnings - only recomputed when selection or times change
+    @Published private(set) var cachedPreviewEarnings: [String: Double] = [:]
+
+    /// Cached projected recurring dates - only recomputed when recurring settings change
+    @Published private(set) var cachedProjectedRecurringDates: [String] = []
 
     // MARK: - Preview Cache (computed only when preview sheet is shown)
 
@@ -227,90 +287,34 @@ final class AddShiftViewModel: ObservableObject {
         return formatTimeAsHHmm(time)
     }
 
-    /// Set of dates that have existing shifts
+    /// Set of dates that have existing shifts - uses cached data for performance
     var existingShiftDates: Set<String> {
-        var dates = Set<String>()
-
-        // Add regular shifts
-        for shift in cachedShifts {
-            dates.insert(shift.shift_date)
-        }
-
-        // Add virtual shifts from recurring patterns
-        let virtualDates = generateVirtualShiftDatesForDisplay()
-        dates.formUnion(virtualDates)
-
-        return dates
+        cachedDisplayData?.existingShiftDates ?? Set<String>()
     }
 
-    /// Computed earnings for existing shifts by date
+    /// Computed earnings for existing shifts by date - uses cached data for performance
     var existingShiftEarnings: [String: Double] {
-        var result: [String: Double] = [:]
-
-        // Compute earnings for regular shifts
-        for shift in cachedShifts {
-            let snapshot = SnapshotsService.snapshotForDate(shift.shift_date, from: cachedSnapshots)
-            let computed = PayrollCalculator.computeShift(shift, snapshot: snapshot)
-            result[shift.shift_date, default: 0] += computed.gross
-        }
-
-        // Compute earnings for virtual shifts from recurring patterns
-        let virtualShifts = generateVirtualShiftsForDisplay()
-        for virtualShift in virtualShifts {
-            result[virtualShift.date, default: 0] += virtualShift.earnings
-        }
-
-        return result
+        cachedDisplayData?.existingShiftEarnings ?? [:]
     }
 
-    /// Set of dates that would conflict with the current time selection
+    /// Set of dates that would conflict with the current time selection - uses cached data
     var conflictDates: Set<String> {
-        let datesToCheck: [String]
-        switch mode {
-        case .single:
-            datesToCheck = Array(selectedDates)
-        case .recurring:
-            datesToCheck = projectedRecurringDates
-        }
-
-        return ShiftConflictDetector.detectConflicts(
-            dates: datesToCheck,
-            startTime: startTimeString,
-            endTime: endTimeString,
-            existingShifts: cachedShifts,
-            existingRecurringShifts: cachedRecurringShifts
-        )
+        cachedConflictDatesForCalendar
     }
 
-    /// Projected dates for the recurring pattern
+    /// Projected dates for the recurring pattern - uses cached data
     var projectedRecurringDates: [String] {
-        guard !selectedDays.isEmpty else { return [] }
-
-        return RecurringShiftProjector.generateDates(
-            selectedDays: selectedDays,
-            repeatInterval: repeatInterval,
-            endCondition: endCondition
-        )
+        cachedProjectedRecurringDates
     }
 
     /// Number of conflicts in the current selection
     var conflictCount: Int {
-        conflictDates.count
+        cachedConflictDatesForCalendar.count
     }
 
-    /// Preview earnings for selected dates (single mode)
+    /// Preview earnings for selected dates (single mode) - uses cached data
     var previewEarnings: [String: Double] {
-        guard canSubmitSingle else { return [:] }
-
-        var result: [String: Double] = [:]
-
-        for dateISO in selectedDates {
-            if let earnings = computeEarningsForDate(dateISO) {
-                result[dateISO] = earnings
-            }
-        }
-
-        return result
+        cachedPreviewEarnings
     }
 
     /// Preview earnings for projected recurring dates (recurring mode)
@@ -319,7 +323,7 @@ final class AddShiftViewModel: ObservableObject {
 
         var result: [String: Double] = [:]
 
-        for dateISO in projectedRecurringDates {
+        for dateISO in cachedProjectedRecurringDates {
             if let earnings = computeEarningsForDate(dateISO) {
                 result[dateISO] = earnings
             }
@@ -348,6 +352,9 @@ final class AddShiftViewModel: ObservableObject {
 
         // Load recurring shifts
         cachedRecurringShifts = recurringRepository.getRecurringShifts(for: userId)
+
+        // Build cached display data for the current month
+        rebuildCalendarDisplayData()
 
         // Check for pre-selected date from SharedMonthContext (e.g., tapping empty day in Shifts tab)
         applyPreselectedDate()
@@ -404,6 +411,12 @@ final class AddShiftViewModel: ObservableObject {
 
         cachedShifts = shiftsRepository.getShifts(for: userId, startDate: startDate, endDate: endDate)
 
+        // Rebuild display data for the new month
+        rebuildCalendarDisplayData()
+
+        // Update conflicts and preview earnings
+        updateConflictsAndPreviews()
+
         // Trigger view update for new month's shift indicators
         cacheVersion += 1
     }
@@ -415,8 +428,16 @@ final class AddShiftViewModel: ObservableObject {
         // Toggle single date
         if selectedDates.contains(dateISO) {
             selectedDates.remove(dateISO)
+            // Incremental update: remove from preview earnings
+            cachedPreviewEarnings.removeValue(forKey: dateISO)
+            // Update conflicts after removing date
+            updateConflictsIncrementally(removedDate: dateISO)
         } else {
             selectedDates.insert(dateISO)
+            // Incremental update: only compute earnings for this new date
+            updatePreviewEarningsIncrementally(addedDate: dateISO)
+            // Update conflicts after adding date
+            updateConflictsIncrementally(addedDate: dateISO)
         }
 
         // Haptic feedback
@@ -427,6 +448,8 @@ final class AddShiftViewModel: ObservableObject {
     /// Clear all selected dates
     func clearSelectedDates() {
         selectedDates.removeAll()
+        cachedPreviewEarnings.removeAll()
+        cachedConflictDatesForCalendar.removeAll()
     }
 
     /// Submit single shifts
@@ -758,6 +781,15 @@ final class AddShiftViewModel: ObservableObject {
         selectedDates.removeAll()
         selectedDays.removeAll()
 
+        // Clear cached computation data
+        cachedPreviewEarnings.removeAll()
+        cachedConflictDatesForCalendar.removeAll()
+        cachedProjectedRecurringDates.removeAll()
+
+        // Cancel any pending preview update before clearing times
+        previewUpdateTask?.cancel()
+        previewUpdateTask = nil
+
         // Clear times so user can start fresh
         startTime = nil
         endTime = nil
@@ -790,5 +822,203 @@ final class AddShiftViewModel: ObservableObject {
         components.hour = 17
         components.minute = 0
         return calendar.date(from: components) ?? Date()
+    }
+
+    // MARK: - Performance Optimization Methods
+
+    /// Schedule a debounced preview update after time input changes
+    private func schedulePreviewUpdate() {
+        // Cancel any pending update
+        previewUpdateTask?.cancel()
+
+        // Schedule new update with debounce delay
+        previewUpdateTask = Task { [weak self] in
+            do {
+                try await Task.sleep(nanoseconds: Self.previewDebounceDelay)
+
+                // Check if cancelled during sleep
+                guard !Task.isCancelled else { return }
+
+                await MainActor.run {
+                    self?.updateConflictsAndPreviews()
+                }
+            } catch {
+                // Task was cancelled - this is expected
+            }
+        }
+    }
+
+    /// Rebuild the calendar display data from cached shifts (called once per month change)
+    private func rebuildCalendarDisplayData() {
+        let year = displayYear
+        let month = displayMonthNumber
+
+        // Build set of existing shift dates
+        var existingDates = Set<String>()
+        var existingEarnings: [String: Double] = [:]
+
+        // Add regular shifts
+        for shift in cachedShifts {
+            existingDates.insert(shift.shift_date)
+
+            // Compute earnings for regular shifts
+            let snapshot = SnapshotsService.snapshotForDate(shift.shift_date, from: cachedSnapshots)
+            let computed = PayrollCalculator.computeShift(shift, snapshot: snapshot)
+            existingEarnings[shift.shift_date, default: 0] += computed.gross
+        }
+
+        // Generate virtual shifts with computed earnings
+        var virtualShiftsWithEarnings: [CalendarDisplayData.VirtualShiftWithEarnings] = []
+
+        for recurring in cachedRecurringShifts {
+            let virtualShifts = RecurringShiftGenerator.generateVirtualShiftsForMonth(
+                year: year,
+                month: month,
+                recurring: recurring
+            )
+
+            for virtualShift in virtualShifts {
+                existingDates.insert(virtualShift.date)
+
+                // Create a temporary shift to compute earnings
+                let shift = ShiftRow(
+                    id: "virtual-\(virtualShift.date)",
+                    user_id: nil,
+                    shift_date: virtualShift.date,
+                    start_time: recurring.start_time,
+                    end_time: recurring.end_time,
+                    custom_supplements: nil
+                )
+
+                let snapshot = SnapshotsService.snapshotForDate(virtualShift.date, from: cachedSnapshots)
+                let computed = PayrollCalculator.computeShift(shift, snapshot: snapshot)
+
+                virtualShiftsWithEarnings.append(CalendarDisplayData.VirtualShiftWithEarnings(
+                    date: virtualShift.date,
+                    earnings: computed.gross
+                ))
+
+                // Also add to existing earnings map
+                existingEarnings[virtualShift.date, default: 0] += computed.gross
+            }
+        }
+
+        // Store the cached display data
+        cachedDisplayData = CalendarDisplayData(
+            existingShiftDates: existingDates,
+            existingShiftEarnings: existingEarnings,
+            virtualShifts: virtualShiftsWithEarnings,
+            year: year,
+            month: month,
+            timestamp: Date()
+        )
+
+        logger.info("Rebuilt calendar display data: \(existingDates.count) dates, \(virtualShiftsWithEarnings.count) virtual shifts")
+    }
+
+    /// Update conflicts and preview earnings (called after time changes or initial load)
+    private func updateConflictsAndPreviews() {
+        // Update conflicts based on current mode
+        let datesToCheck: [String]
+        switch mode {
+        case .single:
+            datesToCheck = Array(selectedDates)
+        case .recurring:
+            // Regenerate projected dates when recurring settings change
+            if !selectedDays.isEmpty {
+                cachedProjectedRecurringDates = RecurringShiftProjector.generateDates(
+                    selectedDays: selectedDays,
+                    repeatInterval: repeatInterval,
+                    endCondition: endCondition
+                )
+            } else {
+                cachedProjectedRecurringDates = []
+            }
+            datesToCheck = cachedProjectedRecurringDates
+        }
+
+        // Only check conflicts if we have valid times and dates
+        guard hasValidTimes, !datesToCheck.isEmpty else {
+            cachedConflictDatesForCalendar = []
+            cachedPreviewEarnings = [:]
+            return
+        }
+
+        // Compute conflicts
+        cachedConflictDatesForCalendar = ShiftConflictDetector.detectConflicts(
+            dates: datesToCheck,
+            startTime: startTimeString,
+            endTime: endTimeString,
+            existingShifts: cachedShifts,
+            existingRecurringShifts: cachedRecurringShifts
+        )
+
+        // Compute preview earnings for all selected dates
+        if mode == .single {
+            var newPreviewEarnings: [String: Double] = [:]
+            for dateISO in selectedDates {
+                if let earnings = computeEarningsForDate(dateISO) {
+                    newPreviewEarnings[dateISO] = earnings
+                }
+            }
+            cachedPreviewEarnings = newPreviewEarnings
+        }
+    }
+
+    /// Incrementally update preview earnings when a single date is added
+    private func updatePreviewEarningsIncrementally(addedDate: String) {
+        guard hasValidTimes else { return }
+
+        if let earnings = computeEarningsForDate(addedDate) {
+            cachedPreviewEarnings[addedDate] = earnings
+        }
+    }
+
+    /// Incrementally update conflicts when a date is added
+    private func updateConflictsIncrementally(addedDate: String) {
+        guard hasValidTimes else { return }
+
+        // Check if the added date conflicts with existing shifts
+        let conflicts = ShiftConflictDetector.detectConflicts(
+            dates: [addedDate],
+            startTime: startTimeString,
+            endTime: endTimeString,
+            existingShifts: cachedShifts,
+            existingRecurringShifts: cachedRecurringShifts
+        )
+
+        // Add any conflicts found
+        cachedConflictDatesForCalendar.formUnion(conflicts)
+    }
+
+    /// Incrementally update conflicts when a date is removed
+    private func updateConflictsIncrementally(removedDate: String) {
+        // Simply remove the date from conflicts (it can't conflict if it's not selected)
+        cachedConflictDatesForCalendar.remove(removedDate)
+    }
+
+    /// Update projected recurring dates when recurring settings change
+    func updateProjectedRecurringDates() {
+        guard !selectedDays.isEmpty else {
+            cachedProjectedRecurringDates = []
+            return
+        }
+
+        cachedProjectedRecurringDates = RecurringShiftProjector.generateDates(
+            selectedDays: selectedDays,
+            repeatInterval: repeatInterval,
+            endCondition: endCondition
+        )
+
+        // Also update conflicts for the new projected dates
+        if hasValidTimes {
+            cachedConflictDatesForCalendar = ShiftConflictDetector.detectConflicts(
+                dates: cachedProjectedRecurringDates,
+                startTime: startTimeString,
+                endTime: endTimeString,
+                existingShifts: cachedShifts,
+                existingRecurringShifts: cachedRecurringShifts
+            )
+        }
     }
 }

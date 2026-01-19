@@ -69,6 +69,22 @@ private struct MonthCacheEntry {
     }
 }
 
+/// Lightweight prefetch cache entry - stores raw shift data without payroll computation
+/// This allows fast prefetching without expensive PayrollEngine calls
+private struct PrefetchCacheEntry {
+    let year: Int
+    let month: Int
+    let rawShifts: [ShiftRow]
+    let timestamp: Date
+
+    var key: String { "\(year)-\(month)" }
+
+    /// Check if prefetch entry is still valid (within 10 minutes)
+    var isValid: Bool {
+        Date().timeIntervalSince(timestamp) < 600 // 10 minutes
+    }
+}
+
 // MARK: - Shifts View Model
 
 @MainActor
@@ -241,6 +257,10 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
     /// Cache of computed shifts by month key (e.g., "2025-1")
     private var monthCache: [String: MonthCacheEntry] = [:]
 
+    /// Lightweight prefetch cache - stores raw shifts without payroll computation
+    /// Payroll is computed lazily when the month becomes visible
+    private var prefetchCache: [String: PrefetchCacheEntry] = [:]
+
     /// Maximum number of months to keep in cache (prevents unbounded memory growth)
     private static let maxCacheSize = 12
 
@@ -324,8 +344,9 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
 
     /// Handle memory warning by clearing the cache
     private func handleMemoryWarning() {
-        logger.warning("⚠️ Memory warning received - clearing month cache (\(self.monthCache.count) entries)")
+        logger.warning("⚠️ Memory warning received - clearing month cache (\(self.monthCache.count) entries) and prefetch cache (\(self.prefetchCache.count) entries)")
         monthCache.removeAll()
+        prefetchCache.removeAll()
         prefetchTasks.removeAll()
     }
 
@@ -620,10 +641,10 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
         let targetMonth = displayMonth
         let displayKey = "\(targetYear)-\(targetMonth)"
 
-        // Check if we have valid cache for displayed month
+        // Check if we have valid computed cache for displayed month
         if var displayCache = monthCache[displayKey], displayCache.isValid {
-            // Use cached data - instant navigation!
-            logger.info("📦 Using cached data for \(displayKey)")
+            // Use cached computed data - instant navigation!
+            logger.info("📦 Using cached computed data for \(displayKey)")
             self.shifts = displayCache.shifts
             self.weekGroups = groupShiftsByWeek(displayCache.shifts)
 
@@ -636,7 +657,59 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
             return
         }
 
-        // Cache miss - show loading state and fetch
+        // Check if we have prefetched raw data - compute payroll lazily now
+        if let prefetchEntry = prefetchCache[displayKey], prefetchEntry.isValid {
+            logger.info("⚡ Using prefetched raw data for \(displayKey), computing payroll lazily")
+
+            // Show loading briefly while computing payroll
+            self.isLoading = true
+
+            // Compute payroll from prefetched data
+            Task { [weak self] in
+                guard let self = self,
+                      let settings = self.settings else {
+                    self?.isLoading = false
+                    return
+                }
+
+                let computedShifts = PayrollEngine.computeShiftsForMonth(
+                    year: targetYear,
+                    month: targetMonth,
+                    shifts: prefetchEntry.rawShifts,
+                    recurring: self.recurringShifts,
+                    snapshots: self.snapshots,
+                    settings: settings
+                )
+
+                // Cache the computed results
+                self.monthCache[displayKey] = MonthCacheEntry(
+                    year: targetYear,
+                    month: targetMonth,
+                    shifts: computedShifts,
+                    timestamp: Date()
+                )
+
+                // Remove from prefetch cache (now in full cache)
+                self.prefetchCache.removeValue(forKey: displayKey)
+
+                // Update UI
+                self.shifts = computedShifts
+                self.weekGroups = self.groupShiftsByWeek(computedShifts)
+                self.updateConflictDetection(for: computedShifts)
+
+                if self.isCurrentMonth {
+                    self.updateNextUpcomingShift(for: computedShifts)
+                }
+
+                self.isLoading = false
+
+                // Prefetch neighbors after successful load
+                self.prefetchNeighboringMonths()
+            }
+            return
+        }
+
+        // Full cache miss - show loading state and fetch
         logger.info("🔄 Cache miss for \(displayKey), fetching in background...")
 
         // Clear data and show loading state
@@ -684,8 +757,9 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
         lastObservedMonth = monthContext.displayMonth
         navigationDirection = nil
 
-        // Clear cache on full reload
+        // Clear all caches on full reload
         monthCache.removeAll()
+        prefetchCache.removeAll()
         prefetchTasks.removeAll()
 
         await loadShiftsFromLocal()
@@ -726,6 +800,7 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
 
             // Clear in-memory caches so we pick up synced data
             monthCache.removeAll()
+            prefetchCache.removeAll()
             prefetchTasks.removeAll()
             settings = nil
             snapshots = []
@@ -755,8 +830,9 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
     func reloadFromLocal() async {
         logger.info("🔄 Reloading shifts from local data")
 
-        // Clear in-memory caches to pick up new data
+        // Clear all caches to pick up new data
         monthCache.removeAll()
+        prefetchCache.removeAll()
         prefetchTasks.removeAll()
 
         // Reload from local repositories
@@ -1094,12 +1170,18 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
         prefetchMonthInBackground(year: nextYM.year, month: nextYM.month)
     }
 
-    /// Prefetch a single month's data in the background
+    /// Prefetch a single month's raw shift data in the background
+    /// Only fetches shift data - payroll computation is deferred until month becomes visible
     private func prefetchMonthInBackground(year: Int, month: Int) {
         let key = "\(year)-\(month)"
 
-        // Skip if already cached and valid
+        // Skip if already have computed cache
         if let cached = monthCache[key], cached.isValid {
+            return
+        }
+
+        // Skip if already have prefetch cache
+        if let prefetched = prefetchCache[key], prefetched.isValid {
             return
         }
 
@@ -1119,42 +1201,24 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
             let startDate = Date.firstDayOfMonthDate(year: year, month: month)
             let endDate = Date.lastDayOfMonthDate(year: year, month: month)
 
-            // Read from local repository
+            // Read raw shifts from local repository - NO payroll computation
             let fetchedShifts = shiftsRepository.getShifts(
                 for: userId,
                 startDate: startDate,
                 endDate: endDate
             )
 
-            // Compute shifts with payroll
-            guard let settings = self.settings else {
-                prefetchTasks.remove(key)
-                return
-            }
-
-            let computedShifts = PayrollEngine.computeShiftsForMonth(
+            // Store raw data in prefetch cache (lightweight, no computation)
+            let entry = PrefetchCacheEntry(
                 year: year,
                 month: month,
-                shifts: fetchedShifts,
-                recurring: recurringShifts,
-                snapshots: snapshots,
-                settings: settings
-            )
-
-            // Store in cache
-            let entry = MonthCacheEntry(
-                year: year,
-                month: month,
-                shifts: computedShifts,
+                rawShifts: fetchedShifts,
                 timestamp: Date()
             )
-            self.monthCache[key] = entry
+            self.prefetchCache[key] = entry
             self.prefetchTasks.remove(key)
 
-            // Evict old cache entries if over limit
-            self.evictCacheIfNeeded()
-
-            logger.info("📦 Prefetched \(key) with \(computedShifts.count) shifts from local")
+            logger.info("📦 Prefetched raw shifts for \(key): \(fetchedShifts.count) shifts (payroll deferred)")
         }
     }
 

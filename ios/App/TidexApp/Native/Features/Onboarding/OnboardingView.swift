@@ -83,11 +83,11 @@ struct OnboardingView: View {
                 .animation(.spring(response: 0.4, dampingFraction: 0.8), value: currentPage)
             }
 
-            // Skip button overlaid at top-right (doesn't clip content below)
+            // Skip button overlaid at top-right (only on first page)
             VStack {
                 HStack {
                     Spacer()
-                    if currentPage < totalPages - 1 {
+                    if currentPage == 0 {
                         Button {
                             withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
                                 currentPage = totalPages - 1
@@ -95,14 +95,19 @@ struct OnboardingView: View {
                         } label: {
                             Text(localization.string("onboarding.skip"))
                                 .font(.system(size: 16, weight: .medium))
-                                .foregroundColor(.tidexTextMuted)
+                                .foregroundColor(.tidexTextSecondary)
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 8)
                         }
+                        .glassEffect(.regular.interactive(), in: .capsule)
                         .padding(.trailing, 24)
                         .padding(.top, 16)
+                        .transition(.opacity.combined(with: .scale(scale: 0.9)))
                     }
                 }
                 Spacer()
             }
+            .animation(.spring(response: 0.3, dampingFraction: 0.8), value: currentPage)
         }
         .onAppear {
             // Initialize hourly rate based on locale (only once)

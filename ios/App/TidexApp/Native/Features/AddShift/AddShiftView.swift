@@ -72,8 +72,8 @@ struct AddShiftView: View {
                             }
                             .padding(.horizontal, 16)
                             .padding(.vertical, 24)
-                            // Add bottom padding to account for fixed bottom controls
-                            .padding(.bottom, 200)
+                            // Add bottom padding to account for fixed month picker
+                            .padding(.bottom, 100)
                         }
                         .scrollDismissesKeyboard(.interactively)
                         .onTapGesture {
@@ -82,7 +82,7 @@ struct AddShiftView: View {
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-                    // Fixed bottom area with liquid glass background
+                    // Fixed bottom area with month picker
                     VStack(spacing: 8) {
                         // Error display (if any)
                         if let error = viewModel.error {
@@ -97,38 +97,30 @@ struct AddShiftView: View {
                             .padding(.horizontal, 16)
                         }
 
-                        // Month picker and add button in one row
-                        // Matches Dashboard month picker: height 56, cornerRadius 30, padding 16
-                        HStack(spacing: 4) {
-                            AnimatedMonthHeader(
-                                monthName: viewModel.displayMonthName,
-                                year: viewModel.displayYear,
-                                phase: transitionPhase,
-                                isCurrentMonth: viewModel.isCurrentMonth,
-                                config: .compact,
-                                onPrevious: {
-                                    viewModel.goToPreviousMonth()
-                                },
-                                onNext: {
-                                    viewModel.goToNextMonth()
-                                },
-                                onReturnToCurrent: {
-                                    viewModel.goToCurrentMonth()
-                                },
-                                isLoading: viewModel.isLoading,
-                                backToTodayText: localization.string("dashboard.backToToday")
-                            )
-
-                            // Compact add button - 48pt to be concentric with 56pt pill (4pt padding each side)
-                            CompactAddButton(viewModel: viewModel)
-                        }
-                        .padding(.leading, 8)
-                        .padding(.trailing, 4)
-                        .frame(height: 56)
-                        .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 30))
+                        // Month picker - same styling as Dashboard/Shifts/Sharing
+                        AnimatedMonthHeader(
+                            monthName: viewModel.displayMonthName,
+                            year: viewModel.displayYear,
+                            phase: transitionPhase,
+                            isCurrentMonth: viewModel.isCurrentMonth,
+                            config: .default,
+                            onPrevious: {
+                                viewModel.goToPreviousMonth()
+                            },
+                            onNext: {
+                                viewModel.goToNextMonth()
+                            },
+                            onReturnToCurrent: {
+                                viewModel.goToCurrentMonth()
+                            },
+                            isLoading: viewModel.isLoading,
+                            backToTodayText: localization.string("dashboard.backToToday")
+                        )
+                        .frame(height: MonthPickerLayout.height)
+                        .glassEffect(.regular.interactive(), in: .rect(cornerRadius: MonthPickerLayout.cornerRadius))
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 8)
+                    .padding(.horizontal, MonthPickerLayout.horizontalPadding)
+                    .padding(.bottom, MonthPickerLayout.bottomPadding)
                 }
             },
             principalContent: {
@@ -177,6 +169,7 @@ struct AddShiftView: View {
 private struct SingleShiftContent: View {
     @ObservedObject var viewModel: AddShiftViewModel
     var scrollProxy: ScrollViewProxy
+    @Environment(\.localization) private var localization
 
     var body: some View {
         VStack(spacing: 24) {
@@ -188,6 +181,8 @@ private struct SingleShiftContent: View {
                 scrollProxy: scrollProxy,
                 scrollId: "singleTimePicker"
             )
+
+            AddShiftButton(viewModel: viewModel, mode: .single)
         }
     }
 }
@@ -223,17 +218,22 @@ private struct RecurringShiftContent: View {
                 scrollProxy: scrollProxy,
                 scrollId: "recurringTimePicker"
             )
+
+            AddShiftButton(viewModel: viewModel, mode: .recurring)
         }
     }
 }
 
-// MARK: - Compact Add Button
+// MARK: - Add Shift Button
 
-private struct CompactAddButton: View {
+/// Full-width add shift button placed below the time picker
+private struct AddShiftButton: View {
     @ObservedObject var viewModel: AddShiftViewModel
+    let mode: AddShiftMode
+    @Environment(\.localization) private var localization
 
     private var canSubmit: Bool {
-        switch viewModel.mode {
+        switch mode {
         case .single:
             return viewModel.canSubmitSingle
         case .recurring:
@@ -241,46 +241,52 @@ private struct CompactAddButton: View {
         }
     }
 
-    /// Badge text showing count or status
-    private var badgeText: String? {
-        switch viewModel.mode {
+    /// Count of selected items
+    private var count: Int {
+        switch mode {
         case .single:
-            let count = viewModel.selectedDates.count
-            return count > 0 ? "\(count)" : nil
+            return viewModel.selectedDates.count
         case .recurring:
-            let count = viewModel.selectedDays.count
-            return count > 0 ? "\(count)" : nil
+            return viewModel.selectedDays.count
+        }
+    }
+
+    /// Button title based on mode and selection count
+    private var buttonTitle: String {
+        switch mode {
+        case .single:
+            if count <= 1 {
+                return localization.string("addShift.addShift")
+            } else {
+                // "Legg til {count} vakter" / "Add {count} shifts"
+                return localization.string("addShift.addShifts")
+                    .replacingOccurrences(of: "{count}", with: "\(count)")
+            }
+        case .recurring:
+            return localization.string("addShift.previewShifts")
         }
     }
 
     var body: some View {
         Button(action: handleSubmit) {
-            ZStack(alignment: .topTrailing) {
+            HStack(spacing: 8) {
                 if viewModel.isLoading {
                     ProgressView()
                         .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                        .frame(width: 48, height: 48)
                 } else {
-                    Image(systemName: "plus")
-                        .font(.system(size: 22, weight: .semibold))
-                        .frame(width: 48, height: 48)
-                }
+                    Image(systemName: mode == .single ? "plus" : "eye")
+                        .font(.system(size: 16, weight: .semibold))
 
-                // Badge showing count
-                if let badge = badgeText, !viewModel.isLoading {
-                    Text(badge)
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundColor(.white)
-                        .frame(minWidth: 18, minHeight: 18)
-                        .background(Color.tidexBlue)
-                        .clipShape(Circle())
-                        .offset(x: 4, y: -4)
+                    Text(buttonTitle)
+                        .font(.system(size: 16, weight: .semibold))
                 }
             }
+            .frame(maxWidth: .infinity)
+            .frame(height: 52)
+            .foregroundColor(canSubmit ? .white : .tidexTextMuted)
+            .background(canSubmit ? Color.tidexBlue : Color.tidexSurfaceSecondary)
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         }
-        .foregroundColor(canSubmit ? .white : .tidexTextMuted)
-        .background(canSubmit ? Color.tidexBlue : Color.tidexSurfaceSecondary)
-        .clipShape(Circle())
         .disabled(!canSubmit || viewModel.isLoading)
         .animation(.spring(response: 0.2, dampingFraction: 0.8), value: canSubmit)
     }
@@ -290,7 +296,7 @@ private struct CompactAddButton: View {
         let generator = UIImpactFeedbackGenerator(style: .medium)
         generator.impactOccurred()
 
-        switch viewModel.mode {
+        switch mode {
         case .single:
             Task {
                 await viewModel.submitSingleShifts()

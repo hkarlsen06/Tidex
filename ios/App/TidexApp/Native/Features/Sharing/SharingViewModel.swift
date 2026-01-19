@@ -154,15 +154,22 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
                 throw SharingError.notAuthenticated
             }
 
-            // Load from cache first
-            let cachedSharers = sharedShiftsRepository.getSharers(for: userId)
-            if !cachedSharers.isEmpty {
-                sharers = cachedSharers
+            // Load from cache first (only if we have no data yet)
+            if sharers.isEmpty {
+                let cachedSharers = sharedShiftsRepository.getSharers(for: userId)
+                if !cachedSharers.isEmpty {
+                    sharers = cachedSharers
+                }
             }
 
             // Fetch fresh data from network
+            logger.info("Fetching fresh sharers from network...")
             let freshSharers = try await sharingService.fetchSharers(for: userId)
+            logger.info("Network returned \(freshSharers.count) sharers: \(freshSharers.map { $0.displayName })")
+
+            // Update UI with fresh data
             sharers = freshSharers
+            logger.info("Updated sharers property, now has \(self.sharers.count) items")
 
             // Save to cache
             await sharedShiftsRepository.saveSharers(freshSharers, for: userId)
@@ -173,7 +180,19 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
             isLoadingSharers = false
             await loadShiftPreviews(forceRefresh: forceRefreshPreviews)
 
+        } catch is CancellationError {
+            // Task was cancelled (e.g., user released pull-to-refresh early)
+            // This is not an error, just log and return
+            logger.info("loadSharers was cancelled")
+            isLoadingSharers = false
         } catch {
+            // Check if the underlying error is a cancellation (URLError.cancelled)
+            if let urlError = error as? URLError, urlError.code == .cancelled {
+                logger.info("loadSharers network request was cancelled")
+                isLoadingSharers = false
+                return
+            }
+
             logger.error("Failed to load sharers: \(error.localizedDescription)")
             self.error = SharingError.loadFailed(underlying: error)
             isLoadingSharers = false

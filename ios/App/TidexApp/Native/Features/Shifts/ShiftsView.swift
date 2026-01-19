@@ -45,58 +45,54 @@ struct ShiftsView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack {
+            ZStack(alignment: .bottom) {
                 // Background that fills entire screen including safe areas
                 Color.tidexBackground
                     .ignoresSafeArea()
 
-                // Main layout: content area + month picker at bottom
-                VStack(spacing: 0) {
-                    // Content area - fills available space above month picker
-                    Group {
-                        if let error = viewModel.error {
-                            errorView(error: error)
-                        } else if viewModel.isLoading && viewModel.shifts.isEmpty {
-                            loadingView
-                        } else {
-                            // Unified content view - handles both empty and populated states
-                            // This ensures StaggeredCardsContainer persists across month changes
-                            shiftsContent
-                        }
+                // Content area - fills entire screen, content scrolls behind month picker
+                Group {
+                    if let error = viewModel.error {
+                        errorView(error: error)
+                    } else if viewModel.isLoading && viewModel.shifts.isEmpty {
+                        loadingView
+                    } else {
+                        // Unified content view - handles both empty and populated states
+                        // This ensures StaggeredCardsContainer persists across month changes
+                        shiftsContent
                     }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-                    // Month picker - ALWAYS visible for navigation (liquid glass style)
-                    // Matches tab bar dimensions exactly
-                    AnimatedMonthHeader(
-                        monthName: viewModel.displayMonthName,
-                        year: viewModel.displayYear,
-                        phase: transitionPhase,
-                        isCurrentMonth: viewModel.isCurrentMonth,
-                        config: .default,
-                        onPrevious: {
-                            // Reset appearance tracker for fresh animations
-                            AppearanceTracker.shared.reset()
-                            viewModel.goToPreviousMonth()
-                        },
-                        onNext: {
-                            // Reset appearance tracker for fresh animations
-                            AppearanceTracker.shared.reset()
-                            viewModel.goToNextMonth()
-                        },
-                        onReturnToCurrent: {
-                            // Reset appearance tracker for fresh animations
-                            AppearanceTracker.shared.reset()
-                            viewModel.goToCurrentMonth()
-                        },
-                        isLoading: viewModel.isLoading,
-                        backToTodayText: localization.string("dashboard.backToToday")
-                    )
-                    .frame(height: 56)
-                    .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 30))
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 8)
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+                // Month picker - floats above content (liquid glass style)
+                AnimatedMonthHeader(
+                    monthName: viewModel.displayMonthName,
+                    year: viewModel.displayYear,
+                    phase: transitionPhase,
+                    isCurrentMonth: viewModel.isCurrentMonth,
+                    config: .default,
+                    onPrevious: {
+                        // Reset appearance tracker for fresh animations
+                        AppearanceTracker.shared.reset()
+                        viewModel.goToPreviousMonth()
+                    },
+                    onNext: {
+                        // Reset appearance tracker for fresh animations
+                        AppearanceTracker.shared.reset()
+                        viewModel.goToNextMonth()
+                    },
+                    onReturnToCurrent: {
+                        // Reset appearance tracker for fresh animations
+                        AppearanceTracker.shared.reset()
+                        viewModel.goToCurrentMonth()
+                    },
+                    isLoading: viewModel.isLoading,
+                    backToTodayText: localization.string("dashboard.backToToday")
+                )
+                .frame(height: MonthPickerLayout.height)
+                .glassEffect(.regular.interactive(), in: .rect(cornerRadius: MonthPickerLayout.cornerRadius))
+                .padding(.horizontal, MonthPickerLayout.horizontalPadding)
+                .padding(.bottom, MonthPickerLayout.bottomPadding)
             }
             .navigationTitle(localization.string(AppTab.shifts.titleKey))
             .navigationBarTitleDisplayMode(.inline)
@@ -616,6 +612,8 @@ struct ShiftsView: View {
                 )
                 .padding(.horizontal, 16)
                 .padding(.top, 40)
+                // Add bottom padding for floating MonthPicker
+                .padding(.bottom, MonthPickerLayout.height + MonthPickerLayout.bottomPadding + 16)
             }
             .refreshable {
                 AppearanceTracker.shared.reset()
@@ -680,7 +678,9 @@ struct ShiftsView: View {
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
-        .background(Color.tidexBackground)
+        .background(Color.clear)
+        // Add bottom padding so last items can scroll above the floating MonthPicker
+        .contentMargins(.bottom, MonthPickerLayout.height + MonthPickerLayout.bottomPadding + 16, for: .scrollContent)
     }
 
     /// Individual shift card row (visual content only - swipe actions are on List row)

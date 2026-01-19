@@ -300,7 +300,7 @@ private struct ShiftPreviewCard: View {
         let endComponents = shift.end_time.split(separator: ":").compactMap { Int($0) }
         guard startComponents.count >= 2, endComponents.count >= 2 else { return "" }
 
-        guard var shiftStart = Calendar.current.date(
+        guard let shiftStart = Calendar.current.date(
             bySettingHour: startComponents[0],
             minute: startComponents[1],
             second: 0,
@@ -337,7 +337,6 @@ private struct ShiftPreviewCard: View {
 
         let totalSeconds = Int(absDiffSeconds)
         let totalMinutes = totalSeconds / 60
-        let totalHours = totalMinutes / 60
 
         // Count midnight crossings for day-based formatting
         let midnightDays = countMidnightCrossings(from: min(now, shiftStart), to: max(now, shiftStart))

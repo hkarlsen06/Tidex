@@ -288,6 +288,9 @@ final class AppCoordinator: ObservableObject {
             // Configure StoreKit and load entitlements
             await configureStoreKitAndEntitlements(userId: currentUserId)
 
+            // Request notification permission and register for APNs
+            await NotificationService.shared.requestPermissionAndRegister()
+
             // Trigger initial sync in background after authentication
             triggerInitialSync(userId: currentUserId)
 

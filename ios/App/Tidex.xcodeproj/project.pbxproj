@@ -125,7 +125,6 @@
 		11A1971D2F1D7CD40030E524 /* SharedUser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A1971C2F1D7CD40030E524 /* SharedUser.swift */; };
 		11A1971F2F1D7D260030E524 /* SharedShiftData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A1971E2F1D7D260030E524 /* SharedShiftData.swift */; };
 		11A197212F1D7D7A0030E524 /* SharedShiftsRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A197202F1D7D7A0030E524 /* SharedShiftsRepository.swift */; };
-		11A197232F1D7DBF0030E524 /* SharingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A197222F1D7DBF0030E524 /* SharingService.swift */; };
 		11A197252F1D7EBD0030E524 /* LocalSharedShift.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A197242F1D7EBD0030E524 /* LocalSharedShift.swift */; };
 		11A1978D2F1D8E310030E524 /* SharedShiftsCalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A1978C2F1D8E310030E524 /* SharedShiftsCalendarView.swift */; };
 		11A1978F2F1D92940030E524 /* CachedAsyncImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A1978E2F1D92940030E524 /* CachedAsyncImage.swift */; };
@@ -135,6 +134,7 @@
 		11A197AA2F1D9D550030E524 /* ManageSharingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A197A52F1D9D550030E524 /* ManageSharingViewModel.swift */; };
 		11A197AC2F1D9D760030E524 /* SharingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A197AB2F1D9D760030E524 /* SharingService.swift */; };
 		11A197AE2F1D9DC30030E524 /* Friend.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A197AD2F1D9DC30030E524 /* Friend.swift */; };
+		11A197C42F1DB4F30030E524 /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A197C22F1DB4F30030E524 /* NotificationService.swift */; };
 		11A5CD262F101201002BAC91 /* StoredShift.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A5CD252F101201002BAC91 /* StoredShift.swift */; };
 		11A5CD302F101283002BAC91 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 11A5CD2F2F101283002BAC91 /* WidgetKit.framework */; };
 		11A5CD322F101283002BAC91 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 11A5CD312F101283002BAC91 /* SwiftUI.framework */; };
@@ -350,6 +350,7 @@
 		11A197A52F1D9D550030E524 /* ManageSharingViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ManageSharingViewModel.swift; sourceTree = "<group>"; };
 		11A197AB2F1D9D760030E524 /* SharingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharingService.swift; sourceTree = "<group>"; };
 		11A197AD2F1D9DC30030E524 /* Friend.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Friend.swift; sourceTree = "<group>"; };
+		11A197C22F1DB4F30030E524 /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationService.swift; sourceTree = "<group>"; };
 		11A5CD252F101201002BAC91 /* StoredShift.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoredShift.swift; sourceTree = "<group>"; };
 		11A5CD2E2F101283002BAC91 /* TidexShiftWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TidexShiftWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		11A5CD2F2F101283002BAC91 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
@@ -678,6 +679,7 @@
 		119D1CD92F16E46300EC7072 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				11A197C32F1DB4F30030E524 /* Notification */,
 				11A196472F1AE68C0030E524 /* Subscription */,
 				11AE8D022F16FDBD005AB062 /* Payroll */,
 				11AE8CFA2F16FDB2005AB062 /* Data */,
@@ -910,6 +912,14 @@
 				11A197A52F1D9D550030E524 /* ManageSharingViewModel.swift */,
 			);
 			path = ManageSharing;
+			sourceTree = "<group>";
+		};
+		11A197C32F1DB4F30030E524 /* Notification */ = {
+			isa = PBXGroup;
+			children = (
+				11A197C22F1DB4F30030E524 /* NotificationService.swift */,
+			);
+			path = Notification;
 			sourceTree = "<group>";
 		};
 		11A1D6CE2F11F48F00060819 /* Core */ = {
@@ -1328,6 +1338,7 @@
 				11A196172F1AA3450030E524 /* MFASetupScreen.swift in Sources */,
 				11A1961D2F1AA3550030E524 /* OnboardingSaveManager.swift in Sources */,
 				11A196182F1AA3450030E524 /* SettingsAccordionScreen.swift in Sources */,
+				11A197C42F1DB4F30030E524 /* NotificationService.swift in Sources */,
 				11A196192F1AA3450030E524 /* SupplementsScreen.swift in Sources */,
 				11A1961A2F1AA3450030E524 /* WageScreen.swift in Sources */,
 				119D1CF22F16E46300EC7072 /* ErrorTranslations.swift in Sources */,
@@ -1455,7 +1466,6 @@
 				11A197012F1B14FA0030E524 /* NextShiftCountdownCard.swift in Sources */,
 				11A197022F1B14FA0030E524 /* ShiftDetailsSheet.swift in Sources */,
 				11A196382F1AC0070030E524 /* RepeatIntervalPicker.swift in Sources */,
-				11A197232F1D7DBF0030E524 /* SharingService.swift in Sources */,
 				11A196392F1AC0070030E524 /* AddShiftViewModel.swift in Sources */,
 				11A1963A2F1AC0070030E524 /* RecurringPreviewSheet.swift in Sources */,
 				11A1963B2F1AC0070030E524 /* DurationPicker.swift in Sources */,
