@@ -84,10 +84,9 @@ struct DashboardView: View {
         }
         .onChange(of: coordinator.initialSyncComplete) { _, completed in
             // When initial sync completes after login, reload dashboard to show synced data
-            // Don't show loading state to avoid a flash - data should just appear
             if completed {
                 Task {
-                    await viewModel.reloadFromLocal(showLoadingState: false)
+                    await viewModel.reloadFromLocal()
                 }
             }
         }
