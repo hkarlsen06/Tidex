@@ -51,6 +51,16 @@ final class SyncCoordinator: ObservableObject {
 
     private init() {}
 
+    /// Reset sync state when user changes (e.g., sign out)
+    /// Clears the interval guard so the next user's initial sync isn't blocked
+    func resetForUserChange() {
+        lastAutoSyncAt = nil
+        lastError = nil
+        lastSyncedAt = nil
+        conflictCount = 0
+        logger.info("Sync state reset for user change")
+    }
+
     // MARK: - Public API
 
     /// Trigger a sync operation
@@ -76,11 +86,10 @@ final class SyncCoordinator: ObservableObject {
             )
         }
 
-        // Interval guard for automatic syncs
+        // Interval guard for automatic syncs (silent skip)
         if reason != .manualRefresh {
             if let lastAuto = lastAutoSyncAt,
                Date().timeIntervalSince(lastAuto) < minimumSyncInterval {
-                logger.info("Skipping auto sync, last sync was \(Int(Date().timeIntervalSince(lastAuto)))s ago")
                 return SyncResult(
                     success: false,
                     tableResults: [],
@@ -90,7 +99,7 @@ final class SyncCoordinator: ObservableObject {
                     totalConflicts: 0,
                     totalAutoMerged: 0,
                     duration: 0,
-                    error: "Minimum sync interval not reached"
+                    error: nil
                 )
             }
         }
@@ -106,7 +115,6 @@ final class SyncCoordinator: ObservableObject {
         }
 
         let startTime = Date()
-        logger.info("Starting sync: \(reason.rawValue) for user \(userId.prefix(8))...")
 
         // Get or create sync state
         let storeActor = LocalStore.shared.storeActor
@@ -139,7 +147,7 @@ final class SyncCoordinator: ObservableObject {
             let pushConflicts = pushResults.reduce(0) { $0 + $1.newConflicts }
             let totalConflicts = pullConflicts + pushConflicts
             let totalAutoMerged = tableResults.reduce(0) { $0 + $1.autoMerged }
-            let totalRebased = pushResults.reduce(0) { $0 + $1.rebased }
+            _ = pushResults.reduce(0) { $0 + $1.rebased } // totalRebased - tracked but not logged
             let duration = Date().timeIntervalSince(startTime)
 
             // Update sync state
@@ -155,7 +163,10 @@ final class SyncCoordinator: ObservableObject {
                 lastAutoSyncAt = Date()
             }
 
-            logger.info("Sync completed: pulled \(totalRows), pushed \(totalPushed), \(totalConflicts) conflicts, \(totalAutoMerged) auto-merged, \(totalRebased) rebased in \(String(format: "%.2f", duration))s")
+            // Only log when there's actual data transfer
+            if totalRows > 0 || totalPushed > 0 || totalConflicts > 0 {
+                logger.info("Sync: \(totalRows) pulled, \(totalPushed) pushed\(totalConflicts > 0 ? ", \(totalConflicts) conflicts" : "")")
+            }
 
             // Update widget storage with latest shift data
             NativeWidgetStorage.updateWidgetStorage(for: userId)

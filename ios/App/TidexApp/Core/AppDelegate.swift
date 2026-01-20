@@ -20,6 +20,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     private let apnsTokenRegisteredUserKey = "apns_device_token_registered_user"
     private let apnsTokenRegisteredValueKey = "apns_device_token_registered_value"
 
+    /// Prevents duplicate APNs registration calls while one is in flight
+    private var apnsRegistrationInFlight = false
+
     private func shiftDateTimeFormatter() -> DateFormatter {
         let formatter = DateFormatter()
         formatter.calendar = Calendar(identifier: .gregorian)
@@ -96,7 +99,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
               let data = shiftsJson.data(using: .utf8),
               let shifts = try? JSONDecoder().decode([StoredShift].self, from: data)
         else {
-            print("[BGTask] No cached shifts available for scheduling")
             return
         }
 
@@ -109,7 +111,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             .min()
 
         guard let shiftStart = nextShiftStart else {
-            print("[BGTask] No upcoming shifts to schedule")
             return
         }
 
@@ -122,10 +123,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
         do {
             try BGTaskScheduler.shared.submit(request)
-            let formatter = shiftDateTimeFormatter()
-            print("[BGTask] Live Activity scheduled for \(formatter.string(from: scheduledTime))")
         } catch {
-            print("[BGTask] Failed to schedule Live Activity task: \(error)")
+            print("[BGTask] Failed to schedule: \(error)")
         }
     }
 
@@ -165,7 +164,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     func checkAndStartLiveActivityIfNeeded() {
         // Check if Live Activities are enabled
         guard ActivityAuthorizationInfo().areActivitiesEnabled else {
-            print("[LiveActivity] Activities not enabled by user")
             return
         }
 
@@ -174,7 +172,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
         // Check if there's already an active activity
         guard Activity<ShiftActivityAttributes>.activities.isEmpty else {
-            print("[LiveActivity] Activity already running")
             return
         }
 
@@ -182,7 +179,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         guard let userDefaults = sharedUserDefaults(),
               let shiftsJson = userDefaults.string(forKey: "upcoming_shifts"),
               let shiftsData = shiftsJson.data(using: .utf8) else {
-            print("[LiveActivity] No cached shifts available")
             return
         }
 
@@ -190,24 +186,13 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         do {
             let shifts = try JSONDecoder().decode([StoredShift].self, from: shiftsData)
             let now = Date()
-            let formatter = shiftDateTimeFormatter()
-            print("[LiveActivity] Checking \(shifts.count) shifts at \(formatter.string(from: now))")
 
-            var foundOngoing = false
-            for shift in shifts {
-                let isOngoing = isShiftOngoing(shift, at: now)
-                print("[LiveActivity] Shift \(shift.shiftId): \(shift.shiftDate) \(shift.startTime)-\(shift.endTime), ongoing=\(isOngoing)")
-                if isOngoing {
-                    // Start Live Activity for this shift
-                    print("[LiveActivity] Found ongoing shift \(shift.shiftId), starting activity")
-                    startLiveActivityForShift(shift)
-                    foundOngoing = true
-                    break
-                }
+            // Find the ongoing shift without verbose per-shift logging
+            if let ongoingShift = shifts.first(where: { isShiftOngoing($0, at: now) }) {
+                print("[LiveActivity] Starting activity for shift \(ongoingShift.shiftDate) \(ongoingShift.startTime)-\(ongoingShift.endTime)")
+                startLiveActivityForShift(ongoingShift)
             }
-            if !foundOngoing {
-                print("[LiveActivity] No ongoing shift found")
-            }
+            // Silent when no ongoing shift - this is the normal case
         } catch {
             print("[LiveActivity] Failed to parse shifts: \(error)")
         }
@@ -332,14 +317,11 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         )
 
         do {
-            let activity = try Activity.request(
+            _ = try Activity.request(
                 attributes: attributes,
                 content: .init(state: initialState, staleDate: nil),
                 pushType: nil
             )
-            print("[LiveActivity] Started activity \(activity.id) for shift \(shift.shiftId)")
-            print("[LiveActivity] Activity state: \(activity.activityState)")
-            print("[LiveActivity] Total active activities: \(Activity<ShiftActivityAttributes>.activities.count)")
         } catch {
             print("[LiveActivity] Failed to start: \(error)")
         }
@@ -394,7 +376,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
         // Convert token to hex string for storage
         let tokenString = deviceToken.map { String(format: "%02.2hhx", $0) }.joined()
-        print("[APNs] Token received: \(tokenString)")
 
         cacheAPNsToken(tokenString)
 
@@ -418,17 +399,22 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     /// Register APNs token via the web app API
     /// The API uses service role credentials to access the internal.push_devices table
     private func registerAPNsToken(_ token: String) async {
+        // Prevent duplicate in-flight registrations
+        guard !apnsRegistrationInFlight else { return }
+
         do {
             // Get current user session for auth and user ID
             let session = try await supabase.auth.session
             let userId = session.user.id.uuidString.lowercased()
             let defaults = UserDefaults.standard
 
-            // Skip if already registered for this user
+            // Skip silently if already registered for this user
             if !needsAPNsRegistration(token: token, userId: userId) {
-                print("[APNs] Token already registered for user \(userId.prefix(8))")
                 return
             }
+
+            apnsRegistrationInFlight = true
+            defer { apnsRegistrationInFlight = false }
 
             // Build API request
             let url = APIConfiguration.webAppBaseURL.appendingPathComponent("api/push-device")
@@ -471,7 +457,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
                 // Success - cache the registration
                 defaults.set(token, forKey: apnsTokenRegisteredValueKey)
                 defaults.set(userId, forKey: apnsTokenRegisteredUserKey)
-                print("[APNs] Token registered via API for user \(userId.prefix(8))")
             } else {
                 // Log error response
                 let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"

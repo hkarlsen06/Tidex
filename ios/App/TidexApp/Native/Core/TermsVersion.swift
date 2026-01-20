@@ -54,7 +54,6 @@ enum TermsVersion {
             cachedVersionDate = versionResponse.termsVersionDate
             lastFetchTime = Date()
 
-            print("[TermsVersion] Fetched version date from API: \(versionResponse.termsVersionDate)")
             return versionResponse.termsVersionDate
         } catch {
             print("[TermsVersion] Failed to fetch version: \(error). Using fallback.")

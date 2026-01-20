@@ -57,7 +57,6 @@ final class NotificationService {
     /// Register with APNs to receive the device token
     /// This triggers `didRegisterForRemoteNotificationsWithDeviceToken` in AppDelegate
     private func registerForRemoteNotifications() {
-        print("[Notifications] Registering for remote notifications...")
         UIApplication.shared.registerForRemoteNotifications()
     }
 }
