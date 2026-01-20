@@ -133,16 +133,11 @@ struct ShiftsView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(Color.tidexBackground, for: .navigationBar)
             .toolbar {
-                // Logo in title area, left-aligned
                 ToolbarItem(placement: .principal) {
-                    HStack {
-                        Image("TidexWordmark")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(height: 22)
-                        Spacer()
-                    }
-                    .frame(maxWidth: .infinity)
+                    Image("TidexWordmark")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(height: 22)
                 }
                 // Refresh button
                 ToolbarItem(placement: .topBarLeading) {
@@ -661,6 +656,13 @@ struct ShiftsView: View {
                                         selectedShift = shift
                                     } else if let dateISO = viewModel.selectedDates.first {
                                         selectedDayForSheet = DayShiftSelection(dateISO: dateISO, shifts: shiftsOnDate)
+                                    }
+                                },
+                                onEdit: {
+                                    // Open shift directly in edit mode
+                                    let shiftsOnDate = viewModel.selectedDateShifts
+                                    if let shift = shiftsOnDate.first {
+                                        shiftToEditDirectly = shift
                                     }
                                 },
                                 onMove: {

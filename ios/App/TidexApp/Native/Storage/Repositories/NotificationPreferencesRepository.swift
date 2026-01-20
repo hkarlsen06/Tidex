@@ -22,13 +22,14 @@ final class NotificationPreferencesRepository: ObservableObject {
     // MARK: - Read Operations (Local Only)
 
     /// Get notification preferences for a user
-    /// - Parameter userId: User ID
+    /// - Parameter userId: User ID (will be normalized to uppercase)
     /// - Returns: LocalNotificationPreferences if found, nil otherwise
     func getPreferences(for userId: String) -> LocalNotificationPreferences? {
         let context = localStore.mainContext
+        let normalizedUserId = userId.uppercased()
 
         let descriptor = FetchDescriptor<LocalNotificationPreferences>(
-            predicate: #Predicate { $0.userId == userId }
+            predicate: #Predicate { $0.userId == normalizedUserId }
         )
 
         do {
@@ -40,17 +41,19 @@ final class NotificationPreferencesRepository: ObservableObject {
     }
 
     /// Get or create notification preferences with defaults
-    /// - Parameter userId: User ID
+    /// - Parameter userId: User ID (will be normalized to uppercase)
     /// - Returns: LocalNotificationPreferences (existing or newly created with defaults)
     func getOrCreatePreferences(for userId: String) -> LocalNotificationPreferences {
-        if let existing = getPreferences(for: userId) {
+        let normalizedUserId = userId.uppercased()
+
+        if let existing = getPreferences(for: normalizedUserId) {
             return existing
         }
 
-        // Create new preferences with defaults
+        // Create new preferences with defaults (always use normalized userId)
         let context = localStore.mainContext
         let preferences = LocalNotificationPreferences(
-            userId: userId,
+            userId: normalizedUserId,
             shiftRemindersEnabled: true,
             shiftReminderMinutesArray: LocalNotificationPreferences.defaultReminderMinutes,
             sharedShiftsEnabled: true,
@@ -63,7 +66,7 @@ final class NotificationPreferencesRepository: ObservableObject {
 
         do {
             try context.save()
-            logger.info("Created new notification preferences for user: \(userId)")
+            logger.info("Created new notification preferences for user: \(normalizedUserId)")
         } catch {
             logger.error("Failed to save new notification preferences: \(error.localizedDescription)")
         }
@@ -159,28 +162,35 @@ final class NotificationPreferencesRepository: ObservableObject {
     // MARK: - Sync Support
 
     /// Save preferences from server response
-    /// Only updates if local is not dirty (iOS is source of truth)
+    /// iOS is source of truth - only creates new record if none exists locally
+    /// Never updates existing local data from server
     /// - Parameters:
     ///   - row: Server response row
     ///   - serverUpdatedAt: Server's updated_at timestamp
     func saveFromServer(row: NotificationPreferencesRow, serverUpdatedAt: Date) {
         let context = localStore.mainContext
+        let normalizedUserId = row.user_id.uppercased()
 
-        if let existing = getPreferences(for: row.user_id) {
-            // Only update from server if not dirty (iOS is source of truth)
-            existing.updateFromServer(row: row, serverUpdatedAt: serverUpdatedAt)
-        } else {
-            // Insert new record from server
-            let preferences = LocalNotificationPreferences.from(
-                serverRow: row,
-                serverUpdatedAt: serverUpdatedAt
-            )
-            context.insert(preferences)
+        // iOS is source of truth - only create new record if none exists locally
+        if getPreferences(for: normalizedUserId) != nil {
+            return
         }
+
+        // Insert new record from server (first sync after install/login)
+        let preferences = LocalNotificationPreferences(
+            userId: normalizedUserId,
+            shiftRemindersEnabled: row.shift_reminders_enabled,
+            shiftReminderMinutesArray: row.shift_reminder_minutes_array ?? LocalNotificationPreferences.defaultReminderMinutes,
+            sharedShiftsEnabled: row.shared_shifts_enabled,
+            serverUpdatedAt: serverUpdatedAt,
+            syncStatus: .clean,
+            localUpdatedAt: Date()
+        )
+        context.insert(preferences)
 
         do {
             try context.save()
-            logger.debug("Saved notification preferences from server for user: \(row.user_id)")
+            logger.debug("Created notification preferences from server for user: \(normalizedUserId)")
         } catch {
             logger.error("Failed to save notification preferences from server: \(error.localizedDescription)")
         }

@@ -1,55 +1,14 @@
 import SwiftUI
 
-// MARK: - Legacy Tidex Brand Colors (Deprecated)
-//
-// These global color constants are deprecated in favor of the adaptive Color extensions
-// in Color+Tidex.swift. They are kept here for backwards compatibility with:
-// - OfflineScreenView.swift
-// - OfflineDashboardCards.swift
-// - Any other legacy code that uses global color constants
-//
-// New code should ALWAYS use Color.tidexXxx (e.g., Color.tidexBackground, Color.tidexBlue)
-// which automatically adapts to system appearance (light/dark mode).
-//
-// These legacy constants now reference the dark mode values directly since the offline
-// views that use them don't support adaptive theming yet.
-
-/// Tidex brand highlight color - DEPRECATED: Use Color.tidexBlue instead
-/// @available(*, deprecated, message: "Use Color.tidexBlue for adaptive theming")
-let tidexBlue = Color(hue: 217 / 360, saturation: 0.91, brightness: 0.90)
-
-/// Dark background color - DEPRECATED: Use Color.tidexBackground instead
-/// @available(*, deprecated, message: "Use Color.tidexBackground for adaptive theming")
-let tidexDarkBackground = Color(hue: 222.2 / 360, saturation: 0.84, brightness: 0.11)
-
-/// Surface primary for cards - DEPRECATED: Use Color.tidexSurfacePrimary instead
-/// @available(*, deprecated, message: "Use Color.tidexSurfacePrimary for adaptive theming")
-let tidexSurfacePrimary = Color(hue: 220 / 360, saturation: 0.49, brightness: 0.18)
-
-/// Text primary color - DEPRECATED: Use Color.tidexTextPrimary instead
-/// @available(*, deprecated, message: "Use Color.tidexTextPrimary for adaptive theming")
-let tidexTextPrimary = Color(hue: 210 / 360, saturation: 0.40, brightness: 0.98)
-
-/// Text secondary color - DEPRECATED: Use Color.tidexTextSecondary instead
-/// @available(*, deprecated, message: "Use Color.tidexTextSecondary for adaptive theming")
-let tidexTextSecondary = Color(hue: 214 / 360, saturation: 0.32, brightness: 0.85)
-
-/// Text muted color - DEPRECATED: Use Color.tidexTextMuted instead
-/// @available(*, deprecated, message: "Use Color.tidexTextMuted for adaptive theming")
-let tidexTextMuted = Color(hue: 215 / 360, saturation: 0.20, brightness: 0.70)
-
 /// Logo gradient colors from short-logo-gradient.svg
-/// These remain constant regardless of appearance mode
-let logoGradientColors = [
-    Color(red: 0, green: 212 / 255, blue: 1),              // #00D4FF - cyan (top)
-    Color(red: 123 / 255, green: 97 / 255, blue: 1),       // #7B61FF - purple (middle)
+private let logoGradientColors = [
+    Color(red: 0, green: 212 / 255, blue: 1),           // #00D4FF - cyan (top)
+    Color(red: 123 / 255, green: 97 / 255, blue: 1),    // #7B61FF - purple (middle)
     Color(red: 155 / 255, green: 77 / 255, blue: 202 / 255) // #9B4DCA - magenta (bottom)
 ]
 
-// MARK: - Tidex Logo Shape
-
 /// Tidex "T" logo shape - exact path from short-logo-gradient.svg
-struct TidexLogoShape: Shape {
+private struct TidexLogoShape: Shape {
     func path(in rect: CGRect) -> Path {
         var path = Path()
 
@@ -59,8 +18,8 @@ struct TidexLogoShape: Shape {
         let pathMinY: CGFloat = 1.7177
         let pathMaxY: CGFloat = 2.311
 
-        let pathWidth = pathMaxX - pathMinX   // ~0.624
-        let pathHeight = pathMaxY - pathMinY  // ~0.593
+        let pathWidth = pathMaxX - pathMinX
+        let pathHeight = pathMaxY - pathMinY
 
         // Use uniform scaling to preserve aspect ratio
         let scale = min(rect.width / pathWidth, rect.height / pathHeight)
@@ -99,9 +58,7 @@ struct TidexLogoShape: Shape {
     }
 }
 
-// MARK: - Logo Watermark
-
-/// Gradient-filled logo watermark with brand colors
+/// Gradient-filled logo watermark with brand colors from short-logo-gradient.svg
 struct LogoWatermark: View {
     var opacity: Double = 0.15
 
@@ -116,4 +73,15 @@ struct LogoWatermark: View {
             )
             .opacity(opacity)
     }
+}
+
+#Preview {
+    VStack(spacing: 20) {
+        LogoWatermark()
+            .frame(width: 64, height: 64)
+
+        LogoWatermark(opacity: 0.5)
+            .frame(width: 32, height: 32)
+    }
+    .padding()
 }

@@ -23,8 +23,8 @@
 		1128F3BD2F1877C600702359 /* NativeWidgetStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1128F3BC2F1877C600702359 /* NativeWidgetStorage.swift */; };
 		1128F3C12F187DAF00702359 /* SyncDebugView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1128F3BE2F187DAF00702359 /* SyncDebugView.swift */; };
 		1128F3C22F187DAF00702359 /* SyncTestHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1128F3BF2F187DAF00702359 /* SyncTestHelper.swift */; };
+		114F0EA82F202C4400B587F0 /* LogoWatermark.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0EA72F202C4400B587F0 /* LogoWatermark.swift */; };
 		1152D0CB2F01E2A7002FD5ED /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1152D0CA2F01E2A7002FD5ED /* StoreKit.framework */; };
-		11923C162F16B89C0076AFD6 /* AuthState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11923C152F16B89C0076AFD6 /* AuthState.swift */; };
 		11923C192F16B94B0076AFD6 /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = 11923C182F16B94B0076AFD6 /* Auth */; };
 		11923C1B2F16B94B0076AFD6 /* Functions in Frameworks */ = {isa = PBXBuildFile; productRef = 11923C1A2F16B94B0076AFD6 /* Functions */; };
 		11923C1D2F16B94B0076AFD6 /* PostgREST in Frameworks */ = {isa = PBXBuildFile; productRef = 11923C1C2F16B94B0076AFD6 /* PostgREST */; };
@@ -152,6 +152,8 @@
 		11A198242F2015C50030E524 /* OAuthWebAuthSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A198232F2015C50030E524 /* OAuthWebAuthSession.swift */; };
 		11A198282F201B0A0030E524 /* SubscriptionSettingsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A198262F201B0A0030E524 /* SubscriptionSettingsViewModel.swift */; };
 		11A198292F201B0A0030E524 /* SubscriptionSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A198252F201B0A0030E524 /* SubscriptionSettingsView.swift */; };
+		11A1982D2F201FFC0030E524 /* NotificationSettingsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A1982B2F201FFC0030E524 /* NotificationSettingsViewModel.swift */; };
+		11A1982E2F201FFC0030E524 /* NotificationSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A1982A2F201FFC0030E524 /* NotificationSettingsView.swift */; };
 		11A5CD262F101201002BAC91 /* StoredShift.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A5CD252F101201002BAC91 /* StoredShift.swift */; };
 		11A5CD302F101283002BAC91 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 11A5CD2F2F101283002BAC91 /* WidgetKit.framework */; };
 		11A5CD322F101283002BAC91 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 11A5CD312F101283002BAC91 /* SwiftUI.framework */; };
@@ -212,13 +214,8 @@
 		504EC30F1FED79650016851F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 504EC30E1FED79650016851F /* Assets.xcassets */; };
 		INFOP0012F0900000000001 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = INFOP0012F0900000000004 /* InfoPlist.strings */; };
 		LAUNCH0012F0500000000001 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = LAUNCH0012F0500000000002 /* LaunchScreen.storyboard */; };
-		NETMON0012F2000000000001 /* NetworkMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = NETMON0012F2000000000002 /* NetworkMonitor.swift */; };
 		NTFSND0012F1400000000001 /* tidex_notification.caf in Resources */ = {isa = PBXBuildFile; fileRef = NTFSND0012F1400000000002 /* tidex_notification.caf */; };
-		OFFDSH0012F3000000000001 /* OfflineDashboardCards.swift in Sources */ = {isa = PBXBuildFile; fileRef = OFFDSH0012F3000000000002 /* OfflineDashboardCards.swift */; };
-		OFFSCR0012F2000000000001 /* OfflineScreenView.swift in Sources */ = {isa = PBXBuildFile; fileRef = OFFSCR0012F2000000000002 /* OfflineScreenView.swift */; };
-		OFFSTR0012F2000000000001 /* OfflineShiftStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = OFFSTR0012F2000000000002 /* OfflineShiftStorage.swift */; };
 		SCENE0012F0700000000001 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = SCENE0012F0700000000002 /* SceneDelegate.swift */; };
-		TIDCLR0012F2000000000001 /* TidexBrandColors.swift in Sources */ = {isa = PBXBuildFile; fileRef = TIDCLR0012F2000000000002 /* TidexBrandColors.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -262,9 +259,9 @@
 		1128F3BC2F1877C600702359 /* NativeWidgetStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeWidgetStorage.swift; sourceTree = "<group>"; };
 		1128F3BE2F187DAF00702359 /* SyncDebugView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncDebugView.swift; sourceTree = "<group>"; };
 		1128F3BF2F187DAF00702359 /* SyncTestHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncTestHelper.swift; sourceTree = "<group>"; };
+		114F0EA72F202C4400B587F0 /* LogoWatermark.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogoWatermark.swift; sourceTree = "<group>"; };
 		1152D0C82F01BB9B002FD5ED /* App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = App.entitlements; sourceTree = "<group>"; };
 		1152D0CA2F01E2A7002FD5ED /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
-		11923C152F16B89C0076AFD6 /* AuthState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthState.swift; sourceTree = "<group>"; };
 		119D1CB72F16E46300EC7072 /* AppCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppCoordinator.swift; sourceTree = "<group>"; };
 		119D1CB82F16E46300EC7072 /* FeatureFlags.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeatureFlags.swift; sourceTree = "<group>"; };
 		119D1CB92F16E46300EC7072 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
@@ -385,6 +382,8 @@
 		11A198232F2015C50030E524 /* OAuthWebAuthSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OAuthWebAuthSession.swift; sourceTree = "<group>"; };
 		11A198252F201B0A0030E524 /* SubscriptionSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionSettingsView.swift; sourceTree = "<group>"; };
 		11A198262F201B0A0030E524 /* SubscriptionSettingsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionSettingsViewModel.swift; sourceTree = "<group>"; };
+		11A1982A2F201FFC0030E524 /* NotificationSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationSettingsView.swift; sourceTree = "<group>"; };
+		11A1982B2F201FFC0030E524 /* NotificationSettingsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationSettingsViewModel.swift; sourceTree = "<group>"; };
 		11A5CD252F101201002BAC91 /* StoredShift.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoredShift.swift; sourceTree = "<group>"; };
 		11A5CD2E2F101283002BAC91 /* TidexShiftWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TidexShiftWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		11A5CD2F2F101283002BAC91 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
@@ -451,13 +450,8 @@
 		INFOP0012F0900000000002 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		INFOP0012F0900000000003 /* nb */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = nb; path = nb.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		LAUNCH0012F0500000000002 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
-		NETMON0012F2000000000002 /* NetworkMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkMonitor.swift; sourceTree = "<group>"; };
 		NTFSND0012F1400000000002 /* tidex_notification.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = tidex_notification.caf; sourceTree = "<group>"; };
-		OFFDSH0012F3000000000002 /* OfflineDashboardCards.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineDashboardCards.swift; sourceTree = "<group>"; };
-		OFFSCR0012F2000000000002 /* OfflineScreenView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineScreenView.swift; sourceTree = "<group>"; };
-		OFFSTR0012F2000000000002 /* OfflineShiftStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineShiftStorage.swift; sourceTree = "<group>"; };
 		SCENE0012F0700000000002 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
-		TIDCLR0012F2000000000002 /* TidexBrandColors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TidexBrandColors.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -730,6 +724,7 @@
 		119D1CE12F16E46300EC7072 /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				114F0EA72F202C4400B587F0 /* LogoWatermark.swift */,
 				11A1978E2F1D92940030E524 /* CachedAsyncImage.swift */,
 				11A197092F1D6F510030E524 /* ConfettiView.swift */,
 				11A196402F1AC1BE0030E524 /* PlaceholderContent.swift */,
@@ -968,6 +963,7 @@
 		11A1980F2F20053A0030E524 /* Settings */ = {
 			isa = PBXGroup;
 			children = (
+				11A1982C2F201FFC0030E524 /* Notifications */,
 				11A198272F201B0A0030E524 /* Subscription */,
 				11A1981B2F20115E0030E524 /* Profile */,
 				11A1981E2F20115E0030E524 /* Security */,
@@ -1003,6 +999,15 @@
 			path = Subscription;
 			sourceTree = "<group>";
 		};
+		11A1982C2F201FFC0030E524 /* Notifications */ = {
+			isa = PBXGroup;
+			children = (
+				11A1982A2F201FFC0030E524 /* NotificationSettingsView.swift */,
+				11A1982B2F201FFC0030E524 /* NotificationSettingsViewModel.swift */,
+			);
+			path = Notifications;
+			sourceTree = "<group>";
+		};
 		11A1D6CE2F11F48F00060819 /* Core */ = {
 			isa = PBXGroup;
 			children = (
@@ -1012,33 +1017,13 @@
 			path = Core;
 			sourceTree = "<group>";
 		};
-		11A1D6CF2F11F4E000060819 /* Utilities */ = {
-			isa = PBXGroup;
-			children = (
-				NETMON0012F2000000000002 /* NetworkMonitor.swift */,
-				TIDCLR0012F2000000000002 /* TidexBrandColors.swift */,
-			);
-			path = Utilities;
-			sourceTree = "<group>";
-		};
 		11A1D6D02F11F51B00060819 /* Models */ = {
 			isa = PBXGroup;
 			children = (
-				11923C152F16B89C0076AFD6 /* AuthState.swift */,
 				11F1CBDA2F101C5700246C07 /* ShiftActivityAttributes.swift */,
 				11A5CD252F101201002BAC91 /* StoredShift.swift */,
 			);
 			path = Models;
-			sourceTree = "<group>";
-		};
-		11A1D6D22F11F55800060819 /* Features */ = {
-			isa = PBXGroup;
-			children = (
-				OFFDSH0012F3000000000002 /* OfflineDashboardCards.swift */,
-				OFFSCR0012F2000000000002 /* OfflineScreenView.swift */,
-				OFFSTR0012F2000000000002 /* OfflineShiftStorage.swift */,
-			);
-			path = Features;
 			sourceTree = "<group>";
 		};
 		11AE8CC62F16F2BF005AB062 /* Components */ = {
@@ -1211,9 +1196,7 @@
 			isa = PBXGroup;
 			children = (
 				119D1CE52F16E46300EC7072 /* Native */,
-				11A1D6D22F11F55800060819 /* Features */,
 				11A1D6D02F11F51B00060819 /* Models */,
-				11A1D6CF2F11F4E000060819 /* Utilities */,
 				11A1D6CE2F11F48F00060819 /* Core */,
 				1152D0C82F01BB9B002FD5ED /* App.entitlements */,
 				504EC30E1FED79650016851F /* Assets.xcassets */,
@@ -1387,6 +1370,8 @@
 				119D1CE82F16E46300EC7072 /* RootView.swift in Sources */,
 				119D1CE92F16E46300EC7072 /* SupabaseClient.swift in Sources */,
 				11AE8CE82F16FD82005AB062 /* NextShiftCard.swift in Sources */,
+				11A1982D2F201FFC0030E524 /* NotificationSettingsViewModel.swift in Sources */,
+				11A1982E2F201FFC0030E524 /* NotificationSettingsView.swift in Sources */,
 				11AE8D032F16FDBD005AB062 /* RecurringShiftGenerator.swift in Sources */,
 				11A196702F1B02C90030E524 /* SharedMonthContext.swift in Sources */,
 				11AE8D042F16FDBD005AB062 /* PayrollCalculator.swift in Sources */,
@@ -1531,7 +1516,6 @@
 				119D1D002F16E46300EC7072 /* OutlineButton.swift in Sources */,
 				119D1D012F16E46300EC7072 /* AppleAuthProvider.swift in Sources */,
 				119D1D022F16E46300EC7072 /* GoogleAuthProvider.swift in Sources */,
-				11923C162F16B89C0076AFD6 /* AuthState.swift in Sources */,
 				11AE8CC92F16F2BF005AB062 /* SignupView.swift in Sources */,
 				11A1966A2F1B00B50030E524 /* ShiftsViewModel.swift in Sources */,
 				11A1966B2F1B00B50030E524 /* ShiftsView.swift in Sources */,
@@ -1544,11 +1528,7 @@
 				11A197062F1D52EF0030E524 /* CalendarGestureCoordinator.swift in Sources */,
 				11AE8CCB2F16F2BF005AB062 /* TermsAgreementView.swift in Sources */,
 				11A196212F1AB6160030E524 /* Currency.swift in Sources */,
-				NETMON0012F2000000000001 /* NetworkMonitor.swift in Sources */,
-				OFFDSH0012F3000000000001 /* OfflineDashboardCards.swift in Sources */,
 				11A196522F1AE8900030E524 /* JWSUploadWorker.swift in Sources */,
-				OFFSCR0012F2000000000001 /* OfflineScreenView.swift in Sources */,
-				OFFSTR0012F2000000000001 /* OfflineShiftStorage.swift in Sources */,
 				11A197252F1D7EBD0030E524 /* LocalSharedShift.swift in Sources */,
 				11A5CD262F101201002BAC91 /* StoredShift.swift in Sources */,
 				SCENE0012F0700000000001 /* SceneDelegate.swift in Sources */,
@@ -1557,6 +1537,7 @@
 				11A1981F2F20115E0030E524 /* SecuritySettingsViewModel.swift in Sources */,
 				11A198202F20115E0030E524 /* SecuritySettingsView.swift in Sources */,
 				11A198212F20115E0030E524 /* ProfileSettingsView.swift in Sources */,
+				114F0EA82F202C4400B587F0 /* LogoWatermark.swift in Sources */,
 				11A198222F20115E0030E524 /* ProfileSettingsViewModel.swift in Sources */,
 				11A196342F1AC0070030E524 /* AddShiftView.swift in Sources */,
 				11A196352F1AC0070030E524 /* RecurringShiftProjector.swift in Sources */,
@@ -1574,7 +1555,6 @@
 				11A1963E2F1AC0070030E524 /* ShiftModeToggle.swift in Sources */,
 				11A1963F2F1AC0070030E524 /* ShiftConflictDetector.swift in Sources */,
 				11F1CBDB2F101C5700246C07 /* ShiftActivityAttributes.swift in Sources */,
-				TIDCLR0012F2000000000001 /* TidexBrandColors.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

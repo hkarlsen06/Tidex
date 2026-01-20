@@ -113,14 +113,10 @@ struct SharingView: View {
                         }
                     } else {
                         // Logo on main friends list
-                        HStack {
-                            Image("TidexWordmark")
-                                .resizable()
-                                .scaledToFit()
-                                .frame(height: 22)
-                            Spacer()
-                        }
-                        .frame(maxWidth: .infinity)
+                        Image("TidexWordmark")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(height: 22)
                     }
                 }
 

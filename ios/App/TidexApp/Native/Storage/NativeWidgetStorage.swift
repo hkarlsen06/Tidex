@@ -171,8 +171,9 @@ enum NativeWidgetStorage {
         }
 
         // Schedule shift reminder notifications for upcoming shifts
+        // Pass shifts directly to avoid race condition with UserDefaults write
         Task {
-            await ShiftReminderScheduler.shared.scheduleAllReminders(for: userId)
+            await ShiftReminderScheduler.shared.scheduleAllReminders(for: userId, shifts: storedShifts)
         }
 
         logger.info("Widget storage updated with \(storedShifts.count) shifts")

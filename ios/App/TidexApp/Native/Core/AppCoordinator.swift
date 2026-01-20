@@ -227,7 +227,7 @@ final class AppCoordinator: ObservableObject {
     // MARK: - Terms Acceptance Check
 
     /// Check if user needs to accept updated terms
-    /// Fetches the latest terms version from the API before checking
+    /// Uses cached/fallback version for immediate check, then verifies in background
     private func checkTermsAndUpdateState() async {
         do {
             let session = try await supabase.auth.session
@@ -236,34 +236,51 @@ final class AppCoordinator: ObservableObject {
             // Get terms_accepted_at from user metadata
             let termsAcceptedAt = user.userMetadata["terms_accepted_at"]?.value as? String
 
-            // Use async version that fetches latest terms version from API
-            let needsReAcceptance = await TermsVersion.needsTermsReAcceptanceAsync(termsAcceptedAt)
+            // Quick sync check with cached/fallback version - doesn't block on API
+            let needsReAcceptanceImmediate = TermsVersion.needsTermsReAcceptance(termsAcceptedAt)
 
-            if needsReAcceptance {
-                // User needs to accept terms
-                self.isTermsUpdate = termsAcceptedAt != nil  // true if they had accepted before
+            if needsReAcceptanceImmediate {
+                // User definitely needs to accept terms (based on cached/fallback version)
+                self.isTermsUpdate = termsAcceptedAt != nil
                 self.appState = .termsRequired
             } else {
-                // Terms are up to date, user is fully authenticated
-                // Load onboarding state BEFORE setting authenticated to prevent flash
+                // Terms appear up to date - proceed to authenticated immediately
                 loadOnboardingStateFromUser(user)
-                // Reset initialSyncComplete BEFORE setting authenticated state
-                // This ensures DashboardView shows loading instead of empty state
                 self.initialSyncComplete = false
                 self.appState = .authenticated
                 await updateUserProfile()
+
+                // Check in background if API has a newer terms version
+                // This handles the case where terms were updated but we're using stale cache
+                self.checkTermsVersionInBackground(termsAcceptedAt: termsAcceptedAt)
             }
         } catch {
             // If we can't check terms, proceed to authenticated and let backend handle it
             print("[AppCoordinator] Terms check failed: \(error)")
-            // Try to load onboarding state even on error
             if let session = try? await supabase.auth.session {
                 loadOnboardingStateFromUser(session.user)
             }
-            // Reset initialSyncComplete BEFORE setting authenticated state
             self.initialSyncComplete = false
             self.appState = .authenticated
             await updateUserProfile()
+        }
+    }
+
+    /// Background check for terms version update
+    /// Fetches latest version from API and transitions to termsRequired if needed
+    private func checkTermsVersionInBackground(termsAcceptedAt: String?) {
+        Task { [weak self] in
+            // Fetch latest terms version from API (this may take time on slow networks)
+            let needsReAcceptance = await TermsVersion.needsTermsReAcceptanceAsync(termsAcceptedAt)
+
+            guard let self = self else { return }
+
+            // Only transition if we're still authenticated and terms are actually needed
+            if needsReAcceptance && self.appState == .authenticated {
+                print("[AppCoordinator] Background terms check: user needs to accept updated terms")
+                self.isTermsUpdate = termsAcceptedAt != nil
+                self.appState = .termsRequired
+            }
         }
     }
 
