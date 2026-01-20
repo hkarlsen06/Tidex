@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// A user menu button that displays the user's profile picture and name,
-/// with a dropdown menu containing settings and logout options.
+/// with a dropdown menu for accessing settings.
 /// Inspired by the web UserMenu component.
 struct UserMenuButton: View {
     @EnvironmentObject private var coordinator: AppCoordinator
@@ -12,8 +12,6 @@ struct UserMenuButton: View {
     let displayName: String
     /// Optional profile picture URL
     let avatarUrl: String?
-    /// Whether the sign out action is in progress
-    @State private var isSigningOut = false
     /// Cached profile image (downloaded once, then reused)
     @State private var cachedImage: UIImage?
     /// Whether image download is in progress
@@ -22,6 +20,8 @@ struct UserMenuButton: View {
     @State private var loadedUrl: String?
     /// Whether to show the sync debug sheet
     @State private var showSyncDebug = false
+    /// Whether to show the settings sheet
+    @State private var showSettings = false
 
     /// Whether debug features are enabled (DEBUG builds only)
     private var isDebugBuild: Bool {
@@ -34,16 +34,15 @@ struct UserMenuButton: View {
 
     var body: some View {
         Menu {
-            // Settings button (disabled for now - no settings page yet)
+            // Settings button
             Button {
-                // TODO: Navigate to settings when page is created
+                showSettings = true
             } label: {
                 Label(
                     localization.string("userMenu.settings"),
                     systemImage: "gearshape"
                 )
             }
-            .disabled(true)
 
             // Sync Debug button (DEBUG builds only)
             if isDebugBuild {
@@ -56,28 +55,6 @@ struct UserMenuButton: View {
                     )
                 }
             }
-
-            Divider()
-
-            // Logout button
-            Button(role: .destructive) {
-                Task {
-                    await signOut()
-                }
-            } label: {
-                if isSigningOut {
-                    Label(
-                        localization.string("userMenu.loggingOut"),
-                        systemImage: "arrow.counterclockwise"
-                    )
-                } else {
-                    Label(
-                        localization.string("userMenu.logout"),
-                        systemImage: "rectangle.portrait.and.arrow.right"
-                    )
-                }
-            }
-            .disabled(isSigningOut)
         } label: {
             menuButton
         }
@@ -85,6 +62,9 @@ struct UserMenuButton: View {
             NavigationStack {
                 SyncDebugView()
             }
+        }
+        .sheet(isPresented: $showSettings) {
+            SettingsView()
         }
     }
 
@@ -196,14 +176,6 @@ struct UserMenuButton: View {
                 .foregroundColor(.tidexBlue)
         }
         .frame(width: 28, height: 28)
-    }
-
-    // MARK: - Actions
-
-    private func signOut() async {
-        isSigningOut = true
-        await coordinator.signOut()
-        isSigningOut = false
     }
 }
 

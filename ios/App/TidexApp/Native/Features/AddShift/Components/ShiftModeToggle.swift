@@ -1,17 +1,20 @@
 import SwiftUI
 
 /// Toggle between single and recurring shift modes
-/// Pill-shaped segmented control matching the web design
+/// Rounded segmented control with liquid glass styling
 struct ShiftModeToggle: View {
     @Binding var mode: AddShiftMode
     @Environment(\.localization) private var localization
+
+    private let cornerRadius: CGFloat = 22
 
     var body: some View {
         HStack(spacing: 4) {
             ForEach(AddShiftMode.allCases) { modeOption in
                 ModeButton(
                     title: localizedTitle(for: modeOption),
-                    isSelected: mode == modeOption
+                    isSelected: mode == modeOption,
+                    cornerRadius: cornerRadius - 4
                 ) {
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
                         mode = modeOption
@@ -22,6 +25,9 @@ struct ShiftModeToggle: View {
                 }
             }
         }
+        .padding(4)
+        .background(Color.tidexSurfaceSecondary)
+        .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
     }
 
     private func localizedTitle(for mode: AddShiftMode) -> String {
@@ -39,6 +45,7 @@ struct ShiftModeToggle: View {
 private struct ModeButton: View {
     let title: String
     let isSelected: Bool
+    let cornerRadius: CGFloat
     let action: () -> Void
 
     var body: some View {
@@ -46,10 +53,10 @@ private struct ModeButton: View {
             Text(title)
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundColor(isSelected ? .white : .tidexTextSecondary)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
                 .background(isSelected ? Color.tidexBlue : Color.clear)
-                .clipShape(Capsule())
+                .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
         }
         .buttonStyle(.plain)
     }

@@ -144,6 +144,7 @@
 		11A198092F1FDD890030E524 /* LocalNotificationPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A198082F1FDD890030E524 /* LocalNotificationPreferences.swift */; };
 		11A1980B2F1FDFD00030E524 /* ShiftReminderScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A1980A2F1FDFD00030E524 /* ShiftReminderScheduler.swift */; };
 		11A1980D2F1FDFEE0030E524 /* NotificationPreferencesRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A1980C2F1FDFEE0030E524 /* NotificationPreferencesRepository.swift */; };
+		11A198102F20053A0030E524 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A1980E2F20053A0030E524 /* SettingsView.swift */; };
 		11A5CD262F101201002BAC91 /* StoredShift.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A5CD252F101201002BAC91 /* StoredShift.swift */; };
 		11A5CD302F101283002BAC91 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 11A5CD2F2F101283002BAC91 /* WidgetKit.framework */; };
 		11A5CD322F101283002BAC91 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 11A5CD312F101283002BAC91 /* SwiftUI.framework */; };
@@ -369,6 +370,7 @@
 		11A198082F1FDD890030E524 /* LocalNotificationPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalNotificationPreferences.swift; sourceTree = "<group>"; };
 		11A1980A2F1FDFD00030E524 /* ShiftReminderScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShiftReminderScheduler.swift; sourceTree = "<group>"; };
 		11A1980C2F1FDFEE0030E524 /* NotificationPreferencesRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationPreferencesRepository.swift; sourceTree = "<group>"; };
+		11A1980E2F20053A0030E524 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		11A5CD252F101201002BAC91 /* StoredShift.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoredShift.swift; sourceTree = "<group>"; };
 		11A5CD2E2F101283002BAC91 /* TidexShiftWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TidexShiftWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		11A5CD2F2F101283002BAC91 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
@@ -648,6 +650,7 @@
 		119D1CCC2F16E46300EC7072 /* Features */ = {
 			isa = PBXGroup;
 			children = (
+				11A1980F2F20053A0030E524 /* Settings */,
 				11A197152F1D7B400030E524 /* Sharing */,
 				11A196692F1B00B50030E524 /* Shifts */,
 				11A1965A2F1AEB360030E524 /* Paywall */,
@@ -945,6 +948,14 @@
 				11A197C22F1DB4F30030E524 /* NotificationService.swift */,
 			);
 			path = Notification;
+			sourceTree = "<group>";
+		};
+		11A1980F2F20053A0030E524 /* Settings */ = {
+			isa = PBXGroup;
+			children = (
+				11A1980E2F20053A0030E524 /* SettingsView.swift */,
+			);
+			path = Settings;
 			sourceTree = "<group>";
 		};
 		11A1D6CE2F11F48F00060819 /* Core */ = {
@@ -1344,6 +1355,7 @@
 				11AE8D062F16FDBD005AB062 /* WagePeriodBuilder.swift in Sources */,
 				11AE8CE92F16FD82005AB062 /* TotalCard.swift in Sources */,
 				11AE8CFB2F16FDB2005AB062 /* ShiftsService.swift in Sources */,
+				11A198102F20053A0030E524 /* SettingsView.swift in Sources */,
 				11AE8CFC2F16FDB2005AB062 /* SnapshotsService.swift in Sources */,
 				11AE8CFD2F16FDB2005AB062 /* SettingsService.swift in Sources */,
 				11AE8CEA2F16FD82005AB062 /* PayrollCard.swift in Sources */,
