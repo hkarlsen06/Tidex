@@ -72,37 +72,61 @@ struct ShiftsView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-                // Month picker - floats above content (liquid glass style)
-                AnimatedMonthHeader(
-                    monthName: viewModel.displayMonthName,
-                    year: viewModel.displayYear,
-                    phase: transitionPhase,
-                    isCurrentMonth: viewModel.isCurrentMonth,
-                    config: .default,
-                    onPrevious: {
-                        // Reset appearance tracker for fresh animations
-                        AppearanceTracker.shared.reset()
-                        viewModel.goToPreviousMonth()
-                    },
-                    onNext: {
-                        // Reset appearance tracker for fresh animations
-                        AppearanceTracker.shared.reset()
-                        viewModel.goToNextMonth()
-                    },
-                    onReturnToCurrent: {
-                        // Reset appearance tracker for fresh animations
-                        AppearanceTracker.shared.reset()
-                        viewModel.goToCurrentMonth()
-                    },
-                    onNavigateToMonth: { year, month in
-                        AppearanceTracker.shared.reset()
-                        SharedMonthContext.shared.navigateTo(year: year, month: month)
-                    },
-                    isLoading: viewModel.isLoading,
-                    backToTodayText: localization.string("dashboard.backToToday")
-                )
-                .frame(height: MonthPickerLayout.height)
-                .glassEffect(.regular.interactive(), in: .rect(cornerRadius: MonthPickerLayout.cornerRadius))
+                // View mode toggle + Month picker - floats above content (liquid glass style)
+                HStack(spacing: 8) {
+                    // View mode toggle button (list/calendar) - separate pill
+                    Button {
+                        selectionHaptic.selectionChanged()
+                        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                            showListView.toggle()
+                            // Exit selection mode when switching to list view
+                            if showListView {
+                                viewModel.isSelectionModeEnabled = false
+                            }
+                        }
+                    } label: {
+                        Image(systemName: showListView ? "calendar" : "list.bullet")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.tidexBlue)
+                            .frame(width: MonthPickerLayout.height, height: MonthPickerLayout.height)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .contentTransition(.symbolEffect(.replace))
+                    .glassEffect(.regular, in: .rect(cornerRadius: MonthPickerLayout.cornerRadius))
+
+                    // Month picker
+                    AnimatedMonthHeader(
+                        monthName: viewModel.displayMonthName,
+                        year: viewModel.displayYear,
+                        phase: transitionPhase,
+                        isCurrentMonth: viewModel.isCurrentMonth,
+                        config: .default,
+                        onPrevious: {
+                            // Reset appearance tracker for fresh animations
+                            AppearanceTracker.shared.reset()
+                            viewModel.goToPreviousMonth()
+                        },
+                        onNext: {
+                            // Reset appearance tracker for fresh animations
+                            AppearanceTracker.shared.reset()
+                            viewModel.goToNextMonth()
+                        },
+                        onReturnToCurrent: {
+                            // Reset appearance tracker for fresh animations
+                            AppearanceTracker.shared.reset()
+                            viewModel.goToCurrentMonth()
+                        },
+                        onNavigateToMonth: { year, month in
+                            AppearanceTracker.shared.reset()
+                            SharedMonthContext.shared.navigateTo(year: year, month: month)
+                        },
+                        isLoading: viewModel.isLoading,
+                        backToTodayText: localization.string("dashboard.backToToday")
+                    )
+                    .frame(height: MonthPickerLayout.height)
+                    .glassEffect(.regular.interactive(), in: .rect(cornerRadius: MonthPickerLayout.cornerRadius))
+                }
                 .padding(.horizontal, MonthPickerLayout.horizontalPadding)
                 .padding(.bottom, MonthPickerLayout.bottomPadding)
             }
@@ -120,11 +144,22 @@ struct ShiftsView: View {
                     }
                     .frame(maxWidth: .infinity)
                 }
-                // View mode toggle (calendar/list)
+                // Refresh button
                 ToolbarItem(placement: .topBarLeading) {
-                    viewModeToggleButton
+                    Button {
+                        Task {
+                            AppearanceTracker.shared.reset()
+                            await viewModel.refresh()
+                        }
+                    } label: {
+                        Image(systemName: "arrow.clockwise")
+                            .font(.system(size: 18, weight: .medium))
+                            .foregroundColor(.tidexTextPrimary)
+                    }
+                    .disabled(viewModel.isLoading)
+                    .opacity(viewModel.isLoading ? 0.5 : 1.0)
                 }
-                // Selection mode toggle (only in calendar view) - spacer separates it
+                // Selection mode toggle (only in calendar view)
                 if !showListView {
                     ToolbarSpacer(.fixed, placement: .topBarLeading)
                     ToolbarItem(placement: .topBarLeading) {
@@ -512,28 +547,7 @@ struct ShiftsView: View {
         }
     }
 
-    // MARK: - View Mode Toggle Button
-
-    /// Toggle button to switch between calendar and list views
-    @ViewBuilder
-    private var viewModeToggleButton: some View {
-        Button {
-            selectionHaptic.selectionChanged()
-            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                showListView.toggle()
-                // Exit selection mode when switching to list view
-                if showListView {
-                    viewModel.isSelectionModeEnabled = false
-                }
-            }
-        } label: {
-            Image(systemName: showListView ? "calendar" : "list.bullet")
-                .font(.system(size: 18, weight: .medium))
-                .foregroundColor(.tidexTextPrimary)
-        }
-        .buttonStyle(.plain)
-        .contentTransition(.symbolEffect(.replace))
-    }
+    // MARK: - Selection Mode Toggle Button
 
     /// Toggle button for selection mode (calendar view only)
     @ViewBuilder

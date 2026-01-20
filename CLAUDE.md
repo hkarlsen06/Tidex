@@ -33,6 +33,10 @@ Use these skills for specialized tasks:
 
 **NEVER run Xcode builds automatically.** Prompt the user to build in Xcode themselves.
 
+**ONLY create API routes when service role privileges are required.** Everything that can be done in the iOS binary using the user's JWT + RLS policies should stay there. Examples:
+- ✅ API route needed: `/api/delete-account` (needs admin API), `/api/push-device` (needs `internal` schema)
+- ❌ No API route: Subscription/entitlement data, settings, shifts - use Supabase client directly or RPC functions
+
 ## CRITICAL: Cache Invalidation (Next.js 16)
 
 **ALWAYS use `revalidateTag(tag, "max")` - NEVER use `updateTag()`**
@@ -111,12 +115,19 @@ All Supabase clients MUST use cookie configuration from `lib/auth/cookie-config.
 
 ### API Routes for Native iOS App
 
-When creating API routes (`app/api/*`) for the iOS app:
+**Only create API routes when the iOS app needs service role privileges.** Most operations should use the Supabase client directly in Swift with the user's JWT.
+
+When an API route IS needed (`app/api/*`):
 
 1. **Skip the Effect layer** - Use direct Supabase clients
 2. **Support Bearer token authentication** - iOS sends JWT in Authorization header (see `app/api/push-device/route.ts` for example)
 3. **Use service client for internal schema** - `createSupabaseServiceClient()` for `internal` schema
 4. **Return simple JSON responses**
+
+**Current iOS API routes (all require service role):**
+- `/api/delete-account` - Needs admin API to delete auth user
+- `/api/push-device` - Needs access to `internal` schema
+- `/api/profile-picture` - Needs storage operations with user context
 
 ### Component System
 

@@ -150,6 +150,8 @@
 		11A198212F20115E0030E524 /* ProfileSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A198192F20115E0030E524 /* ProfileSettingsView.swift */; };
 		11A198222F20115E0030E524 /* ProfileSettingsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A1981A2F20115E0030E524 /* ProfileSettingsViewModel.swift */; };
 		11A198242F2015C50030E524 /* OAuthWebAuthSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A198232F2015C50030E524 /* OAuthWebAuthSession.swift */; };
+		11A198282F201B0A0030E524 /* SubscriptionSettingsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A198262F201B0A0030E524 /* SubscriptionSettingsViewModel.swift */; };
+		11A198292F201B0A0030E524 /* SubscriptionSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A198252F201B0A0030E524 /* SubscriptionSettingsView.swift */; };
 		11A5CD262F101201002BAC91 /* StoredShift.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A5CD252F101201002BAC91 /* StoredShift.swift */; };
 		11A5CD302F101283002BAC91 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 11A5CD2F2F101283002BAC91 /* WidgetKit.framework */; };
 		11A5CD322F101283002BAC91 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 11A5CD312F101283002BAC91 /* SwiftUI.framework */; };
@@ -381,6 +383,8 @@
 		11A1981C2F20115E0030E524 /* SecuritySettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecuritySettingsView.swift; sourceTree = "<group>"; };
 		11A1981D2F20115E0030E524 /* SecuritySettingsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecuritySettingsViewModel.swift; sourceTree = "<group>"; };
 		11A198232F2015C50030E524 /* OAuthWebAuthSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OAuthWebAuthSession.swift; sourceTree = "<group>"; };
+		11A198252F201B0A0030E524 /* SubscriptionSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionSettingsView.swift; sourceTree = "<group>"; };
+		11A198262F201B0A0030E524 /* SubscriptionSettingsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionSettingsViewModel.swift; sourceTree = "<group>"; };
 		11A5CD252F101201002BAC91 /* StoredShift.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoredShift.swift; sourceTree = "<group>"; };
 		11A5CD2E2F101283002BAC91 /* TidexShiftWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TidexShiftWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		11A5CD2F2F101283002BAC91 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
@@ -964,6 +968,7 @@
 		11A1980F2F20053A0030E524 /* Settings */ = {
 			isa = PBXGroup;
 			children = (
+				11A198272F201B0A0030E524 /* Subscription */,
 				11A1981B2F20115E0030E524 /* Profile */,
 				11A1981E2F20115E0030E524 /* Security */,
 				11A1980E2F20053A0030E524 /* SettingsView.swift */,
@@ -987,6 +992,15 @@
 				11A1981D2F20115E0030E524 /* SecuritySettingsViewModel.swift */,
 			);
 			path = Security;
+			sourceTree = "<group>";
+		};
+		11A198272F201B0A0030E524 /* Subscription */ = {
+			isa = PBXGroup;
+			children = (
+				11A198252F201B0A0030E524 /* SubscriptionSettingsView.swift */,
+				11A198262F201B0A0030E524 /* SubscriptionSettingsViewModel.swift */,
+			);
+			path = Subscription;
 			sourceTree = "<group>";
 		};
 		11A1D6CE2F11F48F00060819 /* Core */ = {
@@ -1429,6 +1443,8 @@
 				11A1980D2F1FDFEE0030E524 /* NotificationPreferencesRepository.swift in Sources */,
 				11A197212F1D7D7A0030E524 /* SharedShiftsRepository.swift in Sources */,
 				11AE8D202F17CB31005AB062 /* MonthSwipeGesture.swift in Sources */,
+				11A198282F201B0A0030E524 /* SubscriptionSettingsViewModel.swift in Sources */,
+				11A198292F201B0A0030E524 /* SubscriptionSettingsView.swift in Sources */,
 				119D1CF82F16E46300EC7072 /* AuthStrings.swift in Sources */,
 				119D1CF92F16E46300EC7072 /* APIConfiguration.swift in Sources */,
 				11F42F902F1A65F3002B1FBE /* HowItWorksScreen.swift in Sources */,

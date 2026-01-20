@@ -36,31 +36,24 @@ struct AddShiftView: View {
                 Color.tidexBackground
                     .ignoresSafeArea()
 
-                // Scrollable content area - centered on full screen
-                GeometryReader { geometry in
-                    ScrollViewReader { scrollProxy in
-                        ScrollView {
-                            VStack(spacing: 24) {
-                                Spacer(minLength: 0)
-
-                                switch viewModel.mode {
-                                case .single:
-                                    SingleShiftContent(viewModel: viewModel, scrollProxy: scrollProxy)
-                                case .recurring:
-                                    RecurringShiftContent(viewModel: viewModel, scrollProxy: scrollProxy)
-                                }
-
-                                Spacer(minLength: 0)
+                // Scrollable content area
+                ScrollViewReader { scrollProxy in
+                    ScrollView {
+                        VStack(spacing: 24) {
+                            switch viewModel.mode {
+                            case .single:
+                                SingleShiftContent(viewModel: viewModel, scrollProxy: scrollProxy)
+                            case .recurring:
+                                RecurringShiftContent(viewModel: viewModel, scrollProxy: scrollProxy)
                             }
-                            .padding(.horizontal, 16)
-                            .frame(maxWidth: .infinity)
-                            // Center content on full screen height
-                            .frame(minHeight: geometry.size.height)
                         }
-                        .scrollDismissesKeyboard(.interactively)
-                        .onTapGesture {
-                            hideKeyboard()
-                        }
+                        .padding(.horizontal, 16)
+                        .padding(.top, 16)
+                        .frame(maxWidth: .infinity)
+                    }
+                    .scrollDismissesKeyboard(.interactively)
+                    .onTapGesture {
+                        hideKeyboard()
                     }
                 }
 
@@ -191,6 +184,19 @@ private struct SingleShiftContent: View {
 
     var body: some View {
         VStack(spacing: 24) {
+            // Header
+            VStack(spacing: 4) {
+                Text(localization.string("addShift.headerTitle"))
+                    .font(.system(size: 28, weight: .bold))
+                    .foregroundColor(.tidexTextPrimary)
+
+                Text(localization.string("addShift.headerSubtitle"))
+                    .font(.system(size: 15))
+                    .foregroundColor(.tidexTextSecondary)
+                    .multilineTextAlignment(.center)
+            }
+            .padding(.bottom, 8)
+
             AddShiftCalendarView(viewModel: viewModel)
 
             TimeRangePicker(
@@ -212,6 +218,19 @@ private struct RecurringShiftContent: View {
 
     var body: some View {
         VStack(spacing: 20) {
+            // Header
+            VStack(spacing: 4) {
+                Text(localization.string("addShift.headerTitle"))
+                    .font(.system(size: 28, weight: .bold))
+                    .foregroundColor(.tidexTextPrimary)
+
+                Text(localization.string("addShift.headerSubtitle"))
+                    .font(.system(size: 15))
+                    .foregroundColor(.tidexTextSecondary)
+                    .multilineTextAlignment(.center)
+            }
+            .padding(.bottom, 8)
+
             DurationPicker(endCondition: $viewModel.endCondition)
 
             RepeatIntervalPicker(interval: $viewModel.repeatInterval)
@@ -237,6 +256,8 @@ private struct RecurringShiftContent: View {
 
             RecurringCalendarView(viewModel: viewModel)
         }
+        // Extra bottom padding to clear the month picker
+        .padding(.bottom, 80)
     }
 }
 

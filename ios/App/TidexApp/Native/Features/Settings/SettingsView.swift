@@ -62,7 +62,7 @@ struct SettingsView: View {
                                 title: localization.string("settings.menu.subscription.label"),
                                 description: localization.string("settings.menu.subscription.description"),
                                 action: {
-                                    // TODO: Navigate to subscription settings
+                                    navigationPath.append(SettingsDestination.subscription)
                                 }
                             )
                         }
@@ -168,8 +168,7 @@ struct SettingsView: View {
                 case .security:
                     SecuritySettingsView()
                 case .subscription:
-                    // TODO: Implement SubscriptionSettingsView
-                    Text("Subscription Settings")
+                    SubscriptionSettingsView()
                 case .notifications:
                     // TODO: Implement NotificationSettingsView
                     Text("Notification Settings")
