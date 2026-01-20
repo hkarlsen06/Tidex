@@ -95,7 +95,7 @@ struct SettingsView: View {
                                 title: localization.string("settings.menu.pay.label"),
                                 description: localization.string("settings.menu.pay.description"),
                                 action: {
-                                    // TODO: Navigate to pay settings
+                                    navigationPath.append(SettingsDestination.pay)
                                 }
                             )
                         }
@@ -174,8 +174,7 @@ struct SettingsView: View {
                 case .appearance:
                     AppearanceSettingsView()
                 case .pay:
-                    // TODO: Implement PaySettingsView
-                    Text("Pay Settings")
+                    PaySettingsView()
                 case .data:
                     // TODO: Implement DataSettingsView
                     Text("Data Settings")
@@ -284,7 +283,7 @@ struct SettingsMenuGroup<Content: View>: View {
                 .padding(.horizontal, 4)
 
             // Menu items
-            VStack(spacing: 2) {
+            VStack(spacing: 8) {
                 content()
             }
         }
