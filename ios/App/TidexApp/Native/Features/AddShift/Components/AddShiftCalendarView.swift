@@ -253,6 +253,9 @@ private struct AddShiftCalendarDayCell: View {
         if isSelected {
             return hasConflict ? Color.tidexWarning.opacity(0.15) : Color.tidexBlue.opacity(0.15)
         }
+        if isToday && !dayInfo.isOutsideMonth {
+            return Color.tidexBlue.opacity(0.2)
+        }
         return Color.tidexSurfacePrimary
     }
 
@@ -260,14 +263,11 @@ private struct AddShiftCalendarDayCell: View {
         if isSelected {
             return hasConflict ? Color.tidexWarning : Color.tidexBlue
         }
-        if isToday && !dayInfo.isOutsideMonth {
-            return Color.tidexBlue
-        }
         return Color.clear
     }
 
     private var borderWidth: CGFloat {
-        if isSelected || (isToday && !dayInfo.isOutsideMonth) {
+        if isSelected {
             return 2
         }
         return 0
@@ -277,8 +277,11 @@ private struct AddShiftCalendarDayCell: View {
         if hasConflict && isSelected {
             return .tidexWarning
         }
-        if isSelected || (hasExistingShift && !dayInfo.isOutsideMonth) {
+        if isToday && !dayInfo.isOutsideMonth {
             return .tidexBlue
+        }
+        if hasExistingShift && !dayInfo.isOutsideMonth {
+            return .white
         }
         return .tidexTextPrimary
     }

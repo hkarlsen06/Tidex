@@ -130,8 +130,8 @@ struct CardTransitionModifier: ViewModifier {
 
 // MARK: - Text Transition Modifier
 
-/// A view modifier that applies vertical slide transition to text (month/year labels)
-/// Similar to the Next.js MonthPicker vertical animation
+/// A view modifier that applies horizontal slide transition to text (month/year labels)
+/// Text slides sideways in the direction of navigation
 struct TextTransitionModifier: ViewModifier {
     let phase: MonthTransitionPhase
     let config: MonthTransitionConfig
@@ -151,8 +151,8 @@ struct TextTransitionModifier: ViewModifier {
         let offset = direction == .next ? config.textOffset : -config.textOffset
 
         return .asymmetric(
-            insertion: .offset(y: offset).combined(with: .opacity),
-            removal: .offset(y: -offset).combined(with: .opacity)
+            insertion: .offset(x: offset).combined(with: .opacity),
+            removal: .offset(x: -offset).combined(with: .opacity)
         )
     }
 }
@@ -567,8 +567,8 @@ struct AnimatedMonthHeader: View {
         let offset = direction == .next ? config.textOffset : -config.textOffset
 
         return .asymmetric(
-            insertion: .offset(y: offset).combined(with: .opacity),
-            removal: .offset(y: -offset).combined(with: .opacity)
+            insertion: .offset(x: offset).combined(with: .opacity),
+            removal: .offset(x: -offset).combined(with: .opacity)
         )
     }
 }

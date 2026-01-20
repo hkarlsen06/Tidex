@@ -38,6 +38,8 @@ struct ShiftsView: View {
 
     // Deep link navigation state
     @State private var highlightedDateISO: String?
+    @State private var deepLinkAction: AppCoordinator.ShiftDeepLinkAction = .open
+    @State private var deepLinkHighlightDate: String?  // Date to visually highlight (for widget deeplinks)
 
     // View mode toggle (calendar vs list) - persisted across app launches
     @AppStorage("shiftsViewMode") private var showListView = false
@@ -343,7 +345,7 @@ struct ShiftsView: View {
 
     /// Handle pending deep link from widget or notification
     private func handleDeepLink(_ deepLink: AppCoordinator.DeepLink?) {
-        guard case .shifts(let dates) = deepLink,
+        guard case .shifts(let dates, let action) = deepLink,
               let dateISO = dates?.first else { return }
 
         // Avoid processing the same deep link twice
@@ -352,7 +354,10 @@ struct ShiftsView: View {
             return
         }
 
-        print("[ShiftsView] Handling deep link for date: \(dateISO)")
+        print("[ShiftsView] Handling deep link for date: \(dateISO), action: \(action.rawValue)")
+
+        // Store the action to use when selecting the shift
+        deepLinkAction = action
 
         // Parse the date to extract year and month
         guard let date = Date.fromISODateString(dateISO) else {
@@ -416,14 +421,34 @@ struct ShiftsView: View {
             return
         }
 
-        print("[ShiftsView] Found \(shiftsOnDate.count) shift(s) on \(dateISO)")
+        print("[ShiftsView] Found \(shiftsOnDate.count) shift(s) on \(dateISO), action: \(deepLinkAction.rawValue)")
 
-        // Clear the highlighted date since we're handling it now
+        // Capture the action before clearing state
+        let action = deepLinkAction
+
+        // Clear the highlighted date and reset action since we're handling it now
         highlightedDateISO = nil
+        deepLinkAction = .open  // Reset to default
 
         // Small delay to allow view to stabilize after month navigation
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
             selectionHaptic.selectionChanged()
+
+            // Only open sheets when action is .open (default behavior from notifications)
+            // When action is .highlight (from widgets), show visual highlight instead
+            if action == .highlight {
+                print("[ShiftsView] Highlight-only mode - showing visual highlight for \(dateISO)")
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    deepLinkHighlightDate = dateISO
+                }
+                // Auto-clear highlight after 3 seconds
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+                    withAnimation(.easeOut(duration: 0.5)) {
+                        deepLinkHighlightDate = nil
+                    }
+                }
+                return
+            }
 
             if shiftsOnDate.count == 1, let shift = shiftsOnDate.first {
                 // Single shift - open shift details directly
@@ -671,7 +696,8 @@ struct ShiftsView: View {
                                     viewModel.cancelCopyMoveMode()
                                 },
                                 isSelectionModeEnabled: $viewModel.isSelectionModeEnabled,
-                                newlyAddedDates: celebrationManager.newlyAddedDates
+                                newlyAddedDates: celebrationManager.newlyAddedDates,
+                                deepLinkHighlightDate: deepLinkHighlightDate
                             )
                             .padding(.horizontal, 16)
                         }

@@ -30,6 +30,12 @@ struct SharedUser: Codable, Identifiable, Equatable {
         return "Unknown"
     }
 
+    /// First name only (first word of displayName), for compact toolbar display
+    var firstNameOnly: String {
+        let name = displayName
+        return name.components(separatedBy: " ").first ?? name
+    }
+
     /// Best available avatar URL
     var avatarUrl: String? {
         profilePictureUrl ?? oauthAvatarUrl
