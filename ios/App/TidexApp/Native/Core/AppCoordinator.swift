@@ -340,10 +340,11 @@ final class AppCoordinator: ObservableObject {
                 }
             }
 
-            // Profile picture will be loaded from local store after sync completes
-            // For now, check local settings repository
+            // Profile picture and appearance will be loaded from local store after sync completes
+            // For now, check local settings repository for cached values
             if let settings = SettingsRepository.shared.getSettings(for: currentUserId) {
                 userAvatarUrl = settings.profile_picture_url
+                AppearanceManager.shared.loadFromSettings(settings.theme)
             }
 
         } catch {
@@ -397,9 +398,10 @@ final class AppCoordinator: ObservableObject {
 
             initialSyncComplete = true
 
-            // Update avatar from synced settings
+            // Update avatar and appearance from synced settings
             if let settings = SettingsRepository.shared.getSettings(for: userId) {
                 userAvatarUrl = settings.profile_picture_url
+                AppearanceManager.shared.loadFromSettings(settings.theme)
             }
         }
     }

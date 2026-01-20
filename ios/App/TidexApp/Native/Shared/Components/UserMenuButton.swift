@@ -7,6 +7,7 @@ struct UserMenuButton: View {
     @EnvironmentObject private var coordinator: AppCoordinator
     @Environment(\.localization) private var localization
     @Environment(\.displayScale) private var displayScale
+    @ObservedObject private var appearanceManager = AppearanceManager.shared
 
     /// User's display name (email or name from profile)
     let displayName: String
@@ -62,9 +63,11 @@ struct UserMenuButton: View {
             NavigationStack {
                 SyncDebugView()
             }
+            .preferredColorScheme(appearanceManager.colorScheme)
         }
         .sheet(isPresented: $showSettings) {
             SettingsView()
+                .preferredColorScheme(appearanceManager.colorScheme)
         }
     }
 

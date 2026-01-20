@@ -83,7 +83,7 @@ struct SettingsView: View {
                                 title: localization.string("settings.menu.appearance.label"),
                                 description: localization.string("settings.menu.appearance.description"),
                                 action: {
-                                    // TODO: Navigate to appearance settings
+                                    navigationPath.append(SettingsDestination.appearance)
                                 }
                             )
                         }
@@ -172,8 +172,7 @@ struct SettingsView: View {
                 case .notifications:
                     NotificationSettingsView()
                 case .appearance:
-                    // TODO: Implement AppearanceSettingsView
-                    Text("Appearance Settings")
+                    AppearanceSettingsView()
                 case .pay:
                     // TODO: Implement PaySettingsView
                     Text("Pay Settings")

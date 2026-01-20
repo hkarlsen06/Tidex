@@ -1,0 +1,109 @@
+import Foundation
+import os.log
+
+private let logger = Logger(subsystem: "com.tidex.app", category: "AppearanceSettingsViewModel")
+
+/// ViewModel for appearance settings
+@MainActor
+final class AppearanceSettingsViewModel: ObservableObject {
+
+    // MARK: - Published State
+
+    /// The currently selected theme
+    @Published var selectedTheme: AppTheme = .system {
+        didSet {
+            if oldValue != selectedTheme && !isInitialLoad {
+                updateTheme()
+            }
+        }
+    }
+
+    /// Loading state
+    @Published var isLoading: Bool = false
+
+    /// Error message
+    @Published var errorMessage: String?
+
+    // MARK: - Private Properties
+
+    private let settingsRepository = SettingsRepository.shared
+    private let appearanceManager = AppearanceManager.shared
+    private var userId: String?
+    private var isInitialLoad = true
+
+    // MARK: - Initialization
+
+    init() {}
+
+    // MARK: - Public Methods
+
+    /// Load appearance settings
+    func loadSettings() async {
+        isLoading = true
+        errorMessage = nil
+
+        // Get current user
+        do {
+            let session = try await supabase.auth.session
+            userId = session.user.id.uuidString
+        } catch {
+            logger.error("Failed to get user session: \(error.localizedDescription)")
+            isLoading = false
+            return
+        }
+
+        guard let userId = userId else {
+            isLoading = false
+            return
+        }
+
+        // Load settings from repository
+        let settings = settingsRepository.getSettings(for: userId)
+
+        // Update state without triggering saves
+        isInitialLoad = true
+        if let themeString = settings?.theme,
+           let theme = AppTheme(rawValue: themeString) {
+            selectedTheme = theme
+        } else {
+            selectedTheme = .system
+        }
+        isInitialLoad = false
+
+        isLoading = false
+        logger.info("Loaded appearance settings")
+    }
+
+    /// Clear error message
+    func clearError() {
+        errorMessage = nil
+    }
+
+    // MARK: - Private Methods
+
+    /// Update theme in repository and apply to app
+    private func updateTheme() {
+        guard !isInitialLoad, let userId = userId else { return }
+
+        // Apply immediately to AppearanceManager
+        appearanceManager.setTheme(selectedTheme)
+
+        // Save to repository (triggers sync)
+        Task {
+            do {
+                _ = try await settingsRepository.updateSettings(
+                    for: userId,
+                    theme: selectedTheme.rawValue
+                )
+
+                // Trigger sync
+                await SyncCoordinator.shared.sync(reason: .localChange, userId: userId)
+
+                logger.info("Updated theme to: \(self.selectedTheme.rawValue)")
+            } catch {
+                logger.error("Failed to save theme: \(error.localizedDescription)")
+                errorMessage = "Failed to save theme preference"
+            }
+        }
+    }
+}
