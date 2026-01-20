@@ -613,6 +613,22 @@ enum AuthStrings {
         "settings.menu.admin.label": "Admin",
         "settings.menu.admin.description": "Administrasjonspanel",
 
+        // Appearance Settings
+        "appearance.title": "Utseende",
+        "appearance.subtitle": "Tilpass hvordan appen ser ut",
+        "appearance.theme.sectionTitle": "Tema",
+        "appearance.theme.system": "System",
+        "appearance.theme.systemDescription": "F\u{00F8}lg enhetens innstillinger",
+        "appearance.theme.light": "Lyst",
+        "appearance.theme.lightDescription": "Alltid bruk lyst tema",
+        "appearance.theme.dark": "M\u{00F8}rkt",
+        "appearance.theme.darkDescription": "Alltid bruk m\u{00F8}rkt tema",
+        "appearance.info.systemActive": "Bruker for \u{00F8}yeblikket {mode} tema basert p\u{00E5} enhetens innstillinger",
+        "appearance.info.lightActive": "Appen vil alltid vises i lyst tema",
+        "appearance.info.darkActive": "Appen vil alltid vises i m\u{00F8}rkt tema",
+        "appearance.info.light": "lyst",
+        "appearance.info.dark": "m\u{00F8}rkt",
+
         // Profile Settings
         "profile.title": "Konto",
         "profile.personalInfo.title": "Personlig informasjon",
@@ -1396,6 +1412,22 @@ enum AuthStrings {
         "settings.menu.feedback.description": "Send us your feedback",
         "settings.menu.admin.label": "Admin",
         "settings.menu.admin.description": "Administration panel",
+
+        // Appearance Settings
+        "appearance.title": "Appearance",
+        "appearance.subtitle": "Customize how the app looks",
+        "appearance.theme.sectionTitle": "Theme",
+        "appearance.theme.system": "System",
+        "appearance.theme.systemDescription": "Follow device settings",
+        "appearance.theme.light": "Light",
+        "appearance.theme.lightDescription": "Always use light theme",
+        "appearance.theme.dark": "Dark",
+        "appearance.theme.darkDescription": "Always use dark theme",
+        "appearance.info.systemActive": "Currently using {mode} theme based on device settings",
+        "appearance.info.lightActive": "App will always appear in light theme",
+        "appearance.info.darkActive": "App will always appear in dark theme",
+        "appearance.info.light": "light",
+        "appearance.info.dark": "dark",
 
         // Profile Settings
         "profile.title": "Account",
