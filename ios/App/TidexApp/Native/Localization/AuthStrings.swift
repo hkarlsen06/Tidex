@@ -582,7 +582,34 @@ enum AuthStrings {
         "supplements.custom": "Tilpasset",
         "supplements.noRules": "Ingen tillegg",
         "supplements.noRulesHint": "Trykk p\u{00E5} knappen under for \u{00E5} legge til et tillegg",
-        "supplements.editorHint": "Tillegg beregnes basert p\u{00E5} vaktens tid. Endringer her gjelder kun for denne vakten."
+        "supplements.editorHint": "Tillegg beregnes basert p\u{00E5} vaktens tid. Endringer her gjelder kun for denne vakten.",
+
+        // Settings
+        "settings.title": "Innstillinger",
+        "settings.subtitle": "Administrer innstillinger og preferanser",
+        "settings.group.accountSecurity": "Konto og sikkerhet",
+        "settings.group.preferences": "Preferanser",
+        "settings.group.appSettings": "App-innstillinger",
+        "settings.group.dataSupport": "Data og support",
+        "settings.group.admin": "Administrasjon",
+        "settings.menu.account.label": "Konto",
+        "settings.menu.account.description": "Administrer din personlige informasjon",
+        "settings.menu.security.label": "Innlogging og sikkerhet",
+        "settings.menu.security.description": "Passord, tilkoblinger og to-faktor autentisering",
+        "settings.menu.subscription.label": "Abonnement",
+        "settings.menu.subscription.description": "Administrer abonnementet ditt",
+        "settings.menu.notifications.label": "Varsler",
+        "settings.menu.notifications.description": "Push-varsler og preferanser",
+        "settings.menu.appearance.label": "Utseende",
+        "settings.menu.appearance.description": "Tilpass hvordan appen ser ut",
+        "settings.menu.pay.label": "L\u{00F8}nn og tillegg",
+        "settings.menu.pay.description": "Konfigurer l\u{00F8}nnsinnstillinger og tillegg",
+        "settings.menu.data.label": "Data",
+        "settings.menu.data.description": "Eksporter dataene dine som PDF",
+        "settings.menu.feedback.label": "Tilbakemelding",
+        "settings.menu.feedback.description": "Send oss din tilbakemelding",
+        "settings.menu.admin.label": "Admin",
+        "settings.menu.admin.description": "Administrasjonspanel"
     ]
 
     // MARK: - English Strings
@@ -1155,6 +1182,33 @@ enum AuthStrings {
         "supplements.custom": "Custom",
         "supplements.noRules": "No supplements",
         "supplements.noRulesHint": "Tap the button below to add a supplement",
-        "supplements.editorHint": "Supplements are calculated based on shift times. Changes here apply only to this shift."
+        "supplements.editorHint": "Supplements are calculated based on shift times. Changes here apply only to this shift.",
+
+        // Settings
+        "settings.title": "Settings",
+        "settings.subtitle": "Manage your settings and preferences",
+        "settings.group.accountSecurity": "Account & Security",
+        "settings.group.preferences": "Preferences",
+        "settings.group.appSettings": "App Settings",
+        "settings.group.dataSupport": "Data & Support",
+        "settings.group.admin": "Administration",
+        "settings.menu.account.label": "Account",
+        "settings.menu.account.description": "Manage your personal information",
+        "settings.menu.security.label": "Login and security",
+        "settings.menu.security.description": "Password, connections, and two-factor authentication",
+        "settings.menu.subscription.label": "Subscription",
+        "settings.menu.subscription.description": "Manage your subscription",
+        "settings.menu.notifications.label": "Notifications",
+        "settings.menu.notifications.description": "Push notifications and preferences",
+        "settings.menu.appearance.label": "Appearance",
+        "settings.menu.appearance.description": "Customize how the app looks",
+        "settings.menu.pay.label": "Pay and supplements",
+        "settings.menu.pay.description": "Configure pay settings and supplements",
+        "settings.menu.data.label": "Data",
+        "settings.menu.data.description": "Export your data as PDF",
+        "settings.menu.feedback.label": "Feedback",
+        "settings.menu.feedback.description": "Send us your feedback",
+        "settings.menu.admin.label": "Admin",
+        "settings.menu.admin.description": "Administration panel"
     ]
 }
