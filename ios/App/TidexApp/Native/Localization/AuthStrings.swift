@@ -169,6 +169,7 @@ enum AuthStrings {
         "common.done": "Ferdig",
         "common.save": "Lagre",
         "common.saveChanges": "Lagre endringer",
+        "common.or": "eller",
 
         // Tabs
         "tabs.home": "Hjem",
@@ -613,6 +614,28 @@ enum AuthStrings {
         "settings.menu.admin.label": "Admin",
         "settings.menu.admin.description": "Administrasjonspanel",
 
+        // Data Export Settings
+        "data.title": "Data",
+        "data.export.title": "Eksporter data",
+        "data.export.description": "Velg tidsperiode og last ned vakter som PDF eller CSV.",
+        "data.export.syncing": "Synkroniserer data...",
+        "data.export.periodLabel": "Velg tidsperiode",
+        "data.export.periodDescription": "Velg en tidsperiode for eksporten.",
+        "data.export.customPeriod": "Egendefinert periode",
+        "data.export.fromLabel": "Fra",
+        "data.export.toLabel": "Til",
+        "data.export.dateRangeError": "Fradato kan ikke v\u{00E6}re etter tildato.",
+        "data.export.pdf.title": "Eksporter til PDF",
+        "data.export.pdf.description": "Inkluderer vaktoversikt, summer per type og totale l\u{00F8}nnstall.",
+        "data.export.pdf.button": "Last ned PDF",
+        "data.export.pdf.exporting": "Eksporterer...",
+        "data.export.csv.title": "Eksporter til CSV",
+        "data.export.csv.description": "Vaktinfo per vakt i kronologisk rekkef\u{00F8}lge. Inkluderer sum p\u{00E5} slutten.",
+        "data.export.csv.button": "Last ned CSV",
+        "data.export.csv.exporting": "Eksporterer...",
+        "data.export.about.title": "Om rapporten",
+        "data.export.about.description": "PDF-rapporten er optimalisert for A4-portrettformat og inkluderer automatisk sidetall og genereringstidspunkt.",
+
         // Pay Settings
         "settings.pay.title": "L\u{00F8}nn og tillegg",
         "settings.pay.subtitle": "Administrer l\u{00F8}nnshistorikk og innstillinger",
@@ -1019,6 +1042,7 @@ enum AuthStrings {
         "common.done": "Done",
         "common.save": "Save",
         "common.saveChanges": "Save changes",
+        "common.or": "or",
 
         // Tabs
         "tabs.home": "Home",
@@ -1462,6 +1486,28 @@ enum AuthStrings {
         "settings.menu.feedback.description": "Send us your feedback",
         "settings.menu.admin.label": "Admin",
         "settings.menu.admin.description": "Administration panel",
+
+        // Data Export Settings
+        "data.title": "Data",
+        "data.export.title": "Export Data",
+        "data.export.description": "Select a time period and download shifts as PDF or CSV.",
+        "data.export.syncing": "Syncing data...",
+        "data.export.periodLabel": "Select time period",
+        "data.export.periodDescription": "Choose a time period for the export.",
+        "data.export.customPeriod": "Custom period",
+        "data.export.fromLabel": "From",
+        "data.export.toLabel": "To",
+        "data.export.dateRangeError": "Start date cannot be after end date.",
+        "data.export.pdf.title": "Export to PDF",
+        "data.export.pdf.description": "Includes shift overview, totals by type, and wage summary.",
+        "data.export.pdf.button": "Download PDF",
+        "data.export.pdf.exporting": "Exporting...",
+        "data.export.csv.title": "Export to CSV",
+        "data.export.csv.description": "Shift info per shift in chronological order. Includes totals at the end.",
+        "data.export.csv.button": "Download CSV",
+        "data.export.csv.exporting": "Exporting...",
+        "data.export.about.title": "About the report",
+        "data.export.about.description": "The PDF report is optimized for A4 portrait format and includes automatic page numbers and generation timestamp.",
 
         // Pay Settings
         "settings.pay.title": "Pay and supplements",
