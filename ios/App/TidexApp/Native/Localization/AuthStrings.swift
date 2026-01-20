@@ -366,6 +366,8 @@ enum AuthStrings {
         "addShift.previewShifts": "Forh\u{00E5}ndsvis vakter",
         "addShift.tapToSetAnchors": "Trykk på datoer for å sette ankerdager",
         "addShift.oneAnchorPerWeekday": "Ett anker per ukedag (maks 7)",
+        "addShift.headerTitle": "Legg til vakt",
+        "addShift.headerSubtitle": "Velg datoer og trykk på pluss-knappen",
 
         // MFA Screen
         "onboarding.mfa.title": "Ekstra sikkerhet",
@@ -741,7 +743,26 @@ enum AuthStrings {
         "security.mfa.errors.unenrollFailed": "Kunne ikke fjerne faktor. Pr\u{00F8}v igjen.",
         "security.mfa.unenrollDialog.title": "Fjern autentiseringsapp?",
         "security.mfa.unenrollDialog.description": "Du vil ikke lenger kunne bruke denne appen for to-faktor autentisering.",
-        "security.mfa.unenrollDialog.confirm": "Fjern"
+        "security.mfa.unenrollDialog.confirm": "Fjern",
+
+        // Subscription Settings
+        "subscription.title": "Abonnement",
+        "subscription.subtitle": "Administrer abonnementet ditt",
+        "subscription.choosePlan.title": "Velg en plan",
+        "subscription.choosePlan.subtitle": "Oppgrader for å låse opp alle funksjoner",
+        "subscription.currentPlan.sectionTitle": "Nåværende plan",
+        "subscription.currentPlan.price": "Pris",
+        "subscription.currentPlan.renews": "Fornyes",
+        "subscription.status.active": "Aktiv",
+        "subscription.status.inactive": "Inaktiv",
+        "subscription.features.sectionTitle": "Funksjoner inkludert",
+        "subscription.features.lifetimeAccess": "Livstidstilgang",
+        "subscription.earlySupporter.title": "Tidlig støttespiller",
+        "subscription.earlySupporter.description": "Takk for at du var med fra starten! Du har livstidstilgang til premium-funksjoner.",
+        "subscription.actions.manage": "Administrer abonnement",
+        "subscription.actions.subscribe": "Velg plan",
+        "subscription.actions.upgrade": "Oppgrader",
+        "subscription.errors.restoreFailed": "Kunne ikke gjenopprette kjøp. Prøv igjen."
     ]
 
     // MARK: - English Strings
@@ -1098,6 +1119,8 @@ enum AuthStrings {
         "addShift.previewShifts": "Preview shifts",
         "addShift.tapToSetAnchors": "Tap dates to set anchor days",
         "addShift.oneAnchorPerWeekday": "One anchor per weekday (max 7)",
+        "addShift.headerTitle": "Add Shift",
+        "addShift.headerSubtitle": "Select dates and tap the plus button",
 
         // MFA Screen
         "onboarding.mfa.title": "Extra security",
@@ -1473,6 +1496,25 @@ enum AuthStrings {
         "security.mfa.errors.unenrollFailed": "Could not remove factor. Please try again.",
         "security.mfa.unenrollDialog.title": "Remove authenticator app?",
         "security.mfa.unenrollDialog.description": "You will no longer be able to use this app for two-factor authentication.",
-        "security.mfa.unenrollDialog.confirm": "Remove"
+        "security.mfa.unenrollDialog.confirm": "Remove",
+
+        // Subscription Settings
+        "subscription.title": "Subscription",
+        "subscription.subtitle": "Manage your subscription",
+        "subscription.choosePlan.title": "Choose a plan",
+        "subscription.choosePlan.subtitle": "Upgrade to unlock all features",
+        "subscription.currentPlan.sectionTitle": "Current plan",
+        "subscription.currentPlan.price": "Price",
+        "subscription.currentPlan.renews": "Renews",
+        "subscription.status.active": "Active",
+        "subscription.status.inactive": "Inactive",
+        "subscription.features.sectionTitle": "Features included",
+        "subscription.features.lifetimeAccess": "Lifetime access",
+        "subscription.earlySupporter.title": "Early Supporter",
+        "subscription.earlySupporter.description": "Thank you for being with us from the start! You have lifetime access to premium features.",
+        "subscription.actions.manage": "Manage subscription",
+        "subscription.actions.subscribe": "Choose plan",
+        "subscription.actions.upgrade": "Upgrade",
+        "subscription.errors.restoreFailed": "Could not restore purchases. Please try again."
     ]
 }

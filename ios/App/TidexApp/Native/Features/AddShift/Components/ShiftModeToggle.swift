@@ -25,9 +25,6 @@ struct ShiftModeToggle: View {
                 }
             }
         }
-        .padding(4)
-        .background(Color.tidexSurfaceSecondary)
-        .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
     }
 
     private func localizedTitle(for mode: AddShiftMode) -> String {
