@@ -72,10 +72,13 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  // Initialize cookie-based client as default (web app)
+  let supabase: ReturnType<typeof createSupabaseRouteHandlerClient> =
+    createSupabaseRouteHandlerClient(request, baseResponse);
+  let userId: string | null = null;
+
   // Try to authenticate via Bearer token first (native iOS app)
   const authHeader = request.headers.get("Authorization");
-  let userId: string | null = null;
-  let supabase: ReturnType<typeof createSupabaseRouteHandlerClient>;
 
   if (authHeader?.startsWith("Bearer ")) {
     const token = authHeader.substring(7);
@@ -99,8 +102,6 @@ export async function GET(request: NextRequest) {
 
   // Fall back to cookie-based session (web app)
   if (!userId) {
-    supabase = createSupabaseRouteHandlerClient(request, baseResponse);
-
     // Use getClaims() for performance - parses JWT locally without network request
     const { data: authData, error: authError } = await supabase.auth.getClaims();
 
