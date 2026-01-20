@@ -303,6 +303,11 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         let earnings = hoursWorked * totalRate
         let remainingMinutes = max(0, Int((total - elapsed) / 60))
 
+        // Calculate net amount if tax rate is configured
+        let totalNetEstimate: Double? = shift.taxRate.map { taxRate in
+            shift.totalGrossEstimate * (1.0 - taxRate)
+        }
+
         // Include startDate and endDate for real-time SwiftUI timer updates
         let attributes = ShiftActivityAttributes(
             shiftId: shift.shiftId,
@@ -312,6 +317,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             hourlyWage: shift.hourlyWage,
             supplementRatePerHour: shift.supplementRatePerHour,
             totalGrossEstimate: shift.totalGrossEstimate,
+            totalNetEstimate: totalNetEstimate,
             locale: shift.locale,
             currencySymbol: shift.currencySymbol ?? "kr",
             startDate: startDate,

@@ -40,8 +40,10 @@ public struct ShiftActivityAttributes: ActivityAttributes, Sendable {
     public let hourlyWage: Double
     /// Average supplement rate per hour in NOK
     public let supplementRatePerHour: Double
-    /// Total expected gross earnings for the full shift
+    /// Total expected gross earnings for the full shift (before tax)
     public let totalGrossEstimate: Double
+    /// Total expected net earnings for the full shift (after tax), nil if no tax configured
+    public let totalNetEstimate: Double?
     /// User's locale ("no" or "en")
     public let locale: String
     /// Currency symbol to display (e.g., "kr", "$", "€")
@@ -62,6 +64,7 @@ public struct ShiftActivityAttributes: ActivityAttributes, Sendable {
         hourlyWage: Double,
         supplementRatePerHour: Double,
         totalGrossEstimate: Double,
+        totalNetEstimate: Double? = nil,
         locale: String,
         currencySymbol: String? = "kr",
         startDate: Date,
@@ -74,6 +77,7 @@ public struct ShiftActivityAttributes: ActivityAttributes, Sendable {
         self.hourlyWage = hourlyWage
         self.supplementRatePerHour = supplementRatePerHour
         self.totalGrossEstimate = totalGrossEstimate
+        self.totalNetEstimate = totalNetEstimate
         self.locale = locale
         self.currencySymbol = currencySymbol
         self.startDate = startDate
