@@ -236,17 +236,13 @@ final class AppCoordinator: ObservableObject {
             // Get terms_accepted_at from user metadata
             let termsAcceptedAt = user.userMetadata["terms_accepted_at"]?.value as? String
 
-            print("[AppCoordinator] Checking terms - termsAcceptedAt: \(termsAcceptedAt ?? "nil")")
-
             // Use async version that fetches latest terms version from API
             let needsReAcceptance = await TermsVersion.needsTermsReAcceptanceAsync(termsAcceptedAt)
-            print("[AppCoordinator] needsTermsReAcceptance: \(needsReAcceptance)")
 
             if needsReAcceptance {
                 // User needs to accept terms
                 self.isTermsUpdate = termsAcceptedAt != nil  // true if they had accepted before
                 self.appState = .termsRequired
-                print("[AppCoordinator] Terms acceptance required (update: \(self.isTermsUpdate))")
             } else {
                 // Terms are up to date, user is fully authenticated
                 // Load onboarding state BEFORE setting authenticated to prevent flash
@@ -276,10 +272,8 @@ final class AppCoordinator: ObservableObject {
     private func loadOnboardingStateFromUser(_ user: User) {
         if let finishedOnboarding = user.userMetadata["finishedOnboarding"]?.value as? Bool {
             self.hasFinishedOnboardingRemotely = finishedOnboarding
-            print("[AppCoordinator] User finishedOnboarding from metadata: \(finishedOnboarding)")
         } else {
             self.hasFinishedOnboardingRemotely = false
-            print("[AppCoordinator] User finishedOnboarding not set in metadata")
         }
     }
 
@@ -297,13 +291,8 @@ final class AppCoordinator: ObservableObject {
             self.userId = currentUserId
 
             // Check if onboarding was already completed (from raw_user_meta_data.finishedOnboarding)
-            if let finishedOnboarding = user.userMetadata["finishedOnboarding"]?.value as? Bool {
-                self.hasFinishedOnboardingRemotely = finishedOnboarding
-                print("[AppCoordinator] User finishedOnboarding from metadata: \(finishedOnboarding)")
-            } else {
-                self.hasFinishedOnboardingRemotely = false
-                print("[AppCoordinator] User finishedOnboarding not set in metadata")
-            }
+            // Note: loadOnboardingStateFromUser is called earlier, but we update again in case metadata changed
+            loadOnboardingStateFromUser(user)
 
             // Extract display name from user metadata or fall back to email
             if let fullName = user.userMetadata["full_name"]?.value as? String, !fullName.isEmpty {
@@ -351,14 +340,11 @@ final class AppCoordinator: ObservableObject {
     /// Configure StoreKit and entitlement services after authentication
     /// Called once during updateUserProfile() after successful login
     private func configureStoreKitAndEntitlements(userId: String) async {
-        print("[AppCoordinator] Configuring StoreKit and entitlements for user \(userId.prefix(8))...")
-
         // 1. Configure StoreKit with user ID (required before purchases)
         StoreKitManager.shared.configure(userId: userId)
 
         // 2. Load cached entitlement first (fast, offline-safe)
         EntitlementService.shared.loadFromCache(userId: userId)
-        print("[AppCoordinator] Loaded cached entitlement: tier=\(EntitlementService.shared.effectiveTier.rawValue)")
 
         // 3. Start StoreKit transaction listener (handles renewals, restores from other devices)
         StoreKitManager.shared.startListening()
@@ -368,19 +354,13 @@ final class AppCoordinator: ObservableObject {
 
         // 5. Refresh entitlement from server in background (non-blocking)
         Task {
-            do {
-                try await EntitlementService.shared.refreshFromServer(userId: userId)
-                print("[AppCoordinator] Refreshed entitlement from server: tier=\(EntitlementService.shared.effectiveTier.rawValue)")
-            } catch {
-                print("[AppCoordinator] Failed to refresh entitlement from server: \(error.localizedDescription)")
-                // Non-fatal: we still have cache or StoreKit entitlements
-            }
+            try? await EntitlementService.shared.refreshFromServer(userId: userId)
+            // Silent on success or failure - we have cache fallback
         }
 
         // 6. Load StoreKit products in background (for paywall)
         Task {
             await StoreKitManager.shared.loadProducts()
-            print("[AppCoordinator] Loaded \(StoreKitManager.shared.products.count) StoreKit products")
         }
     }
 
@@ -391,15 +371,12 @@ final class AppCoordinator: ObservableObject {
         initialSyncComplete = false
 
         Task {
-            print("[AppCoordinator] Triggering initial sync for user \(userId.prefix(8))...")
-
             let result = await syncCoordinator.sync(reason: .appLaunch, userId: userId)
 
-            if result.success {
-                print("[AppCoordinator] Initial sync completed: \(result.totalRowsProcessed) rows pulled, \(result.totalRowsPushed) pushed")
-            } else if let error = result.error {
-                print("[AppCoordinator] Initial sync failed: \(error)")
+            if result.success && (result.totalRowsProcessed > 0 || result.totalRowsPushed > 0) {
+                print("[AppCoordinator] Initial sync: \(result.totalRowsProcessed) pulled, \(result.totalRowsPushed) pushed")
             }
+            // Silent on failure - SyncCoordinator logs errors
 
             initialSyncComplete = true
 
@@ -426,13 +403,12 @@ final class AppCoordinator: ObservableObject {
                     }
                 }
 
-                print("[AppCoordinator] App returned to foreground, triggering sync...")
                 let result = await syncCoordinator.sync(reason: .foreground, userId: userId)
 
-                if result.success {
-                    print("[AppCoordinator] Foreground sync completed: \(result.totalRowsProcessed) rows")
+                // Only log if sync actually ran and had data
+                if result.success && result.totalRowsProcessed > 0 {
+                    print("[AppCoordinator] Foreground sync: \(result.totalRowsProcessed) rows")
                 }
-                // Note: SyncCoordinator handles interval guard - if sync was recent, it will skip
             } catch {
                 print("[AppCoordinator] Foreground sync skipped (no session): \(error)")
             }
@@ -488,17 +464,27 @@ final class AppCoordinator: ObservableObject {
         // Clear image cache
         ImageCache.shared.clearAll()
 
+        // Reset sync coordinator state for new user
+        // This clears the interval guard so the next user's initial sync isn't blocked
+        syncCoordinator.resetForUserChange()
+
         do {
             try await authService.signOut()
             // Auth state listener will update appState to .unauthenticated
             initialSyncComplete = false
             userId = nil
+            // Clear user profile data to prevent stale data showing for next user
+            userDisplayName = ""
+            userAvatarUrl = nil
         } catch {
             print("[AppCoordinator] Sign out failed: \(error)")
             // Force state change even if sign out fails
             appState = .unauthenticated
             initialSyncComplete = false
             userId = nil
+            // Clear user profile data to prevent stale data showing for next user
+            userDisplayName = ""
+            userAvatarUrl = nil
         }
     }
 

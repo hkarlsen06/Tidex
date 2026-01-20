@@ -4,9 +4,11 @@ import UIKit
 /// Add Shift tab view - form for creating new shifts
 /// Supports both single shifts and recurring shift patterns
 struct AddShiftView: View {
+    @EnvironmentObject private var coordinator: AppCoordinator
     @Environment(\.localization) private var localization
     @StateObject private var viewModel = AddShiftViewModel()
     @Binding var selectedTab: MainTabView.Tab
+    @State private var isKeyboardVisible = false
 
     /// Transition phase for AnimatedMonthHeader animations
     private var transitionPhase: MonthTransitionPhase {
@@ -34,75 +36,87 @@ struct AddShiftView: View {
                 Color.tidexBackground
                     .ignoresSafeArea()
 
-                // Scrollable content area - fills available space
-                ScrollViewReader { scrollProxy in
-                    ScrollView {
-                        VStack(spacing: 24) {
-                            switch viewModel.mode {
-                            case .single:
-                                SingleShiftContent(viewModel: viewModel, scrollProxy: scrollProxy)
-                            case .recurring:
-                                RecurringShiftContent(viewModel: viewModel, scrollProxy: scrollProxy)
+                // Scrollable content area - centered on full screen
+                GeometryReader { geometry in
+                    ScrollViewReader { scrollProxy in
+                        ScrollView {
+                            VStack(spacing: 24) {
+                                Spacer(minLength: 0)
+
+                                switch viewModel.mode {
+                                case .single:
+                                    SingleShiftContent(viewModel: viewModel, scrollProxy: scrollProxy)
+                                case .recurring:
+                                    RecurringShiftContent(viewModel: viewModel, scrollProxy: scrollProxy)
+                                }
+
+                                Spacer(minLength: 0)
                             }
+                            .padding(.horizontal, 16)
+                            .frame(maxWidth: .infinity)
+                            // Center content on full screen height
+                            .frame(minHeight: geometry.size.height)
                         }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 24)
-                        // Add bottom padding to account for fixed month picker
-                        .padding(.bottom, 100)
-                    }
-                    .scrollDismissesKeyboard(.interactively)
-                    .onTapGesture {
-                        hideKeyboard()
+                        .scrollDismissesKeyboard(.interactively)
+                        .onTapGesture {
+                            hideKeyboard()
+                        }
                     }
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-                // Fixed bottom area with month picker
-                VStack(spacing: 8) {
-                    // Error display (if any)
-                    if let error = viewModel.error {
-                        HStack(spacing: 8) {
-                            Image(systemName: "exclamationmark.circle.fill")
-                                .foregroundColor(.tidexError)
+                // Fixed bottom area with month picker - hidden when keyboard is visible
+                if !isKeyboardVisible {
+                    VStack(spacing: 8) {
+                        // Error display (if any)
+                        if let error = viewModel.error {
+                            HStack(spacing: 8) {
+                                Image(systemName: "exclamationmark.circle.fill")
+                                    .foregroundColor(.tidexError)
 
-                            Text(error)
-                                .font(.system(size: 14))
-                                .foregroundColor(.tidexError)
+                                Text(error)
+                                    .font(.system(size: 14))
+                                    .foregroundColor(.tidexError)
+                            }
+                            .padding(.horizontal, 16)
                         }
-                        .padding(.horizontal, 16)
-                    }
 
-                    // Month picker - same styling as Dashboard/Shifts/Sharing
-                    AnimatedMonthHeader(
-                        monthName: viewModel.displayMonthName,
-                        year: viewModel.displayYear,
-                        phase: transitionPhase,
-                        isCurrentMonth: viewModel.isCurrentMonth,
-                        config: .default,
-                        onPrevious: {
-                            viewModel.goToPreviousMonth()
-                        },
-                        onNext: {
-                            viewModel.goToNextMonth()
-                        },
-                        onReturnToCurrent: {
-                            viewModel.goToCurrentMonth()
-                        },
-                        onNavigateToMonth: { year, month in
-                            SharedMonthContext.shared.navigateTo(year: year, month: month)
-                        },
-                        isLoading: viewModel.isLoading,
-                        backToTodayText: localization.string("dashboard.backToToday")
-                    )
-                    .frame(height: MonthPickerLayout.height)
-                    .glassEffect(.regular.interactive(), in: .rect(cornerRadius: MonthPickerLayout.cornerRadius))
+                        // Month picker - same styling as Dashboard/Shifts/Sharing
+                        AnimatedMonthHeader(
+                            monthName: viewModel.displayMonthName,
+                            year: viewModel.displayYear,
+                            phase: transitionPhase,
+                            isCurrentMonth: viewModel.isCurrentMonth,
+                            config: .default,
+                            onPrevious: {
+                                viewModel.goToPreviousMonth()
+                            },
+                            onNext: {
+                                viewModel.goToNextMonth()
+                            },
+                            onReturnToCurrent: {
+                                viewModel.goToCurrentMonth()
+                            },
+                            onNavigateToMonth: { year, month in
+                                SharedMonthContext.shared.navigateTo(year: year, month: month)
+                            },
+                            isLoading: viewModel.isLoading,
+                            backToTodayText: localization.string("dashboard.backToToday")
+                        )
+                        .frame(height: MonthPickerLayout.height)
+                        .glassEffect(.regular.interactive(), in: .rect(cornerRadius: MonthPickerLayout.cornerRadius))
+                    }
+                    .padding(.horizontal, MonthPickerLayout.horizontalPadding)
+                    .padding(.bottom, MonthPickerLayout.bottomPadding)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
-                .padding(.horizontal, MonthPickerLayout.horizontalPadding)
-                .padding(.bottom, MonthPickerLayout.bottomPadding)
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(Color.tidexBackground, for: .navigationBar)
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    ShiftModeToggle(mode: $viewModel.mode)
+                        .fixedSize()
+                }
                 ToolbarItem(placement: .principal) {
                     HStack {
                         Image("TidexWordmark")
@@ -114,7 +128,10 @@ struct AddShiftView: View {
                     .frame(maxWidth: .infinity)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    ShiftModeToggle(mode: $viewModel.mode)
+                    UserMenuButton(
+                        displayName: coordinator.userDisplayName,
+                        avatarUrl: coordinator.userAvatarUrl
+                    )
                 }
             }
         }
@@ -147,6 +164,16 @@ struct AddShiftView: View {
                     viewModel.onUpgradeComplete()
                 }
             )
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
+            withAnimation(.easeInOut(duration: 0.25)) {
+                isKeyboardVisible = true
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
+            withAnimation(.easeInOut(duration: 0.25)) {
+                isKeyboardVisible = false
+            }
         }
     }
 
