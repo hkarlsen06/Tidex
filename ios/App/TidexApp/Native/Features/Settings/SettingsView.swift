@@ -12,9 +12,24 @@ struct SettingsView: View {
     @State private var isAdmin = false
     /// Whether sign out is in progress
     @State private var isSigningOut = false
+    /// Navigation path for settings subviews
+    @State private var navigationPath = NavigationPath()
+
+    /// Settings navigation destinations
+    enum SettingsDestination: Hashable {
+        case profile
+        case security
+        case subscription
+        case notifications
+        case appearance
+        case pay
+        case data
+        case feedback
+        case admin
+    }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navigationPath) {
             ScrollView {
                 VStack(spacing: 0) {
                     // Header section
@@ -29,7 +44,7 @@ struct SettingsView: View {
                                 title: localization.string("settings.menu.account.label"),
                                 description: localization.string("settings.menu.account.description"),
                                 action: {
-                                    // TODO: Navigate to account settings
+                                    navigationPath.append(SettingsDestination.profile)
                                 }
                             )
 
@@ -144,6 +159,36 @@ struct SettingsView: View {
                             .font(.system(size: 24))
                             .foregroundStyle(Color.tidexTextMuted)
                     }
+                }
+            }
+            .navigationDestination(for: SettingsDestination.self) { destination in
+                switch destination {
+                case .profile:
+                    ProfileSettingsView()
+                case .security:
+                    // TODO: Implement SecuritySettingsView
+                    Text("Security Settings")
+                case .subscription:
+                    // TODO: Implement SubscriptionSettingsView
+                    Text("Subscription Settings")
+                case .notifications:
+                    // TODO: Implement NotificationSettingsView
+                    Text("Notification Settings")
+                case .appearance:
+                    // TODO: Implement AppearanceSettingsView
+                    Text("Appearance Settings")
+                case .pay:
+                    // TODO: Implement PaySettingsView
+                    Text("Pay Settings")
+                case .data:
+                    // TODO: Implement DataSettingsView
+                    Text("Data Settings")
+                case .feedback:
+                    // TODO: Implement FeedbackSettingsView
+                    Text("Feedback Settings")
+                case .admin:
+                    // TODO: Implement AdminSettingsView
+                    Text("Admin Settings")
                 }
             }
         }

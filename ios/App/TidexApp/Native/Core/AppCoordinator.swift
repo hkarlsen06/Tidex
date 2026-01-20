@@ -503,6 +503,20 @@ final class AppCoordinator: ObservableObject {
         }
     }
 
+    // MARK: - Profile Updates
+
+    /// Update the user's display name
+    /// Called from ProfileSettingsViewModel after successfully saving the name
+    func updateDisplayName(_ name: String) {
+        userDisplayName = name
+    }
+
+    /// Update the user's avatar URL
+    /// Called from ProfileSettingsViewModel after uploading/removing the avatar
+    func updateAvatarUrl(_ url: String?) {
+        userAvatarUrl = url
+    }
+
     // MARK: - Deep Link Handling
 
     /// Handle a deep link URL and set pendingDeepLink for navigation
