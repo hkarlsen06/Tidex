@@ -76,7 +76,7 @@ struct WagePeriod: Equatable {
 // MARK: - Break Method
 
 /// Method for applying break deductions
-enum BreakMethod: String, Codable, Equatable {
+enum BreakMethod: String, Codable, Equatable, CaseIterable {
     /// Deduct break proportionally across all periods
     case proportional = "proportional"
     /// Deduct from base/lowest supplement periods first

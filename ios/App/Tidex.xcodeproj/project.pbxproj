@@ -27,6 +27,15 @@
 		114F0EAC2F202ED900B587F0 /* AppearanceSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0EA92F202ED900B587F0 /* AppearanceSettingsView.swift */; };
 		114F0EAD2F202ED900B587F0 /* AppearanceSettingsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0EAA2F202ED900B587F0 /* AppearanceSettingsViewModel.swift */; };
 		114F0EAF2F202EEA00B587F0 /* AppearanceManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0EAE2F202EEA00B587F0 /* AppearanceManager.swift */; };
+		114F0EB92F20330C00B587F0 /* PaySettingsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0EB72F20330C00B587F0 /* PaySettingsViewModel.swift */; };
+		114F0EBA2F20330C00B587F0 /* BreakDeductionSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0EB02F20330C00B587F0 /* BreakDeductionSection.swift */; };
+		114F0EBB2F20330C00B587F0 /* WageSourceSelector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0EB32F20330C00B587F0 /* WageSourceSelector.swift */; };
+		114F0EBC2F20330C00B587F0 /* TaxDeductionSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0EB22F20330C00B587F0 /* TaxDeductionSection.swift */; };
+		114F0EBD2F20330C00B587F0 /* WageTimelineEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0EB52F20330C00B587F0 /* WageTimelineEntry.swift */; };
+		114F0EBE2F20330C00B587F0 /* GlobalPaySettingsCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0EB12F20330C00B587F0 /* GlobalPaySettingsCard.swift */; };
+		114F0EC02F20338100B587F0 /* WageHistoryTimelineView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0EBF2F20338100B587F0 /* WageHistoryTimelineView.swift */; };
+		114F0EC22F20339000B587F0 /* PaySettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0EC12F20339000B587F0 /* PaySettingsView.swift */; };
+		114F0EC42F2033E200B587F0 /* WageSnapshotEditorSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0EC32F2033E200B587F0 /* WageSnapshotEditorSheet.swift */; };
 		1152D0CB2F01E2A7002FD5ED /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1152D0CA2F01E2A7002FD5ED /* StoreKit.framework */; };
 		11923C192F16B94B0076AFD6 /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = 11923C182F16B94B0076AFD6 /* Auth */; };
 		11923C1B2F16B94B0076AFD6 /* Functions in Frameworks */ = {isa = PBXBuildFile; productRef = 11923C1A2F16B94B0076AFD6 /* Functions */; };
@@ -266,6 +275,15 @@
 		114F0EA92F202ED900B587F0 /* AppearanceSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppearanceSettingsView.swift; sourceTree = "<group>"; };
 		114F0EAA2F202ED900B587F0 /* AppearanceSettingsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppearanceSettingsViewModel.swift; sourceTree = "<group>"; };
 		114F0EAE2F202EEA00B587F0 /* AppearanceManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppearanceManager.swift; sourceTree = "<group>"; };
+		114F0EB02F20330C00B587F0 /* BreakDeductionSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BreakDeductionSection.swift; sourceTree = "<group>"; };
+		114F0EB12F20330C00B587F0 /* GlobalPaySettingsCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlobalPaySettingsCard.swift; sourceTree = "<group>"; };
+		114F0EB22F20330C00B587F0 /* TaxDeductionSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaxDeductionSection.swift; sourceTree = "<group>"; };
+		114F0EB32F20330C00B587F0 /* WageSourceSelector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WageSourceSelector.swift; sourceTree = "<group>"; };
+		114F0EB52F20330C00B587F0 /* WageTimelineEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WageTimelineEntry.swift; sourceTree = "<group>"; };
+		114F0EB72F20330C00B587F0 /* PaySettingsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaySettingsViewModel.swift; sourceTree = "<group>"; };
+		114F0EBF2F20338100B587F0 /* WageHistoryTimelineView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WageHistoryTimelineView.swift; sourceTree = "<group>"; };
+		114F0EC12F20339000B587F0 /* PaySettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaySettingsView.swift; sourceTree = "<group>"; };
+		114F0EC32F2033E200B587F0 /* WageSnapshotEditorSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WageSnapshotEditorSheet.swift; sourceTree = "<group>"; };
 		1152D0C82F01BB9B002FD5ED /* App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = App.entitlements; sourceTree = "<group>"; };
 		1152D0CA2F01E2A7002FD5ED /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 		119D1CB72F16E46300EC7072 /* AppCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppCoordinator.swift; sourceTree = "<group>"; };
@@ -572,6 +590,38 @@
 				114F0EAA2F202ED900B587F0 /* AppearanceSettingsViewModel.swift */,
 			);
 			path = Appearance;
+			sourceTree = "<group>";
+		};
+		114F0EB42F20330C00B587F0 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				114F0EC32F2033E200B587F0 /* WageSnapshotEditorSheet.swift */,
+				114F0EBF2F20338100B587F0 /* WageHistoryTimelineView.swift */,
+				114F0EB02F20330C00B587F0 /* BreakDeductionSection.swift */,
+				114F0EB12F20330C00B587F0 /* GlobalPaySettingsCard.swift */,
+				114F0EB22F20330C00B587F0 /* TaxDeductionSection.swift */,
+				114F0EB32F20330C00B587F0 /* WageSourceSelector.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		114F0EB62F20330C00B587F0 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				114F0EB52F20330C00B587F0 /* WageTimelineEntry.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		114F0EB82F20330C00B587F0 /* Pay */ = {
+			isa = PBXGroup;
+			children = (
+				114F0EC12F20339000B587F0 /* PaySettingsView.swift */,
+				114F0EB42F20330C00B587F0 /* Components */,
+				114F0EB62F20330C00B587F0 /* Models */,
+				114F0EB72F20330C00B587F0 /* PaySettingsViewModel.swift */,
+			);
+			path = Pay;
 			sourceTree = "<group>";
 		};
 		1152D0C92F01E2A7002FD5ED /* Frameworks */ = {
@@ -979,6 +1029,7 @@
 		11A1980F2F20053A0030E524 /* Settings */ = {
 			isa = PBXGroup;
 			children = (
+				114F0EB82F20330C00B587F0 /* Pay */,
 				114F0EAB2F202ED900B587F0 /* Appearance */,
 				11A1982C2F201FFC0030E524 /* Notifications */,
 				11A198272F201B0A0030E524 /* Subscription */,
@@ -1387,6 +1438,7 @@
 				119D1CE82F16E46300EC7072 /* RootView.swift in Sources */,
 				119D1CE92F16E46300EC7072 /* SupabaseClient.swift in Sources */,
 				11AE8CE82F16FD82005AB062 /* NextShiftCard.swift in Sources */,
+				114F0EC42F2033E200B587F0 /* WageSnapshotEditorSheet.swift in Sources */,
 				11A1982D2F201FFC0030E524 /* NotificationSettingsViewModel.swift in Sources */,
 				11A1982E2F201FFC0030E524 /* NotificationSettingsView.swift in Sources */,
 				11AE8D032F16FDBD005AB062 /* RecurringShiftGenerator.swift in Sources */,
@@ -1454,6 +1506,7 @@
 				11A1964C2F1AE6A20030E524 /* LocalPendingJWSUpload.swift in Sources */,
 				11A1978D2F1D8E310030E524 /* SharedShiftsCalendarView.swift in Sources */,
 				11A198092F1FDD890030E524 /* LocalNotificationPreferences.swift in Sources */,
+				114F0EC02F20338100B587F0 /* WageHistoryTimelineView.swift in Sources */,
 				11F42F912F1A65F3002B1FBE /* StepItem.swift in Sources */,
 				11A1961F2F1AB6020030E524 /* CurrencySelector.swift in Sources */,
 				11A197162F1D7B400030E524 /* SharerRow.swift in Sources */,
@@ -1529,6 +1582,12 @@
 				11AE8D2A2F17D02E005AB062 /* CountdownFormatter.swift in Sources */,
 				11A197082F1D62060030E524 /* AddShiftCalendarView.swift in Sources */,
 				11A196602F1AEB4D0030E524 /* VerificationRequiredView.swift in Sources */,
+				114F0EB92F20330C00B587F0 /* PaySettingsViewModel.swift in Sources */,
+				114F0EBA2F20330C00B587F0 /* BreakDeductionSection.swift in Sources */,
+				114F0EBB2F20330C00B587F0 /* WageSourceSelector.swift in Sources */,
+				114F0EBC2F20330C00B587F0 /* TaxDeductionSection.swift in Sources */,
+				114F0EBD2F20330C00B587F0 /* WageTimelineEntry.swift in Sources */,
+				114F0EBE2F20330C00B587F0 /* GlobalPaySettingsCard.swift in Sources */,
 				119D1CFD2F16E46300EC7072 /* LoginView.swift in Sources */,
 				119D1CFE2F16E46300EC7072 /* MFAVerifyViewModel.swift in Sources */,
 				119D1CFF2F16E46300EC7072 /* PrimaryButton.swift in Sources */,
@@ -1538,6 +1597,7 @@
 				119D1D022F16E46300EC7072 /* GoogleAuthProvider.swift in Sources */,
 				11AE8CC92F16F2BF005AB062 /* SignupView.swift in Sources */,
 				11A1966A2F1B00B50030E524 /* ShiftsViewModel.swift in Sources */,
+				114F0EC22F20339000B587F0 /* PaySettingsView.swift in Sources */,
 				11A1966B2F1B00B50030E524 /* ShiftsView.swift in Sources */,
 				11A1966C2F1B00B50030E524 /* ShiftsEmptyState.swift in Sources */,
 				11A1966D2F1B00B50030E524 /* ShiftRowCard.swift in Sources */,
