@@ -476,6 +476,12 @@ final class AppCoordinator: ObservableObject {
         StoreKitManager.shared.stopListening()
         await EntitlementService.shared.clearCache()
 
+        // Clear all local data (shifts, settings, sync state, etc.)
+        await LocalStore.shared.resetAllData()
+
+        // Clear image cache
+        ImageCache.shared.clearAll()
+
         do {
             try await authService.signOut()
             // Auth state listener will update appState to .unauthenticated

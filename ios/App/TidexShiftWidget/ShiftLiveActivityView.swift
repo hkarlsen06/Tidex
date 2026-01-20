@@ -17,6 +17,7 @@ private func localizedString(_ key: String, locale: String) -> String {
         "shift": ["no": "Vakt", "en": "Shift"],
         "hours_short": ["no": "t", "en": "h"],
         "minutes_short": ["no": "m", "en": "m"],
+        "before_tax": ["no": "Før skatt:", "en": "Before tax:"],
     ]
     return strings[key]?[locale] ?? strings[key]?["en"] ?? key
 }
@@ -32,38 +33,6 @@ private func formatCurrency(_ value: Double) -> String {
     return formatter.string(from: NSNumber(value: value)) ?? "\(Int(value))"
 }
 
-// MARK: - Time Formatter (for fallback static display)
-
-private func formatTimeRemaining(_ minutes: Int, locale: String) -> String {
-    let hours = minutes / 60
-    let mins = minutes % 60
-    let h = localizedString("hours_short", locale: locale)
-    let m = localizedString("minutes_short", locale: locale)
-    if hours > 0 {
-        return "\(hours)\(h) \(mins)\(m)"
-    }
-    return "\(mins)\(m)"
-}
-
-// MARK: - Real-Time Calculation Helpers
-
-/// Calculate current earnings based on elapsed time (linear interpolation)
-private func calculateCurrentEarnings(startDate: Date, endDate: Date, totalGross: Double, at now: Date) -> Double {
-    let total = endDate.timeIntervalSince(startDate)
-    guard total > 0 else { return 0 }
-    let elapsed = now.timeIntervalSince(startDate)
-    let progress = min(1.0, max(0.0, elapsed / total))
-    return progress * totalGross
-}
-
-/// Calculate progress percentage based on elapsed time
-private func calculateProgress(startDate: Date, endDate: Date, at now: Date) -> Double {
-    let total = endDate.timeIntervalSince(startDate)
-    guard total > 0 else { return 0 }
-    let elapsed = now.timeIntervalSince(startDate)
-    return min(100.0, max(0.0, (elapsed / total) * 100.0))
-}
-
 // MARK: - Lock Screen View
 
 struct LockScreenLiveActivityView: View {
@@ -73,11 +42,17 @@ struct LockScreenLiveActivityView: View {
         context.attributes.currencySymbol ?? "kr"
     }
 
-    var body: some View {
-        // Use ContentState values (updated by the app)
-        let currentEarnings = context.state.currentEarnings
-        let progress = context.state.progressPercent
+    /// The primary amount to display (net if available, otherwise gross)
+    private var displayAmount: Double {
+        context.attributes.totalNetEstimate ?? context.attributes.totalGrossEstimate
+    }
 
+    /// Whether to show "before tax" line (when net differs from gross)
+    private var showBeforeTax: Bool {
+        context.attributes.totalNetEstimate != nil
+    }
+
+    var body: some View {
         HStack(spacing: 16) {
             // Left side: Time info
             VStack(alignment: .leading, spacing: 4) {
@@ -101,32 +76,23 @@ struct LockScreenLiveActivityView: View {
             Spacer()
 
             // Right side: Earnings
-            VStack(alignment: .trailing, spacing: 4) {
-                // Current earnings from state
-                Text("\(formatCurrency(currentEarnings)) \(currencySymbol)")
+            VStack(alignment: .trailing, spacing: 2) {
+                // Primary amount (net or gross)
+                Text("\(formatCurrency(displayAmount)) \(currencySymbol)")
                     .font(.system(size: 22, weight: .bold, design: .rounded))
                     .monospacedDigit()
                     .foregroundColor(tidexBlue)
 
-                // Of total
-                Text("\(localizedString("of", locale: context.attributes.locale)) \(formatCurrency(context.attributes.totalGrossEstimate)) \(currencySymbol)")
-                    .font(.system(size: 13))
-                    .foregroundColor(.secondary)
+                // Before tax (only if tax is configured)
+                if showBeforeTax {
+                    Text("\(localizedString("before_tax", locale: context.attributes.locale)) \(formatCurrency(context.attributes.totalGrossEstimate)) \(currencySymbol)")
+                        .font(.system(size: 12))
+                        .foregroundColor(.secondary)
+                }
             }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
-        .background(
-            // Progress bar at bottom
-            GeometryReader { geometry in
-                VStack {
-                    Spacer()
-                    Rectangle()
-                        .fill(tidexBlue.opacity(0.3))
-                        .frame(width: geometry.size.width * CGFloat(progress / 100), height: 3)
-                }
-            }
-        )
     }
 }
 
@@ -155,8 +121,13 @@ struct CompactTrailingView: View {
         context.attributes.currencySymbol ?? "kr"
     }
 
+    /// The primary amount to display (net if available, otherwise gross)
+    private var displayAmount: Double {
+        context.attributes.totalNetEstimate ?? context.attributes.totalGrossEstimate
+    }
+
     var body: some View {
-        Text("\(formatCurrency(context.state.currentEarnings)) \(currencySymbol)")
+        Text("\(formatCurrency(displayAmount)) \(currencySymbol)")
             .font(.system(size: 13, weight: .semibold, design: .rounded))
             .monospacedDigit()
             .foregroundColor(tidexBlue)
@@ -172,51 +143,52 @@ struct ExpandedView: View {
         context.attributes.currencySymbol ?? "kr"
     }
 
-    var body: some View {
-        let currentEarnings = context.state.currentEarnings
-        let progress = context.state.progressPercent
+    /// The primary amount to display (net if available, otherwise gross)
+    private var displayAmount: Double {
+        context.attributes.totalNetEstimate ?? context.attributes.totalGrossEstimate
+    }
 
-        VStack(spacing: 8) {
-            // Top row: Time range and remaining
-            HStack {
-                Text("\(context.attributes.startTime) - \(context.attributes.endTime)")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(.secondary)
-                Spacer()
+    /// Whether to show "before tax" line (when net differs from gross)
+    private var showBeforeTax: Bool {
+        context.attributes.totalNetEstimate != nil
+    }
+
+    var body: some View {
+        HStack(spacing: 12) {
+            // Left column: Countdown (top), Time range (bottom)
+            VStack(alignment: .leading, spacing: 4) {
+                // Countdown timer
                 HStack(alignment: .firstTextBaseline, spacing: 4) {
                     Image(systemName: "clock.fill")
                         .font(.system(size: 12))
                         .foregroundColor(tidexBlue)
-                    // SwiftUI timer automatically counts down
                     Text(context.attributes.endDate, style: .timer)
-                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                        .font(.system(size: 16, weight: .bold, design: .rounded))
                         .monospacedDigit()
                 }
-            }
 
-            // Progress bar
-            GeometryReader { geometry in
-                ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 2)
-                        .fill(Color.gray.opacity(0.3))
-                        .frame(height: 4)
-                    RoundedRectangle(cornerRadius: 2)
-                        .fill(tidexBlue)
-                        .frame(width: geometry.size.width * CGFloat(progress / 100), height: 4)
-                }
-            }
-            .frame(height: 4)
-
-            // Bottom row: Earnings
-            HStack {
-                Text(localizedString("earned", locale: context.attributes.locale))
-                    .font(.system(size: 13))
+                // Shift time range
+                Text("\(context.attributes.startTime) - \(context.attributes.endTime)")
+                    .font(.system(size: 13, weight: .medium))
                     .foregroundColor(.secondary)
-                Spacer()
-                Text("\(formatCurrency(currentEarnings)) / \(formatCurrency(context.attributes.totalGrossEstimate)) \(currencySymbol)")
-                    .font(.system(size: 15, weight: .bold, design: .rounded))
+            }
+
+            Spacer()
+
+            // Right column: Net (top), Before tax (bottom)
+            VStack(alignment: .trailing, spacing: 4) {
+                // Net amount
+                Text("\(formatCurrency(displayAmount)) \(currencySymbol)")
+                    .font(.system(size: 18, weight: .bold, design: .rounded))
                     .monospacedDigit()
                     .foregroundColor(tidexBlue)
+
+                // Before tax (only if tax configured)
+                if showBeforeTax {
+                    Text("\(localizedString("before_tax", locale: context.attributes.locale)) \(formatCurrency(context.attributes.totalGrossEstimate)) \(currencySymbol)")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                }
             }
         }
         .padding(.horizontal, 16)
