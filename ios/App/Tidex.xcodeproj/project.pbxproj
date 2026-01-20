@@ -145,8 +145,11 @@
 		11A1980B2F1FDFD00030E524 /* ShiftReminderScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A1980A2F1FDFD00030E524 /* ShiftReminderScheduler.swift */; };
 		11A1980D2F1FDFEE0030E524 /* NotificationPreferencesRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A1980C2F1FDFEE0030E524 /* NotificationPreferencesRepository.swift */; };
 		11A198102F20053A0030E524 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A1980E2F20053A0030E524 /* SettingsView.swift */; };
-		11A198132F2008610030E524 /* ProfileSettingsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A198122F2008610030E524 /* ProfileSettingsViewModel.swift */; };
-		11A198142F2008610030E524 /* ProfileSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A198112F2008610030E524 /* ProfileSettingsView.swift */; };
+		11A1981F2F20115E0030E524 /* SecuritySettingsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A1981D2F20115E0030E524 /* SecuritySettingsViewModel.swift */; };
+		11A198202F20115E0030E524 /* SecuritySettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A1981C2F20115E0030E524 /* SecuritySettingsView.swift */; };
+		11A198212F20115E0030E524 /* ProfileSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A198192F20115E0030E524 /* ProfileSettingsView.swift */; };
+		11A198222F20115E0030E524 /* ProfileSettingsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A1981A2F20115E0030E524 /* ProfileSettingsViewModel.swift */; };
+		11A198242F2015C50030E524 /* OAuthWebAuthSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A198232F2015C50030E524 /* OAuthWebAuthSession.swift */; };
 		11A5CD262F101201002BAC91 /* StoredShift.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A5CD252F101201002BAC91 /* StoredShift.swift */; };
 		11A5CD302F101283002BAC91 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 11A5CD2F2F101283002BAC91 /* WidgetKit.framework */; };
 		11A5CD322F101283002BAC91 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 11A5CD312F101283002BAC91 /* SwiftUI.framework */; };
@@ -373,8 +376,11 @@
 		11A1980A2F1FDFD00030E524 /* ShiftReminderScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShiftReminderScheduler.swift; sourceTree = "<group>"; };
 		11A1980C2F1FDFEE0030E524 /* NotificationPreferencesRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationPreferencesRepository.swift; sourceTree = "<group>"; };
 		11A1980E2F20053A0030E524 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
-		11A198112F2008610030E524 /* ProfileSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileSettingsView.swift; sourceTree = "<group>"; };
-		11A198122F2008610030E524 /* ProfileSettingsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileSettingsViewModel.swift; sourceTree = "<group>"; };
+		11A198192F20115E0030E524 /* ProfileSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileSettingsView.swift; sourceTree = "<group>"; };
+		11A1981A2F20115E0030E524 /* ProfileSettingsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileSettingsViewModel.swift; sourceTree = "<group>"; };
+		11A1981C2F20115E0030E524 /* SecuritySettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecuritySettingsView.swift; sourceTree = "<group>"; };
+		11A1981D2F20115E0030E524 /* SecuritySettingsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecuritySettingsViewModel.swift; sourceTree = "<group>"; };
+		11A198232F2015C50030E524 /* OAuthWebAuthSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OAuthWebAuthSession.swift; sourceTree = "<group>"; };
 		11A5CD252F101201002BAC91 /* StoredShift.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoredShift.swift; sourceTree = "<group>"; };
 		11A5CD2E2F101283002BAC91 /* TidexShiftWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TidexShiftWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		11A5CD2F2F101283002BAC91 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
@@ -679,6 +685,7 @@
 		119D1CD32F16E46300EC7072 /* OAuthProviders */ = {
 			isa = PBXGroup;
 			children = (
+				11A198232F2015C50030E524 /* OAuthWebAuthSession.swift */,
 				119D1CD12F16E46300EC7072 /* AppleAuthProvider.swift */,
 				119D1CD22F16E46300EC7072 /* GoogleAuthProvider.swift */,
 			);
@@ -957,11 +964,29 @@
 		11A1980F2F20053A0030E524 /* Settings */ = {
 			isa = PBXGroup;
 			children = (
-				11A198112F2008610030E524 /* ProfileSettingsView.swift */,
-				11A198122F2008610030E524 /* ProfileSettingsViewModel.swift */,
+				11A1981B2F20115E0030E524 /* Profile */,
+				11A1981E2F20115E0030E524 /* Security */,
 				11A1980E2F20053A0030E524 /* SettingsView.swift */,
 			);
 			path = Settings;
+			sourceTree = "<group>";
+		};
+		11A1981B2F20115E0030E524 /* Profile */ = {
+			isa = PBXGroup;
+			children = (
+				11A198192F20115E0030E524 /* ProfileSettingsView.swift */,
+				11A1981A2F20115E0030E524 /* ProfileSettingsViewModel.swift */,
+			);
+			path = Profile;
+			sourceTree = "<group>";
+		};
+		11A1981E2F20115E0030E524 /* Security */ = {
+			isa = PBXGroup;
+			children = (
+				11A1981C2F20115E0030E524 /* SecuritySettingsView.swift */,
+				11A1981D2F20115E0030E524 /* SecuritySettingsViewModel.swift */,
+			);
+			path = Security;
 			sourceTree = "<group>";
 		};
 		11A1D6CE2F11F48F00060819 /* Core */ = {
@@ -1341,6 +1366,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				504EC3081FED79650016851F /* AppDelegate.swift in Sources */,
+				11A198242F2015C50030E524 /* OAuthWebAuthSession.swift in Sources */,
 				119D1CE62F16E46300EC7072 /* OAuthButtonsView.swift in Sources */,
 				119D1CE72F16E46300EC7072 /* SecureTextField.swift in Sources */,
 				11A196722F1B03760030E524 /* ShiftsCalendarView.swift in Sources */,
@@ -1352,8 +1378,6 @@
 				11AE8D042F16FDBD005AB062 /* PayrollCalculator.swift in Sources */,
 				11AE8D762F1856D2005AB062 /* AuthNavigationView.swift in Sources */,
 				11AE8D052F16FDBD005AB062 /* BreakDeduction.swift in Sources */,
-				11A198132F2008610030E524 /* ProfileSettingsViewModel.swift in Sources */,
-				11A198142F2008610030E524 /* ProfileSettingsView.swift in Sources */,
 				11AE8D1C2F17BE13005AB062 /* PayrollEngine.swift in Sources */,
 				11A1971D2F1D7CD40030E524 /* SharedUser.swift in Sources */,
 				11AE8D1D2F17BE13005AB062 /* ConflictExclusion.swift in Sources */,
@@ -1514,6 +1538,10 @@
 				SCENE0012F0700000000001 /* SceneDelegate.swift in Sources */,
 				11A197042F1B15080030E524 /* ScrollAppearModifier.swift in Sources */,
 				11A196332F1AC0070030E524 /* TimePickerRow.swift in Sources */,
+				11A1981F2F20115E0030E524 /* SecuritySettingsViewModel.swift in Sources */,
+				11A198202F20115E0030E524 /* SecuritySettingsView.swift in Sources */,
+				11A198212F20115E0030E524 /* ProfileSettingsView.swift in Sources */,
+				11A198222F20115E0030E524 /* ProfileSettingsViewModel.swift in Sources */,
 				11A196342F1AC0070030E524 /* AddShiftView.swift in Sources */,
 				11A196352F1AC0070030E524 /* RecurringShiftProjector.swift in Sources */,
 				11A196362F1AC0070030E524 /* RecurringCalendarView.swift in Sources */,
