@@ -20,7 +20,6 @@ final class SignupViewModel: ObservableObject {
     @Published var password: String = ""
     @Published var confirmPassword: String = ""
     @Published var otpCode: String = ""
-    @Published var agreedToTerms: Bool = false
 
     @Published var currentStep: SignupStep = .input
     @Published var isLoading = false
@@ -53,14 +52,12 @@ final class SignupViewModel: ObservableObject {
         var password: String?
         var confirmPassword: String?
         var otp: String?
-        var terms: String?
 
         mutating func clear() {
             emailOrPhone = nil
             password = nil
             confirmPassword = nil
             otp = nil
-            terms = nil
         }
     }
 
@@ -112,7 +109,7 @@ final class SignupViewModel: ObservableObject {
 
     /// Check if form is valid for submission
     var isFormValid: Bool {
-        !emailOrPhone.isEmpty && !password.isEmpty && agreedToTerms
+        !emailOrPhone.isEmpty && !password.isEmpty
     }
 
     // MARK: - Initialization
@@ -282,12 +279,6 @@ final class SignupViewModel: ObservableObject {
         // Confirm password must match (if visible)
         if !confirmPassword.isEmpty && password != confirmPassword {
             fieldErrors.confirmPassword = localization.string("signup.errors.passwordMismatch")
-            isValid = false
-        }
-
-        // Terms must be agreed
-        if !agreedToTerms {
-            fieldErrors.terms = localization.string("signup.errors.termsRequired")
             isValid = false
         }
 

@@ -70,29 +70,27 @@ struct UserMenuButton: View {
 
     // MARK: - Computed Properties
 
-    /// Extract first name only from display name, truncated if too long
-    private var truncatedDisplayName: String {
-        let name = displayName.components(separatedBy: " ").first ?? displayName
-        // Limit to 12 characters to prevent overlapping the logo
-        if name.count > 12 {
-            return String(name.prefix(11)) + "…"
-        }
-        return name
+    /// Extract first name only from display name
+    private var firstName: String {
+        displayName.components(separatedBy: " ").first ?? displayName
     }
 
     // MARK: - Menu Button Label
 
     private var menuButton: some View {
         HStack(spacing: 8) {
-            // First name only, truncated to prevent overlap with logo
-            Text(truncatedDisplayName)
+            // First name only, truncates if too long
+            Text(firstName)
                 .font(.system(size: 14, weight: .medium))
                 .foregroundColor(.tidexTextPrimary)
                 .lineLimit(1)
+                .truncationMode(.tail)
 
             // Profile picture or initial
             profileImage
         }
+        // Fixed width ensures consistent toolbar spacing so the logo stays centered
+        .frame(width: 110, alignment: .trailing)
     }
 
     // MARK: - Profile Image
@@ -187,25 +185,25 @@ struct UserMenuButton: View {
             .ignoresSafeArea()
 
         VStack(spacing: 20) {
-            // Shows "John" (first name only)
+            // Shows "John"
             UserMenuButton(
                 displayName: "John Doe",
                 avatarUrl: nil
             )
 
-            // Shows "jane@exampl…" (truncated to 12 chars)
+            // Shows "jane@exam…" (truncated by frame constraint)
             UserMenuButton(
                 displayName: "jane@example.com",
                 avatarUrl: "https://example.com/avatar.jpg"
             )
 
-            // Shows "Hjalmar" (first name only from full name)
+            // Shows "Hjalmar"
             UserMenuButton(
                 displayName: "Hjalmar Samuelsson-Kristensen",
                 avatarUrl: nil
             )
 
-            // Shows "Christopher…" (long first name truncated)
+            // Shows "Christoph…" (truncated by frame constraint)
             UserMenuButton(
                 displayName: "Christopherson McAllister",
                 avatarUrl: nil

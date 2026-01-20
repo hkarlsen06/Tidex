@@ -82,6 +82,7 @@ struct ShiftsCalendarView: View {
     var onCancelDelete: (() -> Void)?
     var onCopy: (() -> Void)?
     var onDetails: (() -> Void)?
+    var onEdit: (() -> Void)?
     var onMove: (() -> Void)?
     var onClearSelection: (() -> Void)?
 
@@ -671,6 +672,19 @@ struct ShiftsCalendarView: View {
             }
 
             if !confirmingDelete {
+                // Edit button (icon only)
+                Button {
+                    toggleHaptic.impactOccurred()
+                    onEdit?()
+                } label: {
+                    Image(systemName: "pencil")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.tidexBlue)
+                        .frame(width: 44, height: 36)
+                        .background(Capsule().fill(Color.tidexBlue.opacity(0.1)))
+                }
+                .buttonStyle(.plain)
+
                 // Move button
                 Button {
                     toggleHaptic.impactOccurred()

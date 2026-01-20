@@ -191,14 +191,10 @@ struct PlaceholderTabView: View {
             .toolbarBackground(Color.tidexBackground, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .principal) {
-                    HStack {
-                        Image("TidexWordmark")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(height: 22)
-                        Spacer()
-                    }
-                    .frame(maxWidth: .infinity)
+                    Image("TidexWordmark")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(height: 22)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     UserMenuButton(

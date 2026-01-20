@@ -762,7 +762,38 @@ enum AuthStrings {
         "subscription.actions.manage": "Administrer abonnement",
         "subscription.actions.subscribe": "Velg plan",
         "subscription.actions.upgrade": "Oppgrader",
-        "subscription.errors.restoreFailed": "Kunne ikke gjenopprette kjøp. Prøv igjen."
+        "subscription.errors.restoreFailed": "Kunne ikke gjenopprette kjøp. Prøv igjen.",
+
+        // Notification Settings
+        "notifications.title": "Varsler",
+        "notifications.subtitle": "Administrer push-varsler og preferanser",
+
+        // Notification - Permission
+        "notifications.permission.sectionTitle": "Systemtillatelse",
+        "notifications.permission.title": "Push-varsler",
+        "notifications.permission.enabled": "Varsler er aktivert",
+        "notifications.permission.denied": "Varsler er deaktivert",
+        "notifications.permission.notDetermined": "Ikke konfigurert enda",
+        "notifications.permission.active": "Aktiv",
+        "notifications.permission.enable": "Aktiver",
+        "notifications.permission.openSettings": "Innstillinger",
+        "notifications.permission.deniedHint": "For \u{00E5} motta varsler m\u{00E5} du aktivere dem i Innstillinger-appen",
+
+        // Notification - Shift Reminders
+        "notifications.reminders.sectionTitle": "Vaktpåminnelser",
+        "notifications.reminders.sectionSubtitle": "F\u{00E5} p\u{00E5}minnelser f\u{00F8}r vaktene dine",
+        "notifications.reminders.title": "P\u{00E5}minnelser",
+        "notifications.reminders.description": "Varsle meg f\u{00F8}r vaktene mine starter",
+        "notifications.reminders.timesLabel": "N\u{00E5}r vil du bli varslet?",
+        "notifications.reminder.1hour": "1 time f\u{00F8}r",
+        "notifications.reminder.5hours": "5 timer f\u{00F8}r",
+        "notifications.reminder.1day": "1 dag f\u{00F8}r",
+
+        // Notification - Shared Shifts
+        "notifications.shared.sectionTitle": "Delte vakter",
+        "notifications.shared.sectionSubtitle": "Varsler om endringer fra venner",
+        "notifications.shared.title": "Vaktendringer",
+        "notifications.shared.description": "Varsle meg n\u{00E5}r venner endrer vaktene sine"
     ]
 
     // MARK: - English Strings
@@ -1515,6 +1546,37 @@ enum AuthStrings {
         "subscription.actions.manage": "Manage subscription",
         "subscription.actions.subscribe": "Choose plan",
         "subscription.actions.upgrade": "Upgrade",
-        "subscription.errors.restoreFailed": "Could not restore purchases. Please try again."
+        "subscription.errors.restoreFailed": "Could not restore purchases. Please try again.",
+
+        // Notification Settings
+        "notifications.title": "Notifications",
+        "notifications.subtitle": "Manage push notifications and preferences",
+
+        // Notification - Permission
+        "notifications.permission.sectionTitle": "System Permission",
+        "notifications.permission.title": "Push Notifications",
+        "notifications.permission.enabled": "Notifications are enabled",
+        "notifications.permission.denied": "Notifications are disabled",
+        "notifications.permission.notDetermined": "Not configured yet",
+        "notifications.permission.active": "Active",
+        "notifications.permission.enable": "Enable",
+        "notifications.permission.openSettings": "Settings",
+        "notifications.permission.deniedHint": "To receive notifications, enable them in the Settings app",
+
+        // Notification - Shift Reminders
+        "notifications.reminders.sectionTitle": "Shift Reminders",
+        "notifications.reminders.sectionSubtitle": "Get reminded before your shifts",
+        "notifications.reminders.title": "Reminders",
+        "notifications.reminders.description": "Notify me before my shifts start",
+        "notifications.reminders.timesLabel": "When do you want to be notified?",
+        "notifications.reminder.1hour": "1 hour before",
+        "notifications.reminder.5hours": "5 hours before",
+        "notifications.reminder.1day": "1 day before",
+
+        // Notification - Shared Shifts
+        "notifications.shared.sectionTitle": "Shared Shifts",
+        "notifications.shared.sectionSubtitle": "Notifications about changes from friends",
+        "notifications.shared.title": "Shift Changes",
+        "notifications.shared.description": "Notify me when friends change their shifts"
     ]
 }

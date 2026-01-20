@@ -239,20 +239,13 @@ struct SignupForm: View {
                 .foregroundColor(.tidexTextMuted)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-            // Terms agreement
-            TermsAgreementView(
-                isAgreed: $viewModel.agreedToTerms,
-                error: viewModel.fieldErrors.terms
-            )
-
             // Submit button
             PrimaryButton(
                 title: localization.string("signup.submitButton"),
                 action: {
                     Task { await viewModel.signUp() }
                 },
-                isLoading: viewModel.isLoading,
-                isDisabled: !viewModel.agreedToTerms
+                isLoading: viewModel.isLoading
             )
         }
     }

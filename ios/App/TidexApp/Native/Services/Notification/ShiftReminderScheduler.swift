@@ -30,9 +30,22 @@ final class ShiftReminderScheduler {
 
     /// Schedule reminders for all upcoming shifts
     /// Call after sync completes or when preferences change
-    /// - Parameter userId: User ID
-    func scheduleAllReminders(for userId: String) async {
+    /// - Parameters:
+    ///   - userId: User ID
+    ///   - shifts: Optional pre-loaded shifts. If nil, reads from widget storage.
+    func scheduleAllReminders(for userId: String, shifts: [StoredShift]? = nil) async {
         logger.info("Scheduling shift reminders for user \(userId.prefix(8))...")
+
+        // Check system notification permission first
+        let center = UNUserNotificationCenter.current()
+        let settings = await center.notificationSettings()
+
+        guard settings.authorizationStatus == .authorized ||
+              settings.authorizationStatus == .provisional ||
+              settings.authorizationStatus == .ephemeral else {
+            logger.warning("Notification permission not granted, skipping scheduling")
+            return
+        }
 
         // Get notification preferences
         let prefsRepository = NotificationPreferencesRepository.shared
@@ -55,9 +68,14 @@ final class ShiftReminderScheduler {
         // Cancel existing reminders first
         await cancelAllReminders()
 
-        // Get upcoming shifts from widget storage (already computed and sorted)
-        guard let storedShifts = getStoredShifts() else {
-            logger.info("No shifts available for scheduling")
+        // Use provided shifts or read from widget storage
+        let storedShifts: [StoredShift]
+        if let providedShifts = shifts {
+            storedShifts = providedShifts
+        } else if let shiftsFromStorage = getStoredShifts() {
+            storedShifts = shiftsFromStorage
+        } else {
+            logger.warning("No shifts available for scheduling")
             return
         }
 
@@ -108,9 +126,8 @@ final class ShiftReminderScheduler {
                 }
 
                 // Calculate notification fire date
-                let notificationDate = calendar.date(byAdding: .minute, value: -minutes, to: shiftStart)
-                guard let fireDate = notificationDate, fireDate > now else {
-                    // Reminder time already passed
+                guard let fireDate = calendar.date(byAdding: .minute, value: -minutes, to: shiftStart),
+                      fireDate > now else {
                     continue
                 }
 

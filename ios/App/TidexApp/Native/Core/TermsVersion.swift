@@ -22,14 +22,14 @@ enum TermsVersion {
     private static let cacheExpiryInterval: TimeInterval = 3600 // 1 hour
 
     /// Maximum time to wait for terms version API response
-    /// Prevents slow app launch on poor connectivity
-    private static let requestTimeout: TimeInterval = 0.5
+    /// Since this runs in the background, we can be more lenient
+    private static let requestTimeout: TimeInterval = 10.0
 
     // MARK: - Public API
 
     /// Fetch the current terms version date from the API
     /// Uses a cached value if available and not expired
-    /// Times out quickly to prevent slow app launch on poor connectivity
+    /// Returns fallback version if API is unavailable (timeout/error)
     static func fetchCurrentVersionDate() async -> String {
         // Check cache first
         if let cached = cachedVersionDate,
