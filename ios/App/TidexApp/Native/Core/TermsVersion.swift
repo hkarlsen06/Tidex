@@ -21,10 +21,15 @@ enum TermsVersion {
     private static var lastFetchTime: Date?
     private static let cacheExpiryInterval: TimeInterval = 3600 // 1 hour
 
+    /// Maximum time to wait for terms version API response
+    /// Prevents slow app launch on poor connectivity
+    private static let requestTimeout: TimeInterval = 0.5
+
     // MARK: - Public API
 
     /// Fetch the current terms version date from the API
     /// Uses a cached value if available and not expired
+    /// Times out quickly to prevent slow app launch on poor connectivity
     static func fetchCurrentVersionDate() async -> String {
         // Check cache first
         if let cached = cachedVersionDate,
@@ -33,14 +38,16 @@ enum TermsVersion {
             return cached
         }
 
-        // Fetch from API
+        // Fetch from API with timeout
         do {
             guard let url = URL(string: versionEndpoint) else {
                 print("[TermsVersion] Invalid endpoint URL")
                 return fallbackVersionDate
             }
 
-            let (data, response) = try await URLSession.shared.data(from: url)
+            let (data, response) = try await withTimeout(seconds: requestTimeout) {
+                try await URLSession.shared.data(from: url)
+            }
 
             guard let httpResponse = response as? HTTPURLResponse,
                   httpResponse.statusCode == 200 else {
@@ -55,9 +62,38 @@ enum TermsVersion {
             lastFetchTime = Date()
 
             return versionResponse.termsVersionDate
+        } catch is TimeoutError {
+            print("[TermsVersion] Request timed out after \(requestTimeout)s. Using fallback.")
+            return fallbackVersionDate
         } catch {
             print("[TermsVersion] Failed to fetch version: \(error). Using fallback.")
             return fallbackVersionDate
+        }
+    }
+
+    // MARK: - Timeout Helper
+
+    private struct TimeoutError: Error {}
+
+    /// Execute an async operation with a timeout
+    private static func withTimeout<T>(
+        seconds: TimeInterval,
+        operation: @escaping () async throws -> T
+    ) async throws -> T {
+        try await withThrowingTaskGroup(of: T.self) { group in
+            group.addTask {
+                try await operation()
+            }
+
+            group.addTask {
+                try await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+                throw TimeoutError()
+            }
+
+            // Return the first result (either the operation or timeout)
+            let result = try await group.next()!
+            group.cancelAll()
+            return result
         }
     }
 
