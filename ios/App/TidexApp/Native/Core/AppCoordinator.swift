@@ -38,9 +38,15 @@ final class AppCoordinator: ObservableObject {
     /// Pending deep link navigation to execute after authentication/tab setup
     @Published var pendingDeepLink: DeepLink?
 
+    /// Action to take when opening a shift deeplink
+    enum ShiftDeepLinkAction: String, Equatable {
+        case open      // Open shift details sheet (default behavior)
+        case highlight // Just highlight/navigate to the date in calendar, no sheet
+    }
+
     /// Supported deep link types
     enum DeepLink: Equatable {
-        case shifts(dates: [String]?)           // Navigate to shifts view, optionally filtering dates
+        case shifts(dates: [String]?, action: ShiftDeepLinkAction) // Navigate to shifts view, optionally filtering dates
         case sharing(sharerId: String?)         // Navigate to sharing tab, optionally selecting a sharer
         case sharingManage(highlightUserId: String?) // Open sharing management modal, optionally highlighting a user
     }
@@ -545,8 +551,11 @@ final class AppCoordinator: ObservableObject {
         case "shifts":
             let datesString = queryItems.first(where: { $0.name == "dates" })?.value
             let dates = datesString?.components(separatedBy: ",").map { $0.trimmingCharacters(in: .whitespaces) }
-            pendingDeepLink = .shifts(dates: dates)
-            print("[AppCoordinator] Deep link: shifts, dates=\(dates ?? [])")
+            // Parse action parameter: "open" (default) or "highlight"
+            let actionString = queryItems.first(where: { $0.name == "action" })?.value?.lowercased()
+            let action: ShiftDeepLinkAction = actionString == "highlight" ? .highlight : .open
+            pendingDeepLink = .shifts(dates: dates, action: action)
+            print("[AppCoordinator] Deep link: shifts, dates=\(dates ?? []), action=\(action.rawValue)")
 
         default:
             print("[AppCoordinator] Unknown deep link host: \(host ?? "nil")")

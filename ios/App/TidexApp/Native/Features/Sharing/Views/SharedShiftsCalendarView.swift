@@ -479,19 +479,24 @@ private struct SharedCalendarDayCell: View {
         .clipped()
         .background(
             RoundedRectangle(cornerRadius: 8)
-                .fill(Color.tidexSurfacePrimary)
-        )
-        .overlay(
-            // Today indicator ring
-            RoundedRectangle(cornerRadius: 8)
-                .strokeBorder(isToday ? Color.tidexBlue : Color.clear, lineWidth: 2)
+                .fill(backgroundColor)
         )
         .opacity(dayInfo.isOutsideMonth ? 0.4 : 1.0)
     }
 
+    private var backgroundColor: Color {
+        if isToday {
+            return Color.tidexBlue.opacity(0.2)
+        }
+        return Color.tidexSurfacePrimary
+    }
+
     private var dayNumberColor: Color {
-        if hasShift {
+        if isToday {
             return .tidexBlue
+        }
+        if hasShift {
+            return .white
         }
         return .tidexTextPrimary
     }

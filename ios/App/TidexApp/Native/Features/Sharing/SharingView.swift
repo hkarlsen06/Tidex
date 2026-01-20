@@ -105,9 +105,11 @@ struct SharingView: View {
                             } else {
                                 sharerInitialsAvatar(sharer: sharer)
                             }
-                            Text(sharer.displayName)
+                            Text(sharer.firstNameOnly)
                                 .font(.system(size: 17, weight: .semibold))
                                 .foregroundColor(.tidexTextPrimary)
+                                .lineLimit(1)
+                                .truncationMode(.tail)
                         }
                     } else {
                         // Logo on main friends list

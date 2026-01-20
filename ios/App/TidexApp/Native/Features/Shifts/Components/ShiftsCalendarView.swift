@@ -108,6 +108,9 @@ struct ShiftsCalendarView: View {
     // Newly added dates for celebration highlighting
     var newlyAddedDates: Set<String> = []
 
+    // Date to highlight from widget deeplink (temporary visual highlight)
+    var deepLinkHighlightDate: String?
+
     @Environment(\.localization) private var localization
     @State private var viewMode: CalendarViewMode = CalendarViewMode.load()
 
@@ -334,6 +337,7 @@ struct ShiftsCalendarView: View {
                 let shiftsOnDay = dayInfo.dateISO.flatMap { shiftsByDate[$0] } ?? []
                 let isInDragPreview = dayInfo.dateISO.map { dragPreviewDates.contains($0) } ?? false
                 let isNewlyAdded = dayInfo.dateISO.map { newlyAddedDates.contains($0) } ?? false
+                let isDeepLinkHighlighted = dayInfo.dateISO == deepLinkHighlightDate
 
                 ShiftsCalendarDayCell(
                     dayInfo: dayInfo,
@@ -344,7 +348,8 @@ struct ShiftsCalendarView: View {
                     hasShifts: !shiftsOnDay.isEmpty,
                     isSelected: dayInfo.isSelected,
                     isInDragPreview: isInDragPreview,
-                    isNewlyAdded: isNewlyAdded
+                    isNewlyAdded: isNewlyAdded,
+                    isDeepLinkHighlighted: isDeepLinkHighlighted
                 )
             }
         }
@@ -973,6 +978,7 @@ private struct ShiftsCalendarDayCell: View {
     let isSelected: Bool
     let isInDragPreview: Bool
     let isNewlyAdded: Bool
+    let isDeepLinkHighlighted: Bool
 
     private var hasShift: Bool {
         earnings != nil || hours != nil
@@ -1052,45 +1058,57 @@ private struct ShiftsCalendarDayCell: View {
     /// Celebration green color for newly added shifts
     private static let celebrationColor = Color(red: 0.298, green: 0.686, blue: 0.314)  // #4CAF50 Green
 
+    /// Purple/violet color for deep link highlight from widgets
+    private static let deepLinkHighlightColor = Color(red: 0.545, green: 0.361, blue: 0.965)  // #8B5CF5 Violet
+
     private var backgroundColor: Color {
+        if isDeepLinkHighlighted {
+            return Self.deepLinkHighlightColor.opacity(0.2)
+        }
         if isNewlyAdded {
             return Self.celebrationColor.opacity(0.2)
         }
         if isSelected || isInDragPreview {
             return Color.tidexBlue.opacity(0.15)
         }
+        if isToday {
+            return Color.tidexBlue.opacity(0.2)
+        }
         return Color.tidexSurfacePrimary
     }
 
     private var borderColor: Color {
+        if isDeepLinkHighlighted {
+            return Self.deepLinkHighlightColor
+        }
         if isNewlyAdded {
             return Self.celebrationColor
         }
         if isSelected || isInDragPreview {
             return Color.tidexBlue
         }
-        if isToday {
-            return Color.tidexBlue
-        }
         return Color.clear
     }
 
     private var borderWidth: CGFloat {
+        if isDeepLinkHighlighted {
+            return 2.5
+        }
         if isNewlyAdded {
             return 2.5
         }
         if isSelected || isInDragPreview {
             return 2
         }
-        if isToday {
-            return 2
-        }
         return 0
     }
 
     private var dayNumberColor: Color {
-        if hasShift {
+        if isToday {
             return .tidexBlue
+        }
+        if hasShift {
+            return .white
         }
         return .tidexTextPrimary
     }
