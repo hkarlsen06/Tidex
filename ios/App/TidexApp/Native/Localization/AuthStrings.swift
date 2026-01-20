@@ -702,6 +702,24 @@ enum AuthStrings {
         "appearance.info.light": "lyst",
         "appearance.info.dark": "m\u{00F8}rkt",
 
+        // Feedback Settings
+        "feedback.title": "Tilbakemelding",
+        "feedback.subtitle": "Hjelp oss \u{00E5} bli bedre ved \u{00E5} dele dine tanker",
+        "feedback.placeholder": "Fortell oss hva du synes...",
+        "feedback.submit": "Send tilbakemelding",
+        "feedback.submitAnother": "Send mer tilbakemelding",
+        "feedback.sending": "Sender...",
+        "feedback.charCount": "{count} / 2000",
+        "feedback.success": "Takk for din tilbakemelding!",
+        "feedback.errors.empty": "Vennligst skriv inn din tilbakemelding",
+        "feedback.errors.tooLong": "Tilbakemelding m\u{00E5} v\u{00E6}re 2000 tegn eller mindre",
+        "feedback.errors.failed": "Kunne ikke sende tilbakemelding. Pr\u{00F8}v igjen.",
+        "feedback.history.title": "Dine tilbakemeldinger",
+        "feedback.history.submittedOn": "Sendt",
+        "feedback.history.response": "Svar fra Tidex",
+        "feedback.history.respondedOn": "Besvart",
+        "feedback.history.noResponse": "Venter p\u{00E5} svar",
+
         // Profile Settings
         "profile.title": "Konto",
         "profile.personalInfo.title": "Personlig informasjon",
@@ -1574,6 +1592,24 @@ enum AuthStrings {
         "appearance.info.darkActive": "App will always appear in dark theme",
         "appearance.info.light": "light",
         "appearance.info.dark": "dark",
+
+        // Feedback Settings
+        "feedback.title": "Feedback",
+        "feedback.subtitle": "Help us improve by sharing your thoughts",
+        "feedback.placeholder": "Tell us what you think...",
+        "feedback.submit": "Send Feedback",
+        "feedback.submitAnother": "Send more feedback",
+        "feedback.sending": "Sending...",
+        "feedback.charCount": "{count} / 2000",
+        "feedback.success": "Thank you for your feedback!",
+        "feedback.errors.empty": "Please enter your feedback",
+        "feedback.errors.tooLong": "Feedback must be 2000 characters or less",
+        "feedback.errors.failed": "Failed to send feedback. Please try again.",
+        "feedback.history.title": "Your Feedback",
+        "feedback.history.submittedOn": "Submitted",
+        "feedback.history.response": "Response from Tidex",
+        "feedback.history.respondedOn": "Responded",
+        "feedback.history.noResponse": "Awaiting response",
 
         // Profile Settings
         "profile.title": "Account",
