@@ -38,6 +38,8 @@
 		114F0EC42F2033E200B587F0 /* WageSnapshotEditorSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0EC32F2033E200B587F0 /* WageSnapshotEditorSheet.swift */; };
 		114F0EC82F203E7200B587F0 /* DataSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0EC52F203E7200B587F0 /* DataSettingsView.swift */; };
 		114F0EC92F203E7200B587F0 /* DataSettingsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0EC62F203E7200B587F0 /* DataSettingsViewModel.swift */; };
+		114F0ECD2F20429A00B587F0 /* FeedbackSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0ECA2F20429A00B587F0 /* FeedbackSettingsView.swift */; };
+		114F0ECE2F20429A00B587F0 /* FeedbackSettingsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0ECB2F20429A00B587F0 /* FeedbackSettingsViewModel.swift */; };
 		1152D0CB2F01E2A7002FD5ED /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1152D0CA2F01E2A7002FD5ED /* StoreKit.framework */; };
 		11923C192F16B94B0076AFD6 /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = 11923C182F16B94B0076AFD6 /* Auth */; };
 		11923C1B2F16B94B0076AFD6 /* Functions in Frameworks */ = {isa = PBXBuildFile; productRef = 11923C1A2F16B94B0076AFD6 /* Functions */; };
@@ -288,6 +290,8 @@
 		114F0EC32F2033E200B587F0 /* WageSnapshotEditorSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WageSnapshotEditorSheet.swift; sourceTree = "<group>"; };
 		114F0EC52F203E7200B587F0 /* DataSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataSettingsView.swift; sourceTree = "<group>"; };
 		114F0EC62F203E7200B587F0 /* DataSettingsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataSettingsViewModel.swift; sourceTree = "<group>"; };
+		114F0ECA2F20429A00B587F0 /* FeedbackSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedbackSettingsView.swift; sourceTree = "<group>"; };
+		114F0ECB2F20429A00B587F0 /* FeedbackSettingsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedbackSettingsViewModel.swift; sourceTree = "<group>"; };
 		1152D0C82F01BB9B002FD5ED /* App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = App.entitlements; sourceTree = "<group>"; };
 		1152D0CA2F01E2A7002FD5ED /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 		119D1CB72F16E46300EC7072 /* AppCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppCoordinator.swift; sourceTree = "<group>"; };
@@ -635,6 +639,15 @@
 				114F0EC62F203E7200B587F0 /* DataSettingsViewModel.swift */,
 			);
 			path = Data;
+			sourceTree = "<group>";
+		};
+		114F0ECC2F20429A00B587F0 /* Feedback */ = {
+			isa = PBXGroup;
+			children = (
+				114F0ECA2F20429A00B587F0 /* FeedbackSettingsView.swift */,
+				114F0ECB2F20429A00B587F0 /* FeedbackSettingsViewModel.swift */,
+			);
+			path = Feedback;
 			sourceTree = "<group>";
 		};
 		1152D0C92F01E2A7002FD5ED /* Frameworks */ = {
@@ -1042,6 +1055,7 @@
 		11A1980F2F20053A0030E524 /* Settings */ = {
 			isa = PBXGroup;
 			children = (
+				114F0ECC2F20429A00B587F0 /* Feedback */,
 				114F0EC72F203E7200B587F0 /* Data */,
 				114F0EB82F20330C00B587F0 /* Pay */,
 				114F0EAB2F202ED900B587F0 /* Appearance */,
@@ -1462,6 +1476,8 @@
 				11AE8D052F16FDBD005AB062 /* BreakDeduction.swift in Sources */,
 				11AE8D1C2F17BE13005AB062 /* PayrollEngine.swift in Sources */,
 				11A1971D2F1D7CD40030E524 /* SharedUser.swift in Sources */,
+				114F0ECD2F20429A00B587F0 /* FeedbackSettingsView.swift in Sources */,
+				114F0ECE2F20429A00B587F0 /* FeedbackSettingsViewModel.swift in Sources */,
 				11AE8D1D2F17BE13005AB062 /* ConflictExclusion.swift in Sources */,
 				11A196122F1AA3350030E524 /* OnboardingData.swift in Sources */,
 				11AE8D252F17CF3A005AB062 /* MonthTransition.swift in Sources */,

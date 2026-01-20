@@ -32,9 +32,6 @@ struct SettingsView: View {
         NavigationStack(path: $navigationPath) {
             ScrollView {
                 VStack(spacing: 0) {
-                    // Header section
-                    headerSection
-
                     // Menu items grouped by category
                     VStack(spacing: 24) {
                         // Account & Security group
@@ -116,7 +113,7 @@ struct SettingsView: View {
                                 title: localization.string("settings.menu.feedback.label"),
                                 description: localization.string("settings.menu.feedback.description"),
                                 action: {
-                                    // TODO: Navigate to feedback
+                                    navigationPath.append(SettingsDestination.feedback)
                                 }
                             )
                         }
@@ -137,7 +134,7 @@ struct SettingsView: View {
                         }
                     }
                     .padding(.horizontal, 16)
-                    .padding(.top, 8)
+                    .padding(.top, 16)
 
                     // Sign out button
                     signOutButton
@@ -147,10 +144,23 @@ struct SettingsView: View {
                 }
             }
             .background(Color.tidexBackground)
-            .navigationTitle(localization.string("settings.title"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(Color.tidexBackground, for: .navigationBar)
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(localization.string("settings.title"))
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundColor(.tidexTextPrimary)
+
+                        Text(localization.string("settings.subtitle"))
+                            .font(.system(size: 12))
+                            .foregroundColor(.tidexTextSecondary)
+                    }
+                    .fixedSize()
+                }
+                .sharedBackgroundVisibility(.hidden)
+
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         dismiss()
@@ -178,8 +188,7 @@ struct SettingsView: View {
                 case .data:
                     DataSettingsView()
                 case .feedback:
-                    // TODO: Implement FeedbackSettingsView
-                    Text("Feedback Settings")
+                    FeedbackSettingsView()
                 case .admin:
                     // TODO: Implement AdminSettingsView
                     Text("Admin Settings")
@@ -189,23 +198,6 @@ struct SettingsView: View {
         .task {
             await checkAdminStatus()
         }
-    }
-
-    // MARK: - Header Section
-
-    private var headerSection: some View {
-        VStack(spacing: 4) {
-            Text(localization.string("settings.title"))
-                .font(.title2)
-                .fontWeight(.bold)
-                .foregroundColor(.tidexTextPrimary)
-
-            Text(localization.string("settings.subtitle"))
-                .font(.subheadline)
-                .foregroundColor(.tidexTextSecondary)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 24)
     }
 
     // MARK: - Sign Out Button

@@ -88,12 +88,14 @@ struct UserMenuButton: View {
                 .foregroundColor(.tidexTextPrimary)
                 .lineLimit(1)
                 .truncationMode(.tail)
+                .frame(maxWidth: 80) // Limit text width to prevent overly long names
 
             // Profile picture or initial
             profileImage
         }
-        // Fixed width ensures consistent toolbar spacing so the logo stays centered
-        .frame(width: 110, alignment: .trailing)
+        .padding(.leading, 12)
+        .padding(.trailing, 4)
+        .padding(.vertical, 4)
     }
 
     // MARK: - Profile Image
