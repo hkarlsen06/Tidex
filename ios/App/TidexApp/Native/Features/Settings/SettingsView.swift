@@ -107,7 +107,7 @@ struct SettingsView: View {
                                 title: localization.string("settings.menu.data.label"),
                                 description: localization.string("settings.menu.data.description"),
                                 action: {
-                                    // TODO: Navigate to data export
+                                    navigationPath.append(SettingsDestination.data)
                                 }
                             )
 
@@ -176,8 +176,7 @@ struct SettingsView: View {
                 case .pay:
                     PaySettingsView()
                 case .data:
-                    // TODO: Implement DataSettingsView
-                    Text("Data Settings")
+                    DataSettingsView()
                 case .feedback:
                     // TODO: Implement FeedbackSettingsView
                     Text("Feedback Settings")

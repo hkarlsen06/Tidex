@@ -36,6 +36,8 @@
 		114F0EC02F20338100B587F0 /* WageHistoryTimelineView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0EBF2F20338100B587F0 /* WageHistoryTimelineView.swift */; };
 		114F0EC22F20339000B587F0 /* PaySettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0EC12F20339000B587F0 /* PaySettingsView.swift */; };
 		114F0EC42F2033E200B587F0 /* WageSnapshotEditorSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0EC32F2033E200B587F0 /* WageSnapshotEditorSheet.swift */; };
+		114F0EC82F203E7200B587F0 /* DataSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0EC52F203E7200B587F0 /* DataSettingsView.swift */; };
+		114F0EC92F203E7200B587F0 /* DataSettingsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0EC62F203E7200B587F0 /* DataSettingsViewModel.swift */; };
 		1152D0CB2F01E2A7002FD5ED /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1152D0CA2F01E2A7002FD5ED /* StoreKit.framework */; };
 		11923C192F16B94B0076AFD6 /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = 11923C182F16B94B0076AFD6 /* Auth */; };
 		11923C1B2F16B94B0076AFD6 /* Functions in Frameworks */ = {isa = PBXBuildFile; productRef = 11923C1A2F16B94B0076AFD6 /* Functions */; };
@@ -284,6 +286,8 @@
 		114F0EBF2F20338100B587F0 /* WageHistoryTimelineView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WageHistoryTimelineView.swift; sourceTree = "<group>"; };
 		114F0EC12F20339000B587F0 /* PaySettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaySettingsView.swift; sourceTree = "<group>"; };
 		114F0EC32F2033E200B587F0 /* WageSnapshotEditorSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WageSnapshotEditorSheet.swift; sourceTree = "<group>"; };
+		114F0EC52F203E7200B587F0 /* DataSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataSettingsView.swift; sourceTree = "<group>"; };
+		114F0EC62F203E7200B587F0 /* DataSettingsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataSettingsViewModel.swift; sourceTree = "<group>"; };
 		1152D0C82F01BB9B002FD5ED /* App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = App.entitlements; sourceTree = "<group>"; };
 		1152D0CA2F01E2A7002FD5ED /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 		119D1CB72F16E46300EC7072 /* AppCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppCoordinator.swift; sourceTree = "<group>"; };
@@ -622,6 +626,15 @@
 				114F0EB72F20330C00B587F0 /* PaySettingsViewModel.swift */,
 			);
 			path = Pay;
+			sourceTree = "<group>";
+		};
+		114F0EC72F203E7200B587F0 /* Data */ = {
+			isa = PBXGroup;
+			children = (
+				114F0EC52F203E7200B587F0 /* DataSettingsView.swift */,
+				114F0EC62F203E7200B587F0 /* DataSettingsViewModel.swift */,
+			);
+			path = Data;
 			sourceTree = "<group>";
 		};
 		1152D0C92F01E2A7002FD5ED /* Frameworks */ = {
@@ -1029,6 +1042,7 @@
 		11A1980F2F20053A0030E524 /* Settings */ = {
 			isa = PBXGroup;
 			children = (
+				114F0EC72F203E7200B587F0 /* Data */,
 				114F0EB82F20330C00B587F0 /* Pay */,
 				114F0EAB2F202ED900B587F0 /* Appearance */,
 				11A1982C2F201FFC0030E524 /* Notifications */,
@@ -1616,6 +1630,8 @@
 				11A196332F1AC0070030E524 /* TimePickerRow.swift in Sources */,
 				11A1981F2F20115E0030E524 /* SecuritySettingsViewModel.swift in Sources */,
 				11A198202F20115E0030E524 /* SecuritySettingsView.swift in Sources */,
+				114F0EC82F203E7200B587F0 /* DataSettingsView.swift in Sources */,
+				114F0EC92F203E7200B587F0 /* DataSettingsViewModel.swift in Sources */,
 				11A198212F20115E0030E524 /* ProfileSettingsView.swift in Sources */,
 				114F0EA82F202C4400B587F0 /* LogoWatermark.swift in Sources */,
 				11A198222F20115E0030E524 /* ProfileSettingsViewModel.swift in Sources */,
