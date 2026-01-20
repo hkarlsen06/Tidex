@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { createClient } from "@supabase/supabase-js";
 
 import { createSupabaseRouteHandlerClient } from "@/lib/supabase/server";
 import {
@@ -13,6 +14,7 @@ import { logger } from "@/lib/logger";
 import { generateVirtualShiftsForMonth } from "@/lib/recurring/utils";
 import type { RecurringShiftRow } from "@/lib/recurring/types";
 import { cleanTime } from "@/lib/time-utils";
+import { ENV } from "@/lib/env";
 
 const CACHE_CONTROL = { headers: { "cache-control": "no-store" } };
 
@@ -34,7 +36,6 @@ export async function GET(request: NextRequest) {
   await cookies();
 
   const baseResponse = new NextResponse(null, CACHE_CONTROL);
-  const supabase = createSupabaseRouteHandlerClient(request, baseResponse);
   const searchParams = request.nextUrl.searchParams;
   const fromParam = searchParams.get("from");
   const toParam = searchParams.get("to");
@@ -71,11 +72,52 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // Use getClaims() for performance - parses JWT locally without network request
-  const { data: authData, error: authError } = await supabase.auth.getClaims();
+  // Try to authenticate via Bearer token first (native iOS app)
+  const authHeader = request.headers.get("Authorization");
+  let userId: string | null = null;
+  let supabase: ReturnType<typeof createSupabaseRouteHandlerClient>;
 
-  if (authError || !authData?.claims) {
-    logger.error("[data export] Failed to verify session:", authError);
+  if (authHeader?.startsWith("Bearer ")) {
+    const token = authHeader.substring(7);
+
+    // Create a Supabase client with the user's JWT to verify it
+    const supabaseWithToken = createClient(ENV.URL!, ENV.PUBLISHABLE!, {
+      global: {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    });
+
+    const { data, error: authError } = await supabaseWithToken.auth.getUser();
+    if (!authError && data.user) {
+      userId = data.user.id;
+      // Use the token-authenticated client for subsequent queries
+      supabase = supabaseWithToken as unknown as ReturnType<typeof createSupabaseRouteHandlerClient>;
+    }
+  }
+
+  // Fall back to cookie-based session (web app)
+  if (!userId) {
+    supabase = createSupabaseRouteHandlerClient(request, baseResponse);
+
+    // Use getClaims() for performance - parses JWT locally without network request
+    const { data: authData, error: authError } = await supabase.auth.getClaims();
+
+    if (authError || !authData?.claims) {
+      logger.error("[data export] Failed to verify session:", authError);
+      const response = NextResponse.json(
+        { error: "Ikke autentisert." },
+        { status: 401, ...CACHE_CONTROL }
+      );
+      propagateCookies(baseResponse, response);
+      return response;
+    }
+
+    userId = authData.claims.sub;
+  }
+
+  if (!userId) {
     const response = NextResponse.json(
       { error: "Ikke autentisert." },
       { status: 401, ...CACHE_CONTROL }
@@ -83,8 +125,6 @@ export async function GET(request: NextRequest) {
     propagateCookies(baseResponse, response);
     return response;
   }
-
-  const userId = authData.claims.sub;
 
   const { data: settingsRow, error: settingsError } = await supabase
     .from("user_settings")
