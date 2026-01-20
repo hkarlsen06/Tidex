@@ -13,6 +13,7 @@ extension Notification.Name {
 struct MainTabView: View {
     @EnvironmentObject private var coordinator: AppCoordinator
     @Environment(\.localization) private var localization
+    @ObservedObject private var addShiftCoordinator = AddShiftCoordinator.shared
 
     @State private var selectedTab: Tab = .home
 
@@ -45,17 +46,23 @@ struct MainTabView: View {
     }
 
     /// Custom binding that detects tab reselection and posts notification
+    /// For the Add tab, tapping while already selected triggers the add action
     private var tabSelection: Binding<Tab> {
         Binding(
             get: { selectedTab },
             set: { newTab in
                 if newTab == selectedTab {
-                    // Same tab tapped again - post notification
-                    NotificationCenter.default.post(
-                        name: .tabReselected,
-                        object: nil,
-                        userInfo: ["tab": newTab]
-                    )
+                    if newTab == .add {
+                        // Add tab tapped while already on it - trigger add action
+                        addShiftCoordinator.triggerAdd()
+                    } else {
+                        // Other tab tapped again - post notification for scroll-to-top etc.
+                        NotificationCenter.default.post(
+                            name: .tabReselected,
+                            object: nil,
+                            userInfo: ["tab": newTab]
+                        )
+                    }
                 } else {
                     selectedTab = newTab
                 }

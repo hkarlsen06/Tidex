@@ -140,6 +140,10 @@
 		11A197CC2F1DF01F0030E524 /* CustomSupplementsEditorSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A197C92F1DF01F0030E524 /* CustomSupplementsEditorSheet.swift */; };
 		11A197CF2F1DF0750030E524 /* NorwegianHolidays.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A197CD2F1DF0750030E524 /* NorwegianHolidays.swift */; };
 		11A197D02F1DF0750030E524 /* PayrollDateAdjuster.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A197CE2F1DF0750030E524 /* PayrollDateAdjuster.swift */; };
+		11A198072F1FDD750030E524 /* AddShiftCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A198062F1FDD750030E524 /* AddShiftCoordinator.swift */; };
+		11A198092F1FDD890030E524 /* LocalNotificationPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A198082F1FDD890030E524 /* LocalNotificationPreferences.swift */; };
+		11A1980B2F1FDFD00030E524 /* ShiftReminderScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A1980A2F1FDFD00030E524 /* ShiftReminderScheduler.swift */; };
+		11A1980D2F1FDFEE0030E524 /* NotificationPreferencesRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A1980C2F1FDFEE0030E524 /* NotificationPreferencesRepository.swift */; };
 		11A5CD262F101201002BAC91 /* StoredShift.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A5CD252F101201002BAC91 /* StoredShift.swift */; };
 		11A5CD302F101283002BAC91 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 11A5CD2F2F101283002BAC91 /* WidgetKit.framework */; };
 		11A5CD322F101283002BAC91 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 11A5CD312F101283002BAC91 /* SwiftUI.framework */; };
@@ -361,6 +365,10 @@
 		11A197CA2F1DF01F0030E524 /* SupplementRuleCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupplementRuleCard.swift; sourceTree = "<group>"; };
 		11A197CD2F1DF0750030E524 /* NorwegianHolidays.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NorwegianHolidays.swift; sourceTree = "<group>"; };
 		11A197CE2F1DF0750030E524 /* PayrollDateAdjuster.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PayrollDateAdjuster.swift; sourceTree = "<group>"; };
+		11A198062F1FDD750030E524 /* AddShiftCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddShiftCoordinator.swift; sourceTree = "<group>"; };
+		11A198082F1FDD890030E524 /* LocalNotificationPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalNotificationPreferences.swift; sourceTree = "<group>"; };
+		11A1980A2F1FDFD00030E524 /* ShiftReminderScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShiftReminderScheduler.swift; sourceTree = "<group>"; };
+		11A1980C2F1FDFEE0030E524 /* NotificationPreferencesRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationPreferencesRepository.swift; sourceTree = "<group>"; };
 		11A5CD252F101201002BAC91 /* StoredShift.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoredShift.swift; sourceTree = "<group>"; };
 		11A5CD2E2F101283002BAC91 /* TidexShiftWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TidexShiftWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		11A5CD2F2F101283002BAC91 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
@@ -482,6 +490,7 @@
 		1128F3A32F18729100702359 /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				11A198082F1FDD890030E524 /* LocalNotificationPreferences.swift */,
 				11A197242F1D7EBD0030E524 /* LocalSharedShift.swift */,
 				11A196492F1AE6A20030E524 /* LocalEntitlementCache.swift */,
 				11A1964A2F1AE6A20030E524 /* LocalPendingJWSUpload.swift */,
@@ -497,6 +506,7 @@
 		1128F3A82F18729100702359 /* Repositories */ = {
 			isa = PBXGroup;
 			children = (
+				11A1980C2F1FDFEE0030E524 /* NotificationPreferencesRepository.swift */,
 				11A197202F1D7D7A0030E524 /* SharedShiftsRepository.swift */,
 				11A1964D2F1AE7980030E524 /* EntitlementRepository.swift */,
 				1128F3A42F18729100702359 /* RecurringShiftsRepository.swift */,
@@ -808,6 +818,7 @@
 		11A196322F1AC0070030E524 /* AddShift */ = {
 			isa = PBXGroup;
 			children = (
+				11A198062F1FDD750030E524 /* AddShiftCoordinator.swift */,
 				11A1962A2F1AC0070030E524 /* Components */,
 				11A1962C2F1AC0070030E524 /* Models */,
 				11A1962F2F1AC0070030E524 /* Utilities */,
@@ -930,6 +941,7 @@
 		11A197C32F1DB4F30030E524 /* Notification */ = {
 			isa = PBXGroup;
 			children = (
+				11A1980A2F1FDFD00030E524 /* ShiftReminderScheduler.swift */,
 				11A197C22F1DB4F30030E524 /* NotificationService.swift */,
 			);
 			path = Notification;
@@ -1370,6 +1382,7 @@
 				119D1CF62F16E46300EC7072 /* LoadingOverlay.swift in Sources */,
 				11AE8D742F17DD44005AB062 /* UserMenuButton.swift in Sources */,
 				119D1CF72F16E46300EC7072 /* Color+Tidex.swift in Sources */,
+				11A1980D2F1FDFEE0030E524 /* NotificationPreferencesRepository.swift in Sources */,
 				11A197212F1D7D7A0030E524 /* SharedShiftsRepository.swift in Sources */,
 				11AE8D202F17CB31005AB062 /* MonthSwipeGesture.swift in Sources */,
 				119D1CF82F16E46300EC7072 /* AuthStrings.swift in Sources */,
@@ -1378,6 +1391,7 @@
 				11A1964B2F1AE6A20030E524 /* LocalEntitlementCache.swift in Sources */,
 				11A1964C2F1AE6A20030E524 /* LocalPendingJWSUpload.swift in Sources */,
 				11A1978D2F1D8E310030E524 /* SharedShiftsCalendarView.swift in Sources */,
+				11A198092F1FDD890030E524 /* LocalNotificationPreferences.swift in Sources */,
 				11F42F912F1A65F3002B1FBE /* StepItem.swift in Sources */,
 				11A1961F2F1AB6020030E524 /* CurrencySelector.swift in Sources */,
 				11A197162F1D7B400030E524 /* SharerRow.swift in Sources */,
@@ -1397,6 +1411,7 @@
 				11A1965C2F1AEB360030E524 /* PaywallViewModel.swift in Sources */,
 				11A197C82F1DDC5A0030E524 /* ShimmerModifier.swift in Sources */,
 				11A1965D2F1AEB360030E524 /* PaywallView.swift in Sources */,
+				11A1980B2F1FDFD00030E524 /* ShiftReminderScheduler.swift in Sources */,
 				11A1965E2F1AEB360030E524 /* BillingToggle.swift in Sources */,
 				11A1971F2F1D7D260030E524 /* SharedShiftData.swift in Sources */,
 				11A197A72F1D9D550030E524 /* FriendRow.swift in Sources */,
@@ -1414,6 +1429,7 @@
 				11F42F9C2F1A65F3002B1FBE /* SamplePaycheckScreen.swift in Sources */,
 				11A197AC2F1D9D760030E524 /* SharingService.swift in Sources */,
 				11AE8CCE2F16F2CF005AB062 /* ResetPasswordViewModel.swift in Sources */,
+				11A198072F1FDD750030E524 /* AddShiftCoordinator.swift in Sources */,
 				11AE8CCF2F16F2CF005AB062 /* ResetPasswordView.swift in Sources */,
 				119D1CFA2F16E46300EC7072 /* ErrorBanner.swift in Sources */,
 				119D1CFB2F16E46300EC7072 /* MainTabView.swift in Sources */,

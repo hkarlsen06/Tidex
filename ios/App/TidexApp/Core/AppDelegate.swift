@@ -527,7 +527,19 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
     func userNotificationCenter(_ center: UNUserNotificationCenter,
                                 didReceive response: UNNotificationResponse,
                                 withCompletionHandler completionHandler: @escaping () -> Void) {
-        // Handle notification tap navigation here if needed
+        let userInfo = response.notification.request.content.userInfo
+
+        // Handle shift reminder notification taps
+        if let type = userInfo["type"] as? String, type == "shift_reminder",
+           let shiftDate = userInfo["shift_date"] as? String {
+            // Post notification for WebView to handle navigation
+            NotificationCenter.default.post(
+                name: NSNotification.Name("ShiftReminderTapped"),
+                object: nil,
+                userInfo: ["shift_date": shiftDate]
+            )
+        }
+
         completionHandler()
     }
 }

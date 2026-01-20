@@ -170,6 +170,11 @@ enum NativeWidgetStorage {
             appDelegate.checkAndStartLiveActivityIfNeeded()
         }
 
+        // Schedule shift reminder notifications for upcoming shifts
+        Task {
+            await ShiftReminderScheduler.shared.scheduleAllReminders(for: userId)
+        }
+
         logger.info("Widget storage updated with \(storedShifts.count) shifts")
     }
 
@@ -182,6 +187,11 @@ enum NativeWidgetStorage {
 
         userDefaults.removeObject(forKey: shiftsKey)
         reloadWidgetTimelines()
+
+        // Cancel all scheduled shift reminders
+        Task {
+            await ShiftReminderScheduler.shared.cancelAllReminders()
+        }
 
         logger.info("Widget storage cleared")
     }

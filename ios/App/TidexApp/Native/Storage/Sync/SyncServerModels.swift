@@ -158,6 +158,27 @@ struct SyncUserSettingsRow: Codable {
     }
 }
 
+/// Notification preferences row for sync
+/// Note: This table has no revision column - iOS is the source of truth
+struct SyncNotificationPreferencesRow: Codable {
+    let user_id: String
+    let shift_reminders_enabled: Bool
+    let shift_reminder_minutes_array: [Int]?
+    let shared_shifts_enabled: Bool
+    let updated_at: String
+
+    /// Convert to NotificationPreferencesRow
+    func toNotificationPreferencesRow() -> NotificationPreferencesRow {
+        NotificationPreferencesRow(
+            user_id: user_id,
+            shared_shifts_enabled: shared_shifts_enabled,
+            shift_reminders_enabled: shift_reminders_enabled,
+            shift_reminder_minutes_array: shift_reminder_minutes_array,
+            updated_at: updated_at
+        )
+    }
+}
+
 // MARK: - Sync Result Types
 
 /// Result of pulling a single table
