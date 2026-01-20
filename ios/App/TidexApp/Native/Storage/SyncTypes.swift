@@ -61,6 +61,13 @@ enum UserSettingsField: String, Codable, CaseIterable {
     case lastActive = "last_active"
 }
 
+/// Field keys for tracking dirty fields on LocalNotificationPreferences
+enum NotificationPreferencesField: String, Codable, CaseIterable {
+    case shiftRemindersEnabled = "shift_reminders_enabled"
+    case shiftReminderMinutesArray = "shift_reminder_minutes_array"
+    case sharedShiftsEnabled = "shared_shifts_enabled"
+}
+
 // MARK: - JSON Coding Helpers
 
 /// Canonical JSON encoder for stable encoding (sorted keys, no extra whitespace)

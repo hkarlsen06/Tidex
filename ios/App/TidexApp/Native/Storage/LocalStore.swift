@@ -32,6 +32,7 @@ final class LocalStore {
             LocalRecurringShift.self,
             LocalWageSnapshot.self,
             LocalUserSettings.self,
+            LocalNotificationPreferences.self,
             LocalSyncState.self,
             LocalEntitlementCache.self,
             LocalPendingJWSUpload.self,

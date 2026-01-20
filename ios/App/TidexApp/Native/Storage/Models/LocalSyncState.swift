@@ -56,6 +56,12 @@ final class LocalSyncState {
     /// Tie-breaker ID at the last synced updated_at for user_settings
     var lastUserSettingsUpdatedAtTieId: String?
 
+    /// Last synced updated_at for notification_preferences table
+    var lastNotificationPreferencesUpdatedAt: Date?
+
+    /// Tie-breaker ID at the last synced updated_at for notification_preferences
+    var lastNotificationPreferencesUpdatedAtTieId: String?
+
     // MARK: - Sync Timestamps
 
     /// When the last successful sync completed
@@ -85,7 +91,9 @@ final class LocalSyncState {
         lastWageSnapshotsUpdatedAt: Date? = nil,
         lastWageSnapshotsUpdatedAtTieId: String? = nil,
         lastUserSettingsUpdatedAt: Date? = nil,
-        lastUserSettingsUpdatedAtTieId: String? = nil
+        lastUserSettingsUpdatedAtTieId: String? = nil,
+        lastNotificationPreferencesUpdatedAt: Date? = nil,
+        lastNotificationPreferencesUpdatedAtTieId: String? = nil
     ) {
         self.userId = userId
         self.lastRevisionUserShifts = lastRevisionUserShifts
@@ -103,6 +111,8 @@ final class LocalSyncState {
         self.lastWageSnapshotsUpdatedAtTieId = lastWageSnapshotsUpdatedAtTieId
         self.lastUserSettingsUpdatedAt = lastUserSettingsUpdatedAt
         self.lastUserSettingsUpdatedAtTieId = lastUserSettingsUpdatedAtTieId
+        self.lastNotificationPreferencesUpdatedAt = lastNotificationPreferencesUpdatedAt
+        self.lastNotificationPreferencesUpdatedAtTieId = lastNotificationPreferencesUpdatedAtTieId
     }
 
     // MARK: - Convenience Methods
@@ -130,6 +140,8 @@ final class LocalSyncState {
             return SyncCursor(updatedAt: lastWageSnapshotsUpdatedAt, tieId: lastWageSnapshotsUpdatedAtTieId ?? "")
         case .userSettings:
             return SyncCursor(updatedAt: lastUserSettingsUpdatedAt, tieId: lastUserSettingsUpdatedAtTieId ?? "")
+        case .notificationPreferences:
+            return SyncCursor(updatedAt: lastNotificationPreferencesUpdatedAt, tieId: lastNotificationPreferencesUpdatedAtTieId ?? "")
         }
     }
 
@@ -148,6 +160,9 @@ final class LocalSyncState {
         case .userSettings:
             lastUserSettingsUpdatedAt = updatedAt
             lastUserSettingsUpdatedAtTieId = tieId
+        case .notificationPreferences:
+            lastNotificationPreferencesUpdatedAt = updatedAt
+            lastNotificationPreferencesUpdatedAtTieId = tieId
         }
     }
 
@@ -164,6 +179,8 @@ final class LocalSyncState {
             return lastRevisionWageSnapshots
         case .userSettings:
             return lastRevisionUserSettings
+        case .notificationPreferences:
+            return 0 // No legacy revision for notification preferences
         }
     }
 
@@ -178,6 +195,8 @@ final class LocalSyncState {
             lastRevisionWageSnapshots = revision
         case .userSettings:
             lastRevisionUserSettings = revision
+        case .notificationPreferences:
+            break // No legacy revision for notification preferences
         }
     }
 
@@ -209,6 +228,8 @@ final class LocalSyncState {
         lastWageSnapshotsUpdatedAtTieId = nil
         lastUserSettingsUpdatedAt = nil
         lastUserSettingsUpdatedAtTieId = nil
+        lastNotificationPreferencesUpdatedAt = nil
+        lastNotificationPreferencesUpdatedAtTieId = nil
 
         // Reset legacy revision cursors (for debugging)
         lastRevisionUserShifts = 0
@@ -251,6 +272,7 @@ enum SyncTable: String, CaseIterable {
     case recurringShifts = "recurring_shifts"
     case wageSnapshots = "wage_snapshots"
     case userSettings = "user_settings"
+    case notificationPreferences = "notification_preferences"
 
     /// Supabase table name
     var tableName: String {
@@ -264,6 +286,7 @@ enum SyncTable: String, CaseIterable {
         case .recurringShifts: return "Recurring Shifts"
         case .wageSnapshots: return "Wage Snapshots"
         case .userSettings: return "User Settings"
+        case .notificationPreferences: return "Notification Preferences"
         }
     }
 }

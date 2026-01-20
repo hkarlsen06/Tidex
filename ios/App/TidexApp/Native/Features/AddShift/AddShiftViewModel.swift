@@ -46,10 +46,13 @@ final class AddShiftViewModel: ObservableObject {
     private let snapshotsRepository: SnapshotsRepository
     private let syncCoordinator: SyncCoordinator
     private let monthContext: SharedMonthContext
+    private let addShiftCoordinator: AddShiftCoordinator
 
     // MARK: - Mode State
 
-    @Published var mode: AddShiftMode = .single
+    @Published var mode: AddShiftMode = .single {
+        didSet { publishStateToCoordinator() }
+    }
 
     // MARK: - Shared State
 
@@ -57,15 +60,19 @@ final class AddShiftViewModel: ObservableObject {
         didSet {
             // Debounce time changes - schedule recomputation
             schedulePreviewUpdate()
+            publishStateToCoordinator()
         }
     }
     @Published var endTime: Date? = nil {
         didSet {
             // Debounce time changes - schedule recomputation
             schedulePreviewUpdate()
+            publishStateToCoordinator()
         }
     }
-    @Published var isLoading = false
+    @Published var isLoading = false {
+        didSet { publishStateToCoordinator() }
+    }
     @Published var error: String?
 
     // MARK: - Time Input Debouncing
@@ -106,6 +113,9 @@ final class AddShiftViewModel: ObservableObject {
     /// Subscription to SharedMonthContext changes
     private var monthContextCancellable: AnyCancellable?
 
+    /// Subscription to tab bar add action trigger
+    private var addActionCancellable: AnyCancellable?
+
     /// Track the last observed month to detect changes
     private var lastObservedYear: Int = 0
     private var lastObservedMonth: Int = 0
@@ -129,7 +139,9 @@ final class AddShiftViewModel: ObservableObject {
 
     // MARK: - Single Mode State
 
-    @Published var selectedDates: Set<String> = []  // ISO dates (YYYY-MM-DD)
+    @Published var selectedDates: Set<String> = [] {  // ISO dates (YYYY-MM-DD)
+        didSet { publishStateToCoordinator() }
+    }
 
     // MARK: - Paywall State
 
@@ -145,7 +157,9 @@ final class AddShiftViewModel: ObservableObject {
     // MARK: - Recurring Mode State
 
     @Published var repeatInterval: Int = 0  // 0 = weekly, 1 = biweekly, etc.
-    @Published var selectedDays: [String: String] = [:]  // weekday "0"-"6" -> anchor ISO date
+    @Published var selectedDays: [String: String] = [:] {  // weekday "0"-"6" -> anchor ISO date
+        didSet { publishStateToCoordinator() }
+    }
     @Published var endCondition: EndCondition? = .months(value: 6)
     @Published var showPreviewSheet = false
 
@@ -197,7 +211,8 @@ final class AddShiftViewModel: ObservableObject {
         settingsRepository: SettingsRepository? = nil,
         snapshotsRepository: SnapshotsRepository? = nil,
         syncCoordinator: SyncCoordinator? = nil,
-        monthContext: SharedMonthContext? = nil
+        monthContext: SharedMonthContext? = nil,
+        addShiftCoordinator: AddShiftCoordinator? = nil
     ) {
         self.shiftsRepository = shiftsRepository ?? ShiftsRepository.shared
         self.recurringRepository = recurringRepository ?? RecurringShiftsRepository.shared
@@ -205,6 +220,7 @@ final class AddShiftViewModel: ObservableObject {
         self.snapshotsRepository = snapshotsRepository ?? SnapshotsRepository.shared
         self.syncCoordinator = syncCoordinator ?? SyncCoordinator.shared
         self.monthContext = monthContext ?? SharedMonthContext.shared
+        self.addShiftCoordinator = addShiftCoordinator ?? AddShiftCoordinator.shared
 
         // Initialize tracking to current month context values
         self.lastObservedYear = self.monthContext.displayYear
@@ -212,6 +228,9 @@ final class AddShiftViewModel: ObservableObject {
 
         // Subscribe to month context changes
         setupMonthContextSubscription()
+
+        // Subscribe to tab bar add action trigger
+        setupAddActionSubscription()
     }
 
     /// Subscribe to SharedMonthContext changes to reload data when month changes
@@ -239,6 +258,39 @@ final class AddShiftViewModel: ObservableObject {
                 // Reload shifts for conflict detection in the new month
                 self.reloadShiftsForDisplayedMonth()
             }
+    }
+
+    /// Subscribe to tab bar add action trigger
+    private func setupAddActionSubscription() {
+        addActionCancellable = addShiftCoordinator.triggerAddAction
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] in
+                self?.handleTabBarAddTrigger()
+            }
+    }
+
+    /// Handle the add action triggered from tab bar
+    private func handleTabBarAddTrigger() {
+        // Haptic feedback
+        let generator = UIImpactFeedbackGenerator(style: .medium)
+        generator.impactOccurred()
+
+        switch mode {
+        case .single:
+            Task {
+                await submitSingleShifts()
+            }
+        case .recurring:
+            showPreview()
+        }
+    }
+
+    /// Publish current state to the coordinator (call after state changes)
+    private func publishStateToCoordinator() {
+        let canSubmit = mode == .single ? canSubmitSingle : canSubmitRecurring
+        addShiftCoordinator.updateCanSubmit(canSubmit)
+        addShiftCoordinator.updateMode(mode)
+        addShiftCoordinator.updateIsLoading(isLoading)
     }
 
     // MARK: - Month Navigation

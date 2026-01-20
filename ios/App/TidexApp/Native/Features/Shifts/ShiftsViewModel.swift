@@ -270,6 +270,9 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
     /// Memory warning observer
     private var memoryWarningObserver: NSObjectProtocol?
 
+    /// Shift reminder tap observer for deep linking
+    private var shiftReminderObserver: NSObjectProtocol?
+
     /// Track active navigation task to cancel stale fetches
     private var activeNavigationTask: Task<Void, Never>?
 
@@ -308,6 +311,17 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
                 self?.handleMemoryWarning()
             }
         }
+
+        // Listen for shift reminder notification taps for deep linking
+        shiftReminderObserver = NotificationCenter.default.addObserver(
+            forName: NSNotification.Name("ShiftReminderTapped"),
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            Task { @MainActor in
+                self?.handleShiftReminderTap(notification)
+            }
+        }
     }
 
     /// Subscribe to SharedMonthContext changes to reload data when month changes
@@ -338,6 +352,9 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
         if let observer = memoryWarningObserver {
             NotificationCenter.default.removeObserver(observer)
         }
+        if let observer = shiftReminderObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
     }
 
     // MARK: - Memory Management
@@ -348,6 +365,36 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
         monthCache.removeAll()
         prefetchCache.removeAll()
         prefetchTasks.removeAll()
+    }
+
+    // MARK: - Deep Linking
+
+    /// Handle shift reminder notification tap - navigate to the shift's date
+    private func handleShiftReminderTap(_ notification: Notification) {
+        guard let userInfo = notification.userInfo,
+              let shiftDateString = userInfo["shift_date"] as? String else {
+            logger.warning("Shift reminder tap missing shift_date")
+            return
+        }
+
+        logger.info("Deep linking to shift date: \(shiftDateString)")
+
+        // Parse the shift date (format: "yyyy-MM-dd")
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        guard let shiftDate = formatter.date(from: shiftDateString) else {
+            logger.warning("Failed to parse shift date: \(shiftDateString)")
+            return
+        }
+
+        let calendar = Calendar.current
+        let year = calendar.component(.year, from: shiftDate)
+        let month = calendar.component(.month, from: shiftDate)
+
+        // Navigate to the month and select the date
+        monthContext.navigateTo(year: year, month: month)
+        selectedDates = [shiftDateString]
+        isSelectionModeEnabled = true
     }
 
     /// Evict least recently used cache entries if over limit

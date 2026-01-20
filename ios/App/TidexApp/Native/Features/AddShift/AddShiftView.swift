@@ -172,8 +172,6 @@ private struct SingleShiftContent: View {
                 scrollProxy: scrollProxy,
                 scrollId: "singleTimePicker"
             )
-
-            AddShiftButton(viewModel: viewModel, mode: .single)
         }
     }
 }
@@ -211,91 +209,6 @@ private struct RecurringShiftContent: View {
             )
 
             RecurringCalendarView(viewModel: viewModel)
-
-            AddShiftButton(viewModel: viewModel, mode: .recurring)
-        }
-    }
-}
-
-// MARK: - Add Shift Button
-
-/// Full-width add shift button placed below the time picker
-private struct AddShiftButton: View {
-    @ObservedObject var viewModel: AddShiftViewModel
-    let mode: AddShiftMode
-    @Environment(\.localization) private var localization
-
-    private var canSubmit: Bool {
-        switch mode {
-        case .single:
-            return viewModel.canSubmitSingle
-        case .recurring:
-            return viewModel.canSubmitRecurring
-        }
-    }
-
-    /// Count of selected items
-    private var count: Int {
-        switch mode {
-        case .single:
-            return viewModel.selectedDates.count
-        case .recurring:
-            return viewModel.selectedDays.count
-        }
-    }
-
-    /// Button title based on mode and selection count
-    private var buttonTitle: String {
-        switch mode {
-        case .single:
-            if count <= 1 {
-                return localization.string("addShift.addShift")
-            } else {
-                // "Legg til {count} vakter" / "Add {count} shifts"
-                return localization.string("addShift.addShifts")
-                    .replacingOccurrences(of: "{count}", with: "\(count)")
-            }
-        case .recurring:
-            return localization.string("addShift.previewShifts")
-        }
-    }
-
-    var body: some View {
-        Button(action: handleSubmit) {
-            HStack(spacing: 8) {
-                if viewModel.isLoading {
-                    ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                } else {
-                    Image(systemName: mode == .single ? "plus" : "eye")
-                        .font(.system(size: 16, weight: .semibold))
-
-                    Text(buttonTitle)
-                        .font(.system(size: 16, weight: .semibold))
-                }
-            }
-            .frame(maxWidth: .infinity)
-            .frame(height: 52)
-            .foregroundColor(canSubmit ? .white : .tidexTextMuted)
-            .background(canSubmit ? Color.tidexBlue : Color.tidexSurfaceSecondary)
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-        }
-        .disabled(!canSubmit || viewModel.isLoading)
-        .animation(.spring(response: 0.2, dampingFraction: 0.8), value: canSubmit)
-    }
-
-    private func handleSubmit() {
-        // Haptic feedback
-        let generator = UIImpactFeedbackGenerator(style: .medium)
-        generator.impactOccurred()
-
-        switch mode {
-        case .single:
-            Task {
-                await viewModel.submitSingleShifts()
-            }
-        case .recurring:
-            viewModel.showPreview()
         }
     }
 }

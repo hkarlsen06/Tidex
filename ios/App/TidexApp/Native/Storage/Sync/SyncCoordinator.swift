@@ -242,6 +242,8 @@ final class SyncCoordinator: ObservableObject {
                 result = try await pullWageSnapshotsPage(userId: userId, cursor: cursor)
             case .userSettings:
                 result = try await pullUserSettingsPage(userId: userId, cursor: cursor)
+            case .notificationPreferences:
+                result = try await pullNotificationPreferencesPage(userId: userId, cursor: cursor)
             }
 
             totalRows += result.rowsProcessed
@@ -1256,6 +1258,8 @@ final class SyncCoordinator: ObservableObject {
             return try await pushWageSnapshots(userId: userId)
         case .userSettings:
             return try await pushUserSettings(userId: userId)
+        case .notificationPreferences:
+            return try await pushNotificationPreferences(userId: userId)
         }
     }
 
@@ -3070,6 +3074,131 @@ final class SyncCoordinator: ObservableObject {
 
         // Update widget storage since settings (e.g., currency) may affect display
         NativeWidgetStorage.updateWidgetStorage(for: userId)
+    }
+
+    // MARK: - Notification Preferences Pull
+
+    private func pullNotificationPreferencesPage(userId: String, cursor: SyncCursor) async throws -> PagePullResult {
+        // Query using updated_at + user_id tie-breaker (notification_preferences uses user_id as primary key)
+        // Note: This table has no revision column - iOS is source of truth
+        let rows: [SyncNotificationPreferencesRow]
+
+        if let cursorUpdatedAt = cursor.updatedAt {
+            let cursorTimestamp = formatISO8601(cursorUpdatedAt)
+            let cursorTieId = cursor.tieId
+
+            rows = try await supabase
+                .from("notification_preferences")
+                .select()
+                .eq("user_id", value: userId)
+                .or("updated_at.gt.\(cursorTimestamp),and(updated_at.eq.\(cursorTimestamp),user_id.gt.\(cursorTieId))")
+                .order("updated_at", ascending: true)
+                .order("user_id", ascending: true)
+                .limit(pageSize)
+                .execute()
+                .value
+        } else {
+            rows = try await supabase
+                .from("notification_preferences")
+                .select()
+                .eq("user_id", value: userId)
+                .order("updated_at", ascending: true)
+                .order("user_id", ascending: true)
+                .limit(pageSize)
+                .execute()
+                .value
+        }
+
+        if rows.isEmpty {
+            return PagePullResult(
+                rowsProcessed: 0,
+                lastUpdatedAt: cursor.updatedAt,
+                lastTieId: cursor.tieId,
+                maxRevision: 0,
+                newConflicts: 0,
+                autoMerged: 0,
+                hasMore: false
+            )
+        }
+
+        let pageStartTime = Date()
+
+        // Apply each row to local storage using the repository
+        let repository = NotificationPreferencesRepository.shared
+        for row in rows {
+            let serverUpdatedAt = parseISO8601(row.updated_at) ?? Date()
+            repository.saveFromServer(row: row.toNotificationPreferencesRow(), serverUpdatedAt: serverUpdatedAt)
+        }
+
+        let duration = Date().timeIntervalSince(pageStartTime)
+        logger.info("notification_preferences: page complete - \(rows.count) rows in \(String(format: "%.2f", duration))s")
+
+        guard let lastRow = rows.last else {
+            logger.warning("Unexpected empty rows after processing in pullNotificationPreferencesPage")
+            return PagePullResult(
+                rowsProcessed: 0,
+                lastUpdatedAt: Date(),
+                lastTieId: "",
+                maxRevision: 0,
+                newConflicts: 0,
+                autoMerged: 0,
+                hasMore: false
+            )
+        }
+
+        let lastUpdatedAt = try requireISO8601(lastRow.updated_at, table: .notificationPreferences, id: lastRow.user_id)
+
+        return PagePullResult(
+            rowsProcessed: rows.count,
+            lastUpdatedAt: lastUpdatedAt,
+            lastTieId: lastRow.user_id,
+            maxRevision: 0, // No revision column for notification_preferences
+            newConflicts: 0, // iOS is source of truth, no conflicts
+            autoMerged: 0,
+            hasMore: rows.count == pageSize
+        )
+    }
+
+    // MARK: - Notification Preferences Push
+
+    private func pushNotificationPreferences(userId: String) async throws -> TablePushResult {
+        let repository = NotificationPreferencesRepository.shared
+
+        // Get dirty preferences (if any)
+        guard let preferences = repository.getDirtyPreferences(for: userId) else {
+            return TablePushResult(table: .notificationPreferences, rowsPushed: 0, newConflicts: 0, rebased: 0)
+        }
+
+        // Build upsert payload - iOS is source of truth, so we always push all fields
+        let updateData: [String: AnyJSON] = [
+            "user_id": .string(userId),
+            "shift_reminders_enabled": .bool(preferences.shiftRemindersEnabled),
+            "shift_reminder_minutes_array": .array(preferences.shiftReminderMinutesArray.map { .integer($0) }),
+            "shared_shifts_enabled": .bool(preferences.sharedShiftsEnabled)
+        ]
+
+        do {
+            // Upsert to server (insert or update based on user_id)
+            let returnedRows: [SyncNotificationPreferencesRow] = try await supabase
+                .from("notification_preferences")
+                .upsert(updateData, onConflict: "user_id")
+                .select()
+                .execute()
+                .value
+
+            if let returnedRow = returnedRows.first {
+                let serverUpdatedAt = parseISO8601(returnedRow.updated_at) ?? Date()
+                repository.markClean(for: userId, serverUpdatedAt: serverUpdatedAt)
+                logger.debug("Pushed notification preferences for user \(userId.prefix(8))")
+                return TablePushResult(table: .notificationPreferences, rowsPushed: 1, newConflicts: 0, rebased: 0)
+            } else {
+                logger.warning("No rows returned after notification preferences upsert")
+                return TablePushResult(table: .notificationPreferences, rowsPushed: 0, newConflicts: 0, rebased: 0)
+            }
+        } catch {
+            logger.error("Push notification preferences failed: \(error.localizedDescription)")
+            throw error
+        }
     }
 
     // MARK: - Helpers
