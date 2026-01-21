@@ -269,17 +269,72 @@ final class ProfileSettingsViewModel: ObservableObject {
     private func convertToWebP(_ imageData: Data, quality: CGFloat = 0.8) -> Data? {
         guard let source = CGImageSourceCreateWithData(imageData as CFData, nil),
               let cgImage = CGImageSourceCreateImageAtIndex(source, 0, nil) else {
+            print("[ProfileSettingsViewModel] WebP conversion failed: could not create CGImage from data")
+            return nil
+        }
+
+        // Log image properties for debugging
+        let colorSpace = cgImage.colorSpace?.name as String? ?? "unknown"
+        let bitsPerComponent = cgImage.bitsPerComponent
+        let bitsPerPixel = cgImage.bitsPerPixel
+        print("[ProfileSettingsViewModel] Source image: \(cgImage.width)x\(cgImage.height), colorSpace=\(colorSpace), bpc=\(bitsPerComponent), bpp=\(bitsPerPixel)")
+
+        // Check if WebP encoding is supported
+        let supportedTypes = CGImageDestinationCopyTypeIdentifiers() as? [String] ?? []
+        let webpSupported = supportedTypes.contains(UTType.webP.identifier)
+        print("[ProfileSettingsViewModel] WebP encoding supported: \(webpSupported)")
+
+        if !webpSupported {
+            print("[ProfileSettingsViewModel] WebP not in supported types: \(supportedTypes.prefix(10))...")
             return nil
         }
 
         let webpData = NSMutableData()
-        guard let webpUTType = UTType.webP.identifier as CFString?,
-              let destination = CGImageDestinationCreateWithData(
-                  webpData,
-                  webpUTType,
-                  1,
-                  nil
-              ) else {
+        let webpUTType = UTType.webP.identifier as CFString
+
+        guard let destination = CGImageDestinationCreateWithData(
+            webpData,
+            webpUTType,
+            1,
+            nil
+        ) else {
+            // WebP encoding not supported on this device - this is expected on some configurations
+            print("[ProfileSettingsViewModel] WebP CGImageDestination creation failed despite type being supported")
+            return nil
+        }
+
+        let options: [CFString: Any] = [
+            kCGImageDestinationLossyCompressionQuality: quality
+        ]
+
+        CGImageDestinationAddImage(destination, cgImage, options as CFDictionary)
+
+        guard CGImageDestinationFinalize(destination) else {
+            print("[ProfileSettingsViewModel] WebP conversion failed: CGImageDestinationFinalize returned false")
+            return nil
+        }
+
+        return webpData as Data
+    }
+
+    /// Convert image data to HEIC format (fallback when WebP unavailable)
+    /// HEIC offers ~50% smaller files than JPEG with similar quality
+    private func convertToHEIC(_ imageData: Data, quality: CGFloat = 0.8) -> Data? {
+        guard let source = CGImageSourceCreateWithData(imageData as CFData, nil),
+              let cgImage = CGImageSourceCreateImageAtIndex(source, 0, nil) else {
+            return nil
+        }
+
+        let heicData = NSMutableData()
+        let heicUTType = UTType.heic.identifier as CFString
+
+        guard let destination = CGImageDestinationCreateWithData(
+            heicData,
+            heicUTType,
+            1,
+            nil
+        ) else {
+            print("[ProfileSettingsViewModel] HEIC encoding not available")
             return nil
         }
 
@@ -293,7 +348,7 @@ final class ProfileSettingsViewModel: ObservableObject {
             return nil
         }
 
-        return webpData as Data
+        return heicData as Data
     }
 
     /// Upload a new profile picture directly to Supabase Storage
@@ -314,7 +369,8 @@ final class ProfileSettingsViewModel: ObservableObject {
                 }
             }
 
-            // Convert to WebP for smaller file size
+            // Convert to modern format for smaller file size
+            // Priority: WebP > HEIC > JPEG
             let uploadData: Data
             let contentType: String
             let fileExtension: String
@@ -323,11 +379,19 @@ final class ProfileSettingsViewModel: ObservableObject {
                 uploadData = webpData
                 contentType = "image/webp"
                 fileExtension = "webp"
+                print("[ProfileSettingsViewModel] Using WebP format (\(webpData.count) bytes)")
+            } else if let heicData = convertToHEIC(imageData, quality: 0.8) {
+                // HEIC fallback - ~50% smaller than JPEG, supported since iOS 11
+                uploadData = heicData
+                contentType = "image/heic"
+                fileExtension = "heic"
+                print("[ProfileSettingsViewModel] Using HEIC format (\(heicData.count) bytes)")
             } else {
-                // Fallback to original JPEG if WebP conversion fails
+                // Final fallback to JPEG
                 uploadData = imageData
                 contentType = "image/jpeg"
                 fileExtension = "jpg"
+                print("[ProfileSettingsViewModel] Using JPEG fallback (\(imageData.count) bytes)")
             }
 
             // Generate unique filename
@@ -354,18 +418,30 @@ final class ProfileSettingsViewModel: ObservableObject {
 
             profilePictureUrl = publicUrl
 
-            // Update local settings
-            _ = try? await settingsRepository.updateSettings(
-                for: currentUserId,
-                profilePictureUrl: publicUrl
-            )
+            // Update local settings - this marks the field dirty for sync
+            do {
+                _ = try await settingsRepository.updateSettings(
+                    for: currentUserId,
+                    profilePictureUrl: publicUrl
+                )
+                print("[ProfileSettingsViewModel] Local settings updated with new URL")
+            } catch {
+                // Critical: If local save fails, the URL won't sync
+                print("[ProfileSettingsViewModel] WARNING: Failed to save URL locally: \(error)")
+                // Continue anyway - at least the storage upload succeeded
+            }
 
             // Update AppCoordinator's avatar URL
             AppCoordinator.shared.updateAvatarUrl(publicUrl)
 
-            // Trigger sync
-            Task {
-                _ = await syncCoordinator.sync(reason: .foreground, userId: currentUserId)
+            // Trigger sync and wait for it to complete
+            // Use .localChange to bypass rate limiting - this is a user-initiated local change
+            let syncResult = await syncCoordinator.sync(reason: .localChange, userId: currentUserId)
+            if !syncResult.success {
+                print("[ProfileSettingsViewModel] WARNING: Sync failed after upload: \(syncResult.error ?? "unknown")")
+                // Don't show error to user - the upload succeeded, sync will retry later
+            } else {
+                print("[ProfileSettingsViewModel] Profile picture synced successfully")
             }
 
         } catch {
@@ -393,23 +469,27 @@ final class ProfileSettingsViewModel: ObservableObject {
                 ImageCache.shared.remove(for: url)
             }
 
+            // Update local state immediately (optimistic UI)
             profilePictureUrl = nil
 
-            // Update Supabase user_settings table directly to set profile_picture_url to null
-            // Note: The local repository's updateSettings can't set values to nil,
-            // so we update Supabase directly and let sync pull the change back
-            try await supabase
-                .from("user_settings")
-                .update(["profile_picture_url": AnyJSON.null])
-                .eq("user_id", value: currentUserId)
-                .execute()
+            // Update local settings - this marks the field dirty for sync
+            do {
+                _ = try await settingsRepository.clearProfilePictureUrl(for: currentUserId)
+                print("[ProfileSettingsViewModel] Local settings cleared profile picture URL")
+            } catch {
+                print("[ProfileSettingsViewModel] WARNING: Failed to clear URL locally: \(error)")
+            }
 
             // Update AppCoordinator's avatar URL
             AppCoordinator.shared.updateAvatarUrl(nil)
 
-            // Trigger sync to update local storage
-            Task {
-                _ = await syncCoordinator.sync(reason: .foreground, userId: currentUserId)
+            // Trigger sync to push the change to server
+            // Use .localChange to bypass rate limiting
+            let syncResult = await syncCoordinator.sync(reason: .localChange, userId: currentUserId)
+            if !syncResult.success {
+                print("[ProfileSettingsViewModel] WARNING: Sync failed after removal: \(syncResult.error ?? "unknown")")
+            } else {
+                print("[ProfileSettingsViewModel] Profile picture removal synced successfully")
             }
 
         } catch {
