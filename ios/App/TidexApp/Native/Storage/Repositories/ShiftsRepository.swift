@@ -190,6 +190,9 @@ final class ShiftsRepository: ObservableObject {
         // Update widget storage with the new shift
         NativeWidgetStorage.updateWidgetStorage(for: userId)
 
+        // Update Apple Watch with new shift data
+        WatchConnectivityManager.shared.sendUpdatedData(userId: userId)
+
         return createdShift
     }
 
@@ -222,6 +225,8 @@ final class ShiftsRepository: ObservableObject {
 
             if let userId = updatedShift.user_id {
                 NativeWidgetStorage.updateWidgetStorage(for: userId)
+                // Update Apple Watch with new shift data
+                WatchConnectivityManager.shared.sendUpdatedData(userId: userId)
             }
 
             return updatedShift
@@ -244,6 +249,9 @@ final class ShiftsRepository: ObservableObject {
 
             // Update widget storage to remove the deleted shift
             NativeWidgetStorage.updateWidgetStorage(for: userId)
+
+            // Update Apple Watch with new shift data
+            WatchConnectivityManager.shared.sendUpdatedData(userId: userId)
         } catch LocalStoreWriteError.notFound {
             logger.warning("Shift not found for deletion: \(id)")
         } catch {

@@ -303,4 +303,6 @@ enum SyncReason: String {
     case manualRefresh = "manual_refresh"
     /// Sync after local changes (e.g., adding a shift)
     case localChange = "local_change"
+    /// Sync triggered by Watch refresh request
+    case watchRefresh = "watch_refresh"
 }

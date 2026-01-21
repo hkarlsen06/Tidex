@@ -2,6 +2,7 @@ import ActivityKit
 import BackgroundTasks
 import Supabase
 import UIKit
+import WatchConnectivity
 
 @main
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -67,6 +68,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // Check immediately if there's an ongoing shift that needs a Live Activity
         // This handles the case where app launches during a shift
         checkAndStartLiveActivityIfNeeded()
+
+        // Activate Watch Connectivity for Apple Watch companion app
+        WatchConnectivityManager.shared.activateSession()
 
         return true
     }

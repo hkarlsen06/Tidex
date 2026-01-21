@@ -67,6 +67,15 @@
 		114F0F172F21132000B587F0 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0F162F21132000B587F0 /* MainTabView.swift */; };
 		114F0F3B2F21374200B587F0 /* CameraPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0F3A2F21374200B587F0 /* CameraPicker.swift */; };
 		114F0F3D2F21487000B587F0 /* tidex.icon in Resources */ = {isa = PBXBuildFile; fileRef = 114F0F3C2F21487000B587F0 /* tidex.icon */; };
+		114F0F4C2F2150EA00B587F0 /* TidexWatchApp.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 114F0F422F2150EA00B587F0 /* TidexWatchApp.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		114F0F692F21529600B587F0 /* ShiftPreviewStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0F652F21529600B587F0 /* ShiftPreviewStatus.swift */; };
+		114F0F6A2F21529600B587F0 /* WatchShiftDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0F672F21529600B587F0 /* WatchShiftDTO.swift */; };
+		114F0F6B2F21529600B587F0 /* WatchDataPayload.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0F662F21529600B587F0 /* WatchDataPayload.swift */; };
+		114F0F6C2F21529600B587F0 /* ShiftPreviewStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0F652F21529600B587F0 /* ShiftPreviewStatus.swift */; };
+		114F0F6D2F21529600B587F0 /* WatchShiftDTO.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0F672F21529600B587F0 /* WatchShiftDTO.swift */; };
+		114F0F6E2F21529600B587F0 /* WatchDataPayload.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0F662F21529600B587F0 /* WatchDataPayload.swift */; };
+		114F0F722F21532800B587F0 /* WatchConnectivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0F6F2F21532800B587F0 /* WatchConnectivityManager.swift */; };
+		114F0F732F21532800B587F0 /* WatchDataConverter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0F702F21532800B587F0 /* WatchDataConverter.swift */; };
 		1152D0CB2F01E2A7002FD5ED /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1152D0CA2F01E2A7002FD5ED /* StoreKit.framework */; };
 		11923C192F16B94B0076AFD6 /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = 11923C182F16B94B0076AFD6 /* Auth */; };
 		11923C1B2F16B94B0076AFD6 /* Functions in Frameworks */ = {isa = PBXBuildFile; productRef = 11923C1A2F16B94B0076AFD6 /* Functions */; };
@@ -270,6 +279,17 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
+		114F0F502F2150EA00B587F0 /* Embed Watch Content */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
+			dstSubfolderSpec = 16;
+			files = (
+				114F0F4C2F2150EA00B587F0 /* TidexWatchApp.app in Embed Watch Content */,
+			);
+			name = "Embed Watch Content";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		11A5CD462F101284002BAC91 /* Embed Foundation Extensions */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -344,6 +364,12 @@
 		114F0F162F21132000B587F0 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
 		114F0F3A2F21374200B587F0 /* CameraPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraPicker.swift; sourceTree = "<group>"; };
 		114F0F3C2F21487000B587F0 /* tidex.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = tidex.icon; sourceTree = "<group>"; };
+		114F0F422F2150EA00B587F0 /* TidexWatchApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TidexWatchApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		114F0F652F21529600B587F0 /* ShiftPreviewStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShiftPreviewStatus.swift; sourceTree = "<group>"; };
+		114F0F662F21529600B587F0 /* WatchDataPayload.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchDataPayload.swift; sourceTree = "<group>"; };
+		114F0F672F21529600B587F0 /* WatchShiftDTO.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchShiftDTO.swift; sourceTree = "<group>"; };
+		114F0F6F2F21532800B587F0 /* WatchConnectivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchConnectivityManager.swift; sourceTree = "<group>"; };
+		114F0F702F21532800B587F0 /* WatchDataConverter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchDataConverter.swift; sourceTree = "<group>"; };
 		1152D0C82F01BB9B002FD5ED /* App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = App.entitlements; sourceTree = "<group>"; };
 		1152D0CA2F01E2A7002FD5ED /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 		119D1CB72F16E46300EC7072 /* AppCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppCoordinator.swift; sourceTree = "<group>"; };
@@ -547,10 +573,18 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		114F0F432F2150EA00B587F0 /* TidexWatchApp */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = TidexWatchApp; sourceTree = "<group>"; };
 		11A5CD332F101283002BAC91 /* TidexShiftWidget */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (113F7F842F1017390078A6D8 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = TidexShiftWidget; sourceTree = "<group>"; };
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		114F0F3F2F2150EA00B587F0 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		11A5CD2B2F101283002BAC91 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -761,6 +795,25 @@
 				114F0F092F20BF5900B587F0 /* CalendarWeekdayHeader.swift */,
 			);
 			path = Calendar;
+			sourceTree = "<group>";
+		};
+		114F0F682F21529600B587F0 /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				114F0F652F21529600B587F0 /* ShiftPreviewStatus.swift */,
+				114F0F662F21529600B587F0 /* WatchDataPayload.swift */,
+				114F0F672F21529600B587F0 /* WatchShiftDTO.swift */,
+			);
+			path = Shared;
+			sourceTree = "<group>";
+		};
+		114F0F712F21532800B587F0 /* Watch */ = {
+			isa = PBXGroup;
+			children = (
+				114F0F6F2F21532800B587F0 /* WatchConnectivityManager.swift */,
+				114F0F702F21532800B587F0 /* WatchDataConverter.swift */,
+			);
+			path = Watch;
 			sourceTree = "<group>";
 		};
 		1152D0C92F01E2A7002FD5ED /* Frameworks */ = {
@@ -978,6 +1031,7 @@
 		119D1CE52F16E46300EC7072 /* Native */ = {
 			isa = PBXGroup;
 			children = (
+				114F0F712F21532800B587F0 /* Watch */,
 				1128F3AE2F18729100702359 /* Storage */,
 				11AE8CF12F16FDA4005AB062 /* Models */,
 				119D1CBA2F16E46300EC7072 /* Core */,
@@ -1392,10 +1446,12 @@
 		504EC2FB1FED79650016851F = {
 			isa = PBXGroup;
 			children = (
+				114F0F682F21529600B587F0 /* Shared */,
 				11A5CD552F10138F002BAC91 /* TidexShiftWidgetExtension.entitlements */,
 				958DCC722DB07C7200EA8C5F /* debug.xcconfig */,
 				504EC3061FED79650016851F /* TidexApp */,
 				11A5CD332F101283002BAC91 /* TidexShiftWidget */,
+				114F0F432F2150EA00B587F0 /* TidexWatchApp */,
 				1152D0C92F01E2A7002FD5ED /* Frameworks */,
 				504EC3051FED79650016851F /* Products */,
 			);
@@ -1406,6 +1462,7 @@
 			children = (
 				504EC3041FED79650016851F /* Tidex.app */,
 				11A5CD2E2F101283002BAC91 /* TidexShiftWidgetExtension.appex */,
+				114F0F422F2150EA00B587F0 /* TidexWatchApp.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -1430,6 +1487,28 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		114F0F412F2150EA00B587F0 /* TidexWatchApp */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 114F0F4D2F2150EA00B587F0 /* Build configuration list for PBXNativeTarget "TidexWatchApp" */;
+			buildPhases = (
+				114F0F3E2F2150EA00B587F0 /* Sources */,
+				114F0F3F2F2150EA00B587F0 /* Frameworks */,
+				114F0F402F2150EA00B587F0 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				114F0F432F2150EA00B587F0 /* TidexWatchApp */,
+			);
+			name = TidexWatchApp;
+			packageProductDependencies = (
+			);
+			productName = "TidexWatchApp Watch App";
+			productReference = 114F0F422F2150EA00B587F0 /* TidexWatchApp.app */;
+			productType = "com.apple.product-type.application";
+		};
 		11A5CD2D2F101283002BAC91 /* TidexShiftWidgetExtension */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 11A5CD432F101284002BAC91 /* Build configuration list for PBXNativeTarget "TidexShiftWidgetExtension" */;
@@ -1461,6 +1540,7 @@
 				504EC3011FED79650016851F /* Frameworks */,
 				504EC3021FED79650016851F /* Resources */,
 				11A5CD462F101284002BAC91 /* Embed Foundation Extensions */,
+				114F0F502F2150EA00B587F0 /* Embed Watch Content */,
 			);
 			buildRules = (
 			);
@@ -1492,6 +1572,9 @@
 				LastSwiftUpdateCheck = 2620;
 				LastUpgradeCheck = 2620;
 				TargetAttributes = {
+					114F0F412F2150EA00B587F0 = {
+						CreatedOnToolsVersion = 26.2;
+					};
 					11A5CD2D2F101283002BAC91 = {
 						CreatedOnToolsVersion = 26.2;
 					};
@@ -1522,11 +1605,19 @@
 			targets = (
 				504EC3031FED79650016851F /* TidexApp */,
 				11A5CD2D2F101283002BAC91 /* TidexShiftWidgetExtension */,
+				114F0F412F2150EA00B587F0 /* TidexWatchApp */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		114F0F402F2150EA00B587F0 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		11A5CD2C2F101283002BAC91 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -1571,6 +1662,16 @@
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		114F0F3E2F2150EA00B587F0 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				114F0F692F21529600B587F0 /* ShiftPreviewStatus.swift in Sources */,
+				114F0F6A2F21529600B587F0 /* WatchShiftDTO.swift in Sources */,
+				114F0F6B2F21529600B587F0 /* WatchDataPayload.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		11A5CD2A2F101283002BAC91 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -1652,6 +1753,8 @@
 				11A196432F1AC1BE0030E524 /* PlaceholderContent.swift in Sources */,
 				114F0EE92F20711F00B587F0 /* WeeklyBarChart.swift in Sources */,
 				119D1CF52F16E46300EC7072 /* MFAVerifyView.swift in Sources */,
+				114F0F722F21532800B587F0 /* WatchConnectivityManager.swift in Sources */,
+				114F0F732F21532800B587F0 /* WatchDataConverter.swift in Sources */,
 				11A197AE2F1D9DC30030E524 /* Friend.swift in Sources */,
 				11F430212F1A9592002B1FBE /* AcceptTermsView.swift in Sources */,
 				119D1CF62F16E46300EC7072 /* LoadingOverlay.swift in Sources */,
@@ -1661,6 +1764,9 @@
 				11A197212F1D7D7A0030E524 /* SharedShiftsRepository.swift in Sources */,
 				114F0F022F20BBDF00B587F0 /* Spacing.swift in Sources */,
 				11AE8D202F17CB31005AB062 /* MonthSwipeGesture.swift in Sources */,
+				114F0F6C2F21529600B587F0 /* ShiftPreviewStatus.swift in Sources */,
+				114F0F6D2F21529600B587F0 /* WatchShiftDTO.swift in Sources */,
+				114F0F6E2F21529600B587F0 /* WatchDataPayload.swift in Sources */,
 				11A198282F201B0A0030E524 /* SubscriptionSettingsViewModel.swift in Sources */,
 				11A198292F201B0A0030E524 /* SubscriptionSettingsView.swift in Sources */,
 				119D1CF82F16E46300EC7072 /* AuthStrings.swift in Sources */,
@@ -1841,6 +1947,88 @@
 /* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
+		114F0F4E2F2150EA00B587F0 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = tidex;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CODE_SIGN_ENTITLEMENTS = TidexWatchApp/TidexWatchApp.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 210126.2;
+				ENABLE_PREVIEWS = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Tidex;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = no.tidex.app;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MARKETING_VERSION = 2.0.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = no.tidex.app.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 26.2;
+			};
+			name = Debug;
+		};
+		114F0F4F2F2150EA00B587F0 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = tidex;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CODE_SIGN_ENTITLEMENTS = TidexWatchApp/TidexWatchApp.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 210126.2;
+				ENABLE_PREVIEWS = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Tidex;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = no.tidex.app;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MARKETING_VERSION = 2.0.0;
+				MTL_FAST_MATH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = no.tidex.app.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 26.2;
+			};
+			name = Release;
+		};
 		11A5CD442F101284002BAC91 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -1851,7 +2039,7 @@
 				CLANG_ENABLE_OBJC_WEAK = YES;
 				CODE_SIGN_ENTITLEMENTS = TidexShiftWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 210126.1;
+				CURRENT_PROJECT_VERSION = 210126.2;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = TidexShiftWidget/Info.plist;
@@ -1890,7 +2078,7 @@
 				CLANG_ENABLE_OBJC_WEAK = YES;
 				CODE_SIGN_ENTITLEMENTS = TidexShiftWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 210126.1;
+				CURRENT_PROJECT_VERSION = 210126.2;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = TidexShiftWidget/Info.plist;
@@ -2048,7 +2236,7 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = TidexApp/App.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 210126.1;
+				CURRENT_PROJECT_VERSION = 210126.2;
 				INFOPLIST_FILE = TidexApp/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = no.tidex.app;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
@@ -2076,7 +2264,7 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = TidexApp/AppRelease.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 210126.1;
+				CURRENT_PROJECT_VERSION = 210126.2;
 				INFOPLIST_FILE = TidexApp/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = no.tidex.app;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
@@ -2100,6 +2288,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		114F0F4D2F2150EA00B587F0 /* Build configuration list for PBXNativeTarget "TidexWatchApp" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				114F0F4E2F2150EA00B587F0 /* Debug */,
+				114F0F4F2F2150EA00B587F0 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		11A5CD432F101284002BAC91 /* Build configuration list for PBXNativeTarget "TidexShiftWidgetExtension" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

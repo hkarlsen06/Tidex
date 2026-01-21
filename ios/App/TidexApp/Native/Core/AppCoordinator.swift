@@ -388,6 +388,9 @@ final class AppCoordinator: ObservableObject {
                 userAvatarUrl = settings.profile_picture_url
                 AppearanceManager.shared.loadFromSettings(settings.theme)
             }
+
+            // Update Apple Watch with latest shift data after initial sync
+            WatchConnectivityManager.shared.sendUpdatedData(userId: userId)
         }
     }
 
@@ -408,6 +411,9 @@ final class AppCoordinator: ObservableObject {
                 }
 
                 _ = await syncCoordinator.sync(reason: .foreground, userId: userId)
+
+                // Update Apple Watch with latest shift data after foreground sync
+                WatchConnectivityManager.shared.sendUpdatedData(userId: userId)
             } catch {
                 // No session available
             }
