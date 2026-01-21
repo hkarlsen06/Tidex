@@ -127,7 +127,7 @@ struct SettingsView: View {
                                     description: localization.string("settings.menu.admin.description"),
                                     iconColor: .tidexWarning,
                                     action: {
-                                        // TODO: Navigate to admin panel
+                                        navigationPath.append(SettingsDestination.admin)
                                     }
                                 )
                             }
@@ -190,8 +190,7 @@ struct SettingsView: View {
                 case .feedback:
                     FeedbackSettingsView()
                 case .admin:
-                    // TODO: Implement AdminSettingsView
-                    Text("Admin Settings")
+                    AdminSettingsView()
                 }
             }
         }

@@ -40,6 +40,8 @@
 		114F0EC92F203E7200B587F0 /* DataSettingsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0EC62F203E7200B587F0 /* DataSettingsViewModel.swift */; };
 		114F0ECD2F20429A00B587F0 /* FeedbackSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0ECA2F20429A00B587F0 /* FeedbackSettingsView.swift */; };
 		114F0ECE2F20429A00B587F0 /* FeedbackSettingsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0ECB2F20429A00B587F0 /* FeedbackSettingsViewModel.swift */; };
+		114F0ED22F20487F00B587F0 /* AdminSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0ECF2F20487F00B587F0 /* AdminSettingsView.swift */; };
+		114F0ED32F20487F00B587F0 /* AdminSettingsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0ED02F20487F00B587F0 /* AdminSettingsViewModel.swift */; };
 		1152D0CB2F01E2A7002FD5ED /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1152D0CA2F01E2A7002FD5ED /* StoreKit.framework */; };
 		11923C192F16B94B0076AFD6 /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = 11923C182F16B94B0076AFD6 /* Auth */; };
 		11923C1B2F16B94B0076AFD6 /* Functions in Frameworks */ = {isa = PBXBuildFile; productRef = 11923C1A2F16B94B0076AFD6 /* Functions */; };
@@ -292,6 +294,8 @@
 		114F0EC62F203E7200B587F0 /* DataSettingsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataSettingsViewModel.swift; sourceTree = "<group>"; };
 		114F0ECA2F20429A00B587F0 /* FeedbackSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedbackSettingsView.swift; sourceTree = "<group>"; };
 		114F0ECB2F20429A00B587F0 /* FeedbackSettingsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedbackSettingsViewModel.swift; sourceTree = "<group>"; };
+		114F0ECF2F20487F00B587F0 /* AdminSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminSettingsView.swift; sourceTree = "<group>"; };
+		114F0ED02F20487F00B587F0 /* AdminSettingsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminSettingsViewModel.swift; sourceTree = "<group>"; };
 		1152D0C82F01BB9B002FD5ED /* App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = App.entitlements; sourceTree = "<group>"; };
 		1152D0CA2F01E2A7002FD5ED /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 		119D1CB72F16E46300EC7072 /* AppCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppCoordinator.swift; sourceTree = "<group>"; };
@@ -648,6 +652,15 @@
 				114F0ECB2F20429A00B587F0 /* FeedbackSettingsViewModel.swift */,
 			);
 			path = Feedback;
+			sourceTree = "<group>";
+		};
+		114F0ED12F20487F00B587F0 /* Admin */ = {
+			isa = PBXGroup;
+			children = (
+				114F0ECF2F20487F00B587F0 /* AdminSettingsView.swift */,
+				114F0ED02F20487F00B587F0 /* AdminSettingsViewModel.swift */,
+			);
+			path = Admin;
 			sourceTree = "<group>";
 		};
 		1152D0C92F01E2A7002FD5ED /* Frameworks */ = {
@@ -1055,6 +1068,7 @@
 		11A1980F2F20053A0030E524 /* Settings */ = {
 			isa = PBXGroup;
 			children = (
+				114F0ED12F20487F00B587F0 /* Admin */,
 				114F0ECC2F20429A00B587F0 /* Feedback */,
 				114F0EC72F203E7200B587F0 /* Data */,
 				114F0EB82F20330C00B587F0 /* Pay */,
@@ -1568,6 +1582,8 @@
 				11F42F972F1A65F3002B1FBE /* GetStartedScreen.swift in Sources */,
 				11F42F982F1A65F3002B1FBE /* CountUpText.swift in Sources */,
 				114F0EAF2F202EEA00B587F0 /* AppearanceManager.swift in Sources */,
+				114F0ED22F20487F00B587F0 /* AdminSettingsView.swift in Sources */,
+				114F0ED32F20487F00B587F0 /* AdminSettingsViewModel.swift in Sources */,
 				11F42F992F1A65F3002B1FBE /* OnboardingView.swift in Sources */,
 				11F42F9A2F1A65F3002B1FBE /* SuccessScreen.swift in Sources */,
 				11A1978F2F1D92940030E524 /* CachedAsyncImage.swift in Sources */,
