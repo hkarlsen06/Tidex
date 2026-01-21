@@ -96,7 +96,7 @@ struct MainTabView: View {
                     }
                     .tag(Tab.add)
 
-                StatsPlaceholderView()
+                StatsView(selectedTab: $selectedTab)
                     .tabItem {
                         Label(localization.string(Tab.stats.localizationKey), systemImage: Tab.stats.icon)
                     }
