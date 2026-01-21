@@ -14,6 +14,8 @@ struct StatsData: Codable, Equatable {
     let thisMonthCumulative: [DailyCumulativeData]
     let thisWeek: [DailyData]?       // Current week (Mon-Sun) - only for current month
     let bestWeek: BestWeekData?       // Best week - only for past months
+    let employment: EmploymentData?   // Employment percentage data for the focus year
+    let yearlyIncome: [MonthlyIncomeData]?  // Monthly income data for the focus year
 }
 
 // MARK: - Sub-types
@@ -77,6 +79,40 @@ struct BestWeekData: Codable, Equatable {
     let totalHours: Double        // Total hours for the week
 }
 
+/// Monthly employment percentage data
+/// Shows average employment percentage for each month of the year
+struct EmploymentMonthlyData: Codable, Equatable, Identifiable {
+    let month: String             // Short month name (e.g., "jan.", "feb.")
+    let fullMonth: String         // Full month name (e.g., "Januar", "Februar")
+    let year: Int                 // Year (e.g., 2025)
+    let monthNumber: Int          // Month number (1-12)
+    let averagePercentage: Double // Average employment percentage for the month
+    let hasShifts: Bool           // Whether the month has any shifts
+
+    var id: String { "\(year)-\(monthNumber)" }
+}
+
+/// Employment data containing monthly breakdown and yearly average
+struct EmploymentData: Codable, Equatable {
+    let monthlyData: [EmploymentMonthlyData]  // All 12 months of the focus year
+    let yearlyAverage: Double?                 // Yearly average (nil if no shifts)
+    let fullTimeHoursPerWeek: Double           // Full-time hours used (37.5 or 40)
+}
+
+/// Monthly income data for yearly income chart
+/// Shows earnings, hours, and shifts for each month
+struct MonthlyIncomeData: Codable, Equatable, Identifiable {
+    let month: String             // Short month name (e.g., "jan.", "feb.")
+    let fullMonth: String         // Full month name (e.g., "Januar", "Februar")
+    let year: Int                 // Year (e.g., 2026)
+    let monthNumber: Int          // Month number (1-12)
+    let earnings: Double          // Gross earnings for the month
+    let hours: Double             // Total hours worked
+    let shifts: Int               // Number of shifts
+
+    var id: String { "\(year)-\(monthNumber)" }
+}
+
 // MARK: - Preview Data
 
 extension StatsData {
@@ -106,7 +142,9 @@ extension StatsData {
         ),
         thisMonthCumulative: DailyCumulativeData.previewData,
         thisWeek: DailyData.previewThisWeek,
-        bestWeek: nil
+        bestWeek: nil,
+        employment: EmploymentData.preview,
+        yearlyIncome: MonthlyIncomeData.previewData
     )
 
     /// Preview data for past month (showing best week)
@@ -135,7 +173,9 @@ extension StatsData {
         ),
         thisMonthCumulative: DailyCumulativeData.previewData,
         thisWeek: nil,
-        bestWeek: BestWeekData.preview
+        bestWeek: BestWeekData.preview,
+        employment: EmploymentData.preview,
+        yearlyIncome: MonthlyIncomeData.previewData
     )
 
     /// Empty data for when no shifts exist
@@ -164,7 +204,9 @@ extension StatsData {
         ),
         thisMonthCumulative: [],
         thisWeek: nil,
-        bestWeek: nil
+        bestWeek: nil,
+        employment: nil,
+        yearlyIncome: nil
     )
 }
 
@@ -247,5 +289,74 @@ extension DailyCumulativeData {
         }
 
         return data
+    }
+}
+
+// MARK: - EmploymentData Preview
+
+extension EmploymentData {
+    /// Preview data showing typical employment percentages across a year
+    static var preview: EmploymentData {
+        let shortMonthNames = ["jan.", "feb.", "mar.", "apr.", "mai", "jun.",
+                               "jul.", "aug.", "sep.", "okt.", "nov.", "des."]
+        let fullMonthNames = ["Januar", "Februar", "Mars", "April", "Mai", "Juni",
+                              "Juli", "August", "September", "Oktober", "November", "Desember"]
+        // Sample percentages simulating typical part-time work
+        let percentages: [Double] = [32.5, 35.0, 50.0, 55.0, 70.0, 52.0,
+                                     25.0, 48.0, 50.0, 42.0, 45.0, 48.0]
+
+        let monthlyData = (0..<12).map { index in
+            EmploymentMonthlyData(
+                month: shortMonthNames[index],
+                fullMonth: fullMonthNames[index],
+                year: 2025,
+                monthNumber: index + 1,
+                averagePercentage: percentages[index],
+                hasShifts: percentages[index] > 0
+            )
+        }
+
+        // Calculate yearly average
+        let withShifts = percentages.filter { $0 > 0 }
+        let yearlyAvg = withShifts.isEmpty ? nil : withShifts.reduce(0, +) / Double(withShifts.count)
+
+        return EmploymentData(
+            monthlyData: monthlyData,
+            yearlyAverage: yearlyAvg.map { ($0 * 10).rounded() / 10 }, // Round to 1 decimal
+            fullTimeHoursPerWeek: 40
+        )
+    }
+}
+
+// MARK: - MonthlyIncomeData Preview
+
+extension MonthlyIncomeData {
+    /// Preview data showing monthly income for a year
+    /// Simulates typical income pattern with current month highlighted
+    static var previewData: [MonthlyIncomeData] {
+        let shortMonthNames = ["jan.", "feb.", "mar.", "apr.", "mai", "jun.",
+                               "jul.", "aug.", "sep.", "okt.", "nov.", "des."]
+        let fullMonthNames = ["Januar", "Februar", "Mars", "April", "Mai", "Juni",
+                              "Juli", "August", "September", "Oktober", "November", "Desember"]
+
+        // Sample earnings simulating varied monthly income
+        let earnings: [Double] = [13772, 5200, 6100, 5800, 4900, 5500,
+                                  6200, 0, 0, 0, 0, 0]
+        let hours: [Double] = [60.3, 28, 32, 30, 25, 28,
+                               33, 0, 0, 0, 0, 0]
+        let shifts: [Int] = [9, 4, 5, 4, 4, 4,
+                             5, 0, 0, 0, 0, 0]
+
+        return (0..<12).map { index in
+            MonthlyIncomeData(
+                month: shortMonthNames[index],
+                fullMonth: fullMonthNames[index],
+                year: 2026,
+                monthNumber: index + 1,
+                earnings: earnings[index],
+                hours: hours[index],
+                shifts: shifts[index]
+            )
+        }
     }
 }

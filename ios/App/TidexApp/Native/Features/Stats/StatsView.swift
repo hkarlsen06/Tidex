@@ -136,6 +136,17 @@ struct StatsView: View {
                     MonthlyProgressChartEmpty()
                 }
 
+                // Yearly Income Chart
+                yearlyIncomeChartSection(stats: stats)
+
+                // Employment Percentage Chart
+                if let employment = stats.employment,
+                   employment.monthlyData.contains(where: { $0.averagePercentage > 0 }) {
+                    EmploymentPercentageChart(data: employment)
+                } else {
+                    EmploymentPercentageChartEmpty()
+                }
+
                 // Bottom spacing for floating month picker
                 Spacer()
                     .frame(height: MonthPickerLayout.height + MonthPickerLayout.bottomPadding + 24)
@@ -191,6 +202,25 @@ struct StatsView: View {
         }
     }
 
+    // MARK: - Yearly Income Chart Section
+
+    @ViewBuilder
+    private func yearlyIncomeChartSection(stats: StatsData) -> some View {
+        if let yearlyIncome = stats.yearlyIncome {
+            let hasData = yearlyIncome.contains { $0.earnings > 0 }
+            if hasData {
+                YearlyIncomeChart(
+                    data: yearlyIncome,
+                    focusYear: stats.focusMonth.year
+                )
+            } else {
+                YearlyIncomeChartEmpty(focusYear: stats.focusMonth.year)
+            }
+        } else {
+            YearlyIncomeChartEmpty(focusYear: stats.focusMonth.year)
+        }
+    }
+
     // MARK: - Loading View
 
     @ViewBuilder
@@ -213,6 +243,9 @@ struct StatsView: View {
                 skeletonCard(height: 260)
 
                 // Skeleton for Monthly Progress Chart
+                skeletonCard(height: 280)
+
+                // Skeleton for Yearly Income Chart
                 skeletonCard(height: 280)
 
                 // Bottom spacing for floating month picker

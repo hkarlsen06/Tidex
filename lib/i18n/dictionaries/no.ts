@@ -347,7 +347,7 @@ export const no = {
         monthlyEarnings: 'Inntjening denne måneden',
         afterTax: 'Etter skatt',
         beforeTax: 'Før skatt',
-        fromPreviousMonth: 'fra forrige måned',
+        fromPreviousMonth: 'mot måneden før',
         monthlyProgress: 'Månedens utvikling',
         salaryComposition: 'Lønnssammensetning',
         thisWeek: 'Denne uken',
