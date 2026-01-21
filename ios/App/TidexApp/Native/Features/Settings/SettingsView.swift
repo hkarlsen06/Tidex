@@ -223,7 +223,7 @@ struct SettingsView: View {
             }
             .foregroundColor(.white)
             .frame(maxWidth: .infinity)
-            .frame(height: 50)
+            .frame(height: Spacing.buttonHeight)
             .background(Color.tidexError)
             .cornerRadius(12)
         }
@@ -291,7 +291,7 @@ struct SettingsMenuItem: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 14) {
+            HStack(spacing: Spacing.sm) {
                 // Icon
                 Image(systemName: icon)
                     .font(.system(size: 20))
@@ -318,7 +318,7 @@ struct SettingsMenuItem: View {
                     .foregroundColor(.tidexTextMuted)
             }
             .padding(.horizontal, 16)
-            .padding(.vertical, 14)
+            .padding(.vertical, Spacing.sm)
             .background(Color.tidexSurfacePrimary)
             .cornerRadius(12)
         }

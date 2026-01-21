@@ -96,7 +96,7 @@ struct PersonalizationScreen: View {
 
             // Horizontal scroll with day options
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 10) {
+                HStack(spacing: Spacing.xs) {
                     ForEach(payrollDayOptions, id: \.self) { day in
                         Button {
                             UIImpactFeedbackGenerator(style: .light).impactOccurred()

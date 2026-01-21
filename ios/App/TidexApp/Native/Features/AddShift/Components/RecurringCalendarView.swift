@@ -240,7 +240,7 @@ private struct RecurringCalendarDayCell: View {
                     Circle()
                         .fill(hasConflict ? Color.tidexWarning : Color.tidexBlue)
                         .frame(width: 8, height: 8)
-                        .padding(.bottom, 10)
+                        .padding(.bottom, Spacing.xs)
                 } else if let earnings = existingEarnings, !dayInfo.isOutsideMonth {
                     // Existing shift earnings (grey)
                     Text(formatCompactCurrency(earnings))

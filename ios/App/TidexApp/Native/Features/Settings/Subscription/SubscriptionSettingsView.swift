@@ -362,7 +362,7 @@ struct SubscriptionSettingsView: View {
                     }
                     .foregroundColor(.tidexBlue)
                     .frame(maxWidth: .infinity)
-                    .frame(height: 50)
+                    .frame(height: Spacing.buttonHeight)
                     .background(Color.tidexBlue.opacity(0.1))
                     .cornerRadius(12)
                 }
@@ -383,7 +383,7 @@ struct SubscriptionSettingsView: View {
                     }
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
-                    .frame(height: 50)
+                    .frame(height: Spacing.buttonHeight)
                     .background(Color.tidexBlue)
                     .cornerRadius(12)
                 }

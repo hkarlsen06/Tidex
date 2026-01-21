@@ -119,7 +119,7 @@ struct ProfileSettingsView: View {
                     .font(.system(size: 16))
                     .foregroundColor(.tidexTextMuted)
                     .padding(.horizontal, 12)
-                    .padding(.vertical, 10)
+                    .padding(.vertical, Spacing.sm)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(Color.tidexSurfaceSecondary.opacity(0.5))
                     .cornerRadius(8)
@@ -138,7 +138,7 @@ struct ProfileSettingsView: View {
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     .padding(.horizontal, 12)
-                    .padding(.vertical, 10)
+                    .padding(.vertical, Spacing.sm)
                     .background(Color.tidexSurfaceSecondary)
                     .cornerRadius(8)
             }
@@ -169,7 +169,7 @@ struct ProfileSettingsView: View {
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundColor(.white)
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
+                .padding(.vertical, Spacing.sm)
                 .background(viewModel.newEmail.isEmpty ? Color.tidexBlue.opacity(0.5) : Color.tidexBlue)
                 .cornerRadius(10)
             }
@@ -210,7 +210,7 @@ struct ProfileSettingsView: View {
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
+                    .padding(.vertical, Spacing.sm)
                     .background(Color.tidexBlue)
                     .cornerRadius(10)
             }
@@ -387,7 +387,7 @@ struct ProfileSettingsView: View {
                 .font(.system(size: 16))
                 .foregroundColor(.tidexTextPrimary)
                 .padding(.horizontal, 12)
-                .padding(.vertical, 10)
+                .padding(.vertical, Spacing.sm)
                 .background(Color.tidexSurfaceSecondary)
                 .cornerRadius(8)
                 .onChange(of: viewModel.displayName) { _, _ in
@@ -432,7 +432,7 @@ struct ProfileSettingsView: View {
                 }
             }
             .padding(.horizontal, 12)
-            .padding(.vertical, 10)
+            .padding(.vertical, Spacing.sm)
             .background(Color.tidexSurfaceSecondary.opacity(0.5))
             .cornerRadius(8)
 
@@ -491,7 +491,7 @@ struct ProfileSettingsView: View {
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundColor(.white)
                             .padding(.horizontal, 16)
-                            .padding(.vertical, 10)
+                            .padding(.vertical, Spacing.sm)
                             .background(Color.tidexError)
                             .cornerRadius(8)
                     }

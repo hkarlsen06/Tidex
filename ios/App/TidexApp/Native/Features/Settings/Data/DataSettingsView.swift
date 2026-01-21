@@ -357,7 +357,7 @@ struct DataSettingsView: View {
                 }
                 .foregroundColor(.white)
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
+                .padding(.vertical, Spacing.sm)
                 .background(
                     RoundedRectangle(cornerRadius: 10)
                         .fill(viewModel.canExport ? buttonColor : buttonColor.opacity(0.5))

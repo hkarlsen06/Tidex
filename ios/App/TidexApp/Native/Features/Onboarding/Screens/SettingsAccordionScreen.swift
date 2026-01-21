@@ -351,7 +351,7 @@ struct SettingsAccordionScreen: View {
                 // Overlay with fade gradient to hint there's more content
                 ZStack(alignment: .trailing) {
                     ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 10) {
+                        HStack(spacing: Spacing.xs) {
                             ForEach(payrollDayOptions, id: \.self) { day in
                                 PaydayButton(
                                     day: day,
@@ -536,7 +536,7 @@ private struct TaxPresetButton: View {
             Text("\(Int(value))%")
                 .font(.system(size: 14, weight: isSelected ? .semibold : .medium))
                 .foregroundColor(isSelected ? .white : .tidexTextSecondary)
-                .padding(.horizontal, 14)
+                .padding(.horizontal, Spacing.sm)
                 .padding(.vertical, 8)
                 .background(isSelected ? Color.tidexBrandPrimary : Color.tidexBackground)
                 .clipShape(Capsule())

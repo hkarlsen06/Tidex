@@ -22,10 +22,10 @@ struct PrimaryButton: View {
                 }
 
                 Text(title)
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.tidexButton)
             }
             .frame(maxWidth: .infinity)
-            .frame(height: 50)
+            .frame(height: Spacing.buttonHeight)
             .background(
                 isDisabled
                     ? Color.tidexBrandPrimary.opacity(0.5)

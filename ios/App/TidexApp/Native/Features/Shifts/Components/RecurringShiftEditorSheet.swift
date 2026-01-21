@@ -295,7 +295,7 @@ struct RecurringShiftEditorSheet: View {
                 .font(.system(size: 13, weight: .medium))
                 .foregroundColor(isSelected ? .white : .tidexTextSecondary)
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 10)
+                .padding(.vertical, Spacing.sm)
                 .background(
                     RoundedRectangle(cornerRadius: 8)
                         .fill(isSelected ? Color.tidexBlue : Color.tidexSurfaceSecondary)
@@ -478,7 +478,7 @@ struct RecurringShiftEditorSheet: View {
                 }
                 .foregroundColor(.white)
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
+                .padding(.vertical, Spacing.sm)
                 .background(hasChanges && !editedSelectedDays.isEmpty ? Color.tidexBlue : Color.tidexBlue.opacity(0.5))
                 .cornerRadius(12)
             }
@@ -503,7 +503,7 @@ struct RecurringShiftEditorSheet: View {
                     }
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
+                    .padding(.vertical, Spacing.sm)
                     .background(Color.tidexError)
                     .cornerRadius(12)
                 }

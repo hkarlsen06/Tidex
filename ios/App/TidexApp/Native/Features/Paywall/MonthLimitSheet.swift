@@ -214,7 +214,7 @@ struct MonthLimitSheet: View {
     }
 
     private func featureRow(icon: String, text: String) -> some View {
-        HStack(spacing: 14) {
+        HStack(spacing: Spacing.sm) {
             Image(systemName: icon)
                 .font(.system(size: 18, weight: .medium))
                 .foregroundStyle(
@@ -278,7 +278,7 @@ struct MonthLimitSheet: View {
             // Expanded delete section
             VStack(spacing: 16) {
                 // Header with collapse button
-                HStack(alignment: .top, spacing: 14) {
+                HStack(alignment: .top, spacing: Spacing.sm) {
                     ZStack {
                         Circle()
                             .fill(Color.tidexTextMuted.opacity(0.1))
@@ -346,7 +346,7 @@ struct MonthLimitSheet: View {
 
                 // Error display
                 if let error = error {
-                    HStack(spacing: 10) {
+                    HStack(spacing: Spacing.xs) {
                         Image(systemName: "exclamationmark.triangle.fill")
                             .font(.system(size: 14))
                             .foregroundStyle(Color.tidexError)
@@ -355,13 +355,13 @@ struct MonthLimitSheet: View {
                             .font(.system(size: 13, weight: .medium))
                             .foregroundStyle(Color.tidexError)
                     }
-                    .padding(14)
+                    .padding(Spacing.sm)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(Color.tidexError.opacity(0.08))
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 }
             }
-            .padding(18)
+            .padding(Spacing.md)
             .background(Color.tidexSurfaceSecondary.opacity(0.4))
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             .overlay(
@@ -374,9 +374,9 @@ struct MonthLimitSheet: View {
     // MARK: - Confirm Delete Section
 
     private var confirmDeleteSection: some View {
-        VStack(spacing: 14) {
+        VStack(spacing: Spacing.sm) {
             // Warning message
-            HStack(alignment: .top, spacing: 10) {
+            HStack(alignment: .top, spacing: Spacing.xs) {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .font(.system(size: 15))
                     .foregroundStyle(Color.tidexError)
@@ -386,13 +386,13 @@ struct MonthLimitSheet: View {
                     .foregroundStyle(Color.tidexError)
                     .lineSpacing(2)
             }
-            .padding(14)
+            .padding(Spacing.sm)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(Color.tidexError.opacity(0.08))
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 
             // Action buttons
-            HStack(spacing: 10) {
+            HStack(spacing: Spacing.xs) {
                 // Cancel
                 Button(action: { withAnimation(.spring(response: 0.3)) { showConfirmDelete = false } }) {
                     Text(AuthStrings.string("monthLimit.cancelDelete", locale: localization.currentLocale))

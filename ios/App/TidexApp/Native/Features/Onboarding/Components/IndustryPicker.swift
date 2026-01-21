@@ -76,7 +76,7 @@ struct IndustryPicker: View {
                         .font(.system(size: 14, weight: selection == industry ? .semibold : .medium))
                         .foregroundColor(selection == industry ? .tidexTextPrimary : .tidexTextMuted)
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 10)
+                        .padding(.vertical, Spacing.sm)
                         .background(
                             selection == industry
                                 ? Color.tidexSurfacePrimary

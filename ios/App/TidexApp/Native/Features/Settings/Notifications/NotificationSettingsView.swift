@@ -68,7 +68,7 @@ struct NotificationSettingsView: View {
 
             // Permission card
             VStack(spacing: 0) {
-                HStack(spacing: 14) {
+                HStack(spacing: Spacing.sm) {
                     // Icon
                     Image(systemName: permissionIcon)
                         .font(.system(size: 20))
@@ -213,7 +213,7 @@ struct NotificationSettingsView: View {
             // Reminders card
             VStack(spacing: 0) {
                 // Enable toggle
-                HStack(spacing: 14) {
+                HStack(spacing: Spacing.sm) {
                     Image(systemName: "bell.fill")
                         .font(.system(size: 20))
                         .foregroundColor(.tidexBlue)
@@ -318,7 +318,7 @@ struct NotificationSettingsView: View {
 
             // Shared shifts card
             VStack(spacing: 0) {
-                HStack(spacing: 14) {
+                HStack(spacing: Spacing.sm) {
                     Image(systemName: "person.2.fill")
                         .font(.system(size: 20))
                         .foregroundColor(.tidexBlue)

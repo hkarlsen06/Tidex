@@ -127,7 +127,7 @@ struct AddFriendForm: View {
                             }
                             .foregroundColor(.white)
                             .padding(.horizontal, 16)
-                            .padding(.vertical, 10)
+                            .padding(.vertical, Spacing.sm)
                             .background(
                                 identifier.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isLoading
                                     ? Color.tidexBlue.opacity(0.5)
@@ -156,7 +156,7 @@ struct AddFriendForm: View {
 struct TidexTextFieldStyle: TextFieldStyle {
     func _body(configuration: TextField<Self._Label>) -> some View {
         configuration
-            .padding(.horizontal, 14)
+            .padding(.horizontal, Spacing.sm)
             .padding(.vertical, 12)
             .background(Color.tidexSurfaceSecondary)
             .cornerRadius(10)

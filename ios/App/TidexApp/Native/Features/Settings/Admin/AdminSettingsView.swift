@@ -402,7 +402,7 @@ private struct NotificationsTabView: View {
                                         .scaleEffect(0.8)
                                 }
                             }
-                            .padding(10)
+                            .padding(Spacing.xs)
                             .background(Color.tidexSurfaceSecondary)
                             .cornerRadius(8)
 
@@ -429,7 +429,7 @@ private struct NotificationsTabView: View {
                                                     .foregroundColor(.tidexBlue)
                                             }
                                             .padding(.vertical, 8)
-                                            .padding(.horizontal, 10)
+                                            .padding(.horizontal, Spacing.xs)
                                         }
                                         Divider()
                                     }
@@ -685,7 +685,7 @@ private struct AuditLogCard: View {
                 Text("Target: \(target)").font(.system(size: 12)).foregroundColor(.tidexTextMuted)
             }
         }
-        .padding(10)
+        .padding(Spacing.xs)
         .background(Color.tidexSurfacePrimary)
         .cornerRadius(8)
     }
@@ -717,7 +717,7 @@ private struct ShareCard: View {
                     .font(.system(size: 12)).foregroundColor(.tidexError)
             }
         }
-        .padding(10)
+        .padding(Spacing.xs)
         .background(Color.tidexSurfacePrimary)
         .cornerRadius(8)
     }
@@ -739,7 +739,7 @@ private struct BroadcastCard: View {
                 Text("Sent: \(broadcast.sentCount)/\(broadcast.targetCount)").font(.system(size: 11)).foregroundColor(.tidexTextMuted)
             }
         }
-        .padding(10)
+        .padding(Spacing.xs)
         .background(Color.tidexSurfacePrimary)
         .cornerRadius(8)
     }

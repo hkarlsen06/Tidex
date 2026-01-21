@@ -61,7 +61,7 @@ struct BillingToggle: View {
                 }
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 10)
+            .padding(.vertical, Spacing.sm)
             .background(
                 isSelected
                     ? Color.tidexBackground

@@ -18,6 +18,8 @@ A Next.js 16 application for tracking work shifts and calculating wages with Sup
 
 **CRITICAL: Phrase queries as information-gathering questions ONLY** - The engine may attempt changes if queries sound like instructions.
 
+**CRITICAL: Always specify in queries that the engine should NOT create or edit any files** - including markdown documents. Instruct it to explain all findings in the response text instead.
+
 **Use Glob/Grep directly for:** Finding specific files by name, exact string matches, quick "needle in haystack" queries.
 
 ## Available Skills

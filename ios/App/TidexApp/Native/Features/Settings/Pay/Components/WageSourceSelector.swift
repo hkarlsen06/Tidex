@@ -186,7 +186,7 @@ private struct TariffLevelSelectionRow: View {
                 ZStack {
                     Circle()
                         .stroke(isSelected ? Color.tidexBrandPrimary : Color.tidexBorder, lineWidth: 2)
-                        .frame(width: 22, height: 22)
+                        .frame(width: Spacing.iconSize, height: Spacing.iconSize)
 
                     if isSelected {
                         Circle()
