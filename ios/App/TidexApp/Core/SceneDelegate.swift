@@ -25,6 +25,10 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         window?.rootViewController = hostingController
         window?.makeKeyAndVisible()
 
+        // Apply cached theme to window (UIKit level for reliable system appearance following)
+        // Using static method to avoid MainActor isolation issues at startup
+        window?.overrideUserInterfaceStyle = AppearanceManager.cachedUserInterfaceStyle()
+
         // Handle any URLs passed at launch (OAuth callbacks, deep links)
         if let urlContext = connectionOptions.urlContexts.first {
             handleURL(urlContext.url)
@@ -42,6 +46,10 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     func sceneDidBecomeActive(_ scene: UIScene) {
         // Called when the scene has moved from an inactive state to an active state.
+        // Re-apply theme to ensure it's correctly set after view hierarchy is fully loaded
+        Task { @MainActor in
+            AppearanceManager.shared.applyToWindows()
+        }
     }
 
     func sceneWillResignActive(_ scene: UIScene) {

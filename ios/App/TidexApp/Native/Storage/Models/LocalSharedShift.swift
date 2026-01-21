@@ -367,3 +367,167 @@ final class LocalSharer {
         )
     }
 }
+
+// MARK: - Local Shift Preview Cache
+
+/// SwiftData model for caching shift previews
+/// Shows the most relevant shift (active/upcoming/past) for each sharer
+@Model
+final class LocalShiftPreview {
+    // MARK: - Primary Key
+
+    /// Composite key: viewerId:sharerId
+    @Attribute(.unique)
+    var compositeKey: String
+
+    // MARK: - Identity
+
+    /// The sharer's user ID
+    var sharerId: String
+
+    /// The viewer's user ID (current user)
+    var viewerId: String
+
+    // MARK: - Preview Status
+
+    /// Status: active, upcoming, or past
+    var status: String?
+
+    /// Whether earnings are visible
+    var showEarnings: Bool
+
+    // MARK: - Shift Data (optional - may be nil if no shifts)
+
+    var shiftId: String?
+    var shiftDate: String?
+    var startTime: String?
+    var endTime: String?
+    var durationHours: Double?
+    var paidHours: Double?
+    var basePay: Double?
+    var supplementPay: Double?
+    var gross: Double?
+    var taxEnabled: Bool?
+    var taxPercentage: Double?
+    var recurringId: String?
+    var recurringAnchorWeekday: Int?
+
+    // MARK: - Cache Metadata
+
+    var cachedAt: Date
+
+    // MARK: - Initialization
+
+    init(
+        sharerId: String,
+        viewerId: String,
+        status: String?,
+        showEarnings: Bool,
+        shiftId: String? = nil,
+        shiftDate: String? = nil,
+        startTime: String? = nil,
+        endTime: String? = nil,
+        durationHours: Double? = nil,
+        paidHours: Double? = nil,
+        basePay: Double? = nil,
+        supplementPay: Double? = nil,
+        gross: Double? = nil,
+        taxEnabled: Bool? = nil,
+        taxPercentage: Double? = nil,
+        recurringId: String? = nil,
+        recurringAnchorWeekday: Int? = nil,
+        cachedAt: Date = Date()
+    ) {
+        self.compositeKey = "\(viewerId):\(sharerId)"
+        self.sharerId = sharerId
+        self.viewerId = viewerId
+        self.status = status
+        self.showEarnings = showEarnings
+        self.shiftId = shiftId
+        self.shiftDate = shiftDate
+        self.startTime = startTime
+        self.endTime = endTime
+        self.durationHours = durationHours
+        self.paidHours = paidHours
+        self.basePay = basePay
+        self.supplementPay = supplementPay
+        self.gross = gross
+        self.taxEnabled = taxEnabled
+        self.taxPercentage = taxPercentage
+        self.recurringId = recurringId
+        self.recurringAnchorWeekday = recurringAnchorWeekday
+        self.cachedAt = cachedAt
+    }
+
+    /// Create from SharerShiftPreview
+    static func from(
+        preview: SharerShiftPreview,
+        viewerId: String
+    ) -> LocalShiftPreview {
+        LocalShiftPreview(
+            sharerId: preview.sharerId,
+            viewerId: viewerId,
+            status: preview.status?.rawValue,
+            showEarnings: preview.showEarnings,
+            shiftId: preview.shift?.id,
+            shiftDate: preview.shift?.shift_date,
+            startTime: preview.shift?.start_time,
+            endTime: preview.shift?.end_time,
+            durationHours: preview.shift?.computed.durationHours,
+            paidHours: preview.shift?.computed.paidHours,
+            basePay: preview.shift?.computed.basePay,
+            supplementPay: preview.shift?.computed.supplementPay,
+            gross: preview.shift?.computed.gross,
+            taxEnabled: preview.shift?.tax_enabled,
+            taxPercentage: preview.shift?.tax_percentage,
+            recurringId: preview.shift?.recurring_id,
+            recurringAnchorWeekday: preview.shift?.recurring_anchor_weekday
+        )
+    }
+
+    /// Convert back to SharerShiftPreview
+    func toSharerShiftPreview() -> SharerShiftPreview {
+        let shiftData: SharedShiftData? = buildShiftData()
+        let previewStatus: ShiftPreviewStatus? = status.flatMap { ShiftPreviewStatus(rawValue: $0) }
+
+        return SharerShiftPreview(
+            sharerId: sharerId,
+            shift: shiftData,
+            status: previewStatus,
+            showEarnings: showEarnings
+        )
+    }
+
+    /// Helper to build SharedShiftData (separated to help compiler type-checking)
+    private func buildShiftData() -> SharedShiftData? {
+        guard let shiftId = shiftId,
+              let shiftDate = shiftDate,
+              let startTime = startTime,
+              let endTime = endTime else {
+            return nil
+        }
+
+        let computedPayroll = SharedShiftComputed(
+            id: shiftId,
+            durationHours: durationHours ?? 0,
+            paidHours: paidHours ?? 0,
+            basePay: basePay ?? 0,
+            supplementPay: supplementPay ?? 0,
+            gross: gross ?? 0
+        )
+
+        return SharedShiftData(
+            id: shiftId,
+            user_id: sharerId,
+            shift_date: shiftDate,
+            start_time: startTime,
+            end_time: endTime,
+            computed: computedPayroll,
+            tax_enabled: taxEnabled,
+            tax_percentage: taxPercentage,
+            custom_supplements: nil,
+            recurring_id: recurringId,
+            recurring_anchor_weekday: recurringAnchorWeekday
+        )
+    }
+}

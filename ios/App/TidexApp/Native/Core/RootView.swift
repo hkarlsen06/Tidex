@@ -6,7 +6,7 @@ struct RootView: View {
     // Note: Using @ObservedObject for singletons as @StateObject is meant for owned instances
     @ObservedObject private var coordinator = AppCoordinator.shared
     @ObservedObject private var localization = LocalizationManager.shared
-    @ObservedObject private var appearanceManager = AppearanceManager.shared
+    // Theme is handled at UIKit window level - no need to observe AppearanceManager here
 
     // Onboarding state - explicit naming for two-phase onboarding
     @AppStorage("hasCompletedPreAuthOnboarding") private var hasCompletedPreAuthOnboarding = false
@@ -93,7 +93,8 @@ struct RootView: View {
         .animation(.easeInOut(duration: 0.3), value: hasCompletedPostAuthOnboarding)
         .environmentObject(coordinator)
         .environment(\.localization, localization)
-        .preferredColorScheme(appearanceManager.colorScheme)
+        // Theme is handled at UIKit window level via AppearanceManager.applyToWindows()
+        // Don't use .preferredColorScheme() here as it conflicts with window.overrideUserInterfaceStyle
     }
 }
 

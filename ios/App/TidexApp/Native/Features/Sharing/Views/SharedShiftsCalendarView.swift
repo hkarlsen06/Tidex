@@ -497,9 +497,6 @@ private struct SharedCalendarDayCell: View {
         if isToday {
             return .tidexBlue
         }
-        if hasShift {
-            return .white
-        }
         return .tidexTextPrimary
     }
 

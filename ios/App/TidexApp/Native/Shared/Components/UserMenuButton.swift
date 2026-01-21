@@ -7,7 +7,7 @@ struct UserMenuButton: View {
     @EnvironmentObject private var coordinator: AppCoordinator
     @Environment(\.localization) private var localization
     @Environment(\.displayScale) private var displayScale
-    @ObservedObject private var appearanceManager = AppearanceManager.shared
+    // Theme is handled at UIKit window level - sheets inherit from window
 
     /// User's display name (email or name from profile)
     let displayName: String
@@ -57,12 +57,10 @@ struct UserMenuButton: View {
             NavigationStack {
                 SyncDebugView()
             }
-            .preferredColorScheme(appearanceManager.colorScheme)
         }
         #endif
         .sheet(isPresented: $showSettings) {
             SettingsView()
-                .preferredColorScheme(appearanceManager.colorScheme)
         }
     }
 
