@@ -66,6 +66,7 @@
 		114F0F152F20C6C900B587F0 /* NextShiftCountdownText.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0F142F20C6C900B587F0 /* NextShiftCountdownText.swift */; };
 		114F0F172F21132000B587F0 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0F162F21132000B587F0 /* MainTabView.swift */; };
 		114F0F3B2F21374200B587F0 /* CameraPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0F3A2F21374200B587F0 /* CameraPicker.swift */; };
+		114F0F3D2F21487000B587F0 /* tidex.icon in Resources */ = {isa = PBXBuildFile; fileRef = 114F0F3C2F21487000B587F0 /* tidex.icon */; };
 		1152D0CB2F01E2A7002FD5ED /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1152D0CA2F01E2A7002FD5ED /* StoreKit.framework */; };
 		11923C192F16B94B0076AFD6 /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = 11923C182F16B94B0076AFD6 /* Auth */; };
 		11923C1B2F16B94B0076AFD6 /* Functions in Frameworks */ = {isa = PBXBuildFile; productRef = 11923C1A2F16B94B0076AFD6 /* Functions */; };
@@ -342,6 +343,7 @@
 		114F0F142F20C6C900B587F0 /* NextShiftCountdownText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextShiftCountdownText.swift; sourceTree = "<group>"; };
 		114F0F162F21132000B587F0 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
 		114F0F3A2F21374200B587F0 /* CameraPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraPicker.swift; sourceTree = "<group>"; };
+		114F0F3C2F21487000B587F0 /* tidex.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = tidex.icon; sourceTree = "<group>"; };
 		1152D0C82F01BB9B002FD5ED /* App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = App.entitlements; sourceTree = "<group>"; };
 		1152D0CA2F01E2A7002FD5ED /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 		119D1CB72F16E46300EC7072 /* AppCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppCoordinator.swift; sourceTree = "<group>"; };
@@ -1411,6 +1413,7 @@
 		504EC3061FED79650016851F /* TidexApp */ = {
 			isa = PBXGroup;
 			children = (
+				114F0F3C2F21487000B587F0 /* tidex.icon */,
 				119D1CE52F16E46300EC7072 /* Native */,
 				11A1D6D02F11F51B00060819 /* Models */,
 				11A1D6CE2F11F48F00060819 /* Core */,
@@ -1539,6 +1542,7 @@
 				LAUNCH0012F0500000000001 /* LaunchScreen.storyboard in Resources */,
 				INFOP0012F0900000000001 /* InfoPlist.strings in Resources */,
 				NTFSND0012F1400000000001 /* tidex_notification.caf in Resources */,
+				114F0F3D2F21487000B587F0 /* tidex.icon in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2040,8 +2044,8 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 958DCC722DB07C7200EA8C5F /* debug.xcconfig */;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
+				ASSETCATALOG_COMPILER_APPICON_NAME = tidex;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = TidexApp/App.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 210126.1;
@@ -2068,8 +2072,8 @@
 		504EC3181FED79650016851F /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
+				ASSETCATALOG_COMPILER_APPICON_NAME = tidex;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = TidexApp/AppRelease.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 210126.1;
