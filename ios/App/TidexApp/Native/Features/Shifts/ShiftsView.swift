@@ -278,13 +278,13 @@ struct ShiftsView: View {
         }
         // Trigger celebration when shifts are added (check on view appear and when month matches)
         .onChange(of: celebrationManager.shouldShowConfetti) { _, shouldShow in
-            if shouldShow && celebrationManager.shouldShowConfetti(forYear: viewModel.displayYear, month: viewModel.displayMonth) {
+            if shouldShow && celebrationManager.shouldShowConfetti(forYear: viewModel.committedYear, month: viewModel.committedMonth) {
                 triggerCelebration()
             }
         }
-        .onChange(of: viewModel.displayMonth) { _, _ in
-            // Check if we should show confetti for the newly navigated month
-            if celebrationManager.shouldShowConfetti(forYear: viewModel.displayYear, month: viewModel.displayMonth) {
+        .onChange(of: viewModel.committedMonth) { _, _ in
+            // Check if we should show confetti for the newly committed (visible) month
+            if celebrationManager.shouldShowConfetti(forYear: viewModel.committedYear, month: viewModel.committedMonth) {
                 triggerCelebration()
             }
             // Check if we have a pending deep link for this month
@@ -424,9 +424,10 @@ struct ShiftsView: View {
         let targetYear = calendar.component(.year, from: targetDate)
         let targetMonth = calendar.component(.month, from: targetDate)
 
-        // Make sure we're on the correct month before trying to find the shift
-        guard viewModel.displayYear == targetYear && viewModel.displayMonth == targetMonth else {
-            print("[ShiftsView] Not on target month yet (current: \(viewModel.displayYear)-\(viewModel.displayMonth), target: \(targetYear)-\(targetMonth))")
+        // Make sure we're on the correct committed month before trying to find the shift
+        // (committed values indicate data is ready to display)
+        guard viewModel.committedYear == targetYear && viewModel.committedMonth == targetMonth else {
+            print("[ShiftsView] Not on target month yet (committed: \(viewModel.committedYear)-\(viewModel.committedMonth), target: \(targetYear)-\(targetMonth))")
             // Keep highlightedDateISO - month navigation is still in progress
             return
         }
@@ -555,10 +556,11 @@ struct ShiftsView: View {
     // MARK: - Transition Phase
 
     /// Current transition phase for animations
+    /// Uses committed values to ensure calendar structure updates atomically with shift data
     private var transitionPhase: MonthTransitionPhase {
         MonthTransitionPhase(
-            year: viewModel.displayYear,
-            month: viewModel.displayMonth,
+            year: viewModel.committedYear,
+            month: viewModel.committedMonth,
             direction: viewModel.navigationDirection
         )
     }
@@ -633,8 +635,8 @@ struct ShiftsView: View {
                             ShiftsCalendarView(
                                 shifts: viewModel.shifts,
                                 month: displayedMonthDate,
-                                year: viewModel.displayYear,
-                                monthNumber: viewModel.displayMonth,
+                                year: viewModel.committedYear,
+                                monthNumber: viewModel.committedMonth,
                                 currency: viewModel.currency,
                                 showEarnings: true,
                                 phase: transitionPhase,
@@ -817,8 +819,8 @@ struct ShiftsView: View {
                             ShiftsCalendarView(
                                 shifts: viewModel.shifts,
                                 month: displayedMonthDate,
-                                year: viewModel.displayYear,
-                                monthNumber: viewModel.displayMonth,
+                                year: viewModel.committedYear,
+                                monthNumber: viewModel.committedMonth,
                                 currency: viewModel.currency,
                                 showEarnings: true,
                                 phase: transitionPhase,
@@ -1116,10 +1118,11 @@ struct ShiftsView: View {
     }
 
     /// Convert displayed year/month to a Date for the calendar
+    /// Uses committed values to ensure calendar structure updates atomically with shift data
     private var displayedMonthDate: Date {
         var components = DateComponents()
-        components.year = viewModel.displayYear
-        components.month = viewModel.displayMonth
+        components.year = viewModel.committedYear
+        components.month = viewModel.committedMonth
         components.day = 1
         return Calendar.current.date(from: components) ?? Date()
     }

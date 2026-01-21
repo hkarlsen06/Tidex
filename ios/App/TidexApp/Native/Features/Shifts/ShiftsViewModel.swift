@@ -117,22 +117,47 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
     /// Direction of last navigation (for animations) - synced from SharedMonthContext
     @Published private(set) var navigationDirection: MonthNavigationDirection?
 
+    // MARK: - Committed Display State
+    // These values only update AFTER shift data is ready, ensuring atomic rendering
+    // The calendar uses these to avoid showing the new month structure before data arrives
+
+    /// The year that is actually ready to display (data loaded)
+    @Published private(set) var committedYear: Int
+
+    /// The month that is actually ready to display (data loaded)
+    @Published private(set) var committedMonth: Int
+
     /// Currently displayed year - synced from SharedMonthContext
     var displayYear: Int { monthContext.displayYear }
 
     /// Currently displayed month 1-12 - synced from SharedMonthContext
     var displayMonth: Int { monthContext.displayMonth }
 
-    /// Whether viewing the current (real) month
-    var isCurrentMonth: Bool { monthContext.isCurrentMonth }
+    /// Whether viewing the current (real) month (based on committed state)
+    var isCurrentMonth: Bool {
+        let current = Date.currentYearMonth()
+        return committedYear == current.year && committedMonth == current.month
+    }
 
-    /// Computed month name for immediate display (doesn't wait for API)
-    var displayMonthName: String { monthContext.displayMonthName }
+    /// Computed month name for immediate display (uses committed state for stability)
+    var displayMonthName: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMMM"
+        var components = DateComponents()
+        components.year = committedYear
+        components.month = committedMonth
+        components.day = 1
+        if let date = Calendar.current.date(from: components) {
+            return formatter.string(from: date)
+        }
+        return ""
+    }
 
     /// The period type of the displayed month (past, current, or future)
+    /// Uses committed state for stable rendering
     var monthPeriod: MonthPeriod {
         let current = Date.currentYearMonth()
-        let displayedIndex = displayYear * 12 + displayMonth
+        let displayedIndex = committedYear * 12 + committedMonth
         let currentIndex = current.year * 12 + current.month
 
         if displayedIndex < currentIndex {
@@ -293,6 +318,11 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
         self.recurringShiftsRepository = recurringShiftsRepository ?? RecurringShiftsRepository.shared
         self.syncCoordinator = syncCoordinator ?? SyncCoordinator.shared
         self.monthContext = monthContext ?? SharedMonthContext.shared
+
+        // Initialize committed state to current month context values
+        // These will be updated atomically with shift data
+        self.committedYear = self.monthContext.displayYear
+        self.committedMonth = self.monthContext.displayMonth
 
         // Initialize tracking to current month context values
         self.lastObservedYear = self.monthContext.displayYear
@@ -813,6 +843,7 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
 
     /// Non-blocking month data loader
     /// Uses cache for instant display, fetches in background if needed
+    /// IMPORTANT: Commits display state (year/month) atomically with shift data
     private func loadShiftsForDisplayedMonthNonBlocking() {
         let targetYear = displayYear
         let targetMonth = displayMonth
@@ -822,8 +853,13 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
         if var displayCache = monthCache[displayKey], displayCache.isValid {
             // Use cached computed data - instant navigation!
             logger.info("📦 Using cached computed data for \(displayKey)")
+
+            // ATOMIC UPDATE: Set shifts and committed state together
+            // This ensures the calendar structure and data update in the same render pass
             self.shifts = displayCache.shifts
             self.weekGroups = groupShiftsByWeek(displayCache.shifts)
+            self.committedYear = targetYear
+            self.committedMonth = targetMonth
 
             // Update last accessed time for LRU tracking
             displayCache.lastAccessed = Date()
@@ -835,7 +871,7 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
         }
 
         // Cache miss - fetch from local in background
-        // DON'T clear shifts array - keep showing previous month's data until new data is ready
+        // DON'T clear shifts array or update committed state - keep showing previous month until new data is ready
         // This prevents the "flash of empty state" during local SQLite reads
         logger.info("🔄 Cache miss for \(displayKey), fetching from local...")
         self.isLoading = true
@@ -855,7 +891,7 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
                 return
             }
 
-            await self.loadShiftsForDisplayedMonth(showLoadingState: false)
+            await self.loadShiftsForDisplayedMonth(showLoadingState: false, targetYear: targetYear, targetMonth: targetMonth)
 
             // Check again after fetch
             guard !Task.isCancelled,
@@ -1064,9 +1100,12 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
             // Evict old cache entries if over limit
             evictCacheIfNeeded()
 
-            // Update published state
+            // ATOMIC UPDATE: Set shifts and committed state together
+            // This ensures the calendar structure and data update in the same render pass
             self.shifts = computedShifts
             self.weekGroups = groupShiftsByWeek(computedShifts)
+            self.committedYear = displayYM.year
+            self.committedMonth = displayYM.month
 
             // Calculate conflict detection
             updateConflictDetection(for: computedShifts)
@@ -1090,12 +1129,19 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
     }
 
     /// Load shifts data for the currently displayed month
-    /// - Parameter showLoadingState: Whether to show loading indicator
-    private func loadShiftsForDisplayedMonth(showLoadingState: Bool = true) async {
+    /// - Parameters:
+    ///   - showLoadingState: Whether to show loading indicator
+    ///   - targetYear: The year to load (for atomic commit)
+    ///   - targetMonth: The month to load (for atomic commit)
+    private func loadShiftsForDisplayedMonth(showLoadingState: Bool = true, targetYear: Int? = nil, targetMonth: Int? = nil) async {
         if showLoadingState {
             isLoading = true
         }
         error = nil
+
+        // Use provided targets or fall back to current display values
+        let loadYear = targetYear ?? displayYear
+        let loadMonth = targetMonth ?? displayMonth
 
         do {
             // Get or cache user ID
@@ -1127,7 +1173,7 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
             }
 
             // Calculate date range for displayed month (includes out-of-month padding days visible in calendar)
-            let displayYM = (year: displayYear, month: displayMonth)
+            let displayYM = (year: loadYear, month: loadMonth)
             let visibleRange = Date.visibleCalendarRange(year: displayYM.year, month: displayYM.month)
 
             // Load shifts for the full visible calendar range (so out-of-month days show shift data)
@@ -1167,9 +1213,12 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
             // Evict old cache entries if over limit
             evictCacheIfNeeded()
 
-            // Update published state
+            // ATOMIC UPDATE: Set shifts and committed state together
+            // This ensures the calendar structure and data update in the same render pass
             self.shifts = computedShifts
             self.weekGroups = groupShiftsByWeek(computedShifts)
+            self.committedYear = loadYear
+            self.committedMonth = loadMonth
 
             // Calculate conflict detection
             updateConflictDetection(for: computedShifts)
