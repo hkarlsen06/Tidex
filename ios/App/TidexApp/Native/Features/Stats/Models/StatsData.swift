@@ -12,6 +12,8 @@ struct StatsData: Codable, Equatable {
     let percentageChange: Double?
     let monthlyGoal: MonthlyGoal
     let thisMonthCumulative: [DailyCumulativeData]
+    let thisWeek: [DailyData]?       // Current week (Mon-Sun) - only for current month
+    let bestWeek: BestWeekData?       // Best week - only for past months
 }
 
 // MARK: - Sub-types
@@ -53,6 +55,28 @@ struct DailyCumulativeData: Codable, Equatable, Identifiable {
     var id: Int { day }
 }
 
+/// Daily earnings data for weekly bar charts
+/// Used for both "This Week" (current month) and "Best Week" (past months)
+struct DailyData: Codable, Equatable, Identifiable {
+    let date: String         // Short day name (e.g., "Mon", "Man") or date number (e.g., "15.")
+    let fullDay: String      // Full day name (e.g., "Monday", "Mandag")
+    let earnings: Double     // Gross earnings for this day
+    let hours: Double        // Hours worked this day
+    let shifts: Int          // Number of shifts this day
+    let fullDate: String     // ISO date string (YYYY-MM-DD)
+
+    var id: String { fullDate }
+}
+
+/// Best week data for past months
+/// Contains the week with highest earnings in that month
+struct BestWeekData: Codable, Equatable {
+    let weekData: [DailyData]     // Daily breakdown (Mon-Sun)
+    let weekNumber: Int           // ISO week number
+    let totalEarnings: Double     // Total earnings for the week
+    let totalHours: Double        // Total hours for the week
+}
+
 // MARK: - Preview Data
 
 extension StatsData {
@@ -80,7 +104,38 @@ extension StatsData {
             percentage: 85.4,
             remaining: 2192
         ),
-        thisMonthCumulative: DailyCumulativeData.previewData
+        thisMonthCumulative: DailyCumulativeData.previewData,
+        thisWeek: DailyData.previewThisWeek,
+        bestWeek: nil
+    )
+
+    /// Preview data for past month (showing best week)
+    static let previewPastMonth = StatsData(
+        focusMonth: FocusMonth(year: 2024, month: 12),
+        tax: TaxSettings(enabled: true, percentage: 7.5),
+        currentMonth: MonthStats(
+            totalEarnings: 20000,
+            totalEarningsNet: 18500,
+            totalHours: 85,
+            shiftCount: 12
+        ),
+        lastMonth: MonthStats(
+            totalEarnings: 18000,
+            totalEarningsNet: 16650,
+            totalHours: 75,
+            shiftCount: 10
+        ),
+        percentageChange: 11,
+        monthlyGoal: MonthlyGoal(
+            enabled: true,
+            target: 20000,
+            progress: 18500,
+            percentage: 92.5,
+            remaining: 1500
+        ),
+        thisMonthCumulative: DailyCumulativeData.previewData,
+        thisWeek: nil,
+        bestWeek: BestWeekData.preview
     )
 
     /// Empty data for when no shifts exist
@@ -107,8 +162,50 @@ extension StatsData {
             percentage: 0,
             remaining: 0
         ),
-        thisMonthCumulative: []
+        thisMonthCumulative: [],
+        thisWeek: nil,
+        bestWeek: nil
     )
+}
+
+// MARK: - DailyData Preview
+
+extension DailyData {
+    /// Preview data for "This Week" chart
+    /// Simulates a typical week with work on Mon, Thu, Fri
+    static var previewThisWeek: [DailyData] {
+        [
+            DailyData(date: "Man", fullDay: "Mandag", earnings: 1250, hours: 6.5, shifts: 1, fullDate: "2025-01-20"),
+            DailyData(date: "Tir", fullDay: "Tirsdag", earnings: 0, hours: 0, shifts: 0, fullDate: "2025-01-21"),
+            DailyData(date: "Ons", fullDay: "Onsdag", earnings: 0, hours: 0, shifts: 0, fullDate: "2025-01-22"),
+            DailyData(date: "Tor", fullDay: "Torsdag", earnings: 1450, hours: 7.5, shifts: 1, fullDate: "2025-01-23"),
+            DailyData(date: "Fre", fullDay: "Fredag", earnings: 1280, hours: 6.5, shifts: 1, fullDate: "2025-01-24"),
+            DailyData(date: "Lør", fullDay: "Lørdag", earnings: 0, hours: 0, shifts: 0, fullDate: "2025-01-25"),
+            DailyData(date: "Søn", fullDay: "Søndag", earnings: 0, hours: 0, shifts: 0, fullDate: "2025-01-26"),
+        ]
+    }
+}
+
+// MARK: - BestWeekData Preview
+
+extension BestWeekData {
+    /// Preview data for "Best Week" chart (past month)
+    static var preview: BestWeekData {
+        BestWeekData(
+            weekData: [
+                DailyData(date: "9.", fullDay: "Mandag", earnings: 1400, hours: 7, shifts: 1, fullDate: "2024-12-09"),
+                DailyData(date: "10.", fullDay: "Tirsdag", earnings: 1350, hours: 7, shifts: 1, fullDate: "2024-12-10"),
+                DailyData(date: "11.", fullDay: "Onsdag", earnings: 0, hours: 0, shifts: 0, fullDate: "2024-12-11"),
+                DailyData(date: "12.", fullDay: "Torsdag", earnings: 1500, hours: 8, shifts: 1, fullDate: "2024-12-12"),
+                DailyData(date: "13.", fullDay: "Fredag", earnings: 1600, hours: 8, shifts: 1, fullDate: "2024-12-13"),
+                DailyData(date: "14.", fullDay: "Lørdag", earnings: 1800, hours: 9, shifts: 1, fullDate: "2024-12-14"),
+                DailyData(date: "15.", fullDay: "Søndag", earnings: 0, hours: 0, shifts: 0, fullDate: "2024-12-15"),
+            ],
+            weekNumber: 50,
+            totalEarnings: 7650,
+            totalHours: 39
+        )
+    }
 }
 
 // MARK: - DailyCumulativeData Preview

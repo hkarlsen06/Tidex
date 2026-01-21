@@ -50,6 +50,7 @@
 		114F0EE42F205B3B00B587F0 /* StatsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0EDD2F205B3B00B587F0 /* StatsViewModel.swift */; };
 		114F0EE52F205B3B00B587F0 /* MonthlyEarningsCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0ED42F205B3B00B587F0 /* MonthlyEarningsCard.swift */; };
 		114F0EE72F206E5A00B587F0 /* MonthlyProgressChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0EE62F206E5A00B587F0 /* MonthlyProgressChart.swift */; };
+		114F0EE92F20711F00B587F0 /* WeeklyBarChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0EE82F20711F00B587F0 /* WeeklyBarChart.swift */; };
 		1152D0CB2F01E2A7002FD5ED /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1152D0CA2F01E2A7002FD5ED /* StoreKit.framework */; };
 		11923C192F16B94B0076AFD6 /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = 11923C182F16B94B0076AFD6 /* Auth */; };
 		11923C1B2F16B94B0076AFD6 /* Functions in Frameworks */ = {isa = PBXBuildFile; productRef = 11923C1A2F16B94B0076AFD6 /* Functions */; };
@@ -312,6 +313,7 @@
 		114F0EDC2F205B3B00B587F0 /* StatsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsView.swift; sourceTree = "<group>"; };
 		114F0EDD2F205B3B00B587F0 /* StatsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsViewModel.swift; sourceTree = "<group>"; };
 		114F0EE62F206E5A00B587F0 /* MonthlyProgressChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthlyProgressChart.swift; sourceTree = "<group>"; };
+		114F0EE82F20711F00B587F0 /* WeeklyBarChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyBarChart.swift; sourceTree = "<group>"; };
 		1152D0C82F01BB9B002FD5ED /* App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = App.entitlements; sourceTree = "<group>"; };
 		1152D0CA2F01E2A7002FD5ED /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 		119D1CB72F16E46300EC7072 /* AppCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppCoordinator.swift; sourceTree = "<group>"; };
@@ -682,6 +684,7 @@
 		114F0ED72F205B3B00B587F0 /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				114F0EE82F20711F00B587F0 /* WeeklyBarChart.swift */,
 				114F0EE62F206E5A00B587F0 /* MonthlyProgressChart.swift */,
 				114F0ED42F205B3B00B587F0 /* MonthlyEarningsCard.swift */,
 				114F0ED52F205B3B00B587F0 /* MonthlyGoalCard.swift */,
@@ -1595,6 +1598,7 @@
 				11A196422F1AC1BE0030E524 /* TabScreenContainer.swift in Sources */,
 				11A196542F1AE8AC0030E524 /* EntitlementService.swift in Sources */,
 				11A196432F1AC1BE0030E524 /* PlaceholderContent.swift in Sources */,
+				114F0EE92F20711F00B587F0 /* WeeklyBarChart.swift in Sources */,
 				119D1CF52F16E46300EC7072 /* MFAVerifyView.swift in Sources */,
 				11A197AE2F1D9DC30030E524 /* Friend.swift in Sources */,
 				11F430212F1A9592002B1FBE /* AcceptTermsView.swift in Sources */,

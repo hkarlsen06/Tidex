@@ -126,6 +126,9 @@ struct StatsView: View {
                     MonthlyGoalEmptyCard()
                 }
 
+                // Weekly Chart (This Week or Best Week)
+                weeklyChartSection(stats: stats)
+
                 // Monthly Progress Chart
                 if !stats.thisMonthCumulative.isEmpty {
                     MonthlyProgressChart(data: stats.thisMonthCumulative)
@@ -142,6 +145,49 @@ struct StatsView: View {
         }
         .refreshable {
             await viewModel.refresh()
+        }
+    }
+
+    // MARK: - Weekly Chart Section
+
+    @ViewBuilder
+    private func weeklyChartSection(stats: StatsData) -> some View {
+        if let thisWeek = stats.thisWeek, !thisWeek.isEmpty {
+            // Current month: show "This Week"
+            let hasData = thisWeek.contains { $0.earnings > 0 }
+            if hasData {
+                WeeklyBarChart(
+                    data: thisWeek,
+                    title: localization.string("stats.charts.weeklyChart.thisWeek"),
+                    highlightToday: true
+                )
+            } else {
+                WeeklyBarChartEmpty(
+                    title: localization.string("stats.charts.weeklyChart.thisWeek")
+                )
+            }
+        } else if let bestWeek = stats.bestWeek {
+            // Past month: show "Best Week"
+            let hasData = bestWeek.weekData.contains { $0.earnings > 0 }
+            if hasData {
+                let title = localization.string("stats.charts.weeklyChart.bestWeek")
+                    .replacingOccurrences(of: "{week}", with: "\(bestWeek.weekNumber)")
+                WeeklyBarChart(
+                    data: bestWeek.weekData,
+                    title: title,
+                    highlightToday: false
+                )
+            } else {
+                // Past month with no shifts in best week (shouldn't happen, but handle gracefully)
+                WeeklyBarChartEmpty(
+                    title: localization.string("stats.charts.weeklyChart.thisWeek")
+                )
+            }
+        } else {
+            // No weekly data available (past month with no shifts)
+            WeeklyBarChartEmpty(
+                title: localization.string("stats.charts.weeklyChart.thisWeek")
+            )
         }
     }
 
@@ -162,6 +208,9 @@ struct StatsView: View {
 
                 // Skeleton for Monthly Goal Card
                 skeletonCard(height: 140)
+
+                // Skeleton for Weekly Chart
+                skeletonCard(height: 260)
 
                 // Skeleton for Monthly Progress Chart
                 skeletonCard(height: 280)
