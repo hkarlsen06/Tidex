@@ -11,7 +11,8 @@ interface SendBroadcastBody {
   body: string;
   deeplink?: string;
   target: TargetAudience;
-  specificUserId?: string;
+  specificUserId?: string; // Legacy single user support
+  specificUserIds?: string[]; // Multiple users support
   includeSelf?: boolean;
 }
 
@@ -169,24 +170,35 @@ export async function POST(request: NextRequest) {
     let targetUserIds: string[] = [];
 
     if (input.target === 'specific') {
-      if (!input.specificUserId) {
+      // Support both single user (legacy) and multiple users
+      const userIds = input.specificUserIds ?? (input.specificUserId ? [input.specificUserId] : []);
+
+      if (userIds.length === 0) {
         return NextResponse.json(
-          { success: false, message: 'User ID required for specific targeting' },
+          { success: false, message: 'At least one user ID required for specific targeting' },
           { status: 400 }
         );
       }
-      // Validate UUID format
-      if (
-        !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-          input.specificUserId
-        )
-      ) {
+
+      if (userIds.length > 100) {
         return NextResponse.json(
-          { success: false, message: 'Invalid User ID format' },
+          { success: false, message: 'Maximum 100 users per broadcast' },
           { status: 400 }
         );
       }
-      targetUserIds = [input.specificUserId];
+
+      // Validate all UUID formats
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      for (const id of userIds) {
+        if (!uuidRegex.test(id)) {
+          return NextResponse.json(
+            { success: false, message: `Invalid User ID format: ${id}` },
+            { status: 400 }
+          );
+        }
+      }
+
+      targetUserIds = userIds;
     } else {
       // Use hardened admin RPC functions (service_role only)
       const excludeUserId = input.includeSelf ? null : userId;
