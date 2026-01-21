@@ -129,6 +129,9 @@ struct ShiftsCalendarView: View {
     /// Preview dates during drag (before committing)
     @State private var dragPreviewDates: Set<String> = []
 
+    /// Track the last displayed earnings amount for smooth animation
+    @State private var lastDisplayedEarnings: Double = 0
+
     // Haptic feedback for UI interactions (non-gesture haptics)
     private let toggleHaptic = UIImpactFeedbackGenerator(style: .light)
     private let warningHaptic = UINotificationFeedbackGenerator()
@@ -284,9 +287,29 @@ struct ShiftsCalendarView: View {
         let displayAmount = showTax ? displayTotals.net : displayTotals.gross
 
         VStack(alignment: .trailing, spacing: 2) {
-            Text(displayTotals.gross == 0 ? "—" : formatCurrency(displayAmount))
+            if displayTotals.gross == 0 {
+                Text("—")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundColor(.tidexTextPrimary)
+            } else {
+                CurrencyCountUpText(
+                    amount: displayAmount,
+                    animateOnAppear: false,
+                    animateFrom: lastDisplayedEarnings > 0 ? lastDisplayedEarnings : nil
+                )
                 .font(.system(size: 17, weight: .semibold))
                 .foregroundColor(.tidexTextPrimary)
+                .onChange(of: displayAmount) { _, newValue in
+                    // Track the displayed amount for animating FROM on view recreation
+                    lastDisplayedEarnings = newValue
+                }
+                .onAppear {
+                    // Initialize on first appear
+                    if lastDisplayedEarnings == 0 {
+                        lastDisplayedEarnings = displayAmount
+                    }
+                }
+            }
 
             if showTax && displayTotals.gross > 0 {
                 Text(formatCurrency(displayTotals.gross))
