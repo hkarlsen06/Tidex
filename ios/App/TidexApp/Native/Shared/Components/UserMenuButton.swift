@@ -140,7 +140,7 @@ struct UserMenuButton: View {
             // Profile picture or initial
             profileImage
         }
-        .padding(.leading, 12)
+        .padding(.leading, 6)
         .padding(.trailing, 4)
         .padding(.vertical, 4)
         // Fixed height prevents toolbar layout shifts on iPad

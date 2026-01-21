@@ -230,42 +230,42 @@ struct ShiftHomeWidgetView: View {
 
     /// Layout for today, tomorrow, or past shifts with time block and salute
     private var todayTomorrowLayout: some View {
+        // All content in one width-matched centered group
         VStack(spacing: 0) {
-            // TOP ROW: Logo on left, Date + Earnings stacked on right
-            HStack(alignment: .top) {
-                // Logo - two lines high to match date + earnings
-                LogoWatermark(useTint: useTintedLogo)
-                    .frame(width: 28, height: 32)
-
-                Spacer()
-
-                // Date and earnings stacked on the right
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text(entry.shiftDate)
-                        .font(.system(size: 14, weight: .semibold, design: .default))
-                        .foregroundColor(entry.hasShift ? accentColor : mutedTextColor)
-                        .widgetAccentable(entry.hasShift)
-                        .lineLimit(1)
-
-                    Text(entry.netEarnings)
-                        .font(.system(size: 14, weight: .semibold, design: .default))
-                        .foregroundColor(secondaryTextColor)
-                        .lineLimit(1)
-                }
-            }
+            // TOP: Header row
+            topHeaderRow
 
             Spacer()
 
-            // MIDDLE: Time block (vertically centered as a group)
+            // MIDDLE: Times
             timeBlockView
 
             Spacer()
 
-            // BOTTOM: Time range for past/ended shifts, salute for active shifts
+            // BOTTOM: Salute or time range
             bottomTextView
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 18)
+        .padding(.top, 14)
+        .padding(.bottom, 14)
+    }
+
+    /// Top header row: Date and Earnings centered
+    private var topHeaderRow: some View {
+        HStack(spacing: 6) {
+            // Date
+            Text(entry.shiftDate)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundColor(entry.hasShift ? accentColor : mutedTextColor)
+                .widgetAccentable(entry.hasShift)
+                .lineLimit(1)
+
+            // Earnings
+            Text(entry.netEarnings)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundColor(secondaryTextColor)
+                .lineLimit(1)
+        }
     }
 
     /// Bottom text: shows time range for past/ended shifts, salute for active shifts
@@ -279,62 +279,49 @@ struct ShiftHomeWidgetView: View {
                     .lineLimit(1)
             } else {
                 // Show motivational salute for active/upcoming shifts
+                // Allow wrapping to 2 lines for long salutes
                 Text(entry.salute)
-                    .font(.system(size: 17, weight: .bold, design: .default))
+                    .font(.system(size: 15, weight: .bold, design: .default))
                     .italic()
                     .foregroundColor(entry.hasShift ? accentColor : mutedTextColor)
                     .widgetAccentable(entry.hasShift)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.6)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.center)
+                    .minimumScaleFactor(0.8)
             }
         }
-        .frame(maxWidth: .infinity)
-        .frame(maxHeight: 24)
     }
 
-    /// Time block: primary time (large) + secondary time (small) stacked vertically
-    /// Before shift: Start (large) over End (small)
-    /// After shift starts: End (large) over Start (small)
-    /// After shift ends today: "Ferdig" / "Done" (large)
+    /// Time block: start and end times in equal sizes
+    /// Primary time (start before shift, end after shift starts) is emphasized via weight/color
+    /// After shift ends today: "Ferdig" / "Done"
     /// Past shift (previous day): "X dager siden" countdown
     private var timeBlockView: some View {
-        VStack(spacing: 4) {
+        VStack(spacing: -6) {
             if entry.layoutState == .pastShift {
                 // Past shift from previous day - show days ago countdown
                 pastShiftCountupView
             } else if entry.shiftHasEnded {
                 // Shift ended today - show "Ferdig" / "Done"
                 Text(entry.locale == "no" ? "Ferdig" : "Done")
-                    .font(.system(size: 46, weight: .bold, design: .default))
+                    .font(.system(size: 36, weight: .bold, design: .default))
                     .foregroundColor(entry.hasShift ? primaryTextColor : mutedTextColor)
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
             } else {
-                // Secondary time (small) - shown on top after shift starts
-                if entry.shiftHasStarted {
-                    Text(secondaryTime)
-                        .font(.system(size: 14, weight: .medium, design: .default))
-                        .monospacedDigit()
-                        .foregroundColor(secondaryTextColor)
-                        .lineLimit(1)
-                }
-
-                // Primary time (large)
-                Text(primaryTime)
-                    .font(.system(size: 46, weight: .bold, design: .default))
+                // Start time - emphasized when shift hasn't started
+                Text(entry.startTime)
+                    .font(.system(size: 32, weight: entry.shiftHasStarted ? .medium : .bold, design: .default))
                     .monospacedDigit()
-                    .foregroundColor(entry.hasShift ? primaryTextColor : mutedTextColor)
+                    .foregroundColor(entry.shiftHasStarted ? secondaryTextColor : (entry.hasShift ? primaryTextColor : mutedTextColor))
                     .lineLimit(1)
-                    .minimumScaleFactor(0.7)
 
-                // Secondary time (small) - shown below before shift starts
-                if !entry.shiftHasStarted {
-                    Text(secondaryTime)
-                        .font(.system(size: 14, weight: .medium, design: .default))
-                        .monospacedDigit()
-                        .foregroundColor(secondaryTextColor)
-                        .lineLimit(1)
-                }
+                // End time - emphasized after shift starts
+                Text(entry.endTime)
+                    .font(.system(size: 32, weight: entry.shiftHasStarted ? .bold : .medium, design: .default))
+                    .monospacedDigit()
+                    .foregroundColor(entry.shiftHasStarted ? (entry.hasShift ? primaryTextColor : mutedTextColor) : secondaryTextColor)
+                    .lineLimit(1)
             }
         }
     }
@@ -347,21 +334,22 @@ struct ShiftHomeWidgetView: View {
             : (daysAgo == 1 ? "day" : "days")
         let agoLabel = entry.locale == "no" ? "siden" : "ago"
 
-        return HStack(alignment: .center, spacing: 8) {
+        return HStack(alignment: .center, spacing: 4) {
             Text("\(daysAgo)")
-                .font(.system(size: 46, weight: .bold, design: .default))
+                .font(.system(size: 72, weight: .bold, design: .default))
                 .monospacedDigit()
                 .foregroundColor(entry.hasShift ? primaryTextColor : mutedTextColor)
                 .lineLimit(1)
+                .minimumScaleFactor(0.5)
 
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: -4) {
                 Text(daysLabel)
-                    .font(.system(size: 14, weight: .semibold, design: .default))
+                    .font(.system(size: 24, weight: .semibold, design: .default))
                     .foregroundColor(entry.hasShift ? primaryTextColor : mutedTextColor)
                     .lineLimit(1)
 
                 Text(agoLabel)
-                    .font(.system(size: 14, weight: .semibold, design: .default))
+                    .font(.system(size: 24, weight: .semibold, design: .default))
                     .foregroundColor(entry.hasShift ? primaryTextColor : mutedTextColor)
                     .lineLimit(1)
             }
@@ -372,29 +360,10 @@ struct ShiftHomeWidgetView: View {
 
     /// Layout for shifts more than 1 day away
     private var countdownLayout: some View {
+        // All content in one width-matched centered group
         VStack(spacing: 0) {
-            // TOP ROW: Logo on left, Date + Earnings stacked on right
-            HStack(alignment: .top) {
-                // Logo - two lines high to match date + earnings
-                LogoWatermark(useTint: useTintedLogo)
-                    .frame(width: 28, height: 32)
-
-                Spacer()
-
-                // Date and earnings stacked on the right
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text(entry.shiftDate)
-                        .font(.system(size: 14, weight: .semibold, design: .default))
-                        .foregroundColor(entry.hasShift ? accentColor : mutedTextColor)
-                        .widgetAccentable(entry.hasShift)
-                        .lineLimit(1)
-
-                    Text(entry.netEarnings)
-                        .font(.system(size: 14, weight: .semibold, design: .default))
-                        .foregroundColor(secondaryTextColor)
-                        .lineLimit(1)
-                }
-            }
+            // TOP: Header row
+            topHeaderRow
 
             Spacer()
 
@@ -403,36 +372,38 @@ struct ShiftHomeWidgetView: View {
 
             Spacer()
 
-            // BOTTOM: Centered time range
+            // BOTTOM: Time range
             Text("\(entry.startTime) – \(entry.endTime)")
                 .font(.system(size: 14, weight: .medium, design: .default))
                 .foregroundColor(secondaryTextColor)
                 .lineLimit(1)
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 18)
+        .padding(.top, 14)
+        .padding(.bottom, 14)
     }
 
     /// Countdown hero view: large number on left, two stacked lines on right
     /// The number and labels are horizontally centered as a group
     private var countdownHeroView: some View {
-        HStack(alignment: .center, spacing: 8) {
+        HStack(alignment: .center, spacing: 4) {
             // Large countdown number
             Text("\(entry.daysRemaining)")
-                .font(.system(size: 46, weight: .bold, design: .default))
+                .font(.system(size: 72, weight: .bold, design: .default))
                 .monospacedDigit()
                 .foregroundColor(primaryTextColor)
                 .lineLimit(1)
+                .minimumScaleFactor(0.5)
 
             // Two stacked text lines: "days" / "dager" on top, "left" / "igjen" on bottom
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: -4) {
                 Text(daysLabel)
-                    .font(.system(size: 14, weight: .semibold, design: .default))
+                    .font(.system(size: 24, weight: .semibold, design: .default))
                     .foregroundColor(primaryTextColor)
                     .lineLimit(1)
 
                 Text(leftLabel)
-                    .font(.system(size: 14, weight: .semibold, design: .default))
+                    .font(.system(size: 24, weight: .semibold, design: .default))
                     .foregroundColor(primaryTextColor)
                     .lineLimit(1)
             }
