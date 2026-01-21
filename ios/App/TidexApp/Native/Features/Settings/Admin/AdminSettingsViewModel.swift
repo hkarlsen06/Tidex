@@ -324,8 +324,8 @@ final class AdminSettingsViewModel: ObservableObject {
 
     // Specific user targeting
     @Published var notificationUserSearch: String = ""
-    @Published var notificationUserSearchResults: [AdminUser] = []
-    @Published var notificationSelectedUsers: [AdminUser] = []
+    @Published var notificationUserSearchResults: [AdminUserItem] = []
+    @Published var notificationSelectedUsers: [AdminUserItem] = []
     @Published var isSearchingNotificationUsers: Bool = false
 
     // MARK: - Private Properties
@@ -697,7 +697,7 @@ final class AdminSettingsViewModel: ObservableObject {
         }
     }
 
-    func selectNotificationUser(_ user: AdminUser) {
+    func selectNotificationUser(_ user: AdminUserItem) {
         guard !notificationSelectedUsers.contains(where: { $0.id == user.id }) else { return }
         notificationSelectedUsers.append(user)
         notificationUserSearchResults.removeAll { $0.id == user.id }
@@ -705,7 +705,7 @@ final class AdminSettingsViewModel: ObservableObject {
         previewCount = notificationSelectedUsers.count
     }
 
-    func deselectNotificationUser(_ user: AdminUser) {
+    func deselectNotificationUser(_ user: AdminUserItem) {
         notificationSelectedUsers.removeAll { $0.id == user.id }
         previewCount = notificationSelectedUsers.count
     }
