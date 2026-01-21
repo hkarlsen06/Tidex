@@ -87,7 +87,7 @@ final class ProfileSettingsViewModel: ObservableObject {
             // Fetch fresh user data to get identities (not available in JWT)
             let freshUser = try await supabase.auth.user()
 
-            userId = freshUser.id.uuidString.lowercased()
+            userId = freshUser.normalizedId
 
             // Extract display name from user metadata
             if let fullName = freshUser.userMetadata["full_name"]?.value as? String, !fullName.isEmpty {

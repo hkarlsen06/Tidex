@@ -582,7 +582,7 @@ final class SharingService: ObservableObject {
     /// Owner can delete directly via Supabase (RLS allows this)
     func removeShare(recipientId: String) async throws {
         let session = try await supabase.auth.session
-        let userId = session.user.id.uuidString
+        let userId = session.normalizedUserId
 
         logger.info("Removing share for recipient \(recipientId)")
 
@@ -600,7 +600,7 @@ final class SharingService: ObservableObject {
     /// Viewer can delete directly via Supabase (RLS allows this)
     func removeSharer(ownerId: String) async throws {
         let session = try await supabase.auth.session
-        let userId = session.user.id.uuidString
+        let userId = session.normalizedUserId
 
         logger.info("Removing sharer \(ownerId) from friends list")
 
@@ -618,7 +618,7 @@ final class SharingService: ObservableObject {
     /// Owner can update show_earnings directly via Supabase (RLS allows this)
     func toggleShareEarnings(recipientId: String, showEarnings: Bool) async throws {
         let session = try await supabase.auth.session
-        let userId = session.user.id.uuidString
+        let userId = session.normalizedUserId
 
         logger.info("Toggling earnings visibility for recipient \(recipientId) to \(showEarnings)")
 
@@ -636,7 +636,7 @@ final class SharingService: ObservableObject {
     /// Viewer can update blocked directly via Supabase (RLS allows this)
     func blockSharer(ownerId: String) async throws {
         let session = try await supabase.auth.session
-        let userId = session.user.id.uuidString
+        let userId = session.normalizedUserId
 
         logger.info("Blocking sharer \(ownerId)")
 
@@ -654,7 +654,7 @@ final class SharingService: ObservableObject {
     /// Viewer can update blocked directly via Supabase (RLS allows this)
     func unblockSharer(ownerId: String) async throws {
         let session = try await supabase.auth.session
-        let userId = session.user.id.uuidString
+        let userId = session.normalizedUserId
 
         logger.info("Unblocking sharer \(ownerId)")
 
@@ -681,7 +681,7 @@ final class SharingService: ObservableObject {
     /// Viewer can update muted directly via Supabase (RLS allows this)
     func toggleSharerMuted(ownerId: String, muted: Bool) async throws {
         let session = try await supabase.auth.session
-        let userId = session.user.id.uuidString
+        let userId = session.normalizedUserId
 
         logger.info("Toggling muted status for sharer \(ownerId) to \(muted)")
 

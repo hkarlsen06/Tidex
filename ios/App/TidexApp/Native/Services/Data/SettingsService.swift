@@ -58,6 +58,6 @@ final class SettingsService: ObservableObject {
     /// Get current authenticated user ID
     private func getCurrentUserId() async throws -> String? {
         let session = try await supabase.auth.session
-        return session.user.id.uuidString.lowercased()
+        return session.normalizedUserId
     }
 }

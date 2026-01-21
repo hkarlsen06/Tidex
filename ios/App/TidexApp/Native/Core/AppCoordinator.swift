@@ -304,7 +304,7 @@ final class AppCoordinator: ObservableObject {
             let user = session.user
 
             // Store user ID
-            let currentUserId = user.id.uuidString.lowercased()
+            let currentUserId = user.normalizedId
             self.userId = currentUserId
 
             // Check if onboarding was already completed (from raw_user_meta_data.finishedOnboarding)
@@ -414,7 +414,7 @@ final class AppCoordinator: ObservableObject {
         Task {
             do {
                 let session = try await supabase.auth.session
-                let userId = session.user.id.uuidString.lowercased()
+                let userId = session.normalizedUserId
 
                 if let appDelegate = UIApplication.shared.delegate as? AppDelegate {
                     Task {

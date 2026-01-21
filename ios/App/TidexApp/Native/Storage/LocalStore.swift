@@ -207,7 +207,7 @@ actor LocalStoreActor {
         endTime: String,
         customSupplements: CustomSupplementsData?
     ) throws -> ShiftRow {
-        let id = UUID().uuidString.lowercased()
+        let id = UUID().lowercasedString
         let now = Date()
 
         let supplementsData = customSupplements.flatMap { try? canonicalJSONEncoder.encode($0) }
@@ -458,7 +458,7 @@ actor LocalStoreActor {
         exclusions: [String]?,
         dateSpecificSupplements: [String: CustomSupplementsData]?
     ) throws -> RecurringShiftRow {
-        let id = UUID().uuidString.lowercased()
+        let id = UUID().lowercasedString
         let now = Date()
 
         let selectedDaysData = (try? canonicalJSONEncoder.encode(selectedDays)) ?? Data()
@@ -779,7 +779,7 @@ actor LocalStoreActor {
         breakThresholdHours: Double?,
         breakDeductionMinutes: Int?
     ) throws -> WageSnapshot {
-        let id = UUID().uuidString.lowercased()
+        let id = UUID().lowercasedString
         let now = Date()
 
         let supplementsData = (try? canonicalJSONEncoder.encode(supplements)) ?? Data()
@@ -1185,7 +1185,10 @@ actor LocalStoreActor {
             newDirtyFields.insert(.payrollDay)
         }
 
-        if let newTheme = theme, newTheme != localSettings.theme {
+        // Theme: Always mark dirty when explicitly set, even if value appears unchanged
+        // This handles the case where UserDefaults cache differs from SwiftData
+        // (e.g., user changed theme but sync failed, SwiftData has old server value)
+        if let newTheme = theme {
             localSettings.theme = newTheme
             newDirtyFields.insert(.theme)
         }
@@ -1203,6 +1206,7 @@ actor LocalStoreActor {
         localSettings.dirtyFieldKeys = newDirtyFields
         localSettings.localUpdatedAt = now
 
+        // Mark as dirty if we have dirty fields and status allows it
         if !newDirtyFields.isEmpty && localSettings.syncStatus == .clean {
             localSettings.syncStatus = .dirty
         }

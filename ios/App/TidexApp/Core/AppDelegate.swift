@@ -405,7 +405,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         do {
             // Get current user session for auth and user ID
             let session = try await supabase.auth.session
-            let userId = session.user.id.uuidString.lowercased()
+            let userId = session.normalizedUserId
             let defaults = UserDefaults.standard
 
             // Skip silently if already registered for this user

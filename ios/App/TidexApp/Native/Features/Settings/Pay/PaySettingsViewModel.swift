@@ -89,7 +89,7 @@ final class PaySettingsViewModel: ObservableObject {
 
         do {
             let session = try await supabase.auth.session
-            userId = session.user.id.uuidString.lowercased()
+            userId = session.normalizedUserId
 
             guard let userId = userId else {
                 throw PaySettingsError.notAuthenticated

@@ -348,7 +348,7 @@ final class AdminSettingsViewModel: ObservableObject {
     func loadInitialData() async {
         do {
             let session = try await supabase.auth.session
-            isSuperAdmin = session.user.id.uuidString == SUPERADMIN_USER_ID
+            isSuperAdmin = session.normalizedUserId == SUPERADMIN_USER_ID
         } catch {
             logger.error("Failed to check superadmin status: \(error.localizedDescription)")
         }
