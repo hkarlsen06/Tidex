@@ -220,6 +220,21 @@ enum AuthStrings {
         "placeholder.statsDescription": "Statistikken din vises her",
         "placeholder.sharingDescription": "Del vakter med venner her",
 
+        // Stats
+        "stats.monthlyEarnings": "Inntjening denne m\u{00E5}neden",
+        "stats.afterTax": "Etter skatt",
+        "stats.beforeTax": "F\u{00F8}r skatt",
+        "stats.fromPreviousMonth": "fra forrige m\u{00E5}ned",
+        "stats.hours": "Timer",
+        "stats.shifts": "Vakter",
+        "stats.monthlyGoal.title": "M\u{00E5}nedsmål",
+        "stats.monthlyGoal.goalLabel": "M\u{00E5}l",
+        "stats.monthlyGoal.goalReached": "M\u{00E5}l n\u{00E5}dd!",
+        "stats.monthlyGoal.overTarget": "+{amount} over",
+        "stats.monthlyGoal.remaining": "{amount} gjenstår",
+        "stats.monthlyGoal.notEnabled": "Sett et m\u{00E5}nedlig inntektsm\u{00E5}l i Innstillinger for \u{00E5} f\u{00F8}lge fremgangen din.",
+        "stats.errors.couldNotUpdate": "Kunne ikke oppdatere statistikken. Pr\u{00F8}v igjen senere.",
+
         // User Menu
         "userMenu.settings": "Innstillinger",
         "userMenu.logout": "Logg ut",
@@ -1129,6 +1144,21 @@ enum AuthStrings {
         "placeholder.addShiftDescription": "Add a new shift here",
         "placeholder.statsDescription": "Your statistics will appear here",
         "placeholder.sharingDescription": "Share shifts with friends here",
+
+        // Stats
+        "stats.monthlyEarnings": "Earnings this month",
+        "stats.afterTax": "After tax",
+        "stats.beforeTax": "Before tax",
+        "stats.fromPreviousMonth": "from last month",
+        "stats.hours": "Hours",
+        "stats.shifts": "Shifts",
+        "stats.monthlyGoal.title": "Monthly goal",
+        "stats.monthlyGoal.goalLabel": "Goal",
+        "stats.monthlyGoal.goalReached": "Goal reached!",
+        "stats.monthlyGoal.overTarget": "+{amount} over",
+        "stats.monthlyGoal.remaining": "{amount} remaining",
+        "stats.monthlyGoal.notEnabled": "Set a monthly earnings goal in Settings to track your progress.",
+        "stats.errors.couldNotUpdate": "Could not update statistics. Please try again later.",
 
         // User Menu
         "userMenu.settings": "Settings",

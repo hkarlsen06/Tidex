@@ -42,6 +42,13 @@
 		114F0ECE2F20429A00B587F0 /* FeedbackSettingsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0ECB2F20429A00B587F0 /* FeedbackSettingsViewModel.swift */; };
 		114F0ED22F20487F00B587F0 /* AdminSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0ECF2F20487F00B587F0 /* AdminSettingsView.swift */; };
 		114F0ED32F20487F00B587F0 /* AdminSettingsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0ED02F20487F00B587F0 /* AdminSettingsViewModel.swift */; };
+		114F0EDF2F205B3B00B587F0 /* MonthlyGoalCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0ED52F205B3B00B587F0 /* MonthlyGoalCard.swift */; };
+		114F0EE02F205B3B00B587F0 /* StatsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0EDA2F205B3B00B587F0 /* StatsService.swift */; };
+		114F0EE12F205B3B00B587F0 /* StatsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0EDC2F205B3B00B587F0 /* StatsView.swift */; };
+		114F0EE22F205B3B00B587F0 /* StatsData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0ED82F205B3B00B587F0 /* StatsData.swift */; };
+		114F0EE32F205B3B00B587F0 /* SmallStatCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0ED62F205B3B00B587F0 /* SmallStatCard.swift */; };
+		114F0EE42F205B3B00B587F0 /* StatsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0EDD2F205B3B00B587F0 /* StatsViewModel.swift */; };
+		114F0EE52F205B3B00B587F0 /* MonthlyEarningsCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0ED42F205B3B00B587F0 /* MonthlyEarningsCard.swift */; };
 		1152D0CB2F01E2A7002FD5ED /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1152D0CA2F01E2A7002FD5ED /* StoreKit.framework */; };
 		11923C192F16B94B0076AFD6 /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = 11923C182F16B94B0076AFD6 /* Auth */; };
 		11923C1B2F16B94B0076AFD6 /* Functions in Frameworks */ = {isa = PBXBuildFile; productRef = 11923C1A2F16B94B0076AFD6 /* Functions */; };
@@ -296,6 +303,13 @@
 		114F0ECB2F20429A00B587F0 /* FeedbackSettingsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedbackSettingsViewModel.swift; sourceTree = "<group>"; };
 		114F0ECF2F20487F00B587F0 /* AdminSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminSettingsView.swift; sourceTree = "<group>"; };
 		114F0ED02F20487F00B587F0 /* AdminSettingsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminSettingsViewModel.swift; sourceTree = "<group>"; };
+		114F0ED42F205B3B00B587F0 /* MonthlyEarningsCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthlyEarningsCard.swift; sourceTree = "<group>"; };
+		114F0ED52F205B3B00B587F0 /* MonthlyGoalCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthlyGoalCard.swift; sourceTree = "<group>"; };
+		114F0ED62F205B3B00B587F0 /* SmallStatCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmallStatCard.swift; sourceTree = "<group>"; };
+		114F0ED82F205B3B00B587F0 /* StatsData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsData.swift; sourceTree = "<group>"; };
+		114F0EDA2F205B3B00B587F0 /* StatsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsService.swift; sourceTree = "<group>"; };
+		114F0EDC2F205B3B00B587F0 /* StatsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsView.swift; sourceTree = "<group>"; };
+		114F0EDD2F205B3B00B587F0 /* StatsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsViewModel.swift; sourceTree = "<group>"; };
 		1152D0C82F01BB9B002FD5ED /* App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = App.entitlements; sourceTree = "<group>"; };
 		1152D0CA2F01E2A7002FD5ED /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 		119D1CB72F16E46300EC7072 /* AppCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppCoordinator.swift; sourceTree = "<group>"; };
@@ -663,6 +677,44 @@
 			path = Admin;
 			sourceTree = "<group>";
 		};
+		114F0ED72F205B3B00B587F0 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				114F0ED42F205B3B00B587F0 /* MonthlyEarningsCard.swift */,
+				114F0ED52F205B3B00B587F0 /* MonthlyGoalCard.swift */,
+				114F0ED62F205B3B00B587F0 /* SmallStatCard.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		114F0ED92F205B3B00B587F0 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				114F0ED82F205B3B00B587F0 /* StatsData.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		114F0EDB2F205B3B00B587F0 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				114F0EDA2F205B3B00B587F0 /* StatsService.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		114F0EDE2F205B3B00B587F0 /* Stats */ = {
+			isa = PBXGroup;
+			children = (
+				114F0ED72F205B3B00B587F0 /* Components */,
+				114F0ED92F205B3B00B587F0 /* Models */,
+				114F0EDB2F205B3B00B587F0 /* Services */,
+				114F0EDC2F205B3B00B587F0 /* StatsView.swift */,
+				114F0EDD2F205B3B00B587F0 /* StatsViewModel.swift */,
+			);
+			path = Stats;
+			sourceTree = "<group>";
+		};
 		1152D0C92F01E2A7002FD5ED /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
@@ -762,6 +814,7 @@
 		119D1CCC2F16E46300EC7072 /* Features */ = {
 			isa = PBXGroup;
 			children = (
+				114F0EDE2F205B3B00B587F0 /* Stats */,
 				11A1980F2F20053A0030E524 /* Settings */,
 				11A197152F1D7B400030E524 /* Sharing */,
 				11A196692F1B00B50030E524 /* Shifts */,
@@ -1519,6 +1572,13 @@
 				119D1CF02F16E46300EC7072 /* EmailPasswordForm.swift in Sources */,
 				119D1CF12F16E46300EC7072 /* LoginViewModel.swift in Sources */,
 				11A196502F1AE8890030E524 /* StoreKitManager.swift in Sources */,
+				114F0EDF2F205B3B00B587F0 /* MonthlyGoalCard.swift in Sources */,
+				114F0EE02F205B3B00B587F0 /* StatsService.swift in Sources */,
+				114F0EE12F205B3B00B587F0 /* StatsView.swift in Sources */,
+				114F0EE22F205B3B00B587F0 /* StatsData.swift in Sources */,
+				114F0EE32F205B3B00B587F0 /* SmallStatCard.swift in Sources */,
+				114F0EE42F205B3B00B587F0 /* StatsViewModel.swift in Sources */,
+				114F0EE52F205B3B00B587F0 /* MonthlyEarningsCard.swift in Sources */,
 				11A196172F1AA3450030E524 /* MFASetupScreen.swift in Sources */,
 				11A1961D2F1AA3550030E524 /* OnboardingSaveManager.swift in Sources */,
 				11A196182F1AA3450030E524 /* SettingsAccordionScreen.swift in Sources */,
