@@ -279,8 +279,8 @@ struct SharingView: View {
                 SharedShiftsListView(
                     sharer: sharer,
                     shifts: viewModel.sharedShifts,
-                    year: viewModel.displayYear,
-                    month: viewModel.displayMonth,
+                    year: viewModel.committedYear,
+                    month: viewModel.committedMonth,
                     isLoading: viewModel.isLoadingShifts
                 )
                 .frame(maxWidth: AdaptiveMaxWidth.tabContent)

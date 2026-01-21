@@ -68,12 +68,40 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
     /// Whether shift previews are being loaded
     @Published private(set) var isLoadingPreviews = false
 
+    // MARK: - Committed Display State
+    // These values only update AFTER shift data is ready, ensuring atomic rendering
+    // The calendar uses these to avoid showing the new month structure before data arrives
+
+    /// The year that is actually ready to display (data loaded)
+    @Published private(set) var committedYear: Int
+
+    /// The month that is actually ready to display (data loaded)
+    @Published private(set) var committedMonth: Int
+
     // MARK: - Month Navigation (MonthNavigable)
 
     var displayYear: Int { monthContext.displayYear }
     var displayMonth: Int { monthContext.displayMonth }
-    var isCurrentMonth: Bool { monthContext.isCurrentMonth }
-    var displayMonthName: String { monthContext.displayMonthName }
+
+    /// Whether viewing the current (real) month (based on committed state)
+    var isCurrentMonth: Bool {
+        let current = Date.currentYearMonth()
+        return committedYear == current.year && committedMonth == current.month
+    }
+
+    /// Computed month name for immediate display (uses committed state for stability)
+    var displayMonthName: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMMM"
+        var components = DateComponents()
+        components.year = committedYear
+        components.month = committedMonth
+        components.day = 1
+        if let date = Calendar.current.date(from: components) {
+            return formatter.string(from: date)
+        }
+        return ""
+    }
 
     /// Required by MonthNavigable protocol
     var isLoading: Bool { isLoadingSharers || isLoadingShifts }
@@ -95,6 +123,11 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
         self.sharingService = sharingService ?? SharingService.shared
         self.sharedShiftsRepository = sharedShiftsRepository ?? SharedShiftsRepository.shared
         self.monthContext = monthContext ?? SharedMonthContext.shared
+
+        // Initialize committed state to current month context values
+        // These will be updated atomically with shift data
+        self.committedYear = self.monthContext.displayYear
+        self.committedMonth = self.monthContext.displayMonth
 
         // Initialize tracking
         self.lastObservedYear = self.monthContext.displayYear
@@ -309,6 +342,7 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
     }
 
     /// Load shifts for the selected sharer and current month
+    /// Commits display state (year/month) atomically with shift data
     func loadShiftsForSelectedSharer() async {
         guard let sharer = selectedSharer else { return }
 
@@ -332,7 +366,10 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
 
             if !cachedShifts.isEmpty {
                 // Cache hit - show cached data immediately, no loading flash
+                // ATOMIC UPDATE: Set shifts and committed state together
                 sharedShifts = cachedShifts
+                committedYear = year
+                committedMonth = month
                 lastCacheTime = sharedShiftsRepository.getLastCacheTime(
                     ownerId: sharer.id,
                     viewerId: userId,
@@ -341,9 +378,8 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
                 )
                 // Don't set isLoadingShifts - we have data to show
             } else {
-                // Cache miss - clear old data and show loading state
-                // This prevents showing an empty calendar with old month's data
-                sharedShifts = []
+                // Cache miss - DON'T clear shifts or update committed state
+                // Keep showing previous month until new data is ready
                 isLoadingShifts = true
             }
 
@@ -356,7 +392,12 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
 
             // Convert to ShiftWithComputations
             let freshShifts = response.shifts.map { $0.toShiftWithComputations() }
+
+            // ATOMIC UPDATE: Set shifts and committed state together
+            // This ensures the calendar structure and data update in the same render pass
             sharedShifts = freshShifts
+            committedYear = year
+            committedMonth = month
             lastCacheTime = Date()
 
             // Save to cache
