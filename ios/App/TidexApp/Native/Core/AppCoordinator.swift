@@ -47,7 +47,7 @@ final class AppCoordinator: ObservableObject {
     /// Supported deep link types
     enum DeepLink: Equatable {
         case shifts(dates: [String]?, action: ShiftDeepLinkAction) // Navigate to shifts view, optionally filtering dates
-        case sharing(sharerId: String?)         // Navigate to sharing tab, optionally selecting a sharer
+        case sharing(sharerId: String?, highlightDates: [String]?) // Navigate to sharing tab, select sharer, highlight specific dates
         case sharingManage(highlightUserId: String?) // Open sharing management modal, optionally highlighting a user
     }
 
@@ -539,9 +539,11 @@ final class AppCoordinator: ObservableObject {
                 let highlightUserId = queryItems.first(where: { $0.name == "highlight" })?.value
                 pendingDeepLink = .sharingManage(highlightUserId: highlightUserId)
             } else {
-                // Navigate to sharer
+                // Navigate to sharer with optional date highlighting
                 let sharerId = queryItems.first(where: { $0.name == "user" })?.value
-                pendingDeepLink = .sharing(sharerId: sharerId)
+                let datesString = queryItems.first(where: { $0.name == "dates" })?.value
+                let dates = datesString?.components(separatedBy: ",").map { $0.trimmingCharacters(in: .whitespaces) }
+                pendingDeepLink = .sharing(sharerId: sharerId, highlightDates: dates)
             }
 
         case "shifts":

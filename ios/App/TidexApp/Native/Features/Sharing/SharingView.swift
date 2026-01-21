@@ -22,9 +22,15 @@ struct SharingView: View {
     /// User ID to highlight in the manage sheet (from deep link)
     @State private var highlightUserId: String?
 
+    /// Dates to highlight in the calendar (from shared shift notification)
+    @State private var highlightDates: Set<String> = []
+
     /// Timer for updating relative sync time
     @State private var currentTime = Date()
     private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+
+    /// Duration to show highlight before auto-clearing (3 seconds)
+    private static let highlightDuration: TimeInterval = 3.0
 
     // iPad detection - hide logo on iPad
     private var isIPad: Bool {
@@ -160,7 +166,7 @@ struct SharingView: View {
         guard let deepLink = deepLink else { return }
 
         switch deepLink {
-        case .sharing(let sharerId):
+        case .sharing(let sharerId, let dates):
             if let sharerId = sharerId {
                 // Wait for sharers to load, then select the sharer
                 Task {
@@ -174,6 +180,28 @@ struct SharingView: View {
                     if let sharer = viewModel.sharers.first(where: { $0.id == sharerId }) {
                         withAnimation(.easeInOut(duration: 0.2)) {
                             viewModel.selectSharer(sharer)
+                        }
+
+                        // If dates were provided, navigate to the correct month and set highlight
+                        if let dates = dates, let firstDate = dates.first,
+                           let date = Date.fromISODateString(firstDate) {
+                            let calendar = Calendar.current
+                            let components = calendar.dateComponents([.year, .month], from: date)
+                            if let year = components.year, let month = components.month {
+                                // Navigate to the month containing the highlighted shifts
+                                SharedMonthContext.shared.navigateTo(year: year, month: month)
+                            }
+
+                            // Set highlight dates for the calendar
+                            highlightDates = Set(dates)
+
+                            // Clear highlight after a delay
+                            Task {
+                                try? await Task.sleep(nanoseconds: UInt64(Self.highlightDuration * 1_000_000_000))
+                                withAnimation(.easeOut(duration: 0.3)) {
+                                    highlightDates = []
+                                }
+                            }
                         }
                     }
                 }
@@ -281,7 +309,8 @@ struct SharingView: View {
                     shifts: viewModel.sharedShifts,
                     year: viewModel.committedYear,
                     month: viewModel.committedMonth,
-                    isLoading: viewModel.isLoadingShifts
+                    isLoading: viewModel.isLoadingShifts,
+                    highlightDates: highlightDates
                 )
                 .frame(maxWidth: AdaptiveMaxWidth.tabContent)
                 .frame(maxWidth: .infinity)
