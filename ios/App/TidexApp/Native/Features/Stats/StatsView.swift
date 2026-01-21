@@ -126,6 +126,13 @@ struct StatsView: View {
                     MonthlyGoalEmptyCard()
                 }
 
+                // Monthly Progress Chart
+                if !stats.thisMonthCumulative.isEmpty {
+                    MonthlyProgressChart(data: stats.thisMonthCumulative)
+                } else {
+                    MonthlyProgressChartEmpty()
+                }
+
                 // Bottom spacing for floating month picker
                 Spacer()
                     .frame(height: MonthPickerLayout.height + MonthPickerLayout.bottomPadding + 24)
@@ -155,6 +162,9 @@ struct StatsView: View {
 
                 // Skeleton for Monthly Goal Card
                 skeletonCard(height: 140)
+
+                // Skeleton for Monthly Progress Chart
+                skeletonCard(height: 280)
 
                 // Bottom spacing for floating month picker
                 Spacer()
