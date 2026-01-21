@@ -111,7 +111,6 @@ final class NotificationPreferencesRepository: ObservableObject {
         reminderMinutes: [Int]? = nil,
         sharedShiftsEnabled: Bool? = nil
     ) -> LocalNotificationPreferences? {
-        let context = localStore.mainContext
         let preferences = getOrCreatePreferences(for: userId)
 
         var hasChanges = false
@@ -133,6 +132,12 @@ final class NotificationPreferencesRepository: ObservableObject {
 
         if hasChanges {
             preferences.markDirty()
+
+            // Use the context that contains the preferences object
+            guard let context = preferences.modelContext else {
+                logger.error("Preferences object has no model context")
+                return nil
+            }
 
             do {
                 try context.save()
@@ -212,13 +217,17 @@ final class NotificationPreferencesRepository: ObservableObject {
     ///   - userId: User ID
     ///   - serverUpdatedAt: Server's updated_at timestamp
     func markClean(for userId: String, serverUpdatedAt: Date) {
-        let context = localStore.mainContext
-
         guard let preferences = getPreferences(for: userId) else {
             return
         }
 
         preferences.markClean(serverUpdatedAt: serverUpdatedAt)
+
+        // Use the context that contains the preferences object
+        guard let context = preferences.modelContext else {
+            logger.error("Preferences object has no model context")
+            return
+        }
 
         do {
             try context.save()
@@ -233,9 +242,13 @@ final class NotificationPreferencesRepository: ObservableObject {
     /// Delete all preferences for a user (on logout)
     /// - Parameter userId: User ID
     func deleteAll(for userId: String) {
-        let context = localStore.mainContext
-
         guard let preferences = getPreferences(for: userId) else {
+            return
+        }
+
+        // Use the context that contains the preferences object
+        guard let context = preferences.modelContext else {
+            logger.error("Preferences object has no model context")
             return
         }
 
