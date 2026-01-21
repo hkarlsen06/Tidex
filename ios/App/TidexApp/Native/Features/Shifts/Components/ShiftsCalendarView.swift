@@ -1,40 +1,6 @@
 import SwiftUI
 import UIKit
 
-// MARK: - Calendar View Mode
-
-/// Mode for displaying data in calendar cells
-enum CalendarViewMode: String, CaseIterable {
-    case hours
-    case money
-
-    /// UserDefaults key for persisting view mode
-    static let userDefaultsKey = "shifts_calendar_view_mode"
-
-    /// Save the current mode to UserDefaults
-    func save() {
-        UserDefaults.standard.set(rawValue, forKey: Self.userDefaultsKey)
-    }
-
-    /// Load saved mode from UserDefaults (defaults to hours)
-    static func load() -> CalendarViewMode {
-        guard let rawValue = UserDefaults.standard.string(forKey: userDefaultsKey),
-              let mode = CalendarViewMode(rawValue: rawValue) else {
-            return .hours
-        }
-        return mode
-    }
-}
-
-// MARK: - Hours Data for Calendar Cell
-
-/// Time range data for a single day
-struct HoursData: Equatable {
-    let start: String
-    let end: String
-    let crossesMidnight: Bool
-}
-
 // MARK: - Gesture State Machine
 
 /// The current mode of the gesture state machine
@@ -140,7 +106,6 @@ struct ShiftsCalendarView: View {
     private let warningHaptic = UINotificationFeedbackGenerator()
 
     private let calendar = Calendar.current
-    private let columns = Array(repeating: GridItem(.flexible(), spacing: 4), count: 7)
 
     // MARK: - Computed Data
 
@@ -156,35 +121,29 @@ struct ShiftsCalendarView: View {
 
     /// Hours by ISO date string
     private var hoursByDate: [String: HoursData] {
-        var shiftsByDate: [String: [ShiftWithComputations]] = [:]
-
+        var shiftsByDateDict: [String: [ShiftWithComputations]] = [:]
         for shift in shifts {
-            shiftsByDate[shift.shiftDate, default: []].append(shift)
+            shiftsByDateDict[shift.shiftDate, default: []].append(shift)
         }
 
         var result: [String: HoursData] = [:]
-
-        for (date, shiftsOnDate) in shiftsByDate {
-            // Sort by start time
+        for (date, shiftsOnDate) in shiftsByDateDict {
             let sorted = shiftsOnDate.sorted { $0.startTime < $1.startTime }
-
             let earliestStart = sorted.first?.startTime ?? ""
             let latestEnd = sorted.map(\.endTime).max() ?? ""
 
-            // Check if any shift crosses midnight
             let crossesMidnight = shiftsOnDate.contains { shift in
-                let startMinutes = timeToMinutes(shift.startTime)
-                let endMinutes = timeToMinutes(shift.endTime)
+                let startMinutes = CalendarGridHelper.timeToMinutes(shift.startTime)
+                let endMinutes = CalendarGridHelper.timeToMinutes(shift.endTime)
                 return endMinutes <= startMinutes
             }
 
             result[date] = HoursData(
-                start: formatTime(earliestStart),
-                end: formatTime(latestEnd),
+                start: CalendarGridHelper.formatTime(earliestStart),
+                end: CalendarGridHelper.formatTime(latestEnd),
                 crossesMidnight: crossesMidnight
             )
         }
-
         return result
     }
 
@@ -225,7 +184,7 @@ struct ShiftsCalendarView: View {
             headerRow
 
             // Weekday headers
-            weekdayHeaderRow
+            CalendarWeekdayHeader()
                 .padding(.bottom, 8)
 
             // Calendar grid with gesture handling
@@ -303,11 +262,9 @@ struct ShiftsCalendarView: View {
                 .font(.system(size: 17, weight: .semibold))
                 .foregroundColor(.tidexTextPrimary)
                 .onChange(of: displayAmount) { _, newValue in
-                    // Track the displayed amount for animating FROM on view recreation
                     lastDisplayedEarnings = newValue
                 }
                 .onAppear {
-                    // Initialize on first appear
                     if lastDisplayedEarnings == 0 {
                         lastDisplayedEarnings = displayAmount
                     }
@@ -337,77 +294,54 @@ struct ShiftsCalendarView: View {
     // MARK: - Month Name
 
     private var monthName: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MMMM"
-        formatter.locale = Locale(identifier: localization.currentLocale.localeIdentifier)
-        return formatter.string(from: month).capitalized
-    }
-
-    // MARK: - Weekday Header Row
-
-    private var weekdayHeaderRow: some View {
-        HStack(spacing: 0) {
-            ForEach(weekdaySymbols.indices, id: \.self) { index in
-                Text(weekdaySymbols[index])
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(.tidexTextMuted)
-                    .frame(maxWidth: .infinity)
-            }
-        }
-    }
-
-    private var weekdaySymbols: [String] {
-        let isNorwegian = localization.currentLocale == .norwegian
-        if isNorwegian {
-            return ["MA", "TI", "ON", "TO", "FR", "LØ", "SØ"]
-        } else {
-            return ["MO", "TU", "WE", "TH", "FR", "SA", "SU"]
-        }
+        CalendarGridHelper.monthName(
+            from: month,
+            locale: Locale(identifier: localization.currentLocale.localeIdentifier)
+        )
     }
 
     // MARK: - Calendar Grid
 
     @ViewBuilder
     private var calendarGrid: some View {
-        let days = daysInMonth()
+        let days = CalendarGridHelper.daysInMonth(year: year, month: monthNumber)
 
-        LazyVGrid(columns: columns, spacing: 4) {
+        LazyVGrid(columns: CalendarGridHelper.columns, spacing: 4) {
             ForEach(days, id: \.id) { dayInfo in
                 let shiftsOnDay = dayInfo.dateISO.flatMap { shiftsByDate[$0] } ?? []
+                let isSelected = dayInfo.dateISO.map { selectedDates.contains($0) } ?? false
                 let isInDragPreview = dayInfo.dateISO.map { dragPreviewDates.contains($0) } ?? false
                 let isNewlyAdded = dayInfo.dateISO.map { newlyAddedDates.contains($0) } ?? false
                 let isDeepLinkHighlighted = dayInfo.dateISO == deepLinkHighlightDate
+                let isToday = dayInfo.dateISO == todayISO()
 
-                ShiftsCalendarDayCell(
+                CalendarDayCell(
                     dayInfo: dayInfo,
-                    viewMode: showEarnings ? viewMode : .hours,
-                    earnings: dayInfo.dateISO.flatMap { earningsByDate[$0] },
-                    hours: dayInfo.dateISO.flatMap { hoursByDate[$0] },
-                    isToday: dayInfo.dateISO == todayISO(),
-                    hasShifts: !shiftsOnDay.isEmpty,
-                    isSelected: dayInfo.isSelected,
-                    isInDragPreview: isInDragPreview,
-                    isNewlyAdded: isNewlyAdded,
-                    isDeepLinkHighlighted: isDeepLinkHighlighted
+                    style: cellStyle(
+                        isToday: isToday,
+                        isSelected: isSelected,
+                        isInDragPreview: isInDragPreview,
+                        isNewlyAdded: isNewlyAdded,
+                        isDeepLinkHighlighted: isDeepLinkHighlighted
+                    ),
+                    content: cellContent(
+                        for: dayInfo,
+                        hasShifts: !shiftsOnDay.isEmpty
+                    )
                 )
             }
         }
         .coordinateSpace(name: "calendar")
-        // Gesture handling depends on selection mode:
-        // - Normal mode: tap to select (swipes pass through to parent)
-        // - Selection mode: tap + drag for range selection
         .overlay(
             GeometryReader { geometry in
                 Color.clear
                     .contentShape(Rectangle())
-                    // Normal mode: just tap gestures (swipes work)
                     .calendarTapGesture(
                         onTap: { location in
                             handleTap(at: location, geometry: geometry, days: days)
                         },
                         isEnabled: !isSelectionModeEnabled
                     )
-                    // Selection mode: tap + drag gestures
                     .calendarSelectionGestures(
                         actions: CalendarGestureActions(
                             onTap: { location in
@@ -430,14 +364,76 @@ struct ShiftsCalendarView: View {
         )
     }
 
+    // MARK: - Cell Styling
+
+    /// Celebration green color for newly added shifts
+    private static let celebrationColor = Color(red: 0.298, green: 0.686, blue: 0.314)
+
+    /// Purple/violet color for deep link highlight from widgets
+    private static let deepLinkHighlightColor = Color(red: 0.545, green: 0.361, blue: 0.965)
+
+    private func cellStyle(
+        isToday: Bool,
+        isSelected: Bool,
+        isInDragPreview: Bool,
+        isNewlyAdded: Bool,
+        isDeepLinkHighlighted: Bool
+    ) -> CalendarCellStyle {
+        // Priority order: deep link > newly added > selected/drag > today > default
+        if isDeepLinkHighlighted {
+            return CalendarCellStyle(
+                backgroundColor: Self.deepLinkHighlightColor.opacity(0.2),
+                borderColor: Self.deepLinkHighlightColor,
+                borderWidth: 2.5,
+                dayNumberColor: .tidexTextPrimary
+            )
+        }
+        if isNewlyAdded {
+            return CalendarCellStyle(
+                backgroundColor: Self.celebrationColor.opacity(0.2),
+                borderColor: Self.celebrationColor,
+                borderWidth: 2.5,
+                dayNumberColor: .tidexTextPrimary
+            )
+        }
+        if isSelected || isInDragPreview {
+            return CalendarCellStyle(
+                backgroundColor: Color.tidexBlue.opacity(0.15),
+                borderColor: .tidexBlue,
+                borderWidth: 2,
+                dayNumberColor: .tidexTextPrimary
+            )
+        }
+        if isToday {
+            return CalendarCellStyle(
+                backgroundColor: Color.tidexBlue.opacity(0.2),
+                borderColor: .clear,
+                borderWidth: 0,
+                dayNumberColor: .tidexBlue
+            )
+        }
+        return .default
+    }
+
+    private func cellContent(for dayInfo: CalendarDayInfo, hasShifts: Bool) -> CalendarCellContent {
+        guard let dateISO = dayInfo.dateISO else { return .empty }
+
+        let effectiveViewMode = showEarnings ? viewMode : .hours
+
+        if effectiveViewMode == .money, let amount = earningsByDate[dateISO] {
+            return .earnings(amount)
+        } else if effectiveViewMode == .hours, let hoursData = hoursByDate[dateISO] {
+            return .hours(hoursData)
+        }
+
+        return .empty
+    }
+
     // MARK: - Gesture Handling
 
-    /// Handle tap gesture
-    private func handleTap(at location: CGPoint, geometry: GeometryProxy, days: [DayInfo]) {
+    private func handleTap(at location: CGPoint, geometry: GeometryProxy, days: [CalendarDayInfo]) {
         guard let dayISO = findDayAt(location: location, geometry: geometry, days: days) else {
-            // Tapped outside valid days
             if isCopyMode || isMoveMode {
-                // In copy/move mode, tapping outside cancels
                 onCancelCopyMove?()
             } else {
                 onEmptyDayTapped?(nil)
@@ -445,7 +441,6 @@ struct ShiftsCalendarView: View {
             return
         }
 
-        // Handle copy/move mode - any date tap triggers the operation
         if isCopyMode {
             onCopyToDate?(dayISO)
             return
@@ -456,36 +451,29 @@ struct ShiftsCalendarView: View {
             return
         }
 
-        // Normal mode
         let shiftsOnDay = shiftsByDate[dayISO] ?? []
 
         if shiftsOnDay.isEmpty {
-            // Tapped empty day - pass the date for pre-selection in Add tab
             onEmptyDayTapped?(dayISO)
         } else {
-            // Tapped day with shifts
             onDayTapped?(dayISO, shiftsOnDay)
         }
     }
 
-    /// Handle drag start (beginning of range selection)
-    private func handleDragStart(at location: CGPoint, geometry: GeometryProxy, days: [DayInfo]) {
+    private func handleDragStart(at location: CGPoint, geometry: GeometryProxy, days: [CalendarDayInfo]) {
         guard let dayISO = findDayAt(location: location, geometry: geometry, days: days) else {
             return
         }
 
-        // Enter selecting mode - anchor on the day where drag started
         gestureMode = .selecting
         anchorDateISO = dayISO
         hoverDateISO = dayISO
         dragPreviewDates = [dayISO]
     }
 
-    /// Handle drag movement (extending range selection)
-    private func handleDragChanged(at location: CGPoint, geometry: GeometryProxy, days: [DayInfo]) {
+    private func handleDragChanged(at location: CGPoint, geometry: GeometryProxy, days: [CalendarDayInfo]) {
         guard gestureMode == .selecting else { return }
 
-        // Update hover date and preview
         if let dayISO = findDayAt(location: location, geometry: geometry, days: days) {
             if dayISO != hoverDateISO {
                 hoverDateISO = dayISO
@@ -494,14 +482,12 @@ struct ShiftsCalendarView: View {
         }
     }
 
-    /// Handle drag end
     private func handleDragEnded() {
         guard gestureMode == .selecting else {
             resetGestureState()
             return
         }
 
-        // Commit the drag preview selection
         if !dragPreviewDates.isEmpty {
             let datesToSelect = Array(dragPreviewDates)
             onSelectDateRange?(datesToSelect)
@@ -510,7 +496,6 @@ struct ShiftsCalendarView: View {
         resetGestureState()
     }
 
-    /// Reset all gesture state
     private func resetGestureState() {
         gestureMode = .idle
         anchorDateISO = nil
@@ -518,17 +503,13 @@ struct ShiftsCalendarView: View {
         dragPreviewDates.removeAll()
     }
 
-    /// Update drag preview dates based on anchor and hover
     private func updateDragPreview() {
         guard let anchorISO = anchorDateISO, let hoverISO = hoverDateISO else {
             dragPreviewDates.removeAll()
             return
         }
 
-        // Build date range from anchor to hover
         let range = buildDateRange(from: anchorISO, to: hoverISO)
-
-        // Filter to only dates with shifts
         let datesWithShifts = range.filter { dateISO in
             if let shiftsOnDay = shiftsByDate[dateISO] {
                 return !shiftsOnDay.isEmpty
@@ -539,14 +520,12 @@ struct ShiftsCalendarView: View {
         dragPreviewDates = Set(datesWithShifts)
     }
 
-    /// Build contiguous date range between two ISO dates
     private func buildDateRange(from startISO: String, to endISO: String) -> [String] {
         guard let startDate = Date.fromISODateString(startISO),
               let endDate = Date.fromISODateString(endISO) else {
             return [startISO]
         }
 
-        // Determine direction
         let (earlierDate, laterDate) = startDate <= endDate ? (startDate, endDate) : (endDate, startDate)
 
         var result: [String] = []
@@ -561,8 +540,7 @@ struct ShiftsCalendarView: View {
         return result
     }
 
-    /// Find the day at a given location in the calendar grid
-    private func findDayAt(location: CGPoint, geometry: GeometryProxy, days: [DayInfo]) -> String? {
+    private func findDayAt(location: CGPoint, geometry: GeometryProxy, days: [CalendarDayInfo]) -> String? {
         let gridWidth = geometry.size.width
         let gridHeight = geometry.size.height
 
@@ -590,21 +568,19 @@ struct ShiftsCalendarView: View {
     private var actionBar: some View {
         HStack(spacing: 0) {
             if isCopyMode || isMoveMode {
-                // Copy/Move mode: show instruction bar
                 copyMoveBar
             } else if selectedDates.isEmpty {
-                // Default: Hours/Money toggle
-                viewModeToggleContent
+                CalendarViewModeToggle(
+                    viewMode: $viewMode,
+                    currency: currency,
+                    showMoneyOption: showEarnings
+                )
             } else if selectedDates.count == 1 {
-                // Single selection: Delete | Copy | Details | Move
                 singleSelectionBar
             } else {
-                // Multi selection: Delete | Cancel
                 multiSelectionBar
             }
         }
-        .padding(4)
-        .background(Capsule().fill(Color.tidexSurfaceSecondary))
         .animation(.spring(response: 0.25, dampingFraction: 0.8), value: selectedDates.count)
         .animation(.spring(response: 0.25, dampingFraction: 0.8), value: confirmingDelete)
         .animation(.spring(response: 0.25, dampingFraction: 0.8), value: isCopyMode)
@@ -615,11 +591,9 @@ struct ShiftsCalendarView: View {
         }
     }
 
-    /// Action bar shown when in copy or move mode
     @ViewBuilder
     private var copyMoveBar: some View {
         HStack(spacing: 4) {
-            // Loading indicator or instruction text
             if isCopying || isMoving {
                 ProgressView()
                     .progressViewStyle(CircularProgressViewStyle(tint: isCopyMode ? .tidexBlue : .orange))
@@ -633,13 +607,11 @@ struct ShiftsCalendarView: View {
                     .foregroundColor(.tidexTextSecondary)
                     .frame(maxWidth: .infinity)
             } else {
-                // Icon indicating mode
                 Image(systemName: isCopyMode ? "doc.on.doc" : "arrow.left.arrow.right")
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(isCopyMode ? .tidexBlue : .orange)
                     .frame(width: 36, height: 36)
 
-                // Instruction text
                 Text(isCopyMode
                     ? localization.string("shifts.selectCopyTarget")
                     : localization.string("shifts.selectMoveTarget"))
@@ -648,7 +620,6 @@ struct ShiftsCalendarView: View {
                     .frame(maxWidth: .infinity)
             }
 
-            // Cancel button
             Button {
                 toggleHaptic.impactOccurred()
                 onCancelCopyMove?()
@@ -664,16 +635,16 @@ struct ShiftsCalendarView: View {
             .disabled(isCopying || isMoving)
         }
         .frame(height: 36)
+        .padding(4)
+        .background(Capsule().fill(Color.tidexSurfaceSecondary))
     }
 
     @ViewBuilder
     private var singleSelectionBar: some View {
         HStack(spacing: 4) {
-            // Delete button (expands on confirm)
             deleteButton
 
             if !confirmingDelete {
-                // Copy button
                 Button {
                     toggleHaptic.impactOccurred()
                     onCopy?()
@@ -687,7 +658,6 @@ struct ShiftsCalendarView: View {
                 .buttonStyle(.plain)
             }
 
-            // Details/Cancel button
             if confirmingDelete {
                 cancelButton
             } else {
@@ -710,7 +680,6 @@ struct ShiftsCalendarView: View {
             }
 
             if !confirmingDelete {
-                // Edit button (icon only)
                 Button {
                     toggleHaptic.impactOccurred()
                     onEdit?()
@@ -723,7 +692,6 @@ struct ShiftsCalendarView: View {
                 }
                 .buttonStyle(.plain)
 
-                // Move button
                 Button {
                     toggleHaptic.impactOccurred()
                     onMove?()
@@ -743,15 +711,15 @@ struct ShiftsCalendarView: View {
             }
         }
         .frame(height: 36)
+        .padding(4)
+        .background(Capsule().fill(Color.tidexSurfaceSecondary))
     }
 
     @ViewBuilder
     private var multiSelectionBar: some View {
         HStack(spacing: 4) {
-            // Delete button
             deleteButton
 
-            // Cancel/Close button
             if confirmingDelete {
                 cancelButton
             } else {
@@ -774,6 +742,8 @@ struct ShiftsCalendarView: View {
             }
         }
         .frame(height: 36)
+        .padding(4)
+        .background(Capsule().fill(Color.tidexSurfaceSecondary))
     }
 
     @ViewBuilder
@@ -831,346 +801,6 @@ struct ShiftsCalendarView: View {
             .background(Capsule().fill(Color.tidexBrandPrimary))
         }
         .buttonStyle(.plain)
-    }
-
-    /// Hours/Money toggle content
-    @ViewBuilder
-    private var viewModeToggleContent: some View {
-        // Hours button
-        Button {
-            guard viewMode != .hours else { return }
-            toggleHaptic.impactOccurred()
-            withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
-                viewMode = .hours
-                viewMode.save()
-            }
-        } label: {
-            HStack(spacing: 6) {
-                Text("--:--")
-                Image(systemName: "clock")
-                    .font(.system(size: 14, weight: .medium))
-            }
-            .font(.system(size: 14, weight: viewMode == .hours ? .semibold : .regular))
-            .foregroundColor(viewMode == .hours ? .tidexTextPrimary : .tidexTextMuted)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, Spacing.sm)
-            .contentShape(Rectangle())
-            .background(
-                Group {
-                    if viewMode == .hours {
-                        Capsule()
-                            .fill(.clear)
-                            .glassEffect(.regular.interactive())
-                    }
-                }
-            )
-        }
-        .buttonStyle(.plain)
-
-        // Money button (only if showing earnings)
-        if showEarnings {
-            Button {
-                guard viewMode != .money else { return }
-                toggleHaptic.impactOccurred()
-                withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
-                    viewMode = .money
-                    viewMode.save()
-                }
-            } label: {
-                Text("---- \(currency)")
-                    .font(.system(size: 14, weight: viewMode == .money ? .semibold : .regular))
-                    .foregroundColor(viewMode == .money ? .tidexTextPrimary : .tidexTextMuted)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, Spacing.sm)
-                    .contentShape(Rectangle())
-                    .background(
-                        Group {
-                            if viewMode == .money {
-                                Capsule()
-                                    .fill(.clear)
-                                    .glassEffect(.regular.interactive())
-                            }
-                        }
-                    )
-            }
-            .buttonStyle(.plain)
-        }
-    }
-
-    // MARK: - Calendar Helpers
-
-    struct DayInfo: Identifiable {
-        let id: Int
-        let dayNumber: Int
-        let dateISO: String?
-        let weekNumber: Int?  // ISO week number (only on Mondays)
-        let isOutsideMonth: Bool
-        let isSelected: Bool  // Whether this date is in selectedDates
-    }
-
-    private func daysInMonth() -> [DayInfo] {
-        var days: [DayInfo] = []
-
-        // Get first day of month
-        var components = DateComponents()
-        components.year = year
-        components.month = monthNumber
-        components.day = 1
-        guard let firstOfMonth = calendar.date(from: components) else { return days }
-
-        // Get weekday of first day (1 = Sunday, 7 = Saturday)
-        let firstWeekday = calendar.component(.weekday, from: firstOfMonth)
-
-        // Convert to Monday-start (0 = Monday, 6 = Sunday)
-        let startOffset = (firstWeekday + 5) % 7
-
-        // Get number of days in month
-        guard let range = calendar.range(of: .day, in: .month, for: firstOfMonth) else { return days }
-
-        // Get last day of previous month for "outside days"
-        let previousMonth = calendar.date(byAdding: .month, value: -1, to: firstOfMonth)!
-        let daysInPreviousMonth = calendar.range(of: .day, in: .month, for: previousMonth)!.count
-
-        // Add days from previous month (outside days)
-        for i in 0..<startOffset {
-            let day = daysInPreviousMonth - startOffset + i + 1
-            let date = calendar.date(byAdding: .day, value: i - startOffset, to: firstOfMonth)!
-            let dateISO = date.toISODateString()
-            let weekNum = calendar.component(.weekday, from: date) == 2 ? getIsoWeek(from: date) : nil
-            let isSelected = selectedDates.contains(dateISO)
-
-            days.append(DayInfo(
-                id: -1000 + i,
-                dayNumber: day,
-                dateISO: dateISO,
-                weekNumber: weekNum,
-                isOutsideMonth: true,
-                isSelected: isSelected
-            ))
-        }
-
-        // Add cells for each day in current month
-        for day in range {
-            guard let date = calendar.date(byAdding: .day, value: day - 1, to: firstOfMonth) else { continue }
-            let dateISO = date.toISODateString()
-            let isMonday = calendar.component(.weekday, from: date) == 2
-            let weekNum = isMonday ? getIsoWeek(from: date) : nil
-            let isSelected = selectedDates.contains(dateISO)
-
-            days.append(DayInfo(
-                id: day,
-                dayNumber: day,
-                dateISO: dateISO,
-                weekNumber: weekNum,
-                isOutsideMonth: false,
-                isSelected: isSelected
-            ))
-        }
-
-        // Add days from next month to fill the last row
-        let totalDays = days.count
-        let remainder = totalDays % 7
-        if remainder > 0 {
-            let daysToAdd = 7 - remainder
-            for i in 0..<daysToAdd {
-                let date = calendar.date(byAdding: .day, value: range.count + i, to: firstOfMonth)!
-                let dateISO = date.toISODateString()
-                let weekNum = calendar.component(.weekday, from: date) == 2 ? getIsoWeek(from: date) : nil
-                let isSelected = selectedDates.contains(dateISO)
-
-                days.append(DayInfo(
-                    id: 1000 + i,
-                    dayNumber: i + 1,
-                    dateISO: dateISO,
-                    weekNumber: weekNum,
-                    isOutsideMonth: true,
-                    isSelected: isSelected
-                ))
-            }
-        }
-
-        return days
-    }
-
-    private func getIsoWeek(from date: Date) -> Int {
-        var isoCalendar = Calendar(identifier: .iso8601)
-        isoCalendar.firstWeekday = 2  // Monday
-        isoCalendar.minimumDaysInFirstWeek = 4
-        return isoCalendar.component(.weekOfYear, from: date)
-    }
-
-    // MARK: - Formatting
-
-    private func formatCurrency(_ amount: Double) -> String {
-        CurrencyConfig.format(amount, currency: currency)
-    }
-
-    private func formatTime(_ time: String) -> String {
-        // Remove seconds and leading zero (e.g., "08:30:00" -> "8:30")
-        let hhmm = String(time.prefix(5))
-        return hhmm.hasPrefix("0") ? String(hhmm.dropFirst()) : hhmm
-    }
-
-    private func timeToMinutes(_ time: String) -> Int {
-        let parts = time.split(separator: ":")
-        guard parts.count >= 2,
-              let hours = Int(parts[0]),
-              let minutes = Int(parts[1]) else { return 0 }
-        return hours * 60 + minutes
-    }
-}
-
-// MARK: - Shifts Calendar Day Cell
-
-private struct ShiftsCalendarDayCell: View {
-    let dayInfo: ShiftsCalendarView.DayInfo
-    let viewMode: CalendarViewMode
-    let earnings: Double?
-    let hours: HoursData?
-    let isToday: Bool
-    let hasShifts: Bool
-    let isSelected: Bool
-    let isInDragPreview: Bool
-    let isNewlyAdded: Bool
-    let isDeepLinkHighlighted: Bool
-
-    private var hasShift: Bool {
-        earnings != nil || hours != nil
-    }
-
-    /// Whether this cell is tappable (has shifts and is in current month)
-    private var isTappable: Bool {
-        hasShifts && !dayInfo.isOutsideMonth
-    }
-
-    var body: some View {
-        ZStack {
-            // Week number (top-left corner, only on Mondays)
-            if let weekNum = dayInfo.weekNumber {
-                VStack {
-                    HStack {
-                        Text("\(weekNum)")
-                            .font(.system(size: 9))
-                            .foregroundColor(.tidexTextMuted)
-                            .padding(.leading, 6)
-                            .padding(.top, 4)
-                        Spacer()
-                    }
-                    Spacer()
-                }
-            }
-
-            // Day number (top-right corner)
-            VStack {
-                HStack {
-                    Spacer()
-                    Text("\(dayInfo.dayNumber)")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundColor(dayNumberColor)
-                        .padding(.trailing, 4)
-                        .padding(.top, 3)
-                }
-                Spacer()
-            }
-
-            // Content (centered - hours or earnings)
-            if viewMode == .money, let amount = earnings {
-                Text(formatCompactCurrency(amount))
-                    .font(.system(size: 15, weight: .bold))
-                    .foregroundColor(.tidexTextPrimary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.6)
-                    .padding(.top, 8)
-            } else if viewMode == .hours, let hoursData = hours {
-                VStack(spacing: 1) {
-                    Text(hoursData.start)
-                        .font(.system(size: 14, weight: .bold))
-                    Text(hoursData.end + (hoursData.crossesMidnight ? "*" : ""))
-                        .font(.system(size: 14, weight: .bold))
-                }
-                .foregroundColor(.tidexTextPrimary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.6)
-                .padding(.top, 8)
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .aspectRatio(1 / 1.3, contentMode: .fill)
-        .clipped()
-        .background(
-            RoundedRectangle(cornerRadius: 8)
-                .fill(backgroundColor)
-        )
-        .overlay(
-            // Selection/today indicator ring
-            RoundedRectangle(cornerRadius: 8)
-                .strokeBorder(borderColor, lineWidth: borderWidth)
-        )
-        .opacity(dayInfo.isOutsideMonth ? 0.4 : 1.0)
-    }
-
-    /// Celebration green color for newly added shifts
-    private static let celebrationColor = Color(red: 0.298, green: 0.686, blue: 0.314)  // #4CAF50 Green
-
-    /// Purple/violet color for deep link highlight from widgets
-    private static let deepLinkHighlightColor = Color(red: 0.545, green: 0.361, blue: 0.965)  // #8B5CF5 Violet
-
-    private var backgroundColor: Color {
-        if isDeepLinkHighlighted {
-            return Self.deepLinkHighlightColor.opacity(0.2)
-        }
-        if isNewlyAdded {
-            return Self.celebrationColor.opacity(0.2)
-        }
-        if isSelected || isInDragPreview {
-            return Color.tidexBlue.opacity(0.15)
-        }
-        if isToday {
-            return Color.tidexBlue.opacity(0.2)
-        }
-        return Color.tidexSurfacePrimary
-    }
-
-    private var borderColor: Color {
-        if isDeepLinkHighlighted {
-            return Self.deepLinkHighlightColor
-        }
-        if isNewlyAdded {
-            return Self.celebrationColor
-        }
-        if isSelected || isInDragPreview {
-            return Color.tidexBlue
-        }
-        return Color.clear
-    }
-
-    private var borderWidth: CGFloat {
-        if isDeepLinkHighlighted {
-            return 2.5
-        }
-        if isNewlyAdded {
-            return 2.5
-        }
-        if isSelected || isInDragPreview {
-            return 2
-        }
-        return 0
-    }
-
-    private var dayNumberColor: Color {
-        if isToday {
-            return .tidexBlue
-        }
-        return .tidexTextPrimary
-    }
-
-    private func formatCompactCurrency(_ amount: Double) -> String {
-        // Compact format without currency symbol for calendar cells
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .decimal
-        formatter.maximumFractionDigits = 0
-        formatter.groupingSeparator = " "
-        return formatter.string(from: NSNumber(value: amount)) ?? "\(Int(amount))"
     }
 }
 
