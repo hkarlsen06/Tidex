@@ -178,6 +178,17 @@ final class StatsService: ObservableObject {
                 )
             }
 
+            // Build cumulative data for progress chart
+            let cumulativeData = buildCumulativeData(
+                currentMonthShifts: currentMonthShifts,
+                previousMonthShifts: previousMonthShifts,
+                targetYear: targetYear,
+                targetMonth: targetMonth,
+                previousYear: previousYM.year,
+                previousMonth: previousYM.month,
+                now: now
+            )
+
             // Build stats data
             let statsData = StatsData(
                 focusMonth: FocusMonth(year: targetYear, month: targetMonth),
@@ -195,7 +206,8 @@ final class StatsService: ObservableObject {
                     shiftCount: previousMonthShifts.count
                 ),
                 percentageChange: percentageChange,
-                monthlyGoal: monthlyGoal
+                monthlyGoal: monthlyGoal,
+                thisMonthCumulative: cumulativeData
             )
 
             stats = statsData
@@ -217,6 +229,98 @@ final class StatsService: ObservableObject {
     func clearCache() {
         stats = nil
         cachedUserId = nil
+    }
+
+    // MARK: - Private Helpers
+
+    /// Build cumulative earnings data for the progress chart
+    /// - Parameters:
+    ///   - currentMonthShifts: Computed shifts for the target month
+    ///   - previousMonthShifts: Computed shifts for the previous month
+    ///   - targetYear: Year of target month
+    ///   - targetMonth: Month number (1-12) of target month
+    ///   - previousYear: Year of previous month
+    ///   - previousMonth: Month number (1-12) of previous month
+    ///   - now: Current date for determining today/future
+    /// - Returns: Array of cumulative data for each day of the month
+    private func buildCumulativeData(
+        currentMonthShifts: [ShiftWithComputations],
+        previousMonthShifts: [ShiftWithComputations],
+        targetYear: Int,
+        targetMonth: Int,
+        previousYear: Int,
+        previousMonth: Int,
+        now: Date
+    ) -> [DailyCumulativeData] {
+        let calendar = Calendar.current
+
+        // Get days in target month
+        guard let targetMonthDate = calendar.date(from: DateComponents(year: targetYear, month: targetMonth, day: 1)),
+              let range = calendar.range(of: .day, in: .month, for: targetMonthDate) else {
+            return []
+        }
+        let daysInCurrentMonth = range.count
+
+        // Get days in previous month
+        guard let prevMonthDate = calendar.date(from: DateComponents(year: previousYear, month: previousMonth, day: 1)),
+              let prevRange = calendar.range(of: .day, in: .month, for: prevMonthDate) else {
+            return []
+        }
+        let daysInPreviousMonth = prevRange.count
+
+        // Determine if we're viewing the current real month
+        let currentYear = calendar.component(.year, from: now)
+        let currentMonth = calendar.component(.month, from: now)
+        let isCurrentSelection = targetYear == currentYear && targetMonth == currentMonth
+
+        // Today's day number (or end of month if viewing a past month)
+        let todayDayNumber = isCurrentSelection ? calendar.component(.day, from: now) : daysInCurrentMonth
+
+        // Build earnings per day maps
+        var currentMonthEarningsPerDay: [Int: Double] = [:]
+        var previousMonthEarningsPerDay: [Int: Double] = [:]
+
+        for shift in currentMonthShifts {
+            // Parse day from shift_date string (YYYY-MM-DD)
+            let components = shift.shiftDate.split(separator: "-")
+            if components.count >= 3, let day = Int(components[2]) {
+                currentMonthEarningsPerDay[day, default: 0] += shift.grossPay
+            }
+        }
+
+        for shift in previousMonthShifts {
+            // Parse day from shift_date string (YYYY-MM-DD)
+            let components = shift.shiftDate.split(separator: "-")
+            if components.count >= 3, let day = Int(components[2]) {
+                previousMonthEarningsPerDay[day, default: 0] += shift.grossPay
+            }
+        }
+
+        // Build cumulative data
+        var cumulativeData: [DailyCumulativeData] = []
+        var currentCumulative: Double = 0
+        var previousCumulative: Double = 0
+
+        for day in 1...daysInCurrentMonth {
+            // Add current month's earnings for this day
+            currentCumulative += currentMonthEarningsPerDay[day] ?? 0
+
+            // Add previous month's earnings for this day (if it exists in previous month)
+            if day <= daysInPreviousMonth {
+                previousCumulative += previousMonthEarningsPerDay[day] ?? 0
+            }
+
+            let dataPoint = DailyCumulativeData(
+                day: day,
+                currentMonth: currentCumulative,
+                lastMonth: previousCumulative,
+                isToday: isCurrentSelection && day == todayDayNumber,
+                isFuture: day > todayDayNumber
+            )
+            cumulativeData.append(dataPoint)
+        }
+
+        return cumulativeData
     }
 }
 

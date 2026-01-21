@@ -49,6 +49,7 @@
 		114F0EE32F205B3B00B587F0 /* SmallStatCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0ED62F205B3B00B587F0 /* SmallStatCard.swift */; };
 		114F0EE42F205B3B00B587F0 /* StatsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0EDD2F205B3B00B587F0 /* StatsViewModel.swift */; };
 		114F0EE52F205B3B00B587F0 /* MonthlyEarningsCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0ED42F205B3B00B587F0 /* MonthlyEarningsCard.swift */; };
+		114F0EE72F206E5A00B587F0 /* MonthlyProgressChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0EE62F206E5A00B587F0 /* MonthlyProgressChart.swift */; };
 		1152D0CB2F01E2A7002FD5ED /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1152D0CA2F01E2A7002FD5ED /* StoreKit.framework */; };
 		11923C192F16B94B0076AFD6 /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = 11923C182F16B94B0076AFD6 /* Auth */; };
 		11923C1B2F16B94B0076AFD6 /* Functions in Frameworks */ = {isa = PBXBuildFile; productRef = 11923C1A2F16B94B0076AFD6 /* Functions */; };
@@ -310,6 +311,7 @@
 		114F0EDA2F205B3B00B587F0 /* StatsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsService.swift; sourceTree = "<group>"; };
 		114F0EDC2F205B3B00B587F0 /* StatsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsView.swift; sourceTree = "<group>"; };
 		114F0EDD2F205B3B00B587F0 /* StatsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsViewModel.swift; sourceTree = "<group>"; };
+		114F0EE62F206E5A00B587F0 /* MonthlyProgressChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthlyProgressChart.swift; sourceTree = "<group>"; };
 		1152D0C82F01BB9B002FD5ED /* App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = App.entitlements; sourceTree = "<group>"; };
 		1152D0CA2F01E2A7002FD5ED /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 		119D1CB72F16E46300EC7072 /* AppCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppCoordinator.swift; sourceTree = "<group>"; };
@@ -680,6 +682,7 @@
 		114F0ED72F205B3B00B587F0 /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				114F0EE62F206E5A00B587F0 /* MonthlyProgressChart.swift */,
 				114F0ED42F205B3B00B587F0 /* MonthlyEarningsCard.swift */,
 				114F0ED52F205B3B00B587F0 /* MonthlyGoalCard.swift */,
 				114F0ED62F205B3B00B587F0 /* SmallStatCard.swift */,
@@ -1629,6 +1632,7 @@
 				11A1970D2F1D6F630030E524 /* CelebrationManager.swift in Sources */,
 				11A1965C2F1AEB360030E524 /* PaywallViewModel.swift in Sources */,
 				11A197C82F1DDC5A0030E524 /* ShimmerModifier.swift in Sources */,
+				114F0EE72F206E5A00B587F0 /* MonthlyProgressChart.swift in Sources */,
 				11A1965D2F1AEB360030E524 /* PaywallView.swift in Sources */,
 				11A1980B2F1FDFD00030E524 /* ShiftReminderScheduler.swift in Sources */,
 				11A1965E2F1AEB360030E524 /* BillingToggle.swift in Sources */,

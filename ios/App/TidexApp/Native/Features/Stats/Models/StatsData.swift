@@ -11,6 +11,7 @@ struct StatsData: Codable, Equatable {
     let lastMonth: MonthStats
     let percentageChange: Double?
     let monthlyGoal: MonthlyGoal
+    let thisMonthCumulative: [DailyCumulativeData]
 }
 
 // MARK: - Sub-types
@@ -40,6 +41,18 @@ struct MonthlyGoal: Codable, Equatable {
     let remaining: Double
 }
 
+/// Daily cumulative earnings data for progress chart
+/// Shows cumulative earnings per day for current month vs last month
+struct DailyCumulativeData: Codable, Equatable, Identifiable {
+    let day: Int           // Day of month (1-31)
+    let currentMonth: Double  // Cumulative earnings up to this day
+    let lastMonth: Double     // Last month's cumulative earnings up to same day
+    let isToday: Bool         // Whether this is today's date
+    let isFuture: Bool        // Whether this day is in the future
+
+    var id: Int { day }
+}
+
 // MARK: - Preview Data
 
 extension StatsData {
@@ -66,7 +79,8 @@ extension StatsData {
             progress: 12808,
             percentage: 85.4,
             remaining: 2192
-        )
+        ),
+        thisMonthCumulative: DailyCumulativeData.previewData
     )
 
     /// Empty data for when no shifts exist
@@ -92,6 +106,49 @@ extension StatsData {
             progress: 0,
             percentage: 0,
             remaining: 0
-        )
+        ),
+        thisMonthCumulative: []
     )
+}
+
+// MARK: - DailyCumulativeData Preview
+
+extension DailyCumulativeData {
+    /// Generate sample cumulative data for previews
+    /// Simulates earnings accumulating through the month
+    static var previewData: [DailyCumulativeData] {
+        let daysInMonth = 31
+        let today = 15 // Simulate mid-month
+
+        // Last month pattern: steady earnings with some variation
+        let lastMonthDailyEarnings = [
+            0, 0, 2500, 0, 0, 0, 2800, 0, 0, 3000, 0, 0, 0, 2600, 0,
+            0, 2900, 0, 0, 0, 2700, 0, 0, 3100, 0, 0, 0, 2800, 0, 0, 0
+        ]
+
+        // Current month pattern: similar earnings
+        let currentMonthDailyEarnings = [
+            0, 0, 0, 3200, 0, 0, 0, 2900, 0, 0, 3100, 0, 0, 0, 2800, 0,
+            0, 3000, 0, 0, 0, 2700, 0, 0, 3200, 0, 0, 0, 2900, 0, 0
+        ]
+
+        var data: [DailyCumulativeData] = []
+        var lastMonthCumulative: Double = 0
+        var currentMonthCumulative: Double = 0
+
+        for day in 1...daysInMonth {
+            lastMonthCumulative += Double(lastMonthDailyEarnings[day - 1])
+            currentMonthCumulative += Double(currentMonthDailyEarnings[day - 1])
+
+            data.append(DailyCumulativeData(
+                day: day,
+                currentMonth: currentMonthCumulative,
+                lastMonth: lastMonthCumulative,
+                isToday: day == today,
+                isFuture: day > today
+            ))
+        }
+
+        return data
+    }
 }
