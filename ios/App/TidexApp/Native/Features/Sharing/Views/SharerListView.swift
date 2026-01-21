@@ -39,23 +39,32 @@ struct SharerListView: View {
 
             // Within same status, sort by time
             guard let shiftA = previewA?.shift, let shiftB = previewB?.shift else {
-                return false
+                // Fallback to alphabetical for stable ordering
+                return a.displayName.localizedCaseInsensitiveCompare(b.displayName) == .orderedAscending
             }
 
             let timeA = shiftStartTime(for: shiftA)
             let timeB = shiftStartTime(for: shiftB)
 
-            guard let timeA = timeA, let timeB = timeB else { return false }
+            guard let timeA = timeA, let timeB = timeB else {
+                return a.displayName.localizedCaseInsensitiveCompare(b.displayName) == .orderedAscending
+            }
 
             switch previewA?.status {
             case .upcoming:
-                // Upcoming: soonest first (ascending)
+                // Upcoming: soonest first (ascending), then alphabetical for same time
+                if timeA == timeB {
+                    return a.displayName.localizedCaseInsensitiveCompare(b.displayName) == .orderedAscending
+                }
                 return timeA < timeB
             case .past:
-                // Past: most recent first (descending)
+                // Past: most recent first (descending), then alphabetical for same time
+                if timeA == timeB {
+                    return a.displayName.localizedCaseInsensitiveCompare(b.displayName) == .orderedAscending
+                }
                 return timeA > timeB
             default:
-                return false
+                return a.displayName.localizedCaseInsensitiveCompare(b.displayName) == .orderedAscending
             }
         }
     }
