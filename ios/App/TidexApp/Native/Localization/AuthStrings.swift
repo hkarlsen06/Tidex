@@ -235,6 +235,9 @@ enum AuthStrings {
         "stats.monthlyGoal.notEnabled": "Sett et m\u{00E5}nedlig inntektsm\u{00E5}l i Innstillinger for \u{00E5} f\u{00F8}lge fremgangen din.",
         "stats.charts.monthlyProgress.title": "M\u{00E5}nedens utvikling",
         "stats.charts.monthlyProgress.noData": "Legg til vakter for \u{00E5} se m\u{00E5}nedens utvikling.",
+        "stats.charts.weeklyChart.thisWeek": "Denne uken",
+        "stats.charts.weeklyChart.bestWeek": "Beste uke (Uke {week})",
+        "stats.charts.weeklyChart.noData": "Legg til vakter for \u{00E5} se ukens inntjening.",
         "stats.errors.couldNotUpdate": "Kunne ikke oppdatere statistikken. Pr\u{00F8}v igjen senere.",
 
         // User Menu
@@ -1162,6 +1165,9 @@ enum AuthStrings {
         "stats.monthlyGoal.notEnabled": "Set a monthly earnings goal in Settings to track your progress.",
         "stats.charts.monthlyProgress.title": "Monthly progress",
         "stats.charts.monthlyProgress.noData": "Add shifts to see monthly progress.",
+        "stats.charts.weeklyChart.thisWeek": "This week",
+        "stats.charts.weeklyChart.bestWeek": "Best week (Week {week})",
+        "stats.charts.weeklyChart.noData": "Add shifts to see weekly earnings.",
         "stats.errors.couldNotUpdate": "Could not update statistics. Please try again later.",
 
         // User Menu

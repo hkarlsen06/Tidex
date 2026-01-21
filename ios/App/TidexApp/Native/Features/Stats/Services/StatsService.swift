@@ -189,6 +189,31 @@ final class StatsService: ObservableObject {
                 now: now
             )
 
+            // Determine if viewing current month
+            let isCurrentMonth = targetYear == calendar.component(.year, from: now) &&
+                                 targetMonth == calendar.component(.month, from: now)
+
+            // Build weekly data
+            let thisWeek: [DailyData]?
+            let bestWeek: BestWeekData?
+
+            if isCurrentMonth {
+                // Current month: show this week (Mon-Sun)
+                thisWeek = buildThisWeekData(
+                    shifts: currentMonthShifts,
+                    now: now
+                )
+                bestWeek = nil
+            } else {
+                // Past month: show best week
+                thisWeek = nil
+                bestWeek = buildBestWeekData(
+                    shifts: currentMonthShifts,
+                    focusYear: targetYear,
+                    focusMonth: targetMonth
+                )
+            }
+
             // Build stats data
             let statsData = StatsData(
                 focusMonth: FocusMonth(year: targetYear, month: targetMonth),
@@ -207,7 +232,9 @@ final class StatsService: ObservableObject {
                 ),
                 percentageChange: percentageChange,
                 monthlyGoal: monthlyGoal,
-                thisMonthCumulative: cumulativeData
+                thisMonthCumulative: cumulativeData,
+                thisWeek: thisWeek,
+                bestWeek: bestWeek
             )
 
             stats = statsData
@@ -321,6 +348,197 @@ final class StatsService: ObservableObject {
         }
 
         return cumulativeData
+    }
+
+    /// Build "This Week" data showing current calendar week (Mon-Sun)
+    /// - Parameters:
+    ///   - shifts: Computed shifts for the current month
+    ///   - now: Current date
+    /// - Returns: Array of daily data for Mon-Sun of current week
+    private func buildThisWeekData(
+        shifts: [ShiftWithComputations],
+        now: Date
+    ) -> [DailyData] {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = Date.localTimeZone
+        calendar.firstWeekday = 2 // Monday
+
+        // Find Monday of current week
+        let weekday = calendar.component(.weekday, from: now)
+        // weekday: 1=Sun, 2=Mon, ..., 7=Sat
+        // Days back to Monday: Sun(1)->6, Mon(2)->0, Tue(3)->1, etc.
+        let daysBackToMonday = weekday == 1 ? 6 : weekday - 2
+        guard let monday = calendar.date(byAdding: .day, value: -daysBackToMonday, to: now) else {
+            return []
+        }
+
+        // Build earnings map for shifts
+        var earningsMap: [String: (earnings: Double, hours: Double, shifts: Int)] = [:]
+        for shift in shifts {
+            let key = shift.shiftDate
+            let existing = earningsMap[key] ?? (0, 0, 0)
+            earningsMap[key] = (
+                existing.earnings + shift.grossPay,
+                existing.hours + shift.paidHours,
+                existing.shifts + 1
+            )
+        }
+
+        // Build data for each day of the week (Mon-Sun)
+        var weekData: [DailyData] = []
+
+        for dayOffset in 0..<7 {
+            guard let date = calendar.date(byAdding: .day, value: dayOffset, to: monday) else {
+                continue
+            }
+
+            let isoDate = date.toISODateString()
+            let data = earningsMap[isoDate] ?? (0, 0, 0)
+
+            // Get localized day names
+            let shortName = shortWeekdayName(for: date, calendar: calendar)
+            let fullName = fullWeekdayName(for: date, calendar: calendar)
+
+            weekData.append(DailyData(
+                date: shortName,
+                fullDay: fullName,
+                earnings: data.earnings,
+                hours: data.hours,
+                shifts: data.shifts,
+                fullDate: isoDate
+            ))
+        }
+
+        return weekData
+    }
+
+    /// Build "Best Week" data showing the week with highest earnings in a past month
+    /// - Parameters:
+    ///   - shifts: Computed shifts for the focus month
+    ///   - focusYear: Year of focus month
+    ///   - focusMonth: Month number (1-12) of focus month
+    /// - Returns: Best week data or nil if no shifts
+    private func buildBestWeekData(
+        shifts: [ShiftWithComputations],
+        focusYear: Int,
+        focusMonth: Int
+    ) -> BestWeekData? {
+        guard !shifts.isEmpty else { return nil }
+
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = Date.localTimeZone
+        calendar.firstWeekday = 2 // Monday
+
+        // Group shifts by ISO week number
+        var weeklyEarnings: [Int: (earnings: Double, hours: Double, shifts: [ShiftWithComputations])] = [:]
+
+        for shift in shifts {
+            guard let date = Date.fromISODateString(shift.shiftDate) else { continue }
+            let weekNumber = calendar.component(.weekOfYear, from: date)
+
+            let existing = weeklyEarnings[weekNumber] ?? (0, 0, [])
+            weeklyEarnings[weekNumber] = (
+                existing.earnings + shift.grossPay,
+                existing.hours + shift.paidHours,
+                existing.shifts + [shift]
+            )
+        }
+
+        // Find week with highest earnings
+        guard let bestWeekEntry = weeklyEarnings.max(by: { $0.value.earnings < $1.value.earnings }) else {
+            return nil
+        }
+
+        let bestWeekNumber = bestWeekEntry.key
+        let bestWeekShifts = bestWeekEntry.value.shifts
+
+        // Find Monday of the best week
+        // Get any date from that week and find its Monday
+        guard let sampleShift = bestWeekShifts.first,
+              let sampleDate = Date.fromISODateString(sampleShift.shiftDate) else {
+            return nil
+        }
+
+        let weekday = calendar.component(.weekday, from: sampleDate)
+        let daysBackToMonday = weekday == 1 ? 6 : weekday - 2
+        guard let monday = calendar.date(byAdding: .day, value: -daysBackToMonday, to: sampleDate) else {
+            return nil
+        }
+
+        // Build earnings map
+        var earningsMap: [String: (earnings: Double, hours: Double, shifts: Int)] = [:]
+        for shift in bestWeekShifts {
+            let key = shift.shiftDate
+            let existing = earningsMap[key] ?? (0, 0, 0)
+            earningsMap[key] = (
+                existing.earnings + shift.grossPay,
+                existing.hours + shift.paidHours,
+                existing.shifts + 1
+            )
+        }
+
+        // Build data for each day of the week (Mon-Sun)
+        // Use date numbers for best week (e.g., "15.") instead of day names
+        var weekData: [DailyData] = []
+
+        for dayOffset in 0..<7 {
+            guard let date = calendar.date(byAdding: .day, value: dayOffset, to: monday) else {
+                continue
+            }
+
+            let isoDate = date.toISODateString()
+            let dayComponents = isoDate.split(separator: "-")
+
+            // Only include days that are in the focus month
+            let dateMonth = dayComponents.count >= 2 ? Int(dayComponents[1]) ?? 0 : 0
+            let dayNumber = dayComponents.count >= 3 ? Int(dayComponents[2]) ?? 0 : 0
+
+            let data: (earnings: Double, hours: Double, shifts: Int)
+            if dateMonth == focusMonth {
+                data = earningsMap[isoDate] ?? (0, 0, 0)
+            } else {
+                // Day is outside focus month - show 0
+                data = (0, 0, 0)
+            }
+
+            // Show date number instead of day name for best week (e.g., "15.")
+            let dateLabel = "\(dayNumber)."
+            let fullName = fullWeekdayName(for: date, calendar: calendar)
+
+            weekData.append(DailyData(
+                date: dateLabel,
+                fullDay: fullName,
+                earnings: data.earnings,
+                hours: data.hours,
+                shifts: data.shifts,
+                fullDate: isoDate
+            ))
+        }
+
+        return BestWeekData(
+            weekData: weekData,
+            weekNumber: bestWeekNumber,
+            totalEarnings: bestWeekEntry.value.earnings,
+            totalHours: bestWeekEntry.value.hours
+        )
+    }
+
+    /// Get short weekday name (e.g., "Man", "Tir")
+    private func shortWeekdayName(for date: Date, calendar: Calendar) -> String {
+        let formatter = DateFormatter()
+        formatter.calendar = calendar
+        formatter.locale = Locale(identifier: "nb_NO") // Norwegian for consistency
+        formatter.dateFormat = "EEE"
+        return formatter.string(from: date).capitalized
+    }
+
+    /// Get full weekday name (e.g., "Mandag", "Tirsdag")
+    private func fullWeekdayName(for date: Date, calendar: Calendar) -> String {
+        let formatter = DateFormatter()
+        formatter.calendar = calendar
+        formatter.locale = Locale(identifier: "nb_NO") // Norwegian for consistency
+        formatter.dateFormat = "EEEE"
+        return formatter.string(from: date).capitalized
     }
 }
 
