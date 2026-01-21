@@ -27,25 +27,30 @@ struct AddShiftView: View {
                 Color.tidexBackground
                     .ignoresSafeArea()
 
-                // Scrollable content area
-                ScrollViewReader { scrollProxy in
-                    ScrollView {
-                        VStack(spacing: 24) {
-                            switch viewModel.mode {
-                            case .single:
-                                SingleShiftContent(viewModel: viewModel, scrollProxy: scrollProxy)
-                            case .recurring:
-                                RecurringShiftContent(viewModel: viewModel, scrollProxy: scrollProxy)
+                // Scrollable content area - centered in available space when content fits
+                GeometryReader { geometry in
+                    let availableHeight = geometry.size.height - (MonthPickerLayout.height + MonthPickerLayout.bottomPadding)
+
+                    ScrollViewReader { scrollProxy in
+                        ScrollView {
+                            VStack(spacing: 24) {
+                                switch viewModel.mode {
+                                case .single:
+                                    SingleShiftContent(viewModel: viewModel, scrollProxy: scrollProxy)
+                                case .recurring:
+                                    RecurringShiftContent(viewModel: viewModel, scrollProxy: scrollProxy)
+                                }
                             }
+                            .padding(.horizontal, 16)
+                            .padding(.top, 16)
+                            .frame(maxWidth: .infinity)
+                            .frame(minHeight: availableHeight, alignment: .center)
                         }
-                        .padding(.horizontal, 16)
-                        .padding(.top, 16)
-                        .frame(maxWidth: .infinity)
-                    }
-                    .scrollDismissesKeyboard(.interactively)
-                    .contentMargins(.bottom, MonthPickerLayout.height + MonthPickerLayout.bottomPadding + 16, for: .scrollContent)
-                    .onTapGesture {
-                        hideKeyboard()
+                        .scrollDismissesKeyboard(.interactively)
+                        .contentMargins(.bottom, MonthPickerLayout.height + MonthPickerLayout.bottomPadding + 16, for: .scrollContent)
+                        .onTapGesture {
+                            hideKeyboard()
+                        }
                     }
                 }
 
