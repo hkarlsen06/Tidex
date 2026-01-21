@@ -14,6 +14,11 @@ struct StatsView: View {
     // Haptic feedback
     private let selectionHaptic = UISelectionFeedbackGenerator()
 
+    // iPad detection - hide logo on iPad
+    private var isIPad: Bool {
+        UIDevice.current.userInterfaceIdiom == .pad
+    }
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -37,13 +42,15 @@ struct StatsView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(Color.tidexBackground, for: .navigationBar)
+            .iPadToolbarBackground(Color.tidexBackground)
             .toolbar {
-                ToolbarItem(placement: .principal) {
-                    Image("TidexWordmark")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(height: 22)
+                if !isIPad {
+                    ToolbarItem(placement: .principal) {
+                        Image("TidexWordmark")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(height: 22)
+                    }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     UserMenuButton(
@@ -52,6 +59,7 @@ struct StatsView: View {
                     )
                 }
             }
+            .iPadToolbarTransaction()
         }
         .task {
             await viewModel.loadStats()
@@ -113,8 +121,10 @@ struct StatsView: View {
                 Spacer()
                     .frame(height: MonthPickerLayout.height + MonthPickerLayout.bottomPadding + 24)
             }
+            .frame(maxWidth: AdaptiveMaxWidth.tabContent)
             .padding(.horizontal, 16)
             .padding(.top, 16)
+            .frame(maxWidth: .infinity)
         }
         .refreshable {
             await viewModel.refresh()
@@ -214,8 +224,10 @@ struct StatsView: View {
                 Spacer()
                     .frame(height: MonthPickerLayout.height + MonthPickerLayout.bottomPadding + 24)
             }
+            .frame(maxWidth: AdaptiveMaxWidth.tabContent)
             .padding(.horizontal, 16)
             .padding(.top, 16)
+            .frame(maxWidth: .infinity)
         }
         .refreshable {
             await viewModel.refresh()
@@ -262,6 +274,7 @@ struct StatsView: View {
                     .cornerRadius(8)
             }
         }
+        .frame(maxWidth: AdaptiveMaxWidth.tabContent)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding()
     }

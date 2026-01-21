@@ -17,6 +17,9 @@ enum AdaptiveMaxWidth {
 
     /// Max width for card-based layouts
     static let card: CGFloat = 520
+
+    /// Max width for main tab content (matches tab bar width on iPad)
+    static let tabContent: CGFloat = 500
 }
 
 // MARK: - View Modifier for Adaptive Max Width
@@ -140,6 +143,113 @@ extension View {
     /// Use this instead of the deprecated UIScreen.main approach
     func onSizeClass(_ action: @escaping (Bool) -> Void) -> some View {
         modifier(SizeClassReader(action: action))
+    }
+}
+
+// MARK: - iPad Detection Helper
+
+/// Check if running on iPad
+private var isIPad: Bool {
+    UIDevice.current.userInterfaceIdiom == .pad
+}
+
+// MARK: - iPad-Only View Modifiers
+
+extension View {
+    /// Applies toolbar background visibility only on iPad
+    /// On iPhone, the toolbar background behavior remains unchanged
+    @ViewBuilder
+    func iPadToolbarBackground(_ color: Color) -> some View {
+        if isIPad {
+            self
+                .toolbarBackgroundVisibility(.visible, for: .navigationBar)
+                .toolbarBackground(color, for: .navigationBar)
+        } else {
+            self
+                .toolbarBackground(color, for: .navigationBar)
+        }
+    }
+
+    /// Disables toolbar animations only on iPad
+    /// Prevents layout shifts when toolbar items change on iPad
+    @ViewBuilder
+    func iPadToolbarTransaction() -> some View {
+        if isIPad {
+            self.transaction { $0.animation = nil }
+        } else {
+            self
+        }
+    }
+
+    /// Applies fixed height only on iPad to prevent toolbar layout shifts
+    @ViewBuilder
+    func iPadFixedHeight(_ height: CGFloat) -> some View {
+        if isIPad {
+            self.frame(height: height)
+        } else {
+            self
+        }
+    }
+}
+
+// MARK: - iPad Landscape Detection
+
+/// Observable class that tracks device orientation changes
+@MainActor
+class OrientationTracker: ObservableObject {
+    static let shared = OrientationTracker()
+
+    @Published private(set) var isLandscape: Bool = false
+
+    private init() {
+        // Set initial value
+        updateOrientation()
+
+        // Listen for orientation changes
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(orientationDidChange),
+            name: UIDevice.orientationDidChangeNotification,
+            object: nil
+        )
+    }
+
+    @objc private func orientationDidChange() {
+        updateOrientation()
+    }
+
+    private func updateOrientation() {
+        // Use window scene for more reliable orientation detection
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+            if #available(iOS 26.0, *) {
+                let orientation = windowScene.effectiveGeometry.interfaceOrientation
+                isLandscape = orientation.isLandscape
+            } else {
+                let orientation = windowScene.interfaceOrientation
+                isLandscape = orientation.isLandscape
+            }
+        } else {
+            // Fallback to device orientation
+            let orientation = UIDevice.current.orientation
+            isLandscape = orientation.isLandscape
+        }
+    }
+}
+
+/// Helper to check if running on iPad in landscape mode
+/// Use this for iPad-specific landscape layouts
+@MainActor
+struct iPadLandscapeChecker {
+    static var isIPad: Bool {
+        UIDevice.current.userInterfaceIdiom == .pad
+    }
+
+    static var isLandscape: Bool {
+        OrientationTracker.shared.isLandscape
+    }
+
+    static var isIPadLandscape: Bool {
+        isIPad && isLandscape
     }
 }
 

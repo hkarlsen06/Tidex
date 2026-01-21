@@ -20,6 +20,11 @@ struct AddShiftView: View {
         }
     }
 
+    // iPad detection - hide logo on iPad
+    private var isIPad: Bool {
+        UIDevice.current.userInterfaceIdiom == .pad
+    }
+
     var body: some View {
         NavigationStack {
             ZStack(alignment: .bottom) {
@@ -41,6 +46,7 @@ struct AddShiftView: View {
                                     RecurringShiftContent(viewModel: viewModel, scrollProxy: scrollProxy)
                                 }
                             }
+                            .frame(maxWidth: AdaptiveMaxWidth.tabContent)
                             .padding(.horizontal, 16)
                             .padding(.top, 16)
                             .frame(maxWidth: .infinity)
@@ -64,23 +70,26 @@ struct AddShiftView: View {
                             .font(.system(size: 14))
                             .foregroundColor(.tidexError)
                     }
+                    .frame(maxWidth: AdaptiveMaxWidth.tabContent)
                     .padding(.horizontal, 16)
                     .padding(.bottom, MonthPickerLayout.height + MonthPickerLayout.bottomPadding + 8)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(Color.tidexBackground, for: .navigationBar)
+            .iPadToolbarBackground(Color.tidexBackground)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     ShiftModeToggle(mode: $viewModel.mode)
                         .fixedSize()
                 }
-                ToolbarItem(placement: .principal) {
-                    Image("TidexWordmark")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(height: 22)
+                if !isIPad {
+                    ToolbarItem(placement: .principal) {
+                        Image("TidexWordmark")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(height: 22)
+                    }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     UserMenuButton(
@@ -89,6 +98,7 @@ struct AddShiftView: View {
                     )
                 }
             }
+            .iPadToolbarTransaction()
         }
         .task {
             await viewModel.loadData()

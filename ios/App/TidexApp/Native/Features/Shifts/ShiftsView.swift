@@ -74,6 +74,19 @@ struct ShiftsView: View {
     private let impactHaptic = UIImpactFeedbackGenerator(style: .medium)
     private let celebrationHaptic = UINotificationFeedbackGenerator()
 
+    // iPad detection - hide logo on iPad
+    private var isIPad: Bool {
+        UIDevice.current.userInterfaceIdiom == .pad
+    }
+
+    // Orientation tracking for iPad landscape layout
+    @ObservedObject private var orientationTracker = OrientationTracker.shared
+
+    /// Whether to show iPad landscape side-by-side layout (calendar + list)
+    private var isIPadLandscape: Bool {
+        isIPad && orientationTracker.isLandscape
+    }
+
     // MARK: - Body
 
     var body: some View {
@@ -100,13 +113,15 @@ struct ShiftsView: View {
                 // Month picker is now in shared overlay in MainTabView
             }
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(Color.tidexBackground, for: .navigationBar)
+            .iPadToolbarBackground(Color.tidexBackground)
             .toolbar {
-                ToolbarItem(placement: .principal) {
-                    Image("TidexWordmark")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(height: 22)
+                if !isIPad {
+                    ToolbarItem(placement: .principal) {
+                        Image("TidexWordmark")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(height: 22)
+                    }
                 }
                 // Refresh button
                 ToolbarItem(placement: .topBarLeading) {
@@ -138,6 +153,7 @@ struct ShiftsView: View {
                     )
                 }
             }
+            .iPadToolbarTransaction()
         }
         .task {
             await viewModel.loadShifts()
@@ -553,12 +569,215 @@ struct ShiftsView: View {
     /// This ensures StaggeredCardsContainer persists across month changes for consistent animation
     @ViewBuilder
     private var shiftsContent: some View {
-        if showListView {
+        if isIPadLandscape {
+            // iPad landscape: side-by-side layout (calendar left, list right)
+            iPadLandscapeContent
+        } else if showListView {
             // List view mode - just the shift cards without calendar
             listViewContent
         } else {
             // Calendar view mode - calendar + shift list below
             calendarViewContent
+        }
+    }
+
+    // MARK: - iPad Landscape Content
+
+    /// Side-by-side layout for iPad landscape: calendar on left, shifts list on right
+    @ViewBuilder
+    private var iPadLandscapeContent: some View {
+        HStack(spacing: 48) {
+            Spacer()
+
+            // Left side: Calendar
+            calendarPanelForIPad
+                .frame(maxWidth: 500)
+
+            // Right side: Shifts list
+            shiftsPanelForIPad
+                .frame(maxWidth: 480)
+
+            Spacer()
+        }
+    }
+
+    /// Calendar panel for iPad landscape (left side)
+    @ViewBuilder
+    private var calendarPanelForIPad: some View {
+        MonthSwipeContainer(
+            onSwipeLeft: {
+                AppearanceTracker.shared.reset()
+                viewModel.goToNextMonth()
+            },
+            onSwipeRight: {
+                AppearanceTracker.shared.reset()
+                viewModel.goToPreviousMonth()
+            },
+            isEnabled: !viewModel.isSelectionModeEnabled
+        ) {
+            GeometryReader { geometry in
+                ZStack {
+                    // Background layer to dismiss selection when tapping outside calendar
+                    Color.clear
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            if !viewModel.selectedDates.isEmpty {
+                                viewModel.clearSelection()
+                            }
+                        }
+
+                    // Calendar content - centered
+                    VStack {
+                        Spacer()
+                        StaggeredCardsContainer(phase: transitionPhase, config: .default) {
+                            ShiftsCalendarView(
+                                shifts: viewModel.shifts,
+                                month: displayedMonthDate,
+                                year: viewModel.displayYear,
+                                monthNumber: viewModel.displayMonth,
+                                currency: viewModel.currency,
+                                showEarnings: true,
+                                phase: transitionPhase,
+                                onDayTapped: { dateISO, shiftsOnDay in
+                                    viewModel.handleDayTapped(dateISO: dateISO, shiftsOnDay: shiftsOnDay)
+                                },
+                                selectedDates: $viewModel.selectedDates,
+                                confirmingDelete: viewModel.confirmingDelete,
+                                isDeleting: viewModel.isDeleting,
+                                selectedEarnings: viewModel.selectedEarnings,
+                                selectedHasTaxEnabled: viewModel.selectedHasTaxEnabled,
+                                onDelete: {
+                                    viewModel.confirmingDelete = true
+                                },
+                                onConfirmDelete: {
+                                    Task {
+                                        await viewModel.deleteSelectedShifts()
+                                    }
+                                },
+                                onCancelDelete: {
+                                    viewModel.confirmingDelete = false
+                                },
+                                onCopy: {
+                                    viewModel.initiateCopy()
+                                },
+                                onDetails: {
+                                    let shiftsOnDate = viewModel.selectedDateShifts
+                                    if shiftsOnDate.count == 1, let shift = shiftsOnDate.first {
+                                        selectedShift = shift
+                                    } else if let dateISO = viewModel.selectedDates.first {
+                                        selectedDayForSheet = DayShiftSelection(dateISO: dateISO, shifts: shiftsOnDate)
+                                    }
+                                },
+                                onEdit: {
+                                    let shiftsOnDate = viewModel.selectedDateShifts
+                                    if let shift = shiftsOnDate.first {
+                                        shiftToEditDirectly = shift
+                                    }
+                                },
+                                onMove: {
+                                    viewModel.initiateMove()
+                                },
+                                onClearSelection: {
+                                    viewModel.clearSelection()
+                                },
+                                onSelectDateRange: { dates in
+                                    viewModel.handleDateRangeSelected(dates)
+                                },
+                                onEmptyDayTapped: { dateISO in
+                                    if viewModel.isCopyMode || viewModel.isMoveMode {
+                                        viewModel.cancelCopyMoveMode()
+                                        return
+                                    }
+                                    if !viewModel.selectedDates.isEmpty {
+                                        viewModel.clearSelection()
+                                        return
+                                    }
+                                    if let dateISO = dateISO {
+                                        SharedMonthContext.shared.preselectedDate = dateISO
+                                        selectedTab = .add
+                                    }
+                                },
+                                isCopyMode: viewModel.isCopyMode,
+                                isMoveMode: viewModel.isMoveMode,
+                                isCopying: viewModel.isCopying,
+                                isMoving: viewModel.isMoving,
+                                onCopyToDate: { targetDateISO in
+                                    Task {
+                                        await viewModel.handleCopyToDate(targetDateISO)
+                                    }
+                                },
+                                onMoveToDate: { targetDateISO in
+                                    Task {
+                                        await viewModel.handleMoveToDate(targetDateISO)
+                                    }
+                                },
+                                onCancelCopyMove: {
+                                    viewModel.cancelCopyMoveMode()
+                                },
+                                isSelectionModeEnabled: $viewModel.isSelectionModeEnabled,
+                                newlyAddedDates: celebrationManager.newlyAddedDates,
+                                deepLinkHighlightDate: deepLinkHighlightDate
+                            )
+                            .padding(.horizontal, 16)
+                        }
+                        Spacer()
+                    }
+                    // Offset for month picker overlay
+                    .padding(.bottom, MonthPickerLayout.height + MonthPickerLayout.bottomPadding)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }
+    }
+
+    /// Shifts list panel for iPad landscape (right side)
+    @ViewBuilder
+    private var shiftsPanelForIPad: some View {
+        if viewModel.shifts.isEmpty && !viewModel.isCurrentMonth {
+            // Empty state for past/future months
+            ScrollView {
+                ShiftsEmptyState(
+                    isCurrentMonth: viewModel.isCurrentMonth,
+                    monthPeriod: viewModel.monthPeriod,
+                    monthName: viewModel.displayMonthName,
+                    onAddShift: {
+                        selectedTab = .add
+                    }
+                )
+                .padding(.horizontal, 16)
+                .padding(.top, 40)
+                .padding(.bottom, MonthPickerLayout.height + MonthPickerLayout.bottomPadding + 16)
+            }
+            .refreshable {
+                AppearanceTracker.shared.reset()
+                await viewModel.refresh()
+            }
+        } else {
+            // Shift list
+            List {
+                ForEach(weekGroupsWithPlaceholder, id: \.weekKey) { weekGroup in
+                    Section {
+                        ForEach(weekGroup.items) { item in
+                            listItemRow(item: item)
+                        }
+                    } header: {
+                        WeekHeaderView(
+                            weekNumber: weekGroup.weekNumber,
+                            totalGross: weekGroup.totalGross
+                        )
+                        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 4, trailing: 16))
+                        .listRowBackground(Color.tidexBackground)
+                    }
+                }
+            }
+            .listStyle(.plain)
+            .scrollContentBackground(.hidden)
+            .background(Color.clear)
+            .contentMargins(.bottom, MonthPickerLayout.height + MonthPickerLayout.bottomPadding + 16, for: .scrollContent)
+            .refreshable {
+                AppearanceTracker.shared.reset()
+                await viewModel.refresh()
+            }
         }
     }
 
@@ -691,6 +910,7 @@ struct ShiftsView: View {
                                 newlyAddedDates: celebrationManager.newlyAddedDates,
                                 deepLinkHighlightDate: deepLinkHighlightDate
                             )
+                            .frame(maxWidth: AdaptiveMaxWidth.tabContent)
                             .padding(.horizontal, 16)
                         }
                         Spacer()
@@ -720,6 +940,7 @@ struct ShiftsView: View {
                         selectedTab = .add
                     }
                 )
+                .frame(maxWidth: AdaptiveMaxWidth.tabContent)
                 .padding(.horizontal, 16)
                 .padding(.top, 40)
                 // Add bottom padding for floating MonthPicker
@@ -819,6 +1040,8 @@ struct ShiftsView: View {
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
         .background(Color.clear)
+        .frame(maxWidth: AdaptiveMaxWidth.tabContent)
+        .frame(maxWidth: .infinity)
         // Add bottom padding so last items can scroll above the floating MonthPicker
         .contentMargins(.bottom, MonthPickerLayout.height + MonthPickerLayout.bottomPadding + 16, for: .scrollContent)
     }
@@ -913,6 +1136,7 @@ struct ShiftsView: View {
                 .font(.system(size: 14))
                 .foregroundColor(.tidexTextSecondary)
         }
+        .frame(maxWidth: AdaptiveMaxWidth.tabContent)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
@@ -946,6 +1170,7 @@ struct ShiftsView: View {
                     .cornerRadius(8)
             }
         }
+        .frame(maxWidth: AdaptiveMaxWidth.tabContent)
         .padding(.horizontal, 40)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }

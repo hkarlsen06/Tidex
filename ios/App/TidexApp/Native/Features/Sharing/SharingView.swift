@@ -26,6 +26,11 @@ struct SharingView: View {
     @State private var currentTime = Date()
     private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
+    // iPad detection - hide logo on iPad
+    private var isIPad: Bool {
+        UIDevice.current.userInterfaceIdiom == .pad
+    }
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -38,7 +43,7 @@ struct SharingView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(Color.tidexBackground, for: .navigationBar)
+            .iPadToolbarBackground(Color.tidexBackground)
             .toolbar {
                 // Back button when viewing a sharer
                 ToolbarItem(placement: .topBarLeading) {
@@ -59,31 +64,13 @@ struct SharingView: View {
                     }
                 }
 
-                // Title area - show logo on main list, sharer info when viewing a sharer
+                // Title area - show logo on main list, sharer info when viewing a sharer (iPhone only)
                 ToolbarItem(placement: .principal) {
-                    if let sharer = viewModel.selectedSharer {
-                        HStack(spacing: 8) {
-                            if let urlString = sharer.avatarUrl, let url = URL(string: urlString) {
-                                CachedAsyncImage(url: url) { image in
-                                    image
-                                        .resizable()
-                                        .aspectRatio(contentMode: .fill)
-                                        .frame(width: 28, height: 28)
-                                        .clipShape(Circle())
-                                } placeholder: {
-                                    sharerInitialsAvatar(sharer: sharer)
-                                }
-                            } else {
-                                sharerInitialsAvatar(sharer: sharer)
-                            }
-                            Text(sharer.firstNameOnly)
-                                .font(.system(size: 17, weight: .semibold))
-                                .foregroundColor(.tidexTextPrimary)
-                                .lineLimit(1)
-                                .truncationMode(.tail)
-                        }
-                    } else {
-                        // Logo on main friends list
+                    if let sharer = viewModel.selectedSharer, !isIPad {
+                        // Show sharer info in center on iPhone
+                        sharerToolbarInfo(sharer: sharer)
+                    } else if !isIPad {
+                        // Logo on main friends list - hidden on iPad
                         Image("TidexWordmark")
                             .resizable()
                             .scaledToFit()
@@ -91,10 +78,16 @@ struct SharingView: View {
                     }
                 }
 
-                // Sync time in trailing position when viewing a sharer
+                // Trailing area - sync time on iPhone, sharer info on iPad
                 ToolbarItem(placement: .topBarTrailing) {
-                    if viewModel.selectedSharer != nil {
-                        syncTimeView
+                    if let sharer = viewModel.selectedSharer {
+                        if isIPad {
+                            // Show sharer info on right side for iPad
+                            sharerToolbarInfo(sharer: sharer)
+                        } else {
+                            // Show sync time on iPhone
+                            syncTimeView
+                        }
                     }
                 }
 
@@ -109,6 +102,7 @@ struct SharingView: View {
                     }
                 }
             }
+            .iPadToolbarTransaction()
             .refreshable {
                 await viewModel.refresh()
             }
@@ -261,8 +255,10 @@ struct SharingView: View {
                     }
                 )
             }
+            .frame(maxWidth: AdaptiveMaxWidth.tabContent)
             .padding(.top, 16)
             .padding(.bottom, 32)
+            .frame(maxWidth: .infinity)
         }
     }
 
@@ -287,6 +283,8 @@ struct SharingView: View {
                     month: viewModel.displayMonth,
                     isLoading: viewModel.isLoadingShifts
                 )
+                .frame(maxWidth: AdaptiveMaxWidth.tabContent)
+                .frame(maxWidth: .infinity)
             }
             .background(
                 EdgeSwipeBackGesture {
@@ -299,6 +297,30 @@ struct SharingView: View {
     }
 
     // MARK: - Helper Views
+
+    /// Sharer name and avatar for toolbar display
+    private func sharerToolbarInfo(sharer: SharedUser) -> some View {
+        HStack(spacing: 8) {
+            if let urlString = sharer.avatarUrl, let url = URL(string: urlString) {
+                CachedAsyncImage(url: url) { image in
+                    image
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: 28, height: 28)
+                        .clipShape(Circle())
+                } placeholder: {
+                    sharerInitialsAvatar(sharer: sharer)
+                }
+            } else {
+                sharerInitialsAvatar(sharer: sharer)
+            }
+            Text(sharer.firstNameOnly)
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundColor(.tidexTextPrimary)
+                .lineLimit(1)
+                .truncationMode(.tail)
+        }
+    }
 
     private func sharerInitialsAvatar(sharer: SharedUser) -> some View {
         Circle()

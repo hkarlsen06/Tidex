@@ -25,6 +25,8 @@ struct ShiftModeToggle: View {
                 }
             }
         }
+        // Fixed height prevents toolbar layout shifts on iPad
+        .iPadFixedHeight(36)
     }
 
     private func localizedTitle(for mode: AddShiftMode) -> String {

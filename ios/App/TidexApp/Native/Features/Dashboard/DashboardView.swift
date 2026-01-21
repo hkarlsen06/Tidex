@@ -12,6 +12,11 @@ struct DashboardView: View {
     @StateObject private var viewModel = DashboardViewModel()
     @StateObject private var countdownManager = CountdownManager()
 
+    // iPad detection - hide logo on iPad
+    private var isIPad: Bool {
+        UIDevice.current.userInterfaceIdiom == .pad
+    }
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -35,13 +40,15 @@ struct DashboardView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(Color.tidexBackground, for: .navigationBar)
+            .iPadToolbarBackground(Color.tidexBackground)
             .toolbar {
-                ToolbarItem(placement: .principal) {
-                    Image("TidexWordmark")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(height: 22)
+                if !isIPad {
+                    ToolbarItem(placement: .principal) {
+                        Image("TidexWordmark")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(height: 22)
+                    }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     UserMenuButton(
@@ -50,6 +57,7 @@ struct DashboardView: View {
                     )
                 }
             }
+            .iPadToolbarTransaction()
         }
         .task {
             await viewModel.loadDashboard()
@@ -157,6 +165,7 @@ struct DashboardView: View {
 
                         // Animated card content - centered vertically
                         animatedCardContent(data: data)
+                            .frame(maxWidth: AdaptiveMaxWidth.tabContent)
                             .padding(.horizontal, 16)
 
                         Spacer()
@@ -330,6 +339,7 @@ struct DashboardView: View {
                         // Featured Shift Card skeleton
                         EmptyShiftCard(isBestShift: false, isLoading: true)
                     }
+                    .frame(maxWidth: AdaptiveMaxWidth.tabContent)
                     .padding(.horizontal, 16)
 
                     Spacer()
@@ -374,6 +384,7 @@ struct DashboardView: View {
                     .cornerRadius(8)
             }
         }
+        .frame(maxWidth: AdaptiveMaxWidth.tabContent)
         .padding(.horizontal, 40)
     }
 }
