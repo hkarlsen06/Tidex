@@ -150,7 +150,7 @@ struct DashboardView: View {
                 },
                 isEnabled: true  // Always enabled - navigation is now non-blocking
             ) {
-                // Cards centered on screen using GeometryReader
+                // Cards centered in available space (between toolbar and month picker)
                 GeometryReader { geometry in
                     VStack(spacing: 0) {
                         Spacer()
@@ -161,6 +161,8 @@ struct DashboardView: View {
 
                         Spacer()
                     }
+                    // Offset for month picker overlay so content centers in available space
+                    .padding(.bottom, MonthPickerLayout.height + MonthPickerLayout.bottomPadding)
                     .frame(width: geometry.size.width, height: geometry.size.height)
                     // Make entire VStack hit-testable for gesture propagation
                     .contentShape(Rectangle())
@@ -332,6 +334,8 @@ struct DashboardView: View {
 
                     Spacer()
                 }
+                // Offset for month picker overlay so content centers in available space
+                .padding(.bottom, MonthPickerLayout.height + MonthPickerLayout.bottomPadding)
                 .frame(width: geometry.size.width, height: geometry.size.height)
                 .contentShape(Rectangle())
             }

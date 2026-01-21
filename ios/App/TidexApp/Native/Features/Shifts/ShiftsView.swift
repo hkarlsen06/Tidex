@@ -591,7 +591,7 @@ struct ShiftsView: View {
                             }
                         }
 
-                    // Calendar content
+                    // Calendar content - centered between toolbar and month picker
                     VStack {
                         Spacer()
                         StaggeredCardsContainer(phase: transitionPhase, config: .default) {
@@ -695,6 +695,8 @@ struct ShiftsView: View {
                         }
                         Spacer()
                     }
+                    // Offset for month picker overlay so content centers in available space
+                    .padding(.bottom, MonthPickerLayout.height + MonthPickerLayout.bottomPadding)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
