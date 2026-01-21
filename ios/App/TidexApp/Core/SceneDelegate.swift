@@ -25,9 +25,12 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         window?.rootViewController = hostingController
         window?.makeKeyAndVisible()
 
-        // Apply cached theme to window (UIKit level for reliable system appearance following)
+        // Apply cached theme to window AND hosting controller (UIKit level for reliable system appearance following)
         // Using static method to avoid MainActor isolation issues at startup
-        window?.overrideUserInterfaceStyle = AppearanceManager.cachedUserInterfaceStyle()
+        // Both window and hostingController need the style set for SwiftUI to properly pick it up
+        let cachedStyle = AppearanceManager.cachedUserInterfaceStyle()
+        window?.overrideUserInterfaceStyle = cachedStyle
+        hostingController.overrideUserInterfaceStyle = cachedStyle
 
         // Handle any URLs passed at launch (OAuth callbacks, deep links)
         if let urlContext = connectionOptions.urlContexts.first {

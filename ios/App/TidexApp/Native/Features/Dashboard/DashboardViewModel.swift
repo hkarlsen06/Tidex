@@ -871,7 +871,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
         // Update published properties
         self.userDisplayName = displayName
 
-        return user.id.uuidString.lowercased()
+        return user.normalizedId
     }
 
     /// Update user avatar URL from settings (called after settings are loaded)

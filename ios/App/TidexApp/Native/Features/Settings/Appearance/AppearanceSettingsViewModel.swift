@@ -45,7 +45,7 @@ final class AppearanceSettingsViewModel: ObservableObject {
         // Get current user
         do {
             let session = try await supabase.auth.session
-            userId = session.user.id.uuidString
+            userId = session.normalizedUserId
         } catch {
             logger.error("Failed to get user session: \(error.localizedDescription)")
             isLoading = false

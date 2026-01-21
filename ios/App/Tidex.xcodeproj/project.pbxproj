@@ -53,6 +53,7 @@
 		114F0EE92F20711F00B587F0 /* WeeklyBarChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0EE82F20711F00B587F0 /* WeeklyBarChart.swift */; };
 		114F0EEC2F20773800B587F0 /* EmploymentPercentageChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0EEA2F20773800B587F0 /* EmploymentPercentageChart.swift */; };
 		114F0EED2F20773800B587F0 /* YearlyIncomeChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0EEB2F20773800B587F0 /* YearlyIncomeChart.swift */; };
+		114F0EEF2F2088DD00B587F0 /* Supabase+UserId.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0EEE2F2088DD00B587F0 /* Supabase+UserId.swift */; };
 		1152D0CB2F01E2A7002FD5ED /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1152D0CA2F01E2A7002FD5ED /* StoreKit.framework */; };
 		11923C192F16B94B0076AFD6 /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = 11923C182F16B94B0076AFD6 /* Auth */; };
 		11923C1B2F16B94B0076AFD6 /* Functions in Frameworks */ = {isa = PBXBuildFile; productRef = 11923C1A2F16B94B0076AFD6 /* Functions */; };
@@ -318,6 +319,7 @@
 		114F0EE82F20711F00B587F0 /* WeeklyBarChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyBarChart.swift; sourceTree = "<group>"; };
 		114F0EEA2F20773800B587F0 /* EmploymentPercentageChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmploymentPercentageChart.swift; sourceTree = "<group>"; };
 		114F0EEB2F20773800B587F0 /* YearlyIncomeChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YearlyIncomeChart.swift; sourceTree = "<group>"; };
+		114F0EEE2F2088DD00B587F0 /* Supabase+UserId.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Supabase+UserId.swift"; sourceTree = "<group>"; };
 		1152D0C82F01BB9B002FD5ED /* App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = App.entitlements; sourceTree = "<group>"; };
 		1152D0CA2F01E2A7002FD5ED /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 		119D1CB72F16E46300EC7072 /* AppCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppCoordinator.swift; sourceTree = "<group>"; };
@@ -915,6 +917,7 @@
 		119D1CE32F16E46300EC7072 /* Extensions */ = {
 			isa = PBXGroup;
 			children = (
+				114F0EEE2F2088DD00B587F0 /* Supabase+UserId.swift */,
 				11F4300A2F1A92EA002B1FBE /* View+AdaptiveLayout.swift */,
 				11AE8D072F16FDD8005AB062 /* Date+Tidex.swift */,
 				119D1CE22F16E46300EC7072 /* Color+Tidex.swift */,
@@ -1570,6 +1573,7 @@
 				11AE8CEA2F16FD82005AB062 /* PayrollCard.swift in Sources */,
 				11AE8CEB2F16FD82005AB062 /* DashboardViewModel.swift in Sources */,
 				11F42FA02F1A6A38002B1FBE /* OnboardingRateSlider.swift in Sources */,
+				114F0EEF2F2088DD00B587F0 /* Supabase+UserId.swift in Sources */,
 				119D1CEA2F16E46300EC7072 /* OTPInputField.swift in Sources */,
 				11A197CF2F1DF0750030E524 /* NorwegianHolidays.swift in Sources */,
 				11A197D02F1DF0750030E524 /* PayrollDateAdjuster.swift in Sources */,
@@ -1795,7 +1799,7 @@
 				CLANG_ENABLE_OBJC_WEAK = YES;
 				CODE_SIGN_ENTITLEMENTS = TidexShiftWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 130126.1;
+				CURRENT_PROJECT_VERSION = 210126.1;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = TidexShiftWidget/Info.plist;
@@ -1808,7 +1812,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MARKETING_VERSION = 1.2.0;
+				MARKETING_VERSION = 2.0.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				PRODUCT_BUNDLE_IDENTIFIER = no.tidex.app.TidexShiftWidget;
@@ -1834,7 +1838,7 @@
 				CLANG_ENABLE_OBJC_WEAK = YES;
 				CODE_SIGN_ENTITLEMENTS = TidexShiftWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 130126.1;
+				CURRENT_PROJECT_VERSION = 210126.1;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = TidexShiftWidget/Info.plist;
@@ -1847,7 +1851,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MARKETING_VERSION = 1.2.0;
+				MARKETING_VERSION = 2.0.0;
 				MTL_FAST_MATH = YES;
 				PRODUCT_BUNDLE_IDENTIFIER = no.tidex.app.TidexShiftWidget;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -1992,7 +1996,7 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				CODE_SIGN_ENTITLEMENTS = TidexApp/App.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 130126.1;
+				CURRENT_PROJECT_VERSION = 210126.1;
 				INFOPLIST_FILE = TidexApp/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = no.tidex.app;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
@@ -2001,7 +2005,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.2.0;
+				MARKETING_VERSION = 2.0.0;
 				OTHER_SWIFT_FLAGS = "$(inherited) \"-D\" \"COCOAPODS\" \"-DDEBUG\"";
 				PRODUCT_BUNDLE_IDENTIFIER = no.tidex.app;
 				PRODUCT_NAME = Tidex;
@@ -2020,7 +2024,7 @@
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				CODE_SIGN_ENTITLEMENTS = TidexApp/AppRelease.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 130126.1;
+				CURRENT_PROJECT_VERSION = 210126.1;
 				INFOPLIST_FILE = TidexApp/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = no.tidex.app;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
@@ -2029,7 +2033,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.2.0;
+				MARKETING_VERSION = 2.0.0;
 				"OTHER_SWIFT_FLAGS[arch=*]" = "-supress-warnings";
 				PRODUCT_BUNDLE_IDENTIFIER = no.tidex.app;
 				PRODUCT_NAME = Tidex;

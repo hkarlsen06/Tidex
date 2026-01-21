@@ -87,7 +87,8 @@ final class SyncCoordinator: ObservableObject {
         }
 
         // Interval guard for automatic syncs (silent skip)
-        if reason != .manualRefresh {
+        // Local changes and manual refreshes always bypass the interval guard
+        if reason != .manualRefresh && reason != .localChange {
             if let lastAuto = lastAutoSyncAt,
                Date().timeIntervalSince(lastAuto) < minimumSyncInterval {
                 return SyncResult(

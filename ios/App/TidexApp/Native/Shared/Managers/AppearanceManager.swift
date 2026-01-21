@@ -96,39 +96,51 @@ final class AppearanceManager: ObservableObject {
         logger.info("Theme updated to: \(theme.rawValue)")
     }
 
-    /// Apply the current theme to all app windows
+    /// Apply the current theme to all app windows and their root view controllers
     /// This uses UIKit's overrideUserInterfaceStyle which properly respects system appearance
     func applyToWindows() {
+        let style = theme.userInterfaceStyle
         for scene in UIApplication.shared.connectedScenes {
             guard let windowScene = scene as? UIWindowScene else { continue }
             for window in windowScene.windows {
-                window.overrideUserInterfaceStyle = theme.userInterfaceStyle
-                logger.debug("Applied \(self.theme.rawValue) to window")
+                window.overrideUserInterfaceStyle = style
+                // Also set on root view controller (UIHostingController) to ensure SwiftUI picks it up
+                window.rootViewController?.overrideUserInterfaceStyle = style
+                logger.debug("Applied \(self.theme.rawValue) (style: \(String(describing: style.rawValue))) to window and rootVC")
             }
         }
     }
 
-    /// Apply theme to a specific window
+    /// Apply theme to a specific window and its root view controller
     /// Called by SceneDelegate after window creation to apply the cached theme
     func applyToWindow(_ window: UIWindow) {
-        window.overrideUserInterfaceStyle = theme.userInterfaceStyle
-        logger.debug("Applied theme \(self.theme.rawValue) to window")
+        let style = theme.userInterfaceStyle
+        window.overrideUserInterfaceStyle = style
+        window.rootViewController?.overrideUserInterfaceStyle = style
+        logger.debug("Applied theme \(self.theme.rawValue) (style: \(String(describing: style.rawValue))) to window")
     }
 
     /// Load theme from user settings
     /// Called when settings are loaded from the repository
     /// - Parameter themeString: The theme string from user settings
+    ///
+    /// Note: If the user has a locally cached theme preference (in UserDefaults),
+    /// we trust that over the server value since it represents their most recent action.
+    /// The local preference will sync to the server in the background.
     func loadFromSettings(_ themeString: String?) {
-        let newTheme: AppTheme
-        if let themeString = themeString,
-           let parsed = AppTheme(rawValue: themeString) {
-            newTheme = parsed
-        } else {
-            newTheme = .system
-        }
+        // Check if we already have a locally cached theme preference
+        let hasCachedPreference = UserDefaults.standard.string(forKey: themeKey) != nil
 
-        // Update theme state and cache
-        if self.theme != newTheme {
+        if !hasCachedPreference {
+            // No local cache - use the server value
+            let newTheme: AppTheme
+            if let themeString = themeString,
+               let parsed = AppTheme(rawValue: themeString) {
+                newTheme = parsed
+            } else {
+                newTheme = .system
+            }
+
             self.theme = newTheme
             UserDefaults.standard.set(newTheme.rawValue, forKey: themeKey)
             logger.info("Theme loaded from settings: \(newTheme.rawValue)")

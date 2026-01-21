@@ -425,7 +425,7 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
         }
 
         let session = try await supabase.auth.session
-        let userId = session.user.id.uuidString.lowercased()
+        let userId = session.normalizedUserId
         cachedUserId = userId
         return userId
     }

@@ -67,7 +67,7 @@ final class StatsService: ObservableObject {
             // Get user ID
             if cachedUserId == nil {
                 let session = try await supabase.auth.session
-                cachedUserId = session.user.id.uuidString.lowercased()
+                cachedUserId = session.normalizedUserId
             }
 
             guard let userId = cachedUserId else {
