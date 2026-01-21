@@ -149,35 +149,6 @@ extension Color {
         Color(red: 155 / 255, green: 77 / 255, blue: 202 / 255) // #9B4DCA - magenta (bottom)
     ]
 
-    // MARK: - Legacy Static Colors (Deprecated)
-    //
-    // These colors are kept for backward compatibility during migration.
-    // New code should use the adaptive colors above.
-    // TODO: Remove these after full migration
-
-    /// @available(*, deprecated, message: "Use tidexBackground instead")
-    static let tidexDarkBackground = Color(hue: 222.2 / 360, saturation: 0.84, brightness: 0.11)
-}
-
-// MARK: - Color Asset Fallbacks
-//
-// These extensions provide fallback implementations for color assets.
-// The Asset Catalog colors are preferred, but these ensure the app works
-// even if the assets are missing.
-
-extension Color {
-    /// Creates a color that adapts to the current color scheme
-    /// - Parameters:
-    ///   - light: The color to use in light mode
-    ///   - dark: The color to use in dark mode
-    /// - Returns: A color that automatically switches based on appearance
-    static func adaptive(light: Color, dark: Color) -> Color {
-        // This is a workaround since SwiftUI doesn't have built-in adaptive colors
-        // outside of Asset Catalog. For now, we rely on the Asset Catalog colors.
-        // If asset is missing, this will crash - which is intentional to catch
-        // missing assets during development.
-        return light
-    }
 }
 
 // MARK: - Programmatic Adaptive Colors

@@ -1,3 +1,4 @@
+#if DEBUG
 import SwiftUI
 import os.log
 
@@ -546,3 +547,4 @@ struct SyncDebugView: View {
         SyncDebugView()
     }
 }
+#endif
