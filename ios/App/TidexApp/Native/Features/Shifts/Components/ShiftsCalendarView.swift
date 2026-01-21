@@ -132,6 +132,9 @@ struct ShiftsCalendarView: View {
     /// Track the last displayed earnings amount for smooth animation
     @State private var lastDisplayedEarnings: Double = 0
 
+    /// Track the last displayed gross earnings amount for smooth animation
+    @State private var lastDisplayedGrossEarnings: Double = 0
+
     // Haptic feedback for UI interactions (non-gesture haptics)
     private let toggleHaptic = UIImpactFeedbackGenerator(style: .light)
     private let warningHaptic = UINotificationFeedbackGenerator()
@@ -312,9 +315,21 @@ struct ShiftsCalendarView: View {
             }
 
             if showTax && displayTotals.gross > 0 {
-                Text(formatCurrency(displayTotals.gross))
-                    .font(.system(size: 13))
-                    .foregroundColor(.tidexTextMuted)
+                CurrencyCountUpText(
+                    amount: displayTotals.gross,
+                    animateOnAppear: false,
+                    animateFrom: lastDisplayedGrossEarnings > 0 ? lastDisplayedGrossEarnings : nil
+                )
+                .font(.system(size: 13))
+                .foregroundColor(.tidexTextMuted)
+                .onChange(of: displayTotals.gross) { _, newValue in
+                    lastDisplayedGrossEarnings = newValue
+                }
+                .onAppear {
+                    if lastDisplayedGrossEarnings == 0 {
+                        lastDisplayedGrossEarnings = displayTotals.gross
+                    }
+                }
             }
         }
     }
@@ -839,8 +854,9 @@ struct ShiftsCalendarView: View {
             .foregroundColor(viewMode == .hours ? .tidexTextPrimary : .tidexTextMuted)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 10)
+            .contentShape(Rectangle())
             .background(
-Group {
+                Group {
                     if viewMode == .hours {
                         Capsule()
                             .fill(.clear)
@@ -866,8 +882,9 @@ Group {
                     .foregroundColor(viewMode == .money ? .tidexTextPrimary : .tidexTextMuted)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 10)
+                    .contentShape(Rectangle())
                     .background(
-Group {
+                        Group {
                             if viewMode == .money {
                                 Capsule()
                                     .fill(.clear)

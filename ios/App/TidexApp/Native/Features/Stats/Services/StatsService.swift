@@ -122,6 +122,28 @@ final class StatsService: ObservableObject {
                 settings: settings
             )
 
+            // Compute all shifts for the year (for employment calculation)
+            // We need paidHours for each shift, so we compute them month by month
+            var fullYearShifts: [ShiftWithComputations] = []
+            for month in 1...12 {
+                let monthStart = Date.firstDayOfMonthDate(year: targetYear, month: month)
+                let monthEnd = Date.lastDayOfMonthDate(year: targetYear, month: month)
+                let monthShiftsRaw = shiftsRepository.getShifts(
+                    for: userId,
+                    startDate: monthStart,
+                    endDate: monthEnd
+                )
+                let computedShifts = PayrollEngine.computeShiftsForMonth(
+                    year: targetYear,
+                    month: month,
+                    shifts: monthShiftsRaw,
+                    recurring: recurringShifts,
+                    snapshots: snapshots,
+                    settings: settings
+                )
+                fullYearShifts.append(contentsOf: computedShifts)
+            }
+
             // Get totals using PayrollEngine
             let halfTaxMonth = settings.half_tax_month
             let currentTotals = PayrollEngine.summarizeShiftTotals(
@@ -214,6 +236,19 @@ final class StatsService: ObservableObject {
                 )
             }
 
+            // Build employment data for the focus year
+            let employmentData = buildEmploymentData(
+                focusYear: targetYear,
+                shifts: fullYearShifts,
+                snapshots: snapshots
+            )
+
+            // Build yearly income data (monthly breakdown for the focus year)
+            let yearlyIncomeData = buildYearlyIncomeData(
+                focusYear: targetYear,
+                shifts: fullYearShifts
+            )
+
             // Build stats data
             let statsData = StatsData(
                 focusMonth: FocusMonth(year: targetYear, month: targetMonth),
@@ -234,7 +269,9 @@ final class StatsService: ObservableObject {
                 monthlyGoal: monthlyGoal,
                 thisMonthCumulative: cumulativeData,
                 thisWeek: thisWeek,
-                bestWeek: bestWeek
+                bestWeek: bestWeek,
+                employment: employmentData,
+                yearlyIncome: yearlyIncomeData
             )
 
             stats = statsData
@@ -539,6 +576,222 @@ final class StatsService: ObservableObject {
         formatter.locale = Locale(identifier: "nb_NO") // Norwegian for consistency
         formatter.dateFormat = "EEEE"
         return formatter.string(from: date).capitalized
+    }
+
+    // MARK: - Employment Percentage Calculation
+
+    /// Build employment percentage data for the focus year
+    /// Calculates average employment percentage per month based on hours worked
+    /// Uses weighted distribution for weeks spanning multiple months
+    /// - Parameters:
+    ///   - focusYear: The year to calculate employment data for
+    ///   - shifts: All computed shifts for the year
+    ///   - snapshots: Wage snapshots to determine break deduction settings
+    /// - Returns: Employment data with monthly breakdown and yearly average
+    private func buildEmploymentData(
+        focusYear: Int,
+        shifts: [ShiftWithComputations],
+        snapshots: [WageSnapshot]
+    ) -> EmploymentData {
+        // Full-time hours per week: 37.5h if break deduction enabled, 40h otherwise
+        // Uses baseline snapshot's break setting (or first available snapshot)
+        let baselineSnapshot = snapshots.first { $0.isBaseline } ?? snapshots.first
+        let breakDeductionEnabled = baselineSnapshot?.effectiveBreakEnabled ?? true
+        let fullTimeHoursPerWeek: Double = breakDeductionEnabled ? 37.5 : 40
+
+        // Short and full month names (Norwegian)
+        let shortMonthNames = ["jan.", "feb.", "mar.", "apr.", "mai", "jun.",
+                               "jul.", "aug.", "sep.", "okt.", "nov.", "des."]
+        let fullMonthNames = ["Januar", "Februar", "Mars", "April", "Mai", "Juni",
+                              "Juli", "August", "September", "Oktober", "November", "Desember"]
+
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = Date.localTimeZone
+        calendar.firstWeekday = 2 // Monday
+
+        // Build a map of date -> hours worked
+        var hoursPerDay: [String: Double] = [:]
+        for shift in shifts {
+            let dateStr = shift.shiftDate
+            hoursPerDay[dateStr, default: 0] += shift.paidHours
+        }
+
+        // Track which days have shifts for hasShifts flag
+        var daysWithShiftsPerMonth: [Int: Set<Int>] = [:]
+        for shift in shifts {
+            let components = shift.shiftDate.split(separator: "-")
+            if components.count >= 3,
+               let month = Int(components[1]),
+               let day = Int(components[2]) {
+                daysWithShiftsPerMonth[month, default: []].insert(day)
+            }
+        }
+
+        // Accumulators for monthly employment percentages
+        struct MonthAccumulator {
+            var totalWeightedPercentage: Double = 0
+            var totalWeight: Double = 0
+        }
+        var monthlyAccumulators: [Int: MonthAccumulator] = [:]
+        for month in 1...12 {
+            monthlyAccumulators[month] = MonthAccumulator()
+        }
+
+        // Find Monday of the first week of the year
+        guard let yearStart = calendar.date(from: DateComponents(year: focusYear, month: 1, day: 1)) else {
+            return EmploymentData(monthlyData: [], yearlyAverage: nil, fullTimeHoursPerWeek: fullTimeHoursPerWeek)
+        }
+        let weekday = calendar.component(.weekday, from: yearStart)
+        let daysBackToMonday = weekday == 1 ? 6 : weekday - 2
+        guard var currentMonday = calendar.date(byAdding: .day, value: -daysBackToMonday, to: yearStart) else {
+            return EmploymentData(monthlyData: [], yearlyAverage: nil, fullTimeHoursPerWeek: fullTimeHoursPerWeek)
+        }
+
+        // End of the focus year
+        guard let yearEnd = calendar.date(from: DateComponents(year: focusYear, month: 12, day: 31)) else {
+            return EmploymentData(monthlyData: [], yearlyAverage: nil, fullTimeHoursPerWeek: fullTimeHoursPerWeek)
+        }
+
+        // Process all weeks until we pass the end of the year
+        while currentMonday <= yearEnd {
+            // Build the 7 days of this week
+            var weekDays: [Date] = []
+            for i in 0..<7 {
+                if let day = calendar.date(byAdding: .day, value: i, to: currentMonday) {
+                    weekDays.append(day)
+                }
+            }
+
+            // Calculate total hours worked this week
+            var totalWeekHours: Double = 0
+            for day in weekDays {
+                let dateStr = day.toISODateString()
+                totalWeekHours += hoursPerDay[dateStr] ?? 0
+            }
+
+            // Calculate employment percentage for this week
+            let weekEmploymentPct = (totalWeekHours / fullTimeHoursPerWeek) * 100
+
+            // Count how many days fall in each month (for weighted distribution)
+            var daysPerMonth: [Int: Int] = [:]
+            for day in weekDays {
+                let month = calendar.component(.month, from: day)
+                let year = calendar.component(.year, from: day)
+                // Only count days in the focus year
+                if year == focusYear {
+                    daysPerMonth[month, default: 0] += 1
+                }
+            }
+
+            // Add weighted contribution to each month
+            for (month, dayCount) in daysPerMonth {
+                let weight = Double(dayCount) / 7.0
+                monthlyAccumulators[month]?.totalWeightedPercentage += weekEmploymentPct * weight
+                monthlyAccumulators[month]?.totalWeight += weight
+            }
+
+            // Move to next week
+            currentMonday = calendar.date(byAdding: .day, value: 7, to: currentMonday) ?? currentMonday
+        }
+
+        // Build monthly data
+        var monthlyData: [EmploymentMonthlyData] = []
+        var yearlySum: Double = 0
+        var monthsWithShifts = 0
+
+        for month in 1...12 {
+            let accumulator = monthlyAccumulators[month] ?? MonthAccumulator()
+            let averagePercentage: Double
+            if accumulator.totalWeight > 0 {
+                averagePercentage = accumulator.totalWeightedPercentage / accumulator.totalWeight
+            } else {
+                averagePercentage = 0
+            }
+
+            let hasShifts = !(daysWithShiftsPerMonth[month]?.isEmpty ?? true)
+
+            // Round to 1 decimal place
+            let roundedPercentage = (averagePercentage * 10).rounded() / 10
+
+            monthlyData.append(EmploymentMonthlyData(
+                month: shortMonthNames[month - 1],
+                fullMonth: fullMonthNames[month - 1],
+                year: focusYear,
+                monthNumber: month,
+                averagePercentage: roundedPercentage,
+                hasShifts: hasShifts
+            ))
+
+            // Add to yearly sum if month has shifts
+            if hasShifts && accumulator.totalWeight > 0 {
+                yearlySum += averagePercentage
+                monthsWithShifts += 1
+            }
+        }
+
+        // Calculate yearly average
+        let yearlyAverage: Double?
+        if monthsWithShifts > 0 {
+            yearlyAverage = (yearlySum / Double(monthsWithShifts) * 10).rounded() / 10
+        } else {
+            yearlyAverage = nil
+        }
+
+        return EmploymentData(
+            monthlyData: monthlyData,
+            yearlyAverage: yearlyAverage,
+            fullTimeHoursPerWeek: fullTimeHoursPerWeek
+        )
+    }
+
+    // MARK: - Yearly Income Data
+
+    /// Build monthly income breakdown for the focus year
+    /// - Parameters:
+    ///   - focusYear: The year to calculate income data for
+    ///   - shifts: All computed shifts for the year
+    /// - Returns: Array of monthly income data for all 12 months
+    private func buildYearlyIncomeData(
+        focusYear: Int,
+        shifts: [ShiftWithComputations]
+    ) -> [MonthlyIncomeData] {
+        // Short and full month names (Norwegian)
+        let shortMonthNames = ["jan.", "feb.", "mar.", "apr.", "mai", "jun.",
+                               "jul.", "aug.", "sep.", "okt.", "nov.", "des."]
+        let fullMonthNames = ["Januar", "Februar", "Mars", "April", "Mai", "Juni",
+                              "Juli", "August", "September", "Oktober", "November", "Desember"]
+
+        // Group shifts by month
+        var monthlyEarnings: [Int: Double] = [:]
+        var monthlyHours: [Int: Double] = [:]
+        var monthlyShiftCounts: [Int: Int] = [:]
+
+        for shift in shifts {
+            // Parse month from shift_date string (YYYY-MM-DD)
+            let components = shift.shiftDate.split(separator: "-")
+            guard components.count >= 2,
+                  let month = Int(components[1]),
+                  month >= 1, month <= 12 else {
+                continue
+            }
+
+            monthlyEarnings[month, default: 0] += shift.grossPay
+            monthlyHours[month, default: 0] += shift.paidHours
+            monthlyShiftCounts[month, default: 0] += 1
+        }
+
+        // Build monthly data for all 12 months
+        return (1...12).map { month in
+            MonthlyIncomeData(
+                month: shortMonthNames[month - 1],
+                fullMonth: fullMonthNames[month - 1],
+                year: focusYear,
+                monthNumber: month,
+                earnings: monthlyEarnings[month] ?? 0,
+                hours: monthlyHours[month] ?? 0,
+                shifts: monthlyShiftCounts[month] ?? 0
+            )
+        }
     }
 }
 
