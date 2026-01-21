@@ -11,29 +11,92 @@ struct StatsView: View {
 
     @StateObject private var viewModel = StatsViewModel()
 
+    // Haptic feedback
+    private let selectionHaptic = UISelectionFeedbackGenerator()
+
     var body: some View {
-        RefreshableTabScreenContainer(
-            title: localization.string(AppTab.stats.titleKey),
-            onRefresh: {
-                await viewModel.refresh()
+        NavigationStack {
+            ZStack(alignment: .bottom) {
+                // Background
+                Color.tidexBackground
+                    .ignoresSafeArea()
+
+                // Main content
+                Group {
+                    if let error = viewModel.error {
+                        errorView(error: error)
+                    } else if let stats = viewModel.stats {
+                        statsContent(stats: stats)
+                    } else if viewModel.isLoading {
+                        loadingView
+                    } else {
+                        // Initial state - show loading
+                        loadingView
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+                // Floating month picker
+                AnimatedMonthHeader(
+                    monthName: viewModel.displayMonthName,
+                    year: viewModel.displayYear,
+                    phase: transitionPhase,
+                    isCurrentMonth: viewModel.isCurrentMonth,
+                    config: .default,
+                    onPrevious: {
+                        viewModel.goToPreviousMonth()
+                    },
+                    onNext: {
+                        viewModel.goToNextMonth()
+                    },
+                    onReturnToCurrent: {
+                        viewModel.goToCurrentMonth()
+                    },
+                    onNavigateToMonth: { year, month in
+                        SharedMonthContext.shared.navigateTo(year: year, month: month)
+                    },
+                    isLoading: viewModel.isLoading,
+                    backToTodayText: localization.string("dashboard.backToToday")
+                )
+                .frame(height: MonthPickerLayout.height)
+                .glassEffect(.regular.interactive(), in: .rect(cornerRadius: MonthPickerLayout.cornerRadius))
+                .padding(.horizontal, MonthPickerLayout.horizontalPadding)
+                .padding(.bottom, MonthPickerLayout.bottomPadding)
             }
-        ) {
-            Group {
-                if let error = viewModel.error {
-                    errorView(error: error)
-                } else if let stats = viewModel.stats {
-                    statsContent(stats: stats)
-                } else if viewModel.isLoading {
-                    loadingView
-                } else {
-                    // Initial state - show loading
-                    loadingView
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(Color.tidexBackground, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Image("TidexWordmark")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(height: 22)
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    UserMenuButton(
+                        displayName: coordinator.userDisplayName,
+                        avatarUrl: coordinator.userAvatarUrl
+                    )
                 }
             }
         }
         .task {
             await viewModel.loadStats()
         }
+        .onAppear {
+            selectionHaptic.prepare()
+        }
+    }
+
+    // MARK: - Transition Phase
+
+    /// Current transition phase for animations
+    private var transitionPhase: MonthTransitionPhase {
+        MonthTransitionPhase(
+            year: viewModel.displayYear,
+            month: viewModel.displayMonth,
+            direction: viewModel.navigationDirection
+        )
     }
 
     // MARK: - Stats Content
@@ -63,12 +126,15 @@ struct StatsView: View {
                     MonthlyGoalEmptyCard()
                 }
 
-                // Bottom spacing for tab bar
+                // Bottom spacing for floating month picker
                 Spacer()
-                    .frame(height: 24)
+                    .frame(height: MonthPickerLayout.height + MonthPickerLayout.bottomPadding + 24)
             }
             .padding(.horizontal, 16)
             .padding(.top, 16)
+        }
+        .refreshable {
+            await viewModel.refresh()
         }
     }
 
@@ -89,9 +155,16 @@ struct StatsView: View {
 
                 // Skeleton for Monthly Goal Card
                 skeletonCard(height: 140)
+
+                // Bottom spacing for floating month picker
+                Spacer()
+                    .frame(height: MonthPickerLayout.height + MonthPickerLayout.bottomPadding + 24)
             }
             .padding(.horizontal, 16)
             .padding(.top, 16)
+        }
+        .refreshable {
+            await viewModel.refresh()
         }
     }
 
