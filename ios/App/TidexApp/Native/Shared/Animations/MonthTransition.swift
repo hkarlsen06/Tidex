@@ -387,23 +387,19 @@ struct AnimatedMonthHeader: View {
 
     private var defaultLayout: some View {
         HStack(spacing: 0) {
-            // Left section: Previous button
-            HStack(spacing: 0) {
-                navigationButton(icon: "chevron.left", action: onPrevious)
-            }
-            .frame(width: navButtonWidth)
+            // Left section: Previous button (fixed width)
+            navigationButton(icon: "chevron.left", action: onPrevious)
+                .frame(width: navButtonWidth)
 
-            Spacer()
-
-            // Center section: Month and Year (horizontal)
-            // Naturally centers in available space between left and right sections
-            // Shows full year when space allows, truncates to 2 digits if needed
+            // Center section: Month and Year (fills available space, text centered)
+            // Fixed width ensures layout stability across different month names
             ViewThatFits(in: .horizontal) {
                 // Try full year first
                 monthYearLabel(yearText: String(year))
                 // Fall back to short year if needed
                 monthYearLabel(yearText: shortYear)
             }
+            .frame(maxWidth: .infinity)  // Fill space between buttons
             .id("month-\(phase.id)")
             .transition(textTransition)
             .scaleEffect(monthScale)
@@ -415,8 +411,6 @@ struct AnimatedMonthHeader: View {
                 tapHaptic.impactOccurred()
                 showMonthPicker()
             }
-
-            Spacer()
 
             // Right section: Back-to-today button (animated width) + Next button
             HStack(spacing: 8) {
@@ -459,12 +453,10 @@ struct AnimatedMonthHeader: View {
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundColor(.tidexTextPrimary)
                 .lineLimit(1)
-                .fixedSize()
 
             Text(yearText)
                 .font(.system(size: 16, weight: .regular))
                 .foregroundColor(.tidexTextSecondary)
-                .fixedSize()
         }
     }
 
@@ -476,12 +468,10 @@ struct AnimatedMonthHeader: View {
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundColor(.tidexTextPrimary)
                 .lineLimit(1)
-                .fixedSize()
 
             Text(yearText)
                 .font(.system(size: 13, weight: .regular))
                 .foregroundColor(.tidexTextSecondary)
-                .fixedSize()
         }
     }
 

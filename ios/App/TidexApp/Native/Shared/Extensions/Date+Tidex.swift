@@ -107,6 +107,36 @@ extension Date {
         return calendar.date(from: components) ?? Date()
     }
 
+    /// Get the visible date range for a calendar grid (includes out-of-month padding days)
+    /// - Parameters:
+    ///   - year: The year
+    ///   - month: The month (1-12)
+    /// - Returns: Tuple of (startDate, endDate) for the visible calendar range
+    static func visibleCalendarRange(year: Int, month: Int) -> (start: Date, end: Date) {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = localTimeZone
+
+        let firstOfMonth = firstDayOfMonthDate(year: year, month: month)
+        let lastOfMonth = lastDayOfMonthDate(year: year, month: month)
+
+        // Calendar grid starts on Monday, calculate days from previous month needed
+        // weekday: 1=Sunday, 2=Monday, ..., 7=Saturday
+        let firstWeekday = calendar.component(.weekday, from: firstOfMonth)
+        // Convert to Monday-start offset (0=Monday, 6=Sunday)
+        let startOffset = (firstWeekday + 5) % 7
+
+        // Calculate start date (may be in previous month)
+        let startDate = calendar.date(byAdding: .day, value: -startOffset, to: firstOfMonth) ?? firstOfMonth
+
+        // Calculate end date - fill to complete the last week
+        let lastWeekday = calendar.component(.weekday, from: lastOfMonth)
+        let lastOffset = (lastWeekday + 5) % 7  // days since Monday
+        let daysToEndOfWeek = lastOffset == 6 ? 0 : (6 - lastOffset)  // days until Sunday
+        let endDate = calendar.date(byAdding: .day, value: daysToEndOfWeek, to: lastOfMonth) ?? lastOfMonth
+
+        return (start: startDate, end: endDate)
+    }
+
     // MARK: - Weekday
 
     /// Get weekday (1-7 where 1=Monday, 7=Sunday) matching TypeScript conventions

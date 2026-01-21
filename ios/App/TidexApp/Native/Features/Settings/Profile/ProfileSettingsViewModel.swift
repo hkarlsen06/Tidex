@@ -119,7 +119,6 @@ final class ProfileSettingsViewModel: ObservableObject {
             }
 
         } catch {
-            print("[ProfileSettingsViewModel] Failed to load profile: \(error)")
             errorMessage = localization.string("profile.errors.loadFailed")
         }
 
@@ -174,7 +173,6 @@ final class ProfileSettingsViewModel: ObservableObject {
             }
 
         } catch {
-            print("[ProfileSettingsViewModel] Failed to save name: \(error)")
             errorMessage = localization.string("profile.errors.saveFailed")
         }
 
@@ -223,7 +221,6 @@ final class ProfileSettingsViewModel: ObservableObject {
             emailChangeSent = true
 
         } catch {
-            print("[ProfileSettingsViewModel] Failed to initiate email change: \(error)")
             errorMessage = localization.string("profile.emailChange.errors.failed")
         }
 
@@ -258,7 +255,6 @@ final class ProfileSettingsViewModel: ObservableObject {
                 .from(storageBucket)
                 .remove(paths: [path])
         } catch {
-            print("[ProfileSettingsViewModel] Failed to delete old avatar: \(error)")
             // Non-fatal - continue with upload
         }
     }
@@ -269,23 +265,14 @@ final class ProfileSettingsViewModel: ObservableObject {
     private func convertToWebP(_ imageData: Data, quality: CGFloat = 0.8) -> Data? {
         guard let source = CGImageSourceCreateWithData(imageData as CFData, nil),
               let cgImage = CGImageSourceCreateImageAtIndex(source, 0, nil) else {
-            print("[ProfileSettingsViewModel] WebP conversion failed: could not create CGImage from data")
             return nil
         }
-
-        // Log image properties for debugging
-        let colorSpace = cgImage.colorSpace?.name as String? ?? "unknown"
-        let bitsPerComponent = cgImage.bitsPerComponent
-        let bitsPerPixel = cgImage.bitsPerPixel
-        print("[ProfileSettingsViewModel] Source image: \(cgImage.width)x\(cgImage.height), colorSpace=\(colorSpace), bpc=\(bitsPerComponent), bpp=\(bitsPerPixel)")
 
         // Check if WebP encoding is supported
         let supportedTypes = CGImageDestinationCopyTypeIdentifiers() as? [String] ?? []
         let webpSupported = supportedTypes.contains(UTType.webP.identifier)
-        print("[ProfileSettingsViewModel] WebP encoding supported: \(webpSupported)")
 
         if !webpSupported {
-            print("[ProfileSettingsViewModel] WebP not in supported types: \(supportedTypes.prefix(10))...")
             return nil
         }
 
@@ -298,8 +285,6 @@ final class ProfileSettingsViewModel: ObservableObject {
             1,
             nil
         ) else {
-            // WebP encoding not supported on this device - this is expected on some configurations
-            print("[ProfileSettingsViewModel] WebP CGImageDestination creation failed despite type being supported")
             return nil
         }
 
@@ -310,7 +295,6 @@ final class ProfileSettingsViewModel: ObservableObject {
         CGImageDestinationAddImage(destination, cgImage, options as CFDictionary)
 
         guard CGImageDestinationFinalize(destination) else {
-            print("[ProfileSettingsViewModel] WebP conversion failed: CGImageDestinationFinalize returned false")
             return nil
         }
 
@@ -334,7 +318,6 @@ final class ProfileSettingsViewModel: ObservableObject {
             1,
             nil
         ) else {
-            print("[ProfileSettingsViewModel] HEIC encoding not available")
             return nil
         }
 
@@ -379,19 +362,16 @@ final class ProfileSettingsViewModel: ObservableObject {
                 uploadData = webpData
                 contentType = "image/webp"
                 fileExtension = "webp"
-                print("[ProfileSettingsViewModel] Using WebP format (\(webpData.count) bytes)")
             } else if let heicData = convertToHEIC(imageData, quality: 0.8) {
                 // HEIC fallback - ~50% smaller than JPEG, supported since iOS 11
                 uploadData = heicData
                 contentType = "image/heic"
                 fileExtension = "heic"
-                print("[ProfileSettingsViewModel] Using HEIC format (\(heicData.count) bytes)")
             } else {
                 // Final fallback to JPEG
                 uploadData = imageData
                 contentType = "image/jpeg"
                 fileExtension = "jpg"
-                print("[ProfileSettingsViewModel] Using JPEG fallback (\(imageData.count) bytes)")
             }
 
             // Generate unique filename
@@ -424,28 +404,17 @@ final class ProfileSettingsViewModel: ObservableObject {
                     for: currentUserId,
                     profilePictureUrl: publicUrl
                 )
-                print("[ProfileSettingsViewModel] Local settings updated with new URL")
             } catch {
-                // Critical: If local save fails, the URL won't sync
-                print("[ProfileSettingsViewModel] WARNING: Failed to save URL locally: \(error)")
-                // Continue anyway - at least the storage upload succeeded
+                // Non-fatal: storage upload succeeded, sync will retry later
             }
 
             // Update AppCoordinator's avatar URL
             AppCoordinator.shared.updateAvatarUrl(publicUrl)
 
-            // Trigger sync and wait for it to complete
-            // Use .localChange to bypass rate limiting - this is a user-initiated local change
-            let syncResult = await syncCoordinator.sync(reason: .localChange, userId: currentUserId)
-            if !syncResult.success {
-                print("[ProfileSettingsViewModel] WARNING: Sync failed after upload: \(syncResult.error ?? "unknown")")
-                // Don't show error to user - the upload succeeded, sync will retry later
-            } else {
-                print("[ProfileSettingsViewModel] Profile picture synced successfully")
-            }
+            // Trigger sync - use .localChange to bypass rate limiting
+            _ = await syncCoordinator.sync(reason: .localChange, userId: currentUserId)
 
         } catch {
-            print("[ProfileSettingsViewModel] Failed to upload avatar: \(error)")
             errorMessage = localization.string("profile.errors.uploadFailed")
         }
 
@@ -460,42 +429,25 @@ final class ProfileSettingsViewModel: ObservableObject {
         isUploadingAvatar = true
         errorMessage = nil
 
-        do {
-            // Delete from storage
-            await deleteStorageFile(from: currentUrl)
+        // Delete from storage
+        await deleteStorageFile(from: currentUrl)
 
-            // Clear from local cache
-            if let url = URL(string: currentUrl) {
-                ImageCache.shared.remove(for: url)
-            }
-
-            // Update local state immediately (optimistic UI)
-            profilePictureUrl = nil
-
-            // Update local settings - this marks the field dirty for sync
-            do {
-                _ = try await settingsRepository.clearProfilePictureUrl(for: currentUserId)
-                print("[ProfileSettingsViewModel] Local settings cleared profile picture URL")
-            } catch {
-                print("[ProfileSettingsViewModel] WARNING: Failed to clear URL locally: \(error)")
-            }
-
-            // Update AppCoordinator's avatar URL
-            AppCoordinator.shared.updateAvatarUrl(nil)
-
-            // Trigger sync to push the change to server
-            // Use .localChange to bypass rate limiting
-            let syncResult = await syncCoordinator.sync(reason: .localChange, userId: currentUserId)
-            if !syncResult.success {
-                print("[ProfileSettingsViewModel] WARNING: Sync failed after removal: \(syncResult.error ?? "unknown")")
-            } else {
-                print("[ProfileSettingsViewModel] Profile picture removal synced successfully")
-            }
-
-        } catch {
-            print("[ProfileSettingsViewModel] Failed to remove avatar: \(error)")
-            errorMessage = localization.string("profile.errors.removeFailed")
+        // Clear from local cache
+        if let url = URL(string: currentUrl) {
+            ImageCache.shared.remove(for: url)
         }
+
+        // Update local state immediately (optimistic UI)
+        profilePictureUrl = nil
+
+        // Update local settings - this marks the field dirty for sync
+        _ = try? await settingsRepository.clearProfilePictureUrl(for: currentUserId)
+
+        // Update AppCoordinator's avatar URL
+        AppCoordinator.shared.updateAvatarUrl(nil)
+
+        // Trigger sync - use .localChange to bypass rate limiting
+        _ = await syncCoordinator.sync(reason: .localChange, userId: currentUserId)
 
         isUploadingAvatar = false
     }
@@ -536,7 +488,7 @@ final class ProfileSettingsViewModel: ObservableObject {
             request.httpMethod = "DELETE"
             request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
 
-            let (data, response) = try await URLSession.shared.data(for: request)
+            let (_, response) = try await URLSession.shared.data(for: request)
 
             guard let httpResponse = response as? HTTPURLResponse else {
                 throw URLError(.badServerResponse)
@@ -549,16 +501,10 @@ final class ProfileSettingsViewModel: ObservableObject {
                 // Clear local data via AppCoordinator
                 await AppCoordinator.shared.signOut()
             } else {
-                // Parse error message
-                if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                   let errorMsg = json["error"] as? String {
-                    print("[ProfileSettingsViewModel] Delete account failed: \(errorMsg)")
-                }
                 throw URLError(.badServerResponse)
             }
 
         } catch {
-            print("[ProfileSettingsViewModel] Failed to delete account: \(error)")
             errorMessage = localization.string("profile.dangerZone.deleteAccount.errors.deleteFailed")
             isDeletingAccount = false
         }

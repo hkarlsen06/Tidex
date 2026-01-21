@@ -214,10 +214,12 @@ struct MainTabView: View {
                 isLoading: false,
                 backToTodayText: localization.string("dashboard.backToToday")
             )
+            .frame(maxWidth: .infinity)  // Fill available width for consistent sizing
             .frame(height: MonthPickerLayout.height)
             .glassEffect(.regular.interactive(), in: .rect(cornerRadius: MonthPickerLayout.cornerRadius))
         }
         .frame(maxWidth: AdaptiveMaxWidth.tabContent)
+        .frame(maxWidth: .infinity)  // Fill screen width, then constrain to tabContent max
         .padding(.horizontal, MonthPickerLayout.horizontalPadding)
         // Position above tab bar (49pt on iPhone) + original bottom padding (8pt)
         // On iPad, tab bar is at top so no extra padding needed

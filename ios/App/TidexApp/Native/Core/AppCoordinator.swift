@@ -120,7 +120,6 @@ final class AppCoordinator: ObservableObject {
             // the authStateChanges stream hasn't emitted.
             // This can happen if there's no stored session or the SDK initialization is slow.
             if self.appState == .loading && !self.didReceiveInitialSession {
-                print("[AppCoordinator] Initial session timeout - performing manual session check")
                 await self.performInitialSessionCheck()
             }
         }
@@ -131,10 +130,8 @@ final class AppCoordinator: ObservableObject {
         do {
             // session is non-optional - throws if no session exists
             _ = try await supabase.auth.session
-            print("[AppCoordinator] Manual session check: session found")
             await checkMFAAndUpdateState()
         } catch {
-            print("[AppCoordinator] Manual session check: no session (\(error.localizedDescription))")
             appState = .unauthenticated
         }
     }
@@ -145,8 +142,6 @@ final class AppCoordinator: ObservableObject {
         authStateTask = Task { [weak self] in
             for await (event, session) in supabase.auth.authStateChanges {
                 guard let self = self else { return }
-
-                print("[AppCoordinator] Auth event: \(event), session: \(session != nil ? "present" : "nil")")
 
                 switch event {
                 case .initialSession:
@@ -164,7 +159,6 @@ final class AppCoordinator: ObservableObject {
                     // User just signed in, check MFA
                     // Skip if already authenticated or in terms flow to prevent duplicate checks
                     guard self.appState != .authenticated && self.appState != .termsRequired else {
-                        print("[AppCoordinator] Skipping signedIn handling - already in state: \(self.appState)")
                         break
                     }
                     await self.checkMFAAndUpdateState()
@@ -219,7 +213,6 @@ final class AppCoordinator: ObservableObject {
             }
         } catch {
             // If MFA check fails, check terms and let backend handle MFA
-            print("[AppCoordinator] MFA check failed: \(error)")
             await checkTermsAndUpdateState()
         }
     }
@@ -256,7 +249,6 @@ final class AppCoordinator: ObservableObject {
             }
         } catch {
             // If we can't check terms, proceed to authenticated and let backend handle it
-            print("[AppCoordinator] Terms check failed: \(error)")
             if let session = try? await supabase.auth.session {
                 loadOnboardingStateFromUser(session.user)
             }
@@ -277,7 +269,6 @@ final class AppCoordinator: ObservableObject {
 
             // Only transition if we're still authenticated and terms are actually needed
             if needsReAcceptance && self.appState == .authenticated {
-                print("[AppCoordinator] Background terms check: user needs to accept updated terms")
                 self.isTermsUpdate = termsAcceptedAt != nil
                 self.appState = .termsRequired
             }
@@ -348,7 +339,6 @@ final class AppCoordinator: ObservableObject {
             }
 
         } catch {
-            print("[AppCoordinator] Failed to update user profile: \(error)")
             userDisplayName = "User"
         }
     }
@@ -389,12 +379,7 @@ final class AppCoordinator: ObservableObject {
         initialSyncComplete = false
 
         Task {
-            let result = await syncCoordinator.sync(reason: .appLaunch, userId: userId)
-
-            if result.success && (result.totalRowsProcessed > 0 || result.totalRowsPushed > 0) {
-                print("[AppCoordinator] Initial sync: \(result.totalRowsProcessed) pulled, \(result.totalRowsPushed) pushed")
-            }
-            // Silent on failure - SyncCoordinator logs errors
+            _ = await syncCoordinator.sync(reason: .appLaunch, userId: userId)
 
             initialSyncComplete = true
 
@@ -422,14 +407,9 @@ final class AppCoordinator: ObservableObject {
                     }
                 }
 
-                let result = await syncCoordinator.sync(reason: .foreground, userId: userId)
-
-                // Only log if sync actually ran and had data
-                if result.success && result.totalRowsProcessed > 0 {
-                    print("[AppCoordinator] Foreground sync: \(result.totalRowsProcessed) rows")
-                }
+                _ = await syncCoordinator.sync(reason: .foreground, userId: userId)
             } catch {
-                print("[AppCoordinator] Foreground sync skipped (no session): \(error)")
+                // No session available
             }
         }
     }
@@ -490,21 +470,16 @@ final class AppCoordinator: ObservableObject {
         do {
             try await authService.signOut()
             // Auth state listener will update appState to .unauthenticated
-            initialSyncComplete = false
-            userId = nil
-            // Clear user profile data to prevent stale data showing for next user
-            userDisplayName = ""
-            userAvatarUrl = nil
         } catch {
-            print("[AppCoordinator] Sign out failed: \(error)")
             // Force state change even if sign out fails
             appState = .unauthenticated
-            initialSyncComplete = false
-            userId = nil
-            // Clear user profile data to prevent stale data showing for next user
-            userDisplayName = ""
-            userAvatarUrl = nil
         }
+
+        initialSyncComplete = false
+        userId = nil
+        // Clear user profile data to prevent stale data showing for next user
+        userDisplayName = ""
+        userAvatarUrl = nil
     }
 
     /// Force a session check (useful for debugging or manual refresh)
@@ -551,20 +526,16 @@ final class AppCoordinator: ObservableObject {
         let host = url.host?.lowercased()
         let queryItems = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
 
-        print("[AppCoordinator] Handling deep link: \(url)")
-
         switch host {
         case "sharing":
             // Check for manage path
             if url.path == "/manage" || url.pathComponents.contains("manage") {
                 let highlightUserId = queryItems.first(where: { $0.name == "highlight" })?.value
                 pendingDeepLink = .sharingManage(highlightUserId: highlightUserId)
-                print("[AppCoordinator] Deep link: sharing/manage, highlight=\(highlightUserId ?? "nil")")
             } else {
                 // Navigate to sharer
                 let sharerId = queryItems.first(where: { $0.name == "user" })?.value
                 pendingDeepLink = .sharing(sharerId: sharerId)
-                print("[AppCoordinator] Deep link: sharing, user=\(sharerId ?? "nil")")
             }
 
         case "shifts":
@@ -574,10 +545,9 @@ final class AppCoordinator: ObservableObject {
             let actionString = queryItems.first(where: { $0.name == "action" })?.value?.lowercased()
             let action: ShiftDeepLinkAction = actionString == "highlight" ? .highlight : .open
             pendingDeepLink = .shifts(dates: dates, action: action)
-            print("[AppCoordinator] Deep link: shifts, dates=\(dates ?? []), action=\(action.rawValue)")
 
         default:
-            print("[AppCoordinator] Unknown deep link host: \(host ?? "nil")")
+            break
         }
     }
 
