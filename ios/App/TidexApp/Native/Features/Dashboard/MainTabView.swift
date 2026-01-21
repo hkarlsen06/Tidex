@@ -63,6 +63,9 @@ struct MainTabView: View {
         Binding(
             get: { selectedTab },
             set: { newTab in
+                // Haptic feedback for all tab interactions
+                selectionHaptic.selectionChanged()
+
                 if newTab == selectedTab {
                     if newTab == .add {
                         // Add tab tapped while already on it - trigger add action
