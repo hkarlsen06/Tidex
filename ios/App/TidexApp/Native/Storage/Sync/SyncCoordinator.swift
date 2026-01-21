@@ -61,6 +61,28 @@ final class SyncCoordinator: ObservableObject {
         logger.info("Sync state reset for user change")
     }
 
+    // MARK: - Device Locale Update
+
+    /// Updates the user's raw_user_meta_data with the current device locale
+    /// This helps track which locale the user's device is set to for notifications/localization
+    private func updateDeviceLocale() async {
+        // Get the device's preferred language (e.g., "en", "no", "nb")
+        guard let languageCode = Locale.current.language.languageCode?.identifier else {
+            logger.debug("Could not determine device language code")
+            return
+        }
+
+        do {
+            _ = try await supabase.auth.update(
+                user: UserAttributes(data: ["locale": .string(languageCode)])
+            )
+            logger.debug("Updated user locale to: \(languageCode)")
+        } catch {
+            // Non-fatal - log but don't fail the sync
+            logger.warning("Failed to update device locale: \(error.localizedDescription)")
+        }
+    }
+
     // MARK: - Public API
 
     /// Trigger a sync operation
@@ -116,6 +138,9 @@ final class SyncCoordinator: ObservableObject {
         }
 
         let startTime = Date()
+
+        // Update device locale in user metadata (non-blocking, errors logged but not propagated)
+        await updateDeviceLocale()
 
         // Get or create sync state
         let storeActor = LocalStore.shared.storeActor
