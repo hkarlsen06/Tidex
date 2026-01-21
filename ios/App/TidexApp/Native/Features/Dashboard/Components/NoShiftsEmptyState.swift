@@ -36,14 +36,14 @@ struct NoShiftsEmptyState: View {
 
             // Main message
             Text(localization.string("dashboard.noShifts"))
-                .font(.system(size: 16, weight: .medium))
+                .font(.tidexBodyMedium)
                 .foregroundColor(.tidexTextSecondary)
                 .multilineTextAlignment(.center)
 
             // Optional subtitle
             if let subtitle = subtitle {
                 Text(subtitle)
-                    .font(.system(size: 14))
+                    .font(.tidexSubheadline)
                     .foregroundColor(.tidexTextMuted)
                     .multilineTextAlignment(.center)
             }
@@ -52,10 +52,10 @@ struct NoShiftsEmptyState: View {
             if let actionButton = actionButton {
                 Button(action: actionButton.action) {
                     Text(actionButton.label)
-                        .font(.system(size: 14, weight: .medium))
+                        .font(.tidexLabel)
                         .foregroundColor(.tidexBlue)
                         .padding(.horizontal, 20)
-                        .padding(.vertical, 10)
+                        .padding(.vertical, Spacing.sm)
                         .background(Color.tidexBlue.opacity(0.1))
                         .cornerRadius(8)
                 }

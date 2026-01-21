@@ -149,7 +149,7 @@ struct ShiftsEmptyState: View {
                 }
                 .foregroundColor(.white)
                 .padding(.horizontal, 24)
-                .padding(.vertical, 14)
+                .padding(.vertical, Spacing.sm)
                 .background(Color.tidexBlue)
                 .cornerRadius(12)
             }

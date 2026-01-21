@@ -24,12 +24,12 @@ struct PlanCard: View {
                 VStack(alignment: .leading, spacing: 2) {
                     // Use App Store Connect localized name if available
                     Text(product?.displayName ?? tierName)
-                        .font(.system(size: 20, weight: .bold))
+                        .font(.tidexTitle2)
                         .foregroundColor(.tidexTextPrimary)
 
                     if isCurrentPlan {
                         Text(AuthStrings.string("paywall.currentPlan", locale: localization.currentLocale))
-                            .font(.system(size: 12, weight: .medium))
+                            .font(.tidexCaption)
                             .foregroundColor(.tidexSuccess)
                     }
                 }
@@ -44,7 +44,7 @@ struct PlanCard: View {
             // Product description from App Store Connect
             if let product = product {
                 Text(product.description)
-                    .font(.system(size: 14))
+                    .font(.tidexSubheadline)
                     .foregroundColor(.tidexTextSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -58,7 +58,7 @@ struct PlanCard: View {
                             .frame(maxWidth: .infinity)
                     } else {
                         Text(product != nil ? AuthStrings.string("paywall.subscribe", locale: localization.currentLocale) : AuthStrings.string("paywall.loadingButton", locale: localization.currentLocale))
-                            .font(.system(size: 16, weight: .semibold))
+                            .font(.tidexButton)
                             .frame(maxWidth: .infinity)
                     }
                 }
@@ -116,11 +116,11 @@ struct PlanCard: View {
     private func priceView(for product: Product) -> some View {
         VStack(alignment: .trailing, spacing: 2) {
             Text(product.displayPrice)
-                .font(.system(size: 22, weight: .bold))
+                .font(.tidexPrice)
                 .foregroundColor(.tidexTextPrimary)
 
             Text(periodLabel(for: product))
-                .font(.system(size: 12))
+                .font(.tidexPricePeriod)
                 .foregroundColor(.tidexTextMuted)
         }
     }

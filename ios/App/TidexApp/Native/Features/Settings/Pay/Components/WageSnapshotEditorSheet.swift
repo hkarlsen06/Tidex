@@ -358,7 +358,7 @@ struct WageSnapshotEditorSheet: View {
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundColor(.tidexBrandPrimary)
         }
-        .padding(10)
+        .padding(Spacing.xs)
         .background(Color.tidexSurfaceSecondary)
         .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
     }
@@ -404,7 +404,7 @@ struct WageSnapshotEditorSheet: View {
                     .foregroundColor(.tidexError)
             }
         }
-        .padding(10)
+        .padding(Spacing.xs)
         .background(Color.tidexSurfaceSecondary)
         .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
     }
@@ -475,7 +475,7 @@ struct WageSnapshotEditorSheet: View {
             }
             .foregroundColor(.white)
             .frame(maxWidth: .infinity)
-            .frame(height: 50)
+            .frame(height: Spacing.buttonHeight)
             .background(Color.tidexError)
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         }

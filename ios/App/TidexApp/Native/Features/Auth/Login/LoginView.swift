@@ -100,7 +100,7 @@ struct LoginView: View {
             // Title row with logo inline (matches Next.js layout)
             HStack {
                 Text(localization.string("login.title"))
-                    .font(.system(size: 22, weight: .bold))
+                    .font(.tidexTitle)
                     .foregroundColor(.tidexTextPrimary)
 
                 Spacer()
@@ -111,7 +111,7 @@ struct LoginView: View {
 
             // Subtitle aligned left
             Text(localization.string("login.subtitle"))
-                .font(.system(size: 14))
+                .font(.tidexSubheadline)
                 .foregroundColor(.tidexTextSecondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -155,7 +155,7 @@ struct LoginView: View {
                 .frame(height: 1)
 
             Text(localization.string("login.separator"))
-                .font(.system(size: 14))
+                .font(.tidexSubheadline)
                 .foregroundColor(.tidexTextMuted)
 
             Rectangle()
@@ -169,14 +169,14 @@ struct LoginView: View {
     private var footerView: some View {
         HStack(spacing: 4) {
             Text(localization.string("login.noAccount"))
-                .font(.system(size: 14))
+                .font(.tidexSubheadline)
                 .foregroundColor(.tidexTextSecondary)
 
             Button(action: {
                 onNavigateToSignup?()
             }) {
                 Text(localization.string("login.createAccount"))
-                    .font(.system(size: 14, weight: .medium))
+                    .font(.tidexLabel)
                     .foregroundColor(.tidexBlue)
             }
             .buttonStyle(.plain)

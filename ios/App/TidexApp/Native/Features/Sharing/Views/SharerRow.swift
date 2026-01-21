@@ -38,7 +38,7 @@ struct SharerRow: View {
                         .foregroundColor(.tidexTextMuted)
                 }
                 .padding(.horizontal, 16)
-                .padding(.vertical, 14)
+                .padding(.vertical, Spacing.sm)
 
                 // Shift preview (only shown when data is available, no skeleton)
                 // This allows for a cleaner staged reveal: sort first, then show cards
@@ -135,7 +135,7 @@ private struct ShiftPreviewCard: View {
             statusBadge
         }
         .padding(.horizontal, 12)
-        .padding(.vertical, 10)
+        .padding(.vertical, Spacing.sm)
         .background(
             RoundedRectangle(cornerRadius: 12)
                 .fill(Color.tidexSurfaceSecondary.opacity(0.5))

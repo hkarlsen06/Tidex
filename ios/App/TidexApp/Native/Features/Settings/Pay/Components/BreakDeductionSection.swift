@@ -189,7 +189,7 @@ private struct BreakMethodRow: View {
                     }
                 }
             }
-            .padding(10)
+            .padding(Spacing.xs)
             .background(isSelected ? Color.tidexBrandPrimary.opacity(0.08) : Color.tidexSurfaceSecondary)
             .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
         }

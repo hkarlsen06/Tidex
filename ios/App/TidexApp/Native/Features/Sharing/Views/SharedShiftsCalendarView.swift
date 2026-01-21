@@ -245,7 +245,7 @@ struct SharedShiftsCalendarView: View {
                 .font(.system(size: 14, weight: viewMode == .hours ? .semibold : .regular))
                 .foregroundColor(viewMode == .hours ? .tidexTextPrimary : .tidexTextMuted)
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 10)
+                .padding(.vertical, Spacing.sm)
                 .contentShape(Rectangle())
                 .background(
                     Group {
@@ -272,7 +272,7 @@ struct SharedShiftsCalendarView: View {
                     .font(.system(size: 14, weight: viewMode == .money ? .semibold : .regular))
                     .foregroundColor(viewMode == .money ? .tidexTextPrimary : .tidexTextMuted)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
+                    .padding(.vertical, Spacing.sm)
                     .contentShape(Rectangle())
                     .background(
                         Group {

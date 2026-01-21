@@ -26,10 +26,10 @@ struct OutlineButton: View {
                 }
 
                 Text(title)
-                    .font(.system(size: 16, weight: .medium))
+                    .font(.tidexBodyMedium)
             }
             .frame(maxWidth: .infinity)
-            .frame(height: 50)
+            .frame(height: Spacing.buttonHeight)
             .foregroundColor(.tidexTextSecondary)
             .background(Color.clear)
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))

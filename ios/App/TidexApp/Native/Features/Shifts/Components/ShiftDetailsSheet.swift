@@ -625,7 +625,7 @@ struct ShiftDetailsSheet: View {
                 }
                 .foregroundColor(.white)
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
+                .padding(.vertical, Spacing.sm)
                 .background(hasChanges ? Color.tidexBlue : Color.tidexBlue.opacity(0.5))
                 .cornerRadius(12)
             }
@@ -639,7 +639,7 @@ struct ShiftDetailsSheet: View {
                     .font(.system(size: 15, weight: .medium))
                     .foregroundColor(.tidexTextSecondary)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
+                    .padding(.vertical, Spacing.sm)
                     .background(Color.tidexSurfaceSecondary)
                     .cornerRadius(12)
             }
@@ -667,7 +667,7 @@ struct ShiftDetailsSheet: View {
                     }
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
+                    .padding(.vertical, Spacing.sm)
                     .background(Color.tidexBlue)
                     .cornerRadius(12)
                 }
@@ -690,7 +690,7 @@ struct ShiftDetailsSheet: View {
                     }
                     .foregroundColor(.tidexBlue)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
+                    .padding(.vertical, Spacing.sm)
                     .background(Color.tidexBlue.opacity(0.1))
                     .cornerRadius(12)
                 }
@@ -932,7 +932,7 @@ struct ShiftDetailsSheet: View {
             }
             .foregroundColor(.white)
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 14)
+            .padding(.vertical, Spacing.sm)
             .background(Color.tidexError)
             .cornerRadius(12)
         }

@@ -19,12 +19,12 @@ struct TidexTextField: View {
         VStack(alignment: .leading, spacing: 8) {
             // Label
             Text(label)
-                .font(.system(size: 14, weight: .medium))
+                .font(.tidexLabel)
                 .foregroundColor(.tidexTextSecondary)
 
             // Text field
             TextField(placeholder, text: $text)
-                .font(.system(size: 16))
+                .font(.tidexBody)
                 .foregroundColor(.tidexTextPrimary)
                 .keyboardType(keyboardType)
                 .textContentType(textContentType)
@@ -32,7 +32,7 @@ struct TidexTextField: View {
                 .autocorrectionDisabled(!autocorrection)
                 .focused($isFocused)
                 .padding(.horizontal, 16)
-                .padding(.vertical, 14)
+                .padding(.vertical, Spacing.sm)
                 .background(Color.tidexSurfaceSecondary)
                 .overlay(
                     RoundedRectangle(cornerRadius: 10)
@@ -47,7 +47,7 @@ struct TidexTextField: View {
             // Error message
             if let error = error, !error.isEmpty {
                 Text(error)
-                    .font(.system(size: 12))
+                    .font(.tidexCaptionRegular)
                     .foregroundColor(.tidexError)
             }
         }

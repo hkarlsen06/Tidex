@@ -657,7 +657,7 @@ struct ShiftsCalendarView: View {
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(.white)
                     .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
+                    .padding(.vertical, Spacing.sm)
                     .background(Capsule().fill(Color.tidexBrandPrimary))
             }
             .buttonStyle(.plain)
@@ -703,7 +703,7 @@ struct ShiftsCalendarView: View {
                     }
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
+                    .padding(.vertical, Spacing.sm)
                     .background(Capsule().fill(Color.tidexBrandPrimary))
                 }
                 .buttonStyle(.plain)
@@ -736,7 +736,7 @@ struct ShiftsCalendarView: View {
                     }
                     .foregroundColor(.orange)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
+                    .padding(.vertical, Spacing.sm)
                     .background(Capsule().fill(Color.orange.opacity(0.1)))
                 }
                 .buttonStyle(.plain)
@@ -767,7 +767,7 @@ struct ShiftsCalendarView: View {
                     }
                     .foregroundColor(.tidexTextSecondary)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
+                    .padding(.vertical, Spacing.sm)
                     .background(Capsule().fill(Color.tidexSurfaceSecondary.opacity(0.8)))
                 }
                 .buttonStyle(.plain)
@@ -805,7 +805,7 @@ struct ShiftsCalendarView: View {
             .foregroundColor(confirmingDelete ? .white : .red)
             .frame(width: confirmingDelete ? nil : 44)
             .frame(maxWidth: confirmingDelete ? .infinity : nil)
-            .padding(.vertical, 10)
+            .padding(.vertical, Spacing.sm)
             .padding(.horizontal, confirmingDelete ? 16 : 0)
             .background(Capsule().fill(confirmingDelete ? Color.red : Color.red.opacity(0.1)))
         }
@@ -827,7 +827,7 @@ struct ShiftsCalendarView: View {
             }
             .foregroundColor(.white)
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 10)
+            .padding(.vertical, Spacing.sm)
             .background(Capsule().fill(Color.tidexBrandPrimary))
         }
         .buttonStyle(.plain)
@@ -853,7 +853,7 @@ struct ShiftsCalendarView: View {
             .font(.system(size: 14, weight: viewMode == .hours ? .semibold : .regular))
             .foregroundColor(viewMode == .hours ? .tidexTextPrimary : .tidexTextMuted)
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 10)
+            .padding(.vertical, Spacing.sm)
             .contentShape(Rectangle())
             .background(
                 Group {
@@ -881,7 +881,7 @@ struct ShiftsCalendarView: View {
                     .font(.system(size: 14, weight: viewMode == .money ? .semibold : .regular))
                     .foregroundColor(viewMode == .money ? .tidexTextPrimary : .tidexTextMuted)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
+                    .padding(.vertical, Spacing.sm)
                     .contentShape(Rectangle())
                     .background(
                         Group {

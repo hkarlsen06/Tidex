@@ -878,7 +878,7 @@ struct ShiftsView: View {
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(.tidexBlue)
                     .padding(.horizontal, 20)
-                    .padding(.vertical, 10)
+                    .padding(.vertical, Spacing.sm)
                     .background(Color.tidexBlue.opacity(0.1))
                     .cornerRadius(8)
             }

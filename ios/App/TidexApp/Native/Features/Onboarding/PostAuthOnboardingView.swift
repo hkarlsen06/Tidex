@@ -377,7 +377,7 @@ private struct MFAEnrollmentSheet: View {
                         }
                         .foregroundColor(.tidexBlue)
                         .padding(.horizontal, 16)
-                        .padding(.vertical, 10)
+                        .padding(.vertical, Spacing.sm)
                         .background(Color.tidexBlue.opacity(0.1))
                         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                     }

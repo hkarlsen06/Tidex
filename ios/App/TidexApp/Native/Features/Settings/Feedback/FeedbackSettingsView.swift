@@ -170,7 +170,7 @@ struct FeedbackSettingsView: View {
                 }
                 .foregroundColor(.white)
                 .frame(maxWidth: .infinity)
-                .frame(height: 50)
+                .frame(height: Spacing.buttonHeight)
                 .background(viewModel.canSubmit ? Color.tidexBlue : Color.tidexBlue.opacity(0.5))
                 .cornerRadius(12)
             }

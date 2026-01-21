@@ -49,7 +49,7 @@ private struct AppleSignInButton: View {
                     .foregroundColor(.tidexTextPrimary)
             }
             .frame(maxWidth: .infinity)
-            .frame(height: 50)
+            .frame(height: Spacing.buttonHeight)
             .background(Color.tidexSurfaceSecondary)
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             .overlay(
@@ -84,7 +84,7 @@ private struct GoogleSignInButton: View {
                     .foregroundColor(.tidexTextPrimary)
             }
             .frame(maxWidth: .infinity)
-            .frame(height: 50)
+            .frame(height: Spacing.buttonHeight)
             .background(Color.tidexSurfaceSecondary)
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             .overlay(

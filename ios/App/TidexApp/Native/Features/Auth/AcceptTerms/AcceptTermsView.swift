@@ -95,7 +95,7 @@ struct AcceptTermsView: View {
                                 .font(.system(size: 16, weight: .medium))
                                 .foregroundColor(.tidexBlue)
                                 .padding(.horizontal, 16)
-                                .padding(.vertical, 14)
+                                .padding(.vertical, Spacing.sm)
                                 .background(
                                     RoundedRectangle(cornerRadius: 12)
                                         .fill(Color.tidexSurfaceSecondary)
@@ -118,7 +118,7 @@ struct AcceptTermsView: View {
                                 .font(.system(size: 16, weight: .medium))
                                 .foregroundColor(.tidexBlue)
                                 .padding(.horizontal, 16)
-                                .padding(.vertical, 14)
+                                .padding(.vertical, Spacing.sm)
                                 .background(
                                     RoundedRectangle(cornerRadius: 12)
                                         .fill(Color.tidexSurfaceSecondary)

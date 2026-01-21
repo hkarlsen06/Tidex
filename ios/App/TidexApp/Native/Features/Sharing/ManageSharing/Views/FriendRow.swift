@@ -166,7 +166,7 @@ struct FriendRow: View {
             Text(localization.string("sharing.shareBack"))
                 .font(.system(size: 12, weight: .medium))
                 .foregroundColor(.white)
-                .padding(.horizontal, 10)
+                .padding(.horizontal, Spacing.sm)
                 .padding(.vertical, 6)
                 .background(Color.tidexBlue)
                 .cornerRadius(6)

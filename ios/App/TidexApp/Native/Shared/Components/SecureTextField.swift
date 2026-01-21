@@ -50,7 +50,7 @@ struct SecureTextField: View {
                 .buttonStyle(.plain)
             }
             .padding(.horizontal, 16)
-            .padding(.vertical, 14)
+            .padding(.vertical, Spacing.sm)
             .background(Color.tidexSurfaceSecondary)
             .overlay(
                 RoundedRectangle(cornerRadius: 10)

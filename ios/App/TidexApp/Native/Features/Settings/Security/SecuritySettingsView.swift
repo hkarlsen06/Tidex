@@ -128,7 +128,7 @@ struct SecuritySettingsView: View {
 
             // Password card
             VStack(spacing: 0) {
-                HStack(spacing: 14) {
+                HStack(spacing: Spacing.sm) {
                     // Icon
                     Image(systemName: "lock.fill")
                         .font(.system(size: 20))
@@ -264,7 +264,7 @@ struct SecuritySettingsView: View {
         onDisconnect: @escaping () -> Void,
         connectDisabled: Bool = false
     ) -> some View {
-        HStack(spacing: 14) {
+        HStack(spacing: Spacing.sm) {
             // Icon
             Image(systemName: icon)
                 .font(.system(size: 20))
@@ -364,7 +364,7 @@ struct SecuritySettingsView: View {
             VStack(spacing: 0) {
                 // Enrolled factors
                 if viewModel.mfaFactors.isEmpty {
-                    HStack(spacing: 14) {
+                    HStack(spacing: Spacing.sm) {
                         Image(systemName: "shield.slash")
                             .font(.system(size: 20))
                             .foregroundColor(.tidexTextMuted)
@@ -413,7 +413,7 @@ struct SecuritySettingsView: View {
                     }
                     .foregroundColor(.tidexBlue)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
+                    .padding(.vertical, Spacing.sm)
                 }
                 .disabled(viewModel.isEnrollingMFA)
             }
@@ -453,7 +453,7 @@ struct SecuritySettingsView: View {
 
     @ViewBuilder
     private func mfaFactorRow(_ factor: SecuritySettingsViewModel.MFAFactor) -> some View {
-        HStack(spacing: 14) {
+        HStack(spacing: Spacing.sm) {
             // Icon
             Image(systemName: "iphone")
                 .font(.system(size: 20))
@@ -552,7 +552,7 @@ struct SecuritySettingsView: View {
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
+                            .padding(.vertical, Spacing.sm)
                             .background(canSubmitPassword ? Color.tidexBlue : Color.tidexBlue.opacity(0.5))
                             .cornerRadius(10)
                         }
@@ -599,7 +599,7 @@ struct SecuritySettingsView: View {
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
+                    .padding(.vertical, Spacing.sm)
                     .background(Color.tidexBlue)
                     .cornerRadius(10)
                 }
@@ -616,7 +616,7 @@ struct SecuritySettingsView: View {
                         .foregroundColor(.tidexTextPrimary)
                         .keyboardType(.numberPad)
                         .padding(.horizontal, 12)
-                        .padding(.vertical, 10)
+                        .padding(.vertical, Spacing.sm)
                         .background(Color.tidexSurfaceSecondary)
                         .cornerRadius(8)
                         .onChange(of: viewModel.phoneOtp) { _, newValue in
@@ -647,7 +647,7 @@ struct SecuritySettingsView: View {
                     .font(.system(size: 16))
                     .foregroundColor(.tidexTextPrimary)
                     .padding(.horizontal, 12)
-                    .padding(.vertical, 10)
+                    .padding(.vertical, Spacing.sm)
                     .background(Color.tidexSurfaceSecondary)
                     .cornerRadius(8)
             }
@@ -662,7 +662,7 @@ struct SecuritySettingsView: View {
                     .font(.system(size: 16))
                     .foregroundColor(.tidexTextPrimary)
                     .padding(.horizontal, 12)
-                    .padding(.vertical, 10)
+                    .padding(.vertical, Spacing.sm)
                     .background(Color.tidexSurfaceSecondary)
                     .cornerRadius(8)
             }
@@ -727,7 +727,7 @@ struct SecuritySettingsView: View {
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
+                            .padding(.vertical, Spacing.sm)
                             .background(viewModel.mfaVerifyCode.count == 6 ? Color.tidexBlue : Color.tidexBlue.opacity(0.5))
                             .cornerRadius(10)
                         }

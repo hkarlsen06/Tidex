@@ -110,7 +110,7 @@ struct WelcomeScreen: View {
 
                 // Large "amount" - the visual hook (locale-aware)
                 Text(ghostedAmountText)
-                    .font(.system(size: 32, weight: .bold, design: .rounded))
+                    .font(.tidexAmountLarge)
                     .foregroundColor(.tidexBlue)
 
                 Spacer().frame(height: 8)
@@ -180,7 +180,7 @@ struct WelcomeScreen: View {
         VStack(spacing: 12) {
             // Headline - sized to never truncate on any device
             Text(localization.string("onboarding.welcome.title"))
-                .font(.system(size: 24, weight: .bold))
+                .font(.tidexLargeTitle)
                 .foregroundStyle(
                     LinearGradient(
                         colors: [.tidexBlue, .tidexBlue.opacity(0.85)],
@@ -197,7 +197,7 @@ struct WelcomeScreen: View {
 
             // Subheadline
             Text(localization.string("onboarding.welcome.subtitle"))
-                .font(.system(size: 16))
+                .font(.tidexBody)
                 .foregroundColor(.tidexTextSecondary)
                 .multilineTextAlignment(.center)
                 .lineLimit(3)

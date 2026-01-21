@@ -125,7 +125,7 @@ private struct DurationTypeButton: View {
                 .font(.system(size: 14, weight: isSelected ? .semibold : .regular))
                 .foregroundColor(isSelected ? .white : .tidexTextSecondary)
                 .padding(.horizontal, 16)
-                .padding(.vertical, 10)
+                .padding(.vertical, Spacing.sm)
                 .background(isSelected ? Color.tidexBlue : Color.tidexSurfaceSecondary)
                 .clipShape(Capsule())
         }

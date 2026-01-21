@@ -32,7 +32,7 @@ struct CurrencySelector: View {
                         .foregroundColor(.tidexTextMuted)
                 }
                 .padding(.horizontal, 16)
-                .padding(.vertical, 14)
+                .padding(.vertical, Spacing.sm)
                 .background(Color.tidexSurfaceSecondary)
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 .overlay(
@@ -135,7 +135,7 @@ private struct CurrencyRow: View {
             }
             .contentShape(Rectangle())
             .padding(.horizontal, 20)
-            .padding(.vertical, 14)
+            .padding(.vertical, Spacing.sm)
             .background(isSelected ? Color.tidexBrandPrimary.opacity(0.08) : Color.clear)
         }
         .buttonStyle(.plain)

@@ -449,7 +449,7 @@ struct CustomSupplementsEditorSheet: View {
             }
             .foregroundColor(.tidexBlue)
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 14)
+            .padding(.vertical, Spacing.sm)
             .background(
                 RoundedRectangle(cornerRadius: 12)
                     .stroke(Color.tidexBlue, style: StrokeStyle(lineWidth: 1.5, dash: [6]))
