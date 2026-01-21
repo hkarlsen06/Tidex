@@ -15,6 +15,12 @@ struct ProfileSettingsView: View {
     @State private var selectedPhotoItem: PhotosPickerItem?
     /// Whether to show the remove avatar confirmation
     @State private var showRemoveAvatarConfirmation = false
+    /// Whether to show the image source picker (camera vs gallery)
+    @State private var showImageSourcePicker = false
+    /// Whether to show the gallery picker
+    @State private var showGalleryPicker = false
+    /// Whether to show the camera picker
+    @State private var showCamera = false
 
     var body: some View {
         ScrollView {
@@ -69,6 +75,33 @@ struct ProfileSettingsView: View {
                 }
             }
             Button(localization.string("common.cancel"), role: .cancel) {}
+        }
+        .confirmationDialog(
+            localization.string("profile.personalInfo.chooseImageSource"),
+            isPresented: $showImageSourcePicker,
+            titleVisibility: .visible
+        ) {
+            Button(localization.string("profile.personalInfo.takePhoto")) {
+                showCamera = true
+            }
+            Button(localization.string("profile.personalInfo.chooseFromLibrary")) {
+                showGalleryPicker = true
+            }
+            Button(localization.string("common.cancel"), role: .cancel) {}
+        }
+        .photosPicker(
+            isPresented: $showGalleryPicker,
+            selection: $selectedPhotoItem,
+            matching: .images,
+            photoLibrary: .shared()
+        )
+        .fullScreenCover(isPresented: $showCamera) {
+            CameraPicker { image in
+                Task {
+                    await handleCameraImage(image)
+                }
+            }
+            .ignoresSafeArea()
         }
         .sheet(isPresented: $viewModel.showEmailChangeSheet) {
             emailChangeSheet
@@ -294,11 +327,9 @@ struct ProfileSettingsView: View {
 
             // Buttons
             VStack(alignment: .leading, spacing: 8) {
-                PhotosPicker(
-                    selection: $selectedPhotoItem,
-                    matching: .images,
-                    photoLibrary: .shared()
-                ) {
+                Button {
+                    showImageSourcePicker = true
+                } label: {
                     uploadButtonLabel
                 }
                 .disabled(viewModel.isUploadingAvatar)
@@ -567,6 +598,45 @@ struct ProfileSettingsView: View {
         } catch {
             logger.error("Failed to process photo: \(error.localizedDescription)")
         }
+    }
+
+    /// Handle image captured from camera
+    private func handleCameraImage(_ image: UIImage) async {
+        // Resize to 192x192 square (matches server's AVATAR_SIZE for 2x retina)
+        // Use "cover" fit - crop to square from center, then resize
+        let avatarSize: CGFloat = 192
+        let sourceSize = image.size
+
+        // Calculate crop rect for center square
+        let shortSide = min(sourceSize.width, sourceSize.height)
+        let cropRect = CGRect(
+            x: (sourceSize.width - shortSide) / 2,
+            y: (sourceSize.height - shortSide) / 2,
+            width: shortSide,
+            height: shortSide
+        )
+
+        // Crop to square
+        guard let cgImage = image.cgImage,
+              let croppedCGImage = cgImage.cropping(to: cropRect) else {
+            logger.error("Failed to crop camera image")
+            return
+        }
+        let croppedImage = UIImage(cgImage: croppedCGImage, scale: image.scale, orientation: image.imageOrientation)
+
+        // Resize to avatar size
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: avatarSize, height: avatarSize))
+        let resizedImage = renderer.image { _ in
+            croppedImage.draw(in: CGRect(origin: .zero, size: CGSize(width: avatarSize, height: avatarSize)))
+        }
+
+        guard let compressedData = resizedImage.jpegData(compressionQuality: 0.8) else {
+            logger.error("Failed to compress camera image")
+            return
+        }
+
+        // Upload the image
+        await viewModel.uploadProfilePicture(compressedData)
     }
 }
 
