@@ -24,6 +24,9 @@ struct ShiftsCalendarView: View {
     let currency: String
     let showEarnings: Bool
 
+    /// Transition phase for header text animations
+    var phase: MonthTransitionPhase?
+
     // Day tap callback (single tap for selection toggle)
     var onDayTapped: ((String, [ShiftWithComputations]) -> Void)?
 
@@ -202,6 +205,7 @@ struct ShiftsCalendarView: View {
     private var headerRow: some View {
         HStack {
             // Month name + Year (or selection count)
+            // Animated horizontally on month change (like the month picker)
             HStack(spacing: 6) {
                 Text(monthName)
                     .font(.system(size: 20, weight: .semibold))
@@ -218,6 +222,7 @@ struct ShiftsCalendarView: View {
                         .foregroundColor(.tidexTextMuted)
                 }
             }
+            .modifier(HeaderTextTransitionModifier(phase: phase))
 
             Spacer()
 
@@ -228,6 +233,35 @@ struct ShiftsCalendarView: View {
         }
         .padding(.horizontal, 4)
         .padding(.bottom, 12)
+    }
+
+    // MARK: - Header Text Transition
+
+    /// Applies horizontal slide transition to the month/year header text
+    private struct HeaderTextTransitionModifier: ViewModifier {
+        let phase: MonthTransitionPhase?
+
+        func body(content: Content) -> some View {
+            if let phase = phase {
+                content
+                    .id("header-\(phase.id)")
+                    .transition(textTransition(for: phase))
+                    .animation(
+                        .spring(response: 0.3, dampingFraction: 0.85),
+                        value: phase.id
+                    )
+            } else {
+                content
+            }
+        }
+
+        private func textTransition(for phase: MonthTransitionPhase) -> AnyTransition {
+            let offset: CGFloat = phase.direction == .next ? 20 : -20
+            return .asymmetric(
+                insertion: .offset(x: offset).combined(with: .opacity),
+                removal: .offset(x: -offset).combined(with: .opacity)
+            )
+        }
     }
 
     /// Earnings display - shows monthly or selection totals

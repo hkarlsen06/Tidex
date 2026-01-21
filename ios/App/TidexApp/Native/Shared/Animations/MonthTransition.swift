@@ -3,6 +3,23 @@ import SwiftUI
 // MonthNavigationDirection is defined in MonthSwipeGesture.swift
 // This file provides animation utilities for month transitions
 
+// MARK: - Animation State Environment
+
+/// Environment key for tracking whether a month transition animation is in progress
+/// Child views can read this to buffer data changes during animation
+private struct MonthAnimatingKey: EnvironmentKey {
+    static let defaultValue: Bool = false
+}
+
+extension EnvironmentValues {
+    /// Whether a month transition animation is currently in progress
+    /// Use this to defer data updates until animation completes
+    var isMonthAnimating: Bool {
+        get { self[MonthAnimatingKey.self] }
+        set { self[MonthAnimatingKey.self] = newValue }
+    }
+}
+
 // MARK: - Layout Constants
 
 /// Layout constants for the floating MonthPicker above the tab bar
@@ -159,82 +176,16 @@ struct TextTransitionModifier: ViewModifier {
 
 // MARK: - Staggered Cards Container
 
-/// A container that animates child cards with a horizontal slide effect
-/// New content slides in from the appropriate direction based on navigation.
-///
-/// Note: This implementation uses manual offset animation instead of SwiftUI's
-/// .transition() API because transitions evaluate direction for both entering
-/// and exiting views using current state, causing bugs when direction changes rapidly.
+/// A simple container wrapper for calendar content.
+/// Previously handled slide animations, now simplified for instant transitions.
+/// The phase is still passed through for use by child views (e.g., header text animations).
 struct StaggeredCardsContainer<Content: View>: View {
     let phase: MonthTransitionPhase
     let config: MonthTransitionConfig
     @ViewBuilder let content: () -> Content
 
-    /// Current horizontal offset for slide animation
-    @State private var xOffset: CGFloat = 0
-
-    /// Track the last phase to detect actual changes
-    @State private var lastPhaseId: String = ""
-
-    /// Skip animation on very first render
-    @State private var hasInitialized: Bool = false
-
-    /// Container width for slide animations
-    @State private var containerWidth: CGFloat = 0
-
     var body: some View {
-        // No ZStack, no .id(), no .transition() - just offset animation
         content()
-            .offset(x: xOffset)
-            .clipped() // Clip overflow during animation (doesn't affect hit testing)
-            .contentShape(Rectangle()) // Ensure gestures can pass through
-            .background(
-                GeometryReader { geometry in
-                    Color.clear.onAppear {
-                        containerWidth = geometry.size.width
-                    }
-                    .onChange(of: geometry.size.width) { _, newWidth in
-                        containerWidth = newWidth
-                    }
-                }
-            )
-            .onAppear {
-                lastPhaseId = phase.id
-                xOffset = 0
-                // Delay initialization flag to prevent animation on first data load
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                    hasInitialized = true
-                }
-            }
-            .onChange(of: phase.id) { oldId, newId in
-                // Only animate if we've initialized and phase actually changed
-                guard hasInitialized, oldId != newId else {
-                    lastPhaseId = newId
-                    return
-                }
-
-                // Capture direction immediately
-                let direction = phase.direction ?? .next
-
-                // Determine entry position:
-                // .next (going forward in time): slide in from RIGHT
-                // .previous (going back in time): slide in from LEFT
-                let startX = direction == .next ? containerWidth : -containerWidth
-
-                // Transaction to ensure immediate position set
-                var transaction = Transaction()
-                transaction.disablesAnimations = true
-                withTransaction(transaction) {
-                    xOffset = startX
-                }
-
-                // Then animate to center
-                withAnimation(.spring(response: config.springResponse, dampingFraction: config.dampingFraction)) {
-                    xOffset = 0
-                }
-
-                lastPhaseId = newId
-            }
     }
 }
 
