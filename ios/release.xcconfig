@@ -1,4 +1,4 @@
-// Debug Configuration
+// Release Configuration
 // Includes shared version settings
 
 #include "Version.xcconfig"
