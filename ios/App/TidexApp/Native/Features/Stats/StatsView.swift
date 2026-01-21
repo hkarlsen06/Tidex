@@ -16,12 +16,12 @@ struct StatsView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack(alignment: .bottom) {
+            ZStack {
                 // Background
                 Color.tidexBackground
                     .ignoresSafeArea()
 
-                // Main content
+                // Main content - month picker is now in shared overlay
                 Group {
                     if let error = viewModel.error {
                         errorView(error: error)
@@ -35,33 +35,6 @@ struct StatsView: View {
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-                // Floating month picker
-                AnimatedMonthHeader(
-                    monthName: viewModel.displayMonthName,
-                    year: viewModel.displayYear,
-                    phase: transitionPhase,
-                    isCurrentMonth: viewModel.isCurrentMonth,
-                    config: .default,
-                    onPrevious: {
-                        viewModel.goToPreviousMonth()
-                    },
-                    onNext: {
-                        viewModel.goToNextMonth()
-                    },
-                    onReturnToCurrent: {
-                        viewModel.goToCurrentMonth()
-                    },
-                    onNavigateToMonth: { year, month in
-                        SharedMonthContext.shared.navigateTo(year: year, month: month)
-                    },
-                    isLoading: viewModel.isLoading,
-                    backToTodayText: localization.string("dashboard.backToToday")
-                )
-                .frame(height: MonthPickerLayout.height)
-                .glassEffect(.regular.interactive(), in: .rect(cornerRadius: MonthPickerLayout.cornerRadius))
-                .padding(.horizontal, MonthPickerLayout.horizontalPadding)
-                .padding(.bottom, MonthPickerLayout.bottomPadding)
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(Color.tidexBackground, for: .navigationBar)
@@ -86,17 +59,6 @@ struct StatsView: View {
         .onAppear {
             selectionHaptic.prepare()
         }
-    }
-
-    // MARK: - Transition Phase
-
-    /// Current transition phase for animations
-    private var transitionPhase: MonthTransitionPhase {
-        MonthTransitionPhase(
-            year: viewModel.displayYear,
-            month: viewModel.displayMonth,
-            direction: viewModel.navigationDirection
-        )
     }
 
     // MARK: - Stats Content

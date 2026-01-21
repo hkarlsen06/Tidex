@@ -11,6 +11,9 @@ struct SharingView: View {
     /// Binding to the selected tab for navigation
     @Binding var selectedTab: MainTabView.Tab
 
+    /// Binding to communicate sharer selection state to parent
+    @Binding var hasSelectedSharer: Bool
+
     @StateObject private var viewModel = SharingViewModel()
 
     /// State for showing the manage sharing sheet
@@ -30,41 +33,9 @@ struct SharingView: View {
                 Color.tidexBackground
                     .ignoresSafeArea()
 
-                // Main layout
-                VStack(spacing: 0) {
-                    // Content area
-                    contentView
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-                    // Month picker - only visible when viewing a sharer's shifts
-                    if viewModel.selectedSharer != nil {
-                        AnimatedMonthHeader(
-                            monthName: viewModel.displayMonthName,
-                            year: viewModel.displayYear,
-                            phase: transitionPhase,
-                            isCurrentMonth: viewModel.isCurrentMonth,
-                            config: .default,
-                            onPrevious: {
-                                viewModel.goToPreviousMonth()
-                            },
-                            onNext: {
-                                viewModel.goToNextMonth()
-                            },
-                            onReturnToCurrent: {
-                                viewModel.goToCurrentMonth()
-                            },
-                            onNavigateToMonth: { year, month in
-                                SharedMonthContext.shared.navigateTo(year: year, month: month)
-                            },
-                            isLoading: viewModel.isLoadingShifts,
-                            backToTodayText: localization.string("dashboard.backToToday")
-                        )
-                        .frame(height: MonthPickerLayout.height)
-                        .glassEffect(.regular.interactive(), in: .rect(cornerRadius: MonthPickerLayout.cornerRadius))
-                        .padding(.horizontal, MonthPickerLayout.horizontalPadding)
-                        .padding(.bottom, MonthPickerLayout.bottomPadding)
-                    }
-                }
+                // Main content - month picker is now in shared overlay
+                contentView
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(Color.tidexBackground, for: .navigationBar)
@@ -181,6 +152,12 @@ struct SharingView: View {
         .onAppear {
             // Handle any pending deep link on initial appearance
             handlePendingDeepLink(coordinator.pendingDeepLink)
+            // Sync initial state
+            hasSelectedSharer = viewModel.selectedSharer != nil
+        }
+        .onChange(of: viewModel.selectedSharer) { _, sharer in
+            // Sync sharer selection state with parent for shared month picker visibility
+            hasSelectedSharer = sharer != nil
         }
     }
 
@@ -366,15 +343,6 @@ struct SharingView: View {
         }
     }
 
-    // MARK: - Transition Phase
-
-    private var transitionPhase: MonthTransitionPhase {
-        MonthTransitionPhase(
-            year: viewModel.displayYear,
-            month: viewModel.displayMonth,
-            direction: viewModel.navigationDirection
-        )
-    }
 }
 
 // MARK: - Edge Swipe Back Gesture
@@ -482,9 +450,10 @@ private class EdgeSwipeView: UIView {
 #Preview {
     struct PreviewWrapper: View {
         @State private var selectedTab: MainTabView.Tab = .sharing
+        @State private var hasSelectedSharer = false
 
         var body: some View {
-            SharingView(selectedTab: $selectedTab)
+            SharingView(selectedTab: $selectedTab, hasSelectedSharer: $hasSelectedSharer)
                 .environmentObject(AppCoordinator.shared)
                 .environment(\.localization, LocalizationManager.shared)
                 .environment(\.userCurrency, "kr")

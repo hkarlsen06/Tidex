@@ -8,16 +8,7 @@ struct AddShiftView: View {
     @Environment(\.localization) private var localization
     @StateObject private var viewModel = AddShiftViewModel()
     @Binding var selectedTab: MainTabView.Tab
-    @State private var isKeyboardVisible = false
-
-    /// Transition phase for AnimatedMonthHeader animations
-    private var transitionPhase: MonthTransitionPhase {
-        MonthTransitionPhase(
-            year: viewModel.displayYear,
-            month: viewModel.displayMonthNumber,
-            direction: viewModel.navigationDirection
-        )
-    }
+    @Binding var isKeyboardVisible: Bool
 
     /// Title for current mode
     private var modeTitle: String {
@@ -52,54 +43,24 @@ struct AddShiftView: View {
                         .frame(maxWidth: .infinity)
                     }
                     .scrollDismissesKeyboard(.interactively)
+                    .contentMargins(.bottom, MonthPickerLayout.height + MonthPickerLayout.bottomPadding + 16, for: .scrollContent)
                     .onTapGesture {
                         hideKeyboard()
                     }
                 }
 
-                // Fixed bottom area with month picker - hidden when keyboard is visible
-                if !isKeyboardVisible {
-                    VStack(spacing: 8) {
-                        // Error display (if any)
-                        if let error = viewModel.error {
-                            HStack(spacing: 8) {
-                                Image(systemName: "exclamationmark.circle.fill")
-                                    .foregroundColor(.tidexError)
+                // Error display - positioned above the shared month picker
+                if let error = viewModel.error, !isKeyboardVisible {
+                    HStack(spacing: 8) {
+                        Image(systemName: "exclamationmark.circle.fill")
+                            .foregroundColor(.tidexError)
 
-                                Text(error)
-                                    .font(.system(size: 14))
-                                    .foregroundColor(.tidexError)
-                            }
-                            .padding(.horizontal, 16)
-                        }
-
-                        // Month picker - same styling as Dashboard/Shifts/Sharing
-                        AnimatedMonthHeader(
-                            monthName: viewModel.displayMonthName,
-                            year: viewModel.displayYear,
-                            phase: transitionPhase,
-                            isCurrentMonth: viewModel.isCurrentMonth,
-                            config: .default,
-                            onPrevious: {
-                                viewModel.goToPreviousMonth()
-                            },
-                            onNext: {
-                                viewModel.goToNextMonth()
-                            },
-                            onReturnToCurrent: {
-                                viewModel.goToCurrentMonth()
-                            },
-                            onNavigateToMonth: { year, month in
-                                SharedMonthContext.shared.navigateTo(year: year, month: month)
-                            },
-                            isLoading: viewModel.isLoading,
-                            backToTodayText: localization.string("dashboard.backToToday")
-                        )
-                        .frame(height: MonthPickerLayout.height)
-                        .glassEffect(.regular.interactive(), in: .rect(cornerRadius: MonthPickerLayout.cornerRadius))
+                        Text(error)
+                            .font(.system(size: 14))
+                            .foregroundColor(.tidexError)
                     }
-                    .padding(.horizontal, MonthPickerLayout.horizontalPadding)
-                    .padding(.bottom, MonthPickerLayout.bottomPadding)
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, MonthPickerLayout.height + MonthPickerLayout.bottomPadding + 8)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
             }
@@ -260,7 +221,7 @@ private struct RecurringShiftContent: View {
 // MARK: - Preview
 
 #Preview {
-    AddShiftView(selectedTab: .constant(.add))
+    AddShiftView(selectedTab: .constant(.add), isKeyboardVisible: .constant(false))
         .environmentObject(AppCoordinator.shared)
         .environment(\.localization, LocalizationManager.shared)
 }

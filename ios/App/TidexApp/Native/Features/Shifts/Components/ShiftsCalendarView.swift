@@ -697,6 +697,18 @@ struct ShiftsCalendarView: View {
             } else {
                 Button {
                     toggleHaptic.impactOccurred()
+                    onEdit?()
+                } label: {
+                    Image(systemName: "pencil")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.tidexBlue)
+                        .frame(width: 44, height: 36)
+                        .background(Capsule().fill(Color.tidexBlue.opacity(0.1)))
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                    toggleHaptic.impactOccurred()
                     onDetails?()
                 } label: {
                     HStack(spacing: 6) {
@@ -706,23 +718,8 @@ struct ShiftsCalendarView: View {
                             .font(.system(size: 14, weight: .semibold))
                     }
                     .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, Spacing.sm)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .background(Capsule().fill(Color.tidexBrandPrimary))
-                }
-                .buttonStyle(.plain)
-            }
-
-            if !confirmingDelete {
-                Button {
-                    toggleHaptic.impactOccurred()
-                    onEdit?()
-                } label: {
-                    Image(systemName: "pencil")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(.tidexBlue)
-                        .frame(width: 44, height: 36)
-                        .background(Capsule().fill(Color.tidexBlue.opacity(0.1)))
                 }
                 .buttonStyle(.plain)
 
@@ -737,8 +734,7 @@ struct ShiftsCalendarView: View {
                             .font(.system(size: 14, weight: .medium))
                     }
                     .foregroundColor(.orange)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, Spacing.sm)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .background(Capsule().fill(Color.orange.opacity(0.1)))
                 }
                 .buttonStyle(.plain)
@@ -768,8 +764,7 @@ struct ShiftsCalendarView: View {
                             .font(.system(size: 14, weight: .medium))
                     }
                     .foregroundColor(.tidexTextSecondary)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, Spacing.sm)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .background(Capsule().fill(Color.tidexSurfaceSecondary.opacity(0.8)))
                 }
                 .buttonStyle(.plain)
@@ -808,8 +803,7 @@ struct ShiftsCalendarView: View {
             }
             .foregroundColor(confirmingDelete ? .white : .red)
             .frame(width: confirmingDelete ? nil : 44)
-            .frame(maxWidth: confirmingDelete ? .infinity : nil)
-            .padding(.vertical, Spacing.sm)
+            .frame(maxWidth: confirmingDelete ? .infinity : nil, maxHeight: .infinity)
             .padding(.horizontal, confirmingDelete ? 16 : 0)
             .background(Capsule().fill(confirmingDelete ? Color.red : Color.red.opacity(0.1)))
         }
@@ -830,8 +824,7 @@ struct ShiftsCalendarView: View {
                     .font(.system(size: 14, weight: .semibold))
             }
             .foregroundColor(.white)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, Spacing.sm)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Capsule().fill(Color.tidexBrandPrimary))
         }
         .buttonStyle(.plain)

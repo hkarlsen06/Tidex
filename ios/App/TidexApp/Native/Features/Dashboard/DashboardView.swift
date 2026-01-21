@@ -20,50 +20,19 @@ struct DashboardView: View {
                 Color.tidexBackground
                     .ignoresSafeArea()
 
-                // Main layout: content area + month picker at bottom
-                VStack(spacing: 0) {
-                    // Content area - fills available space above month picker
-                    Group {
-                        if let error = viewModel.error {
-                            errorView(error: error)
-                        } else if let data = viewModel.dashboardData {
-                            cardContent(data: data)
-                        } else {
-                            // Show skeleton cards with shimmer while loading or waiting for sync
-                            // This provides a consistent visual preview of the layout
-                            loadingSkeletonView
-                        }
+                // Main content - month picker is now in shared overlay
+                Group {
+                    if let error = viewModel.error {
+                        errorView(error: error)
+                    } else if let data = viewModel.dashboardData {
+                        cardContent(data: data)
+                    } else {
+                        // Show skeleton cards with shimmer while loading or waiting for sync
+                        // This provides a consistent visual preview of the layout
+                        loadingSkeletonView
                     }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-                    // Month picker - ALWAYS visible for navigation (liquid glass style)
-                    // Matches tab bar dimensions exactly
-                    AnimatedMonthHeader(
-                        monthName: viewModel.displayMonthName,
-                        year: viewModel.displayYear,
-                        phase: transitionPhase,
-                        isCurrentMonth: viewModel.isCurrentMonth,
-                        config: .default,
-                        onPrevious: {
-                            viewModel.goToPreviousMonth()
-                        },
-                        onNext: {
-                            viewModel.goToNextMonth()
-                        },
-                        onReturnToCurrent: {
-                            viewModel.goToCurrentMonth()
-                        },
-                        onNavigateToMonth: { year, month in
-                            SharedMonthContext.shared.navigateTo(year: year, month: month)
-                        },
-                        isLoading: viewModel.isLoading,
-                        backToTodayText: localization.string("dashboard.backToToday")
-                    )
-                    .frame(height: MonthPickerLayout.height)
-                    .glassEffect(.regular.interactive(), in: .rect(cornerRadius: MonthPickerLayout.cornerRadius))
-                    .padding(.horizontal, MonthPickerLayout.horizontalPadding)
-                    .padding(.bottom, MonthPickerLayout.bottomPadding)
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(Color.tidexBackground, for: .navigationBar)
