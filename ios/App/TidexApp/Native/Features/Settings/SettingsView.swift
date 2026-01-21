@@ -144,11 +144,9 @@ struct SettingsView: View {
                 }
             }
             .background(Color.tidexBackground)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(Color.tidexBackground, for: .navigationBar)
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    VStack(alignment: .leading, spacing: 2) {
+                ToolbarItem(placement: .principal) {
+                    VStack(spacing: 2) {
                         Text(localization.string("settings.title"))
                             .font(.system(size: 17, weight: .semibold))
                             .foregroundColor(.tidexTextPrimary)
@@ -157,41 +155,42 @@ struct SettingsView: View {
                             .font(.system(size: 12))
                             .foregroundColor(.tidexTextSecondary)
                     }
-                    .fixedSize()
                 }
-                .sharedBackgroundVisibility(.hidden)
 
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         dismiss()
                     } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 24))
+                        Image(systemName: "xmark")
+                            .font(.system(size: 16, weight: .medium))
                             .foregroundStyle(Color.tidexTextMuted)
                     }
                 }
             }
             .navigationDestination(for: SettingsDestination.self) { destination in
-                switch destination {
-                case .profile:
-                    ProfileSettingsView()
-                case .security:
-                    SecuritySettingsView()
-                case .subscription:
-                    SubscriptionSettingsView()
-                case .notifications:
-                    NotificationSettingsView()
-                case .appearance:
-                    AppearanceSettingsView()
-                case .pay:
-                    PaySettingsView()
-                case .data:
-                    DataSettingsView()
-                case .feedback:
-                    FeedbackSettingsView()
-                case .admin:
-                    AdminSettingsView()
+                Group {
+                    switch destination {
+                    case .profile:
+                        ProfileSettingsView()
+                    case .security:
+                        SecuritySettingsView()
+                    case .subscription:
+                        SubscriptionSettingsView()
+                    case .notifications:
+                        NotificationSettingsView()
+                    case .appearance:
+                        AppearanceSettingsView()
+                    case .pay:
+                        PaySettingsView()
+                    case .data:
+                        DataSettingsView()
+                    case .feedback:
+                        FeedbackSettingsView()
+                    case .admin:
+                        AdminSettingsView()
+                    }
                 }
+                .toolbarRole(.editor)
             }
         }
         .task {
