@@ -233,6 +233,12 @@ final class AddShiftViewModel: ObservableObject {
         setupAddActionSubscription()
     }
 
+    deinit {
+        monthContextCancellable?.cancel()
+        addActionCancellable?.cancel()
+        previewUpdateTask?.cancel()
+    }
+
     /// Subscribe to SharedMonthContext changes to reload data when month changes
     private func setupMonthContextSubscription() {
         monthContextCancellable = monthContext.monthChanged

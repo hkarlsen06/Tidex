@@ -214,6 +214,10 @@ class OrientationTracker: ObservableObject {
         )
     }
 
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+
     @objc private func orientationDidChange() {
         updateOrientation()
     }

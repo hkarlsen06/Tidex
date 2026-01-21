@@ -75,16 +75,16 @@ extension WatchConnectivityManager: WCSessionDelegate {
         activationDidCompleteWith activationState: WCSessionActivationState,
         error: Error?
     ) {
-        Task { @MainActor in
+        Task { @MainActor [weak self] in
             if let error = error {
                 logger.error("Activation failed: \(error.localizedDescription)")
             } else {
                 logger.info("Activated: \(activationState.rawValue)")
-                self.isReachable = session.isReachable
+                self?.isReachable = session.isReachable
 
                 // Check for any existing application context
                 if let data = session.receivedApplicationContext["shiftData"] as? Data {
-                    self.processReceivedData(data)
+                    self?.processReceivedData(data)
                 }
             }
         }
@@ -94,18 +94,18 @@ extension WatchConnectivityManager: WCSessionDelegate {
         _ session: WCSession,
         didReceiveApplicationContext applicationContext: [String: Any]
     ) {
-        Task { @MainActor in
+        Task { @MainActor [weak self] in
             guard let data = applicationContext["shiftData"] as? Data else {
                 logger.warning("No shiftData in applicationContext")
                 return
             }
-            self.processReceivedData(data)
+            self?.processReceivedData(data)
         }
     }
 
     nonisolated func sessionReachabilityDidChange(_ session: WCSession) {
-        Task { @MainActor in
-            self.isReachable = session.isReachable
+        Task { @MainActor [weak self] in
+            self?.isReachable = session.isReachable
             logger.info("Reachability changed: \(session.isReachable)")
         }
     }
