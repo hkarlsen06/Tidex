@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
 import { createSupabaseServiceClient } from '@/lib/supabase/service';
 import { verifyAdminFromRequest } from '../_lib/verify-admin';
 
@@ -48,7 +47,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const supabase = await createSupabaseServerClient();
+    // Use service client since we've already verified admin access
     const serviceClient = createSupabaseServiceClient();
 
     // Parse query parameters
@@ -62,8 +61,8 @@ export async function GET(request: NextRequest) {
       parseInt(searchParams.get('offset') ?? '0', 10)
     );
 
-    // Fetch feedback with pagination
-    const { data, count, error } = await supabase
+    // Fetch feedback with pagination (using service client to bypass RLS)
+    const { data, count, error } = await serviceClient
       .from('feedback')
       .select('*', { count: 'exact' })
       .order('created_at', { ascending: false })
@@ -98,7 +97,7 @@ export async function GET(request: NextRequest) {
       }
 
       // Fetch profile pictures from user_settings
-      const { data: settingsData } = await supabase
+      const { data: settingsData } = await serviceClient
         .from('user_settings')
         .select('user_id, profile_picture_url')
         .in('user_id', userIds);
