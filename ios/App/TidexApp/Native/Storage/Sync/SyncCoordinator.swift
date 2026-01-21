@@ -1416,6 +1416,9 @@ final class SyncCoordinator: ObservableObject {
                     deletedAt: nil
                 )
 
+                // Get old values from last synced snapshot for notification (before marking pushed)
+                let oldSnapshot = UserShiftServerSnapshot.decode(from: shift.lastSyncedSnapshot)
+
                 await storeActor.markShiftPushed(
                     id: shiftId,
                     serverRow: returnedRow,
@@ -1425,6 +1428,23 @@ final class SyncCoordinator: ObservableObject {
                 )
 
                 logger.debug("Pushed shift \(shiftId.prefix(8))")
+
+                // Notify shared users if date or times changed
+                let dateOrTimesChanged = dirtyFields.contains(.shiftDate) ||
+                                         dirtyFields.contains(.startTime) ||
+                                         dirtyFields.contains(.endTime)
+                if dateOrTimesChanged {
+                    await notifyShiftChange(
+                        shiftId: shiftId,
+                        shiftDate: returnedRow.shift_date,
+                        startTime: returnedRow.start_time,
+                        endTime: returnedRow.end_time,
+                        eventType: "updated",
+                        oldStartTime: oldSnapshot?.startTime,
+                        oldEndTime: oldSnapshot?.endTime
+                    )
+                }
+
                 return .success
             } else {
                 // Row wasn't updated - revision mismatch
@@ -1474,6 +1494,9 @@ final class SyncCoordinator: ObservableObject {
             let serverUpdatedAt = parseISO8601(returnedRow.updated_at) ?? Date()
             let serverDeletedAt = returnedRow.deleted_at.flatMap { parseISO8601($0) }
 
+            // Get shift details from snapshot before marking deleted (for notification)
+            let snapshot = UserShiftServerSnapshot.decode(from: shift.lastSyncedSnapshot)
+
             await storeActor.markShiftDeleted(
                 id: shiftId,
                 serverUpdatedAt: serverUpdatedAt,
@@ -1482,6 +1505,18 @@ final class SyncCoordinator: ObservableObject {
             )
 
             logger.debug("Deleted shift \(shiftId.prefix(8))")
+
+            // Notify shared users about the deleted shift (best-effort)
+            if let snapshot = snapshot {
+                await notifyShiftChange(
+                    shiftId: shiftId,
+                    shiftDate: snapshot.shiftDate,
+                    startTime: snapshot.startTime,
+                    endTime: snapshot.endTime,
+                    eventType: "deleted"
+                )
+            }
+
             return .deleted
         } else {
             // Conflict - fetch current server state
@@ -1579,6 +1614,16 @@ final class SyncCoordinator: ObservableObject {
                 )
 
                 logger.debug("Inserted new shift \(shiftId.prefix(8))")
+
+                // Notify shared users about the new shift (best-effort)
+                await notifyShiftChange(
+                    shiftId: shiftId,
+                    shiftDate: returnedRow.shift_date,
+                    startTime: returnedRow.start_time,
+                    endTime: returnedRow.end_time,
+                    eventType: "added"
+                )
+
                 return .success
             } else {
                 logger.error("Insert shift returned no rows for \(shiftId.prefix(8))")
@@ -3312,6 +3357,61 @@ final class SyncCoordinator: ObservableObject {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         return formatter.string(from: date)
+    }
+
+    // MARK: - Shift Notification Helper
+
+    /// Notify shared users about a shift change via RPC
+    /// This is best-effort - failures are logged but don't affect sync success
+    ///
+    /// - Parameters:
+    ///   - shiftId: The shift's UUID
+    ///   - shiftDate: The shift date in YYYY-MM-DD format
+    ///   - startTime: The shift start time in HH:mm format
+    ///   - endTime: The shift end time in HH:mm format
+    ///   - eventType: The type of change: "added", "updated", or "deleted"
+    ///   - oldStartTime: For updates: the previous start time
+    ///   - oldEndTime: For updates: the previous end time
+    private func notifyShiftChange(
+        shiftId: String,
+        shiftDate: String,
+        startTime: String,
+        endTime: String,
+        eventType: String,
+        oldStartTime: String? = nil,
+        oldEndTime: String? = nil
+    ) async {
+        // Generate a unique mutation ID for idempotency
+        let mutationId = UUID().uuidString
+
+        do {
+            // Build RPC parameters
+            var params: [String: AnyJSON] = [
+                "p_shift_id": .string(shiftId),
+                "p_shift_date": .string(shiftDate),
+                "p_start_time": .string(startTime),
+                "p_end_time": .string(endTime),
+                "p_event_type": .string(eventType),
+                "p_mutation_id": .string(mutationId)
+            ]
+
+            // Include old times for update events (if times changed)
+            if let oldStart = oldStartTime, let oldEnd = oldEndTime {
+                params["p_old_start_time"] = .string(oldStart)
+                params["p_old_end_time"] = .string(oldEnd)
+            }
+
+            // Call the RPC - response contains {"queued": N, "delivery": "immediate"|"batched"|"none"}
+            let _: AnyJSON = try await supabase
+                .rpc("enqueue_shift_notification", params: params)
+                .execute()
+                .value
+
+            logger.debug("Notified shift change: \(eventType) for \(shiftId.prefix(8))")
+        } catch {
+            // Best-effort: log but don't fail the sync
+            logger.warning("Failed to notify shift change: \(error.localizedDescription)")
+        }
     }
 }
 
