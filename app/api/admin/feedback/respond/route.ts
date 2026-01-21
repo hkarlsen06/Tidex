@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { createSupabaseServiceClient } from '@/lib/supabase/service';
 import {
   verifyAdminFromRequest,
   isValidUUID,
@@ -97,7 +97,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabase = await createSupabaseServerClient();
+    // Use service client since we've already verified admin access
+    const supabase = createSupabaseServiceClient();
 
     // Get current feedback to check if this is the first response
     const { data: currentFeedback, error: fetchError } = await supabase
