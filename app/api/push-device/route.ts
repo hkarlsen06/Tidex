@@ -84,16 +84,17 @@ export async function POST(request: NextRequest) {
 
     // Use service client to access internal schema
     const serviceClient = createSupabaseServiceClient();
+    const now = new Date().toISOString();
 
-    // Build the upsert payload
+    // Build the payload
     const payload: Record<string, unknown> = {
       user_id: user.id,
       platform,
       device_id: deviceId ?? null,
       device_model: deviceModel ?? null,
       app_version: appVersion ?? null,
-      last_seen_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
+      last_seen_at: now,
+      updated_at: now,
     };
 
     // Add tokens if provided
@@ -104,86 +105,115 @@ export async function POST(request: NextRequest) {
       payload.fcm_token = fcmToken;
     }
 
-    // For APNs-only registration, try to update existing record
-    // Match by device_id (if provided) or fall back to user_id + platform
-    // This handles the case where FCM token was registered first via Capacitor
-    if (apnsToken && !fcmToken) {
-      let existingDevice: { id: string } | null = null;
+    // DEDUPLICATION: Find existing device by device_id first (most reliable)
+    // This prevents duplicate entries when tokens change
+    let existingDeviceId: string | null = null;
 
-      // First try to find by device_id (most accurate match for same device)
+    if (deviceId) {
+      const { data: deviceMatch } = await serviceClient
+        .schema('internal')
+        .from('push_devices')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('device_id', deviceId)
+        .maybeSingle();
+
+      existingDeviceId = deviceMatch?.id ?? null;
+    }
+
+    // Fall back to matching by fcm_token if no device_id match
+    if (!existingDeviceId && fcmToken) {
+      const { data: tokenMatch } = await serviceClient
+        .schema('internal')
+        .from('push_devices')
+        .select('id')
+        .eq('fcm_token', fcmToken)
+        .maybeSingle();
+
+      existingDeviceId = tokenMatch?.id ?? null;
+    }
+
+    // Fall back to user_id + platform for APNs-only registrations
+    if (!existingDeviceId && apnsToken && !fcmToken) {
+      const { data: platformMatch } = await serviceClient
+        .schema('internal')
+        .from('push_devices')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('platform', platform)
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      existingDeviceId = platformMatch?.id ?? null;
+    }
+
+    if (existingDeviceId) {
+      // Update existing record
+      const updatePayload: Record<string, unknown> = {
+        device_id: deviceId ?? null,
+        device_model: deviceModel ?? null,
+        app_version: appVersion ?? null,
+        last_seen_at: now,
+        updated_at: now,
+      };
+
+      // Update tokens if provided
+      if (apnsToken) {
+        updatePayload.apns_token = apnsToken;
+      }
+      if (fcmToken) {
+        updatePayload.fcm_token = fcmToken;
+      }
+
+      const { error: updateError } = await serviceClient
+        .schema('internal')
+        .from('push_devices')
+        .update(updatePayload)
+        .eq('id', existingDeviceId);
+
+      if (updateError) {
+        console.error('[push-device] Update error:', updateError);
+        return NextResponse.json(
+          { error: 'Failed to update push device' },
+          { status: 500 }
+        );
+      }
+
+      // Clean up any other duplicate entries for this device_id
       if (deviceId) {
-        const { data: deviceMatch } = await serviceClient
+        await serviceClient
           .schema('internal')
           .from('push_devices')
-          .select('id')
+          .delete()
           .eq('user_id', user.id)
           .eq('device_id', deviceId)
-          .maybeSingle();
-
-        existingDevice = deviceMatch;
+          .neq('id', existingDeviceId);
       }
 
-      // Fall back to user_id + platform if no device_id match
-      if (!existingDevice) {
-        const { data: platformMatch } = await serviceClient
-          .schema('internal')
-          .from('push_devices')
-          .select('id')
-          .eq('user_id', user.id)
-          .eq('platform', 'ios')
-          .order('updated_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
+      return NextResponse.json({ success: true, action: 'updated' });
+    }
 
-        existingDevice = platformMatch;
-      }
-
-      if (existingDevice) {
-        // Update existing record with APNs token
-        const { error: updateError } = await serviceClient
-          .schema('internal')
-          .from('push_devices')
-          .update({
-            apns_token: apnsToken,
-            device_id: deviceId ?? null,
-            device_model: deviceModel ?? null,
-            app_version: appVersion ?? null,
-            last_seen_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', existingDevice.id);
-
-        if (updateError) {
-          console.error('[push-device] Update error:', updateError);
-          return NextResponse.json(
-            { error: 'Failed to update push device' },
-            { status: 500 }
-          );
-        }
-
-        return NextResponse.json({ success: true, action: 'updated' });
-      }
-
-      // No existing record - insert new one
-      // Need a placeholder fcm_token since it's required (unique constraint)
+    // No existing record - insert new one
+    // For APNs-only, generate a placeholder fcm_token (unique constraint)
+    if (apnsToken && !fcmToken) {
       payload.fcm_token = `apns_${apnsToken.substring(0, 32)}`;
     }
 
-    // Upsert with ON CONFLICT on fcm_token
-    const { error: upsertError } = await serviceClient
+    const { error: insertError } = await serviceClient
       .schema('internal')
       .from('push_devices')
-      .upsert(payload, { onConflict: 'fcm_token' });
+      .insert(payload);
 
-    if (upsertError) {
-      console.error('[push-device] Upsert error:', upsertError);
+    if (insertError) {
+      console.error('[push-device] Insert error:', insertError);
       return NextResponse.json(
         { error: 'Failed to register push device' },
         { status: 500 }
       );
     }
 
-    return NextResponse.json({ success: true, action: 'upserted' });
+    return NextResponse.json({ success: true, action: 'inserted' });
   } catch (error) {
     console.error('[push-device] Exception:', error);
     return NextResponse.json(
