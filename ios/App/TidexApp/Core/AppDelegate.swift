@@ -552,6 +552,18 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
                 AppCoordinator.shared.pendingDeepLink = .sharing(sharerId: ownerId, highlightDates: nil)
             }
         }
+        // Handle feedback_responded notification (admin responded to user's feedback)
+        else if type == "feedback_responded" {
+            Task { @MainActor in
+                AppCoordinator.shared.pendingDeepLink = .feedback
+            }
+        }
+        // Handle feedback_submitted notification (user submitted feedback, admin notification)
+        else if type == "feedback_submitted" {
+            Task { @MainActor in
+                AppCoordinator.shared.pendingDeepLink = .adminFeedback
+            }
+        }
 
         completionHandler()
     }
