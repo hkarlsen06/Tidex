@@ -2,35 +2,37 @@ import { Metadata } from 'next';
 import { PayrollDocsPage } from './PayrollDocsPage';
 
 export const metadata: Metadata = {
-  title: 'Payroll Documentation - How Tidex calculates your pay',
+  title: 'Payroll Engine Specification - How Tidex calculates your pay',
   description:
-    'A transparent, auditable reference for every payroll rule we apply—from the shift you log to the amount you see on screen.',
+    'Complete technical specification for the Tidex payroll engine. Enables re-implementation in any language with identical results.',
   openGraph: {
-    title: 'Payroll Documentation - How Tidex calculates your pay',
+    title: 'Payroll Engine Specification - How Tidex calculates your pay',
     description:
-      'A transparent, auditable reference for every payroll rule we apply—from the shift you log to the amount you see on screen.',
+      'Complete technical specification for the Tidex payroll engine. Enables re-implementation in any language with identical results.',
   },
   twitter: {
-    title: 'Payroll Documentation - How Tidex calculates your pay',
+    title: 'Payroll Engine Specification - How Tidex calculates your pay',
     description:
-      'A transparent, auditable reference for every payroll rule we apply—from the shift you log to the amount you see on screen.',
+      'Complete technical specification for the Tidex payroll engine. Enables re-implementation in any language with identical results.',
   },
 };
 
-// English-only payroll documentation content
+// Comprehensive payroll documentation based on PAYROLL_ENGINE_SPEC.md
 const payrollDocs = {
-  badge: 'Payroll Documentation',
+  badge: 'Payroll Engine Specification v1.1',
   title: 'How Tidex calculates your pay',
   subtitle:
-    'A transparent, auditable reference for every payroll rule we apply—from the shift you log to the amount you see on screen.',
+    'A transparent, auditable reference for every payroll rule we apply. This specification enables re-implementation in any language (Swift, Kotlin, Go, etc.) with identical results.',
 
   navigation: [
     { id: 'overview', label: 'Overview' },
-    { id: 'base-wage', label: 'Wage Snapshots' },
-    { id: 'time-periods', label: 'Time Periods' },
-    { id: 'supplements', label: 'Supplements' },
+    { id: 'data-model', label: 'Data Model' },
+    { id: 'pipeline', label: 'Shift Pipeline' },
+    { id: 'snapshots', label: 'Snapshots & Payout' },
+    { id: 'calculation', label: 'Calculation Engine' },
     { id: 'breaks', label: 'Break Deductions' },
-    { id: 'examples', label: 'Complete Flow' },
+    { id: 'aggregations', label: 'Aggregations' },
+    { id: 'test-vectors', label: 'Test Vectors' },
   ],
 
   bugReportCta: {
@@ -48,154 +50,196 @@ const payrollDocs = {
       title: 'Overview',
       subsections: [
         {
-          heading: 'Transparency by design',
+          heading: 'What the payroll engine does',
           paragraphs: [
-            'Pay accuracy is non-negotiable. Tidex documents every payroll rule so employees, customers, and auditors can review the exact calculations behind each payout.',
-            'Use this guide as the canonical explanation of our payroll engine, from data capture to computed totals.',
+            'The Tidex payroll engine computes wage earnings for work shifts. It takes shift data (date, start/end time) and wage settings (hourly rate, supplements, tax, break deductions) to produce deterministic earnings values.',
           ],
         },
         {
-          heading: 'What this guide covers',
+          heading: 'Inputs',
           list: [
-            'Wage snapshots: Interval-based system preserving historical wage accuracy',
-            'Base wage: How hourly rates are resolved from snapshots or current settings',
-            'Time periods: How a shift is segmented to honour supplement rules',
-            'Supplements: Fixed NOK/hour and percentage-based adjustments for specific days or hours',
-            'Break deductions: Four deduction strategies with audit trails',
-            'Examples: End-to-end code flow from Supabase to the UI render',
+            'Shift data: shift_date (ISO), start_time (HH:MM), end_time (HH:MM), optional custom supplements',
+            'Wage snapshot: Hourly wage, supplement rules, tax settings, break deduction settings',
+            'User settings: Payroll day, half-tax month, monthly goal',
           ],
         },
         {
-          heading: 'Architecture highlights',
-          paragraphs: [
-            'All payroll calculations run in deterministic, side-effect free functions. Identical inputs always yield identical results.',
-            'Computation happens server-side in the Data Access Layer to ensure:',
-          ],
+          heading: 'Outputs',
           list: [
-            'Consistent outputs across devices and clients',
-            'No client-side JavaScript required to validate pay',
-            'A single source of truth for every payroll rule',
+            'durationHours: Raw duration before break deduction',
+            'paidHours: Duration after break deduction',
+            'basePay: Earnings from base hourly rate (NOK)',
+            'supplementPay: Earnings from supplement overlays (NOK)',
+            'gross: Total before tax (basePay + supplementPay)',
+            'taxAmount: Tax deduction (if enabled)',
+            'net: After-tax earnings (gross - taxAmount)',
           ],
+        },
+        {
+          heading: 'Key invariants',
+          list: [
+            'Deterministic: Same inputs always produce same outputs',
+            'Pure computation: Zero I/O, all inputs explicit',
+            'Cross-midnight support: Shifts spanning midnight are calculated as continuous time',
+            'Payout-date-based tax/snapshot: Tax and snapshot selection use payout date, not worked date',
+            'Precision: 3 decimal places for hours, 2 decimal places for currency',
+          ],
+        },
+        {
+          heading: 'Definitions',
+          table: {
+            caption: 'Key terminology',
+            headers: ['Term', 'Definition'],
+            rows: [
+              ['Shift', 'A stored work period with date, start time, end time'],
+              ['Virtual shift', 'A computed occurrence from a recurring shift template (not persisted)'],
+              ['Wage snapshot', 'Point-in-time capture of wage, supplement, tax, and break settings'],
+              ['Baseline snapshot', 'Snapshot with from_date = NULL, serves as fallback'],
+              ['Supplement window', 'Time-of-day range when a supplement rate applies'],
+              ['Payout date', 'Date when wages are paid (typically month after work + payroll day)'],
+              ['Payroll period', 'The calendar month whose earnings are grouped for a payout'],
+              ['Month grouping', 'Shifts worked in month M are paid in month M+1'],
+            ],
+          },
+        },
+        {
+          heading: 'Entry points',
+          paragraphs: ['The payroll engine can be called in two ways:'],
+          code: {
+            language: 'typescript',
+            content: `// Pure function (core calculation)
+computeShift(shift, settings, presetRules, snapshot) // from @/lib/payroll/calc.ts
+
+// Effect-wrapped (with validation)
+computeShift(shift, settings, presetRules, snapshot) // from @/lib/payroll/effect.ts`,
+          },
         },
       ],
     },
     {
-      id: 'base-wage',
-      title: 'Wage Snapshots & Base Wage',
+      id: 'data-model',
+      title: 'Data Model & Schema',
       subsections: [
         {
-          heading: 'Wage snapshot system',
-          paragraphs: [
-            'Tidex uses an interval-based wage snapshot system to maintain historical accuracy. Instead of storing wage data per shift, snapshots mark when your wage changes over time.',
-          ],
-        },
-        {
-          heading: 'How snapshots work',
-          paragraphs: [
-            'Each user has one or more wage snapshots:',
-          ],
-          list: [
-            'Baseline snapshot (from_date = NULL): Your default wage, applies to all shifts unless overridden',
-            'Dated snapshots (from_date = "2025-03-01"): Mark when wage changes occur',
-            'Automatic resolution: For any shift, Tidex finds the most recent snapshot where from_date ≤ shift_date',
-          ],
-          note: 'This system works seamlessly with recurring shifts and allows retroactive wage corrections.',
-        },
-        {
-          heading: 'Snapshot contents',
-          paragraphs: [
-            'Each snapshot captures:',
-          ],
-          code: {
-            language: 'typescript',
-            content: `{
-  id: string;
-  user_id: string;
-  from_date: string | null;      // NULL for baseline
-  hourly_wage: number;            // Resolved base rate (NOK/hour)
-  wage_level: number | null;      // NULL = custom, -2 to 6 = tariff
-  supplements: {
-    rules: SupplementRule[]       // Active supplement rules
-  };
-}`,
-          },
-        },
-        {
-          heading: 'Resolution algorithm',
-          paragraphs: [
-            'For a shift dated 2025-01-15, Tidex resolves the wage snapshot as follows:',
-          ],
-          code: {
-            language: 'typescript',
-            content: `// From data-access/wage-snapshots.ts
-export async function getSnapshotForDate(shiftDate: string) {
-  const snapshots = await getUserWageSnapshots();
-
-  // 1. Find most recent dated snapshot where from_date <= shiftDate
-  const dated = snapshots.find(s =>
-    s.from_date !== null && s.from_date <= shiftDate
-  );
-  if (dated) return dated;
-
-  // 2. Fall back to baseline snapshot (from_date = NULL)
-  return snapshots.find(s => s.from_date === null) ?? null;
-}`,
-          },
-        },
-        {
-          heading: 'How we resolve the hourly rate',
-          paragraphs: [
-            'With the snapshot system in place, Tidex resolves the base rate using this priority:',
-          ],
-        },
-        {
-          heading: '1. New snapshot system (recommended)',
-          paragraphs: [
-            'The wage snapshot for the shift date provides the hourly wage. This is the primary source for all new shifts.',
-          ],
-          code: {
-            language: 'typescript',
-            content: `// From lib/payroll/calc.ts
-if (snapshot?.hourly_wage && snapshot.hourly_wage > 0) {
-  return snapshot.hourly_wage;
-}`,
-          },
-        },
-        {
-          heading: '2. Legacy per-shift snapshot (backward compatibility)',
-          paragraphs: [
-            'Older shifts may have per-shift snapshots stored directly on the shift record. These are preserved for backward compatibility.',
-          ],
-          code: {
-            language: 'typescript',
-            content: `// Backward compatibility with old per-shift snapshots
-if (shift.hourly_wage_snapshot && shift.hourly_wage_snapshot > 0) {
-  return shift.hourly_wage_snapshot;
-}`,
-          },
-        },
-        {
-          heading: '3. Safe default (fallback)',
-          paragraphs: [
-            'As a last resort, if no snapshot exists, Tidex defaults to wage level 1 (184.54 NOK) to prevent calculation errors:',
-          ],
-          code: {
-            language: 'typescript',
-            content: `// Safety net - should only happen if snapshots aren't configured
-return PRESET_WAGE_RATES["1"];`,
-          },
-        },
-        {
-          heading: 'Preset tariff levels',
-          paragraphs: [
-            'Tidex supports standard Norwegian tariff levels. When creating a snapshot, users can choose a tariff level or set a custom wage.',
-          ],
+          heading: 'user_shifts - Core shift data',
+          paragraphs: ['Each shift is stored with the following structure:'],
           table: {
-            caption: 'Preset wage levels (2025 rates)',
-            headers: ['Level', 'Hourly Rate (NOK)'],
+            caption: 'user_shifts table schema',
+            headers: ['Column', 'Type', 'Purpose'],
             rows: [
-              ['-2', '132.90'],
+              ['id', 'uuid', 'Primary key, unique shift identifier'],
+              ['user_id', 'uuid', 'Foreign key to auth.users'],
+              ['shift_date', 'date', 'The date of the shift (ISO: YYYY-MM-DD)'],
+              ['start_time', 'text', 'Start time in HH:MM format'],
+              ['end_time', 'text', 'End time in HH:MM format (supports cross-midnight)'],
+              ['custom_supplements', 'jsonb', 'Shift-specific supplement overrides'],
+            ],
+          },
+          note: 'When end_time <= start_time, shift crosses midnight (e.g., 22:00 to 06:00). Custom supplements when present completely replace snapshot supplements for this shift.',
+        },
+        {
+          heading: 'recurring_shifts - Recurring shift templates',
+          paragraphs: ['Recurring shifts generate virtual shifts at runtime:'],
+          table: {
+            caption: 'recurring_shifts table schema',
+            headers: ['Column', 'Type', 'Purpose'],
+            rows: [
+              ['id', 'uuid', 'Primary key'],
+              ['user_id', 'uuid', 'Foreign key to auth.users'],
+              ['start_time', 'timetz', 'Shift start time with timezone'],
+              ['end_time', 'timetz', 'Shift end time with timezone'],
+              ['repeat_interval_weeks', 'smallint', '0 = every week, 1 = every 2 weeks, ..., 8 = every 9 weeks'],
+              ['selected_days', 'jsonb', 'Anchor dates by weekday: { "1": "2025-01-27" }'],
+              ['end_condition', 'jsonb', 'End rule: { type: "never" | "months" | "years" | "end_date" }'],
+              ['exclusions', 'jsonb', 'Array of ISO dates to skip'],
+              ['date_specific_supplements', 'jsonb', 'Per-date custom supplements'],
+            ],
+          },
+          note: 'Virtual shifts are generated at runtime, never persisted. selected_days keys are weekday numbers (0=Sunday to 6=Saturday).',
+        },
+        {
+          heading: 'wage_snapshots - Point-in-time wage settings',
+          paragraphs: ['Wage snapshots preserve historical wage accuracy:'],
+          table: {
+            caption: 'wage_snapshots table schema',
+            headers: ['Column', 'Type', 'Default', 'Purpose'],
+            rows: [
+              ['id', 'uuid', '-', 'Primary key'],
+              ['user_id', 'uuid', '-', 'Foreign key to auth.users'],
+              ['from_date', 'date', '-', 'Effective date (NULL = baseline snapshot)'],
+              ['hourly_wage', 'numeric', '-', 'Base hourly wage in NOK'],
+              ['wage_level', 'integer', '-', 'Tariff level (1-9) or NULL for custom'],
+              ['supplements', 'jsonb', '[]', 'Array of SupplementRule objects'],
+              ['tax_enabled', 'boolean', 'false', 'Whether tax deduction is enabled'],
+              ['tax_percentage', 'numeric', '0', 'Tax percentage (0-100)'],
+              ['break_enabled', 'boolean', 'true', 'Whether break deduction is enabled'],
+              ['break_method', 'text', 'proportional', 'One of: proportional, base_only, end_of_shift, none'],
+              ['break_threshold_hours', 'numeric', '5.5', 'Hours before break applies'],
+              ['break_deduction_minutes', 'integer', '30', 'Break duration in minutes'],
+            ],
+          },
+          note: 'Only one baseline snapshot (from_date = NULL) allowed per user. Snapshot selection uses shift date for wage/supplements/breaks, but payout date for tax settings.',
+        },
+        {
+          heading: 'user_settings - User preferences',
+          paragraphs: ['User preferences affecting payroll calculations:'],
+          table: {
+            caption: 'user_settings table schema',
+            headers: ['Column', 'Type', 'Default', 'Purpose'],
+            rows: [
+              ['user_id', 'uuid', '-', 'Primary key, FK to auth.users'],
+              ['payroll_day', 'integer', '15', 'Day of month (1-31) when payroll is received'],
+              ['half_tax_month', 'integer', '-', 'Month (11 or 12) for half-tax; NULL = disabled'],
+              ['monthly_goal', 'integer', '20000', 'Monthly earnings goal in NOK'],
+            ],
+          },
+          note: 'payroll_day is used to calculate payout dates for snapshot selection. half_tax_month applies to payout month, not worked month.',
+        },
+        {
+          heading: 'SupplementRule structure',
+          paragraphs: ['Used in wage_snapshots.supplements and user_shifts.custom_supplements:'],
+          code: {
+            language: 'typescript',
+            content: `type SupplementRule = {
+  days: number[];    // 1-7 (1=Monday, 7=Sunday)
+  from: string;      // "HH:MM" (inclusive)
+  to: string;        // "HH:MM" (inclusive)
+  rate?: number;     // Fixed NOK per hour (mutually exclusive with percent)
+  percent?: number;  // Percentage of base rate (mutually exclusive with rate)
+};
+
+// Example rules:
+[
+  { "days": [1,2,3,4,5], "from": "18:00", "to": "21:00", "rate": 22 },
+  { "days": [6], "from": "13:00", "to": "23:59", "rate": 110 },
+  { "days": [7], "from": "00:00", "to": "23:59", "rate": 115 }
+]`,
+          },
+        },
+        {
+          heading: 'Preset supplement rules (tariff default)',
+          paragraphs: ['The standard Norwegian tariff supplements:'],
+          table: {
+            caption: 'Preset supplement rates',
+            headers: ['Period', 'Days', 'Time', 'Rate'],
+            rows: [
+              ['Weekday evening', 'Mon-Fri (1-5)', '18:00-21:00', '+22 NOK/h'],
+              ['Weekday late night', 'Mon-Fri (1-5)', '21:00-23:59', '+45 NOK/h'],
+              ['Saturday afternoon', 'Saturday (6)', '13:00-15:00', '+45 NOK/h'],
+              ['Saturday late afternoon', 'Saturday (6)', '15:00-18:00', '+55 NOK/h'],
+              ['Saturday evening', 'Saturday (6)', '18:00-23:59', '+110 NOK/h'],
+              ['Sunday all day', 'Sunday (7)', '00:00-23:59', '+115 NOK/h'],
+            ],
+          },
+        },
+        {
+          heading: 'Preset wage rates (tariff levels)',
+          table: {
+            caption: 'Preset wage levels',
+            headers: ['Level', 'Rate (NOK/hour)'],
+            rows: [
               ['-1', '129.91'],
+              ['-2', '132.90'],
               ['1', '184.54'],
               ['2', '185.38'],
               ['3', '187.46'],
@@ -205,228 +249,577 @@ return PRESET_WAGE_RATES["1"];`,
             ],
           },
         },
-        {
-          heading: 'Benefits of the snapshot system',
-          list: [
-            'Historical accuracy: Past shifts remain correct even after wage changes',
-            'Mid-month wage changes: Record raises that take effect on specific dates',
-            'Minimal storage: Only store when wages change, not per shift',
-            'Works with recurring shifts: Recurring shifts automatically use the correct snapshot for their date',
-            'Retroactive corrections: Add snapshots to fix historical data',
-          ],
-        },
-        {
-          heading: 'Source code',
-          paragraphs: [
-            'The base wage resolution logic is implemented in lib/payroll/calc.ts (resolveBaseRate function).',
-          ],
-        },
       ],
     },
     {
-      id: 'time-periods',
-      title: 'Time Periods',
+      id: 'pipeline',
+      title: 'Shift Acquisition Pipeline',
       subsections: [
         {
-          heading: 'How shifts become wage periods',
-          paragraphs: [
-            'Single shifts (for example 15:00–23:00) are segmented into wage periods. Each period carries its own base rate and supplement rate so supplements can be applied with minute-level precision.',
-          ],
+          heading: 'ShiftWithComputations - The canonical shift object',
+          paragraphs: ['Every shift flows through the pipeline and emerges with computed values:'],
+          code: {
+            language: 'typescript',
+            content: `type ShiftWithComputations = ShiftRow & {
+  computed: ShiftComputed;
+  tax_enabled?: boolean;
+  tax_percentage?: number;
+};
+
+type ShiftComputed = {
+  id: string;
+  durationHours: number;      // Raw duration before break
+  paidHours: number;          // Duration after break deduction
+  basePay: number;            // NOK from base rate
+  supplementPay: number;      // NOK from supplements
+  gross: number;              // basePay + supplementPay
+  wagePeriods: WagePeriod[];  // After break deduction
+  originalWagePeriods: WagePeriod[];  // Before break deduction
+  breakAudit: BreakAudit;     // Deduction details
+};
+
+type WagePeriod = {
+  fromMin: number;      // Minutes from midnight (shift-relative)
+  toMin: number;        // Minutes from midnight (exclusive)
+  baseRate: number;     // NOK per hour
+  supplementRate: number;  // NOK per hour supplement
+  totalRate: number;    // baseRate + supplementRate
+};`,
+          },
         },
         {
-          heading: 'The algorithm',
+          heading: 'Pipeline steps',
           steps: [
             {
-              title: 'Step 1: Convert to minutes',
-              paragraphs: ['Time strings are converted to minutes since midnight:'],
+              title: 'Step 1: Fetch stored shifts',
               code: {
                 language: 'typescript',
-                content: `"15:00" → 900 minutes (15 * 60)
-"23:00" → 1380 minutes (23 * 60)`,
+                content: `const { data } = await supabase
+  .from("user_shifts")
+  .select("*")
+  .eq("user_id", userId)
+  .gte("shift_date", startDate)
+  .lte("shift_date", endDate)
+  .order("shift_date", { ascending: false })
+  .limit(limit);`,
               },
             },
             {
-              title: 'Step 2: Handle cross-midnight shifts',
-              paragraphs: [
-                'If the end time is earlier than or equal to the start time, we assume the shift crosses midnight.',
-                'Example: 22:00 to 06:00 becomes 22:00 (1320 min) to 30:00 (1800 min)',
-              ],
+              title: 'Step 2: Fetch recurring shift templates',
               code: {
                 language: 'typescript',
-                content: `if (endMin <= startMin) {
-  endMin += 1440; // Add 24 hours
+                content: `const { data: recurringShifts } = await supabase
+  .from("recurring_shifts")
+  .select("*")
+  .eq("user_id", userId);`,
+              },
+            },
+            {
+              title: 'Step 3: Generate virtual shifts',
+              paragraphs: ['For each recurring shift template and each month in range:'],
+              code: {
+                language: 'typescript',
+                content: `function generateVirtualShiftsForMonth(
+  yearMonth: { year: number; month: number },
+  draft: RecurringDraft
+): RecurringVirtualShift[]`,
+              },
+              list: [
+                'For each selected weekday anchor in selected_days',
+                'Find first occurrence of that weekday in target month',
+                'Check if date is on/after anchor date',
+                'Check if date is in phase with anchor (isInPhase)',
+                'Check if within end window (if end condition exists)',
+                'Check if not in exclusions list',
+                'If all pass, add to virtual shifts',
+              ],
+            },
+            {
+              title: 'Step 4: Phase check formula',
+              code: {
+                language: 'typescript',
+                content: `function isInPhase(dateISO, anchorISO, interval) {
+  if (interval === 0) return true; // Every week
+
+  const daysDiff = (date - anchor) / (24 * 60 * 60 * 1000);
+  const weeksDiff = Math.floor(daysDiff / 7);
+
+  // interval 1 = every 2 weeks, interval 2 = every 3 weeks
+  return weeksDiff % (interval + 1) === 0;
 }`,
               },
             },
             {
-              title: 'Step 3: Apply supplement rules',
-              paragraphs: ['Each supplement rule (evening, night, weekend, etc.) defines:'],
-              list: [
-                'Days: Which days it applies (1-7 for Mon-Sun)',
-                'Time range: From/to hours',
-                'Rate: Either fixed NOK/hour or percentage',
-              ],
-              note: 'The algorithm overlays these rules onto the shift timeline, splitting it wherever a supplement starts or stops.',
-            },
-            {
-              title: 'Important: Overlapping supplements',
-              paragraphs: [
-                'If several supplements overlap (for example night and weekend), Tidex applies the highest single supplement rather than stacking the amounts:',
-              ],
+              title: 'Step 5: Batch snapshot lookup',
               code: {
                 language: 'typescript',
-                content: `supplement = Math.max(supplement, supplementValue);`,
+                content: `// Fetch all user's wage snapshots once
+const snapshots = await getUserWageSnapshots(userId);
+
+// Use binary search for O(log n) lookup per date
+for (const shiftDate of allDates) {
+  const payoutDate = calculatePayoutDate(year, month, payrollDay);
+  const snapshot = findSnapshotForDate(payoutDate, snapshots);
+  snapshotMap.set(shiftDate, snapshot);
+}`,
+              },
+            },
+            {
+              title: 'Step 6: Compute each shift',
+              code: {
+                language: 'typescript',
+                content: `for (const shift of shifts) {
+  const snapshot = snapshotMap.get(shift.shift_date);
+  const computed = computeShift(shift, settings, PRESET_RULES, snapshot);
+  result.push({ ...shift, computed, tax_enabled, tax_percentage });
+}`,
               },
             },
           ],
         },
         {
-          heading: 'Example: Evening shift with night supplement',
-          paragraphs: [
-            'Shift: Monday 20:00-02:00 (6 hours)',
-            'Base rate: 185 NOK/hour',
-            'Rules:',
+          heading: 'Date-range inclusion rules',
+          list: [
+            'Boundaries are inclusive on both ends',
+            'Query: shift_date >= startDate AND shift_date <= endDate',
+            'For overnight shifts: The shift belongs to the start date',
           ],
-          list: ['Evening (18:00-21:00): +22 NOK/hour', 'Evening (21:00-23:59): +45 NOK/hour'],
-          table: {
-            caption: 'Result periods',
-            headers: ['Period', 'Hours', 'Base Rate', 'Supplement', 'Total Rate'],
-            rows: [
-              ['20:00-21:00', '1h', '185 NOK', '+22 (evening)', '207 NOK/h'],
-              ['21:00-02:00', '5h', '185 NOK', '+45 (evening)', '230 NOK/h'],
-            ],
-          },
+          note: 'A shift from 22:00 to 06:00 on 2025-01-15 is queried by shift_date = 2025-01-15',
         },
         {
-          heading: 'Precision',
-          paragraphs: [
-            'All time calculations maintain 3 decimal place precision for hours to ensure accurate wage computation:',
-          ],
+          heading: 'Cross-midnight handling',
           code: {
             language: 'typescript',
-            content: `const HOUR_DECIMAL_PRECISION = 1000; // 0.001 hours ≈ 3.6 seconds
-const hours = Math.round((toMin - fromMin) / 60 * 1000) / 1000;`,
+            content: `// Detection
+const isCrossMidnight = endTime <= startTime;
+
+// Treatment in calculation
+let start = toMin(startHHMM); // e.g., 22:00 = 1320
+let end = toMin(endHHMM);     // e.g., 06:00 = 360
+if (end <= start) {
+  end += 24 * 60;             // 360 + 1440 = 1800
+}
+// Duration: 1800 - 1320 = 480 minutes = 8 hours`,
           },
+          note: 'Supplements from both the start day and next day are considered. Time windows are projected into the extended timeline (0-2880 minutes).',
         },
         {
-          heading: 'Source code',
-          paragraphs: [
-            'Period splitting logic lives in lib/payroll/periods.ts (buildWagePeriods function).',
-          ],
+          heading: 'Virtual shift identity',
+          paragraphs: ['Virtual shifts have synthetic IDs for stable React keys and conflict detection:'],
+          code: {
+            language: 'typescript',
+            content: `const id = \`virtual-\${recurringId}-\${shiftDate}\`;
+// Example: "virtual-abc123-2025-01-15"`,
+          },
         },
       ],
     },
     {
-      id: 'supplements',
-      title: 'Supplements',
+      id: 'snapshots',
+      title: 'Wage Snapshot Selection & Payout Date Logic',
       subsections: [
         {
-          heading: 'How evening, night, and weekend pay is applied',
+          heading: 'Important: Two different lookups per shift',
           paragraphs: [
-            'Supplements are additional pay applied for specific days or hours. Tidex supports two models:',
+            'Snapshot selection uses TWO different dates for each shift:',
           ],
+          list: [
+            'Wage, supplements, break settings: Selected based on shift date (the date the shift is worked)',
+            'Tax settings only: Selected based on payout date (shift month + 1, on payroll day)',
+          ],
+          note: 'This is critical for accurate tax calculations when tax rates change between working and getting paid.',
         },
         {
-          heading: '1. Percentage-based supplements',
-          paragraphs: [
-            'Applies a percentage on top of the base rate.',
-            'Example: A 50% evening supplement on a 185 NOK base rate results in a 92.50 NOK/hour supplement.',
-          ],
+          heading: 'Payout date calculation',
           code: {
             language: 'typescript',
-            content: `if (rule.percent) {
-  supplementRate = baseRate * (rule.percent / 100);
+            content: `function calculatePayoutDate(
+  earningsYear: number,
+  earningsMonth: number, // 1-12
+  payrollDay: number
+): string {
+  // Payout month is earnings month + 1
+  let payoutYear = earningsYear;
+  let payoutMonth = earningsMonth + 1;
+
+  if (payoutMonth > 12) {
+    payoutMonth = 1;
+    payoutYear += 1;
+  }
+
+  // Handle edge case: payroll_day exceeds days in payout month
+  const daysInPayoutMonth = new Date(payoutYear, payoutMonth, 0).getDate();
+  const effectivePayrollDay = Math.min(payrollDay, daysInPayoutMonth);
+
+  return \`\${payoutYear}-\${padZero(payoutMonth)}-\${padZero(effectivePayrollDay)}\`;
+}
+
+// Example:
+// Shift on 2025-01-15, payroll day = 20
+// Earnings month = January (1)
+// Payout month = February (2)
+// Payout date = 2025-02-20`,
+          },
+        },
+        {
+          heading: 'Payout date adjustment for holidays',
+          paragraphs: ['Valid payroll days are Tuesday through Friday, excluding public holidays:'],
+          code: {
+            language: 'typescript',
+            content: `function adjustPayrollDate(
+  payrollDay: number,
+  month: number,      // 0-11 (JavaScript Date format)
+  year: number,
+  locale: Locale = 'no'
+): Date {
+  let date = new Date(year, month, payrollDay);
+
+  // Move backward until valid payroll day found (max 10 iterations)
+  while (isInvalidPayrollDay(date, locale)) {
+    date.setDate(date.getDate() - 1);
+  }
+
+  return date;
+}
+
+function isInvalidPayrollDay(date: Date, locale: Locale): boolean {
+  return isWeekend(date) || isMonday(date) || isPublicHoliday(date, locale);
 }`,
           },
+          note: 'Norwegian holidays include: New Year\'s Day, Labour Day (May 1), Constitution Day (May 17), Christmas Day, Boxing Day, and Easter-based holidays.',
         },
         {
-          heading: '2. Fixed-rate supplements',
-          paragraphs: [
-            'Adds a fixed NOK/hour amount.',
-            'Example: Night supplement of 110 NOK/hour.',
-          ],
+          heading: 'Snapshot selection algorithm (binary search)',
           code: {
             language: 'typescript',
-            content: `if (rule.rate) {
-  supplementRate = rule.rate;
-}`,
-          },
-        },
-        {
-          heading: 'Supplement rules',
-          paragraphs: ['Each rule defines:'],
-          code: {
-            language: 'typescript',
-            content: `{
-  days: number[];    // 1-7 for Mon-Sun
-  from: "HH:mm";     // Start time (inclusive)
-  to: "HH:mm";       // End time (inclusive)
-  rate?: number;     // Fixed NOK/hour supplement
-  percent?: number;  // Percentage supplement
-}`,
-          },
-        },
-        {
-          heading: 'Preset supplement rules',
-          paragraphs: [
-            'Tidex ships with presets aligned with common Norwegian tariffs.',
-            'All preset supplements use fixed NOK/hour rates.',
-          ],
-          table: {
-            caption: 'Preset rates',
-            headers: ['Supplement', 'Days', 'Time', 'Rate'],
-            rows: [
-              ['Evening 1', 'Mon-Fri (1-5)', '18:00-21:00', '+22 NOK/h'],
-              ['Evening 2', 'Mon-Fri (1-5)', '21:00-23:59', '+45 NOK/h'],
-              ['Saturday 1', 'Saturday (6)', '13:00-15:00', '+45 NOK/h'],
-              ['Saturday 2', 'Saturday (6)', '15:00-18:00', '+55 NOK/h'],
-              ['Saturday 3', 'Saturday (6)', '18:00-23:59', '+110 NOK/h'],
-              ['Sunday', 'Sunday (7)', '00:00-23:59', '+115 NOK/h'],
-            ],
-          },
-        },
-        {
-          heading: 'Custom supplements',
-          paragraphs: ['Custom supplement rules can be defined in settings:'],
-          code: {
-            language: 'typescript',
-            content: `settings.custom_supplements = {
-  rules: [
-    {
-      days: [1, 2, 3, 4, 5],  // Weekdays
-      from: "17:00",
-      to: "22:00",
-      percent: 40  // Custom 40% supplement
+            content: `function findSnapshotForDate(
+  targetDate: string,
+  snapshots: WageSnapshot[]
+): WageSnapshot | null {
+  // snapshots sorted by from_date DESC (newest first)
+
+  // Find baseline (from_date = NULL) for fallback
+  const baseline = snapshots.find(s => s.from_date === null);
+
+  // Filter to only dated snapshots and sort ascending for binary search
+  const datedSnapshots = snapshots
+    .filter(s => s.from_date !== null)
+    .reverse(); // Now ascending
+
+  // Binary search: find the latest snapshot where from_date <= targetDate
+  let left = 0, right = datedSnapshots.length - 1;
+  let result = null;
+
+  while (left <= right) {
+    const mid = Math.floor((left + right) / 2);
+    if (datedSnapshots[mid].from_date <= targetDate) {
+      result = datedSnapshots[mid];
+      left = mid + 1; // Look for later valid snapshot
+    } else {
+      right = mid - 1;
     }
-  ]
+  }
+
+  return result || baseline || null;
 }`,
           },
         },
         {
-          heading: 'Overlapping supplements',
-          paragraphs: [
-            'If multiple supplements overlap (for example Saturday and evening) Tidex applies the highest single supplement, never the combined total.',
-            'Example: Saturday evening 20:00',
-          ],
-          code: {
-            language: 'typescript',
-            content: `// From lib/payroll/periods.ts
-supplement = Math.max(supplement, supplementValue);`,
-          },
+          heading: 'Selection rules',
           list: [
-            'Saturday 18:00-23:59: +110 NOK',
-            'Evening 18:00-21:00: +22 NOK',
-            'Result: +110 NOK (highest)',
+            'Find latest dated snapshot where from_date <= targetDate',
+            'If none found, use baseline snapshot (from_date = NULL)',
+            'If no baseline, return null (calculation will use defaults)',
+            'Inclusive from_date: A snapshot with from_date = 2025-02-01 applies to target dates >= 2025-02-01',
           ],
         },
         {
-          heading: 'Source code',
-          paragraphs: ['Supplement logic lives in:'],
+          heading: 'Example: Snapshot resolution',
+          paragraphs: ['For a shift on 2025-01-15 with payroll day = 20:'],
           list: [
-            'lib/payroll/periods.ts (supplement application)',
-            'lib/payroll/presets.ts (preset rules)',
-            'lib/payroll/types.ts (type: SupplementRule)',
+            'Wage snapshot lookup: targetDate = 2025-01-15 (shift date)',
+            'Tax snapshot lookup: targetDate = 2025-02-20 (payout date)',
           ],
+          code: {
+            language: 'typescript',
+            content: `// Snapshots:
+const baseline = { from_date: null, hourly_wage: 180.00, tax_percentage: 25 };
+const january = { from_date: "2025-01-01", hourly_wage: 185.00, tax_percentage: 30 };
+const february = { from_date: "2025-02-01", hourly_wage: 190.00, tax_percentage: 35 };
+
+// Resolution:
+// Wage snapshot (by shift date 2025-01-15): january (from_date <= 2025-01-15)
+// Tax snapshot (by payout date 2025-02-20): february (from_date <= 2025-02-20)
+// Hourly wage used: 185.00 (from january snapshot)
+// Tax percentage used: 35% (from february snapshot)`,
+          },
+        },
+      ],
+    },
+    {
+      id: 'calculation',
+      title: 'Pay Calculation Engine (Math Spec)',
+      subsections: [
+        {
+          heading: 'Precision constants',
+          code: {
+            language: 'typescript',
+            content: `const HOUR_DECIMAL_PRECISION = 1000;  // 3 decimal places (0.001 hours)
+const CURRENCY_PRECISION = 100;       // 2 decimal places (cents)`,
+          },
+        },
+        {
+          heading: 'Time conversion',
+          code: {
+            language: 'typescript',
+            content: `function toMin(hhmm: string): number {
+  const [h, m] = hhmm.split(":").map(Number);
+  return h * 60 + m;
+}
+// "09:00" -> 540
+// "17:30" -> 1050
+// "24:00" -> 1440`,
+          },
+        },
+        {
+          heading: 'Duration calculation',
+          code: {
+            language: 'typescript',
+            content: `let start = toMin(startTime);  // e.g., 540
+let end = toMin(endTime);      // e.g., 1050
+
+// Handle cross-midnight
+if (end <= start) {
+  end += 24 * 60; // Add 1440 minutes (24 hours)
+}
+
+const totalMinutes = end - start;
+const durationHours = +(totalMinutes / 60).toFixed(2);`,
+          },
+        },
+        {
+          heading: 'Weekday calculation',
+          code: {
+            language: 'typescript',
+            content: `const WEEKDAYS = [7, 1, 2, 3, 4, 5, 6]; // JS getDay(): 0=Sun -> 7, then 1..6 Mon..Sat
+
+const date = new Date(shiftDate + "T00:00:00Z");
+const weekday = WEEKDAYS[date.getUTCDay()]; // 1-7 (Mon-Sun)`,
+          },
+          note: 'Supplement rules use 1-7 (Monday-Sunday), not JavaScript\'s 0-6.',
+        },
+        {
+          heading: 'Base rate resolution',
+          code: {
+            language: 'typescript',
+            content: `function resolveBaseRate(shift: ShiftRow, snapshot: WageSnapshot | null): number {
+  // Priority 1: New snapshot system
+  if (snapshot?.hourly_wage && snapshot.hourly_wage > 0) {
+    return snapshot.hourly_wage;
+  }
+
+  // Priority 2: Legacy per-shift snapshot (backward compatibility)
+  if (shift.hourly_wage_snapshot && shift.hourly_wage_snapshot > 0) {
+    return shift.hourly_wage_snapshot;
+  }
+
+  // Priority 3: Fallback to tariff level 1
+  return PRESET_WAGE_RATES["1"]; // 184.54
+}`,
+          },
+        },
+        {
+          heading: 'Supplement rules resolution',
+          code: {
+            language: 'typescript',
+            content: `function resolveSupplementRules(
+  weekday: number,
+  predefinedRules: SupplementRule[],
+  customSupplements: CustomSupplementsData | null
+): SupplementRule[] {
+  // Custom supplements completely replace predefined rules
+  if (customSupplements?.rules?.length > 0) {
+    return customSupplements.rules.map(rule => ({
+      ...rule,
+      days: [weekday], // Apply to this shift's weekday only
+    }));
+  }
+
+  return predefinedRules;
+}`,
+          },
+        },
+        {
+          heading: 'Wage periods construction',
+          paragraphs: ['The algorithm builds time periods with their applicable rates:'],
+          code: {
+            language: 'typescript',
+            content: `function buildWagePeriods(
+  startHHMM: string,
+  endHHMM: string,
+  weekday: number,
+  baseRate: number,
+  rules: SupplementRule[]
+): WagePeriod[] {
+  let start = toMin(startHHMM);
+  let end = toMin(endHHMM);
+  if (end <= start) end += 24 * 60;
+
+  // Collect boundaries
+  const points = new Set([start, end]);
+  for (const rule of rules) {
+    if (!rule.days.includes(weekday)) continue;
+    // Add rule boundaries that fall within shift
+    // ... (handles cross-midnight rules)
+  }
+
+  const sorted = Array.from(points).sort((a, b) => a - b);
+  const periods: WagePeriod[] = [];
+
+  for (let i = 0; i < sorted.length - 1; i++) {
+    const a = sorted[i], b = sorted[i + 1];
+
+    // Find highest supplement for this period
+    let supplement = 0;
+    for (const rule of rules) {
+      // ... check if period falls within rule
+      supplement = Math.max(supplement, resolveSupplementRate(rule, baseRate));
+    }
+
+    periods.push({
+      fromMin: a,
+      toMin: b,
+      baseRate,
+      supplementRate: supplement,
+      totalRate: baseRate + supplement,
+    });
+  }
+
+  return periods;
+}`,
+          },
+        },
+        {
+          heading: 'Supplement rate resolution',
+          code: {
+            language: 'typescript',
+            content: `function resolveSupplementRate(rule: SupplementRule, baseRate: number): number {
+  // Fixed rate (NOK per hour)
+  if (rule.rate != null && !isNaN(rule.rate)) {
+    return rule.rate;
+  }
+
+  // Percentage of base rate
+  if (rule.percent != null && !isNaN(rule.percent)) {
+    return (baseRate * rule.percent) / 100;
+  }
+
+  return 0;
+}`,
+          },
+          note: 'Stacking behavior: Highest-wins. Only the highest supplement rate applies to each time period.',
+        },
+        {
+          heading: 'Pay calculation',
+          code: {
+            language: 'typescript',
+            content: `let basePay = 0, supplementPay = 0;
+
+for (const period of periods) {
+  // Round hours to 3 decimals
+  const hours = Math.round((period.toMin - period.fromMin) / 60 * 1000) / 1000;
+
+  // Round each period's contribution to cents
+  basePay += Math.round(hours * period.baseRate * 100) / 100;
+  supplementPay += Math.round(hours * period.supplementRate * 100) / 100;
+}
+
+basePay = +basePay.toFixed(2);
+supplementPay = +supplementPay.toFixed(2);
+const gross = +(basePay + supplementPay).toFixed(2);`,
+          },
+        },
+        {
+          heading: 'Tax calculation',
+          paragraphs: ['Tax is applied client-side or in aggregations, not in computeShift:'],
+          code: {
+            language: 'typescript',
+            content: `const taxEnabled = snapshot.tax_enabled;
+const taxPercentage = snapshot.tax_percentage;
+
+// Half-tax adjustment (based on payout month)
+const payoutMonth = shiftMonth === 12 ? 1 : shiftMonth + 1;
+const effectiveTaxPct = (halfTaxMonth === payoutMonth)
+  ? taxPercentage / 2
+  : taxPercentage;
+
+const taxAmount = taxEnabled ? gross * (effectiveTaxPct / 100) : 0;
+const net = gross - taxAmount;`,
+          },
+        },
+        {
+          heading: 'Complete computation flow (pseudocode)',
+          code: {
+            language: 'text',
+            content: `FUNCTION computeShift(shift, settings, presetRules, snapshot):
+  // 1. Parse times
+  start_minutes = toMinutes(shift.start_time)
+  end_minutes = toMinutes(shift.end_time)
+  IF end_minutes <= start_minutes THEN
+    end_minutes += 1440  // Cross-midnight
+
+  // 2. Get weekday (1-7)
+  date = parseDate(shift.shift_date)
+  weekday = WEEKDAYS[date.dayOfWeek]
+
+  // 3. Resolve base rate
+  baseRate = snapshot?.hourly_wage OR shift.hourly_wage_snapshot OR 184.54
+
+  // 4. Resolve supplement rules
+  rules = shift.custom_supplements OR snapshot.supplements OR presetRules
+
+  // 5. Build wage periods
+  periods = buildWagePeriods(start, end, weekday, baseRate, rules)
+
+  // 6. Calculate raw duration
+  totalMinutes = SUM(period.toMin - period.fromMin FOR period IN periods)
+  durationHours = ROUND(totalMinutes / 60, 2)
+
+  // 7. Apply break deduction
+  breakEnabled = snapshot.break_enabled OR true
+  breakMethod = snapshot.break_method OR "proportional"
+  threshold = snapshot.break_threshold_hours OR 5.5
+  breakMinutes = breakEnabled ? (snapshot.break_deduction_minutes OR 30) : 0
+
+  IF durationHours > threshold AND breakEnabled THEN
+    periods = applyBreakDeduction(periods, breakMethod, threshold, breakMinutes/60)
+
+  // 8. Calculate paid hours
+  paidMinutes = SUM(period.toMin - period.fromMin FOR period IN periods)
+  paidHours = ROUND(paidMinutes / 60, 2)
+
+  // 9. Calculate pay
+  basePay = 0
+  supplementPay = 0
+  FOR period IN periods:
+    hours = ROUND((period.toMin - period.fromMin) / 60, 3)
+    basePay += ROUND(hours * period.baseRate, 2)
+    supplementPay += ROUND(hours * period.supplementRate, 2)
+
+  gross = ROUND(basePay + supplementPay, 2)
+
+  RETURN {
+    id: shift.id,
+    durationHours,
+    paidHours,
+    basePay,
+    supplementPay,
+    gross,
+    wagePeriods: periods,
+    originalWagePeriods: originalPeriods,
+    breakAudit: { method, threshold, deducted }
+  }`,
+          },
         },
       ],
     },
@@ -437,354 +830,517 @@ supplement = Math.max(supplement, supplementValue);`,
         {
           heading: 'Automatic break deductions',
           paragraphs: [
-            'Tidex can deduct unpaid breaks automatically based on your configuration. Four deduction strategies are available:',
+            'Tidex deducts unpaid breaks automatically based on your configuration. Four deduction strategies are available.',
           ],
         },
         {
           heading: 'Default settings',
-          paragraphs: ['Default break policy:'],
           list: [
-            'Enabled: Yes',
+            'Enabled: Yes (break_enabled = true)',
             'Method: Proportional',
-            'Threshold: 5.5 hours',
-            'Break duration: 30 minutes',
+            'Threshold: 5.5 hours (break_threshold_hours)',
+            'Break duration: 30 minutes (break_deduction_minutes)',
           ],
-          code: {
-            language: 'typescript',
-            content: `const defaultSettings = {
-  pause_deduction_enabled: true,
-  pause_deduction_method: "proportional",
-  pause_threshold_hours: 5.5,
-  pause_deduction_minutes: 30,
-};`,
-          },
         },
         {
-          heading: 'Method 1: Proportional',
-          paragraphs: [
-            'Distributes the deduction proportionally across all wage periods, keeping ratios between base pay and supplements intact.',
-            'Example: 6-hour shift with a 30-minute break.',
-          ],
+          heading: 'Threshold behavior',
+          paragraphs: ['Breaks are only deducted when the shift exceeds the configured threshold:'],
           code: {
             language: 'typescript',
-            content: `for (let i = 0; i < periods.length; i++) {
-  const span = periods[i].toMin - periods[i].fromMin;
-  const proportion = span / totalMinutes;
-  const cutMinutes = proportion * pauseHours * 60;
-  periods[i].toMin -= cutMinutes;
+            content: `// Threshold comparison: strict greater than (>)
+let toDeduct = totalHours > thresholdHours ? deductionHours : 0;
+
+// Edge case: Shift exactly at threshold (e.g., 5.5h with 5.5h threshold)
+// NO break applied (uses >, not >=)`,
+          },
+          note: 'A 5.5-hour shift with a 5.5-hour threshold will NOT have a break deducted.',
+        },
+        {
+          heading: 'Method 1: Proportional (default)',
+          paragraphs: ['Distributes the deduction proportionally across all wage periods:'],
+          code: {
+            language: 'typescript',
+            content: `if (method === "proportional") {
+  // Deduct exact proportional fractions (not rounded to minutes)
+  for (let i = 0; i < adjusted.length; i++) {
+    const span = adjusted[i].toMin - adjusted[i].fromMin;
+    const proportion = span / totalMinutes;
+    const cutMinutes = proportion * toDeduct * 60;
+    adjusted[i].toMin -= cutMinutes;
+  }
 }`,
           },
-          list: [
-            'Period 1: 2 hours → deduct 10 min (2/6 * 30)',
-            'Period 2: 4 hours → deduct 20 min (4/6 * 30)',
-          ],
+          note: 'Keeps ratios between base pay and supplements intact.',
         },
         {
           heading: 'Method 2: End of shift',
-          paragraphs: [
-            'Removes the break from the end of the shift by trimming the latest wage periods.',
-            'Useful when breaks are always taken at the end.',
-          ],
+          paragraphs: ['Removes the break from the end of the shift:'],
           code: {
             language: 'typescript',
-            content: `for (let i = periods.length - 1; i >= 0 && remaining > 0; i--) {
-  const span = periods[i].toMin - periods[i].fromMin;
-  const cut = Math.min(span, remaining);
-  periods[i].toMin -= cut;
-  remaining -= cut;
+            content: `if (method === "end_of_shift") {
+  // Subtract from the tail
+  for (let i = adjusted.length - 1; i >= 0 && remaining > 0; i--) {
+    const span = adjusted[i].toMin - adjusted[i].fromMin;
+    const cut = Math.min(span, remaining);
+    adjusted[i].toMin -= cut;
+    remaining -= cut;
+  }
 }`,
           },
         },
         {
           heading: 'Method 3: Base only',
-          paragraphs: [
-            'Deducts from periods with the lowest supplement first (typically the base rate) to preserve premium hours.',
-            'Example: A shift with base pay (185 NOK/h) and evening supplement (230 NOK/h).',
-          ],
+          paragraphs: ['Deducts from periods with the lowest supplement first:'],
           code: {
             language: 'typescript',
-            content: `// Sort periods by supplement (lowest first)
-const order = periods
-  .map((p, idx) => ({ idx, supplement: p.supplementRate }))
-  .sort((a, b) => a.supplement - b.supplement)
-  .map(o => o.idx);
+            content: `if (method === "base_only") {
+  // Deduct from periods with lowest supplement first
+  const order = adjusted
+    .map((p, idx) => ({ idx, supplement: p.supplementRate }))
+    .sort((a, b) => a.supplement - b.supplement);
 
-// Deduct from lowest supplement periods
-for (const i of order) {
-  if (remaining <= 0) break;
-  const span = periods[i].toMin - periods[i].fromMin;
-  const cut = Math.min(span, remaining);
-  periods[i].toMin -= cut;
-  remaining -= cut;
+  for (const { idx } of order) {
+    if (remaining <= 0) break;
+    const span = adjusted[idx].toMin - adjusted[idx].fromMin;
+    const cut = Math.min(span, remaining);
+    adjusted[idx].toMin -= cut;
+    remaining -= cut;
+  }
 }`,
           },
-          list: [
-            '30 min break deducted first from base pay period',
-            'Evening supplement period preserved entirely',
-          ],
+          note: 'Useful for preserving premium hours (evening/weekend supplements).',
         },
         {
           heading: 'Method 4: None',
-          paragraphs: [
-            'No automatic break deduction is applied. All hours are paid.',
-            'Use this if you manually track breaks elsewhere or prefer to pay all logged hours.',
-          ],
-          code: {
-            language: 'typescript',
-            content: `if (method === "none") {
-  // Skip break deduction entirely
-  toDeduct = 0;
-}`,
-          },
+          paragraphs: ['No automatic break deduction is applied. All hours are paid.'],
         },
         {
-          heading: 'Threshold',
-          paragraphs: [
-            'Breaks are only deducted when the shift exceeds the configured threshold.',
-            'Default threshold: 5.5 hours (shifts under 5.5 hours incur no deduction).',
-          ],
-          code: {
-            language: 'typescript',
-            content: `const totalHours = totalMinutes / 60;
-let toDeduct = totalHours > thresholdHours ? pauseHours : 0;`,
+          heading: 'Break method summary',
+          table: {
+            caption: 'Break deduction methods',
+            headers: ['Method', 'Behavior'],
+            rows: [
+              ['proportional', 'Deducts break time proportionally across all periods based on their duration'],
+              ['base_only', 'Deducts from periods with lowest supplement rate first'],
+              ['end_of_shift', 'Deducts from the last period(s) of the shift'],
+              ['none', 'No break deduction'],
+            ],
           },
         },
         {
           heading: 'Break audit',
-          paragraphs: ['Each computation includes a break audit to show exactly what was deducted:'],
+          paragraphs: ['Each computation includes a break audit for transparency:'],
           code: {
             language: 'typescript',
-            content: `{
-  method: "proportional",
-  thresholdHours: 5.5,
-  deductedHours: 0.5,
-  notes: ["Deducted proportionally across periods"]
-}`,
+            content: `type BreakAudit = {
+  method: BreakMethod;
+  thresholdHours: number;
+  deductedHours: number;
+  notes?: string[];
+};`,
           },
-        },
-        {
-          heading: 'Source code',
-          paragraphs: [
-            'Break deduction logic is in lib/payroll/breaks.ts (applyBreakDeduction function).',
-          ],
         },
       ],
     },
     {
-      id: 'examples',
-      title: 'Complete Flow',
+      id: 'aggregations',
+      title: 'Aggregations & Higher-Level Metrics',
       subsections: [
         {
-          heading: 'From database to UI',
+          heading: 'Monthly totals (TotalCard)',
+          code: {
+            language: 'typescript',
+            content: `const aggregates = shifts.reduce((acc, shift) => ({
+  totalHours: acc.totalHours + shift.computed.paidHours,
+  totalEarnings: acc.totalEarnings + shift.computed.gross,
+}), { totalHours: 0, totalEarnings: 0 });
+
+// Filter: Shifts where startDate <= shift_date <= endDate`,
+          },
+        },
+        {
+          heading: 'Next payroll (NextPayrollCard)',
+          paragraphs: ['Which shifts are included: Previous month\'s shifts (earnings month = current month - 1)'],
+          code: {
+            language: 'typescript',
+            content: `const prevMonth = currentMonth - 1;
+const prevYear = prevMonth === 0 ? currentYear - 1 : currentYear;
+const actualPrevMonth = prevMonth === 0 ? 12 : prevMonth;
+
+// Filter shifts from previous month
+const prevMonthShifts = shifts.filter(s => {
+  const [y, m] = s.shift_date.split('-').map(Number);
+  return y === prevYear && m === actualPrevMonth;
+});
+
+// Get tax settings for current payout
+const payoutDate = calculatePayoutDate(prevYear, actualPrevMonth, payrollDay);
+const snapshot = getSnapshotForDate(payoutDate);
+
+const grossAmount = SUM(shift.computed.gross);
+const taxAmount = snapshot.tax_enabled
+  ? grossAmount * (snapshot.tax_percentage / 100)
+  : 0;
+const netAmount = grossAmount - taxAmount;`,
+          },
+        },
+        {
+          heading: 'Projected total',
+          paragraphs: ['Total earnings including future planned shifts:'],
+          code: {
+            language: 'typescript',
+            content: `const today = new Date().toISOString().slice(0, 10);
+
+const earnedToDate = shifts
+  .filter(s => s.shift_date <= today)
+  .reduce((sum, s) => sum + s.computed.gross, 0);
+
+const projectedTotal = shifts
+  .reduce((sum, s) => sum + s.computed.gross, 0);
+
+const hasFutureShifts = projectedTotal !== earnedToDate;`,
+          },
+        },
+        {
+          heading: 'Conflict exclusion (overlapping shifts)',
           paragraphs: [
-            "Here's the complete flow of how a shift goes from raw data in Supabase to the final number you see on screen:",
-          ],
-        },
-        {
-          heading: 'Step 1: Database query',
-          paragraphs: ['Data Access Layer (DAL) fetches shifts and user settings from Supabase:'],
-          code: {
-            language: 'typescript',
-            content: `// data-access/shifts.ts
-const supabase = await createSupabaseServerClient();
-
-const { data: settingsRow } = await supabase
-  .from("user_settings")
-  .select("*")
-  .eq("user_id", userId)
-  .single();
-
-const { data: shifts } = await supabase
-  .from("user_shifts")
-  .select("*")
-  .eq("user_id", userId)
-  .gte("shift_date", startDate)
-  .lte("shift_date", endDate)
-  .order("shift_date", { ascending: false });`,
-          },
-        },
-        {
-          heading: 'Step 2: Fetch wage snapshots',
-          paragraphs: ['Collect all shift dates and batch-fetch applicable snapshots:'],
-          code: {
-            language: 'typescript',
-            content: `// data-access/shifts.ts
-import { getSnapshotsForDates } from '@/data-access/wage-snapshots';
-
-// Collect all shift dates for batch lookup
-const shiftDates = shifts.map((s) => s.shift_date);
-
-// Fetch wage snapshots for all dates in one query (cached)
-const snapshotMap = await getSnapshotsForDates(shiftDates);`,
-          },
-        },
-        {
-          heading: 'Step 3: Payroll computation',
-          paragraphs: ['For each shift, resolve its snapshot and call computeShift() to calculate wages:'],
-          code: {
-            language: 'typescript',
-            content: `// data-access/shifts.ts
-const computedShifts = shifts.map((shift) => {
-  const snapshot = snapshotMap.get(shift.shift_date) ?? null;
-  return {
-    ...shift,
-    computed: computeShift(shift, settings, PRESET_RULES, snapshot),
-  };
-});`,
-          },
-          note: 'Inside computeShift() (from lib/payroll/calc.ts):',
-          additionalCode: {
-            language: 'typescript',
-            content: `export function computeShift(
-  shift: ShiftRow,
-  settings: UserSettings,
-  presetRules: SupplementRule[],
-  snapshot: WageSnapshot | null = null
-): ShiftComputed {
-  // 1. Resolve base wage from snapshot (or fallback)
-  const baseRate = resolveBaseRate(shift, snapshot);
-
-  // 2. Resolve supplement rules from snapshot (or fallback)
-  const rules = snapshot?.supplements?.rules?.length
-    ? snapshot.supplements.rules
-    : presetRules;
-
-  // 3. Build wage periods with supplements
-  let periods = buildWagePeriods(
-    shift.start_time,
-    shift.end_time,
-    weekday,
-    baseRate,
-    rules
-  );
-
-  // 4. Calculate total duration
-  const totalMinutes = periods.reduce((sum, p) =>
-    sum + (p.toMin - p.fromMin), 0
-  );
-  const durationHours = totalMinutes / 60;
-
-  // 5. Deduct break
-  const afterBreak = applyBreakDeduction(
-    periods,
-    settings.pause_deduction_method,
-    settings.pause_threshold_hours,
-    pauseHours
-  );
-  periods = afterBreak.periods;
-
-  // 6. Calculate pay
-  let basePay = 0, supplementPay = 0;
-  for (const p of periods) {
-    const h = (p.toMin - p.fromMin) / 60;
-    basePay += h * p.baseRate;
-    supplementPay += h * p.supplementRate;
-  }
-
-  const gross = basePay + supplementPay;
-
-  return {
-    id: shift.id,
-    durationHours,
-    paidHours: periods.reduce(...) / 60,
-    basePay,
-    supplementPay,
-    gross,
-    wagePeriods: periods,
-    breakAudit: afterBreak.audit
-  };
-}`,
-          },
-        },
-        {
-          heading: 'Step 4: Return to page',
-          paragraphs: ['DAL returns shifts with pre-computed values:'],
-          code: {
-            language: 'typescript',
-            content: `// data-access/shifts.ts
-return {
-  shifts: computedShifts,
-  settings,
-  aggregates: {
-    totalHours: sum(shifts.map(s => s.computed.paidHours)),
-    totalEarnings: sum(shifts.map(s => s.computed.gross))
-  }
-};`,
-          },
-        },
-        {
-          heading: 'Step 5: UI rendering',
-          paragraphs: ['Page receives pre-computed data and displays it:'],
-          code: {
-            language: 'typescript',
-            content: `// app/[locale]/(app)/page.tsx
-import { verifySession } from "@/data-access/auth";
-import { getComputedShifts } from "@/data-access/shifts";
-
-export default async function Page() {
-  const { user } = await verifySession();
-  const { shifts, aggregates } = await getComputedShifts(user.id);
-
-  return <ShiftsList shifts={shifts} totals={aggregates} />;
-}`,
-          },
-          note: 'ShiftCard component displays the computed values:',
-          additionalCode: {
-            language: 'typescript',
-            content: `// components/app/ShiftCard.tsx
-export function ShiftCard({ shift }: { shift: ShiftWithComputations }) {
-  const { basePay, supplementPay, gross, paidHours } = shift.computed;
-
-  return (
-    <Card>
-      <p>{formatCurrency(gross)}</p>
-      <p>{formatHours(paidHours)}</p>
-      <p>Base pay: {formatCurrency(basePay)}</p>
-      <p>Supplements: {formatCurrency(supplementPay)}</p>
-    </Card>
-  );
-}`,
-          },
-        },
-        {
-          heading: 'Complete example: Saturday evening',
-          paragraphs: ['The following example walks through a shift end to end:'],
-          list: [
-            'Shift: Saturday 15:00-23:00',
-            'User settings: Preset wage level 3 (187.46 NOK/h), proportional break',
+            'When multiple shifts overlap on the same date, only one contributes to earnings totals. The shift with the lowest gross earnings is kept; all higher-earning overlapping shifts are excluded.',
           ],
           code: {
             language: 'typescript',
-            content: `// 1. Base wage
-baseRate = 187.46 // From PRESET_WAGE_RATES["3"]
+            content: `function buildExcludedShiftIds(shifts: ShiftWithComputations[]): Set<string> {
+  const result = new Set<string>();
+  const shiftsByDate = groupByDate(shifts);
 
-// 2. Time periods with supplements
-// Saturday 15:00-18:00: +55 NOK
-// Saturday 18:00-23:00: +110 NOK
-periods = [
-  { fromMin: 900, toMin: 1080, baseRate: 187.46, supplementRate: 55 },  // 15:00-18:00 (3h)
-  { fromMin: 1080, toMin: 1380, baseRate: 187.46, supplementRate: 110 } // 18:00-23:00 (5h)
-]
+  for (const [date, shiftsOnDate] of shiftsByDate) {
+    if (shiftsOnDate.length < 2) continue;
 
-// 3. Duration
-durationHours = 8.00 hours
+    // Find overlapping clusters using union-find
+    const clusters = findOverlappingClusters(shiftsOnDate);
 
-// 4. Break deduction (8h > 5.5h, deduct 0.5h proportionally)
-// Period 1: 180min → deduct 11.25min (180/480 * 30)
-// Period 2: 300min → deduct 18.75min (300/480 * 30)
-// After deduction:
-periods = [
-  { fromMin: 900, toMin: 1068.75, baseRate: 187.46, supplementRate: 55 },  // 2.813h
-  { fromMin: 1080, toMin: 1361.25, baseRate: 187.46, supplementRate: 110 } // 4.688h
-]
-paidHours = 7.50 hours
+    for (const cluster of clusters) {
+      if (cluster.length < 2) continue;
 
-// 5. Pay calculation (with per-period rounding to 2 decimals)
-// Period 1: 2.813h * 187.46 = 527.32 kr (base), 2.813h * 55 = 154.72 kr (supp)
-// Period 2: 4.688h * 187.46 = 878.81 kr (base), 4.688h * 110 = 515.68 kr (supp)
-basePay = 527.32 + 878.81 = 1406.13 kr
-supplementPay = 154.72 + 515.68 = 670.40 kr
-gross = 2076.53 kr`,
+      // Sort by gross ascending, keep only the lowest
+      cluster.sort((a, b) => a.computed.gross - b.computed.gross);
+      for (let i = 1; i < cluster.length; i++) {
+        result.add(cluster[i].id);
+      }
+    }
+  }
+
+  return result;
+}`,
+          },
+          note: 'Excluded shifts are displayed with strikethrough styling but remain visible.',
+        },
+        {
+          heading: 'Overlap detection',
+          code: {
+            language: 'typescript',
+            content: `function shiftsOverlap(a, b): boolean {
+  let startA = toMinutes(a.start_time);
+  let endA = toMinutes(a.end_time);
+  let startB = toMinutes(b.start_time);
+  let endB = toMinutes(b.end_time);
+
+  // Handle cross-midnight
+  if (endA <= startA) endA += 24 * 60;
+  if (endB <= startB) endB += 24 * 60;
+
+  return startA < endB && startB < endA;
+}`,
+          },
+        },
+        {
+          heading: 'Stats aggregates',
+          table: {
+            caption: 'Stats calculations',
+            headers: ['Aggregate', 'Formula', 'Period'],
+            rows: [
+              ['Total hours', 'SUM(paidHours)', 'Selected range'],
+              ['Total earnings', 'SUM(gross)', 'Selected range'],
+              ['Average per shift', 'totalEarnings / shiftCount', 'Selected range'],
+              ['Average hourly', 'totalEarnings / totalHours', 'Selected range'],
+              ['Month-over-month %', '(current - previous) / previous * 100', 'Comparison'],
+            ],
+          },
+        },
+      ],
+    },
+    {
+      id: 'test-vectors',
+      title: 'Test Vectors & Examples',
+      subsections: [
+        {
+          heading: 'Test case 1: Basic weekday shift (no supplements)',
+          paragraphs: ['A simple morning shift with no supplement windows:'],
+          code: {
+            language: 'typescript',
+            content: `// Input
+const shift = {
+  shift_date: "2025-01-15", // Wednesday
+  start_time: "09:00",
+  end_time: "14:00",
+};
+
+const snapshot = {
+  hourly_wage: 185.00,
+  supplements: { rules: [] }, // No supplements
+  break_enabled: false,
+};
+
+// Expected output
+{
+  durationHours: 5.00,
+  paidHours: 5.00,
+  basePay: 925.00,      // 5h x 185
+  supplementPay: 0,
+  gross: 925.00,
+}`,
+          },
+        },
+        {
+          heading: 'Test case 2: Weekday evening shift (with supplement)',
+          paragraphs: ['An evening shift that spans multiple supplement windows:'],
+          code: {
+            language: 'typescript',
+            content: `// Input
+const shift = {
+  shift_date: "2025-01-15", // Wednesday
+  start_time: "17:00",
+  end_time: "22:00",
+};
+
+const snapshot = {
+  hourly_wage: 185.00,
+  supplements: { rules: [
+    { days: [1,2,3,4,5], from: "18:00", to: "21:00", rate: 22 },
+    { days: [1,2,3,4,5], from: "21:00", to: "23:59", rate: 45 },
+  ]},
+  break_enabled: false,
+};
+
+// Expected output
+{
+  durationHours: 5.00,
+  paidHours: 5.00,
+  basePay: 925.00,       // 5h x 185
+  supplementPay: 111.00, // 1h x 0 + 3h x 22 + 1h x 45 = 0 + 66 + 45
+  gross: 1036.00,
+}`,
+          },
+        },
+        {
+          heading: 'Test case 3: Cross-midnight shift',
+          paragraphs: ['A night shift that crosses midnight:'],
+          code: {
+            language: 'typescript',
+            content: `// Input
+const shift = {
+  shift_date: "2025-01-15", // Wednesday
+  start_time: "22:00",
+  end_time: "06:00",
+};
+
+const snapshot = {
+  hourly_wage: 185.00,
+  supplements: { rules: [
+    { days: [1,2,3,4,5], from: "21:00", to: "23:59", rate: 45 },
+  ]},
+  break_enabled: true,
+  break_threshold_hours: 5.5,
+  break_deduction_minutes: 30,
+};
+
+// Expected output
+{
+  durationHours: 8.00,        // 22:00 to 06:00 = 8 hours
+  paidHours: 7.50,            // 8h - 0.5h break
+  basePay: 1387.50,           // 7.5h x 185
+  supplementPay: 67.50,       // 1.5h x 45 (proportional deduction)
+  gross: 1455.00,
+}`,
+          },
+        },
+        {
+          heading: 'Test case 4: Sunday full day (high supplement)',
+          code: {
+            language: 'typescript',
+            content: `// Input
+const shift = {
+  shift_date: "2025-01-19", // Sunday
+  start_time: "08:00",
+  end_time: "16:00",
+};
+
+const snapshot = {
+  hourly_wage: 185.00,
+  supplements: { rules: [
+    { days: [7], from: "00:00", to: "23:59", rate: 115 },
+  ]},
+  break_enabled: true,
+  break_threshold_hours: 5.5,
+  break_deduction_minutes: 30,
+};
+
+// Expected output
+{
+  durationHours: 8.00,
+  paidHours: 7.50,
+  basePay: 1387.50,      // 7.5h x 185
+  supplementPay: 862.50, // 7.5h x 115
+  gross: 2250.00,
+}`,
+          },
+        },
+        {
+          heading: 'Test case 5: Break threshold edge case',
+          paragraphs: ['A shift exactly at the threshold - NO break applied:'],
+          code: {
+            language: 'typescript',
+            content: `// Input
+const shift = {
+  shift_date: "2025-01-15",
+  start_time: "09:00",
+  end_time: "14:30", // Exactly 5.5 hours
+};
+
+const snapshot = {
+  hourly_wage: 185.00,
+  break_enabled: true,
+  break_threshold_hours: 5.5,
+  break_deduction_minutes: 30,
+};
+
+// Expected output
+{
+  durationHours: 5.50,
+  paidHours: 5.50,       // NO break (threshold uses >)
+  basePay: 1017.50,
+  supplementPay: 0,
+  gross: 1017.50,
+}`,
+          },
+          note: 'The threshold comparison uses strict greater than (>), not >=.',
+        },
+        {
+          heading: 'Test case 6: Percentage-based supplement',
+          code: {
+            language: 'typescript',
+            content: `// Input
+const shift = {
+  shift_date: "2025-01-15",
+  start_time: "18:00",
+  end_time: "22:00",
+};
+
+const snapshot = {
+  hourly_wage: 200.00,
+  supplements: { rules: [
+    { days: [3], from: "18:00", to: "23:59", percent: 50 }, // 50% of base
+  ]},
+  break_enabled: false,
+};
+
+// Expected output
+{
+  durationHours: 4.00,
+  paidHours: 4.00,
+  basePay: 800.00,       // 4h x 200
+  supplementPay: 400.00, // 4h x (200 x 0.50)
+  gross: 1200.00,
+}`,
+          },
+        },
+        {
+          heading: 'Test case 7: Saturday to Sunday cross-midnight',
+          paragraphs: ['A shift that spans from Saturday evening to Sunday morning:'],
+          code: {
+            language: 'typescript',
+            content: `// Input
+const shift = {
+  shift_date: "2025-01-18", // Saturday
+  start_time: "20:00",
+  end_time: "02:00",
+};
+
+const snapshot = {
+  hourly_wage: 185.00,
+  supplements: { rules: [
+    { days: [6], from: "18:00", to: "23:59", rate: 110 }, // Saturday evening
+    { days: [7], from: "00:00", to: "23:59", rate: 115 }, // Sunday all day
+  ]},
+  break_enabled: false,
+};
+
+// Expected output
+{
+  durationHours: 6.00,
+  paidHours: 6.00,
+  // 20:00-00:00 (4h) at Saturday rate 110
+  // 00:00-02:00 (2h) at Sunday rate 115
+  basePay: 1110.00,       // 6h x 185
+  supplementPay: 670.00,  // 4h x 110 + 2h x 115 = 440 + 230
+  gross: 1780.00,
+}`,
+          },
+        },
+        {
+          heading: 'Test case 8: Tax with half-tax month',
+          code: {
+            language: 'typescript',
+            content: `// Input
+const shift = {
+  shift_date: "2025-11-15", // November
+};
+
+const snapshot = {
+  tax_enabled: true,
+  tax_percentage: 30,
+};
+
+const settings = {
+  half_tax_month: 12, // December (payout month for November shifts)
+};
+
+// Tax calculation
+// Payout month = December
+// Half-tax applies because halfTaxMonth === payoutMonth
+const effectiveTaxPct = 30 / 2; // = 15%
+const taxAmount = gross * 0.15;`,
+          },
+        },
+        {
+          heading: 'Test case 9: Overlapping shifts (conflict exclusion)',
+          code: {
+            language: 'typescript',
+            content: `// Input
+const shifts = [
+  {
+    id: "shift-a",
+    shift_date: "2025-01-15",
+    start_time: "09:00",
+    end_time: "17:00", // Gross: 1480 NOK
+  },
+  {
+    id: "shift-b",
+    shift_date: "2025-01-15",
+    start_time: "14:00",
+    end_time: "22:00", // Gross: 1850 NOK (higher due to evening supplement)
+  },
+];
+
+// Expected behavior
+// shift-a and shift-b overlap (14:00-17:00)
+// shift-a has lower gross (1480) -> included in totals
+// shift-b has higher gross (1850) -> excluded from totals, shown with strikethrough
+
+const excludedIds = buildExcludedShiftIds(shifts);
+// excludedIds.has("shift-b") === true
+// excludedIds.has("shift-a") === false
+
+// Monthly total = 1480 (only shift-a counted)`,
           },
         },
       ],
