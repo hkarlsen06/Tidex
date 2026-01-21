@@ -22,6 +22,10 @@ struct MainTabView: View {
     @State private var isKeyboardVisible = false
     @State private var sharingHasSelectedSharer = false
 
+    // State for feedback deep link sheets
+    @State private var showFeedbackSheet = false
+    @State private var showAdminFeedbackSheet = false
+
     // View mode toggle (calendar vs list) - persisted across app launches
     // Shared with ShiftsView via @AppStorage
     @AppStorage("shiftsViewMode") private var showListView = false
@@ -147,6 +151,14 @@ struct MainTabView: View {
             handlePendingDeepLink(coordinator.pendingDeepLink)
             selectionHaptic.prepare()
         }
+        .sheet(isPresented: $showFeedbackSheet) {
+            NavigationStack {
+                FeedbackSettingsView()
+            }
+        }
+        .sheet(isPresented: $showAdminFeedbackSheet) {
+            AdminSettingsView(initialTab: .feedback)
+        }
     }
 
     // MARK: - Month Picker Visibility
@@ -253,8 +265,16 @@ struct MainTabView: View {
             if selectedTab != .shifts {
                 selectedTab = .shifts
             }
+        case .feedback:
+            // Open feedback sheet for users viewing their feedback responses
+            showFeedbackSheet = true
+            coordinator.clearPendingDeepLink()
+        case .adminFeedback:
+            // Open admin panel with feedback tab for admins viewing new feedback
+            showAdminFeedbackSheet = true
+            coordinator.clearPendingDeepLink()
         }
-        // Note: We don't clear the deep link here - the destination view will consume and clear it
+        // Note: We don't clear the deep link here for tab-based navigation - the destination view will consume and clear it
     }
 }
 

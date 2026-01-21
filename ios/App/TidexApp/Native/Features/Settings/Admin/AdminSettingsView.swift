@@ -3,6 +3,9 @@ import SwiftUI
 struct AdminSettingsView: View {
     @StateObject private var viewModel = AdminSettingsViewModel()
 
+    /// Optional initial tab to select when the view appears (for deep linking)
+    var initialTab: AdminTab?
+
     var body: some View {
         VStack(spacing: 0) {
             // Tab picker
@@ -38,7 +41,13 @@ struct AdminSettingsView: View {
         .background(Color.tidexBackground)
         .navigationTitle("Admin")
         .navigationBarTitleDisplayMode(.inline)
-        .task { await viewModel.loadInitialData() }
+        .task {
+            // Set initial tab if provided (for deep linking)
+            if let initialTab = initialTab {
+                viewModel.selectedTab = initialTab
+            }
+            await viewModel.loadInitialData()
+        }
         .sheet(item: $viewModel.selectedUser) { user in
             UserActionSheet(user: user, viewModel: viewModel)
         }
