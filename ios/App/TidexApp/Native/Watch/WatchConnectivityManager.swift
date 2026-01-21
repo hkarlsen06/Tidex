@@ -80,12 +80,12 @@ extension WatchConnectivityManager: WCSessionDelegate {
         activationDidCompleteWith activationState: WCSessionActivationState,
         error: Error?
     ) {
-        Task { @MainActor in
+        Task { @MainActor [weak self] in
             if let error = error {
                 logger.error("WCSession activation failed: \(error.localizedDescription)")
             } else {
                 logger.info("WCSession activated: \(activationState.rawValue)")
-                self.updatePairingState(session)
+                self?.updatePairingState(session)
             }
         }
     }
@@ -105,8 +105,8 @@ extension WatchConnectivityManager: WCSessionDelegate {
     }
 
     nonisolated func sessionWatchStateDidChange(_ session: WCSession) {
-        Task { @MainActor in
-            self.updatePairingState(session)
+        Task { @MainActor [weak self] in
+            self?.updatePairingState(session)
         }
     }
 
@@ -116,7 +116,7 @@ extension WatchConnectivityManager: WCSessionDelegate {
         didReceiveMessage message: [String: Any],
         replyHandler: @escaping ([String: Any]) -> Void
     ) {
-        Task { @MainActor in
+        Task { @MainActor [weak self] in
             if message["action"] as? String == "refresh" {
                 logger.info("Watch requested refresh")
 
@@ -129,10 +129,10 @@ extension WatchConnectivityManager: WCSessionDelegate {
                 _ = await SyncCoordinator.shared.sync(reason: .watchRefresh, userId: userId)
 
                 // Also fetch friend data so it's available for the Watch
-                await self.refreshFriendData(userId: userId)
+                await self?.refreshFriendData(userId: userId)
 
                 // Send updated data to Watch
-                self.sendUpdatedData(userId: userId)
+                self?.sendUpdatedData(userId: userId)
                 replyHandler(["success": true])
             }
         }

@@ -137,6 +137,10 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
         setupMonthContextSubscription()
     }
 
+    deinit {
+        monthContextCancellable?.cancel()
+    }
+
     private func setupMonthContextSubscription() {
         monthContextCancellable = monthContext.monthChanged
             .receive(on: DispatchQueue.main)
