@@ -199,7 +199,9 @@ export function AuditLogCard({ refreshTrigger }: Props) {
                 <div className="px-3 pb-3 pt-0">
                   <div className="bg-surface-secondary rounded p-3 text-sm space-y-2">
                     <div className="grid grid-cols-2 gap-2">
-                      <CopyableId label="Admin ID" value={entry.adminId} />
+                      {entry.adminId && (
+                        <CopyableId label="Admin ID" value={entry.adminId} />
+                      )}
                       {entry.targetUserId && (
                         <CopyableId label="Target ID" value={entry.targetUserId} />
                       )}
