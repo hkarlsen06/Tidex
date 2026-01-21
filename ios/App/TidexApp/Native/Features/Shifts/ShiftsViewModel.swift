@@ -834,64 +834,10 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
             return
         }
 
-        // Check if we have prefetched raw data - compute payroll lazily now
-        if let prefetchEntry = prefetchCache[displayKey], prefetchEntry.isValid {
-            logger.info("⚡ Using prefetched raw data for \(displayKey), computing payroll lazily")
-
-            // Show loading briefly while computing payroll
-            self.isLoading = true
-
-            // Compute payroll from prefetched data
-            Task { [weak self] in
-                guard let self = self,
-                      let settings = self.settings else {
-                    self?.isLoading = false
-                    return
-                }
-
-                let computedShifts = PayrollEngine.computeShiftsForMonth(
-                    year: targetYear,
-                    month: targetMonth,
-                    shifts: prefetchEntry.rawShifts,
-                    recurring: self.recurringShifts,
-                    snapshots: self.snapshots,
-                    settings: settings
-                )
-
-                // Cache the computed results
-                self.monthCache[displayKey] = MonthCacheEntry(
-                    year: targetYear,
-                    month: targetMonth,
-                    shifts: computedShifts,
-                    timestamp: Date()
-                )
-
-                // Remove from prefetch cache (now in full cache)
-                self.prefetchCache.removeValue(forKey: displayKey)
-
-                // Update UI
-                self.shifts = computedShifts
-                self.weekGroups = self.groupShiftsByWeek(computedShifts)
-                self.updateConflictDetection(for: computedShifts)
-
-                if self.isCurrentMonth {
-                    self.updateNextUpcomingShift(for: computedShifts)
-                }
-
-                self.isLoading = false
-
-                // Prefetch neighbors after successful load
-                self.prefetchNeighboringMonths()
-            }
-            return
-        }
-
-        // Full cache miss - show loading state and fetch
-        logger.info("🔄 Cache miss for \(displayKey), fetching in background...")
-
-        // Clear data and show loading state
-        self.shifts = []
-        self.weekGroups = []
+        // Cache miss - fetch from local in background
+        // DON'T clear shifts array - keep showing previous month's data until new data is ready
+        // This prevents the "flash of empty state" during local SQLite reads
+        logger.info("🔄 Cache miss for \(displayKey), fetching from local...")
         self.isLoading = true
 
         // Cancel any previous navigation task
@@ -1076,16 +1022,15 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
                 logger.info("📋 Loaded recurring: \(self.recurringShifts.count)")
             }
 
-            // Calculate date range for displayed month
+            // Calculate date range for displayed month (includes out-of-month padding days visible in calendar)
             let displayYM = (year: displayYear, month: displayMonth)
-            let displayStartDate = Date.firstDayOfMonthDate(year: displayYM.year, month: displayYM.month)
-            let displayEndDate = Date.lastDayOfMonthDate(year: displayYM.year, month: displayYM.month)
+            let visibleRange = Date.visibleCalendarRange(year: displayYM.year, month: displayYM.month)
 
-            // Load shifts from local store
+            // Load shifts for the full visible calendar range (so out-of-month days show shift data)
             let displayShifts = shiftsRepository.getShifts(
                 for: userId,
-                startDate: displayStartDate,
-                endDate: displayEndDate
+                startDate: visibleRange.start,
+                endDate: visibleRange.end
             )
             logger.info("📋 Loaded shifts for \(displayYM.year)-\(displayYM.month): \(displayShifts.count)")
 
@@ -1096,14 +1041,15 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
                 return
             }
 
-            // Compute shifts with payroll using PayrollEngine
+            // Compute shifts with payroll using PayrollEngine (include visible range for virtual shifts)
             let computedShifts = PayrollEngine.computeShiftsForMonth(
                 year: displayYM.year,
                 month: displayYM.month,
                 shifts: displayShifts,
                 recurring: recurringShifts,
                 snapshots: snapshots,
-                settings: currentSettings
+                settings: currentSettings,
+                visibleRange: visibleRange
             )
 
             // Cache the computed results
@@ -1180,16 +1126,15 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
                 recurringShifts = recurringShiftsRepository.getRecurringShifts(for: userId)
             }
 
-            // Calculate date range for displayed month
+            // Calculate date range for displayed month (includes out-of-month padding days visible in calendar)
             let displayYM = (year: displayYear, month: displayMonth)
-            let displayStartDate = Date.firstDayOfMonthDate(year: displayYM.year, month: displayYM.month)
-            let displayEndDate = Date.lastDayOfMonthDate(year: displayYM.year, month: displayYM.month)
+            let visibleRange = Date.visibleCalendarRange(year: displayYM.year, month: displayYM.month)
 
-            // Load shifts from local repository
+            // Load shifts for the full visible calendar range (so out-of-month days show shift data)
             let displayShifts = shiftsRepository.getShifts(
                 for: userId,
-                startDate: displayStartDate,
-                endDate: displayEndDate
+                startDate: visibleRange.start,
+                endDate: visibleRange.end
             )
 
             // Ensure settings are available
@@ -1199,14 +1144,15 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
                 return
             }
 
-            // Compute shifts with payroll
+            // Compute shifts with payroll (include visible range for virtual shifts)
             let computedShifts = PayrollEngine.computeShiftsForMonth(
                 year: displayYM.year,
                 month: displayYM.month,
                 shifts: displayShifts,
                 recurring: recurringShifts,
                 snapshots: snapshots,
-                settings: currentSettings
+                settings: currentSettings,
+                visibleRange: visibleRange
             )
 
             // Cache the computed results
@@ -1361,18 +1307,13 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
         prefetchMonthInBackground(year: nextYM.year, month: nextYM.month)
     }
 
-    /// Prefetch a single month's raw shift data in the background
-    /// Only fetches shift data - payroll computation is deferred until month becomes visible
+    /// Prefetch a single month's shift data with full payroll computation
+    /// Computes payroll upfront so navigation is instant
     private func prefetchMonthInBackground(year: Int, month: Int) {
         let key = "\(year)-\(month)"
 
         // Skip if already have computed cache
         if let cached = monthCache[key], cached.isValid {
-            return
-        }
-
-        // Skip if already have prefetch cache
-        if let prefetched = prefetchCache[key], prefetched.isValid {
             return
         }
 
@@ -1384,32 +1325,46 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
         prefetchTasks.insert(key)
 
         Task {
-            guard let userId = cachedUserId else {
+            guard let userId = cachedUserId,
+                  let currentSettings = self.settings else {
                 prefetchTasks.remove(key)
                 return
             }
 
-            let startDate = Date.firstDayOfMonthDate(year: year, month: month)
-            let endDate = Date.lastDayOfMonthDate(year: year, month: month)
+            // Get visible calendar range (includes out-of-month padding days)
+            let visibleRange = Date.visibleCalendarRange(year: year, month: month)
 
-            // Read raw shifts from local repository - NO payroll computation
+            // Read shifts for the full visible calendar range
             let fetchedShifts = shiftsRepository.getShifts(
                 for: userId,
-                startDate: startDate,
-                endDate: endDate
+                startDate: visibleRange.start,
+                endDate: visibleRange.end
             )
 
-            // Store raw data in prefetch cache (lightweight, no computation)
-            let entry = PrefetchCacheEntry(
+            // Compute payroll upfront for instant navigation (include visible range for virtual shifts)
+            let computedShifts = PayrollEngine.computeShiftsForMonth(
                 year: year,
                 month: month,
-                rawShifts: fetchedShifts,
+                shifts: fetchedShifts,
+                recurring: self.recurringShifts,
+                snapshots: self.snapshots,
+                settings: currentSettings,
+                visibleRange: visibleRange
+            )
+
+            // Store in full computed cache
+            self.monthCache[key] = MonthCacheEntry(
+                year: year,
+                month: month,
+                shifts: computedShifts,
                 timestamp: Date()
             )
-            self.prefetchCache[key] = entry
             self.prefetchTasks.remove(key)
 
-            logger.info("📦 Prefetched raw shifts for \(key): \(fetchedShifts.count) shifts (payroll deferred)")
+            // Evict old entries if needed
+            self.evictCacheIfNeeded()
+
+            logger.info("📦 Prefetched \(key): \(computedShifts.count) shifts (with payroll)")
         }
     }
 

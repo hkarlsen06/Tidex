@@ -64,6 +64,7 @@
 		114F0F112F20C0EC00B587F0 /* SoundManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0F102F20C0EC00B587F0 /* SoundManager.swift */; };
 		114F0F132F20C61900B587F0 /* TodayPlaceholderCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0F122F20C61900B587F0 /* TodayPlaceholderCard.swift */; };
 		114F0F152F20C6C900B587F0 /* NextShiftCountdownText.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0F142F20C6C900B587F0 /* NextShiftCountdownText.swift */; };
+		114F0F172F21132000B587F0 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0F162F21132000B587F0 /* MainTabView.swift */; };
 		1152D0CB2F01E2A7002FD5ED /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1152D0CA2F01E2A7002FD5ED /* StoreKit.framework */; };
 		11923C192F16B94B0076AFD6 /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = 11923C182F16B94B0076AFD6 /* Auth */; };
 		11923C1B2F16B94B0076AFD6 /* Functions in Frameworks */ = {isa = PBXBuildFile; productRef = 11923C1A2F16B94B0076AFD6 /* Functions */; };
@@ -93,7 +94,6 @@
 		119D1CF82F16E46300EC7072 /* AuthStrings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 119D1CCD2F16E46300EC7072 /* AuthStrings.swift */; };
 		119D1CF92F16E46300EC7072 /* APIConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 119D1CD62F16E46300EC7072 /* APIConfiguration.swift */; };
 		119D1CFA2F16E46300EC7072 /* ErrorBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 119D1CDA2F16E46300EC7072 /* ErrorBanner.swift */; };
-		119D1CFB2F16E46300EC7072 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 119D1CCA2F16E46300EC7072 /* MainTabView.swift */; };
 		119D1CFC2F16E46300EC7072 /* AppCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 119D1CB72F16E46300EC7072 /* AppCoordinator.swift */; };
 		119D1CFD2F16E46300EC7072 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 119D1CC12F16E46300EC7072 /* LoginView.swift */; };
 		119D1CFE2F16E46300EC7072 /* MFAVerifyViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 119D1CC52F16E46300EC7072 /* MFAVerifyViewModel.swift */; };
@@ -340,6 +340,7 @@
 		114F0F102F20C0EC00B587F0 /* SoundManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundManager.swift; sourceTree = "<group>"; };
 		114F0F122F20C61900B587F0 /* TodayPlaceholderCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayPlaceholderCard.swift; sourceTree = "<group>"; };
 		114F0F142F20C6C900B587F0 /* NextShiftCountdownText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextShiftCountdownText.swift; sourceTree = "<group>"; };
+		114F0F162F21132000B587F0 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
 		1152D0C82F01BB9B002FD5ED /* App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = App.entitlements; sourceTree = "<group>"; };
 		1152D0CA2F01E2A7002FD5ED /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 		119D1CB72F16E46300EC7072 /* AppCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppCoordinator.swift; sourceTree = "<group>"; };
@@ -353,7 +354,6 @@
 		119D1CC22F16E46300EC7072 /* LoginViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginViewModel.swift; sourceTree = "<group>"; };
 		119D1CC42F16E46300EC7072 /* MFAVerifyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MFAVerifyView.swift; sourceTree = "<group>"; };
 		119D1CC52F16E46300EC7072 /* MFAVerifyViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MFAVerifyViewModel.swift; sourceTree = "<group>"; };
-		119D1CCA2F16E46300EC7072 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
 		119D1CCD2F16E46300EC7072 /* AuthStrings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthStrings.swift; sourceTree = "<group>"; };
 		119D1CCE2F16E46300EC7072 /* ErrorTranslations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorTranslations.swift; sourceTree = "<group>"; };
 		119D1CCF2F16E46300EC7072 /* LocalizationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalizationManager.swift; sourceTree = "<group>"; };
@@ -774,6 +774,7 @@
 		119D1CBA2F16E46300EC7072 /* Core */ = {
 			isa = PBXGroup;
 			children = (
+				114F0F162F21132000B587F0 /* MainTabView.swift */,
 				11A1966F2F1B02C90030E524 /* SharedMonthContext.swift */,
 				11A196442F1AC20E0030E524 /* TabConfiguration.swift */,
 				11F4301D2F1A957C002B1FBE /* TermsVersion.swift */,
@@ -852,7 +853,6 @@
 				11F430082F1A9104002B1FBE /* DashboardView.swift */,
 				11AE8CE62F16FD82005AB062 /* Components */,
 				11AE8CE72F16FD82005AB062 /* DashboardViewModel.swift */,
-				119D1CCA2F16E46300EC7072 /* MainTabView.swift */,
 			);
 			path = Dashboard;
 			sourceTree = "<group>";
@@ -1676,6 +1676,7 @@
 				11A197CB2F1DF01F0030E524 /* SupplementRuleCard.swift in Sources */,
 				11A197CC2F1DF01F0030E524 /* CustomSupplementsEditorSheet.swift in Sources */,
 				11A197192F1D7B400030E524 /* SharerListView.swift in Sources */,
+				114F0F172F21132000B587F0 /* MainTabView.swift in Sources */,
 				11A1971A2F1D7B400030E524 /* SharedShiftsListView.swift in Sources */,
 				11A1971B2F1D7B400030E524 /* SharedShiftRow.swift in Sources */,
 				114F0F152F20C6C900B587F0 /* NextShiftCountdownText.swift in Sources */,
@@ -1714,7 +1715,6 @@
 				11A198072F1FDD750030E524 /* AddShiftCoordinator.swift in Sources */,
 				11AE8CCF2F16F2CF005AB062 /* ResetPasswordView.swift in Sources */,
 				119D1CFA2F16E46300EC7072 /* ErrorBanner.swift in Sources */,
-				119D1CFB2F16E46300EC7072 /* MainTabView.swift in Sources */,
 				119D1CFC2F16E46300EC7072 /* AppCoordinator.swift in Sources */,
 				1128F3AF2F18729100702359 /* LocalRecurringShift.swift in Sources */,
 				114F0EAC2F202ED900B587F0 /* AppearanceSettingsView.swift in Sources */,

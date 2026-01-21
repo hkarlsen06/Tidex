@@ -265,6 +265,7 @@ struct ShiftsCalendarView: View {
     }
 
     /// Earnings display - shows monthly or selection totals
+    /// Uses fixed height to prevent layout jumps during month transitions
     @ViewBuilder
     private var earningsDisplay: some View {
         // Use selection earnings if dates are selected, otherwise monthly
@@ -282,6 +283,8 @@ struct ShiftsCalendarView: View {
         let showTax = selectedDates.isEmpty ? hasTaxEnabled : selectedHasTaxEnabled
         let displayAmount = showTax ? displayTotals.net : displayTotals.gross
 
+        // Fixed height prevents calendar jumping when gross line appears/disappears
+        // Height: 17pt (net) + 2pt (spacing) + 13pt (gross) ≈ 36pt total
         VStack(alignment: .trailing, spacing: 2) {
             if displayTotals.gross == 0 {
                 Text("—")
@@ -305,24 +308,26 @@ struct ShiftsCalendarView: View {
                 }
             }
 
-            if showTax && displayTotals.gross > 0 {
-                CurrencyCountUpText(
-                    amount: displayTotals.gross,
-                    animateOnAppear: false,
-                    animateFrom: lastDisplayedGrossEarnings > 0 ? lastDisplayedGrossEarnings : nil
-                )
-                .font(.system(size: 13))
-                .foregroundColor(.tidexTextMuted)
-                .onChange(of: displayTotals.gross) { _, newValue in
-                    lastDisplayedGrossEarnings = newValue
-                }
-                .onAppear {
-                    if lastDisplayedGrossEarnings == 0 {
-                        lastDisplayedGrossEarnings = displayTotals.gross
-                    }
+            // Always render the gross line to reserve space, use opacity for visibility
+            // This prevents layout jumps during month transitions
+            CurrencyCountUpText(
+                amount: displayTotals.gross,
+                animateOnAppear: false,
+                animateFrom: lastDisplayedGrossEarnings > 0 ? lastDisplayedGrossEarnings : nil
+            )
+            .font(.system(size: 13))
+            .foregroundColor(.tidexTextMuted)
+            .opacity(showTax && displayTotals.gross > 0 ? 1 : 0)
+            .onChange(of: displayTotals.gross) { _, newValue in
+                lastDisplayedGrossEarnings = newValue
+            }
+            .onAppear {
+                if lastDisplayedGrossEarnings == 0 {
+                    lastDisplayedGrossEarnings = displayTotals.gross
                 }
             }
         }
+        .frame(minHeight: 36, alignment: .trailing)
     }
 
     // MARK: - Month Name

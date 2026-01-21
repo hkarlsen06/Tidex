@@ -59,10 +59,11 @@ struct PayrollEngine {
     /// - Parameters:
     ///   - year: Target year
     ///   - month: Target month (1-12)
-    ///   - shifts: Regular shifts from database
+    ///   - shifts: Regular shifts from database (may include out-of-month shifts for calendar display)
     ///   - recurring: Recurring shift patterns
     ///   - snapshots: Wage snapshots for lookup
     ///   - settings: User settings (for payroll_day)
+    ///   - visibleRange: Optional visible date range for generating virtual shifts (includes out-of-month padding)
     /// - Returns: Array of computed shifts with correct tax settings
     static func computeShiftsForMonth(
         year: Int,
@@ -70,12 +71,15 @@ struct PayrollEngine {
         shifts: [ShiftRow],
         recurring: [RecurringShiftRow],
         snapshots: [WageSnapshot],
-        settings: UserSettings?
+        settings: UserSettings?,
+        visibleRange: (start: Date, end: Date)? = nil
     ) -> [ShiftWithComputations] {
         var result: [ShiftWithComputations] = []
         let payrollDay = settings?.effectivePayrollDay ?? 1
-        let startDate = Date.firstDayOfMonth(year: year, month: month)
-        let endDate = Date.lastDayOfMonth(year: year, month: month)
+
+        // Use visible range if provided, otherwise just the target month
+        let startDate = visibleRange?.start.toISODateString() ?? Date.firstDayOfMonth(year: year, month: month)
+        let endDate = visibleRange?.end.toISODateString() ?? Date.lastDayOfMonth(year: year, month: month)
 
         // Process regular shifts
         for shift in shifts {
@@ -88,44 +92,82 @@ struct PayrollEngine {
         }
 
         // Generate and process virtual shifts from recurring patterns
+        // Need to generate for all months that might have visible dates
+        let monthsToGenerate = getMonthsInRange(startDate: startDate, endDate: endDate)
+
         for recurringShift in recurring {
-            let virtualShifts = RecurringShiftGenerator.generateVirtualShiftsForMonth(
-                year: year,
-                month: month,
-                recurring: recurringShift
-            )
-
-            for virtual in virtualShifts {
-                // Filter to date range
-                guard virtual.date >= startDate && virtual.date <= endDate else { continue }
-
-                // Skip if a real shift exists on this date (avoid duplicates)
-                if shifts.contains(where: { $0.shift_date == virtual.date }) { continue }
-
-                // Create virtual shift row
-                let virtualRow = ShiftRow(
-                    id: "virtual-\(recurringShift.id)-\(virtual.date)",
-                    user_id: recurringShift.user_id,
-                    shift_date: virtual.date,
-                    start_time: recurringShift.cleanStartTime,
-                    end_time: recurringShift.cleanEndTime,
-                    custom_supplements: recurringShift.date_specific_supplements?[virtual.date],
-                    created_at: nil,
-                    recurring_id: recurringShift.id,
-                    recurring_anchor_weekday: virtual.weekday
+            for (genYear, genMonth) in monthsToGenerate {
+                let virtualShifts = RecurringShiftGenerator.generateVirtualShiftsForMonth(
+                    year: genYear,
+                    month: genMonth,
+                    recurring: recurringShift
                 )
 
-                let computed = computeShiftWithTax(
-                    shift: virtualRow,
-                    allSnapshots: snapshots,
-                    payrollDay: payrollDay
-                )
-                result.append(computed)
+                for virtual in virtualShifts {
+                    // Filter to visible date range
+                    guard virtual.date >= startDate && virtual.date <= endDate else { continue }
+
+                    // Skip if a real shift exists on this date (avoid duplicates)
+                    if shifts.contains(where: { $0.shift_date == virtual.date }) { continue }
+
+                    // Skip if we already added this virtual shift (from another month generation)
+                    let virtualId = "virtual-\(recurringShift.id)-\(virtual.date)"
+                    if result.contains(where: { $0.id == virtualId }) { continue }
+
+                    // Create virtual shift row
+                    let virtualRow = ShiftRow(
+                        id: virtualId,
+                        user_id: recurringShift.user_id,
+                        shift_date: virtual.date,
+                        start_time: recurringShift.cleanStartTime,
+                        end_time: recurringShift.cleanEndTime,
+                        custom_supplements: recurringShift.date_specific_supplements?[virtual.date],
+                        created_at: nil,
+                        recurring_id: recurringShift.id,
+                        recurring_anchor_weekday: virtual.weekday
+                    )
+
+                    let computed = computeShiftWithTax(
+                        shift: virtualRow,
+                        allSnapshots: snapshots,
+                        payrollDay: payrollDay
+                    )
+                    result.append(computed)
+                }
             }
         }
 
         // Sort by date
         return result.sorted { $0.shiftDate < $1.shiftDate }
+    }
+
+    /// Get all (year, month) pairs that fall within a date range
+    private static func getMonthsInRange(startDate: String, endDate: String) -> [(Int, Int)] {
+        let startComponents = startDate.split(separator: "-")
+        let endComponents = endDate.split(separator: "-")
+
+        guard startComponents.count >= 2, endComponents.count >= 2,
+              let startYear = Int(startComponents[0]),
+              let startMonth = Int(startComponents[1]),
+              let endYear = Int(endComponents[0]),
+              let endMonth = Int(endComponents[1]) else {
+            return []
+        }
+
+        var months: [(Int, Int)] = []
+        var year = startYear
+        var month = startMonth
+
+        while year < endYear || (year == endYear && month <= endMonth) {
+            months.append((year, month))
+            month += 1
+            if month > 12 {
+                month = 1
+                year += 1
+            }
+        }
+
+        return months
     }
 
     /// Compute a single shift with correct tax settings based on payout date
