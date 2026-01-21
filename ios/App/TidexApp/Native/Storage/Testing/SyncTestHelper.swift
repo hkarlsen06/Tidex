@@ -1,3 +1,4 @@
+#if DEBUG
 import Foundation
 import SwiftData
 import os.log
@@ -452,3 +453,4 @@ struct ValidationResult: Identifiable {
     let issues: [String]
     let details: String
 }
+#endif

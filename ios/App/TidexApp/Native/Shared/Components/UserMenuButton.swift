@@ -19,19 +19,12 @@ struct UserMenuButton: View {
     @State private var isLoadingImage = false
     /// Track the URL we've loaded to detect changes
     @State private var loadedUrl: String?
+    #if DEBUG
     /// Whether to show the sync debug sheet
     @State private var showSyncDebug = false
+    #endif
     /// Whether to show the settings sheet
     @State private var showSettings = false
-
-    /// Whether debug features are enabled (DEBUG builds only)
-    private var isDebugBuild: Bool {
-        #if DEBUG
-        return true
-        #else
-        return false
-        #endif
-    }
 
     var body: some View {
         Menu {
@@ -46,25 +39,27 @@ struct UserMenuButton: View {
             }
 
             // Sync Debug button (DEBUG builds only)
-            if isDebugBuild {
-                Button {
-                    showSyncDebug = true
-                } label: {
-                    Label(
-                        "Sync Debug",
-                        systemImage: "arrow.triangle.2.circlepath.circle"
-                    )
-                }
+            #if DEBUG
+            Button {
+                showSyncDebug = true
+            } label: {
+                Label(
+                    "Sync Debug",
+                    systemImage: "arrow.triangle.2.circlepath.circle"
+                )
             }
+            #endif
         } label: {
             menuButton
         }
+        #if DEBUG
         .sheet(isPresented: $showSyncDebug) {
             NavigationStack {
                 SyncDebugView()
             }
             .preferredColorScheme(appearanceManager.colorScheme)
         }
+        #endif
         .sheet(isPresented: $showSettings) {
             SettingsView()
                 .preferredColorScheme(appearanceManager.colorScheme)
