@@ -29,6 +29,11 @@ struct MainTabView: View {
     // Haptic feedback for toggle
     private let selectionHaptic = UISelectionFeedbackGenerator()
 
+    // iPad detection - tab bar is at top on iPad, so month picker doesn't need extra bottom padding
+    private var isIPad: Bool {
+        UIDevice.current.userInterfaceIdiom == .pad
+    }
+
     enum Tab: String, CaseIterable {
         case home
         case shifts
@@ -212,9 +217,11 @@ struct MainTabView: View {
             .frame(height: MonthPickerLayout.height)
             .glassEffect(.regular.interactive(), in: .rect(cornerRadius: MonthPickerLayout.cornerRadius))
         }
+        .frame(maxWidth: AdaptiveMaxWidth.tabContent)
         .padding(.horizontal, MonthPickerLayout.horizontalPadding)
-        // Position above tab bar (49pt) + original bottom padding (8pt)
-        .padding(.bottom, 49 + MonthPickerLayout.bottomPadding)
+        // Position above tab bar (49pt on iPhone) + original bottom padding (8pt)
+        // On iPad, tab bar is at top so no extra padding needed
+        .padding(.bottom, isIPad ? MonthPickerLayout.bottomPadding : 49 + MonthPickerLayout.bottomPadding)
     }
 
     /// Current transition phase for month picker animations

@@ -170,6 +170,7 @@ struct AcceptTermsView: View {
                         RoundedRectangle(cornerRadius: 16)
                             .fill(Color.tidexSurfacePrimary)
                     )
+                    .adaptiveFormWidth()
                     .padding(.horizontal, 20)
                 }
                 .padding(.bottom, 40)

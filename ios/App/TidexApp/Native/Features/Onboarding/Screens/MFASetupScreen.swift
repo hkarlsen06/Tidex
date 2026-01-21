@@ -37,6 +37,7 @@ struct MFASetupScreen: View {
                     }
                     .padding(.horizontal, 24)
                     .padding(.top, 16)
+                    .adaptiveContentWidth()
                 }
 
                 Spacer()

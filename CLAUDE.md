@@ -33,6 +33,8 @@ Use these skills for specialized tasks:
 
 ## iOS Development Rules
 
+**Current iOS version: iOS 26** (released September 2025). Apple changed version numbering at WWDC 2025 to align all operating systems. iOS 26 introduced the "Liquid Glass" design language.
+
 **NEVER run Xcode builds automatically.** Prompt the user to build in Xcode themselves.
 
 **ONLY create API routes when service role privileges are required.** Everything that can be done in the iOS binary using the user's JWT + RLS policies should stay there. Examples:
