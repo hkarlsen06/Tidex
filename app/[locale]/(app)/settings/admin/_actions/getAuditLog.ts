@@ -6,8 +6,8 @@ import type { AdminAction } from "@/lib/admin/action-labels";
 
 export interface AuditLogEntry {
   id: string;
-  adminId: string;
-  adminEmail: string;
+  adminId: string | null;
+  adminEmail: string | null;
   action: AdminAction;
   targetUserId: string | null;
   targetEmail: string | null;
@@ -65,8 +65,8 @@ export async function getAuditLog(
   const entries: AuditLogEntry[] = (data ?? []).map(
     (row: {
       id: string;
-      admin_id: string;
-      admin_email: string;
+      admin_id: string | null;
+      admin_email: string | null;
       action: AdminAction;
       target_user_id: string | null;
       target_email: string | null;
