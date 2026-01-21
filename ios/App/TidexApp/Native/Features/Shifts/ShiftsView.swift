@@ -7,6 +7,31 @@ private struct DayShiftSelection: Identifiable {
     let shifts: [ShiftWithComputations]
 }
 
+/// Represents an item in the shifts list - either a shift card or today's placeholder
+private enum ShiftListItem: Identifiable {
+    case shift(ShiftWithComputations)
+    case todayPlaceholder
+
+    var id: String {
+        switch self {
+        case .shift(let shift):
+            return shift.id
+        case .todayPlaceholder:
+            return "today-placeholder"
+        }
+    }
+
+    /// The date for sorting purposes
+    var sortDate: String {
+        switch self {
+        case .shift(let shift):
+            return shift.shiftDate
+        case .todayPlaceholder:
+            return todayISO()
+        }
+    }
+}
+
 /// Shifts tab view - displays list of user's shifts grouped by week
 /// Supports month navigation, pull-to-refresh, swipe gestures, and calendar/list view toggle
 struct ShiftsView: View {
@@ -72,63 +97,7 @@ struct ShiftsView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-                // View mode toggle + Month picker - floats above content (liquid glass style)
-                HStack(spacing: 8) {
-                    // View mode toggle button (list/calendar) - separate pill
-                    Button {
-                        selectionHaptic.selectionChanged()
-                        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                            showListView.toggle()
-                            // Exit selection mode when switching to list view
-                            if showListView {
-                                viewModel.isSelectionModeEnabled = false
-                            }
-                        }
-                    } label: {
-                        Image(systemName: showListView ? "calendar" : "list.bullet")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(.tidexBlue)
-                            .frame(width: MonthPickerLayout.height, height: MonthPickerLayout.height)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .contentTransition(.symbolEffect(.replace))
-                    .glassEffect(.regular, in: .rect(cornerRadius: MonthPickerLayout.cornerRadius))
-
-                    // Month picker
-                    AnimatedMonthHeader(
-                        monthName: viewModel.displayMonthName,
-                        year: viewModel.displayYear,
-                        phase: transitionPhase,
-                        isCurrentMonth: viewModel.isCurrentMonth,
-                        config: .default,
-                        onPrevious: {
-                            // Reset appearance tracker for fresh animations
-                            AppearanceTracker.shared.reset()
-                            viewModel.goToPreviousMonth()
-                        },
-                        onNext: {
-                            // Reset appearance tracker for fresh animations
-                            AppearanceTracker.shared.reset()
-                            viewModel.goToNextMonth()
-                        },
-                        onReturnToCurrent: {
-                            // Reset appearance tracker for fresh animations
-                            AppearanceTracker.shared.reset()
-                            viewModel.goToCurrentMonth()
-                        },
-                        onNavigateToMonth: { year, month in
-                            AppearanceTracker.shared.reset()
-                            SharedMonthContext.shared.navigateTo(year: year, month: month)
-                        },
-                        isLoading: viewModel.isLoading,
-                        backToTodayText: localization.string("dashboard.backToToday")
-                    )
-                    .frame(height: MonthPickerLayout.height)
-                    .glassEffect(.regular.interactive(), in: .rect(cornerRadius: MonthPickerLayout.cornerRadius))
-                }
-                .padding(.horizontal, MonthPickerLayout.horizontalPadding)
-                .padding(.bottom, MonthPickerLayout.bottomPadding)
+                // Month picker is now in shared overlay in MainTabView
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(Color.tidexBackground, for: .navigationBar)
@@ -276,6 +245,12 @@ struct ShiftsView: View {
             celebrationHaptic.prepare()
             // Handle any pending deep link on initial appearance
             handleDeepLink(coordinator.pendingDeepLink)
+        }
+        // Exit selection mode when switching to list view (toggle is in shared overlay)
+        .onChange(of: showListView) { _, isListView in
+            if isListView {
+                viewModel.isSelectionModeEnabled = false
+            }
         }
         // Confetti overlay for celebration when shifts are added
         .overlay {
@@ -730,8 +705,10 @@ struct ShiftsView: View {
 
     @ViewBuilder
     private var listViewContent: some View {
-        if viewModel.shifts.isEmpty {
-            // Empty state - use ScrollView for pull-to-refresh
+        // Show empty state only when there are no shifts AND it's not current month
+        // (current month with no shifts shows just the today placeholder card in the list)
+        if viewModel.shifts.isEmpty && !viewModel.isCurrentMonth {
+            // Empty state for past/future months with no shifts
             ScrollView {
                 ShiftsEmptyState(
                     isCurrentMonth: viewModel.isCurrentMonth,
@@ -751,7 +728,7 @@ struct ShiftsView: View {
                 await viewModel.refresh()
             }
         } else {
-            // Shift list - List has its own scrolling, don't wrap in ScrollView
+            // Shift list (includes today placeholder for current month if no shift today)
             shiftListContent
                 .refreshable {
                     AppearanceTracker.shared.reset()
@@ -762,41 +739,70 @@ struct ShiftsView: View {
 
     // MARK: - Shift List Content (shared between calendar and list modes)
 
+    /// Build flat list of items (shifts + placeholder) sorted by date
+    private var shiftListItems: [ShiftListItem] {
+        var items: [ShiftListItem] = viewModel.shifts.map { .shift($0) }
+
+        // Add today's placeholder if current month and no shift today
+        if viewModel.isCurrentMonth {
+            let today = todayISO()
+            let hasShiftToday = viewModel.shifts.contains { $0.shiftDate == today }
+            if !hasShiftToday {
+                items.append(.todayPlaceholder)
+            }
+        }
+
+        // Sort by date
+        return items.sorted { $0.sortDate < $1.sortDate }
+    }
+
+    /// Group list items by ISO week (preserves placeholder in correct position)
+    private var weekGroupsWithPlaceholder: [(weekKey: String, weekNumber: Int, totalGross: Double, items: [ShiftListItem])] {
+        var calendar = Calendar(identifier: .iso8601)
+        calendar.firstWeekday = 2  // Monday
+        calendar.minimumDaysInFirstWeek = 4
+
+        var weekMap: [String: (weekNumber: Int, year: Int, totalGross: Double, items: [ShiftListItem])] = [:]
+
+        for item in shiftListItems {
+            guard let date = Date.fromISODateString(item.sortDate) else { continue }
+
+            let weekOfYear = calendar.component(.weekOfYear, from: date)
+            let yearForWeek = calendar.component(.yearForWeekOfYear, from: date)
+            let weekKey = "\(yearForWeek)-W\(String(format: "%02d", weekOfYear))"
+
+            // Calculate gross (only for shifts)
+            let itemGross: Double
+            if case .shift(let shift) = item {
+                itemGross = shift.grossPay
+            } else {
+                itemGross = 0
+            }
+
+            if var existing = weekMap[weekKey] {
+                existing.items.append(item)
+                existing.totalGross += itemGross
+                weekMap[weekKey] = existing
+            } else {
+                weekMap[weekKey] = (weekNumber: weekOfYear, year: yearForWeek, totalGross: itemGross, items: [item])
+            }
+        }
+
+        // Convert to array and sort
+        return weekMap.map { (weekKey: $0.key, weekNumber: $0.value.weekNumber, totalGross: $0.value.totalGross, items: $0.value.items) }
+            .sorted { $0.weekKey < $1.weekKey }
+    }
+
     @ViewBuilder
     private var shiftListContent: some View {
         // ARCHITECTURE: Using native List with .swipeActions() for reliable gesture handling
         // This is Apple's designed solution - no custom gesture conflicts with scrolling
         // Styled with .listRowBackground() and .listRowSeparator(.hidden) for custom look
         List {
-            ForEach(viewModel.weekGroups) { weekGroup in
+            ForEach(weekGroupsWithPlaceholder, id: \.weekKey) { weekGroup in
                 Section {
-                    ForEach(weekGroup.shifts) { shift in
-                        shiftCardRow(shift: shift)
-                            .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
-                            .listRowBackground(Color.tidexBackground)
-                            .listRowSeparator(.hidden)
-                            // Native swipe actions - works perfectly with List scrolling
-                            .swipeActions(edge: .leading, allowsFullSwipe: true) {
-                                Button {
-                                    selectionHaptic.selectionChanged()
-                                    // Open sheet directly in edit mode
-                                    shiftToEditDirectly = shift
-                                } label: {
-                                    Label("Edit", systemImage: "pencil")
-                                }
-                                .tint(.tidexBlue)
-                            }
-                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                // Allow delete for both regular and virtual shifts
-                                Button(role: .destructive) {
-                                    impactHaptic.impactOccurred()
-                                    shiftToDelete = shift
-                                    showDeleteConfirmation = true
-                                } label: {
-                                    Label("Delete", systemImage: "trash")
-                                }
-                                .tint(.red)
-                            }
+                    ForEach(weekGroup.items) { item in
+                        listItemRow(item: item)
                     }
                 } header: {
                     WeekHeaderView(
@@ -815,19 +821,73 @@ struct ShiftsView: View {
         .contentMargins(.bottom, MonthPickerLayout.height + MonthPickerLayout.bottomPadding + 16, for: .scrollContent)
     }
 
+    /// Render a single list item (shift or placeholder)
+    @ViewBuilder
+    private func listItemRow(item: ShiftListItem) -> some View {
+        switch item {
+        case .shift(let shift):
+            shiftCardRow(shift: shift)
+                .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
+                .listRowBackground(Color.tidexBackground)
+                .listRowSeparator(.hidden)
+                // Native swipe actions - works perfectly with List scrolling
+                .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                    Button {
+                        selectionHaptic.selectionChanged()
+                        // Open sheet directly in edit mode
+                        shiftToEditDirectly = shift
+                    } label: {
+                        Label("Edit", systemImage: "pencil")
+                    }
+                    .tint(.tidexBlue)
+                }
+                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                    // Allow delete for both regular and virtual shifts
+                    Button(role: .destructive) {
+                        impactHaptic.impactOccurred()
+                        shiftToDelete = shift
+                        showDeleteConfirmation = true
+                    } label: {
+                        Label("Delete", systemImage: "trash")
+                    }
+                    .tint(.red)
+                }
+
+        case .todayPlaceholder:
+            TodayPlaceholderCard(onTap: {
+                selectionHaptic.selectionChanged()
+                // Navigate to add shift with today's date pre-selected
+                SharedMonthContext.shared.preselectedDate = todayISO()
+                selectedTab = .add
+            })
+            .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
+            .listRowBackground(Color.tidexBackground)
+            .listRowSeparator(.hidden)
+        }
+    }
+
     /// Individual shift card row (visual content only - swipe actions are on List row)
     @ViewBuilder
     private func shiftCardRow(shift: ShiftWithComputations) -> some View {
-        ShiftRowCard(
-            shift: shift,
-            isToday: shift.shiftDate == todayISO(),
-            hasConflict: viewModel.conflictingShiftIds.contains(shift.id),
-            excludedFromTotal: viewModel.excludedFromTotalIds.contains(shift.id),
-            onTap: {
-                selectionHaptic.selectionChanged()
-                handleShiftTapped(shift)
+        let isNextUpcoming = viewModel.nextUpcomingShift?.id == shift.id
+
+        VStack(spacing: 8) {
+            ShiftRowCard(
+                shift: shift,
+                isToday: shift.shiftDate == todayISO(),
+                hasConflict: viewModel.conflictingShiftIds.contains(shift.id),
+                excludedFromTotal: viewModel.excludedFromTotalIds.contains(shift.id),
+                onTap: {
+                    selectionHaptic.selectionChanged()
+                    handleShiftTapped(shift)
+                }
+            )
+
+            // Show countdown text below next upcoming shift
+            if isNextUpcoming {
+                NextShiftCountdownText(shift: shift)
             }
-        )
+        }
     }
 
     /// Convert displayed year/month to a Date for the calendar
