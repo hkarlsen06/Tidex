@@ -830,8 +830,9 @@ export const StatsServiceLive = Layer.effect(
         }
 
         // Calculate employment percentage data
-        // Full-time hours per week: 37.5 if pause deduction enabled, 40 otherwise
-        const fullTimeHoursPerWeek = (userSettings as DbUserSettings).pause_deduction_enabled ? 37.5 : 40;
+        // Full-time hours per week: 37.5 if break deduction enabled, 40 otherwise
+        // Uses baseline snapshot's break_enabled setting
+        const fullTimeHoursPerWeek = shiftData.breakDeductionEnabled ? 37.5 : 40;
 
         // Helper to get Monday of a week containing a date
         const getMondayOfWeek = (date: Date): Date => {

@@ -109,6 +109,11 @@ export type ShiftData = {
    * Only present when year and month are provided in options.
    */
   readonly currentPayoutTaxSettings: PayoutTaxSettings;
+  /**
+   * Whether break deduction is enabled for the user (from baseline snapshot).
+   * Used for employment percentage calculation (37.5h if enabled, 40h otherwise).
+   */
+  readonly breakDeductionEnabled: boolean;
 };
 
 /**
@@ -601,6 +606,11 @@ export const ShiftsServiceLive = Layer.effect(
           }
         }
 
+        // Get baseline snapshot's break_enabled for employment percentage calculation
+        const allSnapshots = yield* getUserWageSnapshots(userId, skipAuthCheck);
+        const baselineSnapshot = allSnapshots.find((s) => s.from_date === null);
+        const breakDeductionEnabled = baselineSnapshot?.break_enabled ?? true;
+
         return {
           shifts: allShifts as readonly ShiftWithComputations[],
           defaultView: userSettings?.default_shifts_view ?? "calendar",
@@ -608,6 +618,7 @@ export const ShiftsServiceLive = Layer.effect(
           aggregates,
           payoutTaxSettings,
           currentPayoutTaxSettings,
+          breakDeductionEnabled,
         };
       });
 
