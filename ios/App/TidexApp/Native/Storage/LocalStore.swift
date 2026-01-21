@@ -38,6 +38,7 @@ final class LocalStore {
             LocalPendingJWSUpload.self,
             LocalSharedShift.self,
             LocalSharer.self,
+            LocalShiftPreview.self,
         ])
 
         // Configure container for persistent storage
@@ -98,6 +99,7 @@ actor LocalStoreActor {
             try modelContext.delete(model: LocalPendingJWSUpload.self)
             try modelContext.delete(model: LocalSharedShift.self)
             try modelContext.delete(model: LocalSharer.self)
+            try modelContext.delete(model: LocalShiftPreview.self)
             try modelContext.save()
         } catch {
             logger.error("Failed to reset all data: \(error.localizedDescription)")
@@ -2402,6 +2404,14 @@ actor LocalStoreActor {
             modelContext.delete(shift)
         }
 
+        // Clear shift previews
+        let previewDescriptor = FetchDescriptor<LocalShiftPreview>(
+            predicate: #Predicate { $0.viewerId == viewerId }
+        )
+        for preview in try modelContext.fetch(previewDescriptor) {
+            modelContext.delete(preview)
+        }
+
         try modelContext.save()
     }
 
@@ -2415,6 +2425,31 @@ actor LocalStoreActor {
         for shift in try modelContext.fetch(descriptor) {
             modelContext.delete(shift)
         }
+        try modelContext.save()
+    }
+
+    // MARK: - Shift Preview Operations
+
+    /// Save shift previews to cache, replacing existing entries for this viewer
+    func saveShiftPreviews(_ previews: [SharerShiftPreview], for viewerId: String) throws {
+        // Delete existing previews for this viewer (only for sharers in this batch)
+        let sharerIds = previews.map { $0.sharerId }
+        for sharerId in sharerIds {
+            let compositeKey = "\(viewerId):\(sharerId)"
+            let descriptor = FetchDescriptor<LocalShiftPreview>(
+                predicate: #Predicate { $0.compositeKey == compositeKey }
+            )
+            for existing in try modelContext.fetch(descriptor) {
+                modelContext.delete(existing)
+            }
+        }
+
+        // Insert new previews
+        for preview in previews {
+            let localPreview = LocalShiftPreview.from(preview: preview, viewerId: viewerId)
+            modelContext.insert(localPreview)
+        }
+
         try modelContext.save()
     }
 }

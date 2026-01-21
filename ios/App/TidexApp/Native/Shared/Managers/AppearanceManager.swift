@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import UIKit
 import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "AppearanceManager")
@@ -14,6 +15,15 @@ enum AppTheme: String, CaseIterable {
     var colorScheme: ColorScheme? {
         switch self {
         case .system: return nil // Let system decide
+        case .light: return .light
+        case .dark: return .dark
+        }
+    }
+
+    /// Convert to UIKit UIUserInterfaceStyle for window override
+    var userInterfaceStyle: UIUserInterfaceStyle {
+        switch self {
+        case .system: return .unspecified // Follow system
         case .light: return .light
         case .dark: return .dark
         }
@@ -43,6 +53,19 @@ final class AppearanceManager: ObservableObject {
 
     /// UserDefaults key for caching theme locally
     private let themeKey = "cachedTheme"
+    private static let themeKeyStatic = "cachedTheme"
+
+    // MARK: - Static Methods
+
+    /// Get the cached user interface style without requiring MainActor
+    /// Use this in SceneDelegate for initial window setup before the manager is accessed
+    static func cachedUserInterfaceStyle() -> UIUserInterfaceStyle {
+        if let cachedTheme = UserDefaults.standard.string(forKey: themeKeyStatic),
+           let theme = AppTheme(rawValue: cachedTheme) {
+            return theme.userInterfaceStyle
+        }
+        return .unspecified // Default to system
+    }
 
     // MARK: - Initialization
 
@@ -67,20 +90,51 @@ final class AppearanceManager: ObservableObject {
         // Cache in UserDefaults for quick startup
         UserDefaults.standard.set(theme.rawValue, forKey: themeKey)
 
+        // Apply to all windows (UIKit level is more reliable than SwiftUI .preferredColorScheme)
+        applyToWindows()
+
         logger.info("Theme updated to: \(theme.rawValue)")
+    }
+
+    /// Apply the current theme to all app windows
+    /// This uses UIKit's overrideUserInterfaceStyle which properly respects system appearance
+    func applyToWindows() {
+        for scene in UIApplication.shared.connectedScenes {
+            guard let windowScene = scene as? UIWindowScene else { continue }
+            for window in windowScene.windows {
+                window.overrideUserInterfaceStyle = theme.userInterfaceStyle
+                logger.debug("Applied \(self.theme.rawValue) to window")
+            }
+        }
+    }
+
+    /// Apply theme to a specific window
+    /// Called by SceneDelegate after window creation to apply the cached theme
+    func applyToWindow(_ window: UIWindow) {
+        window.overrideUserInterfaceStyle = theme.userInterfaceStyle
+        logger.debug("Applied theme \(self.theme.rawValue) to window")
     }
 
     /// Load theme from user settings
     /// Called when settings are loaded from the repository
     /// - Parameter themeString: The theme string from user settings
     func loadFromSettings(_ themeString: String?) {
-        guard let themeString = themeString,
-              let theme = AppTheme(rawValue: themeString) else {
-            // Default to system if not set or invalid
-            setTheme(.system)
-            return
+        let newTheme: AppTheme
+        if let themeString = themeString,
+           let parsed = AppTheme(rawValue: themeString) {
+            newTheme = parsed
+        } else {
+            newTheme = .system
         }
 
-        setTheme(theme)
+        // Update theme state and cache
+        if self.theme != newTheme {
+            self.theme = newTheme
+            UserDefaults.standard.set(newTheme.rawValue, forKey: themeKey)
+            logger.info("Theme loaded from settings: \(newTheme.rawValue)")
+        }
+
+        // Always apply to windows - the SwiftUI view hierarchy may have reset the window style
+        applyToWindows()
     }
 }

@@ -146,7 +146,6 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
     /// Load initial data (sharers list)
     /// - Parameter forceRefreshPreviews: If true, forces fresh preview data (used on pull-to-refresh)
     func loadSharers(forceRefreshPreviews: Bool = false) async {
-        isLoadingSharers = true
         error = nil
 
         do {
@@ -155,11 +154,28 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
             }
 
             // Load from cache first (only if we have no data yet)
+            // Load BOTH sharers and shift previews together to avoid pop-in effect
+            // This happens BEFORE setting isLoadingSharers so view renders with complete data instantly
+            var loadedFromCache = false
             if sharers.isEmpty {
                 let cachedSharers = sharedShiftsRepository.getSharers(for: userId)
                 if !cachedSharers.isEmpty {
+                    // Load cached shift previews at the same time
+                    let cachedPreviews = sharedShiftsRepository.getShiftPreviews(for: userId)
+
+                    // Update both together so UI renders with complete data and correct sorting
                     sharers = cachedSharers
+                    if !cachedPreviews.isEmpty {
+                        shiftPreviews = cachedPreviews
+                    }
+                    loadedFromCache = true
+                    logger.info("Loaded \(cachedSharers.count) sharers and \(cachedPreviews.count) previews from cache together")
                 }
+            }
+
+            // Only show loading indicator if we have no cached data
+            if !loadedFromCache && sharers.isEmpty {
+                isLoadingSharers = true
             }
 
             // Fetch fresh data from network
@@ -204,9 +220,32 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
     func loadShiftPreviews(forceRefresh: Bool = false) async {
         guard !sharers.isEmpty else { return }
 
-        isLoadingPreviews = true
-
         do {
+            guard let userId = try await getCurrentUserId() else {
+                throw SharingError.notAuthenticated
+            }
+
+            // Check if we already have cached data (loaded in loadSharers or from previous fetch)
+            // This determines whether to animate the network data reveal
+            var hasCachedData = !shiftPreviews.isEmpty
+
+            // If we don't have data yet and not forcing refresh, try loading from cache
+            if !forceRefresh && !hasCachedData {
+                let cachedPreviews = sharedShiftsRepository.getShiftPreviews(for: userId)
+                if !cachedPreviews.isEmpty {
+                    shiftPreviews = cachedPreviews
+                    hasCachedData = true
+                    logger.info("Loaded \(cachedPreviews.count) shift previews from persistent cache")
+                }
+            }
+
+            // Only show loading animation if we have no data to display
+            // This prevents animation when cached data is available
+            if !hasCachedData && shiftPreviews.isEmpty {
+                isLoadingPreviews = true
+            }
+
+            // Fetch fresh data from network
             let sharerIds = sharers.map { $0.id }
             let previews = try await sharingService.fetchShiftPreviews(
                 sharerIds: sharerIds,
@@ -218,7 +257,19 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
             for preview in previews {
                 previewMap[preview.sharerId] = preview
             }
-            shiftPreviews = previewMap
+
+            // Animate the reveal only when loading fresh (no cached data)
+            // When cached data exists, update silently (no animation needed)
+            if !hasCachedData {
+                withAnimation(.spring(duration: 0.4, bounce: 0.15)) {
+                    shiftPreviews = previewMap
+                }
+            } else {
+                shiftPreviews = previewMap
+            }
+
+            // Save to persistent cache
+            await sharedShiftsRepository.saveShiftPreviews(previews, for: userId)
 
             logger.info("Loaded shift previews for \(previews.count) sharers (forceRefresh: \(forceRefresh))")
         } catch {

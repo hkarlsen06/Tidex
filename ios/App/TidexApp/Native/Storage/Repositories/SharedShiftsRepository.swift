@@ -204,4 +204,43 @@ final class SharedShiftsRepository: ObservableObject {
             logger.error("Failed to clear shared shifts cache: \(error.localizedDescription)")
         }
     }
+
+    // MARK: - Shift Preview Operations
+
+    /// Get cached shift previews for a viewer
+    /// - Parameter viewerId: The current user's ID
+    /// - Returns: Dictionary of sharer ID to SharerShiftPreview
+    func getShiftPreviews(for viewerId: String) -> [String: SharerShiftPreview] {
+        let context = localStore.mainContext
+
+        let descriptor = FetchDescriptor<LocalShiftPreview>(
+            predicate: #Predicate { $0.viewerId == viewerId }
+        )
+
+        do {
+            let localPreviews = try context.fetch(descriptor)
+            logger.info("📦 Found \(localPreviews.count) cached shift previews for viewer \(viewerId.prefix(8))...")
+            var previewMap: [String: SharerShiftPreview] = [:]
+            for localPreview in localPreviews {
+                previewMap[localPreview.sharerId] = localPreview.toSharerShiftPreview()
+            }
+            return previewMap
+        } catch {
+            logger.error("Failed to fetch cached shift previews: \(error.localizedDescription)")
+            return [:]
+        }
+    }
+
+    /// Save shift previews to local cache
+    /// - Parameters:
+    ///   - previews: Array of SharerShiftPreview from API
+    ///   - viewerId: The current user's ID
+    func saveShiftPreviews(_ previews: [SharerShiftPreview], for viewerId: String) async {
+        do {
+            try await localStore.storeActor.saveShiftPreviews(previews, for: viewerId)
+            logger.info("Saved \(previews.count) shift previews to cache")
+        } catch {
+            logger.error("Failed to save shift previews: \(error.localizedDescription)")
+        }
+    }
 }

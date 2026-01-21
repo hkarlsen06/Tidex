@@ -1161,9 +1161,6 @@ private struct ShiftsCalendarDayCell: View {
         if isToday {
             return .tidexBlue
         }
-        if hasShift {
-            return .white
-        }
         return .tidexTextPrimary
     }
 

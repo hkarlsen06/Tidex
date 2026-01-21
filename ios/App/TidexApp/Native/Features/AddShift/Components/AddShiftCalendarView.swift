@@ -280,9 +280,6 @@ private struct AddShiftCalendarDayCell: View {
         if isToday && !dayInfo.isOutsideMonth {
             return .tidexBlue
         }
-        if hasExistingShift && !dayInfo.isOutsideMonth {
-            return .white
-        }
         return .tidexTextPrimary
     }
 
