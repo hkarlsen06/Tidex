@@ -46,12 +46,8 @@ struct SharerShiftPreview: Equatable {
     let showEarnings: Bool
 }
 
-/// Status of a shift preview
-enum ShiftPreviewStatus: String {
-    case active
-    case upcoming
-    case past
-}
+// Note: ShiftPreviewStatus is now defined in Shared/ShiftPreviewStatus.swift
+// for use by both iOS and Watch targets
 
 // MARK: - Errors
 
