@@ -1,6 +1,9 @@
+import os.log
 import SafariServices
 import Supabase
 import SwiftUI
+
+private let logger = Logger(subsystem: "no.tidex.app", category: "AcceptTerms")
 
 /// Screen shown when user needs to accept (or re-accept) terms of service
 /// Mirrors the web app's `/accept-terms` page behavior
@@ -205,7 +208,7 @@ struct AcceptTermsView: View {
                     self.error = localization.string("acceptTerms.errors.updateFailed")
                     self.isProcessing = false
                 }
-                print("[AcceptTermsView] Failed to update terms acceptance: \(error)")
+                logger.error("Failed to update terms acceptance: \(error.localizedDescription)")
             }
         }
     }

@@ -53,8 +53,32 @@ final class LocalStore {
             storeActor = LocalStoreActor(modelContainer: container)
             logger.info("LocalStore initialized successfully")
         } catch {
-            // Fatal error - app cannot function without local storage
-            fatalError("Failed to initialize LocalStore: \(error)")
+            logger.error("Failed to initialize LocalStore: \(error.localizedDescription)")
+
+            // Try to recover by creating an in-memory container as fallback
+            // This allows the app to function (without persistence) rather than crash
+            logger.warning("Attempting fallback to in-memory storage")
+            let fallbackConfig = ModelConfiguration(
+                schema: schema,
+                isStoredInMemoryOnly: true,
+                allowsSave: true
+            )
+
+            do {
+                container = try ModelContainer(for: schema, configurations: [fallbackConfig])
+                storeActor = LocalStoreActor(modelContainer: container)
+                logger.warning("LocalStore initialized with in-memory fallback - data will not persist")
+            } catch let fallbackError {
+                // This should essentially never happen - in-memory containers rarely fail
+                // But we need to initialize the properties, so create a minimal container
+                logger.critical("Failed to create even in-memory storage: \(fallbackError.localizedDescription)")
+
+                // Last resort: try with default configuration
+                // If this fails, there's a fundamental issue with the app's model definitions
+                container = try! ModelContainer(for: schema)
+                storeActor = LocalStoreActor(modelContainer: container)
+                logger.critical("LocalStore using default container - app may be unstable")
+            }
         }
     }
 

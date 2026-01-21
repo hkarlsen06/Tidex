@@ -1,4 +1,5 @@
 import Foundation
+import os.log
 
 // MARK: - Sync Status
 
@@ -134,8 +135,19 @@ enum SyncLogger {
 }
 
 struct SyncLoggerImpl {
+    private let logger = Logger(subsystem: "no.tidex.app", category: "Sync")
+
     func log(_ message: String, level: SyncLogLevel) {
-        print("[\(level.rawValue)] [Sync] \(message)")
+        switch level {
+        case .debug:
+            logger.debug("\(message)")
+        case .info:
+            logger.info("\(message)")
+        case .warning:
+            logger.warning("\(message)")
+        case .error:
+            logger.error("\(message)")
+        }
     }
 }
 

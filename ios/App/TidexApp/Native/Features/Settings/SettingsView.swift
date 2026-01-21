@@ -1,5 +1,8 @@
-import SwiftUI
+import os.log
 import Supabase
+import SwiftUI
+
+private let logger = Logger(subsystem: "no.tidex.app", category: "SettingsView")
 
 /// Settings main menu view
 /// Displays a list of settings options matching the web app's settings navigation
@@ -244,7 +247,7 @@ struct SettingsView: View {
             }
         } catch {
             // Silently fail - non-admin is the default
-            print("[SettingsView] Could not check admin status: \(error)")
+            logger.debug("Could not check admin status: \(error.localizedDescription)")
         }
     }
 

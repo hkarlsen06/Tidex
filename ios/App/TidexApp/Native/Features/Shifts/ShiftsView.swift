@@ -1,4 +1,7 @@
+import os.log
 import SwiftUI
+
+private let logger = Logger(subsystem: "no.tidex.app", category: "ShiftsView")
 
 /// Helper struct for day sheet selection (must be Identifiable for .sheet(item:))
 private struct DayShiftSelection: Identifiable {
@@ -299,7 +302,7 @@ struct ShiftsView: View {
         // When shifts finish loading, check if we should highlight/select a date from deep link
         .onChange(of: viewModel.isLoading) { _, isLoading in
             if !isLoading, let dateISO = highlightedDateISO {
-                print("[ShiftsView] Shifts finished loading, checking for deep link date: \(dateISO)")
+                logger.debug(" Shifts finished loading, checking for deep link date: \(dateISO)")
                 selectShiftFromDeepLink(dateISO: dateISO, shifts: viewModel.shifts)
             }
         }
@@ -371,18 +374,18 @@ struct ShiftsView: View {
 
         // Avoid processing the same deep link twice
         if highlightedDateISO == dateISO {
-            print("[ShiftsView] Deep link already being processed for: \(dateISO)")
+            logger.debug(" Deep link already being processed for: \(dateISO)")
             return
         }
 
-        print("[ShiftsView] Handling deep link for date: \(dateISO), action: \(action.rawValue)")
+        logger.debug(" Handling deep link for date: \(dateISO), action: \(action.rawValue)")
 
         // Store the action to use when selecting the shift
         deepLinkAction = action
 
         // Parse the date to extract year and month
         guard let date = Date.fromISODateString(dateISO) else {
-            print("[ShiftsView] Failed to parse date: \(dateISO)")
+            logger.debug(" Failed to parse date: \(dateISO)")
             coordinator.clearPendingDeepLink()
             return
         }
@@ -400,7 +403,7 @@ struct ShiftsView: View {
 
         // Navigate to the correct month if not already there
         if viewModel.displayYear != targetYear || viewModel.displayMonth != targetMonth {
-            print("[ShiftsView] Navigating to \(targetYear)-\(targetMonth)")
+            logger.debug(" Navigating to \(targetYear)-\(targetMonth)")
             SharedMonthContext.shared.navigateTo(year: targetYear, month: targetMonth)
             // Shifts will load via the month change subscription
             // The onChange(of: viewModel.shifts) will then call selectShiftFromDeepLink
@@ -415,7 +418,7 @@ struct ShiftsView: View {
     private func selectShiftFromDeepLink(dateISO: String, shifts: [ShiftWithComputations]) {
         // Parse target date to verify we're looking at the correct month
         guard let targetDate = Date.fromISODateString(dateISO) else {
-            print("[ShiftsView] Invalid date format: \(dateISO)")
+            logger.debug(" Invalid date format: \(dateISO)")
             highlightedDateISO = nil
             return
         }
@@ -427,7 +430,7 @@ struct ShiftsView: View {
         // Make sure we're on the correct committed month before trying to find the shift
         // (committed values indicate data is ready to display)
         guard viewModel.committedYear == targetYear && viewModel.committedMonth == targetMonth else {
-            print("[ShiftsView] Not on target month yet (committed: \(viewModel.committedYear)-\(viewModel.committedMonth), target: \(targetYear)-\(targetMonth))")
+            logger.debug(" Not on target month yet (committed: \(viewModel.committedYear)-\(viewModel.committedMonth), target: \(targetYear)-\(targetMonth))")
             // Keep highlightedDateISO - month navigation is still in progress
             return
         }
@@ -436,14 +439,14 @@ struct ShiftsView: View {
         let shiftsOnDate = shifts.filter { $0.shiftDate == dateISO }
 
         guard !shiftsOnDate.isEmpty else {
-            print("[ShiftsView] No shifts found for date: \(dateISO) (shifts loaded: \(shifts.count))")
+            logger.debug(" No shifts found for date: \(dateISO) (shifts loaded: \(shifts.count))")
             // Clear highlighted date - we're on the right month but there's no shift
             // This handles the case where the shift was deleted
             highlightedDateISO = nil
             return
         }
 
-        print("[ShiftsView] Found \(shiftsOnDate.count) shift(s) on \(dateISO), action: \(deepLinkAction.rawValue)")
+        logger.debug(" Found \(shiftsOnDate.count) shift(s) on \(dateISO), action: \(deepLinkAction.rawValue)")
 
         // Capture the action before clearing state
         let action = deepLinkAction
@@ -459,7 +462,7 @@ struct ShiftsView: View {
             // Only open sheets when action is .open (default behavior from notifications)
             // When action is .highlight (from widgets), show visual highlight instead
             if action == .highlight {
-                print("[ShiftsView] Highlight-only mode - showing visual highlight for \(dateISO)")
+                logger.debug(" Highlight-only mode - showing visual highlight for \(dateISO)")
                 withAnimation(.easeInOut(duration: 0.3)) {
                     deepLinkHighlightDate = dateISO
                 }
@@ -511,7 +514,7 @@ struct ShiftsView: View {
             shiftToDelete = nil
         } catch {
             // Error handling - could show an alert here
-            print("Failed to delete shift: \(error.localizedDescription)")
+            logger.error("Failed to delete shift: \(error.localizedDescription)")
         }
     }
 

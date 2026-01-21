@@ -1,4 +1,7 @@
 import Foundation
+import os.log
+
+private let logger = Logger(subsystem: "no.tidex.app", category: "TermsVersion")
 
 /// Terms version management for iOS
 /// Fetches the current terms version from the API, with a hardcoded fallback
@@ -41,7 +44,7 @@ enum TermsVersion {
         // Fetch from API with timeout
         do {
             guard let url = URL(string: versionEndpoint) else {
-                print("[TermsVersion] Invalid endpoint URL")
+                logger.error("Invalid endpoint URL")
                 return fallbackVersionDate
             }
 
@@ -51,7 +54,7 @@ enum TermsVersion {
 
             guard let httpResponse = response as? HTTPURLResponse,
                   httpResponse.statusCode == 200 else {
-                print("[TermsVersion] API returned non-200 status")
+                logger.warning("API returned non-200 status")
                 return fallbackVersionDate
             }
 
@@ -63,10 +66,10 @@ enum TermsVersion {
 
             return versionResponse.termsVersionDate
         } catch is TimeoutError {
-            print("[TermsVersion] Request timed out after \(requestTimeout)s. Using fallback.")
+            logger.warning("Request timed out after \(requestTimeout)s. Using fallback.")
             return fallbackVersionDate
         } catch {
-            print("[TermsVersion] Failed to fetch version: \(error). Using fallback.")
+            logger.warning("Failed to fetch version: \(error.localizedDescription). Using fallback.")
             return fallbackVersionDate
         }
     }
@@ -149,7 +152,7 @@ enum TermsVersion {
 
         guard let accepted = acceptedDate else {
             // Can't parse date, require re-acceptance
-            print("[TermsVersion] Could not parse termsAcceptedAt: \(acceptedAt)")
+            logger.warning("Could not parse termsAcceptedAt: \(acceptedAt)")
             return true
         }
 
@@ -160,7 +163,7 @@ enum TermsVersion {
 
         guard let currentVersion = versionFormatter.date(from: versionDate) else {
             // Should never happen with valid date
-            print("[TermsVersion] Could not parse versionDate: \(versionDate)")
+            logger.error("Could not parse versionDate: \(versionDate)")
             return false
         }
 

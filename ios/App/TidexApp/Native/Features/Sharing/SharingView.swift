@@ -103,9 +103,6 @@ struct SharingView: View {
                 }
             }
             .iPadToolbarTransaction()
-            .refreshable {
-                await viewModel.refresh()
-            }
         }
         .task {
             await viewModel.loadSharers()
@@ -259,6 +256,9 @@ struct SharingView: View {
             .padding(.top, 16)
             .padding(.bottom, 32)
             .frame(maxWidth: .infinity)
+        }
+        .refreshable {
+            await viewModel.refresh()
         }
     }
 
