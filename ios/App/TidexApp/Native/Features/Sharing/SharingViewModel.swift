@@ -312,7 +312,6 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
     func loadShiftsForSelectedSharer() async {
         guard let sharer = selectedSharer else { return }
 
-        isLoadingShifts = true
         error = nil
 
         do {
@@ -323,14 +322,16 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
             let year = displayYear
             let month = displayMonth
 
-            // Load from cache first
+            // Load from cache first (synchronously, before setting loading state)
             let cachedShifts = sharedShiftsRepository.getSharedShifts(
                 ownerId: sharer.id,
                 viewerId: userId,
                 year: year,
                 month: month
             )
+
             if !cachedShifts.isEmpty {
+                // Cache hit - show cached data immediately, no loading flash
                 sharedShifts = cachedShifts
                 lastCacheTime = sharedShiftsRepository.getLastCacheTime(
                     ownerId: sharer.id,
@@ -338,6 +339,12 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
                     year: year,
                     month: month
                 )
+                // Don't set isLoadingShifts - we have data to show
+            } else {
+                // Cache miss - clear old data and show loading state
+                // This prevents showing an empty calendar with old month's data
+                sharedShifts = []
+                isLoadingShifts = true
             }
 
             // Fetch fresh data from API
