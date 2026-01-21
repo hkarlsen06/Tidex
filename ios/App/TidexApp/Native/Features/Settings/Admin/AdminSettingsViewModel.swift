@@ -10,37 +10,37 @@ private let SUPERADMIN_USER_ID = "032d8c2a-9af6-4777-99f0-24e2c4058bf3"
 // MARK: - Admin Tab
 
 enum AdminTab: String, CaseIterable, Identifiable {
+    case notifications
     case users
     case subscribers
     case feedback
     case auditLog
     case sql
     case shares
-    case notifications
 
     var id: String { rawValue }
 
     var title: String {
         switch self {
+        case .notifications: return "Notifications"
         case .users: return "Users"
         case .subscribers: return "Subscribers"
         case .feedback: return "Feedback"
         case .auditLog: return "Audit Log"
         case .sql: return "SQL"
         case .shares: return "Shares"
-        case .notifications: return "Notifications"
         }
     }
 
     var icon: String {
         switch self {
+        case .notifications: return "bell"
         case .users: return "person.2"
         case .subscribers: return "creditcard"
         case .feedback: return "bubble.left.and.bubble.right"
         case .auditLog: return "list.bullet.clipboard"
         case .sql: return "terminal"
         case .shares: return "square.and.arrow.up"
-        case .notifications: return "bell"
         }
     }
 }
@@ -115,8 +115,8 @@ struct AdminFeedbackResponse: Codable {
 /// Audit log entry
 struct AuditLogEntry: Codable, Identifiable {
     let id: String
-    let adminId: String
-    let adminEmail: String
+    let adminId: String?
+    let adminEmail: String?
     let action: String
     let targetUserId: String?
     let targetEmail: String?
@@ -321,6 +321,12 @@ final class AdminSettingsViewModel: ObservableObject {
     @Published var notificationDeeplink: String = ""
     @Published var previewCount: Int = 0
     @Published var isSendingNotification: Bool = false
+
+    // Specific user targeting
+    @Published var notificationUserSearch: String = ""
+    @Published var notificationUserSearchResults: [AdminUser] = []
+    @Published var notificationSelectedUsers: [AdminUser] = []
+    @Published var isSearchingNotificationUsers: Bool = false
 
     // MARK: - Private Properties
 
@@ -645,6 +651,12 @@ final class AdminSettingsViewModel: ObservableObject {
     }
 
     func previewNotificationCount() async {
+        // For specific target, count is the selected users count
+        if notificationTarget == "specific" {
+            previewCount = notificationSelectedUsers.count
+            return
+        }
+
         do {
             let result: PreviewCountResponse = try await makeRequest(
                 url: APIConfiguration.webAppBaseURL.appendingPathComponent("/api/admin/notifications/preview"),
@@ -657,9 +669,56 @@ final class AdminSettingsViewModel: ObservableObject {
         }
     }
 
+    func searchNotificationUsers() {
+        let query = notificationUserSearch.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard query.count >= 2 else {
+            notificationUserSearchResults = []
+            return
+        }
+
+        Task {
+            isSearchingNotificationUsers = true
+            do {
+                let url = APIConfiguration.webAppBaseURL.appendingPathComponent("/api/admin/users")
+                var components = URLComponents(url: url, resolvingAgainstBaseURL: false)!
+                components.queryItems = [
+                    URLQueryItem(name: "search", value: query),
+                    URLQueryItem(name: "limit", value: "10")
+                ]
+
+                let result: AdminUsersResponse = try await makeRequest(url: components.url!, method: "GET")
+                // Filter out already selected users
+                let selectedIds = Set(notificationSelectedUsers.map { $0.id })
+                notificationUserSearchResults = result.users.filter { !selectedIds.contains($0.id) }
+            } catch {
+                notificationUserSearchResults = []
+            }
+            isSearchingNotificationUsers = false
+        }
+    }
+
+    func selectNotificationUser(_ user: AdminUser) {
+        guard !notificationSelectedUsers.contains(where: { $0.id == user.id }) else { return }
+        notificationSelectedUsers.append(user)
+        notificationUserSearchResults.removeAll { $0.id == user.id }
+        notificationUserSearch = ""
+        previewCount = notificationSelectedUsers.count
+    }
+
+    func deselectNotificationUser(_ user: AdminUser) {
+        notificationSelectedUsers.removeAll { $0.id == user.id }
+        previewCount = notificationSelectedUsers.count
+    }
+
     func sendNotification() async {
         guard !notificationTitle.isEmpty && !notificationBody.isEmpty else {
             errorMessage = "Title and body are required"
+            return
+        }
+
+        // For specific target, require at least one selected user
+        if notificationTarget == "specific" && notificationSelectedUsers.isEmpty {
+            errorMessage = "Please select at least one user"
             return
         }
 
@@ -676,6 +735,9 @@ final class AdminSettingsViewModel: ObservableObject {
             if !notificationDeeplink.isEmpty {
                 body["deeplink"] = notificationDeeplink
             }
+            if notificationTarget == "specific" {
+                body["specificUserIds"] = notificationSelectedUsers.map { $0.id }
+            }
 
             let result: AdminActionResponse = try await makeRequest(
                 url: APIConfiguration.webAppBaseURL.appendingPathComponent("/api/admin/notifications/send"),
@@ -688,6 +750,9 @@ final class AdminSettingsViewModel: ObservableObject {
                 notificationTitle = ""
                 notificationBody = ""
                 notificationDeeplink = ""
+                notificationSelectedUsers = []
+                notificationUserSearch = ""
+                notificationUserSearchResults = []
                 previewCount = 0
                 await fetchBroadcastHistory()
             } else {

@@ -332,7 +332,7 @@ private struct SharesTabView: View {
 
 private struct NotificationsTabView: View {
     @ObservedObject var viewModel: AdminSettingsViewModel
-    let targets = ["all", "pro", "active"]
+    let targets = ["all", "pro", "active", "specific"]
 
     var body: some View {
         ScrollView {
@@ -359,8 +359,89 @@ private struct NotificationsTabView: View {
                         Task { await viewModel.previewNotificationCount() }
                     }
 
+                    // Specific user selection
+                    if viewModel.notificationTarget == "specific" {
+                        VStack(alignment: .leading, spacing: 8) {
+                            // Selected users chips
+                            if !viewModel.notificationSelectedUsers.isEmpty {
+                                FlowLayout(spacing: 6) {
+                                    ForEach(viewModel.notificationSelectedUsers) { user in
+                                        HStack(spacing: 4) {
+                                            Text(user.email ?? user.name ?? String(user.id.prefix(8)))
+                                                .font(.system(size: 12))
+                                                .foregroundColor(.tidexTextPrimary)
+                                            Button {
+                                                viewModel.deselectNotificationUser(user)
+                                            } label: {
+                                                Image(systemName: "xmark.circle.fill")
+                                                    .font(.system(size: 12))
+                                                    .foregroundColor(.tidexTextMuted)
+                                            }
+                                        }
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 4)
+                                        .background(Color.tidexSurfaceSecondary)
+                                        .cornerRadius(12)
+                                    }
+                                }
+                            }
+
+                            // User search field
+                            HStack {
+                                Image(systemName: "magnifyingglass")
+                                    .foregroundColor(.tidexTextMuted)
+                                TextField("Search users by email or name...", text: $viewModel.notificationUserSearch)
+                                    .textFieldStyle(.plain)
+                                    .autocorrectionDisabled()
+                                    .textInputAutocapitalization(.never)
+                                    .onChange(of: viewModel.notificationUserSearch) { _, _ in
+                                        viewModel.searchNotificationUsers()
+                                    }
+                                if viewModel.isSearchingNotificationUsers {
+                                    ProgressView()
+                                        .scaleEffect(0.8)
+                                }
+                            }
+                            .padding(10)
+                            .background(Color.tidexSurfaceSecondary)
+                            .cornerRadius(8)
+
+                            // Search results
+                            if !viewModel.notificationUserSearchResults.isEmpty {
+                                VStack(spacing: 0) {
+                                    ForEach(viewModel.notificationUserSearchResults) { user in
+                                        Button {
+                                            viewModel.selectNotificationUser(user)
+                                        } label: {
+                                            HStack {
+                                                VStack(alignment: .leading, spacing: 2) {
+                                                    Text(user.email ?? "No email")
+                                                        .font(.system(size: 13))
+                                                        .foregroundColor(.tidexTextPrimary)
+                                                    if let name = user.name {
+                                                        Text(name)
+                                                            .font(.system(size: 11))
+                                                            .foregroundColor(.tidexTextMuted)
+                                                    }
+                                                }
+                                                Spacer()
+                                                Image(systemName: "plus.circle.fill")
+                                                    .foregroundColor(.tidexBlue)
+                                            }
+                                            .padding(.vertical, 8)
+                                            .padding(.horizontal, 10)
+                                        }
+                                        Divider()
+                                    }
+                                }
+                                .background(Color.tidexSurfaceSecondary)
+                                .cornerRadius(8)
+                            }
+                        }
+                    }
+
                     if viewModel.previewCount > 0 {
-                        Text("Will send to \(viewModel.previewCount) users")
+                        Text("Will send to \(viewModel.previewCount) user\(viewModel.previewCount == 1 ? "" : "s")")
                             .font(.system(size: 13)).foregroundColor(.tidexTextMuted)
                     }
 
@@ -377,7 +458,7 @@ private struct NotificationsTabView: View {
                         .foregroundColor(.white)
                         .cornerRadius(8)
                     }
-                    .disabled(viewModel.isSendingNotification)
+                    .disabled(viewModel.isSendingNotification || (viewModel.notificationTarget == "specific" && viewModel.notificationSelectedUsers.isEmpty))
                 }
                 .padding(16)
                 .background(Color.tidexSurfacePrimary)
@@ -401,6 +482,46 @@ private struct NotificationsTabView: View {
             .padding(16)
         }
         .task { await viewModel.previewNotificationCount() }
+    }
+}
+
+// MARK: - Flow Layout for User Chips
+
+private struct FlowLayout: Layout {
+    var spacing: CGFloat = 8
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let result = computeLayout(proposal: proposal, subviews: subviews)
+        return result.size
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let result = computeLayout(proposal: proposal, subviews: subviews)
+        for (index, position) in result.positions.enumerated() {
+            subviews[index].place(at: CGPoint(x: bounds.minX + position.x, y: bounds.minY + position.y), proposal: .unspecified)
+        }
+    }
+
+    private func computeLayout(proposal: ProposedViewSize, subviews: Subviews) -> (size: CGSize, positions: [CGPoint]) {
+        var positions: [CGPoint] = []
+        var currentX: CGFloat = 0
+        var currentY: CGFloat = 0
+        var lineHeight: CGFloat = 0
+        let maxWidth = proposal.width ?? .infinity
+
+        for subview in subviews {
+            let size = subview.sizeThatFits(.unspecified)
+            if currentX + size.width > maxWidth && currentX > 0 {
+                currentX = 0
+                currentY += lineHeight + spacing
+                lineHeight = 0
+            }
+            positions.append(CGPoint(x: currentX, y: currentY))
+            lineHeight = max(lineHeight, size.height)
+            currentX += size.width + spacing
+        }
+
+        return (CGSize(width: maxWidth, height: currentY + lineHeight), positions)
     }
 }
 
@@ -559,7 +680,7 @@ private struct AuditLogCard: View {
                 Spacer()
                 Text(entry.createdAt.prefix(10)).font(.system(size: 11)).foregroundColor(.tidexTextMuted)
             }
-            Text("by \(entry.adminEmail)").font(.system(size: 12)).foregroundColor(.tidexTextSecondary)
+            Text("by \(entry.adminEmail ?? "System")").font(.system(size: 12)).foregroundColor(.tidexTextSecondary)
             if let target = entry.targetEmail {
                 Text("Target: \(target)").font(.system(size: 12)).foregroundColor(.tidexTextMuted)
             }
