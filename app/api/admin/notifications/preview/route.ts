@@ -7,7 +7,8 @@ type TargetAudience = 'all' | 'pro' | 'active' | 'specific';
 
 interface PreviewTargetBody {
   target: TargetAudience;
-  specificUserId?: string;
+  specificUserId?: string; // Legacy single user
+  specificUserIds?: string[]; // Multiple users
   includeSelf?: boolean;
 }
 
@@ -88,25 +89,9 @@ export async function POST(request: NextRequest) {
 
     // Handle specific user targeting
     if (input.target === 'specific') {
-      if (!input.specificUserId) {
-        return NextResponse.json(
-          { error: 'User ID required for specific targeting' },
-          { status: 400 }
-        );
-      }
-      // Validate UUID format
-      if (
-        !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-          input.specificUserId
-        )
-      ) {
-        return NextResponse.json(
-          { error: 'Invalid User ID format' },
-          { status: 400 }
-        );
-      }
-      // Specific user always returns count of 1
-      return NextResponse.json({ count: 1 });
+      const userIds = input.specificUserIds ?? (input.specificUserId ? [input.specificUserId] : []);
+      // Return count of selected users
+      return NextResponse.json({ count: userIds.length });
     }
 
     // Service role client for admin operations
