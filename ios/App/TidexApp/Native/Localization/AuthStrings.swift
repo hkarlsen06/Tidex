@@ -614,6 +614,25 @@ enum AuthStrings {
         "settings.menu.admin.label": "Admin",
         "settings.menu.admin.description": "Administrasjonspanel",
 
+        // Admin Settings
+        "admin.title": "Admin",
+        "admin.subtitle": "Administrer brukere og tilganger",
+        "admin.superadminBadge": "Superadmin",
+        "admin.searchPlaceholder": "Søk etter bruker...",
+        "admin.loading": "Laster brukere...",
+        "admin.noUsers": "Ingen brukere funnet",
+        "admin.noSearchResults": "Ingen brukere matcher søket",
+        "admin.usersCount": "brukere",
+        "admin.loadMore": "Last inn flere",
+        "admin.userActions": "Brukerhandlinger",
+        "admin.action.ban": "Utesteng bruker",
+        "admin.action.unban": "Fjern utestengelse",
+        "admin.action.grantAdmin": "Gi admin-tilgang",
+        "admin.action.revokeAdmin": "Fjern admin-tilgang",
+        "admin.action.grantGrandfathered": "Gi grandfathered-status",
+        "admin.action.revokeGrandfathered": "Fjern grandfathered-status",
+        "common.close": "Lukk",
+
         // Data Export Settings
         "data.title": "Data",
         "data.export.title": "Eksporter data",
@@ -1504,6 +1523,25 @@ enum AuthStrings {
         "settings.menu.feedback.description": "Send us your feedback",
         "settings.menu.admin.label": "Admin",
         "settings.menu.admin.description": "Administration panel",
+
+        // Admin Settings
+        "admin.title": "Admin",
+        "admin.subtitle": "Manage users and access",
+        "admin.superadminBadge": "Superadmin",
+        "admin.searchPlaceholder": "Search for user...",
+        "admin.loading": "Loading users...",
+        "admin.noUsers": "No users found",
+        "admin.noSearchResults": "No users match the search",
+        "admin.usersCount": "users",
+        "admin.loadMore": "Load more",
+        "admin.userActions": "User actions",
+        "admin.action.ban": "Ban user",
+        "admin.action.unban": "Remove ban",
+        "admin.action.grantAdmin": "Grant admin access",
+        "admin.action.revokeAdmin": "Revoke admin access",
+        "admin.action.grantGrandfathered": "Grant grandfathered status",
+        "admin.action.revokeGrandfathered": "Revoke grandfathered status",
+        "common.close": "Close",
 
         // Data Export Settings
         "data.title": "Data",
