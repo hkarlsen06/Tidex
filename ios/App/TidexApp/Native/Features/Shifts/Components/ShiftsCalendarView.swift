@@ -637,7 +637,7 @@ struct ShiftsCalendarView: View {
                 ProgressView()
                     .progressViewStyle(CircularProgressViewStyle(tint: isCopyMode ? .tidexBlue : .orange))
                     .scaleEffect(0.8)
-                    .frame(width: 36, height: 36)
+                    .frame(width: 36)
 
                 Text(isCopyMode
                     ? localization.string("shifts.copying")
@@ -649,7 +649,7 @@ struct ShiftsCalendarView: View {
                 Image(systemName: isCopyMode ? "doc.on.doc" : "arrow.left.arrow.right")
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(isCopyMode ? .tidexBlue : .orange)
-                    .frame(width: 36, height: 36)
+                    .frame(width: 36)
 
                 Text(isCopyMode
                     ? localization.string("shifts.selectCopyTarget")
@@ -673,7 +673,7 @@ struct ShiftsCalendarView: View {
             .buttonStyle(.plain)
             .disabled(isCopying || isMoving)
         }
-        .frame(height: 36)
+        .frame(height: 41)
         .padding(4)
         .background(Capsule().fill(Color.tidexSurfaceSecondary))
     }
@@ -691,7 +691,8 @@ struct ShiftsCalendarView: View {
                     Image(systemName: "doc.on.doc")
                         .font(.system(size: 14, weight: .medium))
                         .foregroundColor(.tidexBlue)
-                        .frame(width: 44, height: 36)
+                        .frame(width: 44)
+                        .frame(maxHeight: .infinity)
                         .background(Capsule().fill(Color.tidexBlue.opacity(0.1)))
                 }
                 .buttonStyle(.plain)
@@ -707,7 +708,8 @@ struct ShiftsCalendarView: View {
                     Image(systemName: "pencil")
                         .font(.system(size: 14, weight: .medium))
                         .foregroundColor(.tidexBlue)
-                        .frame(width: 44, height: 36)
+                        .frame(width: 44)
+                        .frame(maxHeight: .infinity)
                         .background(Capsule().fill(Color.tidexBlue.opacity(0.1)))
                 }
                 .buttonStyle(.plain)
@@ -745,7 +747,7 @@ struct ShiftsCalendarView: View {
                 .buttonStyle(.plain)
             }
         }
-        .frame(height: 36)
+        .frame(height: 41)
         .padding(4)
         .background(Capsule().fill(Color.tidexSurfaceSecondary))
     }
@@ -775,7 +777,7 @@ struct ShiftsCalendarView: View {
                 .buttonStyle(.plain)
             }
         }
-        .frame(height: 36)
+        .frame(height: 41)
         .padding(4)
         .background(Capsule().fill(Color.tidexSurfaceSecondary))
     }

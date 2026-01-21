@@ -115,11 +115,11 @@ extension AppleAuthProvider: ASAuthorizationControllerPresentationContextProvidi
             if let keyWindow {
                 return keyWindow
             }
-            // Create window from first available scene (iOS 26+ requirement)
+            // Create window from first available scene (required in iOS 26+)
             guard let windowScene = UIApplication.shared.connectedScenes
                 .compactMap({ $0 as? UIWindowScene })
                 .first else {
-                fatalError("No window scene available for Apple Sign-In presentation")
+                fatalError("No UIWindowScene available - this should never happen in a running app")
             }
             return UIWindow(windowScene: windowScene)
         }

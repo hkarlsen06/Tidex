@@ -1,7 +1,10 @@
 import AuthenticationServices
 import Foundation
+import os.log
 import Supabase
 import SwiftUI
+
+private let logger = Logger(subsystem: "no.tidex.app", category: "SecuritySettings")
 
 /// View model for security settings
 /// Handles password management, connected accounts, and MFA
@@ -110,7 +113,7 @@ final class SecuritySettingsViewModel: ObservableObject {
             await loadMFAFactors()
 
         } catch {
-            print("[SecuritySettingsViewModel] Failed to load security info: \(error)")
+            logger.error("Failed to load security info: \(error)")
             errorMessage = localization.string("security.errors.loadFailed")
         }
 
@@ -133,7 +136,7 @@ final class SecuritySettingsViewModel: ObservableObject {
                     )
                 }
         } catch {
-            print("[SecuritySettingsViewModel] Failed to load MFA factors: \(error)")
+            logger.error("Failed to load MFA factors: \(error)")
         }
     }
 
@@ -152,7 +155,7 @@ final class SecuritySettingsViewModel: ObservableObject {
             otpSent = true
             successMessage = localization.string("security.password.codeSent")
         } catch {
-            print("[SecuritySettingsViewModel] Failed to request OTP: \(error)")
+            logger.error("Failed to request OTP: \(error)")
             errorMessage = localization.string("security.password.errors.otpFailed")
         }
 
@@ -216,7 +219,7 @@ final class SecuritySettingsViewModel: ObservableObject {
             await loadSecurityInfo()
 
         } catch {
-            print("[SecuritySettingsViewModel] Failed to set password: \(error)")
+            logger.error("Failed to set password: \(error)")
             errorMessage = localization.string("security.password.errors.failed")
         }
 
@@ -263,7 +266,7 @@ final class SecuritySettingsViewModel: ObservableObject {
 
             // Process the callback URL to complete the identity linking
             // The callback URL contains the auth result that Supabase needs to process
-            print("[SecuritySettingsViewModel] OAuth callback received: \(callbackURL)")
+            logger.debug("OAuth callback received: \(callbackURL)")
 
             // Parse both fragment and query for parameters
             // Errors can be in either location depending on the flow
@@ -282,7 +285,7 @@ final class SecuritySettingsViewModel: ObservableObject {
                 let errorDescription = rawDescription
                     .replacingOccurrences(of: "+", with: " ")
                     .removingPercentEncoding ?? rawDescription
-                print("[SecuritySettingsViewModel] OAuth error: \(error) - \(errorDescription)")
+                logger.error("OAuth error: \(error) - \(errorDescription)")
                 errorMessage = errorDescription
                 isConnectingProvider = false
                 return
@@ -308,7 +311,7 @@ final class SecuritySettingsViewModel: ObservableObject {
                 successMessage = localization.string("security.connections.success.connected")
             } else {
                 // No tokens or code found - something went wrong
-                print("[SecuritySettingsViewModel] No tokens or code in callback URL")
+                logger.warning("No tokens or code in callback URL")
                 errorMessage = localization.string("security.connections.errors.linkFailed")
             }
 
@@ -317,9 +320,9 @@ final class SecuritySettingsViewModel: ObservableObject {
 
         } catch let error as OAuthWebAuthError where error.isCancellation {
             // User cancelled - don't show error
-            print("[SecuritySettingsViewModel] User cancelled \(provider) linking")
+            logger.debug("User cancelled \(provider.rawValue) linking")
         } catch {
-            print("[SecuritySettingsViewModel] Failed to link \(provider): \(error)")
+            logger.error("Failed to link \(provider.rawValue): \(error)")
             errorMessage = localization.string("security.connections.errors.linkFailed")
         }
 
@@ -365,7 +368,7 @@ final class SecuritySettingsViewModel: ObservableObject {
             await loadSecurityInfo()
 
         } catch {
-            print("[SecuritySettingsViewModel] Failed to unlink \(provider): \(error)")
+            logger.error("Failed to unlink \(provider): \(error)")
             errorMessage = localization.string("security.connections.errors.unlinkFailed")
         }
 
@@ -393,7 +396,7 @@ final class SecuritySettingsViewModel: ObservableObject {
             showMFAEnrollment = true
 
         } catch {
-            print("[SecuritySettingsViewModel] Failed to start MFA enrollment: \(error)")
+            logger.error("Failed to start MFA enrollment: \(error)")
             errorMessage = localization.string("security.mfa.errors.enrollFailed")
         }
 
@@ -433,7 +436,7 @@ final class SecuritySettingsViewModel: ObservableObject {
             await loadMFAFactors()
 
         } catch {
-            print("[SecuritySettingsViewModel] Failed to verify MFA: \(error)")
+            logger.error("Failed to verify MFA: \(error)")
             errorMessage = localization.string("security.mfa.errors.invalidCode")
         }
 
@@ -448,7 +451,7 @@ final class SecuritySettingsViewModel: ObservableObject {
                 try await supabase.auth.mfa.unenroll(params: MFAUnenrollParams(factorId: factorId))
             } catch {
                 // Ignore errors when canceling
-                print("[SecuritySettingsViewModel] Failed to unenroll pending factor: \(error)")
+                logger.error("Failed to unenroll pending factor: \(error)")
             }
         }
 
@@ -482,7 +485,7 @@ final class SecuritySettingsViewModel: ObservableObject {
             await loadMFAFactors()
 
         } catch {
-            print("[SecuritySettingsViewModel] Failed to unenroll MFA: \(error)")
+            logger.error("Failed to unenroll MFA: \(error)")
             errorMessage = localization.string("security.mfa.errors.unenrollFailed")
         }
 

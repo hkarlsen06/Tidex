@@ -1,5 +1,8 @@
-import SwiftUI
+import os.log
 import PhotosUI
+import SwiftUI
+
+private let logger = Logger(subsystem: "no.tidex.app", category: "ProfileSettings")
 
 /// Profile settings view
 /// Displays profile picture, name, email, and danger zone (delete account)
@@ -562,7 +565,7 @@ struct ProfileSettingsView: View {
             selectedPhotoItem = nil
 
         } catch {
-            print("[ProfileSettingsView] Failed to process photo: \(error)")
+            logger.error("Failed to process photo: \(error.localizedDescription)")
         }
     }
 }

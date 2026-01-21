@@ -1,6 +1,9 @@
 import Foundation
-import UserNotifications
+import os.log
 import UIKit
+import UserNotifications
+
+private let logger = Logger(subsystem: "no.tidex.app", category: "Notifications")
 
 /// Handles push notification permission and registration
 /// Call `requestPermissionAndRegister()` after successful authentication
@@ -29,7 +32,7 @@ final class NotificationService {
 
         case .denied:
             // User denied - don't bother registering
-            print("[Notifications] Permission denied by user")
+            logger.info("Permission denied by user")
 
         @unknown default:
             break
@@ -44,13 +47,13 @@ final class NotificationService {
             let granted = try await center.requestAuthorization(options: [.alert, .badge, .sound])
 
             if granted {
-                print("[Notifications] Permission granted")
+                logger.info("Permission granted")
                 registerForRemoteNotifications()
             } else {
-                print("[Notifications] Permission denied")
+                logger.info("Permission denied")
             }
         } catch {
-            print("[Notifications] Permission request failed: \(error)")
+            logger.error("Permission request failed: \(error.localizedDescription)")
         }
     }
 

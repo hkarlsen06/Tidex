@@ -80,7 +80,6 @@
 		119D1CE92F16E46300EC7072 /* SupabaseClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 119D1CD72F16E46300EC7072 /* SupabaseClient.swift */; };
 		119D1CEA2F16E46300EC7072 /* OTPInputField.swift in Sources */ = {isa = PBXBuildFile; fileRef = 119D1CBE2F16E46300EC7072 /* OTPInputField.swift */; };
 		119D1CEB2F16E46300EC7072 /* TidexTextField.swift in Sources */ = {isa = PBXBuildFile; fileRef = 119D1CE02F16E46300EC7072 /* TidexTextField.swift */; };
-		119D1CEC2F16E46300EC7072 /* FeatureFlags.swift in Sources */ = {isa = PBXBuildFile; fileRef = 119D1CB82F16E46300EC7072 /* FeatureFlags.swift */; };
 		119D1CED2F16E46300EC7072 /* LocalizationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 119D1CCF2F16E46300EC7072 /* LocalizationManager.swift */; };
 		119D1CEE2F16E46300EC7072 /* PhoneOTPForm.swift in Sources */ = {isa = PBXBuildFile; fileRef = 119D1CBF2F16E46300EC7072 /* PhoneOTPForm.swift */; };
 		119D1CEF2F16E46300EC7072 /* TidexCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 119D1CDF2F16E46300EC7072 /* TidexCard.swift */; };
@@ -344,7 +343,6 @@
 		1152D0C82F01BB9B002FD5ED /* App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = App.entitlements; sourceTree = "<group>"; };
 		1152D0CA2F01E2A7002FD5ED /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 		119D1CB72F16E46300EC7072 /* AppCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppCoordinator.swift; sourceTree = "<group>"; };
-		119D1CB82F16E46300EC7072 /* FeatureFlags.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeatureFlags.swift; sourceTree = "<group>"; };
 		119D1CB92F16E46300EC7072 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		119D1CBB2F16E46300EC7072 /* EmailPasswordForm.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmailPasswordForm.swift; sourceTree = "<group>"; };
 		119D1CBD2F16E46300EC7072 /* OAuthButtonsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OAuthButtonsView.swift; sourceTree = "<group>"; };
@@ -779,7 +777,6 @@
 				11A196442F1AC20E0030E524 /* TabConfiguration.swift */,
 				11F4301D2F1A957C002B1FBE /* TermsVersion.swift */,
 				119D1CB72F16E46300EC7072 /* AppCoordinator.swift */,
-				119D1CB82F16E46300EC7072 /* FeatureFlags.swift */,
 				119D1CB92F16E46300EC7072 /* RootView.swift */,
 			);
 			path = Core;
@@ -1616,7 +1613,6 @@
 				11A197CF2F1DF0750030E524 /* NorwegianHolidays.swift in Sources */,
 				11A197D02F1DF0750030E524 /* PayrollDateAdjuster.swift in Sources */,
 				119D1CEB2F16E46300EC7072 /* TidexTextField.swift in Sources */,
-				119D1CEC2F16E46300EC7072 /* FeatureFlags.swift in Sources */,
 				119D1CED2F16E46300EC7072 /* LocalizationManager.swift in Sources */,
 				119D1CEE2F16E46300EC7072 /* PhoneOTPForm.swift in Sources */,
 				11A196452F1AC20E0030E524 /* TabConfiguration.swift in Sources */,
@@ -1968,7 +1964,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
@@ -2026,7 +2022,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				SDKROOT = iphoneos;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;

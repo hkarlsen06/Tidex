@@ -173,10 +173,11 @@ extension OAuthWebAuthSession: ASWebAuthenticationPresentationContextProviding {
             if let keyWindow {
                 return keyWindow
             }
+            // Create window from first available scene (required in iOS 26+)
             guard let windowScene = UIApplication.shared.connectedScenes
                 .compactMap({ $0 as? UIWindowScene })
                 .first else {
-                fatalError("No window scene available for OAuth presentation")
+                fatalError("No UIWindowScene available - this should never happen in a running app")
             }
             return UIWindow(windowScene: windowScene)
         }
