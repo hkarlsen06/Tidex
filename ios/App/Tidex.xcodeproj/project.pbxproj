@@ -2034,7 +2034,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 2.0.0;
-				"OTHER_SWIFT_FLAGS[arch=*]" = "-supress-warnings";
+				"OTHER_SWIFT_FLAGS[arch=*]" = "-suppress-warnings";
 				PRODUCT_BUNDLE_IDENTIFIER = no.tidex.app;
 				PRODUCT_NAME = Tidex;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";

@@ -1,10 +1,9 @@
 import SwiftUI
 
 /// A user menu button that displays the user's profile picture and name,
-/// with a dropdown menu for accessing settings.
+/// with a dropdown menu for accessing settings and other quick actions.
 /// Inspired by the web UserMenu component.
 struct UserMenuButton: View {
-    @EnvironmentObject private var coordinator: AppCoordinator
     @Environment(\.localization) private var localization
     @Environment(\.displayScale) private var displayScale
     // Theme is handled at UIKit window level - sheets inherit from window
@@ -25,9 +24,25 @@ struct UserMenuButton: View {
     #endif
     /// Whether to show the settings sheet
     @State private var showSettings = false
+    /// Whether to show the subscription sheet
+    @State private var showSubscription = false
+    /// Whether to show the account/profile sheet
+    @State private var showAccount = false
+    /// Whether to show the feedback sheet
+    @State private var showFeedback = false
 
     var body: some View {
         Menu {
+            // Account button
+            Button {
+                showAccount = true
+            } label: {
+                Label(
+                    localization.string("settings.menu.account.label"),
+                    systemImage: "person.circle"
+                )
+            }
+
             // Settings button
             Button {
                 showSettings = true
@@ -35,6 +50,28 @@ struct UserMenuButton: View {
                 Label(
                     localization.string("userMenu.settings"),
                     systemImage: "gearshape"
+                )
+            }
+
+            // Subscription button
+            Button {
+                showSubscription = true
+            } label: {
+                Label(
+                    localization.string("subscription.title"),
+                    systemImage: "creditcard"
+                )
+            }
+
+            Divider()
+
+            // Send Feedback button
+            Button {
+                showFeedback = true
+            } label: {
+                Label(
+                    localization.string("feedback.title"),
+                    systemImage: "message"
                 )
             }
 
@@ -61,6 +98,21 @@ struct UserMenuButton: View {
         #endif
         .sheet(isPresented: $showSettings) {
             SettingsView()
+        }
+        .sheet(isPresented: $showAccount) {
+            NavigationStack {
+                ProfileSettingsView()
+            }
+        }
+        .sheet(isPresented: $showSubscription) {
+            NavigationStack {
+                SubscriptionSettingsView()
+            }
+        }
+        .sheet(isPresented: $showFeedback) {
+            NavigationStack {
+                FeedbackSettingsView()
+            }
         }
     }
 
