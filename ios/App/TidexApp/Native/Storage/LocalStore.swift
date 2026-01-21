@@ -1215,6 +1215,30 @@ actor LocalStoreActor {
         return localSettings.toUserSettings()
     }
 
+    /// Clear the profile picture URL (set to nil)
+    /// This is separate from updateUserSettings because Swift optionals can't distinguish
+    /// between "not provided" and "explicitly set to nil"
+    func clearProfilePictureUrl(userId: String) throws -> UserSettings {
+        let descriptor = FetchDescriptor<LocalUserSettings>(
+            predicate: #Predicate { $0.userId == userId }
+        )
+
+        guard let localSettings = try modelContext.fetch(descriptor).first else {
+            throw LocalStoreWriteError.notFound
+        }
+
+        localSettings.profilePictureUrl = nil
+        localSettings.dirtyFieldKeys.insert(.profilePictureUrl)
+        localSettings.localUpdatedAt = Date()
+
+        if localSettings.syncStatus == .clean {
+            localSettings.syncStatus = .dirty
+        }
+
+        try modelContext.save()
+        return localSettings.toUserSettings()
+    }
+
     func updateUserSettingsLastActive(userId: String) throws -> Bool {
         let descriptor = FetchDescriptor<LocalUserSettings>(
             predicate: #Predicate { $0.userId == userId }

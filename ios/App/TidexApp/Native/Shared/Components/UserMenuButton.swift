@@ -18,6 +18,8 @@ struct UserMenuButton: View {
     @State private var isLoadingImage = false
     /// Track the URL we've loaded to detect changes
     @State private var loadedUrl: String?
+    /// Task for loading image (allows cancellation when URL changes)
+    @State private var loadTask: Task<Void, Never>?
     #if DEBUG
     /// Whether to show the sync debug sheet
     @State private var showSyncDebug = false
@@ -173,10 +175,14 @@ struct UserMenuButton: View {
         .frame(width: 28, height: 28)
         .clipShape(RoundedRectangle(cornerRadius: 10))
         .onChange(of: avatarUrl) { oldUrl, newUrl in
-            // If URL changes, reload image
+            // If URL changes, cancel any in-progress load and reload
             if newUrl != loadedUrl {
+                // Cancel any existing load to prevent race conditions
+                loadTask?.cancel()
+                loadTask = nil
                 cachedImage = nil
                 loadedUrl = nil
+                isLoadingImage = false
                 loadImageIfNeeded()
             }
         }
@@ -193,22 +199,37 @@ struct UserMenuButton: View {
 
         isLoadingImage = true
 
-        Task {
+        loadTask = Task {
             do {
                 let (data, _) = try await URLSession.shared.data(from: url)
+
+                // Check for cancellation before processing
+                guard !Task.isCancelled else { return }
+
                 let targetSize = CGSize(width: 28 * displayScale, height: 28 * displayScale)
                 let uiImage: UIImage? = await Task.detached(priority: .utility) { () -> UIImage? in
                     guard let baseImage = UIImage(data: data) else { return nil }
                     return baseImage.preparingThumbnail(of: targetSize) ?? baseImage
                 }.value
+
+                // Check for cancellation before updating state
+                guard !Task.isCancelled else { return }
+
                 await MainActor.run {
+                    // Double-check this is still the URL we want
+                    guard urlString == avatarUrl else { return }
                     if let uiImage = uiImage {
                         cachedImage = uiImage
+                        loadedUrl = urlString
+                    } else {
+                        // Image parsing failed - mark as loaded to prevent infinite retries
                         loadedUrl = urlString
                     }
                     isLoadingImage = false
                 }
             } catch {
+                // Don't update state if cancelled
+                guard !Task.isCancelled else { return }
                 await MainActor.run {
                     isLoadingImage = false
                 }

@@ -147,6 +147,22 @@ final class SettingsRepository: ObservableObject {
         }
     }
 
+    /// Clear the profile picture URL (set to nil)
+    /// - Parameter userId: User ID
+    /// - Returns: Updated UserSettings if successful
+    func clearProfilePictureUrl(for userId: String) async throws -> UserSettings? {
+        do {
+            let updatedSettings = try await localStore.storeActor.clearProfilePictureUrl(userId: userId)
+            logger.info("Cleared profile picture URL for user: \(userId)")
+            return updatedSettings
+        } catch LocalStoreWriteError.notFound {
+            logger.warning("Settings not found for clearing profile picture: \(userId)")
+            return nil
+        } catch {
+            throw error
+        }
+    }
+
     /// Update last active timestamp
     /// This is typically not synced but can be used locally
     /// - Parameter userId: User ID
