@@ -517,13 +517,39 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
                                 didReceive response: UNNotificationResponse,
                                 withCompletionHandler completionHandler: @escaping () -> Void) {
         let userInfo = response.notification.request.content.userInfo
+        let type = userInfo["type"] as? String ?? ""
 
         // Handle shift reminder notification taps
-        if let type = userInfo["type"] as? String, type == "shift_reminder",
+        if type == "shift_reminder",
            let shiftDate = userInfo["shift_date"] as? String {
             // Navigate to shifts view with the shift highlighted
             Task { @MainActor in
                 AppCoordinator.shared.pendingDeepLink = .shifts(dates: [shiftDate], action: .highlight)
+            }
+        }
+        // Handle shared shift notifications (created, updated, deleted)
+        else if type.hasPrefix("shared_shift_") {
+            // Extract owner_id (the friend who shared) and shift_dates
+            let ownerId = userInfo["owner_id"] as? String
+
+            // Parse shift_dates - APNs sends arrays as-is, FCM sends comma-separated strings
+            var dates: [String]?
+            if let datesArray = userInfo["shift_dates"] as? [String] {
+                dates = datesArray
+            } else if let datesString = userInfo["shift_dates"] as? String {
+                dates = datesString.components(separatedBy: ",").map { $0.trimmingCharacters(in: .whitespaces) }
+            }
+
+            // Navigate to sharing tab with the specific friend and dates highlighted
+            Task { @MainActor in
+                AppCoordinator.shared.pendingDeepLink = .sharing(sharerId: ownerId, highlightDates: dates)
+            }
+        }
+        // Handle share_started notification (someone started sharing with you)
+        else if type == "share_started" {
+            let ownerId = userInfo["owner_id"] as? String
+            Task { @MainActor in
+                AppCoordinator.shared.pendingDeepLink = .sharing(sharerId: ownerId, highlightDates: nil)
             }
         }
 

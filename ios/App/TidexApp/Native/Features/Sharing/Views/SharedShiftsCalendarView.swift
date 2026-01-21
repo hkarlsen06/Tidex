@@ -10,11 +10,17 @@ struct SharedShiftsCalendarView: View {
     let currency: String
     let showEarnings: Bool
 
+    /// Dates to highlight from notification deeplink (e.g., friend's updated shifts)
+    var highlightDates: Set<String> = []
+
     /// Callback when a shift is tapped (for showing details)
     var onShiftTapped: ((ShiftWithComputations) -> Void)?
 
     @Environment(\.localization) private var localization
     @State private var viewMode: CalendarViewMode = CalendarViewMode.load()
+
+    /// Purple/violet color for deep link highlight (matches ShiftsCalendarView)
+    private static let deepLinkHighlightColor = Color(red: 0.545, green: 0.361, blue: 0.965)
 
     private let calendar = Calendar.current
 
@@ -171,10 +177,11 @@ struct SharedShiftsCalendarView: View {
             ForEach(days, id: \.id) { dayInfo in
                 let shiftsOnDay = dayInfo.dateISO.flatMap { shiftsByDate[$0] } ?? []
                 let isToday = dayInfo.dateISO == todayISO()
+                let isHighlighted = dayInfo.dateISO.map { highlightDates.contains($0) } ?? false
 
                 CalendarDayCell(
                     dayInfo: dayInfo,
-                    style: isToday ? .today() : .default,
+                    style: cellStyle(isToday: isToday, isHighlighted: isHighlighted),
                     content: cellContent(for: dayInfo, hasShifts: !shiftsOnDay.isEmpty)
                 )
                 .onTapGesture {
@@ -188,6 +195,24 @@ struct SharedShiftsCalendarView: View {
                 }
             }
         }
+    }
+
+    // MARK: - Cell Styling
+
+    private func cellStyle(isToday: Bool, isHighlighted: Bool) -> CalendarCellStyle {
+        // Priority: highlighted > today > default
+        if isHighlighted {
+            return CalendarCellStyle(
+                backgroundColor: Self.deepLinkHighlightColor.opacity(0.2),
+                borderColor: Self.deepLinkHighlightColor,
+                borderWidth: 2.5,
+                dayNumberColor: .tidexTextPrimary
+            )
+        }
+        if isToday {
+            return .today()
+        }
+        return .default
     }
 
     // MARK: - Cell Content
