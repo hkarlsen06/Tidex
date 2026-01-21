@@ -74,6 +74,7 @@ final class SharedMonthContext: ObservableObject {
     /// Navigate to the previous month
     func goToPreviousMonth() {
         navigationDirection = .previous
+        SoundManager.shared.play("tap")
 
         if displayMonth == 1 {
             displayMonth = 12
@@ -86,6 +87,7 @@ final class SharedMonthContext: ObservableObject {
     /// Navigate to the next month
     func goToNextMonth() {
         navigationDirection = .next
+        SoundManager.shared.play("tap")
 
         if displayMonth == 12 {
             displayMonth = 1

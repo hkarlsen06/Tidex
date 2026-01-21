@@ -61,6 +61,7 @@
 		114F0F0D2F20BF5900B587F0 /* CalendarDayCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0F052F20BF5900B587F0 /* CalendarDayCell.swift */; };
 		114F0F0E2F20BF5900B587F0 /* CalendarDayInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0F062F20BF5900B587F0 /* CalendarDayInfo.swift */; };
 		114F0F0F2F20BF5900B587F0 /* CalendarGridHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0F072F20BF5900B587F0 /* CalendarGridHelper.swift */; };
+		114F0F112F20C0EC00B587F0 /* SoundManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0F102F20C0EC00B587F0 /* SoundManager.swift */; };
 		1152D0CB2F01E2A7002FD5ED /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1152D0CA2F01E2A7002FD5ED /* StoreKit.framework */; };
 		11923C192F16B94B0076AFD6 /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = 11923C182F16B94B0076AFD6 /* Auth */; };
 		11923C1B2F16B94B0076AFD6 /* Functions in Frameworks */ = {isa = PBXBuildFile; productRef = 11923C1A2F16B94B0076AFD6 /* Functions */; };
@@ -334,6 +335,7 @@
 		114F0F072F20BF5900B587F0 /* CalendarGridHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarGridHelper.swift; sourceTree = "<group>"; };
 		114F0F082F20BF5900B587F0 /* CalendarViewModeToggle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarViewModeToggle.swift; sourceTree = "<group>"; };
 		114F0F092F20BF5900B587F0 /* CalendarWeekdayHeader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarWeekdayHeader.swift; sourceTree = "<group>"; };
+		114F0F102F20C0EC00B587F0 /* SoundManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundManager.swift; sourceTree = "<group>"; };
 		1152D0C82F01BB9B002FD5ED /* App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = App.entitlements; sourceTree = "<group>"; };
 		1152D0CA2F01E2A7002FD5ED /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 		119D1CB72F16E46300EC7072 /* AppCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppCoordinator.swift; sourceTree = "<group>"; };
@@ -1105,6 +1107,7 @@
 		11A1970C2F1D6F630030E524 /* Managers */ = {
 			isa = PBXGroup;
 			children = (
+				114F0F102F20C0EC00B587F0 /* SoundManager.swift */,
 				114F0EAE2F202EEA00B587F0 /* AppearanceManager.swift */,
 				11A1970B2F1D6F630030E524 /* CelebrationManager.swift */,
 			);
@@ -1721,6 +1724,7 @@
 				1128F3B72F18729100702359 /* SyncTypes.swift in Sources */,
 				1128F3B82F18729100702359 /* LocalStore.swift in Sources */,
 				1128F3B92F18729100702359 /* LocalWageSnapshot.swift in Sources */,
+				114F0F112F20C0EC00B587F0 /* SoundManager.swift in Sources */,
 				11F4301E2F1A957C002B1FBE /* TermsVersion.swift in Sources */,
 				1128F3BA2F18729100702359 /* RecurringShiftsRepository.swift in Sources */,
 				1128F3BB2F18729100702359 /* LocalUserShift.swift in Sources */,

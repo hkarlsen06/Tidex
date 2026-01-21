@@ -627,6 +627,7 @@ struct ShiftsView: View {
                                 monthNumber: viewModel.displayMonth,
                                 currency: viewModel.currency,
                                 showEarnings: true,
+                                phase: transitionPhase,
                                 onDayTapped: { dateISO, shiftsOnDay in
                                     viewModel.handleDayTapped(dateISO: dateISO, shiftsOnDay: shiftsOnDay)
                                 },
