@@ -308,6 +308,11 @@ struct AnimatedMonthHeader: View {
     // Width for return button + spacing + nav button
     private let fullRightWidth: CGFloat = 80  // 36 + 8 + 36
 
+    /// Short year format (2 digits) - e.g., "26" for 2026
+    private var shortYear: String {
+        String(format: "%02d", year % 100)
+    }
+
     var body: some View {
         Group {
             if config.isCompact {
@@ -335,14 +340,12 @@ struct AnimatedMonthHeader: View {
             navigationButton(icon: "chevron.left", action: onPrevious)
 
             // Month and Year - vertically stacked, centered, takes available space
-            VStack(spacing: 0) {
-                Text(monthName.capitalized)
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(.tidexTextPrimary)
-
-                Text(String(year))
-                    .font(.system(size: 13, weight: .regular))
-                    .foregroundColor(.tidexTextSecondary)
+            // Shows full year when space allows, truncates to 2 digits if needed
+            ViewThatFits(in: .horizontal) {
+                // Try full year first
+                compactMonthYearLabel(yearText: String(year))
+                // Fall back to short year if needed
+                compactMonthYearLabel(yearText: shortYear)
             }
             .frame(maxWidth: .infinity)
             .id("month-\(phase.id)")
@@ -394,14 +397,12 @@ struct AnimatedMonthHeader: View {
 
             // Center section: Month and Year (horizontal)
             // Naturally centers in available space between left and right sections
-            HStack(spacing: 6) {
-                Text(monthName.capitalized)
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.tidexTextPrimary)
-
-                Text(String(year))
-                    .font(.system(size: 16, weight: .regular))
-                    .foregroundColor(.tidexTextSecondary)
+            // Shows full year when space allows, truncates to 2 digits if needed
+            ViewThatFits(in: .horizontal) {
+                // Try full year first
+                monthYearLabel(yearText: String(year))
+                // Fall back to short year if needed
+                monthYearLabel(yearText: shortYear)
             }
             .id("month-\(phase.id)")
             .transition(textTransition)
@@ -449,6 +450,40 @@ struct AnimatedMonthHeader: View {
     }
 
     // MARK: - Shared Helpers
+
+    /// Reusable month/year label for ViewThatFits (default layout - horizontal)
+    @ViewBuilder
+    private func monthYearLabel(yearText: String) -> some View {
+        HStack(spacing: 6) {
+            Text(monthName.capitalized)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(.tidexTextPrimary)
+                .lineLimit(1)
+                .fixedSize()
+
+            Text(yearText)
+                .font(.system(size: 16, weight: .regular))
+                .foregroundColor(.tidexTextSecondary)
+                .fixedSize()
+        }
+    }
+
+    /// Reusable month/year label for ViewThatFits (compact layout - vertical)
+    @ViewBuilder
+    private func compactMonthYearLabel(yearText: String) -> some View {
+        VStack(spacing: 0) {
+            Text(monthName.capitalized)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundColor(.tidexTextPrimary)
+                .lineLimit(1)
+                .fixedSize()
+
+            Text(yearText)
+                .font(.system(size: 13, weight: .regular))
+                .foregroundColor(.tidexTextSecondary)
+                .fixedSize()
+        }
+    }
 
     private func showMonthPicker() {
         // Bounce animation on tap
