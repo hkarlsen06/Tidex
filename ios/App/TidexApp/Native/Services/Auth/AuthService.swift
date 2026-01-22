@@ -322,11 +322,21 @@ final class AuthService: ObservableObject {
 
     // MARK: - Sign Out
 
-    /// Sign out the current user
+    /// Sign out the current user from this device only (local scope)
+    /// Other devices will remain logged in
     func signOut() async throws {
         isLoading = true
         defer { isLoading = false }
 
-        try await supabase.auth.signOut()
+        try await supabase.auth.signOut(scope: .local)
+    }
+
+    /// Sign out the current user from ALL devices (global scope)
+    /// This invalidates all refresh tokens across all devices
+    func signOutGlobal() async throws {
+        isLoading = true
+        defer { isLoading = false }
+
+        try await supabase.auth.signOut(scope: .global)
     }
 }

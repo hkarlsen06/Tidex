@@ -5,9 +5,19 @@ import type { MouseEvent as ReactMouseEvent } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Settings, LogOut, Loader2 } from "lucide-react";
+import { Settings, LogOut, Loader2, Globe } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
 import { LocaleToggle } from "./LocaleToggle";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "./AlertDialog";
 import { cn } from "@/lib/utils";
 import { useNavigationFeedback } from "./navigation-feedback";
 import { useTranslations } from "@/lib/i18n/client";
@@ -27,16 +37,32 @@ export function UserMenu({
   const pathname = usePathname();
   const { navigate } = useNavigationFeedback();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [isLoggingOutGlobal, setIsLoggingOutGlobal] = useState(false);
+  const [showLogoutEverywhereDialog, setShowLogoutEverywhereDialog] = useState(false);
 
   // Logout via route handler that clears cookies and returns HTML with client-side redirect
   // Can't use router.push() for route handlers - causes RSC payload errors
   const handleLogout = useCallback((event: ReactMouseEvent<HTMLAnchorElement>) => {
     event.preventDefault();
-    if (isLoggingOut) return;
+    if (isLoggingOut || isLoggingOutGlobal) return;
 
     setIsLoggingOut(true);
     window.location.href = "/logout";
-  }, [isLoggingOut]);
+  }, [isLoggingOut, isLoggingOutGlobal]);
+
+  // Open confirmation dialog for global logout
+  const handleLogoutEverywhereClick = useCallback((event: ReactMouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    if (isLoggingOut || isLoggingOutGlobal) return;
+    setShowLogoutEverywhereDialog(true);
+  }, [isLoggingOut, isLoggingOutGlobal]);
+
+  // Execute global logout after confirmation
+  const handleLogoutEverywhereConfirm = useCallback(() => {
+    setIsLoggingOutGlobal(true);
+    setShowLogoutEverywhereDialog(false);
+    window.location.href = "/logout-global";
+  }, []);
 
   // Hide locale toggle on native - iOS uses system language preference
   const isNative = useSyncExternalStore(
@@ -168,11 +194,11 @@ export function UserMenu({
             onClick={handleLogout}
             prefetch={false}
             role="menuitem"
-            aria-disabled={isLoggingOut}
-            tabIndex={isLoggingOut ? -1 : undefined}
+            aria-disabled={isLoggingOut || isLoggingOutGlobal}
+            tabIndex={isLoggingOut || isLoggingOutGlobal ? -1 : undefined}
             className={cn(
               "flex items-center gap-3 px-4 py-3.5 text-base text-error hover:bg-error-subtle",
-              isLoggingOut && "cursor-not-allowed opacity-70 hover:bg-transparent"
+              (isLoggingOut || isLoggingOutGlobal) && "cursor-not-allowed opacity-70 hover:bg-transparent"
             )}
           >
             {isLoggingOut ? (
@@ -182,8 +208,48 @@ export function UserMenu({
             )}
             {t.userMenu.logout}
           </Link>
+          <button
+            type="button"
+            onClick={handleLogoutEverywhereClick}
+            role="menuitem"
+            aria-disabled={isLoggingOut || isLoggingOutGlobal}
+            tabIndex={isLoggingOut || isLoggingOutGlobal ? -1 : undefined}
+            className={cn(
+              "flex w-full items-center gap-3 px-4 py-3.5 text-base text-text-secondary hover:bg-accent text-left",
+              (isLoggingOut || isLoggingOutGlobal) && "cursor-not-allowed opacity-70 hover:bg-transparent"
+            )}
+            disabled={isLoggingOut || isLoggingOutGlobal}
+          >
+            {isLoggingOutGlobal ? (
+              <Loader2 strokeWidth={2} className="h-5 w-5 animate-spin" />
+            ) : (
+              <Globe strokeWidth={2} className="h-5 w-5" />
+            )}
+            {isLoggingOutGlobal ? t.userMenu.logoutEverywhereLoading : t.userMenu.logoutEverywhere}
+          </button>
         </div>
       )}
+
+      {/* Confirmation dialog for "Log out everywhere" */}
+      <AlertDialog open={showLogoutEverywhereDialog} onOpenChange={setShowLogoutEverywhereDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t.userMenu.logoutEverywhereConfirmTitle}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t.userMenu.logoutEverywhereConfirmDescription}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t.userMenu.logoutEverywhereConfirmCancel}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleLogoutEverywhereConfirm}
+              className="bg-error hover:bg-error/90"
+            >
+              {t.userMenu.logoutEverywhereConfirmAction}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

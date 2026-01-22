@@ -75,10 +75,10 @@ export async function GET(
     // Ignore - user may already be logged out
   }
 
-  // Sign out from Supabase with local scope (only clears this client's session)
-  // This allows other devices to remain logged in
+  // Sign out from Supabase with global scope (invalidates ALL refresh tokens across all devices)
+  // This logs the user out from all devices/browsers
   try {
-    await supabase.auth.signOut({ scope: "local" });
+    await supabase.auth.signOut({ scope: "global" });
   } catch {
     // Ignore - user may already be logged out
   }

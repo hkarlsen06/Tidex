@@ -15,6 +15,10 @@ struct SettingsView: View {
     @State private var isAdmin = false
     /// Whether sign out is in progress
     @State private var isSigningOut = false
+    /// Whether global sign out is in progress
+    @State private var isSigningOutGlobal = false
+    /// Whether to show the global sign out confirmation alert
+    @State private var showSignOutEverywhereAlert = false
     /// Navigation path for settings subviews
     @State private var navigationPath = NavigationPath()
 
@@ -139,11 +143,14 @@ struct SettingsView: View {
                     .padding(.horizontal, 16)
                     .padding(.top, 16)
 
-                    // Sign out button
-                    signOutButton
-                        .padding(.horizontal, 16)
-                        .padding(.top, 32)
-                        .padding(.bottom, 40)
+                    // Sign out buttons
+                    VStack(spacing: 12) {
+                        signOutButton
+                        signOutEverywhereButton
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 32)
+                    .padding(.bottom, 40)
                 }
             }
             .background(Color.tidexBackground)
@@ -199,10 +206,24 @@ struct SettingsView: View {
         .task {
             await checkAdminStatus()
         }
+        .alert(
+            localization.string("userMenu.logoutEverywhereConfirmTitle"),
+            isPresented: $showSignOutEverywhereAlert
+        ) {
+            Button(localization.string("userMenu.logoutEverywhereConfirmCancel"), role: .cancel) {}
+            Button(localization.string("userMenu.logoutEverywhereConfirmAction"), role: .destructive) {
+                Task {
+                    await signOutGlobal()
+                }
+            }
+        } message: {
+            Text(localization.string("userMenu.logoutEverywhereConfirmDescription"))
+        }
     }
 
-    // MARK: - Sign Out Button
+    // MARK: - Sign Out Buttons
 
+    /// Sign out from this device only (local scope)
     private var signOutButton: some View {
         Button {
             Task {
@@ -230,7 +251,40 @@ struct SettingsView: View {
             .background(Color.tidexError)
             .cornerRadius(12)
         }
-        .disabled(isSigningOut)
+        .disabled(isSigningOut || isSigningOutGlobal)
+    }
+
+    /// Sign out from ALL devices (global scope)
+    private var signOutEverywhereButton: some View {
+        Button {
+            showSignOutEverywhereAlert = true
+        } label: {
+            HStack(spacing: 12) {
+                if isSigningOutGlobal {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: .tidexTextSecondary))
+                        .frame(width: 20, height: 20)
+                } else {
+                    Image(systemName: "globe")
+                        .font(.system(size: 16, weight: .medium))
+                }
+
+                Text(isSigningOutGlobal
+                     ? localization.string("userMenu.logoutEverywhereLoading")
+                     : localization.string("userMenu.logoutEverywhere"))
+                    .font(.system(size: 16, weight: .semibold))
+            }
+            .foregroundColor(.tidexTextSecondary)
+            .frame(maxWidth: .infinity)
+            .frame(height: Spacing.buttonHeight)
+            .background(Color.tidexSurfacePrimary)
+            .cornerRadius(12)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(Color.tidexBorder, lineWidth: 1)
+            )
+        }
+        .disabled(isSigningOut || isSigningOutGlobal)
     }
 
     // MARK: - Actions
@@ -256,6 +310,13 @@ struct SettingsView: View {
         await coordinator.signOut()
         dismiss()
         isSigningOut = false
+    }
+
+    private func signOutGlobal() async {
+        isSigningOutGlobal = true
+        await coordinator.signOutGlobal()
+        dismiss()
+        isSigningOutGlobal = false
     }
 }
 

@@ -456,8 +456,21 @@ final class AppCoordinator: ObservableObject {
         await signOut()
     }
 
-    /// Sign out the user
+    /// Sign out the user from this device only (local scope)
+    /// Other devices will remain logged in
     func signOut() async {
+        await performSignOut(global: false)
+    }
+
+    /// Sign out the user from ALL devices (global scope)
+    /// This invalidates all refresh tokens across all devices
+    func signOutGlobal() async {
+        await performSignOut(global: true)
+    }
+
+    /// Internal sign out implementation
+    /// - Parameter global: If true, signs out from all devices; if false, only this device
+    private func performSignOut(global: Bool) async {
         // Clear widget storage before sign out
         NativeWidgetStorage.clearWidgetStorage()
 
@@ -476,7 +489,11 @@ final class AppCoordinator: ObservableObject {
         syncCoordinator.resetForUserChange()
 
         do {
-            try await authService.signOut()
+            if global {
+                try await authService.signOutGlobal()
+            } else {
+                try await authService.signOut()
+            }
             // Auth state listener will update appState to .unauthenticated
         } catch {
             // Force state change even if sign out fails
