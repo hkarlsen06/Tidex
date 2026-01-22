@@ -251,6 +251,12 @@ enum AuthStrings {
         "userMenu.settings": "Innstillinger",
         "userMenu.logout": "Logg ut",
         "userMenu.loggingOut": "Logger ut...",
+        "userMenu.logoutEverywhere": "Logg ut overalt",
+        "userMenu.logoutEverywhereLoading": "Logger ut overalt...",
+        "userMenu.logoutEverywhereConfirmTitle": "Logg ut overalt?",
+        "userMenu.logoutEverywhereConfirmDescription": "Dette logger deg ut fra alle enheter, inkludert denne. Du må logge inn igjen på hver enhet.",
+        "userMenu.logoutEverywhereConfirmCancel": "Avbryt",
+        "userMenu.logoutEverywhereConfirmAction": "Logg ut overalt",
 
         // Pull to Refresh
         "pullToRefresh.pullDown": "Dra ned for å oppdatere",
@@ -1191,6 +1197,12 @@ enum AuthStrings {
         "userMenu.settings": "Settings",
         "userMenu.logout": "Log out",
         "userMenu.loggingOut": "Logging out...",
+        "userMenu.logoutEverywhere": "Log out everywhere",
+        "userMenu.logoutEverywhereLoading": "Logging out everywhere...",
+        "userMenu.logoutEverywhereConfirmTitle": "Log out everywhere?",
+        "userMenu.logoutEverywhereConfirmDescription": "This will sign you out from all devices, including this one. You will need to log in again on each device.",
+        "userMenu.logoutEverywhereConfirmCancel": "Cancel",
+        "userMenu.logoutEverywhereConfirmAction": "Log out everywhere",
 
         // Pull to Refresh
         "pullToRefresh.pullDown": "Pull down to refresh",

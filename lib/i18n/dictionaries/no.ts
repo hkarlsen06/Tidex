@@ -97,6 +97,12 @@ export const no = {
     lightMode: 'Lys modus',
     darkMode: 'Mørk modus',
     logout: 'Logg ut',
+    logoutEverywhere: 'Logg ut overalt',
+    logoutEverywhereLoading: 'Logger ut overalt...',
+    logoutEverywhereConfirmTitle: 'Logg ut overalt?',
+    logoutEverywhereConfirmDescription: 'Dette logger deg ut fra alle enheter, inkludert denne. Du må logge inn igjen på hver enhet.',
+    logoutEverywhereConfirmCancel: 'Avbryt',
+    logoutEverywhereConfirmAction: 'Logg ut overalt',
   },
   navigation: {
     back: 'Tilbake',
