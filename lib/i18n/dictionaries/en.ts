@@ -98,6 +98,12 @@ export const en: Dictionary = {
     lightMode: 'Light mode',
     darkMode: 'Dark mode',
     logout: 'Log out',
+    logoutEverywhere: 'Log out everywhere',
+    logoutEverywhereLoading: 'Logging out everywhere...',
+    logoutEverywhereConfirmTitle: 'Log out everywhere?',
+    logoutEverywhereConfirmDescription: 'This will sign you out from all devices, including this one. You will need to log in again on each device.',
+    logoutEverywhereConfirmCancel: 'Cancel',
+    logoutEverywhereConfirmAction: 'Log out everywhere',
   },
   navigation: {
     back: 'Back',
