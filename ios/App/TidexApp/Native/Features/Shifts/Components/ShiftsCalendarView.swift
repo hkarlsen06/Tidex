@@ -182,20 +182,24 @@ struct ShiftsCalendarView: View {
     // MARK: - Body
 
     var body: some View {
+        // Calendar grid is the anchor - header and action bar positioned relative to it
+        // Using overlay with alignment guides to position content outside calendar bounds
         VStack(spacing: 0) {
-            // Header: Month name + Year and Total
-            headerRow
-
-            // Weekday headers
             CalendarWeekdayHeader()
                 .padding(.bottom, 8)
-
-            // Calendar grid with gesture handling
             calendarGrid
+        }
+        .overlay(alignment: .top) {
+            // Header positioned above the calendar
+            headerRow
                 .padding(.bottom, 12)
-
-            // Action bar (view mode toggle or selection actions)
+                .alignmentGuide(.top) { d in d[.bottom] }
+        }
+        .overlay(alignment: .bottom) {
+            // Action bar positioned below the calendar
             actionBar
+                .padding(.top, 12)
+                .alignmentGuide(.bottom) { d in d[.top] }
         }
     }
 
