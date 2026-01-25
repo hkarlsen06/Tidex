@@ -201,17 +201,12 @@ struct ShiftLockScreenWidget: Widget {
 
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: ShiftWidgetProvider()) { entry in
-            if #available(iOS 17.0, *) {
-                ShiftLockScreenWidgetEntryView(entry: entry)
-                    .widgetURL(entry.deepLinkURL)
-                    .containerBackground(for: .widget) {
-                        // Accessory widgets don't have backgrounds
-                        Color.clear
-                    }
-            } else {
-                ShiftLockScreenWidgetEntryView(entry: entry)
-                    .widgetURL(entry.deepLinkURL)
-            }
+            ShiftLockScreenWidgetEntryView(entry: entry)
+                .widgetURL(entry.deepLinkURL)
+                .containerBackground(for: .widget) {
+                    // Accessory widgets don't have backgrounds
+                    Color.clear
+                }
         }
         .configurationDisplayName(displayName)
         .description(widgetDescription)
@@ -248,16 +243,11 @@ struct ShiftLockScreenWidgetEntryView: View {
 private extension View {
     @ViewBuilder
     func widgetAccentableIfAvailable(_ enabled: Bool = true) -> some View {
-        if #available(iOS 17.0, *) {
-            widgetAccentable(enabled)
-        } else {
-            self
-        }
+        widgetAccentable(enabled)
     }
 }
 
 #if DEBUG
-@available(iOS 17.0, *)
 #Preview("Circular", as: .accessoryCircular) {
     ShiftLockScreenWidget()
 } timeline: {
@@ -327,7 +317,6 @@ private extension View {
     ShiftWidgetEntry.empty(locale: "no")
 }
 
-@available(iOS 17.0, *)
 #Preview("Rectangular", as: .accessoryRectangular) {
     ShiftLockScreenWidget()
 } timeline: {
@@ -351,7 +340,6 @@ private extension View {
     ShiftWidgetEntry.empty(locale: "no")
 }
 
-@available(iOS 17.0, *)
 #Preview("Inline", as: .accessoryInline) {
     ShiftLockScreenWidget()
 } timeline: {

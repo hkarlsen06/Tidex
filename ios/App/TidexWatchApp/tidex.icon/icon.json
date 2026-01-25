@@ -1,0 +1,90 @@
+{
+  "fill" : "automatic",
+  "groups" : [
+    {
+      "blend-mode" : "normal",
+      "blur-material" : null,
+      "layers" : [
+        {
+          "blend-mode-specializations" : [
+            {
+              "appearance" : "dark",
+              "value" : "normal"
+            }
+          ],
+          "fill-specializations" : [
+            {
+              "value" : {
+                "linear-gradient" : [
+                  "display-p3:0.46867,0.78136,1.00000,1.00000",
+                  "display-p3:0.44310,0.17082,0.88701,1.00000"
+                ],
+                "orientation" : {
+                  "start" : {
+                    "x" : 0.1173620810055866,
+                    "y" : 0
+                  },
+                  "stop" : {
+                    "x" : 0.5,
+                    "y" : 0.9192755424954792
+                  }
+                }
+              }
+            },
+            {
+              "appearance" : "dark",
+              "value" : {
+                "linear-gradient" : [
+                  "display-p3:0.50335,0.89951,0.98512,1.00000",
+                  "display-p3:0.44310,0.17082,0.88701,1.00000"
+                ],
+                "orientation" : {
+                  "start" : {
+                    "x" : 0.1173620810055866,
+                    "y" : 0
+                  },
+                  "stop" : {
+                    "x" : 0.5,
+                    "y" : 0.9192755424954792
+                  }
+                }
+              }
+            },
+            {
+              "appearance" : "tinted",
+              "value" : {
+                "solid" : "display-p3:0.36117,0.49446,0.96662,1.00000"
+              }
+            }
+          ],
+          "glass" : true,
+          "image-name" : "logo-outline-white.svg",
+          "name" : "logo-outline-white",
+          "position" : {
+            "scale" : 1.26,
+            "translation-in-points" : [
+              0,
+              11
+            ]
+          }
+        }
+      ],
+      "lighting" : "individual",
+      "shadow" : {
+        "kind" : "layer-color",
+        "opacity" : 0.5
+      },
+      "specular" : true,
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.5
+      }
+    }
+  ],
+  "supported-platforms" : {
+    "circles" : [
+      "watchOS"
+    ],
+    "squares" : "shared"
+  }
+}

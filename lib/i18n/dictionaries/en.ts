@@ -354,7 +354,7 @@ export const en: Dictionary = {
         monthlyEarnings: 'Earnings this month',
         afterTax: 'After tax',
         beforeTax: 'Before tax',
-        fromPreviousMonth: 'from last month',
+        fromPreviousMonth: 'compared to previous month',
         monthlyProgress: 'Monthly progress',
         salaryComposition: 'Salary composition',
         thisWeek: 'This week',

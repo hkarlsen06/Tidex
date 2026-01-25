@@ -1,8 +1,8 @@
 /**
  * Capacitor In-App Purchase Wrapper
  *
- * Provides a unified interface for iOS StoreKit 2 purchases via Capacitor.
- * Only loads the native plugin on iOS platform.
+ * Provides a unified interface for iOS StoreKit 2 and Android Google Play Billing
+ * purchases via Capacitor. Only loads the native plugin on iOS/Android platforms.
  *
  * This module handles:
  * - Product listing
@@ -89,8 +89,9 @@ export function checkPluginAvailability(): { available: boolean; details: string
   if (!isNativePlatform()) {
     return { available: false, details: "Not running on native platform" };
   }
-  if (getPlatform() !== "ios") {
-    return { available: false, details: `Platform is ${getPlatform()}, not iOS` };
+  const platform = getPlatform();
+  if (platform !== "ios" && platform !== "android") {
+    return { available: false, details: `Platform is ${platform}, not iOS or Android` };
   }
   if (NativePurchases) {
     return { available: true, details: "Plugin available" };
@@ -99,8 +100,9 @@ export function checkPluginAvailability(): { available: boolean; details: string
 }
 
 function getPlugin() {
-  if (!isNativePlatform() || getPlatform() !== "ios") {
-    throw new Error("Native purchases only available on iOS");
+  const platform = getPlatform();
+  if (!isNativePlatform() || (platform !== "ios" && platform !== "android")) {
+    throw new Error("Native purchases only available on iOS and Android");
   }
   return NativePurchases;
 }
@@ -111,12 +113,13 @@ function getPlugin() {
  * Check if IAP is available on the current platform
  */
 export function isIAPAvailable(): boolean {
-  return isNativePlatform() && getPlatform() === "ios";
+  const platform = getPlatform();
+  return isNativePlatform() && (platform === "ios" || platform === "android");
 }
 
 /**
  * Initialize the IAP plugin
- * Should be called once at app startup on iOS
+ * Should be called once at app startup on iOS/Android
  * Note: @capgo/native-purchases doesn't require explicit initialization,
  * but we check if billing is supported as a validation step.
  */
@@ -648,15 +651,20 @@ async function verifyPurchaseWithServer(
 }
 
 /**
- * Open the iOS subscription management page
+ * Open the subscription management page for the current platform
  */
 export async function openSubscriptionManagement(): Promise<void> {
-  // iOS deep link to subscription management
+  const platform = getPlatform();
+
+  // Platform-specific deep links
   const iosDeepLink = "https://apps.apple.com/account/subscriptions";
+  const androidDeepLink = "https://play.google.com/store/account/subscriptions";
+
+  const targetUrl = platform === "android" ? androidDeepLink : iosDeepLink;
 
   if (!isIAPAvailable()) {
     // On web, open in new tab
-    window.open(iosDeepLink, "_blank");
+    window.open(targetUrl, "_blank");
     return;
   }
 
@@ -672,10 +680,10 @@ export async function openSubscriptionManagement(): Promise<void> {
     // Fallback: use Capacitor Browser plugin which properly handles external URLs
     try {
       const { Browser } = await import("@capacitor/browser");
-      await Browser.open({ url: iosDeepLink });
+      await Browser.open({ url: targetUrl });
     } catch {
       // Last resort fallback
-      window.location.href = iosDeepLink;
+      window.location.href = targetUrl;
     }
   }
 }

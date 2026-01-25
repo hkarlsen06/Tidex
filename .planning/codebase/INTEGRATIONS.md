@@ -53,11 +53,9 @@
   - Entry points: `data-access/auth.ts` (verifySession, getSession)
 
 **OAuth Integrations:**
-- Google OAuth - Social sign-in
-  - SDK: `@capgo/capacitor-social-login` v8.2.13
+- Google OAuth - Social sign-in (via Supabase Auth)
   - Scopes: email, profile
-- Apple OAuth - iOS social sign-in
-  - SDK: `@capgo/capacitor-social-login` v8.2.13
+- Apple OAuth - iOS social sign-in (via Supabase Auth + native Sign in with Apple)
   - Scopes: email, name
 
 ## Monitoring & Observability
@@ -128,7 +126,7 @@
 
 **Service:**
 - Firebase Cloud Messaging - Push notification delivery
-  - SDK: `@capacitor-firebase/messaging` v8.0.1
+  - iOS: Native Firebase SDK integration
   - Edge Function: `supabase/functions/send-push-notifications/index.ts`
   - Scheduling: pg_cron every minute for reminders
 
@@ -151,19 +149,18 @@
   - Configuration: `NEXT_PUBLIC_TURNSTILE_SITE_KEY` env var
   - Usage: Login, signup, password reset forms
 
-## Mobile Integration
+## iOS Native App
 
-**Capacitor Plugins:**
-- `@capacitor/app` v8.0.0 - App lifecycle, deep links
-- `@capacitor/browser` v8.0.0 - In-app browser, URL handling
-- `@capacitor/device` v8.0.0 - Device information
-- `@capacitor/haptics` v8.0.0 - Haptic feedback
-- `@capacitor/ios` v8.0.0 - iOS-specific features
-- `@capgo/native-purchases` v8.0.12 - In-app purchases
+**Technology:**
+- SwiftUI - Native UI framework
+- Supabase Swift SDK - Database and authentication
+- Firebase iOS SDK - Push notifications (FCM)
+- StoreKit 2 - In-app purchases
 
 **Configuration:**
-- `capacitor.config.ts` - App ID: `no.tidex.app`
+- App ID: `no.tidex.app`
 - Deep linking: Universal Links via `.well-known/apple-app-site-association`
+- Source: `ios/App/TidexApp/` (fully native, no WebView)
 
 ---
 
