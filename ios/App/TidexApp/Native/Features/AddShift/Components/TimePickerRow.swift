@@ -164,14 +164,6 @@ struct TimeRangePicker: View {
             )
         }
         .id(scrollId)
-        .onChange(of: focusedField) { _, newValue in
-            if newValue != nil, let proxy = scrollProxy, let id = scrollId {
-                withAnimation(.easeInOut(duration: 0.3)) {
-                    // Use center anchor to position above the floating glass card
-                    proxy.scrollTo(id, anchor: .center)
-                }
-            }
-        }
     }
 }
 
@@ -214,13 +206,15 @@ struct TimePickerRow: View {
 // MARK: - Preview
 
 #Preview {
-    VStack(spacing: 16) {
-        TimeRangePicker(
-            startTime: .constant(nil),
-            endTime: .constant(nil)
-        )
+    NavigationStack {
+        VStack(spacing: 16) {
+            TimeRangePicker(
+                startTime: .constant(nil),
+                endTime: .constant(nil)
+            )
+        }
+        .padding()
+        .background(Color.tidexBackground)
     }
-    .padding()
-    .background(Color.tidexBackground)
     .environment(\.localization, LocalizationManager.shared)
 }
