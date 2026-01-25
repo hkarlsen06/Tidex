@@ -56,9 +56,13 @@ User locale is stored in: `auth.users.raw_user_meta_data->>'locale'`
 | Value | Language |
 |-------|----------|
 | `'en'` | English (default if not set) |
-| `'no'` | Norwegian |
+| `'no'` | Norwegian (generic) |
+| `'nb'` | Norwegian Bokmål |
+| `'nn'` | Norwegian Nynorsk |
 
 **Always use:** `COALESCE(raw_user_meta_data->>'locale', 'en')` when fetching locale.
+
+**Important:** When checking for Norwegian, always check for all three codes: `'no'`, `'nb'`, and `'nn'`.
 
 ---
 

@@ -33,7 +33,7 @@ final class ScreenshotNotificationService {
         if let lastReported = lastReportedTimestamps[sharerId] {
             let elapsed = Date().timeIntervalSince(lastReported)
             if elapsed < cooldownInterval {
-                logger.info("Screenshot notification skipped - cooldown active (\(Int(cooldownInterval - elapsed))s remaining)")
+                logger.info("Screenshot notification skipped - cooldown active (\(Int(self.cooldownInterval - elapsed))s remaining)")
                 return
             }
         }
