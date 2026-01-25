@@ -25,6 +25,7 @@ A Next.js 16 application for tracking work shifts and calculating wages with Sup
 ## Available Skills
 
 Use these skills for specialized tasks:
+- `ios` - Start iOS development mode for working on the native Tidex iOS app
 - `troubleshoot-supabase-cookies` - For "Refresh Token Not Found" errors
 - `add-shadcn-component` - For adding UI components
 - `motion-react` - For adding animations
