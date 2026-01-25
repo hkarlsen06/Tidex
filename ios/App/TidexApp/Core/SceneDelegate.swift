@@ -6,6 +6,9 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     var window: UIWindow?
 
+    /// Privacy blur view shown when app enters app switcher
+    private var privacyBlurView: UIVisualEffectView?
+
     func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
         // Use this method to optionally configure and attach the UIWindow to the provided UIWindowScene.
         guard let windowScene = (scene as? UIWindowScene) else { return }
@@ -53,10 +56,15 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         Task { @MainActor in
             AppearanceManager.shared.applyToWindows()
         }
+
+        // Remove privacy blur when returning to app
+        hidePrivacyBlur()
     }
 
     func sceneWillResignActive(_ scene: UIScene) {
         // Called when the scene will move from an active state to an inactive state.
+        // Show privacy blur when entering app switcher (like Snapchat)
+        showPrivacyBlur()
     }
 
     func sceneWillEnterForeground(_ scene: UIScene) {
@@ -158,5 +166,26 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         // Parse the path and handle accordingly
         // For auth-related paths, the Supabase SDK handles automatically
         handleDeepLink(url)
+    }
+
+    // MARK: - Privacy Blur
+
+    /// Shows a blur overlay to hide sensitive content in app switcher
+    private func showPrivacyBlur() {
+        guard let window = window, privacyBlurView == nil else { return }
+
+        let blurEffect = UIBlurEffect(style: .systemThinMaterial)
+        let blurView = UIVisualEffectView(effect: blurEffect)
+        blurView.frame = window.bounds
+        blurView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+
+        window.addSubview(blurView)
+        privacyBlurView = blurView
+    }
+
+    /// Removes the privacy blur overlay
+    private func hidePrivacyBlur() {
+        privacyBlurView?.removeFromSuperview()
+        privacyBlurView = nil
     }
 }
