@@ -115,7 +115,7 @@ export async function GET(request: NextRequest) {
     const recipientIds = (outgoingShares || []).map((s: any) => s.viewer_id);
     const allUserIds = [...new Set([...sharerIds, ...recipientIds])];
 
-    // Fetch user profiles for all friends
+    // Fetch user profiles for all friends using direct RPC query
     let userProfiles: Map<
       string,
       {
@@ -128,21 +128,23 @@ export async function GET(request: NextRequest) {
     > = new Map();
 
     if (allUserIds.length > 0) {
-      // Fetch from auth.users
-      const { data: usersData, error: usersError } =
-        await adminClient.auth.admin.listUsers();
+      // Fetch user data via RPC (no pagination issues)
+      const { data: usersData, error: usersError } = await adminClient.rpc(
+        "get_users_by_ids",
+        { user_ids: allUserIds }
+      );
 
       if (usersError) {
         logger.error("Failed to fetch user profiles:", usersError);
       } else {
         const usersMap = new Map(
-          usersData.users.map((u) => [
+          (usersData || []).map((u: any) => [
             u.id,
             {
               email: u.email || null,
               phone: u.phone || null,
-              firstName: u.user_metadata?.firstName || u.user_metadata?.full_name || null,
-              oauthAvatarUrl: u.user_metadata?.avatar_url || null,
+              firstName: u.first_name || null,
+              oauthAvatarUrl: u.oauth_avatar_url || null,
             },
           ])
         );

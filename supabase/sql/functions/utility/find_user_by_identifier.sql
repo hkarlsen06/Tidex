@@ -36,3 +36,36 @@ REVOKE ALL ON FUNCTION public.find_user_by_phone(text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.find_user_by_phone(text) FROM anon;
 REVOKE ALL ON FUNCTION public.find_user_by_phone(text) FROM authenticated;
 GRANT EXECUTE ON FUNCTION public.find_user_by_phone(text) TO service_role;
+
+-- Efficiently fetch user data for a list of user IDs
+-- Returns basic profile info needed for friends list
+CREATE OR REPLACE FUNCTION public.get_users_by_ids(user_ids uuid[])
+RETURNS TABLE (
+  id uuid,
+  email text,
+  phone text,
+  first_name text,
+  oauth_avatar_url text
+)
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+  SELECT
+    u.id,
+    u.email,
+    u.phone,
+    COALESCE(
+      u.raw_user_meta_data->>'firstName',
+      u.raw_user_meta_data->>'full_name'
+    ) as first_name,
+    u.raw_user_meta_data->>'avatar_url' as oauth_avatar_url
+  FROM auth.users u
+  WHERE u.id = ANY(user_ids);
+$$;
+
+-- Grant execute to service role only
+REVOKE ALL ON FUNCTION public.get_users_by_ids(uuid[]) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.get_users_by_ids(uuid[]) FROM anon;
+REVOKE ALL ON FUNCTION public.get_users_by_ids(uuid[]) FROM authenticated;
+GRANT EXECUTE ON FUNCTION public.get_users_by_ids(uuid[]) TO service_role;
