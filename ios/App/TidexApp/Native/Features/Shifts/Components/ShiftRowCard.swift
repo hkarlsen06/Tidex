@@ -54,9 +54,9 @@ struct ShiftRowCard: View {
         formatter.dateFormat = "EEEE"
         let dayName = formatter.string(from: date).capitalized
 
-        // Get day number
+        // Get day number (with dot suffix for Norwegian)
         formatter.dateFormat = "d"
-        let dayNumber = formatter.string(from: date)
+        let dayNumber = formatter.string(from: date) + (isNorwegian ? "." : "")
 
         // Get month name (short)
         formatter.dateFormat = "MMM"
