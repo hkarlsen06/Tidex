@@ -13,6 +13,9 @@ struct PlanCard: View {
 
     @Environment(\.localization) private var localization
 
+    /// Local state to provide immediate feedback on tap, preventing double-tap issues
+    @State private var isSubscribeTapped = false
+
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             // Header with tier name and badge
@@ -51,8 +54,12 @@ struct PlanCard: View {
 
             // Subscribe button
             if !isCurrentPlan {
-                Button(action: onSubscribe) {
-                    if isPurchasing {
+                Button(action: {
+                    // Set local state immediately for instant feedback (prevents double-tap)
+                    isSubscribeTapped = true
+                    onSubscribe()
+                }) {
+                    if isPurchasing || isSubscribeTapped {
                         ProgressView()
                             .progressViewStyle(CircularProgressViewStyle(tint: .white))
                             .frame(maxWidth: .infinity)
@@ -66,7 +73,14 @@ struct PlanCard: View {
                 .foregroundColor(.white)
                 .background(product != nil ? tierColor : Color.tidexTextMuted)
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                .disabled(product == nil || isPurchasing)
+                .disabled(product == nil || isPurchasing || isSubscribeTapped)
+                .onChange(of: isPurchasing) { _, newValue in
+                    // Reset local tap state when purchase state changes
+                    if !newValue {
+                        isSubscribeTapped = false
+                    }
+                }
+                .sensoryFeedback(.impact(flexibility: .soft), trigger: isSubscribeTapped)
             }
         }
         .padding(20)
