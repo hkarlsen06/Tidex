@@ -128,13 +128,23 @@ export async function POST(request: NextRequest) {
 }
 
 /**
+ * Check if a locale is Norwegian (handles variants like no-NO, nb-NO, nn-NO)
+ */
+function isNorwegian(locale: string | undefined): boolean {
+  if (!locale) return false;
+  const l = locale.toLowerCase();
+  return l === "no" || l === "nb" || l === "nn" ||
+    l.startsWith("no-") || l.startsWith("nb-") || l.startsWith("nn-");
+}
+
+/**
  * Build localized notification message for screenshot event
  */
 function buildScreenshotMessage(
   screenshotterName: string,
   locale: string
 ): { title: string; body: string } {
-  if (locale === "no" || locale === "nb" || locale === "nn") {
+  if (isNorwegian(locale)) {
     return {
       title: "Skjermbilde tatt",
       body: `${screenshotterName} tok et skjermbilde av vaktene dine`,
