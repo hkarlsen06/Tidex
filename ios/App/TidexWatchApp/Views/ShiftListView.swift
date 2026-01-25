@@ -31,7 +31,12 @@ struct ShiftListView: View {
             // User's shift section
             if let userShift = store.userShift {
                 Section(store.myShiftTitle) {
-                    ShiftRowView(shift: userShift, isCurrentUser: true, locale: store.locale)
+                    ShiftRowView(
+                        shift: userShift,
+                        isCurrentUser: true,
+                        locale: store.locale,
+                        isRefreshing: connectivity.isRefreshing
+                    )
                 }
             }
 
@@ -39,7 +44,12 @@ struct ShiftListView: View {
             if !store.friendShifts.isEmpty {
                 Section(store.friendsTitle) {
                     ForEach(store.friendShifts) { shift in
-                        ShiftRowView(shift: shift, isCurrentUser: false, locale: store.locale)
+                        ShiftRowView(
+                            shift: shift,
+                            isCurrentUser: false,
+                            locale: store.locale,
+                            isRefreshing: connectivity.isRefreshing
+                        )
                     }
                 }
             }

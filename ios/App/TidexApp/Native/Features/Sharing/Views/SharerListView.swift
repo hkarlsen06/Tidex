@@ -12,6 +12,7 @@ struct SharerListView: View {
     let shiftPreviews: [String: SharerShiftPreview]
     let isLoading: Bool
     let isLoadingPreviews: Bool
+    let isRefreshing: Bool
     let onSelectSharer: (SharedUser) -> Void
 
     @Environment(\.localization) private var localization
@@ -127,6 +128,7 @@ struct SharerListView: View {
                     sharer: sharer,
                     preview: shiftPreviews[sharer.id],
                     isSelected: selectedSharer?.id == sharer.id,
+                    isRefreshing: isRefreshing,
                     onTap: {
                         onSelectSharer(sharer)
                     }
@@ -170,6 +172,7 @@ struct SharerListView: View {
         shiftPreviews: [:],
         isLoading: false,
         isLoadingPreviews: false,
+        isRefreshing: false,
         onSelectSharer: { _ in }
     )
     .background(Color.tidexBackground)
