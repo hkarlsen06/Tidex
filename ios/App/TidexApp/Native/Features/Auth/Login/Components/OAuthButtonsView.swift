@@ -1,21 +1,21 @@
+import AuthenticationServices
 import SwiftUI
 
 /// OAuth sign-in buttons for Google and Apple
+/// Uses native SignInWithAppleButton for the official iOS look
 struct OAuthButtonsView: View {
     let onGoogleTap: () -> Void
     let onAppleTap: () -> Void
     var isLoading: Bool = false
 
+    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.localization) private var localization
 
     var body: some View {
         VStack(spacing: 12) {
-            // Apple Sign-In Button
-            AppleSignInButton(
-                title: localization.string("oauth.continueWithApple"),
-                action: onAppleTap,
-                isLoading: isLoading
-            )
+            // Native Apple Sign-In Button
+            NativeAppleSignInButton(action: onAppleTap, isLoading: isLoading)
+                .frame(height: 50)
 
             // Google Sign-In Button
             GoogleSignInButton(
@@ -27,39 +27,36 @@ struct OAuthButtonsView: View {
     }
 }
 
-// MARK: - Apple Sign-In Button
+// MARK: - Native Apple Sign-In Button
 
-private struct AppleSignInButton: View {
-    let title: String
+/// Wrapper around the official SignInWithAppleButton
+private struct NativeAppleSignInButton: View {
     let action: () -> Void
     var isLoading: Bool = false
 
-    var body: some View {
-        Button {
-            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-            action()
-        } label: {
-            HStack(spacing: 12) {
-                Image(systemName: "apple.logo")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundColor(.tidexTextPrimary)
+    @Environment(\.colorScheme) private var colorScheme
 
-                Text(title)
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.tidexTextPrimary)
-            }
-            .frame(maxWidth: .infinity)
-            .frame(height: Spacing.buttonHeight)
-            .background(Color.tidexSurfaceSecondary)
-            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .stroke(Color.tidexBorder, lineWidth: 1)
-            )
+    var body: some View {
+        SignInWithAppleButton(.continue) { _ in
+            // The request configuration is handled elsewhere
+        } onCompletion: { _ in
+            // We ignore this - actual auth is handled by the action
         }
-        .buttonStyle(SnappyButtonStyle())
+        .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .disabled(isLoading)
         .opacity(isLoading ? 0.6 : 1)
+        .allowsHitTesting(false) // Disable built-in tap handling
+        .overlay {
+            // Invisible button that triggers our custom action
+            Button {
+                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                action()
+            } label: {
+                Color.clear
+            }
+            .disabled(isLoading)
+        }
     }
 }
 
@@ -69,6 +66,8 @@ private struct GoogleSignInButton: View {
     let title: String
     let action: () -> Void
     var isLoading: Bool = false
+
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         Button {
@@ -80,17 +79,13 @@ private struct GoogleSignInButton: View {
                     .frame(width: 18, height: 18)
 
                 Text(title)
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.tidexTextPrimary)
+                    .font(.system(size: 19, weight: .medium))
+                    .foregroundColor(colorScheme == .dark ? .black : .white)
             }
             .frame(maxWidth: .infinity)
-            .frame(height: Spacing.buttonHeight)
-            .background(Color.tidexSurfaceSecondary)
+            .frame(height: 50)
+            .background(colorScheme == .dark ? Color.white : Color.black)
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .stroke(Color.tidexBorder, lineWidth: 1)
-            )
         }
         .buttonStyle(SnappyButtonStyle())
         .disabled(isLoading)
@@ -261,18 +256,6 @@ private struct GoogleRedPath: Shape {
             control2: CGPoint(x: 0.36652 * w, y: 0.19267 * h)
         )
         return path
-    }
-}
-
-// MARK: - Snappy Button Style
-
-/// Button style with immediate press feedback - feels snappy and responsive
-private struct SnappyButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
-            .opacity(configuration.isPressed ? 0.9 : 1.0)
-            .animation(.easeOut(duration: 0.1), value: configuration.isPressed)
     }
 }
 

@@ -5,6 +5,7 @@ import UIKit
 /// Matches PrimaryButton styling with gradient option
 struct OnboardingButton: View {
     let title: String
+    var isEnabled: Bool = true
     let action: () -> Void
     var style: ButtonStyle = .primary
 
@@ -26,7 +27,7 @@ struct OnboardingButton: View {
                 .background(
                     Group {
                         if style == .primary {
-                            Color.tidexBrandPrimary
+                            isEnabled ? Color.tidexBrandPrimary : Color.tidexBrandPrimary.opacity(0.5)
                         } else {
                             Color.clear
                         }
@@ -35,6 +36,7 @@ struct OnboardingButton: View {
                 .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         }
         .buttonStyle(SnappyOnboardingButtonStyle())
+        .disabled(!isEnabled)
     }
 }
 

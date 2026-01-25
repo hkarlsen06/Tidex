@@ -219,10 +219,28 @@ struct ShiftHomeWidgetView: View {
             switch entry.layoutState {
             case .countdown:
                 countdownLayout
-            case .pastShift, .todayOrTomorrow, .empty:
+            case .pastShift, .todayOrTomorrow:
                 // Past shifts use the same layout as today/tomorrow
                 todayTomorrowLayout
+            case .empty:
+                emptyStateLayout
             }
+        }
+    }
+
+    // MARK: - Empty State Layout
+
+    /// Minimal empty state with just logo and simple message
+    private var emptyStateLayout: some View {
+        VStack(spacing: 12) {
+            // Logo watermark - larger and centered
+            LogoWatermark(useTint: useTintedLogo)
+                .frame(width: 48, height: 48)
+
+            // Simple "No shifts" message
+            Text(entry.locale == "no" ? "Ingen vakt" : "No shifts")
+                .font(.system(size: 15, weight: .medium))
+                .foregroundColor(mutedTextColor)
         }
     }
 

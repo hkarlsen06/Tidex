@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// MFA verification screen
+/// MFA verification screen with native iOS styling
 /// Displays a 6-digit code input for TOTP verification
 struct MFAVerifyView: View {
     @StateObject private var viewModel: MFAVerifyViewModel
@@ -14,66 +14,67 @@ struct MFAVerifyView: View {
     }
 
     var body: some View {
-        ZStack {
-            // Background - adapts to system appearance
-            Color.tidexBackground
-                .ignoresSafeArea()
+        VStack(spacing: 0) {
+            Spacer()
 
-            // Content - constrained for iPad
-            ScrollView {
-                VStack(spacing: 24) {
-                    // Header with logo
-                    headerView
-                        .padding(.top, 40)
+            // Header section
+            headerSection
+                .padding(.bottom, 32)
 
-                    // Main card - constrained width for iPad
-                    TidexCard {
-                        VStack(spacing: 20) {
-                            // Card header
-                            cardHeader
-
-                            // Error banner
-                            if let error = viewModel.errorMessage {
-                                ErrorBanner(
-                                    message: error,
-                                    onDismiss: { viewModel.errorMessage = nil }
-                                )
-                            }
-
-                            // Code input
-                            codeInputSection
-
-                            // Verify button
-                            PrimaryButton(
-                                title: localization.string("mfa.submitButton"),
-                                action: {
-                                    Task { await viewModel.verifyCode() }
-                                },
-                                isLoading: viewModel.isLoading
-                            )
-                            .disabled(viewModel.code.count != 6)
-
-                            // Back to login
-                            backButton
-                        }
-                        .padding(24)
-                    }
-                    .adaptiveFormWidth()
+            // Main content
+            VStack(spacing: 24) {
+                // Error banner
+                if let error = viewModel.errorMessage {
+                    ErrorBanner(
+                        message: error,
+                        onDismiss: { viewModel.errorMessage = nil }
+                    )
                 }
-                .padding(.horizontal, 20)
-                .padding(.bottom, 40)
+
+                // Instructions
+                instructionsSection
+
+                // OTP input
+                OTPInputField(
+                    code: $viewModel.code,
+                    error: nil,
+                    onComplete: {
+                        Task { await viewModel.verifyCode() }
+                    },
+                    autoFocus: true
+                )
+
+                // Verify button
+                PrimaryButton(
+                    title: localization.string("mfa.submitButton"),
+                    action: {
+                        Task { await viewModel.verifyCode() }
+                    },
+                    isLoading: viewModel.isLoading,
+                    isDisabled: viewModel.code.count < 6
+                )
+
+                // Back to login
+                backButton
             }
+            .padding(.horizontal, 24)
+
+            Spacer()
         }
+        .background(Color.tidexBackground)
         .loading(viewModel.isLoading)
+        .onTapGesture {
+            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        }
         .onAppear {
             Task { await viewModel.createChallenge() }
         }
     }
 
-    // MARK: - Header
+    // MARK: - Header Section
 
-    private var headerView: some View {
-        VStack(spacing: 12) {
+    private var headerSection: some View {
+        VStack(spacing: 16) {
             // Lock icon for MFA
             ZStack {
                 Circle()
@@ -85,56 +86,36 @@ struct MFAVerifyView: View {
                     .foregroundColor(.tidexBlue)
             }
 
+            // Title
             Text("Tidex")
                 .font(.system(size: 28, weight: .bold))
                 .foregroundColor(.tidexTextPrimary)
         }
     }
 
-    // MARK: - Card Header
+    // MARK: - Instructions Section
 
-    private var cardHeader: some View {
+    private var instructionsSection: some View {
         VStack(spacing: 8) {
             Text(localization.string("mfa.title"))
-                .font(.system(size: 20, weight: .semibold))
+                .font(.system(size: 22, weight: .bold))
                 .foregroundColor(.tidexTextPrimary)
 
             Text(localization.string("mfa.subtitle"))
-                .font(.system(size: 14))
+                .font(.system(size: 15))
                 .foregroundColor(.tidexTextSecondary)
                 .multilineTextAlignment(.center)
 
             // Show factor name if available
             if let factorName = viewModel.factor.friendlyName {
                 Text(factorName)
-                    .font(.system(size: 12, weight: .medium))
+                    .font(.system(size: 13, weight: .medium))
                     .foregroundColor(.tidexTextMuted)
                     .padding(.horizontal, 12)
-                    .padding(.vertical, 4)
+                    .padding(.vertical, 6)
                     .background(Color.tidexSurfaceSecondary)
-                    .cornerRadius(6)
+                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
             }
-        }
-    }
-
-    // MARK: - Code Input
-
-    private var codeInputSection: some View {
-        VStack(spacing: 12) {
-            Text(localization.string("mfa.codeLabel"))
-                .font(.system(size: 14, weight: .medium))
-                .foregroundColor(.tidexTextSecondary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-            // Use OTPInputField for consistent, fast input
-            OTPInputField(
-                code: $viewModel.code,
-                error: nil,
-                onComplete: {
-                    Task { await viewModel.verifyCode() }
-                },
-                autoFocus: true
-            )
         }
     }
 
@@ -144,12 +125,11 @@ struct MFAVerifyView: View {
         Button(action: {
             Task { await viewModel.signOutAndReturn() }
         }) {
-            HStack(spacing: 6) {
-                Image(systemName: "arrow.left")
-                    .font(.system(size: 14))
-
+            HStack(spacing: 4) {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 12, weight: .medium))
                 Text(localization.string("mfa.backToLogin"))
-                    .font(.system(size: 14, weight: .medium))
+                    .font(.system(size: 15))
             }
             .foregroundColor(.tidexTextSecondary)
         }

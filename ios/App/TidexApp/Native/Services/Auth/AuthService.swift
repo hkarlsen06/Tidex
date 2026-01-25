@@ -89,14 +89,24 @@ final class AuthService: ObservableObject {
     /// - Parameters:
     ///   - email: User's email address
     ///   - password: User's password
+    ///   - fullName: User's full name (optional)
     /// - Returns: The authenticated session (email verification disabled)
-    func signUpWithEmail(email: String, password: String) async throws -> Session {
+    func signUpWithEmail(email: String, password: String, fullName: String? = nil) async throws -> Session {
         isLoading = true
         defer { isLoading = false }
 
+        // Build user metadata
+        var data: [String: AnyJSON] = [
+            "terms_accepted_at": .string(ISO8601DateFormatter().string(from: Date()))
+        ]
+        if let fullName = fullName, !fullName.isEmpty {
+            data["full_name"] = .string(fullName)
+        }
+
         let response = try await supabase.auth.signUp(
             email: email,
-            password: password
+            password: password,
+            data: data
         )
         // Email verification disabled - session is returned immediately
         guard let session = response.session else {
@@ -109,14 +119,24 @@ final class AuthService: ObservableObject {
     /// - Parameters:
     ///   - phone: Phone number in E.164 format
     ///   - password: User's password
+    ///   - fullName: User's full name (optional)
     /// - Note: User will receive an OTP code via SMS to verify
-    func signUpWithPhone(phone: String, password: String) async throws {
+    func signUpWithPhone(phone: String, password: String, fullName: String? = nil) async throws {
         isLoading = true
         defer { isLoading = false }
 
+        // Build user metadata
+        var data: [String: AnyJSON] = [
+            "terms_accepted_at": .string(ISO8601DateFormatter().string(from: Date()))
+        ]
+        if let fullName = fullName, !fullName.isEmpty {
+            data["full_name"] = .string(fullName)
+        }
+
         _ = try await supabase.auth.signUp(
             phone: phone,
-            password: password
+            password: password,
+            data: data
         )
         // User needs to verify OTP before signing in
     }

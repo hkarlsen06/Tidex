@@ -113,30 +113,17 @@ struct ShiftAccessoryRectangularView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         } else {
-            // No shift state
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 4) {
-                    Image(systemName: "briefcase")
-                        .font(.system(size: 11, weight: .medium))
-
-                    Text(entry.locale == "no" ? "Ingen vakt" : "No shift")
-                        .font(.system(size: 12, weight: .semibold))
-                        .lineLimit(1)
-                }
-                .widgetAccentableIfAvailable()
-
-                Text("--:-- – --:--")
-                    .font(.system(size: 16, weight: .bold, design: .rounded))
-                    .monospacedDigit()
+            // Simplified empty state
+            HStack(spacing: 6) {
+                Image(systemName: "briefcase")
+                    .font(.system(size: 14, weight: .medium))
                     .foregroundStyle(.secondary)
-                    .lineLimit(1)
 
-                Text("---")
-                    .font(.system(size: 12, weight: .medium))
+                Text(entry.locale == "no" ? "Ingen vakt" : "No shifts")
+                    .font(.system(size: 14, weight: .medium))
                     .foregroundStyle(.secondary)
-                    .lineLimit(1)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
 }
