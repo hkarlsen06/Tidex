@@ -693,8 +693,8 @@ struct ShiftsView: View {
                                         viewModel.cancelCopyMoveMode()
                                         return
                                     }
+                                    // Ignore empty cell taps while dates are selected
                                     if !viewModel.selectedDates.isEmpty {
-                                        viewModel.clearSelection()
                                         return
                                     }
                                     if let dateISO = dateISO {
@@ -882,9 +882,8 @@ struct ShiftsView: View {
                                         return
                                     }
 
-                                    // If shifts are selected, just clear the selection
+                                    // Ignore empty cell taps while dates are selected
                                     if !viewModel.selectedDates.isEmpty {
-                                        viewModel.clearSelection()
                                         return
                                     }
 

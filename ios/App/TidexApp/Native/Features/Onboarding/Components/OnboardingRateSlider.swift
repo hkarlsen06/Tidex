@@ -363,8 +363,8 @@ struct OnboardingRateSlider: View {
         // Parse the input, handling both comma and period as decimal separator
         let normalized = inputText.replacingOccurrences(of: ",", with: ".")
         if let parsed = Double(normalized) {
-            // Clamp to valid range and round to 2 decimal places
-            let clamped = min(max(parsed, minValue), maxValue)
+            // Allow any positive value 0-10000 when manually entered (not limited by slider range)
+            let clamped = min(max(parsed, 0), 10000)
             let rounded = (clamped * 100).rounded() / 100
             value = rounded
         }
