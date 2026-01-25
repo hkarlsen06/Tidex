@@ -132,8 +132,10 @@ final class SyncCoordinator: ObservableObject {
         isSyncing = true
         lastError = nil
 
-        // Update global sync status for UI indicators
-        SyncStatusManager.shared.syncStarted()
+        // Update global sync status for UI indicators (only for manual pull-to-refresh)
+        if reason == .manualRefresh {
+            SyncStatusManager.shared.syncStarted()
+        }
 
         // SAFETY: Ensure flags are always reset, even on unexpected errors
         defer {
