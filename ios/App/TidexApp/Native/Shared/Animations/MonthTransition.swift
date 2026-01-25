@@ -176,9 +176,9 @@ struct TextTransitionModifier: ViewModifier {
 
 // MARK: - Staggered Cards Container
 
-/// A simple container wrapper for calendar content.
-/// Previously handled slide animations, now simplified for instant transitions.
-/// The phase is still passed through for use by child views (e.g., header text animations).
+/// A container wrapper for calendar content that applies horizontal slide animations
+/// when navigating between months. Slides in from right when going forward,
+/// slides in from left when going backward.
 struct StaggeredCardsContainer<Content: View>: View {
     let phase: MonthTransitionPhase
     let config: MonthTransitionConfig
@@ -186,6 +186,23 @@ struct StaggeredCardsContainer<Content: View>: View {
 
     var body: some View {
         content()
+            .id(phase.id)
+            .transition(slideTransition)
+            .animation(
+                .spring(response: config.springResponse, dampingFraction: config.dampingFraction),
+                value: phase.id
+            )
+    }
+
+    /// Asymmetric transition: new content slides in from direction of navigation,
+    /// old content slides out in the opposite direction
+    private var slideTransition: AnyTransition {
+        let offset = phase.direction == .next ? config.slideOffset : -config.slideOffset
+
+        return .asymmetric(
+            insertion: .offset(x: offset).combined(with: .opacity),
+            removal: .offset(x: -offset).combined(with: .opacity)
+        )
     }
 }
 
