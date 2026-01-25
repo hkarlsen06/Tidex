@@ -216,7 +216,8 @@ private struct ShiftPreviewCard: View {
         relativeText = computeRelativeTimeText()
     }
 
-    /// Format date to match Next.js: "Mandag · 15 jan."
+    /// Format date: "Mandag · 15. januar" (Norwegian) or "Monday · 15 January" (English)
+    /// Friends tab uses full month names for better readability
     private var formattedDate: String {
         guard let date = Date.fromISODateString(shift.shift_date) else { return "" }
 
@@ -228,17 +229,15 @@ private struct ShiftPreviewCard: View {
         dayFormatter.dateFormat = "EEEE"
         let dayName = dayFormatter.string(from: date).capitalized
 
-        // Get day number
+        // Get day number (with dot suffix for Norwegian)
         let dayNumber = Calendar.current.component(.day, from: date)
+        let dayString = isNorwegian ? "\(dayNumber)." : "\(dayNumber)"
 
-        // Get month abbreviation - match Next.js format with period
-        let monthIndex = Calendar.current.component(.month, from: date) - 1
-        let monthsShort = isNorwegian
-            ? ["jan.", "feb.", "mar.", "apr.", "mai", "jun.", "jul.", "aug.", "sep.", "okt.", "nov.", "des."]
-            : ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
-        let monthName = monthsShort[monthIndex]
+        // Get full month name for better readability in friends tab
+        dayFormatter.dateFormat = "MMMM"
+        let monthName = dayFormatter.string(from: date).lowercased()
 
-        return "\(dayName) · \(dayNumber) \(monthName)"
+        return "\(dayName) · \(dayString) \(monthName)"
     }
 
     /// Format time range to match Next.js: "09:00 – 17:00" (with spaces around en-dash)
