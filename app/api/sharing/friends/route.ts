@@ -137,7 +137,15 @@ export async function GET(request: NextRequest) {
       if (usersError) {
         logger.error("Failed to fetch user profiles:", usersError);
       } else {
-        const usersMap = new Map(
+        const usersMap = new Map<
+          string,
+          {
+            email: string | null;
+            phone: string | null;
+            firstName: string | null;
+            oauthAvatarUrl: string | null;
+          }
+        >(
           (usersData || []).map((u: any) => [
             u.id,
             {
