@@ -607,6 +607,7 @@ enum AuthStrings {
         "sharing.error.removeShare": "Kunne ikke fjerne deling",
         "sharing.error.removePerson": "Kunne ikke fjerne personen",
         "sharing.error.shareBack": "Kunne ikke dele tilbake",
+        "sharing.screenshotTaken": "Skjermbilde tatt!",
 
         // Custom Supplements Editor
         "supplements.editTitle": "Tillegg for vakt",
@@ -1570,6 +1571,7 @@ enum AuthStrings {
         "sharing.error.removeShare": "Could not remove share",
         "sharing.error.removePerson": "Could not remove person",
         "sharing.error.shareBack": "Could not share back",
+        "sharing.screenshotTaken": "Screenshot taken!",
 
         // Custom Supplements Editor
         "supplements.editTitle": "Shift Supplements",
