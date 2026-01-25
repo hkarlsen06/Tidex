@@ -206,6 +206,15 @@ export async function POST(request: NextRequest) {
       .insert(payload);
 
     if (insertError) {
+      // Handle unique constraint violation (race condition - another request already inserted)
+      // PostgreSQL error code 23505 = unique_violation
+      if (insertError.code === '23505') {
+        console.log(
+          '[push-device] Device already registered (race condition), treating as success'
+        );
+        return NextResponse.json({ success: true, action: 'already_registered' });
+      }
+
       console.error('[push-device] Insert error:', insertError);
       return NextResponse.json(
         { error: 'Failed to register push device' },
