@@ -402,6 +402,8 @@ enum AuthStrings {
         "addShift.oneAnchorPerWeekday": "Ett anker per ukedag (maks 7)",
         "addShift.headerTitle": "Legg til vakt",
         "addShift.headerSubtitle": "Velg datoer og trykk på pluss-knappen",
+        "addShift.draftRestored": "Forrige utkast gjenopprettet",
+        "addShift.startFresh": "Start på nytt",
 
         // MFA Screen
         "onboarding.mfa.title": "Ekstra sikkerhet",
@@ -955,7 +957,22 @@ enum AuthStrings {
         "notifications.shared.sectionTitle": "Delte vakter",
         "notifications.shared.sectionSubtitle": "Varsler om endringer fra venner",
         "notifications.shared.title": "Vaktendringer",
-        "notifications.shared.description": "Varsle meg n\u{00E5}r venner endrer vaktene sine"
+        "notifications.shared.description": "Varsle meg n\u{00E5}r venner endrer vaktene sine",
+
+        // Sync Status
+        "sync.syncing": "Synkroniserer...",
+        "sync.syncFailed": "Synkronisering feilet",
+        "sync.lastSynced": "Synkronisert %@",
+        "sync.offline": "Frakoblet",
+        "sync.justNow": "n\u{00E5} nettopp",
+        "sync.minutesAgo": "%d min siden",
+        "sync.hoursAgo": "%d t siden",
+
+        // Push Notification Failure
+        "push.failure.title": "Varslinger fungerer ikke",
+        "push.failure.message": "Vaktpåminnelser vil ikke fungere før dette er løst. Sjekk varslingsinnstillingene dine.",
+        "push.failure.settingsButton": "Innstillinger",
+        "push.failure.laterButton": "Senere"
     ]
 
     // MARK: - English Strings
@@ -1348,6 +1365,8 @@ enum AuthStrings {
         "addShift.oneAnchorPerWeekday": "One anchor per weekday (max 7)",
         "addShift.headerTitle": "Add Shift",
         "addShift.headerSubtitle": "Select dates and tap the plus button",
+        "addShift.draftRestored": "Previous draft restored",
+        "addShift.startFresh": "Start fresh",
 
         // MFA Screen
         "onboarding.mfa.title": "Extra security",
@@ -1901,6 +1920,21 @@ enum AuthStrings {
         "notifications.shared.sectionTitle": "Shared Shifts",
         "notifications.shared.sectionSubtitle": "Notifications about changes from friends",
         "notifications.shared.title": "Shift Changes",
-        "notifications.shared.description": "Notify me when friends change their shifts"
+        "notifications.shared.description": "Notify me when friends change their shifts",
+
+        // Sync Status
+        "sync.syncing": "Syncing...",
+        "sync.syncFailed": "Sync failed",
+        "sync.lastSynced": "Synced %@",
+        "sync.offline": "Offline",
+        "sync.justNow": "just now",
+        "sync.minutesAgo": "%dm ago",
+        "sync.hoursAgo": "%dh ago",
+
+        // Push Notification Failure
+        "push.failure.title": "Notifications Setup Failed",
+        "push.failure.message": "Shift reminders won't work until this is resolved. Check your notification settings.",
+        "push.failure.settingsButton": "Settings",
+        "push.failure.laterButton": "Later"
     ]
 }

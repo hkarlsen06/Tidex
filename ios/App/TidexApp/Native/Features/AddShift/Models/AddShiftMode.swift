@@ -3,7 +3,7 @@ import Foundation
 /// Mode for the Add Shift view
 /// - single: Add one or more individual shifts on specific dates
 /// - recurring: Create a recurring shift pattern
-enum AddShiftMode: String, CaseIterable, Identifiable {
+enum AddShiftMode: String, CaseIterable, Identifiable, Codable {
     case single
     case recurring
 

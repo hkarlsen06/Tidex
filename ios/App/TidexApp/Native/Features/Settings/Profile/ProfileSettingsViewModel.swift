@@ -194,6 +194,9 @@ final class ProfileSettingsViewModel: ObservableObject {
 
     /// Initiate email change - sends confirmation to both old and new email
     func initiateEmailChange() async {
+        // Prevent duplicate taps
+        guard !isChangingEmail else { return }
+
         guard canChangeEmail else {
             errorMessage = localization.string("profile.emailChange.errors.oauthOnly")
             return
@@ -337,6 +340,8 @@ final class ProfileSettingsViewModel: ObservableObject {
     /// Upload a new profile picture directly to Supabase Storage
     /// - Parameter imageData: The image data to upload (will be converted to WebP)
     func uploadProfilePicture(_ imageData: Data) async {
+        // Prevent duplicate taps
+        guard !isUploadingAvatar else { return }
         guard let currentUserId = userId else { return }
 
         isUploadingAvatar = true
@@ -414,8 +419,10 @@ final class ProfileSettingsViewModel: ObservableObject {
             // Trigger sync - use .localChange to bypass rate limiting
             _ = await syncCoordinator.sync(reason: .localChange, userId: currentUserId)
 
+            Haptics.play(.success)
         } catch {
             errorMessage = localization.string("profile.errors.uploadFailed")
+            Haptics.play(.error)
         }
 
         isUploadingAvatar = false
@@ -449,6 +456,7 @@ final class ProfileSettingsViewModel: ObservableObject {
         // Trigger sync - use .localChange to bypass rate limiting
         _ = await syncCoordinator.sync(reason: .localChange, userId: currentUserId)
 
+        Haptics.play(.success)
         isUploadingAvatar = false
     }
 
@@ -466,6 +474,9 @@ final class ProfileSettingsViewModel: ObservableObject {
 
     /// Delete the user's account via API route (requires service role)
     func deleteAccount() async {
+        // Prevent duplicate taps
+        guard !isDeletingAccount else { return }
+
         guard canConfirmDelete else {
             errorMessage = localization.string("profile.dangerZone.deleteAccount.errors.confirmMismatch")
             return
@@ -496,6 +507,7 @@ final class ProfileSettingsViewModel: ObservableObject {
 
             if httpResponse.statusCode == 200 {
                 // Account deleted successfully - sign out locally
+                Haptics.play(.warning)
                 try? await supabase.auth.signOut()
 
                 // Clear local data via AppCoordinator
@@ -506,6 +518,7 @@ final class ProfileSettingsViewModel: ObservableObject {
 
         } catch {
             errorMessage = localization.string("profile.dangerZone.deleteAccount.errors.deleteFailed")
+            Haptics.play(.error)
             isDeletingAccount = false
         }
     }

@@ -51,7 +51,10 @@ final class AddShiftViewModel: ObservableObject {
     // MARK: - Mode State
 
     @Published var mode: AddShiftMode = .single {
-        didSet { publishStateToCoordinator() }
+        didSet {
+            publishStateToCoordinator()
+            scheduleDraftSave()
+        }
     }
 
     // MARK: - Shared State
@@ -61,6 +64,7 @@ final class AddShiftViewModel: ObservableObject {
             // Debounce time changes - schedule recomputation
             schedulePreviewUpdate()
             publishStateToCoordinator()
+            scheduleDraftSave()
         }
     }
     @Published var endTime: Date? = nil {
@@ -68,6 +72,7 @@ final class AddShiftViewModel: ObservableObject {
             // Debounce time changes - schedule recomputation
             schedulePreviewUpdate()
             publishStateToCoordinator()
+            scheduleDraftSave()
         }
     }
     @Published var isLoading = false {
@@ -82,6 +87,17 @@ final class AddShiftViewModel: ObservableObject {
 
     /// Debounce delay in seconds (wait for user to finish typing)
     private static let previewDebounceDelay: UInt64 = 300_000_000 // 300ms
+
+    // MARK: - Draft Persistence
+
+    /// Debounce timer for draft saving
+    private var draftSaveTask: Task<Void, Never>?
+
+    /// Debounce delay for draft saving (500ms)
+    private static let draftSaveDebounceDelay: UInt64 = 500_000_000
+
+    /// Whether a draft was restored (for "Start Fresh" button visibility)
+    @Published private(set) var hasDraft = false
 
     /// Display month as Date - computed from SharedMonthContext
     /// Setter updates the SharedMonthContext to sync with other tabs
@@ -140,7 +156,10 @@ final class AddShiftViewModel: ObservableObject {
     // MARK: - Single Mode State
 
     @Published var selectedDates: Set<String> = [] {  // ISO dates (YYYY-MM-DD)
-        didSet { publishStateToCoordinator() }
+        didSet {
+            publishStateToCoordinator()
+            scheduleDraftSave()
+        }
     }
 
     // MARK: - Paywall State
@@ -156,11 +175,18 @@ final class AddShiftViewModel: ObservableObject {
 
     // MARK: - Recurring Mode State
 
-    @Published var repeatInterval: Int = 0  // 0 = weekly, 1 = biweekly, etc.
-    @Published var selectedDays: [String: String] = [:] {  // weekday "0"-"6" -> anchor ISO date
-        didSet { publishStateToCoordinator() }
+    @Published var repeatInterval: Int = 0 {  // 0 = weekly, 1 = biweekly, etc.
+        didSet { scheduleDraftSave() }
     }
-    @Published var endCondition: EndCondition? = .months(value: 6)
+    @Published var selectedDays: [String: String] = [:] {  // weekday "0"-"6" -> anchor ISO date
+        didSet {
+            publishStateToCoordinator()
+            scheduleDraftSave()
+        }
+    }
+    @Published var endCondition: EndCondition? = .months(value: 6) {
+        didSet { scheduleDraftSave() }
+    }
     @Published var showPreviewSheet = false
 
     // MARK: - Cached Data
@@ -237,6 +263,7 @@ final class AddShiftViewModel: ObservableObject {
         monthContextCancellable?.cancel()
         addActionCancellable?.cancel()
         previewUpdateTask?.cancel()
+        draftSaveTask?.cancel()
     }
 
     /// Subscribe to SharedMonthContext changes to reload data when month changes
@@ -393,6 +420,9 @@ final class AddShiftViewModel: ObservableObject {
             logger.warning("Cannot load data: no user ID")
             return
         }
+
+        // Load any saved draft first (before other data to set mode correctly)
+        loadDraft()
 
         // Load settings
         cachedSettings = settingsRepository.getSettings(for: userId)
@@ -554,6 +584,9 @@ final class AddShiftViewModel: ObservableObject {
             // Clear form
             clearForm()
 
+            // Success haptic
+            Haptics.play(.success)
+
             // Notify that shifts changed (for dashboard refresh)
             NotificationCenter.default.post(name: .shiftsDidChange, object: nil)
 
@@ -576,6 +609,7 @@ final class AddShiftViewModel: ObservableObject {
         } catch {
             logger.error("Failed to create shifts: \(error.localizedDescription)")
             self.error = error.localizedDescription
+            Haptics.play(.error)
         }
 
         isLoading = false
@@ -695,6 +729,9 @@ final class AddShiftViewModel: ObservableObject {
             // Dismiss preview sheet
             showPreviewSheet = false
 
+            // Success haptic
+            Haptics.play(.success)
+
             // Notify that shifts changed (for dashboard refresh)
             NotificationCenter.default.post(name: .shiftsDidChange, object: nil)
 
@@ -704,6 +741,7 @@ final class AddShiftViewModel: ObservableObject {
         } catch {
             logger.error("Failed to create recurring shift: \(error.localizedDescription)")
             self.error = error.localizedDescription
+            Haptics.play(.error)
         }
 
         isLoading = false
@@ -847,6 +885,9 @@ final class AddShiftViewModel: ObservableObject {
 
     /// Clear the form after successful submission
     private func clearForm() {
+        // Clear the saved draft since submission was successful
+        clearDraft()
+
         // Clear date selections
         selectedDates.removeAll()
         selectedDays.removeAll()
@@ -893,6 +934,133 @@ final class AddShiftViewModel: ObservableObject {
         components.hour = 17
         components.minute = 0
         return calendar.date(from: components) ?? Date()
+    }
+
+    // MARK: - Draft Persistence Methods
+
+    /// Schedule a debounced draft save
+    private func scheduleDraftSave() {
+        // Cancel any pending save
+        draftSaveTask?.cancel()
+
+        // Schedule new save with debounce delay
+        draftSaveTask = Task { [weak self] in
+            do {
+                try await Task.sleep(nanoseconds: Self.draftSaveDebounceDelay)
+
+                // Check if cancelled during sleep
+                guard !Task.isCancelled else { return }
+
+                await MainActor.run {
+                    self?.saveDraft()
+                }
+            } catch {
+                // Task was cancelled - this is expected
+            }
+        }
+    }
+
+    /// Save the current form state as a draft
+    private func saveDraft() {
+        let draft = ShiftDraft(
+            mode: mode,
+            startTime: startTime.map { formatTimeAsHHmm($0) },
+            endTime: endTime.map { formatTimeAsHHmm($0) },
+            selectedDates: Array(selectedDates),
+            selectedDays: selectedDays,
+            repeatInterval: repeatInterval,
+            endCondition: endCondition,
+            lastModified: Date()
+        )
+
+        // Only save if there's meaningful content
+        guard draft.hasContent else {
+            clearDraft()
+            return
+        }
+
+        if let data = try? JSONEncoder().encode(draft) {
+            UserDefaults.standard.set(data, forKey: ShiftDraft.userDefaultsKey)
+            hasDraft = true
+            logger.debug("Saved draft: mode=\(draft.mode.rawValue), dates=\(draft.selectedDates.count)")
+        }
+    }
+
+    /// Load a saved draft if it exists and hasn't expired
+    private func loadDraft() {
+        guard let data = UserDefaults.standard.data(forKey: ShiftDraft.userDefaultsKey),
+              let draft = try? JSONDecoder().decode(ShiftDraft.self, from: data),
+              !draft.isExpired,
+              draft.hasContent
+        else {
+            hasDraft = false
+            return
+        }
+
+        // Restore form state from draft
+        mode = draft.mode
+
+        // Restore times
+        if let startTimeString = draft.startTime {
+            startTime = parseTimeFromHHmm(startTimeString)
+        }
+        if let endTimeString = draft.endTime {
+            endTime = parseTimeFromHHmm(endTimeString)
+        }
+
+        // Restore mode-specific data
+        switch mode {
+        case .single:
+            selectedDates = Set(draft.selectedDates)
+        case .recurring:
+            selectedDays = draft.selectedDays
+            repeatInterval = draft.repeatInterval
+            endCondition = draft.endCondition
+        }
+
+        hasDraft = true
+        logger.info("Loaded draft: mode=\(draft.mode.rawValue), dates=\(draft.selectedDates.count), days=\(draft.selectedDays.count)")
+    }
+
+    /// Clear the saved draft
+    func clearDraft() {
+        draftSaveTask?.cancel()
+        draftSaveTask = nil
+        UserDefaults.standard.removeObject(forKey: ShiftDraft.userDefaultsKey)
+        hasDraft = false
+        logger.debug("Cleared draft")
+    }
+
+    /// Start fresh - clear all form data and the draft
+    func startFresh() {
+        clearDraft()
+        clearSelectedDates()
+        clearAnchors()
+        startTime = nil
+        endTime = nil
+        repeatInterval = 0
+        endCondition = .months(value: 6)
+        error = nil
+
+        // Haptic feedback
+        let generator = UIImpactFeedbackGenerator(style: .medium)
+        generator.impactOccurred()
+    }
+
+    /// Parse HH:mm string to Date
+    private func parseTimeFromHHmm(_ timeString: String) -> Date? {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm"
+        guard let time = formatter.date(from: timeString) else { return nil }
+
+        // Transfer hour and minute to today's date
+        let calendar = Calendar.current
+        var components = calendar.dateComponents([.year, .month, .day], from: Date())
+        let timeComponents = calendar.dateComponents([.hour, .minute], from: time)
+        components.hour = timeComponents.hour
+        components.minute = timeComponents.minute
+
+        return calendar.date(from: components)
     }
 
     // MARK: - Performance Optimization Methods

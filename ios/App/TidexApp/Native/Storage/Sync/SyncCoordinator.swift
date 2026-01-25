@@ -58,6 +58,7 @@ final class SyncCoordinator: ObservableObject {
         lastError = nil
         lastSyncedAt = nil
         conflictCount = 0
+        SyncStatusManager.shared.reset()
         logger.info("Sync state reset for user change")
     }
 
@@ -131,6 +132,9 @@ final class SyncCoordinator: ObservableObject {
         isSyncing = true
         lastError = nil
 
+        // Update global sync status for UI indicators
+        SyncStatusManager.shared.syncStarted()
+
         // SAFETY: Ensure flags are always reset, even on unexpected errors
         defer {
             syncInProgress = false
@@ -185,6 +189,9 @@ final class SyncCoordinator: ObservableObject {
             lastSyncedAt = Date()
             conflictCount = try await storeActor.countConflicts(userId: userId)
 
+            // Update global sync status for UI indicators
+            SyncStatusManager.shared.syncSucceeded()
+
             if reason != .manualRefresh {
                 lastAutoSyncAt = Date()
             }
@@ -233,6 +240,9 @@ final class SyncCoordinator: ObservableObject {
 
             // Surface user-friendly message to UI
             lastError = userFriendlyMessage
+
+            // Update global sync status for UI indicators
+            SyncStatusManager.shared.syncFailed(message: userFriendlyMessage)
 
             // Note: syncInProgress and isSyncing are reset by defer block
             return SyncResult(

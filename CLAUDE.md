@@ -42,6 +42,22 @@ Use these skills for specialized tasks:
 - ✅ API route needed: `/api/delete-account` (needs admin API), `/api/push-device` (needs `internal` schema)
 - ❌ No API route: Subscription/entitlement data, settings, shifts - use Supabase client directly or RPC functions
 
+### iOS Color System
+
+**ALWAYS use semantic Tidex colors** from `Color+Tidex.swift`. Never use hardcoded colors or non-existent color names.
+
+Available colors (all adapt to light/dark mode):
+| Category | Colors |
+|----------|--------|
+| Background | `tidexBackground`, `tidexBackgroundSecondary`, `tidexLaunchBackground` |
+| Surface | `tidexSurfacePrimary`, `tidexSurfaceSecondary` |
+| Text | `tidexTextPrimary`, `tidexTextSecondary`, `tidexTextMuted`, `tidexTextInverse` |
+| Brand | `tidexBlue`, `tidexBrandPrimary`, `tidexPurple` |
+| Border | `tidexBorder`, `tidexBorderSubtle` |
+| Status | `tidexError`, `tidexSuccess`, `tidexWarning`, `tidexInfo` |
+
+Usage: `Color.tidexSurfacePrimary`, `Color.tidexTextSecondary`, etc.
+
 ## CRITICAL: Cache Invalidation (Next.js 16)
 
 **ALWAYS use `revalidateTag(tag, "max")` - NEVER use `updateTag()`**

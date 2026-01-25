@@ -391,6 +391,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
         print("[APNs] Failed to register: \(error)")
+        Task { @MainActor in
+            PushNotificationManager.shared.apnsRegistrationFailed(error)
+        }
     }
 
     func application(_ application: UIApplication,
@@ -461,13 +464,22 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
                 // Success - cache the registration
                 defaults.set(token, forKey: apnsTokenRegisteredValueKey)
                 defaults.set(userId, forKey: apnsTokenRegisteredUserKey)
+                await MainActor.run {
+                    PushNotificationManager.shared.registrationSucceeded()
+                }
             } else {
                 // Log error response
                 let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
                 print("[APNs] API error (\(httpResponse.statusCode)): \(errorMessage)")
+                await MainActor.run {
+                    PushNotificationManager.shared.serverRegistrationFailed(errorMessage)
+                }
             }
         } catch {
             print("[APNs] Failed to register token: \(error)")
+            await MainActor.run {
+                PushNotificationManager.shared.serverRegistrationFailed(error.localizedDescription)
+            }
         }
     }
 

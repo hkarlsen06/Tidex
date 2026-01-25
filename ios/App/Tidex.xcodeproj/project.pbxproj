@@ -77,6 +77,7 @@
 		114F0F722F21532800B587F0 /* WatchConnectivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0F6F2F21532800B587F0 /* WatchConnectivityManager.swift */; };
 		114F0F732F21532800B587F0 /* WatchDataConverter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 114F0F702F21532800B587F0 /* WatchDataConverter.swift */; };
 		1152D0CB2F01E2A7002FD5ED /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1152D0CA2F01E2A7002FD5ED /* StoreKit.framework */; };
+		118288182F268128008A1A80 /* ShiftDraft.swift in Sources */ = {isa = PBXBuildFile; fileRef = 118288172F268128008A1A80 /* ShiftDraft.swift */; };
 		11923C192F16B94B0076AFD6 /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = 11923C182F16B94B0076AFD6 /* Auth */; };
 		11923C1B2F16B94B0076AFD6 /* Functions in Frameworks */ = {isa = PBXBuildFile; productRef = 11923C1A2F16B94B0076AFD6 /* Functions */; };
 		11923C1D2F16B94B0076AFD6 /* PostgREST in Frameworks */ = {isa = PBXBuildFile; productRef = 11923C1C2F16B94B0076AFD6 /* PostgREST */; };
@@ -105,6 +106,10 @@
 		119D1CF92F16E46300EC7072 /* APIConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 119D1CD62F16E46300EC7072 /* APIConfiguration.swift */; };
 		119D1CFA2F16E46300EC7072 /* ErrorBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 119D1CDA2F16E46300EC7072 /* ErrorBanner.swift */; };
 		119D1CFC2F16E46300EC7072 /* AppCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 119D1CB72F16E46300EC7072 /* AppCoordinator.swift */; };
+		1182881A2F26812C008A1A80 /* SyncStatusManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 118288182F26812A008A1A80 /* SyncStatusManager.swift */; };
+		1182881D2F26815B008A1A80 /* PushNotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1182881C2F26815A008A1A80 /* PushNotificationManager.swift */; };
+		1182881F2F26816B008A1A80 /* Haptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1182881E2F26816A008A1A80 /* Haptics.swift */; };
+		1182881B2F26812D008A1A80 /* SyncStatusIndicator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 118288192F26812B008A1A80 /* SyncStatusIndicator.swift */; };
 		119D1CFD2F16E46300EC7072 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 119D1CC12F16E46300EC7072 /* LoginView.swift */; };
 		119D1CFE2F16E46300EC7072 /* MFAVerifyViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 119D1CC52F16E46300EC7072 /* MFAVerifyViewModel.swift */; };
 		119D1CFF2F16E46300EC7072 /* PrimaryButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 119D1CDD2F16E46300EC7072 /* PrimaryButton.swift */; };
@@ -372,6 +377,11 @@
 		114F0F702F21532800B587F0 /* WatchDataConverter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchDataConverter.swift; sourceTree = "<group>"; };
 		1152D0C82F01BB9B002FD5ED /* App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = App.entitlements; sourceTree = "<group>"; };
 		1152D0CA2F01E2A7002FD5ED /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
+		118288172F268128008A1A80 /* ShiftDraft.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShiftDraft.swift; sourceTree = "<group>"; };
+		118288182F26812A008A1A80 /* SyncStatusManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncStatusManager.swift; sourceTree = "<group>"; };
+		1182881C2F26815A008A1A80 /* PushNotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushNotificationManager.swift; sourceTree = "<group>"; };
+		1182881E2F26816A008A1A80 /* Haptics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Haptics.swift; sourceTree = "<group>"; };
+		118288192F26812B008A1A80 /* SyncStatusIndicator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncStatusIndicator.swift; sourceTree = "<group>"; };
 		119D1CB72F16E46300EC7072 /* AppCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppCoordinator.swift; sourceTree = "<group>"; };
 		119D1CB92F16E46300EC7072 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		119D1CBB2F16E46300EC7072 /* EmailPasswordForm.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmailPasswordForm.swift; sourceTree = "<group>"; };
@@ -836,6 +846,8 @@
 				11A196442F1AC20E0030E524 /* TabConfiguration.swift */,
 				11F4301D2F1A957C002B1FBE /* TermsVersion.swift */,
 				119D1CB72F16E46300EC7072 /* AppCoordinator.swift */,
+				118288182F26812A008A1A80 /* SyncStatusManager.swift */,
+				1182881C2F26815A008A1A80 /* PushNotificationManager.swift */,
 				119D1CB92F16E46300EC7072 /* RootView.swift */,
 			);
 			path = Core;
@@ -993,6 +1005,7 @@
 				11AE8D732F17DD44005AB062 /* UserMenuButton.swift */,
 				11F42F802F1A65F3002B1FBE /* CountUpText.swift */,
 				119D1CDA2F16E46300EC7072 /* ErrorBanner.swift */,
+				118288192F26812B008A1A80 /* SyncStatusIndicator.swift */,
 				119D1CDB2F16E46300EC7072 /* LoadingOverlay.swift */,
 				119D1CDC2F16E46300EC7072 /* OutlineButton.swift */,
 				119D1CDD2F16E46300EC7072 /* PrimaryButton.swift */,
@@ -1079,6 +1092,7 @@
 		11A1962C2F1AC0070030E524 /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				118288172F268128008A1A80 /* ShiftDraft.swift */,
 				11A1962B2F1AC0070030E524 /* AddShiftMode.swift */,
 			);
 			path = Models;
@@ -1384,6 +1398,7 @@
 		11AE8D282F17D02E005AB062 /* Utilities */ = {
 			isa = PBXGroup;
 			children = (
+				1182881E2F26816A008A1A80 /* Haptics.swift */,
 				11A197CD2F1DF0750030E524 /* NorwegianHolidays.swift */,
 				11A197CE2F1DF0750030E524 /* PayrollDateAdjuster.swift */,
 				11AE8D262F17D02E005AB062 /* CountdownFormatter.swift */,
@@ -1746,6 +1761,7 @@
 				11A1961D2F1AA3550030E524 /* OnboardingSaveManager.swift in Sources */,
 				11A196182F1AA3450030E524 /* SettingsAccordionScreen.swift in Sources */,
 				11A197C42F1DB4F30030E524 /* NotificationService.swift in Sources */,
+				118288182F268128008A1A80 /* ShiftDraft.swift in Sources */,
 				11A196192F1AA3450030E524 /* SupplementsScreen.swift in Sources */,
 				11A1961A2F1AA3450030E524 /* WageScreen.swift in Sources */,
 				119D1CF22F16E46300EC7072 /* ErrorTranslations.swift in Sources */,
@@ -1829,7 +1845,11 @@
 				11A198072F1FDD750030E524 /* AddShiftCoordinator.swift in Sources */,
 				11AE8CCF2F16F2CF005AB062 /* ResetPasswordView.swift in Sources */,
 				119D1CFA2F16E46300EC7072 /* ErrorBanner.swift in Sources */,
+				1182881B2F26812D008A1A80 /* SyncStatusIndicator.swift in Sources */,
 				119D1CFC2F16E46300EC7072 /* AppCoordinator.swift in Sources */,
+				1182881A2F26812C008A1A80 /* SyncStatusManager.swift in Sources */,
+				1182881D2F26815B008A1A80 /* PushNotificationManager.swift in Sources */,
+				1182881F2F26816B008A1A80 /* Haptics.swift in Sources */,
 				1128F3AF2F18729100702359 /* LocalRecurringShift.swift in Sources */,
 				114F0EAC2F202ED900B587F0 /* AppearanceSettingsView.swift in Sources */,
 				114F0EAD2F202ED900B587F0 /* AppearanceSettingsViewModel.swift in Sources */,

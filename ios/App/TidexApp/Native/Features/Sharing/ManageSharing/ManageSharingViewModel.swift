@@ -116,6 +116,9 @@ final class ManageSharingViewModel: ObservableObject {
 
     /// Add a new friend by email or phone
     func addFriend() async {
+        // Prevent duplicate taps
+        guard !isAdding else { return }
+
         let identifier = addIdentifier.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !identifier.isEmpty else {
             addError = localization.string("sharing.error.addFriendEmpty")
@@ -160,6 +163,8 @@ final class ManageSharingViewModel: ObservableObject {
 
     /// Toggle whether a recipient can see my earnings
     func toggleEarnings(for friend: Friend) async {
+        // Prevent duplicate taps
+        guard actionInProgress == nil else { return }
         guard let iShareWith = friend.iShareWith else { return }
 
         let newValue = !iShareWith.showEarningsToThem
@@ -171,11 +176,13 @@ final class ManageSharingViewModel: ObservableObject {
         do {
             try await sharingService.toggleShareEarnings(recipientId: friend.id, showEarnings: newValue)
             logger.info("Toggled earnings for \(friend.id) to \(newValue)")
+            Haptics.play(.selection)
         } catch {
             // Revert on failure
             applyOptimisticEarningsUpdate(friendId: friend.id, showEarnings: !newValue)
             logger.error("Failed to toggle earnings: \(error.localizedDescription)")
             errorMessage = localization.string("sharing.error.updateSettings")
+            Haptics.play(.error)
         }
 
         actionInProgress = nil
@@ -206,6 +213,8 @@ final class ManageSharingViewModel: ObservableObject {
 
     /// Toggle whether a sharer is blocked (hidden from my list)
     func toggleBlocked(for friend: Friend) async {
+        // Prevent duplicate taps
+        guard actionInProgress == nil else { return }
         guard let sharesWithMe = friend.sharesWithMe else { return }
 
         let newValue = !sharesWithMe.blocked
@@ -221,11 +230,13 @@ final class ManageSharingViewModel: ObservableObject {
                 try await sharingService.unblockSharer(ownerId: friend.id)
             }
             logger.info("Toggled blocked for \(friend.id) to \(newValue)")
+            Haptics.play(.selection)
         } catch {
             // Revert on failure
             applyOptimisticBlockedUpdate(friendId: friend.id, blocked: !newValue)
             logger.error("Failed to toggle blocked: \(error.localizedDescription)")
             errorMessage = localization.string("sharing.error.updateSettings")
+            Haptics.play(.error)
         }
 
         actionInProgress = nil
@@ -258,6 +269,8 @@ final class ManageSharingViewModel: ObservableObject {
 
     /// Toggle whether notifications from a sharer are muted
     func toggleMuted(for friend: Friend) async {
+        // Prevent duplicate taps
+        guard actionInProgress == nil else { return }
         guard let sharesWithMe = friend.sharesWithMe else { return }
 
         let newValue = !sharesWithMe.isMuted
@@ -269,11 +282,13 @@ final class ManageSharingViewModel: ObservableObject {
         do {
             try await sharingService.toggleSharerMuted(ownerId: friend.id, muted: newValue)
             logger.info("Toggled muted for \(friend.id) to \(newValue)")
+            Haptics.play(.selection)
         } catch {
             // Revert on failure
             applyOptimisticMutedUpdate(friendId: friend.id, muted: !newValue)
             logger.error("Failed to toggle muted: \(error.localizedDescription)")
             errorMessage = localization.string("sharing.error.updateNotifications")
+            Haptics.play(.error)
         }
 
         actionInProgress = nil
@@ -307,6 +322,8 @@ final class ManageSharingViewModel: ObservableObject {
 
     /// Remove my share with someone (revoke their access to my shifts)
     func removeShare(for friend: Friend) async {
+        // Prevent duplicate taps
+        guard actionInProgress == nil else { return }
         guard friend.iShareWith != nil else { return }
 
         // Optimistic update: remove iShareWith
@@ -317,11 +334,13 @@ final class ManageSharingViewModel: ObservableObject {
         do {
             try await sharingService.removeShare(recipientId: friend.id)
             logger.info("Removed share with \(friend.id)")
+            Haptics.play(.success)
         } catch {
             // Revert on failure
             revertOptimisticRemove(originalFriend: originalFriend)
             logger.error("Failed to remove share: \(error.localizedDescription)")
             errorMessage = localization.string("sharing.error.removeShare")
+            Haptics.play(.error)
         }
 
         actionInProgress = nil
@@ -354,6 +373,8 @@ final class ManageSharingViewModel: ObservableObject {
 
     /// Remove someone from my friends list (delete their share with me)
     func removeSharer(for friend: Friend) async {
+        // Prevent duplicate taps
+        guard actionInProgress == nil else { return }
         guard friend.sharesWithMe != nil else { return }
 
         // Optimistic update: remove sharesWithMe
@@ -364,11 +385,13 @@ final class ManageSharingViewModel: ObservableObject {
         do {
             try await sharingService.removeSharer(ownerId: friend.id)
             logger.info("Removed sharer \(friend.id)")
+            Haptics.play(.success)
         } catch {
             // Revert on failure
             revertOptimisticRemove(originalFriend: originalFriend)
             logger.error("Failed to remove sharer: \(error.localizedDescription)")
             errorMessage = localization.string("sharing.error.removePerson")
+            Haptics.play(.error)
         }
 
         actionInProgress = nil
@@ -417,6 +440,8 @@ final class ManageSharingViewModel: ObservableObject {
 
     /// Share my shifts back with someone who shares with me
     func shareBack(with friend: Friend) async {
+        // Prevent duplicate taps
+        guard actionInProgress == nil else { return }
         guard friend.sharesWithMe != nil, friend.iShareWith == nil else { return }
 
         // Optimistic update: add iShareWith
