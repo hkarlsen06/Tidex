@@ -58,6 +58,7 @@ struct MonthLimitSheet: View {
         }
         .sheet(isPresented: $showPaywall, onDismiss: handlePaywallDismiss) {
             PaywallView(contextType: .monthLimit)
+                .interactiveDismissDisabled()
         }
     }
 
