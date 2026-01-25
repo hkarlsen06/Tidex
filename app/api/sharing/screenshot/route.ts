@@ -134,7 +134,7 @@ function buildScreenshotMessage(
   screenshotterName: string,
   locale: string
 ): { title: string; body: string } {
-  if (locale === "no") {
+  if (locale === "no" || locale === "nb" || locale === "nn") {
     return {
       title: "Skjermbilde tatt",
       body: `${screenshotterName} tok et skjermbilde av vaktene dine`,

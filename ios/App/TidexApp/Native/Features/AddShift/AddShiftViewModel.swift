@@ -981,7 +981,6 @@ final class AddShiftViewModel: ObservableObject {
 
         if let data = try? JSONEncoder().encode(draft) {
             UserDefaults.standard.set(data, forKey: ShiftDraft.userDefaultsKey)
-            hasDraft = true
             logger.debug("Saved draft: mode=\(draft.mode.rawValue), dates=\(draft.selectedDates.count)")
         }
     }
