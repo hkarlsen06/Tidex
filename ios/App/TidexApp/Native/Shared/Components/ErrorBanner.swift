@@ -2,8 +2,10 @@ import SwiftUI
 
 /// Error banner for displaying error messages
 /// Appears at the top of forms when there's an error
+/// Supports optional retry and dismiss actions
 struct ErrorBanner: View {
     let message: String
+    var onRetry: (() -> Void)? = nil
     var onDismiss: (() -> Void)? = nil
 
     var body: some View {
@@ -18,6 +20,15 @@ struct ErrorBanner: View {
                 .multilineTextAlignment(.leading)
 
             Spacer()
+
+            if let onRetry = onRetry {
+                Button(action: onRetry) {
+                    Text(LocalizationManager.shared.string("common.retry"))
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.tidexBlue)
+                }
+                .buttonStyle(.plain)
+            }
 
             if let onDismiss = onDismiss {
                 Button(action: onDismiss) {
@@ -79,7 +90,17 @@ struct SuccessBanner: View {
     VStack(spacing: 16) {
         ErrorBanner(
             message: "Invalid email or password. Please try again.",
+            onRetry: {},
             onDismiss: {}
+        )
+
+        ErrorBanner(
+            message: "Connection failed. Check your network.",
+            onRetry: {}
+        )
+
+        ErrorBanner(
+            message: "Simple error without actions."
         )
 
         SuccessBanner(

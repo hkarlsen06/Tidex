@@ -203,6 +203,15 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
     /// Whether a move operation is in progress
     @Published var isMoving: Bool = false
 
+    /// Whether a recurring shift update is in progress
+    @Published var isUpdatingRecurring: Bool = false
+
+    /// Whether a recurring shift deletion is in progress
+    @Published var isDeletingRecurring: Bool = false
+
+    /// Whether a shift update is in progress
+    @Published var isUpdatingShift: Bool = false
+
     /// The shift being copied or moved (stored when entering copy/move mode)
     private var shiftForOperation: ShiftWithComputations?
 
@@ -605,6 +614,9 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
     /// Handle date tap when in copy mode - copy shift to the tapped date
     /// - Parameter targetDateISO: The ISO date string to copy to
     func handleCopyToDate(_ targetDateISO: String) async {
+        // Prevent duplicate taps
+        guard !isCopying else { return }
+
         guard isCopyMode,
               let sourceShift = shiftForOperation else { return }
 
@@ -660,6 +672,9 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
     /// Handle date tap when in move mode - move shift to the tapped date
     /// - Parameter targetDateISO: The ISO date string to move to
     func handleMoveToDate(_ targetDateISO: String) async {
+        // Prevent duplicate taps
+        guard !isMoving else { return }
+
         guard isMoveMode,
               let sourceShift = shiftForOperation else { return }
 
@@ -716,6 +731,10 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
     /// Update a recurring shift pattern
     /// - Parameter editResult: The result from the recurring shift edit form
     func updateRecurringShift(_ editResult: RecurringShiftEditResult) async {
+        // Prevent duplicate taps
+        guard !isUpdatingRecurring else { return }
+
+        isUpdatingRecurring = true
         logger.info("📝 Updating recurring shift \(editResult.recurringId)")
 
         do {
@@ -742,11 +761,17 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
         } catch {
             logger.error("❌ Failed to update recurring shift: \(error.localizedDescription)")
         }
+
+        isUpdatingRecurring = false
     }
 
     /// Delete a recurring shift pattern
     /// - Parameter recurringId: The ID of the recurring shift to delete
     func deleteRecurringShift(_ recurringId: String) async {
+        // Prevent duplicate taps
+        guard !isDeletingRecurring else { return }
+
+        isDeletingRecurring = true
         logger.info("🗑️ Deleting recurring shift \(recurringId)")
 
         do {
@@ -766,6 +791,8 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
         } catch {
             logger.error("❌ Failed to delete recurring shift: \(error.localizedDescription)")
         }
+
+        isDeletingRecurring = false
     }
 
     /// Get a recurring shift by ID
@@ -780,12 +807,17 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
     /// Update a shift with new date/time values
     /// - Parameter editResult: The result from the shift edit form
     func updateShift(_ editResult: ShiftEditResult) async {
+        // Prevent duplicate taps
+        guard !isUpdatingShift else { return }
+
+        isUpdatingShift = true
         logger.info("📝 Updating shift \(editResult.shiftId)")
 
         do {
             // Parse the new date
             guard let newDate = Date.fromISODateString(editResult.shiftDate) else {
                 logger.error("Invalid date format: \(editResult.shiftDate)")
+                isUpdatingShift = false
                 return
             }
 
@@ -798,6 +830,7 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
                 guard let recurringId = editResult.recurringId,
                       let userId = cachedUserId else {
                     logger.error("Missing recurringId or userId for virtual shift conversion")
+                    isUpdatingShift = false
                     return
                 }
 
@@ -839,6 +872,8 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
         } catch {
             logger.error("❌ Failed to update shift: \(error.localizedDescription)")
         }
+
+        isUpdatingShift = false
     }
 
     /// Non-blocking month data loader

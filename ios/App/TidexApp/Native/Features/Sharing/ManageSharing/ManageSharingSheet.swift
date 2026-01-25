@@ -42,7 +42,15 @@ struct ManageSharingSheet: View {
 
                             // Error banner
                             if let error = viewModel.errorMessage {
-                                errorBanner(error)
+                                ErrorBanner(
+                                    message: error,
+                                    onRetry: {
+                                        Task {
+                                            await viewModel.refresh()
+                                        }
+                                    },
+                                    onDismiss: { viewModel.errorMessage = nil }
+                                )
                             }
 
                             // Friend sections
@@ -161,32 +169,6 @@ struct ManageSharingSheet: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 4)
-    }
-
-    // MARK: - Error Banner
-
-    private func errorBanner(_ message: String) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .foregroundColor(.orange)
-
-            Text(message)
-                .font(.system(size: 14))
-                .foregroundColor(.tidexTextPrimary)
-
-            Spacer()
-
-            Button(action: { viewModel.errorMessage = nil }) {
-                Image(systemName: "xmark")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(.tidexTextMuted)
-            }
-        }
-        .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: 10)
-                .fill(Color.orange.opacity(0.1))
-        )
     }
 
     // MARK: - Loading View
@@ -329,24 +311,21 @@ struct ManageSharingSheet: View {
             return
         }
 
-        // Delay scroll slightly to ensure layout is complete
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            withAnimation(.easeInOut(duration: 0.3)) {
+        // Use Task for cleaner async flow with reduced delays
+        Task { @MainActor in
+            // Minimal delay to ensure layout is complete
+            try? await Task.sleep(for: .milliseconds(150))
+
+            // Scroll and highlight simultaneously for snappier UX
+            withAnimation(.easeOut(duration: 0.25)) {
                 scrollProxy.scrollTo(highlightUserId, anchor: .center)
+                isHighlightActive = true
             }
 
-            // Start highlight animation after scroll completes
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-                withAnimation(.easeInOut(duration: 0.3)) {
-                    isHighlightActive = true
-                }
-
-                // Turn off highlight after 5 seconds
-                DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
-                    withAnimation(.easeInOut(duration: 0.5)) {
-                        isHighlightActive = false
-                    }
-                }
+            // Turn off highlight after 3 seconds (reduced from 5)
+            try? await Task.sleep(for: .seconds(3))
+            withAnimation(.easeOut(duration: 0.3)) {
+                isHighlightActive = false
             }
         }
     }

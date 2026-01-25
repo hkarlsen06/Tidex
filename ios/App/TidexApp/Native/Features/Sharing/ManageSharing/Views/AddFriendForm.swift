@@ -49,8 +49,9 @@ struct AddFriendForm: View {
                                 withAnimation(.easeInOut(duration: 0.2)) {
                                     isExpanded = true
                                 }
-                                // Focus the input after a short delay
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                // Focus the input after minimal delay (just enough for animation)
+                                Task { @MainActor in
+                                    try? await Task.sleep(for: .milliseconds(150))
                                     isFocused = true
                                 }
                             }) {

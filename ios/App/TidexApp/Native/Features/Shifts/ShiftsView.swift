@@ -114,6 +114,17 @@ struct ShiftsView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
 
                 // Month picker is now in shared overlay in MainTabView
+
+                // Sync status indicator (shows when syncing, failed, or offline)
+                VStack {
+                    SyncStatusIndicator {
+                        Task {
+                            await viewModel.refresh()
+                        }
+                    }
+                    .padding(.top, 8)
+                    Spacer()
+                }
             }
             .navigationBarTitleDisplayMode(.inline)
             .iPadToolbarBackground(Color.tidexBackground)

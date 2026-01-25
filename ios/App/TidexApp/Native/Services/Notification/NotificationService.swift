@@ -33,6 +33,7 @@ final class NotificationService {
         case .denied:
             // User denied - don't bother registering
             logger.info("Permission denied by user")
+            PushNotificationManager.shared.permissionDenied()
 
         @unknown default:
             break
@@ -51,9 +52,11 @@ final class NotificationService {
                 registerForRemoteNotifications()
             } else {
                 logger.info("Permission denied")
+                PushNotificationManager.shared.permissionDenied()
             }
         } catch {
             logger.error("Permission request failed: \(error.localizedDescription)")
+            PushNotificationManager.shared.apnsRegistrationFailed(error)
         }
     }
 

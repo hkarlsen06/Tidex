@@ -11,6 +11,10 @@ struct DashboardView: View {
 
     @StateObject private var viewModel = DashboardViewModel()
     @StateObject private var countdownManager = CountdownManager()
+    @ObservedObject private var pushManager = PushNotificationManager.shared
+
+    /// State for showing push notification failure alert
+    @State private var showPushFailureAlert = false
 
     // iPad detection - hide logo on iPad
     private var isIPad: Bool {
@@ -38,6 +42,17 @@ struct DashboardView: View {
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+                // Sync status indicator (shows when syncing, failed, or offline)
+                VStack {
+                    SyncStatusIndicator {
+                        Task {
+                            await viewModel.refresh()
+                        }
+                    }
+                    .padding(.top, 8)
+                    Spacer()
+                }
             }
             .navigationBarTitleDisplayMode(.inline)
             .iPadToolbarBackground(Color.tidexBackground)
@@ -90,6 +105,26 @@ struct DashboardView: View {
             Task {
                 await viewModel.reloadFromLocal()
             }
+        }
+        .onChange(of: pushManager.shouldShowAlert) { _, shouldShow in
+            // Show alert when push registration fails
+            if shouldShow {
+                showPushFailureAlert = true
+            }
+        }
+        .alert(
+            localization.string("push.failure.title"),
+            isPresented: $showPushFailureAlert
+        ) {
+            Button(localization.string("push.failure.settingsButton")) {
+                pushManager.openSettings()
+                pushManager.dismissAlert()
+            }
+            Button(localization.string("push.failure.laterButton"), role: .cancel) {
+                pushManager.dismissAlert()
+            }
+        } message: {
+            Text(localization.string("push.failure.message"))
         }
     }
 

@@ -25,6 +25,14 @@ struct ProfileSettingsView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
+                // Error banner (for avatar upload, name save, etc.)
+                if let error = viewModel.errorMessage, !viewModel.showEmailChangeSheet {
+                    ErrorBanner(
+                        message: error,
+                        onDismiss: { viewModel.errorMessage = nil }
+                    )
+                }
+
                 // Personal Info Section
                 personalInfoSection
 

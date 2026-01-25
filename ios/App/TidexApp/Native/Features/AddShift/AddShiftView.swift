@@ -39,6 +39,13 @@ struct AddShiftView: View {
                     ScrollViewReader { scrollProxy in
                         ScrollView {
                             VStack(spacing: 24) {
+                                // Draft restored banner
+                                if viewModel.hasDraft {
+                                    DraftRestoredBanner(onStartFresh: {
+                                        viewModel.startFresh()
+                                    })
+                                }
+
                                 switch viewModel.mode {
                                 case .single:
                                     SingleShiftContent(viewModel: viewModel, scrollProxy: scrollProxy)
@@ -62,14 +69,20 @@ struct AddShiftView: View {
 
                 // Error display - positioned above the shared month picker
                 if let error = viewModel.error, !isKeyboardVisible {
-                    HStack(spacing: 8) {
-                        Image(systemName: "exclamationmark.circle.fill")
-                            .foregroundColor(.tidexError)
-
-                        Text(error)
-                            .font(.system(size: 14))
-                            .foregroundColor(.tidexError)
-                    }
+                    ErrorBanner(
+                        message: error,
+                        onRetry: {
+                            Task {
+                                switch viewModel.mode {
+                                case .single:
+                                    await viewModel.submitSingleShifts()
+                                case .recurring:
+                                    await viewModel.submitRecurringShift()
+                                }
+                            }
+                        },
+                        onDismiss: { viewModel.error = nil }
+                    )
                     .frame(maxWidth: AdaptiveMaxWidth.tabContent)
                     .padding(.horizontal, 16)
                     .padding(.bottom, MonthPickerLayout.height + MonthPickerLayout.bottomPadding + 8)
@@ -230,6 +243,39 @@ private struct RecurringShiftContent: View {
         }
         // Extra bottom padding to clear the month picker
         .padding(.bottom, 80)
+    }
+}
+
+// MARK: - Draft Restored Banner
+
+private struct DraftRestoredBanner: View {
+    let onStartFresh: () -> Void
+    @Environment(\.localization) private var localization
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "arrow.counterclockwise.circle.fill")
+                .font(.system(size: 16))
+                .foregroundColor(.tidexBlue)
+
+            Text(localization.string("addShift.draftRestored"))
+                .font(.system(size: 14))
+                .foregroundColor(.tidexTextSecondary)
+
+            Spacer()
+
+            Button {
+                onStartFresh()
+            } label: {
+                Text(localization.string("addShift.startFresh"))
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.tidexBlue)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(Color.tidexBlue.opacity(0.1))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 }
 

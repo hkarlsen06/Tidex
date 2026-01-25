@@ -269,6 +269,7 @@ final class LoginViewModel: ObservableObject {
         //
         // We call handleLoginSuccess() to ensure the coordinator
         // immediately checks MFA status after successful login.
+        Haptics.play(.success)
         await AppCoordinator.shared.handleLoginSuccess()
     }
 
@@ -276,6 +277,7 @@ final class LoginViewModel: ObservableObject {
         // Translate the error message
         let translated = ErrorTranslations.translate(error)
         errorMessage = translated
+        Haptics.play(.error)
     }
 
     private func clearMessages() {
