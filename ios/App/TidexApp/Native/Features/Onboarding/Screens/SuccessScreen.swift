@@ -1,0 +1,261 @@
+import SwiftUI
+import UIKit
+
+/// Screen 6: Success/Ready
+/// Confirms setup complete, shows save status, transitions to app
+struct SuccessScreen: View {
+    // New API with save status handling
+    var saveStatus: OnboardingSaveManager.SaveStatus = .success
+    var errorMessage: String?
+    let onComplete: () -> Void
+    var onRetry: (() -> Void)?
+
+    @Environment(\.localization) private var localization
+    @State private var checkmarkScale: CGFloat = 0.0
+    @State private var checkmarkOpacity: Double = 0.0
+    @State private var contentVisible = false
+
+    var body: some View {
+        ZStack {
+            // Background
+            Color.tidexBackground
+                .ignoresSafeArea()
+
+            VStack(spacing: 0) {
+                Spacer()
+
+                // Animated checkmark or loading
+                statusAnimation
+
+                Spacer()
+                    .frame(height: 32)
+
+                // Header and content - constrained for iPad
+                VStack(spacing: 12) {
+                    Text(statusTitle)
+                        .font(.system(size: 28, weight: .bold))
+                        .foregroundColor(.tidexTextPrimary)
+                        .multilineTextAlignment(.center)
+
+                    Text(statusSubtitle)
+                        .font(.system(size: 17))
+                        .foregroundColor(.tidexTextSecondary)
+                        .multilineTextAlignment(.center)
+
+                    if saveStatus == .success || saveStatus == .idle {
+                        Spacer()
+                            .frame(height: 8)
+
+                        // Reassurance line
+                        Text(localization.string("onboarding.success.reassurance"))
+                            .font(.system(size: 14))
+                            .foregroundColor(.tidexTextMuted)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 16)
+                    }
+                }
+                .padding(.horizontal, 32)
+                .adaptiveContentWidth()
+                .opacity(contentVisible ? 1 : 0)
+                .offset(y: contentVisible ? 0 : 20)
+
+                // Error message
+                if saveStatus == .error, let errorMessage = errorMessage {
+                    Spacer()
+                        .frame(height: 24)
+
+                    errorBanner(message: errorMessage)
+                        .padding(.horizontal, 24)
+                        .adaptiveContentWidth()
+                }
+
+                Spacer()
+
+                // Bottom button(s)
+                VStack(spacing: 12) {
+                    // Go to Dashboard button
+                    OnboardingButton(
+                        title: localization.string("onboarding.success.button"),
+                        action: {
+                            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                            onComplete()
+                        }
+                    )
+                    .disabled(saveStatus == .saving)
+                    .opacity(saveStatus == .saving ? 0.5 : 1)
+
+                    // Retry button (only on error)
+                    if saveStatus == .error, let onRetry = onRetry {
+                        Button(action: {
+                            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                            onRetry()
+                        }) {
+                            Text(localization.string("common.retry"))
+                                .font(.system(size: 16, weight: .medium))
+                                .foregroundColor(.tidexBlue)
+                        }
+                    }
+                }
+                .padding(.horizontal, 24)
+                .adaptiveContentWidth()
+                .padding(.bottom, 32)
+                .opacity(contentVisible ? 1 : 0)
+            }
+        }
+        .onAppear {
+            startAnimations()
+        }
+        .onChange(of: saveStatus) { _, newStatus in
+            if newStatus == .success {
+                // Play success haptic when save completes
+                UINotificationFeedbackGenerator().notificationOccurred(.success)
+            } else if newStatus == .error {
+                UINotificationFeedbackGenerator().notificationOccurred(.error)
+            }
+        }
+    }
+
+    // MARK: - Status Animation
+
+    @ViewBuilder
+    private var statusAnimation: some View {
+        ZStack {
+            switch saveStatus {
+            case .idle, .success:
+                // Checkmark
+                Circle()
+                    .fill(Color.tidexSuccess.opacity(0.15))
+                    .frame(width: 120, height: 120)
+                    .scaleEffect(checkmarkScale)
+
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 80))
+                    .foregroundColor(.tidexSuccess)
+                    .scaleEffect(checkmarkScale)
+                    .opacity(checkmarkOpacity)
+
+            case .saving:
+                // Loading spinner
+                Circle()
+                    .fill(Color.tidexBlue.opacity(0.15))
+                    .frame(width: 120, height: 120)
+
+                ProgressView()
+                    .progressViewStyle(.circular)
+                    .scaleEffect(1.5)
+                    .tint(.tidexBlue)
+
+            case .error:
+                // Error icon
+                Circle()
+                    .fill(Color.tidexError.opacity(0.15))
+                    .frame(width: 120, height: 120)
+
+                Image(systemName: "exclamationmark.circle.fill")
+                    .font(.system(size: 80))
+                    .foregroundColor(.tidexError)
+            }
+        }
+    }
+
+    // MARK: - Status Text
+
+    private var statusTitle: String {
+        switch saveStatus {
+        case .idle, .success:
+            return localization.string("onboarding.success.title")
+        case .saving:
+            return localization.string("onboarding.success.savingTitle")
+        case .error:
+            return localization.string("onboarding.success.errorTitle")
+        }
+    }
+
+    private var statusSubtitle: String {
+        switch saveStatus {
+        case .idle, .success:
+            return localization.string("onboarding.success.subtitle")
+        case .saving:
+            return localization.string("onboarding.success.saving")
+        case .error:
+            return localization.string("onboarding.success.errorSubtitle")
+        }
+    }
+
+    // MARK: - Error Banner
+
+    @ViewBuilder
+    private func errorBanner(message: String) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 16))
+                .foregroundColor(.tidexError)
+
+            Text(message)
+                .font(.system(size: 14))
+                .foregroundColor(.tidexTextSecondary)
+                .lineLimit(3)
+
+            Spacer()
+        }
+        .padding(16)
+        .background(Color.tidexError.opacity(0.1))
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+
+    // MARK: - Animation Sequence
+
+    private func startAnimations() {
+        // Only animate checkmark for idle/success states
+        if saveStatus == .idle || saveStatus == .success {
+            // Checkmark draw and scale animation
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.6).delay(0.1)) {
+                checkmarkScale = 1.1
+                checkmarkOpacity = 1.0
+            }
+
+            // Settle to normal scale
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.8).delay(0.4)) {
+                checkmarkScale = 1.0
+            }
+
+            // Success haptic
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                UINotificationFeedbackGenerator().notificationOccurred(.success)
+            }
+        }
+
+        // Show content
+        withAnimation(.easeOut(duration: 0.3).delay(0.5)) {
+            contentVisible = true
+        }
+    }
+}
+
+#Preview("Success") {
+    SuccessScreen(
+        saveStatus: .success,
+        onComplete: {},
+        onRetry: nil
+    )
+    .environment(\.localization, LocalizationManager.shared)
+}
+
+#Preview("Saving") {
+    SuccessScreen(
+        saveStatus: .saving,
+        onComplete: {},
+        onRetry: nil
+    )
+    .environment(\.localization, LocalizationManager.shared)
+}
+
+#Preview("Error") {
+    SuccessScreen(
+        saveStatus: .error,
+        errorMessage: "Could not connect to server. Please check your internet connection.",
+        onComplete: {},
+        onRetry: {}
+    )
+    .environment(\.localization, LocalizationManager.shared)
+}

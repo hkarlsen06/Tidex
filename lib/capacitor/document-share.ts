@@ -18,22 +18,24 @@ const DocumentShare = registerPlugin<DocumentSharePlugin>("DocumentShare");
 
 /**
  * Check if we should use native sharing.
- * Uses multiple detection methods to ensure we catch native iOS.
+ * Uses multiple detection methods to ensure we catch native iOS and Android.
  */
 function shouldUseNativeShare(): boolean {
   if (typeof window === "undefined") return false;
 
   // Check Capacitor bridge - most reliable method
   try {
-    if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios") {
+    const platform = Capacitor.getPlatform();
+    if (Capacitor.isNativePlatform() && (platform === "ios" || platform === "android")) {
       return true;
     }
   } catch {
     // Capacitor not available, try fallbacks
   }
 
-  // Fallback: Check for native-ios CSS class (set by inline script in layout.tsx)
-  if (document.documentElement.classList.contains("native-ios")) {
+  // Fallback: Check for native-ios or native-android CSS class (set by inline script in layout.tsx)
+  if (document.documentElement.classList.contains("native-ios") ||
+      document.documentElement.classList.contains("native-android")) {
     return true;
   }
 

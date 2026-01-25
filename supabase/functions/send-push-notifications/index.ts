@@ -1,6 +1,7 @@
 // Supabase Edge Function: Send Push Notifications
 // - Processes notifications from notifications_outbox table (pre-built messages)
-// - Uses FCM HTTP v1 API with OAuth2 for iOS/Android push
+// - Uses APNs HTTP/2 API for iOS native app (preferred)
+// - Uses FCM HTTP v1 API with OAuth2 for hybrid app (fallback)
 // - Atomic queue claiming via claim_outbox_notifications RPC
 // - Automatic invalid token cleanup
 // - NO message building - titles/bodies are pre-computed by app
@@ -17,8 +18,20 @@ const FCM_PROJECT_ID = Deno.env.get("FCM_PROJECT_ID") ?? "";
 const FCM_CLIENT_EMAIL = Deno.env.get("FCM_CLIENT_EMAIL") ?? "";
 const FCM_PRIVATE_KEY = (Deno.env.get("FCM_PRIVATE_KEY") ?? "").replace(/\\n/g, "\n");
 
-// Cache access token (valid for 1 hour)
-let cachedAccessToken: { token: string; expiresAt: number } | null = null;
+// APNs credentials (from Apple Developer Portal)
+// Production credentials (for App Store builds)
+const APNS_KEY_ID = Deno.env.get("APNS_KEY_ID") ?? "";
+const APNS_TEAM_ID = Deno.env.get("APNS_TEAM_ID") ?? "";
+const APNS_PRIVATE_KEY = (Deno.env.get("APNS_PRIVATE_KEY") ?? "").replace(/\\n/g, "\n");
+// Sandbox credentials (for TestFlight/debug builds) - falls back to production if not set
+const APNS_SANDBOX_KEY_ID = Deno.env.get("APNS_SANDBOX_KEY_ID") ?? "";
+const APNS_SANDBOX_PRIVATE_KEY = (Deno.env.get("APNS_SANDBOX_PRIVATE_KEY") ?? "").replace(/\\n/g, "\n");
+const APNS_BUNDLE_ID = Deno.env.get("APNS_BUNDLE_ID") ?? "no.tidex.app";
+
+// Cache access tokens (valid for 1 hour)
+let cachedFcmAccessToken: { token: string; expiresAt: number } | null = null;
+let cachedApnsTokenProd: { token: string; expiresAt: number } | null = null;
+let cachedApnsTokenSandbox: { token: string; expiresAt: number } | null = null;
 
 // ---------- Types ----------
 interface OutboxNotification {
@@ -38,7 +51,8 @@ interface OutboxNotification {
 
 interface PushDevice {
   id: string;
-  fcm_token: string;
+  fcm_token: string | null;
+  apns_token: string | null;
 }
 
 // ---------- Helpers ----------
@@ -76,7 +90,10 @@ function pemToArrayBuffer(pem: string): ArrayBuffer {
   return bytes.buffer;
 }
 
-async function createJwt(payload: object, privateKey: string): Promise<string> {
+/**
+ * Create JWT with RS256 algorithm (for FCM/Google OAuth)
+ */
+async function createJwtRs256(payload: object, privateKey: string): Promise<string> {
   const header = { alg: "RS256", typ: "JWT" };
 
   const encodedHeader = base64UrlEncode(JSON.stringify(header));
@@ -101,10 +118,112 @@ async function createJwt(payload: object, privateKey: string): Promise<string> {
   return `${signingInput}.${base64UrlEncode(signature)}`;
 }
 
+/**
+ * Create JWT with ES256 algorithm (for APNs)
+ * APNs requires ECDSA with P-256 curve
+ */
+async function createJwtEs256(payload: object, privateKey: string, keyId: string): Promise<string> {
+  const header = { alg: "ES256", typ: "JWT", kid: keyId };
+
+  const encodedHeader = base64UrlEncode(JSON.stringify(header));
+  const encodedPayload = base64UrlEncode(JSON.stringify(payload));
+  const signingInput = `${encodedHeader}.${encodedPayload}`;
+
+  // Import EC private key (P-256 curve)
+  const key = await crypto.subtle.importKey(
+    "pkcs8",
+    pemToArrayBuffer(privateKey),
+    { name: "ECDSA", namedCurve: "P-256" },
+    false,
+    ["sign"]
+  );
+
+  const signature = await crypto.subtle.sign(
+    { name: "ECDSA", hash: "SHA-256" },
+    key,
+    new TextEncoder().encode(signingInput)
+  );
+
+  // Convert signature to raw r||s format (APNs expects raw format)
+  // Web Crypto may return DER or raw format depending on runtime
+  const rawSignature = signatureToRaw(new Uint8Array(signature));
+
+  return `${signingInput}.${base64UrlEncode(rawSignature)}`;
+}
+
+/**
+ * Convert ECDSA signature to raw r||s format for APNs
+ * Handles both DER-encoded and raw format signatures
+ * - Deno/Web Crypto may return either format depending on version
+ * - DER format: 0x30 [total-length] 0x02 [r-length] [r] 0x02 [s-length] [s]
+ * - Raw format: [r (32 bytes)] [s (32 bytes)] = 64 bytes total
+ */
+function signatureToRaw(sig: Uint8Array): Uint8Array {
+  // If already 64 bytes, it's already in raw format
+  if (sig.length === 64) {
+    return sig;
+  }
+
+  // Otherwise, parse as DER format
+  // DER format starts with 0x30 (SEQUENCE tag)
+  if (sig[0] !== 0x30) {
+    throw new Error(`Unexpected signature format: first byte is ${sig[0]}, length is ${sig.length}`);
+  }
+
+  let offset = 2; // Skip 0x30 and total length
+
+  // Read r
+  if (sig[offset] !== 0x02) {
+    throw new Error(`Invalid DER signature: expected 0x02 at offset ${offset}, got ${sig[offset]}`);
+  }
+  offset++;
+  const rLength = sig[offset];
+  offset++;
+  let r = sig.slice(offset, offset + rLength);
+  offset += rLength;
+
+  // Read s
+  if (sig[offset] !== 0x02) {
+    throw new Error(`Invalid DER signature: expected 0x02 at offset ${offset}, got ${sig[offset]}`);
+  }
+  offset++;
+  const sLength = sig[offset];
+  offset++;
+  let s = sig.slice(offset, offset + sLength);
+
+  // Normalize to 32 bytes each (remove leading zeros or pad)
+  r = normalizeToLength(r, 32);
+  s = normalizeToLength(s, 32);
+
+  // Concatenate r and s
+  const raw = new Uint8Array(64);
+  raw.set(r, 0);
+  raw.set(s, 32);
+
+  return raw;
+}
+
+/**
+ * Normalize byte array to specific length
+ */
+function normalizeToLength(bytes: Uint8Array, length: number): Uint8Array {
+  if (bytes.length === length) return bytes;
+
+  if (bytes.length > length) {
+    // Remove leading zeros
+    return bytes.slice(bytes.length - length);
+  }
+
+  // Pad with leading zeros
+  const padded = new Uint8Array(length);
+  padded.set(bytes, length - bytes.length);
+  return padded;
+}
+
 async function getFcmAccessToken(): Promise<string> {
   // Return cached token if still valid (with 1 minute buffer)
-  if (cachedAccessToken && Date.now() < cachedAccessToken.expiresAt - 60000) {
-    return cachedAccessToken.token;
+  if (cachedFcmAccessToken && Date.now() < cachedFcmAccessToken.expiresAt - 60000) {
+    return cachedFcmAccessToken.token;
   }
 
   // Generate JWT for Google OAuth2
@@ -117,7 +236,7 @@ async function getFcmAccessToken(): Promise<string> {
     exp: now + 3600,
   };
 
-  const jwt = await createJwt(payload, FCM_PRIVATE_KEY);
+  const jwt = await createJwtRs256(payload, FCM_PRIVATE_KEY);
 
   // Exchange JWT for access token
   const response = await fetch("https://oauth2.googleapis.com/token", {
@@ -134,12 +253,51 @@ async function getFcmAccessToken(): Promise<string> {
   }
 
   const data = await response.json();
-  cachedAccessToken = {
+  cachedFcmAccessToken = {
     token: data.access_token,
     expiresAt: Date.now() + data.expires_in * 1000,
   };
 
   return data.access_token;
+}
+
+/**
+ * Get APNs JWT token for authentication
+ * APNs uses ES256 algorithm (ECDSA with P-256 curve)
+ * @param sandbox - If true, use sandbox credentials; otherwise use production
+ */
+async function getApnsToken(sandbox: boolean): Promise<string> {
+  const cache = sandbox ? cachedApnsTokenSandbox : cachedApnsTokenProd;
+
+  // Return cached token if still valid (with 5 minute buffer)
+  // APNs tokens are valid for 1 hour
+  if (cache && Date.now() < cache.expiresAt - 300000) {
+    return cache.token;
+  }
+
+  // Select credentials based on environment
+  const keyId = sandbox ? (APNS_SANDBOX_KEY_ID || APNS_KEY_ID) : APNS_KEY_ID;
+  const privateKey = sandbox ? (APNS_SANDBOX_PRIVATE_KEY || APNS_PRIVATE_KEY) : APNS_PRIVATE_KEY;
+
+  const now = Math.floor(Date.now() / 1000);
+  const token = await createJwtEs256(
+    { iss: APNS_TEAM_ID, iat: now },
+    privateKey,
+    keyId
+  );
+
+  const cacheEntry = {
+    token,
+    expiresAt: Date.now() + 3600000, // 1 hour
+  };
+
+  if (sandbox) {
+    cachedApnsTokenSandbox = cacheEntry;
+  } else {
+    cachedApnsTokenProd = cacheEntry;
+  }
+
+  return token;
 }
 
 /**
@@ -229,6 +387,99 @@ async function sendToFcm(
   return { success: false };
 }
 
+/**
+ * Send a notification to APNs (Apple Push Notification service)
+ * Uses HTTP/2 API with JWT authentication
+ * Tries production first, falls back to sandbox if BadDeviceToken
+ */
+async function sendToApns(
+  apnsToken: string,
+  notification: OutboxNotification
+): Promise<{ success: boolean; invalidToken?: boolean }> {
+  const { title, body, data_payload, notification_type } = notification;
+
+  // Build custom data payload
+  const customData: Record<string, unknown> = {
+    type: notification_type,
+    ...data_payload,
+  };
+
+  // APNs payload format
+  const payload = {
+    aps: {
+      alert: { title, body },
+      sound: "tidex_notification.caf",
+      "mutable-content": 1,
+    },
+    ...customData,
+  };
+
+  // Try production first, then sandbox
+  // This handles mixed environments (App Store + TestFlight users)
+  const environments: Array<{ sandbox: boolean; host: string }> = [
+    { sandbox: false, host: "api.push.apple.com" },
+    { sandbox: true, host: "api.sandbox.push.apple.com" },
+  ];
+
+  // Check if sandbox credentials are configured
+  const sandboxConfigured = !!(APNS_SANDBOX_KEY_ID && APNS_SANDBOX_PRIVATE_KEY);
+
+  for (const env of environments) {
+    // Skip sandbox if not configured
+    if (env.sandbox && !sandboxConfigured) {
+      continue;
+    }
+
+    const jwtToken = await getApnsToken(env.sandbox);
+    const apnsUrl = `https://${env.host}/3/device/${apnsToken}`;
+
+    console.log(`[APNs] Trying ${env.host}...`);
+
+    const response = await fetch(apnsUrl, {
+      method: "POST",
+      headers: {
+        Authorization: `bearer ${jwtToken}`,
+        "apns-topic": APNS_BUNDLE_ID,
+        "apns-push-type": "alert",
+        "apns-priority": "10",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (response.ok) {
+      console.log(`[APNs] Success via ${env.host}`);
+      return { success: true };
+    }
+
+    const status = response.status;
+    const errorBody = await response.text();
+    console.error(`APNs error (${status}) via ${env.host} for token ${apnsToken.substring(0, 20)}...:`, errorBody);
+
+    // If BadDeviceToken on production, try sandbox (device might be from TestFlight)
+    if (status === 400 && errorBody.includes("BadDeviceToken") && !env.sandbox) {
+      console.log("[APNs] BadDeviceToken on production, trying sandbox...");
+      continue;
+    }
+
+    // 410 Unregistered means token is truly invalid (user uninstalled app)
+    if (status === 410) {
+      return { success: false, invalidToken: true };
+    }
+
+    // Other 400 errors (BadDeviceToken after both attempts) mean invalid token
+    if (status === 400) {
+      // Only mark as invalid if this is the last attempt
+      if (env.sandbox || !sandboxConfigured) {
+        return { success: false, invalidToken: true };
+      }
+    }
+  }
+
+  // All attempts failed
+  return { success: false, invalidToken: true };
+}
+
 // ---------- Server ----------
 serve(async (req: Request) => {
   try {
@@ -241,8 +492,13 @@ serve(async (req: Request) => {
     if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
       return res("Supabase not configured", 503);
     }
-    if (!FCM_PROJECT_ID || !FCM_CLIENT_EMAIL || !FCM_PRIVATE_KEY) {
-      return res("FCM not configured", 503);
+
+    // Check if at least one push provider is configured
+    const fcmConfigured = !!(FCM_PROJECT_ID && FCM_CLIENT_EMAIL && FCM_PRIVATE_KEY);
+    const apnsConfigured = !!(APNS_KEY_ID && APNS_TEAM_ID && APNS_PRIVATE_KEY);
+
+    if (!fcmConfigured && !apnsConfigured) {
+      return res("No push provider configured (FCM or APNs required)", 503);
     }
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
@@ -265,8 +521,11 @@ serve(async (req: Request) => {
       return json({ processed: 0, message: "No pending notifications" });
     }
 
-    // Get FCM access token
-    const accessToken = await getFcmAccessToken();
+    // Get FCM access token only if FCM is configured
+    let fcmAccessToken: string | null = null;
+    if (fcmConfigured) {
+      fcmAccessToken = await getFcmAccessToken();
+    }
 
     let processed = 0;
     let failed = 0;
@@ -274,11 +533,11 @@ serve(async (req: Request) => {
 
     for (const notification of notifications as OutboxNotification[]) {
       try {
-        // Get recipient's FCM tokens
+        // Get recipient's push tokens (both APNs and FCM)
         const { data: devices } = await supabase
           .schema("internal")
           .from("push_devices")
-          .select("id, fcm_token")
+          .select("id, fcm_token, apns_token")
           .eq("user_id", notification.recipient_id);
 
         if (!devices?.length) {
@@ -295,15 +554,37 @@ serve(async (req: Request) => {
         }
 
         // Send to each device
+        // Priority: APNs (native iOS) > FCM (hybrid/Android)
         let anySuccess = false;
         for (const device of devices as PushDevice[]) {
-          const result = await sendToFcm(accessToken, device.fcm_token, notification);
+          let result: { success: boolean; invalidToken?: boolean };
+
+          // Prefer APNs if token exists and APNs is configured
+          if (device.apns_token && apnsConfigured) {
+            result = await sendToApns(device.apns_token, notification);
+            if (result.invalidToken) {
+              // Clear invalid APNs token but don't delete device (may have FCM)
+              await supabase
+                .schema("internal")
+                .from("push_devices")
+                .update({ apns_token: null })
+                .eq("id", device.id);
+            }
+          }
+          // Fall back to FCM if APNs not available/failed
+          else if (device.fcm_token && fcmAccessToken) {
+            result = await sendToFcm(fcmAccessToken, device.fcm_token, notification);
+            if (result.invalidToken) {
+              // Token is invalid, queue device for deletion
+              invalidTokens.push(device.id);
+            }
+          } else {
+            // No valid token for this device
+            result = { success: false };
+          }
 
           if (result.success) {
             anySuccess = true;
-          } else if (result.invalidToken) {
-            // Token is invalid, queue for deletion
-            invalidTokens.push(device.id);
           }
         }
 

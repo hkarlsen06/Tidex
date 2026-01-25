@@ -1,1 +1,4 @@
-CAPACITOR_DEBUG = true
+// Debug Configuration
+// Includes shared version settings
+
+#include "Version.xcconfig"

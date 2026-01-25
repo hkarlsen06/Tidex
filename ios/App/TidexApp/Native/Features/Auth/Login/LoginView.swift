@@ -1,0 +1,190 @@
+import SwiftUI
+
+/// Main login screen view
+/// Supports email/password, phone/OTP, Google, and Apple sign-in
+struct LoginView: View {
+    @StateObject private var viewModel = LoginViewModel()
+    @Environment(\.localization) private var localization
+
+    // Navigation callbacks
+    var onNavigateToSignup: (() -> Void)?
+    var onNavigateToResetPassword: (() -> Void)?
+
+    // Animation state
+    @State private var cardAppeared = false
+    @State private var footerAppeared = false
+
+    var body: some View {
+        ZStack {
+            // Background - adapts to system appearance
+            Color.tidexBackground
+                .ignoresSafeArea()
+
+            // Content - centered vertically like web version, constrained for iPad
+            GeometryReader { geometry in
+                ScrollView {
+                    VStack(spacing: 24) {
+                        Spacer(minLength: 0)
+
+                        // Main card - constrained width for iPad
+                        TidexCard {
+                            VStack(spacing: 20) {
+                                // Card header with logo inline
+                                cardHeader
+
+                                // Error/Success banners
+                                if let error = viewModel.errorMessage {
+                                    ErrorBanner(
+                                        message: error,
+                                        onDismiss: { viewModel.errorMessage = nil }
+                                    )
+                                }
+
+                                if let success = viewModel.successMessage {
+                                    SuccessBanner(
+                                        message: success,
+                                        onDismiss: { viewModel.successMessage = nil }
+                                    )
+                                }
+
+                                // Step content
+                                switch viewModel.currentStep {
+                                case .input:
+                                    inputStepContent
+                                case .otp:
+                                    PhoneOTPForm(viewModel: viewModel)
+                                }
+                            }
+                            .padding(24)
+                        }
+                        .adaptiveFormWidth()
+                        .opacity(cardAppeared ? 1 : 0)
+                        .offset(y: cardAppeared ? 0 : 30)
+                        .scaleEffect(cardAppeared ? 1 : 0.95)
+
+                        // Footer
+                        if viewModel.currentStep == .input {
+                            footerView
+                                .opacity(footerAppeared ? 1 : 0)
+                        }
+
+                        Spacer(minLength: 0)
+                    }
+                    .padding(.horizontal, 20)
+                    .frame(minHeight: geometry.size.height)
+                    .frame(maxWidth: .infinity)
+                }
+                .scrollBounceBehavior(.basedOnSize)
+            }
+        }
+        .loading(viewModel.isLoading)
+        .onTapGesture {
+            // Dismiss keyboard when tapping outside input fields
+            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        }
+        .onAppear {
+            // Fast staggered entrance animations - feel snappy
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                cardAppeared = true
+            }
+            withAnimation(.easeOut(duration: 0.25).delay(0.1)) {
+                footerAppeared = true
+            }
+        }
+    }
+
+    // MARK: - Card Header
+
+    private var cardHeader: some View {
+        VStack(spacing: 8) {
+            // Title row with logo inline (matches Next.js layout)
+            HStack {
+                Text(localization.string("login.title"))
+                    .font(.tidexTitle)
+                    .foregroundColor(.tidexTextPrimary)
+
+                Spacer()
+
+                LogoWatermark(opacity: 1.0)
+                    .frame(width: 32, height: 32)
+            }
+
+            // Subtitle aligned left
+            Text(localization.string("login.subtitle"))
+                .font(.tidexSubheadline)
+                .foregroundColor(.tidexTextSecondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    // MARK: - Input Step Content
+
+    @ViewBuilder
+    private var inputStepContent: some View {
+        // OAuth buttons
+        OAuthButtonsView(
+            onGoogleTap: { Task { await viewModel.signInWithGoogle() } },
+            onAppleTap: { Task { await viewModel.signInWithApple() } },
+            isLoading: viewModel.isLoading
+        )
+
+        // Divider
+        dividerView
+
+        // Email/phone form
+        if viewModel.showEmailForm {
+            EmailPasswordForm(
+                viewModel: viewModel,
+                onForgotPassword: onNavigateToResetPassword
+            )
+        } else {
+            OutlineButton(
+                title: localization.string("login.emailOrPhoneReveal"),
+                action: { viewModel.showEmailForm = true },
+                icon: "envelope"
+            )
+        }
+    }
+
+    // MARK: - Divider
+
+    private var dividerView: some View {
+        HStack(spacing: 16) {
+            Rectangle()
+                .fill(Color.tidexBorderSubtle)
+                .frame(height: 1)
+
+            Text(localization.string("login.separator"))
+                .font(.tidexSubheadline)
+                .foregroundColor(.tidexTextMuted)
+
+            Rectangle()
+                .fill(Color.tidexBorderSubtle)
+                .frame(height: 1)
+        }
+    }
+
+    // MARK: - Footer
+
+    private var footerView: some View {
+        HStack(spacing: 4) {
+            Text(localization.string("login.noAccount"))
+                .font(.tidexSubheadline)
+                .foregroundColor(.tidexTextSecondary)
+
+            Button(action: {
+                onNavigateToSignup?()
+            }) {
+                Text(localization.string("login.createAccount"))
+                    .font(.tidexLabel)
+                    .foregroundColor(.tidexBlue)
+            }
+            .buttonStyle(.plain)
+        }
+    }
+}
+
+#Preview {
+    LoginView()
+        .environment(\.localization, LocalizationManager.shared)
+}

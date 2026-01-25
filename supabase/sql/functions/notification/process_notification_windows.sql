@@ -6,7 +6,7 @@
 -- This function processes notification windows where window_end has passed (window_start + 15 min).
 -- For each window, it:
 --   1. Marks the window as 'processing'
---   2. Builds a Norwegian notification message from the aggregated counts
+--   2. Builds LOCALIZED notification messages based on each recipient's locale
 --   3. Fans out to each non-muted recipient with shared_shifts_enabled
 --   4. Marks the window as 'finalized'
 --
@@ -14,9 +14,13 @@
 --   windows_processed: Number of windows processed
 --   outbox_rows_created: Number of outbox rows inserted
 --
--- Message format examples:
+-- Message format examples (Norwegian):
 --   Title: "Alvilde"
 --   Body: "La til 2 vakter, endret 1 vakt, og slettet 3 vakter"
+--
+-- Message format examples (English):
+--   Title: "Alvilde"
+--   Body: "Added 2 shifts, updated 1 shift, and deleted 3 shifts"
 
 CREATE OR REPLACE FUNCTION internal.process_notification_windows()
 RETURNS TABLE(windows_processed INT, outbox_rows_created INT)
@@ -27,9 +31,6 @@ AS $$
 DECLARE
   v_window RECORD;
   v_owner_name TEXT;
-  v_title TEXT;
-  v_body TEXT;
-  v_action_parts TEXT[];
   v_windows_processed INT := 0;
   v_outbox_created INT := 0;
   v_rows_inserted INT;
@@ -65,45 +66,8 @@ BEGIN
       v_owner_name := 'Noen';
     END IF;
 
-    -- Title is just the owner name
-    v_title := v_owner_name;
-
-    -- Build Norwegian body message
-    -- Order: added, updated, deleted
-    -- Format: "La til 2 vakter, endret 1 vakt, og slettet 3 vakter"
-    v_action_parts := '{}';
-
-    IF v_window.added_count > 0 THEN
-      v_action_parts := array_append(v_action_parts,
-        'la til ' || v_window.added_count ||
-        CASE WHEN v_window.added_count = 1 THEN ' vakt' ELSE ' vakter' END);
-    END IF;
-
-    IF v_window.updated_count > 0 THEN
-      v_action_parts := array_append(v_action_parts,
-        'endret ' || v_window.updated_count ||
-        CASE WHEN v_window.updated_count = 1 THEN ' vakt' ELSE ' vakter' END);
-    END IF;
-
-    IF v_window.deleted_count > 0 THEN
-      v_action_parts := array_append(v_action_parts,
-        'slettet ' || v_window.deleted_count ||
-        CASE WHEN v_window.deleted_count = 1 THEN ' vakt' ELSE ' vakter' END);
-    END IF;
-
-    -- Build body with Norwegian conjunction rules
-    IF array_length(v_action_parts, 1) = 1 THEN
-      -- Capitalize first letter
-      v_body := initcap(substring(v_action_parts[1] from 1 for 1)) || substring(v_action_parts[1] from 2);
-    ELSIF array_length(v_action_parts, 1) = 2 THEN
-      v_body := initcap(substring(v_action_parts[1] from 1 for 1)) || substring(v_action_parts[1] from 2) ||
-                ' og ' || v_action_parts[2];
-    ELSE
-      v_body := initcap(substring(v_action_parts[1] from 1 for 1)) || substring(v_action_parts[1] from 2) ||
-                ', ' || v_action_parts[2] || ', og ' || v_action_parts[3];
-    END IF;
-
-    -- Fan out to each non-muted recipient
+    -- Fan out to each non-muted recipient WITH LOCALIZED MESSAGES
+    -- Each recipient gets a message in their preferred locale
     INSERT INTO internal.notifications_outbox (
       owner_id, recipient_id, notification_type, due_at, title, body, data_payload, idempotency_key
     )
@@ -111,13 +75,20 @@ BEGIN
       v_window.owner_id,
       ss.viewer_id,
       'shared_shift_changes',
-      v_window_end,  -- due_at = window_end for clarity
-      v_title,
-      v_body,
+      v_window_end,
+      -- Title is just owner name (same in both languages)
+      v_owner_name,
+      -- Body is localized based on recipient's locale (defaults to 'no' for Norwegian)
+      internal.build_batched_body(
+        v_window.added_count,
+        v_window.updated_count,
+        v_window.deleted_count,
+        COALESCE(u.raw_user_meta_data->>'locale', 'no')
+      ),
       jsonb_build_object(
         'type', 'shared_shift_changes',
         'owner_id', v_window.owner_id,
-        'shift_dates', to_jsonb(v_window.affected_dates),  -- JSON array, not comma string
+        'shift_dates', to_jsonb(v_window.affected_dates),
         'added_count', v_window.added_count,
         'updated_count', v_window.updated_count,
         'deleted_count', v_window.deleted_count
@@ -125,6 +96,7 @@ BEGIN
       -- Stable idempotency: owner_id:recipient_id:window_start
       v_window.owner_id || ':' || ss.viewer_id || ':' || v_window.window_start::text
     FROM shift_shares ss
+    JOIN auth.users u ON u.id = ss.viewer_id
     LEFT JOIN notification_preferences np ON np.user_id = ss.viewer_id
     WHERE ss.owner_id = v_window.owner_id
       AND ss.muted = FALSE

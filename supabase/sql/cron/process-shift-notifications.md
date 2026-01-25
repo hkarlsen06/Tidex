@@ -24,7 +24,9 @@ Calls `run_notification_workers()` which:
 
 1. **Processes completed time windows** - Runs `internal.process_notification_windows()` to:
    - Find windows where `window_start + 15 minutes <= now()` and status is 'pending'
-   - Build aggregated Norwegian notification messages (e.g., "Alvilde la til 2 vakter og endret 1 vakt")
+   - Build **localized** notification messages based on each recipient's locale:
+     - Norwegian (default): "Alvilde la til 2 vakter og endret 1 vakt"
+     - English: "Alvilde added 2 shifts and updated 1 shift"
    - Fan out to each non-muted recipient with `shared_shifts_enabled`
    - Insert rows into `internal.notifications_outbox`
    - Mark windows as 'finalized'

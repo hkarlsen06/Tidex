@@ -33,6 +33,7 @@ interface DueReminder {
 interface PushDevice {
   id: string;
   fcm_token: string;
+  apns_token: string | null;
 }
 
 // ---------- Helpers ----------
@@ -305,11 +306,19 @@ async function processReminder(
   // Step 2: Claim succeeded, get user's devices and send notification
   const { data: devices } = await supabase
     .schema("internal").from("push_devices")
-    .select("id, fcm_token")
+    .select("id, fcm_token, apns_token")
     .eq("user_id", reminder.user_id);
 
   if (!devices?.length) {
     console.log(`No devices for user ${reminder.user_id}`);
+    return { sent: false, invalidTokens: [] };
+  }
+
+  // Skip if user has ANY device with APNs token - they handle reminders locally
+  // This prevents double notifications for iOS users
+  const hasApnsDevice = (devices as PushDevice[]).some((d) => d.apns_token != null);
+  if (hasApnsDevice) {
+    console.log(`User ${reminder.user_id} has APNs device, skipping server reminder`);
     return { sent: false, invalidTokens: [] };
   }
 

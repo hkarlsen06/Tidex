@@ -1,0 +1,314 @@
+import Foundation
+
+// MARK: - Wage Timeline Entry
+
+/// Processed timeline entry for display in the wage history timeline
+/// Wraps a WageSnapshot with computed metadata for visual presentation
+struct WageTimelineEntry: Identifiable {
+    let id: String
+    let snapshot: WageSnapshot
+    let type: EntryType
+    let dateRange: String
+    let endDate: String?
+    let changes: [WageChange]
+
+    /// Type of timeline entry based on temporal position
+    enum EntryType {
+        case future   // from_date is in the future
+        case current  // from_date is in the past and this is the most recent
+        case past     // from_date is in the past but superseded by a newer snapshot
+    }
+}
+
+// MARK: - Wage Change
+
+/// Describes a change between consecutive snapshots
+struct WageChange: Identifiable {
+    let id = UUID()
+    let description: String
+    let type: ChangeType
+
+    enum ChangeType {
+        case wage
+        case tariffLevel
+        case tax
+        case breaks
+        case supplements
+    }
+}
+
+// MARK: - Timeline Processing
+
+/// Processes raw snapshots into timeline entries with change detection
+enum WageTimelineProcessor {
+
+    /// Process snapshots into timeline entries for display
+    /// - Parameters:
+    ///   - snapshots: Raw snapshots ordered by from_date DESC (most recent first)
+    ///   - locale: Locale for date formatting
+    /// - Returns: Timeline entries ready for display
+    static func processSnapshots(
+        _ snapshots: [WageSnapshot],
+        locale: LocalizationManager.AppLocale
+    ) -> [WageTimelineEntry] {
+        guard !snapshots.isEmpty else { return [] }
+
+        let today = ISO8601DateFormatter.dateOnlyString(from: Date())
+        var entries: [WageTimelineEntry] = []
+
+        // Find the current entry (first snapshot where from_date <= today or baseline)
+        var foundCurrent = false
+
+        for (index, snapshot) in snapshots.enumerated() {
+            let previousSnapshot = index > 0 ? snapshots[index - 1] : nil
+            let nextSnapshot = index < snapshots.count - 1 ? snapshots[index + 1] : nil
+
+            // Determine entry type
+            let entryType: WageTimelineEntry.EntryType
+            if let fromDate = snapshot.from_date {
+                if fromDate > today {
+                    entryType = .future
+                } else if !foundCurrent {
+                    entryType = .current
+                    foundCurrent = true
+                } else {
+                    entryType = .past
+                }
+            } else {
+                // Baseline (nil from_date)
+                entryType = foundCurrent ? .past : .current
+                if entryType == .current {
+                    foundCurrent = true
+                }
+            }
+
+            // Calculate end date (previous snapshot's from_date - 1 day)
+            let endDate = calculateEndDate(for: snapshot, previousSnapshot: previousSnapshot)
+
+            // Format date range
+            let dateRange = formatDateRange(
+                fromDate: snapshot.from_date,
+                endDate: endDate,
+                isCurrent: entryType == .current,
+                isPast: entryType == .past,
+                locale: locale
+            )
+
+            // Detect changes from the next snapshot (chronologically earlier)
+            let changes = detectChanges(current: snapshot, previous: nextSnapshot, locale: locale)
+
+            entries.append(WageTimelineEntry(
+                id: snapshot.id,
+                snapshot: snapshot,
+                type: entryType,
+                dateRange: dateRange,
+                endDate: endDate,
+                changes: changes
+            ))
+        }
+
+        return entries
+    }
+
+    // MARK: - Private Helpers
+
+    /// Calculate the end date for a snapshot (one day before the next snapshot starts)
+    private static func calculateEndDate(
+        for snapshot: WageSnapshot,
+        previousSnapshot: WageSnapshot?
+    ) -> String? {
+        guard let previousFromDate = previousSnapshot?.from_date else { return nil }
+
+        // Parse the date and subtract one day
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+
+        guard let date = formatter.date(from: previousFromDate),
+              let oneDayBefore = Calendar.current.date(byAdding: .day, value: -1, to: date) else {
+            return nil
+        }
+
+        return formatter.string(from: oneDayBefore)
+    }
+
+    /// Format date range for display
+    private static func formatDateRange(
+        fromDate: String?,
+        endDate: String?,
+        isCurrent: Bool,
+        isPast: Bool,
+        locale: LocalizationManager.AppLocale
+    ) -> String {
+        let isNorwegian = locale == .norwegian
+        let nowText = isNorwegian ? "nå" : "now"
+
+        // Baseline with no date
+        guard let fromDate = fromDate else {
+            // If baseline has an end date and is past, show "- {endDate}"
+            if let endDate = endDate, isPast {
+                let formattedEnd = formatDate(endDate, locale: locale)
+                return "- \(formattedEnd)"
+            }
+            // Otherwise show "- nå" (it's the only entry or current)
+            return "- \(nowText)"
+        }
+
+        let formattedFrom = formatDate(fromDate, locale: locale)
+
+        if isCurrent {
+            return "\(formattedFrom) - \(nowText)"
+        } else if let endDate = endDate {
+            let formattedEnd = formatDate(endDate, locale: locale)
+            return "\(formattedFrom) - \(formattedEnd)"
+        } else {
+            return formattedFrom
+        }
+    }
+
+    /// Format a single date, hiding year if it's the current year
+    private static func formatDate(_ isoDate: String, locale: LocalizationManager.AppLocale) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+
+        guard let date = formatter.date(from: isoDate) else { return isoDate }
+
+        let calendar = Calendar.current
+        let isCurrentYear = calendar.component(.year, from: date) == calendar.component(.year, from: Date())
+
+        let displayFormatter = DateFormatter()
+        displayFormatter.locale = Locale(identifier: locale == .norwegian ? "nb_NO" : "en_US")
+
+        if isCurrentYear {
+            displayFormatter.dateFormat = locale == .norwegian ? "d. MMM" : "MMM d"
+        } else {
+            displayFormatter.dateFormat = locale == .norwegian ? "d. MMM yyyy" : "MMM d, yyyy"
+        }
+
+        return displayFormatter.string(from: date)
+    }
+
+    /// Detect what changed between two consecutive snapshots
+    private static func detectChanges(
+        current: WageSnapshot,
+        previous: WageSnapshot?,
+        locale: LocalizationManager.AppLocale
+    ) -> [WageChange] {
+        guard let previous = previous else { return [] }
+
+        let isNorwegian = locale == .norwegian
+        var changes: [WageChange] = []
+
+        // Wage change
+        if current.hourly_wage != previous.hourly_wage {
+            let formatter = NumberFormatter()
+            formatter.numberStyle = .decimal
+            formatter.minimumFractionDigits = 2
+            formatter.maximumFractionDigits = 2
+            formatter.locale = Locale(identifier: "nb_NO")
+
+            let oldWage = formatter.string(from: NSNumber(value: previous.hourly_wage)) ?? "\(previous.hourly_wage)"
+            let newWage = formatter.string(from: NSNumber(value: current.hourly_wage)) ?? "\(current.hourly_wage)"
+
+            changes.append(WageChange(
+                description: "\(oldWage) \u{2192} \(newWage) kr/t",
+                type: .wage
+            ))
+        }
+
+        // Tariff level change
+        if current.wage_level != previous.wage_level {
+            if current.wage_level == nil && previous.wage_level != nil {
+                changes.append(WageChange(
+                    description: isNorwegian ? "Byttet til egendefinert lønn" : "Switched to custom wage",
+                    type: .tariffLevel
+                ))
+            } else if current.wage_level != nil && previous.wage_level == nil {
+                changes.append(WageChange(
+                    description: isNorwegian ? "Byttet til tariff" : "Switched to tariff",
+                    type: .tariffLevel
+                ))
+            } else if let currentLevel = current.wage_level, let previousLevel = previous.wage_level {
+                changes.append(WageChange(
+                    description: isNorwegian
+                        ? "Lønnstrinn \(previousLevel) \u{2192} \(currentLevel)"
+                        : "Level \(previousLevel) \u{2192} \(currentLevel)",
+                    type: .tariffLevel
+                ))
+            }
+        }
+
+        // Tax change
+        if current.effectiveTaxEnabled != previous.effectiveTaxEnabled {
+            changes.append(WageChange(
+                description: current.effectiveTaxEnabled
+                    ? (isNorwegian ? "Skatt aktivert" : "Tax enabled")
+                    : (isNorwegian ? "Skatt deaktivert" : "Tax disabled"),
+                type: .tax
+            ))
+        } else if current.effectiveTaxEnabled && current.effectiveTaxPercentage != previous.effectiveTaxPercentage {
+            changes.append(WageChange(
+                description: isNorwegian
+                    ? "Skatt \(Int(previous.effectiveTaxPercentage))% \u{2192} \(Int(current.effectiveTaxPercentage))%"
+                    : "Tax \(Int(previous.effectiveTaxPercentage))% \u{2192} \(Int(current.effectiveTaxPercentage))%",
+                type: .tax
+            ))
+        }
+
+        // Break change
+        if current.effectiveBreakEnabled != previous.effectiveBreakEnabled {
+            changes.append(WageChange(
+                description: current.effectiveBreakEnabled
+                    ? (isNorwegian ? "Pause aktivert" : "Break enabled")
+                    : (isNorwegian ? "Pause deaktivert" : "Break disabled"),
+                type: .breaks
+            ))
+        } else if current.effectiveBreakEnabled && current.breakMethod != previous.breakMethod {
+            changes.append(WageChange(
+                description: isNorwegian ? "Pausemetode endret" : "Break method changed",
+                type: .breaks
+            ))
+        }
+
+        // Supplements change
+        if current.supplements.rules.count != previous.supplements.rules.count {
+            let diff = current.supplements.rules.count - previous.supplements.rules.count
+            if diff > 0 {
+                changes.append(WageChange(
+                    description: isNorwegian
+                        ? "+\(diff) tillegg"
+                        : "+\(diff) supplement\(diff > 1 ? "s" : "")",
+                    type: .supplements
+                ))
+            } else {
+                changes.append(WageChange(
+                    description: isNorwegian
+                        ? "\(diff) tillegg"
+                        : "\(diff) supplement\(diff < -1 ? "s" : "")",
+                    type: .supplements
+                ))
+            }
+        }
+
+        return changes
+    }
+}
+
+// MARK: - ISO8601 Date Helper
+
+extension ISO8601DateFormatter {
+    /// Format date as YYYY-MM-DD (date only, no time)
+    static func dateOnlyString(from date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        formatter.timeZone = TimeZone.current
+        return formatter.string(from: date)
+    }
+
+    /// Parse YYYY-MM-DD string to Date
+    static func dateFromDateOnlyString(_ string: String) -> Date? {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        formatter.timeZone = TimeZone.current
+        return formatter.date(from: string)
+    }
+}
