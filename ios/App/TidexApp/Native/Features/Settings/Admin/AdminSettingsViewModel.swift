@@ -315,10 +315,15 @@ final class AdminSettingsViewModel: ObservableObject {
 
     @Published var broadcastHistory: [BroadcastRecord] = []
     @Published var notificationsIsLoading: Bool = false
+    // English fields
     @Published var notificationTitle: String = ""
     @Published var notificationBody: String = ""
+    @Published var notificationDeeplink: String = "tidex://"
+    // Norwegian fields
+    @Published var notificationTitleNo: String = ""
+    @Published var notificationBodyNo: String = ""
+    @Published var notificationDeeplinkNo: String = ""
     @Published var notificationTarget: String = "all"
-    @Published var notificationDeeplink: String = ""
     @Published var previewCount: Int = 0
     @Published var isSendingNotification: Bool = false
 
@@ -711,8 +716,10 @@ final class AdminSettingsViewModel: ObservableObject {
     }
 
     func sendNotification() async {
-        guard !notificationTitle.isEmpty && !notificationBody.isEmpty else {
-            errorMessage = "Title and body are required"
+        // Require both English and Norwegian title/body
+        guard !notificationTitle.isEmpty && !notificationTitleNo.isEmpty &&
+              !notificationBody.isEmpty && !notificationBodyNo.isEmpty else {
+            errorMessage = "English and Norwegian title and body are required"
             return
         }
 
@@ -728,12 +735,17 @@ final class AdminSettingsViewModel: ObservableObject {
         do {
             var body: [String: Any] = [
                 "title": notificationTitle,
+                "titleNo": notificationTitleNo,
                 "body": notificationBody,
+                "bodyNo": notificationBodyNo,
                 "target": notificationTarget,
                 "includeSelf": false
             ]
             if !notificationDeeplink.isEmpty {
                 body["deeplink"] = notificationDeeplink
+            }
+            if !notificationDeeplinkNo.isEmpty {
+                body["deeplinkNo"] = notificationDeeplinkNo
             }
             if notificationTarget == "specific" {
                 body["specificUserIds"] = notificationSelectedUsers.map { $0.id }
@@ -747,13 +759,7 @@ final class AdminSettingsViewModel: ObservableObject {
 
             if result.success {
                 successMessage = result.message ?? "Notification sent"
-                notificationTitle = ""
-                notificationBody = ""
-                notificationDeeplink = ""
-                notificationSelectedUsers = []
-                notificationUserSearch = ""
-                notificationUserSearchResults = []
-                previewCount = 0
+                // Don't clear fields on success - user may want to send similar notification
                 await fetchBroadcastHistory()
             } else {
                 errorMessage = result.message ?? "Failed to send notification"

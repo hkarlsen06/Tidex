@@ -35,15 +35,18 @@ async function logAdminAction(params: {
 }
 
 interface BroadcastInput {
-  title: string;
-  body: string;
-  deeplink?: string;
+  title: string;      // English
+  titleNo: string;    // Norwegian
+  body: string;       // English
+  bodyNo: string;     // Norwegian
+  deeplink?: string;  // English
+  deeplinkNo?: string; // Norwegian (optional, falls back to English)
   target: TargetAudience;
   specificUserId?: string;
   includeSelf?: boolean;
 }
 
-// Validate deeplink server-side - returns error message or null if valid
+// Validate deeplink server-side - allows any URL format
 function validateDeeplink(
   deeplink: string | undefined
 ): { valid: true; value: string | null } | { valid: false; error: string } {
@@ -54,19 +57,11 @@ function validateDeeplink(
   if (deeplink.length > 200) {
     return { valid: false, error: "Deeplink too long (max 200 chars)" };
   }
-  // Allow query strings: /stats?tab=week
-  if (!/^\/[a-zA-Z0-9/_?=&-]*$/.test(deeplink)) {
-    return {
-      valid: false,
-      error:
-        "Invalid deeplink format. Must start with / and contain only alphanumeric, /, _, -, ?, =, &",
-    };
+  // Block path traversal
+  if (deeplink.includes("..")) {
+    return { valid: false, error: "Invalid deeplink: cannot contain .." };
   }
-  // Block path traversal and protocol injection
-  if (deeplink.includes("//") || deeplink.includes("..")) {
-    return { valid: false, error: "Invalid deeplink: cannot contain // or .." };
-  }
-  return { valid: true, value: deeplink };
+  return { valid: true, value: deeplink.trim() };
 }
 
 const BATCH_SIZE = 500; // Supabase insert limit safety
@@ -78,26 +73,46 @@ export async function sendBroadcastNotification(input: BroadcastInput) {
   // Use service role client to call admin RPC functions
   const supabase = createSupabaseServiceClient();
 
-  // Validate inputs
+  // Validate English inputs
   if (!input.title || input.title.trim().length === 0) {
-    return { success: false, message: "Title is required" };
+    return { success: false, message: "English title is required" };
   }
   if (input.title.length > 100) {
-    return { success: false, message: "Title too long (max 100 chars)" };
+    return { success: false, message: "English title too long (max 100 chars)" };
   }
   if (!input.body || input.body.trim().length === 0) {
-    return { success: false, message: "Body is required" };
+    return { success: false, message: "English body is required" };
   }
   if (input.body.length > 500) {
-    return { success: false, message: "Body too long (max 500 chars)" };
+    return { success: false, message: "English body too long (max 500 chars)" };
   }
 
-  // Validate deeplink - error if present but invalid
+  // Validate Norwegian inputs
+  if (!input.titleNo || input.titleNo.trim().length === 0) {
+    return { success: false, message: "Norwegian title is required" };
+  }
+  if (input.titleNo.length > 100) {
+    return { success: false, message: "Norwegian title too long (max 100 chars)" };
+  }
+  if (!input.bodyNo || input.bodyNo.trim().length === 0) {
+    return { success: false, message: "Norwegian body is required" };
+  }
+  if (input.bodyNo.length > 500) {
+    return { success: false, message: "Norwegian body too long (max 500 chars)" };
+  }
+
+  // Validate deeplinks - error if present but invalid
   const deeplinkResult = validateDeeplink(input.deeplink);
   if (!deeplinkResult.valid) {
-    return { success: false, message: deeplinkResult.error };
+    return { success: false, message: `English deeplink: ${deeplinkResult.error}` };
   }
   const validatedDeeplink = deeplinkResult.value;
+
+  const deeplinkNoResult = validateDeeplink(input.deeplinkNo);
+  if (!deeplinkNoResult.valid) {
+    return { success: false, message: `Norwegian deeplink: ${deeplinkNoResult.error}` };
+  }
+  const validatedDeeplinkNo = deeplinkNoResult.value;
 
   let targetUserIds: string[] = [];
 
@@ -171,22 +186,54 @@ export async function sendBroadcastNotification(input: BroadcastInput) {
 
   const broadcastId = broadcast.id;
 
-  // Build notification rows for the new outbox table
-  const allNotifications = targetUserIds.map((userId) => ({
-    owner_id: user.id, // Admin who sent the broadcast
-    recipient_id: userId,
-    broadcast_id: broadcastId,
-    notification_type: "admin_broadcast",
-    due_at: new Date().toISOString(), // Immediate delivery
-    title: input.title.trim(),
-    body: input.body.trim(),
-    data_payload: {
-      type: "admin_broadcast",
-      deeplink: validatedDeeplink,
+  // Fetch user locales for all target users via RPC
+  const { data: userLocales } = await supabase.rpc("admin_get_user_locales", {
+    user_ids: targetUserIds,
+  });
+
+  // Build a map of user ID to locale
+  const localeMap = new Map<string, string>();
+  if (userLocales) {
+    for (const u of userLocales as { user_id: string; locale: string | null }[]) {
+      localeMap.set(u.user_id, u.locale ?? "en");
+    }
+  }
+
+  // Helper to determine if a locale is Norwegian
+  const isNorwegian = (locale: string | undefined) => {
+    if (!locale) return false;
+    const l = locale.toLowerCase();
+    return l === "no" || l === "nb" || l === "nn" || l.startsWith("no-") || l.startsWith("nb-") || l.startsWith("nn-");
+  };
+
+  // Build notification rows for the new outbox table with localized content
+  const allNotifications = targetUserIds.map((userId) => {
+    const userLocale = localeMap.get(userId);
+    const useNorwegian = isNorwegian(userLocale);
+
+    const localizedTitle = useNorwegian ? input.titleNo.trim() : input.title.trim();
+    const localizedBody = useNorwegian ? input.bodyNo.trim() : input.body.trim();
+    // Norwegian deeplink falls back to English if not provided
+    const localizedDeeplink = useNorwegian && validatedDeeplinkNo
+      ? validatedDeeplinkNo
+      : validatedDeeplink;
+
+    return {
+      owner_id: user.id, // Admin who sent the broadcast
+      recipient_id: userId,
       broadcast_id: broadcastId,
-    },
-    idempotency_key: `broadcast:${broadcastId}:${userId}`,
-  }));
+      notification_type: "admin_broadcast",
+      due_at: new Date().toISOString(), // Immediate delivery
+      title: localizedTitle,
+      body: localizedBody,
+      data_payload: {
+        type: "admin_broadcast",
+        deeplink: localizedDeeplink,
+        broadcast_id: broadcastId,
+      },
+      idempotency_key: `broadcast:${broadcastId}:${userId}`,
+    };
+  });
 
   // Batch insert to avoid payload size limits
   let insertedCount = 0;
