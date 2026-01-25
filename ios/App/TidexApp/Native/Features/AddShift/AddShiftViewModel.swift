@@ -571,9 +571,6 @@ final class AddShiftViewModel: ObservableObject {
 
             logger.info("Created \(sortedDates.count) shifts")
 
-            // Play success sound
-            SoundManager.shared.play("success")
-
             // Trigger celebration with the dates that were added
             // Use the current display month as the origin for confetti
             CelebrationManager.shared.celebrate(
@@ -709,9 +706,6 @@ final class AddShiftViewModel: ObservableObject {
             )
 
             logger.info("Created recurring shift with \(self.cachedProjectedDates.count) projected dates, \(conflicts.count) exclusions")
-
-            // Play success sound
-            SoundManager.shared.play("success")
 
             // Get non-excluded dates for celebration (the ones actually created)
             let createdDates = Set(cachedProjectedDates).subtracting(conflicts)

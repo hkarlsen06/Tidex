@@ -39,20 +39,8 @@ struct AddShiftView: View {
                     ScrollViewReader { scrollProxy in
                         switch viewModel.mode {
                         case .single:
-                            // Single mode: Fixed layout with centered calendar (no scroll)
-                            // This matches ShiftsView's calendarViewContent layout exactly
+                            // Single mode: Fixed layout with centered calendar
                             VStack(spacing: 0) {
-                                // Draft restored banner at top
-                                if viewModel.hasDraft {
-                                    DraftRestoredBanner(onStartFresh: {
-                                        viewModel.startFresh()
-                                    })
-                                    .frame(maxWidth: AdaptiveMaxWidth.tabContent)
-                                    .padding(.horizontal, 16)
-                                    .padding(.top, 16)
-                                }
-
-                                // Center content using outer Spacers (not inner frame expansion)
                                 Spacer()
 
                                 SingleShiftContent(viewModel: viewModel, scrollProxy: scrollProxy)
@@ -117,6 +105,8 @@ struct AddShiftView: View {
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(Color.tidexBackground, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
             .iPadToolbarBackground(Color.tidexBackground)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -136,6 +126,20 @@ struct AddShiftView: View {
                         displayName: coordinator.userDisplayName,
                         avatarUrl: coordinator.userAvatarUrl
                     )
+                }
+            }
+            .overlay(alignment: .bottomTrailing) {
+                if isKeyboardVisible {
+                    Button(localization.string("common.done")) {
+                        hideKeyboard()
+                    }
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(.tidexTextPrimary)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .glassEffect(.regular.tint(.tidexBlue.opacity(0.3)))
+                    .padding(.trailing, 16)
+                    .padding(.bottom, 8)
                 }
             }
             .iPadToolbarTransaction()
@@ -200,15 +204,24 @@ private struct SingleShiftContent: View {
         AddShiftCalendarView(viewModel: viewModel)
             .overlay(alignment: .top) {
                 // Header positioned above the calendar
-                VStack(spacing: 4) {
-                    Text(localization.string("addShift.headerTitle"))
-                        .font(.system(size: 28, weight: .bold))
-                        .foregroundColor(.tidexTextPrimary)
+                // Draft banner is included here so it stacks properly with the header
+                VStack(spacing: 12) {
+                    if viewModel.hasDraft {
+                        DraftRestoredBanner(onStartFresh: {
+                            viewModel.startFresh()
+                        })
+                    }
 
-                    Text(localization.string("addShift.headerSubtitle"))
-                        .font(.system(size: 15))
-                        .foregroundColor(.tidexTextSecondary)
-                        .multilineTextAlignment(.center)
+                    VStack(spacing: 4) {
+                        Text(localization.string("addShift.headerTitle"))
+                            .font(.system(size: 28, weight: .bold))
+                            .foregroundColor(.tidexTextPrimary)
+
+                        Text(localization.string("addShift.headerSubtitle"))
+                            .font(.system(size: 15))
+                            .foregroundColor(.tidexTextSecondary)
+                            .multilineTextAlignment(.center)
+                    }
                 }
                 .padding(.bottom, 12)
                 .alignmentGuide(.top) { d in d[.bottom] }
