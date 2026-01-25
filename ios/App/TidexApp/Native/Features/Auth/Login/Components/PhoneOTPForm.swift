@@ -1,21 +1,21 @@
 import SwiftUI
 
-/// OTP verification form for phone login
+/// OTP verification form for phone login with native iOS styling
 struct PhoneOTPForm: View {
     @ObservedObject var viewModel: LoginViewModel
 
     @Environment(\.localization) private var localization
 
     var body: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 24) {
             // Instructions
             VStack(spacing: 8) {
                 Text(localization.string("otp.title"))
-                    .font(.system(size: 20, weight: .semibold))
+                    .font(.system(size: 22, weight: .bold))
                     .foregroundColor(.tidexTextPrimary)
 
                 Text(localization.string("otp.subtitle", viewModel.normalizedPhone))
-                    .font(.system(size: 14))
+                    .font(.system(size: 15))
                     .foregroundColor(.tidexTextSecondary)
                     .multilineTextAlignment(.center)
             }
@@ -39,26 +39,31 @@ struct PhoneOTPForm: View {
                 isDisabled: viewModel.otpCode.count < 6
             )
 
-            // Resend code link
-            Button(action: {
-                Task { await viewModel.resendOTP() }
-            }) {
-                Text(localization.string("otp.resendCode"))
-                    .font(.system(size: 14))
-                    .foregroundColor(.tidexBlue)
-            }
-            .buttonStyle(.plain)
-            .disabled(viewModel.isLoading)
+            // Resend and back links
+            VStack(spacing: 16) {
+                Button(action: {
+                    Task { await viewModel.resendOTP() }
+                }) {
+                    Text(localization.string("otp.resendCode"))
+                        .font(.system(size: 15))
+                        .foregroundColor(.tidexBlue)
+                }
+                .buttonStyle(.plain)
+                .disabled(viewModel.isLoading)
 
-            // Back to login link
-            Button(action: {
-                viewModel.backToInput()
-            }) {
-                Text(localization.string("otp.backToLogin"))
-                    .font(.system(size: 14))
-                    .foregroundColor(.tidexTextMuted)
+                Button(action: {
+                    viewModel.backToInput()
+                }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 12, weight: .medium))
+                        Text(localization.string("otp.backToLogin"))
+                            .font(.system(size: 15))
+                    }
+                    .foregroundColor(.tidexTextSecondary)
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
         }
     }
 }

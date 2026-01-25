@@ -16,6 +16,8 @@ final class SignupViewModel: ObservableObject {
 
     // MARK: - Published State
 
+    @Published var firstName: String = ""
+    @Published var lastName: String = ""
     @Published var emailOrPhone: String = ""
     @Published var password: String = ""
     @Published var confirmPassword: String = ""
@@ -48,12 +50,16 @@ final class SignupViewModel: ObservableObject {
     }
 
     struct FieldErrors {
+        var firstName: String?
+        var lastName: String?
         var emailOrPhone: String?
         var password: String?
         var confirmPassword: String?
         var otp: String?
 
         mutating func clear() {
+            firstName = nil
+            lastName = nil
             emailOrPhone = nil
             password = nil
             confirmPassword = nil
@@ -109,7 +115,15 @@ final class SignupViewModel: ObservableObject {
 
     /// Check if form is valid for submission
     var isFormValid: Bool {
-        !emailOrPhone.isEmpty && !password.isEmpty
+        !firstName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+        !lastName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+        !emailOrPhone.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+        !password.isEmpty
+    }
+
+    /// Full name combined from first and last name
+    var fullName: String {
+        "\(firstName) \(lastName)".trimmingCharacters(in: .whitespaces)
     }
 
     // MARK: - Initialization
@@ -228,7 +242,7 @@ final class SignupViewModel: ObservableObject {
         defer { isLoading = false }
 
         do {
-            try await authService.signUpWithPhone(phone: normalizedPhone, password: password)
+            try await authService.signUpWithPhone(phone: normalizedPhone, password: password, fullName: fullName)
             successMessage = localization.string("signup.success.otpResent")
         } catch {
             handleError(error)
@@ -244,12 +258,12 @@ final class SignupViewModel: ObservableObject {
 
     private func signUpWithEmail() async throws {
         // Email verification disabled - session is returned immediately
-        let _ = try await authService.signUpWithEmail(email: emailOrPhone, password: password)
+        let _ = try await authService.signUpWithEmail(email: emailOrPhone, password: password, fullName: fullName)
         await handleSuccessfulSignup()
     }
 
     private func signUpWithPhone() async throws {
-        try await authService.signUpWithPhone(phone: normalizedPhone, password: password)
+        try await authService.signUpWithPhone(phone: normalizedPhone, password: password, fullName: fullName)
         successMessage = localization.string("signup.success.otpSent")
         currentStep = .otp
     }
@@ -257,6 +271,18 @@ final class SignupViewModel: ObservableObject {
     private func validateInput() -> Bool {
         var isValid = true
         let trimmed = emailOrPhone.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // First name required
+        if firstName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            fieldErrors.firstName = localization.string("signup.errors.firstNameRequired")
+            isValid = false
+        }
+
+        // Last name required
+        if lastName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            fieldErrors.lastName = localization.string("signup.errors.lastNameRequired")
+            isValid = false
+        }
 
         // Email/phone required
         if trimmed.isEmpty {

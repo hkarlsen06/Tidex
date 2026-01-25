@@ -27,161 +27,173 @@ struct AcceptTermsView: View {
     }
 
     var body: some View {
-        ZStack {
-            Color.tidexBackground
-                .ignoresSafeArea()
-
+        GeometryReader { geometry in
             ScrollView {
-                VStack(spacing: 32) {
-                    // Logo
-                    Image("Splash")
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(width: 120, height: 120)
-                        .padding(.top, 40)
+                VStack(spacing: 0) {
+                    Spacer(minLength: 60)
 
-                    // Content card
+                    // Header section
+                    headerSection
+                        .padding(.bottom, 40)
+
+                    // Main content
                     VStack(spacing: 24) {
-                        // Title and description
-                        VStack(spacing: 12) {
-                            Text(isUpdate
-                                 ? localization.string("acceptTerms.updated.title")
-                                 : localization.string("acceptTerms.title"))
-                                .font(.system(size: 24, weight: .bold))
-                                .foregroundColor(.tidexTextPrimary)
-                                .multilineTextAlignment(.center)
-
-                            Text(isUpdate
-                                 ? localization.string("acceptTerms.updated.description")
-                                 : localization.string("acceptTerms.description"))
-                                .font(.system(size: 16))
-                                .foregroundColor(.tidexTextSecondary)
-                                .multilineTextAlignment(.center)
-                        }
-
-                        // Explanation text
-                        Text(isUpdate
-                             ? localization.string("acceptTerms.updated.explanation")
-                             : localization.string("acceptTerms.explanation"))
-                            .font(.system(size: 14))
-                            .foregroundColor(.tidexTextSecondary)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 16)
-
-                        // Error message
+                        // Error banner
                         if let error = error {
-                            Text(error)
-                                .font(.system(size: 14))
-                                .foregroundColor(.tidexError)
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 12)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .fill(Color.tidexError.opacity(0.1))
-                                )
+                            ErrorBanner(
+                                message: error,
+                                onDismiss: { self.error = nil }
+                            )
                         }
+
+                        // Instructions
+                        instructionsSection
 
                         // Legal links
-                        VStack(spacing: 12) {
-                            Button {
-                                if let url = termsURL {
-                                    safariURL = url
-                                }
-                            } label: {
-                                HStack {
-                                    Image(systemName: "doc.text")
-                                    Text(localization.string("acceptTerms.viewTerms"))
-                                    Spacer()
-                                    Image(systemName: "arrow.up.right")
-                                        .font(.system(size: 12))
-                                }
-                                .font(.system(size: 16, weight: .medium))
-                                .foregroundColor(.tidexBlue)
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, Spacing.sm)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .fill(Color.tidexSurfaceSecondary)
-                                )
-                            }
-                            .disabled(isProcessing)
-
-                            Button {
-                                if let url = privacyURL {
-                                    safariURL = url
-                                }
-                            } label: {
-                                HStack {
-                                    Image(systemName: "shield")
-                                    Text(localization.string("acceptTerms.viewPrivacy"))
-                                    Spacer()
-                                    Image(systemName: "arrow.up.right")
-                                        .font(.system(size: 12))
-                                }
-                                .font(.system(size: 16, weight: .medium))
-                                .foregroundColor(.tidexBlue)
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, Spacing.sm)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .fill(Color.tidexSurfaceSecondary)
-                                )
-                            }
-                            .disabled(isProcessing)
-                        }
+                        legalLinksSection
 
                         // Action buttons
-                        VStack(spacing: 12) {
-                            // Accept button
-                            Button {
-                                acceptTerms()
-                            } label: {
-                                HStack {
-                                    if isProcessing {
-                                        ProgressView()
-                                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                                            .scaleEffect(0.8)
-                                    }
-                                    Text(localization.string("acceptTerms.acceptButton"))
-                                }
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundColor(.white)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 16)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .fill(Color.tidexBrandPrimary)
-                                )
-                            }
-                            .disabled(isProcessing)
-
-                            // Decline button
-                            Button {
-                                declineTerms()
-                            } label: {
-                                Text(localization.string("acceptTerms.declineButton"))
-                                    .font(.system(size: 14, weight: .medium))
-                                    .foregroundColor(.tidexTextMuted)
-                            }
-                            .disabled(isProcessing)
-                        }
-                        .padding(.top, 8)
+                        actionButtonsSection
                     }
                     .padding(.horizontal, 24)
-                    .padding(.vertical, 32)
-                    .background(
-                        RoundedRectangle(cornerRadius: 16)
-                            .fill(Color.tidexSurfacePrimary)
-                    )
-                    .adaptiveFormWidth()
-                    .padding(.horizontal, 20)
+
+                    Spacer(minLength: 60)
                 }
-                .padding(.bottom, 40)
+                .frame(minHeight: geometry.size.height)
             }
+            .scrollBounceBehavior(.basedOnSize)
         }
+        .background(Color.tidexBackground)
         .fullScreenCover(item: $safariURL) { url in
             SafariViewAcceptTerms(url: url)
                 .ignoresSafeArea()
+        }
+    }
+
+    // MARK: - Header Section
+
+    private var headerSection: some View {
+        VStack(spacing: 16) {
+            // Document icon for terms
+            ZStack {
+                Circle()
+                    .fill(Color.tidexBlue.opacity(0.1))
+                    .frame(width: 80, height: 80)
+
+                Image(systemName: "doc.text.fill")
+                    .font(.system(size: 36))
+                    .foregroundColor(.tidexBlue)
+            }
+
+            // Title
+            Text("Tidex")
+                .font(.system(size: 28, weight: .bold))
+                .foregroundColor(.tidexTextPrimary)
+        }
+    }
+
+    // MARK: - Instructions Section
+
+    private var instructionsSection: some View {
+        VStack(spacing: 8) {
+            Text(isUpdate
+                 ? localization.string("acceptTerms.updated.title")
+                 : localization.string("acceptTerms.title"))
+                .font(.system(size: 22, weight: .bold))
+                .foregroundColor(.tidexTextPrimary)
+                .multilineTextAlignment(.center)
+
+            Text(isUpdate
+                 ? localization.string("acceptTerms.updated.description")
+                 : localization.string("acceptTerms.description"))
+                .font(.system(size: 15))
+                .foregroundColor(.tidexTextSecondary)
+                .multilineTextAlignment(.center)
+
+            Text(isUpdate
+                 ? localization.string("acceptTerms.updated.explanation")
+                 : localization.string("acceptTerms.explanation"))
+                .font(.system(size: 13))
+                .foregroundColor(.tidexTextMuted)
+                .multilineTextAlignment(.center)
+                .padding(.top, 4)
+        }
+    }
+
+    // MARK: - Legal Links Section
+
+    private var legalLinksSection: some View {
+        VStack(spacing: 0) {
+            Button {
+                if let url = termsURL {
+                    safariURL = url
+                }
+            } label: {
+                HStack {
+                    Image(systemName: "doc.text")
+                        .font(.system(size: 16))
+                    Text(localization.string("acceptTerms.viewTerms"))
+                        .font(.system(size: 17))
+                    Spacer()
+                    Image(systemName: "arrow.up.right")
+                        .font(.system(size: 12))
+                        .foregroundColor(.tidexTextMuted)
+                }
+                .foregroundColor(.tidexTextPrimary)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 14)
+            }
+            .disabled(isProcessing)
+
+            Divider()
+                .background(Color.tidexBorderSubtle)
+
+            Button {
+                if let url = privacyURL {
+                    safariURL = url
+                }
+            } label: {
+                HStack {
+                    Image(systemName: "shield")
+                        .font(.system(size: 16))
+                    Text(localization.string("acceptTerms.viewPrivacy"))
+                        .font(.system(size: 17))
+                    Spacer()
+                    Image(systemName: "arrow.up.right")
+                        .font(.system(size: 12))
+                        .foregroundColor(.tidexTextMuted)
+                }
+                .foregroundColor(.tidexTextPrimary)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 14)
+            }
+            .disabled(isProcessing)
+        }
+        .background(Color.tidexSurfacePrimary)
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+
+    // MARK: - Action Buttons Section
+
+    private var actionButtonsSection: some View {
+        VStack(spacing: 16) {
+            // Accept button
+            PrimaryButton(
+                title: localization.string("acceptTerms.acceptButton"),
+                action: { acceptTerms() },
+                isLoading: isProcessing
+            )
+
+            // Decline button
+            Button {
+                declineTerms()
+            } label: {
+                Text(localization.string("acceptTerms.declineButton"))
+                    .font(.system(size: 15))
+                    .foregroundColor(.tidexTextSecondary)
+            }
+            .buttonStyle(.plain)
+            .disabled(isProcessing)
         }
     }
 

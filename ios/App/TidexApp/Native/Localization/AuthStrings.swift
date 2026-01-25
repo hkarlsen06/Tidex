@@ -68,6 +68,10 @@ enum AuthStrings {
         // Signup Screen
         "signup.title": "Opprett konto",
         "signup.subtitle": "Kom i gang med Tidex",
+        "signup.firstNameLabel": "Fornavn",
+        "signup.firstNamePlaceholder": "Fornavn",
+        "signup.lastNameLabel": "Etternavn",
+        "signup.lastNamePlaceholder": "Etternavn",
         "signup.emailOrPhoneLabel": "E-post eller telefonnummer",
         "signup.emailOrPhonePlaceholder": "navn@eksempel.no eller +47 12345678",
         "signup.emailLabel": "E-post",
@@ -81,6 +85,8 @@ enum AuthStrings {
         "signup.login": "Logg inn",
         "signup.emailOrPhoneReveal": "Registrer med e-post eller telefon",
         "signup.backToSignup": "Tilbake",
+        "signup.errors.firstNameRequired": "Fornavn er påkrevd",
+        "signup.errors.lastNameRequired": "Etternavn er påkrevd",
         "signup.errors.emailOrPhoneRequired": "Fyll inn e-post eller telefonnummer",
         "signup.errors.invalidEmailOrPhone": "Ugyldig e-post eller telefonnummer",
         "signup.errors.passwordRequired": "Passord er p\u{00E5}krevd",
@@ -313,6 +319,12 @@ enum AuthStrings {
         "onboarding.success.savingTitle": "Ett øyeblikk",
         "onboarding.success.errorTitle": "Noe gikk galt",
         "onboarding.success.errorSubtitle": "Vi kunne ikke lagre innstillingene dine",
+
+        // Profile Setup Screen
+        "onboarding.profile.title": "Hva heter du?",
+        "onboarding.profile.subtitle": "Vi bruker navnet ditt for å gjøre appen mer personlig",
+        "onboarding.profile.nameLabel": "Navn",
+        "onboarding.profile.namePlaceholder": "Skriv inn navnet ditt",
 
         // Wage Screen
         "onboarding.wage.title": "Velg din lønnstype",
@@ -1033,6 +1045,10 @@ enum AuthStrings {
         // Signup Screen
         "signup.title": "Create account",
         "signup.subtitle": "Get started with Tidex",
+        "signup.firstNameLabel": "First name",
+        "signup.firstNamePlaceholder": "First name",
+        "signup.lastNameLabel": "Last name",
+        "signup.lastNamePlaceholder": "Last name",
         "signup.emailOrPhoneLabel": "Email or phone number",
         "signup.emailOrPhonePlaceholder": "name@example.com or +47 12345678",
         "signup.emailLabel": "Email",
@@ -1046,6 +1062,8 @@ enum AuthStrings {
         "signup.login": "Log in",
         "signup.emailOrPhoneReveal": "Sign up with email or phone",
         "signup.backToSignup": "Back",
+        "signup.errors.firstNameRequired": "First name is required",
+        "signup.errors.lastNameRequired": "Last name is required",
         "signup.errors.emailOrPhoneRequired": "Please enter email or phone number",
         "signup.errors.invalidEmailOrPhone": "Invalid email or phone number",
         "signup.errors.passwordRequired": "Password is required",
@@ -1278,6 +1296,12 @@ enum AuthStrings {
         "onboarding.success.savingTitle": "One moment",
         "onboarding.success.errorTitle": "Something went wrong",
         "onboarding.success.errorSubtitle": "We couldn't save your settings",
+
+        // Profile Setup Screen
+        "onboarding.profile.title": "What's your name?",
+        "onboarding.profile.subtitle": "We use your name to personalize the app",
+        "onboarding.profile.nameLabel": "Name",
+        "onboarding.profile.namePlaceholder": "Enter your name",
 
         // Wage Screen
         "onboarding.wage.title": "Choose your wage type",

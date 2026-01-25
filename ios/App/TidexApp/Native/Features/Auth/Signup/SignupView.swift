@@ -1,142 +1,86 @@
 import SwiftUI
 
-/// Main signup screen view
+/// Main signup screen view with native iOS styling
 /// Supports email/password, phone/OTP, Google, and Apple sign-up
 struct SignupView: View {
     @StateObject private var viewModel = SignupViewModel()
     @Environment(\.localization) private var localization
     var onNavigateToLogin: (() -> Void)?
 
-    // Animation state
-    @State private var headerAppeared = false
-    @State private var cardAppeared = false
-    @State private var footerAppeared = false
-
     var body: some View {
-        ZStack {
-            // Background - adapts to system appearance
-            Color.tidexBackground
-                .ignoresSafeArea()
-
-            // Content - constrained for iPad
+        GeometryReader { geometry in
             ScrollView {
-                VStack(spacing: 24) {
-                    // Header with logo
-                    headerView
-                        .padding(.top, 40)
-                        .opacity(headerAppeared ? 1 : 0)
-                        .offset(y: headerAppeared ? 0 : -20)
+                VStack(spacing: 0) {
+                    Spacer(minLength: 60)
 
-                    // Main card - constrained width for iPad
-                    TidexCard {
-                        VStack(spacing: 20) {
-                            // Card header
-                            cardHeader
+                    // Header section
+                    headerSection
+                        .padding(.bottom, 40)
 
-                            // Error/Success banners
-                            if let error = viewModel.errorMessage {
-                                ErrorBanner(
-                                    message: error,
-                                    onDismiss: { viewModel.errorMessage = nil }
-                                )
-                            }
-
-                            if let success = viewModel.successMessage {
-                                SuccessBanner(
-                                    message: success,
-                                    onDismiss: { viewModel.successMessage = nil }
-                                )
-                            }
-
-                            // Step content
-                            switch viewModel.currentStep {
-                            case .input:
-                                inputStepContent
-                            case .otp:
-                                SignupOTPForm(viewModel: viewModel)
-                            }
+                    // Main content
+                    VStack(spacing: 24) {
+                        // Error/Success banners
+                        if let error = viewModel.errorMessage {
+                            ErrorBanner(
+                                message: error,
+                                onDismiss: { viewModel.errorMessage = nil }
+                            )
                         }
-                        .padding(24)
+
+                        if let success = viewModel.successMessage {
+                            SuccessBanner(
+                                message: success,
+                                onDismiss: { viewModel.successMessage = nil }
+                            )
+                        }
+
+                        // Step content
+                        switch viewModel.currentStep {
+                        case .input:
+                            inputStepContent
+                        case .otp:
+                            SignupOTPForm(viewModel: viewModel)
+                        }
                     }
-                    .adaptiveFormWidth()
-                    .opacity(cardAppeared ? 1 : 0)
-                    .offset(y: cardAppeared ? 0 : 30)
-                    .scaleEffect(cardAppeared ? 1 : 0.95)
+                    .padding(.horizontal, 24)
+
+                    Spacer(minLength: 60)
 
                     // Footer
                     if viewModel.currentStep == .input {
                         footerView
-                            .opacity(footerAppeared ? 1 : 0)
+                            .padding(.bottom, 40)
                     }
                 }
-                .padding(.horizontal, 20)
-                .padding(.bottom, 40)
+                .frame(minHeight: geometry.size.height)
             }
+            .scrollBounceBehavior(.basedOnSize)
         }
+        .background(Color.tidexBackground)
         .loading(viewModel.isLoading)
         .onTapGesture {
             UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
         }
         .onAppear {
             viewModel.onNavigateToLogin = onNavigateToLogin
-
-            // Fast staggered entrance animations - feel snappy
-            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                headerAppeared = true
-            }
-            withAnimation(.spring(response: 0.4, dampingFraction: 0.8).delay(0.05)) {
-                cardAppeared = true
-            }
-            withAnimation(.easeOut(duration: 0.25).delay(0.1)) {
-                footerAppeared = true
-            }
         }
     }
 
-    // MARK: - Header
+    // MARK: - Header Section
 
-    private var headerView: some View {
-        VStack(spacing: 12) {
-            // Logo
-            LogoWatermark(opacity: 1.0)
-                .frame(width: 60, height: 60)
+    private var headerSection: some View {
+        VStack(spacing: 16) {
+            // Full wordmark
+            Image("TidexWordmark")
+                .resizable()
+                .scaledToFit()
+                .frame(height: 48)
 
-            Text("Tidex")
-                .font(.system(size: 28, weight: .bold))
-                .foregroundColor(.tidexTextPrimary)
-        }
-    }
-
-    // MARK: - Card Header
-
-    private var cardHeader: some View {
-        VStack(spacing: 8) {
-            Text(cardTitle)
-                .font(.system(size: 20, weight: .semibold))
-                .foregroundColor(.tidexTextPrimary)
-
-            Text(cardSubtitle)
-                .font(.system(size: 14))
+            // Subtitle
+            Text(localization.string("signup.subtitle"))
+                .font(.system(size: 17))
                 .foregroundColor(.tidexTextSecondary)
                 .multilineTextAlignment(.center)
-        }
-    }
-
-    private var cardTitle: String {
-        switch viewModel.currentStep {
-        case .input:
-            return localization.string("signup.title")
-        case .otp:
-            return localization.string("otp.title")
-        }
-    }
-
-    private var cardSubtitle: String {
-        switch viewModel.currentStep {
-        case .input:
-            return localization.string("signup.subtitle")
-        case .otp:
-            return localization.string("otp.subtitle", viewModel.normalizedPhone)
         }
     }
 
@@ -144,26 +88,48 @@ struct SignupView: View {
 
     @ViewBuilder
     private var inputStepContent: some View {
-        // OAuth buttons
-        OAuthButtonsView(
-            onGoogleTap: { Task { await viewModel.signUpWithGoogle() } },
-            onAppleTap: { Task { await viewModel.signUpWithApple() } },
-            isLoading: viewModel.isLoading
-        )
-
-        // Divider
-        dividerView
-
-        // Email/phone form
-        if viewModel.showEmailForm {
-            SignupForm(viewModel: viewModel)
-        } else {
-            OutlineButton(
-                title: localization.string("signup.emailOrPhoneReveal"),
-                action: { viewModel.showEmailForm = true },
-                icon: "envelope"
+        VStack(spacing: 16) {
+            // OAuth buttons
+            OAuthButtonsView(
+                onGoogleTap: { Task { await viewModel.signUpWithGoogle() } },
+                onAppleTap: { Task { await viewModel.signUpWithApple() } },
+                isLoading: viewModel.isLoading
             )
+
+            // Divider
+            dividerView
+                .padding(.vertical, 8)
+
+            // Email/phone form or reveal button
+            if viewModel.showEmailForm {
+                SignupForm(viewModel: viewModel)
+            } else {
+                revealEmailButton
+            }
         }
+    }
+
+    // MARK: - Reveal Email Button
+
+    private var revealEmailButton: some View {
+        Button {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                viewModel.showEmailForm = true
+            }
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "envelope")
+                    .font(.system(size: 16))
+                Text(localization.string("signup.emailOrPhoneReveal"))
+                    .font(.system(size: 16, weight: .medium))
+            }
+            .foregroundColor(.tidexTextSecondary)
+            .frame(maxWidth: .infinity)
+            .frame(height: 50)
+            .background(Color.tidexSurfacePrimary)
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        }
+        .buttonStyle(SnappyButtonStyle())
     }
 
     // MARK: - Divider
@@ -189,14 +155,14 @@ struct SignupView: View {
     private var footerView: some View {
         HStack(spacing: 4) {
             Text(localization.string("signup.hasAccount"))
-                .font(.system(size: 14))
+                .font(.system(size: 15))
                 .foregroundColor(.tidexTextSecondary)
 
             Button(action: {
                 onNavigateToLogin?()
             }) {
                 Text(localization.string("signup.login"))
-                    .font(.system(size: 14, weight: .medium))
+                    .font(.system(size: 15, weight: .semibold))
                     .foregroundColor(.tidexBlue)
             }
             .buttonStyle(.plain)
@@ -206,36 +172,106 @@ struct SignupView: View {
 
 // MARK: - Signup Form
 
-/// Email/phone, password, and terms form for signup
+/// Email/phone, password, and terms form for signup with native iOS styling
 struct SignupForm: View {
     @ObservedObject var viewModel: SignupViewModel
     @Environment(\.localization) private var localization
 
     var body: some View {
         VStack(spacing: 16) {
-            // Email/Phone field
-            TidexTextField(
-                label: localization.string("signup.emailOrPhoneLabel"),
-                placeholder: localization.string("signup.emailOrPhonePlaceholder"),
-                text: $viewModel.emailOrPhone,
-                error: viewModel.fieldErrors.emailOrPhone,
-                keyboardType: .emailAddress,
-                textContentType: .emailAddress,
-                autocapitalization: .never,
-                autocorrection: false
-            )
+            // Name fields side by side
+            HStack(spacing: 12) {
+                // First name
+                VStack(spacing: 0) {
+                    TextField(localization.string("signup.firstNamePlaceholder"), text: $viewModel.firstName)
+                        .font(.system(size: 17))
+                        .foregroundColor(.tidexTextPrimary)
+                        .textContentType(.givenName)
+                        .textInputAutocapitalization(.words)
+                        .autocorrectionDisabled()
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 14)
+                }
+                .background(Color.tidexSurfacePrimary)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 
-            // Password field
-            SecureTextField(
-                label: localization.string("signup.passwordLabel"),
-                placeholder: localization.string("signup.passwordPlaceholder"),
-                text: $viewModel.password,
-                error: viewModel.fieldErrors.password
-            )
+                // Last name
+                VStack(spacing: 0) {
+                    TextField(localization.string("signup.lastNamePlaceholder"), text: $viewModel.lastName)
+                        .font(.system(size: 17))
+                        .foregroundColor(.tidexTextPrimary)
+                        .textContentType(.familyName)
+                        .textInputAutocapitalization(.words)
+                        .autocorrectionDisabled()
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 14)
+                }
+                .background(Color.tidexSurfacePrimary)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            }
+
+            // Name error messages
+            if let firstNameError = viewModel.fieldErrors.firstName {
+                Text(firstNameError)
+                    .font(.system(size: 13))
+                    .foregroundColor(.tidexError)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 4)
+            }
+
+            if let lastNameError = viewModel.fieldErrors.lastName {
+                Text(lastNameError)
+                    .font(.system(size: 13))
+                    .foregroundColor(.tidexError)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 4)
+            }
+
+            // Email/Phone and Password in grouped style
+            VStack(spacing: 0) {
+                // Email/Phone field
+                NativeTextField(
+                    placeholder: localization.string("signup.emailOrPhonePlaceholder"),
+                    text: $viewModel.emailOrPhone,
+                    keyboardType: .emailAddress,
+                    textContentType: .emailAddress
+                )
+
+                Divider()
+                    .background(Color.tidexBorderSubtle)
+
+                // Password field
+                NativeSecureField(
+                    placeholder: localization.string("signup.passwordPlaceholder"),
+                    text: $viewModel.password,
+                    onSubmit: {
+                        Task { await viewModel.signUp() }
+                    }
+                )
+            }
+            .background(Color.tidexSurfacePrimary)
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+            // Error messages
+            if let emailError = viewModel.fieldErrors.emailOrPhone {
+                Text(emailError)
+                    .font(.system(size: 13))
+                    .foregroundColor(.tidexError)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 4)
+            }
+
+            if let passwordError = viewModel.fieldErrors.password {
+                Text(passwordError)
+                    .font(.system(size: 13))
+                    .foregroundColor(.tidexError)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 4)
+            }
 
             // Password hint
             Text(localization.string("signup.passwordHint"))
-                .font(.system(size: 12))
+                .font(.system(size: 13))
                 .foregroundColor(.tidexTextMuted)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -253,13 +289,25 @@ struct SignupForm: View {
 
 // MARK: - Signup OTP Form
 
-/// OTP verification form for phone signup
+/// OTP verification form for phone signup with native iOS styling
 struct SignupOTPForm: View {
     @ObservedObject var viewModel: SignupViewModel
     @Environment(\.localization) private var localization
 
     var body: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 24) {
+            // OTP explanation
+            VStack(spacing: 8) {
+                Text(localization.string("otp.title"))
+                    .font(.system(size: 22, weight: .bold))
+                    .foregroundColor(.tidexTextPrimary)
+
+                Text(localization.string("otp.subtitle", viewModel.normalizedPhone))
+                    .font(.system(size: 15))
+                    .foregroundColor(.tidexTextSecondary)
+                    .multilineTextAlignment(.center)
+            }
+
             // OTP Input
             OTPInputField(
                 code: $viewModel.otpCode,
@@ -275,30 +323,31 @@ struct SignupOTPForm: View {
                 isLoading: viewModel.isLoading
             )
 
-            // Resend code link
-            Button(action: {
-                Task { await viewModel.resendOTP() }
-            }) {
-                Text(localization.string("otp.resendCode"))
-                    .font(.system(size: 14))
-                    .foregroundColor(.tidexBlue)
-            }
-            .buttonStyle(.plain)
-            .disabled(viewModel.isLoading)
-
-            // Back link
-            Button(action: {
-                viewModel.backToInput()
-            }) {
-                HStack(spacing: 4) {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 12, weight: .medium))
-                    Text(localization.string("signup.backToSignup"))
-                        .font(.system(size: 14))
+            // Resend and back links
+            VStack(spacing: 16) {
+                Button(action: {
+                    Task { await viewModel.resendOTP() }
+                }) {
+                    Text(localization.string("otp.resendCode"))
+                        .font(.system(size: 15))
+                        .foregroundColor(.tidexBlue)
                 }
-                .foregroundColor(.tidexTextSecondary)
+                .buttonStyle(.plain)
+                .disabled(viewModel.isLoading)
+
+                Button(action: {
+                    viewModel.backToInput()
+                }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 12, weight: .medium))
+                        Text(localization.string("signup.backToSignup"))
+                            .font(.system(size: 15))
+                    }
+                    .foregroundColor(.tidexTextSecondary)
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
         }
     }
 }

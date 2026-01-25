@@ -11,14 +11,17 @@ struct PostAuthOnboardingView: View {
     let userId: String
 
     @Environment(\.localization) private var localization
-    @State private var currentScreen: PostAuthScreen = .wage
+    @State private var currentScreen: PostAuthScreen = .loading
     @State private var onboardingData = OnboardingData()
     @StateObject private var saveManager = OnboardingSaveManager()
     @State private var showingMFAEnrollment = false
     @State private var isNavigatingBack = false
+    @State private var hasCheckedUserName = false
     @Environment(\.scenePhase) private var scenePhase
 
     enum PostAuthScreen: String {
+        case loading
+        case profileSetup
         case wage
         case supplements
         case settingsAccordion
@@ -35,13 +38,29 @@ struct PostAuthOnboardingView: View {
             // Current screen with transition
             Group {
                 switch currentScreen {
+                case .loading:
+                    // Brief loading state while checking user name
+                    Color.tidexBackground
+                        .ignoresSafeArea()
+
+                case .profileSetup:
+                    ProfileSetupScreen(
+                        data: onboardingData,
+                        onContinue: {
+                            navigateTo(.wage)
+                        }
+                    )
+                    .transition(screenTransition)
+
                 case .wage:
                     WageScreen(
                         data: onboardingData,
                         onContinue: {
                             navigateFromWage()
+                        },
+                        onBack: onboardingData.initiallyHadName ? nil : {
+                            navigateBack(to: .profileSetup)
                         }
-                        // No back button on first screen
                     )
                     .transition(screenTransition)
 
@@ -120,68 +139,115 @@ struct PostAuthOnboardingView: View {
                 }
             )
         }
-        .onAppear {
-            restoreSavedProgress()
+        .task {
+            await initializeOnboarding()
         }
         .onChange(of: currentScreen) { _, newScreen in
-            // Save progress when screen changes (except success screen)
-            if newScreen != .success {
+            // Save progress when screen changes (except success and loading screens)
+            if newScreen != .success && newScreen != .loading {
                 saveProgress()
             }
         }
         .onChange(of: scenePhase) { _, newPhase in
             // Save when app goes to background
             if newPhase == .inactive || newPhase == .background {
-                if currentScreen != .success {
+                if currentScreen != .success && currentScreen != .loading {
                     saveProgress()
                 }
             }
         }
         // Save when key data changes within screens
         .onChange(of: onboardingData.supplementRules.count) { _, _ in
-            if currentScreen != .success {
+            if currentScreen != .success && currentScreen != .loading {
                 saveProgress()
             }
         }
         .onChange(of: onboardingData.wageType) { _, _ in
-            if currentScreen != .success {
+            if currentScreen != .success && currentScreen != .loading {
                 saveProgress()
             }
         }
         .onChange(of: onboardingData.customHourlyWage) { _, _ in
-            if currentScreen != .success {
+            if currentScreen != .success && currentScreen != .loading {
                 saveProgress()
             }
         }
         .onChange(of: onboardingData.selectedTariffLevel) { _, _ in
-            if currentScreen != .success {
+            if currentScreen != .success && currentScreen != .loading {
                 saveProgress()
             }
         }
         .onChange(of: onboardingData.breakEnabled) { _, _ in
-            if currentScreen != .success {
+            if currentScreen != .success && currentScreen != .loading {
                 saveProgress()
             }
         }
         .onChange(of: onboardingData.taxEnabled) { _, _ in
-            if currentScreen != .success {
+            if currentScreen != .success && currentScreen != .loading {
                 saveProgress()
             }
         }
         .onChange(of: onboardingData.taxPercentage) { _, _ in
-            if currentScreen != .success {
+            if currentScreen != .success && currentScreen != .loading {
                 saveProgress()
             }
         }
         .onChange(of: onboardingData.payrollDay) { _, _ in
-            if currentScreen != .success {
+            if currentScreen != .success && currentScreen != .loading {
                 saveProgress()
             }
         }
         .onChange(of: onboardingData.currency) { _, _ in
-            if currentScreen != .success {
+            if currentScreen != .success && currentScreen != .loading {
                 saveProgress()
             }
+        }
+        .onChange(of: onboardingData.displayName) { _, _ in
+            if currentScreen != .success && currentScreen != .loading {
+                saveProgress()
+            }
+        }
+    }
+
+    // MARK: - Initialization
+
+    /// Initialize onboarding by checking if user has a name and restoring progress
+    private func initializeOnboarding() async {
+        guard !hasCheckedUserName else { return }
+        hasCheckedUserName = true
+
+        // First, try to restore saved progress
+        if let savedScreenName = onboardingData.restore(),
+           let savedScreen = PostAuthScreen(rawValue: savedScreenName),
+           savedScreen != .success && savedScreen != .loading {
+            // Restore to the saved screen
+            currentScreen = savedScreen
+            return
+        }
+
+        // No saved progress - check if user has a name
+        do {
+            let user = try await supabase.auth.user()
+            let fullName = user.userMetadata["full_name"]?.value as? String
+            let name = user.userMetadata["name"]?.value as? String
+
+            let hasName = !(fullName ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
+                          !(name ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+
+            onboardingData.initiallyHadName = hasName
+
+            if hasName {
+                // User has a name, skip profile setup
+                onboardingData.displayName = fullName ?? name ?? ""
+                currentScreen = .wage
+            } else {
+                // User doesn't have a name, show profile setup
+                currentScreen = .profileSetup
+            }
+        } catch {
+            // On error, skip profile setup and go to wage
+            onboardingData.initiallyHadName = true
+            currentScreen = .wage
         }
     }
 
@@ -189,15 +255,6 @@ struct PostAuthOnboardingView: View {
 
     private func saveProgress() {
         onboardingData.save(currentScreen: currentScreen.rawValue)
-    }
-
-    private func restoreSavedProgress() {
-        if let savedScreenName = onboardingData.restore(),
-           let savedScreen = PostAuthScreen(rawValue: savedScreenName),
-           savedScreen != .success {
-            // Restore to the saved screen
-            currentScreen = savedScreen
-        }
     }
 
     // MARK: - Navigation

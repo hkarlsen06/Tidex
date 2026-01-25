@@ -83,6 +83,7 @@
 		1182881D2F26815B008A1A80 /* PushNotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1182881C2F26815A008A1A80 /* PushNotificationManager.swift */; };
 		1182881F2F26816B008A1A80 /* Haptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1182881E2F26816A008A1A80 /* Haptics.swift */; };
 		11828A3F2F26A6C9008A1A80 /* ScreenshotNotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11828A3E2F26A6C9008A1A80 /* ScreenshotNotificationService.swift */; };
+		11828A412F26C68D008A1A80 /* ProfileSetupScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11828A402F26C68D008A1A80 /* ProfileSetupScreen.swift */; };
 		11923C192F16B94B0076AFD6 /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = 11923C182F16B94B0076AFD6 /* Auth */; };
 		11923C1B2F16B94B0076AFD6 /* Functions in Frameworks */ = {isa = PBXBuildFile; productRef = 11923C1A2F16B94B0076AFD6 /* Functions */; };
 		11923C1D2F16B94B0076AFD6 /* PostgREST in Frameworks */ = {isa = PBXBuildFile; productRef = 11923C1C2F16B94B0076AFD6 /* PostgREST */; };
@@ -384,6 +385,7 @@
 		1182881C2F26815A008A1A80 /* PushNotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushNotificationManager.swift; sourceTree = "<group>"; };
 		1182881E2F26816A008A1A80 /* Haptics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Haptics.swift; sourceTree = "<group>"; };
 		11828A3E2F26A6C9008A1A80 /* ScreenshotNotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenshotNotificationService.swift; sourceTree = "<group>"; };
+		11828A402F26C68D008A1A80 /* ProfileSetupScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileSetupScreen.swift; sourceTree = "<group>"; };
 		119D1CB72F16E46300EC7072 /* AppCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppCoordinator.swift; sourceTree = "<group>"; };
 		119D1CB92F16E46300EC7072 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		119D1CBB2F16E46300EC7072 /* EmailPasswordForm.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmailPasswordForm.swift; sourceTree = "<group>"; };
@@ -1428,6 +1430,7 @@
 		11F42F8C2F1A65F3002B1FBE /* Screens */ = {
 			isa = PBXGroup;
 			children = (
+				11828A402F26C68D008A1A80 /* ProfileSetupScreen.swift */,
 				11A196132F1AA3450030E524 /* MFASetupScreen.swift */,
 				11A196142F1AA3450030E524 /* SettingsAccordionScreen.swift */,
 				11A196152F1AA3450030E524 /* SupplementsScreen.swift */,
@@ -1734,6 +1737,7 @@
 				11AE8CE92F16FD82005AB062 /* TotalCard.swift in Sources */,
 				11AE8CFB2F16FDB2005AB062 /* ShiftsService.swift in Sources */,
 				11A198102F20053A0030E524 /* SettingsView.swift in Sources */,
+				11828A412F26C68D008A1A80 /* ProfileSetupScreen.swift in Sources */,
 				11AE8CFC2F16FDB2005AB062 /* SnapshotsService.swift in Sources */,
 				11AE8CFD2F16FDB2005AB062 /* SettingsService.swift in Sources */,
 				11AE8CEA2F16FD82005AB062 /* PayrollCard.swift in Sources */,
