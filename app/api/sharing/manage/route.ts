@@ -216,41 +216,41 @@ function normalizePhoneNumber(phone: string): string {
 }
 
 /**
- * Find a user by email or phone
+ * Find a user by email or phone using direct database queries
  */
 async function findUserByIdentifier(
   adminClient: SupabaseClient,
   identifier: string
 ): Promise<{ id: string } | null> {
-  const { data: usersData } = await adminClient.auth.admin.listUsers();
-
-  if (!usersData?.users) return null;
-
-  // Check if identifier is email or phone
   const isEmail = identifier.includes("@");
 
   if (isEmail) {
-    for (const u of usersData.users) {
-      if (u.email?.toLowerCase() === identifier.toLowerCase()) {
-        return { id: u.id };
-      }
+    // Direct lookup by email (case-insensitive)
+    const { data, error } = await adminClient.rpc("find_user_by_email", {
+      search_email: identifier.toLowerCase(),
+    });
+
+    if (error) {
+      logger.error("Error finding user by email:", error);
+      return null;
     }
+
+    return data ? { id: data } : null;
   } else {
-    // Normalize the input phone number
-    const normalizedInput = normalizePhoneNumber(identifier);
+    // Normalize phone and lookup directly
+    const normalizedPhone = normalizePhoneNumber(identifier);
 
-    for (const u of usersData.users) {
-      if (u.phone) {
-        // Normalize the stored phone number for comparison
-        const normalizedStored = normalizePhoneNumber(u.phone);
-        if (normalizedStored === normalizedInput) {
-          return { id: u.id };
-        }
-      }
+    const { data, error } = await adminClient.rpc("find_user_by_phone", {
+      search_phone: normalizedPhone,
+    });
+
+    if (error) {
+      logger.error("Error finding user by phone:", error);
+      return null;
     }
-  }
 
-  return null;
+    return data ? { id: data } : null;
+  }
 }
 
 /**
