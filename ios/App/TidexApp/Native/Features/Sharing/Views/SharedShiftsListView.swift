@@ -1,4 +1,7 @@
 import SwiftUI
+import os.log
+
+private let logger = Logger(subsystem: "com.tidex.app", category: "SharedShiftsListView")
 
 /// List of shared shifts from a specific sharer for the selected month
 struct SharedShiftsListView: View {
@@ -46,6 +49,27 @@ struct SharedShiftsListView: View {
             ShiftDetailsSheet(shift: shift, onDelete: nil)
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
+        }
+        // Detect screenshots and notify the sharer
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.userDidTakeScreenshotNotification)) { _ in
+            Task {
+                await reportScreenshot()
+            }
+        }
+    }
+
+    // MARK: - Screenshot Detection
+
+    /// Reports to the sharer that their shifts were screenshotted
+    private func reportScreenshot() async {
+        logger.info("Screenshot detected while viewing \(sharer.firstName ?? "friend")'s shifts")
+
+        do {
+            try await ScreenshotNotificationService.shared.reportScreenshot(sharerId: sharer.id)
+            logger.info("Screenshot notification sent successfully")
+        } catch {
+            // Silently fail - don't interrupt user experience for notification failures
+            logger.error("Failed to report screenshot: \(error.localizedDescription)")
         }
     }
 

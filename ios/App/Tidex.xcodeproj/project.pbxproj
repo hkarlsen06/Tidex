@@ -82,6 +82,7 @@
 		1182881B2F26812D008A1A80 /* SyncStatusIndicator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 118288192F26812B008A1A80 /* SyncStatusIndicator.swift */; };
 		1182881D2F26815B008A1A80 /* PushNotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1182881C2F26815A008A1A80 /* PushNotificationManager.swift */; };
 		1182881F2F26816B008A1A80 /* Haptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1182881E2F26816A008A1A80 /* Haptics.swift */; };
+		11828A3F2F26A6C9008A1A80 /* ScreenshotNotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11828A3E2F26A6C9008A1A80 /* ScreenshotNotificationService.swift */; };
 		11923C192F16B94B0076AFD6 /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = 11923C182F16B94B0076AFD6 /* Auth */; };
 		11923C1B2F16B94B0076AFD6 /* Functions in Frameworks */ = {isa = PBXBuildFile; productRef = 11923C1A2F16B94B0076AFD6 /* Functions */; };
 		11923C1D2F16B94B0076AFD6 /* PostgREST in Frameworks */ = {isa = PBXBuildFile; productRef = 11923C1C2F16B94B0076AFD6 /* PostgREST */; };
@@ -382,6 +383,7 @@
 		118288192F26812B008A1A80 /* SyncStatusIndicator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncStatusIndicator.swift; sourceTree = "<group>"; };
 		1182881C2F26815A008A1A80 /* PushNotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushNotificationManager.swift; sourceTree = "<group>"; };
 		1182881E2F26816A008A1A80 /* Haptics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Haptics.swift; sourceTree = "<group>"; };
+		11828A3E2F26A6C9008A1A80 /* ScreenshotNotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenshotNotificationService.swift; sourceTree = "<group>"; };
 		119D1CB72F16E46300EC7072 /* AppCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppCoordinator.swift; sourceTree = "<group>"; };
 		119D1CB92F16E46300EC7072 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		119D1CBB2F16E46300EC7072 /* EmailPasswordForm.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmailPasswordForm.swift; sourceTree = "<group>"; };
@@ -1237,6 +1239,7 @@
 		11A197C32F1DB4F30030E524 /* Notification */ = {
 			isa = PBXGroup;
 			children = (
+				11828A3E2F26A6C9008A1A80 /* ScreenshotNotificationService.swift */,
 				11A1980A2F1FDFD00030E524 /* ShiftReminderScheduler.swift */,
 				11A197C22F1DB4F30030E524 /* NotificationService.swift */,
 			);
@@ -1786,6 +1789,7 @@
 				11AE8D202F17CB31005AB062 /* MonthSwipeGesture.swift in Sources */,
 				114F0F6C2F21529600B587F0 /* ShiftPreviewStatus.swift in Sources */,
 				114F0F6D2F21529600B587F0 /* WatchShiftDTO.swift in Sources */,
+				11828A3F2F26A6C9008A1A80 /* ScreenshotNotificationService.swift in Sources */,
 				114F0F6E2F21529600B587F0 /* WatchDataPayload.swift in Sources */,
 				11A198282F201B0A0030E524 /* SubscriptionSettingsViewModel.swift in Sources */,
 				11A198292F201B0A0030E524 /* SubscriptionSettingsView.swift in Sources */,
