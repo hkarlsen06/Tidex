@@ -116,7 +116,6 @@ private struct TabContent: View {
     var body: some View {
         switch viewModel.selectedTab {
         case .users: UsersTabView(viewModel: viewModel)
-        case .subscribers: SubscribersTabView(viewModel: viewModel)
         case .feedback: FeedbackTabView(viewModel: viewModel)
         case .auditLog: AuditLogTabView(viewModel: viewModel)
         case .sql: SqlTabView(viewModel: viewModel)
@@ -148,46 +147,17 @@ private struct UsersTabView: View {
 
                         ForEach(viewModel.users) { user in
                             UserCard(user: user) { viewModel.selectedUser = user }
+                                .onAppear {
+                                    // Trigger infinite scroll when last user appears
+                                    if user.id == viewModel.users.last?.id && viewModel.usersHasMore && !viewModel.usersIsLoading {
+                                        Task { await viewModel.loadMoreUsers() }
+                                    }
+                                }
                         }
 
-                        if viewModel.usersHasMore {
-                            Button("Load more") { Task { await viewModel.loadMoreUsers() } }
-                                .font(.system(size: 14)).foregroundColor(.tidexBlue).padding()
-                        }
-                    }
-                    .padding(16)
-                }
-            }
-        }
-    }
-}
-
-// MARK: - Subscribers Tab
-
-private struct SubscribersTabView: View {
-    @ObservedObject var viewModel: AdminSettingsViewModel
-    let filters = ["all", "pro", "max", "trial", "grandfathered"]
-
-    var body: some View {
-        VStack(spacing: 0) {
-            Picker("Filter", selection: $viewModel.subscribersFilter) {
-                ForEach(filters, id: \.self) { Text($0.capitalized).tag($0) }
-            }
-            .pickerStyle(.segmented)
-            .padding(16)
-            .onChange(of: viewModel.subscribersFilter) { _, _ in
-                Task { await viewModel.fetchSubscribers() }
-            }
-
-            if viewModel.subscribersIsLoading {
-                AdminLoadingView()
-            } else if viewModel.subscribers.isEmpty {
-                EmptyStateView(icon: "creditcard", message: "No subscribers found")
-            } else {
-                ScrollView {
-                    LazyVStack(spacing: 8) {
-                        ForEach(viewModel.subscribers) { sub in
-                            SubscriberCard(subscriber: sub)
+                        if viewModel.usersIsLoading && !viewModel.users.isEmpty {
+                            ProgressView()
+                                .padding()
                         }
                     }
                     .padding(16)
@@ -311,8 +281,21 @@ private struct SharesTabView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            SearchBar(text: $viewModel.sharesSearchQuery, placeholder: "Search shares...", isSearching: viewModel.sharesIsLoading) {
-                viewModel.searchShares()
+            // Search and create button row
+            HStack(spacing: 8) {
+                SearchBar(text: $viewModel.sharesSearchQuery, placeholder: "Search shares...", isSearching: viewModel.sharesIsLoading) {
+                    viewModel.searchShares()
+                }
+
+                Button {
+                    viewModel.resetCreateShareForm()
+                    viewModel.isShowingCreateShare = true
+                } label: {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 24))
+                        .foregroundColor(.tidexBlue)
+                }
+                .padding(.trailing, 12)
             }
 
             if viewModel.sharesIsLoading {
@@ -333,6 +316,9 @@ private struct SharesTabView: View {
                     .padding(16)
                 }
             }
+        }
+        .sheet(isPresented: $viewModel.isShowingCreateShare) {
+            CreateShareSheet(viewModel: viewModel)
         }
     }
 }
@@ -657,30 +643,6 @@ private struct UserCard: View {
     }
 }
 
-private struct SubscriberCard: View {
-    let subscriber: SubscriberItem
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack {
-                Text(subscriber.displayName).font(.system(size: 15, weight: .medium)).foregroundColor(.tidexTextPrimary)
-                Spacer()
-                Badge(text: subscriber.planDisplayName, color: .tidexBlue)
-                if subscriber.isGrandfathered { Badge(text: "GF", color: .tidexSuccess) }
-            }
-            if let status = subscriber.status {
-                Text("Status: \(status)").font(.system(size: 12)).foregroundColor(.tidexTextMuted)
-            }
-            if let provider = subscriber.provider {
-                Text("Provider: \(provider)").font(.system(size: 12)).foregroundColor(.tidexTextMuted)
-            }
-        }
-        .padding(12)
-        .background(Color.tidexSurfacePrimary)
-        .cornerRadius(10)
-    }
-}
-
 private struct FeedbackCard: View {
     let item: AdminFeedbackItem
     let onTap: () -> Void
@@ -811,12 +773,51 @@ private struct UserActionSheet: View {
     @ObservedObject var viewModel: AdminSettingsViewModel
     @Environment(\.dismiss) private var dismiss
 
+    private var formattedLastSignIn: String? {
+        guard let lastSignIn = user.lastSignInAt else { return nil }
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        guard let date = formatter.date(from: lastSignIn) else {
+            // Try without fractional seconds
+            formatter.formatOptions = [.withInternetDateTime]
+            guard let date = formatter.date(from: lastSignIn) else { return lastSignIn }
+            return formatDate(date)
+        }
+        return formatDate(date)
+    }
+
+    private func formatDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        return formatter.string(from: date)
+    }
+
     var body: some View {
         NavigationStack {
             List {
                 Section {
                     Text(user.displayName).font(.headline)
                     if let email = user.email { Text(email).font(.subheadline).foregroundColor(.secondary) }
+                    if let lastSignIn = formattedLastSignIn {
+                        HStack {
+                            Text("Last login")
+                                .foregroundColor(.secondary)
+                            Spacer()
+                            Text(lastSignIn)
+                                .foregroundColor(.tidexTextMuted)
+                        }
+                        .font(.subheadline)
+                    } else {
+                        HStack {
+                            Text("Last login")
+                                .foregroundColor(.secondary)
+                            Spacer()
+                            Text("Never")
+                                .foregroundColor(.tidexTextMuted)
+                        }
+                        .font(.subheadline)
+                    }
                 }
 
                 Section("Actions") {
@@ -917,6 +918,227 @@ private struct FeedbackResponseSheet: View {
                 }
             }
         }
+    }
+}
+
+private struct CreateShareSheet: View {
+    @ObservedObject var viewModel: AdminSettingsViewModel
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("Create a new share between two users. The owner's shifts will be visible to the viewer.")
+                        .font(.subheadline)
+                        .foregroundColor(.tidexTextSecondary)
+
+                    // Owner selection
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Owner (shares their shifts)").font(.subheadline).foregroundColor(.tidexTextMuted)
+
+                        if let owner = viewModel.createShareSelectedOwner {
+                            // Selected owner chip
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(owner.displayName)
+                                        .font(.system(size: 14, weight: .medium))
+                                        .foregroundColor(.tidexTextPrimary)
+                                    if let email = owner.email {
+                                        Text(email)
+                                            .font(.system(size: 12))
+                                            .foregroundColor(.tidexTextMuted)
+                                    }
+                                }
+                                Spacer()
+                                Button {
+                                    viewModel.clearShareOwner()
+                                } label: {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .foregroundColor(.tidexTextMuted)
+                                }
+                            }
+                            .padding(12)
+                            .background(Color.tidexSurfaceSecondary)
+                            .cornerRadius(8)
+                        } else {
+                            // Search field
+                            HStack {
+                                Image(systemName: "magnifyingglass")
+                                    .foregroundColor(.tidexTextMuted)
+                                TextField("Search by name, email, or phone...", text: $viewModel.createShareOwnerSearch)
+                                    .textFieldStyle(.plain)
+                                    .autocorrectionDisabled()
+                                    .textInputAutocapitalization(.never)
+                                    .onChange(of: viewModel.createShareOwnerSearch) { _, _ in
+                                        viewModel.searchShareOwner()
+                                    }
+                                if viewModel.isSearchingOwner {
+                                    ProgressView().scaleEffect(0.8)
+                                }
+                            }
+                            .padding(12)
+                            .background(Color.tidexSurfaceSecondary)
+                            .cornerRadius(8)
+
+                            // Search results
+                            if !viewModel.createShareOwnerResults.isEmpty {
+                                VStack(spacing: 0) {
+                                    ForEach(viewModel.createShareOwnerResults) { user in
+                                        Button {
+                                            viewModel.selectShareOwner(user)
+                                        } label: {
+                                            UserSearchResultRow(user: user)
+                                        }
+                                        if user.id != viewModel.createShareOwnerResults.last?.id {
+                                            Divider()
+                                        }
+                                    }
+                                }
+                                .background(Color.tidexSurfaceSecondary)
+                                .cornerRadius(8)
+                            }
+                        }
+                    }
+
+                    // Viewer selection
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Viewer (can see owner's shifts)").font(.subheadline).foregroundColor(.tidexTextMuted)
+
+                        if let viewer = viewModel.createShareSelectedViewer {
+                            // Selected viewer chip
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(viewer.displayName)
+                                        .font(.system(size: 14, weight: .medium))
+                                        .foregroundColor(.tidexTextPrimary)
+                                    if let email = viewer.email {
+                                        Text(email)
+                                            .font(.system(size: 12))
+                                            .foregroundColor(.tidexTextMuted)
+                                    }
+                                }
+                                Spacer()
+                                Button {
+                                    viewModel.clearShareViewer()
+                                } label: {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .foregroundColor(.tidexTextMuted)
+                                }
+                            }
+                            .padding(12)
+                            .background(Color.tidexSurfaceSecondary)
+                            .cornerRadius(8)
+                        } else {
+                            // Search field
+                            HStack {
+                                Image(systemName: "magnifyingglass")
+                                    .foregroundColor(.tidexTextMuted)
+                                TextField("Search by name, email, or phone...", text: $viewModel.createShareViewerSearch)
+                                    .textFieldStyle(.plain)
+                                    .autocorrectionDisabled()
+                                    .textInputAutocapitalization(.never)
+                                    .onChange(of: viewModel.createShareViewerSearch) { _, _ in
+                                        viewModel.searchShareViewer()
+                                    }
+                                if viewModel.isSearchingViewer {
+                                    ProgressView().scaleEffect(0.8)
+                                }
+                            }
+                            .padding(12)
+                            .background(Color.tidexSurfaceSecondary)
+                            .cornerRadius(8)
+
+                            // Search results
+                            if !viewModel.createShareViewerResults.isEmpty {
+                                VStack(spacing: 0) {
+                                    ForEach(viewModel.createShareViewerResults) { user in
+                                        Button {
+                                            viewModel.selectShareViewer(user)
+                                        } label: {
+                                            UserSearchResultRow(user: user)
+                                        }
+                                        if user.id != viewModel.createShareViewerResults.last?.id {
+                                            Divider()
+                                        }
+                                    }
+                                }
+                                .background(Color.tidexSurfaceSecondary)
+                                .cornerRadius(8)
+                            }
+                        }
+                    }
+
+                    Toggle("Show Earnings", isOn: $viewModel.createShareShowEarnings)
+                        .tint(.tidexBlue)
+
+                    Button(action: {
+                        Task { await viewModel.createShare() }
+                    }) {
+                        HStack {
+                            if viewModel.isCreatingShare {
+                                ProgressView()
+                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                            }
+                            Text(viewModel.isCreatingShare ? "Creating..." : "Create Share")
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(
+                            (viewModel.createShareSelectedOwner != nil && viewModel.createShareSelectedViewer != nil && !viewModel.isCreatingShare)
+                            ? Color.tidexBlue
+                            : Color.tidexBlue.opacity(0.5)
+                        )
+                        .foregroundColor(.white)
+                        .cornerRadius(8)
+                    }
+                    .disabled(
+                        viewModel.isCreatingShare ||
+                        viewModel.createShareSelectedOwner == nil ||
+                        viewModel.createShareSelectedViewer == nil
+                    )
+                }
+                .padding()
+            }
+            .navigationTitle("Create Share")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Cancel") { dismiss() }
+                }
+            }
+        }
+        .presentationDetents([.large])
+    }
+}
+
+private struct UserSearchResultRow: View {
+    let user: AdminUserItem
+
+    var body: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(user.displayName)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.tidexTextPrimary)
+                if let email = user.email, email != user.displayName {
+                    Text(email)
+                        .font(.system(size: 12))
+                        .foregroundColor(.tidexTextMuted)
+                }
+                if let phone = user.phone {
+                    Text(phone)
+                        .font(.system(size: 12))
+                        .foregroundColor(.tidexTextMuted)
+                }
+            }
+            Spacer()
+            Image(systemName: "plus.circle.fill")
+                .foregroundColor(.tidexBlue)
+        }
+        .padding(.vertical, 10)
+        .padding(.horizontal, 12)
+        .contentShape(Rectangle())
     }
 }
 

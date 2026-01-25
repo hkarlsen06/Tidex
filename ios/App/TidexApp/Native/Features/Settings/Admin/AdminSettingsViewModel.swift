@@ -12,7 +12,6 @@ private let SUPERADMIN_USER_ID = "032d8c2a-9af6-4777-99f0-24e2c4058bf3"
 enum AdminTab: String, CaseIterable, Identifiable {
     case notifications
     case users
-    case subscribers
     case feedback
     case auditLog
     case sql
@@ -24,7 +23,6 @@ enum AdminTab: String, CaseIterable, Identifiable {
         switch self {
         case .notifications: return "Notifications"
         case .users: return "Users"
-        case .subscribers: return "Subscribers"
         case .feedback: return "Feedback"
         case .auditLog: return "Audit Log"
         case .sql: return "SQL"
@@ -36,7 +34,6 @@ enum AdminTab: String, CaseIterable, Identifiable {
         switch self {
         case .notifications: return "bell"
         case .users: return "person.2"
-        case .subscribers: return "creditcard"
         case .feedback: return "bubble.left.and.bubble.right"
         case .auditLog: return "list.bullet.clipboard"
         case .sql: return "terminal"
@@ -69,28 +66,6 @@ struct AdminUsersResponse: Codable {
     let page: Int
     let perPage: Int
     let resultsArePartial: Bool
-}
-
-/// Subscriber data
-struct SubscriberItem: Codable, Identifiable {
-    var id: String { userId }
-    let userId: String
-    let email: String?
-    let phone: String?
-    let name: String?
-    let provider: String?
-    let productId: String?
-    let priceId: String?
-    let status: String?
-    let currentPeriodEnd: String?
-    let isGrandfathered: Bool
-    let plan: String
-}
-
-struct SubscribersResponse: Codable {
-    let success: Bool
-    let subscribers: [SubscriberItem]?
-    let message: String?
 }
 
 /// Feedback item for admin view
@@ -193,6 +168,7 @@ struct AdminActionResponse: Codable {
     let success: Bool
     let message: String?
     let error: String?
+    let id: String?  // Returned when creating resources
 }
 
 /// AnyCodable for handling dynamic JSON
@@ -276,11 +252,6 @@ final class AdminSettingsViewModel: ObservableObject {
     @Published var usersHasMore: Bool = false
     @Published var selectedUser: AdminUserItem?
 
-    // MARK: - Subscribers Tab State
-
-    @Published var subscribers: [SubscriberItem] = []
-    @Published var subscribersFilter: String = "all"
-    @Published var subscribersIsLoading: Bool = false
 
     // MARK: - Feedback Tab State
 
@@ -310,6 +281,19 @@ final class AdminSettingsViewModel: ObservableObject {
     @Published var sharesSearchQuery: String = ""
     @Published var sharesIsLoading: Bool = false
     @Published var sharesTotalCount: Int = 0
+    @Published var isShowingCreateShare: Bool = false
+    @Published var createShareShowEarnings: Bool = true
+    @Published var isCreatingShare: Bool = false
+    // Owner search
+    @Published var createShareOwnerSearch: String = ""
+    @Published var createShareOwnerResults: [AdminUserItem] = []
+    @Published var createShareSelectedOwner: AdminUserItem?
+    @Published var isSearchingOwner: Bool = false
+    // Viewer search
+    @Published var createShareViewerSearch: String = ""
+    @Published var createShareViewerResults: [AdminUserItem] = []
+    @Published var createShareSelectedViewer: AdminUserItem?
+    @Published var isSearchingViewer: Bool = false
 
     // MARK: - Notifications Tab State
 
@@ -365,8 +349,6 @@ final class AdminSettingsViewModel: ObservableObject {
         switch tab {
         case .users:
             await fetchUsers(page: 1, search: nil)
-        case .subscribers:
-            await fetchSubscribers()
         case .feedback:
             await fetchFeedback()
         case .auditLog:
@@ -469,24 +451,6 @@ final class AdminSettingsViewModel: ObservableObject {
         isPerformingAction = false
     }
 
-    // MARK: - Subscribers Tab Methods
-
-    func fetchSubscribers() async {
-        subscribersIsLoading = true
-
-        do {
-            var components = URLComponents(url: APIConfiguration.webAppBaseURL.appendingPathComponent("/api/admin/subscribers"), resolvingAgainstBaseURL: false)!
-            components.queryItems = [URLQueryItem(name: "filter", value: subscribersFilter)]
-
-            let result: SubscribersResponse = try await makeRequest(url: components.url!, method: "GET")
-            subscribers = result.subscribers ?? []
-        } catch {
-            logger.error("Failed to fetch subscribers: \(error.localizedDescription)")
-            errorMessage = "Failed to load subscribers"
-        }
-
-        subscribersIsLoading = false
-    }
 
     // MARK: - Feedback Tab Methods
 
@@ -636,6 +600,147 @@ final class AdminSettingsViewModel: ObservableObject {
         }
 
         isPerformingAction = false
+    }
+
+    func createShare() async {
+        guard let owner = createShareSelectedOwner, let viewer = createShareSelectedViewer else {
+            errorMessage = "Please select both owner and viewer"
+            return
+        }
+
+        guard owner.id != viewer.id else {
+            errorMessage = "Owner and viewer cannot be the same user"
+            return
+        }
+
+        guard !isCreatingShare else { return }
+        isCreatingShare = true
+        clearMessages()
+
+        do {
+            let result: AdminActionResponse = try await makeRequest(
+                url: APIConfiguration.webAppBaseURL.appendingPathComponent("/api/admin/shares"),
+                method: "POST",
+                body: [
+                    "ownerId": owner.id,
+                    "viewerId": viewer.id,
+                    "showEarnings": createShareShowEarnings
+                ]
+            )
+            if result.success {
+                successMessage = "Share created"
+                resetCreateShareForm()
+                isShowingCreateShare = false
+                await fetchShares()
+            } else {
+                errorMessage = result.message ?? "Failed to create share"
+            }
+        } catch let error as AdminError {
+            // Parse error message from server response if available
+            if case .serverError(_, let message) = error {
+                // Try to extract the message from JSON response
+                if let data = message.data(using: .utf8),
+                   let json = try? JSONDecoder().decode(AdminActionResponse.self, from: data) {
+                    errorMessage = json.message ?? "Failed to create share"
+                } else {
+                    errorMessage = error.localizedDescription
+                }
+            } else {
+                errorMessage = error.localizedDescription
+            }
+        } catch {
+            errorMessage = "Failed to create share: \(error.localizedDescription)"
+        }
+
+        isCreatingShare = false
+    }
+
+    func resetCreateShareForm() {
+        createShareOwnerSearch = ""
+        createShareOwnerResults = []
+        createShareSelectedOwner = nil
+        createShareViewerSearch = ""
+        createShareViewerResults = []
+        createShareSelectedViewer = nil
+        createShareShowEarnings = true
+        isSearchingOwner = false
+        isSearchingViewer = false
+    }
+
+    func searchShareOwner() {
+        let query = createShareOwnerSearch.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard query.count >= 2 else {
+            createShareOwnerResults = []
+            return
+        }
+
+        Task {
+            isSearchingOwner = true
+            do {
+                let url = APIConfiguration.webAppBaseURL.appendingPathComponent("/api/admin/users")
+                var components = URLComponents(url: url, resolvingAgainstBaseURL: false)!
+                components.queryItems = [
+                    URLQueryItem(name: "search", value: query),
+                    URLQueryItem(name: "perPage", value: "10")
+                ]
+
+                let result: AdminUsersResponse = try await makeRequest(url: components.url!, method: "GET")
+                createShareOwnerResults = result.users
+            } catch {
+                createShareOwnerResults = []
+            }
+            isSearchingOwner = false
+        }
+    }
+
+    func selectShareOwner(_ user: AdminUserItem) {
+        createShareSelectedOwner = user
+        createShareOwnerSearch = ""
+        createShareOwnerResults = []
+    }
+
+    func clearShareOwner() {
+        createShareSelectedOwner = nil
+        createShareOwnerSearch = ""
+        createShareOwnerResults = []
+    }
+
+    func searchShareViewer() {
+        let query = createShareViewerSearch.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard query.count >= 2 else {
+            createShareViewerResults = []
+            return
+        }
+
+        Task {
+            isSearchingViewer = true
+            do {
+                let url = APIConfiguration.webAppBaseURL.appendingPathComponent("/api/admin/users")
+                var components = URLComponents(url: url, resolvingAgainstBaseURL: false)!
+                components.queryItems = [
+                    URLQueryItem(name: "search", value: query),
+                    URLQueryItem(name: "perPage", value: "10")
+                ]
+
+                let result: AdminUsersResponse = try await makeRequest(url: components.url!, method: "GET")
+                createShareViewerResults = result.users
+            } catch {
+                createShareViewerResults = []
+            }
+            isSearchingViewer = false
+        }
+    }
+
+    func selectShareViewer(_ user: AdminUserItem) {
+        createShareSelectedViewer = user
+        createShareViewerSearch = ""
+        createShareViewerResults = []
+    }
+
+    func clearShareViewer() {
+        createShareSelectedViewer = nil
+        createShareViewerSearch = ""
+        createShareViewerResults = []
     }
 
     // MARK: - Notifications Tab Methods
@@ -835,17 +940,3 @@ extension AdminUserItem {
     }
 }
 
-extension SubscriberItem {
-    var displayName: String {
-        name ?? email ?? phone ?? String(userId.prefix(8)) + "..."
-    }
-
-    var planDisplayName: String {
-        switch plan {
-        case "max": return "Max"
-        case "pro": return "Pro"
-        case "trial": return "Trial"
-        default: return "Free"
-        }
-    }
-}

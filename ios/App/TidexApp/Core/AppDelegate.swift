@@ -576,6 +576,19 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
                 AppCoordinator.shared.pendingDeepLink = .adminFeedback
             }
         }
+        // Handle deeplink from admin broadcast or other notification types
+        else if let deeplink = userInfo["deeplink"] as? String,
+                let url = URL(string: deeplink) {
+            Task { @MainActor in
+                if url.scheme == "tidex" {
+                    // Internal deep link - pass to AppCoordinator
+                    AppCoordinator.shared.handleDeepLink(url)
+                } else {
+                    // External URL (e.g., itms-apps://, https://) - open with system
+                    await UIApplication.shared.open(url)
+                }
+            }
+        }
 
         completionHandler()
     }
