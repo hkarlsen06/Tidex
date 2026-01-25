@@ -78,12 +78,12 @@ BEGIN
       v_window_end,
       -- Title is just owner name (same in both languages)
       v_owner_name,
-      -- Body is localized based on recipient's locale (defaults to 'no' for Norwegian)
+      -- Body is localized based on recipient's locale (defaults to 'en' for English)
       internal.build_batched_body(
         v_window.added_count,
         v_window.updated_count,
         v_window.deleted_count,
-        COALESCE(u.raw_user_meta_data->>'locale', 'no')
+        COALESCE(u.raw_user_meta_data->>'locale', 'en')
       ),
       jsonb_build_object(
         'type', 'shared_shift_changes',

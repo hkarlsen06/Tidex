@@ -100,7 +100,7 @@ BEGIN
   FOR v_viewer IN
     SELECT
       ss.viewer_id,
-      COALESCE(u.raw_user_meta_data->>'locale', 'no') as locale
+      COALESCE(u.raw_user_meta_data->>'locale', 'en') as locale
     FROM shift_shares ss
     JOIN auth.users u ON u.id = ss.viewer_id
     LEFT JOIN notification_preferences np ON np.user_id = ss.viewer_id
