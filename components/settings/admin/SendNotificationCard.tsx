@@ -30,9 +30,14 @@ interface Props {
 }
 
 export function SendNotificationCard({ onSuccess }: Props) {
+  // English fields
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
-  const [deeplink, setDeeplink] = useState("");
+  const [deeplink, setDeeplink] = useState("tidex://");
+  // Norwegian fields
+  const [titleNo, setTitleNo] = useState("");
+  const [bodyNo, setBodyNo] = useState("");
+  const [deeplinkNo, setDeeplinkNo] = useState("");
   const [target, setTarget] = useState<TargetAudience>("all");
   const [specificUserId, setSpecificUserId] = useState("");
   const [includeSelf, setIncludeSelf] = useState(false);
@@ -88,8 +93,11 @@ export function SendNotificationCard({ onSuccess }: Props) {
 
     const res = await sendBroadcastNotification({
       title,
+      titleNo,
       body,
+      bodyNo,
       deeplink: deeplink || undefined,
+      deeplinkNo: deeplinkNo || undefined,
       target,
       specificUserId: target === "specific" ? specificUserId : undefined,
       includeSelf,
@@ -97,10 +105,7 @@ export function SendNotificationCard({ onSuccess }: Props) {
 
     setResult(res);
     if (res.success) {
-      setTitle("");
-      setBody("");
-      setDeeplink("");
-      setSpecificUserId("");
+      // Don't clear fields on success - user may want to send similar notification
       onSuccess?.();
     }
     setIsPending(false);
@@ -110,37 +115,80 @@ export function SendNotificationCard({ onSuccess }: Props) {
     <Card className="p-6">
       <h3 className="text-lg font-semibold mb-4">Send Notification</h3>
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label htmlFor="notification-title" className="block text-sm font-medium mb-1">
-            Title <span className="text-text-muted">({title.length}/100)</span>
-          </label>
-          <Input
-            id="notification-title"
-            value={title}
-            onChange={(e) => setTitle(e.target.value.slice(0, 100))}
-            placeholder="Notification title"
-            required
-          />
+        {/* Title fields */}
+        <div className="space-y-2">
+          <span className="block text-sm font-medium text-text-muted">Title</span>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label htmlFor="notification-title-en" className="block text-xs text-text-muted mb-1">
+                English <span>({title.length}/100)</span>
+              </label>
+              <Input
+                id="notification-title-en"
+                value={title}
+                onChange={(e) => setTitle(e.target.value.slice(0, 100))}
+                placeholder="Notification title"
+                required
+              />
+            </div>
+            <div>
+              <label htmlFor="notification-title-no" className="block text-xs text-text-muted mb-1">
+                Norwegian <span>({titleNo.length}/100)</span>
+              </label>
+              <Input
+                id="notification-title-no"
+                value={titleNo}
+                onChange={(e) => setTitleNo(e.target.value.slice(0, 100))}
+                placeholder="Varslingsoverskrift"
+                required
+              />
+            </div>
+          </div>
         </div>
 
-        <div>
-          <label htmlFor="notification-body" className="block text-sm font-medium mb-1">
-            Body <span className="text-text-muted">({body.length}/500)</span>
-          </label>
-          <textarea
-            id="notification-body"
-            value={body}
-            onChange={(e) => setBody(e.target.value.slice(0, 500))}
-            placeholder="Notification message"
-            required
-            rows={3}
-            className={cn(
-              "flex w-full min-w-0 max-w-full rounded-md border border-input bg-transparent px-3 py-2 text-base shadow-xs transition-colors",
-              "placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
-              "focus:border-ring focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
-              "resize-none"
-            )}
-          />
+        {/* Body fields */}
+        <div className="space-y-2">
+          <span className="block text-sm font-medium text-text-muted">Body</span>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label htmlFor="notification-body-en" className="block text-xs text-text-muted mb-1">
+                English <span>({body.length}/500)</span>
+              </label>
+              <textarea
+                id="notification-body-en"
+                value={body}
+                onChange={(e) => setBody(e.target.value.slice(0, 500))}
+                placeholder="Notification message"
+                required
+                rows={3}
+                className={cn(
+                  "flex w-full min-w-0 max-w-full rounded-md border border-input bg-transparent px-3 py-2 text-base shadow-xs transition-colors",
+                  "placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+                  "focus:border-ring focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
+                  "resize-none"
+                )}
+              />
+            </div>
+            <div>
+              <label htmlFor="notification-body-no" className="block text-xs text-text-muted mb-1">
+                Norwegian <span>({bodyNo.length}/500)</span>
+              </label>
+              <textarea
+                id="notification-body-no"
+                value={bodyNo}
+                onChange={(e) => setBodyNo(e.target.value.slice(0, 500))}
+                placeholder="Varslingsmelding"
+                required
+                rows={3}
+                className={cn(
+                  "flex w-full min-w-0 max-w-full rounded-md border border-input bg-transparent px-3 py-2 text-base shadow-xs transition-colors",
+                  "placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+                  "focus:border-ring focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
+                  "resize-none"
+                )}
+              />
+            </div>
+          </div>
         </div>
 
         <div>
@@ -224,22 +272,39 @@ export function SendNotificationCard({ onSuccess }: Props) {
           </div>
         )}
 
-        <div>
-          <label htmlFor="notification-deeplink" className="block text-sm font-medium mb-1">
-            Deeplink (optional)
-          </label>
-          <Input
-            id="notification-deeplink"
-            value={deeplink}
-            onChange={(e) => setDeeplink(e.target.value)}
-            placeholder="/shifts or /stats"
-          />
-          <p className="text-xs text-text-muted mt-1">
-            Route to navigate when tapped. Must start with /
+        {/* Deeplink fields */}
+        <div className="space-y-2">
+          <span className="block text-sm font-medium text-text-muted">Deeplink (optional)</span>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label htmlFor="notification-deeplink-en" className="block text-xs text-text-muted mb-1">
+                English
+              </label>
+              <Input
+                id="notification-deeplink-en"
+                value={deeplink}
+                onChange={(e) => setDeeplink(e.target.value)}
+                placeholder="tidex://shifts or https://..."
+              />
+            </div>
+            <div>
+              <label htmlFor="notification-deeplink-no" className="block text-xs text-text-muted mb-1">
+                Norwegian (optional, falls back to English)
+              </label>
+              <Input
+                id="notification-deeplink-no"
+                value={deeplinkNo}
+                onChange={(e) => setDeeplinkNo(e.target.value)}
+                placeholder="tidex://shifts or https://..."
+              />
+            </div>
+          </div>
+          <p className="text-xs text-text-muted">
+            Any URL format allowed (tidex://, https://, /path)
           </p>
         </div>
 
-        <Button type="submit" disabled={isPending || !title || !body}>
+        <Button type="submit" disabled={isPending || !title || !titleNo || !body || !bodyNo}>
           {isPending ? "Sending..." : "Send Notification"}
         </Button>
 

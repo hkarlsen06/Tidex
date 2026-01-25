@@ -350,15 +350,34 @@ private struct NotificationsTabView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Send Notification").font(.headline).foregroundColor(.tidexTextPrimary)
 
-                    TextField("Title", text: $viewModel.notificationTitle)
-                        .textFieldStyle(AdminTextFieldStyle())
+                    // Title fields
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Title").font(.subheadline).foregroundColor(.tidexTextMuted)
+                        TextField("English", text: $viewModel.notificationTitle)
+                            .textFieldStyle(AdminTextFieldStyle())
+                        TextField("Norwegian", text: $viewModel.notificationTitleNo)
+                            .textFieldStyle(AdminTextFieldStyle())
+                    }
 
-                    TextField("Body", text: $viewModel.notificationBody, axis: .vertical)
-                        .lineLimit(3...6)
-                        .textFieldStyle(AdminTextFieldStyle())
+                    // Body fields
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Body").font(.subheadline).foregroundColor(.tidexTextMuted)
+                        TextField("English", text: $viewModel.notificationBody, axis: .vertical)
+                            .lineLimit(3...6)
+                            .textFieldStyle(AdminTextFieldStyle())
+                        TextField("Norwegian", text: $viewModel.notificationBodyNo, axis: .vertical)
+                            .lineLimit(3...6)
+                            .textFieldStyle(AdminTextFieldStyle())
+                    }
 
-                    TextField("Deeplink (optional)", text: $viewModel.notificationDeeplink)
-                        .textFieldStyle(AdminTextFieldStyle())
+                    // Deeplink fields
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Deeplink (optional)").font(.subheadline).foregroundColor(.tidexTextMuted)
+                        TextField("English (e.g. tidex://shifts)", text: $viewModel.notificationDeeplink)
+                            .textFieldStyle(AdminTextFieldStyle())
+                        TextField("Norwegian (optional, falls back to English)", text: $viewModel.notificationDeeplinkNo)
+                            .textFieldStyle(AdminTextFieldStyle())
+                    }
 
                     Picker("Target", selection: $viewModel.notificationTarget) {
                         ForEach(targets, id: \.self) { Text($0.capitalized).tag($0) }
@@ -467,7 +486,14 @@ private struct NotificationsTabView: View {
                         .foregroundColor(.white)
                         .cornerRadius(8)
                     }
-                    .disabled(viewModel.isSendingNotification || (viewModel.notificationTarget == "specific" && viewModel.notificationSelectedUsers.isEmpty))
+                    .disabled(
+                        viewModel.isSendingNotification ||
+                        viewModel.notificationTitle.isEmpty ||
+                        viewModel.notificationTitleNo.isEmpty ||
+                        viewModel.notificationBody.isEmpty ||
+                        viewModel.notificationBodyNo.isEmpty ||
+                        (viewModel.notificationTarget == "specific" && viewModel.notificationSelectedUsers.isEmpty)
+                    )
                 }
                 .padding(16)
                 .background(Color.tidexSurfacePrimary)
