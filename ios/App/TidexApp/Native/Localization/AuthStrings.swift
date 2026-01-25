@@ -170,6 +170,7 @@ enum AuthStrings {
         "common.save": "Lagre",
         "common.saveChanges": "Lagre endringer",
         "common.or": "eller",
+        "common.thisMonth": "Denne mnd.",
 
         // Tabs
         "tabs.home": "Hjem",
@@ -1134,6 +1135,7 @@ enum AuthStrings {
         "common.save": "Save",
         "common.saveChanges": "Save changes",
         "common.or": "or",
+        "common.thisMonth": "This month",
 
         // Tabs
         "tabs.home": "Home",

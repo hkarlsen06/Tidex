@@ -205,7 +205,6 @@ struct MainTabView: View {
                 monthName: monthContext.displayMonthName,
                 year: monthContext.displayYear,
                 phase: transitionPhase,
-                isCurrentMonth: monthContext.isCurrentMonth,
                 config: .default,
                 onPrevious: {
                     AppearanceTracker.shared.reset()
@@ -215,16 +214,11 @@ struct MainTabView: View {
                     AppearanceTracker.shared.reset()
                     monthContext.goToNextMonth()
                 },
-                onReturnToCurrent: {
-                    AppearanceTracker.shared.reset()
-                    monthContext.goToCurrentMonth()
-                },
                 onNavigateToMonth: { year, month in
                     AppearanceTracker.shared.reset()
                     monthContext.navigateTo(year: year, month: month)
                 },
-                isLoading: false,
-                backToTodayText: localization.string("dashboard.backToToday")
+                isLoading: false
             )
             .frame(maxWidth: .infinity)  // Fill available width for consistent sizing
             .frame(height: MonthPickerLayout.height)

@@ -232,6 +232,16 @@ struct MonthYearPickerSheet: View {
         return formatter.monthSymbols.map { $0.capitalized }
     }
 
+    /// Current real month/year for the "This month" button
+    private var realMonth: (year: Int, month: Int) {
+        Date.currentYearMonth()
+    }
+
+    /// Whether the picker is already showing the current month
+    private var isShowingCurrentMonth: Bool {
+        selectedYear == realMonth.year && selectedMonth == realMonth.month
+    }
+
     init(isPresented: Binding<Bool>, currentYear: Int, currentMonth: Int, onSelect: @escaping (Int, Int) -> Void) {
         self._isPresented = isPresented
         self.currentYear = currentYear
@@ -280,6 +290,25 @@ struct MonthYearPickerSheet: View {
                     .foregroundColor(.tidexBlue)
                 }
 
+                ToolbarItem(placement: .principal) {
+                    Button {
+                        onSelect(realMonth.year, realMonth.month)
+                        isPresented = false
+                    } label: {
+                        Text(localization.string("common.thisMonth"))
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .foregroundColor(isShowingCurrentMonth ? .tidexTextMuted : .tidexBlue)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(
+                                Color.tidexBlue.opacity(isShowingCurrentMonth ? 0.05 : 0.1),
+                                in: Capsule()
+                            )
+                    }
+                    .disabled(isShowingCurrentMonth)
+                }
+
                 ToolbarItem(placement: .confirmationAction) {
                     Button(localization.string("common.done")) {
                         onSelect(selectedYear, selectedMonth)
@@ -297,21 +326,18 @@ struct MonthYearPickerSheet: View {
 
 // MARK: - Animated Month Header
 
-/// An animated header showing month and year with vertical text transitions
-/// Back to today button is inline between month/year and next button (doesn't affect layout)
+/// An animated header showing month and year with horizontal text transitions
 /// Supports swipe gestures for month navigation and tap to open month/year picker
+/// "Return to current month" functionality is in the MonthYearPickerSheet
 struct AnimatedMonthHeader: View {
     let monthName: String
     let year: Int
     let phase: MonthTransitionPhase
-    let isCurrentMonth: Bool
     let config: MonthTransitionConfig
     let onPrevious: () -> Void
     let onNext: () -> Void
-    let onReturnToCurrent: () -> Void
     let onNavigateToMonth: ((Int, Int) -> Void)?
     let isLoading: Bool
-    let backToTodayText: String  // Kept for API compatibility, but not used in new design
 
     @State private var monthScale: CGFloat = 1.0
     @State private var showingMonthPicker = false
@@ -319,11 +345,6 @@ struct AnimatedMonthHeader: View {
     // Haptic feedback for swipe and tap
     private let swipeHaptic = UIImpactFeedbackGenerator(style: .medium)
     private let tapHaptic = UIImpactFeedbackGenerator(style: .light)
-
-    // Width for navigation button only (when return button is hidden)
-    private let navButtonWidth: CGFloat = 36
-    // Width for return button + spacing + nav button
-    private let fullRightWidth: CGFloat = 80  // 36 + 8 + 36
 
     /// Short year format (2 digits) - e.g., "26" for 2026
     private var shortYear: String {
@@ -379,18 +400,6 @@ struct AnimatedMonthHeader: View {
 
             // Next button
             navigationButton(icon: "chevron.right", action: onNext)
-
-            // Back-to-today button (outside the main picker area)
-            Button(action: onReturnToCurrent) {
-                Image(systemName: "arrow.uturn.backward")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(.tidexBlue)
-                    .frame(width: 36, height: 36)
-                    .background(Color.tidexBlue.opacity(0.1))
-                    .clipShape(Circle())
-            }
-            .opacity(isCurrentMonth ? 0 : 1)
-            .disabled(isCurrentMonth)
         }
         .contentShape(Rectangle())
         .gesture(swipeGesture)
@@ -404,19 +413,17 @@ struct AnimatedMonthHeader: View {
 
     private var defaultLayout: some View {
         HStack(spacing: 0) {
-            // Left section: Previous button (fixed width)
+            // Left section: Previous button
             navigationButton(icon: "chevron.left", action: onPrevious)
-                .frame(width: navButtonWidth)
 
             // Center section: Month and Year (fills available space, text centered)
-            // Fixed width ensures layout stability across different month names
             ViewThatFits(in: .horizontal) {
                 // Try full year first
                 monthYearLabel(yearText: String(year))
                 // Fall back to short year if needed
                 monthYearLabel(yearText: shortYear)
             }
-            .frame(maxWidth: .infinity)  // Fill space between buttons
+            .frame(maxWidth: .infinity)
             .id("month-\(phase.id)")
             .transition(textTransition)
             .scaleEffect(monthScale)
@@ -429,25 +436,8 @@ struct AnimatedMonthHeader: View {
                 showMonthPicker()
             }
 
-            // Right section: Back-to-today button (animated width) + Next button
-            HStack(spacing: 8) {
-                // Return button with animated width - collapses when hidden
-                Button(action: onReturnToCurrent) {
-                    Image(systemName: "arrow.uturn.backward")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(.tidexBlue)
-                        .frame(width: 36, height: 36)
-                        .background(Color.tidexBlue.opacity(0.1))
-                        .clipShape(Circle())
-                }
-                .frame(width: isCurrentMonth ? 0 : 36)
-                .opacity(isCurrentMonth ? 0 : 1)
-                .clipped()
-                .disabled(isCurrentMonth)
-                .animation(.spring(response: 0.35, dampingFraction: 0.85), value: isCurrentMonth)
-
-                navigationButton(icon: "chevron.right", action: onNext)
-            }
+            // Right section: Next button
+            navigationButton(icon: "chevron.right", action: onNext)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, Spacing.sm)
@@ -457,7 +447,6 @@ struct AnimatedMonthHeader: View {
             swipeHaptic.prepare()
             tapHaptic.prepare()
         }
-        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: isCurrentMonth)
     }
 
     // MARK: - Shared Helpers
@@ -504,18 +493,6 @@ struct AnimatedMonthHeader: View {
             // Show picker after bounce completes
             showingMonthPicker = true
         }
-    }
-
-    private func bounceAndReturn() {
-        withAnimation(.spring(response: 0.15, dampingFraction: 0.5)) {
-            monthScale = 0.95
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            withAnimation(.spring(response: 0.2, dampingFraction: 0.6)) {
-                monthScale = 1.0
-            }
-        }
-        onReturnToCurrent()
     }
 
     private var swipeGesture: some Gesture {
