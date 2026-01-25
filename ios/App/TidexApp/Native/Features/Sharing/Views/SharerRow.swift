@@ -6,6 +6,7 @@ struct SharerRow: View {
     let sharer: SharedUser
     let preview: SharerShiftPreview?
     let isSelected: Bool
+    let isRefreshing: Bool
     let onTap: () -> Void
 
     @Environment(\.localization) private var localization
@@ -40,13 +41,17 @@ struct SharerRow: View {
                 .padding(.horizontal, 16)
                 .padding(.vertical, Spacing.sm)
 
-                // Shift preview (only shown when data is available, no skeleton)
-                // This allows for a cleaner staged reveal: sort first, then show cards
+                // Shift preview section - swap between skeleton and real card
                 if let preview = preview, let shift = preview.shift, let status = preview.status {
-                    ShiftPreviewCard(shift: shift, status: status)
-                        .padding(.horizontal, 12)
-                        .padding(.bottom, 12)
-                        .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .top)))
+                    Group {
+                        if isRefreshing {
+                            shiftPreviewSkeleton
+                        } else {
+                            ShiftPreviewCard(shift: shift, status: status)
+                        }
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.bottom, 12)
                 }
             }
             .background(
@@ -90,6 +95,36 @@ struct SharerRow: View {
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(.tidexBlue)
             )
+    }
+
+    /// Skeleton placeholder for shift preview while refreshing
+    private var shiftPreviewSkeleton: some View {
+        HStack(spacing: 12) {
+            // Date and time skeleton
+            VStack(alignment: .leading, spacing: 4) {
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(Color.tidexTextMuted.opacity(0.3))
+                    .frame(width: 140, height: 14)
+
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(Color.tidexTextMuted.opacity(0.2))
+                    .frame(width: 90, height: 13)
+            }
+
+            Spacer()
+
+            // Status badge skeleton
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color.tidexTextMuted.opacity(0.2))
+                .frame(width: 70, height: 24)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, Spacing.sm)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.tidexSurfaceSecondary.opacity(0.5))
+        )
+        .shimmer(duration: 1.2)
     }
 }
 
@@ -507,6 +542,7 @@ struct SharerListEmptyState: View {
             ),
             preview: nil,
             isSelected: false,
+            isRefreshing: false,
             onTap: {}
         )
 
@@ -524,6 +560,7 @@ struct SharerListEmptyState: View {
             ),
             preview: nil,
             isSelected: true,
+            isRefreshing: false,
             onTap: {}
         )
     }

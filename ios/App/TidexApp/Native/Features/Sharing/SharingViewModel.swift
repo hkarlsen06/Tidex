@@ -68,6 +68,9 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
     /// Whether shift previews are being loaded
     @Published private(set) var isLoadingPreviews = false
 
+    /// Whether a pull-to-refresh is in progress (for shimmer on cards)
+    @Published private(set) var isRefreshing = false
+
     // MARK: - Committed Display State
     // These values only update AFTER shift data is ready, ensuring atomic rendering
     // The calendar uses these to avoid showing the new month structure before data arrives
@@ -318,13 +321,41 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
     }
 
     /// Refresh sharers (pull-to-refresh) - forces fresh data
+    /// Uses minimum refresh duration to ensure shimmer is visible
     func refresh() async {
+        // Set refreshing state immediately
+        isRefreshing = true
+
+        // Minimum 800ms ensures shimmer is visible even on fast connections
+        let minimumDurationMs: UInt64 = 800
+        let startTime = DispatchTime.now()
+
         if selectedSharer != nil {
             // Refresh shifts for selected sharer
             await loadShiftsForSelectedSharer()
         } else {
             // Refresh sharer list and previews with forced refresh
             await loadSharers(forceRefreshPreviews: true)
+        }
+
+        // Calculate elapsed time and wait for minimum duration
+        // Use DispatchQueue.asyncAfter which is not cancelled by SwiftUI's .refreshable
+        let elapsedMs = (DispatchTime.now().uptimeNanoseconds - startTime.uptimeNanoseconds) / 1_000_000
+        let remainingMs = minimumDurationMs > elapsedMs ? minimumDurationMs - elapsedMs : 0
+
+        if remainingMs > 0 {
+            await withCheckedContinuation { continuation in
+                DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(Int(remainingMs))) {
+                    continuation.resume()
+                }
+            }
+        }
+
+        isRefreshing = false
+
+        // Update Apple Watch with refreshed friend data
+        if let userId = cachedUserId {
+            WatchConnectivityManager.shared.sendUpdatedData(userId: userId)
         }
     }
 

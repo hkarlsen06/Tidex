@@ -277,6 +277,7 @@ struct SharingView: View {
                     shiftPreviews: viewModel.shiftPreviews,
                     isLoading: viewModel.isLoadingSharers,
                     isLoadingPreviews: viewModel.isLoadingPreviews,
+                    isRefreshing: viewModel.isRefreshing,
                     onSelectSharer: { sharer in
                         withAnimation(.easeInOut(duration: 0.2)) {
                             viewModel.selectSharer(sharer)

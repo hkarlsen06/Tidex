@@ -248,6 +248,7 @@ final class SharingService: ObservableObject {
             // Build request with auth header
             var request = URLRequest(url: url)
             request.httpMethod = "GET"
+            request.cachePolicy = .reloadIgnoringLocalCacheData
             request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
@@ -345,6 +346,7 @@ final class SharingService: ObservableObject {
             // Build request with auth header
             var request = URLRequest(url: url)
             request.httpMethod = "GET"
+            request.cachePolicy = .reloadIgnoringLocalCacheData
             request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 

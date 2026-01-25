@@ -38,31 +38,30 @@ struct MonthlyEarningsCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            // Title
-            Text(localization.string("stats.monthlyEarnings"))
-                .font(.system(size: 16, weight: .medium))
-                .foregroundColor(.tidexTextSecondary)
+            // Title, amount, and after tax label grouped tightly
+            VStack(alignment: .leading, spacing: 2) {
+                Text(localization.string("stats.monthlyEarnings"))
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(.tidexTextSecondary)
 
-            // Main amount
-            CurrencyCountUpText(amount: mainDisplayValue)
-                .font(.system(size: 56, weight: .bold))
-                .foregroundColor(.tidexTextPrimary)
-                .minimumScaleFactor(0.5)
-                .lineLimit(1)
+                CurrencyCountUpText(amount: mainDisplayValue)
+                    .font(.system(size: 56, weight: .bold))
+                    .foregroundColor(.tidexTextPrimary)
+                    .minimumScaleFactor(0.5)
+                    .lineLimit(1)
 
-            // Tax subtitle
-            if taxEnabled {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(localization.string("stats.afterTax"))
+                if taxEnabled {
+                    Text(localization.string("stats.afterTax").lowercased())
                         .font(.system(size: 14, weight: .medium))
                         .foregroundColor(.tidexTextSecondary)
-
-                    if showTaxSubtitle {
-                        Text("\(localization.string("stats.beforeTax")): \(formatCurrency(grossEarnings))")
-                            .font(.system(size: 14, weight: .regular))
-                            .foregroundColor(.tidexTextMuted)
-                    }
                 }
+            }
+
+            // Before tax subtitle
+            if taxEnabled && showTaxSubtitle {
+                Text("\(localization.string("stats.beforeTax")): \(formatCurrency(grossEarnings))")
+                    .font(.system(size: 14, weight: .regular))
+                    .foregroundColor(.tidexTextMuted)
             }
 
             // Percentage change indicator

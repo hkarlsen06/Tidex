@@ -8,6 +8,7 @@ struct ShiftRowView: View {
     let shift: WatchShiftDTO
     let isCurrentUser: Bool
     let locale: String
+    let isRefreshing: Bool
 
     private var isNorwegian: Bool { locale == "no" }
 
@@ -71,6 +72,16 @@ struct ShiftRowView: View {
     // MARK: - Shift Card
 
     private var shiftCard: some View {
+        Group {
+            if isRefreshing {
+                shiftCardSkeleton
+            } else {
+                shiftCardContent
+            }
+        }
+    }
+
+    private var shiftCardContent: some View {
         HStack(spacing: 4) {
             // Date and time - fixed size to prevent wrapping
             VStack(alignment: .leading, spacing: 1) {
@@ -105,6 +116,35 @@ struct ShiftRowView: View {
                 }
             }
         )
+    }
+
+    private var shiftCardSkeleton: some View {
+        HStack(spacing: 4) {
+            // Date and time skeleton
+            VStack(alignment: .leading, spacing: 2) {
+                RoundedRectangle(cornerRadius: 3)
+                    .fill(Color.secondary.opacity(0.3))
+                    .frame(width: 60, height: 10)
+
+                RoundedRectangle(cornerRadius: 3)
+                    .fill(Color.secondary.opacity(0.2))
+                    .frame(width: 45, height: 9)
+            }
+
+            Spacer(minLength: 0)
+
+            // Status badge skeleton
+            RoundedRectangle(cornerRadius: 4)
+                .fill(Color.secondary.opacity(0.2))
+                .frame(width: 35, height: 14)
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color.secondary.opacity(0.15))
+        )
+        .shimmer(duration: 1.2)
     }
 
     // MARK: - Status Badge
@@ -374,7 +414,8 @@ struct ShiftRowView: View {
                 avatarImageData: nil
             ),
             isCurrentUser: true,
-            locale: "no"
+            locale: "no",
+            isRefreshing: false
         )
 
         ShiftRowView(
@@ -391,7 +432,8 @@ struct ShiftRowView: View {
                 avatarImageData: nil
             ),
             isCurrentUser: false,
-            locale: "no"
+            locale: "no",
+            isRefreshing: true
         )
 
         ShiftRowView(
@@ -408,7 +450,8 @@ struct ShiftRowView: View {
                 avatarImageData: nil
             ),
             isCurrentUser: false,
-            locale: "en"
+            locale: "en",
+            isRefreshing: false
         )
     }
 }
