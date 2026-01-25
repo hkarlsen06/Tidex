@@ -204,33 +204,29 @@ private struct AddShiftCalendarDayCell: View {
                 Spacer()
             }
 
-            // Content: earnings display or indicator
-            VStack {
-                Spacer()
-
-                if isSelected, let earnings = previewEarnings {
-                    // Preview earnings for selected dates (blue)
-                    Text(formatCompactCurrency(earnings))
-                        .font(.system(size: 15, weight: .bold))
-                        .foregroundColor(hasConflict ? .tidexWarning : .tidexBlue)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.6)
-                        .padding(.bottom, 6)
-                } else if isSelected {
-                    // Selected but no preview earnings yet (need times)
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundColor(hasConflict ? .tidexWarning : .tidexBlue)
-                        .padding(.bottom, 8)
-                } else if let earnings = existingEarnings, !dayInfo.isOutsideMonth {
-                    // Existing shift earnings (grey)
-                    Text(formatCompactCurrency(earnings))
-                        .font(.system(size: 15, weight: .bold))
-                        .foregroundColor(.tidexTextMuted)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.6)
-                        .padding(.bottom, 6)
-                }
+            // Content: earnings display or indicator (centered with slight top offset)
+            if isSelected, let earnings = previewEarnings {
+                // Preview earnings for selected dates (blue)
+                Text(formatCompactCurrency(earnings))
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundColor(hasConflict ? .tidexWarning : .tidexBlue)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+                    .padding(.top, 8)
+            } else if isSelected {
+                // Selected but no preview earnings yet (need times)
+                Image(systemName: "checkmark")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundColor(hasConflict ? .tidexWarning : .tidexBlue)
+                    .padding(.top, 8)
+            } else if let earnings = existingEarnings, !dayInfo.isOutsideMonth {
+                // Existing shift earnings (grey)
+                Text(formatCompactCurrency(earnings))
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundColor(.tidexTextMuted)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+                    .padding(.top, 8)
             }
         }
         .frame(maxWidth: .infinity)

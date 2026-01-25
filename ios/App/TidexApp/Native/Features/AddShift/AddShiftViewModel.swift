@@ -816,9 +816,16 @@ final class AddShiftViewModel: ObservableObject {
         return String((weekday - 1) % 7)
     }
 
-    /// Compute earnings for a single date
+    /// Compute earnings for a single date (net after tax)
+    /// Uses wage snapshot from shift date, tax snapshot from payout date (shift month + 1)
     private func computeEarningsForDate(_ dateISO: String) -> Double? {
-        let snapshot = SnapshotsService.snapshotForDate(dateISO, from: cachedSnapshots)
+        // Wage/supplements from shift date
+        let wageSnapshot = SnapshotsService.snapshotForDate(dateISO, from: cachedSnapshots)
+
+        // Tax settings from payout date (shift month + 1)
+        let payrollDay = cachedSettings?.effectivePayrollDay ?? 1
+        let payoutDate = PayrollEngine.calculatePayoutDate(shiftDate: dateISO, payrollDay: payrollDay)
+        let taxSnapshot = SnapshotsService.snapshotForDate(payoutDate, from: cachedSnapshots)
 
         let shift = ShiftRow(
             id: "preview-\(dateISO)",
@@ -829,8 +836,11 @@ final class AddShiftViewModel: ObservableObject {
             custom_supplements: nil
         )
 
-        let computed = PayrollCalculator.computeShift(shift, snapshot: snapshot)
-        return computed.gross
+        let computed = PayrollCalculator.computeShift(shift, snapshot: wageSnapshot)
+        return computed.netPay(
+            taxEnabled: taxSnapshot?.effectiveTaxEnabled ?? false,
+            taxPercentage: taxSnapshot?.effectiveTaxPercentage ?? 0
+        )
     }
 
     /// Virtual shift with computed earnings
@@ -844,13 +854,15 @@ final class AddShiftViewModel: ObservableObject {
         Set(generateVirtualShiftsForDisplay().map { $0.date })
     }
 
-    /// Generate virtual shifts with computed earnings from recurring patterns
+    /// Generate virtual shifts with computed earnings from recurring patterns (net after tax)
+    /// Uses wage snapshot from shift date, tax snapshot from payout date (shift month + 1)
     private func generateVirtualShiftsForDisplay() -> [VirtualShiftWithEarnings] {
         var results: [VirtualShiftWithEarnings] = []
 
         // Only generate for the currently displayed month
         let year = displayYear
         let month = displayMonthNumber
+        let payrollDay = cachedSettings?.effectivePayrollDay ?? 1
 
         for recurring in cachedRecurringShifts {
             let virtualShifts = RecurringShiftGenerator.generateVirtualShiftsForMonth(
@@ -870,12 +882,20 @@ final class AddShiftViewModel: ObservableObject {
                     custom_supplements: nil
                 )
 
-                let snapshot = SnapshotsService.snapshotForDate(virtualShift.date, from: cachedSnapshots)
-                let computed = PayrollCalculator.computeShift(shift, snapshot: snapshot)
+                // Wage/supplements from shift date
+                let wageSnapshot = SnapshotsService.snapshotForDate(virtualShift.date, from: cachedSnapshots)
+                let computed = PayrollCalculator.computeShift(shift, snapshot: wageSnapshot)
+
+                // Tax settings from payout date (shift month + 1)
+                let payoutDate = PayrollEngine.calculatePayoutDate(shiftDate: virtualShift.date, payrollDay: payrollDay)
+                let taxSnapshot = SnapshotsService.snapshotForDate(payoutDate, from: cachedSnapshots)
 
                 results.append(VirtualShiftWithEarnings(
                     date: virtualShift.date,
-                    earnings: computed.gross
+                    earnings: computed.netPay(
+                        taxEnabled: taxSnapshot?.effectiveTaxEnabled ?? false,
+                        taxPercentage: taxSnapshot?.effectiveTaxPercentage ?? 0
+                    )
                 ))
             }
         }
@@ -1087,9 +1107,11 @@ final class AddShiftViewModel: ObservableObject {
     }
 
     /// Rebuild the calendar display data from cached shifts (called once per month change)
+    /// Uses wage snapshot from shift date, tax snapshot from payout date (shift month + 1)
     private func rebuildCalendarDisplayData() {
         let year = displayYear
         let month = displayMonthNumber
+        let payrollDay = cachedSettings?.effectivePayrollDay ?? 1
 
         // Build set of existing shift dates
         var existingDates = Set<String>()
@@ -1099,10 +1121,18 @@ final class AddShiftViewModel: ObservableObject {
         for shift in cachedShifts {
             existingDates.insert(shift.shift_date)
 
-            // Compute earnings for regular shifts
-            let snapshot = SnapshotsService.snapshotForDate(shift.shift_date, from: cachedSnapshots)
-            let computed = PayrollCalculator.computeShift(shift, snapshot: snapshot)
-            existingEarnings[shift.shift_date, default: 0] += computed.gross
+            // Wage/supplements from shift date
+            let wageSnapshot = SnapshotsService.snapshotForDate(shift.shift_date, from: cachedSnapshots)
+            let computed = PayrollCalculator.computeShift(shift, snapshot: wageSnapshot)
+
+            // Tax settings from payout date (shift month + 1)
+            let payoutDate = PayrollEngine.calculatePayoutDate(shiftDate: shift.shift_date, payrollDay: payrollDay)
+            let taxSnapshot = SnapshotsService.snapshotForDate(payoutDate, from: cachedSnapshots)
+
+            existingEarnings[shift.shift_date, default: 0] += computed.netPay(
+                taxEnabled: taxSnapshot?.effectiveTaxEnabled ?? false,
+                taxPercentage: taxSnapshot?.effectiveTaxPercentage ?? 0
+            )
         }
 
         // Generate virtual shifts with computed earnings
@@ -1128,16 +1158,26 @@ final class AddShiftViewModel: ObservableObject {
                     custom_supplements: nil
                 )
 
-                let snapshot = SnapshotsService.snapshotForDate(virtualShift.date, from: cachedSnapshots)
-                let computed = PayrollCalculator.computeShift(shift, snapshot: snapshot)
+                // Wage/supplements from shift date
+                let wageSnapshot = SnapshotsService.snapshotForDate(virtualShift.date, from: cachedSnapshots)
+                let computed = PayrollCalculator.computeShift(shift, snapshot: wageSnapshot)
+
+                // Tax settings from payout date (shift month + 1)
+                let payoutDate = PayrollEngine.calculatePayoutDate(shiftDate: virtualShift.date, payrollDay: payrollDay)
+                let taxSnapshot = SnapshotsService.snapshotForDate(payoutDate, from: cachedSnapshots)
+
+                let netEarnings = computed.netPay(
+                    taxEnabled: taxSnapshot?.effectiveTaxEnabled ?? false,
+                    taxPercentage: taxSnapshot?.effectiveTaxPercentage ?? 0
+                )
 
                 virtualShiftsWithEarnings.append(CalendarDisplayData.VirtualShiftWithEarnings(
                     date: virtualShift.date,
-                    earnings: computed.gross
+                    earnings: netEarnings
                 ))
 
                 // Also add to existing earnings map
-                existingEarnings[virtualShift.date, default: 0] += computed.gross
+                existingEarnings[virtualShift.date, default: 0] += netEarnings
             }
         }
 

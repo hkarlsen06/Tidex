@@ -32,37 +32,64 @@ struct AddShiftView: View {
                 Color.tidexBackground
                     .ignoresSafeArea()
 
-                // Scrollable content area - centered in available space when content fits
+                // Content area - different layouts for single vs recurring mode
                 GeometryReader { geometry in
                     let availableHeight = geometry.size.height - (MonthPickerLayout.height + MonthPickerLayout.bottomPadding)
 
                     ScrollViewReader { scrollProxy in
-                        ScrollView {
-                            VStack(spacing: 24) {
-                                // Draft restored banner
+                        switch viewModel.mode {
+                        case .single:
+                            // Single mode: Fixed layout with centered calendar (no scroll)
+                            // This matches ShiftsView's calendarViewContent layout exactly
+                            VStack(spacing: 0) {
+                                // Draft restored banner at top
                                 if viewModel.hasDraft {
                                     DraftRestoredBanner(onStartFresh: {
                                         viewModel.startFresh()
                                     })
+                                    .frame(maxWidth: AdaptiveMaxWidth.tabContent)
+                                    .padding(.horizontal, 16)
+                                    .padding(.top, 16)
                                 }
 
-                                switch viewModel.mode {
-                                case .single:
-                                    SingleShiftContent(viewModel: viewModel, scrollProxy: scrollProxy)
-                                case .recurring:
+                                // Center content using outer Spacers (not inner frame expansion)
+                                Spacer()
+
+                                SingleShiftContent(viewModel: viewModel, scrollProxy: scrollProxy)
+                                    .frame(maxWidth: AdaptiveMaxWidth.tabContent)
+                                    .padding(.horizontal, 16)
+
+                                Spacer()
+                            }
+                            .padding(.bottom, MonthPickerLayout.height + MonthPickerLayout.bottomPadding)
+                            .onTapGesture {
+                                hideKeyboard()
+                            }
+
+                        case .recurring:
+                            // Recurring mode: Scrollable content (more elements)
+                            ScrollView {
+                                VStack(spacing: 24) {
+                                    // Draft restored banner
+                                    if viewModel.hasDraft {
+                                        DraftRestoredBanner(onStartFresh: {
+                                            viewModel.startFresh()
+                                        })
+                                    }
+
                                     RecurringShiftContent(viewModel: viewModel, scrollProxy: scrollProxy)
                                 }
+                                .frame(maxWidth: AdaptiveMaxWidth.tabContent)
+                                .padding(.horizontal, 16)
+                                .padding(.top, 16)
+                                .frame(maxWidth: .infinity)
+                                .frame(minHeight: availableHeight, alignment: .center)
                             }
-                            .frame(maxWidth: AdaptiveMaxWidth.tabContent)
-                            .padding(.horizontal, 16)
-                            .padding(.top, 16)
-                            .frame(maxWidth: .infinity)
-                            .frame(minHeight: availableHeight, alignment: .center)
-                        }
-                        .scrollDismissesKeyboard(.interactively)
-                        .contentMargins(.bottom, MonthPickerLayout.height + MonthPickerLayout.bottomPadding + 16, for: .scrollContent)
-                        .onTapGesture {
-                            hideKeyboard()
+                            .scrollDismissesKeyboard(.interactively)
+                            .contentMargins(.bottom, MonthPickerLayout.height + MonthPickerLayout.bottomPadding + 16, for: .scrollContent)
+                            .onTapGesture {
+                                hideKeyboard()
+                            }
                         }
                     }
                 }
@@ -168,29 +195,35 @@ private struct SingleShiftContent: View {
     @Environment(\.localization) private var localization
 
     var body: some View {
-        VStack(spacing: 24) {
-            // Header
-            VStack(spacing: 4) {
-                Text(localization.string("addShift.headerTitle"))
-                    .font(.system(size: 28, weight: .bold))
-                    .foregroundColor(.tidexTextPrimary)
+        // Calendar is the anchor - header and time picker positioned relative to it
+        // Using overlay with alignment guides to position content outside calendar bounds
+        AddShiftCalendarView(viewModel: viewModel)
+            .overlay(alignment: .top) {
+                // Header positioned above the calendar
+                VStack(spacing: 4) {
+                    Text(localization.string("addShift.headerTitle"))
+                        .font(.system(size: 28, weight: .bold))
+                        .foregroundColor(.tidexTextPrimary)
 
-                Text(localization.string("addShift.headerSubtitle"))
-                    .font(.system(size: 15))
-                    .foregroundColor(.tidexTextSecondary)
-                    .multilineTextAlignment(.center)
+                    Text(localization.string("addShift.headerSubtitle"))
+                        .font(.system(size: 15))
+                        .foregroundColor(.tidexTextSecondary)
+                        .multilineTextAlignment(.center)
+                }
+                .padding(.bottom, 12)
+                .alignmentGuide(.top) { d in d[.bottom] }
             }
-            .padding(.bottom, 8)
-
-            AddShiftCalendarView(viewModel: viewModel)
-
-            TimeRangePicker(
-                startTime: $viewModel.startTime,
-                endTime: $viewModel.endTime,
-                scrollProxy: scrollProxy,
-                scrollId: "singleTimePicker"
-            )
-        }
+            .overlay(alignment: .bottom) {
+                // Time picker positioned below the calendar
+                TimeRangePicker(
+                    startTime: $viewModel.startTime,
+                    endTime: $viewModel.endTime,
+                    scrollProxy: scrollProxy,
+                    scrollId: "singleTimePicker"
+                )
+                .padding(.top, 12)
+                .alignmentGuide(.bottom) { d in d[.top] }
+            }
     }
 }
 
