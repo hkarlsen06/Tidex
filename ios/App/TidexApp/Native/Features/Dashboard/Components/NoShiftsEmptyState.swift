@@ -18,7 +18,7 @@ struct NoShiftsEmptyState: View {
     ///   - actionButton: Optional button configuration (e.g., retry, create shift)
     ///   - subtitle: Optional subtitle text for additional context
     init(
-        actionButton: ActionButtonConfig? = .retry,
+        actionButton: ActionButtonConfig? = nil,
         subtitle: String? = nil
     ) {
         self.actionButton = actionButton

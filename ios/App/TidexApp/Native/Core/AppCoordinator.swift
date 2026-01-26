@@ -473,6 +473,7 @@ final class AppCoordinator: ObservableObject {
     private func performSignOut(global: Bool) async {
         // Clear widget storage before sign out
         NativeWidgetStorage.clearWidgetStorage()
+        NativeWidgetStorage.clearFriendWidgetStorage()
 
         // Stop StoreKit listener and clear entitlement cache
         StoreKitManager.shared.stopListening()

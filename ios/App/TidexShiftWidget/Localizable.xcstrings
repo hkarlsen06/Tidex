@@ -1,0 +1,147 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "---" : {
+
+    },
+    "%@" : {
+
+    },
+    "%@ - %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ - %2$@"
+          }
+        }
+      }
+    },
+    "%@ – %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ – %2$@"
+          }
+        }
+      }
+    },
+    "%@ %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ %2$@"
+          }
+        }
+      }
+    },
+    "%@ %@ %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ %2$@ %3$@"
+          }
+        }
+      }
+    },
+    "%lld" : {
+
+    },
+    "%lld%@ %@-%@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld%2$@ %3$@-%4$@"
+          }
+        }
+      }
+    },
+    "%lldd %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lldd %2$@"
+          }
+        }
+      }
+    },
+    "ago" : {
+
+    },
+    "dager" : {
+
+    },
+    "days" : {
+
+    },
+    "done" : {
+
+    },
+    "Done" : {
+
+    },
+    "ferdig" : {
+
+    },
+    "Ferdig" : {
+
+    },
+    "Friend" : {
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Venn"
+          }
+        }
+      }
+    },
+    "Friend's Shift" : {
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Venns vakt"
+          }
+        }
+      }
+    },
+    "Ingen vakt" : {
+
+    },
+    "No shift" : {
+
+    },
+    "No shifts" : {
+
+    },
+    "Select a friend" : {
+
+    },
+    "Select a friend to display their shift" : {
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Velg en venn for å vise vakten deres"
+          }
+        }
+      }
+    },
+    "siden" : {
+
+    },
+    "start" : {
+
+    },
+    "Velg en venn" : {
+
+    }
+  },
+  "version" : "1.0"
+}

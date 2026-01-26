@@ -20,6 +20,8 @@ enum NativeWidgetStorage {
     private static let appGroupId = "group.no.tidex.app"
     private static let shiftsKey = "upcoming_shifts"
     private static let currencyKey = "user_currency"
+    private static let friendSharersKey = "friend_sharers"
+    private static let friendShiftsKey = "friend_shifts"
 
     /// Default currency symbol if settings don't specify one
     private static let defaultCurrencySymbol = "kr"
@@ -195,6 +197,88 @@ enum NativeWidgetStorage {
         }
 
         logger.info("Widget storage cleared")
+    }
+
+    // MARK: - Friend Widget Storage
+
+    /// Update widget storage with friend/sharer data for the Friend's Shift widget
+    /// - Parameters:
+    ///   - sharers: List of users who share their shifts with the current user
+    ///   - previews: Shift previews for each sharer
+    @MainActor
+    static func updateFriendWidgetStorage(
+        sharers: [SharedUser],
+        previews: [SharerShiftPreview]
+    ) {
+        logger.info("Updating friend widget storage with \(sharers.count) sharers and \(previews.count) previews")
+
+        guard let userDefaults = sharedUserDefaults() else {
+            logger.warning("Unable to access App Group UserDefaults for friend widget storage")
+            return
+        }
+
+        // Get locale and currency
+        let locale = getAppLocale()
+        let currencySymbol = userDefaults.string(forKey: currencyKey) ?? defaultCurrencySymbol
+
+        // Convert sharers to WidgetSharer format
+        let widgetSharers = sharers.map { $0.toWidgetSharer() }
+
+        // Convert previews to StoredFriendShift format
+        let storedShifts = previews.compactMap { preview in
+            StoredFriendShift.from(
+                preview: preview,
+                locale: locale,
+                currencySymbol: currencySymbol
+            )
+        }
+
+        // Write to App Group UserDefaults
+        writeFriendSharersToAppGroup(widgetSharers, userDefaults: userDefaults)
+        writeFriendShiftsToAppGroup(storedShifts, userDefaults: userDefaults)
+
+        // Reload widget timelines
+        reloadWidgetTimelines()
+
+        logger.info("Friend widget storage updated with \(widgetSharers.count) sharers and \(storedShifts.count) shifts")
+    }
+
+    /// Clear friend widget storage (e.g., on logout)
+    static func clearFriendWidgetStorage() {
+        guard let userDefaults = sharedUserDefaults() else {
+            logger.warning("Unable to access App Group UserDefaults")
+            return
+        }
+
+        userDefaults.removeObject(forKey: friendSharersKey)
+        userDefaults.removeObject(forKey: friendShiftsKey)
+        reloadWidgetTimelines()
+
+        logger.info("Friend widget storage cleared")
+    }
+
+    private static func writeFriendSharersToAppGroup(_ sharers: [WidgetSharer], userDefaults: UserDefaults) {
+        do {
+            let encoder = JSONEncoder()
+            let data = try encoder.encode(sharers)
+            let jsonString = String(data: data, encoding: .utf8)
+            userDefaults.set(jsonString, forKey: friendSharersKey)
+            logger.debug("Wrote \(sharers.count) friend sharers to App Group")
+        } catch {
+            logger.error("Failed to encode friend sharers for widget: \(error.localizedDescription)")
+        }
+    }
+
+    private static func writeFriendShiftsToAppGroup(_ shifts: [StoredFriendShift], userDefaults: UserDefaults) {
+        do {
+            let encoder = JSONEncoder()
+            let data = try encoder.encode(shifts)
+            let jsonString = String(data: data, encoding: .utf8)
+            userDefaults.set(jsonString, forKey: friendShiftsKey)
+            logger.debug("Wrote \(shifts.count) friend shifts to App Group")
+        } catch {
+            logger.error("Failed to encode friend shifts for widget: \(error.localizedDescription)")
+        }
     }
 
     // MARK: - Private Helpers
