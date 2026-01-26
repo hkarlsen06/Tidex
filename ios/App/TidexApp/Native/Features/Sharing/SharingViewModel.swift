@@ -311,6 +311,14 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
             // Save to persistent cache
             await sharedShiftsRepository.saveShiftPreviews(previews, for: userId)
 
+            // Update friend widget storage with sharers and previews
+            if !sharers.isEmpty {
+                NativeWidgetStorage.updateFriendWidgetStorage(
+                    sharers: sharers,
+                    previews: previews
+                )
+            }
+
             logger.info("Loaded shift previews for \(previews.count) sharers (forceRefresh: \(forceRefresh))")
         } catch {
             logger.error("Failed to load shift previews: \(error.localizedDescription)")

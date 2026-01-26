@@ -1,114 +1,129 @@
 import Foundation
 
 /// Motivational salute phrases for the shift widget
-/// Randomized on each widget refresh to add personality
+/// Kept short to fit on one line in the widget
+/// Works for shifts today, tomorrow, or in the future
 struct MotivationalSalutes {
-    /// Norwegian salutes (40 options)
+    /// Norwegian salutes - short, uplifting, time-neutral
     static let norwegian = [
         // Classic encouragements
         "God vakt!",
         "Stå på!",
         "Lykke til!",
         "Kjør på!",
-        "Du klarer det!",
         "Gi gass!",
         "Full gass!",
         "Heia deg!",
         "Kos deg!",
-        "Dagen er din!",
         "Vis dem!",
         "Du er klar!",
-
-        // Confidence boosters
-        "Du er superstjerne!",
-        "Bare vær deg selv!",
-        "Du er fantastisk!",
-        "Tro på deg selv!",
         "Du har dette!",
-        "Stol på deg selv!",
-        "Du er unik!",
-        "Du gjør en forskjell!",
-
-        // Action-oriented
-        "Ta dagen!",
-        "Grip mulighetene!",
-        "Gjør det beste av det!",
-        "Skap magi i dag!",
         "Slå til!",
         "Gi jern!",
         "Få det til!",
-        "Vis hva du kan!",
-
-        // Positive vibes
-        "Ha en fin dag!",
         "Nyt vakten!",
-        "Smil og vær glad!",
-        "Spre god stemning!",
-        "Du lyser opp!",
         "God energi!",
-        "Positiv vibb!",
-        "Du inspirerer!",
-
-        // Empowerment
-        "Du er sterkere enn du tror!",
-        "Ingenting stopper deg!",
-        "Du takler alt!",
         "Bare fremover!",
+        "Gled deg!",
+        "La det swinge!",
+        "Du rocker!",
+
+        // Confidence boosters
+        "Du er best!",
+        "Helt rå!",
+        "Superstjerne!",
+        "Du er gull!",
+        "Knallbra!",
+        "Helt topp!",
+        "Du fikser det!",
+        "Stol på deg!",
+        "Tro på deg!",
+        "Du er unik!",
+
+        // Energy & vibes
+        "God stemning!",
+        "Positiv vibb!",
+        "Spre glede!",
+        "Du lyser opp!",
+        "Smil litt!",
+        "Ha det gøy!",
+        "Gled andre!",
+        "Du inspirerer!",
+        "Vær stolt!",
+        "Du er viktig!",
+
+        // Action & power
+        "Full fokus!",
+        "Gi alt!",
+        "Vis styrke!",
+        "Vær modig!",
+        "Hold ut!",
+        "Stå sterkt!",
+        "Du takler alt!",
+        "Ingenting stopper deg!",
+        "Vær uredd!",
+        "Du eier det!",
     ]
 
-    /// English salutes (40 options)
+    /// English salutes - short, uplifting, time-neutral
     static let english = [
         // Classic encouragements
         "Good luck!",
         "You got this!",
         "Go get 'em!",
         "Crush it!",
-        "Stay strong!",
-        "Make it count!",
-        "Showtime!",
         "Let's go!",
         "Rock it!",
-        "Go smash it!",
-        "Have fun!",
         "Own it!",
+        "Slay!",
+        "Showtime!",
+        "Have fun!",
+        "Stay sharp!",
+        "Kill it!",
+        "Make it count!",
+        "Stay golden!",
+        "Be great!",
+        "Boss mode!",
+        "Go hard!",
+        "Send it!",
+        "Nail it!",
+        "Smash it!",
 
         // Confidence boosters
-        "You're a rockstar!",
-        "Just be you!",
-        "You're amazing!",
-        "Believe in yourself!",
+        "You're the best!",
+        "Superstar!",
+        "You're gold!",
+        "Amazing!",
+        "Legendary!",
+        "You're a pro!",
         "Trust yourself!",
-        "You're one of a kind!",
-        "You make a difference!",
-        "You're a legend!",
+        "Believe!",
+        "You're unique!",
+        "Stay confident!",
 
-        // Action-oriented
-        "Seize the day!",
-        "Grab the moment!",
-        "Make it happen!",
-        "Create some magic!",
-        "Time to shine!",
-        "Show them what you've got!",
-        "Bring your A-game!",
-        "Make today great!",
-
-        // Positive vibes
-        "Have a great day!",
-        "Enjoy your shift!",
-        "Smile and shine!",
-        "Spread good vibes!",
-        "You light up the room!",
+        // Energy & vibes
+        "Good vibes!",
+        "Spread joy!",
+        "You light it up!",
+        "Keep smiling!",
+        "Enjoy it!",
+        "Make 'em smile!",
+        "You inspire!",
+        "Be proud!",
+        "You matter!",
         "Stay positive!",
-        "Good energy!",
-        "You inspire others!",
 
-        // Empowerment
-        "You're stronger than you think!",
-        "Nothing can stop you!",
-        "You can handle anything!",
-        "Keep pushing forward!",
-        "Today is your day!",
-        "Be unstoppable!",
+        // Action & power
+        "Full focus!",
+        "Give it all!",
+        "Show strength!",
+        "Be bold!",
+        "Stay strong!",
+        "Stand tall!",
+        "You can do it!",
+        "Unstoppable!",
+        "Be fearless!",
+        "You own it!",
     ]
 
     /// Returns a random salute for the given locale
