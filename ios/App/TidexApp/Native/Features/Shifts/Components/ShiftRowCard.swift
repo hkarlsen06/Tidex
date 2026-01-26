@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Card displaying a single shift in the shifts list
-/// Design matches NextShiftCard from the Dashboard
+/// Design matches FeaturedShiftCard from the Dashboard
 struct ShiftRowCard: View {
     let shift: ShiftWithComputations
     let isToday: Bool
@@ -146,9 +146,9 @@ struct ShiftRowCard: View {
                 // Breakdown (gross - tax) when tax enabled, or excluded label
                 if showBreakdown {
                     HStack(spacing: 4) {
-                        Text(formatCurrency(shift.grossPay))
+                        Text(formatPlainAmount(shift.grossPay))
                         Text("−")
-                        Text(formatCurrency(shift.taxAmount))
+                        Text(formatPlainAmount(shift.taxAmount))
                     }
                     .font(.system(size: 14, weight: .regular))
                     .foregroundColor(.tidexTextMuted)
@@ -189,6 +189,11 @@ struct ShiftRowCard: View {
 
     private func formatCurrency(_ amount: Double) -> String {
         CurrencyConfig.format(amount, currency: currency)
+    }
+
+    /// Format amount without currency symbol (for breakdown display)
+    private func formatPlainAmount(_ amount: Double) -> String {
+        CurrencyConfig.formatPlain(amount)
     }
 
     /// Format time string to HH:mm (removes seconds if present)
