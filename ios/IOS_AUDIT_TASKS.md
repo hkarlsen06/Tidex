@@ -629,7 +629,7 @@ private func checkMFAAndUpdateState() async {
 
 ### TASK-008: Add Synchronization to Keychain Access Operations
 
-**Status:** PENDING
+**Status:** DONE (2026-01-27)
 
 **Severity:** HIGH - Race condition can corrupt session data
 
@@ -1944,6 +1944,27 @@ Fixed the race condition between the auth state listener and the timeout fallbac
 
 ---
 
+### TASK-008: Add Synchronization to Keychain Access Operations
+
+**Status:** DONE (2026-01-27)
+
+**Severity:** HIGH - Race condition can corrupt session data
+
+**Fix Applied:**
+Added a serial DispatchQueue to synchronize all Keychain operations, preventing TOCTOU (Time-Of-Check-Time-Of-Use) race conditions. Key changes:
+1. Added `keychainQueue` serial DispatchQueue with `.userInitiated` QoS
+2. Wrapped `store()`, `retrieve()`, and `remove()` operations in `keychainQueue.sync` blocks
+3. Added documentation explaining the thread safety guarantees
+
+Without synchronization, concurrent access could result in:
+- Thread A deletes old token, Thread B reads nil, Thread A adds new token
+- Corrupted or missing session data during concurrent token refresh attempts
+
+**Files Modified:**
+- `ios/App/TidexApp/Native/Services/Network/SupabaseClient.swift`
+
+---
+
 ## Notes
 
 - Each task should be completed and committed separately
@@ -1953,5 +1974,5 @@ Fixed the race condition between the auth state listener and the timeout fallbac
 
 **Last Updated:** 2026-01-27
 **Total Tasks:** 22
-**Completed:** 7
-**Remaining:** 15
+**Completed:** 8
+**Remaining:** 14

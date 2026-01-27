@@ -19,63 +19,79 @@ let supabase = SupabaseClient(
 
 /// Custom storage implementation that uses the Keychain
 /// This is more secure than UserDefaults for storing auth tokens
+///
+/// Thread Safety: All Keychain operations are serialized through a dedicated
+/// dispatch queue to prevent TOCTOU (Time-Of-Check-Time-Of-Use) race conditions.
+/// Without synchronization, concurrent access could result in:
+/// - Thread A deletes old token, Thread B reads nil, Thread A adds new token
+/// - Corrupted or missing session data during concurrent refresh attempts
 final class KeychainLocalStorage: AuthLocalStorage {
     private let service = APIConfiguration.keychainService
     private let sessionKey = "supabase.auth.session"
 
+    /// Serial queue for synchronizing all Keychain operations
+    /// Using .userInitiated QoS since auth operations are user-facing
+    private let keychainQueue = DispatchQueue(label: "com.tidex.keychain", qos: .userInitiated)
+
     func store(key: String, value: Data) throws {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: key
-        ]
+        try keychainQueue.sync {
+            let query: [String: Any] = [
+                kSecClass as String: kSecClassGenericPassword,
+                kSecAttrService as String: service,
+                kSecAttrAccount as String: key
+            ]
 
-        // Delete existing item first
-        SecItemDelete(query as CFDictionary)
+            // Delete existing item first
+            SecItemDelete(query as CFDictionary)
 
-        // Add new item
-        var newItem = query
-        newItem[kSecValueData as String] = value
-        newItem[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
+            // Add new item
+            var newItem = query
+            newItem[kSecValueData as String] = value
+            newItem[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
 
-        let status = SecItemAdd(newItem as CFDictionary, nil)
-        guard status == errSecSuccess else {
-            throw KeychainError.unableToStore(status: status)
+            let status = SecItemAdd(newItem as CFDictionary, nil)
+            guard status == errSecSuccess else {
+                throw KeychainError.unableToStore(status: status)
+            }
         }
     }
 
     func retrieve(key: String) throws -> Data? {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: key,
-            kSecReturnData as String: true,
-            kSecMatchLimit as String: kSecMatchLimitOne
-        ]
+        try keychainQueue.sync {
+            let query: [String: Any] = [
+                kSecClass as String: kSecClassGenericPassword,
+                kSecAttrService as String: service,
+                kSecAttrAccount as String: key,
+                kSecReturnData as String: true,
+                kSecMatchLimit as String: kSecMatchLimitOne
+            ]
 
-        var result: AnyObject?
-        let status = SecItemCopyMatching(query as CFDictionary, &result)
+            var result: AnyObject?
+            let status = SecItemCopyMatching(query as CFDictionary, &result)
 
-        switch status {
-        case errSecSuccess:
-            return result as? Data
-        case errSecItemNotFound:
-            return nil
-        default:
-            throw KeychainError.unableToRetrieve(status: status)
+            switch status {
+            case errSecSuccess:
+                return result as? Data
+            case errSecItemNotFound:
+                return nil
+            default:
+                throw KeychainError.unableToRetrieve(status: status)
+            }
         }
     }
 
     func remove(key: String) throws {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: key
-        ]
+        try keychainQueue.sync {
+            let query: [String: Any] = [
+                kSecClass as String: kSecClassGenericPassword,
+                kSecAttrService as String: service,
+                kSecAttrAccount as String: key
+            ]
 
-        let status = SecItemDelete(query as CFDictionary)
-        guard status == errSecSuccess || status == errSecItemNotFound else {
-            throw KeychainError.unableToRemove(status: status)
+            let status = SecItemDelete(query as CFDictionary)
+            guard status == errSecSuccess || status == errSecItemNotFound else {
+                throw KeychainError.unableToRemove(status: status)
+            }
         }
     }
 }
