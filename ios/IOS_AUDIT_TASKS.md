@@ -536,7 +536,7 @@ actor SyncStateManager {
 
 ### TASK-007: Fix AppCoordinator Auth State Initialization Race Condition
 
-**Status:** PENDING
+**Status:** DONE (2026-01-27)
 
 **Severity:** HIGH - Can cause duplicate MFA screens and state inconsistency
 
@@ -1925,6 +1925,25 @@ Replaced the separate `syncInProgress` flag with an atomic `SyncState` enum for 
 
 ---
 
+### TASK-007: Fix AppCoordinator Auth State Initialization Race Condition
+
+**Status:** DONE (2026-01-27)
+
+**Severity:** HIGH - Can cause duplicate MFA screens and state inconsistency
+
+**Fix Applied:**
+Fixed the race condition between the auth state listener and the timeout fallback. Key changes:
+1. Added `initialSessionTimeoutTask` property to store and cancel the timeout task
+2. Added `isUpdatingAuthState` flag to prevent concurrent state updates in `checkMFAAndUpdateState()`
+3. The timeout task now checks `Task.isCancelled` after sleep to respect cancellation
+4. When `.initialSession` is received from the auth listener, the timeout task is immediately cancelled
+5. `checkMFAAndUpdateState()` now guards against concurrent calls using the `isUpdatingAuthState` flag with proper defer cleanup
+
+**Files Modified:**
+- `ios/App/TidexApp/Native/Core/AppCoordinator.swift`
+
+---
+
 ## Notes
 
 - Each task should be completed and committed separately
@@ -1934,5 +1953,5 @@ Replaced the separate `syncInProgress` flag with an atomic `SyncState` enum for 
 
 **Last Updated:** 2026-01-27
 **Total Tasks:** 22
-**Completed:** 6
-**Remaining:** 16
+**Completed:** 7
+**Remaining:** 15

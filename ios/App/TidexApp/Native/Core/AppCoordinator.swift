@@ -90,7 +90,9 @@ final class AppCoordinator: ObservableObject {
     // MARK: - Private
 
     private var authStateTask: Task<Void, Never>?
+    private var initialSessionTimeoutTask: Task<Void, Never>?
     private var didReceiveInitialSession = false
+    private var isUpdatingAuthState = false
 
     // MARK: - Initialization
 
@@ -108,6 +110,7 @@ final class AppCoordinator: ObservableObject {
 
     deinit {
         authStateTask?.cancel()
+        initialSessionTimeoutTask?.cancel()
     }
 
     // MARK: - Initial Session Check
@@ -119,11 +122,12 @@ final class AppCoordinator: ObservableObject {
     /// Fallback check in case authStateChanges doesn't emit .initialSession promptly
     /// This handles edge cases where the Supabase SDK doesn't emit the initial event
     private func setupInitialSessionCheck() {
-        Task { [weak self] in
+        initialSessionTimeoutTask = Task { [weak self] in
             // Wait for authStateChanges to emit - this is a fallback, not the primary flow
             try? await Task.sleep(nanoseconds: Self.initialSessionTimeout)
 
-            guard let self = self else { return }
+            guard let self = self,
+                  !Task.isCancelled else { return }
 
             // If still loading after timeout AND we haven't received initialSession event,
             // the authStateChanges stream hasn't emitted.
@@ -155,6 +159,10 @@ final class AppCoordinator: ObservableObject {
 
                 switch event {
                 case .initialSession:
+                    // Cancel the timeout task since we received the session event
+                    self.initialSessionTimeoutTask?.cancel()
+                    self.initialSessionTimeoutTask = nil
+
                     // Mark that we received the initial session event (prevents duplicate check from timeout)
                     self.didReceiveInitialSession = true
 
@@ -202,7 +210,13 @@ final class AppCoordinator: ObservableObject {
     // MARK: - MFA Check
 
     /// Check MFA status and update app state accordingly
+    /// Uses isUpdatingAuthState flag to prevent concurrent state updates from race conditions
     private func checkMFAAndUpdateState() async {
+        // Prevent concurrent state updates from timeout vs auth listener race
+        guard !isUpdatingAuthState else { return }
+        isUpdatingAuthState = true
+        defer { isUpdatingAuthState = false }
+
         do {
             let mfaStatus = try await authService.getMFAStatus()
 
