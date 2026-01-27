@@ -424,7 +424,7 @@ func reportScreenshot(sharerId: String) async throws {
 
 ### TASK-006: Add Atomic Sync State Management to SyncCoordinator
 
-**Status:** PENDING
+**Status:** DONE (2026-01-27)
 
 **Severity:** HIGH - Race condition can cause duplicate syncs and data corruption
 
@@ -1889,6 +1889,42 @@ This prevents CSRF attacks where an attacker could link their OAuth account to a
 
 ---
 
+### TASK-005: Fix ScreenshotNotificationService Cooldown Race Condition
+
+**Status:** DONE (2026-01-27)
+
+**Severity:** HIGH - Race condition causes duplicate notifications
+
+**Fix Applied:**
+Fixed the race condition where multiple concurrent screenshot reports could bypass the cooldown check. The fix:
+1. Added an `inFlightRequests` set to track pending requests
+2. Check if request is already in-flight before processing
+3. Update timestamp BEFORE the network call to prevent races
+4. On failure, remove timestamp so retry is possible
+
+**Files Modified:**
+- `ios/App/TidexApp/Native/Services/Notification/ScreenshotNotificationService.swift`
+
+---
+
+### TASK-006: Add Atomic Sync State Management to SyncCoordinator
+
+**Status:** DONE (2026-01-27)
+
+**Severity:** HIGH - Race condition can cause duplicate syncs and data corruption
+
+**Fix Applied:**
+Replaced the separate `syncInProgress` flag with an atomic `SyncState` enum for proper check-and-set operations. Key changes:
+1. Created private `SyncState` enum with `.idle` and `.syncing(userId:startedAt:)` cases
+2. Added computed `syncInProgress` property for backwards compatibility
+3. Updated `lastAutoSyncAt` BEFORE starting sync (for interval-guarded syncs) to prevent concurrent syncs from both passing the interval check
+4. Added `syncState` and `isSyncing` reset to `resetForUserChange()` for safety
+
+**Files Modified:**
+- `ios/App/TidexApp/Native/Storage/Sync/SyncCoordinator.swift`
+
+---
+
 ## Notes
 
 - Each task should be completed and committed separately
@@ -1898,5 +1934,5 @@ This prevents CSRF attacks where an attacker could link their OAuth account to a
 
 **Last Updated:** 2026-01-27
 **Total Tasks:** 22
-**Completed:** 5
-**Remaining:** 17
+**Completed:** 6
+**Remaining:** 16

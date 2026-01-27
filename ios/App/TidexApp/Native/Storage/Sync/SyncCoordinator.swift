@@ -43,8 +43,21 @@ final class SyncCoordinator: ObservableObject {
 
     // MARK: - Private State
 
-    /// Lock to prevent concurrent syncs
-    private var syncInProgress = false
+    /// Sync state for atomic check-and-set operations
+    /// Prevents race conditions when multiple sync calls occur concurrently
+    private enum SyncState {
+        case idle
+        case syncing(userId: String, startedAt: Date)
+    }
+
+    /// Atomic sync state - replaces separate syncInProgress flag
+    private var syncState: SyncState = .idle
+
+    /// Computed property to check if sync is in progress
+    private var syncInProgress: Bool {
+        if case .syncing = syncState { return true }
+        return false
+    }
 
     /// Last automatic sync attempt time
     private var lastAutoSyncAt: Date?
@@ -54,6 +67,8 @@ final class SyncCoordinator: ObservableObject {
     /// Reset sync state when user changes (e.g., sign out)
     /// Clears the interval guard so the next user's initial sync isn't blocked
     func resetForUserChange() {
+        syncState = .idle
+        isSyncing = false
         lastAutoSyncAt = nil
         lastError = nil
         lastSyncedAt = nil
@@ -93,8 +108,10 @@ final class SyncCoordinator: ObservableObject {
     /// - Returns: Sync result
     @discardableResult
     func sync(reason: SyncReason, userId: String) async -> SyncResult {
-        // Single-flight protection
-        guard !syncInProgress else {
+        // Atomic check-and-set to prevent race conditions
+        // Since this is @MainActor, we're guaranteed single-threaded access here
+        switch syncState {
+        case .syncing:
             logger.info("Sync already in progress, skipping \(reason.rawValue)")
             return SyncResult(
                 success: false,
@@ -107,11 +124,15 @@ final class SyncCoordinator: ObservableObject {
                 duration: 0,
                 error: "Sync already in progress"
             )
+        case .idle:
+            break
         }
 
         // Interval guard for automatic syncs (silent skip)
         // Local changes, manual refreshes, and Watch refreshes always bypass the interval guard
-        if reason != .manualRefresh && reason != .localChange && reason != .watchRefresh {
+        // Check BEFORE changing state to avoid race conditions
+        let requiresIntervalCheck = reason != .manualRefresh && reason != .localChange && reason != .watchRefresh
+        if requiresIntervalCheck {
             if let lastAuto = lastAutoSyncAt,
                Date().timeIntervalSince(lastAuto) < minimumSyncInterval {
                 return SyncResult(
@@ -128,7 +149,13 @@ final class SyncCoordinator: ObservableObject {
             }
         }
 
-        syncInProgress = true
+        // Atomically update state - timestamp IMMEDIATELY to prevent races
+        // For interval-guarded syncs, update lastAutoSyncAt now, not at the end
+        if requiresIntervalCheck {
+            lastAutoSyncAt = Date()
+        }
+
+        syncState = .syncing(userId: userId, startedAt: Date())
         isSyncing = true
         lastError = nil
 
@@ -137,9 +164,9 @@ final class SyncCoordinator: ObservableObject {
             SyncStatusManager.shared.syncStarted()
         }
 
-        // SAFETY: Ensure flags are always reset, even on unexpected errors
+        // SAFETY: Ensure state is always reset, even on unexpected errors
         defer {
-            syncInProgress = false
+            syncState = .idle
             isSyncing = false
         }
 
@@ -194,9 +221,8 @@ final class SyncCoordinator: ObservableObject {
             // Update global sync status for UI indicators
             SyncStatusManager.shared.syncSucceeded()
 
-            if reason != .manualRefresh {
-                lastAutoSyncAt = Date()
-            }
+            // Note: lastAutoSyncAt is now updated at the START of sync (for interval-guarded syncs)
+            // to prevent race conditions where concurrent syncs both pass the interval check
 
             // Only log when there's actual data transfer
             if totalRows > 0 || totalPushed > 0 || totalConflicts > 0 {
@@ -206,7 +232,7 @@ final class SyncCoordinator: ObservableObject {
             // Update widget storage with latest shift data
             NativeWidgetStorage.updateWidgetStorage(for: userId)
 
-            // Note: syncInProgress and isSyncing are reset by defer block
+            // Note: syncState and isSyncing are reset by defer block
             return SyncResult(
                 success: true,
                 tableResults: tableResults,
@@ -246,7 +272,7 @@ final class SyncCoordinator: ObservableObject {
             // Update global sync status for UI indicators
             SyncStatusManager.shared.syncFailed(message: userFriendlyMessage)
 
-            // Note: syncInProgress and isSyncing are reset by defer block
+            // Note: syncState and isSyncing are reset by defer block
             return SyncResult(
                 success: false,
                 tableResults: [],
