@@ -742,7 +742,7 @@ enum KeychainError: Error {
 
 ### TASK-009: Add deinit Cleanup to StatsViewModel for Combine Subscriptions
 
-**Status:** PENDING
+**Status:** DONE (2026-01-27)
 
 **Severity:** HIGH - Memory leak from accumulated subscriptions
 
@@ -1965,6 +1965,28 @@ Without synchronization, concurrent access could result in:
 
 ---
 
+### TASK-009: Add deinit Cleanup to ViewModels with Combine Subscriptions
+
+**Status:** DONE (2026-01-27)
+
+**Severity:** HIGH - Memory leak from accumulated subscriptions
+
+**Fix Applied:**
+Added deinit cleanup to cancel Combine subscriptions in ViewModels. While `[weak self]` prevents retain cycles, the subscriptions themselves remain active without explicit cancellation, causing memory to accumulate if ViewModels are created/destroyed frequently.
+
+Key changes:
+1. **StatsViewModel** - Added deinit with `cancellables.removeAll()` to cancel all subscriptions stored in the Set
+2. **DashboardViewModel** - Added `monthContextCancellable?.cancel()` to existing deinit
+3. **ShiftsViewModel** - Added `monthContextCancellable?.cancel()` to existing deinit
+4. **SharingViewModel** - Already correct (already had `monthContextCancellable?.cancel()` in deinit)
+
+**Files Modified:**
+- `ios/App/TidexApp/Native/Features/Stats/StatsViewModel.swift`
+- `ios/App/TidexApp/Native/Features/Dashboard/DashboardViewModel.swift`
+- `ios/App/TidexApp/Native/Features/Shifts/ShiftsViewModel.swift`
+
+---
+
 ## Notes
 
 - Each task should be completed and committed separately
@@ -1974,5 +1996,5 @@ Without synchronization, concurrent access could result in:
 
 **Last Updated:** 2026-01-27
 **Total Tasks:** 22
-**Completed:** 8
-**Remaining:** 14
+**Completed:** 9
+**Remaining:** 13
