@@ -981,7 +981,7 @@ Apply the same pattern to any ViewModel with stored Tasks:
 
 ### TASK-012: Fix Silent Dirty Fields Decode Failure in UserShift Model
 
-**Status:** PENDING
+**Status:** DONE (2026-01-27)
 
 **Severity:** HIGH - Silent data loss when dirty fields are corrupted
 
@@ -2032,6 +2032,34 @@ This prevents scenarios where:
 
 ---
 
+### TASK-012: Fix Silent Dirty Fields Decode Failure in UserShift Model
+
+**Status:** DONE (2026-01-27)
+
+**Severity:** HIGH - Silent data loss when dirty fields are corrupted
+
+**Fix Applied:**
+Fixed silent data loss when `dirtyFields` data is corrupted by treating decode failures as "all fields dirty" instead of returning an empty set. This ensures data is pushed to the server rather than silently discarded.
+
+Key changes:
+1. Added early return for empty data (common case for clean records, not corruption)
+2. Changed from `try?` to explicit `do/catch` error handling
+3. On decode failure, logs the error with `SyncLogger.shared` and returns all field cases
+4. Applied the same fix to all 4 model files that use this pattern
+
+The fix prevents the scenario where corrupted dirty fields would cause:
+- Record appearing clean when it has local changes
+- Changes never being pushed to server
+- Local edits being silently discarded on next sync
+
+**Files Modified:**
+- `ios/App/TidexApp/Native/Storage/Models/LocalUserShift.swift`
+- `ios/App/TidexApp/Native/Storage/Models/LocalRecurringShift.swift`
+- `ios/App/TidexApp/Native/Storage/Models/LocalWageSnapshot.swift`
+- `ios/App/TidexApp/Native/Storage/Models/LocalUserSettings.swift`
+
+---
+
 ## Notes
 
 - Each task should be completed and committed separately
@@ -2041,5 +2069,5 @@ This prevents scenarios where:
 
 **Last Updated:** 2026-01-27
 **Total Tasks:** 22
-**Completed:** 11
-**Remaining:** 11
+**Completed:** 12
+**Remaining:** 10
