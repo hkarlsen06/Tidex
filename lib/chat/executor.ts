@@ -1556,6 +1556,8 @@ async function getComputedShiftsDirect(
   const startDate = options.startDate || now.toISOString().split("T")[0];
   const endDate = options.endDate || new Date(now.getFullYear(), now.getMonth() + 12, 0).toISOString().split("T")[0];
 
+  console.log("[getComputedShiftsDirect] Fetching shifts for user:", userId, "dateRange:", startDate, "to", endDate);
+
   // Fetch shifts, settings, and current snapshot in parallel
   const [shiftsResult, settingsResult, snapshotResult] = await Promise.all([
     client
@@ -1580,6 +1582,19 @@ async function getComputedShiftsDirect(
       .limit(1)
       .maybeSingle(),
   ]);
+
+  // Log any errors
+  if (shiftsResult.error) {
+    console.error("[getComputedShiftsDirect] Shifts query error:", shiftsResult.error);
+  }
+  if (settingsResult.error) {
+    console.error("[getComputedShiftsDirect] Settings query error:", settingsResult.error);
+  }
+  if (snapshotResult.error) {
+    console.error("[getComputedShiftsDirect] Snapshot query error:", snapshotResult.error);
+  }
+
+  console.log("[getComputedShiftsDirect] Found", shiftsResult.data?.length || 0, "shifts");
 
   const shifts = shiftsResult.data || [];
   const settings = settingsResult.data || {};
