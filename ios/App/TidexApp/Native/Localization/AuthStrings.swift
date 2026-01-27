@@ -986,7 +986,38 @@ enum AuthStrings {
         "push.failure.title": "Varslinger fungerer ikke",
         "push.failure.message": "Vaktpåminnelser vil ikke fungere før dette er løst. Sjekk varslingsinnstillingene dine.",
         "push.failure.settingsButton": "Innstillinger",
-        "push.failure.laterButton": "Senere"
+        "push.failure.laterButton": "Senere",
+
+        // Wagey
+        "wagey.title": "Wagey",
+        "wagey.subtitle": "AI-assistent for vakter",
+        "wagey.placeholder": "Spør Wagey om noe...",
+        "wagey.newChat": "Ny chat",
+        "wagey.sending": "Sender...",
+        "wagey.messagesRemaining": "%d meldinger igjen",
+        "wagey.limitReached.title": "Grense nådd",
+        "wagey.limitReached.message": "Du har brukt alle meldingene dine denne måneden. Nullstilles om %d dager.",
+        "wagey.error.network": "Nettverksfeil. Prøv igjen.",
+        "wagey.error.auth": "Autentiseringsfeil. Logg inn på nytt.",
+        "wagey.error.unknown": "Noe gikk galt. Prøv igjen.",
+        "wagey.emptyState.title": "Chat med Wagey",
+        "wagey.emptyState.subtitle": "Spør meg om å legge til vakter, beregne lønn eller administrere timeplanen din.",
+        "wagey.emptyState.suggestion1": "Legg til en vakt i morgen 9-17",
+        "wagey.emptyState.suggestion2": "Hva tjente jeg forrige måned?",
+        "wagey.emptyState.suggestion3": "Vis vaktene mine denne uken",
+
+        // Wagey Tool Names
+        "wagey.tool.manageShift": "Administrerer vakt...",
+        "wagey.tool.queryShifts": "Finner vakter...",
+        "wagey.tool.calculateWages": "Beregner lønn...",
+        "wagey.tool.manageSettings": "Oppdaterer innstillinger...",
+        "wagey.tool.getStatistics": "Henter statistikk...",
+        "wagey.tool.draftRecurring": "Planlegger gjentagende vakter...",
+        "wagey.tool.confirmRecurring": "Oppretter gjentagende vakter...",
+        "wagey.tool.manageRecurring": "Administrerer gjentagende vakter...",
+        "wagey.tool.unknown": "Arbeider...",
+        "wagey.tool.success": "Ferdig",
+        "wagey.tool.failed": "Feilet"
     ]
 
     // MARK: - English Strings
@@ -1963,6 +1994,37 @@ enum AuthStrings {
         "push.failure.title": "Notifications Setup Failed",
         "push.failure.message": "Shift reminders won't work until this is resolved. Check your notification settings.",
         "push.failure.settingsButton": "Settings",
-        "push.failure.laterButton": "Later"
+        "push.failure.laterButton": "Later",
+
+        // Wagey
+        "wagey.title": "Wagey",
+        "wagey.subtitle": "AI assistant for shifts",
+        "wagey.placeholder": "Ask Wagey anything...",
+        "wagey.newChat": "New Chat",
+        "wagey.sending": "Sending...",
+        "wagey.messagesRemaining": "%d messages left",
+        "wagey.limitReached.title": "Limit Reached",
+        "wagey.limitReached.message": "You've used all your messages this month. Resets in %d days.",
+        "wagey.error.network": "Network error. Please try again.",
+        "wagey.error.auth": "Authentication error. Please sign in again.",
+        "wagey.error.unknown": "Something went wrong. Please try again.",
+        "wagey.emptyState.title": "Chat with Wagey",
+        "wagey.emptyState.subtitle": "Ask me to add shifts, calculate wages, or manage your schedule.",
+        "wagey.emptyState.suggestion1": "Add a shift tomorrow 9-17",
+        "wagey.emptyState.suggestion2": "What did I earn last month?",
+        "wagey.emptyState.suggestion3": "Show my shifts this week",
+
+        // Wagey Tool Names
+        "wagey.tool.manageShift": "Managing shift...",
+        "wagey.tool.queryShifts": "Finding shifts...",
+        "wagey.tool.calculateWages": "Calculating wages...",
+        "wagey.tool.manageSettings": "Updating settings...",
+        "wagey.tool.getStatistics": "Getting statistics...",
+        "wagey.tool.draftRecurring": "Planning recurring shifts...",
+        "wagey.tool.confirmRecurring": "Creating recurring shifts...",
+        "wagey.tool.manageRecurring": "Managing recurring shifts...",
+        "wagey.tool.unknown": "Working...",
+        "wagey.tool.success": "Done",
+        "wagey.tool.failed": "Failed"
     ]
 }
