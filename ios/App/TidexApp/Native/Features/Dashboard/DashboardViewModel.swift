@@ -345,26 +345,36 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
         activeNavigationTask = Task { [weak self] in
             guard let self = self else { return }
 
-            // Check if this task is still relevant (user hasn't navigated away)
-            guard !Task.isCancelled,
-                  self.displayYear == targetYear,
-                  self.displayMonth == targetMonth else {
-                logger.info("⏭️ Skipping stale fetch for \(displayKey)")
-                return
+            do {
+                // Check cancellation at the start
+                try Task.checkCancellation()
+
+                // Check if this task is still relevant (user hasn't navigated away)
+                guard self.displayYear == targetYear,
+                      self.displayMonth == targetMonth else {
+                    logger.info("⏭️ Skipping stale fetch for \(displayKey)")
+                    return
+                }
+
+                await self.loadDashboardForDisplayedMonth(showLoadingState: false)
+
+                // Check cancellation after async operation
+                try Task.checkCancellation()
+
+                // Check again after fetch - user may have navigated during the async operation
+                guard self.displayYear == targetYear,
+                      self.displayMonth == targetMonth else {
+                    logger.info("⏭️ Skipping prefetch - user navigated during fetch")
+                    return
+                }
+
+                // Prefetch neighbors after successful load
+                self.prefetchNeighboringMonths()
+            } catch is CancellationError {
+                logger.info("⏭️ Navigation task was cancelled for \(displayKey)")
+            } catch {
+                logger.error("Navigation task failed for \(displayKey): \(error.localizedDescription)")
             }
-
-            await self.loadDashboardForDisplayedMonth(showLoadingState: false)
-
-            // Check again after fetch - user may have navigated during the async operation
-            guard !Task.isCancelled,
-                  self.displayYear == targetYear,
-                  self.displayMonth == targetMonth else {
-                logger.info("⏭️ Skipping prefetch - user navigated during fetch")
-                return
-            }
-
-            // Prefetch neighbors after successful load
-            self.prefetchNeighboringMonths()
         }
     }
 

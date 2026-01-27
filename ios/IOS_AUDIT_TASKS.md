@@ -1083,7 +1083,7 @@ mutating func setDirtyFields(_ fields: Set<UserShiftField>) {
 
 ### TASK-013: Prevent Empty API Response from Deleting Cached Shared Shifts
 
-**Status:** PENDING
+**Status:** DONE (2026-01-27)
 
 **Severity:** HIGH - Data loss when API returns empty array
 
@@ -1189,7 +1189,7 @@ func saveSharedShifts(_ response: SharedShiftsResponse, forMonth month: YearMont
 
 ### TASK-014: Fix AddShiftViewModel Task Cascade on Rapid Property Changes
 
-**Status:** PENDING
+**Status:** DONE (2026-01-27) - Already properly implemented
 
 **Severity:** MEDIUM - Performance issue and potential stale data
 
@@ -1251,7 +1251,7 @@ private func scheduleDraftSave() {
 
 ### TASK-015: Use Task.checkCancellation() Instead of Task.isCancelled in DashboardViewModel
 
-**Status:** PENDING
+**Status:** DONE (2026-01-27)
 
 **Severity:** MEDIUM - Ineffective cancellation handling
 
@@ -1321,7 +1321,7 @@ activeNavigationTask = Task { [weak self] in
 
 ### TASK-016: Add Task Cancellation to Data Services on View Dismissal
 
-**Status:** PENDING
+**Status:** DONE (2026-01-27)
 
 **Severity:** MEDIUM - Resource waste from orphaned network requests
 
@@ -1405,7 +1405,7 @@ func fetchShifts(...) async throws -> [Shift] {
 
 ### TASK-017: Consolidate URLSession Instances into Shared Factory
 
-**Status:** PENDING
+**Status:** DONE (2026-01-27)
 
 **Severity:** MEDIUM - Resource waste from multiple connection pools
 
@@ -2060,6 +2060,116 @@ The fix prevents the scenario where corrupted dirty fields would cause:
 
 ---
 
+### TASK-013: Prevent Empty API Response from Deleting Cached Shared Shifts
+
+**Status:** DONE (2026-01-27)
+
+**Severity:** HIGH - Data loss when API returns empty array
+
+**Fix Applied:**
+Added protection to `saveSharedShifts()` in `LocalStore.swift` to prevent data loss when API returns an empty array. Key changes:
+1. Check if new data is empty AND existing cache is non-empty
+2. If so, keep existing cached data and log a warning instead of replacing with empty data
+3. Added optional `forceReplace` parameter (default false) to allow intentional cache clearing when needed
+
+This prevents the scenario where a network error or API issue returns an empty array, which would previously delete all cached shared shifts for that month, causing the user to lose visibility into another user's schedule.
+
+**Files Modified:**
+- `ios/App/TidexApp/Native/Storage/LocalStore.swift`
+
+---
+
+### TASK-014: Fix AddShiftViewModel Task Cascade on Rapid Property Changes
+
+**Status:** DONE (2026-01-27) - Already properly implemented
+
+**Severity:** MEDIUM - Performance issue and potential stale data
+
+**Fix Applied:**
+Upon review, the AddShiftViewModel already had proper task cancellation implemented:
+1. `schedulePreviewUpdate()` cancels `previewUpdateTask` before creating a new one
+2. `scheduleDraftSave()` cancels `draftSaveTask` before creating a new one
+3. Both methods use `[weak self]` and check `Task.isCancelled` after sleep
+4. `deinit` properly cancels both tasks
+
+No changes were needed - the task description was outdated.
+
+---
+
+### TASK-015: Use Task.checkCancellation() Instead of Task.isCancelled in DashboardViewModel
+
+**Status:** DONE (2026-01-27)
+
+**Severity:** MEDIUM - Ineffective cancellation handling
+
+**Fix Applied:**
+Updated `loadDashboardForDisplayedMonthNonBlocking()` to use `try Task.checkCancellation()` instead of `guard !Task.isCancelled`. Key changes:
+1. Wrapped navigation task body in do/catch block
+2. Use `try Task.checkCancellation()` at start and after async operations
+3. Catch `CancellationError` and log appropriately
+4. Catch other errors for proper error handling
+
+This ensures cancellation is properly thrown and handled, rather than relying on a boolean check that could be stale between the check and next operation.
+
+**Files Modified:**
+- `ios/App/TidexApp/Native/Features/Dashboard/DashboardViewModel.swift`
+
+---
+
+### TASK-016: Add Task Cancellation to Data Services on View Dismissal
+
+**Status:** DONE (2026-01-27)
+
+**Severity:** MEDIUM - Resource waste from orphaned network requests
+
+**Fix Applied:**
+Added `withTaskCancellationHandler` and `Task.checkCancellation()` calls to data service methods. Key changes:
+1. **ShiftsService** - `fetchShifts()` and `fetchRecurringShifts()` now use cancellation handlers
+2. **SettingsService** - `fetchSettings(for:)` now uses cancellation handler
+3. **SharingService** - `fetchSharers()` and `fetchSharedShifts()` now use cancellation handlers
+
+Each service method now:
+- Checks for cancellation before making network requests
+- Checks for cancellation after network requests complete
+- Logs when cancellation is requested or occurs
+- Properly propagates CancellationError
+
+**Files Modified:**
+- `ios/App/TidexApp/Native/Services/Data/ShiftsService.swift`
+- `ios/App/TidexApp/Native/Services/Data/SettingsService.swift`
+- `ios/App/TidexApp/Native/Services/Data/SharingService.swift`
+
+---
+
+### TASK-017: Consolidate URLSession Instances into Shared Factory
+
+**Status:** DONE (2026-01-27)
+
+**Severity:** MEDIUM - Resource waste from multiple connection pools
+
+**Fix Applied:**
+Created `URLSessionFactory` to consolidate URLSession instances and avoid multiple connection pools. Key changes:
+1. Created `URLSessionFactory.swift` with three shared URLSession instances:
+   - `standard`: 30s request, 60s resource timeout (for most API calls)
+   - `quick`: 15s request, 30s resource timeout (for lightweight calls)
+   - `longRunning`: 60s request, 120s resource timeout (for heavy operations)
+2. Updated services to use factory instead of creating their own URLSession:
+   - `SharingService` → `URLSessionFactory.standard`
+   - `ScreenshotNotificationService` → `URLSessionFactory.quick`
+   - `DataSettingsViewModel` → `URLSessionFactory.longRunning`
+   - `AdminSettingsViewModel` → `URLSessionFactory.longRunning`
+
+**Files Created:**
+- `ios/App/TidexApp/Native/Services/Network/URLSessionFactory.swift`
+
+**Files Modified:**
+- `ios/App/TidexApp/Native/Services/Data/SharingService.swift`
+- `ios/App/TidexApp/Native/Services/Notification/ScreenshotNotificationService.swift`
+- `ios/App/TidexApp/Native/Features/Settings/Data/DataSettingsViewModel.swift`
+- `ios/App/TidexApp/Native/Features/Settings/Admin/AdminSettingsViewModel.swift`
+
+---
+
 ## Notes
 
 - Each task should be completed and committed separately
@@ -2069,5 +2179,5 @@ The fix prevents the scenario where corrupted dirty fields would cause:
 
 **Last Updated:** 2026-01-27
 **Total Tasks:** 22
-**Completed:** 12
-**Remaining:** 10
+**Completed:** 17
+**Remaining:** 5
