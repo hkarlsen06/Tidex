@@ -14,7 +14,7 @@ This document contains all issues identified during the iOS core app audit, orga
 
 ### TASK-002: Implement Token Refresh Lock to Prevent Concurrent Refresh Race Condition
 
-**Status:** PENDING
+**Status:** DONE (2026-01-27)
 
 **Severity:** CRITICAL - Causes "Refresh Token Not Found" errors
 
@@ -1818,6 +1818,36 @@ Removed the insecure fallback path in `OAuthWebAuthSession.swift` that appended 
 
 ---
 
+### TASK-002: Implement Token Refresh Lock to Prevent Concurrent Refresh Race Condition
+
+**Status:** DONE (2026-01-27)
+
+**Severity:** CRITICAL - Causes "Refresh Token Not Found" errors
+
+**Fix Applied:**
+Created `AuthSessionManager` to serialize all session access and prevent concurrent token refresh attempts. When multiple views/services need the session simultaneously:
+1. The first request triggers the refresh
+2. Subsequent requests wait for the existing refresh to complete
+3. All requests receive the same refreshed session
+
+The manager also proactively refreshes tokens that are within 60 seconds of expiry to prevent edge cases.
+
+**Files Created:**
+- `ios/App/TidexApp/Native/Services/Auth/AuthSessionManager.swift`
+
+**Files Modified:**
+- `ios/App/TidexApp/Native/Services/Auth/AuthService.swift` - Uses AuthSessionManager for getSession()
+- `ios/App/TidexApp/Native/Core/AppCoordinator.swift` - Uses AuthSessionManager (5 places)
+- `ios/App/TidexApp/Native/Services/Data/SharingService.swift` - Uses AuthSessionManager (12 places)
+- `ios/App/TidexApp/Native/Services/Data/SettingsService.swift` - Uses AuthSessionManager
+- `ios/App/TidexApp/Native/Features/Dashboard/DashboardViewModel.swift` - Uses AuthSessionManager
+- `ios/App/TidexApp/Native/Features/Shifts/ShiftsViewModel.swift` - Uses AuthSessionManager
+- `ios/App/TidexApp/Native/Features/Sharing/SharingViewModel.swift` - Uses AuthSessionManager
+- `ios/App/TidexApp/Native/Features/Stats/Services/StatsService.swift` - Uses AuthSessionManager
+- `ios/App/TidexApp/Native/Services/Notification/ScreenshotNotificationService.swift` - Uses AuthSessionManager
+
+---
+
 ---
 
 ## Notes
@@ -1829,5 +1859,5 @@ Removed the insecure fallback path in `OAuthWebAuthSession.swift` that appended 
 
 **Last Updated:** 2026-01-27
 **Total Tasks:** 22
-**Completed:** 1
-**Remaining:** 21
+**Completed:** 2
+**Remaining:** 20
