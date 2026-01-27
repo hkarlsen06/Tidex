@@ -178,36 +178,47 @@ struct SharedShiftsCalendarView: View {
 
         return LazyVGrid(columns: CalendarGridHelper.columns, spacing: 4) {
             ForEach(days, id: \.id) { dayInfo in
-                let shiftsOnDay = dayInfo.dateISO.flatMap { shiftsByDate[$0] } ?? []
-                let isToday = dayInfo.dateISO == todayISO()
-
-                // Check highlighting: use shift IDs for added/updated, dates for deleted shifts
-                let isHighlighted: Bool = {
-                    // Check if any shift on this day matches a highlight shift ID (for added/updated)
-                    let matchesShiftId = !highlightShiftIds.isEmpty &&
-                        shiftsOnDay.contains { highlightShiftIds.contains($0.shiftId) }
-
-                    // Check date-based highlighting (for deleted shifts or legacy payloads)
-                    let matchesDate = dayInfo.dateISO.map { highlightDates.contains($0) } ?? false
-
-                    return matchesShiftId || matchesDate
-                }()
-
-                CalendarDayCell(
-                    dayInfo: dayInfo,
-                    style: cellStyle(isToday: isToday, isHighlighted: isHighlighted),
-                    content: cellContent(for: dayInfo, hasShifts: !shiftsOnDay.isEmpty)
-                )
-                .onTapGesture {
-                    // Only handle taps on days with shifts
-                    if !dayInfo.isOutsideMonth, let dateISO = dayInfo.dateISO {
-                        let shiftsForDay = shiftsByDate[dateISO] ?? []
-                        if let firstShift = shiftsForDay.first {
-                            onShiftTapped?(firstShift)
-                        }
-                    }
-                }
+                calendarDayView(for: dayInfo)
             }
+        }
+    }
+
+    /// Build the view for a single calendar day
+    /// Extracted to help Swift's type inference
+    @ViewBuilder
+    private func calendarDayView(for dayInfo: CalendarDayInfo) -> some View {
+        let shiftsOnDay = dayInfo.dateISO.flatMap { shiftsByDate[$0] } ?? []
+        let isToday = dayInfo.dateISO == todayISO()
+        let isHighlighted = isDateHighlighted(dayInfo: dayInfo, shiftsOnDay: shiftsOnDay)
+
+        CalendarDayCell(
+            dayInfo: dayInfo,
+            style: cellStyle(isToday: isToday, isHighlighted: isHighlighted),
+            content: cellContent(for: dayInfo, hasShifts: !shiftsOnDay.isEmpty)
+        )
+        .onTapGesture {
+            handleDayTap(dayInfo: dayInfo)
+        }
+    }
+
+    /// Check if a date should be highlighted (from notification deeplink)
+    private func isDateHighlighted(dayInfo: CalendarDayInfo, shiftsOnDay: [ShiftWithComputations]) -> Bool {
+        // Check if any shift on this day matches a highlight shift ID (for added/updated)
+        let matchesShiftId = !highlightShiftIds.isEmpty &&
+            shiftsOnDay.contains(where: { highlightShiftIds.contains($0.id) })
+
+        // Check date-based highlighting (for deleted shifts or legacy payloads)
+        let matchesDate = dayInfo.dateISO.map { highlightDates.contains($0) } ?? false
+
+        return matchesShiftId || matchesDate
+    }
+
+    /// Handle tap on a calendar day
+    private func handleDayTap(dayInfo: CalendarDayInfo) {
+        guard !dayInfo.isOutsideMonth, let dateISO = dayInfo.dateISO else { return }
+        let shiftsForDay = shiftsByDate[dateISO] ?? []
+        if let firstShift = shiftsForDay.first {
+            onShiftTapped?(firstShift)
         }
     }
 

@@ -66,32 +66,12 @@ struct FriendRow: View {
 
     // MARK: - Avatar
 
-    @ViewBuilder
     private var avatarView: some View {
-        if let urlString = friend.avatarUrl, let url = URL(string: urlString) {
-            CachedAsyncImage(url: url) { image in
-                image
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .frame(width: 40, height: 40)
-                    .clipShape(Circle())
-            } placeholder: {
-                initialsAvatar
-            }
-        } else {
-            initialsAvatar
-        }
-    }
-
-    private var initialsAvatar: some View {
-        Circle()
-            .fill(Color.tidexBlue.opacity(0.2))
-            .frame(width: 40, height: 40)
-            .overlay(
-                Text(friend.initials)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(.tidexBlue)
-            )
+        AvatarView(
+            url: friend.avatarUrl,
+            initials: friend.initials,
+            size: AvatarView.Size.medium
+        )
     }
 
     // MARK: - Action Buttons
@@ -202,7 +182,7 @@ struct FriendRow: View {
                     blocked: false,
                     showEarningsToMe: true,
                     sharedAt: "2025-01-01",
-                    notificationFrequency: "instant"
+                    notificationFrequency: .instant
                 ),
                 iShareWith: Friend.IShareWith(
                     showEarningsToThem: true,
@@ -259,7 +239,7 @@ struct FriendRow: View {
                     blocked: false,
                     showEarningsToMe: false,
                     sharedAt: "2025-01-01",
-                    notificationFrequency: "muted"
+                    notificationFrequency: .muted
                 ),
                 iShareWith: nil
             ),

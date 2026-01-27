@@ -311,21 +311,19 @@ struct ManageSharingSheet: View {
             return
         }
 
-        // Use Task for cleaner async flow with reduced delays
-        Task { @MainActor in
-            // Minimal delay to ensure layout is complete
-            try? await Task.sleep(for: .milliseconds(150))
-
-            // Scroll and highlight simultaneously for snappier UX
+        // Wait for next run loop to ensure layout is complete, then scroll
+        DispatchQueue.main.async {
             withAnimation(.easeOut(duration: 0.25)) {
                 scrollProxy.scrollTo(highlightUserId, anchor: .center)
                 isHighlightActive = true
             }
 
-            // Turn off highlight after 3 seconds (reduced from 5)
-            try? await Task.sleep(for: .seconds(3))
-            withAnimation(.easeOut(duration: 0.3)) {
-                isHighlightActive = false
+            // Turn off highlight after 3 seconds
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(3))
+                withAnimation(.easeOut(duration: 0.3)) {
+                    isHighlightActive = false
+                }
             }
         }
     }

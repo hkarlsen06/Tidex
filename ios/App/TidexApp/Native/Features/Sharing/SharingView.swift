@@ -28,10 +28,6 @@ struct SharingView: View {
     /// Shift IDs to highlight in the calendar (from changes array in notification)
     @State private var highlightShiftIds: Set<String> = []
 
-    /// Timer for updating relative sync time
-    @State private var currentTime = Date()
-    private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
-
     /// Duration to show highlight before auto-clearing (3 seconds)
     private static let highlightDuration: TimeInterval = 3.0
 
@@ -129,9 +125,6 @@ struct SharingView: View {
                 viewModel.deselectSharer()
             }
         }
-        .onReceive(timer) { _ in
-            currentTime = Date()
-        }
         .sheet(isPresented: $showManageSheet, onDismiss: {
             // Clear highlight when sheet is dismissed
             highlightUserId = nil
@@ -173,11 +166,8 @@ struct SharingView: View {
             if let sharerId = sharerId {
                 // Wait for sharers to load, then select the sharer
                 Task {
-                    // If sharers aren't loaded yet, wait for them
-                    if viewModel.sharers.isEmpty && viewModel.isLoadingSharers {
-                        // Wait a bit for loading to complete
-                        try? await Task.sleep(nanoseconds: 500_000_000)
-                    }
+                    // Wait for sharers to be loaded if still loading
+                    await viewModel.waitForSharersLoaded()
 
                     // Find and select the sharer
                     if let sharer = viewModel.sharers.first(where: { $0.id == sharerId }) {
@@ -346,19 +336,12 @@ struct SharingView: View {
     /// Sharer name and avatar for toolbar display
     private func sharerToolbarInfo(sharer: SharedUser) -> some View {
         HStack(spacing: 8) {
-            if let urlString = sharer.avatarUrl, let url = URL(string: urlString) {
-                CachedAsyncImage(url: url) { image in
-                    image
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                        .frame(width: 28, height: 28)
-                        .clipShape(Circle())
-                } placeholder: {
-                    sharerInitialsAvatar(sharer: sharer)
-                }
-            } else {
-                sharerInitialsAvatar(sharer: sharer)
-            }
+            AvatarView(
+                url: sharer.avatarUrl,
+                initials: sharer.initials,
+                size: AvatarView.Size.small
+            )
+
             Text(sharer.firstNameOnly)
                 .font(.system(size: 17, weight: .semibold))
                 .foregroundColor(.tidexTextPrimary)
@@ -367,24 +350,16 @@ struct SharingView: View {
         }
     }
 
-    private func sharerInitialsAvatar(sharer: SharedUser) -> some View {
-        Circle()
-            .fill(Color.tidexBlue.opacity(0.2))
-            .frame(width: 28, height: 28)
-            .overlay(
-                Text(sharer.initials)
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(.tidexBlue)
-            )
-    }
-
     /// Sync time indicator shown in the toolbar
+    /// Uses TimelineView to efficiently update every second only when visible
     @ViewBuilder
     private var syncTimeView: some View {
         if let cacheTime = viewModel.lastCacheTime {
-            Text(formatTimeSinceSync(from: cacheTime, to: currentTime))
-                .font(.system(size: 15))
-                .foregroundColor(.tidexTextMuted)
+            TimelineView(.periodic(from: .now, by: 1)) { context in
+                Text(formatTimeSinceSync(from: cacheTime, to: context.date))
+                    .font(.system(size: 15))
+                    .foregroundColor(.tidexTextMuted)
+            }
         } else if viewModel.isLoadingShifts {
             ProgressView()
                 .scaleEffect(0.7)
