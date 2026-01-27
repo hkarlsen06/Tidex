@@ -52,27 +52,19 @@ final class OAuthWebAuthSession: NSObject {
         _ = try? await session.data(for: request)
 
         // Check if we captured a redirect URL
-        if let oauthURL = delegate.redirectURL {
-            // Open the OAuth URL in ASWebAuthenticationSession
-            return try await performWebAuth(url: oauthURL)
+        guard let oauthURL = delegate.redirectURL else {
+            // No redirect captured - Supabase didn't return the expected redirect
+            // This means the identity linking request failed
+            throw OAuthWebAuthError.failed("Identity linking failed - no redirect received from server")
         }
 
-        // If no redirect captured, the endpoint might be configured differently
-        // Fall back to opening the authorize URL directly with apikey as query param
-        // (since ASWebAuthenticationSession doesn't support custom headers)
-        var fallbackComponents = URLComponents(url: authURL, resolvingAgainstBaseURL: false)
-        var queryItems = fallbackComponents?.queryItems ?? []
-        queryItems.append(URLQueryItem(name: "apikey", value: APIConfiguration.supabaseAnonKey))
-        fallbackComponents?.queryItems = queryItems
-
-        guard let fallbackURL = fallbackComponents?.url else {
-            throw OAuthWebAuthError.invalidURL
-        }
-
-        return try await performWebAuth(url: fallbackURL, accessToken: accessToken)
+        // Open the OAuth URL in ASWebAuthenticationSession
+        // The access token was already sent securely via Authorization header
+        // in the initial request - it should NOT be passed in the URL
+        return try await performWebAuth(url: oauthURL)
     }
 
-    private func performWebAuth(url: URL, accessToken: String? = nil) async throws -> URL {
+    private func performWebAuth(url: URL) async throws -> URL {
         // Get the presentation anchor
         presentationAnchor = UIApplication.shared.connectedScenes
             .compactMap { $0 as? UIWindowScene }
@@ -80,21 +72,10 @@ final class OAuthWebAuthSession: NSObject {
             .first { $0.isKeyWindow }
 
         return try await withCheckedThrowingContinuation { continuation in
-            // If we have an access token, we need to append it as a query parameter
-            // since ASWebAuthenticationSession doesn't support custom headers
-            var finalURL = url
-            if let accessToken = accessToken {
-                var components = URLComponents(url: url, resolvingAgainstBaseURL: false)
-                var queryItems = components?.queryItems ?? []
-                queryItems.append(URLQueryItem(name: "access_token", value: accessToken))
-                components?.queryItems = queryItems
-                if let newURL = components?.url {
-                    finalURL = newURL
-                }
-            }
-
+            // SECURITY: The access token is NEVER passed in the URL
+            // It was already sent securely via Authorization header in the initial request
             let session = ASWebAuthenticationSession(
-                url: finalURL,
+                url: url,
                 callbackURLScheme: "tidex"
             ) { callbackURL, error in
                 if let error = error {
