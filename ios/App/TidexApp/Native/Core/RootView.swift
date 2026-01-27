@@ -16,6 +16,9 @@ struct RootView: View {
     @State private var showAuthAfterOnboarding = false
     @State private var authDestination: AuthDestination = .login
 
+    // Storage warning state - shown when LocalStore falls back to in-memory storage
+    @State private var showStorageWarning = false
+
     enum AuthDestination {
         case login
         case signup
@@ -95,6 +98,17 @@ struct RootView: View {
         .environment(\.localization, localization)
         // Theme is handled at UIKit window level via AppearanceManager.applyToWindows()
         // Don't use .preferredColorScheme() here as it conflicts with window.overrideUserInterfaceStyle
+        .onAppear {
+            // Check if LocalStore fell back to in-memory storage
+            if LocalStore.shared.isUsingInMemoryFallback {
+                showStorageWarning = true
+            }
+        }
+        .alert("Storage Issue", isPresented: $showStorageWarning) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text("Unable to save data to device storage. Your changes will not be saved when the app closes. Please restart the app or check your device storage.")
+        }
     }
 }
 
