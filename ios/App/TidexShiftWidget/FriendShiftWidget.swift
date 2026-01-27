@@ -535,8 +535,8 @@ struct FriendShiftWidgetView: View {
 
     private var topHeaderRow: some View {
         HStack(spacing: 6) {
-            // Friend's first name only
-            Text(firstName)
+            // Date (matching standard widget layout)
+            Text(entry.shiftDate)
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundColor(entry.hasShift ? accentColor : mutedTextColor)
                 .widgetAccentable(entry.hasShift)
@@ -560,8 +560,8 @@ struct FriendShiftWidgetView: View {
                     .foregroundColor(secondaryTextColor)
                     .lineLimit(1)
             } else {
-                // Show date instead of salute for friend's shift
-                Text(entry.shiftDate)
+                // Show friend's first name at bottom
+                Text(firstName)
                     .font(.system(size: 15, weight: .bold))
                     .foregroundColor(entry.hasShift ? accentColor : mutedTextColor)
                     .widgetAccentable(entry.hasShift)
