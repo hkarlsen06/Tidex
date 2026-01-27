@@ -554,13 +554,13 @@ struct FriendShiftWidgetView: View {
 
     private var bottomTextView: some View {
         Group {
-            if entry.layoutState == .pastShift || entry.shiftHasEnded {
+            if entry.layoutState == .pastShift {
                 Text("\(entry.startTime) – \(entry.endTime)")
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(secondaryTextColor)
                     .lineLimit(1)
             } else {
-                // Show friend's first name at bottom
+                // Show friend's first name at bottom (including when shift has ended)
                 Text(firstName)
                     .font(.system(size: 15, weight: .bold))
                     .foregroundColor(entry.hasShift ? accentColor : mutedTextColor)
