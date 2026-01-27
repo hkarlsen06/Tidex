@@ -11,6 +11,10 @@ final class OAuthWebAuthSession: NSObject {
     private var webAuthSession: ASWebAuthenticationSession?
     private weak var presentationAnchor: UIWindow?
 
+    /// Current OAuth state parameter for CSRF protection
+    /// Generated at the start of an OAuth flow and validated on callback
+    private var currentState: String?
+
     // MARK: - Identity Linking
 
     /// Link an identity using ASWebAuthenticationSession
@@ -22,6 +26,10 @@ final class OAuthWebAuthSession: NSObject {
         provider: String,
         accessToken: String
     ) async throws -> URL {
+        // Generate state parameter for CSRF protection
+        let state = UUID().uuidString
+        currentState = state
+
         // Construct the identity linking URL
         // Supabase identity linking endpoint: /auth/v1/user/identities/authorize
         var components = URLComponents(
@@ -31,7 +39,8 @@ final class OAuthWebAuthSession: NSObject {
 
         components.queryItems = [
             URLQueryItem(name: "provider", value: provider),
-            URLQueryItem(name: "redirect_to", value: "tidex://auth/callback")
+            URLQueryItem(name: "redirect_to", value: "tidex://auth/callback"),
+            URLQueryItem(name: "state", value: state)
         ]
 
         guard let authURL = components.url else {
@@ -136,6 +145,31 @@ extension OAuthWebAuthSession {
     func cancel() {
         webAuthSession?.cancel()
         webAuthSession = nil
+        currentState = nil
+    }
+
+    /// Validates the state parameter from an OAuth callback and clears the stored state
+    /// - Parameter returnedState: The state parameter returned in the callback
+    /// - Throws: `OAuthWebAuthError.stateMismatch` if the state doesn't match or is missing
+    func validateAndClearState(_ returnedState: String?) throws {
+        defer { currentState = nil }
+
+        guard let savedState = currentState else {
+            // No state was stored - this shouldn't happen in normal flow
+            throw OAuthWebAuthError.stateMismatch
+        }
+
+        guard let returnedState = returnedState else {
+            // State parameter missing from callback
+            throw OAuthWebAuthError.stateMismatch
+        }
+
+        guard returnedState == savedState else {
+            // State doesn't match - potential CSRF attack
+            throw OAuthWebAuthError.stateMismatch
+        }
+
+        // State validated successfully
     }
 }
 
@@ -172,6 +206,7 @@ enum OAuthWebAuthError: Error, LocalizedError {
     case invalidURL
     case noCallback
     case sessionStartFailed
+    case stateMismatch
     case failed(String)
 
     var errorDescription: String? {
@@ -184,6 +219,8 @@ enum OAuthWebAuthError: Error, LocalizedError {
             return "No callback received from OAuth"
         case .sessionStartFailed:
             return "Failed to start OAuth session"
+        case .stateMismatch:
+            return "OAuth state validation failed - possible CSRF attack"
         case .failed(let message):
             return "OAuth failed: \(message)"
         }

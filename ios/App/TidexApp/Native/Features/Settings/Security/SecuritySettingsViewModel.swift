@@ -278,6 +278,9 @@ final class SecuritySettingsViewModel: ObservableObject {
                 allParams.merge(parseQueryString(query)) { _, new in new }
             }
 
+            // Validate CSRF state parameter before processing any tokens
+            try OAuthWebAuthSession.shared.validateAndClearState(allParams["state"])
+
             // Check for errors first
             if let error = allParams["error"] {
                 // URL decode the error description (+ becomes space, then percent decode)
@@ -321,6 +324,10 @@ final class SecuritySettingsViewModel: ObservableObject {
         } catch let error as OAuthWebAuthError where error.isCancellation {
             // User cancelled - don't show error
             logger.debug("User cancelled \(provider.rawValue) linking")
+        } catch OAuthWebAuthError.stateMismatch {
+            // State validation failed - potential CSRF attack
+            logger.error("OAuth state validation failed for \(provider.rawValue) - possible CSRF attack")
+            errorMessage = localization.string("security.connections.errors.linkFailed")
         } catch {
             logger.error("Failed to link \(provider.rawValue): \(error)")
             errorMessage = localization.string("security.connections.errors.linkFailed")

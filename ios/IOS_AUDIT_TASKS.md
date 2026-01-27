@@ -244,7 +244,7 @@ final class LocalStore {
 
 ### TASK-004: Add CSRF State Parameter Validation to OAuth Callback Processing
 
-**Status:** PENDING
+**Status:** DONE (2026-01-27)
 
 **Severity:** CRITICAL - Security vulnerability
 
@@ -1867,6 +1867,28 @@ The alert displays:
 
 ---
 
+### TASK-004: Add CSRF State Parameter Validation to OAuth Callback Processing
+
+**Status:** DONE (2026-01-27)
+
+**Severity:** CRITICAL - Security vulnerability
+
+**Fix Applied:**
+Implemented CSRF state parameter validation for OAuth identity linking flows. The fix includes:
+
+1. **State Generation**: A UUID-based state parameter is now generated at the start of each OAuth flow and stored in `OAuthWebAuthSession`
+2. **State Inclusion**: The state parameter is included in the OAuth authorize URL query parameters
+3. **State Validation**: When the OAuth callback is received, the state parameter is validated against the stored value before processing any tokens
+4. **Error Handling**: A new `stateMismatch` error case provides specific handling for state validation failures
+
+This prevents CSRF attacks where an attacker could link their OAuth account to a victim's Tidex account.
+
+**Files Modified:**
+- `ios/App/TidexApp/Native/Services/Auth/OAuthProviders/OAuthWebAuthSession.swift` - Added state generation, storage, and validation
+- `ios/App/TidexApp/Native/Features/Settings/Security/SecuritySettingsViewModel.swift` - Added state validation in callback processing
+
+---
+
 ## Notes
 
 - Each task should be completed and committed separately
@@ -1876,5 +1898,5 @@ The alert displays:
 
 **Last Updated:** 2026-01-27
 **Total Tasks:** 22
-**Completed:** 3
-**Remaining:** 19
+**Completed:** 4
+**Remaining:** 18
