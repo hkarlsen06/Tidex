@@ -343,7 +343,7 @@ func startIdentityLinking(..., state: String) {
 
 ### TASK-005: Fix ScreenshotNotificationService Cooldown Race Condition
 
-**Status:** PENDING
+**Status:** DONE (2026-01-27)
 
 **Severity:** HIGH - Race condition causes duplicate notifications
 
@@ -1898,5 +1898,5 @@ This prevents CSRF attacks where an attacker could link their OAuth account to a
 
 **Last Updated:** 2026-01-27
 **Total Tasks:** 22
-**Completed:** 4
-**Remaining:** 18
+**Completed:** 5
+**Remaining:** 17
