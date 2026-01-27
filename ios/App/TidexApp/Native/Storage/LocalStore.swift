@@ -25,6 +25,10 @@ final class LocalStore {
     /// Actor for serialized writes (sync operations)
     let storeActor: LocalStoreActor
 
+    /// Indicates if the store fell back to in-memory storage due to persistent storage failure.
+    /// When true, data will NOT be saved between app launches - user should be warned.
+    let isUsingInMemoryFallback: Bool
+
     private init() {
         // Create schema with all local models
         let schema = Schema([
@@ -51,6 +55,7 @@ final class LocalStore {
         do {
             container = try ModelContainer(for: schema, configurations: [configuration])
             storeActor = LocalStoreActor(modelContainer: container)
+            isUsingInMemoryFallback = false
             logger.info("LocalStore initialized successfully")
         } catch {
             logger.error("Failed to initialize LocalStore: \(error.localizedDescription)")
@@ -67,6 +72,7 @@ final class LocalStore {
             do {
                 container = try ModelContainer(for: schema, configurations: [fallbackConfig])
                 storeActor = LocalStoreActor(modelContainer: container)
+                isUsingInMemoryFallback = true
                 logger.warning("LocalStore initialized with in-memory fallback - data will not persist")
             } catch let fallbackError {
                 // This should essentially never happen - in-memory containers rarely fail
@@ -77,6 +83,7 @@ final class LocalStore {
                 // If this fails, there's a fundamental issue with the app's model definitions
                 container = try! ModelContainer(for: schema)
                 storeActor = LocalStoreActor(modelContainer: container)
+                isUsingInMemoryFallback = true
                 logger.critical("LocalStore using default container - app may be unstable")
             }
         }

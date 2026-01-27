@@ -150,7 +150,7 @@ final class AuthSessionManager {
 
 ### TASK-003: Alert User When LocalStore Falls Back to In-Memory Storage
 
-**Status:** PENDING
+**Status:** DONE (2026-01-27)
 
 **Severity:** CRITICAL - Silent data loss
 
@@ -1848,6 +1848,23 @@ The manager also proactively refreshes tokens that are within 60 seconds of expi
 
 ---
 
+### TASK-003: Alert User When LocalStore Falls Back to In-Memory Storage
+
+**Status:** DONE (2026-01-27)
+
+**Severity:** CRITICAL - Silent data loss
+
+**Fix Applied:**
+Added `isUsingInMemoryFallback` property to `LocalStore` that tracks whether persistent storage initialization failed and the app fell back to in-memory storage. When in fallback mode, RootView now displays an alert warning the user that their data will not be saved when the app closes.
+
+The alert displays:
+- Title: "Storage Issue"
+- Message: "Unable to save data to device storage. Your changes will not be saved when the app closes. Please restart the app or check your device storage."
+
+**Files Modified:**
+- `ios/App/TidexApp/Native/Storage/LocalStore.swift` - Added `isUsingInMemoryFallback` property
+- `ios/App/TidexApp/Native/Core/RootView.swift` - Added storage warning alert
+
 ---
 
 ## Notes
@@ -1859,5 +1876,5 @@ The manager also proactively refreshes tokens that are within 60 seconds of expi
 
 **Last Updated:** 2026-01-27
 **Total Tasks:** 22
-**Completed:** 2
-**Remaining:** 20
+**Completed:** 3
+**Remaining:** 19
