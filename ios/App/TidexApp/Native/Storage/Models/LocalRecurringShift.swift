@@ -76,12 +76,26 @@ final class LocalRecurringShift {
     }
 
     /// Decoded dirty fields
+    /// When decoding fails (corrupted data), treats record as fully dirty to prevent silent data loss
     var dirtyFieldKeys: Set<RecurringShiftField> {
         get {
-            guard let keys = try? syncJSONDecoder.decode([String].self, from: dirtyFields) else {
+            // Empty data means no dirty fields (common case for clean records)
+            guard !dirtyFields.isEmpty else {
                 return []
             }
-            return Set(keys.compactMap { RecurringShiftField(rawValue: $0) })
+
+            do {
+                let keys = try syncJSONDecoder.decode([String].self, from: dirtyFields)
+                return Set(keys.compactMap { RecurringShiftField(rawValue: $0) })
+            } catch {
+                // If decode fails, treat as fully dirty to ensure data is pushed to server
+                // This prevents silent data loss when dirty fields data is corrupted
+                SyncLogger.shared.log(
+                    "Corrupted dirtyFields for recurring shift \(id), treating as fully dirty: \(error.localizedDescription)",
+                    level: .error
+                )
+                return Set(RecurringShiftField.allCases)
+            }
         }
         set {
             let keys = newValue.map { $0.rawValue }
