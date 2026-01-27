@@ -31,6 +31,7 @@ export interface ShiftNotificationParams {
 
 interface WindowUpsertParams {
   ownerId: string
+  shiftId: string // Added for net-effect tracking
   shiftDate: string
   eventType: ShiftEventType
 }
@@ -93,36 +94,64 @@ function getWindowStart(): string {
 }
 
 /**
- * Format a date string to Norwegian locale
- * Example: "2026-01-15" -> "onsdag 15. januar"
+ * Check if locale is Norwegian (no, nb, nn)
  */
-function formatDateNorwegian(dateStr: string): string {
+function isNorwegianLocale(locale: string): boolean {
+  return locale === "no" || locale === "nb" || locale === "nn"
+}
+
+/**
+ * Format a date string to localized format
+ * Norwegian: "onsdag 15. januar"
+ * English: "Wednesday, January 15"
+ */
+function formatDateLocalized(dateStr: string, locale: string): string {
   const date = new Date(dateStr + "T12:00:00")
-  return date.toLocaleDateString("nb-NO", {
+  if (isNorwegianLocale(locale)) {
+    return date.toLocaleDateString("nb-NO", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      timeZone: "Europe/Oslo",
+    })
+  }
+  return date.toLocaleDateString("en-US", {
     weekday: "long",
-    day: "numeric",
     month: "long",
+    day: "numeric",
     timeZone: "Europe/Oslo",
   })
 }
 
 /**
- * Build Norwegian notification title for a shift event
+ * Build localized notification title for a shift event
  */
-function buildShiftTitle(ownerName: string, eventType: ShiftEventType): string {
+function buildShiftTitle(ownerName: string, eventType: ShiftEventType, locale: string): string {
+  if (isNorwegianLocale(locale)) {
+    switch (eventType) {
+      case "added":
+        return `${ownerName} la til en vakt`
+      case "updated":
+        return `${ownerName} endret en vakt`
+      case "deleted":
+        return `${ownerName} slettet en vakt`
+    }
+  }
+  // English (default)
   switch (eventType) {
     case "added":
-      return `${ownerName} la til en vakt`
+      return `${ownerName} added a shift`
     case "updated":
-      return `${ownerName} endret en vakt`
+      return `${ownerName} updated a shift`
     case "deleted":
-      return `${ownerName} slettet en vakt`
+      return `${ownerName} deleted a shift`
   }
 }
 
 /**
- * Build Norwegian notification body with date and time
- * @param isToday - If true, uses "I dag" prefix instead of full date
+ * Build localized notification body with date and time
+ * @param isToday - If true, uses "I dag"/"Today" prefix instead of full date
+ * @param locale - User's locale preference
  * @param oldStartTime - For updates: show old time in parentheses
  * @param oldEndTime - For updates: show old time in parentheses
  */
@@ -131,9 +160,12 @@ function buildShiftBody(
   startTime: string,
   endTime: string,
   isToday: boolean,
+  locale: string,
   oldStartTime?: string,
   oldEndTime?: string
 ): string {
+  const isNorwegian = isNorwegianLocale(locale)
+
   // Normalize time format (handle both HH:MM and HH:MM:SS)
   const start = startTime.slice(0, 5)
   const end = endTime.slice(0, 5)
@@ -146,11 +178,17 @@ function buildShiftBody(
     const oldEnd = oldEndTime.slice(0, 5)
     // Only show old time if it actually changed
     if (oldStart !== start || oldEnd !== end) {
-      oldTimeStr = `(var ${oldStart}–${oldEnd})`
+      oldTimeStr = isNorwegian
+        ? `(var ${oldStart}–${oldEnd})`
+        : `(was ${oldStart}–${oldEnd})`
     }
   }
 
-  const datePart = isToday ? "I dag" : formatDateNorwegian(shiftDate)
+  const datePart = isToday
+    ? isNorwegian
+      ? "I dag"
+      : "Today"
+    : formatDateLocalized(shiftDate, locale)
   const mainLine = `${datePart} ${timeStr}`
 
   return oldTimeStr ? `${mainLine}\n${oldTimeStr}` : mainLine
@@ -184,7 +222,7 @@ export async function enqueueShiftNotification(params: ShiftNotificationParams) 
   const supabase = createSupabaseServiceClient()
   const todayOslo = getTodayOslo()
 
-  // Step 1: Get non-muted viewers for this owner
+  // Step 1: Get non-muted viewers for this owner with their locale preferences
   const { data: shares } = await supabase
     .from("shift_shares")
     .select("viewer_id")
@@ -195,41 +233,50 @@ export async function enqueueShiftNotification(params: ShiftNotificationParams) 
 
   const viewerIds = shares.map((s) => s.viewer_id)
 
-  // Step 2: Get notification preferences for these viewers
-  const { data: prefs } = await supabase
-    .from("notification_preferences")
-    .select("user_id, shared_shifts_enabled")
-    .in("user_id", viewerIds)
+  // Step 2: Get notification preferences and user locales for these viewers
+  const [{ data: prefs }, { data: users }] = await Promise.all([
+    supabase.from("notification_preferences").select("user_id, shared_shifts_enabled").in("user_id", viewerIds),
+    supabase.auth.admin.listUsers().then((res) => ({
+      data: res.data.users.filter((u) => viewerIds.includes(u.id)),
+    })),
+  ])
 
   // Build a map of user_id -> shared_shifts_enabled (default true if no row)
   const prefsMap = new Map(prefs?.map((p) => [p.user_id, p.shared_shifts_enabled]) ?? [])
+
+  // Build a map of user_id -> locale (default 'en')
+  const localeMap = new Map(
+    users?.map((u) => [u.id, (u.user_metadata?.locale as string) ?? "en"]) ?? []
+  )
 
   // Filter to eligible viewers (shared_shifts_enabled !== false)
   const eligibleViewers = viewerIds.filter((id) => prefsMap.get(id) !== false)
 
   if (eligibleViewers.length === 0) return
 
-  // SAME-DAY: Insert directly to outbox for immediate delivery
+  // SAME-DAY: Insert directly to outbox for immediate delivery (with localized messages)
   if (shiftDate === todayOslo) {
-    const title = buildShiftTitle(ownerName, eventType)
-    const body = buildShiftBody(shiftDate, startTime, endTime, true, oldStartTime, oldEndTime)
-
-    const rows = eligibleViewers.map((viewerId) => ({
-      owner_id: ownerId,
-      recipient_id: viewerId,
-      notification_type: `shared_shift_${eventType}`,
-      due_at: new Date().toISOString(),
-      title,
-      body,
-      data_payload: {
-        type: `shared_shift_${eventType}`,
+    const rows = eligibleViewers.map((viewerId) => {
+      const locale = localeMap.get(viewerId) ?? "en"
+      return {
         owner_id: ownerId,
-        shift_dates: [shiftDate], // JSON array, not comma string
-      },
-      // Stable idempotency: shift_id + event_type + viewer_id + mutation_id
-      // mutation_id ensures retries are deduped but real events are not
-      idempotency_key: `shift:${shiftId}:${eventType}:${viewerId}:${mutationId}`,
-    }))
+        recipient_id: viewerId,
+        notification_type: `shared_shift_${eventType}`,
+        due_at: new Date().toISOString(),
+        title: buildShiftTitle(ownerName, eventType, locale),
+        body: buildShiftBody(shiftDate, startTime, endTime, true, locale, oldStartTime, oldEndTime),
+        data_payload: {
+          type: `shared_shift_${eventType}`,
+          owner_id: ownerId,
+          changes: [{ shift_id: shiftId, date: shiftDate, op: eventType }],
+          // Legacy field for backward compatibility
+          shift_dates: [shiftDate],
+        },
+        // Stable idempotency: shift_id + event_type + viewer_id + mutation_id
+        // mutation_id ensures retries are deduped but real events are not
+        idempotency_key: `shift:${shiftId}:${eventType}:${viewerId}:${mutationId}`,
+      }
+    })
 
     await supabase.schema("internal").from("notifications_outbox").upsert(rows, {
       onConflict: "idempotency_key",
@@ -238,8 +285,8 @@ export async function enqueueShiftNotification(params: ShiftNotificationParams) 
     return
   }
 
-  // NON-TODAY: Upsert into time window
-  await upsertNotificationWindow({ ownerId, shiftDate, eventType })
+  // NON-TODAY: Upsert into time window (with shiftId for net-effect tracking)
+  await upsertNotificationWindow({ ownerId, shiftId, shiftDate, eventType })
 }
 
 /**
@@ -250,11 +297,13 @@ async function upsertNotificationWindow(params: WindowUpsertParams) {
   const windowStart = getWindowStart()
 
   // Note: Function is in internal schema
+  // Pass shift_id for net-effect tracking (add+delete=nothing, add+edit=add, etc.)
   await supabase.schema("internal").rpc("upsert_notification_window", {
     p_owner_id: params.ownerId,
     p_window_start: windowStart,
     p_event_type: params.eventType,
     p_shift_date: params.shiftDate,
+    p_shift_id: params.shiftId,
   })
 }
 
