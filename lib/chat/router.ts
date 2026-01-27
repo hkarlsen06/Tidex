@@ -8,6 +8,7 @@
 import { z } from "zod";
 import { NextRequest } from "next/server";
 import { Effect } from "effect";
+import { createClient } from "@supabase/supabase-js";
 import {
   createRiverStream,
   createRiverRouter,
@@ -19,6 +20,7 @@ import { tools, type ToolName } from "./tools";
 import { executeTool } from "./executor";
 import { LOCALE_COOKIE, defaultLocale, type Locale } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/dictionaries";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 /**
  * Chat chunk types (sent to frontend)
@@ -86,6 +88,55 @@ const chatInputSchema = z.object({
 });
 
 export type ChatInput = z.infer<typeof chatInputSchema>;
+
+/**
+ * Verify authentication from either Bearer token (iOS) or cookie session (web)
+ * Returns the authenticated user ID or null if not authenticated
+ */
+async function verifyAuthentication(
+  request: NextRequest,
+  expectedUserId: string
+): Promise<{ userId: string } | null> {
+  // Try Bearer token first (native iOS app)
+  const authHeader = request.headers.get("Authorization");
+  if (authHeader?.startsWith("Bearer ")) {
+    const token = authHeader.substring(7);
+
+    // Create a Supabase client with the user's JWT to verify it
+    const supabaseWithToken = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+      {
+        global: {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      }
+    );
+
+    const { data, error } = await supabaseWithToken.auth.getUser();
+    if (!error && data.user) {
+      // Verify the token's user matches the requested userId
+      if (data.user.id === expectedUserId) {
+        return { userId: data.user.id };
+      }
+    }
+  }
+
+  // Fall back to cookie-based session (web app)
+  try {
+    const supabase = await createSupabaseServerClient();
+    const { data, error } = await supabase.auth.getUser();
+    if (!error && data.user && data.user.id === expectedUserId) {
+      return { userId: data.user.id };
+    }
+  } catch {
+    // Cookie-based auth failed
+  }
+
+  return null;
+}
 
 /**
  * Convert OpenAI-style messages from frontend to Claude format
@@ -192,18 +243,92 @@ const wageyChatStream = createRiverStream<ChatChunk, NextRequest>()
   .runner(async ({ input, stream, abortSignal, adapterRequest }) => {
     const { messages, userId, userName } = input;
 
+    // Verify authentication first (supports both Bearer token for iOS and cookies for web)
+    const authResult = await verifyAuthentication(adapterRequest, userId);
+    if (!authResult) {
+      await stream.appendChunk({
+        type: "error",
+        error: "Authentication failed",
+      });
+      await stream.close();
+      return;
+    }
+
     // Get locale from cookie for localized tool messages
     const locale = (adapterRequest.cookies.get(LOCALE_COOKIE)?.value || defaultLocale) as Locale;
 
-    // Check usage limits BEFORE Claude API call (free users get trial limit)
-    const { useWageyInvocation, getWageyAccessForUser } = await import("@/data-access/wagey");
-    const { getDaysUntilReset } = await import("@/lib/wagey/types");
+    // Check if this is a Bearer token request (iOS) - needs direct DB access
+    const isBearerAuth = adapterRequest.headers.get("Authorization")?.startsWith("Bearer ");
 
-    // Get access level for system prompt context (use ForUser variant for Route Handlers)
-    const accessInfo = await getWageyAccessForUser(userId);
+    // Import dependencies
+    const { getDaysUntilReset, getCurrentMonth, WAGEY_LIMITS } = await import("@/lib/wagey/types");
+    const { getUserTier } = await import("@/lib/subscription/getUserTier");
 
-    // Check and track usage (free users get trial limit via useWageyInvocation)
-    const result = await useWageyInvocation(userId);
+    let accessInfo: { level: "free" | "pro" | "max"; hasAccess: boolean; limit: number | null; used: number; remaining: number | null; resetDate: Date | null };
+    let result: { allowed: boolean; count: number; remaining: number };
+
+    if (isBearerAuth) {
+      // For Bearer token auth (iOS), call the database directly
+      // This bypasses the Effect-based auth verification which expects cookies
+      const token = adapterRequest.headers.get("Authorization")!.substring(7);
+      const supabaseWithToken = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+        {
+          global: {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          },
+        }
+      );
+
+      // Get subscription and profile data
+      const [subResult, profileResult] = await Promise.all([
+        supabaseWithToken.from("subscriptions").select("*").eq("user_id", userId).maybeSingle(),
+        supabaseWithToken.from("profiles").select("id, before_paywall, wagey_invocations").eq("id", userId).single(),
+      ]);
+
+      const subscription = subResult.data;
+      const profile = profileResult.data;
+
+      // Determine tier and limit
+      const level = getUserTier(subscription, profile);
+      const limit = WAGEY_LIMITS[level];
+      const currentMonth = getCurrentMonth();
+
+      // Get current usage
+      const invocations = profile?.wagey_invocations as { count: number; month: string | null } | null;
+      const used = invocations?.month === currentMonth ? invocations.count : 0;
+
+      accessInfo = {
+        level,
+        hasAccess: level !== "free",
+        limit,
+        used,
+        remaining: Math.max(0, limit - used),
+        resetDate: null,
+      };
+
+      // Call the RPC to atomically check and increment
+      const { data: rpcResult, error: rpcError } = await supabaseWithToken.rpc("increment_wagey_invocation", {
+        p_user_id: userId,
+        p_current_month: currentMonth,
+        p_max_invocations: limit,
+      });
+
+      if (rpcError) {
+        console.error("[chat/router] RPC error:", rpcError);
+        result = { allowed: false, count: 0, remaining: 0 };
+      } else {
+        result = rpcResult as { allowed: boolean; count: number; remaining: number };
+      }
+    } else {
+      // For cookie auth (web), use the existing DAL functions
+      const { useWageyInvocation, getWageyAccessForUser } = await import("@/data-access/wagey");
+      accessInfo = await getWageyAccessForUser(userId);
+      result = await useWageyInvocation(userId);
+    }
 
     if (!result.allowed) {
       await stream.appendChunk({

@@ -23,6 +23,9 @@ final class WageyViewModel {
     /// Number of messages remaining this month (nil if unknown)
     private(set) var remainingMessages: Int?
 
+    /// Days until limit resets (for showing in limit reached message)
+    private(set) var resetDays: Int = 0
+
     /// Current error if any
     private(set) var error: Error?
 
@@ -168,9 +171,10 @@ final class WageyViewModel {
                 )
             }
 
-        case .wageyLimit(let remaining, _):
-            // Update remaining messages count
+        case .wageyLimit(let remaining, let days):
+            // Update remaining messages count and reset days
             remainingMessages = remaining
+            resetDays = days
             if remaining <= 0 {
                 limitReached = true
             }

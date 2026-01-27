@@ -29,10 +29,10 @@ struct ChatInputField: View {
                 .background(Color.tidexBorder)
 
             // Input area
-            HStack(alignment: .bottom, spacing: 12) {
+            HStack(alignment: .center, spacing: 12) {
                 // Text input
                 TextField(
-                    localization.string("wagey.inputPlaceholder"),
+                    localization.string("wagey.placeholder"),
                     text: $inputText,
                     axis: .vertical
                 )
@@ -60,6 +60,7 @@ struct ChatInputField: View {
             .padding(.vertical, 12)
         }
         .background(Color.tidexBackground)
+        .safeAreaPadding(.bottom)
     }
 
     // MARK: - Actions

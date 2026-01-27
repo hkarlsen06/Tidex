@@ -3,52 +3,6 @@ import os.log
 
 private let logger = Logger(subsystem: "no.tidex.app", category: "WageyService")
 
-// MARK: - Chat Message Types
-// These types should be moved to ChatMessage.swift once that file is created
-
-/// Role of a message in the chat
-enum MessageRole: String, Codable {
-    case user
-    case assistant
-}
-
-/// A chat message in the Wagey conversation
-struct ChatMessage: Identifiable, Equatable {
-    let id: String
-    let role: MessageRole
-    var content: String
-    var toolCalls: [ToolCall]?
-    let timestamp: Date
-
-    init(id: String = UUID().uuidString, role: MessageRole, content: String, toolCalls: [ToolCall]? = nil, timestamp: Date = Date()) {
-        self.id = id
-        self.role = role
-        self.content = content
-        self.toolCalls = toolCalls
-        self.timestamp = timestamp
-    }
-}
-
-/// A tool call within a message
-struct ToolCall: Identifiable, Equatable, Codable {
-    let id: String
-    let name: String
-    var arguments: String?
-    var result: String?
-    var success: Bool?
-}
-
-/// Chat chunk types from the streaming API
-enum ChatChunk: Equatable {
-    case text(content: String)
-    case toolStart(toolName: String, toolCallId: String, toolArguments: String?)
-    case toolResult(toolName: String, toolCallId: String, result: String, success: Bool)
-    case done
-    case error(message: String)
-    case wageyLimit(remaining: Int, resetDays: Int)
-    case wageyNoAccess
-}
-
 // MARK: - API Request Types
 
 /// Request body for the chat API endpoint
@@ -262,11 +216,16 @@ final class WageyService: ObservableObject {
             }
 
             // Parse the SSE stream
-            for try await chunk in SSEStreamParser.parse(bytes, as: SSEChunkWrapper.self) {
+            for try await wrapper in SSEStreamParser.parse(bytes, as: WageyChunkWrapper.self) {
                 try Task.checkCancellation()
 
+                // Only process "chunk" type events, skip "special" events
+                guard wrapper.type == "chunk", let rawChunk = wrapper.chunk else {
+                    continue
+                }
+
                 // Map the API chunk to our ChatChunk type
-                if let chatChunk = mapToChatChunk(chunk.chunk) {
+                if let chatChunk = mapToChatChunk(rawChunk) {
                     continuation.yield(chatChunk)
 
                     // If we got a done or error chunk, finish the stream
@@ -347,9 +306,29 @@ final class WageyService: ObservableObject {
 
 // MARK: - SSE Response Types
 
-/// Wrapper for SSE data events: `data: {"chunk": {...}}\n\n`
-private struct SSEChunkWrapper: Decodable {
-    let chunk: RawChatChunk
+/// Wrapper for SSE data events from River streaming framework
+/// River sends: `data: {"type": "chunk", "chunk": {...}}\n\n`
+/// or: `data: {"type": "special", "special": {...}}\n\n`
+private struct WageyChunkWrapper: Decodable {
+    let type: String
+    let chunk: RawChatChunk?
+
+    private enum CodingKeys: String, CodingKey {
+        case type
+        case chunk
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.type = try container.decode(String.self, forKey: .type)
+
+        // Only decode chunk if type is "chunk"
+        if type == "chunk" {
+            self.chunk = try container.decodeIfPresent(RawChatChunk.self, forKey: .chunk)
+        } else {
+            self.chunk = nil
+        }
+    }
 }
 
 /// Raw chunk data from the API

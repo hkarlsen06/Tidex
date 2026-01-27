@@ -16,6 +16,9 @@ struct DashboardView: View {
     /// State for showing push notification failure alert
     @State private var showPushFailureAlert = false
 
+    /// State for showing Wagey AI chat sheet
+    @State private var showWageySheet = false
+
     // iPad detection - hide logo on iPad
     private var isIPad: Bool {
         UIDevice.current.userInterfaceIdiom == .pad
@@ -57,6 +60,16 @@ struct DashboardView: View {
             .navigationBarTitleDisplayMode(.inline)
             .iPadToolbarBackground(Color.tidexBackground)
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        Haptics.play(.light)
+                        showWageySheet = true
+                    } label: {
+                        Image(systemName: "sparkles")
+                            .font(.system(size: 18, weight: .medium))
+                            .foregroundColor(.tidexTextPrimary)
+                    }
+                }
                 if !isIPad {
                     ToolbarItem(placement: .principal) {
                         Image("TidexWordmark")
@@ -125,6 +138,9 @@ struct DashboardView: View {
             }
         } message: {
             Text(localization.string("push.failure.message"))
+        }
+        .sheet(isPresented: $showWageySheet) {
+            WageyView()
         }
     }
 
