@@ -541,27 +541,45 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
         }
         // Handle shared shift notifications (created, updated, deleted)
         else if type.hasPrefix("shared_shift_") {
-            // Extract owner_id (the friend who shared) and shift_dates
+            // Extract owner_id (the friend who shared)
             let ownerId = userInfo["owner_id"] as? String
 
-            // Parse shift_dates - APNs sends arrays as-is, FCM sends comma-separated strings
+            // Parse changes array (new format with shift IDs for highlighting)
+            var changes: [AppCoordinator.ShiftChange]?
+            if let changesArray = userInfo["changes"] as? [[String: Any]] {
+                changes = changesArray.compactMap { dict -> AppCoordinator.ShiftChange? in
+                    guard let shiftId = dict["shift_id"] as? String,
+                          let date = dict["date"] as? String,
+                          let op = dict["op"] as? String else {
+                        return nil
+                    }
+                    return AppCoordinator.ShiftChange(shiftId: shiftId, date: date, op: op)
+                }
+            }
+
+            // Extract dates from changes array, falling back to legacy shift_dates field
             var dates: [String]?
-            if let datesArray = userInfo["shift_dates"] as? [String] {
+            if let changes = changes, !changes.isEmpty {
+                // Extract unique dates from ALL changes (including deleted - useful to see when they're not working)
+                dates = Array(Set(changes.map(\.date)))
+            } else if let datesArray = userInfo["shift_dates"] as? [String] {
+                // Legacy format: APNs sends arrays as-is
                 dates = datesArray
             } else if let datesString = userInfo["shift_dates"] as? String {
+                // Legacy format: FCM sends comma-separated strings
                 dates = datesString.components(separatedBy: ",").map { $0.trimmingCharacters(in: .whitespaces) }
             }
 
-            // Navigate to sharing tab with the specific friend and dates highlighted
+            // Navigate to sharing tab with the specific friend and shifts highlighted
             Task { @MainActor in
-                AppCoordinator.shared.pendingDeepLink = .sharing(sharerId: ownerId, highlightDates: dates)
+                AppCoordinator.shared.pendingDeepLink = .sharing(sharerId: ownerId, highlightDates: dates, changes: changes)
             }
         }
         // Handle share_started notification (someone started sharing with you)
         else if type == "share_started" {
             let ownerId = userInfo["owner_id"] as? String
             Task { @MainActor in
-                AppCoordinator.shared.pendingDeepLink = .sharing(sharerId: ownerId, highlightDates: nil)
+                AppCoordinator.shared.pendingDeepLink = .sharing(sharerId: ownerId, highlightDates: nil, changes: nil)
             }
         }
         // Handle feedback_responded notification (admin responded to user's feedback)

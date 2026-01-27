@@ -13,6 +13,9 @@ struct SharedShiftsCalendarView: View {
     /// Dates to highlight from notification deeplink (e.g., friend's updated shifts)
     var highlightDates: Set<String> = []
 
+    /// Shift IDs to highlight from notification deeplink (more precise than dates)
+    var highlightShiftIds: Set<String> = []
+
     /// Callback when a shift is tapped (for showing details)
     var onShiftTapped: ((ShiftWithComputations) -> Void)?
 
@@ -177,7 +180,18 @@ struct SharedShiftsCalendarView: View {
             ForEach(days, id: \.id) { dayInfo in
                 let shiftsOnDay = dayInfo.dateISO.flatMap { shiftsByDate[$0] } ?? []
                 let isToday = dayInfo.dateISO == todayISO()
-                let isHighlighted = dayInfo.dateISO.map { highlightDates.contains($0) } ?? false
+
+                // Check highlighting: use shift IDs for added/updated, dates for deleted shifts
+                let isHighlighted: Bool = {
+                    // Check if any shift on this day matches a highlight shift ID (for added/updated)
+                    let matchesShiftId = !highlightShiftIds.isEmpty &&
+                        shiftsOnDay.contains { highlightShiftIds.contains($0.shiftId) }
+
+                    // Check date-based highlighting (for deleted shifts or legacy payloads)
+                    let matchesDate = dayInfo.dateISO.map { highlightDates.contains($0) } ?? false
+
+                    return matchesShiftId || matchesDate
+                }()
 
                 CalendarDayCell(
                     dayInfo: dayInfo,

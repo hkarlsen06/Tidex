@@ -25,6 +25,9 @@ struct SharingView: View {
     /// Dates to highlight in the calendar (from shared shift notification)
     @State private var highlightDates: Set<String> = []
 
+    /// Shift IDs to highlight in the calendar (from changes array in notification)
+    @State private var highlightShiftIds: Set<String> = []
+
     /// Timer for updating relative sync time
     @State private var currentTime = Date()
     private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
@@ -166,7 +169,7 @@ struct SharingView: View {
         guard let deepLink = deepLink else { return }
 
         switch deepLink {
-        case .sharing(let sharerId, let dates):
+        case .sharing(let sharerId, let dates, let changes):
             if let sharerId = sharerId {
                 // Wait for sharers to load, then select the sharer
                 Task {
@@ -182,6 +185,12 @@ struct SharingView: View {
                             viewModel.selectSharer(sharer)
                         }
 
+                        // Extract shift IDs for precise highlighting (excludes deleted shifts)
+                        if let changes = changes, !changes.isEmpty {
+                            let shiftIds = changes.filter { $0.op != "deleted" }.map(\.shiftId)
+                            highlightShiftIds = Set(shiftIds)
+                        }
+
                         // If dates were provided, navigate to the correct month and set highlight
                         if let dates = dates, let firstDate = dates.first,
                            let date = Date.fromISODateString(firstDate) {
@@ -192,14 +201,15 @@ struct SharingView: View {
                                 SharedMonthContext.shared.navigateTo(year: year, month: month)
                             }
 
-                            // Set highlight dates for the calendar
+                            // Set highlight dates for the calendar (fallback for older payloads without shift IDs)
                             highlightDates = Set(dates)
 
-                            // Clear highlight after a delay
+                            // Clear highlights after a delay
                             Task {
                                 try? await Task.sleep(nanoseconds: UInt64(Self.highlightDuration * 1_000_000_000))
                                 withAnimation(.easeOut(duration: 0.3)) {
                                     highlightDates = []
+                                    highlightShiftIds = []
                                 }
                             }
                         }
@@ -315,7 +325,8 @@ struct SharingView: View {
                     year: viewModel.committedYear,
                     month: viewModel.committedMonth,
                     isLoading: viewModel.isLoadingShifts,
-                    highlightDates: highlightDates
+                    highlightDates: highlightDates,
+                    highlightShiftIds: highlightShiftIds
                 )
                 .frame(maxWidth: AdaptiveMaxWidth.tabContent)
                 .frame(maxWidth: .infinity)

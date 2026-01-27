@@ -14,6 +14,9 @@ struct SharedShiftsListView: View {
     /// Dates to highlight from notification deeplink
     var highlightDates: Set<String> = []
 
+    /// Shift IDs to highlight from notification deeplink (more precise than dates)
+    var highlightShiftIds: Set<String> = []
+
     @Environment(\.localization) private var localization
     @Environment(\.userCurrency) private var currency
 
@@ -39,6 +42,7 @@ struct SharedShiftsListView: View {
                             currency: currency,
                             showEarnings: sharer.showEarnings,
                             highlightDates: highlightDates,
+                            highlightShiftIds: highlightShiftIds,
                             onShiftTapped: { shift in
                                 selectedShift = shift
                             }
