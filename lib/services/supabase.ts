@@ -25,8 +25,9 @@
 import "server-only";
 import { Context, Effect, Layer, Schedule, Duration, Redacted, Scope } from "effect";
 import { createServerClient } from "@supabase/ssr";
+import { createClient } from "@supabase/supabase-js";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { SupabaseError, TimeoutError, DatabaseError } from "../errors/tagged";
 import { AppConfig } from "./config";
 
@@ -85,11 +86,44 @@ const defaultRetrySchedule = Schedule.exponential(Duration.millis(100)).pipe(
 );
 
 /**
- * Create Supabase client with cookie adapter
+ * Create Supabase client with cookie adapter or Bearer token
  * This is the low-level client creation - wrapped in Effect for resource management
+ *
+ * Authentication priority:
+ * 1. Bearer token in Authorization header (for native iOS app)
+ * 2. Cookie-based session (for web app)
  */
 const createSupabaseClient = Effect.gen(function* () {
   const config = yield* AppConfig;
+
+  // Check for Bearer token in Authorization header (native iOS app)
+  const headerStore = yield* Effect.promise(() => headers());
+  const authHeader = headerStore.get("Authorization");
+
+  if (authHeader?.startsWith("Bearer ")) {
+    const token = authHeader.substring(7);
+
+    // Create client with Bearer token authentication
+    const client = createClient(
+      config.supabase.url,
+      Redacted.value(config.supabase.publishableKey),
+      {
+        global: {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      }
+    );
+
+    // Suppress getSession warning - we use getClaims() for auth validation
+    // @ts-expect-error: suppressGetSessionWarning is not in types but works
+    client.auth.suppressGetSessionWarning = true;
+
+    return client;
+  }
+
+  // Fall back to cookie-based authentication (web app)
   const store = yield* Effect.promise(() => cookies());
 
   const client = createServerClient(
