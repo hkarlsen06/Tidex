@@ -5,7 +5,7 @@
 --
 -- These functions generate localized notification titles and bodies
 -- based on the recipient's locale preference (stored in auth.users.raw_user_meta_data->>'locale').
--- Supported locales: 'en' (English, default), 'no' (Norwegian)
+-- Supported locales: 'en' (English, default), 'no', 'nb', 'nn' (Norwegian variants)
 
 -- ============================================================================
 -- Format a date in the user's locale
@@ -25,14 +25,18 @@ DECLARE
   v_day_name TEXT;
   v_day INT;
   v_month_name TEXT;
+  v_is_norwegian BOOLEAN;
 BEGIN
+  -- Check for Norwegian locale variants
+  v_is_norwegian := p_locale IN ('no', 'nb', 'nn');
+
   IF p_is_today THEN
-    RETURN CASE WHEN p_locale = 'no' THEN 'I dag' ELSE 'Today' END;
+    RETURN CASE WHEN v_is_norwegian THEN 'I dag' ELSE 'Today' END;
   END IF;
 
   v_day := EXTRACT(DAY FROM p_shift_date);
 
-  IF p_locale = 'no' THEN
+  IF v_is_norwegian THEN
     -- Norwegian: "mandag 15. januar"
     v_day_name := CASE EXTRACT(DOW FROM p_shift_date)
       WHEN 0 THEN 'søndag'
@@ -103,8 +107,12 @@ RETURNS TEXT
 LANGUAGE plpgsql
 IMMUTABLE
 AS $$
+DECLARE
+  v_is_norwegian BOOLEAN;
 BEGIN
-  IF p_locale = 'no' THEN
+  v_is_norwegian := p_locale IN ('no', 'nb', 'nn');
+
+  IF v_is_norwegian THEN
     -- Norwegian
     RETURN p_owner_name || CASE p_event_type
       WHEN 'added' THEN ' la til en vakt'
@@ -151,7 +159,10 @@ DECLARE
   v_end TEXT;
   v_old_start TEXT;
   v_old_end TEXT;
+  v_is_norwegian BOOLEAN;
 BEGIN
+  v_is_norwegian := p_locale IN ('no', 'nb', 'nn');
+
   -- Normalize time format (handle both HH:MM and HH:MM:SS)
   v_start := LEFT(p_start_time, 5);
   v_end := LEFT(p_end_time, 5);
@@ -165,7 +176,7 @@ BEGIN
     v_old_end := LEFT(p_old_end_time, 5);
 
     IF v_old_start != v_start OR v_old_end != v_end THEN
-      IF p_locale = 'no' THEN
+      IF v_is_norwegian THEN
         v_old_time_str := '(var ' || v_old_start || '–' || v_old_end || ')';
       ELSE
         v_old_time_str := '(was ' || v_old_start || '–' || v_old_end || ')';
@@ -197,10 +208,12 @@ AS $$
 DECLARE
   v_parts TEXT[];
   v_result TEXT;
+  v_is_norwegian BOOLEAN;
 BEGIN
+  v_is_norwegian := p_locale IN ('no', 'nb', 'nn');
   v_parts := '{}';
 
-  IF p_locale = 'no' THEN
+  IF v_is_norwegian THEN
     -- Norwegian
     IF p_added_count > 0 THEN
       v_parts := array_append(v_parts,

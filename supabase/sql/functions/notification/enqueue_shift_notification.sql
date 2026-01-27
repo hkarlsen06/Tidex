@@ -8,10 +8,11 @@
 -- the web app's enqueueShiftNotification() in lib/notifications/enqueue.ts.
 --
 -- Key features:
--- - Localizes messages based on each recipient's locale preference
+-- - Localizes messages based on each recipient's locale preference (no/nb/nn = Norwegian, else English)
 -- - Same-day shifts: immediate delivery via notifications_outbox
--- - Future shifts: 15-minute batched delivery via notification_time_windows
+-- - Future shifts: 15-minute batched delivery via notification_time_windows with net-effect tracking
 -- - Idempotent via mutation_id parameter
+-- - Includes 'changes' array with shift IDs for app highlighting
 --
 -- Parameters:
 --   p_shift_id: UUID of the shift
@@ -96,7 +97,6 @@ BEGIN
   v_is_today := (v_shift_date = v_today_oslo);
 
   -- Get eligible viewers (non-muted with shared_shifts_enabled)
-  -- Loop through each viewer to generate localized messages
   FOR v_viewer IN
     SELECT
       ss.viewer_id,
@@ -143,6 +143,14 @@ BEGIN
         jsonb_build_object(
           'type', 'shared_shift_' || p_event_type,
           'owner_id', v_owner_id,
+          'changes', jsonb_build_array(
+            jsonb_build_object(
+              'shift_id', p_shift_id,
+              'date', p_shift_date,
+              'op', p_event_type
+            )
+          ),
+          -- Legacy field for backward compatibility
           'shift_dates', jsonb_build_array(p_shift_date)
         ),
         'shift:' || p_shift_id || ':' || p_event_type || ':' || v_viewer.viewer_id || ':' || p_mutation_id
@@ -153,17 +161,17 @@ BEGIN
       v_rows_queued := v_rows_queued + v_row_count;
       v_delivery_type := 'immediate';
     ELSE
-      -- NON-TODAY: Upsert into time window for batched delivery
-      -- Calculate window start (15-minute aligned)
+      -- NON-TODAY: Upsert into time window for batched delivery (with shift_id)
       v_window_start := date_trunc('hour', now()) +
         (floor(EXTRACT(MINUTE FROM now()) / 15) * INTERVAL '15 minutes');
 
-      -- Use existing upsert function
+      -- Pass shift_id to enable net-effect tracking
       PERFORM internal.upsert_notification_window(
         v_owner_id,
         v_window_start,
         p_event_type,
-        v_shift_date
+        v_shift_date,
+        p_shift_id  -- Pass shift_id for net-effect tracking
       );
 
       v_rows_queued := v_rows_queued + 1;
