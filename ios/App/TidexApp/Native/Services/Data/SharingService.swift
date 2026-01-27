@@ -95,7 +95,8 @@ final class SharingService: ObservableObject {
     @Published private(set) var isLoadingShifts = false
     @Published private(set) var error: Error?
 
-    private let urlSession: URLSession
+    /// Shared URLSession from factory (standard timeout: 30s request, 60s resource)
+    private let urlSession = URLSessionFactory.standard
 
     /// Cache for shift previews (by sharer ID)
     private var previewCache: [String: CachedPreview] = [:]
@@ -103,12 +104,7 @@ final class SharingService: ObservableObject {
     /// Cache validity duration (5 minutes)
     private let previewCacheValiditySeconds: TimeInterval = 5 * 60
 
-    private init() {
-        let config = URLSessionConfiguration.default
-        config.timeoutIntervalForRequest = 30
-        config.timeoutIntervalForResource = 60
-        self.urlSession = URLSession(configuration: config)
-    }
+    private init() {}
 
     /// Get cached preview if still valid
     func getCachedPreview(for sharerId: String) -> SharerShiftPreview? {
@@ -135,80 +131,90 @@ final class SharingService: ObservableObject {
         error = nil
         defer { isLoadingSharers = false }
 
-        do {
-            // Get the current session token
-            let session = try await AuthSessionManager.shared.getSession()
-            let accessToken = session.accessToken
-
-            // Build URL for sharers endpoint
-            let url = APIConfiguration.webAppBaseURL.appendingPathComponent("/api/sharing/sharers")
-
-            // Build request with auth header
-            var request = URLRequest(url: url)
-            request.httpMethod = "GET"
-            request.cachePolicy = .reloadIgnoringLocalCacheData
-            request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
-            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-
-            logger.info("Fetching sharers from \(url.absoluteString)")
-
-            // Execute request
-            let (data, response) = try await urlSession.data(for: request)
-
-            guard let httpResponse = response as? HTTPURLResponse else {
-                throw SharingServiceError.networkError(underlying: URLError(.badServerResponse))
-            }
-
-            // Handle HTTP errors
-            switch httpResponse.statusCode {
-            case 200:
-                break // Success
-            case 401:
-                throw SharingServiceError.notAuthenticated
-            default:
-                let message = String(data: data, encoding: .utf8)
-                throw SharingServiceError.httpError(statusCode: httpResponse.statusCode, message: message)
-            }
-
-            // Decode response
-            let decoder = JSONDecoder()
-            let apiResponse: SharersAPIResponse
+        return try await withTaskCancellationHandler {
             do {
-                apiResponse = try decoder.decode(SharersAPIResponse.self, from: data)
+                // Check for cancellation before making network request
+                try Task.checkCancellation()
+
+                // Get the current session token
+                let session = try await AuthSessionManager.shared.getSession()
+                let accessToken = session.accessToken
+
+                // Build URL for sharers endpoint
+                let url = APIConfiguration.webAppBaseURL.appendingPathComponent("/api/sharing/sharers")
+
+                // Build request with auth header
+                var request = URLRequest(url: url)
+                request.httpMethod = "GET"
+                request.cachePolicy = .reloadIgnoringLocalCacheData
+                request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+                request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+                logger.info("Fetching sharers from \(url.absoluteString)")
+
+                // Execute request
+                let (data, response) = try await urlSession.data(for: request)
+
+                // Check for cancellation after network request
+                try Task.checkCancellation()
+
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    throw SharingServiceError.networkError(underlying: URLError(.badServerResponse))
+                }
+
+                // Handle HTTP errors
+                switch httpResponse.statusCode {
+                case 200:
+                    break // Success
+                case 401:
+                    throw SharingServiceError.notAuthenticated
+                default:
+                    let message = String(data: data, encoding: .utf8)
+                    throw SharingServiceError.httpError(statusCode: httpResponse.statusCode, message: message)
+                }
+
+                // Decode response
+                let decoder = JSONDecoder()
+                let apiResponse: SharersAPIResponse
+                do {
+                    apiResponse = try decoder.decode(SharersAPIResponse.self, from: data)
+                } catch {
+                    logger.error("Failed to decode sharers response: \(error)")
+                    throw SharingServiceError.decodingError(underlying: error)
+                }
+
+                // Map to SharedUser
+                let users = apiResponse.sharers.map { sharer in
+                    SharedUser(
+                        id: sharer.id,
+                        email: sharer.email,
+                        phone: sharer.phone,
+                        firstName: sharer.firstName,
+                        profilePictureUrl: sharer.profilePictureUrl,
+                        oauthAvatarUrl: sharer.oauthAvatarUrl,
+                        sharedAt: sharer.sharedAt,
+                        showEarnings: sharer.showEarnings,
+                        blocked: sharer.blocked
+                    )
+                }
+
+                sharers = users
+                logger.info("Loaded \(users.count) sharers for user")
+                return users
+
+            } catch let error as SharingServiceError {
+                self.error = error
+                throw error
+            } catch is CancellationError {
+                logger.info("Sharers fetch was cancelled")
+                throw CancellationError()
             } catch {
-                logger.error("Failed to decode sharers response: \(error)")
-                throw SharingServiceError.decodingError(underlying: error)
+                let wrappedError = SharingServiceError.networkError(underlying: error)
+                self.error = wrappedError
+                throw wrappedError
             }
-
-            // Map to SharedUser
-            let users = apiResponse.sharers.map { sharer in
-                SharedUser(
-                    id: sharer.id,
-                    email: sharer.email,
-                    phone: sharer.phone,
-                    firstName: sharer.firstName,
-                    profilePictureUrl: sharer.profilePictureUrl,
-                    oauthAvatarUrl: sharer.oauthAvatarUrl,
-                    sharedAt: sharer.sharedAt,
-                    showEarnings: sharer.showEarnings,
-                    blocked: sharer.blocked
-                )
-            }
-
-            sharers = users
-            logger.info("Loaded \(users.count) sharers for user")
-            return users
-
-        } catch let error as SharingServiceError {
-            self.error = error
-            throw error
-        } catch is CancellationError {
-            // Re-throw cancellation without wrapping
-            throw CancellationError()
-        } catch {
-            let wrappedError = SharingServiceError.networkError(underlying: error)
-            self.error = wrappedError
-            throw wrappedError
+        } onCancel: {
+            logger.info("Sharers fetch cancellation requested")
         }
     }
 
@@ -225,73 +231,86 @@ final class SharingService: ObservableObject {
         error = nil
         defer { isLoadingShifts = false }
 
-        do {
-            // Get the current session token
-            let session = try await AuthSessionManager.shared.getSession()
-            let accessToken = session.accessToken
-
-            // Build URL
-            var components = URLComponents(
-                url: APIConfiguration.webAppBaseURL.appendingPathComponent("/api/sharing"),
-                resolvingAgainstBaseURL: false
-            )!
-            components.queryItems = [
-                URLQueryItem(name: "ownerId", value: ownerId),
-                URLQueryItem(name: "year", value: String(year)),
-                URLQueryItem(name: "month", value: String(month))
-            ]
-
-            guard let url = components.url else {
-                throw SharingServiceError.networkError(underlying: URLError(.badURL))
-            }
-
-            // Build request with auth header
-            var request = URLRequest(url: url)
-            request.httpMethod = "GET"
-            request.cachePolicy = .reloadIgnoringLocalCacheData
-            request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
-            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-
-            logger.info("Fetching shared shifts from \(url.absoluteString)")
-
-            // Execute request
-            let (data, response) = try await urlSession.data(for: request)
-
-            guard let httpResponse = response as? HTTPURLResponse else {
-                throw SharingServiceError.networkError(underlying: URLError(.badServerResponse))
-            }
-
-            // Handle HTTP errors
-            switch httpResponse.statusCode {
-            case 200:
-                break // Success
-            case 401:
-                throw SharingServiceError.notAuthenticated
-            case 404:
-                throw SharingServiceError.noShareAccess
-            default:
-                let message = String(data: data, encoding: .utf8)
-                throw SharingServiceError.httpError(statusCode: httpResponse.statusCode, message: message)
-            }
-
-            // Decode response
-            let decoder = JSONDecoder()
+        return try await withTaskCancellationHandler {
             do {
-                let result = try decoder.decode(SharedShiftsResponse.self, from: data)
-                logger.info("Loaded \(result.shifts.count) shared shifts for month \(year)-\(month)")
-                return result
-            } catch {
-                logger.error("Failed to decode shared shifts: \(error)")
-                throw SharingServiceError.decodingError(underlying: error)
-            }
+                // Check for cancellation before making network request
+                try Task.checkCancellation()
 
-        } catch let error as SharingServiceError {
-            self.error = error
-            throw error
-        } catch {
-            let wrappedError = SharingServiceError.networkError(underlying: error)
-            self.error = wrappedError
-            throw wrappedError
+                // Get the current session token
+                let session = try await AuthSessionManager.shared.getSession()
+                let accessToken = session.accessToken
+
+                // Build URL
+                var components = URLComponents(
+                    url: APIConfiguration.webAppBaseURL.appendingPathComponent("/api/sharing"),
+                    resolvingAgainstBaseURL: false
+                )!
+                components.queryItems = [
+                    URLQueryItem(name: "ownerId", value: ownerId),
+                    URLQueryItem(name: "year", value: String(year)),
+                    URLQueryItem(name: "month", value: String(month))
+                ]
+
+                guard let url = components.url else {
+                    throw SharingServiceError.networkError(underlying: URLError(.badURL))
+                }
+
+                // Build request with auth header
+                var request = URLRequest(url: url)
+                request.httpMethod = "GET"
+                request.cachePolicy = .reloadIgnoringLocalCacheData
+                request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+                request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+                logger.info("Fetching shared shifts from \(url.absoluteString)")
+
+                // Execute request
+                let (data, response) = try await urlSession.data(for: request)
+
+                // Check for cancellation after network request
+                try Task.checkCancellation()
+
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    throw SharingServiceError.networkError(underlying: URLError(.badServerResponse))
+                }
+
+                // Handle HTTP errors
+                switch httpResponse.statusCode {
+                case 200:
+                    break // Success
+                case 401:
+                    throw SharingServiceError.notAuthenticated
+                case 404:
+                    throw SharingServiceError.noShareAccess
+                default:
+                    let message = String(data: data, encoding: .utf8)
+                    throw SharingServiceError.httpError(statusCode: httpResponse.statusCode, message: message)
+                }
+
+                // Decode response
+                let decoder = JSONDecoder()
+                do {
+                    let result = try decoder.decode(SharedShiftsResponse.self, from: data)
+                    logger.info("Loaded \(result.shifts.count) shared shifts for month \(year)-\(month)")
+                    return result
+                } catch {
+                    logger.error("Failed to decode shared shifts: \(error)")
+                    throw SharingServiceError.decodingError(underlying: error)
+                }
+
+            } catch let error as SharingServiceError {
+                self.error = error
+                throw error
+            } catch is CancellationError {
+                logger.info("Shared shifts fetch was cancelled")
+                throw CancellationError()
+            } catch {
+                let wrappedError = SharingServiceError.networkError(underlying: error)
+                self.error = wrappedError
+                throw wrappedError
+            }
+        } onCancel: {
+            logger.info("Shared shifts fetch cancellation requested")
         }
     }
 

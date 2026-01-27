@@ -11,7 +11,8 @@ private let logger = Logger(subsystem: "com.tidex.app", category: "ScreenshotNot
 final class ScreenshotNotificationService {
     static let shared = ScreenshotNotificationService()
 
-    private let urlSession: URLSession
+    /// Shared URLSession from factory (quick timeout: 15s request, 30s resource)
+    private let urlSession = URLSessionFactory.quick
 
     /// Cooldown tracking to prevent notification spam
     /// Key: sharer ID, Value: last reported timestamp
@@ -23,11 +24,7 @@ final class ScreenshotNotificationService {
     /// Minimum interval between screenshot notifications for the same sharer (5 minutes)
     private let cooldownInterval: TimeInterval = 5 * 60
 
-    private init() {
-        let config = URLSessionConfiguration.default
-        config.timeoutIntervalForRequest = 15
-        self.urlSession = URLSession(configuration: config)
-    }
+    private init() {}
 
     /// Reports that the current user took a screenshot of another user's shifts
     /// - Parameter sharerId: The ID of the user whose shifts were screenshotted

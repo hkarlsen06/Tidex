@@ -1,5 +1,8 @@
 import Foundation
 import Supabase
+import os.log
+
+private let logger = Logger(subsystem: "com.tidex.app", category: "ShiftsService")
 
 /// Service for fetching shifts and recurring shifts from Supabase
 @MainActor
@@ -32,23 +35,36 @@ final class ShiftsService: ObservableObject {
         error = nil
         defer { isLoading = false }
 
-        do {
-            let response: [ShiftRow] = try await supabase
-                .from("user_shifts")
-                .select()
-                .eq("user_id", value: userId)
-                .gte("shift_date", value: startDate)
-                .lte("shift_date", value: endDate)
-                .order("shift_date", ascending: false)
-                .limit(limit)
-                .execute()
-                .value
+        return try await withTaskCancellationHandler {
+            do {
+                // Check for cancellation before making network request
+                try Task.checkCancellation()
 
-            shifts = response
-            return response
-        } catch {
-            self.error = error
-            throw error
+                let response: [ShiftRow] = try await supabase
+                    .from("user_shifts")
+                    .select()
+                    .eq("user_id", value: userId)
+                    .gte("shift_date", value: startDate)
+                    .lte("shift_date", value: endDate)
+                    .order("shift_date", ascending: false)
+                    .limit(limit)
+                    .execute()
+                    .value
+
+                // Check for cancellation after network request
+                try Task.checkCancellation()
+
+                shifts = response
+                return response
+            } catch is CancellationError {
+                logger.info("Shifts fetch was cancelled")
+                throw CancellationError()
+            } catch {
+                self.error = error
+                throw error
+            }
+        } onCancel: {
+            logger.info("Shifts fetch cancellation requested")
         }
     }
 
@@ -56,19 +72,32 @@ final class ShiftsService: ObservableObject {
     /// - Parameter userId: User ID to fetch recurring shifts for
     /// - Returns: Array of recurring shift rows
     func fetchRecurringShifts(for userId: String) async throws -> [RecurringShiftRow] {
-        do {
-            let response: [RecurringShiftRow] = try await supabase
-                .from("recurring_shifts")
-                .select()
-                .eq("user_id", value: userId)
-                .execute()
-                .value
+        return try await withTaskCancellationHandler {
+            do {
+                // Check for cancellation before making network request
+                try Task.checkCancellation()
 
-            recurringShifts = response
-            return response
-        } catch {
-            self.error = error
-            throw error
+                let response: [RecurringShiftRow] = try await supabase
+                    .from("recurring_shifts")
+                    .select()
+                    .eq("user_id", value: userId)
+                    .execute()
+                    .value
+
+                // Check for cancellation after network request
+                try Task.checkCancellation()
+
+                recurringShifts = response
+                return response
+            } catch is CancellationError {
+                logger.info("Recurring shifts fetch was cancelled")
+                throw CancellationError()
+            } catch {
+                self.error = error
+                throw error
+            }
+        } onCancel: {
+            logger.info("Recurring shifts fetch cancellation requested")
         }
     }
 

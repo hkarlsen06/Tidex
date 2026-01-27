@@ -319,18 +319,10 @@ final class AdminSettingsViewModel: ObservableObject {
 
     // MARK: - Private Properties
 
-    private let urlSession: URLSession
+    /// Shared URLSession from factory (long-running timeout for admin operations)
+    private let urlSession = URLSessionFactory.longRunning
     private var searchTask: Task<Void, Never>?
     private let perPage = 20
-
-    // MARK: - Initialization
-
-    init() {
-        let config = URLSessionConfiguration.default
-        config.timeoutIntervalForRequest = 30
-        config.timeoutIntervalForResource = 120
-        self.urlSession = URLSession(configuration: config)
-    }
 
     // MARK: - Common Methods
 

@@ -2410,15 +2410,24 @@ actor LocalStoreActor {
     }
 
     /// Save shared shifts to cache, replacing existing entries for this owner/month
+    /// - Parameters:
+    ///   - shifts: Array of SharedShiftData from API
+    ///   - ownerId: The owner's user ID
+    ///   - viewerId: The current user's ID
+    ///   - showEarnings: Whether earnings are visible for this share
+    ///   - year: Year
+    ///   - month: Month (1-12)
+    ///   - forceReplace: If true, replace cache even when new data is empty (default false)
     func saveSharedShifts(
         _ shifts: [SharedShiftData],
         ownerId: String,
         viewerId: String,
         showEarnings: Bool,
         year: Int,
-        month: Int
+        month: Int,
+        forceReplace: Bool = false
     ) throws {
-        // Delete existing shifts for this owner/viewer/month
+        // Fetch existing shifts for this owner/viewer/month
         let descriptor = FetchDescriptor<LocalSharedShift>(
             predicate: #Predicate { shift in
                 shift.ownerId == ownerId &&
@@ -2427,8 +2436,18 @@ actor LocalStoreActor {
                 shift.month == month
             }
         )
-        for existing in try modelContext.fetch(descriptor) {
-            modelContext.delete(existing)
+        let existing = try modelContext.fetch(descriptor)
+
+        // Don't delete existing cached data if new data is empty (unless forced)
+        // This prevents data loss when the API returns an empty array due to errors
+        if shifts.isEmpty && !existing.isEmpty && !forceReplace {
+            logger.warning("API returned empty shared shifts for \(year)-\(month) (owner: \(ownerId.prefix(8))...), keeping \(existing.count) cached shifts")
+            return
+        }
+
+        // Delete existing shifts
+        for item in existing {
+            modelContext.delete(item)
         }
 
         // Insert new shifts

@@ -108,7 +108,8 @@ final class DataSettingsViewModel: ObservableObject {
 
     // MARK: - Private Properties
 
-    private let urlSession: URLSession
+    /// Shared URLSession from factory (long-running timeout: 60s request, 120s resource)
+    private let urlSession = URLSessionFactory.longRunning
     private var userId: String?
 
     // MARK: - Computed Properties
@@ -136,15 +137,6 @@ final class DataSettingsViewModel: ObservableObject {
     /// Whether the custom date range is invalid
     var isCustomRangeInvalid: Bool {
         selectedPreset == .custom && customFromDate > customToDate
-    }
-
-    // MARK: - Initialization
-
-    init() {
-        let config = URLSessionConfiguration.default
-        config.timeoutIntervalForRequest = 60
-        config.timeoutIntervalForResource = 120
-        self.urlSession = URLSession(configuration: config)
     }
 
     // MARK: - Public Methods
