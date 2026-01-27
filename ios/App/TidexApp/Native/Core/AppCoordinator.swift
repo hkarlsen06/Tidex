@@ -44,10 +44,17 @@ final class AppCoordinator: ObservableObject {
         case highlight // Just highlight/navigate to the date in calendar, no sheet
     }
 
+    /// Change info from notification payload for highlighting
+    struct ShiftChange: Equatable {
+        let shiftId: String
+        let date: String
+        let op: String  // "added", "updated", "deleted"
+    }
+
     /// Supported deep link types
     enum DeepLink: Equatable {
         case shifts(dates: [String]?, action: ShiftDeepLinkAction) // Navigate to shifts view, optionally filtering dates
-        case sharing(sharerId: String?, highlightDates: [String]?) // Navigate to sharing tab, select sharer, highlight specific dates
+        case sharing(sharerId: String?, highlightDates: [String]?, changes: [ShiftChange]?) // Navigate to sharing tab, select sharer, highlight specific shifts
         case sharingManage(highlightUserId: String?) // Open sharing management modal, optionally highlighting a user
         case feedback // Navigate to feedback settings (for users receiving response)
         case adminFeedback // Navigate to admin panel with feedback tab (for admins receiving new feedback)
@@ -563,7 +570,7 @@ final class AppCoordinator: ObservableObject {
                 let sharerId = queryItems.first(where: { $0.name == "user" })?.value
                 let datesString = queryItems.first(where: { $0.name == "dates" })?.value
                 let dates = datesString?.components(separatedBy: ",").map { $0.trimmingCharacters(in: .whitespaces) }
-                pendingDeepLink = .sharing(sharerId: sharerId, highlightDates: dates)
+                pendingDeepLink = .sharing(sharerId: sharerId, highlightDates: dates, changes: nil)
             }
 
         case "shifts":
