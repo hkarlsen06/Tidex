@@ -582,7 +582,7 @@ final class AddShiftViewModel: ObservableObject {
             clearForm()
 
             // Success haptic
-            Haptics.play(.success)
+            Haptics.playShiftCreationSuccess()
 
             // Notify that shifts changed (for dashboard refresh)
             NotificationCenter.default.post(name: .shiftsDidChange, object: nil)
@@ -724,7 +724,7 @@ final class AddShiftViewModel: ObservableObject {
             showPreviewSheet = false
 
             // Success haptic
-            Haptics.play(.success)
+            Haptics.playShiftCreationSuccess()
 
             // Notify that shifts changed (for dashboard refresh)
             NotificationCenter.default.post(name: .shiftsDidChange, object: nil)

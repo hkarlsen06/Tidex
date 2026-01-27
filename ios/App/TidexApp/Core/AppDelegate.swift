@@ -58,6 +58,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // Set notification center delegate
         UNUserNotificationCenter.current().delegate = self
 
+        // Preload all feedback sounds
+        Haptics.prepareSounds()
+
         // Register background task for shift checking (Live Activity auto-start)
         registerBackgroundTasks()
 
