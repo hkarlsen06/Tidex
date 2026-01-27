@@ -258,7 +258,9 @@ const wageyChatStream = createRiverStream<ChatChunk, NextRequest>()
     const locale = (adapterRequest.cookies.get(LOCALE_COOKIE)?.value || defaultLocale) as Locale;
 
     // Check if this is a Bearer token request (iOS) - needs direct DB access
-    const isBearerAuth = adapterRequest.headers.get("Authorization")?.startsWith("Bearer ");
+    const authHeader = adapterRequest.headers.get("Authorization");
+    const isBearerAuth = authHeader?.startsWith("Bearer ");
+    const bearerToken = isBearerAuth ? authHeader!.substring(7) : undefined;
 
     // Import dependencies
     const { getDaysUntilReset, getCurrentMonth, WAGEY_LIMITS } = await import("@/lib/wagey/types");
@@ -469,7 +471,8 @@ const wageyChatStream = createRiverStream<ChatChunk, NextRequest>()
             toolUse.name as ToolName,
             JSON.stringify(toolUse.input),
             userId,
-            locale
+            locale,
+            { bearerToken }
           );
 
           // Only send tool_result chunk to UI if successful
