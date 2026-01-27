@@ -110,9 +110,14 @@ export const SupabaseServiceLive = Layer.effect(
       if (authHeader?.startsWith("Bearer ")) {
         const token = authHeader.substring(7);
 
+        // Use direct Supabase URL for Bearer token auth (bypasses auth proxy)
+        // The auth proxy (e.g., identity.tidex.no) only handles authentication,
+        // not database REST API calls
+        const directUrl = process.env.SUPABASE_DIRECT_URL || config.supabase.url;
+
         // Create client with Bearer token authentication
         const client = createClient(
-          config.supabase.url,
+          directUrl,
           Redacted.value(config.supabase.publishableKey),
           {
             global: {
