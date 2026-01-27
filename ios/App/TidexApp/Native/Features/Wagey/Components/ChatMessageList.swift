@@ -7,6 +7,9 @@ struct ChatMessageList: View {
     let streamingToolCalls: [ToolCall]
     let isStreaming: Bool
 
+    /// Callback when a suggestion chip is tapped
+    var onSuggestionTapped: ((String) -> Void)?
+
     @Environment(\.localization) private var localization
 
     /// Namespace for scroll-to-bottom animation
@@ -69,11 +72,11 @@ struct ChatMessageList: View {
                 .foregroundColor(.tidexBlue)
 
             VStack(spacing: 8) {
-                Text(localization.string("wagey.emptyTitle"))
+                Text(localization.string("wagey.emptyState.title"))
                     .font(.system(size: 20, weight: .semibold))
                     .foregroundColor(.tidexTextPrimary)
 
-                Text(localization.string("wagey.emptySubtitle"))
+                Text(localization.string("wagey.emptyState.subtitle"))
                     .font(.system(size: 15))
                     .foregroundColor(.tidexTextSecondary)
                     .multilineTextAlignment(.center)
@@ -81,9 +84,9 @@ struct ChatMessageList: View {
 
             // Suggestion chips
             VStack(spacing: 12) {
-                suggestionChip(localization.string("wagey.suggestion1"))
-                suggestionChip(localization.string("wagey.suggestion2"))
-                suggestionChip(localization.string("wagey.suggestion3"))
+                suggestionChip(localization.string("wagey.emptyState.suggestion1"))
+                suggestionChip(localization.string("wagey.emptyState.suggestion2"))
+                suggestionChip(localization.string("wagey.emptyState.suggestion3"))
             }
             .padding(.top, 8)
         }
@@ -91,13 +94,19 @@ struct ChatMessageList: View {
     }
 
     private func suggestionChip(_ text: String) -> some View {
-        Text(text)
-            .font(.system(size: 14))
-            .foregroundColor(.tidexBlue)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
-            .background(Color.tidexBlue.opacity(0.1))
-            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        Button {
+            Haptics.play(.light)
+            onSuggestionTapped?(text)
+        } label: {
+            Text(text)
+                .font(.system(size: 14))
+                .foregroundColor(.tidexBlue)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .background(Color.tidexBlue.opacity(0.1))
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Scroll Helper
@@ -127,14 +136,14 @@ struct ChatMessageList: View {
         messages: [
             ChatMessage(
                 id: "1",
-                role: .user,
+                role: MessageRole.user,
                 content: "What shifts do I have this week?",
                 toolCalls: nil,
                 timestamp: Date()
             ),
             ChatMessage(
                 id: "2",
-                role: .assistant,
+                role: MessageRole.assistant,
                 content: "You have 3 shifts scheduled this week:\n\n- Monday: 09:00-17:00\n- Wednesday: 14:00-22:00\n- Friday: 08:00-16:00\n\nTotal: 24 hours, approximately **4,800 kr** before taxes.",
                 toolCalls: [
                     ToolCall(id: "call_1", name: "get_shifts", arguments: nil, result: "{}", success: true)
@@ -155,7 +164,7 @@ struct ChatMessageList: View {
         messages: [
             ChatMessage(
                 id: "1",
-                role: .user,
+                role: MessageRole.user,
                 content: "Add a shift tomorrow 9-17",
                 toolCalls: nil,
                 timestamp: Date()

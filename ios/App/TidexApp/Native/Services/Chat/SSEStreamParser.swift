@@ -73,10 +73,8 @@ enum SSEStreamParser {
                         try Task.checkCancellation()
 
                         // Convert byte to character and append to buffer
-                        guard let scalar = Unicode.Scalar(byte) else {
-                            logger.warning("Skipping invalid byte: \(byte)")
-                            continue
-                        }
+                        // Unicode.Scalar(UInt8) is non-failable since all UInt8 values are valid
+                        let scalar = Unicode.Scalar(byte)
                         buffer.append(Character(scalar))
 
                         // Process complete events in the buffer

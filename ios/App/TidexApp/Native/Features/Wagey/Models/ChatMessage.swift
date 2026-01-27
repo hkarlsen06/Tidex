@@ -1,5 +1,13 @@
 import Foundation
 
+// MARK: - Message Role
+
+/// The role of a message sender in the chat
+enum MessageRole: String, Codable, Equatable {
+    case user
+    case assistant
+}
+
 // MARK: - Chat Message
 
 /// A chat message in the Wagey conversation.
@@ -13,10 +21,13 @@ struct ChatMessage: Identifiable, Equatable {
     var toolCalls: [ToolCall]?
     let timestamp: Date
 
-    /// The role of the message sender
-    enum MessageRole: String, Codable, Equatable {
-        case user
-        case assistant
+    /// Full initializer
+    init(id: String = UUID().uuidString, role: MessageRole, content: String, toolCalls: [ToolCall]? = nil, timestamp: Date = Date()) {
+        self.id = id
+        self.role = role
+        self.content = content
+        self.toolCalls = toolCalls
+        self.timestamp = timestamp
     }
 
     /// Create a user message

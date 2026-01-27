@@ -18,7 +18,12 @@ struct WageyView: View {
                     messages: viewModel.messages,
                     streamingText: viewModel.currentStreamingText,
                     streamingToolCalls: viewModel.activeToolCalls,
-                    isStreaming: viewModel.isStreaming
+                    isStreaming: viewModel.isStreaming,
+                    onSuggestionTapped: { suggestion in
+                        Task {
+                            await viewModel.sendMessage(suggestion)
+                        }
+                    }
                 )
 
                 // Input field
@@ -48,13 +53,13 @@ struct WageyView: View {
             }
         }
         .alert(
-            localization.string("wagey.errorTitle"),
+            localization.string("wagey.error.unknown"),
             isPresented: .init(
                 get: { viewModel.error != nil },
                 set: { if !$0 { viewModel.dismissError() } }
             )
         ) {
-            Button(localization.string("common.ok"), role: .cancel) {
+            Button("OK", role: .cancel) {
                 viewModel.dismissError()
             }
         } message: {
@@ -63,15 +68,15 @@ struct WageyView: View {
             }
         }
         .alert(
-            localization.string("wagey.limitReachedTitle"),
+            localization.string("wagey.limitReached.title"),
             isPresented: .init(
                 get: { viewModel.limitReached && viewModel.error == nil },
                 set: { _ in }
             )
         ) {
-            Button(localization.string("common.ok"), role: .cancel) {}
+            Button("OK", role: .cancel) {}
         } message: {
-            Text(localization.string("wagey.limitReachedMessage"))
+            Text(localization.string("wagey.limitReached.message", viewModel.resetDays))
         }
     }
 
@@ -85,7 +90,7 @@ struct WageyView: View {
                     .foregroundColor(.tidexTextPrimary)
 
                 if let remaining = viewModel.remainingMessages {
-                    Text(localization.string("wagey.messagesRemaining", arguments: remaining))
+                    Text(localization.string("wagey.messagesRemaining", remaining))
                         .font(.system(size: 11))
                         .foregroundColor(.tidexTextSecondary)
                 }

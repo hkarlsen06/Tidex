@@ -152,7 +152,7 @@ struct StreamingMessageBubble: View {
     VStack(spacing: 16) {
         ChatMessageBubble(message: ChatMessage(
             id: "1",
-            role: .user,
+            role: MessageRole.user,
             content: "Add a shift tomorrow from 9 to 17",
             toolCalls: nil,
             timestamp: Date()
@@ -160,7 +160,7 @@ struct StreamingMessageBubble: View {
 
         ChatMessageBubble(message: ChatMessage(
             id: "2",
-            role: .assistant,
+            role: MessageRole.assistant,
             content: "I've added a shift for tomorrow from 09:00 to 17:00. You'll earn approximately **1,600 kr** before taxes.",
             toolCalls: nil,
             timestamp: Date()
@@ -173,7 +173,7 @@ struct StreamingMessageBubble: View {
 #Preview("With Tool Call") {
     ChatMessageBubble(message: ChatMessage(
         id: "1",
-        role: .assistant,
+        role: MessageRole.assistant,
         content: "Done! I've added the shift to your calendar.",
         toolCalls: [
             ToolCall(
