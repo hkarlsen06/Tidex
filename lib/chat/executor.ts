@@ -67,6 +67,9 @@ function createBearerAuthClient(bearerToken: string): SupabaseClient {
   // Use direct URL for REST API calls (bypasses auth proxy like identity.tidex.no)
   const directUrl = process.env.SUPABASE_DIRECT_URL || process.env.NEXT_PUBLIC_SUPABASE_URL!;
 
+  console.log("[createBearerAuthClient] SUPABASE_DIRECT_URL:", process.env.SUPABASE_DIRECT_URL || "NOT SET");
+  console.log("[createBearerAuthClient] Using URL:", directUrl);
+
   return createClient(
     directUrl,
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
@@ -430,7 +433,7 @@ async function executeManageShift(
           }));
 
           const { data, error } = await bearerClient
-            .from("shifts")
+            .from("user_shifts")
             .insert(shiftsToInsert)
             .select();
 
@@ -503,7 +506,7 @@ async function executeManageShift(
         // For Bearer auth (iOS), use direct update
         if (bearerClient) {
           const { error } = await bearerClient
-            .from("shifts")
+            .from("user_shifts")
             .update({
               shift_date: updatedDate,
               start_time: input.start || shift.start_time,
@@ -550,7 +553,7 @@ async function executeManageShift(
           // For Bearer auth (iOS), use direct delete
           if (bearerClient) {
             const { error } = await bearerClient
-              .from("shifts")
+              .from("user_shifts")
               .delete()
               .in("id", fullShiftIds)
               .eq("user_id", userId);
@@ -583,7 +586,7 @@ async function executeManageShift(
           // For Bearer auth (iOS), use direct delete
           if (bearerClient) {
             const { error } = await bearerClient
-              .from("shifts")
+              .from("user_shifts")
               .delete()
               .eq("id", fullShiftId)
               .eq("user_id", userId);
@@ -1568,7 +1571,7 @@ async function getComputedShiftsDirect(
   // Fetch shifts, settings, and current snapshot in parallel
   const [shiftsResult, settingsResult, snapshotResult] = await Promise.all([
     client
-      .from("shifts")
+      .from("user_shifts")
       .select("*")
       .eq("user_id", userId)
       .gte("shift_date", startDate)
@@ -1722,7 +1725,7 @@ async function getStatsDataDirect(
   // Fetch shifts and settings in parallel
   const [shiftsResult, settingsResult, snapshotResult] = await Promise.all([
     client
-      .from("shifts")
+      .from("user_shifts")
       .select("*")
       .eq("user_id", userId)
       .gte("shift_date", yearStart)

@@ -275,6 +275,8 @@ const wageyChatStream = createRiverStream<ChatChunk, NextRequest>()
       // Use SUPABASE_DIRECT_URL to bypass auth proxy (identity.tidex.no) for REST API calls
       const token = adapterRequest.headers.get("Authorization")!.substring(7);
       const directUrl = process.env.SUPABASE_DIRECT_URL || process.env.NEXT_PUBLIC_SUPABASE_URL!;
+      console.log("[chat/router] SUPABASE_DIRECT_URL:", process.env.SUPABASE_DIRECT_URL || "NOT SET");
+      console.log("[chat/router] Using URL:", directUrl);
       const supabaseWithToken = createClient(
         directUrl,
         process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
