@@ -272,9 +272,11 @@ const wageyChatStream = createRiverStream<ChatChunk, NextRequest>()
     if (isBearerAuth) {
       // For Bearer token auth (iOS), call the database directly
       // This bypasses the Effect-based auth verification which expects cookies
+      // Use SUPABASE_DIRECT_URL to bypass auth proxy (identity.tidex.no) for REST API calls
       const token = adapterRequest.headers.get("Authorization")!.substring(7);
+      const directUrl = process.env.SUPABASE_DIRECT_URL || process.env.NEXT_PUBLIC_SUPABASE_URL!;
       const supabaseWithToken = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        directUrl,
         process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
         {
           global: {

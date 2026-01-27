@@ -58,10 +58,17 @@ import { defaultLocale, type Locale } from "@/lib/i18n/config";
 /**
  * Create a Supabase client authenticated with a Bearer token.
  * Used for iOS app requests where cookie auth isn't available.
+ *
+ * IMPORTANT: Uses SUPABASE_DIRECT_URL for direct REST API access.
+ * The NEXT_PUBLIC_SUPABASE_URL may point to an auth proxy (e.g., identity.tidex.no)
+ * that only handles authentication, not database REST API calls.
  */
 function createBearerAuthClient(bearerToken: string): SupabaseClient {
+  // Use direct URL for REST API calls (bypasses auth proxy like identity.tidex.no)
+  const directUrl = process.env.SUPABASE_DIRECT_URL || process.env.NEXT_PUBLIC_SUPABASE_URL!;
+
   return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    directUrl,
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
     {
       global: {
