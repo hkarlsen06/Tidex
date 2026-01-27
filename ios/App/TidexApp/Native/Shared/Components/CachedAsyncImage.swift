@@ -4,15 +4,40 @@ import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "ImageCache")
 
+// MARK: - Cached Image Wrapper
+
+/// Wrapper class for UIImage that tracks when it was cached for expiration
+/// Using a class wrapper because NSCache requires reference types
+final class CachedImageWrapper {
+    let image: UIImage
+    let cachedAt: Date
+
+    init(_ image: UIImage) {
+        self.image = image
+        self.cachedAt = Date()
+    }
+
+    /// Check if the cached image has expired
+    /// - Parameter ttl: Time-to-live in seconds
+    /// - Returns: True if the image has expired
+    func isExpired(ttl: TimeInterval) -> Bool {
+        Date().timeIntervalSince(cachedAt) > ttl
+    }
+}
+
 // MARK: - Image Cache
 
 /// Thread-safe image cache with both in-memory and disk persistence
 /// Memory cache (NSCache) provides fast access and auto-evicts under memory pressure
 /// Disk cache provides persistence across app restarts
+/// Images expire after 1 hour to ensure fresh content when users update their profile pictures
 final class ImageCache: @unchecked Sendable {
     static let shared = ImageCache()
 
-    private let memoryCache = NSCache<NSString, UIImage>()
+    /// Time-to-live for cached images (1 hour)
+    private let cacheTTL: TimeInterval = 3600
+
+    private let memoryCache = NSCache<NSString, CachedImageWrapper>()
     private let fileManager = FileManager.default
     private let diskCacheQueue = DispatchQueue(label: "com.tidex.imagecache.disk", qos: .utility)
     private let diskCacheDirectory: URL
@@ -30,12 +55,23 @@ final class ImageCache: @unchecked Sendable {
         try? fileManager.createDirectory(at: diskCacheDirectory, withIntermediateDirectories: true)
     }
 
-    /// Get image from memory cache
+    /// Get image from memory cache if not expired
     func get(for url: URL) -> UIImage? {
-        memoryCache.object(forKey: url.absoluteString as NSString)
+        guard let wrapper = memoryCache.object(forKey: url.absoluteString as NSString) else {
+            return nil
+        }
+
+        // Check if cached image has expired
+        if wrapper.isExpired(ttl: cacheTTL) {
+            logger.debug("🕐 Memory cache EXPIRED for: \(url.lastPathComponent)")
+            memoryCache.removeObject(forKey: url.absoluteString as NSString)
+            return nil
+        }
+
+        return wrapper.image
     }
 
-    /// Get image from disk cache (async)
+    /// Get image from disk cache if not expired (async)
     func getFromDisk(for url: URL) async -> UIImage? {
         await withCheckedContinuation { continuation in
             diskCacheQueue.async { [weak self] in
@@ -51,6 +87,23 @@ final class ImageCache: @unchecked Sendable {
                     logger.debug("💾 Disk cache MISS for: \(url.lastPathComponent)")
                     continuation.resume(returning: nil)
                     return
+                }
+
+                // Check file modification date for expiration
+                do {
+                    let attributes = try self.fileManager.attributesOfItem(atPath: filePath.path)
+                    if let modificationDate = attributes[.modificationDate] as? Date {
+                        let age = Date().timeIntervalSince(modificationDate)
+                        if age > self.cacheTTL {
+                            logger.debug("🕐 Disk cache EXPIRED for: \(url.lastPathComponent)")
+                            // Remove expired file
+                            try? self.fileManager.removeItem(at: filePath)
+                            continuation.resume(returning: nil)
+                            return
+                        }
+                    }
+                } catch {
+                    logger.warning("Failed to check disk cache attributes: \(error.localizedDescription)")
                 }
 
                 if let data = try? Data(contentsOf: filePath),
@@ -71,8 +124,9 @@ final class ImageCache: @unchecked Sendable {
 
     /// Set image in memory cache only
     private func setMemoryCache(_ image: UIImage, for url: URL) {
+        let wrapper = CachedImageWrapper(image)
         let cost = Int(image.size.width * image.size.height * image.scale * 4)
-        memoryCache.setObject(image, forKey: url.absoluteString as NSString, cost: cost)
+        memoryCache.setObject(wrapper, forKey: url.absoluteString as NSString, cost: cost)
     }
 
     /// Set image in both memory and disk cache
@@ -117,6 +171,39 @@ final class ImageCache: @unchecked Sendable {
             guard let self = self else { return }
             try? self.fileManager.removeItem(at: self.diskCacheDirectory)
             try? self.fileManager.createDirectory(at: self.diskCacheDirectory, withIntermediateDirectories: true)
+        }
+    }
+
+    /// Clear expired items from disk cache
+    /// Call this periodically or on app launch to clean up stale entries
+    func clearExpired() {
+        diskCacheQueue.async { [weak self] in
+            guard let self = self else { return }
+
+            guard let files = try? self.fileManager.contentsOfDirectory(
+                at: self.diskCacheDirectory,
+                includingPropertiesForKeys: [.contentModificationDateKey]
+            ) else { return }
+
+            var removedCount = 0
+            for file in files {
+                do {
+                    let attributes = try self.fileManager.attributesOfItem(atPath: file.path)
+                    if let modificationDate = attributes[.modificationDate] as? Date {
+                        let age = Date().timeIntervalSince(modificationDate)
+                        if age > self.cacheTTL {
+                            try self.fileManager.removeItem(at: file)
+                            removedCount += 1
+                        }
+                    }
+                } catch {
+                    // Ignore errors for individual files
+                }
+            }
+
+            if removedCount > 0 {
+                logger.info("🧹 Cleared \(removedCount) expired images from disk cache")
+            }
         }
     }
 

@@ -98,9 +98,15 @@ final class EntitlementService: ObservableObject {
     // MARK: - Tier Computation
 
     /// Compute effective tier = max(storeKitTier, serverTier if not expired)
+    /// Uses the current StoreKit tier from StoreKitManager
     func updateEffectiveTier() {
-        let storeKitTier = StoreKitManager.shared.currentTier
+        updateEffectiveTier(withStoreKitTier: StoreKitManager.shared.currentTier)
+    }
 
+    /// Compute effective tier with an explicit StoreKit tier value.
+    /// Called by StoreKitManager when tier changes to ensure synchronization.
+    /// - Parameter storeKitTier: The current tier from StoreKit
+    func updateEffectiveTier(withStoreKitTier storeKitTier: SubscriptionTier) {
         if let cached = cachedEntitlement, !cached.isExpired {
             // Server cache is valid - use max of StoreKit and server
             effectiveTier = max(storeKitTier, cached.tier)
@@ -113,6 +119,12 @@ final class EntitlementService: ObservableObject {
         }
 
         logger.debug("Effective tier: \(self.effectiveTier.rawValue) (StoreKit=\(storeKitTier.rawValue), server=\(self.cachedEntitlement?.tier.rawValue ?? "none"), expired=\(self.serverTierExpired))")
+    }
+
+    /// Called by StoreKitManager when StoreKit tier changes.
+    /// This ensures EntitlementService always uses the freshest tier value.
+    func handleStoreKitTierChange(_ newTier: SubscriptionTier) {
+        updateEffectiveTier(withStoreKitTier: newTier)
     }
 
     // MARK: - Cache Management

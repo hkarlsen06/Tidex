@@ -172,6 +172,7 @@ final class StoreKitManager: ObservableObject {
 
     /// Update the current StoreKit tier from Transaction.currentEntitlements
     /// This reflects what StoreKit says the user is entitled to, independent of server
+    /// Notifies EntitlementService when tier changes for proper synchronization
     func updateCurrentEntitlements() async {
         var highestTier: SubscriptionTier = .free
 
@@ -186,8 +187,15 @@ final class StoreKitManager: ObservableObject {
             }
         }
 
+        let previousTier = currentTier
         currentTier = highestTier
         logger.debug("StoreKit entitlements updated: tier=\(highestTier.rawValue)")
+
+        // Notify EntitlementService of tier change for proper synchronization
+        // This ensures EntitlementService always uses the freshest tier value
+        if previousTier != highestTier {
+            EntitlementService.shared.handleStoreKitTierChange(highestTier)
+        }
     }
 
     // MARK: - Transaction Listener
@@ -206,11 +214,8 @@ final class StoreKitManager: ObservableObject {
 
                 logger.info("Transaction update received: \(transaction.productID), id=\(transaction.id)")
 
-                // Update local entitlements
+                // Update local entitlements - this also notifies EntitlementService of tier changes
                 await self?.updateCurrentEntitlements()
-                await MainActor.run {
-                    EntitlementService.shared.updateEffectiveTier()
-                }
 
                 // Queue JWS upload even if products aren't loaded
                 // priceDisplay can be nil - server doesn't require it

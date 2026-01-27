@@ -25,6 +25,13 @@ let supabase = SupabaseClient(
 /// Without synchronization, concurrent access could result in:
 /// - Thread A deletes old token, Thread B reads nil, Thread A adds new token
 /// - Corrupted or missing session data during concurrent refresh attempts
+///
+/// Security: Uses `kSecAttrAccessibleWhenUnlockedThisDeviceOnly` which:
+/// - Only allows access when the device is unlocked
+/// - Prevents backup/migration of tokens (more secure)
+/// - Protects against some physical attack vectors
+/// Note: Background refresh won't work when device is locked, which is acceptable
+/// for auth tokens since user interaction is typically required anyway.
 final class KeychainLocalStorage: AuthLocalStorage {
     private let service = APIConfiguration.keychainService
     private let sessionKey = "supabase.auth.session"
@@ -44,10 +51,11 @@ final class KeychainLocalStorage: AuthLocalStorage {
             // Delete existing item first
             SecItemDelete(query as CFDictionary)
 
-            // Add new item
+            // Add new item with enhanced security
+            // WhenUnlockedThisDeviceOnly: Only accessible when unlocked, not backed up
             var newItem = query
             newItem[kSecValueData as String] = value
-            newItem[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
+            newItem[kSecAttrAccessible as String] = kSecAttrAccessibleWhenUnlockedThisDeviceOnly
 
             let status = SecItemAdd(newItem as CFDictionary, nil)
             guard status == errSecSuccess else {

@@ -229,8 +229,91 @@ struct AnyCodable: Codable {
     }
 }
 
+// MARK: - State Structs
+
+/// Groups related users tab state to reduce unnecessary re-renders
+struct UsersTabState {
+    var items: [AdminUserItem] = []
+    var searchQuery: String = ""
+    var isLoading: Bool = false
+    var currentPage: Int = 1
+    var totalCount: Int = 0
+    var hasMore: Bool = false
+    var selected: AdminUserItem?
+}
+
+/// Groups related feedback tab state
+struct FeedbackTabState {
+    var items: [AdminFeedbackItem] = []
+    var isLoading: Bool = false
+    var total: Int = 0
+    var selected: AdminFeedbackItem?
+    var responseText: String = ""
+}
+
+/// Groups related audit log tab state
+struct AuditLogTabState {
+    var entries: [AuditLogEntry] = []
+    var isLoading: Bool = false
+}
+
+/// Groups related SQL tab state
+struct SqlTabState {
+    var query: String = ""
+    var result: [[String: AnyCodable]]?
+    var rowCount: Int = 0
+    var executionTime: Int = 0
+    var isExecuting: Bool = false
+    var error: String?
+}
+
+/// Groups related shares tab state
+struct SharesTabState {
+    var items: [ShiftShareItem] = []
+    var searchQuery: String = ""
+    var isLoading: Bool = false
+    var totalCount: Int = 0
+    var isShowingCreate: Bool = false
+    var showEarnings: Bool = true
+    var isCreating: Bool = false
+    // Owner search
+    var ownerSearch: String = ""
+    var ownerResults: [AdminUserItem] = []
+    var selectedOwner: AdminUserItem?
+    var isSearchingOwner: Bool = false
+    // Viewer search
+    var viewerSearch: String = ""
+    var viewerResults: [AdminUserItem] = []
+    var selectedViewer: AdminUserItem?
+    var isSearchingViewer: Bool = false
+}
+
+/// Groups related notifications tab state
+struct NotificationsTabState {
+    var broadcastHistory: [BroadcastRecord] = []
+    var isLoading: Bool = false
+    // English fields
+    var title: String = ""
+    var body: String = ""
+    var deeplink: String = "tidex://"
+    // Norwegian fields
+    var titleNo: String = ""
+    var bodyNo: String = ""
+    var deeplinkNo: String = ""
+    var target: String = "all"
+    var previewCount: Int = 0
+    var isSending: Bool = false
+    // Specific user targeting
+    var userSearch: String = ""
+    var userSearchResults: [AdminUserItem] = []
+    var selectedUsers: [AdminUserItem] = []
+    var isSearchingUsers: Bool = false
+}
+
 // MARK: - View Model
 
+/// AdminSettingsViewModel uses grouped state structs to reduce re-renders.
+/// When a property in one state group changes, only observers of that group re-evaluate.
 @MainActor
 final class AdminSettingsViewModel: ObservableObject {
 
@@ -242,80 +325,228 @@ final class AdminSettingsViewModel: ObservableObject {
     @Published var successMessage: String?
     @Published var isPerformingAction: Bool = false
 
-    // MARK: - Users Tab State
+    // MARK: - Grouped Tab States
 
-    @Published var users: [AdminUserItem] = []
-    @Published var usersSearchQuery: String = ""
-    @Published var usersIsLoading: Bool = false
-    @Published var usersCurrentPage: Int = 1
-    @Published var usersTotalCount: Int = 0
-    @Published var usersHasMore: Bool = false
-    @Published var selectedUser: AdminUserItem?
+    @Published var usersState = UsersTabState()
+    @Published var feedbackState = FeedbackTabState()
+    @Published var auditLogState = AuditLogTabState()
+    @Published var sqlState = SqlTabState()
+    @Published var sharesState = SharesTabState()
+    @Published var notificationsState = NotificationsTabState()
 
+    // MARK: - Legacy Computed Properties (for backwards compatibility with View)
 
-    // MARK: - Feedback Tab State
+    // Users
+    var users: [AdminUserItem] {
+        get { usersState.items }
+        set { usersState.items = newValue }
+    }
+    var usersSearchQuery: String {
+        get { usersState.searchQuery }
+        set { usersState.searchQuery = newValue }
+    }
+    var usersIsLoading: Bool {
+        get { usersState.isLoading }
+        set { usersState.isLoading = newValue }
+    }
+    var usersCurrentPage: Int {
+        get { usersState.currentPage }
+        set { usersState.currentPage = newValue }
+    }
+    var usersTotalCount: Int {
+        get { usersState.totalCount }
+        set { usersState.totalCount = newValue }
+    }
+    var usersHasMore: Bool {
+        get { usersState.hasMore }
+        set { usersState.hasMore = newValue }
+    }
+    var selectedUser: AdminUserItem? {
+        get { usersState.selected }
+        set { usersState.selected = newValue }
+    }
 
-    @Published var feedbackItems: [AdminFeedbackItem] = []
-    @Published var feedbackIsLoading: Bool = false
-    @Published var feedbackTotal: Int = 0
-    @Published var selectedFeedback: AdminFeedbackItem?
-    @Published var feedbackResponse: String = ""
+    // Feedback
+    var feedbackItems: [AdminFeedbackItem] {
+        get { feedbackState.items }
+        set { feedbackState.items = newValue }
+    }
+    var feedbackIsLoading: Bool {
+        get { feedbackState.isLoading }
+        set { feedbackState.isLoading = newValue }
+    }
+    var feedbackTotal: Int {
+        get { feedbackState.total }
+        set { feedbackState.total = newValue }
+    }
+    var selectedFeedback: AdminFeedbackItem? {
+        get { feedbackState.selected }
+        set { feedbackState.selected = newValue }
+    }
+    var feedbackResponse: String {
+        get { feedbackState.responseText }
+        set { feedbackState.responseText = newValue }
+    }
 
-    // MARK: - Audit Log Tab State
+    // Audit Log
+    var auditLogEntries: [AuditLogEntry] {
+        get { auditLogState.entries }
+        set { auditLogState.entries = newValue }
+    }
+    var auditLogIsLoading: Bool {
+        get { auditLogState.isLoading }
+        set { auditLogState.isLoading = newValue }
+    }
 
-    @Published var auditLogEntries: [AuditLogEntry] = []
-    @Published var auditLogIsLoading: Bool = false
+    // SQL
+    var sqlQuery: String {
+        get { sqlState.query }
+        set { sqlState.query = newValue }
+    }
+    var sqlResult: [[String: AnyCodable]]? {
+        get { sqlState.result }
+        set { sqlState.result = newValue }
+    }
+    var sqlRowCount: Int {
+        get { sqlState.rowCount }
+        set { sqlState.rowCount = newValue }
+    }
+    var sqlExecutionTime: Int {
+        get { sqlState.executionTime }
+        set { sqlState.executionTime = newValue }
+    }
+    var sqlIsExecuting: Bool {
+        get { sqlState.isExecuting }
+        set { sqlState.isExecuting = newValue }
+    }
+    var sqlError: String? {
+        get { sqlState.error }
+        set { sqlState.error = newValue }
+    }
 
-    // MARK: - SQL Tab State
+    // Shares
+    var shares: [ShiftShareItem] {
+        get { sharesState.items }
+        set { sharesState.items = newValue }
+    }
+    var sharesSearchQuery: String {
+        get { sharesState.searchQuery }
+        set { sharesState.searchQuery = newValue }
+    }
+    var sharesIsLoading: Bool {
+        get { sharesState.isLoading }
+        set { sharesState.isLoading = newValue }
+    }
+    var sharesTotalCount: Int {
+        get { sharesState.totalCount }
+        set { sharesState.totalCount = newValue }
+    }
+    var isShowingCreateShare: Bool {
+        get { sharesState.isShowingCreate }
+        set { sharesState.isShowingCreate = newValue }
+    }
+    var createShareShowEarnings: Bool {
+        get { sharesState.showEarnings }
+        set { sharesState.showEarnings = newValue }
+    }
+    var isCreatingShare: Bool {
+        get { sharesState.isCreating }
+        set { sharesState.isCreating = newValue }
+    }
+    var createShareOwnerSearch: String {
+        get { sharesState.ownerSearch }
+        set { sharesState.ownerSearch = newValue }
+    }
+    var createShareOwnerResults: [AdminUserItem] {
+        get { sharesState.ownerResults }
+        set { sharesState.ownerResults = newValue }
+    }
+    var createShareSelectedOwner: AdminUserItem? {
+        get { sharesState.selectedOwner }
+        set { sharesState.selectedOwner = newValue }
+    }
+    var isSearchingOwner: Bool {
+        get { sharesState.isSearchingOwner }
+        set { sharesState.isSearchingOwner = newValue }
+    }
+    var createShareViewerSearch: String {
+        get { sharesState.viewerSearch }
+        set { sharesState.viewerSearch = newValue }
+    }
+    var createShareViewerResults: [AdminUserItem] {
+        get { sharesState.viewerResults }
+        set { sharesState.viewerResults = newValue }
+    }
+    var createShareSelectedViewer: AdminUserItem? {
+        get { sharesState.selectedViewer }
+        set { sharesState.selectedViewer = newValue }
+    }
+    var isSearchingViewer: Bool {
+        get { sharesState.isSearchingViewer }
+        set { sharesState.isSearchingViewer = newValue }
+    }
 
-    @Published var sqlQuery: String = ""
-    @Published var sqlResult: [[String: AnyCodable]]?
-    @Published var sqlRowCount: Int = 0
-    @Published var sqlExecutionTime: Int = 0
-    @Published var sqlIsExecuting: Bool = false
-    @Published var sqlError: String?
-
-    // MARK: - Shares Tab State
-
-    @Published var shares: [ShiftShareItem] = []
-    @Published var sharesSearchQuery: String = ""
-    @Published var sharesIsLoading: Bool = false
-    @Published var sharesTotalCount: Int = 0
-    @Published var isShowingCreateShare: Bool = false
-    @Published var createShareShowEarnings: Bool = true
-    @Published var isCreatingShare: Bool = false
-    // Owner search
-    @Published var createShareOwnerSearch: String = ""
-    @Published var createShareOwnerResults: [AdminUserItem] = []
-    @Published var createShareSelectedOwner: AdminUserItem?
-    @Published var isSearchingOwner: Bool = false
-    // Viewer search
-    @Published var createShareViewerSearch: String = ""
-    @Published var createShareViewerResults: [AdminUserItem] = []
-    @Published var createShareSelectedViewer: AdminUserItem?
-    @Published var isSearchingViewer: Bool = false
-
-    // MARK: - Notifications Tab State
-
-    @Published var broadcastHistory: [BroadcastRecord] = []
-    @Published var notificationsIsLoading: Bool = false
-    // English fields
-    @Published var notificationTitle: String = ""
-    @Published var notificationBody: String = ""
-    @Published var notificationDeeplink: String = "tidex://"
-    // Norwegian fields
-    @Published var notificationTitleNo: String = ""
-    @Published var notificationBodyNo: String = ""
-    @Published var notificationDeeplinkNo: String = ""
-    @Published var notificationTarget: String = "all"
-    @Published var previewCount: Int = 0
-    @Published var isSendingNotification: Bool = false
-
-    // Specific user targeting
-    @Published var notificationUserSearch: String = ""
-    @Published var notificationUserSearchResults: [AdminUserItem] = []
-    @Published var notificationSelectedUsers: [AdminUserItem] = []
-    @Published var isSearchingNotificationUsers: Bool = false
+    // Notifications
+    var broadcastHistory: [BroadcastRecord] {
+        get { notificationsState.broadcastHistory }
+        set { notificationsState.broadcastHistory = newValue }
+    }
+    var notificationsIsLoading: Bool {
+        get { notificationsState.isLoading }
+        set { notificationsState.isLoading = newValue }
+    }
+    var notificationTitle: String {
+        get { notificationsState.title }
+        set { notificationsState.title = newValue }
+    }
+    var notificationBody: String {
+        get { notificationsState.body }
+        set { notificationsState.body = newValue }
+    }
+    var notificationDeeplink: String {
+        get { notificationsState.deeplink }
+        set { notificationsState.deeplink = newValue }
+    }
+    var notificationTitleNo: String {
+        get { notificationsState.titleNo }
+        set { notificationsState.titleNo = newValue }
+    }
+    var notificationBodyNo: String {
+        get { notificationsState.bodyNo }
+        set { notificationsState.bodyNo = newValue }
+    }
+    var notificationDeeplinkNo: String {
+        get { notificationsState.deeplinkNo }
+        set { notificationsState.deeplinkNo = newValue }
+    }
+    var notificationTarget: String {
+        get { notificationsState.target }
+        set { notificationsState.target = newValue }
+    }
+    var previewCount: Int {
+        get { notificationsState.previewCount }
+        set { notificationsState.previewCount = newValue }
+    }
+    var isSendingNotification: Bool {
+        get { notificationsState.isSending }
+        set { notificationsState.isSending = newValue }
+    }
+    var notificationUserSearch: String {
+        get { notificationsState.userSearch }
+        set { notificationsState.userSearch = newValue }
+    }
+    var notificationUserSearchResults: [AdminUserItem] {
+        get { notificationsState.userSearchResults }
+        set { notificationsState.userSearchResults = newValue }
+    }
+    var notificationSelectedUsers: [AdminUserItem] {
+        get { notificationsState.selectedUsers }
+        set { notificationsState.selectedUsers = newValue }
+    }
+    var isSearchingNotificationUsers: Bool {
+        get { notificationsState.isSearchingUsers }
+        set { notificationsState.isSearchingUsers = newValue }
+    }
 
     // MARK: - Private Properties
 
