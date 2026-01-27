@@ -286,7 +286,7 @@ const wageyChatStream = createRiverStream<ChatChunk, NextRequest>()
       // Get subscription and profile data
       const [subResult, profileResult] = await Promise.all([
         supabaseWithToken.from("subscriptions").select("*").eq("user_id", userId).maybeSingle(),
-        supabaseWithToken.from("profiles").select("id, before_paywall, wagey_invocations").eq("id", userId).single(),
+        supabaseWithToken.from("profiles").select("id, before_paywall, wagey_invocations, created_at, updated_at").eq("id", userId).single(),
       ]);
 
       const subscription = subResult.data;
