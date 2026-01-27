@@ -65,6 +65,7 @@ enum SSEStreamParser {
         AsyncThrowingStream { continuation in
             let task = Task {
                 var buffer = ""
+                var byteBuffer = Data()
                 let decoder = JSONDecoder()
 
                 do {
@@ -72,10 +73,17 @@ enum SSEStreamParser {
                         // Check for task cancellation
                         try Task.checkCancellation()
 
-                        // Convert byte to character and append to buffer
-                        // Unicode.Scalar(UInt8) is non-failable since all UInt8 values are valid
-                        let scalar = Unicode.Scalar(byte)
-                        buffer.append(Character(scalar))
+                        // Accumulate bytes and decode as UTF-8 when we have valid data
+                        byteBuffer.append(byte)
+
+                        // Try to decode the byte buffer as UTF-8
+                        // This handles multi-byte UTF-8 characters correctly
+                        if let string = String(data: byteBuffer, encoding: .utf8) {
+                            buffer.append(string)
+                            byteBuffer.removeAll()
+                        }
+                        // If decoding fails, we have an incomplete multi-byte sequence
+                        // Keep accumulating bytes until we have a complete sequence
 
                         // Process complete events in the buffer
                         while let eventRange = buffer.range(of: eventTerminator) {

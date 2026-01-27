@@ -1015,6 +1015,9 @@ enum AuthStrings {
         "wagey.tool.draftRecurring": "Planlegger gjentagende vakter...",
         "wagey.tool.confirmRecurring": "Oppretter gjentagende vakter...",
         "wagey.tool.manageRecurring": "Administrerer gjentagende vakter...",
+        "wagey.tool.manageExclusion": "Håndterer unntak...",
+        "wagey.tool.getWageInfo": "Henter lønnsinformasjon...",
+        "wagey.tool.calculateEarnings": "Beregner inntekt...",
         "wagey.tool.unknown": "Arbeider...",
         "wagey.tool.success": "Ferdig",
         "wagey.tool.failed": "Feilet"
@@ -2023,6 +2026,9 @@ enum AuthStrings {
         "wagey.tool.draftRecurring": "Planning recurring shifts...",
         "wagey.tool.confirmRecurring": "Creating recurring shifts...",
         "wagey.tool.manageRecurring": "Managing recurring shifts...",
+        "wagey.tool.manageExclusion": "Managing exclusion...",
+        "wagey.tool.getWageInfo": "Getting wage info...",
+        "wagey.tool.calculateEarnings": "Calculating earnings...",
         "wagey.tool.unknown": "Working...",
         "wagey.tool.success": "Done",
         "wagey.tool.failed": "Failed"

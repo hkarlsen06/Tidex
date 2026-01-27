@@ -23,13 +23,25 @@ struct ToolStatusView: View {
     }
 
     /// Map tool names to user-friendly display strings
+    /// Tool names match those defined in lib/chat/tools.ts
     private var toolNameMapping: [String: String] {
         [
+            // Shift management
             "manage_shift": localization.string("wagey.tool.manageShift"),
-            "get_shifts": localization.string("wagey.tool.getShifts"),
-            "get_settings": localization.string("wagey.tool.getSettings"),
-            "update_settings": localization.string("wagey.tool.updateSettings"),
-            "get_stats": localization.string("wagey.tool.getStats")
+            "query_shifts": localization.string("wagey.tool.queryShifts"),
+            "calculate_wages": localization.string("wagey.tool.calculateWages"),
+
+            // Recurring shifts
+            "draft_recurring_shift": localization.string("wagey.tool.draftRecurring"),
+            "confirm_recurring_shift": localization.string("wagey.tool.confirmRecurring"),
+            "manage_recurring_shift": localization.string("wagey.tool.manageRecurring"),
+            "manage_recurring_exclusion": localization.string("wagey.tool.manageExclusion"),
+
+            // Statistics and settings
+            "get_statistics": localization.string("wagey.tool.getStatistics"),
+            "manage_settings": localization.string("wagey.tool.manageSettings"),
+            "get_wage_info": localization.string("wagey.tool.getWageInfo"),
+            "calculate_earnings": localization.string("wagey.tool.calculateEarnings")
         ]
     }
 
