@@ -814,7 +814,7 @@ This same fix should be applied to ALL ViewModels with Combine subscriptions:
 
 ### TASK-010: Track and Cancel Background Tasks in AppCoordinator
 
-**Status:** PENDING
+**Status:** DONE (2026-01-27)
 
 **Severity:** HIGH - Untracked tasks can mutate state after deallocation
 
@@ -1987,6 +1987,27 @@ Key changes:
 
 ---
 
+### TASK-010: Track and Cancel Background Tasks in AppCoordinator
+
+**Status:** DONE (2026-01-27)
+
+**Severity:** HIGH - Untracked tasks can mutate state after deallocation
+
+**Fix Applied:**
+Added tracking and cancellation for background tasks in AppCoordinator. Key changes:
+1. Added `backgroundTasks: [Task<Void, Never>]` array to track untracked background tasks
+2. Modified `checkTermsVersionInBackground()` to store its task and check `Task.isCancelled` after async operation
+3. Added `cancelAllBackgroundTasks()` private method to cancel and clear all tracked tasks
+4. Call `cancelAllBackgroundTasks()` at the start of `performSignOut()` to prevent stale state updates after sign out
+5. Cancel all tracked tasks in deinit for completeness
+
+This prevents the scenario where a user signs out while the terms version check is in progress, which could previously cause state to be updated to `.termsRequired` after the user had already signed out.
+
+**Files Modified:**
+- `ios/App/TidexApp/Native/Core/AppCoordinator.swift`
+
+---
+
 ## Notes
 
 - Each task should be completed and committed separately
@@ -1996,5 +2017,5 @@ Key changes:
 
 **Last Updated:** 2026-01-27
 **Total Tasks:** 22
-**Completed:** 9
-**Remaining:** 13
+**Completed:** 10
+**Remaining:** 12

@@ -91,6 +91,7 @@ final class AppCoordinator: ObservableObject {
 
     private var authStateTask: Task<Void, Never>?
     private var initialSessionTimeoutTask: Task<Void, Never>?
+    private var backgroundTasks: [Task<Void, Never>] = []
     private var didReceiveInitialSession = false
     private var isUpdatingAuthState = false
 
@@ -111,6 +112,7 @@ final class AppCoordinator: ObservableObject {
     deinit {
         authStateTask?.cancel()
         initialSessionTimeoutTask?.cancel()
+        backgroundTasks.forEach { $0.cancel() }
     }
 
     // MARK: - Initial Session Check
@@ -286,11 +288,12 @@ final class AppCoordinator: ObservableObject {
     /// Background check for terms version update
     /// Fetches latest version from API and transitions to termsRequired if needed
     private func checkTermsVersionInBackground(termsAcceptedAt: String?) {
-        Task { [weak self] in
+        let task = Task { [weak self] in
             // Fetch latest terms version from API (this may take time on slow networks)
             let needsReAcceptance = await TermsVersion.needsTermsReAcceptanceAsync(termsAcceptedAt)
 
-            guard let self = self else { return }
+            // Check cancellation after async operation to avoid stale state updates
+            guard let self = self, !Task.isCancelled else { return }
 
             // Only transition if we're still authenticated and terms are actually needed
             if needsReAcceptance && self.appState == .authenticated {
@@ -298,6 +301,14 @@ final class AppCoordinator: ObservableObject {
                 self.appState = .termsRequired
             }
         }
+        backgroundTasks.append(task)
+    }
+
+    /// Cancel all tracked background tasks
+    /// Called during sign out to prevent stale state updates
+    private func cancelAllBackgroundTasks() {
+        backgroundTasks.forEach { $0.cancel() }
+        backgroundTasks.removeAll()
     }
 
     /// Load onboarding completion state from user metadata
@@ -496,6 +507,9 @@ final class AppCoordinator: ObservableObject {
     /// Internal sign out implementation
     /// - Parameter global: If true, signs out from all devices; if false, only this device
     private func performSignOut(global: Bool) async {
+        // Cancel all tracked background tasks to prevent stale state updates
+        cancelAllBackgroundTasks()
+
         // Clear widget storage before sign out
         NativeWidgetStorage.clearWidgetStorage()
         NativeWidgetStorage.clearFriendWidgetStorage()
