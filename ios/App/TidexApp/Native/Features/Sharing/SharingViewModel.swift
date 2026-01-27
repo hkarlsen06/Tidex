@@ -181,6 +181,23 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
         monthContext.goToCurrentMonth()
     }
 
+    /// Wait for sharers to be loaded (used for deep link handling)
+    /// Returns when sharers are loaded or timeout is reached (3 seconds max)
+    func waitForSharersLoaded() async {
+        // If already loaded, return immediately
+        guard sharers.isEmpty else { return }
+
+        // Poll every 100ms until sharers are loaded (max 3 seconds)
+        // We need to wait for loading to START and then COMPLETE
+        let maxAttempts = 30
+        for _ in 0..<maxAttempts {
+            try? await Task.sleep(nanoseconds: 100_000_000) // 100ms
+            if !sharers.isEmpty {
+                return
+            }
+        }
+    }
+
     // MARK: - Public Methods
 
     /// Load initial data (sharers list)

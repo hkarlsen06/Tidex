@@ -192,21 +192,7 @@ final class ManageSharingViewModel: ObservableObject {
         guard let index = friends.firstIndex(where: { $0.id == friendId }),
               let iShareWith = friends[index].iShareWith else { return }
 
-        let updatedIShareWith = Friend.IShareWith(
-            showEarningsToThem: showEarnings,
-            sharedAt: iShareWith.sharedAt
-        )
-
-        friends[index] = Friend(
-            id: friends[index].id,
-            email: friends[index].email,
-            phone: friends[index].phone,
-            firstName: friends[index].firstName,
-            profilePictureUrl: friends[index].profilePictureUrl,
-            oauthAvatarUrl: friends[index].oauthAvatarUrl,
-            sharesWithMe: friends[index].sharesWithMe,
-            iShareWith: updatedIShareWith
-        )
+        friends[index] = friends[index].with(iShareWith: iShareWith.with(showEarningsToThem: showEarnings))
     }
 
     // MARK: - Toggle Blocked Status
@@ -246,23 +232,7 @@ final class ManageSharingViewModel: ObservableObject {
         guard let index = friends.firstIndex(where: { $0.id == friendId }),
               let sharesWithMe = friends[index].sharesWithMe else { return }
 
-        let updatedSharesWithMe = Friend.SharesWithMe(
-            blocked: blocked,
-            showEarningsToMe: sharesWithMe.showEarningsToMe,
-            sharedAt: sharesWithMe.sharedAt,
-            notificationFrequency: sharesWithMe.notificationFrequency
-        )
-
-        friends[index] = Friend(
-            id: friends[index].id,
-            email: friends[index].email,
-            phone: friends[index].phone,
-            firstName: friends[index].firstName,
-            profilePictureUrl: friends[index].profilePictureUrl,
-            oauthAvatarUrl: friends[index].oauthAvatarUrl,
-            sharesWithMe: updatedSharesWithMe,
-            iShareWith: friends[index].iShareWith
-        )
+        friends[index] = friends[index].with(sharesWithMe: sharesWithMe.with(blocked: blocked))
     }
 
     // MARK: - Toggle Muted Status
@@ -298,24 +268,8 @@ final class ManageSharingViewModel: ObservableObject {
         guard let index = friends.firstIndex(where: { $0.id == friendId }),
               let sharesWithMe = friends[index].sharesWithMe else { return }
 
-        let newFrequency = muted ? "muted" : "instant"
-        let updatedSharesWithMe = Friend.SharesWithMe(
-            blocked: sharesWithMe.blocked,
-            showEarningsToMe: sharesWithMe.showEarningsToMe,
-            sharedAt: sharesWithMe.sharedAt,
-            notificationFrequency: newFrequency
-        )
-
-        friends[index] = Friend(
-            id: friends[index].id,
-            email: friends[index].email,
-            phone: friends[index].phone,
-            firstName: friends[index].firstName,
-            profilePictureUrl: friends[index].profilePictureUrl,
-            oauthAvatarUrl: friends[index].oauthAvatarUrl,
-            sharesWithMe: updatedSharesWithMe,
-            iShareWith: friends[index].iShareWith
-        )
+        let newFrequency: NotificationFrequency = muted ? .muted : .instant
+        friends[index] = friends[index].with(sharesWithMe: sharesWithMe.with(notificationFrequency: newFrequency))
     }
 
     // MARK: - Remove Share
@@ -353,16 +307,7 @@ final class ManageSharingViewModel: ObservableObject {
 
         // If they also share with me, just remove iShareWith
         if friend.sharesWithMe != nil {
-            friends[index] = Friend(
-                id: friend.id,
-                email: friend.email,
-                phone: friend.phone,
-                firstName: friend.firstName,
-                profilePictureUrl: friend.profilePictureUrl,
-                oauthAvatarUrl: friend.oauthAvatarUrl,
-                sharesWithMe: friend.sharesWithMe,
-                iShareWith: nil
-            )
+            friends[index] = friend.with(iShareWith: nil)
         } else {
             // Otherwise remove the friend entirely
             friends.remove(at: index)
@@ -404,16 +349,7 @@ final class ManageSharingViewModel: ObservableObject {
 
         // If I also share with them, just remove sharesWithMe
         if friend.iShareWith != nil {
-            friends[index] = Friend(
-                id: friend.id,
-                email: friend.email,
-                phone: friend.phone,
-                firstName: friend.firstName,
-                profilePictureUrl: friend.profilePictureUrl,
-                oauthAvatarUrl: friend.oauthAvatarUrl,
-                sharesWithMe: nil,
-                iShareWith: friend.iShareWith
-            )
+            friends[index] = friend.with(sharesWithMe: nil)
         } else {
             // Otherwise remove the friend entirely
             friends.remove(at: index)
@@ -465,22 +401,12 @@ final class ManageSharingViewModel: ObservableObject {
     private func applyOptimisticShareBack(friendId: String) {
         guard let index = friends.firstIndex(where: { $0.id == friendId }) else { return }
 
-        let friend = friends[index]
         let newIShareWith = Friend.IShareWith(
             showEarningsToThem: false,
             sharedAt: ISO8601DateFormatter().string(from: Date())
         )
 
-        friends[index] = Friend(
-            id: friend.id,
-            email: friend.email,
-            phone: friend.phone,
-            firstName: friend.firstName,
-            profilePictureUrl: friend.profilePictureUrl,
-            oauthAvatarUrl: friend.oauthAvatarUrl,
-            sharesWithMe: friend.sharesWithMe,
-            iShareWith: newIShareWith
-        )
+        friends[index] = friends[index].with(iShareWith: newIShareWith)
     }
 
     private func revertOptimisticShareBack(originalFriend: Friend) {

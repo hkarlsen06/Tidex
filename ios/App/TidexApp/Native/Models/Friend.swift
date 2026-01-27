@@ -1,5 +1,14 @@
 import Foundation
 
+// MARK: - Notification Frequency
+
+/// How often the user wants notifications from a sharer
+enum NotificationFrequency: String, Codable, Equatable {
+    case instant
+    case summary
+    case muted
+}
+
 // MARK: - Friend (Bidirectional Share Relationship)
 
 /// A unified friend entry combining both directions of sharing:
@@ -29,11 +38,21 @@ struct Friend: Codable, Identifiable, Equatable {
         /// When they started sharing with me (ISO date string)
         let sharedAt: String
         /// How often I want notifications from this sharer
-        let notificationFrequency: String // "instant" | "summary" | "muted"
+        let notificationFrequency: NotificationFrequency
 
         /// Whether notifications from this sharer are muted
         var isMuted: Bool {
-            notificationFrequency == "muted"
+            notificationFrequency == .muted
+        }
+
+        /// Create a copy with updated blocked status
+        func with(blocked: Bool) -> SharesWithMe {
+            SharesWithMe(blocked: blocked, showEarningsToMe: showEarningsToMe, sharedAt: sharedAt, notificationFrequency: notificationFrequency)
+        }
+
+        /// Create a copy with updated notification frequency
+        func with(notificationFrequency: NotificationFrequency) -> SharesWithMe {
+            SharesWithMe(blocked: blocked, showEarningsToMe: showEarningsToMe, sharedAt: sharedAt, notificationFrequency: notificationFrequency)
         }
     }
 
@@ -42,6 +61,11 @@ struct Friend: Codable, Identifiable, Equatable {
         let showEarningsToThem: Bool
         /// When I started sharing with them (ISO date string)
         let sharedAt: String
+
+        /// Create a copy with updated earnings visibility
+        func with(showEarningsToThem: Bool) -> IShareWith {
+            IShareWith(showEarningsToThem: showEarningsToThem, sharedAt: sharedAt)
+        }
     }
 
     // MARK: - Computed Properties
@@ -112,6 +136,36 @@ struct Friend: Codable, Identifiable, Equatable {
     /// Only they share with me (I can see theirs, but they can't see mine)
     var isIncomingOnly: Bool {
         sharesWithMe != nil && iShareWith == nil
+    }
+
+    // MARK: - Copy-With Methods (for optimistic updates)
+
+    /// Create a copy with updated sharesWithMe
+    func with(sharesWithMe: SharesWithMe?) -> Friend {
+        Friend(
+            id: id,
+            email: email,
+            phone: phone,
+            firstName: firstName,
+            profilePictureUrl: profilePictureUrl,
+            oauthAvatarUrl: oauthAvatarUrl,
+            sharesWithMe: sharesWithMe,
+            iShareWith: iShareWith
+        )
+    }
+
+    /// Create a copy with updated iShareWith
+    func with(iShareWith: IShareWith?) -> Friend {
+        Friend(
+            id: id,
+            email: email,
+            phone: phone,
+            firstName: firstName,
+            profilePictureUrl: profilePictureUrl,
+            oauthAvatarUrl: oauthAvatarUrl,
+            sharesWithMe: sharesWithMe,
+            iShareWith: iShareWith
+        )
     }
 
     // MARK: - Helpers

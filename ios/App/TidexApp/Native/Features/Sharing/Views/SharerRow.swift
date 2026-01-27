@@ -69,32 +69,12 @@ struct SharerRow: View {
         .buttonStyle(PlainButtonStyle())
     }
 
-    @ViewBuilder
     private var avatarView: some View {
-        if let urlString = sharer.avatarUrl, let url = URL(string: urlString) {
-            CachedAsyncImage(url: url) { image in
-                image
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .frame(width: 44, height: 44)
-                    .clipShape(Circle())
-            } placeholder: {
-                initialsAvatar
-            }
-        } else {
-            initialsAvatar
-        }
-    }
-
-    private var initialsAvatar: some View {
-        Circle()
-            .fill(Color.tidexBlue.opacity(0.2))
-            .frame(width: 44, height: 44)
-            .overlay(
-                Text(sharer.initials)
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.tidexBlue)
-            )
+        AvatarView(
+            url: sharer.avatarUrl,
+            initials: sharer.initials,
+            size: AvatarView.Size.large
+        )
     }
 
     /// Skeleton placeholder for shift preview while refreshing
@@ -132,84 +112,77 @@ struct SharerRow: View {
 
 /// Compact preview of a shift (shown under sharer info)
 /// Matches the Next.js SharedUserShiftPreview component behavior
+/// Uses TimelineView for efficient per-second updates only when visible
 private struct ShiftPreviewCard: View {
     let shift: SharedShiftData
     let status: ShiftPreviewStatus
 
     @Environment(\.localization) private var localization
 
-    // Real-time status tracking
-    @State private var currentStatus: ShiftPreviewStatus
-    @State private var progress: Double = 0
-    @State private var secondsUntilEnd: Int = 0
-    @State private var relativeText: String = ""
-    @State private var timer: Timer?
-
-    init(shift: SharedShiftData, status: ShiftPreviewStatus) {
-        self.shift = shift
-        self.status = status
-        self._currentStatus = State(initialValue: status)
-    }
-
     var body: some View {
-        HStack(spacing: 12) {
-            // Date and time info
-            VStack(alignment: .leading, spacing: 2) {
-                Text(formattedDate)
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(.tidexTextPrimary)
+        TimelineView(.periodic(from: .now, by: 1)) { context in
+            let computed = computeStatus(at: context.date)
 
-                Text(formattedTimeRange)
-                    .font(.system(size: 13))
-                    .foregroundColor(.tidexTextMuted)
-            }
+            HStack(spacing: 12) {
+                // Date and time info
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(formattedDate)
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.tidexTextPrimary)
 
-            Spacer()
-
-            // Status badge
-            statusBadge
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, Spacing.sm)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color.tidexSurfaceSecondary.opacity(0.5))
-        )
-        .overlay(
-            // Progress bar for active shifts
-            GeometryReader { geometry in
-                if currentStatus == .active {
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color.green.opacity(0.1))
-                        .frame(width: geometry.size.width * progress / 100)
-                        .animation(.linear(duration: 1), value: progress)
+                    Text(formattedTimeRange)
+                        .font(.system(size: 13))
+                        .foregroundColor(.tidexTextMuted)
                 }
+
+                Spacer()
+
+                // Status badge
+                statusBadge(computed: computed)
             }
-        )
-        .onAppear {
-            startTimer()
-        }
-        .onDisappear {
-            timer?.invalidate()
-            timer = nil
+            .padding(.horizontal, 12)
+            .padding(.vertical, Spacing.sm)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color.tidexSurfaceSecondary.opacity(0.5))
+            )
+            .overlay(
+                // Progress bar for active shifts
+                GeometryReader { geometry in
+                    if computed.status == .active {
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.green.opacity(0.1))
+                            .frame(width: geometry.size.width * computed.progress / 100)
+                            .animation(.linear(duration: 1), value: computed.progress)
+                    }
+                }
+            )
         }
     }
 
-    private func startTimer() {
-        updateStatus()
-        timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
-            updateStatus()
-        }
+    /// Computed status values for a given point in time
+    private struct ComputedStatus {
+        let status: ShiftPreviewStatus
+        let progress: Double
+        let secondsUntilEnd: Int
+        let relativeText: String
     }
 
-    private func updateStatus() {
-        let now = Date()
-        guard let shiftDate = Date.fromISODateString(shift.shift_date) else { return }
+    /// Compute current status, progress, and relative time for a given date
+    private func computeStatus(at now: Date) -> ComputedStatus {
+        var currentStatus = status
+        var progress: Double = 0
+        var secondsUntilEnd: Int = 0
+        guard let shiftDate = Date.fromISODateString(shift.shift_date) else {
+            return ComputedStatus(status: status, progress: 0, secondsUntilEnd: 0, relativeText: "")
+        }
 
         let startComponents = shift.start_time.split(separator: ":").compactMap { Int($0) }
         let endComponents = shift.end_time.split(separator: ":").compactMap { Int($0) }
 
-        guard startComponents.count >= 2, endComponents.count >= 2 else { return }
+        guard startComponents.count >= 2, endComponents.count >= 2 else {
+            return ComputedStatus(status: status, progress: 0, secondsUntilEnd: 0, relativeText: "")
+        }
 
         let start = Calendar.current.date(
             bySettingHour: startComponents[0],
@@ -230,7 +203,7 @@ private struct ShiftPreviewCard: View {
             end = Calendar.current.date(byAdding: .day, value: 1, to: end) ?? end
         }
 
-        // Update status
+        // Compute status
         if now >= start && now <= end {
             currentStatus = .active
             let totalDuration = end.timeIntervalSince(start)
@@ -247,8 +220,14 @@ private struct ShiftPreviewCard: View {
             secondsUntilEnd = 0
         }
 
-        // Update relative time text to trigger re-render
-        relativeText = computeRelativeTimeText()
+        let relativeText = computeRelativeTimeText(at: now, shiftStart: start, shiftEnd: end)
+
+        return ComputedStatus(
+            status: currentStatus,
+            progress: progress,
+            secondsUntilEnd: secondsUntilEnd,
+            relativeText: relativeText
+        )
     }
 
     /// Format date: "Mandag · 15. januar" (Norwegian) or "Monday · 15 January" (English)
@@ -283,15 +262,15 @@ private struct ShiftPreviewCard: View {
     }
 
     /// Check if we're in the final countdown (last 60 seconds of active shift)
-    private var isCountingDown: Bool {
-        currentStatus == .active && secondsUntilEnd <= 60 && secondsUntilEnd > 0
+    private func isCountingDown(_ computed: ComputedStatus) -> Bool {
+        computed.status == .active && computed.secondsUntilEnd <= 60 && computed.secondsUntilEnd > 0
     }
 
     @ViewBuilder
-    private var statusBadge: some View {
-        if isCountingDown {
+    private func statusBadge(computed: ComputedStatus) -> some View {
+        if isCountingDown(computed) {
             // Show countdown number for final 60 seconds (matches Next.js behavior)
-            Text("\(secondsUntilEnd)")
+            Text("\(computed.secondsUntilEnd)")
                 .font(.system(size: 16, weight: .medium))
                 .monospacedDigit()
                 .frame(minWidth: 40)
@@ -303,62 +282,36 @@ private struct ShiftPreviewCard: View {
                 )
                 .foregroundColor(.green)
                 .contentTransition(.numericText())
-                .animation(.default, value: secondsUntilEnd)
+                .animation(.default, value: computed.secondsUntilEnd)
         } else {
-            Text(statusText)
+            Text(statusText(computed: computed))
                 .font(.system(size: 12, weight: .medium))
                 .monospacedDigit()
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
                 .background(
                     RoundedRectangle(cornerRadius: 8)
-                        .fill(statusBackgroundColor)
+                        .fill(statusBackgroundColor(for: computed.status))
                 )
-                .foregroundColor(statusTextColor)
+                .foregroundColor(statusTextColor(for: computed.status))
                 .contentTransition(.numericText())
-                .animation(.default, value: relativeText)
+                .animation(.default, value: computed.relativeText)
         }
     }
 
-    private var statusText: String {
-        switch currentStatus {
+    private func statusText(computed: ComputedStatus) -> String {
+        switch computed.status {
         case .active:
             return localization.string("sharing.statusActive")
         case .upcoming, .past:
-            return relativeText
+            return computed.relativeText
         }
     }
 
     /// Custom relative time formatting to match Next.js useCountdown hook
     /// Format: "Om 2t 30min 45sek", "I morgen", "2t siden", etc.
     /// Includes seconds for countdowns under 12 hours
-    private func computeRelativeTimeText() -> String {
-        guard let shiftDate = Date.fromISODateString(shift.shift_date) else { return "" }
-
-        let startComponents = shift.start_time.split(separator: ":").compactMap { Int($0) }
-        let endComponents = shift.end_time.split(separator: ":").compactMap { Int($0) }
-        guard startComponents.count >= 2, endComponents.count >= 2 else { return "" }
-
-        guard let shiftStart = Calendar.current.date(
-            bySettingHour: startComponents[0],
-            minute: startComponents[1],
-            second: 0,
-            of: shiftDate
-        ) else { return "" }
-
-        var shiftEnd = Calendar.current.date(
-            bySettingHour: endComponents[0],
-            minute: endComponents[1],
-            second: 0,
-            of: shiftDate
-        ) ?? shiftDate
-
-        // Handle cross-midnight
-        if shiftEnd <= shiftStart {
-            shiftEnd = Calendar.current.date(byAdding: .day, value: 1, to: shiftEnd) ?? shiftEnd
-        }
-
-        let now = Date()
+    private func computeRelativeTimeText(at now: Date, shiftStart: Date, shiftEnd: Date) -> String {
         let isNorwegian = localization.currentLocale == .norwegian
 
         // For past shifts, calculate from end time (matches Next.js behavior)
@@ -476,8 +429,8 @@ private struct ShiftPreviewCard: View {
         return abs(components.day ?? 0)
     }
 
-    private var statusBackgroundColor: Color {
-        switch currentStatus {
+    private func statusBackgroundColor(for status: ShiftPreviewStatus) -> Color {
+        switch status {
         case .active:
             return Color.green.opacity(0.15)
         case .upcoming:
@@ -487,8 +440,8 @@ private struct ShiftPreviewCard: View {
         }
     }
 
-    private var statusTextColor: Color {
-        switch currentStatus {
+    private func statusTextColor(for status: ShiftPreviewStatus) -> Color {
+        switch status {
         case .active:
             return Color.green
         case .upcoming:
