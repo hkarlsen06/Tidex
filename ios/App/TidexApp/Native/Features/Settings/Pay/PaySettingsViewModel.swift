@@ -80,6 +80,12 @@ final class PaySettingsViewModel: ObservableObject {
         self.localization = localization ?? LocalizationManager.shared
     }
 
+    deinit {
+        // Cancel any pending debounce tasks to prevent orphaned operations
+        monthlyGoalSaveTask?.cancel()
+        payrollDaySaveTask?.cancel()
+    }
+
     // MARK: - Load Data
 
     /// Load all data for the pay settings screen

@@ -241,6 +241,9 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
         // Cancel Combine subscriptions to prevent memory leaks
         monthContextCancellable?.cancel()
 
+        // Cancel any active navigation task to prevent orphaned operations
+        activeNavigationTask?.cancel()
+
         if let observer = memoryWarningObserver {
             NotificationCenter.default.removeObserver(observer)
         }

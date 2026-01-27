@@ -917,7 +917,7 @@ private func runBackgroundChecks(termsAcceptedAt: String?) {
 
 ### TASK-011: Add deinit Cleanup to PaySettingsViewModel for Debounce Tasks
 
-**Status:** PENDING
+**Status:** DONE (2026-01-27)
 
 **Severity:** HIGH - Orphaned tasks continue running after deallocation
 
@@ -2008,6 +2008,30 @@ This prevents the scenario where a user signs out while the terms version check 
 
 ---
 
+### TASK-011: Add deinit Cleanup to ViewModels with Stored Tasks
+
+**Status:** DONE (2026-01-27)
+
+**Severity:** HIGH - Orphaned tasks continue running after deallocation
+
+**Fix Applied:**
+Added deinit cleanup to ViewModels with stored Task properties to cancel them when the ViewModel is deallocated. Key changes:
+
+1. **PaySettingsViewModel** - Added deinit to cancel `monthlyGoalSaveTask` and `payrollDaySaveTask` debounce tasks
+2. **DashboardViewModel** - Added `activeNavigationTask?.cancel()` to existing deinit to cancel any in-flight navigation task
+
+**Note:** AddShiftViewModel already had proper deinit cleanup for its tasks (`previewUpdateTask`, `draftSaveTask`) and Combine subscriptions.
+
+This prevents scenarios where:
+- User navigates away while a debounce timer is running, and the task tries to save data for the wrong context
+- Navigation tasks continue running after the ViewModel is deallocated, wasting CPU and potentially corrupting state
+
+**Files Modified:**
+- `ios/App/TidexApp/Native/Features/Settings/Pay/PaySettingsViewModel.swift`
+- `ios/App/TidexApp/Native/Features/Dashboard/DashboardViewModel.swift`
+
+---
+
 ## Notes
 
 - Each task should be completed and committed separately
@@ -2017,5 +2041,5 @@ This prevents the scenario where a user signs out while the terms version check 
 
 **Last Updated:** 2026-01-27
 **Total Tasks:** 22
-**Completed:** 10
-**Remaining:** 12
+**Completed:** 11
+**Remaining:** 11
