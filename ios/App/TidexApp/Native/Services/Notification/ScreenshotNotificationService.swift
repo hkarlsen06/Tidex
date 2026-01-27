@@ -17,6 +17,9 @@ final class ScreenshotNotificationService {
     /// Key: sharer ID, Value: last reported timestamp
     private var lastReportedTimestamps: [String: Date] = [:]
 
+    /// Tracks in-flight requests to prevent concurrent duplicate reports
+    private var inFlightRequests: Set<String> = []
+
     /// Minimum interval between screenshot notifications for the same sharer (5 minutes)
     private let cooldownInterval: TimeInterval = 5 * 60
 
@@ -29,6 +32,12 @@ final class ScreenshotNotificationService {
     /// Reports that the current user took a screenshot of another user's shifts
     /// - Parameter sharerId: The ID of the user whose shifts were screenshotted
     func reportScreenshot(sharerId: String) async throws {
+        // Check if request is already in flight for this sharer
+        guard !inFlightRequests.contains(sharerId) else {
+            logger.info("Screenshot notification skipped - request already in flight for sharer")
+            return
+        }
+
         // Check cooldown to prevent spam
         if let lastReported = lastReportedTimestamps[sharerId] {
             let elapsed = Date().timeIntervalSince(lastReported)
@@ -38,8 +47,22 @@ final class ScreenshotNotificationService {
             }
         }
 
+        // Mark as in-flight BEFORE async operation to prevent race conditions
+        inFlightRequests.insert(sharerId)
+        defer { inFlightRequests.remove(sharerId) }
+
+        // Update timestamp BEFORE network call to prevent concurrent requests from passing cooldown check
+        lastReportedTimestamps[sharerId] = Date()
+
         // Get auth session (using AuthSessionManager to prevent concurrent refresh race conditions)
-        let session = try await AuthSessionManager.shared.getSession()
+        let session: Session
+        do {
+            session = try await AuthSessionManager.shared.getSession()
+        } catch {
+            // On auth failure, remove timestamp so retry is possible
+            lastReportedTimestamps.removeValue(forKey: sharerId)
+            throw error
+        }
         let accessToken = session.accessToken
 
         // Build request
@@ -56,26 +79,38 @@ final class ScreenshotNotificationService {
         logger.info("Reporting screenshot for sharer \(sharerId)")
 
         // Execute request
-        let (data, response) = try await urlSession.data(for: request)
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await urlSession.data(for: request)
+        } catch {
+            // On network failure, remove timestamp so retry is possible
+            lastReportedTimestamps.removeValue(forKey: sharerId)
+            throw error
+        }
 
         guard let httpResponse = response as? HTTPURLResponse else {
+            // On response parsing failure, remove timestamp so retry is possible
+            lastReportedTimestamps.removeValue(forKey: sharerId)
             throw ScreenshotServiceError.networkError
         }
 
         switch httpResponse.statusCode {
         case 200, 201:
-            // Update cooldown timestamp
-            lastReportedTimestamps[sharerId] = Date()
+            // Timestamp already set - keep it for cooldown
             logger.info("Screenshot reported successfully")
         case 401:
+            // On auth error, remove timestamp so retry is possible after re-auth
+            lastReportedTimestamps.removeValue(forKey: sharerId)
             throw ScreenshotServiceError.notAuthenticated
         case 429:
-            // Rate limited - update cooldown anyway
-            lastReportedTimestamps[sharerId] = Date()
+            // Rate limited - keep timestamp (cooldown is working correctly)
             logger.warning("Screenshot notification rate limited")
         default:
             let message = String(data: data, encoding: .utf8) ?? "Unknown error"
             logger.error("Screenshot report failed: \(httpResponse.statusCode) - \(message)")
+            // On server error, remove timestamp so retry is possible
+            lastReportedTimestamps.removeValue(forKey: sharerId)
             throw ScreenshotServiceError.httpError(statusCode: httpResponse.statusCode)
         }
     }
