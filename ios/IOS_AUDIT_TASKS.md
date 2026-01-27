@@ -2251,11 +2251,13 @@ Added 1-hour time-to-live (TTL) expiration to the image cache. Key changes:
 3. Added expiration check in `get(for:)` - removes and returns nil if expired
 4. Added expiration check in `getFromDisk(for:)` using file modification date
 5. Added `clearExpired()` method for periodic cleanup of stale disk cache entries
+6. Call `ImageCache.shared.clearExpired()` in AppDelegate on app launch to proactively clean up stale entries
 
 This ensures profile pictures and other cached images refresh after 1 hour, so users see updated images when they change their profile on web.
 
 **Files Modified:**
 - `ios/App/TidexApp/Native/Shared/Components/CachedAsyncImage.swift`
+- `ios/App/TidexApp/Core/AppDelegate.swift`
 
 ---
 

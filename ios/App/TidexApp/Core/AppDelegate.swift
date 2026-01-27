@@ -61,6 +61,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // Preload all feedback sounds
         Haptics.prepareSounds()
 
+        // Clear expired images from cache (1-hour TTL)
+        ImageCache.shared.clearExpired()
+
         // Register background task for shift checking (Live Activity auto-start)
         registerBackgroundTasks()
 
