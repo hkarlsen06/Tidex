@@ -86,97 +86,87 @@ const defaultRetrySchedule = Schedule.exponential(Duration.millis(100)).pipe(
 );
 
 /**
- * Create Supabase client with cookie adapter or Bearer token
- * This is the low-level client creation - wrapped in Effect for resource management
- *
- * Authentication priority:
- * 1. Bearer token in Authorization header (for native iOS app)
- * 2. Cookie-based session (for web app)
- */
-const createSupabaseClient = Effect.gen(function* () {
-  const config = yield* AppConfig;
-
-  // Check for Bearer token in Authorization header (native iOS app)
-  const headerStore = yield* Effect.promise(() => headers());
-  const authHeader = headerStore.get("Authorization");
-
-  if (authHeader?.startsWith("Bearer ")) {
-    const token = authHeader.substring(7);
-
-    // Create client with Bearer token authentication
-    const client = createClient(
-      config.supabase.url,
-      Redacted.value(config.supabase.publishableKey),
-      {
-        global: {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      }
-    );
-
-    // Suppress getSession warning - we use getClaims() for auth validation
-    // @ts-expect-error: suppressGetSessionWarning is not in types but works
-    client.auth.suppressGetSessionWarning = true;
-
-    return client;
-  }
-
-  // Fall back to cookie-based authentication (web app)
-  const store = yield* Effect.promise(() => cookies());
-
-  const client = createServerClient(
-    config.supabase.url,
-    Redacted.value(config.supabase.publishableKey),
-    {
-      cookies: {
-        getAll() {
-          return store.getAll().map(({ name, value }) => ({ name, value }));
-        },
-        setAll(cookiesToSet) {
-          for (const { name, value, options } of cookiesToSet) {
-            try {
-              store.set(name, value, options);
-            } catch (err) {
-              if (!isReadonlyCookiesError(err)) {
-                console.warn("[Supabase Service] Failed to set cookie:", name, err);
-              }
-            }
-          }
-        },
-      },
-    }
-  );
-
-  // Suppress getSession warning - we use getClaims() for auth validation
-  // @ts-expect-error: suppressGetSessionWarning is not in types but works
-  client.auth.suppressGetSessionWarning = true;
-
-  return client;
-});
-
-/**
  * Live implementation of SupabaseService
  *
- * Uses scoped resource management to ensure proper cleanup
+ * IMPORTANT: Creates a fresh client for each operation to ensure Bearer token
+ * from iOS requests is properly detected. The client is NOT cached because
+ * the Authorization header needs to be read fresh for each request context.
  */
 export const SupabaseServiceLive = Layer.effect(
   SupabaseService,
   Effect.gen(function* () {
-    // Create client as a scoped resource
-    const client = yield* Effect.acquireRelease(
-      createSupabaseClient,
-      (client) =>
-        Effect.sync(() => {
-          // Cleanup: Remove all subscriptions
-          client.removeAllChannels();
-        })
-    );
+    // Get config once (this is safe to cache)
+    const config = yield* AppConfig;
+
+    /**
+     * Create a fresh Supabase client with current request context
+     * This is called for each query/getClient to ensure Bearer tokens are detected
+     */
+    const createFreshClient = Effect.gen(function* () {
+      // Check for Bearer token in Authorization header (native iOS app)
+      const headerStore = yield* Effect.promise(() => headers());
+      const authHeader = headerStore.get("Authorization");
+
+      if (authHeader?.startsWith("Bearer ")) {
+        const token = authHeader.substring(7);
+
+        // Create client with Bearer token authentication
+        const client = createClient(
+          config.supabase.url,
+          Redacted.value(config.supabase.publishableKey),
+          {
+            global: {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            },
+          }
+        );
+
+        // Suppress getSession warning - we use getClaims() for auth validation
+        // @ts-expect-error: suppressGetSessionWarning is not in types but works
+        client.auth.suppressGetSessionWarning = true;
+
+        return client;
+      }
+
+      // Fall back to cookie-based authentication (web app)
+      const store = yield* Effect.promise(() => cookies());
+
+      const client = createServerClient(
+        config.supabase.url,
+        Redacted.value(config.supabase.publishableKey),
+        {
+          cookies: {
+            getAll() {
+              return store.getAll().map(({ name, value }) => ({ name, value }));
+            },
+            setAll(cookiesToSet) {
+              for (const { name, value, options } of cookiesToSet) {
+                try {
+                  store.set(name, value, options);
+                } catch (err) {
+                  if (!isReadonlyCookiesError(err)) {
+                    console.warn("[Supabase Service] Failed to set cookie:", name, err);
+                  }
+                }
+              }
+            },
+          },
+        }
+      );
+
+      // Suppress getSession warning - we use getClaims() for auth validation
+      // @ts-expect-error: suppressGetSessionWarning is not in types but works
+      client.auth.suppressGetSessionWarning = true;
+
+      return client;
+    });
 
     return {
       /**
        * Execute a query with automatic retry, timeout, and error handling
+       * Creates a fresh client for each query to respect request context
        */
       query: <T>(
         callback: (client: SupabaseClient) => Promise<SupabaseQueryResult<T>>,
@@ -185,13 +175,16 @@ export const SupabaseServiceLive = Layer.effect(
           retries?: number;
         }
       ): Effect.Effect<T, SupabaseError | TimeoutError | DatabaseError, never> => {
-        const queryEffect = Effect.tryPromise({
-          try: () => callback(client),
-          catch: (error) =>
-            new SupabaseError({
-              operation: "query",
-              cause: error,
-            }),
+        const queryEffect = Effect.gen(function* () {
+          const client = yield* createFreshClient;
+          return yield* Effect.tryPromise({
+            try: () => callback(client),
+            catch: (error) =>
+              new SupabaseError({
+                operation: "query",
+                cause: error,
+              }),
+          });
         }).pipe(
           // Check for Supabase-level errors
           // Note: null data without error is valid (e.g., .maybeSingle() with no rows)
@@ -221,9 +214,9 @@ export const SupabaseServiceLive = Layer.effect(
       },
 
       /**
-       * Get raw client (use sparingly)
+       * Get raw client (creates fresh client to respect request context)
        */
-      getClient: () => Effect.succeed(client),
+      getClient: () => createFreshClient,
     };
   })
 );
