@@ -1497,7 +1497,7 @@ enum URLSessionFactory {
 
 ### TASK-018: Group Related @Published Properties in AdminSettingsViewModel
 
-**Status:** PENDING
+**Status:** DONE (2026-01-27)
 
 **Severity:** MEDIUM - Performance degradation from excessive re-renders
 
@@ -1572,7 +1572,7 @@ struct FeedbackState {
 
 ### TASK-019: Fix EntitlementService and StoreKitManager Tier Synchronization
 
-**Status:** PENDING
+**Status:** DONE (2026-01-27)
 
 **Severity:** MEDIUM - Potential for stale tier information
 
@@ -1647,7 +1647,7 @@ private func updateEffectiveTier(with storeKitTier: SubscriptionTier? = nil) {
 
 ### TASK-020: Upgrade Keychain Accessibility to WhenUnlockedThisDeviceOnly
 
-**Status:** PENDING
+**Status:** DONE (2026-01-27)
 
 **Severity:** LOW - Security improvement
 
@@ -1691,7 +1691,7 @@ newItem[kSecAttrAccessible as String] = kSecAttrAccessibleWhenUnlockedThisDevice
 
 ### TASK-021: Add Image Cache Expiration
 
-**Status:** PENDING
+**Status:** DONE (2026-01-27)
 
 **Severity:** LOW - Stale images displayed
 
@@ -1754,7 +1754,7 @@ final class ImageCache {
 
 ### TASK-022: Add Explicit Token Expiration Validation Before Use
 
-**Status:** PENDING
+**Status:** DONE (2026-01-27) - Already implemented via TASK-002
 
 **Severity:** LOW - Defense in depth
 
@@ -2170,6 +2170,113 @@ Created `URLSessionFactory` to consolidate URLSession instances and avoid multip
 
 ---
 
+### TASK-018: Group Related @Published Properties in AdminSettingsViewModel
+
+**Status:** DONE (2026-01-27)
+
+**Severity:** MEDIUM - Performance degradation from excessive re-renders
+
+**Fix Applied:**
+Created grouped state structs to reduce unnecessary re-renders when individual properties change. Key changes:
+1. Created 6 state structs: `UsersTabState`, `FeedbackTabState`, `AuditLogTabState`, `SqlTabState`, `SharesTabState`, `NotificationsTabState`
+2. Each struct groups related properties (e.g., items, loading state, search query, pagination)
+3. Added `@Published` properties for each state group in the ViewModel
+4. Added computed properties for backwards compatibility with existing View code
+5. When a property changes within a group, only observers of that group re-evaluate
+
+Benefits:
+- Changing `usersIsLoading` only affects views observing `usersState`
+- Complex admin views with multiple tabs no longer re-render entirely on every change
+- State mutations are easier to track and reason about
+
+**Files Modified:**
+- `ios/App/TidexApp/Native/Features/Settings/Admin/AdminSettingsViewModel.swift`
+
+---
+
+### TASK-019: Fix EntitlementService and StoreKitManager Tier Synchronization
+
+**Status:** DONE (2026-01-27)
+
+**Severity:** MEDIUM - Potential for stale tier information
+
+**Fix Applied:**
+Added explicit synchronization between StoreKitManager and EntitlementService to prevent stale tier values. Key changes:
+1. Added `updateEffectiveTier(withStoreKitTier:)` method to EntitlementService that accepts explicit tier value
+2. Added `handleStoreKitTierChange(_:)` public method for StoreKitManager to call
+3. Modified `updateCurrentEntitlements()` in StoreKitManager to call `handleStoreKitTierChange()` when tier changes
+4. Removed redundant `updateEffectiveTier()` call from transaction listener since notification now happens automatically
+
+This ensures EntitlementService always receives the freshest tier value directly from StoreKitManager when it changes, rather than reading a potentially stale `currentTier` property.
+
+**Files Modified:**
+- `ios/App/TidexApp/Native/Services/Subscription/EntitlementService.swift`
+- `ios/App/TidexApp/Native/Services/Subscription/StoreKitManager.swift`
+
+---
+
+### TASK-020: Upgrade Keychain Accessibility to WhenUnlockedThisDeviceOnly
+
+**Status:** DONE (2026-01-27)
+
+**Severity:** LOW - Security improvement
+
+**Fix Applied:**
+Changed Keychain accessibility from `kSecAttrAccessibleAfterFirstUnlock` to `kSecAttrAccessibleWhenUnlockedThisDeviceOnly`. Key changes:
+1. Updated `kSecAttrAccessible` value in `KeychainLocalStorage.store()`
+2. Added documentation explaining the security benefits
+
+Benefits:
+- Only accessible when device is unlocked (not after first unlock)
+- Prevents backup/migration of tokens to other devices
+- Protects against some physical attack vectors
+
+Note: Background refresh won't work when device is locked, which is acceptable for auth tokens since user interaction is typically required anyway.
+
+**Files Modified:**
+- `ios/App/TidexApp/Native/Services/Network/SupabaseClient.swift`
+
+---
+
+### TASK-021: Add Image Cache Expiration
+
+**Status:** DONE (2026-01-27)
+
+**Severity:** LOW - Stale images displayed
+
+**Fix Applied:**
+Added 1-hour time-to-live (TTL) expiration to the image cache. Key changes:
+1. Created `CachedImageWrapper` class that wraps UIImage with a `cachedAt` timestamp
+2. Modified memory cache to use wrapper instead of raw UIImage
+3. Added expiration check in `get(for:)` - removes and returns nil if expired
+4. Added expiration check in `getFromDisk(for:)` using file modification date
+5. Added `clearExpired()` method for periodic cleanup of stale disk cache entries
+
+This ensures profile pictures and other cached images refresh after 1 hour, so users see updated images when they change their profile on web.
+
+**Files Modified:**
+- `ios/App/TidexApp/Native/Shared/Components/CachedAsyncImage.swift`
+
+---
+
+### TASK-022: Add Explicit Token Expiration Validation Before Use
+
+**Status:** DONE (2026-01-27) - Already implemented via TASK-002
+
+**Severity:** LOW - Defense in depth
+
+**Fix Applied:**
+This task was already implemented as part of TASK-002's `AuthSessionManager`. The manager:
+1. Checks if token expires within 60 seconds before returning session
+2. Proactively refreshes if within the buffer period
+3. Serializes refresh attempts to prevent race conditions
+
+No additional changes were needed - the existing AuthSessionManager implementation satisfies this requirement.
+
+**Reference:** See TASK-002 for implementation details in `ios/App/TidexApp/Native/Services/Auth/AuthSessionManager.swift`
+
+---
+
 ## Notes
 
 - Each task should be completed and committed separately
@@ -2179,5 +2286,5 @@ Created `URLSessionFactory` to consolidate URLSession instances and avoid multip
 
 **Last Updated:** 2026-01-27
 **Total Tasks:** 22
-**Completed:** 17
-**Remaining:** 5
+**Completed:** 22
+**Remaining:** 0
