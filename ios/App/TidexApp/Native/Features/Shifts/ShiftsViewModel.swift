@@ -558,6 +558,9 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
             clearSelection()
             await reloadFromLocal()
             NotificationCenter.default.post(name: .shiftsDidChange, object: nil)
+
+            // Play deletion feedback
+            Haptics.playShiftDeleted()
         } catch {
             logger.error("Failed to delete shifts: \(error.localizedDescription)")
         }

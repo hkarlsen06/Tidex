@@ -140,6 +140,10 @@ final class PaywallViewModel: ObservableObject {
                 logger.info("Purchase succeeded for \(product.id)")
                 purchaseSucceeded = true
                 isPurchasing = false
+
+                // Play celebration feedback
+                Haptics.playSubscriptionSuccess()
+
                 return true
             } else {
                 // User cancelled or pending
