@@ -850,7 +850,8 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
 
     /// Get current authenticated user ID and update user profile data
     private func getCurrentUserId() async throws -> String? {
-        let session = try await supabase.auth.session
+        // Use AuthSessionManager to prevent concurrent refresh race conditions
+        let session = try await AuthSessionManager.shared.getSession()
         let user = session.user
 
         // Extract display name from user metadata or fall back to email

@@ -137,7 +137,7 @@ final class SharingService: ObservableObject {
 
         do {
             // Get the current session token
-            let session = try await supabase.auth.session
+            let session = try await AuthSessionManager.shared.getSession()
             let accessToken = session.accessToken
 
             // Build URL for sharers endpoint
@@ -227,7 +227,7 @@ final class SharingService: ObservableObject {
 
         do {
             // Get the current session token
-            let session = try await supabase.auth.session
+            let session = try await AuthSessionManager.shared.getSession()
             let accessToken = session.accessToken
 
             // Build URL
@@ -327,7 +327,7 @@ final class SharingService: ObservableObject {
 
         do {
             // Get the current session token
-            let session = try await supabase.auth.session
+            let session = try await AuthSessionManager.shared.getSession()
             let accessToken = session.accessToken
 
             // Build URL - only fetch uncached IDs
@@ -425,7 +425,7 @@ final class SharingService: ObservableObject {
 
             let session: Session
             do {
-                session = try await supabase.auth.session
+                session = try await AuthSessionManager.shared.getSession()
                 logger.info("Got session, token expires at: \(session.expiresAt)")
             } catch {
                 logger.error("Failed to get session: \(error.localizedDescription)")
@@ -525,7 +525,7 @@ final class SharingService: ObservableObject {
         showEarnings: Bool? = nil,
         muted: Bool? = nil
     ) async throws {
-        let session = try await supabase.auth.session
+        let session = try await AuthSessionManager.shared.getSession()
         let accessToken = session.accessToken
 
         let url = APIConfiguration.webAppBaseURL.appendingPathComponent("/api/sharing/manage")
@@ -579,7 +579,7 @@ final class SharingService: ObservableObject {
     /// Remove a share (revoke recipient's access to my shifts)
     /// Owner can delete directly via Supabase (RLS allows this)
     func removeShare(recipientId: String) async throws {
-        let session = try await supabase.auth.session
+        let session = try await AuthSessionManager.shared.getSession()
         let userId = session.normalizedUserId
 
         logger.info("Removing share for recipient \(recipientId)")
@@ -597,7 +597,7 @@ final class SharingService: ObservableObject {
     /// Remove a sharer from my friends list (as the viewer)
     /// Viewer can delete directly via Supabase (RLS allows this)
     func removeSharer(ownerId: String) async throws {
-        let session = try await supabase.auth.session
+        let session = try await AuthSessionManager.shared.getSession()
         let userId = session.normalizedUserId
 
         logger.info("Removing sharer \(ownerId) from friends list")
@@ -615,7 +615,7 @@ final class SharingService: ObservableObject {
     /// Toggle earnings visibility for a share recipient
     /// Owner can update show_earnings directly via Supabase (RLS allows this)
     func toggleShareEarnings(recipientId: String, showEarnings: Bool) async throws {
-        let session = try await supabase.auth.session
+        let session = try await AuthSessionManager.shared.getSession()
         let userId = session.normalizedUserId
 
         logger.info("Toggling earnings visibility for recipient \(recipientId) to \(showEarnings)")
@@ -633,7 +633,7 @@ final class SharingService: ObservableObject {
     /// Block a sharer (hide their shifts from my list)
     /// Viewer can update blocked directly via Supabase (RLS allows this)
     func blockSharer(ownerId: String) async throws {
-        let session = try await supabase.auth.session
+        let session = try await AuthSessionManager.shared.getSession()
         let userId = session.normalizedUserId
 
         logger.info("Blocking sharer \(ownerId)")
@@ -651,7 +651,7 @@ final class SharingService: ObservableObject {
     /// Unblock a sharer (restore their shifts to my list)
     /// Viewer can update blocked directly via Supabase (RLS allows this)
     func unblockSharer(ownerId: String) async throws {
-        let session = try await supabase.auth.session
+        let session = try await AuthSessionManager.shared.getSession()
         let userId = session.normalizedUserId
 
         logger.info("Unblocking sharer \(ownerId)")
@@ -678,7 +678,7 @@ final class SharingService: ObservableObject {
     /// Toggle muted status for a specific sharer
     /// Viewer can update muted directly via Supabase (RLS allows this)
     func toggleSharerMuted(ownerId: String, muted: Bool) async throws {
-        let session = try await supabase.auth.session
+        let session = try await AuthSessionManager.shared.getSession()
         let userId = session.normalizedUserId
 
         logger.info("Toggling muted status for sharer \(ownerId) to \(muted)")

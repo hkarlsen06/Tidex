@@ -64,9 +64,9 @@ final class StatsService: ObservableObject {
         defer { isLoading = false }
 
         do {
-            // Get user ID
+            // Get user ID (using AuthSessionManager to prevent concurrent refresh race conditions)
             if cachedUserId == nil {
-                let session = try await supabase.auth.session
+                let session = try await AuthSessionManager.shared.getSession()
                 cachedUserId = session.normalizedUserId
             }
 

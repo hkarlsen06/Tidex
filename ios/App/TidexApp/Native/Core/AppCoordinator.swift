@@ -138,7 +138,8 @@ final class AppCoordinator: ObservableObject {
     private func performInitialSessionCheck() async {
         do {
             // session is non-optional - throws if no session exists
-            _ = try await supabase.auth.session
+            // Use AuthSessionManager to prevent concurrent refresh race conditions
+            _ = try await AuthSessionManager.shared.getSession()
             await checkMFAAndUpdateState()
         } catch {
             appState = .unauthenticated
@@ -232,7 +233,8 @@ final class AppCoordinator: ObservableObject {
     /// Uses cached/fallback version for immediate check, then verifies in background
     private func checkTermsAndUpdateState() async {
         do {
-            let session = try await supabase.auth.session
+            // Use AuthSessionManager to prevent concurrent refresh race conditions
+            let session = try await AuthSessionManager.shared.getSession()
             let user = session.user
 
             // Get terms_accepted_at from user metadata
@@ -258,7 +260,7 @@ final class AppCoordinator: ObservableObject {
             }
         } catch {
             // If we can't check terms, proceed to authenticated and let backend handle it
-            if let session = try? await supabase.auth.session {
+            if let session = await AuthSessionManager.shared.getSessionIfAvailable() {
                 loadOnboardingStateFromUser(session.user)
             }
             self.initialSyncComplete = false
@@ -300,7 +302,8 @@ final class AppCoordinator: ObservableObject {
     /// Also triggers initial sync in background
     private func updateUserProfile() async {
         do {
-            let session = try await supabase.auth.session
+            // Use AuthSessionManager to prevent concurrent refresh race conditions
+            let session = try await AuthSessionManager.shared.getSession()
             let user = session.user
 
             // Store user ID
@@ -410,7 +413,8 @@ final class AppCoordinator: ObservableObject {
 
         Task {
             do {
-                let session = try await supabase.auth.session
+                // Use AuthSessionManager to prevent concurrent refresh race conditions
+                let session = try await AuthSessionManager.shared.getSession()
                 let userId = session.normalizedUserId
 
                 if let appDelegate = UIApplication.shared.delegate as? AppDelegate {

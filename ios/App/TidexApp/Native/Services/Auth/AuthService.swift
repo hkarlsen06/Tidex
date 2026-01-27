@@ -34,19 +34,15 @@ final class AuthService: ObservableObject {
 
     // MARK: - Session Management
 
-    /// Get the current session, refreshing if needed
+    /// Get the current session, refreshing if needed.
+    /// Uses AuthSessionManager to prevent concurrent refresh race conditions.
     func getSession() async throws -> Session? {
-        return try await supabase.auth.session
+        return try await AuthSessionManager.shared.getSession()
     }
 
     /// Check if user is currently authenticated
     func checkAuthentication() async -> Bool {
-        do {
-            _ = try await supabase.auth.session
-            return true
-        } catch {
-            return false
-        }
+        return await AuthSessionManager.shared.getSessionIfAvailable() != nil
     }
 
     // MARK: - Email/Password Authentication

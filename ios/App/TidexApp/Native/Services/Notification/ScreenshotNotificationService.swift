@@ -38,8 +38,8 @@ final class ScreenshotNotificationService {
             }
         }
 
-        // Get auth session
-        let session = try await supabase.auth.session
+        // Get auth session (using AuthSessionManager to prevent concurrent refresh race conditions)
+        let session = try await AuthSessionManager.shared.getSession()
         let accessToken = session.accessToken
 
         // Build request

@@ -57,7 +57,8 @@ final class SettingsService: ObservableObject {
 
     /// Get current authenticated user ID
     private func getCurrentUserId() async throws -> String? {
-        let session = try await supabase.auth.session
+        // Use AuthSessionManager to prevent concurrent refresh race conditions
+        let session = try await AuthSessionManager.shared.getSession()
         return session.normalizedUserId
     }
 }

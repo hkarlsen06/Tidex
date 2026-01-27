@@ -532,7 +532,8 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
             return cached
         }
 
-        let session = try await supabase.auth.session
+        // Use AuthSessionManager to prevent concurrent refresh race conditions
+        let session = try await AuthSessionManager.shared.getSession()
         let userId = session.normalizedUserId
         cachedUserId = userId
         return userId
