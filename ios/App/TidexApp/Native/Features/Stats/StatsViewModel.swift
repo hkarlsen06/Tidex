@@ -51,6 +51,13 @@ final class StatsViewModel: ObservableObject {
         setupMonthSubscription()
     }
 
+    deinit {
+        // Cancel all Combine subscriptions to prevent memory leaks
+        // While [weak self] prevents retain cycles, the subscriptions
+        // themselves remain active without explicit cancellation
+        cancellables.removeAll()
+    }
+
     // MARK: - Month Subscription
 
     private func setupMonthSubscription() {

@@ -388,6 +388,9 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
     }
 
     deinit {
+        // Cancel Combine subscriptions to prevent memory leaks
+        monthContextCancellable?.cancel()
+
         if let observer = memoryWarningObserver {
             NotificationCenter.default.removeObserver(observer)
         }
