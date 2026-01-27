@@ -10,6 +10,10 @@
             {
               "appearance" : "dark",
               "value" : "normal"
+            },
+            {
+              "appearance" : "tinted",
+              "value" : "normal"
             }
           ],
           "fill-specializations" : [
@@ -53,7 +57,7 @@
             {
               "appearance" : "tinted",
               "value" : {
-                "solid" : "display-p3:0.36117,0.49446,0.96662,1.00000"
+                "solid" : "extended-gray:1.00000,1.00000"
               }
             }
           ],
@@ -77,7 +81,7 @@
       "specular" : true,
       "translucency" : {
         "enabled" : true,
-        "value" : 0.5
+        "value" : 0.61
       }
     }
   ],
