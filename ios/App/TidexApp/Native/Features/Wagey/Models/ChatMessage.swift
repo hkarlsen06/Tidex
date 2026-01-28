@@ -14,20 +14,62 @@ enum MessageRole: String, Codable, Equatable {
 ///
 /// Messages can be from the user or the assistant. Assistant messages
 /// may include tool calls that were executed during the response.
+/// Content blocks preserve the chronological order of text and tool calls.
 struct ChatMessage: Identifiable, Equatable {
     let id: String
     let role: MessageRole
-    var content: String
-    var toolCalls: [ToolCall]?
     let timestamp: Date
 
-    /// Full initializer
+    /// Ordered content blocks for assistant messages.
+    /// Preserves the interleaved order of text and tool calls as they streamed in.
+    /// For user messages, this will contain a single text block.
+    var contentBlocks: [ContentBlock]
+
+    /// Concatenated text content (for backward compatibility and API requests)
+    var content: String {
+        contentBlocks.compactMap { block in
+            if case .text(let text) = block {
+                return text
+            }
+            return nil
+        }.joined()
+    }
+
+    /// All tool calls from the message (for backward compatibility and API requests)
+    var toolCalls: [ToolCall]? {
+        let calls = contentBlocks.compactMap { block -> ToolCall? in
+            if case .toolCall(let toolCall) = block {
+                return toolCall
+            }
+            return nil
+        }
+        return calls.isEmpty ? nil : calls
+    }
+
+    /// Full initializer with content blocks
+    init(id: String = UUID().uuidString, role: MessageRole, contentBlocks: [ContentBlock], timestamp: Date = Date()) {
+        self.id = id
+        self.role = role
+        self.contentBlocks = contentBlocks
+        self.timestamp = timestamp
+    }
+
+    /// Convenience initializer with separate content and toolCalls (backward compatible)
+    /// Tool calls are placed before text for backward compatibility with existing behavior
     init(id: String = UUID().uuidString, role: MessageRole, content: String, toolCalls: [ToolCall]? = nil, timestamp: Date = Date()) {
         self.id = id
         self.role = role
-        self.content = content
-        self.toolCalls = toolCalls
         self.timestamp = timestamp
+
+        // Build content blocks: tool calls first, then text (matches old rendering order)
+        var blocks: [ContentBlock] = []
+        if let toolCalls = toolCalls {
+            blocks.append(contentsOf: toolCalls.map { .toolCall($0) })
+        }
+        if !content.isEmpty {
+            blocks.append(.text(content))
+        }
+        self.contentBlocks = blocks
     }
 
     /// Create a user message
@@ -35,8 +77,7 @@ struct ChatMessage: Identifiable, Equatable {
         ChatMessage(
             id: UUID().uuidString,
             role: .user,
-            content: content,
-            toolCalls: nil,
+            contentBlocks: [.text(content)],
             timestamp: Date()
         )
     }
@@ -46,10 +87,28 @@ struct ChatMessage: Identifiable, Equatable {
         ChatMessage(
             id: id,
             role: .assistant,
-            content: content,
-            toolCalls: nil,
+            contentBlocks: content.isEmpty ? [] : [.text(content)],
             timestamp: Date()
         )
+    }
+}
+
+// MARK: - Content Block
+
+/// A block of content in an assistant message.
+/// Preserves the chronological order of text and tool calls as they stream in.
+enum ContentBlock: Identifiable, Equatable {
+    case text(String)
+    case toolCall(ToolCall)
+
+    var id: String {
+        switch self {
+        case .text(let content):
+            // Use a hash of the text for identity (text blocks don't have natural IDs)
+            return "text-\(content.hashValue)"
+        case .toolCall(let toolCall):
+            return toolCall.id
+        }
     }
 }
 

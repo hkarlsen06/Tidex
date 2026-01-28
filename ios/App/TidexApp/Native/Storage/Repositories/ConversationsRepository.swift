@@ -115,7 +115,7 @@ final class ConversationsRepository: ObservableObject {
         // Auto-update title from first user message if it was the default
         if conversation.title == "New Conversation" || conversation.title.isEmpty {
             if let firstUserMessage = messages.first(where: { $0.role == .user }) {
-                conversation.title = generateTitle(from: firstUserMessage.content)
+                conversation.title = generateTitle(from: firstUserMessage.textContent)
             }
         }
 

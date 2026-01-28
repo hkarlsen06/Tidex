@@ -6,6 +6,12 @@ import SwiftUI
 @MainActor
 @Observable
 final class WageyViewModel {
+    // MARK: - Shared Instance
+
+    /// Shared instance that persists across view presentations within the same session
+    /// This ensures the current conversation is retained when dismissing and reopening Wagey
+    static let shared = WageyViewModel()
+
     // MARK: - Published State
 
     /// All conversations for the current user
@@ -17,8 +23,8 @@ final class WageyViewModel {
     /// Conversation history for the current conversation
     private(set) var messages: [ChatMessage] = []
 
-    /// Text being streamed from the assistant
-    private(set) var currentStreamingText: String = ""
+    /// Content blocks being streamed from the assistant (in chronological order)
+    private(set) var activeContentBlocks: [ContentBlock] = []
 
     /// Whether currently receiving a streaming response
     private(set) var isStreaming: Bool = false
@@ -35,8 +41,23 @@ final class WageyViewModel {
     /// Current error if any
     private(set) var error: Error?
 
-    /// Tool calls in progress for the current streaming message
-    private(set) var activeToolCalls: [ToolCall] = []
+    // MARK: - Computed Properties for Streaming
+
+    /// Current streaming text (concatenated from all text blocks)
+    var currentStreamingText: String {
+        activeContentBlocks.compactMap { block in
+            if case .text(let text) = block { return text }
+            return nil
+        }.joined()
+    }
+
+    /// Active tool calls (extracted from content blocks for UI)
+    var activeToolCalls: [ToolCall] {
+        activeContentBlocks.compactMap { block in
+            if case .toolCall(let toolCall) = block { return toolCall }
+            return nil
+        }
+    }
 
     /// Whether the sidebar is visible
     var isSidebarVisible: Bool = false
@@ -60,7 +81,8 @@ final class WageyViewModel {
 
     // MARK: - Initialization
 
-    init() {
+    /// Private initializer to enforce singleton pattern
+    private init() {
         loadConversations()
     }
 
@@ -100,8 +122,7 @@ final class WageyViewModel {
         // Reset state for new conversation
         currentConversationId = nil
         messages = []
-        currentStreamingText = ""
-        activeToolCalls = []
+        activeContentBlocks = []
         error = nil
 
         // Reload conversations list
@@ -166,8 +187,7 @@ final class WageyViewModel {
 
         // Start streaming
         isStreaming = true
-        currentStreamingText = ""
-        activeToolCalls = []
+        activeContentBlocks = []
         hadSuccessfulToolCalls = false
         currentAssistantMessageId = UUID().uuidString
 
@@ -260,8 +280,15 @@ final class WageyViewModel {
     private func processChunk(_ chunk: ChatChunk) {
         switch chunk {
         case .text(let content):
-            // Append text to streaming buffer
-            currentStreamingText += content
+            // Append text to the last text block, or create a new one
+            if let lastIndex = activeContentBlocks.indices.last,
+               case .text(let existingText) = activeContentBlocks[lastIndex] {
+                // Append to existing text block
+                activeContentBlocks[lastIndex] = .text(existingText + content)
+            } else {
+                // Create new text block
+                activeContentBlocks.append(.text(content))
+            }
 
         case .toolStart(let toolName, let toolCallId, let toolArguments):
             // Add a new tool call in progress
@@ -272,18 +299,22 @@ final class WageyViewModel {
                 result: nil,
                 success: nil
             )
-            activeToolCalls.append(toolCall)
+            activeContentBlocks.append(.toolCall(toolCall))
 
         case .toolResult(let toolName, let toolCallId, let result, let success):
-            // Update the tool call with its result
-            if let index = activeToolCalls.firstIndex(where: { $0.id == toolCallId }) {
-                activeToolCalls[index] = ToolCall(
+            // Update the tool call with its result (find by id in content blocks)
+            if let index = activeContentBlocks.firstIndex(where: { block in
+                if case .toolCall(let tc) = block { return tc.id == toolCallId }
+                return false
+            }), case .toolCall(let existingToolCall) = activeContentBlocks[index] {
+                let updatedToolCall = ToolCall(
                     id: toolCallId,
                     name: toolName,
-                    arguments: activeToolCalls[index].arguments,
+                    arguments: existingToolCall.arguments,
                     result: result,
                     success: success
                 )
+                activeContentBlocks[index] = .toolCall(updatedToolCall)
             }
             // Track successful tool calls for sync
             if success == true {
@@ -315,13 +346,12 @@ final class WageyViewModel {
 
     /// Finalize the streaming text into a message
     private func finalizeStreamingText() {
-        // Only create a message if we have content or tool calls
-        if !currentStreamingText.isEmpty || !activeToolCalls.isEmpty {
+        // Only create a message if we have content blocks
+        if !activeContentBlocks.isEmpty {
             let assistantMessage = ChatMessage(
                 id: currentAssistantMessageId ?? UUID().uuidString,
                 role: .assistant,
-                content: currentStreamingText,
-                toolCalls: activeToolCalls.isEmpty ? nil : activeToolCalls,
+                contentBlocks: activeContentBlocks,
                 timestamp: Date()
             )
             messages.append(assistantMessage)
@@ -338,8 +368,7 @@ final class WageyViewModel {
         }
 
         // Reset streaming state
-        currentStreamingText = ""
-        activeToolCalls = []
+        activeContentBlocks = []
         hadSuccessfulToolCalls = false
         isStreaming = false
         currentAssistantMessageId = nil

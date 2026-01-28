@@ -167,7 +167,7 @@ DO NOT:
 - Only standalone/converted shifts remain in database
 
 **Statistics metrics:**
-current_month, last_month, year_to_date, last_6_months, this_week, by_day_of_week, monthly_goal, supplement_breakdown
+current_month, last_month, year_to_date, last_6_months, this_week, monthly_goal, supplement_breakdown
 </key_workflows>
 
 <response_format>

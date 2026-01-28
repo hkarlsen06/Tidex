@@ -1029,7 +1029,11 @@ enum AuthStrings {
         "wagey.tool.manageWageSnapshots": "Oppdaterer lønnsinnstillinger...",
         "wagey.tool.unknown": "Arbeider...",
         "wagey.tool.success": "Ferdig",
-        "wagey.tool.failed": "Feilet"
+        "wagey.tool.failed": "Feilet",
+        "wagey.tool.details": "Verktøydetaljer",
+        "wagey.tool.request": "Forespørsel",
+        "wagey.tool.response": "Svar",
+        "wagey.tool.timedOut": "Tidsavbrudd"
     ]
 
     // MARK: - English Strings
@@ -2049,6 +2053,10 @@ enum AuthStrings {
         "wagey.tool.manageWageSnapshots": "Updating wage settings...",
         "wagey.tool.unknown": "Working...",
         "wagey.tool.success": "Done",
-        "wagey.tool.failed": "Failed"
+        "wagey.tool.failed": "Failed",
+        "wagey.tool.details": "Tool Call Details",
+        "wagey.tool.request": "Request",
+        "wagey.tool.response": "Response",
+        "wagey.tool.timedOut": "Timed out"
     ]
 }

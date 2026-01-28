@@ -386,16 +386,15 @@ const wageyChatStream = createRiverStream<ChatChunk, NextRequest>()
             locale
           );
 
-          // Only send tool_result chunk to UI if successful
-          if (result.success) {
-            await stream.appendChunk({
-              type: "tool_result",
-              toolName: toolUse.name,
-              toolCallId: toolUse.id,
-              result: JSON.stringify(result),
-              success: true,
-            });
-          }
+          // Send tool_result chunk to UI for both success and failure
+          // iOS needs this to track tool call state and include results in subsequent requests
+          await stream.appendChunk({
+            type: "tool_result",
+            toolName: toolUse.name,
+            toolCallId: toolUse.id,
+            result: JSON.stringify(result),
+            success: result.success,
+          });
 
           toolResults.push({
             type: "tool_result",
@@ -406,14 +405,25 @@ const wageyChatStream = createRiverStream<ChatChunk, NextRequest>()
         } catch (error) {
           const errorMessage =
             error instanceof Error ? error.message : "Unknown error";
+          const errorResult = JSON.stringify({
+            success: false,
+            message: errorMessage,
+          });
+
+          // Send tool_result chunk to UI for exception case
+          // iOS needs this to track tool call state and include results in subsequent requests
+          await stream.appendChunk({
+            type: "tool_result",
+            toolName: toolUse.name,
+            toolCallId: toolUse.id,
+            result: errorResult,
+            success: false,
+          });
 
           toolResults.push({
             type: "tool_result",
             tool_use_id: toolUse.id,
-            content: JSON.stringify({
-              success: false,
-              message: errorMessage,
-            }),
+            content: errorResult,
             is_error: true,
           });
         }

@@ -182,19 +182,27 @@ final class WageyService: ObservableObject {
                 )
                 apiMessages.append(apiMessage)
 
-                // If this assistant message had tool calls with results, add tool result messages
+                // If this assistant message had tool calls, add tool result messages
+                // IMPORTANT: We must send a tool_result for EVERY tool_use, or Claude API fails
+                // If a tool call has no result (timed out), send a synthetic failure result
                 if message.role == .assistant, let toolCalls = message.toolCalls {
                     for toolCall in toolCalls {
+                        let resultContent: String
                         if let result = toolCall.result {
-                            let toolResultMessage = ChatAPIRequest.APIMessage(
-                                role: "tool",
-                                content: result,
-                                toolCalls: nil,
-                                toolCallId: toolCall.id,
-                                name: toolCall.name
-                            )
-                            apiMessages.append(toolResultMessage)
+                            resultContent = result
+                        } else {
+                            // Tool call never got a result (timeout, connection lost, etc.)
+                            // Send a synthetic failure result so Claude knows it failed
+                            resultContent = "{\"success\":false,\"message\":\"Tool call timed out or was interrupted\"}"
                         }
+                        let toolResultMessage = ChatAPIRequest.APIMessage(
+                            role: "tool",
+                            content: resultContent,
+                            toolCalls: nil,
+                            toolCallId: toolCall.id,
+                            name: toolCall.name
+                        )
+                        apiMessages.append(toolResultMessage)
                     }
                 }
             }
