@@ -1,11 +1,7 @@
 /**
  * Tool Executor
  *
- * Executes chat tools with validation, authentication, and retry logic.
- *
- * For Bearer token auth (iOS), pass the token to executeTool and it will
- * create a Supabase client with that token, bypassing the Effect layer
- * which doesn't work with Bearer auth.
+ * Executes chat tools with validation, authentication, and retry logic
  */
 
 import { createShifts } from "@/app/[locale]/(app)/shifts/add/actions";
@@ -17,7 +13,6 @@ import { createRecurringShift } from "@/app/[locale]/(app)/shifts/add/_actions/c
 import { updateRecurringShift } from "@/app/[locale]/(app)/shifts/_actions/updateRecurringShift";
 import { deleteRecurringShift } from "@/app/[locale]/(app)/shifts/_actions/deleteRecurringShift";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { EndCondition } from "@/lib/recurring/types";
 import type {
   ToolName,
@@ -54,34 +49,6 @@ import { Effect } from "effect";
 import { logger as _logger } from "@/lib/logger";
 import { getDictionary } from "@/lib/i18n/dictionaries";
 import { defaultLocale, type Locale } from "@/lib/i18n/config";
-
-/**
- * Create a Supabase client authenticated with a Bearer token.
- * Used for iOS app requests where cookie auth isn't available.
- *
- * IMPORTANT: Uses SUPABASE_DIRECT_URL for direct REST API access.
- * The NEXT_PUBLIC_SUPABASE_URL may point to an auth proxy (e.g., identity.tidex.no)
- * that only handles authentication, not database REST API calls.
- */
-function createBearerAuthClient(bearerToken: string): SupabaseClient {
-  // Use direct URL for REST API calls (bypasses auth proxy like identity.tidex.no)
-  const directUrl = process.env.SUPABASE_DIRECT_URL || process.env.NEXT_PUBLIC_SUPABASE_URL!;
-
-  console.log("[createBearerAuthClient] SUPABASE_DIRECT_URL:", process.env.SUPABASE_DIRECT_URL || "NOT SET");
-  console.log("[createBearerAuthClient] Using URL:", directUrl);
-
-  return createClient(
-    directUrl,
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
-    {
-      global: {
-        headers: {
-          Authorization: `Bearer ${bearerToken}`,
-        },
-      },
-    }
-  );
-}
 
 // Type for tool result translations
 type ToolResultTranslations = ReturnType<typeof getDictionary>['pages']['wagey']['toolResults'];
@@ -270,29 +237,15 @@ function normalizeToolName(toolName: string): ToolName | null {
   return fuzzyMatch ?? null;
 }
 
-/**
- * Options for tool execution
- */
-export type ExecuteToolOptions = {
-  /** Bearer token for iOS auth (bypasses Effect layer which doesn't support Bearer) */
-  bearerToken?: string;
-};
-
 export async function executeTool(
   toolName: string,
   argumentsJson: string,
   userId: string,
-  locale: Locale = defaultLocale,
-  options: ExecuteToolOptions = {}
+  locale: Locale = defaultLocale
 ): Promise<ToolResult> {
   // Load translations once at start
   const dict = getDictionary(locale);
   const tr = dict.pages.wagey.toolResults;
-
-  // Create Bearer auth client if token provided
-  const bearerClient = options.bearerToken
-    ? createBearerAuthClient(options.bearerToken)
-    : undefined;
 
   try {
     const normalizedToolName = normalizeToolName(toolName);
@@ -314,7 +267,7 @@ export async function executeTool(
 
     while (attempt < 2) {
       try {
-        const result = await executeToolOnce(normalizedToolName, args, userId, tr, bearerClient);
+        const result = await executeToolOnce(normalizedToolName, args, userId, tr);
         return result;
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error));
@@ -342,24 +295,22 @@ export async function executeTool(
 
 /**
  * Execute tool once (no retry)
- * @param bearerClient - Optional Supabase client with Bearer token auth (for iOS)
  */
 async function executeToolOnce(
   toolName: ToolName,
   args: unknown,
   userId: string,
-  tr: ToolResultTranslations,
-  bearerClient?: SupabaseClient
+  tr: ToolResultTranslations
 ): Promise<ToolResult> {
   switch (toolName) {
     case "manage_shift":
-      return await executeManageShift(args, userId, tr, bearerClient);
+      return await executeManageShift(args, userId, tr);
 
     case "query_shifts":
-      return await executeQueryShifts(args, userId, tr, bearerClient);
+      return await executeQueryShifts(args, userId, tr);
 
     case "calculate_wages":
-      return await executeCalculateWages(args, userId, tr, bearerClient);
+      return await executeCalculateWages(args, userId, tr);
 
     case "draft_recurring_shift":
       return await executeDraftRecurringShift(args, userId, tr);
@@ -368,22 +319,22 @@ async function executeToolOnce(
       return await executeConfirmRecurringShift(args, userId, tr);
 
     case "manage_recurring_shift":
-      return await executeManageRecurringShift(args, userId, tr, bearerClient);
+      return await executeManageRecurringShift(args, userId, tr);
 
     case "manage_recurring_exclusion":
-      return await executeManageRecurringExclusion(args, userId, tr, bearerClient);
+      return await executeManageRecurringExclusion(args, userId, tr);
 
     case "get_statistics":
-      return await executeGetStatistics(args, userId, tr, bearerClient);
+      return await executeGetStatistics(args, userId, tr);
 
     case "manage_settings":
-      return await executeManageSettings(args, userId, tr, bearerClient);
+      return await executeManageSettings(args, userId, tr);
 
     case "get_wage_info":
-      return await executeGetWageInfo(args, userId, tr, bearerClient);
+      return await executeGetWageInfo(args, userId, tr);
 
     case "calculate_earnings":
-      return await executeCalculateEarnings(args, userId, tr, bearerClient);
+      return await executeCalculateEarnings(args, userId, tr);
 
     default:
       return {
@@ -395,13 +346,11 @@ async function executeToolOnce(
 
 /**
  * Execute manage_shift tool (consolidated CRUD)
- * @param bearerClient - Optional Supabase client with Bearer token auth (for iOS)
-*/
+ */
 async function executeManageShift(
   args: unknown,
   userId: string,
-  tr: ToolResultTranslations,
-  bearerClient?: SupabaseClient
+  tr: ToolResultTranslations
 ): Promise<ToolResult> {
   const parsed = manageShiftSchema.safeParse(args);
   if (!parsed.success) {
@@ -420,33 +369,6 @@ async function executeManageShift(
           return {
             success: false,
             message: t(tr.missingFields, { fields: "dates, start, end" }),
-          };
-        }
-
-        // For Bearer auth (iOS), use direct insert
-        if (bearerClient) {
-          const shiftsToInsert = input.dates.map((date) => ({
-            user_id: userId,
-            shift_date: date,
-            start_time: input.start,
-            end_time: input.end,
-          }));
-
-          const { data, error } = await bearerClient
-            .from("user_shifts")
-            .insert(shiftsToInsert)
-            .select();
-
-          if (error) {
-            throw new Error(`Failed to create shifts: ${error.message}`);
-          }
-
-          return {
-            success: true,
-            message: (data?.length || 0) === 1
-              ? t(tr.createdShift, { count: data?.length || 0 })
-              : t(tr.createdShifts, { count: data?.length || 0 }),
-            data: { inserted: data?.length || 0 },
           };
         }
 
@@ -482,9 +404,7 @@ async function executeManageShift(
         }
 
         // Fetch shifts once for both ID resolution and getting shift details
-        const shiftsResult = bearerClient
-          ? await getComputedShiftsDirect(userId, bearerClient, { limit: 1000 })
-          : await getComputedShiftsForApi(userId, { limit: 1000 });
+        const shiftsResult = await getComputedShiftsForApi(userId, { limit: 1000 });
         const fullShiftId = resolveShortIdFromShifts(input.shiftId, shiftsResult.shifts);
         if (!fullShiftId) {
           return {
@@ -503,29 +423,12 @@ async function executeManageShift(
 
         const updatedDate = input.date || shift.shift_date;
 
-        // For Bearer auth (iOS), use direct update
-        if (bearerClient) {
-          const { error } = await bearerClient
-            .from("user_shifts")
-            .update({
-              shift_date: updatedDate,
-              start_time: input.start || shift.start_time,
-              end_time: input.end || shift.end_time,
-            })
-            .eq("id", fullShiftId)
-            .eq("user_id", userId);
-
-          if (error) {
-            throw new Error(`Failed to update shift: ${error.message}`);
-          }
-        } else {
-          await updateShift({
-            id: fullShiftId,
-            shift_date: updatedDate,
-            start: input.start || shift.start_time,
-            end: input.end || shift.end_time,
-          });
-        }
+        await updateShift({
+          id: fullShiftId,
+          shift_date: updatedDate,
+          start: input.start || shift.start_time,
+          end: input.end || shift.end_time,
+        });
 
         return {
           success: true,
@@ -535,9 +438,7 @@ async function executeManageShift(
 
       case "delete": {
         // Fetch shifts once for ID resolution and display info
-        const shiftsResult = bearerClient
-          ? await getComputedShiftsDirect(userId, bearerClient, { limit: 1000 })
-          : await getComputedShiftsForApi(userId, { limit: 1000 });
+        const shiftsResult = await getComputedShiftsForApi(userId, { limit: 1000 });
 
         // Support both single and bulk delete
         if (input.shiftIds && input.shiftIds.length > 0) {
@@ -550,20 +451,7 @@ async function executeManageShift(
             };
           }
 
-          // For Bearer auth (iOS), use direct delete
-          if (bearerClient) {
-            const { error } = await bearerClient
-              .from("user_shifts")
-              .delete()
-              .in("id", fullShiftIds)
-              .eq("user_id", userId);
-
-            if (error) {
-              throw new Error(`Failed to delete shifts: ${error.message}`);
-            }
-          } else {
-            await Promise.all(fullShiftIds.map((id) => deleteShift(id)));
-          }
+          await Promise.all(fullShiftIds.map((id) => deleteShift(id)));
 
           return {
             success: true,
@@ -582,21 +470,7 @@ async function executeManageShift(
           }
 
           const shift = shiftsResult.shifts.find((s) => s.id === fullShiftId);
-
-          // For Bearer auth (iOS), use direct delete
-          if (bearerClient) {
-            const { error } = await bearerClient
-              .from("user_shifts")
-              .delete()
-              .eq("id", fullShiftId)
-              .eq("user_id", userId);
-
-            if (error) {
-              throw new Error(`Failed to delete shift: ${error.message}`);
-            }
-          } else {
-            await deleteShift(fullShiftId);
-          }
+          await deleteShift(fullShiftId);
 
           return {
             success: true,
@@ -675,13 +549,11 @@ function formatRecurringDescription(
 
 /**
  * Execute query_shifts tool (enhanced with filters)
- * @param bearerClient - Optional Supabase client with Bearer token auth (for iOS)
  */
 async function executeQueryShifts(
   args: unknown,
   userId: string,
-  tr: ToolResultTranslations,
-  bearerClient?: SupabaseClient
+  tr: ToolResultTranslations
 ): Promise<ToolResult> {
   const parsed = queryShiftsSchema.safeParse(args);
   if (!parsed.success) {
@@ -718,18 +590,11 @@ async function executeQueryShifts(
   const weekRange = getCurrentWeekRange();
 
   try {
-    // For Bearer auth (iOS), use direct queries to bypass Effect layer
-    const result = bearerClient
-      ? await getComputedShiftsDirect(userId, bearerClient, {
-          startDate: input.startDate ?? weekRange.startDate,
-          endDate: input.endDate ?? weekRange.endDate,
-          limit: 1000,
-        })
-      : await getComputedShiftsForApi(userId, {
-          startDate: input.startDate ?? weekRange.startDate,
-          endDate: input.endDate ?? weekRange.endDate,
-          limit: 1000, // Fetch more to allow client-side filtering
-        });
+    const result = await getComputedShiftsForApi(userId, {
+      startDate: input.startDate ?? weekRange.startDate,
+      endDate: input.endDate ?? weekRange.endDate,
+      limit: 1000, // Fetch more to allow client-side filtering
+    });
 
     let filteredShifts = result.shifts;
 
@@ -761,10 +626,8 @@ async function executeQueryShifts(
     // Apply limit after filtering
     const limitedShifts = filteredShifts.slice(0, input.limit || 30);
 
-    // Get user's currency (use direct query for Bearer auth)
-    const currency = bearerClient
-      ? await getUserCurrencyDirect(userId, bearerClient)
-      : await getUserCurrency(userId);
+    // Get user's currency
+    const currency = await getUserCurrency(userId);
 
     // Check if any shifts have tax enabled (tax settings are now per-shift from snapshots)
     const hasTaxDeduction = limitedShifts.some(s => s.tax_enabled && s.tax_percentage);
@@ -869,13 +732,11 @@ function calculateNetPay(
 
 /**
  * Execute calculate_wages tool (date range only)
- * @param bearerClient - Optional Supabase client with Bearer token auth (for iOS)
  */
 async function executeCalculateWages(
   args: unknown,
   userId: string,
-  tr: ToolResultTranslations,
-  bearerClient?: SupabaseClient
+  tr: ToolResultTranslations
 ): Promise<ToolResult> {
   const parsed = calculateWagesSchema.safeParse(args);
   if (!parsed.success) {
@@ -888,26 +749,18 @@ async function executeCalculateWages(
   const input: CalculateWagesInput = parsed.data;
 
   try {
-    // Fetch shifts by date range (use direct query for Bearer auth)
-    const result = bearerClient
-      ? await getComputedShiftsDirect(userId, bearerClient, {
-          startDate: input.startDate,
-          endDate: input.endDate,
-          limit: 1000,
-        })
-      : await getComputedShiftsForApi(userId, {
-          startDate: input.startDate,
-          endDate: input.endDate,
-          limit: 1000,
-        });
+    // Fetch shifts by date range
+    const result = await getComputedShiftsForApi(userId, {
+      startDate: input.startDate,
+      endDate: input.endDate,
+      limit: 1000,
+    });
 
     const shifts = result.shifts;
     const settings = result.settings;
 
-    // Get user's currency (use direct query for Bearer auth)
-    const currency = bearerClient
-      ? await getUserCurrencyDirect(userId, bearerClient)
-      : await getUserCurrency(userId);
+    // Get user's currency
+    const currency = await getUserCurrency(userId);
 
     // Handle case where no shifts found
     if (shifts.length === 0) {
@@ -1185,13 +1038,11 @@ function formatRecurringForAI(recurring: any): any {
 
 /**
  * Execute manage_recurring_shift tool (consolidated update/delete/list)
- * @param _bearerClient - Optional Supabase client with Bearer token auth (for iOS) - not yet used
  */
 async function executeManageRecurringShift(
   args: unknown,
   _userId: string,
-  tr: ToolResultTranslations,
-  _bearerClient?: SupabaseClient
+  tr: ToolResultTranslations
 ): Promise<ToolResult> {
   const parsed = manageRecurringShiftSchema.safeParse(args);
   if (!parsed.success) {
@@ -1417,13 +1268,11 @@ async function executeManageRecurringShift(
 
 /**
  * Execute manage_recurring_exclusion tool (consolidated add/remove)
- * @param _bearerClient - Optional Supabase client with Bearer token auth (for iOS) - not yet used
  */
 async function executeManageRecurringExclusion(
   args: unknown,
   _userId: string,
-  tr: ToolResultTranslations,
-  _bearerClient?: SupabaseClient
+  tr: ToolResultTranslations
 ): Promise<ToolResult> {
   const parsed = manageRecurringExclusionSchema.safeParse(args);
   if (!parsed.success) {
@@ -1506,13 +1355,11 @@ async function executeManageRecurringExclusion(
 
 /**
  * Execute get_statistics tool
- * @param bearerClient - Optional Supabase client with Bearer token auth (for iOS)
  */
 async function executeGetStatistics(
   args: unknown,
   userId: string,
-  tr: ToolResultTranslations,
-  bearerClient?: SupabaseClient
+  tr: ToolResultTranslations
 ): Promise<ToolResult> {
   const parsed = getStatisticsSchema.safeParse(args);
   if (!parsed.success) {
@@ -1525,18 +1372,7 @@ async function executeGetStatistics(
   const input: GetStatisticsInput = parsed.data;
 
   try {
-    // For Bearer auth (iOS), use direct queries to bypass Effect layer
-    if (bearerClient) {
-      const currency = await getUserCurrencyDirect(userId, bearerClient);
-      const statsData = await getStatsDataDirect(userId, bearerClient, {
-        year: input.year,
-        month: input.month,
-      });
-
-      return formatStatsResponse(input.metric, statsData, currency, tr);
-    }
-
-    // For cookie auth (web), use the normal DAL
+    // Get user's currency and stats data in parallel
     const [currency, statsData] = await Promise.all([
       getUserCurrency(userId),
       getStatsDataForApi(userId, {
@@ -1545,7 +1381,52 @@ async function executeGetStatistics(
       }),
     ]);
 
-    return formatStatsResponse(input.metric, statsData, currency, tr);
+    // Extract requested metric
+    let data: any;
+    let message: string;
+
+    switch (input.metric) {
+      case "current_month":
+        data = statsData.currentMonth;
+        message = tr.statsCurrentMonth;
+        break;
+      case "last_month":
+        data = statsData.lastMonth;
+        message = tr.statsLastMonth;
+        break;
+      case "year_to_date":
+        data = statsData.yearToDate;
+        message = tr.statsYearToDate;
+        break;
+      case "last_6_months":
+        data = statsData.last6Months;
+        message = tr.statsLast6Months;
+        break;
+      case "this_week":
+        data = statsData.thisWeek;
+        message = tr.statsThisWeek;
+        break;
+      case "monthly_goal":
+        data = statsData.monthlyGoal;
+        message = tr.statsMonthlyGoal;
+        break;
+      case "supplement_breakdown":
+        data = statsData.currentMonthBreakdown;
+        message = tr.statsSupplementBreakdown;
+        break;
+      default:
+        return {
+          success: false,
+          message: t(tr.unknownMetric, { metric: input.metric }),
+        };
+    }
+
+    return {
+      success: true,
+      message,
+      data,
+      currency,
+    };
   } catch (error) {
     throw new Error(
       error instanceof Error ? error.message : tr.failedToFetchStatistics
@@ -1554,268 +1435,12 @@ async function executeGetStatistics(
 }
 
 /**
- * Get computed shifts directly from Supabase (for Bearer auth)
- * Replicates the logic of getComputedShiftsForApi but without cookie auth
- */
-async function getComputedShiftsDirect(
-  userId: string,
-  client: SupabaseClient,
-  options: { startDate?: string; endDate?: string; limit?: number }
-): Promise<{ shifts: any[]; settings: any }> {
-  const now = new Date();
-  const startDate = options.startDate || now.toISOString().split("T")[0];
-  const endDate = options.endDate || new Date(now.getFullYear(), now.getMonth() + 12, 0).toISOString().split("T")[0];
-
-  console.log("[getComputedShiftsDirect] Fetching shifts for user:", userId, "dateRange:", startDate, "to", endDate);
-
-  // Fetch shifts, settings, and current snapshot in parallel
-  const [shiftsResult, settingsResult, snapshotResult] = await Promise.all([
-    client
-      .from("user_shifts")
-      .select("*")
-      .eq("user_id", userId)
-      .gte("shift_date", startDate)
-      .lte("shift_date", endDate)
-      .order("shift_date", { ascending: true })
-      .limit(options.limit || 100),
-    client
-      .from("user_settings")
-      .select("*")
-      .eq("user_id", userId)
-      .maybeSingle(),
-    client
-      .from("wage_snapshots")
-      .select("*")
-      .eq("user_id", userId)
-      .or(`from_date.is.null,from_date.lte.${now.toISOString().split("T")[0]}`)
-      .order("from_date", { ascending: false, nullsFirst: false })
-      .limit(1)
-      .maybeSingle(),
-  ]);
-
-  // Log any errors
-  if (shiftsResult.error) {
-    console.error("[getComputedShiftsDirect] Shifts query error:", shiftsResult.error);
-  }
-  if (settingsResult.error) {
-    console.error("[getComputedShiftsDirect] Settings query error:", settingsResult.error);
-  }
-  if (snapshotResult.error) {
-    console.error("[getComputedShiftsDirect] Snapshot query error:", snapshotResult.error);
-  }
-
-  console.log("[getComputedShiftsDirect] Found", shiftsResult.data?.length || 0, "shifts");
-
-  const shifts = shiftsResult.data || [];
-  const settings = settingsResult.data || {};
-  const snapshot = snapshotResult.data;
-
-  // Import payroll computation
-  const { computeShift, PRESET_SUPPLEMENT_RULES } = await import("@/lib/payroll");
-
-  // Compute earnings for each shift
-  const computedShifts = shifts.map((shift: any) => {
-    const computed = computeShift(shift, settings, PRESET_SUPPLEMENT_RULES, snapshot);
-    return {
-      ...shift,
-      computed,
-      // Add fields needed by the query_shifts formatter
-      tax_enabled: snapshot?.tax_deduction_enabled ?? false,
-      tax_percentage: snapshot?.tax_percentage ?? null,
-    };
-  });
-
-  return { shifts: computedShifts, settings };
-}
-
-/**
- * Format stats response based on metric type
- */
-function formatStatsResponse(
-  metric: string,
-  statsData: any,
-  currency: string,
-  tr: ToolResultTranslations
-): ToolResult {
-  let data: any;
-  let message: string;
-
-  switch (metric) {
-    case "current_month":
-      data = statsData.currentMonth;
-      message = tr.statsCurrentMonth;
-      break;
-    case "last_month":
-      data = statsData.lastMonth;
-      message = tr.statsLastMonth;
-      break;
-    case "year_to_date":
-      data = statsData.yearToDate;
-      message = tr.statsYearToDate;
-      break;
-    case "last_6_months":
-      data = statsData.last6Months;
-      message = tr.statsLast6Months;
-      break;
-    case "this_week":
-      data = statsData.thisWeek;
-      message = tr.statsThisWeek;
-      break;
-    case "monthly_goal":
-      data = statsData.monthlyGoal;
-      message = tr.statsMonthlyGoal;
-      break;
-    case "supplement_breakdown":
-      data = statsData.currentMonthBreakdown;
-      message = tr.statsSupplementBreakdown;
-      break;
-    default:
-      return {
-        success: false,
-        message: t(tr.unknownMetric, { metric }),
-      };
-  }
-
-  return {
-    success: true,
-    message,
-    data,
-    currency,
-  };
-}
-
-/**
- * Get user currency directly from Supabase (for Bearer auth)
- */
-async function getUserCurrencyDirect(userId: string, client: SupabaseClient): Promise<string> {
-  const { data } = await client
-    .from("user_settings")
-    .select("currency")
-    .eq("user_id", userId)
-    .maybeSingle();
-
-  return data?.currency || "NOK";
-}
-
-/**
- * Get stats data directly from Supabase (for Bearer auth)
- * This is a simplified version that computes basic stats from shifts
- */
-async function getStatsDataDirect(
-  userId: string,
-  client: SupabaseClient,
-  options: { year?: number; month?: number }
-): Promise<any> {
-  const now = new Date();
-  const currentYear = options.year || now.getFullYear();
-  const currentMonth = options.month || (now.getMonth() + 1);
-
-  // Calculate date ranges
-  const currentMonthStart = `${currentYear}-${String(currentMonth).padStart(2, "0")}-01`;
-  const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
-  const nextYear = currentMonth === 12 ? currentYear + 1 : currentYear;
-  const currentMonthEnd = `${nextYear}-${String(nextMonth).padStart(2, "0")}-01`;
-
-  const lastMonth = currentMonth === 1 ? 12 : currentMonth - 1;
-  const lastMonthYear = currentMonth === 1 ? currentYear - 1 : currentYear;
-  const lastMonthStart = `${lastMonthYear}-${String(lastMonth).padStart(2, "0")}-01`;
-
-  // Use last month's start as the query start date to ensure we capture "last month" data
-  // This is important when currentMonth is January - we need December from previous year
-  const yearStart = lastMonthStart;
-
-  // Fetch shifts and settings in parallel
-  const [shiftsResult, settingsResult, snapshotResult] = await Promise.all([
-    client
-      .from("user_shifts")
-      .select("*")
-      .eq("user_id", userId)
-      .gte("shift_date", yearStart)
-      .lt("shift_date", currentMonthEnd)
-      .order("shift_date", { ascending: true }),
-    client
-      .from("user_settings")
-      .select("*")
-      .eq("user_id", userId)
-      .maybeSingle(),
-    client
-      .from("wage_snapshots")
-      .select("*")
-      .eq("user_id", userId)
-      .or(`from_date.is.null,from_date.lte.${now.toISOString().split("T")[0]}`)
-      .order("from_date", { ascending: false, nullsFirst: false })
-      .limit(1)
-      .maybeSingle(),
-  ]);
-
-  const shifts = shiftsResult.data || [];
-  const settings = settingsResult.data || {};
-  const snapshot = snapshotResult.data;
-
-  // Import payroll computation
-  const { computeShift, PRESET_SUPPLEMENT_RULES } = await import("@/lib/payroll");
-
-  // Compute earnings for each shift
-  const computedShifts = shifts.map((shift: any) => {
-    const computed = computeShift(shift, settings, PRESET_SUPPLEMENT_RULES, snapshot);
-    return { ...shift, computed };
-  });
-
-  // Helper to aggregate shifts
-  const aggregateShifts = (filteredShifts: any[]) => {
-    const totalHours = filteredShifts.reduce((sum, s) => sum + s.computed.paidHours, 0);
-    const totalGross = filteredShifts.reduce((sum, s) => sum + s.computed.gross, 0);
-    return {
-      shiftCount: filteredShifts.length,
-      totalHours: Number(totalHours.toFixed(2)),
-      totalGross: Number(totalGross.toFixed(2)),
-    };
-  };
-
-  // Current month shifts
-  const currentMonthShifts = computedShifts.filter(
-    (s: any) => s.shift_date >= currentMonthStart && s.shift_date < currentMonthEnd
-  );
-
-  // Last month shifts
-  const lastMonthShifts = computedShifts.filter(
-    (s: any) => s.shift_date >= lastMonthStart && s.shift_date < currentMonthStart
-  );
-
-  // Year to date shifts
-  const yearToDateShifts = computedShifts.filter(
-    (s: any) => s.shift_date >= yearStart && s.shift_date < currentMonthEnd
-  );
-
-  return {
-    currentMonth: aggregateShifts(currentMonthShifts),
-    lastMonth: aggregateShifts(lastMonthShifts),
-    yearToDate: aggregateShifts(yearToDateShifts),
-    last6Months: [], // Simplified - return empty for now
-    thisWeek: aggregateShifts([]), // Simplified - return empty for now
-    monthlyGoal: {
-      goal: settings.monthly_goal || 0,
-      current: aggregateShifts(currentMonthShifts).totalGross,
-      progress: settings.monthly_goal
-        ? Math.round((aggregateShifts(currentMonthShifts).totalGross / settings.monthly_goal) * 100)
-        : 0,
-    },
-    currentMonthBreakdown: {
-      basePay: currentMonthShifts.reduce((sum: number, s: any) => sum + s.computed.basePay, 0),
-      supplementPay: currentMonthShifts.reduce((sum: number, s: any) => sum + s.computed.supplementPay, 0),
-    },
-  };
-}
-
-/**
  * Execute manage_settings tool (consolidated view/update)
- * @param _bearerClient - Optional Supabase client with Bearer token auth (for iOS) - not yet used
  */
 async function executeManageSettings(
   args: unknown,
   userId: string,
-  tr: ToolResultTranslations,
-  _bearerClient?: SupabaseClient
+  tr: ToolResultTranslations
 ): Promise<ToolResult> {
   const parsed = manageSettingsSchema.safeParse(args);
   if (!parsed.success) {
@@ -1992,13 +1617,11 @@ async function executeManageSettings(
 /**
  * Execute get_wage_info tool
  * Returns user's complete wage configuration with temporal context
- * @param _bearerClient - Optional Supabase client with Bearer token auth (for iOS) - not yet used
  */
 async function executeGetWageInfo(
   args: unknown,
   userId: string,
-  tr: ToolResultTranslations,
-  _bearerClient?: SupabaseClient
+  tr: ToolResultTranslations
 ): Promise<ToolResult> {
   const parsed = getWageInfoSchema.safeParse(args);
   if (!parsed.success) {
@@ -2138,13 +1761,11 @@ async function executeGetWageInfo(
 
 /**
  * Execute calculate_earnings tool (hypothetical earnings calculator)
- * @param _bearerClient - Optional Supabase client with Bearer token auth (for iOS) - not yet used
  */
 async function executeCalculateEarnings(
   args: unknown,
   userId: string,
-  tr: ToolResultTranslations,
-  _bearerClient?: SupabaseClient
+  tr: ToolResultTranslations
 ): Promise<ToolResult> {
   const parsed = calculateEarningsSchema.safeParse(args);
   if (!parsed.success) {
