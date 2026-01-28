@@ -16,6 +16,7 @@ final class MFAVerifyViewModel: ObservableObject {
 
     @Published var code: String = ""
     @Published var isLoading = false
+    @Published var isVerificationComplete = false  // Keeps overlay visible during transition
     @Published var errorMessage: String?
     @Published var focusedIndex: Int = 0
 
@@ -95,8 +96,15 @@ final class MFAVerifyViewModel: ObservableObject {
             return
         }
 
+        // Dismiss keyboard immediately for smoother transition
+        await MainActor.run {
+            UIApplication.shared.sendAction(
+                #selector(UIResponder.resignFirstResponder),
+                to: nil, from: nil, for: nil
+            )
+        }
+
         isLoading = true
-        defer { isLoading = false }
 
         do {
             try await authService.verifyMFA(
@@ -105,9 +113,14 @@ final class MFAVerifyViewModel: ObservableObject {
                 code: code
             )
 
+            // MFA verified successfully - keep overlay visible during transition
+            isLoading = false
+            isVerificationComplete = true
+
             // MFA verified successfully
             coordinator?.handleMFASuccess()
         } catch {
+            isLoading = false
             errorMessage = ErrorTranslations.translate(error)
             // Clear the code on error
             code = ""
