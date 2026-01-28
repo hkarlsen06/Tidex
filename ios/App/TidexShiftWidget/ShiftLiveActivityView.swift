@@ -56,15 +56,16 @@ struct LockScreenLiveActivityView: View {
         HStack(spacing: 16) {
             // Left side: Time info
             VStack(alignment: .leading, spacing: 4) {
-                // Time remaining - uses SwiftUI's auto-updating timer
+                // Time remaining
                 HStack(alignment: .firstTextBaseline, spacing: 4) {
                     Image(systemName: "clock.fill")
                         .font(.system(size: 14))
                         .foregroundColor(tidexBlue)
-                    // SwiftUI timer automatically counts down every second
                     Text(context.attributes.endDate, style: .timer)
                         .font(.system(size: 20, weight: .bold, design: .rounded))
                         .monospacedDigit()
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
                 }
 
                 // Shift time range
