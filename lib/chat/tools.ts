@@ -921,11 +921,14 @@ Note: Only include settings you want to change in the settings object.`,
     description: `Get user's wage configuration including current, upcoming, and historical wage entries.
 
 Returns:
-- current: The wage that applies today (fromDate, usingTariff, wageLevel, hourlyWage, supplements)
+- current: The wage that applies today (fromDate, usingTariff, wageLevel, hourlyWage, supplements, taxEnabled, taxPercentage)
 - upcoming: Future scheduled wage changes (if any) - compact format showing only changed fields
 - history: Past wage entries for context (if any) - compact format showing only changed fields
 
-Use this when the user asks about their wage, hourly rate, supplements, or wage history.
+Tax settings (taxEnabled, taxPercentage) are per-snapshot, not global. Each wage period can have different tax settings.
+The half-tax month setting remains global (use manage_settings to view/update).
+
+Use this when the user asks about their wage, hourly rate, supplements, tax settings, or wage history.
 For general settings (display, goals, preferences, halfTaxMonth), use manage_settings instead.`,
     input_schema: {
       type: "object",

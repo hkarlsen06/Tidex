@@ -40,6 +40,8 @@ struct StatsView: View {
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+                // Pass user's currency to all child views
+                .userCurrency(viewModel.currency)
             }
             .navigationBarTitleDisplayMode(.inline)
             .iPadToolbarBackground(Color.tidexBackground)

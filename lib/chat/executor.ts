@@ -659,11 +659,16 @@ async function executeQueryShifts(
         gross,
       };
 
-      // Only include net if tax deduction is enabled
+      // Only include net if tax deduction is enabled (tax settings are per-shift from snapshots)
       if (hasTaxDeduction) {
         return {
           ...base,
-          net: Number(calculateNetPay(shift.computed.gross, result.settings, shift.shift_date).toFixed(2)),
+          net: Number(calculateNetPay(
+            shift.computed.gross,
+            { tax_enabled: shift.tax_enabled, tax_percentage: shift.tax_percentage },
+            result.settings.half_tax_month,
+            shift.shift_date
+          ).toFixed(2)),
         };
       }
 
@@ -674,7 +679,12 @@ async function executeQueryShifts(
     const totalHours = limitedShifts.reduce((sum, s) => sum + s.computed.paidHours, 0);
     const totalGross = limitedShifts.reduce((sum, s) => sum + s.computed.gross, 0);
     const totalNet = limitedShifts.reduce((sum, s) => {
-      const net = calculateNetPay(s.computed.gross, result.settings, s.shift_date);
+      const net = calculateNetPay(
+        s.computed.gross,
+        { tax_enabled: s.tax_enabled, tax_percentage: s.tax_percentage },
+        result.settings.half_tax_month,
+        s.shift_date
+      );
       return sum + net;
     }, 0);
     const shiftCount = limitedShifts.length;
@@ -706,22 +716,30 @@ async function executeQueryShifts(
 
 /**
  * Calculate net pay after tax deduction
+ *
+ * Tax settings come from the wage_snapshot (per-shift), not user_settings.
+ * Only half_tax_month remains as a global setting in user_settings.
+ *
+ * Note: Half-tax is based on PAYOUT month (shift month + 1), not worked month.
  */
 function calculateNetPay(
   gross: number,
-  settings: { tax_deduction_enabled?: boolean | null; tax_percentage?: number | null; half_tax_month?: number | null },
+  taxSettings: { tax_enabled?: boolean; tax_percentage?: number },
+  halfTaxMonth: number | null | undefined,
   shiftDate: string
 ): number {
-  if (!settings.tax_deduction_enabled || !settings.tax_percentage) {
+  if (!taxSettings.tax_enabled || !taxSettings.tax_percentage) {
     return gross; // No tax deduction
   }
 
-  let taxRate = settings.tax_percentage / 100;
+  let taxRate = taxSettings.tax_percentage / 100;
 
-  // Check if this is a half-tax month
-  if (settings.half_tax_month) {
+  // Check if this is a half-tax month (based on PAYOUT month, not worked month)
+  if (halfTaxMonth) {
     const shiftMonth = new Date(shiftDate + "T12:00:00").getMonth() + 1; // 1-12
-    if (shiftMonth === settings.half_tax_month) {
+    // Payout month is shift month + 1 (January wages paid in February, etc.)
+    const payoutMonth = shiftMonth === 12 ? 1 : shiftMonth + 1;
+    if (payoutMonth === halfTaxMonth) {
       taxRate = taxRate / 2;
     }
   }
@@ -787,8 +805,14 @@ async function executeCalculateWages(
     const totalGross = shifts.reduce((sum, s) => sum + s.computed.gross, 0);
 
     // Calculate net pay for each shift and sum them up
+    // Tax settings are per-shift from wage snapshots
     const totalNet = shifts.reduce((sum, s) => {
-      const net = calculateNetPay(s.computed.gross, settings, s.shift_date);
+      const net = calculateNetPay(
+        s.computed.gross,
+        { tax_enabled: s.tax_enabled, tax_percentage: s.tax_percentage },
+        settings.half_tax_month,
+        s.shift_date
+      );
       return sum + net;
     }, 0);
 
@@ -1694,6 +1718,8 @@ async function executeGetWageInfo(
       wageLevel: number | null | "unchanged";
       usingTariff: boolean | "unchanged";
       supplements: unknown[] | "unchanged";
+      taxEnabled: boolean | "unchanged";
+      taxPercentage: number | "unchanged";
     };
 
     const buildCompact = (
@@ -1710,6 +1736,8 @@ async function executeGetWageInfo(
             ? snap.wage_level !== null : "unchanged",
           supplements: JSON.stringify(snap.supplements) !== JSON.stringify(prev?.supplements)
             ? (snap.supplements?.rules ?? []) : "unchanged",
+          taxEnabled: snap.tax_enabled !== prev?.tax_enabled ? snap.tax_enabled : "unchanged",
+          taxPercentage: snap.tax_percentage !== prev?.tax_percentage ? snap.tax_percentage : "unchanged",
         };
         prev = snap;
         return entry;
@@ -1724,6 +1752,8 @@ async function executeGetWageInfo(
         wageLevel: number | null;
         hourlyWage: number;
         supplements: unknown[];
+        taxEnabled: boolean;
+        taxPercentage: number;
       } | null;
       upcoming?: CompactEntry[];
       history?: CompactEntry[];
@@ -1734,6 +1764,8 @@ async function executeGetWageInfo(
         wageLevel: currentSnapshot.wage_level,
         hourlyWage: currentSnapshot.hourly_wage,
         supplements: currentSnapshot.supplements?.rules ?? [],
+        taxEnabled: currentSnapshot.tax_enabled,
+        taxPercentage: currentSnapshot.tax_percentage,
       } : null,
     };
 
@@ -1799,8 +1831,21 @@ async function executeCalculateEarnings(
     // Get user's currency
     const currency = await getUserCurrency(userId);
 
-    // Check if user has tax deduction enabled
-    const hasTaxDeduction = userSettings?.tax_deduction_enabled && userSettings?.tax_percentage;
+    // Helper to calculate payout date from shift date
+    // Payout month is shift month + 1 (January wages paid in February, etc.)
+    const calculatePayoutDate = (shiftDate: string, payrollDay: number): string => {
+      const [year, month] = shiftDate.split("-").map(Number);
+      let payoutYear = year;
+      let payoutMonth = month + 1;
+      if (payoutMonth > 12) {
+        payoutMonth = 1;
+        payoutYear += 1;
+      }
+      // Handle edge case: payroll_day exceeds days in payout month
+      const daysInPayoutMonth = new Date(payoutYear, payoutMonth, 0).getDate();
+      const effectivePayrollDay = Math.min(payrollDay, daysInPayoutMonth);
+      return `${payoutYear}-${String(payoutMonth).padStart(2, "0")}-${String(effectivePayrollDay).padStart(2, "0")}`;
+    };
 
     // Helper function to compute earnings for a hypothetical shift
     const computeHypotheticalShift = async (
@@ -1809,18 +1854,27 @@ async function executeCalculateEarnings(
       endTime: string,
       label?: string
     ) => {
-      // Get snapshot for the date
-      const snapshotProgram = Effect.gen(function* () {
-        const snapshots = yield* SnapshotsService;
-        const snapshot = yield* snapshots.getSnapshotForDate(userId, date);
-        return snapshot;
+      // Per PAYROLL_ENGINE_SPEC.md Section E.3:
+      // - Wage/supplements/break snapshot: Looked up by SHIFT DATE
+      // - Tax snapshot: Looked up by PAYOUT DATE (shift month + 1)
+      const payrollDay = userSettings?.payroll_day ?? 15;
+      const payoutDate = calculatePayoutDate(date, payrollDay);
+
+      // Get both snapshots in parallel
+      const snapshotsProgram = Effect.gen(function* () {
+        const service = yield* SnapshotsService;
+        const [wageSnapshot, taxSnapshot] = yield* Effect.all([
+          service.getSnapshotForDate(userId, date),      // For wage, supplements, breaks
+          service.getSnapshotForDate(userId, payoutDate), // For tax settings
+        ]);
+        return { wageSnapshot, taxSnapshot };
       }).pipe(
         Effect.provide(AuthSnapshotsLive),
-        Effect.catchAll(() => Effect.succeed(null)),
+        Effect.catchAll(() => Effect.succeed({ wageSnapshot: null, taxSnapshot: null })),
         Effect.scoped
       );
 
-      const snapshot = await Effect.runPromise(snapshotProgram);
+      const { wageSnapshot, taxSnapshot } = await Effect.runPromise(snapshotsProgram);
 
       // Build a fake shift row for computation
       const fakeShift = {
@@ -1831,21 +1885,25 @@ async function executeCalculateEarnings(
         end_time: endTime,
       };
 
-      // Compute the shift (break settings are now read from the snapshot)
+      // Compute the shift using wage snapshot (break settings are in the snapshot)
       const computed = computeShift(
         fakeShift,
         {}, // UserSettings no longer contains break settings - they're in the snapshot
         PRESET_SUPPLEMENT_RULES,
-        snapshot
+        wageSnapshot
       );
 
       // Get weekday name
       const weekday = getWeekdayAbbr(date, tr);
 
-      // Calculate net pay
-      const net = hasTaxDeduction
-        ? calculateNetPay(computed.gross, userSettings!, date)
-        : computed.gross;
+      // Calculate net pay using tax settings from PAYOUT snapshot (not wage snapshot)
+      // This matches how ShiftsService handles it for real shifts
+      const net = calculateNetPay(
+        computed.gross,
+        { tax_enabled: taxSnapshot?.tax_enabled, tax_percentage: taxSnapshot?.tax_percentage },
+        userSettings?.half_tax_month,
+        date
+      );
 
       return {
         label: label || `${weekday} ${formatDateCompact(date, tr)}`,
