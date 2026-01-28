@@ -52,6 +52,8 @@ export type ChatChunk =
       type: "wagey_limit";
       remaining: number;
       resetDays: number;
+      /** Whether the limit was exceeded (added in 2.2.0, optional for backwards compatibility) */
+      exceeded?: boolean;
     }
   | {
       type: "wagey_no_access";
@@ -240,18 +242,28 @@ const wageyChatStream = createRiverStream<ChatChunk, NextRequest>()
     const { getDaysUntilReset } = await import("@/lib/wagey/types");
 
     // Use DAL functions for wagey access (works with both Bearer token and cookies via Effect layer)
+    // Note: We no longer block operations based on server-side subscription checks.
+    // The iOS app handles entitlement via StoreKit which may have newer information than the DB.
+    // We still track usage and send warnings, but let the device decide if the user can proceed.
     const { useWageyInvocation, getWageyAccessForUser } = await import("@/data-access/wagey");
     const accessInfo = await getWageyAccessForUser(userId);
     const result = await useWageyInvocation(userId);
 
-    if (!result.allowed) {
+    // Track if the limit was exceeded (for warning purposes, not blocking)
+    const limitExceeded = !result.allowed;
+
+    // Send warning if limit exceeded, but continue processing (backwards compatible)
+    // iOS 2.1.0 will receive this but the stream continues with content
+    // Newer iOS versions can use the 'exceeded' field to show appropriate UI
+    if (limitExceeded) {
       await stream.appendChunk({
         type: "wagey_limit",
         remaining: result.remaining,
         resetDays: getDaysUntilReset(),
+        exceeded: true,
       });
-      await stream.close();
-      return;
+      // Note: We intentionally do NOT close the stream here anymore.
+      // The operation continues and the device handles entitlement checks.
     }
 
     // Build system prompt context with usage info
@@ -467,6 +479,7 @@ const wageyChatStream = createRiverStream<ChatChunk, NextRequest>()
       type: "wagey_limit",
       remaining: result.remaining,
       resetDays: getDaysUntilReset(),
+      exceeded: limitExceeded,
     });
 
     // Send done chunk
