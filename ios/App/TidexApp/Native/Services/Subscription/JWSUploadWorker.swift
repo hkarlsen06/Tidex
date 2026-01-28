@@ -65,6 +65,38 @@ final class JWSUploadWorker {
         }
     }
 
+    /// Upload a JWS immediately and wait for completion
+    /// Use this for purchase flow where we need to wait for server to have the subscription
+    /// - Parameter upload: The pending upload to process
+    /// - Returns: true if upload succeeded, false otherwise
+    func uploadImmediately(_ upload: LocalPendingJWSUpload) async -> Bool {
+        logger.info("Uploading JWS immediately for transaction: \(upload.transactionId)")
+
+        do {
+            try await uploadToServer(upload)
+            // Remove from queue if it was also queued
+            try? await repository.removePendingUpload(transactionId: upload.transactionId)
+            logger.info("Immediate upload succeeded for: \(upload.transactionId)")
+
+            // Refresh entitlement from server so we have the latest tier
+            do {
+                try await EntitlementService.shared.refreshFromServer(userId: upload.userId)
+                logger.info("Entitlement refreshed after immediate upload")
+            } catch {
+                logger.warning("Failed to refresh entitlement after upload: \(error.localizedDescription)")
+                // Still return true - the upload succeeded, just couldn't refresh
+            }
+
+            return true
+        } catch {
+            logger.error("Immediate upload failed: \(error.localizedDescription)")
+            // Queue it for retry via the background worker
+            try? await repository.enqueuePendingUpload(upload)
+            processQueue()
+            return false
+        }
+    }
+
     private func runUploadLoop() async {
         var successfulUserIds = Set<String>()  // Track users who had successful uploads
 
