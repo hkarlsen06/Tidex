@@ -1501,9 +1501,10 @@ async function executeManageSettings(
 
       switch (input.category) {
         case "display": {
-          const displayData: { theme?: string; default_shifts_view?: string } = {};
+          const displayData: { theme?: string; default_shifts_view?: string; currency?: string } = {};
           if (input.settings.theme) displayData.theme = input.settings.theme;
           if (input.settings.defaultShiftsView) displayData.default_shifts_view = input.settings.defaultShiftsView;
+          if (input.settings.currency) displayData.currency = input.settings.currency;
 
           result = await updateDisplaySettings(displayData);
           break;
@@ -1615,6 +1616,7 @@ async function executeManageSettings(
         display: {
           theme: settings.theme || "system",
           defaultShiftsView: settings.default_shifts_view || "calendar",
+          currency: settings.currency || "kr",
         },
         tax: {
           // Only half_tax_month remains as a global setting
@@ -1840,6 +1842,15 @@ async function resolveSnapshotId(
 }
 
 /**
+ * Preset wage rates for tariff levels
+ * Note: Must match PRESET_WAGE_RATES in lib/payroll/calc.ts
+ */
+const PRESET_WAGE_RATES: Record<string, number> = {
+  "-1": 129.91, "-2": 132.90, "1": 184.54, "2": 185.38,
+  "3": 187.46, "4": 193.05, "5": 210.81, "6": 256.14,
+};
+
+/**
  * Execute manage_wage_snapshots tool
  * Allows CRUD operations on wage snapshots (wage history entries)
  */
@@ -1896,10 +1907,36 @@ async function executeManageWageSnapshots(
           ? (currentSnapshot?.supplements ?? { rules: [] })
           : { rules: input.supplements as any[] };
 
+        // IMPORTANT: Ensure snapshots are dichotomous (either tariff OR custom, not both)
+        // - If hourly_wage is provided → custom rate mode → wage_level must be null
+        // - If wage_level is provided → tariff mode → hourly_wage comes from preset rates
+        let hourlyWage: number;
+        let wageLevel: number | null;
+
+        if (input.hourly_wage !== undefined) {
+          // User explicitly set a custom hourly rate → custom mode
+          hourlyWage = input.hourly_wage;
+          wageLevel = null; // Force null to ensure dichotomy
+        } else if (input.wage_level !== undefined) {
+          // User explicitly set a wage level → tariff mode
+          wageLevel = input.wage_level;
+          if (wageLevel !== null) {
+            // Look up the tariff rate
+            hourlyWage = PRESET_WAGE_RATES[String(wageLevel)] ?? currentSnapshot?.hourly_wage ?? 200;
+          } else {
+            // wage_level explicitly set to null without hourly_wage - use current or default
+            hourlyWage = currentSnapshot?.hourly_wage ?? 200;
+          }
+        } else {
+          // Neither provided - copy from current snapshot
+          hourlyWage = currentSnapshot?.hourly_wage ?? 200;
+          wageLevel = currentSnapshot?.wage_level ?? null;
+        }
+
         const snapshotData = {
           from_date: input.from_date,
-          hourly_wage: input.hourly_wage ?? currentSnapshot?.hourly_wage ?? 200,
-          wage_level: input.wage_level !== undefined ? input.wage_level : (currentSnapshot?.wage_level ?? null),
+          hourly_wage: hourlyWage,
+          wage_level: wageLevel,
           supplements: supplements as { rules: any[] },
           tax_enabled: input.tax_enabled ?? currentSnapshot?.tax_enabled ?? false,
           tax_percentage: input.tax_percentage ?? currentSnapshot?.tax_percentage ?? 0,
@@ -1979,10 +2016,36 @@ async function executeManageWageSnapshots(
             ? { rules: input.supplements as any[] }
             : (targetSnapshot.supplements ?? { rules: [] });
 
+        // IMPORTANT: Ensure snapshots are dichotomous (either tariff OR custom, not both)
+        // - If hourly_wage is provided → custom rate mode → wage_level must be null
+        // - If wage_level is provided → tariff mode → hourly_wage comes from preset rates
+        let hourlyWage: number;
+        let wageLevel: number | null;
+
+        if (input.hourly_wage !== undefined) {
+          // User explicitly set a custom hourly rate → custom mode
+          hourlyWage = input.hourly_wage;
+          wageLevel = null; // Force null to ensure dichotomy
+        } else if (input.wage_level !== undefined) {
+          // User explicitly set a wage level → tariff mode
+          wageLevel = input.wage_level;
+          if (wageLevel !== null) {
+            // Look up the tariff rate
+            hourlyWage = PRESET_WAGE_RATES[String(wageLevel)] ?? targetSnapshot.hourly_wage;
+          } else {
+            // wage_level explicitly set to null without hourly_wage - keep current hourly_wage
+            hourlyWage = targetSnapshot.hourly_wage;
+          }
+        } else {
+          // Neither provided - keep current values
+          hourlyWage = targetSnapshot.hourly_wage;
+          wageLevel = targetSnapshot.wage_level;
+        }
+
         const updateData = {
           from_date: input.from_date !== undefined ? input.from_date : targetSnapshot.from_date,
-          hourly_wage: input.hourly_wage ?? targetSnapshot.hourly_wage,
-          wage_level: input.wage_level !== undefined ? input.wage_level : targetSnapshot.wage_level,
+          hourly_wage: hourlyWage,
+          wage_level: wageLevel,
           supplements: supplements as { rules: any[] },
           tax_enabled: input.tax_enabled ?? targetSnapshot.tax_enabled,
           tax_percentage: input.tax_percentage ?? targetSnapshot.tax_percentage,

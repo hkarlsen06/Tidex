@@ -10,6 +10,9 @@ struct WageSourceSelector: View {
     @Binding var wageLevel: Int
     @Binding var customWage: Double
     let currency: String
+    /// When false, only shows custom wage input (hides tariff toggle)
+    /// Used when user's currency is not "kr" (Norwegian krone)
+    var showTariffOption: Bool = true
 
     @Environment(\.localization) private var localization
 
@@ -20,35 +23,37 @@ struct WageSourceSelector: View {
                 .font(.system(size: 14, weight: .medium))
                 .foregroundColor(.tidexTextSecondary)
 
-            // Toggle buttons: Tariff vs Custom
-            HStack(spacing: 12) {
-                WageTypeToggleButton(
-                    title: localization.string("onboarding.wage.tariff"),
-                    icon: "building.2",
-                    isSelected: usePreset,
-                    action: {
-                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                            usePreset = true
+            // Toggle buttons: Tariff vs Custom (only show if tariff is available)
+            if showTariffOption {
+                HStack(spacing: 12) {
+                    WageTypeToggleButton(
+                        title: localization.string("onboarding.wage.tariff"),
+                        icon: "building.2",
+                        isSelected: usePreset,
+                        action: {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                usePreset = true
+                            }
                         }
-                    }
-                )
+                    )
 
-                WageTypeToggleButton(
-                    title: localization.string("onboarding.wage.custom"),
-                    icon: "slider.horizontal.3",
-                    isSelected: !usePreset,
-                    action: {
-                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                            usePreset = false
+                    WageTypeToggleButton(
+                        title: localization.string("onboarding.wage.custom"),
+                        icon: "slider.horizontal.3",
+                        isSelected: !usePreset,
+                        action: {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                usePreset = false
+                            }
                         }
-                    }
-                )
+                    )
+                }
             }
 
             // Content based on selection
-            if usePreset {
+            if usePreset && showTariffOption {
                 tariffLevelPicker
                     .transition(.opacity.combined(with: .move(edge: .top)))
             } else {
@@ -97,7 +102,7 @@ struct WageSourceSelector: View {
 
     @ViewBuilder
     private var currentWageDisplay: some View {
-        let currentWage = usePreset
+        let currentWage = (usePreset && showTariffOption)
             ? (PayrollCalculator.presetWageRates[String(wageLevel)] ?? 184.54)
             : customWage
 
@@ -124,7 +129,17 @@ struct WageSourceSelector: View {
         formatter.maximumFractionDigits = 2
         formatter.locale = Locale(identifier: "nb_NO")
         let formatted = formatter.string(from: NSNumber(value: wage)) ?? "\(wage)"
-        return "\(formatted) kr/t"
+
+        let currencyConfig = CurrencyConfig.get(currency)
+        let isNorwegian = localization.currentLocale == .norwegian
+        let perHour = isNorwegian ? "/t" : "/hr"
+
+        switch currencyConfig.display {
+        case .prefix:
+            return "\(currency)\(formatted)\(perHour)"
+        case .suffix:
+            return "\(formatted) \(currency)\(perHour)"
+        }
     }
 }
 

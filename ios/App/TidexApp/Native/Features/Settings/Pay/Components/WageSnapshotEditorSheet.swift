@@ -8,6 +8,8 @@ struct WageSnapshotEditorSheet: View {
     let mode: PaySettingsViewModel.EditorMode
     let snapshot: WageSnapshot?
     let mostRecentSnapshot: WageSnapshot?
+    /// User's currency from settings
+    let userCurrency: String
     let onSave: (WageSnapshotEditorInput) async -> Bool
     let onDelete: (WageSnapshot) -> Void
     let onCancel: () -> Void
@@ -38,14 +40,20 @@ struct WageSnapshotEditorSheet: View {
         snapshot?.isBaseline ?? false
     }
 
+    /// Whether tariff option is available (only for Norwegian krone)
+    private var showTariffOption: Bool {
+        userCurrency == "kr"
+    }
+
     private var currency: String {
-        "kr" // Always NOK for now
+        userCurrency
     }
 
     init(
         mode: PaySettingsViewModel.EditorMode,
         snapshot: WageSnapshot?,
         mostRecentSnapshot: WageSnapshot?,
+        userCurrency: String = "kr",
         onSave: @escaping (WageSnapshotEditorInput) async -> Bool,
         onDelete: @escaping (WageSnapshot) -> Void,
         onCancel: @escaping () -> Void
@@ -53,9 +61,13 @@ struct WageSnapshotEditorSheet: View {
         self.mode = mode
         self.snapshot = snapshot
         self.mostRecentSnapshot = mostRecentSnapshot
+        self.userCurrency = userCurrency
         self.onSave = onSave
         self.onDelete = onDelete
         self.onCancel = onCancel
+
+        // Tariff is only available for Norwegian krone
+        let canUseTariff = userCurrency == "kr"
 
         // Initialize form state
         if mode == .edit, let snapshot = snapshot {
@@ -64,7 +76,8 @@ struct WageSnapshotEditorSheet: View {
                let date = ISO8601DateFormatter.dateFromDateOnlyString(fromDateString) {
                 _fromDate = State(initialValue: date)
             }
-            _usePreset = State(initialValue: snapshot.wage_level != nil)
+            // Only use preset if tariff is available AND snapshot uses tariff
+            _usePreset = State(initialValue: canUseTariff && snapshot.wage_level != nil)
             _wageLevel = State(initialValue: snapshot.wage_level ?? 1)
             _customWage = State(initialValue: snapshot.hourly_wage)
             _supplements = State(initialValue: snapshot.supplements.rules.map { OnboardingSupplementRule(from: $0) })
@@ -77,7 +90,8 @@ struct WageSnapshotEditorSheet: View {
         } else if let mostRecent = mostRecentSnapshot {
             // Creating new snapshot - prefill from most recent
             _fromDate = State(initialValue: Date())
-            _usePreset = State(initialValue: mostRecent.wage_level != nil)
+            // Only use preset if tariff is available AND most recent uses tariff
+            _usePreset = State(initialValue: canUseTariff && mostRecent.wage_level != nil)
             _wageLevel = State(initialValue: mostRecent.wage_level ?? 1)
             _customWage = State(initialValue: mostRecent.hourly_wage)
             _supplements = State(initialValue: mostRecent.supplements.rules.map { OnboardingSupplementRule(from: $0) })
@@ -87,8 +101,10 @@ struct WageSnapshotEditorSheet: View {
             _breakDeductionMinutes = State(initialValue: mostRecent.effectiveBreakDeductionMinutes)
             _taxEnabled = State(initialValue: mostRecent.effectiveTaxEnabled)
             _taxPercentage = State(initialValue: mostRecent.effectiveTaxPercentage)
+        } else {
+            // No existing snapshot - default to custom wage if tariff not available
+            _usePreset = State(initialValue: canUseTariff)
         }
-        // else: use defaults from State declarations
     }
 
     var body: some View {
@@ -110,7 +126,8 @@ struct WageSnapshotEditorSheet: View {
                             usePreset: $usePreset,
                             wageLevel: $wageLevel,
                             customWage: $customWage,
-                            currency: currency
+                            currency: currency,
+                            showTariffOption: showTariffOption
                         )
                         .padding(.horizontal)
 
@@ -487,15 +504,17 @@ struct WageSnapshotEditorSheet: View {
         isSaving = true
         errorMessage = nil
 
-        // Build input
-        let resolvedHourlyWage = usePreset
+        // Build input - only use preset if tariff is available and selected
+        let effectiveUsePreset = showTariffOption && usePreset
+
+        let resolvedHourlyWage = effectiveUsePreset
             ? (PayrollCalculator.presetWageRates[String(wageLevel)] ?? 184.54)
             : customWage
 
-        let resolvedWageLevel = usePreset ? wageLevel : nil
+        let resolvedWageLevel = effectiveUsePreset ? wageLevel : nil
 
         let resolvedSupplements: SupplementRulesSnapshot
-        if usePreset {
+        if effectiveUsePreset {
             resolvedSupplements = SupplementRulesSnapshot(rules: PayrollCalculator.presetSupplementRules)
         } else {
             resolvedSupplements = SupplementRulesSnapshot(rules: supplements.map { $0.toSupplementRule() })

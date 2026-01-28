@@ -903,6 +903,7 @@ Actions:
 - UPDATE: action="update", category, settings object with key-value pairs
 
 Categories: display, tax, goals, preferences
+- display: theme, defaultShiftsView, currency (e.g., "kr", "$", "€", "£")
 - See settings_reference section in system prompt for detailed descriptions.
 - Payroll/tax deduction settings now live in wage snapshots (use get_wage_info).
 - For wage information, use the get_wage_info tool instead.
@@ -935,6 +936,18 @@ Note: Only include settings you want to change in the settings object.`,
         action: "update",
         category: "display",
         settings: { theme: "dark" },
+      },
+      // Change currency to dollars
+      {
+        action: "update",
+        category: "display",
+        settings: { currency: "$" },
+      },
+      // Change currency to euros
+      {
+        action: "update",
+        category: "display",
+        settings: { currency: "€" },
       },
       // Set monthly goal to 50000 kr
       {
@@ -988,7 +1001,13 @@ Actions:
 - UPDATE: Updates an existing wage entry. Requires snapshot_id (use short ID from get_wage_info). Only include fields to change.
 - DELETE: Deletes a wage entry. Requires snapshot_id.
 
-IMPORTANT:
+IMPORTANT - Dichotomy between tariff and custom rates:
+- Snapshots are EITHER tariff-based OR custom hourly rate, never both
+- If you provide hourly_wage → automatically switches to CUSTOM mode (wage_level becomes null)
+- If you provide wage_level → automatically switches to TARIFF mode (hourly_wage is looked up from preset rates)
+- You do NOT need to explicitly set wage_level to null when setting a custom hourly_wage
+
+Other notes:
 - Always call get_wage_info first to see current configuration and get snapshot IDs
 - For CREATE: only specify fields the user wants to change - all others are copied automatically
 - For UPDATE: only specify fields to change
@@ -1057,7 +1076,7 @@ IMPORTANT:
         tax_enabled: true,
         tax_percentage: 5,
       },
-      // "Update my current hourly wage to 250"
+      // "Update my current hourly wage to 250" (automatically switches to custom mode, wage_level becomes null)
       {
         action: "update",
         snapshot_id: "a1b2c",
@@ -1068,13 +1087,25 @@ IMPORTANT:
         action: "delete",
         snapshot_id: "d3e4f",
       },
-      // "From March I want wage level 6 with 10% tax"
+      // "From March I want wage level 6 with 10% tax" (automatically looks up hourly rate from tariff)
       {
         action: "create",
         from_date: "2025-03-01",
         wage_level: 6,
         tax_enabled: true,
         tax_percentage: 10,
+      },
+      // "Change from tariff to custom rate of 220" (hourly_wage triggers custom mode, no need to set wage_level: null)
+      {
+        action: "update",
+        snapshot_id: "a1b2c",
+        hourly_wage: 220,
+      },
+      // "Switch to wage level 4" (automatically looks up rate 193.05 from tariff)
+      {
+        action: "update",
+        snapshot_id: "a1b2c",
+        wage_level: 4,
       },
       // "Enable 30 minute break deduction starting from next month"
       {
