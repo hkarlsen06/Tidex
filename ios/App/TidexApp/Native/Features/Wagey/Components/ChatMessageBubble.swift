@@ -59,24 +59,12 @@ struct ChatMessageBubble: View {
     }
 
     private var assistantMessageContent: some View {
-        // For assistant messages, try to render basic markdown
-        formattedAssistantText
-            .font(.system(size: 16))
-            .foregroundColor(.tidexTextPrimary)
+        // For assistant messages, use FormattedMessageContent for rich formatting (tables, markdown)
+        FormattedMessageContent(content: message.content)
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
             .background(Color.tidexSurfacePrimary)
             .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-    }
-
-    /// Attempt to render basic markdown formatting in assistant messages
-    @ViewBuilder
-    private var formattedAssistantText: some View {
-        if let attributedString = try? AttributedString(markdown: message.content, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)) {
-            Text(attributedString)
-        } else {
-            Text(message.content)
-        }
     }
 }
 
@@ -167,6 +155,41 @@ struct StreamingMessageBubble: View {
         ))
     }
     .padding()
+    .background(Color.tidexBackground)
+}
+
+#Preview("With Table") {
+    ScrollView {
+        VStack(spacing: 16) {
+            ChatMessageBubble(message: ChatMessage(
+                id: "1",
+                role: MessageRole.user,
+                content: "Show me my shifts this week",
+                toolCalls: nil,
+                timestamp: Date()
+            ))
+
+            ChatMessageBubble(message: ChatMessage(
+                id: "2",
+                role: MessageRole.assistant,
+                content: """
+                Here are your shifts for this week:
+
+                ```
+                Day\tDate\tHours\tGross
+                Monday\tJan 27\t8.0\t1,600 kr
+                Wednesday\tJan 29\t6.5\t1,300 kr
+                Friday\tJan 31\t7.5\t1,500 kr
+                ```
+
+                Total: **4,400 kr** before taxes.
+                """,
+                toolCalls: nil,
+                timestamp: Date()
+            ))
+        }
+        .padding()
+    }
     .background(Color.tidexBackground)
 }
 

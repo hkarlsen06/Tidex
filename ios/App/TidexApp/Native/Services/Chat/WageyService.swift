@@ -158,9 +158,13 @@ final class WageyService: ObservableObject {
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
             request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
 
-            // Build request body
-            let apiMessages = messages.map { message in
-                ChatAPIRequest.APIMessage(
+            // Build request body - convert ChatMessages to API format
+            // When assistant messages have tool calls, we need to also send tool result messages
+            var apiMessages: [ChatAPIRequest.APIMessage] = []
+
+            for message in messages {
+                // Add the main message
+                let apiMessage = ChatAPIRequest.APIMessage(
                     role: message.role.rawValue,
                     content: message.content,
                     toolCalls: message.toolCalls?.map { toolCall in
@@ -176,6 +180,29 @@ final class WageyService: ObservableObject {
                     toolCallId: nil,
                     name: nil
                 )
+                apiMessages.append(apiMessage)
+
+                // If this assistant message had tool calls with results, add tool result messages
+                if message.role == .assistant, let toolCalls = message.toolCalls {
+                    for toolCall in toolCalls {
+                        if let result = toolCall.result {
+                            let toolResultMessage = ChatAPIRequest.APIMessage(
+                                role: "tool",
+                                content: result,
+                                toolCalls: nil,
+                                toolCallId: toolCall.id,
+                                name: toolCall.name
+                            )
+                            apiMessages.append(toolResultMessage)
+                        }
+                    }
+                }
+            }
+
+            // Debug log the messages being sent
+            logger.debug("Sending \(apiMessages.count) messages to chat API")
+            for (index, msg) in apiMessages.enumerated() {
+                logger.debug("  [\(index)] role=\(msg.role), content_length=\(msg.content.count), toolCalls=\(msg.toolCalls?.count ?? 0), toolCallId=\(msg.toolCallId ?? "nil")")
             }
 
             let requestBody = ChatAPIRequest(

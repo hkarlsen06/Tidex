@@ -1,42 +1,31 @@
 import SwiftUI
 
 /// Main Wagey chat view
-/// Composes the header, message list, and input field
+/// Composes the header, message list, input field, and conversation sidebar
 struct WageyView: View {
     @EnvironmentObject private var coordinator: AppCoordinator
     @Environment(\.localization) private var localization
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     /// ViewModel for managing chat state
     @State private var viewModel = WageyViewModel()
 
+    /// Sidebar visibility state
+    @State private var showSidebar = false
+
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                // Message list
-                ChatMessageList(
-                    messages: viewModel.messages,
-                    streamingText: viewModel.currentStreamingText,
-                    streamingToolCalls: viewModel.activeToolCalls,
-                    isStreaming: viewModel.isStreaming,
-                    onSuggestionTapped: { suggestion in
-                        Task {
-                            await viewModel.sendMessage(suggestion)
-                        }
-                    }
-                )
+            ZStack(alignment: .leading) {
+                // Main chat content
+                mainContent
+                    .disabled(showSidebar && horizontalSizeClass == .compact)
 
-                // Input field
-                ChatInputField(
-                    onSend: { content in
-                        Task {
-                            await viewModel.sendMessage(content)
-                        }
-                    },
-                    disabled: viewModel.isStreaming || viewModel.limitReached
-                )
+                // Sidebar overlay for compact width (iPhone)
+                if showSidebar && horizontalSizeClass == .compact {
+                    sidebarOverlay
+                }
             }
-            .background(Color.tidexBackground)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .principal) {
@@ -48,7 +37,10 @@ struct WageyView: View {
                 }
 
                 ToolbarItem(placement: .topBarTrailing) {
-                    newChatButton
+                    HStack(spacing: 16) {
+                        sidebarButton
+                        newChatButton
+                    }
                 }
             }
         }
@@ -80,14 +72,86 @@ struct WageyView: View {
         }
     }
 
+    // MARK: - Main Content
+
+    private var mainContent: some View {
+        VStack(spacing: 0) {
+            // Message list
+            ChatMessageList(
+                messages: viewModel.messages,
+                streamingText: viewModel.currentStreamingText,
+                streamingToolCalls: viewModel.activeToolCalls,
+                isStreaming: viewModel.isStreaming,
+                onSuggestionTapped: { suggestion in
+                    Task {
+                        await viewModel.sendMessage(suggestion)
+                    }
+                }
+            )
+
+            // Input field
+            ChatInputField(
+                onSend: { content in
+                    Task {
+                        await viewModel.sendMessage(content)
+                    }
+                },
+                disabled: viewModel.isStreaming || viewModel.limitReached
+            )
+        }
+        .background(Color.tidexBackground)
+    }
+
+    // MARK: - Sidebar Overlay (iPhone)
+
+    private var sidebarOverlay: some View {
+        ZStack(alignment: .leading) {
+            // Dimmed background
+            Color.black.opacity(0.4)
+                .ignoresSafeArea()
+                .onTapGesture {
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        showSidebar = false
+                    }
+                }
+
+            // Sidebar
+            ConversationSidebarView(
+                conversations: viewModel.conversations,
+                currentConversationId: viewModel.currentConversationId,
+                onSelectConversation: { id in
+                    viewModel.loadConversation(id: id)
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        showSidebar = false
+                    }
+                },
+                onNewConversation: {
+                    viewModel.startNewConversation()
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        showSidebar = false
+                    }
+                },
+                onDeleteConversation: { id in
+                    viewModel.deleteConversation(id: id)
+                }
+            )
+            .frame(width: 280)
+            .background(Color.tidexSurfacePrimary)
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .shadow(color: Color.black.opacity(0.2), radius: 10, x: 2, y: 0)
+            .transition(.move(edge: .leading))
+        }
+    }
+
     // MARK: - Header Components
 
     private var headerTitle: some View {
         HStack(spacing: 8) {
             VStack(spacing: 2) {
-                Text(localization.string("wagey.title"))
+                Text(viewModel.currentConversationTitle)
                     .font(.system(size: 17, weight: .semibold))
                     .foregroundColor(.tidexTextPrimary)
+                    .lineLimit(1)
 
                 if let remaining = viewModel.remainingMessages {
                     Text(localization.string("wagey.messagesRemaining", remaining))
@@ -108,10 +172,23 @@ struct WageyView: View {
         }
     }
 
+    private var sidebarButton: some View {
+        Button {
+            Haptics.play(.light)
+            withAnimation(.easeInOut(duration: 0.25)) {
+                showSidebar.toggle()
+            }
+        } label: {
+            Image(systemName: "clock.arrow.circlepath")
+                .font(.system(size: 18, weight: .medium))
+                .foregroundColor(.tidexBlue)
+        }
+    }
+
     private var newChatButton: some View {
         Button {
             Haptics.play(.light)
-            viewModel.clearConversation()
+            viewModel.startNewConversation()
         } label: {
             Image(systemName: "plus.bubble")
                 .font(.system(size: 18, weight: .medium))

@@ -59,6 +59,11 @@ struct ChatMessageList: View {
                     scrollToBottom(proxy: proxy)
                 }
             }
+            .scrollDismissesKeyboard(.interactively)
+        }
+        .onTapGesture {
+            // Dismiss keyboard when tapping on the message area
+            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
         }
     }
 

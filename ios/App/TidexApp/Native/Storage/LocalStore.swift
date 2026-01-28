@@ -43,6 +43,7 @@ final class LocalStore {
             LocalSharedShift.self,
             LocalSharer.self,
             LocalShiftPreview.self,
+            LocalConversation.self,
         ])
 
         // Configure container for persistent storage

@@ -2,13 +2,19 @@ import Foundation
 import SwiftUI
 
 /// ViewModel for the Wagey AI chat feature
-/// Manages conversation state, streaming, and user interactions
+/// Manages conversation state, streaming, persistence, and user interactions
 @MainActor
 @Observable
 final class WageyViewModel {
     // MARK: - Published State
 
-    /// Conversation history
+    /// All conversations for the current user
+    private(set) var conversations: [LocalConversation] = []
+
+    /// Current conversation ID (nil for new unsaved conversation)
+    private(set) var currentConversationId: String?
+
+    /// Conversation history for the current conversation
     private(set) var messages: [ChatMessage] = []
 
     /// Text being streamed from the assistant
@@ -32,6 +38,9 @@ final class WageyViewModel {
     /// Tool calls in progress for the current streaming message
     private(set) var activeToolCalls: [ToolCall] = []
 
+    /// Whether the sidebar is visible
+    var isSidebarVisible: Bool = false
+
     // MARK: - Private State
 
     /// Current streaming task (for cancellation)
@@ -40,9 +49,88 @@ final class WageyViewModel {
     /// ID of the message currently being streamed
     private var currentAssistantMessageId: String?
 
+    /// Repository for conversation persistence
+    private let conversationsRepository = ConversationsRepository.shared
+
+    /// Cached user ID for persistence
+    private var cachedUserId: String?
+
     // MARK: - Initialization
 
-    init() {}
+    init() {
+        loadConversations()
+    }
+
+    // MARK: - Conversation Management
+
+    /// Load all conversations for the current user
+    func loadConversations() {
+        guard let userId = AppCoordinator.shared.userId else { return }
+        cachedUserId = userId
+        conversations = conversationsRepository.getConversations(for: userId)
+    }
+
+    /// Load a specific conversation
+    /// - Parameter id: Conversation ID to load
+    func loadConversation(id: String) {
+        guard let conversation = conversationsRepository.getConversation(id: id) else {
+            return
+        }
+
+        // Cancel any ongoing stream
+        cancelStream()
+
+        // Load the conversation
+        currentConversationId = id
+        messages = conversation.messages.map { $0.toChatMessage() }
+        error = nil
+    }
+
+    /// Start a new conversation (clears current state)
+    func startNewConversation() {
+        // Cancel any ongoing stream
+        cancelStream()
+
+        // Save current conversation if it has messages
+        saveCurrentConversation()
+
+        // Reset state for new conversation
+        currentConversationId = nil
+        messages = []
+        currentStreamingText = ""
+        activeToolCalls = []
+        error = nil
+
+        // Reload conversations list
+        loadConversations()
+    }
+
+    /// Delete a conversation
+    /// - Parameter id: Conversation ID to delete
+    func deleteConversation(id: String) {
+        conversationsRepository.deleteConversation(id: id)
+
+        // If deleting the current conversation, start a new one
+        if id == currentConversationId {
+            startNewConversation()
+        } else {
+            loadConversations()
+        }
+    }
+
+    /// Toggle sidebar visibility
+    func toggleSidebar() {
+        isSidebarVisible.toggle()
+    }
+
+    /// Get the current conversation title
+    var currentConversationTitle: String {
+        if let id = currentConversationId,
+           let conversation = conversations.first(where: { $0.id == id }) {
+            return conversation.title
+        }
+        return "New Conversation"
+    }
 
     // MARK: - Public Actions
 
@@ -64,6 +152,14 @@ final class WageyViewModel {
             timestamp: Date()
         )
         messages.append(userMessage)
+
+        // Create conversation if this is the first message
+        if currentConversationId == nil {
+            createNewConversation()
+        }
+
+        // Save after adding user message
+        saveCurrentConversation()
 
         // Start streaming
         isStreaming = true
@@ -120,18 +216,9 @@ final class WageyViewModel {
         }
     }
 
-    /// Clear the conversation and start a new chat
+    /// Clear the conversation and start a new chat (legacy method, now calls startNewConversation)
     func clearConversation() {
-        // Cancel any ongoing stream
-        cancelStream()
-
-        // Reset state
-        messages = []
-        currentStreamingText = ""
-        activeToolCalls = []
-        error = nil
-        limitReached = false
-        currentAssistantMessageId = nil
+        startNewConversation()
     }
 
     /// Dismiss the current error
@@ -140,6 +227,30 @@ final class WageyViewModel {
     }
 
     // MARK: - Private Helpers
+
+    /// Create a new conversation in the database
+    private func createNewConversation() {
+        guard let userId = cachedUserId ?? AppCoordinator.shared.userId else { return }
+
+        let conversation = conversationsRepository.createConversation(
+            for: userId,
+            title: "New Conversation"
+        )
+        currentConversationId = conversation.id
+        loadConversations()
+    }
+
+    /// Save the current conversation to the database
+    private func saveCurrentConversation() {
+        guard let conversationId = currentConversationId else { return }
+
+        let storedMessages = messages.map { StoredChatMessage(from: $0) }
+        conversationsRepository.updateMessages(
+            conversationId: conversationId,
+            messages: storedMessages
+        )
+        loadConversations()
+    }
 
     /// Process a single chunk from the stream
     private func processChunk(_ chunk: ChatChunk) {
@@ -206,6 +317,9 @@ final class WageyViewModel {
                 timestamp: Date()
             )
             messages.append(assistantMessage)
+
+            // Save after assistant responds
+            saveCurrentConversation()
         }
 
         // Reset streaming state
