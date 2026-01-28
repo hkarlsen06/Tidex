@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServiceClient } from '@/lib/supabase/service';
-import { verifyAdminFromRequest } from '../_lib/verify-admin';
+import { verifyAdminFromRequest, isNextInternalError } from '../_lib/verify-admin';
 
 /**
  * GET /api/admin/subscribers
@@ -232,6 +232,8 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ success: true, subscribers: filtered });
   } catch (error) {
+    // Re-throw Next.js internal errors (prerender bailout, etc.)
+    if (isNextInternalError(error)) throw error;
     console.error('[admin/subscribers] Exception:', error);
     return NextResponse.json(
       { success: false, message: 'Internal server error' },

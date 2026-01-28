@@ -95,3 +95,20 @@ export function isValidUUID(id: string): boolean {
     id
   );
 }
+
+/**
+ * Check if an error is a Next.js internal error that should be re-thrown.
+ * This includes prerender bailout errors (NEXT_PRERENDER_INTERRUPTED) and other
+ * framework-level errors that have a 'digest' property starting with 'NEXT_'.
+ *
+ * These errors should not be caught and logged - they signal to Next.js that
+ * the route needs dynamic rendering.
+ */
+export function isNextInternalError(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    'digest' in error &&
+    typeof (error as Error & { digest?: string }).digest === 'string' &&
+    (error as Error & { digest: string }).digest.startsWith('NEXT_')
+  );
+}

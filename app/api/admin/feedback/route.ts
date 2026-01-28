@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServiceClient } from '@/lib/supabase/service';
-import { verifyAdminFromRequest } from '../_lib/verify-admin';
+import { verifyAdminFromRequest, isNextInternalError } from '../_lib/verify-admin';
 
 /**
  * GET /api/admin/feedback
@@ -129,6 +129,8 @@ export async function GET(request: NextRequest) {
       total: count ?? 0,
     });
   } catch (error) {
+    // Re-throw Next.js internal errors (prerender bailout, etc.)
+    if (isNextInternalError(error)) throw error;
     console.error('[admin/feedback] Exception:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
