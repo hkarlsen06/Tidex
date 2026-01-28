@@ -176,11 +176,67 @@ final class StoreKitManager: ObservableObject {
     /// Restore previous purchases from the App Store
     /// - Throws: Error if sync fails
     func restorePurchases() async throws {
+        guard let userId = userId else {
+            throw PurchaseError.userNotConfigured
+        }
+
         logger.info("Restoring purchases...")
 
         try await AppStore.sync()
         await updateCurrentEntitlements()
         EntitlementService.shared.updateEffectiveTier()
+
+        // After sync, find and upload the best subscription to the server
+        // Prefer Production over Sandbox, and highest tier
+        var bestTransaction: (verification: VerificationResult<Transaction>, tier: SubscriptionTier)?
+
+        for await result in Transaction.currentEntitlements {
+            guard case .verified(let transaction) = result else {
+                continue
+            }
+
+            guard let productId = ProductID(rawValue: transaction.productID) else {
+                continue
+            }
+
+            let isProduction = transaction.environment != .sandbox
+            let currentIsProduction = bestTransaction.map { $0.verification.unsafePayloadValue.environment != .sandbox } ?? false
+
+            // Prefer Production over Sandbox
+            if isProduction && !currentIsProduction {
+                bestTransaction = (result, productId.tier)
+            } else if isProduction == currentIsProduction {
+                // Same environment, prefer higher tier
+                if bestTransaction == nil || productId.tier > bestTransaction!.tier {
+                    bestTransaction = (result, productId.tier)
+                }
+            }
+
+            logger.info("Found entitlement: \(transaction.productID), env=\(transaction.environment == .sandbox ? "Sandbox" : "Production"), tier=\(productId.tier.rawValue)")
+        }
+
+        // Upload the best transaction to the server
+        if let best = bestTransaction, case .verified(let transaction) = best.verification {
+            let jwsRepresentation = best.verification.jwsRepresentation
+            let displayPrice = products.first(where: { $0.id == transaction.productID })?.displayPrice
+
+            let upload = LocalPendingJWSUpload(
+                userId: userId,
+                jwsRepresentation: jwsRepresentation,
+                transactionId: String(transaction.id),
+                originalTransactionId: String(transaction.originalID),
+                productId: transaction.productID,
+                environment: transaction.environment == .sandbox ? "Sandbox" : "Production",
+                priceDisplay: displayPrice
+            )
+
+            let uploadSuccess = await JWSUploadWorker.shared.uploadImmediately(upload)
+            if uploadSuccess {
+                logger.info("Uploaded restored subscription to server: \(transaction.productID), env=\(transaction.environment == .sandbox ? "Sandbox" : "Production")")
+            } else {
+                logger.warning("Failed to upload restored subscription, will retry in background")
+            }
+        }
 
         logger.info("Purchases restored, current tier: \(self.currentTier.rawValue)")
     }
