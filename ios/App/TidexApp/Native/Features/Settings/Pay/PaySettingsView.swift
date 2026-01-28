@@ -28,6 +28,7 @@ struct PaySettingsView: View {
                 mode: viewModel.editorMode,
                 snapshot: viewModel.selectedSnapshot,
                 mostRecentSnapshot: viewModel.snapshots.first,
+                userCurrency: viewModel.userCurrency,
                 onSave: { input in
                     if viewModel.editorMode == .create {
                         return await viewModel.createSnapshot(input: input)
@@ -125,10 +126,14 @@ struct PaySettingsView: View {
                 // Global Pay Settings
                 GlobalPaySettingsCard(
                     settings: viewModel.globalSettings,
+                    canChangeCurrency: viewModel.canChangeCurrency,
                     onUpdateMonthlyGoal: { viewModel.updateMonthlyGoal($0) },
                     onUpdatePayrollDay: { viewModel.updatePayrollDay($0) },
                     onUpdateHalfTaxMonth: { value in
                         await viewModel.updateHalfTaxMonth(value)
+                    },
+                    onUpdateCurrency: { value in
+                        await viewModel.updateCurrency(value)
                     }
                 )
                 .padding(.horizontal, 16)

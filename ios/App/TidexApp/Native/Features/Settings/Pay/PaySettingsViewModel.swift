@@ -31,6 +31,24 @@ final class PaySettingsViewModel: ObservableObject {
     /// Success message to display
     @Published var successMessage: String?
 
+    // MARK: - Currency
+
+    /// User's current currency
+    var userCurrency: String {
+        globalSettings?.currency ?? "kr"
+    }
+
+    /// Whether any snapshot uses tariff (wage_level is set)
+    var hasTariffSnapshots: Bool {
+        snapshots.contains { $0.wage_level != nil }
+    }
+
+    /// Whether user can change their currency
+    /// Only allowed if no snapshots use tariff rates
+    var canChangeCurrency: Bool {
+        !hasTariffSnapshots
+    }
+
     // MARK: - Editor State
 
     /// Whether the editor sheet is showing
@@ -453,6 +471,35 @@ final class PaySettingsViewModel: ObservableObject {
             logger.info("Updated half tax month to: \(value ?? 0)")
         } catch {
             logger.error("Failed to update half tax month: \(error.localizedDescription)")
+        }
+    }
+
+    /// Update currency (immediate, no debounce needed for picker)
+    /// Only allowed if no snapshots use tariff rates
+    func updateCurrency(_ value: String) async {
+        guard let userId = userId else { return }
+        guard canChangeCurrency else {
+            errorMessage = localization.currentLocale == .norwegian
+                ? "Du kan ikke endre valuta når du har lønnstrinn-innstillinger"
+                : "Cannot change currency when using tariff wage settings"
+            return
+        }
+
+        do {
+            _ = try await settingsRepository.updateSettings(
+                for: userId,
+                currency: value
+            )
+
+            // Trigger sync
+            Task {
+                _ = await SyncCoordinator.shared.sync(reason: .localChange, userId: userId)
+            }
+
+            refreshData()
+            logger.info("Updated currency to: \(value)")
+        } catch {
+            logger.error("Failed to update currency: \(error.localizedDescription)")
         }
     }
 

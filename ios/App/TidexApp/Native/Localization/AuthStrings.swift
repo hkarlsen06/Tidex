@@ -754,6 +754,8 @@ enum AuthStrings {
         "settings.pay.global.halfTaxMonthOff": "Ingen",
         "settings.pay.global.halfTaxMonthNovember": "November",
         "settings.pay.global.halfTaxMonthDecember": "Desember",
+        "settings.pay.global.currency": "Valuta",
+        "settings.pay.global.currencyTitle": "Velg valuta",
 
         // Appearance Settings
         "appearance.title": "Utseende",
@@ -1772,6 +1774,8 @@ enum AuthStrings {
         "settings.pay.global.halfTaxMonthOff": "None",
         "settings.pay.global.halfTaxMonthNovember": "November",
         "settings.pay.global.halfTaxMonthDecember": "December",
+        "settings.pay.global.currency": "Currency",
+        "settings.pay.global.currencyTitle": "Select currency",
 
         // Appearance Settings
         "appearance.title": "Appearance",

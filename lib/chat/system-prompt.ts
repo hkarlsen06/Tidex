@@ -210,6 +210,7 @@ Note: Break/pause deduction settings now live in wage snapshots.
 **display** - UI preferences:
 - theme: "light" or "dark"
 - defaultShiftsView: Default calendar/list view
+- currency: Currency symbol for displaying amounts (e.g., "kr", "$", "€", "£"). Default: "kr"
 
 **preferences** - Input behavior:
 - directTimeInput: Allow typing times directly vs. time picker
