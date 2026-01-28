@@ -8,7 +8,6 @@
 import { z } from "zod";
 import { NextRequest } from "next/server";
 import { Effect } from "effect";
-import { createClient } from "@supabase/supabase-js";
 import {
   createRiverStream,
   createRiverRouter,
@@ -20,7 +19,6 @@ import { tools, type ToolName } from "./tools";
 import { executeTool } from "./executor";
 import { LOCALE_COOKIE, defaultLocale, type Locale } from "@/lib/i18n/config";
 import { getDictionary } from "@/lib/i18n/dictionaries";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 /**
  * Chat chunk types (sent to frontend)
@@ -90,49 +88,30 @@ const chatInputSchema = z.object({
 export type ChatInput = z.infer<typeof chatInputSchema>;
 
 /**
- * Verify authentication from either Bearer token (iOS) or cookie session (web)
- * Returns the authenticated user ID or null if not authenticated
+ * Verify authentication using the Effect-based auth service
+ * Supports both Bearer token (iOS) and cookie session (web) via the service layer
  */
 async function verifyAuthentication(
-  request: NextRequest,
+  _request: NextRequest,
   expectedUserId: string
 ): Promise<{ userId: string } | null> {
-  // Try Bearer token first (native iOS app)
-  const authHeader = request.headers.get("Authorization");
-  if (authHeader?.startsWith("Bearer ")) {
-    const token = authHeader.substring(7);
+  const { AuthService } = await import("@/lib/services/auth");
+  const { SupabaseAuthLive } = await import("@/lib/layers/app");
 
-    // Create a Supabase client with the user's JWT to verify it
-    const supabaseWithToken = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
-      {
-        global: {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      }
-    );
+  const program = Effect.gen(function* () {
+    const auth = yield* AuthService;
+    const user = yield* auth.verifyUserId(expectedUserId);
+    return user;
+  }).pipe(
+    Effect.provide(SupabaseAuthLive),
+    Effect.scoped,
+    Effect.catchAll(() => Effect.succeed(null))
+  );
 
-    const { data, error } = await supabaseWithToken.auth.getUser();
-    if (!error && data.user) {
-      // Verify the token's user matches the requested userId
-      if (data.user.id === expectedUserId) {
-        return { userId: data.user.id };
-      }
-    }
-  }
+  const user = await Effect.runPromise(program);
 
-  // Fall back to cookie-based session (web app)
-  try {
-    const supabase = await createSupabaseServerClient();
-    const { data, error } = await supabase.auth.getUser();
-    if (!error && data.user && data.user.id === expectedUserId) {
-      return { userId: data.user.id };
-    }
-  } catch {
-    // Cookie-based auth failed
+  if (user) {
+    return { userId: user.id };
   }
 
   return null;
@@ -257,84 +236,13 @@ const wageyChatStream = createRiverStream<ChatChunk, NextRequest>()
     // Get locale from cookie for localized tool messages
     const locale = (adapterRequest.cookies.get(LOCALE_COOKIE)?.value || defaultLocale) as Locale;
 
-    // Check if this is a Bearer token request (iOS) - needs direct DB access
-    const authHeader = adapterRequest.headers.get("Authorization");
-    const isBearerAuth = authHeader?.startsWith("Bearer ");
-    const bearerToken = isBearerAuth ? authHeader!.substring(7) : undefined;
-
     // Import dependencies
-    const { getDaysUntilReset, getCurrentMonth, WAGEY_LIMITS } = await import("@/lib/wagey/types");
-    const { getUserTier } = await import("@/lib/subscription/getUserTier");
+    const { getDaysUntilReset } = await import("@/lib/wagey/types");
 
-    let accessInfo: { level: "free" | "pro" | "max"; hasAccess: boolean; limit: number | null; used: number; remaining: number | null; resetDate: Date | null };
-    let result: { allowed: boolean; count: number; remaining: number };
-
-    if (isBearerAuth) {
-      // For Bearer token auth (iOS), call the database directly
-      // This bypasses the Effect-based auth verification which expects cookies
-      // Use SUPABASE_DIRECT_URL to bypass auth proxy (identity.tidex.no) for REST API calls
-      const token = adapterRequest.headers.get("Authorization")!.substring(7);
-      const directUrl = process.env.SUPABASE_DIRECT_URL || process.env.NEXT_PUBLIC_SUPABASE_URL!;
-      console.log("[chat/router] SUPABASE_DIRECT_URL:", process.env.SUPABASE_DIRECT_URL || "NOT SET");
-      console.log("[chat/router] Using URL:", directUrl);
-      const supabaseWithToken = createClient(
-        directUrl,
-        process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
-        {
-          global: {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          },
-        }
-      );
-
-      // Get subscription and profile data
-      const [subResult, profileResult] = await Promise.all([
-        supabaseWithToken.from("subscriptions").select("*").eq("user_id", userId).maybeSingle(),
-        supabaseWithToken.from("profiles").select("id, before_paywall, wagey_invocations, created_at, updated_at").eq("id", userId).single(),
-      ]);
-
-      const subscription = subResult.data;
-      const profile = profileResult.data;
-
-      // Determine tier and limit
-      const level = getUserTier(subscription, profile);
-      const limit = WAGEY_LIMITS[level];
-      const currentMonth = getCurrentMonth();
-
-      // Get current usage
-      const invocations = profile?.wagey_invocations as { count: number; month: string | null } | null;
-      const used = invocations?.month === currentMonth ? invocations.count : 0;
-
-      accessInfo = {
-        level,
-        hasAccess: level !== "free",
-        limit,
-        used,
-        remaining: Math.max(0, limit - used),
-        resetDate: null,
-      };
-
-      // Call the RPC to atomically check and increment
-      const { data: rpcResult, error: rpcError } = await supabaseWithToken.rpc("increment_wagey_invocation", {
-        p_user_id: userId,
-        p_current_month: currentMonth,
-        p_max_invocations: limit,
-      });
-
-      if (rpcError) {
-        console.error("[chat/router] RPC error:", rpcError);
-        result = { allowed: false, count: 0, remaining: 0 };
-      } else {
-        result = rpcResult as { allowed: boolean; count: number; remaining: number };
-      }
-    } else {
-      // For cookie auth (web), use the existing DAL functions
-      const { useWageyInvocation, getWageyAccessForUser } = await import("@/data-access/wagey");
-      accessInfo = await getWageyAccessForUser(userId);
-      result = await useWageyInvocation(userId);
-    }
+    // Use DAL functions for wagey access (works with both Bearer token and cookies via Effect layer)
+    const { useWageyInvocation, getWageyAccessForUser } = await import("@/data-access/wagey");
+    const accessInfo = await getWageyAccessForUser(userId);
+    const result = await useWageyInvocation(userId);
 
     if (!result.allowed) {
       await stream.appendChunk({
@@ -475,8 +383,7 @@ const wageyChatStream = createRiverStream<ChatChunk, NextRequest>()
             toolUse.name as ToolName,
             JSON.stringify(toolUse.input),
             userId,
-            locale,
-            { bearerToken }
+            locale
           );
 
           // Only send tool_result chunk to UI if successful
