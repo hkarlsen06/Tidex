@@ -163,8 +163,8 @@ enum ChatChunk: Equatable {
     /// An error occurred during processing
     case error(message: String)
 
-    /// Usage limit has been reached
-    case wageyLimit(remaining: Int, resetDays: Int)
+    /// Usage limit information (may include exceeded warning)
+    case wageyLimit(remaining: Int, resetDays: Int, exceeded: Bool)
 
     /// User does not have access to Wagey
     case wageyNoAccess
@@ -184,6 +184,7 @@ extension ChatChunk: Decodable {
         case error
         case remaining
         case resetDays
+        case exceeded
     }
 
     init(from decoder: Decoder) throws {
@@ -218,7 +219,8 @@ extension ChatChunk: Decodable {
         case "wagey_limit":
             let remaining = try container.decode(Int.self, forKey: .remaining)
             let resetDays = try container.decode(Int.self, forKey: .resetDays)
-            self = .wageyLimit(remaining: remaining, resetDays: resetDays)
+            let exceeded = try container.decodeIfPresent(Bool.self, forKey: .exceeded) ?? false
+            self = .wageyLimit(remaining: remaining, resetDays: resetDays, exceeded: exceeded)
 
         case "wagey_no_access":
             self = .wageyNoAccess

@@ -145,6 +145,11 @@ struct WageyView: View {
             // Usage bar (always show for all tiers)
             usageBar
 
+            // Entitlement sync banner (when server/StoreKit mismatch detected)
+            if let syncMessage = viewModel.entitlementSyncMessage {
+                entitlementSyncBanner(syncMessage)
+            }
+
             // Message list
             ChatMessageList(
                 messages: viewModel.messages,
@@ -181,6 +186,42 @@ struct WageyView: View {
                 .foregroundColor(.tidexBorder)
         }
         .background(Color.tidexSurfacePrimary)
+    }
+
+    // MARK: - Entitlement Sync Banner
+
+    @ViewBuilder
+    private func entitlementSyncBanner(_ message: String) -> some View {
+        HStack(spacing: 8) {
+            if viewModel.isSyncingEntitlement {
+                ProgressView()
+                    .scaleEffect(0.8)
+            } else {
+                Image(systemName: message.contains("Could not") || message.contains("Kunne ikke")
+                      ? "exclamationmark.triangle.fill"
+                      : "checkmark.circle.fill")
+                    .foregroundColor(message.contains("Could not") || message.contains("Kunne ikke")
+                                     ? .tidexWarning
+                                     : .tidexSuccess)
+            }
+
+            Text(message)
+                .font(.system(size: 13))
+                .foregroundColor(.tidexTextPrimary)
+
+            Spacer()
+
+            Button {
+                viewModel.dismissEntitlementSyncMessage()
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(.tidexTextMuted)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background(Color.tidexSurfaceSecondary)
     }
 
     // MARK: - Message Handling

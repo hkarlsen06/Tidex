@@ -559,7 +559,7 @@ serve(async (req) => {
     console.log(`[apple-verify] Success: user=${user.id}, status=${status}, entitled=${isEntitled}`);
 
     return json({
-      success: true,
+      ok: true,
       entitled: isEntitled,
       subscription: {
         status,
