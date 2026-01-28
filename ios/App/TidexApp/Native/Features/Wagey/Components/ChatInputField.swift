@@ -73,6 +73,9 @@ struct ChatInputField: View {
         // Provide haptic feedback
         Haptics.play(.medium)
 
+        // Dismiss keyboard
+        isFocused = false
+
         // Clear input
         inputText = ""
 

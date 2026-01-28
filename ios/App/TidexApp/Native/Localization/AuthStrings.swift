@@ -170,6 +170,7 @@ enum AuthStrings {
         "common.error": "Feil",
         "common.retry": "Pr\u{00F8}v igjen",
         "common.cancel": "Avbryt",
+        "common.delete": "Slett",
         "common.continue": "Fortsett",
         "common.back": "Tilbake",
         "common.done": "Ferdig",
@@ -1006,6 +1007,11 @@ enum AuthStrings {
         "wagey.emptyState.suggestion2": "Hva tjente jeg forrige måned?",
         "wagey.emptyState.suggestion3": "Vis vaktene mine denne uken",
 
+        // Wagey Conversations
+        "wagey.conversations.title": "Samtaler",
+        "wagey.conversations.empty": "Ingen samtaler enn\u{00E5}",
+        "wagey.conversations.deleteConfirm": "Slett denne samtalen?",
+
         // Wagey Tool Names
         "wagey.tool.manageShift": "Administrerer vakt...",
         "wagey.tool.queryShifts": "Finner vakter...",
@@ -1181,6 +1187,7 @@ enum AuthStrings {
         "common.error": "Error",
         "common.retry": "Try again",
         "common.cancel": "Cancel",
+        "common.delete": "Delete",
         "common.continue": "Continue",
         "common.back": "Back",
         "common.done": "Done",
@@ -2016,6 +2023,11 @@ enum AuthStrings {
         "wagey.emptyState.suggestion1": "Add a shift tomorrow 9-17",
         "wagey.emptyState.suggestion2": "What did I earn last month?",
         "wagey.emptyState.suggestion3": "Show my shifts this week",
+
+        // Wagey Conversations
+        "wagey.conversations.title": "Conversations",
+        "wagey.conversations.empty": "No conversations yet",
+        "wagey.conversations.deleteConfirm": "Delete this conversation?",
 
         // Wagey Tool Names
         "wagey.tool.manageShift": "Managing shift...",
