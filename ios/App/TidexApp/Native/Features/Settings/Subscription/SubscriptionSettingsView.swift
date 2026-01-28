@@ -22,6 +22,11 @@ struct SubscriptionSettingsView: View {
                     errorBanner(error)
                 }
 
+                // Success/info message
+                if let success = viewModel.successMessage {
+                    successBanner(success)
+                }
+
                 // Grandfathered banner (early supporter)
                 if viewModel.isGrandfathered && viewModel.hasPremiumAccess {
                     grandfatheredBanner
@@ -117,6 +122,39 @@ struct SubscriptionSettingsView: View {
         .padding(12)
         .background(Color.tidexError.opacity(0.1))
         .cornerRadius(8)
+    }
+
+    // MARK: - Success Banner
+
+    @ViewBuilder
+    private func successBanner(_ message: String) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: "checkmark.circle.fill")
+                .foregroundColor(.tidexSuccess)
+            Text(message)
+                .font(.system(size: 14))
+                .foregroundColor(.tidexSuccess)
+            Spacer()
+            Button {
+                viewModel.successMessage = nil
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(.tidexSuccess)
+            }
+        }
+        .padding(12)
+        .background(Color.tidexSuccess.opacity(0.1))
+        .cornerRadius(8)
+        .onAppear {
+            // Auto-dismiss after 4 seconds
+            Task {
+                try? await Task.sleep(for: .seconds(4))
+                await MainActor.run {
+                    viewModel.successMessage = nil
+                }
+            }
+        }
     }
 
     // MARK: - Grandfathered Banner
@@ -449,7 +487,9 @@ struct SubscriptionSettingsView: View {
                 ProgressView()
                     .scaleEffect(1.2)
 
-                Text(localization.string("common.loading"))
+                Text(viewModel.isRestoring
+                     ? localization.string("subscription.restore.loading")
+                     : localization.string("common.loading"))
                     .font(.system(size: 15))
                     .foregroundColor(.tidexTextSecondary)
             }

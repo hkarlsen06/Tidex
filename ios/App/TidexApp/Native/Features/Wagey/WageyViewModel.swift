@@ -2,6 +2,9 @@ import Foundation
 import SwiftUI
 import Combine
 import Supabase
+import os.log
+
+private let logger = Logger(subsystem: "no.tidex.app", category: "WageyViewModel")
 
 // MARK: - Wagey Invocations
 
@@ -83,6 +86,12 @@ final class WageyViewModel {
 
     /// Current error if any
     private(set) var error: Error?
+
+    /// Whether an entitlement sync is in progress (server/StoreKit mismatch detected)
+    private(set) var isSyncingEntitlement: Bool = false
+
+    /// Message to show after entitlement sync (success or failure)
+    private(set) var entitlementSyncMessage: String?
 
     /// Whether the user has seen the showcase (per user, stored in UserDefaults)
     private(set) var hasSeenShowcase: Bool = false
@@ -425,6 +434,52 @@ final class WageyViewModel {
 
     // MARK: - Private Helpers
 
+    /// Trigger a background entitlement sync when server/StoreKit mismatch is detected
+    /// This uploads the StoreKit subscription to the server to fix the mismatch
+    private func triggerEntitlementSync() async {
+        logger.info("Triggering entitlement sync due to server/StoreKit mismatch")
+
+        isSyncingEntitlement = true
+        entitlementSyncMessage = nil
+
+        do {
+            // Restore will sync with Apple and upload any valid entitlements to the server
+            try await StoreKitManager.shared.restorePurchases()
+            logger.info("Entitlement sync completed successfully")
+
+            // Show brief success feedback
+            entitlementSyncMessage = AuthStrings.string(
+                "wagey.entitlementSync.success",
+                locale: LocalizationManager.shared.currentLocale
+            )
+
+            // Auto-dismiss after 3 seconds
+            Task {
+                try? await Task.sleep(for: .seconds(3))
+                await MainActor.run {
+                    if self.entitlementSyncMessage != nil {
+                        self.entitlementSyncMessage = nil
+                    }
+                }
+            }
+        } catch {
+            logger.error("Entitlement sync failed: \(error.localizedDescription)")
+
+            // Show error with suggestion to restore manually
+            entitlementSyncMessage = AuthStrings.string(
+                "wagey.entitlementSync.failed",
+                locale: LocalizationManager.shared.currentLocale
+            )
+        }
+
+        isSyncingEntitlement = false
+    }
+
+    /// Dismiss the entitlement sync message
+    func dismissEntitlementSyncMessage() {
+        entitlementSyncMessage = nil
+    }
+
     /// Create a new conversation in the database
     private func createNewConversation() {
         guard let userId = cachedUserId ?? AppCoordinator.shared.userId else { return }
@@ -494,7 +549,7 @@ final class WageyViewModel {
                 hadSuccessfulToolCalls = true
             }
 
-        case .wageyLimit(let remaining, let days):
+        case .wageyLimit(let remaining, let days, let exceeded):
             // Update wagey invocations from API response to stay in sync
             // The count is: limit - remaining
             let usedCount = max(0, messageLimit - remaining)
@@ -507,6 +562,16 @@ final class WageyViewModel {
             resetDays = days
             if remaining <= 0 {
                 limitReached = true
+            }
+
+            // Entitlement mismatch detection:
+            // If server says exceeded but StoreKit has valid entitlements, trigger background sync
+            // This handles cases where server doesn't know about a valid Apple subscription
+            if exceeded && StoreKitManager.shared.currentTier != .free {
+                logger.warning("Entitlement mismatch detected: server says exceeded but StoreKit has tier \(StoreKitManager.shared.currentTier.rawValue)")
+                Task {
+                    await triggerEntitlementSync()
+                }
             }
 
         case .wageyNoAccess:

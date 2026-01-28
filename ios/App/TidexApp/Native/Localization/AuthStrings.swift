@@ -944,6 +944,9 @@ enum AuthStrings {
         "subscription.actions.subscribe": "Velg plan",
         "subscription.actions.upgrade": "Oppgrader",
         "subscription.errors.restoreFailed": "Kunne ikke gjenopprette kjøp. Prøv igjen.",
+        "subscription.restore.loading": "Gjenoppretter kjøp...",
+        "subscription.restore.success": "Kjøp gjenopprettet!",
+        "subscription.restore.noPurchases": "Ingen kjøp funnet å gjenopprette.",
 
         // Notification Settings
         "notifications.title": "Varsler",
@@ -1010,6 +1013,8 @@ enum AuthStrings {
         "wagey.error.network": "Nettverksfeil. Prøv igjen.",
         "wagey.error.auth": "Autentiseringsfeil. Logg inn på nytt.",
         "wagey.error.unknown": "Noe gikk galt. Prøv igjen.",
+        "wagey.entitlementSync.success": "Abonnement synkronisert",
+        "wagey.entitlementSync.failed": "Kunne ikke synkronisere abonnement. Prøv å gjenopprette kjøp i innstillinger.",
         "wagey.emptyState.title": "Chat med Wagey",
         "wagey.emptyState.subtitle": "Spør meg om å legge til vakter, beregne lønn eller administrere timeplanen din.",
         "wagey.emptyState.suggestion1": "Legg til en vakt i morgen 9-17",
@@ -2009,6 +2014,9 @@ enum AuthStrings {
         "subscription.actions.subscribe": "Choose plan",
         "subscription.actions.upgrade": "Upgrade",
         "subscription.errors.restoreFailed": "Could not restore purchases. Please try again.",
+        "subscription.restore.loading": "Restoring purchases...",
+        "subscription.restore.success": "Purchases restored!",
+        "subscription.restore.noPurchases": "No purchases found to restore.",
 
         // Notification Settings
         "notifications.title": "Notifications",
@@ -2075,6 +2083,8 @@ enum AuthStrings {
         "wagey.error.network": "Network error. Please try again.",
         "wagey.error.auth": "Authentication error. Please sign in again.",
         "wagey.error.unknown": "Something went wrong. Please try again.",
+        "wagey.entitlementSync.success": "Subscription synced",
+        "wagey.entitlementSync.failed": "Could not sync subscription. Try restoring purchases in settings.",
         "wagey.emptyState.title": "Chat with Wagey",
         "wagey.emptyState.subtitle": "Ask me to add shifts, calculate wages, or manage your schedule.",
         "wagey.emptyState.suggestion1": "Add a shift tomorrow 9-17",
