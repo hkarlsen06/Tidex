@@ -15,6 +15,11 @@ final class SubscriptionSettingsViewModel: ObservableObject {
     private let storeKitManager: StoreKitManager
     private let repository: EntitlementRepository
 
+    /// Whether user has an active StoreKit subscription (independent of server cache)
+    private var hasStoreKitSubscription: Bool {
+        storeKitManager.currentTier != .free
+    }
+
     // MARK: - Published State
 
     /// Current effective tier (max of StoreKit and server)
@@ -136,33 +141,52 @@ final class SubscriptionSettingsViewModel: ObservableObject {
 
         // Load cached entitlement for additional details
         if let cached = repository.getCached(for: userId) {
-            hasActiveSubscription = cached.hasActiveSubscription
+            // hasActiveSubscription = true if server cache says so OR StoreKit has active entitlement
+            // This handles the case where StoreKit has an active subscription but server cache is stale
+            hasActiveSubscription = cached.hasActiveSubscription || hasStoreKitSubscription
             isGrandfathered = cached.isGrandfathered
             subscriptionEndsAt = cached.subscriptionEndsAt
-            activeProvider = cached.activeProvider
-            activeProductId = cached.activeProductId
-            logger.info("Loaded cached subscription: tier=\(cached.tier.rawValue), provider=\(cached.activeProvider ?? "none")")
+            activeProvider = cached.activeProvider ?? (hasStoreKitSubscription ? "apple" : nil)
+            // Use cached product ID, or fall back to StoreKit's current product ID
+            activeProductId = cached.activeProductId ?? storeKitManager.currentProductId
+            logger.info("Loaded cached subscription: tier=\(cached.tier.rawValue), provider=\(self.activeProvider ?? "none"), storeKit=\(self.hasStoreKitSubscription)")
         } else {
-            // Try to refresh from server if no cache
+            // No cache - try to refresh from server
             do {
                 try await entitlementService.refreshFromServer(userId: userId)
                 effectiveTier = entitlementService.effectiveTier
 
                 // Re-check cache after refresh
                 if let cached = repository.getCached(for: userId) {
-                    hasActiveSubscription = cached.hasActiveSubscription
+                    hasActiveSubscription = cached.hasActiveSubscription || hasStoreKitSubscription
                     isGrandfathered = cached.isGrandfathered
                     subscriptionEndsAt = cached.subscriptionEndsAt
-                    activeProvider = cached.activeProvider
-                    activeProductId = cached.activeProductId
+                    activeProvider = cached.activeProvider ?? (hasStoreKitSubscription ? "apple" : nil)
+                    activeProductId = cached.activeProductId ?? storeKitManager.currentProductId
+                } else if hasStoreKitSubscription {
+                    // StoreKit has subscription but server doesn't - still show as active
+                    hasActiveSubscription = true
+                    activeProvider = "apple"
+                    activeProductId = storeKitManager.currentProductId
+                    logger.info("StoreKit subscription active but no server cache")
                 }
             } catch {
                 logger.error("Failed to refresh entitlement: \(error.localizedDescription)")
+                // Even if server refresh fails, check StoreKit
+                if hasStoreKitSubscription {
+                    hasActiveSubscription = true
+                    activeProvider = "apple"
+                    activeProductId = storeKitManager.currentProductId
+                    logger.info("Server refresh failed but StoreKit subscription active")
+                }
             }
         }
 
         // Load products for price display
         await loadCurrentProduct()
+
+        // Log final subscription state for debugging
+        logger.info("Subscription state loaded: tier=\(self.effectiveTier.rawValue), active=\(self.hasActiveSubscription), provider=\(self.activeProvider ?? "none"), productId=\(self.activeProductId ?? "none"), storeKitTier=\(self.storeKitManager.currentTier.rawValue)")
 
         isLoading = false
     }
