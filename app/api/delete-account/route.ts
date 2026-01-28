@@ -28,8 +28,7 @@ export async function DELETE(request: NextRequest) {
     // Try to authenticate via Bearer token first (native apps)
     const authHeader = request.headers.get('Authorization');
     let userId: string | null = null;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let supabaseForRpc: any = null;
+    let supabaseForRpc: ReturnType<typeof createClient> | Awaited<ReturnType<typeof createSupabaseServerClient>> | null = null;
 
     if (authHeader?.startsWith('Bearer ')) {
       const token = authHeader.substring(7);

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServiceClient } from '@/lib/supabase/service';
-import { verifyAdminFromRequest, isValidUUID } from '../_lib/verify-admin';
+import { verifyAdminFromRequest, isValidUUID, isNextInternalError } from '../_lib/verify-admin';
 import type { AdminAction } from '@/lib/admin/action-labels';
 
 /**
@@ -122,6 +122,8 @@ export async function GET(request: NextRequest) {
       }
     );
   } catch (error) {
+    // Re-throw Next.js internal errors (prerender bailout, etc.)
+    if (isNextInternalError(error)) throw error;
     console.error('[admin/audit-log] Exception:', error);
     return NextResponse.json(
       { success: false, message: 'Internal server error' },

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServiceClient } from '@/lib/supabase/service';
 import {
   verifyAdminFromRequest,
+  isNextInternalError,
   SUPERADMIN_USER_ID,
 } from '../_lib/verify-admin';
 
@@ -322,6 +323,8 @@ export async function GET(request: NextRequest) {
       resultsArePartial,
     });
   } catch (error) {
+    // Re-throw Next.js internal errors (prerender bailout, etc.)
+    if (isNextInternalError(error)) throw error;
     console.error('[admin/users] Exception:', error);
     return NextResponse.json(
       { error: 'Internal server error' },

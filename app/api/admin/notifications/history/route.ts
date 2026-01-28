@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getSession } from '@/data-access/auth';
 import { createSupabaseServiceClient } from '@/lib/supabase/service';
+import { isNextInternalError } from '../../_lib/verify-admin';
 
 /**
  * Broadcast record as returned from the database
@@ -134,6 +135,8 @@ export async function GET(request: NextRequest) {
       }
     );
   } catch (error) {
+    // Re-throw Next.js internal errors (prerender bailout, etc.)
+    if (isNextInternalError(error)) throw error;
     console.error('[admin/notifications/history] Error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },

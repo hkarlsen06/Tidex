@@ -3,7 +3,6 @@ import { createSupabaseServiceClient } from '@/lib/supabase/service';
 import {
   verifyAdminFromRequest,
   isValidUUID,
-  SUPERADMIN_USER_ID,
 } from '../../_lib/verify-admin';
 import { logAdminAction } from '../../_lib/audit-log';
 
