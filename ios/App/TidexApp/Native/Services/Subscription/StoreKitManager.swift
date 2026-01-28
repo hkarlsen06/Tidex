@@ -16,6 +16,7 @@ final class StoreKitManager: ObservableObject {
 
     @Published private(set) var products: [Product] = []
     @Published private(set) var currentTier: SubscriptionTier = .free
+    @Published private(set) var currentProductId: String?
     @Published private(set) var purchaseInProgress: Bool = false
     @Published private(set) var isLoadingProducts: Bool = false
 
@@ -175,6 +176,7 @@ final class StoreKitManager: ObservableObject {
     /// Notifies EntitlementService when tier changes for proper synchronization
     func updateCurrentEntitlements() async {
         var highestTier: SubscriptionTier = .free
+        var highestProductId: String?
 
         for await result in Transaction.currentEntitlements {
             guard case .verified(let transaction) = result else {
@@ -183,13 +185,19 @@ final class StoreKitManager: ObservableObject {
 
             // Map product ID to tier
             if let productId = ProductID(rawValue: transaction.productID) {
-                highestTier = max(highestTier, productId.tier)
+                if productId.tier > highestTier {
+                    highestTier = productId.tier
+                    highestProductId = transaction.productID
+                } else if productId.tier == highestTier && highestProductId == nil {
+                    highestProductId = transaction.productID
+                }
             }
         }
 
         let previousTier = currentTier
         currentTier = highestTier
-        logger.debug("StoreKit entitlements updated: tier=\(highestTier.rawValue)")
+        currentProductId = highestProductId
+        logger.debug("StoreKit entitlements updated: tier=\(highestTier.rawValue), productId=\(highestProductId ?? "none")")
 
         // Notify EntitlementService of tier change for proper synchronization
         // This ensures EntitlementService always uses the freshest tier value

@@ -132,6 +132,8 @@ final class PaywallViewModel: ObservableObject {
         isPurchasing = true
         error = nil
 
+        logger.info("Starting purchase: product=\(product.id), currentTier=\(self.currentTier.rawValue), storeKitTier=\(self.storeKitManager.currentTier.rawValue)")
+
         do {
             let transaction = try await storeKitManager.purchase(product)
 
