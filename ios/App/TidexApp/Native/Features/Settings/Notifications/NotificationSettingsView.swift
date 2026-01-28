@@ -38,6 +38,28 @@ struct NotificationSettingsView: View {
                 await viewModel.checkNotificationStatus()
             }
         }
+        .sheet(isPresented: $viewModel.showTimePickerSheet, onDismiss: {
+            viewModel.handlePickerDismiss()
+        }) {
+            ReminderTimePickerSheet(
+                hours: $viewModel.pickerHours,
+                minutes: $viewModel.pickerMinutes,
+                isEditing: viewModel.editingTimeIndex != nil,
+                onSave: {
+                    viewModel.savePickerTime()
+                },
+                onDelete: viewModel.editingTimeIndex != nil ? {
+                    if let index = viewModel.editingTimeIndex {
+                        viewModel.deleteReminderTime(at: index)
+                    }
+                    viewModel.showTimePickerSheet = false
+                } : nil,
+                onCancel: {
+                    viewModel.showTimePickerSheet = false
+                }
+            )
+            .presentationDetents([.medium])
+        }
     }
 
     // MARK: - Header Section
@@ -238,23 +260,21 @@ struct NotificationSettingsView: View {
                 .padding(16)
 
                 // Reminder times (shown when enabled)
-                if viewModel.shiftRemindersEnabled {
+                if viewModel.shiftRemindersEnabled && !viewModel.reminderTimes.isEmpty {
                     Divider()
                         .background(Color.tidexBorder)
                         .padding(.horizontal, 16)
 
                     VStack(alignment: .leading, spacing: 12) {
-                        Text(localization.string("notifications.reminders.timesLabel"))
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundColor(.tidexTextSecondary)
-
-                        // Reminder time options
+                        // Reminder times list
                         VStack(spacing: 8) {
-                            ForEach(NotificationSettingsViewModel.reminderOptions, id: \.minutes) { option in
-                                reminderTimeRow(
-                                    minutes: option.minutes,
-                                    labelKey: option.labelKey
-                                )
+                            ForEach(Array(viewModel.reminderTimes.enumerated()), id: \.offset) { index, minutes in
+                                reminderTimeRow(minutes: minutes, index: index)
+                            }
+
+                            // Add button (if under max)
+                            if viewModel.canAddReminder {
+                                addReminderButton
                             }
                         }
                     }
@@ -269,33 +289,60 @@ struct NotificationSettingsView: View {
     }
 
     @ViewBuilder
-    private func reminderTimeRow(minutes: Int, labelKey: String) -> some View {
-        let isSelected = viewModel.selectedReminderMinutes.contains(minutes)
+    private func reminderTimeRow(minutes: Int, index: Int) -> some View {
+        HStack(spacing: 12) {
+            // Bell icon
+            Image(systemName: "bell.fill")
+                .font(.system(size: 16))
+                .foregroundColor(.tidexBlue)
+                .frame(width: 24)
 
-        Button {
-            if isSelected {
-                // Don't allow deselecting if it's the only one
-                if viewModel.selectedReminderMinutes.count > 1 {
-                    viewModel.selectedReminderMinutes.remove(minutes)
-                }
-            } else {
-                viewModel.selectedReminderMinutes.insert(minutes)
+            // Time label
+            Text(viewModel.formatReminderTime(minutes, locale: localization.currentLocale))
+                .font(.system(size: 15))
+                .foregroundColor(.tidexTextPrimary)
+
+            Spacer()
+
+            // Edit button
+            Button {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                viewModel.prepareForEditingTime(at: index)
+            } label: {
+                Image(systemName: "pencil")
+                    .font(.system(size: 14))
+                    .foregroundColor(.tidexTextMuted)
+                    .padding(8)
             }
-        } label: {
-            HStack(spacing: 12) {
-                // Checkbox
-                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: 20))
-                    .foregroundColor(isSelected ? .tidexBlue : .tidexTextMuted)
+            .buttonStyle(.plain)
+        }
+        .padding(.vertical, 8)
+        .padding(.horizontal, 12)
+        .background(Color.tidexSurfaceSecondary)
+        .cornerRadius(10)
+    }
 
-                // Label
-                Text(localization.string(labelKey))
-                    .font(.system(size: 15))
-                    .foregroundColor(.tidexTextPrimary)
+    @ViewBuilder
+    private var addReminderButton: some View {
+        Button {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            viewModel.prepareForAddingTime()
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "plus.circle.fill")
+                    .font(.system(size: 16))
+                    .foregroundColor(.tidexBlue)
+
+                Text(localization.string("notifications.reminders.addTime"))
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.tidexBlue)
 
                 Spacer()
             }
-            .padding(.vertical, 4)
+            .padding(.vertical, 12)
+            .padding(.horizontal, 12)
+            .background(Color.tidexBlue.opacity(0.1))
+            .cornerRadius(10)
         }
         .buttonStyle(.plain)
     }
