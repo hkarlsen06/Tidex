@@ -104,9 +104,36 @@ export const AuthServiceLive = Layer.effect(
     const supabase = yield* SupabaseService;
 
     /**
+     * Parse a JWT token to extract claims without network request
+     */
+    const parseJwtClaims = (token: string): {
+      sub: string;
+      email?: string;
+      phone?: string;
+      user_metadata?: Record<string, unknown>;
+      app_metadata?: {
+        provider?: string;
+        providers?: string[];
+      };
+    } | null => {
+      try {
+        const parts = token.split(".");
+        if (parts.length !== 3) return null;
+        // Decode the payload (second part)
+        const payload = JSON.parse(Buffer.from(parts[1], "base64url").toString("utf-8"));
+        return payload;
+      } catch {
+        return null;
+      }
+    };
+
+    /**
      * Fetch session data from JWT claims
      * This is called fresh for each request to prevent cross-user session leaks.
-     * getClaims() is fast (local JWT parsing, no network request).
+     *
+     * For Bearer token auth (iOS), parses the JWT directly since getClaims()
+     * only works with cookie/session-based auth.
+     * For cookie auth (web), uses getClaims() which is fast (local JWT parsing).
      */
     const fetchSession = (): Effect.Effect<
       SessionData,
@@ -116,52 +143,91 @@ export const AuthServiceLive = Layer.effect(
       Effect.gen(function* () {
         const client = yield* supabase.getClient();
 
-        // Use getClaims() for performance - parses JWT locally without network request
-        // This is faster than getUser() which always makes a server request
-        const claimsResult = yield* Effect.tryPromise({
-          try: () => client.auth.getClaims(),
-          catch: (error) =>
-            new AuthError({
-              reason: "invalid_session",
-              cause: error,
-            }),
-        });
+        // Check if we're using Bearer token auth by looking at the client's headers
+        // @ts-expect-error - accessing internal property to check auth type
+        const authHeader = client.rest?.headers?.Authorization || client.headers?.Authorization;
+        const isBearerAuth = typeof authHeader === "string" && authHeader.startsWith("Bearer ");
 
-        // Cast to known type from Supabase
-        const result = claimsResult as {
-          data: {
-            claims: {
-              sub: string;
-              email?: string;
-              phone?: string;
-              user_metadata?: Record<string, unknown>;
-              app_metadata?: {
-                provider?: string;
-                providers?: string[];
-              };
+        let claims: {
+          sub: string;
+          email?: string;
+          phone?: string;
+          user_metadata?: Record<string, unknown>;
+          app_metadata?: {
+            provider?: string;
+            providers?: string[];
+          };
+        } | null = null;
+
+        if (isBearerAuth) {
+          // For Bearer token auth, parse the JWT directly
+          // getClaims() doesn't work because it looks at internal session state
+          const token = authHeader.substring(7);
+          claims = parseJwtClaims(token);
+
+          if (!claims) {
+            return yield* Effect.fail(
+              new AuthError({
+                reason: "invalid_session",
+                cause: new Error("Failed to parse Bearer token"),
+              })
+            );
+          }
+        } else {
+          // For cookie auth, use getClaims() which is fast (local JWT parsing)
+          const claimsResult = yield* Effect.tryPromise({
+            try: () => client.auth.getClaims(),
+            catch: (error) =>
+              new AuthError({
+                reason: "invalid_session",
+                cause: error,
+              }),
+          });
+
+          // Cast to known type from Supabase
+          const result = claimsResult as {
+            data: {
+              claims: {
+                sub: string;
+                email?: string;
+                phone?: string;
+                user_metadata?: Record<string, unknown>;
+                app_metadata?: {
+                  provider?: string;
+                  providers?: string[];
+                };
+              } | null;
             } | null;
-          } | null;
-          error: any;
-        };
+            error: any;
+          };
 
-        if (result.error) {
-          return yield* Effect.fail(
-            new AuthError({
-              reason: "invalid_session",
-              cause: result.error,
-            })
-          );
+          if (result.error) {
+            return yield* Effect.fail(
+              new AuthError({
+                reason: "invalid_session",
+                cause: result.error,
+              })
+            );
+          }
+
+          if (!result.data?.claims) {
+            return yield* Effect.fail(
+              new NotFoundError({
+                resource: "User session",
+              })
+            );
+          }
+
+          claims = result.data.claims;
         }
 
-        if (!result.data?.claims) {
+        if (!claims) {
           return yield* Effect.fail(
             new NotFoundError({
               resource: "User session",
             })
           );
         }
-
-        const claims = result.data.claims;
 
         // Extract identity providers from app_metadata
         const providers = claims.app_metadata?.providers ?? [];
