@@ -43,6 +43,9 @@ final class WageyViewModel {
 
     // MARK: - Private State
 
+    /// Whether any tool calls succeeded during the current stream (triggers sync)
+    private var hadSuccessfulToolCalls: Bool = false
+
     /// Current streaming task (for cancellation)
     private var streamTask: Task<Void, Never>?
 
@@ -165,6 +168,7 @@ final class WageyViewModel {
         isStreaming = true
         currentStreamingText = ""
         activeToolCalls = []
+        hadSuccessfulToolCalls = false
         currentAssistantMessageId = UUID().uuidString
 
         // Create streaming task
@@ -281,6 +285,10 @@ final class WageyViewModel {
                     success: success
                 )
             }
+            // Track successful tool calls for sync
+            if success == true {
+                hadSuccessfulToolCalls = true
+            }
 
         case .wageyLimit(let remaining, let days):
             // Update remaining messages count and reset days
@@ -322,9 +330,17 @@ final class WageyViewModel {
             saveCurrentConversation()
         }
 
+        // Trigger sync if any tool calls succeeded (shifts may have changed)
+        if hadSuccessfulToolCalls, let userId = cachedUserId ?? AppCoordinator.shared.userId {
+            Task {
+                await SyncCoordinator.shared.sync(reason: .localChange, userId: userId)
+            }
+        }
+
         // Reset streaming state
         currentStreamingText = ""
         activeToolCalls = []
+        hadSuccessfulToolCalls = false
         isStreaming = false
         currentAssistantMessageId = nil
         streamTask = nil

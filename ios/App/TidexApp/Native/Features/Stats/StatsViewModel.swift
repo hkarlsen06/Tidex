@@ -18,6 +18,9 @@ final class StatsViewModel: ObservableObject {
     @Published private(set) var isLoading = false
     @Published private(set) var error: Error?
 
+    /// User's selected currency (from settings)
+    @Published private(set) var currency: String = "kr"
+
     // MARK: - Month Navigation State (from SharedMonthContext)
 
     @Published private(set) var displayYear: Int
@@ -33,13 +36,19 @@ final class StatsViewModel: ObservableObject {
     // MARK: - Private State
 
     private let statsService: StatsService
+    private let settingsRepository: SettingsRepository
     private let monthContext: SharedMonthContext
     private var cancellables = Set<AnyCancellable>()
 
     // MARK: - Initialization
 
-    init(statsService: StatsService? = nil, monthContext: SharedMonthContext? = nil) {
+    init(
+        statsService: StatsService? = nil,
+        settingsRepository: SettingsRepository? = nil,
+        monthContext: SharedMonthContext? = nil
+    ) {
         self.statsService = statsService ?? StatsService.shared
+        self.settingsRepository = settingsRepository ?? SettingsRepository.shared
         self.monthContext = monthContext ?? SharedMonthContext.shared
 
         // Initialize from shared context
@@ -105,6 +114,12 @@ final class StatsViewModel: ObservableObject {
         error = nil
 
         do {
+            // Load user's currency from settings
+            let session = try await AuthSessionManager.shared.getSession()
+            if let settings = settingsRepository.getSettings(for: session.normalizedUserId) {
+                currency = settings.currency ?? "kr"
+            }
+
             stats = try await statsService.computeStats(year: displayYear, month: displayMonth)
             logger.info("Loaded stats for \(self.displayYear)-\(self.displayMonth): \(self.stats?.currentMonth.shiftCount ?? 0) shifts")
         } catch is CancellationError {
