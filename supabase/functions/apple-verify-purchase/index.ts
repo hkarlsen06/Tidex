@@ -318,106 +318,115 @@ async function upsertAppleSubscription(
     ...(priceDisplay ? { price_display: priceDisplay } : {}),
   };
 
-  // First try to find existing row by apple_original_transaction_id
-  const { data: existing } = await supabaseAdmin
+  // First try to find existing row by unique constraint columns (provider + provider_subscription_id)
+  // This matches the idx_subscriptions_unique_provider_sub constraint
+  const { data: existingByProviderSub } = await supabaseAdmin
     .from("subscriptions")
     .select("id, user_id, price_display")
-    .eq("apple_original_transaction_id", transactionInfo.originalTransactionId)
+    .eq("provider", "apple")
+    .eq("provider_subscription_id", transactionInfo.originalTransactionId)
     .maybeSingle();
 
-  if (existing) {
-    // Update existing subscription
+  if (existingByProviderSub) {
+    // Found by unique constraint - update it
     // Security: Verify user_id matches (unless this is first verification)
-    if (existing.user_id && existing.user_id !== userId) {
-      console.error(`[apple-verify] User ID mismatch: ${existing.user_id} vs ${userId}`);
+    if (existingByProviderSub.user_id && existingByProviderSub.user_id !== userId) {
+      console.error(`[apple-verify] User ID mismatch: ${existingByProviderSub.user_id} vs ${userId}`);
       return { success: false, error: "Subscription belongs to different user" };
     }
 
     // Don't overwrite price_display if it already exists (preserve original purchase price)
-    // This prevents restore from a different locale overwriting the original price
-    const updatePayload = existing.price_display
-      ? { ...payload }
-      : payload;
-    // Remove price_display from update if existing has it
-    if (existing.price_display && 'price_display' in updatePayload) {
+    const updatePayload = { ...payload };
+    if (existingByProviderSub.price_display && 'price_display' in updatePayload) {
       delete (updatePayload as any).price_display;
     }
 
     const { error } = await supabaseAdmin
       .from("subscriptions")
       .update(updatePayload)
-      .eq("id", existing.id);
+      .eq("id", existingByProviderSub.id);
 
     if (error) {
-      console.error("[apple-verify] Update failed:", error.message);
+      console.error("[apple-verify] Update by provider_sub failed:", error.message);
       return { success: false, error: error.message };
     }
-  } else {
-    // Check if user already has a subscription row (from Stripe or previous Apple)
-    const { data: userSub } = await supabaseAdmin
-      .from("subscriptions")
-      .select("id, provider, price_display")
-      .eq("user_id", userId)
-      .maybeSingle();
 
-    if (userSub) {
-      // User has existing subscription - update it with Apple info if provider is apple
-      // or create a new row if it's from a different provider (support multiple subs)
-      if (userSub.provider === "apple") {
-        // Don't overwrite price_display if it already exists
-        const userSubUpdatePayload = { ...payload };
-        if (userSub.price_display && 'price_display' in userSubUpdatePayload) {
-          delete (userSubUpdatePayload as any).price_display;
-        }
-
-        const { error } = await supabaseAdmin
-          .from("subscriptions")
-          .update(userSubUpdatePayload)
-          .eq("id", userSub.id);
-
-        if (error) {
-          console.error("[apple-verify] Update existing Apple sub failed:", error.message);
-          return { success: false, error: error.message };
-        }
-      } else {
-        // User has Stripe sub, create new Apple sub
-        // Remove user_id conflict constraint by using apple_original_transaction_id as identifier
-        const { error } = await supabaseAdmin
-          .from("subscriptions")
-          .insert(payload);
-
-        if (error) {
-          // If unique constraint on user_id fails, update instead
-          if (error.code === "23505") {
-            const { error: updateError } = await supabaseAdmin
-              .from("subscriptions")
-              .update(payload)
-              .eq("user_id", userId)
-              .eq("provider", "apple");
-
-            if (updateError) {
-              console.error("[apple-verify] Insert/Update fallback failed:", updateError.message);
-              return { success: false, error: updateError.message };
-            }
-          } else {
-            console.error("[apple-verify] Insert failed:", error.message);
-            return { success: false, error: error.message };
-          }
-        }
-      }
-    } else {
-      // No existing subscription - insert new
-      const { error } = await supabaseAdmin
-        .from("subscriptions")
-        .insert(payload);
-
-      if (error) {
-        console.error("[apple-verify] Insert failed:", error.message);
-        return { success: false, error: error.message };
-      }
-    }
+    console.log(`[apple-verify] Updated existing subscription by provider_subscription_id`);
+    return { success: true };
   }
 
+  // Also check by apple_original_transaction_id for backwards compatibility
+  const { data: existingByAppleTxn } = await supabaseAdmin
+    .from("subscriptions")
+    .select("id, user_id, price_display")
+    .eq("apple_original_transaction_id", transactionInfo.originalTransactionId)
+    .maybeSingle();
+
+  if (existingByAppleTxn) {
+    // Found by apple_original_transaction_id - update it
+    if (existingByAppleTxn.user_id && existingByAppleTxn.user_id !== userId) {
+      console.error(`[apple-verify] User ID mismatch: ${existingByAppleTxn.user_id} vs ${userId}`);
+      return { success: false, error: "Subscription belongs to different user" };
+    }
+
+    const updatePayload = { ...payload };
+    if (existingByAppleTxn.price_display && 'price_display' in updatePayload) {
+      delete (updatePayload as any).price_display;
+    }
+
+    const { error } = await supabaseAdmin
+      .from("subscriptions")
+      .update(updatePayload)
+      .eq("id", existingByAppleTxn.id);
+
+    if (error) {
+      console.error("[apple-verify] Update by apple_original_transaction_id failed:", error.message);
+      return { success: false, error: error.message };
+    }
+
+    console.log(`[apple-verify] Updated existing subscription by apple_original_transaction_id`);
+    return { success: true };
+  }
+
+  // Check if user already has a subscription row (from Stripe or previous Apple)
+  const { data: userSub } = await supabaseAdmin
+    .from("subscriptions")
+    .select("id, provider, price_display")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (userSub) {
+    // User has existing subscription - update it with Apple info
+    const userSubUpdatePayload = { ...payload };
+    if (userSub.price_display && 'price_display' in userSubUpdatePayload) {
+      delete (userSubUpdatePayload as any).price_display;
+    }
+
+    const { error } = await supabaseAdmin
+      .from("subscriptions")
+      .update(userSubUpdatePayload)
+      .eq("id", userSub.id);
+
+    if (error) {
+      console.error("[apple-verify] Update existing user sub failed:", error.message);
+      return { success: false, error: error.message };
+    }
+
+    console.log(`[apple-verify] Updated existing user subscription (was ${userSub.provider})`);
+    return { success: true };
+  }
+
+  // No existing subscription - insert new
+  const { error } = await supabaseAdmin
+    .from("subscriptions")
+    .insert(payload);
+
+  if (error) {
+    console.error("[apple-verify] Insert failed:", error.message);
+    return { success: false, error: error.message };
+  }
+
+  console.log(`[apple-verify] Inserted new subscription`);
   return { success: true };
 }
 

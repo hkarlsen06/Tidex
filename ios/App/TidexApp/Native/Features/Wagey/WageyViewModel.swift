@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import Combine
 
 /// ViewModel for the Wagey AI chat feature
 /// Manages conversation state, streaming, persistence, and user interactions
@@ -121,12 +122,32 @@ final class WageyViewModel {
     /// Cached user ID for persistence
     private var cachedUserId: String?
 
+    /// Subscription for observing tier changes
+    private var tierChangeSubscription: AnyCancellable?
+
     // MARK: - Initialization
 
     /// Private initializer to enforce singleton pattern
     private init() {
         loadConversations()
         loadShowcaseState()
+        observeTierChanges()
+    }
+
+    /// Observe tier changes to reset limit state when user upgrades
+    private func observeTierChanges() {
+        tierChangeSubscription = EntitlementService.shared.$effectiveTier
+            .dropFirst() // Skip initial value
+            .sink { [weak self] newTier in
+                guard let self = self else { return }
+                // If user upgraded to paid tier, reset the limit reached flag
+                if newTier != .free && self.limitReached {
+                    self.limitReached = false
+                    // Also reset local counter since they have new limits now
+                    self.localMessagesSent = 0
+                    self.remainingMessages = nil
+                }
+            }
     }
 
     // MARK: - Showcase State Management
@@ -325,6 +346,14 @@ final class WageyViewModel {
     /// Dismiss the current error
     func dismissError() {
         error = nil
+    }
+
+    /// Reset the limit reached flag (called when user upgrades tier)
+    /// This allows paid users to continue chatting even if server cache is stale
+    func resetLimitReached() {
+        limitReached = false
+        localMessagesSent = 0
+        remainingMessages = nil
     }
 
     // MARK: - Private Helpers

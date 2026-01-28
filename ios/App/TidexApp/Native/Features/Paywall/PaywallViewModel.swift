@@ -132,21 +132,34 @@ final class PaywallViewModel: ObservableObject {
         isPurchasing = true
         error = nil
 
-        logger.info("Starting purchase: product=\(product.id), currentTier=\(self.currentTier.rawValue), storeKitTier=\(self.storeKitManager.currentTier.rawValue)")
+        let tierBeforePurchase = currentTier
+        logger.info("Starting purchase: product=\(product.id), currentTier=\(tierBeforePurchase.rawValue), storeKitTier=\(self.storeKitManager.currentTier.rawValue)")
 
         do {
             let transaction = try await storeKitManager.purchase(product)
 
             if transaction != nil {
-                // Purchase successful
-                logger.info("Purchase succeeded for \(product.id)")
-                purchaseSucceeded = true
-                isPurchasing = false
+                // Transaction succeeded - but verify entitlement was actually granted
+                // Small delay to let StoreKit/EntitlementService sync
+                try? await Task.sleep(for: .milliseconds(300))
 
-                // Play celebration feedback
-                Haptics.playSubscriptionSuccess()
+                let tierAfterPurchase = entitlementService.effectiveTier
+                logger.info("Purchase completed for \(product.id): tierBefore=\(tierBeforePurchase.rawValue), tierAfter=\(tierAfterPurchase.rawValue)")
 
-                return true
+                // Only mark as successful if tier actually changed (or was already at target tier)
+                let targetTier = ProductID(rawValue: product.id)?.tier ?? .free
+                if tierAfterPurchase >= targetTier || tierAfterPurchase > tierBeforePurchase {
+                    purchaseSucceeded = true
+                    isPurchasing = false
+                    Haptics.playSubscriptionSuccess()
+                    return true
+                } else {
+                    // Transaction completed but entitlement not granted yet
+                    // This can happen in sandbox - don't auto-dismiss
+                    logger.warning("Transaction completed but tier unchanged: expected \(targetTier.rawValue), got \(tierAfterPurchase.rawValue)")
+                    isPurchasing = false
+                    return false
+                }
             } else {
                 // User cancelled or pending
                 logger.info("Purchase was cancelled or is pending for \(product.id)")

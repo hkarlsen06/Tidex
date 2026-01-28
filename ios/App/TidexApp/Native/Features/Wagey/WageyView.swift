@@ -107,6 +107,15 @@ struct WageyView: View {
                 Text(error.localizedDescription)
             }
         }
+        .onChange(of: viewModel.limitReached) { _, isLimitReached in
+            // Show paywall when limit is reached (e.g., server responds with limit error)
+            // But only if user is on free tier - don't show if already subscribed
+            let currentTier = EntitlementService.shared.effectiveTier
+            if isLimitReached && !showPaywall && currentTier == .free {
+                tierBeforePaywall = currentTier
+                showPaywall = true
+            }
+        }
     }
 
     /// Handle paywall dismiss - check if user upgraded
@@ -149,7 +158,7 @@ struct WageyView: View {
                 onSend: { content in
                     handleSendMessage(content)
                 },
-                disabled: viewModel.isStreaming || viewModel.limitReached
+                disabled: viewModel.isStreaming
             )
         }
         .background(Color.tidexBackground)
@@ -176,15 +185,24 @@ struct WageyView: View {
 
     /// Handle sending a message, showing paywall if limit reached
     private func handleSendMessage(_ content: String) {
-        // If limit reached, show paywall instead
-        if viewModel.limitReached {
+        let currentTier = EntitlementService.shared.effectiveTier
+
+        // If limit reached AND user is on free tier, show paywall
+        // If user has paid tier, don't show paywall even if server said limit reached
+        // (this can happen due to server cache lag after subscribing)
+        if viewModel.limitReached && currentTier == .free {
             pendingMessage = content
-            tierBeforePaywall = EntitlementService.shared.effectiveTier
+            tierBeforePaywall = currentTier
             showPaywall = true
             return
         }
 
-        // Otherwise, send the message
+        // If user upgraded but limitReached flag is stale, reset it
+        if viewModel.limitReached && currentTier != .free {
+            viewModel.resetLimitReached()
+        }
+
+        // Send the message
         Task {
             await viewModel.sendMessage(content)
         }

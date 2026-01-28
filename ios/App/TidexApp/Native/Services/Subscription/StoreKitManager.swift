@@ -132,12 +132,28 @@ final class StoreKitManager: ObservableObject {
             await updateCurrentEntitlements()
             EntitlementService.shared.updateEffectiveTier()
 
-            // 3. Finish transaction (don't block on server - user gets access now)
+            // 3. Finish transaction locally
             await transaction.finish()
             logger.info("Transaction finished: \(transaction.productID)")
 
-            // 4. Queue JWS upload to server (persisted with retry)
-            await queueJWSUpload(transaction: transaction, jwsRepresentation: jwsRepresentation, userId: userId, product: product)
+            // 4. Upload JWS to server IMMEDIATELY and wait for it
+            // This ensures the server knows about the subscription before user tries to use features
+            let upload = LocalPendingJWSUpload(
+                userId: userId,
+                jwsRepresentation: jwsRepresentation,
+                transactionId: String(transaction.id),
+                originalTransactionId: String(transaction.originalID),
+                productId: transaction.productID,
+                environment: transaction.environment == .sandbox ? "Sandbox" : "Production",
+                priceDisplay: product.displayPrice
+            )
+
+            let uploadSuccess = await JWSUploadWorker.shared.uploadImmediately(upload)
+            if !uploadSuccess {
+                // Upload failed but will retry in background
+                // Log but don't fail the purchase - user still has local entitlement
+                logger.warning("JWS upload failed, will retry in background. User has local entitlement.")
+            }
 
             return transaction
 
@@ -244,9 +260,9 @@ final class StoreKitManager: ObservableObject {
         }
     }
 
-    // MARK: - JWS Upload Queue
+    // MARK: - JWS Upload Queue (Background Updates)
 
-    /// Queue JWS upload with product info (used by purchase flow)
+    /// Queue JWS upload with product info (used by transaction listener for renewals)
     private func queueJWSUpload(transaction: Transaction, jwsRepresentation: String, userId: String, product: Product) async {
         await queueJWSUpload(
             transaction: transaction,
