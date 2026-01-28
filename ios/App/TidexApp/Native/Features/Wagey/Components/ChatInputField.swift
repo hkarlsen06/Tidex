@@ -42,7 +42,7 @@ struct ChatInputField: View {
                 .lineLimit(1...5)
                 .focused($isFocused)
                 .disabled(disabled)
-                .submitLabel(.send)
+                .submitLabel(.return)
                 .onSubmit {
                     sendMessage()
                 }
