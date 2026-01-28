@@ -1,7 +1,8 @@
 // lib/supabase/server.ts
 import "server-only";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
+import { createClient } from "@supabase/supabase-js";
 import type { NextRequest, NextResponse } from "next/server";
 import { ENV } from "@/lib/env";
 
@@ -17,8 +18,36 @@ const isReadonlyCookiesError = (err: unknown) =>
  * - Safely ignores writes when running in a read-only context
  * - Creates fresh client per call to ensure proper user isolation (SECURITY)
  * - IMPORTANT: Uses Supabase's cookie options directly without overriding
+ * - Supports Bearer token authentication from iOS native app
  */
 export async function createSupabaseServerClient() {
+  // Check for Bearer token in Authorization header (native iOS app)
+  const headerStore = await headers();
+  const authHeader = headerStore.get("Authorization");
+
+  if (authHeader?.startsWith("Bearer ")) {
+    const token = authHeader.substring(7);
+
+    // Use direct Supabase URL for Bearer token auth (bypasses auth proxy)
+    const directUrl = process.env.SUPABASE_DIRECT_URL || ENV.URL!;
+
+    // Create client with Bearer token authentication
+    const client = createClient(directUrl, ENV.PUBLISHABLE!, {
+      global: {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    });
+
+    // Suppress getSession warning - we use getClaims() for auth validation in DAL
+    // @ts-expect-error: suppressGetSessionWarning is not in types but works
+    client.auth.suppressGetSessionWarning = true;
+
+    return client;
+  }
+
+  // Fall back to cookie-based authentication (web app)
   const store = await cookies();
 
   const client = createServerClient(ENV.URL!, ENV.PUBLISHABLE!, {
