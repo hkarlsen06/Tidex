@@ -515,6 +515,16 @@ export const no = {
         retrievedWageInfo: 'Hentet lønnskonfigurasjon',
         noWageConfigured: 'Ingen lønnskonfigurasjon funnet',
         failedToGetWageInfo: 'Kunne ikke hente lønnsinformasjon',
+        // Success messages - wage snapshots
+        createdWageSnapshot: 'Opprettet lønnsoppføring fra {date}',
+        updatedWageSnapshot: 'Oppdaterte lønnsoppføring',
+        deletedWageSnapshot: 'Slettet lønnsoppføring ({count} skift påvirket)',
+        // Error messages - wage snapshots
+        snapshotNotFound: 'Lønnsoppføring ikke funnet: {id}',
+        snapshotConflict: 'En lønnsoppføring finnes allerede for denne datoen',
+        missingFromDate: 'Mangler from_date for opprettelse',
+        missingSnapshotId: 'Mangler snapshot_id for oppdatering/sletting',
+        failedToManageWageSnapshots: 'Kunne ikke håndtere lønnsoppføringer',
         // Success messages - statistics
         statsCurrentMonth: 'Statistikk for denne måneden',
         statsLastMonth: 'Statistikk for forrige måned',

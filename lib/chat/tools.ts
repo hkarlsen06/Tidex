@@ -166,6 +166,44 @@ export const getWageInfoSchema = z.object({});
 export type GetWageInfoInput = z.infer<typeof getWageInfoSchema>;
 
 /**
+ * Supplement rule schema for wage snapshots
+ */
+const supplementRuleSchema = z.object({
+  days: z.array(z.number().int().min(1).max(7)),
+  from: z.string().regex(/^\d{2}:\d{2}$/),
+  to: z.string().regex(/^\d{2}:\d{2}$/),
+  rate: z.number().positive().optional(),
+  percent: z.number().positive().optional(),
+});
+
+/**
+ * Manage Wage Snapshots Tool Schema
+ * Allows CRUD operations on wage snapshots (wage history entries)
+ */
+export const manageWageSnapshotsSchema = z.object({
+  action: z.enum(["create", "update", "delete"]),
+  // For update/delete - accepts short IDs (4-8 hex chars) or full UUIDs
+  snapshot_id: shortOrFullId.optional(),
+  // For create - required date when the new rates take effect
+  from_date: z.union([z.string().regex(/^\d{4}-\d{2}-\d{2}$/), z.null()]).optional(),
+  // Wage settings - all optional for update (only include fields to change)
+  hourly_wage: z.number().positive().optional(),
+  wage_level: z.number().int().min(1).max(9).nullable().optional(),
+  // Tax settings
+  tax_enabled: z.boolean().optional(),
+  tax_percentage: z.number().min(0).max(100).optional(),
+  // Break deduction settings
+  break_enabled: z.boolean().optional(),
+  break_method: z.enum(["proportional", "base_only", "end_of_shift", "none"]).optional(),
+  break_threshold_hours: z.number().positive().optional(),
+  break_deduction_minutes: z.number().int().min(0).optional(),
+  // Supplements - "copy_current" copies from current snapshot, or provide array of rules
+  supplements: z.union([z.literal("copy_current"), z.array(supplementRuleSchema)]).optional(),
+});
+
+export type ManageWageSnapshotsInput = z.infer<typeof manageWageSnapshotsSchema>;
+
+/**
  * Hypothetical shift scenario for earnings calculation
  */
 const hypotheticalShiftSchema = z.object({
@@ -921,20 +959,133 @@ Note: Only include settings you want to change in the settings object.`,
     description: `Get user's wage configuration including current, upcoming, and historical wage entries.
 
 Returns:
-- current: The wage that applies today (fromDate, usingTariff, wageLevel, hourlyWage, supplements, taxEnabled, taxPercentage)
-- upcoming: Future scheduled wage changes (if any) - compact format showing only changed fields
-- history: Past wage entries for context (if any) - compact format showing only changed fields
+- current: The wage that applies today (id, fromDate, usingTariff, wageLevel, hourlyWage, supplements, taxEnabled, taxPercentage)
+- upcoming: Future scheduled wage changes (if any) - compact format showing only changed fields, includes id
+- history: Past wage entries for context (if any) - compact format showing only changed fields, includes id
 
 Tax settings (taxEnabled, taxPercentage) are per-snapshot, not global. Each wage period can have different tax settings.
 The half-tax month setting remains global (use manage_settings to view/update).
 
 Use this when the user asks about their wage, hourly rate, supplements, tax settings, or wage history.
-For general settings (display, goals, preferences, halfTaxMonth), use manage_settings instead.`,
+For general settings (display, goals, preferences, halfTaxMonth), use manage_settings instead.
+To modify wage entries, use manage_wage_snapshots with the id from get_wage_info.`,
     input_schema: {
       type: "object",
       properties: {},
     },
     input_examples: [{}],
+  },
+
+  {
+    name: "manage_wage_snapshots",
+    description: `Create, update, or delete wage snapshots (wage history entries).
+
+Wage snapshots define the user's hourly wage, tax settings, break deduction, and supplements for a specific time period.
+Each snapshot has a from_date (when it takes effect) - the baseline snapshot has from_date=null.
+
+Actions:
+- CREATE: Creates a new wage entry. Requires from_date. All other fields are COPIED from current snapshot by default - only include fields you want to CHANGE.
+- UPDATE: Updates an existing wage entry. Requires snapshot_id (use short ID from get_wage_info). Only include fields to change.
+- DELETE: Deletes a wage entry. Requires snapshot_id.
+
+IMPORTANT:
+- Always call get_wage_info first to see current configuration and get snapshot IDs
+- For CREATE: only specify fields the user wants to change - all others are copied automatically
+- For UPDATE: only specify fields to change
+- Use supplements: "copy_current" to explicitly copy current supplements, or provide a new array of rules`,
+    input_schema: {
+      type: "object",
+      properties: {
+        action: {
+          type: "string",
+          enum: ["create", "update", "delete"],
+          description: "The operation to perform",
+        },
+        snapshot_id: {
+          type: "string",
+          description: "Snapshot ID (required for update/delete). Use short ID from get_wage_info.",
+        },
+        from_date: {
+          type: ["string", "null"],
+          description: "Date when new rates take effect (YYYY-MM-DD). Required for create. Null = baseline.",
+        },
+        hourly_wage: {
+          type: "number",
+          description: "Hourly wage in NOK (e.g., 220.5). Only include to change.",
+        },
+        wage_level: {
+          type: ["integer", "null"],
+          description: "Wage level 1-9 (tariff-based). Set to null to use custom hourly_wage instead.",
+        },
+        tax_enabled: {
+          type: "boolean",
+          description: "Whether tax deduction is enabled for this period.",
+        },
+        tax_percentage: {
+          type: "number",
+          description: "Tax percentage (0-100) for this period.",
+        },
+        break_enabled: {
+          type: "boolean",
+          description: "Whether break deduction is enabled.",
+        },
+        break_method: {
+          type: "string",
+          enum: ["proportional", "base_only", "end_of_shift", "none"],
+          description: "Break deduction method.",
+        },
+        break_threshold_hours: {
+          type: "number",
+          description: "Hours before break deduction kicks in (e.g., 5.5).",
+        },
+        break_deduction_minutes: {
+          type: "integer",
+          description: "Minutes to deduct for break (e.g., 30).",
+        },
+        supplements: {
+          type: ["string", "array"],
+          description: '"copy_current" to copy from current snapshot, or array of supplement rules.',
+        },
+      },
+      required: ["action"],
+    },
+    input_examples: [
+      // "From February I will have 5% tax"
+      {
+        action: "create",
+        from_date: "2025-02-01",
+        tax_enabled: true,
+        tax_percentage: 5,
+      },
+      // "Update my current hourly wage to 250"
+      {
+        action: "update",
+        snapshot_id: "a1b2c",
+        hourly_wage: 250,
+      },
+      // "Delete the upcoming wage change"
+      {
+        action: "delete",
+        snapshot_id: "d3e4f",
+      },
+      // "From March I want wage level 6 with 10% tax"
+      {
+        action: "create",
+        from_date: "2025-03-01",
+        wage_level: 6,
+        tax_enabled: true,
+        tax_percentage: 10,
+      },
+      // "Enable 30 minute break deduction starting from next month"
+      {
+        action: "create",
+        from_date: "2025-02-01",
+        break_enabled: true,
+        break_method: "proportional",
+        break_threshold_hours: 5.5,
+        break_deduction_minutes: 30,
+      },
+    ],
   },
 
   // ---------------------------------------------------------------------------
@@ -1073,6 +1224,7 @@ export type ToolName =
   | "get_statistics"
   | "manage_settings"
   | "get_wage_info"
+  | "manage_wage_snapshots"
   | "calculate_earnings";
 
 /**
