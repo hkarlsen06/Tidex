@@ -1720,7 +1720,9 @@ async function getStatsDataDirect(
   const lastMonthYear = currentMonth === 1 ? currentYear - 1 : currentYear;
   const lastMonthStart = `${lastMonthYear}-${String(lastMonth).padStart(2, "0")}-01`;
 
-  const yearStart = `${currentYear}-01-01`;
+  // Use last month's start as the query start date to ensure we capture "last month" data
+  // This is important when currentMonth is January - we need December from previous year
+  const yearStart = lastMonthStart;
 
   // Fetch shifts and settings in parallel
   const [shiftsResult, settingsResult, snapshotResult] = await Promise.all([
