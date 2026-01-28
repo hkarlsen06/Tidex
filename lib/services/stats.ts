@@ -901,42 +901,40 @@ export const StatsServiceLive = Layer.effect(
             weekDays.push(day);
           }
 
-          // Calculate total hours worked this week
-          let totalWeekHours = 0;
-          for (const day of weekDays) {
-            const dateStr = toDateString(day);
-            totalWeekHours += hoursPerDay.get(dateStr) || 0;
-          }
-
-          // Calculate employment percentage for this week
-          const weekEmploymentPct = (totalWeekHours / fullTimeHoursPerWeek) * 100;
-
-          // Distribute this week's percentage to months based on how many days fall in each month
+          // Calculate hours worked per month within this week
+          // Only count hours towards the month they were actually worked in
+          const hoursPerMonthInWeek = new Map<string, number>();
           const daysPerMonth = new Map<string, number>();
+
           for (const day of weekDays) {
             // Only count days in months we're tracking (focus year + any previous year months in our range)
             const monthKey = `${day.getUTCFullYear()}-${String(day.getUTCMonth() + 1).padStart(2, "0")}`;
             if (monthlyEmployment.has(monthKey)) {
               daysPerMonth.set(monthKey, (daysPerMonth.get(monthKey) || 0) + 1);
+
+              // Add hours worked on this day to the appropriate month
+              const dateStr = toDateString(day);
+              const hoursOnDay = hoursPerDay.get(dateStr) || 0;
+              hoursPerMonthInWeek.set(monthKey, (hoursPerMonthInWeek.get(monthKey) || 0) + hoursOnDay);
             }
           }
 
-          // Add weighted contribution to each month
+          // Add weighted contribution to each month based on hours worked IN that month
           for (const [monthKey, dayCount] of daysPerMonth) {
             const weight = dayCount / 7; // Proportion of the week in this month
+            const hoursInMonth = hoursPerMonthInWeek.get(monthKey) || 0;
+
+            // Calculate employment percentage based only on hours worked in this month's portion
+            const monthEmploymentPct = (hoursInMonth / fullTimeHoursPerWeek) * 100;
+
             const monthData = monthlyEmployment.get(monthKey);
             if (monthData) {
-              monthData.totalWeightedPercentage += weekEmploymentPct * weight;
+              monthData.totalWeightedPercentage += monthEmploymentPct * weight;
               monthData.totalWeight += weight;
-              // Check if any hours were worked on days in this month
-              for (const day of weekDays) {
-                const dayMonthKey = `${day.getUTCFullYear()}-${String(day.getUTCMonth() + 1).padStart(2, "0")}`;
-                if (dayMonthKey === monthKey) {
-                  const dateStr = toDateString(day);
-                  if ((hoursPerDay.get(dateStr) || 0) > 0) {
-                    monthData.hasShifts = true;
-                  }
-                }
+
+              // Mark as having shifts if any hours were worked in this month
+              if (hoursInMonth > 0) {
+                monthData.hasShifts = true;
               }
             }
           }

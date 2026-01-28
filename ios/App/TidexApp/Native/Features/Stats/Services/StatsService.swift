@@ -662,31 +662,35 @@ final class StatsService: ObservableObject {
                 }
             }
 
-            // Calculate total hours worked this week
-            var totalWeekHours: Double = 0
-            for day in weekDays {
-                let dateStr = day.toISODateString()
-                totalWeekHours += hoursPerDay[dateStr] ?? 0
-            }
-
-            // Calculate employment percentage for this week
-            let weekEmploymentPct = (totalWeekHours / fullTimeHoursPerWeek) * 100
-
-            // Count how many days fall in each month (for weighted distribution)
+            // Calculate hours worked per month within this week
+            // Only count hours towards the month they were actually worked in
+            var hoursPerMonthInWeek: [Int: Double] = [:]
             var daysPerMonth: [Int: Int] = [:]
+
             for day in weekDays {
                 let month = calendar.component(.month, from: day)
                 let year = calendar.component(.year, from: day)
+
                 // Only count days in the focus year
                 if year == focusYear {
                     daysPerMonth[month, default: 0] += 1
+
+                    // Add hours worked on this day to the appropriate month
+                    let dateStr = day.toISODateString()
+                    let hoursOnDay = hoursPerDay[dateStr] ?? 0
+                    hoursPerMonthInWeek[month, default: 0] += hoursOnDay
                 }
             }
 
-            // Add weighted contribution to each month
+            // Add weighted contribution to each month based on hours worked IN that month
             for (month, dayCount) in daysPerMonth {
                 let weight = Double(dayCount) / 7.0
-                monthlyAccumulators[month]?.totalWeightedPercentage += weekEmploymentPct * weight
+                let hoursInMonth = hoursPerMonthInWeek[month] ?? 0
+
+                // Calculate employment percentage based only on hours worked in this month's portion
+                let monthEmploymentPct = (hoursInMonth / fullTimeHoursPerWeek) * 100
+
+                monthlyAccumulators[month]?.totalWeightedPercentage += monthEmploymentPct * weight
                 monthlyAccumulators[month]?.totalWeight += weight
             }
 
