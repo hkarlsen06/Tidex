@@ -41,7 +41,10 @@ struct ToolStatusView: View {
             "get_statistics": localization.string("wagey.tool.getStatistics"),
             "manage_settings": localization.string("wagey.tool.manageSettings"),
             "get_wage_info": localization.string("wagey.tool.getWageInfo"),
-            "calculate_earnings": localization.string("wagey.tool.calculateEarnings")
+            "calculate_earnings": localization.string("wagey.tool.calculateEarnings"),
+
+            // Wage snapshots
+            "manage_wage_snapshots": localization.string("wagey.tool.manageWageSnapshots")
         ]
     }
 

@@ -516,6 +516,16 @@ export const en: Dictionary = {
         retrievedWageInfo: 'Retrieved wage configuration',
         noWageConfigured: 'No wage configuration found',
         failedToGetWageInfo: 'Failed to get wage information',
+        // Success messages - wage snapshots
+        createdWageSnapshot: 'Created wage entry from {date}',
+        updatedWageSnapshot: 'Updated wage entry',
+        deletedWageSnapshot: 'Deleted wage entry ({count} shifts affected)',
+        // Error messages - wage snapshots
+        snapshotNotFound: 'Wage entry not found: {id}',
+        snapshotConflict: 'A wage entry already exists for this date',
+        missingFromDate: 'Missing from_date for create action',
+        missingSnapshotId: 'Missing snapshot_id for update/delete action',
+        failedToManageWageSnapshots: 'Failed to manage wage entries',
         // Success messages - statistics
         statsCurrentMonth: 'Current month statistics',
         statsLastMonth: 'Last month statistics',

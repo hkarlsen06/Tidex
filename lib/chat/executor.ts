@@ -27,6 +27,7 @@ import type {
   GetStatisticsInput,
   ManageSettingsInput,
   CalculateEarningsInput,
+  ManageWageSnapshotsInput,
 } from "./tools";
 import {
   manageShiftSchema,
@@ -40,6 +41,7 @@ import {
   manageSettingsSchema,
   calculateEarningsSchema,
   getWageInfoSchema,
+  manageWageSnapshotsSchema,
 } from "./tools";
 import { getStatsDataForApi } from "@/data-access/stats";
 import { SettingsService } from "@/lib/services/settings";
@@ -220,6 +222,7 @@ const KNOWN_TOOL_NAMES: ToolName[] = [
   "get_statistics",
   "manage_settings",
   "get_wage_info",
+  "manage_wage_snapshots",
   "calculate_earnings",
 ];
 
@@ -332,6 +335,9 @@ async function executeToolOnce(
 
     case "get_wage_info":
       return await executeGetWageInfo(args, userId, tr);
+
+    case "manage_wage_snapshots":
+      return await executeManageWageSnapshots(args, userId, tr);
 
     case "calculate_earnings":
       return await executeCalculateEarnings(args, userId, tr);
@@ -1713,6 +1719,7 @@ async function executeGetWageInfo(
 
     // Build compact representation - only show changed fields
     type CompactEntry = {
+      id: string;  // Short ID for referencing in manage_wage_snapshots
       fromDate: string | null;
       hourlyWage: number | "unchanged";
       wageLevel: number | null | "unchanged";
@@ -1729,6 +1736,7 @@ async function executeGetWageInfo(
       let prev = referenceSnapshot;
       return snaps.map((snap) => {
         const entry: CompactEntry = {
+          id: toShortId(snap.id),  // Include short ID for referencing
           fromDate: snap.from_date,
           hourlyWage: snap.hourly_wage !== prev?.hourly_wage ? snap.hourly_wage : "unchanged",
           wageLevel: snap.wage_level !== prev?.wage_level ? snap.wage_level : "unchanged",
@@ -1747,6 +1755,7 @@ async function executeGetWageInfo(
     // Build response
     const data: {
       current: {
+        id: string;  // Short ID for referencing in manage_wage_snapshots
         fromDate: string | null;
         usingTariff: boolean;
         wageLevel: number | null;
@@ -1759,6 +1768,7 @@ async function executeGetWageInfo(
       history?: CompactEntry[];
     } = {
       current: currentSnapshot ? {
+        id: toShortId(currentSnapshot.id),  // Include short ID for referencing
         fromDate: currentSnapshot.from_date,
         usingTariff: currentSnapshot.wage_level !== null,
         wageLevel: currentSnapshot.wage_level,
@@ -1787,6 +1797,264 @@ async function executeGetWageInfo(
   } catch (error) {
     throw new Error(
       error instanceof Error ? error.message : (tr.failedToGetWageInfo ?? "Failed to get wage info")
+    );
+  }
+}
+
+/**
+ * Resolve a short snapshot ID to full UUID by prefix matching.
+ * Returns the full UUID if found, or null if not found/ambiguous.
+ */
+async function resolveSnapshotId(
+  shortOrFullId: string,
+  userId: string
+): Promise<string | null> {
+  // If it's already a full UUID, return as-is
+  if (!isShortId(shortOrFullId)) {
+    return shortOrFullId;
+  }
+
+  // Fetch user's wage snapshots and find by prefix
+  const snapshotsProgram = Effect.gen(function* () {
+    const service = yield* SnapshotsService;
+    const snapshots = yield* service.getUserWageSnapshots(userId);
+    return snapshots;
+  }).pipe(
+    Effect.provide(AuthSnapshotsLive),
+    Effect.catchAll(() => Effect.succeed([] as const)),
+    Effect.scoped
+  );
+
+  const snapshots = await Effect.runPromise(snapshotsProgram);
+
+  const matches = snapshots.filter((s) =>
+    s.id.toLowerCase().startsWith(shortOrFullId.toLowerCase())
+  );
+
+  if (matches.length === 1) {
+    return matches[0].id;
+  }
+
+  // Ambiguous (multiple matches) or not found
+  return null;
+}
+
+/**
+ * Execute manage_wage_snapshots tool
+ * Allows CRUD operations on wage snapshots (wage history entries)
+ */
+async function executeManageWageSnapshots(
+  args: unknown,
+  userId: string,
+  tr: ToolResultTranslations
+): Promise<ToolResult> {
+  const parsed = manageWageSnapshotsSchema.safeParse(args);
+  if (!parsed.success) {
+    return {
+      success: false,
+      message: t(tr.invalidInput, { details: parsed.error.issues.map((i) => i.message).join(", ") }),
+    };
+  }
+
+  const input: ManageWageSnapshotsInput = parsed.data;
+
+  try {
+    // Import server actions for wage snapshots
+    const {
+      createWageSnapshotAction,
+      updateWageSnapshotAction,
+      deleteWageSnapshotAction,
+    } = await import("@/app/[locale]/(app)/settings/pay/_actions/wage-snapshots");
+
+    switch (input.action) {
+      case "create": {
+        // Validate from_date is provided for create
+        if (input.from_date === undefined) {
+          return {
+            success: false,
+            message: tr.missingFromDate ?? "Missing from_date for create action",
+          };
+        }
+
+        // Fetch current snapshot to copy values from
+        const currentProgram = Effect.gen(function* () {
+          const service = yield* SnapshotsService;
+          const today = new Date().toISOString().split("T")[0];
+          const snapshot = yield* service.getSnapshotForDate(userId, today);
+          return snapshot;
+        }).pipe(
+          Effect.provide(AuthSnapshotsLive),
+          Effect.catchAll(() => Effect.succeed(null)),
+          Effect.scoped
+        );
+
+        const currentSnapshot = await Effect.runPromise(currentProgram);
+
+        // Build the new snapshot data, copying from current and applying user changes
+        // Cast supplements to the expected type (WageSnapshotInput uses SupplementRule with template literal types)
+        const supplements = input.supplements === "copy_current" || input.supplements === undefined
+          ? (currentSnapshot?.supplements ?? { rules: [] })
+          : { rules: input.supplements as any[] };
+
+        const snapshotData = {
+          from_date: input.from_date,
+          hourly_wage: input.hourly_wage ?? currentSnapshot?.hourly_wage ?? 200,
+          wage_level: input.wage_level !== undefined ? input.wage_level : (currentSnapshot?.wage_level ?? null),
+          supplements: supplements as { rules: any[] },
+          tax_enabled: input.tax_enabled ?? currentSnapshot?.tax_enabled ?? false,
+          tax_percentage: input.tax_percentage ?? currentSnapshot?.tax_percentage ?? 0,
+          break_enabled: input.break_enabled ?? currentSnapshot?.break_enabled ?? false,
+          break_method: input.break_method ?? currentSnapshot?.break_method ?? "none" as const,
+          break_threshold_hours: input.break_threshold_hours ?? currentSnapshot?.break_threshold_hours ?? 5.5,
+          break_deduction_minutes: input.break_deduction_minutes ?? currentSnapshot?.break_deduction_minutes ?? 30,
+        };
+
+        const result = await createWageSnapshotAction(snapshotData as any);
+
+        if ("error" in result) {
+          // Check for conflict error
+          if (result.error.includes("conflict") || result.error.includes("already exists")) {
+            return {
+              success: false,
+              message: tr.snapshotConflict ?? "A wage entry already exists for this date",
+            };
+          }
+          return {
+            success: false,
+            message: result.error,
+          };
+        }
+
+        const dateStr = input.from_date ? formatDateCompact(input.from_date, tr) : "baseline";
+        return {
+          success: true,
+          message: t(tr.createdWageSnapshot ?? "Created wage entry from {date}", { date: dateStr }),
+          data: { id: toShortId(result.id) },
+        };
+      }
+
+      case "update": {
+        // Validate snapshot_id is provided for update
+        if (!input.snapshot_id) {
+          return {
+            success: false,
+            message: tr.missingSnapshotId ?? "Missing snapshot_id for update action",
+          };
+        }
+
+        // Resolve short ID to full UUID
+        const fullSnapshotId = await resolveSnapshotId(input.snapshot_id, userId);
+        if (!fullSnapshotId) {
+          return {
+            success: false,
+            message: t(tr.snapshotNotFound ?? "Wage entry not found: {id}", { id: input.snapshot_id }),
+          };
+        }
+
+        // Fetch the target snapshot to merge with updates
+        const targetProgram = Effect.gen(function* () {
+          const service = yield* SnapshotsService;
+          const snapshots = yield* service.getUserWageSnapshots(userId);
+          return snapshots.find(s => s.id === fullSnapshotId);
+        }).pipe(
+          Effect.provide(AuthSnapshotsLive),
+          Effect.catchAll(() => Effect.succeed(undefined)),
+          Effect.scoped
+        );
+
+        const targetSnapshot = await Effect.runPromise(targetProgram);
+
+        if (!targetSnapshot) {
+          return {
+            success: false,
+            message: t(tr.snapshotNotFound ?? "Wage entry not found: {id}", { id: input.snapshot_id }),
+          };
+        }
+
+        // Build the updated snapshot data
+        // Cast supplements to the expected type (WageSnapshotInput uses SupplementRule with template literal types)
+        const supplements = input.supplements === "copy_current"
+          ? (targetSnapshot.supplements ?? { rules: [] })
+          : input.supplements !== undefined
+            ? { rules: input.supplements as any[] }
+            : (targetSnapshot.supplements ?? { rules: [] });
+
+        const updateData = {
+          from_date: input.from_date !== undefined ? input.from_date : targetSnapshot.from_date,
+          hourly_wage: input.hourly_wage ?? targetSnapshot.hourly_wage,
+          wage_level: input.wage_level !== undefined ? input.wage_level : targetSnapshot.wage_level,
+          supplements: supplements as { rules: any[] },
+          tax_enabled: input.tax_enabled ?? targetSnapshot.tax_enabled,
+          tax_percentage: input.tax_percentage ?? targetSnapshot.tax_percentage,
+          break_enabled: input.break_enabled ?? targetSnapshot.break_enabled,
+          break_method: input.break_method ?? targetSnapshot.break_method,
+          break_threshold_hours: input.break_threshold_hours ?? targetSnapshot.break_threshold_hours,
+          break_deduction_minutes: input.break_deduction_minutes ?? targetSnapshot.break_deduction_minutes,
+        };
+
+        const result = await updateWageSnapshotAction(fullSnapshotId, updateData as any);
+
+        if ("error" in result) {
+          if (result.error.includes("conflict") || result.error.includes("already exists")) {
+            return {
+              success: false,
+              message: tr.snapshotConflict ?? "A wage entry already exists for this date",
+            };
+          }
+          return {
+            success: false,
+            message: result.error,
+          };
+        }
+
+        return {
+          success: true,
+          message: tr.updatedWageSnapshot ?? "Updated wage entry",
+        };
+      }
+
+      case "delete": {
+        // Validate snapshot_id is provided for delete
+        if (!input.snapshot_id) {
+          return {
+            success: false,
+            message: tr.missingSnapshotId ?? "Missing snapshot_id for delete action",
+          };
+        }
+
+        // Resolve short ID to full UUID
+        const fullSnapshotId = await resolveSnapshotId(input.snapshot_id, userId);
+        if (!fullSnapshotId) {
+          return {
+            success: false,
+            message: t(tr.snapshotNotFound ?? "Wage entry not found: {id}", { id: input.snapshot_id }),
+          };
+        }
+
+        const result = await deleteWageSnapshotAction(fullSnapshotId);
+
+        if ("error" in result) {
+          return {
+            success: false,
+            message: result.error,
+          };
+        }
+
+        return {
+          success: true,
+          message: t(tr.deletedWageSnapshot ?? "Deleted wage entry ({count} shifts affected)", { count: result.affectedShiftCount }),
+        };
+      }
+
+      default:
+        return {
+          success: false,
+          message: t(tr.unknownAction, { action: input.action }),
+        };
+    }
+  } catch (error) {
+    throw new Error(
+      error instanceof Error ? error.message : (tr.failedToManageWageSnapshots ?? "Failed to manage wage snapshots")
     );
   }
 }
