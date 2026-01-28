@@ -116,6 +116,10 @@ struct WageyView: View {
                 showPaywall = true
             }
         }
+        .task {
+            // Fetch wagey usage from profile on view appear
+            await viewModel.fetchWageyUsage()
+        }
     }
 
     /// Handle paywall dismiss - check if user upgraded
@@ -138,10 +142,8 @@ struct WageyView: View {
 
     private var mainContent: some View {
         VStack(spacing: 0) {
-            // Usage bar (always show for free tier users)
-            if viewModel.currentTier == .free {
-                usageBar
-            }
+            // Usage bar (always show for all tiers)
+            usageBar
 
             // Message list
             ChatMessageList(
@@ -268,8 +270,8 @@ struct WageyView: View {
                     .foregroundColor(.tidexTextPrimary)
                     .lineLimit(1)
 
-                if let remaining = viewModel.remainingMessages {
-                    Text(localization.string("wagey.messagesRemaining", remaining))
+                if viewModel.wageyInvocations != nil || viewModel.messagesUsed > 0 {
+                    Text(localization.string("wagey.messagesRemaining", viewModel.remainingMessagesCount))
                         .font(.system(size: 11))
                         .foregroundColor(.tidexTextSecondary)
                 }
