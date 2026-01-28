@@ -462,6 +462,13 @@ const wageyChatStream = createRiverStream<ChatChunk, NextRequest>()
       });
     }
 
+    // Always send usage info so client can update progress bar
+    await stream.appendChunk({
+      type: "wagey_limit",
+      remaining: result.remaining,
+      resetDays: getDaysUntilReset(),
+    });
+
     // Send done chunk
     await stream.appendChunk({ type: "done" });
 

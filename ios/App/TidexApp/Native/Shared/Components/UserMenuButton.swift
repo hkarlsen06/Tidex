@@ -77,14 +77,14 @@ struct UserMenuButton: View {
                 )
             }
 
-            // Sync Debug button (DEBUG builds only)
+            // Debug button (DEBUG builds only)
             #if DEBUG
             Button {
                 showSyncDebug = true
             } label: {
                 Label(
-                    "Sync Debug",
-                    systemImage: "arrow.triangle.2.circlepath.circle"
+                    "Debug",
+                    systemImage: "ladybug"
                 )
             }
             #endif
